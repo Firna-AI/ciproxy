@@ -54,14 +54,16 @@ User decisions, 3 November 2026:
   shared Rust rules, the gate and the billing code of `futex-ai/accounting`,
   and a Rust cache server already exist. The gap to the official Go client
   is small.
-- Pricing unit: a monthly price in bands of jobs, with a free band. ciproxy
-  counts each job that its runners run, on own machines and on overflow.
-  The customer picks the band by hand. The user dropped an automatic band
-  change after two months above a band as too complex. Rejected: a
-  price per own machine, per vCPU, or per job-minute, a share of the
-  savings, and a flat price. Reason: jobs grow with agents and pull
-  requests, which drive CI load, and bands keep the bill predictable with
-  no per-minute charge.
+- Pricing: three tiers. Each tier includes a number of starts per month and
+  a number of own nodes. Add-ons buy extra starts and extra own nodes. A
+  start is one job that a ciproxy runner starts, on an own node or on
+  overflow. The customer picks the tier by hand. This replaces the first
+  choice of the same day: a monthly price in bands of jobs. Rejected
+  before that: a price per own machine, per vCPU, or per job-minute, a
+  share of the savings, and a flat price. Reason: starts grow with agents
+  and pull requests, which drive CI load, and the node count is simple to
+  check. The limits, prices, and features of the tiers stay a proposal
+  until launch.
 - The options check of the `plans` skill ran over the last three decisions
   before the user answered. Its report is in
   `.context/ciproxy-mvp-foundation/options-check-1.md`.
@@ -98,10 +100,41 @@ Design calls, my calls, 3 November 2026:
   caches. Reason: no workflow edits, and no cache poisoning from pull
   requests.
 - The MVP has no billing code. ciproxy charges its first customers by hand,
-  with a Stripe payment link or invoice that uses the job count of the
-  month. In-product billing comes after the MVP, when the price is final.
+  with a Stripe payment link or invoice that uses the starts and own nodes
+  of the month. In-product billing comes after the MVP, when the price is final.
   Reason: the user wants no billing work now and may change the price
   before launch. Charging by hand still tests whether customers pay.
+- Tier limits are soft. When a customer passes the starts or the own nodes
+  of its tier, jobs keep running. The dashboard shows a warning, and
+  ciproxy bills the add-on by hand. Reason: a pricing limit must never stop
+  the CI of a customer.
+- A warm runner that gets no job is not a start. A re-run of a job is a new
+  start. Reason: the customer pays only for jobs that ran.
+
+### Pricing proposal
+
+My proposal, 3 November 2026. It uses the CI of the `mokly-ai`
+organization as a reference: 17,772 starts in 30 days, with up to 92 jobs
+at the same time. Mokly fits the Team tier. The numbers stay open until
+launch.
+
+| | Free | Team | Business |
+| --- | --- | --- | --- |
+| Price per month | $0 | $49 | $299 |
+| Starts per month | 2,000 | 25,000 | 150,000 |
+| Own nodes | 1 | 3 | 10 |
+| Extra 10,000 starts | None | $10 | $10 |
+| Extra own node, per month | None | $20 | $20 |
+
+- Every tier: own Linux nodes, Boat overflow, the transparent cache, warm
+  runners, the dashboard, and the savings report.
+- Team adds: sticky Docker disks, alerts by email and Slack, 30 days of
+  job history instead of 7, and email support.
+- Business adds: several GitHub organizations, single sign-on, an audit
+  log, custom VM images, 90 days of job history, and priority support.
+- Later features join the tiers when they ship: AWS overflow and macOS
+  nodes from Team, Blacksmith sandboxes and a customer cache bucket from
+  Business.
 
 ## Milestone 1: Mockups
 
@@ -122,8 +155,10 @@ up Mokly as `futex-ai/accounting` does.
       and cache use.
 - [ ] Jobs: the live queue and the history, with where each job ran.
 - [ ] Savings: the cost of the jobs on own machines and on overflow,
-      against GitHub-hosted and Blacksmith prices, and the job count of
-      the month.
+      against GitHub-hosted and Blacksmith prices.
+- [ ] Plan and usage: the tier, the starts and own nodes of the month
+      against the tier, the add-ons, and the warning at a soft limit.
+      ciproxy sets the tier by hand in the MVP.
 - [ ] Settings: labels and machine shapes, the overflow wait time, the
       overflow spend limit, and repository access.
 - [ ] User flows: from sign-in to the first green job, and a peak in which
@@ -157,9 +192,9 @@ plan. The design calls above give their first content.
       GitHub cache.
 - [ ] Write `docs/protocol/security.md`: GitHub App permissions, key
       custody, tenant isolation, job isolation, and secrets.
-- [ ] Write `docs/protocol/metering.md`: ciproxy counts each job that its
-      runners run, on own machines and on overflow. Give the rules for the
-      savings report and for the job count of each month.
+- [ ] Write `docs/protocol/metering.md`: what a start is, how ciproxy
+      counts starts and own nodes for each month, the soft tier limits, and
+      the rules for the savings report.
 
 ## Milestone 3: Feasibility spikes
 
