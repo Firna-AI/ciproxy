@@ -62,8 +62,11 @@ User decisions, 3 November 2026:
   before that: a price per own machine, per vCPU, or per job-minute, a
   share of the savings, and a flat price. Reason: starts grow with agents
   and pull requests, which drive CI load, and the node count is simple to
-  check. The limits, prices, and features of the tiers stay a proposal
-  until launch.
+  check.
+- Billing: in-product billing is part of the MVP, with the tiers and the
+  add-ons below. The user approved them and this plan on 3 November 2026,
+  in the words "ok, looks good - lets go ahead". This withdraws my earlier
+  call to leave billing out of the MVP.
 - The options check of the `plans` skill ran over the last three decisions
   before the user answered. Its report is in
   `.context/ciproxy-mvp-foundation/options-check-1.md`.
@@ -99,24 +102,29 @@ Design calls, my calls, 3 November 2026:
   of the GitHub cache. Only jobs on the default branch write back to shared
   caches. Reason: no workflow edits, and no cache poisoning from pull
   requests.
-- The MVP has no billing code. ciproxy charges its first customers by hand,
-  with a Stripe payment link or invoice that uses the starts and own nodes
-  of the month. In-product billing comes after the MVP, when the price is final.
-  Reason: the user wants no billing work now and may change the price
-  before launch. Charging by hand still tests whether customers pay.
 - Tier limits are soft. When a customer passes the starts or the own nodes
-  of its tier, jobs keep running. The dashboard shows a warning, and
-  ciproxy bills the add-on by hand. Reason: a pricing limit must never stop
-  the CI of a customer.
+  of its tier, jobs keep running. The dashboard shows a warning and offers
+  the tier or the add-on that covers the use. Reason: a pricing limit must
+  never stop the CI of a customer.
+- Stripe takes the payments. The customer picks the tier and the add-on
+  quantities in the dashboard, pays through Stripe Checkout, and manages
+  the subscription in the Stripe customer portal. Reason: no card data
+  reaches ciproxy, and `futex-ai/accounting` already bills through Stripe.
+- Add-ons are monthly quantities that the customer sets. ciproxy charges no
+  overage by itself. Reason: the user wants manual control of the plan.
+- Nothing stops jobs in the MVP: not a limit, and not a failed payment.
+  When Stripe ends a subscription after its retries, the organization moves
+  to the Free tier. Reason: a billing problem must never stop the CI of a
+  customer. A hard limit is a new rejection, which needs a user decision.
 - A warm runner that gets no job is not a start. A re-run of a job is a new
   start. Reason: the customer pays only for jobs that ran.
 
-### Pricing proposal
+### Pricing
 
-My proposal, 3 November 2026. It uses the CI of the `mokly-ai`
-organization as a reference: 17,772 starts in 30 days, with up to 92 jobs
-at the same time. Mokly fits the Team tier. The numbers stay open until
-launch.
+My proposal, which the user approved for the MVP on 3 November 2026. It
+uses the CI of the `mokly-ai` organization as a reference: 17,772 starts
+in 30 days, with up to 92 jobs at the same time. Mokly fits the Team tier.
+The numbers can still change before launch.
 
 | | Free | Team | Business |
 | --- | --- | --- | --- |
@@ -156,13 +164,17 @@ up Mokly as `futex-ai/accounting` does.
 - [ ] Jobs: the live queue and the history, with where each job ran.
 - [ ] Savings: the cost of the jobs on own machines and on overflow,
       against GitHub-hosted and Blacksmith prices.
+- [ ] Plans: compare the three tiers, and choose one.
 - [ ] Plan and usage: the tier, the starts and own nodes of the month
-      against the tier, the add-ons, and the warning at a soft limit.
-      ciproxy sets the tier by hand in the MVP.
+      against the tier, the add-ons, the warning at a soft limit, and the
+      way to the Stripe customer portal.
+- [ ] Checkout: from a plan choice through Stripe Checkout to the
+      confirmed plan, and the return after a failed payment.
 - [ ] Settings: labels and machine shapes, the overflow wait time, the
       overflow spend limit, and repository access.
-- [ ] User flows: from sign-in to the first green job, and a peak in which
-      jobs overflow to Boat.
+- [ ] User flows: from sign-in to the first green job, a peak in which
+      jobs overflow to Boat, and a Free organization that passes its starts
+      and upgrades to Team.
 - [ ] Run the mockup check. Smoke-test the changed pages.
 - [ ] Update the design and the TODOs of this plan for each problem that
       the mockups show.
@@ -195,10 +207,13 @@ plan. The design calls above give their first content.
 - [ ] Write `docs/protocol/metering.md`: what a start is, how ciproxy
       counts starts and own nodes for each month, the soft tier limits, and
       the rules for the savings report.
+- [ ] Write `docs/protocol/billing.md`: the tiers, the add-ons, Stripe
+      Checkout and the customer portal, the subscription states, failed
+      payments, and the move to the Free tier.
 
 ## Milestone 3: Feasibility spikes
 
-Depends on: none
+Depends on: 1
 
 Each spike proves one risky mechanism on real infrastructure before the
 implementation plan depends on it. Spike code stays under `.context/`, not
@@ -225,7 +240,7 @@ from the user.
 
 ## Milestone 4: Repository bootstrap
 
-Depends on: none
+Depends on: 1
 
 - [ ] Create the workspace skeleton as in `futex-ai/accounting`: a Rust
       workspace under `crates/`, the gate in `xtask/`, and a TypeScript
@@ -249,8 +264,8 @@ Depends on: 2, 3, 4
       requirement change as a decision.
 - [ ] Write `plans/ciproxy-mvp.md`. Give it milestones for the GitHub App
       and scale sets, the Linux agent, the scaler, the Boat backend, the
-      cache layer, the dashboard backend and UI, metering, and the public
-      copy of the agent at launch. In-product billing comes after the MVP.
+      cache layer, the dashboard backend and UI, metering, billing with
+      Stripe, and the public copy of the agent at launch.
 - [ ] Run the options check over its decisions.
 
 ## Milestone 6: Verification, commit, review, and pull request
