@@ -1,0 +1,44 @@
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-md);
+  background: var(--c-primary);
+  color: var(--c-on-solid);
+  flex-shrink: 0;
+}
+
+.brand-mark svg {
+  transform: rotate(90deg);
+}
+
+.brand-word {
+  color: var(--c-ink);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* Design directions: the geometric mark and a lighter wordmark. */
+
+.brand-geo {
+  flex-shrink: 0;
+}
+
+.dir .brand {
+  gap: 8px;
+  color: inherit;
+}
+
+.dir .brand-word {
+  color: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}

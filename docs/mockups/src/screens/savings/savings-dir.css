@@ -1,0 +1,53 @@
+/* Design directions: the saved amount at the size of a headline figure, and
+   thin cost bars. Each rule repeats a savings.css selector under .dir. */
+
+.dir .hero {
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.dir .hero-figure {
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 34px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dir .hero-text {
+  max-width: 560px;
+  color: var(--c-ink2);
+  font-size: 13px;
+}
+
+.dir .cost-bars {
+  gap: 10px;
+}
+
+.dir .cost-bar-row {
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 16px;
+}
+
+.mockup-mobile .dir .cost-bar-row {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+
+.dir .cost-bar-label {
+  font-size: 13px;
+}
+
+.dir .cost-bar {
+  height: 10px;
+  border-radius: 0 2px 2px 0;
+}
+
+.dir .cost-bar-value {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.dir .cost-note {
+  margin-top: 14px;
+}

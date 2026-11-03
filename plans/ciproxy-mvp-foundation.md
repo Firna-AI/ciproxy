@@ -66,7 +66,9 @@ User decisions, 3 November 2026:
 - Billing: in-product billing is part of the MVP, with the tiers and the
   add-ons below. The user approved them and this plan on 3 November 2026,
   in the words "ok, looks good - lets go ahead". This withdraws my earlier
-  call to leave billing out of the MVP.
+  call to leave billing out of the MVP. The user then limited the work to
+  Milestone 1, in the words "impl milestone 1 only". The other milestones
+  wait for a new go-ahead.
 - The options check of the `plans` skill ran over the last three decisions
   before the user answered. Its report is in
   `.context/ciproxy-mvp-foundation/options-check-1.md`.
@@ -175,6 +177,10 @@ up Mokly as `futex-ai/accounting` does.
 - [ ] User flows: from sign-in to the first green job, a peak in which
       jobs overflow to Boat, and a Free organization that passes its starts
       and upgrades to Team.
+- [ ] Design directions: show three professional visual directions on key
+      screens. Apply the direction that the user picks to every screen.
+- [ ] Fix the findings of the first screenshot review. They are in
+      `.context/ciproxy-mvp-foundation/reviews/mockup-review-1.md`.
 - [ ] Run the mockup check. Smoke-test the changed pages.
 - [ ] Update the design and the TODOs of this plan for each problem that
       the mockups show.

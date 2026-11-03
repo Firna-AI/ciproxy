@@ -1,0 +1,157 @@
+/* A neutral rendering of the Stripe Checkout page. */
+
+.stripe {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-height: 100vh;
+  background: var(--c-surface);
+  color: #30313d;
+}
+
+.stripe-mobile {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.stripe-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 56px 48px 32px 80px;
+  background: #f6f8fa;
+}
+
+.stripe-mobile .stripe-summary {
+  padding: 24px 20px;
+}
+
+.stripe-merchant {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  font-weight: 600;
+}
+
+.stripe-muted {
+  color: #6a7383;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.stripe-amount {
+  font-size: 34px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 40px;
+}
+
+.stripe-lines {
+  display: flex;
+  flex-direction: column;
+  margin-top: 24px;
+}
+
+.stripe-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid #e3e8ee;
+  font-weight: 600;
+}
+
+.stripe-sub {
+  display: block;
+  font-size: 12px;
+}
+
+.stripe-total {
+  font-weight: 650;
+}
+
+.stripe-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 440px;
+  padding: 56px 48px;
+}
+
+.stripe-mobile .stripe-form {
+  max-width: none;
+  padding: 24px 20px 32px;
+}
+
+.stripe-heading {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.stripe-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stripe-label {
+  color: #6a7383;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.stripe-input {
+  display: block;
+  padding: 9px 12px;
+  border: 1px solid #e3e8ee;
+  border-radius: 6px;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+.stripe-input.is-empty {
+  color: #a3acb9;
+}
+
+.stripe-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.stripe-card > .stripe-input {
+  border-radius: 6px 6px 0 0;
+}
+
+.stripe-card-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.stripe-card-row .stripe-input {
+  margin-top: -1px;
+  border-radius: 0 0 0 6px;
+}
+
+.stripe-card-row .stripe-input + .stripe-input {
+  margin-left: -1px;
+  border-radius: 0 0 6px 0;
+}
+
+.stripe-foot {
+  color: #a3acb9;
+  font-size: 12px;
+  text-align: center;
+}
+
+@media (max-width: 860px) {
+  .stripe {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stripe-summary {
+    padding: 32px 32px 24px;
+  }
+
+  .stripe-form {
+    max-width: none;
+    padding: 24px 32px 40px;
+  }
+}

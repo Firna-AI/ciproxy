@@ -1,0 +1,129 @@
+/* The root of a design direction and its versions of the base utilities.
+   Every rule sits under .dir, so a screen outside a direction keeps its look.
+   The tokens come from the scope class (direction-scope.tsx). */
+
+.dir {
+  min-height: 100vh;
+  background: var(--c-bg);
+  color: var(--c-ink);
+  font-family: var(--font-sans);
+  font-size: var(--d-body-size);
+  line-height: 20px;
+}
+
+.dir code,
+.dir .mono {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  letter-spacing: 0;
+}
+
+.dir .text-link {
+  color: var(--c-primary-deep);
+  font-weight: 500;
+}
+
+.dir .text-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.dir-graphite .text-link {
+  color: var(--c-ink2);
+  text-decoration: underline;
+  text-decoration-color: var(--c-border2);
+  text-underline-offset: 3px;
+}
+
+.dir-graphite .text-link:hover {
+  color: var(--c-ink);
+  text-decoration-color: currentColor;
+}
+
+.dir .strong {
+  font-weight: 500;
+}
+
+.dir .small {
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.dir .caption {
+  color: var(--c-muted);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.dir .icon-muted {
+  color: var(--c-faint);
+}
+
+.dir .inline-code {
+  padding: 1px 5px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-sm);
+  background: var(--c-soft);
+  font-size: 12px;
+}
+
+/* A status dot beside its word. The glow only shows where the direction
+   sets one, for a live state. */
+
+.dot-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--c-ink2);
+  white-space: nowrap;
+}
+
+.dot-wrap {
+  display: inline-flex;
+  border-radius: 50%;
+}
+
+.dot-wrap.is-live {
+  box-shadow: var(--d-glow);
+}
+
+.dot-ok {
+  color: var(--d-ok);
+}
+
+.dot-warn {
+  color: var(--d-warn);
+}
+
+.dot-err {
+  color: var(--d-err);
+}
+
+.dot-run {
+  color: var(--d-run);
+}
+
+.dot-idle {
+  color: var(--d-idle);
+}
+
+/* Where a job runs: an icon, the machine in the monospace face, the slot. */
+
+.where {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--c-ink2);
+  white-space: nowrap;
+}
+
+.where .icon-muted {
+  color: var(--c-faint);
+}
+
+.where-machine {
+  overflow: hidden;
+  color: var(--c-ink);
+  text-overflow: ellipsis;
+}

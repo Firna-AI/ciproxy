@@ -1,0 +1,4 @@
+{
+  "title": "Live queue states",
+  "order": ["peak", "spend-limit", "starts-passed", "quiet"]
+}

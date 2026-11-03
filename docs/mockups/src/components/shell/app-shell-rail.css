@@ -1,0 +1,49 @@
+/* A narrow desktop frame, such as the catalogue view beside the phone: the
+   sidebar becomes an icon rail. */
+
+@media (max-width: 960px) {
+  .shell-desktop {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .shell-desktop .sidebar-inner {
+    align-items: center;
+    padding: 16px 8px;
+  }
+
+  .shell-desktop .brand-word,
+  .shell-desktop .org-switch-text,
+  .shell-desktop .org-switch > svg,
+  .shell-desktop .nav-badge,
+  .shell-desktop .user-row .small {
+    display: none;
+  }
+
+  .shell-desktop .nav-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .shell-desktop .org-switch {
+    padding: 4px;
+    border: 0;
+  }
+
+  .shell-desktop .nav-item {
+    justify-content: center;
+    padding: 9px;
+  }
+
+  .shell-desktop .user-row {
+    justify-content: center;
+    padding: 4px 0;
+  }
+
+  .shell-desktop .shell-main {
+    padding: 22px 24px 32px;
+  }
+}

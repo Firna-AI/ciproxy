@@ -1,0 +1,159 @@
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.mockup-mobile .page-head {
+  flex-direction: column;
+  gap: 12px;
+}
+
+.page-head-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 28px;
+}
+
+.mockup-mobile .page-title {
+  font-size: 20px;
+  line-height: 26px;
+}
+
+.page-subtitle {
+  color: var(--c-muted);
+}
+
+.page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 2px;
+  font-size: 13px;
+}
+
+.crumb {
+  color: var(--c-muted);
+  font-weight: 500;
+}
+
+.crumb:hover {
+  color: var(--c-ink);
+}
+
+.panel {
+  padding: 18px 20px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-xl);
+  background: var(--c-surface);
+}
+
+.mockup-mobile .panel {
+  padding: 14px 16px;
+}
+
+.panel-flush {
+  padding: 0;
+  overflow: hidden;
+}
+
+.panel-flush > .panel-head {
+  padding: 16px 20px 4px;
+}
+
+.mockup-mobile .panel-flush,
+.mockup-mobile .panel-flush > .panel-head {
+  padding: 0;
+}
+
+.mockup-mobile .panel-flush > .panel-head {
+  padding: 14px 16px 4px;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.panel-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.link-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.link-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: -1px;
+  padding: 8px 12px;
+  border-bottom: 2px solid transparent;
+  color: var(--c-muted);
+  font-weight: 500;
+}
+
+.link-tab.is-active {
+  border-bottom-color: var(--c-primary);
+  color: var(--c-ink);
+  font-weight: 600;
+}
+
+.link-tab-count {
+  padding: 0 6px;
+  border-radius: var(--r-pill);
+  background: var(--c-bg2);
+  color: var(--c-ink2);
+  font-size: 12px;
+}
+
+.detail-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 0;
+  border-top: 1px solid var(--c-border);
+}
+
+.detail-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.detail-row dt {
+  color: var(--c-muted);
+}
+
+.detail-row dd {
+  margin: 0;
+  text-align: right;
+}

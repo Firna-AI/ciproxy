@@ -1,0 +1,8 @@
+{
+  "$schema": "./ts/node_modules/@mokly/mokly/config.schema.json",
+  "repoRoot": ".",
+  "roots": [{ "dir": "docs/mockups/src/entries" }],
+  "renderer": "docs/mockups/src/render.tsx",
+  "moduleResolution": { "packageRoots": ["ts"] },
+  "review": { "base": "origin/main" }
+}

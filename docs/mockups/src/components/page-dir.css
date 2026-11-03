@@ -1,0 +1,93 @@
+/* Design directions: the page header, panels, tabs, and details lists. Each
+   rule repeats a page.css selector under .dir, so it wins only in a
+   direction. */
+
+.dir .page-head {
+  align-items: center;
+}
+
+.dir .page-head-text {
+  gap: 2px;
+}
+
+.dir .page-title {
+  font-size: var(--d-title-size);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 32px;
+}
+
+.mockup-mobile .dir .page-head {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mockup-mobile .dir .page-title {
+  font-size: 20px;
+  line-height: 28px;
+}
+
+.dir .page-subtitle {
+  color: var(--c-muted);
+  font-size: 13px;
+}
+
+.dir .panel {
+  padding: 16px;
+  border-radius: var(--r-xl);
+  box-shadow: var(--d-shadow);
+}
+
+.mockup-mobile .dir .panel {
+  padding: 14px;
+}
+
+.dir .panel-flush,
+.mockup-mobile .dir .panel-flush {
+  padding: 0;
+}
+
+.dir .panel-head {
+  margin-bottom: 12px;
+}
+
+.dir .panel-flush > .panel-head,
+.mockup-mobile .dir .panel-flush > .panel-head {
+  min-height: 48px;
+  margin: 0;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.dir .panel-title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.dir .link-tabs {
+  gap: 24px;
+}
+
+.dir .link-tab {
+  gap: 8px;
+  padding: 10px 0;
+  font-size: var(--d-body-size);
+  font-weight: 500;
+}
+
+.dir .link-tab.is-active {
+  font-weight: 500;
+}
+
+.dir .link-tab-count {
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.dir .detail-row {
+  padding: 10px 0;
+}

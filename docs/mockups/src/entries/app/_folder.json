@@ -1,0 +1,12 @@
+{
+  "title": "Dashboard",
+  "order": [
+    "auth",
+    "onboarding",
+    "jobs",
+    "machines",
+    "savings",
+    "billing",
+    "settings"
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "name": "@ciproxy/mockups",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "mokly build --strict --no-changes --out docs/mockups/mokly-generated",
+    "check": "npm run build && npm run typecheck && npm run lint && npm run format:check && node ../../docs/mockups/scripts/check-policy.ts",
+    "typecheck": "tsc --project ../../docs/mockups/tsconfig.json",
+    "lint": "cd ../.. && eslint --config ts/mockups/eslint.config.js --max-warnings 0 docs/mockups ts/mockups/eslint.config.js",
+    "format": "cd ../.. && prettier --write docs/mockups mokly.config.json ts/package.json ts/mockups",
+    "format:check": "cd ../.. && prettier --check docs/mockups mokly.config.json ts/package.json ts/mockups",
+    "serve": "mokly serve"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@firna/ui": "^4.0.0",
+    "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource-variable/geist-mono": "^5.3.0",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/ibm-plex-sans": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@mokly/mokly": "0.18.0",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "eslint": "^10.14.0",
+    "lucide-react": "^0.577.0",
+    "prettier": "^3.9.10",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.1"
+  }
+}

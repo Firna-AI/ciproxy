@@ -1,0 +1,125 @@
+.plan-name {
+  font-size: 20px;
+  font-weight: 650;
+  line-height: 26px;
+}
+
+.addons {
+  max-width: 560px;
+}
+
+.addons-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--c-border);
+}
+
+.tier-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+
+.mockup-mobile .tier-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.tier-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-xl);
+  background: var(--c-surface);
+}
+
+/* A full-perimeter border marks the tier that covers the use. */
+.tier-card.is-recommended {
+  border-color: var(--c-primary);
+  box-shadow: 0 0 0 1px var(--c-primary);
+}
+
+.tier-name {
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.tier-price {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.tier-amount {
+  font-size: 32px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 36px;
+}
+
+.tier-features {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tier-features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.tier-features svg {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.tier-addons {
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--c-border);
+}
+
+.checkout {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 16px;
+  align-items: start;
+  max-width: 900px;
+}
+
+.mockup-mobile .checkout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.result-meter {
+  width: 100%;
+  max-width: 380px;
+  padding-bottom: 32px;
+}
+
+@media (max-width: 1000px) {
+  .mockup-desktop .tier-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 880px) {
+  .mockup-desktop .checkout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,0 +1,9 @@
+# Scratch output: reviews, evidence, measurements, and logs.
+.context/
+
+# npm dependencies.
+node_modules/
+
+# Mokly build output and its reservation directory. Never commit them.
+docs/mockups/mokly-generated/
+.mokly-export-reservations/

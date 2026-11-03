@@ -1,0 +1,69 @@
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 20px;
+}
+
+.hero-figure {
+  color: var(--c-ink);
+  font-size: 52px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 56px;
+}
+
+.hero-text {
+  max-width: 520px;
+  color: var(--c-ink2);
+}
+
+.cost-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+}
+
+.cost-bar-row {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.mockup-mobile .cost-bar-row {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+}
+
+.cost-bar-label {
+  color: var(--c-ink2);
+}
+
+.cost-bar-track {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Square at the baseline, a 4px rounded data end. */
+.cost-bar {
+  display: inline-block;
+  height: 20px;
+  border-radius: 0 4px 4px 0;
+  background: var(--c-chart-context);
+}
+
+.cost-bar.is-accent {
+  background: var(--c-chart-accent);
+}
+
+.cost-bar-value {
+  color: var(--c-ink);
+  font-weight: 600;
+}
+
+.cost-note {
+  margin-top: 16px;
+}

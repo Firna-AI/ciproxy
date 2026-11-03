@@ -1,0 +1,20 @@
+.waiting-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--c-ink2);
+}
+
+.connected-machine {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--c-primary-border);
+  border-radius: var(--r-lg);
+  background: var(--c-primary-soft);
+}
+
+.connected-title {
+  font-weight: 600;
+}

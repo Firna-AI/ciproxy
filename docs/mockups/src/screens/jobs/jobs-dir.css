@@ -1,0 +1,79 @@
+/* Design directions: one line per job on desktop, durations in the monospace
+   face, and the dense mobile list. Each rule repeats a jobs.css selector
+   under .dir, or styles markup that only a direction renders. */
+
+.mockup-desktop .dir .job-name {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.dir .job-name-title {
+  font-weight: 500;
+}
+
+.dir .duration {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+.dir .job-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.dir .more-row {
+  padding: 10px 16px;
+  border-top: 1px solid var(--c-border);
+}
+
+.mockup-mobile .dir .more-row {
+  padding: 10px 14px;
+}
+
+.job-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.job-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 12px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--c-border);
+}
+
+.job-row:first-child {
+  border-top: 0;
+}
+
+.job-row > .dot-wrap {
+  margin-top: 6px;
+}
+
+.job-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.job-row > .duration {
+  color: var(--c-ink2);
+  line-height: 20px;
+}
+
+/* A narrow desktop window puts the job context under its name. */
+
+@media (max-width: 960px) {
+  .mockup-desktop .dir .job-name {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+}

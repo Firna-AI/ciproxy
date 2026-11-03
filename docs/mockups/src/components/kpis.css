@@ -1,0 +1,90 @@
+/* The headline figures of a design direction (kpis.tsx): a label, a value of
+   26 px, and, for stat tiles and cards, a trend of recent values. */
+
+.kpis {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 12px;
+}
+
+.mockup-mobile .kpis {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-flow: row;
+  gap: 8px;
+}
+
+.kpi {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 14px 16px;
+}
+
+.kpi-label {
+  overflow: hidden;
+  color: var(--c-muted);
+  font-size: 12px;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kpi-value {
+  color: var(--c-ink);
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 32px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mockup-mobile .kpi-value {
+  font-size: 24px;
+  line-height: 30px;
+}
+
+.kpi-trend {
+  color: var(--c-chart-accent);
+}
+
+.trend-box {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.trend {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.trend-end {
+  position: absolute;
+  right: -3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 2px var(--c-surface);
+  transform: translateY(-50%);
+}
+
+.trend-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
+}
+
+.trend-area {
+  fill: currentColor;
+  opacity: 0.14;
+}

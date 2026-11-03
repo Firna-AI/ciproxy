@@ -1,0 +1,138 @@
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  background: var(--c-surface);
+}
+
+.mockup-mobile .notice {
+  flex-wrap: wrap;
+}
+
+.notice-info {
+  border-color: var(--c-primary-border);
+  background: var(--c-primary-soft);
+}
+
+.notice-success {
+  border-color: var(--c-primary-border);
+  background: var(--c-primary-soft);
+}
+
+.notice-warning {
+  border-color: color-mix(in srgb, var(--c-amber) 28%, var(--c-amber-soft));
+  background: var(--c-amber-soft);
+}
+
+.notice-danger {
+  border-color: color-mix(in srgb, var(--c-rose) 28%, var(--c-rose-soft));
+  background: var(--c-rose-soft);
+}
+
+.notice-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.notice-info .notice-icon,
+.notice-success .notice-icon {
+  color: var(--c-primary-deep);
+}
+
+.notice-warning .notice-icon {
+  color: var(--c-amber-deep);
+}
+
+.notice-danger .notice-icon {
+  color: var(--c-rose-deep);
+}
+
+.notice-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mockup-mobile .notice-text {
+  flex-basis: calc(100% - 30px);
+}
+
+.notice-title {
+  font-weight: 600;
+}
+
+.notice-body {
+  color: var(--c-ink2);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.mockup-mobile .notice-actions {
+  padding-left: 30px;
+}
+
+.state-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 40px 16px;
+  text-align: center;
+}
+
+.state-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 4px;
+  border-radius: var(--r-xl);
+}
+
+.state-icon-primary {
+  background: var(--c-primary-soft);
+  color: var(--c-primary-deep);
+}
+
+.state-icon-neutral {
+  background: var(--c-bg2);
+  color: var(--c-ink2);
+}
+
+.state-icon-warning {
+  background: var(--c-amber-soft);
+  color: var(--c-amber-deep);
+}
+
+.state-icon-danger {
+  background: var(--c-rose-soft);
+  color: var(--c-rose-deep);
+}
+
+.state-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.state-body {
+  max-width: 380px;
+  color: var(--c-muted);
+}
+
+.state-action {
+  justify-content: center;
+  margin-top: 6px;
+}

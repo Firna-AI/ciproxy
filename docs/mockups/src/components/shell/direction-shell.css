@@ -1,0 +1,181 @@
+/* The desktop frame of a design direction (direction-shell.tsx). The colours
+   come from the --d-sidebar-* and --d-top-* tokens of the direction. */
+
+.ds {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.ds-console {
+  grid-template-columns: 232px minmax(0, 1fr);
+}
+
+.ds-navy {
+  grid-template-columns: 248px minmax(0, 1fr);
+}
+
+.ds-side {
+  border-right: 1px solid var(--d-sidebar-border);
+  background: var(--d-sidebar-bg);
+  color: var(--d-sidebar-ink);
+  --ds-line: color-mix(in srgb, var(--d-sidebar-ink) 10%, transparent);
+}
+
+.ds-side-inner {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100vh;
+  padding: 0 12px 12px;
+}
+
+.ds-brand {
+  display: flex;
+  align-items: center;
+  height: 56px;
+  padding: 0 8px;
+}
+
+.ds-topbar .ds-brand {
+  margin: 0 -12px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--d-top-border);
+}
+
+.ds-org {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--ds-line);
+  border-radius: var(--r-md);
+}
+
+.ds-navy .ds-org {
+  border-color: transparent;
+  background: var(--d-sidebar-hover);
+}
+
+.ds-org-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 16px;
+}
+
+.ds-org-name {
+  overflow: hidden;
+  color: var(--d-sidebar-ink);
+  font-size: 13px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-org-tier {
+  color: var(--d-sidebar-muted);
+  font-size: 12px;
+}
+
+.ds-org-chevron {
+  flex-shrink: 0;
+  color: var(--d-sidebar-icon);
+}
+
+.ds-nav {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ds-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--r-md);
+  color: var(--d-sidebar-muted);
+  font-size: var(--d-body-size);
+  font-weight: 500;
+}
+
+.ds-item svg {
+  flex-shrink: 0;
+  color: var(--d-sidebar-icon);
+}
+
+.ds-item:hover {
+  background: var(--d-sidebar-hover);
+  color: var(--d-sidebar-ink);
+}
+
+.ds-item.is-active {
+  background: var(--d-sidebar-active);
+  color: var(--d-sidebar-ink);
+}
+
+.ds-item.is-active svg {
+  color: var(--d-sidebar-ink);
+}
+
+.ds-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-count {
+  color: var(--d-sidebar-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.ds-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ds-line);
+}
+
+.ds-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  padding: 0 8px;
+  color: var(--d-sidebar-ink);
+  font-size: 13px;
+}
+
+.ds-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ds-main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+  padding: 28px 40px 48px;
+}
+
+.ds-console .ds-main {
+  gap: 16px;
+  padding: 24px 28px 40px;
+}
+
+.ds-navy .ds-main {
+  padding: 0 32px 40px;
+}

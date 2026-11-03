@@ -1,0 +1,78 @@
+/* The dense table of a design direction (data-table.tsx). Rows are one line
+   at --d-row-height; the header sits on the --d-head-bg band. */
+
+.dt {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dt th {
+  height: 36px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--c-border);
+  background: var(--d-head-bg);
+  color: var(--d-head-ink);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dt td {
+  height: var(--d-row-height);
+  padding: 0 16px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--c-border);
+  color: var(--c-ink);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.dt tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.dt tbody tr:hover td {
+  background: var(--c-soft);
+}
+
+.dt .dt-right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.dt .dt-center {
+  text-align: center;
+}
+
+.dt-bar {
+  display: block;
+  width: 60%;
+  height: 8px;
+  border-radius: var(--r-sm);
+  background: var(--c-bg2);
+}
+
+.mockup-mobile .dt th,
+.mockup-mobile .dt td {
+  padding: 0 10px;
+}
+
+.mockup-mobile .dt td {
+  font-size: 12.5px;
+}
+
+/* The header of each direction: uppercase in the console, a bolder band in
+   enterprise. */
+
+.dir-midnight .dt th {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dir-enterprise .dt th {
+  font-weight: 600;
+}

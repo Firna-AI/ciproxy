@@ -1,0 +1,98 @@
+.job-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.job-name-title {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+a.job-name-title:hover {
+  color: var(--c-primary-deep);
+  text-decoration: underline;
+}
+
+.more-row {
+  padding: 10px 20px 14px;
+  border-top: 1px solid var(--c-border);
+}
+
+.mockup-mobile .more-row {
+  padding: 10px 16px 12px;
+}
+
+.history-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.history-search {
+  flex: 1;
+  min-width: 220px;
+}
+
+.job-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.mockup-mobile .job-detail {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.where-ran {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.where-ran-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--r-lg);
+  background: var(--c-soft);
+  color: var(--c-ink2);
+  flex-shrink: 0;
+}
+
+.where-ran-title {
+  font-weight: 600;
+}
+
+/* A rail on the left of a list, not of a box. */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0 0 0 14px;
+  border-left: 2px solid var(--c-border);
+  list-style: none;
+}
+
+.timeline li {
+  display: flex;
+  gap: 12px;
+}
+
+.timeline .caption {
+  min-width: 58px;
+}
+
+@media (max-width: 880px) {
+  .mockup-desktop .job-detail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

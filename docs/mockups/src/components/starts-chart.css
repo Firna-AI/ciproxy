@@ -1,0 +1,150 @@
+/* The chart of starts by day in a design direction (starts-chart.tsx). The
+   plot stretches to the panel; grid lines are hairlines, and the axis labels
+   use the monospace face. */
+
+.sc {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: 150px auto auto;
+  column-gap: 10px;
+  margin: 0;
+}
+
+.mockup-mobile .sc {
+  grid-template-rows: 140px auto auto;
+}
+
+.sc-own {
+  --sc-color: var(--c-series-own);
+}
+
+.sc-boat {
+  --sc-color: var(--c-series-boat);
+}
+
+.sc-y {
+  position: relative;
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 34px;
+}
+
+.sc-y span,
+.sc-x span {
+  color: var(--c-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 12px;
+  white-space: nowrap;
+}
+
+.sc-y span {
+  position: absolute;
+  right: 0;
+  transform: translateY(50%);
+}
+
+.sc-plot {
+  position: relative;
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.sc-plot svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.sc-grid {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 0;
+  border-top: 1px solid var(--c-border);
+}
+
+.sc-grid:first-child {
+  border-top-color: var(--c-border2);
+}
+
+.sc-plot rect {
+  fill: var(--sc-color);
+}
+
+.sc-line {
+  fill: none;
+  stroke: var(--sc-color);
+  stroke-linejoin: round;
+  stroke-width: 1.5px;
+}
+
+.sc-area {
+  fill: var(--sc-color);
+  opacity: 0.12;
+}
+
+.sc-x {
+  display: flex;
+  grid-column: 2;
+  grid-row: 2;
+  margin-top: 8px;
+}
+
+.sc-x span {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+
+.sc-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  grid-column: 1 / -1;
+  grid-row: 3;
+  margin-top: 14px;
+}
+
+.sc-legend {
+  display: inline-flex;
+  gap: 16px;
+}
+
+.sc-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--c-ink2);
+  font-size: 12px;
+}
+
+.sc-key::before {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--sc-color);
+  content: "";
+}
+
+.sc-lines .sc-key::before {
+  width: 12px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+/* The values for screen readers; the plot shows them to everyone else. */
+
+.sc-table {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
