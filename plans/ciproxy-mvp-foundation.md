@@ -55,8 +55,9 @@ User decisions, 3 November 2026:
   and a Rust cache server already exist. The gap to the official Go client
   is small.
 - Pricing unit: a monthly price in bands of jobs, with a free band. ciproxy
-  counts each job that its runners run, on own machines and on overflow. A
-  customer moves up a band only after two months above it. Rejected: a
+  counts each job that its runners run, on own machines and on overflow.
+  The customer picks the band by hand. The user dropped an automatic band
+  change after two months above a band as too complex. Rejected: a
   price per own machine, per vCPU, or per job-minute, a share of the
   savings, and a flat price. Reason: jobs grow with agents and pull
   requests, which drive CI load, and bands keep the bill predictable with
@@ -96,6 +97,11 @@ Design calls, my calls, 3 November 2026:
   of the GitHub cache. Only jobs on the default branch write back to shared
   caches. Reason: no workflow edits, and no cache poisoning from pull
   requests.
+- The MVP has no billing code. ciproxy charges its first customers by hand,
+  with a Stripe payment link or invoice that uses the job count of the
+  month. In-product billing comes after the MVP, when the price is final.
+  Reason: the user wants no billing work now and may change the price
+  before launch. Charging by hand still tests whether customers pay.
 
 ## Milestone 1: Mockups
 
@@ -116,11 +122,10 @@ up Mokly as `futex-ai/accounting` does.
       and cache use.
 - [ ] Jobs: the live queue and the history, with where each job ran.
 - [ ] Savings: the cost of the jobs on own machines and on overflow,
-      against GitHub-hosted and Blacksmith prices.
+      against GitHub-hosted and Blacksmith prices, and the job count of
+      the month.
 - [ ] Settings: labels and machine shapes, the overflow wait time, the
       overflow spend limit, and repository access.
-- [ ] Billing and plan: the bands of jobs, the free band, the current band,
-      and the jobs counted this month.
 - [ ] User flows: from sign-in to the first green job, and a peak in which
       jobs overflow to Boat.
 - [ ] Run the mockup check. Smoke-test the changed pages.
@@ -154,7 +159,7 @@ plan. The design calls above give their first content.
       custody, tenant isolation, job isolation, and secrets.
 - [ ] Write `docs/protocol/metering.md`: ciproxy counts each job that its
       runners run, on own machines and on overflow. Give the rules for the
-      savings report and for the bands of jobs.
+      savings report and for the job count of each month.
 
 ## Milestone 3: Feasibility spikes
 
@@ -209,8 +214,8 @@ Depends on: 2, 3, 4
       requirement change as a decision.
 - [ ] Write `plans/ciproxy-mvp.md`. Give it milestones for the GitHub App
       and scale sets, the Linux agent, the scaler, the Boat backend, the
-      cache layer, the dashboard backend and UI, metering, billing, and the
-      public copy of the agent at launch.
+      cache layer, the dashboard backend and UI, metering, and the public
+      copy of the agent at launch. In-product billing comes after the MVP.
 - [ ] Run the options check over its decisions.
 
 ## Milestone 6: Verification, commit, review, and pull request
