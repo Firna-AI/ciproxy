@@ -94,7 +94,10 @@ User decisions, 3 November 2026:
   outage, because it highlights a risk needlessly. Corner radii rely on
   review, with no new gate check. The docs search gets the look of its
   mockup in the site work. The markdownlint rule for links to repeated
-  headings stays as it is.
+  headings stays as it is. A label whose size fits no own machine and no
+  Boat size of the account follows its setting "When nothing fits": wait,
+  the default, or run on the largest Boat size that the account can
+  start. ciproxy reads the sizes that the Boat account can start.
 - The options check of the `plans` skill ran over the last three decisions
   before the user answered. Its report is in
   `.context/ciproxy-mvp-foundation/options-check-1.md`.
@@ -783,7 +786,9 @@ up Mokly as `futex-ai/accounting` does.
       Linux prices.
 - [ ] Add the mockup states that the docs need: a refused Boat sandbox, a
       move between paid tiers, the "Move to Free" confirmation, and a
-      machine that cannot run jobs. Make the docs home say that the wait
+      machine that cannot run jobs. Give the label dialog the setting "When
+      nothing fits", and replace its 32 vCPU example. Make the docs home say
+      that the wait
       counts for each job, limit the instant-start claim of the features
       section to the `ciproxy` label, and apply item 12 to the text of the
       pending approval screen.
