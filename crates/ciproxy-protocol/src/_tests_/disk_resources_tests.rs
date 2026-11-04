@@ -57,10 +57,21 @@ fn machine_resources_keep_the_disk_reserve_and_existing_slots() {
 #[test]
 fn vm_fit_requires_slots_and_job_disk_on_one_machine() {
     let size = ciproxy_size();
+    let four_vcpu = VmSize {
+        vcpu: 4,
+        memory_bytes: 16 * GIGABYTE,
+        disk_bytes: 80 * GIGABYTE,
+    };
+    let eight_vcpu = VmSize {
+        vcpu: 8,
+        memory_bytes: 32 * GIGABYTE,
+        disk_bytes: 120 * GIGABYTE,
+    };
     let examples = [
         (
             "hardware minimum",
             Resources::for_machine(4, 16 * GIGABYTE, 80 * GIGABYTE, true),
+            size,
             true,
         ),
         (
@@ -69,6 +80,7 @@ fn vm_fit_requires_slots_and_job_disk_on_one_machine() {
                 slots: Slots(6),
                 job_disk_bytes: 60 * GIGABYTE - 1,
             },
+            size,
             false,
         ),
         (
@@ -77,15 +89,71 @@ fn vm_fit_requires_slots_and_job_disk_on_one_machine() {
                 slots: Slots(0),
                 job_disk_bytes: 192 * GIGABYTE,
             },
+            size,
             false,
         ),
         (
             "no KVM",
             Resources::for_machine(16, 64 * GIGABYTE, 256 * GIGABYTE, false),
+            size,
+            false,
+        ),
+        (
+            "ciproxy-4vcpu exact fit",
+            Resources {
+                slots: Slots(2),
+                job_disk_bytes: 80 * GIGABYTE,
+            },
+            four_vcpu,
+            true,
+        ),
+        (
+            "ciproxy-4vcpu disk too small",
+            Resources {
+                slots: Slots(2),
+                job_disk_bytes: 60 * GIGABYTE,
+            },
+            four_vcpu,
+            false,
+        ),
+        (
+            "ciproxy-4vcpu slots too small",
+            Resources {
+                slots: Slots(1),
+                job_disk_bytes: 80 * GIGABYTE,
+            },
+            four_vcpu,
+            false,
+        ),
+        (
+            "ciproxy-8vcpu exact fit",
+            Resources {
+                slots: Slots(4),
+                job_disk_bytes: 120 * GIGABYTE,
+            },
+            eight_vcpu,
+            true,
+        ),
+        (
+            "ciproxy-8vcpu disk too small",
+            Resources {
+                slots: Slots(4),
+                job_disk_bytes: 80 * GIGABYTE,
+            },
+            eight_vcpu,
+            false,
+        ),
+        (
+            "ciproxy-8vcpu slots too small",
+            Resources {
+                slots: Slots(3),
+                job_disk_bytes: 120 * GIGABYTE,
+            },
+            eight_vcpu,
             false,
         ),
     ];
-    for (name, resources, expected) in examples {
+    for (name, resources, size, expected) in examples {
         assert_eq!(resources.fits(size), expected, "{name}");
     }
 }

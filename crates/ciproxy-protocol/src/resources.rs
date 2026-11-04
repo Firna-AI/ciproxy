@@ -75,7 +75,7 @@ impl Resources {
 
     /// Check whether both slots and job disk cover the VM size.
     pub fn fits(self, size: VmSize) -> bool {
-        self.slots.fits(Slots::for_vm(size)) && self.job_disk_bytes >= size.disk_bytes
+        self.concurrent_vms(size) > 0
     }
 
     /// Compute the whole VMs of one size that these resources can hold.
