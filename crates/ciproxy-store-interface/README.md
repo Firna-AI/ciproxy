@@ -48,6 +48,15 @@ A new registration in another workspace leaves old history in place.
 Removal and retention queries change stored records only.
 They do not stop machines, call GitHub, or delete Boat sandboxes.
 
+MeteringStore reads coherent workspace facts across all organizations.
+It stores trusted creation times, registration times, and cost histories.
+It stores explicit Free and Stripe billing-period boundaries.
+Anonymous daily aggregates keep actual VM sizes and Boat costs.
+Anonymous timestamp counts preserve exact period boundaries.
+Job and runner cursors support atomic signed aggregate corrections.
+Deleting a job or runner deletes its cursor and preserves its aggregates.
+The metering service supplies all calculation rules and retention dates.
+
 ## Quick Start
 
 Use the same interface for PostgreSQL and service test doubles:
@@ -92,6 +101,7 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 - [src/secrets.rs](src/secrets.rs) owns opaque hashes and ciphertext.
 - [src/scale_sets.rs](src/scale_sets.rs) defines session lock ownership.
 - [src/jobs.rs](src/jobs.rs) defines metadata-only job records.
+- [src/metering](src/metering) defines metering facts and history APIs.
 
 ### Related Docs
 
@@ -102,3 +112,4 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 - [Overflow](../../docs/protocol/overflow.md) defines Boat key rotation.
 - [App removal](../../docs/protocol/app-removal.md) defines retention.
 - [Workspaces](../../docs/protocol/workspaces.md) defines organization joins.
+- [Metering](../ciproxy-metering/README.md) documents trusted producer calls.

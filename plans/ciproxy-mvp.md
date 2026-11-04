@@ -446,13 +446,22 @@ Depends on: 4
 
 `ciproxy-metering` computes `metering.md` from the stored job events.
 
-- [ ] Count the starts of each period, the machines, the soft limits, and
+- [x] Count the starts of each period, the machines, the soft limits, and
       the offer.
-- [ ] Count the starts and the machines of each workspace across its
+      My call, 4 November 2026: keep the current paid tier when offers tie.
+      Reason: the same price needs no tier move.
+      Branch: `conductor/ciproxy-mvp-milestone-16-metering`.
+- [x] Count the starts and the machines of each workspace across its
       organizations.
-- [ ] Compute the savings report, and keep the daily totals for 90 days, as
+      Branch: `conductor/ciproxy-mvp-milestone-16-metering`.
+- [x] Compute the savings report, and keep the daily totals for 90 days, as
       item 37 says.
-- [ ] Unit-test each rule with hand-worked numbers.
+      My call, 4 November 2026: accept dated price lists and the monthly
+      divisor as explicit inputs, because the docs provide no defaults.
+      Missing or ambiguous costs stay explicit and suppress savings.
+      Branch: `conductor/ciproxy-mvp-milestone-16-metering`.
+- [x] Unit-test each rule with hand-worked numbers.
+      Branch: `conductor/ciproxy-mvp-milestone-16-metering`.
 
 ## Milestone 17: Billing with Stripe
 

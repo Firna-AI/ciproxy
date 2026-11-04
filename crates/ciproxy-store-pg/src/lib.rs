@@ -8,6 +8,7 @@ mod error;
 mod jobs;
 mod labels;
 mod machines;
+mod metering;
 mod organization_lifecycle;
 mod organization_rows;
 mod organizations;

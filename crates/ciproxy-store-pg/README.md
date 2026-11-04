@@ -43,6 +43,17 @@ A partial unique index permits only one current registration.
 An install into another workspace creates a separate registration.
 It transfers no history or shared resource from the old workspace.
 
+Metering reads use repeatable-read transactions for coherent snapshots.
+Daily aggregates keep VM sizes and Boat costs without job identifiers.
+Timestamp aggregates keep exact starts without organization identifiers.
+Cursor writes apply caller-supplied signed corrections atomically.
+They return false for a stale cursor or a deleted source record.
+Accounting and Boat history writes lock the workspace before its children.
+Deleting organization data preserves anonymous workspace totals.
+The metering service computes the rules and supplies the retention cutoff.
+Call its refresh before deleting retained job or organization data.
+The saved retention cutoff prevents stale refreshes from restoring old dates.
+
 PgStoreFactory connects and applies pending migrations.
 One connection serializes ordinary queries across clones of the store.
 Each scale set lock owns a separate PostgreSQL connection.
@@ -107,6 +118,7 @@ CI starts the database for the existing workspace test phase.
 - [src/error.rs](src/error.rs) maps database failures to interface errors.
 - [src/scale_sets.rs](src/scale_sets.rs) owns advisory lock sessions.
 - [src/boat.rs](src/boat.rs) rotates and erases encrypted keys.
+- [src/metering](src/metering) stores cost histories and accounting deltas.
 - [tests/store](tests/store) tests the public API against PostgreSQL.
 
 ### Related Docs
@@ -118,3 +130,4 @@ CI starts the database for the existing workspace test phase.
 - [Cache](../../docs/protocol/cache.md#cache-tiers) defines handling and counts.
 - [App removal](../../docs/protocol/app-removal.md) defines removal.
 - [Workspaces](../../docs/protocol/workspaces.md) defines organization joins.
+- [Metering](../ciproxy-metering/README.md) documents trusted producer calls.

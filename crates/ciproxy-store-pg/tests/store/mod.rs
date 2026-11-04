@@ -7,6 +7,7 @@ mod jobs_tests;
 mod key_erasure_tests;
 mod lifecycle_tests;
 mod lock_tests;
+mod metering;
 mod registration_tests;
 mod retention_tests;
 mod support;
