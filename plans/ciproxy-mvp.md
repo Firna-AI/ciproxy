@@ -97,8 +97,9 @@ WebSocket over HTTPS with JSON. Reason: machines open no inbound port.
 - [x] Add the vsock messages of `ciproxy-guest`. Use tagged enums, hide
       secrets from `Debug`, and snapshot each message with `insta`.
       Branch: `conductor/ciproxy-mvp-milestone-3-protocol-crate`.
-- [ ] Add the disk rule of "Slots", after Milestone 2 writes it into
+- [x] Add the disk rule of "Slots", after Milestone 2 writes it into
       `job-routing.md`.
+      Branch: `conductor/ciproxy-mvp-milestone-3-disk-rule`.
 
 ## Milestone 4: Store
 
