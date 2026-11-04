@@ -14,6 +14,12 @@ Keep hosted behaviour separate from the public agent crates.
 Parses `--help` and `--version` with Clap.
 With no arguments, logs the shared protocol version with tracing and exits.
 It exposes no HTTP service and has no product behaviour.
+Its subscriber uses the gateway's mandatory frame-log guard.
+The guard permanently excludes unsafe WebSocket dependency targets.
+It checks native tracing and normalized log-to-tracing targets.
+Selected verbosity directives cannot override it.
+The default formatter still selects INFO and higher levels.
+The guard preserves unrelated diagnostics at their selected verbosity.
 
 ## Quick Start
 
@@ -34,6 +40,8 @@ cargo clippy --workspace --all-targets -- -D warnings
 
 - [src/main.rs](src/main.rs) is the composition root.
 - [src/cli.rs](src/cli.rs) defines the command line and startup log.
+- [Gateway logging](../ciproxy-gateway/src/logging.rs) supplies the mandatory
+  subscriber guard. Every later hosted subscriber must use this wrapper.
 - [src/_tests_/cli_tests.rs](src/_tests_/cli_tests.rs) checks version output.
 
 ### Related Docs

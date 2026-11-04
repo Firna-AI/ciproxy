@@ -46,6 +46,9 @@ It transfers no history or shared resource from the old workspace.
 Gateway queries lock the workspace before registration or token issuance.
 They serialize against last-App removal and reject a retained empty workspace.
 Registration inserts the machine, report, and hashed credential together.
+It holds the install-token row until that transaction commits.
+Independent token revocation waits for that registration before it returns.
+Registrations that validate the token after revocation cannot use it.
 The full last report uses JSONB and a connection identifier.
 Replaced sessions and removed machines cannot overwrite it.
 Desired drain and warm settings stay separate from observed report fields.

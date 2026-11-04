@@ -54,7 +54,8 @@ this close on its next contact. A caller that needs immediate removal uses
 `manage` with `MachineAction::Remove` on the gateway owner.
 Unsupported versions use code 1008 and the fixed reason
 `[gateway] unsupported protocol version`. A replaced connection uses code
-1008 and `[gateway] connection replaced`. Frame contents never enter logs.
+1008 and `[gateway] connection replaced`. Hosted logging excludes dependency
+targets that can expose frame contents at every verbosity.
 
 ### Integration boundary
 
@@ -78,6 +79,12 @@ Unsupported versions use code 1008 and the fixed reason
    Check each event's organization and runner ownership in that service.
    The callback can send a command through the same gateway. It runs
    without the gateway operation lock.
+8. Wrap every hosted tracing subscriber with `logging::protect` before
+   installation. This mandatory guard excludes `tungstenite` and
+   `tokio_tungstenite`, including their module targets and normalized
+   log-to-tracing records. User verbosity directives cannot re-enable
+   those targets. Other TRACE diagnostics remain available. Secret Debug
+   redaction cannot protect serialized frames.
 
 Route each machine's command callers and socket to the same gateway owner.
 The local mailboxes provide in-process routing. The database fences stale
@@ -118,6 +125,8 @@ cargo clippy --package ciproxy-gateway --all-targets -- -D warnings
 - [src/transport.rs](src/transport.rs) serves the agent WebSocket route.
 - [src/connections.rs](src/connections.rs) routes local commands by session.
 - [src/types.rs](src/types.rs) defines identities and machine actions.
+- [src/logging.rs](src/logging.rs) protects hosted subscribers from raw
+  dependency frame logs.
 - [tests/websocket](tests/websocket) tests the complete transport contract.
 
 ### Related Docs

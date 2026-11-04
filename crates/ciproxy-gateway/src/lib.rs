@@ -6,6 +6,7 @@ pub mod boundary;
 pub mod connections;
 pub mod error;
 pub mod gateway;
+pub mod logging;
 pub mod transport;
 pub mod types;
 

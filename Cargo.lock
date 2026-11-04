@@ -278,6 +278,7 @@ dependencies = [
 name = "ciproxy-control-plane"
 version = "0.1.0"
 dependencies = [
+ "ciproxy-gateway",
  "ciproxy-protocol",
  "clap",
  "tracing",
@@ -298,12 +299,15 @@ dependencies = [
  "futures-util",
  "getrandom 0.4.3",
  "internal-error",
+ "log",
  "serde_json",
  "sha2",
  "thiserror",
  "tokio",
  "tokio-tungstenite 0.30.0",
  "tracing",
+ "tracing-log",
+ "tracing-subscriber",
  "unimock",
  "url",
  "uuid",
