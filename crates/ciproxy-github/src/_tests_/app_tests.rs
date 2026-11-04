@@ -3,6 +3,7 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
+use ciproxy_store_interface::github_lifecycle::{GithubLifecycleTarget, LifecycleEvent};
 use ciproxy_store_interface::labels::Label;
 use ciproxy_store_interface::organizations::RepositoryAccess;
 use ciproxy_store_interface::scale_sets::ScaleSet;
@@ -11,12 +12,13 @@ use unimock::{MockFn, Unimock, matching};
 use crate::app::webhook::{AccountKind, InstallationAction};
 use crate::app::{GitHubApp, InstallAuthorityMock, InstallationOutcome, LifecycleOutputMock};
 use crate::persistence::installation::InstallationStoreMock;
+use crate::persistence::lifecycle::LifecycleStoreMock;
 use crate::rest::GitHubRestMock;
 use crate::scale_sets::{ScaleSetApi, ScaleSetApiMock, ScaleSetFactoryMock};
 
 use crate::runtime::RuntimeMock;
 
-use super::coordination::coordination;
+use super::coordination::{coordination, delivery};
 
 use super::support::{app, event, id, labels, organization, repositories};
 
@@ -52,15 +54,27 @@ async fn requester_creates_named_workspace_with_atomic_defaults_and_private_grou
         InstallationStoreMock::by_github_id
             .some_call(matching!(17))
             .returns(Ok(vec![])),
-        InstallationStoreMock::register
+        LifecycleStoreMock::register
             .some_call(matching!(_))
-            .answers(&|_, registration| {
+            .answers_arc(Arc::new(move |_, registration| {
                 assert_eq!(registration.workspace.unwrap().name, "customer");
                 assert_eq!(registration.organization, organization());
                 assert_eq!(registration.defaults, labels());
                 assert_eq!(registration.initial_admin, 41);
-                Ok(())
-            }),
+                let GithubLifecycleTarget::Active(prepared) = registration.target else {
+                    panic!("active preparation");
+                };
+                assert_eq!(prepared.repositories, repositories());
+                for set in prepared.scale_sets {
+                    observed.lock().unwrap().push((
+                        set.organization_id,
+                        set.label_id,
+                        set.github_id,
+                        set.runner_group_id,
+                    ));
+                }
+                Ok(registration.organization)
+            })),
         InstallationStoreMock::pending_admin
             .some_call(matching!(_))
             .returns(Ok(Some(41))),
@@ -81,9 +95,6 @@ async fn requester_creates_named_workspace_with_atomic_defaults_and_private_grou
                 assert_eq!(ids, [23]);
                 Ok(47)
             }),
-        InstallationStoreMock::save_repositories
-            .some_call(matching!(_, _))
-            .returns(Ok(())),
         InstallationStoreMock::scale_sets
             .some_call(matching!(_))
             .returns(Ok(vec![])),
@@ -93,24 +104,10 @@ async fn requester_creates_named_workspace_with_atomic_defaults_and_private_grou
         ScaleSetFactoryMock::for_organization
             .some_call(matching!(_))
             .returns(Ok(api)),
-        InstallationStoreMock::labels
-            .some_call(matching!(_))
-            .returns(Ok(labels())),
-        InstallationStoreMock::save_scale_set
-            .each_call(matching!(_, _))
-            .answers_arc(Arc::new(move |_, workspace_id, scale_set| {
-                assert_eq!(workspace_id, id(1));
-                observed.lock().unwrap().push((
-                    scale_set.organization_id,
-                    scale_set.label_id,
-                    scale_set.github_id,
-                    scale_set.runner_group_id,
-                ));
-                Ok(scale_set)
-            })),
         LifecycleOutputMock::changed
             .some_call(matching!(_))
             .returns(Ok(())),
+        delivery(LifecycleEvent::Active(organization())),
     )));
     assert_eq!(
         service
@@ -150,7 +147,7 @@ async fn admin_intent_uses_shared_workspace_and_replay_keeps_label_edits() {
         InstallationStoreMock::by_github_id
             .some_call(matching!(17))
             .returns(Ok(vec![existing.clone()])),
-        InstallationStoreMock::register
+        LifecycleStoreMock::register
             .some_call(matching!(_))
             .answers(&|_, registration| {
                 assert_eq!(registration.workspace, None);
@@ -159,7 +156,7 @@ async fn admin_intent_uses_shared_workspace_and_replay_keeps_label_edits() {
                     registration.organization.repositories,
                     RepositoryAccess::Selected(vec![23, 29, 101])
                 );
-                Ok(())
+                Ok(registration.organization)
             }),
         InstallationStoreMock::pending_admin
             .some_call(matching!(_))
@@ -175,9 +172,6 @@ async fn admin_intent_uses_shared_workspace_and_replay_keeps_label_edits() {
                 assert_eq!(ids, [23]);
                 Ok(47)
             }),
-        InstallationStoreMock::save_repositories
-            .some_call(matching!(_, _))
-            .returns(Ok(())),
         InstallationStoreMock::scale_sets
             .some_call(matching!(_))
             .returns(Ok(vec![ScaleSet {
@@ -193,9 +187,7 @@ async fn admin_intent_uses_shared_workspace_and_replay_keeps_label_edits() {
         InstallationStoreMock::labels
             .some_call(matching!(_))
             .returns(Ok(vec![edited])),
-        InstallationStoreMock::save_scale_set
-            .some_call(matching!(_, _))
-            .answers(&|_, _, set| Ok(set)),
+        delivery(LifecycleEvent::Active(existing.clone())),
         LifecycleOutputMock::changed
             .some_call(matching!(_))
             .returns(Ok(())),

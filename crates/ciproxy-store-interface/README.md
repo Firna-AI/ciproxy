@@ -60,6 +60,12 @@ including pending deliveries. When GitHub omitted its completion time,
 the first caller-supplied completion observation starts that period.
 Replay preserves that observation without fabricating a GitHub time.
 Trusted run facts preserve raw API fields. A branch name is not a full ref.
+GitHub lifecycle transitions save verified identity, App state, prepared
+resources, and immutable notification snapshots together. Only completed
+remote preparation permits activation. Failed delivery stays pending in
+sequence order even after organization rows change or a workspace purges.
+Consumer acceptance permits deletion. A crash before confirmation requires
+idempotent delivery. A pending-organization scan supports restart recovery.
 Verified installation snapshots save login and App state together.
 The scoped write returns the saved record. It cannot change another
 workspace or account, replace a newer installation, or revive removal.
@@ -122,7 +128,9 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 - [src/scale_sets.rs](src/scale_sets.rs) defines session lock ownership.
 - [src/jobs.rs](src/jobs.rs) defines metadata-only job records.
 - [src/github.rs](src/github.rs) defines repository snapshots and durable
-  UUID demand, including pending role and scaler deliveries.
+  UUID demand and pending role delivery.
+- [src/github_lifecycle.rs](src/github_lifecycle.rs) defines atomic App
+  transitions and immutable ordered lifecycle delivery.
 
 - [src/gateway.rs](src/gateway.rs) defines atomic registration and reports.
 

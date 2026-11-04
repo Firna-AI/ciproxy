@@ -1,6 +1,7 @@
 //! GitHub App installation, requester linkage, and lifecycle orchestration.
 
 mod coordination;
+mod delivery;
 mod installation;
 mod lifecycle;
 mod reconcile;
@@ -9,12 +10,14 @@ pub mod webhook;
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
 use ciproxy_store_interface::organizations::{Organization, RepositoryAccess};
 use uuid::Uuid;
 
 use crate::error::Result;
 use crate::installation_state::InstallationApi;
 use crate::persistence::installation::InstallationStore;
+use crate::persistence::lifecycle::LifecycleStore;
 use crate::persistence::mutation::OrganizationMutations;
 use crate::rest::GitHubRest;
 use crate::runtime::Runtime;
@@ -37,23 +40,6 @@ pub trait InstallAuthority: Send + Sync {
     ) -> Result<Option<Uuid>>;
     /// Idempotently grant the first installer the Admin role in a new workspace.
     async fn ensure_initial_admin(&self, workspace_id: Uuid, github_user_id: i64) -> Result<()>;
-}
-
-/// An organization lifecycle change, delivered after the stored state changes.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum LifecycleEvent {
-    /// Resume listeners and allow new runner starts.
-    Active(Organization),
-    /// Stop idle runners and listeners while allowing running jobs to finish.
-    Suspended(Organization),
-    /// Stop idle runners and delete idle sandboxes without calling GitHub.
-    Removed {
-        /// The removed organization's retained registration.
-        organization: Organization,
-        /// Revoke machine connections and end billing when this is true.
-        /// Retired Boat credentials remain only for running sandbox cleanup.
-        last_organization: bool,
-    },
 }
 
 /// The scaler, machine gateway, and billing services' lifecycle delivery seam.
@@ -83,6 +69,10 @@ pub enum InstallationOutcome {
 /// The complete App integration entry point used by the hosted control plane.
 #[async_trait]
 pub trait GitHubApp: Send + Sync {
+    /// Discover organizations that need lifecycle replay after a process restart.
+    async fn pending_lifecycle_organizations(&self) -> Result<Vec<i64>>;
+    /// Replay one organization's immutable events under its mutation lease.
+    async fn replay_lifecycle(&self, github_id: i64) -> Result<()>;
     /// Handle a verified installation lifecycle event.
     async fn installation(&self, event: InstallationEvent) -> Result<InstallationOutcome>;
     /// Refresh visibility and branches after repository/installation changes.
@@ -103,6 +93,8 @@ pub struct AppService {
     pub installations: Arc<dyn InstallationApi>,
     /// Installation persistence through blocking workers.
     pub store: Arc<dyn InstallationStore>,
+    /// Transactional lifecycle writes and ordered durable notification delivery.
+    pub outbox: Arc<dyn LifecycleStore>,
     /// The three-permission REST client.
     pub rest: Arc<dyn GitHubRest>,
     /// Organization-scoped scale-set APIs.
@@ -117,6 +109,12 @@ pub struct AppService {
 
 #[async_trait]
 impl GitHubApp for AppService {
+    async fn pending_lifecycle_organizations(&self) -> Result<Vec<i64>> {
+        self.outbox.organizations().await
+    }
+    async fn replay_lifecycle(&self, github_id: i64) -> Result<()> {
+        self.replay_pending_lifecycle(github_id).await
+    }
     async fn installation(&self, event: InstallationEvent) -> Result<InstallationOutcome> {
         self.handle_installation(event).await
     }

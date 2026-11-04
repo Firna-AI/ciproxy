@@ -34,6 +34,14 @@ pub(super) fn group(store: &PgStore, github_id: i64) -> Result<Option<i64>> {
 }
 
 pub(super) fn save(store: &PgStore, workspace_id: Uuid, scale_set: &ScaleSet) -> Result<ScaleSet> {
+    save_on(&mut *store.connection()?, workspace_id, scale_set).store()
+}
+
+pub(super) fn save_on(
+    connection: &mut PgConnection,
+    workspace_id: Uuid,
+    scale_set: &ScaleSet,
+) -> QueryResult<ScaleSet> {
     let row = methods::FilterDsl::filter(
         diesel::insert_into(scale_sets::table)
             .values((
@@ -53,8 +61,7 @@ pub(super) fn save(store: &PgStore, workspace_id: Uuid, scale_set: &ScaleSet) ->
         scale_sets::workspace_id.eq(workspace_id),
     )
     .returning(ScaleSetRow::as_returning())
-    .get_result::<ScaleSetRow>(&mut *store.connection()?)
-    .store()?;
+    .get_result::<ScaleSetRow>(connection)?;
     Ok(ScaleSet {
         id: row.id,
         organization_id: row.organization_id,

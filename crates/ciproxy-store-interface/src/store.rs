@@ -6,6 +6,7 @@ use crate::boat::BoatStore;
 use crate::error::Result;
 use crate::gateway::GatewayStore;
 use crate::github::GithubStore;
+use crate::github_lifecycle::GithubLifecycleStore;
 use crate::jobs::JobStore;
 use crate::labels::LabelStore;
 use crate::machines::MachineStore;
@@ -30,6 +31,7 @@ pub trait Store:
     + BoatStore
     + GatewayStore
     + GithubStore
+    + GithubLifecycleStore
 {
 }
 

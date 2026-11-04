@@ -89,6 +89,14 @@ A verified installation-state update saves the current login and App state
 in one statement and returns the saved organization. Workspace, account,
 installation, and non-removed state guards prevent stale identity writes.
 The original suspension-only API stays available to its existing callers.
+The GitHub App uses one transactional lifecycle path for registration,
+verified state, removal, and notification insertion. Prepared repository
+snapshots and scale-set bindings commit with activation. Removal captures
+credential revocation and the last-organization result in the same commit.
+Outbox events keep immutable metadata snapshots and sequence order. They
+have no cascading workspace or organization reference. Pending cleanup
+survives row reuse and retention purge. Confirmation deletes an accepted
+event. Pending-organization discovery supports replay after restart.
 
 Queries are synchronous.
 Async services must call them from blocking workers.

@@ -3,7 +3,6 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, Ordering};
 
-use ciproxy_github::app::LifecycleEvent;
 use ciproxy_github::app::webhook::{Actor, Installation, InstallationAction, InstallationEvent};
 use ciproxy_github::error;
 use ciproxy_github::installation_state::AppInstallationClient;
@@ -11,7 +10,8 @@ use ciproxy_github::persistence::StoreAdapter;
 use ciproxy_github::persistence::session::{ListenerTarget, SessionStore};
 use ciproxy_github::scale_sets::ScaleSetFactory;
 use ciproxy_store_interface::error::Error;
-use ciproxy_store_interface::github::GithubInstallationState;
+use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
+use ciproxy_store_interface::github_lifecycle::{GithubLifecycleTarget, GithubLifecycleUpdate};
 use ciproxy_store_interface::organizations::AppState;
 use reqwest::redirect::Policy;
 use reqwest::{Client, Method, Url};
@@ -117,7 +117,14 @@ async fn verified_rename_persists_active_and_suspended_state_for_new_runtime_con
             "{login}"
         );
         if suspended || action.is_some() {
-            let output = fixture.output.0.lock().unwrap().last().unwrap().clone();
+            let output = fixture
+                .output
+                .accepted
+                .lock()
+                .unwrap()
+                .last()
+                .unwrap()
+                .clone();
             let expected_output = if suspended {
                 LifecycleEvent::Suspended(expected)
             } else {
@@ -143,11 +150,13 @@ async fn verified_rename_persists_active_and_suspended_state_for_new_runtime_con
         Err(error::Error::InstallationPending)
     ));
     assert_eq!(adapter.context(target).await.unwrap().organization, saved);
-    let snapshot = GithubInstallationState {
+    let snapshot = GithubLifecycleUpdate {
         github_id: saved.github_id,
         installation_id: saved.installation_id,
         login: "must-not-be-saved".to_owned(),
-        suspended: true,
+        target: GithubLifecycleTarget::Suspended,
+        repositories: None,
+        notify: false,
     };
     let mut stale = snapshot.clone();
     stale.installation_id = 7;
@@ -161,7 +170,7 @@ async fn verified_rename_persists_active_and_suspended_state_for_new_runtime_con
         assert!(matches!(
             database
                 .store
-                .save_github_installation_state(workspace, saved.id, &state),
+                .update_github_installation(workspace, saved.id, &state),
             Err(Error::NotFound)
         ));
         assert_eq!(adapter.context(target).await.unwrap().organization, saved);
@@ -174,7 +183,7 @@ async fn verified_rename_persists_active_and_suspended_state_for_new_runtime_con
     assert!(matches!(
         database
             .store
-            .save_github_installation_state(saved.workspace_id, saved.id, &snapshot),
+            .update_github_installation(saved.workspace_id, saved.id, &snapshot),
         Err(Error::NotFound)
     ));
     assert_eq!(adapter.context(target).await.unwrap().organization, removed);

@@ -1,12 +1,23 @@
 //! Organization installation records and data-retention queries.
 
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::error::Result;
 
 /// The GitHub App state for an organization.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, strum::EnumString, strum::IntoStaticStr)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Deserialize,
+    Eq,
+    PartialEq,
+    Serialize,
+    strum::EnumString,
+    strum::IntoStaticStr,
+)]
 #[strum(serialize_all = "snake_case")]
 pub enum AppState {
     /// GitHub permits normal App access.
@@ -18,7 +29,7 @@ pub enum AppState {
 }
 
 /// The private repositories of one organization that may use ciproxy.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum RepositoryAccess {
     /// All visible private repositories, including future repositories.
     AllPrivate,
@@ -27,7 +38,7 @@ pub enum RepositoryAccess {
 }
 
 /// A current or retained GitHub registration in one workspace.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Organization {
     /// The registration identifier, preserved with this workspace's history.
     pub id: Uuid,

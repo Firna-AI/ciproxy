@@ -5,10 +5,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::labels::Label;
-use crate::organizations::Organization;
 use crate::scale_sets::ScaleSet;
-use crate::workspaces::Workspace;
 
 /// The repository metadata visible to an App installation.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -118,31 +115,8 @@ pub trait OrganizationLease: Send {
     fn check_connection(&mut self) -> Result<()>;
 }
 
-/// Identity and App state verified by an authoritative GitHub installation read.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct GithubInstallationState {
-    /// The stable GitHub organization identity.
-    pub github_id: i64,
-    /// The current installation that owns this identity.
-    pub installation_id: i64,
-    /// The current organization login used by GitHub API URLs.
-    pub login: String,
-    /// Whether GitHub currently suspends this installation.
-    pub suspended: bool,
-}
-
 /// Queries needed only by the hosted GitHub integration.
 pub trait GithubStore: Send + Sync {
-    /// Atomically save verified login and App state for this current installation.
-    ///
-    /// Wrong tenant/identity, stale installations, and removed rows return NotFound.
-    /// This operation never changes repository access or removal bookkeeping.
-    fn save_github_installation_state(
-        &self,
-        workspace_id: Uuid,
-        organization_id: Uuid,
-        state: &GithubInstallationState,
-    ) -> Result<Organization>;
     /// Wait for exclusive mutation authority over a full GitHub organization ID.
     ///
     /// This uses the two-key advisory namespace, separate from scale-set locks.
@@ -158,17 +132,6 @@ pub trait GithubStore: Send + Sync {
         organization_id: Uuid,
         run_id: i64,
     ) -> Result<Option<RunFacts>>;
-    /// Atomically create a new workspace, defaults, and its registration.
-    ///
-    /// For an existing workspace, pass None and an empty defaults list.
-    /// A failed registration creates no partial workspace or labels.
-    fn register_github_installation(
-        &self,
-        workspace: Option<&Workspace>,
-        organization: &Organization,
-        defaults: &[Label],
-        initial_admin: i64,
-    ) -> Result<()>;
     /// Read the first installer's pending role delivery, saved with its workspace.
     fn pending_initial_admin(&self, workspace_id: Uuid) -> Result<Option<i64>>;
     /// Confirm an idempotent initial Admin delivery to the role service.

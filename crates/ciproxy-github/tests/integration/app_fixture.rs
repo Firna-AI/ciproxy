@@ -1,14 +1,13 @@
 //! Controlled API boundaries around real PostgreSQL App coordination.
 
+use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
 use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use ciproxy_github::app::webhook::{Account, AccountKind};
-use ciproxy_github::app::{
-    AppService, GitHubApp, InstallAuthority, LifecycleEvent, LifecycleOutput,
-};
+use ciproxy_github::app::{AppService, GitHubApp, InstallAuthority, LifecycleOutput};
 use ciproxy_github::error::{Error, Result};
 use ciproxy_github::installation_state::{InstallationApi, InstalledApp};
 use ciproxy_github::persistence::StoreAdapter;
@@ -151,11 +150,19 @@ impl InstallAuthority for Authority {
 }
 
 #[derive(Default)]
-pub(super) struct Output(pub(super) Mutex<Vec<LifecycleEvent>>);
+pub(super) struct Output {
+    pub(super) accepted: Mutex<Vec<LifecycleEvent>>,
+    pub(super) attempts: Mutex<Vec<LifecycleEvent>>,
+    pub(super) fail_next: AtomicBool,
+}
 #[async_trait]
 impl LifecycleOutput for Output {
     async fn changed(&self, event: LifecycleEvent) -> Result<()> {
-        self.0.lock().unwrap().push(event);
+        self.attempts.lock().unwrap().push(event.clone());
+        if self.fail_next.swap(false, Ordering::SeqCst) {
+            return Err(Error::AccessUnavailable(503));
+        }
+        self.accepted.lock().unwrap().push(event);
         Ok(())
     }
 }
@@ -214,7 +221,8 @@ impl Fixture {
         Arc::new(AppService {
             leases: adapter.clone(),
             installations,
-            store: adapter,
+            store: adapter.clone(),
+            outbox: adapter,
             rest: self.remote.clone(),
             scale_sets: Arc::new(ResourceFactory(self.resources.clone())),
             authority: self.authority.clone(),

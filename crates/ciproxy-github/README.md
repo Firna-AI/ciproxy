@@ -61,10 +61,22 @@ reconcile first applies A's removal bookkeeping and cleanup output.
 It uses the trusted observation time. B then resolves retained ownership
 or an explicit target. A delayed removal of A cannot remove active B.
 
+Lifecycle state and immutable notifications commit in one transaction.
+Each organization has one increasing delivery order. A failed callback
+keeps its snapshot pending, even when a retry sees matching saved state.
+Cleanup of an old installation stays ahead of replacement activation.
+Snapshots keep their old workspace and last-organization result when a row
+is reused or purged. Only consumer acceptance permits deletion. A crash
+after acceptance can deliver the same snapshot again, so the consumer must
+be idempotent. Accepted snapshots leave the outbox at once.
+
 A first install atomically saves the workspace, its settings, its three
-default labels, its organization, and a pending first-Admin assignment.
+default labels, its organization, prepared bindings, its lifecycle event,
+and a pending first-Admin assignment.
 The Admin callback is idempotent. The store confirms it after delivery.
-A replay preserves label edits and does not recreate deleted labels.
+Remote scale-set preparation succeeds before an activation transaction
+commits. Preparation failure commits no new activation or event. A replay
+preserves label edits and does not recreate deleted labels.
 A retained reinstall reuses its workspace for 30 days, unless an Admin
 explicitly chose another workspace. It restores no revoked credential.
 A personal install returns organizations-only setup data and a removal
@@ -169,6 +181,13 @@ workers. The later control-plane runtime supplies these adapters:
   observation from the store adapter's injected `Runtime`. Replay keeps
   that observation. The GitHub completion field stays absent.
 
+The control-plane runtime calls `pending_lifecycle_organizations` after
+restart and while retrying failures. It calls `replay_lifecycle(github_id)`
+for each result independently. Replay needs no GitHub read or surviving
+registration. It takes the same organization mutation lease as webhooks.
+The runtime must keep retrying failed deliveries. This crate exposes the
+entry points and does not start a background worker itself.
+
 No adapter in this crate calls Boat.
 An owner removal cannot delete inaccessible GitHub resources.
 Suspension preserves the workspace and its credentials.
@@ -248,7 +267,9 @@ commands, fixture contracts, and cleanup for all five probes.
 - [src/registrations.rs](src/registrations.rs) creates and removes JIT
   registrations with explicit busy outcomes.
 - [src/persistence](src/persistence) keeps blocking store calls outside the
-  asynchronous services.
+  asynchronous services. Its lifecycle seam is the only App state writer.
+- [src/app/delivery.rs](src/app/delivery.rs) replays immutable lifecycle
+  notifications and confirms them after consumer acceptance.
 
 ### Related Docs
 

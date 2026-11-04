@@ -1,9 +1,32 @@
 //! Literal GitHub metadata with nanosecond assignment precision.
 
 use ciproxy_store_interface::github::{DemandPhase, GithubJob, RepositoryIdentity, RunFacts};
+use ciproxy_store_interface::github_lifecycle::{
+    GithubLifecycleTarget, GithubPreparedResources, GithubRegistration,
+};
 use ciproxy_store_interface::labels::Label;
+use ciproxy_store_interface::organizations::Organization;
 use ciproxy_store_interface::scale_sets::ScaleSet;
+use ciproxy_store_interface::workspaces::Workspace;
 use uuid::Uuid;
+
+pub(super) fn registration(
+    workspace: Option<&Workspace>,
+    organization: &Organization,
+    defaults: &[Label],
+    initial_admin: i64,
+) -> GithubRegistration {
+    GithubRegistration {
+        workspace: workspace.cloned(),
+        organization: organization.clone(),
+        defaults: defaults.to_vec(),
+        initial_admin,
+        target: GithubLifecycleTarget::Active(GithubPreparedResources {
+            repositories: vec![],
+            scale_sets: vec![],
+        }),
+    }
+}
 
 pub(super) fn demand(label: &Label, scale_set: &ScaleSet) -> GithubJob {
     GithubJob {

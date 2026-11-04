@@ -113,6 +113,7 @@ pub(super) fn app(mock: Unimock) -> AppService {
         leases: mock.clone(),
         installations: mock.clone(),
         store: mock.clone(),
+        outbox: mock.clone(),
         rest: mock.clone(),
         scale_sets: mock.clone(),
         authority: mock.clone(),

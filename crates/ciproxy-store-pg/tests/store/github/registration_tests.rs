@@ -6,6 +6,9 @@ use ciproxy_store_interface::organizations::Organization;
 use ciproxy_store_interface::workspaces::Workspace;
 use uuid::Uuid;
 
+use super::fixtures::registration;
+use ciproxy_store_interface::github_lifecycle::{GithubLifecycleTarget, GithubPreparedResources};
+
 use super::super::support::{Database, at};
 
 #[test]
@@ -23,12 +26,12 @@ fn failed_registration_rolls_back_new_workspace_and_initial_admin() {
         ..organization.clone()
     };
     assert!(matches!(
-        database.store.register_github_installation(
+        database.store.register_github_installation(&registration(
             Some(&new_workspace),
             &wrong_workspace,
             &[],
             41
-        ),
+        )),
         Err(Error::NotFound)
     ));
     assert_eq!(database.store.workspace(new_workspace.id).unwrap(), None);
@@ -68,7 +71,12 @@ fn atomic_install_preserves_first_admin_and_replay_keeps_workspace_defaults() {
     organization.installation_id ^= 1;
     let store = &database.store;
     store
-        .register_github_installation(Some(&workspace), &organization, &[label.clone()], 41)
+        .register_github_installation(&registration(
+            Some(&workspace),
+            &organization,
+            &[label.clone()],
+            41,
+        ))
         .unwrap();
     assert_eq!(
         store.workspace(workspace.id).unwrap(),
@@ -78,7 +86,7 @@ fn atomic_install_preserves_first_admin_and_replay_keeps_workspace_defaults() {
     label.size.vcpus = 6;
     store.update_label(workspace.id, &label).unwrap();
     store
-        .register_github_installation(None, &organization, &[], 99)
+        .register_github_installation(&registration(None, &organization, &[], 99))
         .unwrap();
     assert_eq!(store.labels(workspace.id).unwrap(), vec![label]);
     assert_eq!(store.pending_initial_admin(workspace.id).unwrap(), Some(41));
@@ -108,9 +116,12 @@ fn atomic_install_preserves_first_admin_and_replay_keeps_workspace_defaults() {
     store
         .record_app_removal(workspace.id, organization.id, at())
         .unwrap();
-    store
-        .register_github_installation(None, &organization, &[], 99)
-        .unwrap();
+    let mut reinstall = registration(None, &organization, &[], 99);
+    reinstall.target = GithubLifecycleTarget::Active(GithubPreparedResources {
+        repositories: repositories.clone(),
+        scale_sets: vec![],
+    });
+    store.register_github_installation(&reinstall).unwrap();
     assert_eq!(store.workspace(workspace.id).unwrap(), Some(workspace));
     assert_eq!(
         store

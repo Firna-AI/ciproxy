@@ -7,6 +7,7 @@ mod database;
 mod fake_http;
 mod installation_tests;
 mod jit_tests;
+mod lifecycle_retry_tests;
 mod listener_tests;
 mod recovery_http_tests;
 mod rename_tests;

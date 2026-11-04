@@ -9,11 +9,13 @@ use unimock::{MockFn, Unimock, matching};
 use crate::app::webhook::InstallationAction;
 use crate::app::{GitHubApp, InstallAuthorityMock, InstallationOutcome, LifecycleOutputMock};
 use crate::persistence::installation::InstallationStoreMock;
+use crate::persistence::lifecycle::LifecycleStoreMock;
 use crate::rest::GitHubRestMock;
 use crate::runtime::RuntimeMock;
 use crate::scale_sets::{ScaleSetApi, ScaleSetApiMock, ScaleSetFactoryMock};
+use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
 
-use super::coordination::coordination;
+use super::coordination::{coordination, delivery};
 
 use super::support::{app, at, context, event, id, labels, organization, repositories};
 
@@ -38,13 +40,13 @@ async fn retained_reinstall_reuses_workspace_and_preserves_shared_label_configur
             .some_call(matching!(17))
             .returns(Ok(vec![retained])),
         RuntimeMock::now.some_call(matching!()).returns(at()),
-        InstallationStoreMock::register
+        LifecycleStoreMock::register
             .some_call(matching!(_))
             .answers(&|_, registration| {
                 assert_eq!(registration.workspace, None);
                 assert_eq!(registration.defaults.len(), 0);
                 assert_eq!(registration.organization, organization());
-                Ok(())
+                Ok(registration.organization)
             }),
         InstallationStoreMock::pending_admin
             .some_call(matching!(_))
@@ -55,9 +57,6 @@ async fn retained_reinstall_reuses_workspace_and_preserves_shared_label_configur
         GitHubRestMock::restrict_runner_group
             .some_call(matching!(_, _, _, _, _))
             .returns(Ok(47)),
-        InstallationStoreMock::save_repositories
-            .some_call(matching!(_, _))
-            .returns(Ok(())),
         InstallationStoreMock::scale_sets
             .some_call(matching!(_))
             .returns(Ok(vec![context().scale_set])),
@@ -67,9 +66,7 @@ async fn retained_reinstall_reuses_workspace_and_preserves_shared_label_configur
         InstallationStoreMock::labels
             .some_call(matching!(_))
             .returns(Ok(vec![labels().remove(0)])),
-        InstallationStoreMock::save_scale_set
-            .some_call(matching!(_, _))
-            .answers(&|_, _, set| Ok(set)),
+        delivery(LifecycleEvent::Active(organization())),
         LifecycleOutputMock::changed
             .some_call(matching!(_))
             .returns(Ok(())),
@@ -106,14 +103,14 @@ async fn expired_retained_organization_joins_admin_workspace_as_new_registration
             .returns(Ok(vec![expired])),
         RuntimeMock::now.some_call(matching!()).returns(at()),
         RuntimeMock::uuid.some_call(matching!()).returns(id(5)),
-        InstallationStoreMock::register
+        LifecycleStoreMock::register
             .some_call(matching!(_))
             .answers(&|_, registration| {
                 assert_eq!(registration.workspace, None);
                 assert_eq!(registration.defaults.len(), 0);
                 assert_eq!(registration.organization.workspace_id, id(1));
                 assert_eq!(registration.organization.id, id(5));
-                Ok(())
+                Ok(registration.organization)
             }),
         InstallationStoreMock::pending_admin
             .some_call(matching!(_))
@@ -124,9 +121,6 @@ async fn expired_retained_organization_joins_admin_workspace_as_new_registration
         GitHubRestMock::restrict_runner_group
             .some_call(matching!(_, _, _, _, _))
             .returns(Ok(47)),
-        InstallationStoreMock::save_repositories
-            .some_call(matching!(_, _))
-            .returns(Ok(())),
         InstallationStoreMock::scale_sets
             .some_call(matching!(_))
             .returns(Ok(vec![context().scale_set])),
@@ -136,9 +130,7 @@ async fn expired_retained_organization_joins_admin_workspace_as_new_registration
         InstallationStoreMock::labels
             .some_call(matching!(_))
             .returns(Ok(vec![labels().remove(0)])),
-        InstallationStoreMock::save_scale_set
-            .some_call(matching!(_, _))
-            .answers(&|_, _, set| Ok(set)),
+        delivery(LifecycleEvent::Active(organization())),
         LifecycleOutputMock::changed
             .some_call(matching!(_))
             .returns(Ok(())),

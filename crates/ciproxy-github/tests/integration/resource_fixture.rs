@@ -1,6 +1,6 @@
 //! Typed remote scale-set controls for App service integration scenarios.
 
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
@@ -11,18 +11,23 @@ use ciproxy_store_interface::organizations::Organization;
 pub(super) struct Resources {
     pub(super) base_id: AtomicI64,
     pub(super) ensures: Mutex<Vec<(String, i64, Option<i64>)>>,
+    pub(super) fail_next: AtomicBool,
 }
 impl Resources {
     pub(super) fn new() -> Self {
         Self {
             base_id: AtomicI64::new(53),
             ensures: Mutex::new(vec![]),
+            fail_next: AtomicBool::new(false),
         }
     }
 }
 #[async_trait]
 impl ScaleSetApi for Resources {
     async fn ensure(&self, label: &str, group: i64, saved: Option<i64>) -> Result<i64> {
+        if self.fail_next.swap(false, Ordering::SeqCst) {
+            return Err(Error::AccessUnavailable(503));
+        }
         self.ensures
             .lock()
             .unwrap()

@@ -1,10 +1,11 @@
 //! Current GitHub state defeats delayed events without losing requester ownership.
 
+use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
 use std::sync::atomic::Ordering;
 
 use chrono::Duration;
+use ciproxy_github::app::InstallationOutcome;
 use ciproxy_github::app::webhook::{Actor, Installation, InstallationAction, InstallationEvent};
-use ciproxy_github::app::{InstallationOutcome, LifecycleEvent};
 use ciproxy_github::error::Error;
 use ciproxy_store_interface::organizations::AppState;
 
@@ -127,7 +128,7 @@ async fn delayed_suspend_follows_current_active_installation_after_unsuspend() {
         .unwrap();
     assert_eq!(organization.app_state, AppState::Active);
     assert_eq!(
-        *fixture.output.0.lock().unwrap(),
+        *fixture.output.accepted.lock().unwrap(),
         vec![
             LifecycleEvent::Active(organization.clone()),
             LifecycleEvent::Active(organization)
@@ -232,7 +233,7 @@ async fn suspended_installation_retry_delivers_pending_initial_admin_without_act
             .unwrap(),
         Some(41)
     );
-    assert_eq!(fixture.output.0.lock().unwrap().len(), 0);
+    assert_eq!(fixture.output.accepted.lock().unwrap().len(), 0);
     let result = app
         .installation(event(InstallationAction::Created, 19))
         .await;
@@ -250,7 +251,7 @@ async fn suspended_installation_retry_delivers_pending_initial_admin_without_act
         vec![saved.clone()]
     );
     assert_eq!(
-        *fixture.output.0.lock().unwrap(),
+        *fixture.output.accepted.lock().unwrap(),
         vec![LifecycleEvent::Suspended(saved)]
     );
     assert_eq!(fixture.remote.policies.lock().unwrap().len(), 0);

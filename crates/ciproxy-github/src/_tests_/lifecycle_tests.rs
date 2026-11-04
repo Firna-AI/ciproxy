@@ -1,19 +1,21 @@
 //! Removal and suspension deliver narrow idempotent lifecycle instructions.
 
+use chrono::Duration;
+use ciproxy_store_interface::github_lifecycle::GithubLifecycleTarget;
+use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
 use ciproxy_store_interface::organizations::AppState;
 use unimock::{MockFn, Unimock, matching};
 
 use crate::app::webhook::InstallationAction;
-use crate::app::{
-    GitHubApp, InstallAuthorityMock, InstallationOutcome, LifecycleEvent, LifecycleOutputMock,
-};
+use crate::app::{GitHubApp, InstallAuthorityMock, InstallationOutcome, LifecycleOutputMock};
 use crate::persistence::installation::InstallationStoreMock;
+use crate::persistence::lifecycle::LifecycleStoreMock;
 use crate::rest::GitHubRestMock;
 use crate::runtime::RuntimeMock;
 use crate::scale_sets::{ScaleSetApi, ScaleSetApiMock, ScaleSetFactoryMock};
 use std::sync::Arc;
 
-use super::coordination::{coordination, lease};
+use super::coordination::{coordination, delivery, lease};
 use crate::error::Error;
 use crate::installation_state::InstallationApiMock;
 
@@ -23,6 +25,8 @@ use super::support::{app, at, context, event, labels, organization, repositories
 async fn removal_revokes_store_state_before_last_workspace_cleanup_delivery() {
     let mut removed = organization();
     removed.app_state = AppState::Removed;
+    removed.removed_at = Some(at());
+    removed.delete_after = Some(at() + Duration::days(30));
     let service = app(Unimock::new((
         lease(),
         InstallationApiMock::for_organization
@@ -35,17 +39,26 @@ async fn removal_revokes_store_state_before_last_workspace_cleanup_delivery() {
             .some_call(matching!(19))
             .returns(Ok(Some(organization()))),
         RuntimeMock::now.some_call(matching!()).returns(at()),
-        InstallationStoreMock::remove
+        LifecycleStoreMock::remove
             .next_call(matching!(_, _))
-            .returns(Ok(())),
-        InstallationStoreMock::has_organizations
-            .some_call(matching!(_))
-            .returns(Ok(false)),
+            .answers(&|_, organization, _| {
+                let mut saved = organization.clone();
+                saved.app_state = AppState::Removed;
+                saved.removed_at = Some(at());
+                saved.delete_after = Some(at() + Duration::days(30));
+                Ok(saved)
+            }),
+        delivery(LifecycleEvent::Removed {
+            organization: removed.clone(),
+            last_organization: true,
+        }),
         LifecycleOutputMock::changed
             .next_call(matching!(_))
             .answers(&|_, event| {
                 let mut expected = organization();
                 expected.app_state = AppState::Removed;
+                expected.removed_at = Some(at());
+                expected.delete_after = Some(at() + Duration::days(30));
                 assert_eq!(
                     event,
                     LifecycleEvent::Removed {
@@ -83,10 +96,10 @@ async fn suspension_stops_idle_organization_capacity_without_revoking_workspace(
         InstallationStoreMock::by_installation
             .some_call(matching!(19))
             .returns(Ok(Some(organization()))),
-        InstallationStoreMock::save_snapshot
+        LifecycleStoreMock::update
             .some_call(matching!(_, _))
             .answers(&|_, previous, snapshot| {
-                assert!(snapshot.suspended);
+                assert!(matches!(snapshot.target, GithubLifecycleTarget::Suspended));
                 let mut saved = previous.clone();
                 saved.login = snapshot.login;
                 saved.app_state = AppState::Suspended;
@@ -95,15 +108,16 @@ async fn suspension_stops_idle_organization_capacity_without_revoking_workspace(
         InstallAuthorityMock::intended_workspace
             .some_call(matching!(41, 17))
             .returns(Ok(None)),
-        InstallationStoreMock::register
+        LifecycleStoreMock::register
             .some_call(matching!(_))
             .answers(&|_, registration| {
                 assert_eq!(registration.organization.app_state, AppState::Suspended);
-                Ok(())
+                Ok(registration.organization)
             }),
         InstallationStoreMock::pending_admin
             .some_call(matching!(_))
             .returns(Ok(None)),
+        delivery(LifecycleEvent::Suspended(suspended.clone())),
         LifecycleOutputMock::changed
             .each_call(matching!(_))
             .answers(&|_, event| {
@@ -143,10 +157,10 @@ async fn unsuspend_reconciles_access_and_resumes_organization_capacity() {
         InstallationStoreMock::by_installation
             .some_call(matching!(19))
             .returns(Ok(Some(suspended))),
-        InstallationStoreMock::save_snapshot
+        LifecycleStoreMock::update
             .some_call(matching!(_, _))
             .answers(&|_, previous, snapshot| {
-                assert!(!snapshot.suspended);
+                assert!(matches!(snapshot.target, GithubLifecycleTarget::Active(_)));
                 let mut saved = previous.clone();
                 saved.login = snapshot.login;
                 saved.app_state = AppState::Active;
@@ -158,9 +172,6 @@ async fn unsuspend_reconciles_access_and_resumes_organization_capacity() {
         GitHubRestMock::restrict_runner_group
             .some_call(matching!(_, _, _, _, _))
             .returns(Ok(47)),
-        InstallationStoreMock::save_repositories
-            .some_call(matching!(_, _))
-            .returns(Ok(())),
         InstallationStoreMock::scale_sets
             .some_call(matching!(_))
             .returns(Ok(vec![context().scale_set])),
@@ -170,9 +181,10 @@ async fn unsuspend_reconciles_access_and_resumes_organization_capacity() {
         InstallationStoreMock::labels
             .some_call(matching!(_))
             .returns(Ok(vec![labels().remove(0)])),
-        InstallationStoreMock::save_scale_set
-            .some_call(matching!(_, _))
-            .answers(&|_, _, set| Ok(set)),
+        InstallationStoreMock::pending_admin
+            .some_call(matching!(_))
+            .returns(Ok(None)),
+        delivery(LifecycleEvent::Active(organization())),
         LifecycleOutputMock::changed
             .some_call(matching!(_))
             .answers(&|_, event| {

@@ -1,10 +1,11 @@
 //! A replacement install completes missed removal before it takes ownership.
 
+use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
 use std::sync::Arc;
 
 use chrono::Duration;
+use ciproxy_github::app::InstallationOutcome;
 use ciproxy_github::app::webhook::{Actor, Installation, InstallationAction, InstallationEvent};
-use ciproxy_github::app::{InstallationOutcome, LifecycleEvent};
 use ciproxy_store_interface::boat::BoatAccount;
 use ciproxy_store_interface::machines::Machine;
 use ciproxy_store_interface::organizations::AppState;
@@ -172,7 +173,7 @@ async fn replacement_creation_before_old_deletion_revokes_old_access_before_acti
             database.store.encrypted_boat_key(id(1), id(83)).unwrap(),
             Some(EncryptedBoatKey::new(vec![4]))
         );
-        let events = fixture.output.0.lock().unwrap().clone();
+        let events = fixture.output.accepted.lock().unwrap().clone();
         assert!(
             matches!(&events[0], LifecycleEvent::Removed { organization, last_organization: true } if organization.installation_id == 19)
         );

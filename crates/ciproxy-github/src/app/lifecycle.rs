@@ -1,6 +1,6 @@
-//! Authoritative suspension and immediate verified removal under one lease.
+//! Atomic lifecycle state writes and replay even when current state already matches.
 
-use ciproxy_store_interface::github::GithubInstallationState;
+use ciproxy_store_interface::github_lifecycle::{GithubLifecycleTarget, GithubLifecycleUpdate};
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
 
 use crate::error::{Error, Result};
@@ -8,7 +8,7 @@ use crate::installation_state::InstalledApp;
 use crate::persistence::mutation::MutationLease;
 
 use super::webhook::InstallationEvent;
-use super::{AppService, InstallationOutcome, LifecycleEvent};
+use super::{AppService, InstallationOutcome};
 
 impl AppService {
     pub(super) async fn remove_installation(
@@ -18,6 +18,8 @@ impl AppService {
     ) -> Result<InstallationOutcome> {
         let Some(mut organization) = self.store.by_installation(event.installation.id).await?
         else {
+            self.deliver_lifecycle(event.installation.account.id, lease)
+                .await?;
             return Ok(InstallationOutcome::Ignored);
         };
         self.retire_installation(&mut organization, lease).await?;
@@ -30,19 +32,8 @@ impl AppService {
         lease: &dyn MutationLease,
     ) -> Result<()> {
         lease.check().await?;
-        self.store.remove(organization, self.runtime.now()).await?;
-        organization.app_state = AppState::Removed;
-        let last_organization = !self
-            .store
-            .has_organizations(organization.workspace_id)
-            .await?;
-        self.lifecycle
-            .changed(LifecycleEvent::Removed {
-                organization: organization.clone(),
-                last_organization,
-            })
-            .await?;
-        Ok(())
+        *organization = self.outbox.remove(organization, self.runtime.now()).await?;
+        self.deliver_lifecycle(organization.github_id, lease).await
     }
 
     pub(super) async fn lifecycle_event(
@@ -52,9 +43,13 @@ impl AppService {
         lease: &dyn MutationLease,
     ) -> Result<InstallationOutcome> {
         let Some(organization) = self.store.by_installation(event.installation.id).await? else {
+            self.deliver_lifecycle(event.installation.account.id, lease)
+                .await?;
             return Ok(InstallationOutcome::Ignored);
         };
         if organization.app_state == AppState::Removed {
+            self.deliver_lifecycle(organization.github_id, lease)
+                .await?;
             return Ok(InstallationOutcome::Ignored);
         }
         let organization = self
@@ -65,55 +60,54 @@ impl AppService {
 
     pub(super) async fn synchronize(
         &self,
-        mut organization: Organization,
+        organization: Organization,
         current: InstalledApp,
         access: Option<RepositoryAccess>,
         notify: bool,
         lease: &dyn MutationLease,
     ) -> Result<Organization> {
         let editing = access.is_some();
-        let desired = if current.suspended {
+        let mut desired = organization.clone();
+        desired.login = current.account.login;
+        desired.app_state = if current.suspended {
             AppState::Suspended
         } else {
             AppState::Active
         };
-        let changed =
-            organization.app_state != desired || organization.login != current.account.login;
-        if changed {
-            lease.check().await?;
-            organization = self
-                .store
-                .save_snapshot(
-                    &organization,
-                    GithubInstallationState {
-                        github_id: current.account.id,
-                        installation_id: current.id,
-                        login: current.account.login,
-                        suspended: current.suspended,
-                    },
+        if let Some(access) = &access {
+            desired.repositories = access.clone();
+        }
+        let target = if current.suspended {
+            GithubLifecycleTarget::Suspended
+        } else {
+            GithubLifecycleTarget::Active(
+                self.prepare(
+                    &desired,
+                    self.store.labels(desired.workspace_id).await?,
+                    lease,
                 )
-                .await?;
-        }
-        if desired == AppState::Active {
-            if let Some(access) = &access {
-                organization.repositories = access.clone();
-            }
-            self.reconcile(&organization, lease).await?;
-            if let Some(access) = access {
-                self.store.save_access(&organization, access).await?;
-            }
-        }
-        if changed || notify {
-            let event = if desired == AppState::Active {
-                LifecycleEvent::Active(organization.clone())
-            } else {
-                LifecycleEvent::Suspended(organization.clone())
-            };
-            self.lifecycle.changed(event).await?;
-        }
-        if desired == AppState::Suspended && editing {
+                .await?,
+            )
+        };
+        lease.check().await?;
+        let saved = self
+            .outbox
+            .update(
+                &organization,
+                GithubLifecycleUpdate {
+                    github_id: current.account.id,
+                    installation_id: current.id,
+                    login: desired.login,
+                    repositories: if current.suspended { None } else { access },
+                    target,
+                    notify,
+                },
+            )
+            .await?;
+        self.deliver_lifecycle(saved.github_id, lease).await?;
+        if current.suspended && editing {
             return Err(Error::OrganizationInactive);
         }
-        Ok(organization)
+        Ok(saved)
     }
 }

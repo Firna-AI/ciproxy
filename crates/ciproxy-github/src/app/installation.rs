@@ -1,5 +1,6 @@
 //! First installation, retained reinstall, and requester-owned workspace choice.
 
+use ciproxy_store_interface::github_lifecycle::{GithubLifecycleTarget, GithubRegistration};
 use ciproxy_store_interface::labels::{Label, WhenNothingFits};
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
 use ciproxy_store_interface::vm_size::VmSize;
@@ -7,11 +8,10 @@ use ciproxy_store_interface::workspaces::Workspace;
 
 use crate::error::{Error, Result};
 use crate::installation_state::InstalledApp;
-use crate::persistence::installation::Registration;
 use crate::persistence::mutation::MutationLease;
 
 use super::webhook::{AccountKind, InstallationAction, InstallationEvent};
-use super::{AppService, InstallationOutcome, LifecycleEvent};
+use super::{AppService, InstallationOutcome};
 
 impl AppService {
     pub(super) async fn handle_installation(
@@ -39,6 +39,8 @@ impl AppService {
             .current_installation(&event.installation.account, event.installation.id, &*lease)
             .await?;
         if current.id != event.installation.id {
+            self.deliver_lifecycle(event.installation.account.id, &*lease)
+                .await?;
             return Ok(InstallationOutcome::Ignored);
         }
         match event.action {
@@ -54,6 +56,8 @@ impl AppService {
                     self.synchronize(organization, current, None, false, &*lease)
                         .await?;
                 }
+                self.deliver_lifecycle(event.installation.account.id, &*lease)
+                    .await?;
                 Ok(InstallationOutcome::Ignored)
             }
             _ => Ok(InstallationOutcome::Ignored),
@@ -137,31 +141,28 @@ impl AppService {
             removed_at: None,
             delete_after: None,
         };
+        let target = if organization.app_state == AppState::Active {
+            let labels = if workspace.is_some() {
+                defaults.clone()
+            } else {
+                self.store.labels(workspace_id).await?
+            };
+            GithubLifecycleTarget::Active(self.prepare(&organization, labels, lease).await?)
+        } else {
+            GithubLifecycleTarget::Suspended
+        };
         lease.check().await?;
-        self.store
-            .register(Registration {
+        let organization = self
+            .outbox
+            .register(GithubRegistration {
                 workspace,
-                organization: organization.clone(),
+                organization,
                 defaults,
                 initial_admin: requester,
+                target,
             })
             .await?;
-        if let Some(user_id) = self.store.pending_admin(workspace_id).await? {
-            self.authority
-                .ensure_initial_admin(workspace_id, user_id)
-                .await?;
-            self.store.confirm_admin(workspace_id).await?;
-        }
-        if organization.app_state == AppState::Active {
-            self.reconcile(&organization, lease).await?;
-            self.lifecycle
-                .changed(LifecycleEvent::Active(organization.clone()))
-                .await?;
-        } else {
-            self.lifecycle
-                .changed(LifecycleEvent::Suspended(organization.clone()))
-                .await?;
-        }
+        self.deliver_lifecycle(github_id, lease).await?;
         Ok(InstallationOutcome::Organization(organization))
     }
 

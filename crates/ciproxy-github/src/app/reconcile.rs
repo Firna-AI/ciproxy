@@ -1,5 +1,7 @@
 //! Leased repository policy and stable organization-label resource bindings.
 
+use ciproxy_store_interface::github_lifecycle::GithubPreparedResources;
+use ciproxy_store_interface::labels::Label;
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
 use ciproxy_store_interface::scale_sets::ScaleSet;
 
@@ -14,9 +16,13 @@ impl AppService {
             return Ok(());
         };
         let Some(organization) = locked.organization else {
+            self.deliver_lifecycle(locked.current.account.id, &*locked.lease)
+                .await?;
             return Ok(());
         };
         if organization.app_state == AppState::Removed {
+            self.deliver_lifecycle(organization.github_id, &*locked.lease)
+                .await?;
             return Ok(());
         }
         self.synchronize(organization, locked.current, None, false, &*locked.lease)
@@ -36,6 +42,8 @@ impl AppService {
             return Err(Error::OrganizationInactive);
         };
         if organization.app_state == AppState::Removed {
+            self.deliver_lifecycle(organization.github_id, &*locked.lease)
+                .await?;
             return Err(Error::OrganizationInactive);
         }
         self.synchronize(
@@ -49,11 +57,12 @@ impl AppService {
         Ok(())
     }
 
-    pub(super) async fn reconcile(
+    pub(super) async fn prepare(
         &self,
         organization: &Organization,
+        labels: Vec<Label>,
         lease: &dyn MutationLease,
-    ) -> Result<()> {
+    ) -> Result<GithubPreparedResources> {
         lease.check().await?;
         let repositories = self.rest.repositories(organization.installation_id).await?;
         let allowed: Vec<i64> = repositories
@@ -84,32 +93,28 @@ impl AppService {
             )
             .await?;
         lease.check().await?;
-        self.store
-            .save_repositories(organization, repositories)
-            .await?;
         let api = self.scale_sets.for_organization(organization).await?;
-        for label in self.store.labels(organization.workspace_id).await? {
+        let mut scale_sets = Vec::new();
+        for label in labels {
             let previous = existing.iter().find(|set| set.label_id == label.id);
             lease.check().await?;
             let github_id = api
                 .ensure(&label.name, group_id, previous.map(|set| set.github_id))
                 .await?;
             lease.check().await?;
-            self.store
-                .save_scale_set(
-                    organization.workspace_id,
-                    ScaleSet {
-                        id: previous
-                            .map(|set| set.id)
-                            .unwrap_or_else(|| self.runtime.uuid()),
-                        organization_id: organization.id,
-                        label_id: label.id,
-                        github_id,
-                        runner_group_id: group_id,
-                    },
-                )
-                .await?;
+            scale_sets.push(ScaleSet {
+                id: previous
+                    .map(|set| set.id)
+                    .unwrap_or_else(|| self.runtime.uuid()),
+                organization_id: organization.id,
+                label_id: label.id,
+                github_id,
+                runner_group_id: group_id,
+            });
         }
-        Ok(())
+        Ok(GithubPreparedResources {
+            repositories,
+            scale_sets,
+        })
     }
 }

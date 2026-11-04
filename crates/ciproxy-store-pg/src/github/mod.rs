@@ -1,9 +1,9 @@
 //! Queries for atomic installation setup and durable scale-set demand.
 
 mod facts;
-mod installation_state;
 mod jobs;
 mod lease;
+mod lifecycle;
 mod registration;
 mod repositories;
 mod scale_sets;
@@ -11,26 +11,14 @@ mod scale_sets;
 use chrono::{DateTime, Utc};
 use ciproxy_store_interface::error::Result;
 use ciproxy_store_interface::github::{
-    GithubInstallationState, GithubJob, GithubStore, JobDelivery, OrganizationLease, Repository,
-    RunFacts,
+    GithubJob, GithubStore, JobDelivery, OrganizationLease, Repository, RunFacts,
 };
-use ciproxy_store_interface::labels::Label;
-use ciproxy_store_interface::organizations::Organization;
 use ciproxy_store_interface::scale_sets::ScaleSet;
-use ciproxy_store_interface::workspaces::Workspace;
 use uuid::Uuid;
 
 use crate::connection::PgStore;
 
 impl GithubStore for PgStore {
-    fn save_github_installation_state(
-        &self,
-        workspace_id: Uuid,
-        organization_id: Uuid,
-        snapshot: &GithubInstallationState,
-    ) -> Result<Organization> {
-        installation_state::save(self, workspace_id, organization_id, snapshot)
-    }
     fn lock_github_organization(&self, github_id: i64) -> Result<Box<dyn OrganizationLease>> {
         lease::acquire(self, github_id)
     }
@@ -48,16 +36,6 @@ impl GithubStore for PgStore {
     ) -> Result<Option<RunFacts>> {
         facts::lookup(self, workspace_id, organization_id, run_id)
     }
-    fn register_github_installation(
-        &self,
-        workspace: Option<&Workspace>,
-        organization: &Organization,
-        defaults: &[Label],
-        initial_admin: i64,
-    ) -> Result<()> {
-        registration::register(self, workspace, organization, defaults, initial_admin)
-    }
-
     fn pending_initial_admin(&self, workspace_id: Uuid) -> Result<Option<i64>> {
         registration::pending_admin(self, workspace_id)
     }

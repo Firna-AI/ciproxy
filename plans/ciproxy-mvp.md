@@ -286,6 +286,12 @@ each label. The scale set spike confirms it.
       Restart a listener whose saved organization login changed.
       Branch:
       `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
+- [x] Save lifecycle notifications atomically with their state changes.
+      Replay them in order and confirm each only after consumer acceptance.
+      Cover failed replacement cleanup, refresh, and suspension delivery.
+      User-approved review fix: option B, 4 November 2026.
+      Branch:
+      `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
 
 ## Milestone 7: Scaler
 

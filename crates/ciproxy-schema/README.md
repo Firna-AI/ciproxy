@@ -43,6 +43,10 @@ omitted its finish time. It does not replace that absent GitHub field.
 These records hold metadata only. They hold no runner registration secret.
 A forward M6 index supports scoped trusted run-facts lookup.
 Organization advisory leases need no persistent schema key rows.
+The lifecycle outbox stores ordered, immutable organization metadata.
+It survives organization/workspace purge until the consumer accepts it.
+It contains no key, token, JIT configuration, job content, or job log.
+Confirmed events are deleted instead of retained indefinitely.
 
 ## Quick Start
 
