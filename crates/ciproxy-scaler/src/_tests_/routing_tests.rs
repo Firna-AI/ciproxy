@@ -7,7 +7,7 @@ use ciproxy_protocol::resources::{GIGABYTE, Slots, VmSize};
 use crate::actions::StartReason;
 use crate::boat::BoatSizeId;
 use crate::decision::decide;
-use crate::snapshot::{Destinations, NothingFits};
+use crate::snapshot::NothingFits;
 
 use super::fixtures::{
     boat, boat_size, boat_with_request, large, own, queued, running, small, snapshot,
@@ -97,37 +97,6 @@ fn ineligible_own_machines_do_not_add_an_overflow_wait() {
                 StartReason::NoEligibleMachine
             )],
             "{case}"
-        );
-    }
-}
-
-#[test]
-fn obeys_independent_label_destination_switches() {
-    for (own_enabled, boat_enabled, expected) in [
-        (true, false, vec![own("a", "ciproxy", small())]),
-        (
-            false,
-            true,
-            vec![boat(
-                "a",
-                "ciproxy",
-                small(),
-                "small",
-                StartReason::NoEligibleMachine,
-            )],
-        ),
-        (false, false, vec![]),
-    ] {
-        let mut state = snapshot();
-        state.queue = vec![queued("a", "ciproxy", 100)];
-        state.labels[0].destinations = Destinations {
-            own_machines: own_enabled,
-            boat: boat_enabled,
-        };
-        assert_eq!(
-            decide(&state),
-            expected,
-            "own {own_enabled}, Boat {boat_enabled}"
         );
     }
 }

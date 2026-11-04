@@ -1,6 +1,7 @@
 //! Retire obsolete idle registrations while preserving every running job.
 
 use crate::actions::StopReason;
+use crate::size_policy::SizePolicy;
 use crate::snapshot::{Runner, RunnerState, Snapshot, WaitingJob};
 use crate::state::{Plan, idle, label_for, warm_candidate};
 
@@ -47,23 +48,31 @@ fn obsolete(snapshot: &Snapshot, runner: &Runner, own_machine: bool) -> Option<S
     {
         return Some(StopReason::DestinationDisabled);
     }
+    if !own_machine && !SizePolicy::for_label(snapshot, label).allows_boat_runner(runner.size) {
+        return Some(StopReason::SizeNoLongerAllowed);
+    }
     None
 }
 
 pub(crate) fn claim_existing(snapshot: &Snapshot, plan: &mut Plan, job: &WaitingJob) -> bool {
-    for machine in &snapshot.machines {
-        for runner in &machine.runners {
-            if (machine.connected || runner.state == RunnerState::Ready) && claim(plan, runner, job)
+    for phase in [RunnerState::Ready, RunnerState::Starting] {
+        for machine in &snapshot.machines {
+            for runner in &machine.runners {
+                if runner.state == phase
+                    && (machine.connected || phase == RunnerState::Ready)
+                    && claim(plan, runner, job)
+                {
+                    return true;
+                }
+            }
+        }
+        for sandbox in snapshot.sandboxes.iter().filter(|sandbox| sandbox.marked) {
+            if let Some(runner) = &sandbox.runner
+                && runner.state == phase
+                && claim(plan, runner, job)
             {
                 return true;
             }
-        }
-    }
-    for sandbox in snapshot.sandboxes.iter().filter(|sandbox| sandbox.marked) {
-        if let Some(runner) = &sandbox.runner
-            && claim(plan, runner, job)
-        {
-            return true;
         }
     }
     false

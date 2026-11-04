@@ -18,11 +18,17 @@ values. Each start names an organization, label, requested size, actual VM
 size, destination, and typed reason. GitHub chooses the job that a runner
 takes. A start has no job or repository assignment.
 
-The scaler counts ready runners and persisted starts before it adds
-capacity. It tries free own capacity first. It starts eligible overflow
+The scaler counts Ready runners before Starting runners across both
+destinations. It counts persisted starts before it adds capacity.
+It tries free own capacity first. It starts eligible overflow
 after the configured wait. Without an eligible own machine, it can start
 Boat at once. It selects the cheapest fitting catalog size or uses the
 label's explicit largest-size choice.
+
+New Boat starts and existing idle Boat runners share one resource size
+policy. An idle undersized fallback retires when its exception no longer
+applies. `SizeNoLongerAllowed` identifies that retirement. Account spend
+and start refusals do not retire an existing runner whose size still fits.
 
 Every own-machine start reserves slots and job disk during the decision call.
 Waiting jobs can request warm runner retirement. Each waiting job gets a
@@ -120,6 +126,7 @@ Tests use the public decision entry point with literal states and actions.
 - [src/actions.rs](src/actions.rs) defines start and retirement intents.
 - [src/boat.rs](src/boat.rs) defines catalog, refusal, and sandbox facts.
 - [src/capacity.rs](src/capacity.rs) delegates complete fit to the protocol.
+- [src/size_policy.rs](src/size_policy.rs) shares Boat resource eligibility.
 - [examples/own_machine.rs](examples/own_machine.rs) runs the public API.
 
 ### Related Docs

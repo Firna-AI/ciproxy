@@ -9,6 +9,7 @@ mod capacity;
 mod lifecycle;
 mod overflow;
 mod placement;
+mod size_policy;
 mod state;
 mod warm;
 

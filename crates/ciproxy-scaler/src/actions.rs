@@ -81,6 +81,8 @@ pub enum StopReason {
     LabelChanged,
     /// The label no longer allows this destination.
     DestinationDisabled,
+    /// The actual Boat VM size no longer meets the label's current size policy.
+    SizeNoLongerAllowed,
     /// The own machine is draining.
     MachineDraining,
     /// A waiting job needs the slots or disk held by a warm runner.
