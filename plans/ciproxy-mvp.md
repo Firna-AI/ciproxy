@@ -183,8 +183,8 @@ machine or on Boat, stop a runner, or delete a sandbox.
       supplied allocation. The snapshot builder's history and allocation
       tests belong to Milestone 13.
       Branch: `conductor/ciproxy-mvp-milestone-7-scaler`.
-- [ ] Use the shared protocol fit rule after its disk helper reaches the
-      primary branch. Check disk pressure and warm runner disk use.
+- [x] Use the shared protocol fit rule for slots and job disk. Check disk
+      pressure and warm runner disk use.
       Merge notes: `.context/ciproxy-mvp/scaler-merge-notes.md`.
       Branch: `conductor/ciproxy-mvp-milestone-7-scaler`.
 

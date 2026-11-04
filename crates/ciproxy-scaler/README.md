@@ -7,7 +7,7 @@ Depend on it when a caller needs routing decisions without external IO.
 ## Responsibilities
 
 Choose runner destinations and retire idle capacity. Reuse
-`ciproxy-protocol` IDs, VM sizes, and CPU and memory slot arithmetic.
+`ciproxy-protocol` IDs, VM sizes, and the complete resource fit rule.
 Keep GitHub, Boat, storage, clocks, and action delivery outside this crate.
 The open protocol crate does not depend on this hosted library.
 
@@ -88,10 +88,11 @@ retry times, billing recovery, key recovery, and monthly spend. It also
 applies sandbox marks, exit reports, lifetime limits, deletion, and key
 retention.
 
-Fit checks use total slots and total job disk. Starts need free slots and
-free job disk. Each VM holds its original disk until removal, including
-warm and retiring VMs. Cache reclamation and host disk measurement remain
-external.
+Total and free capacity checks use `ciproxy-protocol::resources::Resources`
+and its `fits` method. Starts need free slots and free job disk. Each VM
+holds its original disk until removal, including warm and retiring VMs.
+The scaler keeps actual and projected reservations separate. Cache
+reclamation and host disk measurement remain external.
 
 ## Quick Start
 
@@ -118,6 +119,7 @@ Tests use the public decision entry point with literal states and actions.
 - [src/snapshot.rs](src/snapshot.rs) defines the caller's workspace facts.
 - [src/actions.rs](src/actions.rs) defines start and retirement intents.
 - [src/boat.rs](src/boat.rs) defines catalog, refusal, and sandbox facts.
+- [src/capacity.rs](src/capacity.rs) delegates complete fit to the protocol.
 - [examples/own_machine.rs](examples/own_machine.rs) runs the public API.
 
 ### Related Docs

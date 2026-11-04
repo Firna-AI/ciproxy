@@ -1,6 +1,6 @@
 //! CPU, memory, and job-disk reservations on one own machine.
 
-use ciproxy_protocol::resources::{Slots, VmSize};
+use ciproxy_protocol::resources::{Resources, Slots, VmSize};
 
 use crate::snapshot::{Label, Machine};
 
@@ -38,15 +38,21 @@ impl Usage {
     }
 
     pub(crate) fn fits(self, machine: &Machine, size: VmSize) -> bool {
-        machine.capacity.0.saturating_sub(self.slots) >= Slots::for_vm(size).0
-            && machine.disk_budget_bytes.saturating_sub(self.disk_bytes) >= size.disk_bytes
+        Resources {
+            slots: Slots(machine.capacity.0.saturating_sub(self.slots)),
+            job_disk_bytes: machine.disk_budget_bytes.saturating_sub(self.disk_bytes),
+        }
+        .fits(size)
     }
 }
 
 pub(crate) fn eligible(machine: &Machine, label: &Label) -> bool {
+    let capacity = Resources {
+        slots: machine.capacity,
+        job_disk_bytes: machine.disk_budget_bytes,
+    };
     label.destinations.own_machines
         && machine.connected
         && !machine.draining
-        && machine.capacity.fits(Slots::for_vm(label.size))
-        && machine.disk_budget_bytes >= label.size.disk_bytes
+        && capacity.fits(label.size)
 }
