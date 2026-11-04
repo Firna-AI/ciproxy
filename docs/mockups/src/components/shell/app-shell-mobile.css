@@ -1,0 +1,99 @@
+/* Mobile: a top bar with the organization, the page, and a bottom tab bar. */
+
+.m-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.m-top {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 52px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-surface);
+}
+
+.m-org {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.m-divider {
+  width: 1px;
+  height: 18px;
+  background: currentColor;
+  opacity: 0.22;
+  transform: rotate(20deg);
+}
+
+.m-org-name {
+  font-weight: 500;
+}
+
+.m-chevron {
+  margin-left: -4px;
+  color: var(--c-nav-icon);
+}
+
+.m-setup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-surface);
+  font-weight: 500;
+}
+
+.m-setup-label {
+  flex: 1;
+}
+
+.m-count {
+  color: var(--c-nav-label);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.m-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 16px 24px;
+}
+
+.m-tabs {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding: 6px 4px 10px;
+  border-top: 1px solid var(--c-border);
+  background: var(--c-surface);
+}
+
+.m-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 0;
+  color: var(--c-muted);
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 14px;
+}
+
+.m-tab.is-active {
+  color: var(--c-ink);
+}

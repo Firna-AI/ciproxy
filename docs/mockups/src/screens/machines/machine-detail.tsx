@@ -1,7 +1,7 @@
 // One own machine: its slots and warm runners, health, cache, and the monthly
 // cost that the savings report uses.
 
-import { CircleCheck, CircleX, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
 
 import { Action, TextLink } from "../../components/actions.tsx";
@@ -15,9 +15,15 @@ import {
 } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
 import { AppShell } from "../../components/shell/app-shell.tsx";
-import { MachineStatusBadge } from "../../components/status.tsx";
-import { formatMoneyCents } from "../../fixtures/format.ts";
-import { ax42, machineScenes, type Machine } from "../../fixtures/machines.ts";
+import { MachineStatusLabel } from "../../components/status.tsx";
+import { dotJoin, monthly, unbroken } from "../../fixtures/format.ts";
+import {
+  ax42,
+  ax42Size,
+  machineScenes,
+  type Machine,
+} from "../../fixtures/machines.ts";
+import { MachineHealth } from "./machine-health.tsx";
 import { MachineSlots } from "./machine-slots.tsx";
 import "./machines.css";
 
@@ -30,19 +36,6 @@ function machineOf(state: MachineState): Machine {
   const machine = machineScenes[scene][index];
   if (!machine) throw new Error(`No machine for ${state}`);
   return machine;
-}
-
-function Check({ ok, children }: { ok: boolean; children: string }) {
-  return (
-    <span className="status-label">
-      {ok ? (
-        <CircleCheck size={15} className="state-passed" />
-      ) : (
-        <CircleX size={15} className="state-failed" />
-      )}
-      {children}
-    </span>
-  );
 }
 
 export function MachineDetailScreen({
@@ -59,8 +52,8 @@ export function MachineDetailScreen({
       <PageHeader
         crumbs={[{ label: "Machines", to: paths.machines }]}
         title={machine.name}
-        status={<MachineStatusBadge status={machine.status} />}
-        subtitle={`${ax42.cpu} · ${ax42.threads} threads · ${ax42.memoryGb} GB · ${ax42.disk}`}
+        status={<MachineStatusLabel status={machine.status} />}
+        subtitle={dotJoin(ax42.cpu, ax42Size, ax42.disk)}
         actions={
           offline ? (
             <Action tone="danger">Remove machine</Action>
@@ -82,8 +75,8 @@ export function MachineDetailScreen({
       ) : null}
       {offline ? (
         <Notice tone="danger" title={`${machine.name} is offline`}>
-          The last heartbeat came 14 minutes ago. Check that the server is on
-          and can reach ciproxy.dev.
+          ciproxy lost contact with it {unbroken("14 minutes")} ago. Check that
+          the machine is on and can reach ciproxy.dev.
         </Notice>
       ) : null}
       <div className="grid-2">
@@ -101,7 +94,8 @@ export function MachineDetailScreen({
               <MachineSlots slots={machine.slots} />
             )}
             <p className="caption">
-              6 slots of 2 vCPU and 8 GB. A larger shape takes several slots.
+              6 slots of {unbroken("2 vCPU")} and {unbroken("8 GB")}. A larger
+              shape takes several slots.
             </p>
             <Quantity
               label="Warm runners"
@@ -111,22 +105,7 @@ export function MachineDetailScreen({
           </div>
         </Panel>
         <div className="stack">
-          <Panel title="Health">
-            <DetailList>
-              <DetailRow label="Heartbeat">
-                <Check ok={!offline}>{machine.lastSeen}</Check>
-              </DetailRow>
-              <DetailRow label="KVM">
-                <Check ok>Ready</Check>
-              </DetailRow>
-              <DetailRow label="Disk">
-                <Check ok>312 GB free</Check>
-              </DetailRow>
-              <DetailRow label="Agent">
-                <Check ok>{`${ax42.agent} · up to date`}</Check>
-              </DetailRow>
-            </DetailList>
-          </Panel>
+          <MachineHealth machine={machine} />
           <Panel title="Cache">
             <div className="stack">
               <Meter
@@ -136,9 +115,9 @@ export function MachineDetailScreen({
                 value={`${machine.cacheUsedGb} of ${machine.cacheSizeGb} GB`}
               />
               <DetailList>
-                <DetailRow label="Hits, last 7 days">91%</DetailRow>
+                <DetailRow label="Cache hits, 7 days">91%</DetailRow>
                 <DetailRow label="Docker disks">
-                  3 repositories · 96 GB
+                  {dotJoin("3 repositories", unbroken("96 GB"))}
                 </DetailRow>
               </DetailList>
             </div>
@@ -146,9 +125,7 @@ export function MachineDetailScreen({
           <Panel title="Cost">
             <div className="spread">
               <div className="stack-tight">
-                <p className="strong num">
-                  {formatMoneyCents(ax42.monthlyCost)} a month
-                </p>
+                <p className="strong num">{monthly(ax42.monthlyCost)}</p>
                 <p className="caption">The savings report uses this cost.</p>
               </div>
               <Action icon={Pencil} size="sm">

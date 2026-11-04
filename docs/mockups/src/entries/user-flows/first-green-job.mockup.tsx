@@ -6,7 +6,7 @@ import { planDoc } from "../../components/state-schema.ts";
 export const firstGreenJob = defineUseCase({
   title: "From sign-in to the first green job",
   description:
-    "Cal Moore signs in on 1 November 2026, installs the GitHub App on mokly-ai, adds one Hetzner server with one command, connects Boat, and sees the first job pass on the own machine.",
+    "Cal Moore signs in on 1 September 2026, installs the GitHub App on mokly-ai, adds one Hetzner machine with one command, connects Boat, and sees the first job pass on the own machine.",
   relatedDocs: [planDoc],
   steps: [
     {

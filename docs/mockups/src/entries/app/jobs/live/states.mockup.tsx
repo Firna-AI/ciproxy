@@ -26,7 +26,7 @@ export const spendLimit = defineScreen({
   slug: "spend-limit",
   title: "Boat reached the spend limit",
   description:
-    "Boat spend reached the monthly limit that the customer set. Jobs keep running on own machines and wait longer; Raise the limit opens the overflow settings.",
+    "Boat spend reached the monthly limit that the customer set. Jobs run on own machines only and wait longer for a slot; Raise the limit opens the overflow settings.",
   relatedDocs: [planDoc],
   address,
   render: (_props, context) => (
@@ -38,7 +38,7 @@ export const startsPassed = defineScreen({
   slug: "starts-passed",
   title: "Free starts passed",
   description:
-    "On 4 November mokly-ai, still on Free, passes its 2,000 starts. Jobs keep running; the banner on every page offers Team, which covers the use.",
+    "On 4 September mokly-ai, still on Free, passes its 2,000 starts. Jobs keep running; the banner on every page offers Team, which covers the use.",
   relatedDocs: [planDoc],
   address,
   useCasePaths: [paths.flowFreeToTeam],

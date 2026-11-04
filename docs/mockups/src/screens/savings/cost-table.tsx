@@ -1,10 +1,10 @@
-// The parts of the ciproxy cost: own machines, Boat overflow, and the plan.
+// The parts of the ciproxy cost: own machines, Boat overflow, and the plan. A
+// money column, so every amount shows cents.
 
-import { TableCell } from "@firna/ui/table";
-
-import { DataTable } from "../../components/data-table.tsx";
+import { DataTable, type Column } from "../../components/data-table.tsx";
 import { formatCount, formatMoneyCents } from "../../fixtures/format.ts";
 import { savings, yourCost } from "../../fixtures/savings.ts";
+import { ownMachines } from "../../fixtures/tiers.ts";
 
 type CostRow = {
   key: string;
@@ -20,7 +20,7 @@ function rows(missing: boolean): CostRow[] {
   return [
     {
       key: "own",
-      label: "3 own machines",
+      label: ownMachines(3),
       jobs: formatCount(starts.own),
       minutes: formatCount(minutes.own),
       cost: missing ? "Not set" : formatMoneyCents(cost.own),
@@ -63,11 +63,11 @@ function cellValue(row: CostRow, key: string): string {
   }
 }
 
-const columns = [
+const columns: readonly Column[] = [
   { key: "label", label: "", flex: 3 },
-  { key: "jobs", label: "Jobs", flex: 2, align: "right" as const },
-  { key: "minutes", label: "Minutes", flex: 2, align: "right" as const },
-  { key: "cost", label: "Cost", flex: 2, align: "right" as const },
+  { key: "jobs", label: "Jobs", flex: 2, align: "right" },
+  { key: "minutes", label: "Minutes", flex: 2, align: "right" },
+  { key: "cost", label: "Cost", flex: 2, align: "right" },
 ];
 
 export function CostTable({ missing }: { missing: boolean }) {
@@ -76,16 +76,11 @@ export function CostTable({ missing }: { missing: boolean }) {
       columns={columns}
       rows={rows(missing)}
       rowKey={(row) => row.key}
-      size="sm"
-      cell={(row, key) => {
-        const value = cellValue(row, key);
-        const numeric = key !== "label";
-        return (
-          <TableCell bold={row.total} align={numeric ? "right" : "left"}>
-            <span className={numeric ? "num" : undefined}>{value}</span>
-          </TableCell>
-        );
-      }}
+      cell={(row, key) => (
+        <span className={row.total ? "cost-total" : undefined}>
+          {cellValue(row, key)}
+        </span>
+      )}
     />
   );
 }

@@ -23,9 +23,9 @@ export function SignInScreen({
       footer="By signing in, you agree to the ciproxy Terms and Privacy policy."
     >
       <div className="stack-tight">
-        <h1 className="auth-title">Run GitHub Actions on your own servers</h1>
+        <h1 className="auth-title">Run GitHub Actions on your own machines</h1>
         <p className="auth-lead">
-          ciproxy starts each job on your servers first, and on Boat when they
+          ciproxy starts each job on your machines first, and on Boat when they
           are busy.
         </p>
       </div>

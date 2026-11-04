@@ -1,7 +1,6 @@
 // The own machines of the organization, their slots, warm runners, health,
 // and cache, and the Boat account that takes overflow.
 
-import type { ReactNode } from "react";
 import { Plus, Server } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
 
@@ -11,17 +10,17 @@ import { Kpi, KpiRow } from "../../components/kpis.tsx";
 import { PageHeader, Panel } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
 import { AppShell } from "../../components/shell/app-shell.tsx";
+import { usageBanner } from "../../components/usage-banner.tsx";
+import { unbroken } from "../../fixtures/format.ts";
 import {
   ax42,
   countSlots,
   machineScenes,
   type MachineScene,
 } from "../../fixtures/machines.ts";
-import { machineTrends } from "../../fixtures/trends.ts";
 import { MachineTable, LoadingMachineTable } from "./machine-table.tsx";
 import { OverflowPanel } from "./overflow-panel.tsx";
 import "./machines.css";
-import "./machines-dir.css";
 
 export const machinesStates = [
   "steady",
@@ -37,26 +36,10 @@ const sceneOf: Record<MachinesState, MachineScene> = {
   steady: "steady",
   empty: "steady",
   offline: "offline",
-  "over-limit": "fourNodes",
+  "over-limit": "fourMachines",
   loading: "steady",
   error: "steady",
 };
-
-function overLimitBanner(): ReactNode {
-  return (
-    <Notice
-      tone="warning"
-      title="4 own nodes on Team, which includes 3"
-      actions={
-        <LinkAction to={paths.usageOverNodes} tone="primary" size="sm">
-          Add a node
-        </LinkAction>
-      }
-    >
-      Jobs keep running on all four. An extra node costs $20 a month.
-    </Notice>
-  );
-}
 
 export function MachinesScreen({
   viewport,
@@ -74,7 +57,11 @@ export function MachinesScreen({
       setup={
         state === "empty" ? { done: 1, total: 4, active: false } : undefined
       }
-      banner={state === "over-limit" ? overLimitBanner() : undefined}
+      banner={
+        state === "over-limit"
+          ? usageBanner("over-machines", "other")
+          : undefined
+      }
     >
       <PageHeader
         title="Machines"
@@ -96,8 +83,8 @@ export function MachinesScreen({
             </LinkAction>
           }
         >
-          It stopped sending heartbeats 14 minutes ago. New jobs run on your
-          other machines and on Boat.
+          ciproxy lost contact with it {unbroken("14 minutes")} ago. New jobs
+          run on your other machines and on Boat.
         </Notice>
       ) : null}
       <MachinesBody viewport={viewport} state={state} machines={machines} />
@@ -117,7 +104,7 @@ function MachinesBody({
   if (state === "error") {
     return (
       <Panel>
-        <ReadFailure retry={paths.machines} />
+        <ReadFailure subject="machines" retry={paths.machines} />
       </Panel>
     );
   }
@@ -133,8 +120,8 @@ function MachinesBody({
             </LinkAction>
           }
         >
-          Run one command on a Linux server. Jobs start there first, and on Boat
-          when it is busy.
+          Run one command on a Linux machine. Jobs start there first, and on
+          Boat when it is busy.
         </StateBlock>
       </Panel>
     );
@@ -142,13 +129,12 @@ function MachinesBody({
   if (state === "loading") {
     return (
       <Panel title="Own machines" flush>
-        <LoadingMachineTable />
+        <LoadingMachineTable viewport={viewport} />
       </Panel>
     );
   }
   const online = machines.filter((machine) => machine.status !== "offline");
   const slots = online.length * ax42.slotsTotal;
-  const trends = state === "steady" ? machineTrends.steady : undefined;
   return (
     <>
       <KpiRow>
@@ -157,18 +143,12 @@ function MachinesBody({
           label="Slots in use"
           value={countSlots(machines, "busy")}
           valueFormat={(value) => `${value} of ${slots}`}
-          trend={trends?.busySlots}
         />
-        <Kpi
-          label="Warm runners"
-          value={countSlots(machines, "warm")}
-          trend={trends?.warmRunners}
-        />
+        <Kpi label="Warm runners" value={countSlots(machines, "warm")} />
         <Kpi
           label="Cache hits, 7 days"
           value={91}
           valueFormat={(value) => `${value}%`}
-          trend={trends?.cacheHits}
         />
       </KpiRow>
       <Panel title="Own machines" flush>

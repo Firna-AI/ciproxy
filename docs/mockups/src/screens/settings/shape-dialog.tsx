@@ -74,7 +74,13 @@ export function ShapeDialog({ tooLarge }: { tooLarge: boolean }) {
         value={!tooLarge}
         disabled={tooLarge}
       />
-      <Toggle label="Boat" caption="When your machines are busy" value />
+      <Toggle
+        label="Boat"
+        caption={
+          tooLarge ? "Every job with this label" : "When your machines are busy"
+        }
+        value
+      />
     </Dialog>
   );
 }

@@ -1,5 +1,5 @@
-// Plan and usage: the tier, the starts and own nodes of the period against the
-// tier, the add-ons, and the way to the Stripe billing portal.
+// Plan and usage: the tier, the starts and own machines of the period against
+// the tier, the add-ons, and the way to the Stripe billing portal.
 
 import { ExternalLink } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -11,15 +11,21 @@ import { Meter } from "../../components/figures.tsx";
 import { PageHeader, Panel } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
 import { AppShell } from "../../components/shell/app-shell.tsx";
-import { formatCount, formatMoney } from "../../fixtures/format.ts";
-import { addOnPrices, tiers } from "../../fixtures/tiers.ts";
+import { usageBanner } from "../../components/usage-banner.tsx";
+import { dotJoin, formatCount, monthly } from "../../fixtures/format.ts";
+import {
+  addOnPrices,
+  ownMachines,
+  startsText,
+  tiers,
+} from "../../fixtures/tiers.ts";
 import {
   usageScenes,
   type Usage,
   type UsageScene,
 } from "../../fixtures/usage.ts";
 import { AddOns } from "./add-ons.tsx";
-import { usageBanner, usageNotice } from "./usage-notices.tsx";
+import { usageNotice } from "./usage-notices.tsx";
 import "./billing.css";
 
 export type PlanUsageState = UsageScene | "loading" | "error";
@@ -40,12 +46,12 @@ export function PlanUsageScreen({
       viewport={viewport}
       tier={usage.tier}
       active="billing"
-      banner={system ? undefined : usageBanner(scene, usage)}
+      banner={system ? undefined : usageBanner(scene, "billing")}
     >
       <PageHeader title="Plan and usage" />
       {state === "error" ? (
         <Panel>
-          <ReadFailure retry={paths.billing} />
+          <ReadFailure subject="plan and usage" retry={paths.billing} />
         </Panel>
       ) : state === "loading" ? (
         <LoadingUsage />
@@ -73,12 +79,11 @@ function CurrentPlan({ usage }: { usage: Usage }) {
           <p className="plan-name">{tier.name}</p>
           <p className="muted">
             {paid
-              ? `${formatMoney(tier.price)} a month · renews on ${usage.renews}`
-              : "$0"}
+              ? dotJoin(monthly(tier.price), `renews on ${usage.renews}`)
+              : monthly(tier.price)}
           </p>
           <p className="small">
-            {formatCount(tier.starts)} starts and {tier.nodes} own{" "}
-            {tier.nodes === 1 ? "node" : "nodes"} a month
+            {startsText(tier.starts)} a month and {ownMachines(tier.machines)}
           </p>
         </div>
         <div className="row-wrap">
@@ -100,12 +105,12 @@ function CurrentPlan({ usage }: { usage: Usage }) {
   );
 }
 
-/** The included starts and nodes: the tier plus the saved add-ons. */
+/** The included starts and machines: the tier plus the saved add-ons. */
 function limits(usage: Usage) {
   const tier = tiers[usage.tier];
   return {
     starts: tier.starts + usage.extraStarts * addOnPrices.startsBlock,
-    nodes: tier.nodes + usage.extraNodes,
+    machines: tier.machines + usage.extraMachines,
   };
 }
 
@@ -113,7 +118,7 @@ function UsagePanel({ usage }: { usage: Usage }) {
   const limit = limits(usage);
   const startsOver = usage.starts > limit.starts;
   const startsNear = usage.projected > limit.starts;
-  const nodesOver = usage.nodes > limit.nodes;
+  const machinesOver = usage.machines > limit.machines;
   return (
     <Panel title="This period">
       <div className="stack">
@@ -131,14 +136,14 @@ function UsagePanel({ usage }: { usage: Usage }) {
           }
         />
         <Meter
-          label="Own nodes"
-          used={usage.nodes}
-          max={limit.nodes}
-          tone={nodesOver ? "warning" : "normal"}
-          value={`${usage.nodes} of ${limit.nodes}`}
+          label="Own machines"
+          used={usage.machines}
+          max={limit.machines}
+          tone={machinesOver ? "warning" : "normal"}
+          value={`${usage.machines} of ${limit.machines}`}
           detail={
-            nodesOver
-              ? `${usage.nodes - limit.nodes} over. Every node runs jobs.`
+            machinesOver
+              ? `${usage.machines - limit.machines} over. Every machine runs jobs.`
               : undefined
           }
         />

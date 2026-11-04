@@ -26,7 +26,8 @@ export const machine = defineScreen({
     {
       slug: "offline",
       title: "Offline",
-      description: "hetzner-ax42-3 stopped sending heartbeats 14 minutes ago.",
+      description:
+        "ciproxy lost contact with hetzner-ax42-3 14 minutes ago. Health shows the other checks with their last values, in grey.",
       address: orgAddress("machines/hetzner-ax42-3"),
       props: { state: "offline" },
     },

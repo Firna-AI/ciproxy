@@ -1,26 +1,32 @@
 // Compare the three tiers and choose one. The tier that covers the recent use
-// carries a badge; the current tier cannot be chosen again.
+// carries a tag; the current tier cannot be chosen again.
 
 import { Check } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
-import { Badge } from "@firna/ui/badge";
 
 import { Action, LinkAction } from "../../components/actions.tsx";
 import { PageHeader } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
 import { AppShell } from "../../components/shell/app-shell.tsx";
-import { formatCount, formatMoney } from "../../fixtures/format.ts";
+import { Tag } from "../../components/status.tsx";
+import { formatCount, formatMoney, monthly } from "../../fixtures/format.ts";
 import type { TierKey } from "../../fixtures/org.ts";
 import {
+  addOnPrices,
   everyTier,
+  ownMachines,
+  startsText,
   tierOrder,
   tiers,
   type Tier,
 } from "../../fixtures/tiers.ts";
+import { freePeriodEnd, usageScenes } from "../../fixtures/usage.ts";
 import "./billing.css";
 
 export const plansStates = ["from-free", "on-team"] as const;
 export type PlansState = (typeof plansStates)[number];
+
+const freeUse = usageScenes["free-over"];
 
 const context: Record<
   PlansState,
@@ -29,18 +35,19 @@ const context: Record<
   "from-free": {
     current: "free",
     covers: "team",
-    use: "This month so far: 2,214 starts on 1 own node. At this pace, about 18,200 starts by 30 November.",
+    use: `This month so far: ${formatCount(freeUse.starts)} starts on ${ownMachines(freeUse.machines)}. At this pace, about ${formatCount(freeUse.projected)} starts by ${freePeriodEnd}.`,
   },
   "on-team": {
     current: "team",
     covers: "team",
-    use: "Your last 30 days: 17,772 starts on 3 own nodes.",
+    use: `Your last 30 days: ${formatCount(17_772)} starts on ${ownMachines(3)}.`,
   },
 };
 
+/** Free lists all it includes; each tier above lists what it adds. */
 function features(tier: Tier): { lead: string; items: readonly string[] } {
   if (tier.key === "free")
-    return { lead: "Every plan has", items: [...everyTier, ...tier.adds] };
+    return { lead: "Free includes", items: [...everyTier, ...tier.adds] };
   const below = tier.key === "team" ? "Free" : "Team";
   return { lead: `Everything in ${below}, plus`, items: tier.adds };
 }
@@ -99,13 +106,9 @@ function TierCard({
       <div className="spread">
         <h2 className="tier-name">{tier.name}</h2>
         {current ? (
-          <Badge tone="neutral" size="sm">
-            Current plan
-          </Badge>
+          <Tag>Current plan</Tag>
         ) : covers ? (
-          <Badge tone="primary" size="sm">
-            Covers your use
-          </Badge>
+          <Tag tone="accent">Covers your use</Tag>
         ) : null}
       </div>
       <p className="tier-price">
@@ -114,7 +117,8 @@ function TierCard({
       </p>
       <p className="small">
         <strong>{formatCount(tier.starts)}</strong> starts a month ·{" "}
-        <strong>{tier.nodes}</strong> own {tier.nodes === 1 ? "node" : "nodes"}
+        <strong>{tier.machines}</strong> own{" "}
+        {tier.machines === 1 ? "machine" : "machines"}
       </p>
       <TierAction tier={tier} current={current} covers={covers} />
       <div className="stack-tight">
@@ -122,7 +126,7 @@ function TierCard({
         <ul className="tier-features">
           {list.items.map((item) => (
             <li key={item}>
-              <Check size={15} className="state-passed" />
+              <Check size={14} className="tier-check" />
               <span className="small">{item}</span>
             </li>
           ))}
@@ -130,7 +134,9 @@ function TierCard({
       </div>
       {tier.addOns ? (
         <p className="caption tier-addons">
-          Add 10,000 starts for $10 or an own node for $20 a month.
+          Add {startsText(addOnPrices.startsBlock)} for{" "}
+          {monthly(addOnPrices.startsPrice)}, or an extra own machine for{" "}
+          {monthly(addOnPrices.machinePrice)}.
         </p>
       ) : null}
     </section>

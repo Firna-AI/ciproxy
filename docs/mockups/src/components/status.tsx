@@ -1,97 +1,73 @@
-// Status labels. Each state carries an icon and a word, never colour alone.
-// Inside a design direction, the state is a dot beside its word.
+// Status: a small dot beside its word, never colour alone and never a pill.
+// Machine names use the monospace face. A tag is a small bordered label, such
+// as the tier beside the organization or the current plan.
 
-import {
-  CircleCheck,
-  CircleSlash,
-  CircleX,
-  Cloud,
-  Hourglass,
-  Server,
-} from "lucide-react";
-import { Badge } from "@firna/ui/badge";
-import { Spinner } from "@firna/ui/spinner";
+import type { ReactNode } from "react";
+import { Cloud, Server } from "lucide-react";
+import { StatusDot } from "@firna/ui/status-dot";
 
 import type { JobState, Where } from "../fixtures/jobs.ts";
 import type { MachineStatus } from "../fixtures/machines.ts";
-import { useDirection } from "../theme/direction.ts";
-import { theme } from "../theme/firna.tsx";
-import {
-  Dot,
-  DotLabel,
-  jobTones,
-  machineTones,
-  WhereText,
-} from "./status-dots.tsx";
+import { statusColors, type StatusTone } from "../theme/graphite.ts";
 import "./status.css";
 
-const jobStateLabels: Record<JobState, string> = {
-  running: "Running",
-  waiting: "Waiting",
-  passed: "Passed",
-  failed: "Failed",
-  cancelled: "Cancelled",
+type StateLook = { label: string; tone: StatusTone };
+
+const jobStates: Readonly<Record<JobState, StateLook>> = {
+  running: { label: "Running", tone: "run" },
+  waiting: { label: "Waiting", tone: "warn" },
+  passed: { label: "Passed", tone: "ok" },
+  failed: { label: "Failed", tone: "err" },
+  cancelled: { label: "Cancelled", tone: "idle" },
 };
 
-export function JobStateIcon({ state }: { state: JobState }) {
-  const direction = useDirection();
-  if (direction) {
-    return (
-      <Dot
-        tone={jobTones[state]}
-        live={state === "running"}
-        label={jobStateLabels[state]}
-      />
-    );
-  }
-  switch (state) {
-    case "running":
-      return (
-        <Spinner
-          size={14}
-          color={theme.colors.primary}
-          accessibilityLabel="Running"
-        />
-      );
-    case "waiting":
-      return (
-        <Hourglass size={15} className="state-waiting" aria-label="Waiting" />
-      );
-    case "passed":
-      return (
-        <CircleCheck size={16} className="state-passed" aria-label="Passed" />
-      );
-    case "failed":
-      return <CircleX size={16} className="state-failed" aria-label="Failed" />;
-    case "cancelled":
-      return (
-        <CircleSlash
-          size={16}
-          className="state-cancelled"
-          aria-label="Cancelled"
-        />
-      );
-  }
-}
+const machineStates: Readonly<Record<MachineStatus, StateLook>> = {
+  healthy: { label: "Healthy", tone: "ok" },
+  draining: { label: "Draining", tone: "warn" },
+  offline: { label: "Offline", tone: "err" },
+};
 
-export function JobStateLabel({ state }: { state: JobState }) {
-  const direction = useDirection();
-  if (direction) {
-    return (
-      <DotLabel tone={jobTones[state]} live={state === "running"}>
-        {jobStateLabels[state]}
-      </DotLabel>
-    );
-  }
+/** The dot alone. Pass a label when no word beside it names the state. */
+export function Dot({ tone, label }: { tone: StatusTone; label?: string }) {
   return (
-    <span className="status-label">
-      <JobStateIcon state={state} />
-      <span>{jobStateLabels[state]}</span>
+    <span className="dot">
+      <StatusDot color={statusColors[tone]} size="sm" label={label} />
     </span>
   );
 }
 
-/** Where a job ran or runs: an own machine and its slot, or Boat. */
+export function DotLabel({
+  tone,
+  children,
+}: {
+  tone: StatusTone;
+  children: ReactNode;
+}) {
+  return (
+    <span className="dot-label">
+      <Dot tone={tone} />
+      <span>{children}</span>
+    </span>
+  );
+}
+
+/** The state of a job as a dot that names itself, for a row that leads with it. */
+export function JobStateDot({ state }: { state: JobState }) {
+  const { label, tone } = jobStates[state];
+  return <Dot tone={tone} label={label} />;
+}
+
+export function JobStateLabel({ state }: { state: JobState }) {
+  const { label, tone } = jobStates[state];
+  return <DotLabel tone={tone}>{label}</DotLabel>;
+}
+
+export function MachineStatusLabel({ status }: { status: MachineStatus }) {
+  const { label, tone } = machineStates[status];
+  return <DotLabel tone={tone}>{label}</DotLabel>;
+}
+
+/** Where a job runs or ran: an own machine and, while it runs, its slot. */
 export function WhereLabel({
   where,
   slot = false,
@@ -99,50 +75,33 @@ export function WhereLabel({
   where: Where;
   slot?: boolean;
 }) {
-  const direction = useDirection();
-  if (direction) return <WhereText where={where} slot={slot} />;
   if (where.kind === "none") {
     return <span className="muted">Waiting for a runner</span>;
   }
   if (where.kind === "boat") {
     return (
-      <span className="status-label">
-        <Cloud size={15} className="icon-muted" />
+      <span className="where">
+        <Cloud size={14} className="icon-muted" />
         <span>Boat</span>
       </span>
     );
   }
   return (
-    <span className="status-label">
-      <Server size={15} className="icon-muted" />
-      <span>
-        {where.machine}
-        {slot ? <span className="muted"> · slot {where.slot}</span> : null}
-      </span>
+    <span className="where">
+      <Server size={14} className="icon-muted" />
+      <span className="mono where-machine">{where.machine}</span>
+      {slot ? <span className="muted">slot {where.slot}</span> : null}
     </span>
   );
 }
 
-const machineBadges: Record<
-  MachineStatus,
-  { label: string; tone: "primary" | "warning" | "danger" }
-> = {
-  healthy: { label: "Healthy", tone: "primary" },
-  draining: { label: "Draining", tone: "warning" },
-  offline: { label: "Offline", tone: "danger" },
-};
-
-export function MachineStatusBadge({ status }: { status: MachineStatus }) {
-  const direction = useDirection();
-  const badge = machineBadges[status];
-  if (direction) {
-    return <DotLabel tone={machineTones[status]}>{badge.label}</DotLabel>;
-  }
-  return (
-    <span className="badge-wrap">
-      <Badge tone={badge.tone} dot size="sm">
-        {badge.label}
-      </Badge>
-    </span>
-  );
+/** A small bordered label. The accent tone fills it with the ink. */
+export function Tag({
+  tone = "neutral",
+  children,
+}: {
+  tone?: "neutral" | "accent";
+  children: ReactNode;
+}) {
+  return <span className={`tag tag-${tone}`}>{children}</span>;
 }

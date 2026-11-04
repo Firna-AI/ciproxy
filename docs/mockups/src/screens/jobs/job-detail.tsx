@@ -1,5 +1,6 @@
 // One finished job: where it ran, why it ran there, and how long it waited.
 
+import type { ReactNode } from "react";
 import { Cloud, ExternalLink, Server } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
 
@@ -13,8 +14,11 @@ import {
 import { paths } from "../../components/paths.ts";
 import { AppShell } from "../../components/shell/app-shell.tsx";
 import { JobStateLabel } from "../../components/status.tsx";
+import { unbroken } from "../../fixtures/format.ts";
+import { onBoat, own, type Where } from "../../fixtures/jobs.ts";
 import { org } from "../../fixtures/org.ts";
 import "./jobs.css";
+import "./job-detail.css";
 
 export const jobDetailStates = ["own", "boat"] as const;
 export type JobDetailState = (typeof jobDetailStates)[number];
@@ -22,9 +26,9 @@ export type JobDetailState = (typeof jobDetailStates)[number];
 type Detail = {
   name: string;
   context: string;
-  where: string;
+  where: Where;
   why: string;
-  timeline: readonly [string, string][];
+  timeline: readonly [string, ReactNode][];
   waited: string;
   duration: string;
   cache: string;
@@ -35,14 +39,20 @@ const details: Record<JobDetailState, Detail> = {
   own: {
     name: "test (rust)",
     context: `${org.login}/mokly · CI · #1542 Add catalogue search`,
-    where: "hetzner-ax42-1 · slot 3",
+    where: own(1, 3),
     why: "A warm runner was ready, so the job started at once.",
     timeline: [
       ["14:25:09", "Queued on GitHub"],
-      ["14:25:09", "Taken by a warm runner on hetzner-ax42-1"],
+      [
+        "14:25:09",
+        <>
+          Taken by a warm runner on{" "}
+          <span className="mono nowrap">hetzner-ax42-1</span>
+        </>,
+      ],
       ["14:31:21", "Passed"],
     ],
-    waited: "0 s",
+    waited: "0s",
     duration: "6m 12s",
     cache: "3 restored · 2.1 GB",
     cacheSource: "This machine",
@@ -50,7 +60,7 @@ const details: Record<JobDetailState, Detail> = {
   boat: {
     name: "e2e (chromium) 3/4",
     context: `${org.login}/mokly · E2E · main`,
-    where: "Boat",
+    where: onBoat,
     why: "Your machines were full, so the job started on Boat after 30 seconds.",
     timeline: [
       ["14:23:04", "Queued on GitHub"],
@@ -59,12 +69,22 @@ const details: Record<JobDetailState, Detail> = {
       ["14:23:35", "Taken by the Boat runner"],
       ["14:30:40", "Passed"],
     ],
-    waited: "31 s",
+    waited: "31s",
     duration: "7m 05s",
     cache: "3 restored · 2.1 GB",
     cacheSource: "The GitHub cache",
   },
 };
+
+function WhereTitle({ where }: { where: Where }) {
+  if (where.kind !== "own") return "Boat";
+  return (
+    <>
+      <span className="mono">{where.machine}</span>
+      <span className="nowrap"> · slot {where.slot}</span>
+    </>
+  );
+}
 
 export function JobDetailScreen({
   viewport,
@@ -74,7 +94,7 @@ export function JobDetailScreen({
   state: JobDetailState;
 }) {
   const job = details[state];
-  const Icon = state === "boat" ? Cloud : Server;
+  const Icon = job.where.kind === "boat" ? Cloud : Server;
   return (
     <AppShell viewport={viewport} tier="team" active="jobs">
       <PageHeader
@@ -87,18 +107,20 @@ export function JobDetailScreen({
       <div className="job-detail">
         <Panel title="Where it ran">
           <div className="where-ran">
-            <span className="where-ran-icon">
-              <Icon size={20} />
+            <span className="icon-tile">
+              <Icon size={16} />
             </span>
             <div className="stack-tight">
-              <p className="where-ran-title">{job.where}</p>
+              <p className="where-ran-title">
+                <WhereTitle where={job.where} />
+              </p>
               <p className="small muted">{job.why}</p>
             </div>
           </div>
           <ol className="timeline">
-            {job.timeline.map(([time, event]) => (
-              <li key={`${time}-${event}`}>
-                <span className="num caption">{time}</span>
+            {job.timeline.map(([time, event], i) => (
+              <li key={`${time}-${i}`}>
+                <span className="mono timeline-time">{time}</span>
                 <span className="small">{event}</span>
               </li>
             ))}
@@ -109,9 +131,15 @@ export function JobDetailScreen({
             <DetailRow label="Label">
               <span className="inline-code">ciproxy</span>
             </DetailRow>
-            <DetailRow label="Shape">2 vCPU · 8 GB</DetailRow>
-            <DetailRow label="Waited">{job.waited}</DetailRow>
-            <DetailRow label="Duration">{job.duration}</DetailRow>
+            <DetailRow label="Shape">
+              {unbroken("2 vCPU")} · {unbroken("8 GB")}
+            </DetailRow>
+            <DetailRow label="Waited">
+              <span className="duration">{job.waited}</span>
+            </DetailRow>
+            <DetailRow label="Duration">
+              <span className="duration">{job.duration}</span>
+            </DetailRow>
             <DetailRow label="Cache">{job.cache}</DetailRow>
             <DetailRow label="Cache source">{job.cacheSource}</DetailRow>
             <DetailRow label="Starts">Counts as 1 start</DetailRow>

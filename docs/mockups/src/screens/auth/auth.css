@@ -1,27 +1,31 @@
+/* The signed-out frame: the brand above one centred card on the page grey,
+   and a full-width white column on mobile. */
+
 .auth {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 24px;
   min-height: 100vh;
-  padding: 72px 24px 40px;
+  padding: 80px 24px 40px;
 }
 
 .auth-mobile {
   align-items: stretch;
-  padding: 32px 20px 24px;
+  gap: 28px;
+  padding: 28px 20px 24px;
   background: var(--c-surface);
 }
 
 .auth-card {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 20px;
   width: 100%;
-  max-width: 420px;
+  max-width: 400px;
   padding: 28px;
   border: 1px solid var(--c-border);
-  border-radius: var(--r-xxl);
+  border-radius: var(--r-xl);
   background: var(--c-surface);
 }
 
@@ -33,8 +37,8 @@
 
 .auth-title {
   font-size: 22px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   line-height: 28px;
 }
 
@@ -43,7 +47,7 @@
 }
 
 .auth-footer {
-  max-width: 420px;
+  max-width: 400px;
   text-align: center;
 }
 
@@ -53,6 +57,7 @@
   gap: 10px;
   margin: 0;
   padding: 14px 16px;
+  border: 1px solid var(--c-border);
   border-radius: var(--r-lg);
   background: var(--c-bg);
   list-style: none;
@@ -65,7 +70,7 @@
 
 .permission-list svg {
   margin-top: 2px;
-  color: var(--c-primary);
+  color: var(--c-ink);
   flex-shrink: 0;
 }
 

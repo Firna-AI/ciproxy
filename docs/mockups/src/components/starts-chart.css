@@ -1,6 +1,6 @@
-/* The chart of starts by day in a design direction (starts-chart.tsx). The
-   plot stretches to the panel; grid lines are hairlines, and the axis labels
-   use the monospace face. */
+/* The chart of starts by day (starts-chart.tsx). The plot stretches to the
+   panel; grid lines are hairlines, and the axis labels use the monospace
+   face. */
 
 .sc {
   position: relative;
@@ -16,11 +16,11 @@
 }
 
 .sc-own {
-  --sc-color: var(--c-series-own);
+  --sc-color: var(--c-chart-own);
 }
 
 .sc-boat {
-  --sc-color: var(--c-series-boat);
+  --sc-color: var(--c-chart-boat);
 }
 
 .sc-y {
@@ -75,18 +75,6 @@
   fill: var(--sc-color);
 }
 
-.sc-line {
-  fill: none;
-  stroke: var(--sc-color);
-  stroke-linejoin: round;
-  stroke-width: 1.5px;
-}
-
-.sc-area {
-  fill: var(--sc-color);
-  opacity: 0.12;
-}
-
 .sc-x {
   display: flex;
   grid-column: 2;
@@ -130,12 +118,6 @@
   border-radius: 2px;
   background: var(--sc-color);
   content: "";
-}
-
-.sc-lines .sc-key::before {
-  width: 12px;
-  height: 2px;
-  border-radius: 1px;
 }
 
 /* The values for screen readers; the plot shows them to everyone else. */

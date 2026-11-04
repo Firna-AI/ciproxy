@@ -1,4 +1,5 @@
-// The slots of one machine, each with the job it runs or its warm runner.
+// The slots of one machine, each with the job it runs or its warm runner. A
+// long job context wraps to a second line rather than being cut off.
 
 import type { SlotState } from "../../fixtures/machines.ts";
 import { ax42OneSlotJobs } from "../../fixtures/slots.ts";
@@ -16,14 +17,14 @@ export function MachineSlots({ slots }: { slots: readonly SlotState[] }) {
             {job ? (
               <span className="slot-job">
                 <span className="strong">{job.name}</span>
-                <span className="caption"> · {job.context}</span>
+                <span className="caption">{job.context}</span>
               </span>
             ) : (
               <span className="slot-job muted">
                 {slot === "warm" ? "Warm runner, ready" : "Free"}
               </span>
             )}
-            <span className="caption num">{job?.time ?? ""}</span>
+            <span className="duration">{job?.time ?? ""}</span>
           </li>
         );
       })}

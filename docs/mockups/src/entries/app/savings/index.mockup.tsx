@@ -8,7 +8,7 @@ import { SavingsScreen } from "../../../screens/savings/savings.tsx";
 export const savings = defineScreen({
   title: "Savings",
   description:
-    "The last 30 days of mokly-ai: 17,772 jobs cost $309 with ciproxy (three own machines, Boat overflow, and Team), against $698 on Blacksmith and $1,045 on GitHub-hosted runners.",
+    "The last 30 days of mokly-ai, all on Team: 17,772 jobs cost $309.20 with ciproxy (three own machines, Boat overflow, and Team), against $698 on Blacksmith and $1,045 on GitHub-hosted runners.",
   rationale:
     "One hero figure leads against the cheaper alternative, so the claim stays conservative. The bars put the three costs on one axis.",
   relatedDocs: [planDoc],

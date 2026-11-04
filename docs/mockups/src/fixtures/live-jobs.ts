@@ -126,7 +126,7 @@ export const limitRunning = rows("limit-run", [
   ],
 ]);
 
-/** Wednesday 4 November, 15:10, on Free with one machine. */
+/** Friday 4 September, 15:10, on Free with one machine. */
 export const freeRunning = rows("free-run", [
   ["test (rust)", "CI", "mokly", "#1497", "running", own(1, 1), "3m 41s"],
   ["clippy", "CI", "mokly", "#1497", "running", own(1, 2), "1m 52s"],

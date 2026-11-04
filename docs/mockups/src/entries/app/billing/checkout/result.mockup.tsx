@@ -24,7 +24,7 @@ export const confirmed = defineScreen({
   slug: "confirmed",
   title: "The plan is confirmed",
   description:
-    "mokly-ai is on Team. The starts of this period count against the 25,000 of Team from now on.",
+    "mokly-ai is on Team. The first Team period starts today, so its starts count from zero against the 25,000 of Team. The Free starts stay in the Free period.",
   relatedDocs: [planDoc],
   address,
   useCasePaths: [paths.flowFreeToTeam],

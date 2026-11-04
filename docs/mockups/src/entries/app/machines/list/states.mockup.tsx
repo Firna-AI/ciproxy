@@ -22,7 +22,7 @@ export const offline = defineScreen({
   slug: "offline",
   title: "A machine is offline",
   description:
-    "hetzner-ax42-3 stopped sending heartbeats. New jobs go to the other machines and to Boat.",
+    "ciproxy lost contact with hetzner-ax42-3. New jobs go to the other machines and to Boat.",
   relatedDocs: [planDoc],
   address,
   render: (_props, context) => (
@@ -32,9 +32,9 @@ export const offline = defineScreen({
 
 export const overLimit = defineScreen({
   slug: "over-limit",
-  title: "More own nodes than the tier includes",
+  title: "More own machines than the tier includes",
   description:
-    "A fourth machine joined on Team, which includes three. All four run jobs; the banner on every page offers the extra-node add-on.",
+    "A fourth machine joined on Team, which includes three. All four run jobs; the banner on every page offers the extra-machine add-on.",
   relatedDocs: [planDoc],
   address,
   render: (_props, context) => (

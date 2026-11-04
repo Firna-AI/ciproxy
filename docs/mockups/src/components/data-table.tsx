@@ -1,25 +1,28 @@
-// A data table with the props of the Firna Table. Outside a design direction
-// it is the Firna Table. Inside one, it is a dense semantic table: one line
-// per row at the row height of the direction, a header band, and hairlines.
-// It reads columns, rows, rowKey, cell, headless, loading, loadingRowCount,
-// and accessibilityLabel; the Firna density and style props stay Firna's.
+// A dense data table: one line per row, a header band, and hairlines. Fixed
+// columns keep their width; flex columns share the rest as a preferred width,
+// and the automatic table layout still widens a column to its content, so no
+// value is cut off. While a list loads, a table keeps its header and shows
+// bars; a mobile list has no header, so LoadingRows shows bar rows alone.
 
-import { Table, type TableColumn, type TableProps } from "@firna/ui/table";
+import type { ReactNode } from "react";
 
-import { useDirection } from "../theme/direction.ts";
 import "./data-table.css";
 
-function columnClass(column: TableColumn): string {
-  const align = column.align && column.align !== "left" ? column.align : "";
-  return `col-${column.key}${align ? ` dt-${align}` : ""}`;
+export type Column = {
+  key: string;
+  label: string;
+  /** A fixed width in px. */
+  width?: number;
+  /** A share of the width that the fixed columns leave. Defaults to 1. */
+  flex?: number;
+  align?: "left" | "right";
+};
+
+function columnClass(column: Column): string {
+  return `col-${column.key}${column.align === "right" ? " dt-right" : ""}`;
 }
 
-/**
- * Fixed columns keep their width. Flex columns share the rest by flex, as a
- * preferred width: the automatic table layout still widens a column to its
- * content, so a narrow window never clips a value.
- */
-function columnWidth(column: TableColumn, columns: TableColumn[]): string {
+function columnWidth(column: Column, columns: readonly Column[]): string {
   if (column.width !== undefined) return `${column.width}px`;
   const flexTotal = columns
     .filter((c) => c.width === undefined)
@@ -27,28 +30,23 @@ function columnWidth(column: TableColumn, columns: TableColumn[]): string {
   return `${(((column.flex ?? 1) / flexTotal) * 100).toFixed(2)}%`;
 }
 
-export function DataTable<Row>(props: TableProps<Row>) {
-  const direction = useDirection();
-  if (!direction) return <Table {...props} />;
-  return <DenseTable {...props} />;
-}
-
-function DenseTable<Row>({
-  accessibilityLabel,
-  cell,
+export function DataTable<Row>({
   columns,
-  headless,
-  loading,
-  loadingRowCount = 6,
-  rowKey,
   rows,
-}: TableProps<Row>) {
+  rowKey,
+  cell,
+  loading = false,
+  loadingRowCount = 6,
+}: {
+  columns: readonly Column[];
+  rows: readonly Row[];
+  rowKey: (row: Row, index: number) => string;
+  cell: (row: Row, key: string) => ReactNode;
+  loading?: boolean;
+  loadingRowCount?: number;
+}) {
   return (
-    <table
-      className="dt"
-      aria-label={accessibilityLabel}
-      aria-busy={loading ? true : undefined}
-    >
+    <table className="dt" aria-busy={loading ? true : undefined}>
       <colgroup>
         {columns.map((column) => (
           <col
@@ -58,17 +56,15 @@ function DenseTable<Row>({
           />
         ))}
       </colgroup>
-      {headless ? null : (
-        <thead>
-          <tr>
-            {columns.map((column) => (
-              <th key={column.key} scope="col" className={columnClass(column)}>
-                {column.label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-      )}
+      <thead>
+        <tr>
+          {columns.map((column) => (
+            <th key={column.key} scope="col" className={columnClass(column)}>
+              {column.label}
+            </th>
+          ))}
+        </tr>
+      </thead>
       <tbody>
         {loading
           ? Array.from({ length: loadingRowCount }, (_, i) => (
@@ -91,5 +87,22 @@ function DenseTable<Row>({
             ))}
       </tbody>
     </table>
+  );
+}
+
+/** Bar rows without a header, for a mobile list that is still loading. */
+export function LoadingRows({ count }: { count: number }) {
+  return (
+    <ul className="dt-rows" aria-busy="true">
+      {Array.from({ length: count }, (_, i) => (
+        <li key={i} className="dt-rows-item" aria-hidden="true">
+          <span
+            className="dt-bar"
+            style={{ width: `${48 + ((i * 17) % 30)}%` }}
+          />
+          <span className="dt-bar dt-bar-short" />
+        </li>
+      ))}
+    </ul>
   );
 }

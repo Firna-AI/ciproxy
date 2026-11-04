@@ -12,6 +12,7 @@ import {
   WaitingLine,
 } from "../../components/install-command.tsx";
 import { paths } from "../../components/paths.ts";
+import { unbroken } from "../../fixtures/format.ts";
 import { org } from "../../fixtures/org.ts";
 import type { OnboardingState } from "./onboarding.tsx";
 
@@ -19,13 +20,13 @@ export function MachineStep({ state }: { state: OnboardingState }) {
   return (
     <div className="stack">
       <p className="small">
-        Run this command on a Linux server. It installs the ciproxy agent and
-        connects the server to {org.login}.
+        Run this command on a Linux machine. It installs the ciproxy agent and
+        connects the machine to {org.login}.
       </p>
       {state === "machine-no-kvm" ? (
         <Notice tone="danger" title="hetzner-ax42-1 cannot start VMs">
           ciproxy runs each job in its own VM, which needs KVM. Turn on
-          virtualization for this server, then run the command again.
+          virtualization for this machine, then run the command again.
         </Notice>
       ) : null}
       <InstallCommand />
@@ -86,12 +87,13 @@ export function FirstJobStep({ passed }: { passed: boolean }) {
     return (
       <div className="stack">
         <div className="first-job">
-          <CircleCheck size={22} className="state-passed" />
+          <CircleCheck size={18} className="icon-ok" />
           <div className="stack-tight">
             <p className="first-job-title">Your first job passed</p>
             <p className="small">
-              <strong>test (rust)</strong> in {org.login}/mokly passed in 6m 12s
-              on hetzner-ax42-1.
+              <strong>test (rust)</strong> in {org.login}/mokly passed in{" "}
+              {unbroken("6m 12s")} on{" "}
+              <span className="mono">hetzner-ax42-1</span>.
             </p>
           </div>
         </div>
@@ -122,7 +124,7 @@ export function FirstJobStep({ passed }: { passed: boolean }) {
       />
       <WaitingLine>Waiting for a job with runs-on: ciproxy…</WaitingLine>
       <div className="row">
-        <Action tone="ghost">See an example workflow</Action>
+        <Action size="sm">See an example workflow</Action>
       </div>
     </div>
   );

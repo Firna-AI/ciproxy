@@ -1,6 +1,8 @@
-// The sample organization of the mockups. The story runs through November
-// 2026: mokly-ai signs up on 1 November, passes the Free starts on 4 November,
-// moves to Team, and runs three own machines by mid-month.
+// The sample organization of the mockups. mokly-ai signs up on Tuesday 1
+// September 2026, passes the Free starts on Friday 4 September, moves to Team
+// that day, and runs three own machines from mid-September. The November
+// screens show a busy Team organization; the December screens show the
+// payment problems.
 
 /** The dashboard host shown in the address bar of every screen. */
 export const host = "app.ciproxy.dev";

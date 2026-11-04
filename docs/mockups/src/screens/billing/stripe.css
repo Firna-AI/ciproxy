@@ -1,11 +1,12 @@
-/* A neutral rendering of the Stripe Checkout page. */
+/* The Stripe Checkout page with the ciproxy branding: the Graphite colours,
+   the hairlines, and the black button. */
 
 .stripe {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   min-height: 100vh;
   background: var(--c-surface);
-  color: #30313d;
+  color: var(--c-ink);
 }
 
 .stripe-mobile {
@@ -17,11 +18,14 @@
   flex-direction: column;
   gap: 10px;
   padding: 56px 48px 32px 80px;
-  background: #f6f8fa;
+  background: var(--c-bg);
+  border-right: 1px solid var(--c-border);
 }
 
 .stripe-mobile .stripe-summary {
   padding: 24px 20px;
+  border-right: 0;
+  border-bottom: 1px solid var(--c-border);
 }
 
 .stripe-merchant {
@@ -33,14 +37,14 @@
 }
 
 .stripe-muted {
-  color: #6a7383;
+  color: var(--c-muted);
   font-size: 14px;
   font-weight: 500;
 }
 
 .stripe-amount {
   font-size: 34px;
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 40px;
 }
@@ -56,8 +60,8 @@
   justify-content: space-between;
   gap: 16px;
   padding: 12px 0;
-  border-top: 1px solid #e3e8ee;
-  font-weight: 600;
+  border-top: 1px solid var(--c-border);
+  font-weight: 500;
 }
 
 .stripe-sub {
@@ -66,7 +70,7 @@
 }
 
 .stripe-total {
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .stripe-form {
@@ -94,7 +98,7 @@
 }
 
 .stripe-label {
-  color: #6a7383;
+  color: var(--c-muted);
   font-size: 13px;
   font-weight: 500;
 }
@@ -102,13 +106,13 @@
 .stripe-input {
   display: block;
   padding: 9px 12px;
-  border: 1px solid #e3e8ee;
-  border-radius: 6px;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--c-border2);
+  border-radius: var(--r-md);
+  box-shadow: 0 1px 1px color-mix(in srgb, var(--c-ink) 4%, transparent);
 }
 
 .stripe-input.is-empty {
-  color: #a3acb9;
+  color: var(--c-faint);
 }
 
 .stripe-card {
@@ -117,7 +121,7 @@
 }
 
 .stripe-card > .stripe-input {
-  border-radius: 6px 6px 0 0;
+  border-radius: var(--r-md) var(--r-md) 0 0;
 }
 
 .stripe-card-row {
@@ -127,16 +131,16 @@
 
 .stripe-card-row .stripe-input {
   margin-top: -1px;
-  border-radius: 0 0 0 6px;
+  border-radius: 0 0 0 var(--r-md);
 }
 
 .stripe-card-row .stripe-input + .stripe-input {
   margin-left: -1px;
-  border-radius: 0 0 6px 0;
+  border-radius: 0 0 var(--r-md) 0;
 }
 
 .stripe-foot {
-  color: #a3acb9;
+  color: var(--c-faint);
   font-size: 12px;
   text-align: center;
 }
@@ -148,6 +152,8 @@
 
   .stripe-summary {
     padding: 32px 32px 24px;
+    border-right: 0;
+    border-bottom: 1px solid var(--c-border);
   }
 
   .stripe-form {

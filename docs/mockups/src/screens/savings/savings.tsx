@@ -22,7 +22,6 @@ import {
 import { CostBars } from "./cost-bars.tsx";
 import { CostTable } from "./cost-table.tsx";
 import "./savings.css";
-import "./savings-dir.css";
 
 export const savingsStates = [
   "report",
@@ -57,7 +56,9 @@ export function SavingsScreen({
     >
       <PageHeader
         title="Savings"
-        subtitle={`Last 30 days · ${savingsPeriod}`}
+        subtitle={
+          state === "empty" ? undefined : `Last 30 days · ${savingsPeriod}`
+        }
       />
       {state === "empty" || state === "error" ? null : (
         <SegmentedControl
@@ -67,22 +68,16 @@ export function SavingsScreen({
           accessibilityLabel="Period"
         />
       )}
-      <SavingsBody viewport={viewport} state={state} />
+      <SavingsBody state={state} />
     </AppShell>
   );
 }
 
-function SavingsBody({
-  viewport,
-  state,
-}: {
-  viewport: Viewport;
-  state: SavingsState;
-}) {
+function SavingsBody({ state }: { state: SavingsState }) {
   if (state === "error") {
     return (
       <Panel>
-        <ReadFailure retry={paths.savings} />
+        <ReadFailure subject="the savings report" retry={paths.savings} />
       </Panel>
     );
   }
@@ -107,6 +102,7 @@ function SavingsBody({
   if (state === "loading") return <LoadingSavings />;
   const missing = state === "missing-costs";
   const saved = savings.alternatives.blacksmith - yourCost;
+  const jobs = savings.starts.own + savings.starts.boat;
   return (
     <>
       {missing ? (
@@ -126,11 +122,11 @@ function SavingsBody({
       <Panel>
         {missing ? null : (
           <div className="hero">
-            <p className="hero-figure">{formatMoney(Math.round(saved))}</p>
+            <p className="hero-figure">{formatMoney(saved)}</p>
             <p className="hero-text">
-              less than Blacksmith for the same {formatCount(17_772)} jobs, and{" "}
-              {formatMoney(Math.round(savings.alternatives.github - yourCost))}{" "}
-              less than GitHub-hosted runners.
+              less than Blacksmith for the same {formatCount(jobs)} jobs, and{" "}
+              {formatMoney(savings.alternatives.github - yourCost)} less than{" "}
+              <span className="nowrap">GitHub-hosted</span> runners.
             </p>
           </div>
         )}
@@ -146,11 +142,10 @@ function SavingsBody({
         </Panel>
         <Panel title="Starts by day">
           <StartsChart
-            viewport={viewport}
             labels={dailyStarts.labels}
             own={dailyStarts.own}
             boat={dailyStarts.boat}
-            caption="19 October to 17 November"
+            caption={savingsPeriod}
           />
         </Panel>
       </div>

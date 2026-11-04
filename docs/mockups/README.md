@@ -49,17 +49,26 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
 - Notes for reviewers go in the `description` and `rationale` of an entry,
   never inside the rendered screen.
 - Fixture data lives in `src/fixtures/`. It tells one story: mokly-ai signs up
-  on 1 November 2026, passes the Free starts on 4 November, moves to Team, and
-  runs three Hetzner AX42 servers with Boat overflow by mid-November.
-- Check `@firna/ui` before you build a control. Its DOM build renders without
-  React Native; the renderer adds its static CSS and theme.
-- A design direction is a theme layer, not a copy of a screen. A
-  `DirectionScope` around a screen sets the tokens of the direction, and the
-  shared components read `useDirection()` to draw it. Outside a scope, every
-  component keeps the current look.
-- A direction rule in CSS repeats the default selector under `.dir`, or
-  `.dir-<key>` for one direction, in a `*-dir.css` file that the component
-  imports after its default stylesheet.
+  on 1 September 2026, passes the Free starts on 4 September, moves to Team
+  that day, and runs three Hetzner AX42 machines with Boat overflow from
+  mid-September. The November screens show the busy Team organization, and the
+  December screens the payment problems. Each tier counts only the starts of
+  its own period, which begins on the day the tier begins.
+- The customer's own hardware is a "machine" on every screen, also in the
+  pricing: never "node" or "server".
+- One value has one format: `src/fixtures/format.ts` holds the money, count,
+  and date formats, and `unbroken()` keeps a short value such as a date on one
+  line.
+- The look is Graphite: light and monochrome, Geist and Geist Mono, hairline
+  borders, small radii, and black primary buttons. Colour marks status only,
+  as a dot beside its word. Its tokens live in `src/theme/graphite.ts`, and a
+  stylesheet reads them as custom properties, never as colour literals.
+- Check `@firna/ui` and `src/components/` before you build a control. The Firna
+  DOM build renders without React Native; the renderer adds its static CSS and
+  the Graphite theme.
+- A banner of a passed limit or a failed payment comes from
+  `src/components/usage-banner.tsx`, so one state shows one banner on every
+  page.
 - Never edit or commit `docs/mockups/mokly-generated/`. Change the sources and
   build again.
 
@@ -68,10 +77,10 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
 1. Run `npm --prefix ts run mockups:check`.
 2. Open each changed screen at
    `docs/mockups/mokly-generated/static/mokly-generated/<path>/index.mobile.html`
-   and `index.desktop.html`. Check the desktop document at 1180 px and at
+   and `index.desktop.html`. Check the desktop document at 1440 px and at
    720 px: the catalogue shows the desktop frame at about 720 px beside the
    phone, where the sidebar becomes an icon rail. Check the mobile document at
-   366 px, the width of the phone screen.
+   390 px.
 3. Serve the build, for example with
    `python3 -m http.server --directory docs/mockups/mokly-generated`, and open
    `/view/user-flows/<flow>/` for each changed flow. Each step frames its
@@ -86,21 +95,20 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
 
 - `../../mokly.config.json`: the catalogue root, the renderer, and the package
   root `ts` for module resolution. Mokly 0.18 reads only a JSON configuration.
-- `src/render.tsx`: the renderer. It adds the Inter face, the base stylesheet,
-  the static Firna CSS, and the Firna theme provider around every screen.
-- `src/theme/firna.tsx`: the Firna theme, the chart colours, and the tokens as
-  CSS custom properties for the stylesheets.
-- `src/theme/direction.ts`: the `Direction` token set, `useDirection()`, and
-  `useRoutes()`, which the shared components read.
-- `src/theme/direction-scope.tsx`: `DirectionScope`, which publishes the
-  tokens of a direction on its class and nests its Firna theme.
-- `src/theme/directions/`: the three directions, Graphite, Midnight, and
-  Enterprise, with their fonts.
-- `src/screens/directions/direction-screens.tsx`: the key screens of one
-  direction, for the entries under `src/entries/design-directions/`.
-- `src/components/shell/app-shell.tsx`: the signed-in frame, a sidebar on
-  desktop and a top bar with tabs on mobile, with the banner slot for soft-limit
-  and payment warnings.
+- `src/render.tsx`: the renderer. It adds the base stylesheet, the static
+  Firna CSS with the tokens, and the Firna theme provider around every screen.
+- `src/theme/graphite.ts`: the Graphite tokens: the Firna theme with the Geist
+  faces, and the status, chart, slot, and sidebar colours.
+- `src/theme/firna.tsx`: publishes the tokens as CSS custom properties, such as
+  `--c-ink`, `--c-status-ok`, `--r-md`, and `--font-mono`, beside the static
+  Firna CSS.
+- `src/components/shell/app-shell.tsx`: the signed-in frame: a white sidebar
+  and a top bar with the organization and the page as breadcrumbs on desktop,
+  and a top bar with tabs on mobile, with the banner slot for soft-limit and
+  payment warnings.
+- `src/components/`: the shared parts, such as the dense `DataTable`, the
+  figure strip in `kpis.tsx`, the status dots and tags in `status.tsx`, and the
+  starts chart.
 - `src/components/paths.ts`: every catalogue path of a screen and a flow.
 - `src/components/state-schema.ts`: the closed prop schema of a screen whose
   states differ by one `state` prop.

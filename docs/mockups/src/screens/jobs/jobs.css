@@ -1,29 +1,100 @@
+/* Job lists: one line per job on a wide desktop, the context under the name
+   in a narrow window, durations in the monospace face, and the dense mobile
+   list. */
+
 .job-name {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
+.mockup-desktop .job-name {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 10px;
+}
+
 .job-name-title {
-  overflow: hidden;
-  font-weight: 600;
-  text-overflow: ellipsis;
+  font-weight: 500;
   white-space: nowrap;
 }
 
 a.job-name-title:hover {
-  color: var(--c-primary-deep);
   text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.job-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.duration {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  white-space: nowrap;
 }
 
 .more-row {
-  padding: 10px 20px 14px;
+  padding: 10px 16px;
   border-top: 1px solid var(--c-border);
 }
 
 .mockup-mobile .more-row {
-  padding: 10px 16px 12px;
+  padding: 10px 14px;
 }
+
+/* The dense mobile list. */
+
+.job-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.job-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 12px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--c-border);
+}
+
+.job-row.is-finished {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.job-row:first-child {
+  border-top: 0;
+}
+
+.job-row > .dot {
+  margin-top: 6px;
+}
+
+.job-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.job-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 14px;
+}
+
+.job-row > .duration {
+  color: var(--c-ink2);
+  line-height: 20px;
+}
+
+/* History: the filters above the table. */
 
 .history-filters {
   display: flex;
@@ -37,62 +108,21 @@ a.job-name-title:hover {
   min-width: 220px;
 }
 
-.job-detail {
-  display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-  gap: 16px;
-  align-items: start;
-}
+/* A narrow desktop window puts the job context under its name, and the
+   history drops the clock time, so where each job ran stays whole. */
 
-.mockup-mobile .job-detail {
-  grid-template-columns: minmax(0, 1fr);
-}
+@media (max-width: 960px) {
+  .mockup-desktop .job-name {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
 
-.where-ran {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 16px;
-}
+  .mockup-desktop .job-context {
+    white-space: normal;
+  }
 
-.where-ran-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: var(--r-lg);
-  background: var(--c-soft);
-  color: var(--c-ink2);
-  flex-shrink: 0;
-}
-
-.where-ran-title {
-  font-weight: 600;
-}
-
-/* A rail on the left of a list, not of a box. */
-.timeline {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin: 0;
-  padding: 0 0 0 14px;
-  border-left: 2px solid var(--c-border);
-  list-style: none;
-}
-
-.timeline li {
-  display: flex;
-  gap: 12px;
-}
-
-.timeline .caption {
-  min-width: 58px;
-}
-
-@media (max-width: 880px) {
-  .mockup-desktop .job-detail {
-    grid-template-columns: minmax(0, 1fr);
+  .mockup-desktop .dt .col-finished {
+    display: none;
   }
 }

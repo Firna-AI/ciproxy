@@ -1,5 +1,7 @@
-// Own machines of mokly-ai: three Hetzner AX42 servers. A slot holds one job
+// Own machines of mokly-ai: three Hetzner AX42 machines. A slot holds one job
 // VM of 2 vCPU and 8 GB; a larger shape takes several slots.
+
+import { dotJoin, unbroken } from "./format.ts";
 
 export type SlotState = "busy" | "warm" | "free";
 export type MachineStatus = "healthy" | "draining" | "offline";
@@ -19,11 +21,17 @@ export const ax42 = {
   cpu: "AMD Ryzen 7 PRO 8700GE",
   threads: 16,
   memoryGb: 64,
-  disk: "2 × 512 GB NVMe",
+  disk: unbroken("2 × 512 GB NVMe"),
   slotsTotal: 6,
   agent: "0.4.2",
   monthlyCost: 53.4,
 } as const;
+
+/** "16 threads · 64 GB", the line under a machine name. */
+export const ax42Size = dotJoin(
+  unbroken(`${ax42.threads} threads`),
+  unbroken(`${ax42.memoryGb} GB`),
+);
 
 function slots(busy: number, warm: number): SlotState[] {
   const free = ax42.slotsTotal - busy - warm;
@@ -47,7 +55,7 @@ function machine(
     warmTarget: 2,
     cacheUsedGb: [182, 167, 154, 12][index - 1] ?? 0,
     cacheSizeGb: 400,
-    lastSeen: status === "offline" ? "14 min ago" : "3 s ago",
+    lastSeen: status === "offline" ? "14m ago" : "3s ago",
   };
 }
 
@@ -59,12 +67,12 @@ export const machineScenes = {
   peak: [machine(1, 6, 0), machine(2, 6, 0), machine(3, 6, 0)],
   /** Sunday 22 November, 03:10: only warm runners wait. */
   quiet: [machine(1, 0, 2), machine(2, 0, 2), machine(3, 0, 2)],
-  /** hetzner-ax42-3 stopped sending heartbeats. */
+  /** ciproxy lost contact with hetzner-ax42-3 14 minutes ago. */
   offline: [machine(1, 6, 0), machine(2, 5, 1), machine(3, 0, 0, "offline")],
   /** hetzner-ax42-1 finishes its jobs and takes no new ones. */
   draining: [machine(1, 3, 0, "draining"), machine(2, 6, 0), machine(3, 5, 1)],
   /** A fourth machine joined; Team includes three. */
-  fourNodes: [
+  fourMachines: [
     machine(1, 5, 1),
     machine(2, 6, 0),
     machine(3, 4, 2),

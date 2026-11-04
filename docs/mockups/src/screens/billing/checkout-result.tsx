@@ -3,19 +3,17 @@
 
 import { CircleCheck, CreditCard } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
-import { Spinner } from "@firna/ui/spinner";
 
 import { LinkAction } from "../../components/actions.tsx";
-import { StateBlock } from "../../components/feedback.tsx";
+import { Busy, StateBlock } from "../../components/feedback.tsx";
 import { Meter } from "../../components/figures.tsx";
 import { Panel } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
 import { AppShell } from "../../components/shell/app-shell.tsx";
 import { formatCount } from "../../fixtures/format.ts";
 import { org } from "../../fixtures/org.ts";
-import { tiers } from "../../fixtures/tiers.ts";
-import { usageScenes } from "../../fixtures/usage.ts";
-import { theme } from "../../theme/firna.tsx";
+import { ownMachines, startsText, tiers } from "../../fixtures/tiers.ts";
+import { firstTeamPeriod } from "../../fixtures/usage.ts";
 import "./billing.css";
 
 export const resultStates = ["confirming", "confirmed", "cancelled"] as const;
@@ -47,7 +45,7 @@ function ResultBody({ state }: { state: ResultState }) {
   if (state === "confirming") {
     return (
       <div className="state-block">
-        <Spinner size={28} color={theme.colors.primary} />
+        <Busy size={24} />
         <h2 className="state-title">Confirming your payment</h2>
         <p className="state-body">
           Stripe is confirming the payment. This takes a few seconds.
@@ -75,11 +73,12 @@ function ResultBody({ state }: { state: ResultState }) {
       </StateBlock>
     );
   }
-  const used = usageScenes["free-over"].starts;
+  const team = tiers.team;
   return (
     <>
       <StateBlock
         icon={CircleCheck}
+        tone="success"
         title={`${org.login} is on Team`}
         action={
           <>
@@ -90,15 +89,16 @@ function ResultBody({ state }: { state: ResultState }) {
           </>
         }
       >
-        {formatCount(tiers.team.starts)} starts and {tiers.team.nodes} own nodes
-        a month. Stripe emailed the receipt to cal@mokly.ai.
+        {startsText(team.starts)} a month and {ownMachines(team.machines)}.
+        Stripe emailed the receipt to cal@mokly.ai.
       </StateBlock>
       <div className="result-meter">
         <Meter
           label="Starts this period"
-          used={used}
-          max={tiers.team.starts}
-          value={`${formatCount(used)} of ${formatCount(tiers.team.starts)}`}
+          used={firstTeamPeriod.starts}
+          max={team.starts}
+          value={`${formatCount(firstTeamPeriod.starts)} of ${formatCount(team.starts)}`}
+          detail={`The Team period runs ${firstTeamPeriod.period}.`}
         />
       </div>
     </>

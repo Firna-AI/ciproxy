@@ -1,11 +1,12 @@
-// The one install command that connects a Linux server to the organization,
-// shared by setup and Add machine.
+// The one install command that connects a Linux machine to the organization,
+// shared by setup and Add machine, and the lines that follow it: the wait for
+// the machine, and the machine that connected.
 
 import { CircleCheck } from "lucide-react";
-import { Spinner } from "@firna/ui/spinner";
 
-import { ax42 } from "../fixtures/machines.ts";
-import { theme } from "../theme/firna.tsx";
+import { dotJoin, unbroken } from "../fixtures/format.ts";
+import { ax42, ax42Size } from "../fixtures/machines.ts";
+import { Busy } from "./feedback.tsx";
 import { CodeBlock } from "./figures.tsx";
 import "./install-command.css";
 
@@ -15,9 +16,9 @@ export const installCommand =
 export function InstallCommand() {
   return (
     <div className="stack-tight">
-      <CodeBlock label="On the server" lines={[installCommand]} />
+      <CodeBlock label="On the machine" lines={[installCommand]} />
       <p className="caption">
-        The token works for one hour. The server needs x64 Linux with KVM, 4
+        The token works for one hour. The machine needs x64 Linux with KVM, 4
         cores, and 16 GB of memory or more.
       </p>
     </div>
@@ -27,7 +28,7 @@ export function InstallCommand() {
 export function WaitingLine({ children }: { children: string }) {
   return (
     <div className="waiting-line">
-      <Spinner size={16} color={theme.colors.primary} />
+      <Busy />
       <span>{children}</span>
     </div>
   );
@@ -37,12 +38,17 @@ export function WaitingLine({ children }: { children: string }) {
 export function ConnectedMachine({ name }: { name: string }) {
   return (
     <div className="connected-machine">
-      <CircleCheck size={20} className="state-passed" />
+      <CircleCheck size={18} className="icon-ok" />
       <div className="stack-tight">
-        <p className="connected-title">{name} connected</p>
+        <p className="connected-title">
+          <span className="mono">{name}</span> connected
+        </p>
         <p className="caption">
-          {ax42.threads} threads · {ax42.memoryGb} GB · KVM ready ·{" "}
-          {ax42.slotsTotal} slots
+          {dotJoin(
+            ax42Size,
+            unbroken("KVM ready"),
+            unbroken(`${ax42.slotsTotal} slots`),
+          )}
         </p>
       </div>
     </div>

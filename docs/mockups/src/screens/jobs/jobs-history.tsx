@@ -45,9 +45,8 @@ export function JobsHistoryScreen({
       {state === "empty" ? (
         <Panel>
           <StateBlock icon={ListChecks} title="Finished jobs show here">
-            Each job that used{" "}
-            <span className="inline-code">runs-on: ciproxy</span>, with where it
-            ran and how long it waited.
+            Each job with <span className="inline-code">runs-on: ciproxy</span>{" "}
+            shows its result, where it ran, and how long it waited.
           </StateBlock>
         </Panel>
       ) : (
@@ -68,7 +67,7 @@ export function JobsHistoryScreen({
               onChange={noop}
               accessibilityLabel="Where the job ran"
             />
-            <Action icon={ChevronDown}>Today</Action>
+            <Action trailing={<ChevronDown size={16} />}>Today</Action>
           </div>
           <Panel flush>
             <JobList viewport={viewport} kind="finished" jobs={history} />

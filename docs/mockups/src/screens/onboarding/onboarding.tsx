@@ -41,7 +41,7 @@ const steps: readonly {
   {
     key: "machine",
     title: "Add a machine",
-    todo: "Run one command on a Linux server.",
+    todo: "Run one command on a Linux machine.",
     done: "hetzner-ax42-1 · 6 slots",
   },
   {
@@ -106,7 +106,7 @@ export function OnboardingScreen({
             <li key={step.key} className={`setup-step is-${status}`}>
               <span className="setup-marker" aria-hidden="true">
                 {status === "done" ? (
-                  <Check size={15} strokeWidth={3} />
+                  <Check size={14} strokeWidth={2.5} />
                 ) : (
                   index + 1
                 )}

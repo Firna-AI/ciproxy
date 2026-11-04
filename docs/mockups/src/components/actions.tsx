@@ -20,6 +20,8 @@ type ActionProps = {
   block?: boolean;
   disabled?: boolean;
   busy?: boolean;
+  /** A node after the label, such as the chevron of a menu button. */
+  trailing?: ReactNode;
 };
 
 /** A button that acts in place, such as Copy or Save. */

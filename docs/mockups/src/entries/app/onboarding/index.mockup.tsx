@@ -10,7 +10,7 @@ export const onboarding = defineScreen({
   description:
     "The first page after the GitHub App is installed. Setup has four steps; here the second is open, with the one install command, and the page waits for the machine to connect.",
   rationale:
-    "One command installs the agent and connects the server, so a person copies one line and needs no other step on the server.",
+    "One command installs the agent and connects the machine, so a person copies one line and needs no other step on the machine.",
   relatedDocs: [planDoc],
   address: orgAddress("setup"),
   useCasePaths: [paths.flowFirstGreenJob],

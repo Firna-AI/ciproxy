@@ -1,10 +1,12 @@
 // The savings report of mokly-ai for the last 30 days, 19 October to 17
-// November 2026. Source: the CI of mokly-ai (.context/ciproxy-pricing).
+// November 2026, all on Team with three own machines. Source: the CI of
+// mokly-ai (.context/ciproxy-pricing).
 
+import { dateRange } from "./format.ts";
 import { ax42 } from "./machines.ts";
 import { tiers } from "./tiers.ts";
 
-export const savingsPeriod = "19 October – 17 November";
+export const savingsPeriod = dateRange("19 October", "17 November");
 
 const ownCost = 3 * ax42.monthlyCost;
 const boatCost = 100;

@@ -1,5 +1,5 @@
 /* Base styles of the ciproxy dashboard mockups. The colour, radius, and font
-   tokens come from the Firna theme as CSS custom properties (theme/firna.tsx). */
+   tokens are CSS custom properties of the Graphite theme (theme/firna.tsx). */
 
 *,
 *::before,
@@ -29,15 +29,37 @@ p {
   margin: 0;
 }
 
+/* A title breaks into lines of even length, and a paragraph never ends on a
+   lone word. */
+
+h1,
+h2,
+h3,
+.notice-title {
+  text-wrap: balance;
+}
+
+p,
+.caption,
+.notice-body,
+.state-body {
+  text-wrap: pretty;
+}
+
 a {
   color: inherit;
   text-decoration: none;
+}
+
+strong {
+  font-weight: 600;
 }
 
 code,
 .mono {
   font-family: var(--font-mono);
   font-size: 12.5px;
+  letter-spacing: 0;
 }
 
 .mockup {
@@ -45,16 +67,20 @@ code,
 }
 
 .text-link {
-  color: var(--c-primary-deep);
-  font-weight: 600;
+  color: var(--c-ink2);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: var(--c-border2);
+  text-underline-offset: 3px;
 }
 
 .text-link:hover {
-  text-decoration: underline;
+  color: var(--c-ink);
+  text-decoration-color: currentColor;
 }
 
 .strong {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .muted {
@@ -74,6 +100,10 @@ code,
 
 .num {
   font-variant-numeric: tabular-nums;
+}
+
+.nowrap {
+  white-space: nowrap;
 }
 
 .stack {
@@ -123,37 +153,40 @@ code,
   grid-template-columns: minmax(0, 1fr);
 }
 
+/* Icons: decorative grey, the green of a passed state, and a bordered tile. */
+
 .icon-muted {
-  color: var(--c-muted);
+  color: var(--c-faint);
+  flex-shrink: 0;
+}
+
+.icon-ok {
+  color: var(--c-status-ok);
+  flex-shrink: 0;
+}
+
+.icon-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  background: var(--c-surface);
+  color: var(--c-ink2);
   flex-shrink: 0;
 }
 
 .inline-code {
   padding: 1px 5px;
+  border: 1px solid var(--c-border);
   border-radius: var(--r-sm);
-  background: var(--c-bg2);
+  background: var(--c-soft);
   color: var(--c-ink);
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: 12px;
   white-space: nowrap;
-}
-
-/* State colours of icons; each state also carries a word. */
-
-.state-passed {
-  color: var(--c-primary);
-}
-
-.state-failed {
-  color: var(--c-rose);
-}
-
-.state-waiting {
-  color: var(--c-amber);
-}
-
-.state-cancelled {
-  color: var(--c-muted);
 }
 
 /* A narrow desktop frame stacks two-column layouts. */

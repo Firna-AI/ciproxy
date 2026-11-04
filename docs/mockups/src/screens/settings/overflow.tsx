@@ -11,7 +11,7 @@ import { TextField } from "../../components/fields.tsx";
 import { Meter } from "../../components/figures.tsx";
 import { Panel } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
-import { formatMoneyCents } from "../../fixtures/format.ts";
+import { formatMoney, unbroken } from "../../fixtures/format.ts";
 import { boat } from "../../fixtures/machines.ts";
 import { waitChoices } from "../../fixtures/settings.ts";
 import { SettingsFrame } from "./settings-frame.tsx";
@@ -48,16 +48,19 @@ export function OverflowScreen({
       {state === "limit-reached" ? (
         <Notice
           tone="warning"
-          title="Boat spend reached the $200 limit on 26 November"
+          title={`Boat spend reached the ${formatMoney(boat.spendLimit)} limit on ${unbroken("26 November")}`}
         >
-          Jobs wait for a free slot on your machines until 1 December, or until
-          you raise the limit.
+          Jobs run on your machines only, and wait there for a free slot. Boat
+          takes jobs again on {unbroken("1 December")}, or when you raise the
+          limit.
         </Notice>
       ) : null}
       {state === "boat-rejected" ? (
-        <Notice tone="danger" title="Boat rejected the API key on 12 November">
-          Jobs wait for your machines until you connect Boat again with a new
-          key.
+        <Notice
+          tone="danger"
+          title={`Boat rejected the API key on ${unbroken("12 November")}`}
+        >
+          Jobs run on your machines only until you connect Boat with a new key.
         </Notice>
       ) : null}
       <Panel title="Boat">
@@ -120,8 +123,8 @@ export function OverflowScreen({
             used={spent}
             max={boat.spendLimit}
             tone={state === "limit-reached" ? "warning" : "normal"}
-            value={`${formatMoneyCents(spent)} of ${formatMoneyCents(boat.spendLimit)}`}
-            detail="At the limit, jobs wait for a free slot on your machines."
+            value={`${formatMoney(spent)} of ${formatMoney(boat.spendLimit)}`}
+            detail="At the limit, jobs run on your machines only."
           />
           <div className="row">
             <Action tone="primary">Save</Action>

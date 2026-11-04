@@ -7,7 +7,7 @@ import { AddMachineScreen } from "../../../../screens/machines/add-machine.tsx";
 export const addMachine = defineScreen({
   title: "Add a machine",
   description:
-    "The same install command as in setup, for another server. The page waits for the machine to connect.",
+    "The same install command as in setup, for another machine. The page waits for the machine to connect.",
   relatedDocs: [planDoc],
   address: orgAddress("machines/new"),
   propSchema: stateSchema(["waiting", "connected"]),
@@ -20,7 +20,7 @@ export const addMachine = defineScreen({
       slug: "connected",
       title: "A fourth machine connected",
       description:
-        "hetzner-ax42-4 connected and runs jobs. Team includes three own nodes, so the page offers the extra-node add-on.",
+        "hetzner-ax42-4 connected and runs jobs. Team includes three own machines, so the banner of every page offers the extra-machine add-on.",
       props: { state: "connected" },
     },
   ],

@@ -1,16 +1,14 @@
-// Page building blocks: the page header, the breadcrumb, panels, and the link
-// tabs that switch between sibling pages, such as Live and History. Inside a
-// design direction, a live tab leads with a live dot.
+// Page building blocks: the page header with its breadcrumb, panels, the link
+// tabs that switch between sibling pages, such as Live and History, and the
+// details list. A tab with live data leads with a live dot.
 
 import type { ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
 import { MockLink } from "@mokly/mokly";
 
-import { useDirection, useRoutes } from "../theme/direction.ts";
 import type { CataloguePath } from "./paths.ts";
-import { Dot } from "./status-dots.tsx";
+import { Dot } from "./status.tsx";
 import "./page.css";
-import "./page-dir.css";
 
 export type Crumb = { label: string; to: CataloguePath };
 
@@ -42,7 +40,7 @@ export function PageHeader({
             ))}
           </nav>
         ) : null}
-        <div className="row-wrap">
+        <div className="page-title-row">
           <h1 className="page-title">{title}</h1>
           {status}
         </div>
@@ -81,8 +79,7 @@ export function Panel({
 export type TabLink = {
   label: string;
   to: CataloguePath;
-  count?: string;
-  /** The tab shows live data; a direction marks it with a live dot. */
+  /** The tab shows live data, so it leads with a live dot. */
   live?: boolean;
 };
 
@@ -93,22 +90,17 @@ export function LinkTabs({
   tabs: readonly TabLink[];
   active: CataloguePath;
 }) {
-  const direction = useDirection();
-  const route = useRoutes();
   return (
     <nav className="link-tabs">
       {tabs.map((tab) => (
         <MockLink
           key={tab.to}
-          to={route(tab.to)}
+          to={tab.to}
           className={`link-tab${tab.to === active ? " is-active" : ""}`}
           aria-current={tab.to === active ? "page" : undefined}
         >
-          {direction && tab.live ? <Dot tone="run" live /> : null}
+          {tab.live ? <Dot tone="run" /> : null}
           {tab.label}
-          {tab.count ? (
-            <span className="link-tab-count">{tab.count}</span>
-          ) : null}
         </MockLink>
       ))}
     </nav>

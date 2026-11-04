@@ -1,60 +1,66 @@
 .meter {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .meter-label {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .meter-value {
   color: var(--c-ink2);
 }
 
+/* The slots of a machine: a thin segmented bar. */
+
 .slot-strip {
   display: inline-flex;
-  gap: 4px;
+  gap: 2px;
 }
 
 .slot {
   display: inline-block;
   width: 14px;
-  height: 14px;
-  border: 1px solid transparent;
-  border-radius: 4px;
+  height: 6px;
+  border-radius: 1px;
 }
 
 .slot-busy {
-  background: var(--c-primary);
+  background: var(--c-slot-busy);
 }
 
 .slot-warm {
-  border-color: var(--c-primary);
-  background: var(--c-primary-soft);
+  background: var(--c-slot-warm);
 }
 
 .slot-free {
-  border-color: var(--c-border2);
-  background: var(--c-bg);
+  background: var(--c-slot-free);
 }
 
 .slot-legend {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 6px 14px;
+  gap: 6px 16px;
+}
+
+.slot-legend .row {
+  gap: 6px;
 }
 
 .slot-legend .slot {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
+  width: 12px;
+  height: 4px;
 }
+
+/* A code block on the page grey, with a hairline and a light head. A diff
+   line takes a faint status tint across its full width. */
 
 .code-block {
   overflow: hidden;
+  border: 1px solid var(--c-border);
   border-radius: var(--r-lg);
-  background: var(--c-ink);
+  background: var(--c-bg);
 }
 
 .code-head {
@@ -62,19 +68,20 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 6px 8px 6px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 4px 6px 4px 12px;
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-surface);
 }
 
 .code-label {
-  color: #b9bfb8;
+  color: var(--c-muted);
   font-size: 12px;
 }
 
 .code-block pre {
   margin: 0;
-  padding: 12px 16px 14px;
-  color: #eef2ed;
+  padding: 10px 0;
+  color: var(--c-ink);
   font-family: var(--font-mono);
   font-size: 12.5px;
   line-height: 20px;
@@ -82,12 +89,17 @@
   overflow-wrap: anywhere;
 }
 
+.code-block pre > span {
+  display: block;
+  padding: 0 12px;
+}
+
 .code-add {
-  color: #a5d6b4;
+  background: color-mix(in srgb, var(--c-status-ok) 12%, transparent);
 }
 
 .code-remove {
-  color: #e6a69d;
+  background: color-mix(in srgb, var(--c-status-err) 10%, transparent);
 }
 
 .quantity {
@@ -98,7 +110,7 @@
 }
 
 .quantity-label {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .quantity-control {
@@ -109,6 +121,6 @@
 
 .quantity-value {
   min-width: 18px;
-  font-weight: 600;
+  font-weight: 500;
   text-align: center;
 }

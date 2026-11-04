@@ -1,7 +1,5 @@
-// Small figures: the usage meter, the slot strip of a machine, and the code
-// block with its Copy button. The meter takes its colours from the nearest
-// Firna theme; inside a design direction it is thinner, and the slot strip
-// becomes a thin segmented bar (figures-dir.css).
+// Small figures: the usage meter, the slots of a machine as a thin segmented
+// bar, the code block with its Copy button, and a quantity the customer sets.
 
 import type { ReactNode } from "react";
 import { Copy, Minus, Plus } from "lucide-react";
@@ -10,10 +8,8 @@ import { ProgressBar } from "@firna/ui/loader";
 import { useSharedUiTheme } from "@firna/ui/theme";
 
 import type { SlotState } from "../fixtures/machines.ts";
-import { useDirection } from "../theme/direction.ts";
 import { Action, noop } from "./actions.tsx";
 import "./figures.css";
-import "./figures-dir.css";
 
 export type MeterTone = "normal" | "warning";
 
@@ -35,7 +31,6 @@ export function Meter({
   tone?: MeterTone;
 }) {
   const palette = useSharedUiTheme().colors;
-  const thin = useDirection() !== null;
   const colors =
     tone === "warning"
       ? { fill: palette.amber, track: palette.amberSoft }
@@ -50,7 +45,7 @@ export function Meter({
         value={Math.min(used / max, 1)}
         color={colors.fill}
         trackColor={colors.track}
-        height={thin ? 4 : 8}
+        height={4}
         accessibilityLabel={label}
       />
       {detail ? <p className="caption">{detail}</p> : null}
@@ -64,7 +59,13 @@ const slotTitles: Record<SlotState, string> = {
   free: "Free",
 };
 
-/** One cell per slot of a machine: busy, warm runner, or free. */
+function slotSummary(slots: readonly SlotState[]): string {
+  const busy = slots.filter((s) => s === "busy").length;
+  const warm = slots.filter((s) => s === "warm").length;
+  return `${busy} of ${slots.length} busy, ${warm} warm`;
+}
+
+/** One segment per slot of a machine: busy, warm runner, or free. */
 export function SlotStrip({ slots }: { slots: readonly SlotState[] }) {
   return (
     <span className="slot-strip" role="img" aria-label={slotSummary(slots)}>
@@ -77,12 +78,6 @@ export function SlotStrip({ slots }: { slots: readonly SlotState[] }) {
       ))}
     </span>
   );
-}
-
-export function slotSummary(slots: readonly SlotState[]): string {
-  const busy = slots.filter((s) => s === "busy").length;
-  const warm = slots.filter((s) => s === "warm").length;
-  return `${busy} of ${slots.length} busy, ${warm} warm`;
 }
 
 export function SlotLegend() {
@@ -106,7 +101,7 @@ export function CodeBlock({
   label,
   lines,
 }: {
-  /** Where the code goes, such as "On the server" or a file path. */
+  /** Where the code goes, such as "On the machine" or a file path. */
   label: string;
   lines: readonly string[];
 }) {
@@ -114,7 +109,7 @@ export function CodeBlock({
     <div className="code-block">
       <div className="code-head">
         <span className="code-label">{label}</span>
-        <Action tone="onMedia" size="sm" icon={Copy}>
+        <Action size="sm" icon={Copy}>
           Copy
         </Action>
       </div>
@@ -122,7 +117,6 @@ export function CodeBlock({
         {lines.map((line, i) => (
           <span key={i} className={codeLineClass(line)}>
             {line}
-            {"\n"}
           </span>
         ))}
       </pre>

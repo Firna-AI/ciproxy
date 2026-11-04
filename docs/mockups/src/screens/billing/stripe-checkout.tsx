@@ -1,5 +1,7 @@
-// Stripe Checkout as Stripe hosts it, with the line items that ciproxy sends.
+// Stripe Checkout as Stripe hosts it, with the line items that ciproxy sends
+// and the branding that ciproxy sets: the Graphite colours and black button.
 // Stripe owns this page; the mockup shows what the customer sees in the flow.
+// Stripe formats the amounts with cents.
 
 import { ArrowLeft, Lock } from "lucide-react";
 import { MockLink, type Viewport } from "@mokly/mokly";
@@ -7,8 +9,8 @@ import { MockLink, type Viewport } from "@mokly/mokly";
 import { LinkAction } from "../../components/actions.tsx";
 import { BrandMark } from "../../components/brand.tsx";
 import { paths } from "../../components/paths.ts";
-import { formatMoneyCents } from "../../fixtures/format.ts";
-import { tiers } from "../../fixtures/tiers.ts";
+import { dotJoin, formatMoneyCents, unbroken } from "../../fixtures/format.ts";
+import { ownMachines, startsText, tiers } from "../../fixtures/tiers.ts";
 import "./stripe.css";
 
 function Field({
@@ -31,13 +33,14 @@ function Field({
 }
 
 export function StripeCheckoutScreen({ viewport }: { viewport: Viewport }) {
-  const price = formatMoneyCents(tiers.team.price);
+  const team = tiers.team;
+  const price = formatMoneyCents(team.price);
   return (
     <div className={`stripe stripe-${viewport}`}>
       <section className="stripe-summary">
         <MockLink to={paths.checkoutCancelled} className="stripe-merchant">
           <ArrowLeft size={16} />
-          <BrandMark size={22} />
+          <BrandMark size={18} />
           <span>ciproxy</span>
         </MockLink>
         <p className="stripe-muted">Subscribe to Team</p>
@@ -49,7 +52,10 @@ export function StripeCheckoutScreen({ viewport }: { viewport: Viewport }) {
             <span>
               Team
               <span className="stripe-muted stripe-sub">
-                25,000 starts and 3 own nodes · billed monthly
+                {dotJoin(
+                  `${startsText(team.starts)} a month and ${ownMachines(team.machines)}`,
+                  unbroken("Billed monthly"),
+                )}
               </span>
             </span>
             <span>{price}</span>

@@ -1,6 +1,7 @@
 // The approved MVP pricing (plan: Pricing). Every screen that shows a price, a
 // limit, or a tier feature reads it from here.
 
+import { formatCount, unbroken } from "./format.ts";
 import type { TierKey } from "./org.ts";
 
 export type Tier = {
@@ -8,7 +9,8 @@ export type Tier = {
   name: string;
   price: number;
   starts: number;
-  nodes: number;
+  /** The own machines that the tier includes. */
+  machines: number;
   history: string;
   addOns: boolean;
   /** What the tier adds to the tier below it. */
@@ -21,7 +23,7 @@ export const tiers: Readonly<Record<TierKey, Tier>> = {
     name: "Free",
     price: 0,
     starts: 2_000,
-    nodes: 1,
+    machines: 1,
     history: "7 days",
     addOns: false,
     adds: ["7 days of job history"],
@@ -31,7 +33,7 @@ export const tiers: Readonly<Record<TierKey, Tier>> = {
     name: "Team",
     price: 49,
     starts: 25_000,
-    nodes: 3,
+    machines: 3,
     history: "30 days",
     addOns: true,
     adds: [
@@ -46,7 +48,7 @@ export const tiers: Readonly<Record<TierKey, Tier>> = {
     name: "Business",
     price: 299,
     starts: 150_000,
-    nodes: 10,
+    machines: 10,
     history: "90 days",
     addOns: true,
     adds: [
@@ -75,5 +77,15 @@ export const everyTier: readonly string[] = [
 export const addOnPrices = {
   startsBlock: 10_000,
   startsPrice: 10,
-  nodePrice: 20,
+  machinePrice: 20,
 } as const;
+
+/** "1 own machine", "3 own machines", whole on one line. */
+export function ownMachines(count: number): string {
+  return unbroken(`${count} own ${count === 1 ? "machine" : "machines"}`);
+}
+
+/** "25,000 starts", whole on one line. */
+export function startsText(count: number): string {
+  return unbroken(`${formatCount(count)} starts`);
+}

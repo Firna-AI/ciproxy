@@ -35,7 +35,7 @@ export function CostBars({ withCiproxy = true }: { withCiproxy?: boolean }) {
         <div
           key={bar.key}
           className="cost-bar-row"
-          title={`${bar.label}: ${formatMoney(Math.round(bar.value))}`}
+          title={`${bar.label}: ${formatMoney(bar.value)}`}
         >
           <span className={`cost-bar-label${bar.accent ? " strong" : ""}`}>
             {bar.label}
@@ -43,11 +43,9 @@ export function CostBars({ withCiproxy = true }: { withCiproxy?: boolean }) {
           <span className="cost-bar-track">
             <span
               className={`cost-bar${bar.accent ? " is-accent" : ""}`}
-              style={{ width: `calc((100% - 72px) * ${bar.value / max})` }}
+              style={{ width: `calc((100% - 80px) * ${bar.value / max})` }}
             />
-            <span className="cost-bar-value num">
-              {formatMoney(Math.round(bar.value))}
-            </span>
+            <span className="cost-bar-value num">{formatMoney(bar.value)}</span>
           </span>
         </div>
       ))}

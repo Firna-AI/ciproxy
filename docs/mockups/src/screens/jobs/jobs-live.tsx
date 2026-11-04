@@ -12,11 +12,12 @@ import { Kpi, KpiRow } from "../../components/kpis.tsx";
 import { LinkTabs, PageHeader, Panel } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
 import { AppShell } from "../../components/shell/app-shell.tsx";
-import { liveTrends } from "../../fixtures/trends.ts";
+import { usageBanner } from "../../components/usage-banner.tsx";
+import { formatMoney, unbroken } from "../../fixtures/format.ts";
+import { boat } from "../../fixtures/machines.ts";
 import { type LiveScene, liveScenes, type LiveState } from "./live-scenes.ts";
 import { JobList, LoadingJobList } from "./job-tables.tsx";
 import "./jobs.css";
-import "./jobs-dir.css";
 
 export const jobTabs = [
   { label: "Live", to: paths.jobs, live: true },
@@ -26,11 +27,9 @@ export const jobTabs = [
 function notices(state: LiveState, scene: LiveScene): ReactNode {
   if (state === "peak") {
     return (
-      <Notice
-        tone="info"
-        title={`Your machines are full. ciproxy is starting ${scene.waiting} runners on Boat.`}
-      >
-        A job starts on Boat when it has waited 30 seconds for a free slot.
+      <Notice tone="info" title="Your machines are full">
+        {scene.waiting} jobs wait for a free slot. Each one starts on Boat when
+        it has waited {boat.waitSeconds} seconds.
       </Notice>
     );
   }
@@ -38,40 +37,19 @@ function notices(state: LiveState, scene: LiveScene): ReactNode {
     return (
       <Notice
         tone="warning"
-        title="Boat reached its $200 limit for November"
+        title={`Boat reached its ${formatMoney(boat.spendLimit)} limit for November`}
         actions={
           <LinkAction to={paths.overflowLimitReached} size="sm">
             Raise the limit
           </LinkAction>
         }
       >
-        Jobs wait for a free slot on your machines until 1 December.
+        Jobs run on your machines only, and wait there for a free slot. Boat
+        takes jobs again on {unbroken("1 December")}.
       </Notice>
     );
   }
   return null;
-}
-
-function startsPassedBanner(): ReactNode {
-  return (
-    <Notice
-      tone="warning"
-      title="mokly-ai used the 2,000 starts of Free"
-      actions={
-        <>
-          <LinkAction to={paths.usageFreeOver} size="sm">
-            Plan and usage
-          </LinkAction>
-          <LinkAction to={paths.plans} tone="primary" size="sm">
-            Choose Team
-          </LinkAction>
-        </>
-      }
-    >
-      Jobs keep running. Team includes 25,000 starts and 3 own nodes for $49 a
-      month.
-    </Notice>
-  );
 }
 
 export function JobsLiveScreen({
@@ -87,19 +65,21 @@ export function JobsLiveScreen({
       viewport={viewport}
       tier={scene.tier}
       active="jobs"
-      banner={state === "starts-passed" ? startsPassedBanner() : undefined}
+      banner={
+        state === "starts-passed"
+          ? usageBanner("free-over", "other")
+          : undefined
+      }
     >
       <PageHeader title="Jobs" />
       <LinkTabs tabs={jobTabs} active={paths.jobs} />
       {state === "error" ? (
         <Panel>
-          <ReadFailure retry={paths.jobs} />
+          <ReadFailure subject="jobs" retry={paths.jobs} />
         </Panel>
       ) : (
         <>
-          {state === "loading" ? null : (
-            <LiveFigures scene={scene} steady={state === "steady"} />
-          )}
+          {state === "loading" ? null : <LiveFigures scene={scene} />}
           {notices(state, scene)}
           <LiveLists viewport={viewport} state={state} scene={scene} />
         </>
@@ -108,19 +88,17 @@ export function JobsLiveScreen({
   );
 }
 
-function LiveFigures({ scene, steady }: { scene: LiveScene; steady: boolean }) {
-  const trends = steady ? liveTrends.steady : undefined;
+function LiveFigures({ scene }: { scene: LiveScene }) {
   return (
     <KpiRow>
-      <Kpi label="Running" value={scene.running} trend={trends?.running} />
-      <Kpi label="Waiting" value={scene.waiting} trend={trends?.waiting} />
+      <Kpi label="Running" value={scene.running} />
+      <Kpi label="Waiting" value={scene.waiting} />
       <Kpi
         label="Own slots in use"
         value={scene.ownBusy}
         valueFormat={(value) => `${value} of ${scene.ownSlots}`}
-        trend={trends?.busySlots}
       />
-      <Kpi label="On Boat" value={scene.onBoat} trend={trends?.onBoat} />
+      <Kpi label="On Boat" value={scene.onBoat} />
     </KpiRow>
   );
 }

@@ -22,7 +22,7 @@ export const movedToFree = defineScreen({
   slug: "moved-to-free",
   title: "Moved to Free after failed payments",
   description:
-    "Stripe ended the subscription after its retries, so mokly-ai is on Free. Its use now passes the Free limits; jobs keep running and the banner offers a plan.",
+    "Stripe ended the subscription after its retries on 18 December, so mokly-ai is on Free from that day, and the Free period counts only the starts since then. Its 3 own machines pass the Free limit; jobs keep running and the banner offers a plan.",
   relatedDocs: [planDoc],
   address,
   render: (_props, context) => (

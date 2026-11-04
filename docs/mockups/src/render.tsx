@@ -1,8 +1,7 @@
 // The Mokly renderer of the ciproxy dashboard mockups. Mokly calls it around
-// every React screen and owns the document; the renderer adds the Firna theme,
-// the static Firna CSS, the Inter face, and the base stylesheet.
+// every React screen and owns the document; the renderer adds the static Firna
+// CSS with the Graphite tokens, the Firna theme, and the base stylesheet.
 
-import "@fontsource-variable/inter/index.css";
 import "./styles/base.css";
 
 import type { RenderInput, RenderResult } from "@mokly/mokly";

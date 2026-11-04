@@ -1,13 +1,18 @@
-// The own machines as a table on desktop and as cards on mobile.
+// The own machines as a table on desktop and as a dense list on mobile.
 
 import type { Viewport } from "@mokly/mokly";
 import { MockLink } from "@mokly/mokly";
 
-import { DataTable } from "../../components/data-table.tsx";
+import {
+  DataTable,
+  LoadingRows,
+  type Column,
+} from "../../components/data-table.tsx";
 import { SlotLegend, SlotStrip } from "../../components/figures.tsx";
 import { paths, type CataloguePath } from "../../components/paths.ts";
-import { MachineStatusBadge } from "../../components/status.tsx";
-import { ax42, type Machine } from "../../fixtures/machines.ts";
+import { MachineStatusLabel } from "../../components/status.tsx";
+import { dotJoin, unbroken } from "../../fixtures/format.ts";
+import { ax42Size, type Machine } from "../../fixtures/machines.ts";
 
 /** The detail screens that exist: hetzner-ax42-1, and the offline machine. */
 function detailPath(machine: Machine): CataloguePath | undefined {
@@ -20,15 +25,13 @@ function MachineName({ machine }: { machine: Machine }) {
   return (
     <span className="machine-name">
       {to ? (
-        <MockLink to={to} className="machine-link">
+        <MockLink to={to} className="machine-link mono">
           {machine.name}
         </MockLink>
       ) : (
-        <span className="strong">{machine.name}</span>
+        <span className="machine-link mono">{machine.name}</span>
       )}
-      <span className="caption">
-        {ax42.threads} threads · {ax42.memoryGb} GB
-      </span>
+      <span className="caption">{ax42Size}</span>
     </span>
   );
 }
@@ -37,7 +40,7 @@ function slotText(machine: Machine): string {
   if (machine.status === "offline") return "No slots available";
   const busy = machine.slots.filter((slot) => slot === "busy").length;
   const warm = machine.slots.filter((slot) => slot === "warm").length;
-  return `${busy} busy · ${warm} warm`;
+  return dotJoin(unbroken(`${busy} busy`), unbroken(`${warm} warm`));
 }
 
 function cell(machine: Machine, key: string) {
@@ -45,10 +48,10 @@ function cell(machine: Machine, key: string) {
     case "machine":
       return <MachineName machine={machine} />;
     case "status":
-      return <MachineStatusBadge status={machine.status} />;
+      return <MachineStatusLabel status={machine.status} />;
     case "slots":
       return (
-        <span className="stack-tight slots-cell">
+        <span className="slots-cell">
           {machine.status === "offline" ? null : (
             <SlotStrip slots={machine.slots} />
           )}
@@ -62,16 +65,16 @@ function cell(machine: Machine, key: string) {
         </span>
       );
     default:
-      return <span className="muted last-seen">{machine.lastSeen}</span>;
+      return <span className="muted num">{machine.lastSeen}</span>;
   }
 }
 
-const columns = [
+const columns: readonly Column[] = [
   { key: "machine", label: "Machine", flex: 2 },
-  { key: "status", label: "Health", width: 120 },
+  { key: "status", label: "Health", width: 112 },
   { key: "slots", label: "Slots", flex: 2 },
-  { key: "cache", label: "Cache", width: 130 },
-  { key: "seen", label: "Last seen", width: 110, align: "right" as const },
+  { key: "cache", label: "Cache", width: 124 },
+  { key: "seen", label: "Last seen", width: 96, align: "right" },
 ];
 
 export function MachineTable({
@@ -88,7 +91,7 @@ export function MachineTable({
           <div key={machine.name} className="machine-card">
             <div className="spread">
               <MachineName machine={machine} />
-              <MachineStatusBadge status={machine.status} />
+              <MachineStatusLabel status={machine.status} />
             </div>
             <div className="spread">
               {machine.status === "offline" ? (
@@ -110,7 +113,7 @@ export function MachineTable({
     <>
       <DataTable
         columns={columns}
-        rows={[...machines]}
+        rows={machines}
         rowKey={(machine) => machine.name}
         cell={cell}
       />
@@ -121,7 +124,9 @@ export function MachineTable({
   );
 }
 
-export function LoadingMachineTable() {
+/** The machines while they load: a table on desktop, bar rows on mobile. */
+export function LoadingMachineTable({ viewport }: { viewport: Viewport }) {
+  if (viewport === "mobile") return <LoadingRows count={3} />;
   return (
     <DataTable
       columns={columns.slice(0, 3)}

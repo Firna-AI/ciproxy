@@ -9,7 +9,7 @@ export const stripe = defineScreen({
   description:
     "The payment page that Stripe hosts. ciproxy supplies the line items and the return pages; the card never reaches ciproxy.",
   rationale:
-    "Shown so that the flow is complete. Stripe owns the layout of this page; only the line items are ciproxy content.",
+    "Shown so that the flow is complete. Stripe owns the layout of this page; ciproxy sets its branding, the Graphite colours and a black button, and the line items.",
   relatedDocs: [planDoc],
   address: "checkout.stripe.com/c/pay/cs_live_b1Qx7",
   useCasePaths: [paths.flowFreeToTeam],

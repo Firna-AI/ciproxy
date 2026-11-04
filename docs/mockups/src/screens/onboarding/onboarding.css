@@ -1,3 +1,6 @@
+/* Setup: four steps in a column. A done step shows a check, the open step a
+   filled number, and a later step a plain number on the page grey. */
+
 .setup-steps {
   display: flex;
   flex-direction: column;
@@ -11,7 +14,7 @@
 .setup-step {
   display: flex;
   gap: 14px;
-  padding: 16px 18px;
+  padding: 16px;
   border: 1px solid var(--c-border);
   border-radius: var(--r-xl);
   background: var(--c-surface);
@@ -34,26 +37,27 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border: 1px solid var(--c-border2);
   border-radius: var(--r-pill);
   color: var(--c-muted);
-  font-size: 13px;
-  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
   flex-shrink: 0;
 }
 
 .is-active .setup-marker {
-  border-color: var(--c-primary);
-  background: var(--c-primary);
+  border-color: var(--c-ink);
+  background: var(--c-ink);
   color: var(--c-on-solid);
 }
 
 .is-done .setup-marker {
-  border-color: var(--c-primary-border);
+  border-color: var(--c-border2);
   background: var(--c-primary-soft);
-  color: var(--c-primary-deep);
+  color: var(--c-ink);
 }
 
 .setup-content {
@@ -66,7 +70,7 @@
 }
 
 .setup-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -77,13 +81,17 @@
 .first-job {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid var(--c-primary-border);
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--c-border);
   border-radius: var(--r-lg);
-  background: var(--c-primary-soft);
+  background: var(--c-surface);
+}
+
+.first-job .icon-ok {
+  margin-top: 1px;
 }
 
 .first-job-title {
-  font-weight: 600;
+  font-weight: 500;
 }

@@ -8,13 +8,17 @@
 .connected-machine {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 10px;
   padding: 12px 14px;
-  border: 1px solid var(--c-primary-border);
+  border: 1px solid var(--c-border);
   border-radius: var(--r-lg);
-  background: var(--c-primary-soft);
+  background: var(--c-surface);
+}
+
+.connected-machine .icon-ok {
+  margin-top: 1px;
 }
 
 .connected-title {
-  font-weight: 600;
+  font-weight: 500;
 }

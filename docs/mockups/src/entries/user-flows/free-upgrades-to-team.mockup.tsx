@@ -6,7 +6,7 @@ import { planDoc } from "../../components/state-schema.ts";
 export const freeUpgradesToTeam = defineUseCase({
   title: "A Free organization passes its starts and upgrades to Team",
   description:
-    "mokly-ai runs about 600 jobs a day, so on 4 November it passes the 2,000 starts of Free. Jobs keep running; the dashboard offers Team, and Cal pays through Stripe Checkout.",
+    "mokly-ai runs about 600 jobs a day, so on 4 September it passes the 2,000 starts of Free. Jobs keep running; the dashboard offers Team, and Cal pays through Stripe Checkout.",
   relatedDocs: [planDoc],
   steps: [
     {
@@ -46,7 +46,7 @@ export const freeUpgradesToTeam = defineUseCase({
       screenPath: paths.checkoutConfirmed,
       title: "mokly-ai is on Team",
       description:
-        "The 2,214 starts of this period now count against 25,000. Add machines leads to the next own node.",
+        "The first Team period starts today, so its starts count from zero against 25,000. Add machines leads to the next own machine.",
     },
   ],
 });

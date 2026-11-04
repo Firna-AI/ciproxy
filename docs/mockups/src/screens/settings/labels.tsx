@@ -1,16 +1,21 @@
 // Labels and machine shapes. A workflow picks a label in runs-on; each label
-// starts a VM of its shape on an own machine, or on Boat.
+// starts a VM of its shape on an own machine, or on Boat. Every label has an
+// Edit control; the mockup opens the dialog for ciproxy-8vcpu.
 
 import { Pencil, Plus } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
-import { Badge } from "@firna/ui/badge";
-import { Table } from "@firna/ui/table";
 
-import { LinkAction } from "../../components/actions.tsx";
+import { Action, LinkAction } from "../../components/actions.tsx";
+import {
+  DataTable,
+  LoadingRows,
+  type Column,
+} from "../../components/data-table.tsx";
 import { ReadFailure } from "../../components/feedback.tsx";
 import { Panel } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
-import { formatCount } from "../../fixtures/format.ts";
+import { Tag } from "../../components/status.tsx";
+import { dotJoin, formatCount, unbroken } from "../../fixtures/format.ts";
 import { labels, type Label } from "../../fixtures/settings.ts";
 import { SettingsFrame } from "./settings-frame.tsx";
 import { ShapeDialog } from "./shape-dialog.tsx";
@@ -24,41 +29,91 @@ export const labelsStates = [
 ] as const;
 export type LabelsState = (typeof labelsStates)[number];
 
-const columns = [
+const columns: readonly Column[] = [
   { key: "label", label: "Label", flex: 2 },
   { key: "shape", label: "Shape", flex: 2 },
-  { key: "jobs", label: "Jobs, 30 days", width: 120, align: "right" as const },
-  { key: "edit", label: "", width: 90, align: "right" as const },
+  { key: "jobs", label: "Jobs, 30 days", width: 120, align: "right" },
+  { key: "edit", label: "", width: 90, align: "right" },
 ];
 
 function shapeText(label: Label): string {
-  return `${label.vcpu} vCPU · ${label.memoryGb} GB · ${label.diskGb} GB disk`;
+  return dotJoin(
+    unbroken(`${label.vcpu} vCPU`),
+    unbroken(`${label.memoryGb} GB`),
+    unbroken(`${label.diskGb} GB disk`),
+  );
+}
+
+function LabelName({ label }: { label: Label }) {
+  return (
+    <span className="row">
+      <span className="inline-code">{label.name}</span>
+      {label.name === "ciproxy" ? <Tag>Default</Tag> : null}
+    </span>
+  );
+}
+
+function EditLabel({ label }: { label: Label }) {
+  return label.name === "ciproxy-8vcpu" ? (
+    <LinkAction to={paths.editShape} size="sm" icon={Pencil}>
+      Edit
+    </LinkAction>
+  ) : (
+    <Action size="sm" icon={Pencil}>
+      Edit
+    </Action>
+  );
 }
 
 function cell(label: Label, key: string) {
   switch (key) {
     case "label":
-      return (
-        <span className="row">
-          <span className="inline-code">{label.name}</span>
-          {label.name === "ciproxy" ? (
-            <Badge tone="neutral" size="sm">
-              Default
-            </Badge>
-          ) : null}
-        </span>
-      );
+      return <LabelName label={label} />;
     case "shape":
       return <span>{shapeText(label)}</span>;
     case "jobs":
       return <span className="num">{formatCount(label.jobs)}</span>;
     default:
-      return label.name === "ciproxy-8vcpu" ? (
-        <LinkAction to={paths.editShape} size="sm" icon={Pencil}>
-          Edit
-        </LinkAction>
-      ) : null;
+      return <EditLabel label={label} />;
   }
+}
+
+function LabelList({
+  viewport,
+  loading,
+}: {
+  viewport: Viewport;
+  loading: boolean;
+}) {
+  if (viewport === "desktop") {
+    return (
+      <DataTable
+        columns={columns}
+        rows={loading ? [] : labels}
+        rowKey={(label) => label.name}
+        cell={cell}
+        loading={loading}
+        loadingRowCount={3}
+      />
+    );
+  }
+  if (loading) return <LoadingRows count={3} />;
+  return (
+    <ul className="label-cards">
+      {labels.map((label) => (
+        <li key={label.name} className="label-card">
+          <span className="label-card-text">
+            <LabelName label={label} />
+            <span className="small">{shapeText(label)}</span>
+            <span className="caption">
+              {formatCount(label.jobs)} jobs in 30 days
+            </span>
+          </span>
+          <EditLabel label={label} />
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 export function LabelsScreen({
@@ -80,7 +135,7 @@ export function LabelsScreen({
     >
       {state === "error" ? (
         <Panel>
-          <ReadFailure retry={paths.settings} />
+          <ReadFailure subject="settings" retry={paths.settings} />
         </Panel>
       ) : (
         <>
@@ -99,32 +154,11 @@ export function LabelsScreen({
               </LinkAction>
             }
           >
-            {viewport === "mobile" ? (
-              <ul className="label-cards">
-                {labels.map((label) => (
-                  <li key={label.name} className="label-card">
-                    <span className="inline-code">{label.name}</span>
-                    <span className="small">{shapeText(label)}</span>
-                    <span className="caption">
-                      {formatCount(label.jobs)} jobs in 30 days
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <Table
-                columns={columns}
-                rows={state === "loading" ? [] : [...labels]}
-                rowKey={(label) => label.name}
-                cell={cell}
-                loading={state === "loading"}
-                loadingRowCount={3}
-              />
-            )}
+            <LabelList viewport={viewport} loading={state === "loading"} />
           </Panel>
           <p className="caption">
-            A slot on your machines is 2 vCPU and 8 GB. A larger shape takes
-            several slots.
+            A slot on your machines is {unbroken("2 vCPU")} and{" "}
+            {unbroken("8 GB")}. A larger shape takes several slots.
           </p>
         </>
       )}

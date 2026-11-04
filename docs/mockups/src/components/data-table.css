@@ -1,5 +1,5 @@
-/* The dense table of a design direction (data-table.tsx). Rows are one line
-   at --d-row-height; the header sits on the --d-head-bg band. */
+/* The dense table (data-table.tsx): rows of one line at 44 px, the header on
+   the page grey, and hairlines between rows. */
 
 .dt {
   width: 100%;
@@ -10,8 +10,8 @@
   height: 36px;
   padding: 0 16px;
   border-bottom: 1px solid var(--c-border);
-  background: var(--d-head-bg);
-  color: var(--d-head-ink);
+  background: var(--c-bg);
+  color: var(--c-muted);
   font-size: 12px;
   font-weight: 500;
   text-align: left;
@@ -19,13 +19,11 @@
 }
 
 .dt td {
-  height: var(--d-row-height);
+  height: 44px;
   padding: 0 16px;
-  overflow: hidden;
   border-bottom: 1px solid var(--c-border);
   color: var(--c-ink);
   font-size: 13px;
-  text-overflow: ellipsis;
   vertical-align: middle;
   white-space: nowrap;
 }
@@ -41,10 +39,6 @@
 .dt .dt-right {
   text-align: right;
   font-variant-numeric: tabular-nums;
-}
-
-.dt .dt-center {
-  text-align: center;
 }
 
 .dt-bar {
@@ -64,15 +58,35 @@
   font-size: 12.5px;
 }
 
-/* The header of each direction: uppercase in the console, a bolder band in
-   enterprise. */
+/* The bar rows of a mobile list that is still loading. */
 
-.dir-midnight .dt th {
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+.dt-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.dir-enterprise .dt th {
-  font-weight: 600;
+.dt-rows-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-top: 1px solid var(--c-border);
+}
+
+.dt-rows-item:first-child {
+  border-top: 0;
+}
+
+.dt-rows-item .dt-bar-short {
+  width: 32%;
+}
+
+/* A narrow desktop window gives the columns tighter padding. */
+
+@media (max-width: 960px) {
+  .mockup-desktop .dt th,
+  .mockup-desktop .dt td {
+    padding: 0 12px;
+  }
 }

@@ -14,9 +14,14 @@ import {
 } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
 import { AppShell } from "../../components/shell/app-shell.tsx";
-import { formatCount, formatMoneyCents } from "../../fixtures/format.ts";
+import { formatCount, formatMoney, monthly } from "../../fixtures/format.ts";
 import { org } from "../../fixtures/org.ts";
-import { tiers } from "../../fixtures/tiers.ts";
+import {
+  addOnPrices,
+  ownMachines,
+  startsText,
+  tiers,
+} from "../../fixtures/tiers.ts";
 import "./billing.css";
 
 export function CheckoutReviewScreen({ viewport }: { viewport: Viewport }) {
@@ -26,7 +31,7 @@ export function CheckoutReviewScreen({ viewport }: { viewport: Viewport }) {
       <PageHeader
         crumbs={[{ label: "Plans", to: paths.plans }]}
         title="Move to Team"
-        subtitle={`For ${org.login}: ${formatCount(team.starts)} starts and ${team.nodes} own nodes a month.`}
+        subtitle={`For ${org.login}: ${startsText(team.starts)} a month and ${ownMachines(team.machines)}.`}
       />
       <div className="checkout">
         <Panel title="Add-ons">
@@ -37,33 +42,30 @@ export function CheckoutReviewScreen({ viewport }: { viewport: Viewport }) {
             <Quantity
               label="Extra starts"
               value={0}
-              caption="$10 a month for each 10,000"
+              caption={`${monthly(addOnPrices.startsPrice)} for each ${formatCount(addOnPrices.startsBlock)}`}
             />
             <Quantity
-              label="Extra own nodes"
+              label="Extra own machines"
               value={0}
-              caption="$20 a month each"
+              caption={`${monthly(addOnPrices.machinePrice)} each`}
             />
           </div>
         </Panel>
         <Panel title="Summary">
           <div className="stack">
             <DetailList>
-              <DetailRow label="Team">{formatMoneyCents(team.price)}</DetailRow>
-              <DetailRow label="Extra starts · 0">
-                {formatMoneyCents(0)}
-              </DetailRow>
-              <DetailRow label="Extra own nodes · 0">
-                {formatMoneyCents(0)}
+              <DetailRow label="Team">{formatMoney(team.price)}</DetailRow>
+              <DetailRow label="Extra starts · 0">{formatMoney(0)}</DetailRow>
+              <DetailRow label="Extra own machines · 0">
+                {formatMoney(0)}
               </DetailRow>
               <DetailRow label="Total a month">
-                <strong>{formatMoneyCents(team.price)}</strong>
+                <strong>{formatMoney(team.price)}</strong>
               </DetailRow>
             </DetailList>
             <p className="caption">
-              Stripe charges {formatMoneyCents(team.price)} today, then on the
-              4th of each month. You pay on Stripe; ciproxy never sees your
-              card.
+              Stripe charges {formatMoney(team.price)} today, then on the 4th of
+              each month. You pay on Stripe; ciproxy never sees your card.
             </p>
             <LinkAction
               to={paths.checkoutStripe}

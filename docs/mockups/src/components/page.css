@@ -1,36 +1,44 @@
 .page-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
 }
 
 .mockup-mobile .page-head {
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
 .page-head-text {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
 }
 
+.page-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+
 .page-title {
-  font-size: 22px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
-  line-height: 28px;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 32px;
 }
 
 .mockup-mobile .page-title {
   font-size: 20px;
-  line-height: 26px;
+  line-height: 28px;
 }
 
 .page-subtitle {
   color: var(--c-muted);
+  font-size: 13px;
 }
 
 .page-actions {
@@ -58,32 +66,19 @@
 }
 
 .panel {
-  padding: 18px 20px;
+  padding: 16px;
   border: 1px solid var(--c-border);
   border-radius: var(--r-xl);
   background: var(--c-surface);
 }
 
 .mockup-mobile .panel {
-  padding: 14px 16px;
+  padding: 14px;
 }
 
-.panel-flush {
+.panel.panel-flush {
   padding: 0;
   overflow: hidden;
-}
-
-.panel-flush > .panel-head {
-  padding: 16px 20px 4px;
-}
-
-.mockup-mobile .panel-flush,
-.mockup-mobile .panel-flush > .panel-head {
-  padding: 0;
-}
-
-.mockup-mobile .panel-flush > .panel-head {
-  padding: 14px 16px 4px;
 }
 
 .panel-head {
@@ -94,40 +89,43 @@
   margin-bottom: 12px;
 }
 
+.panel-flush > .panel-head {
+  min-height: 48px;
+  margin: 0;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.mockup-mobile .panel-flush > .panel-head {
+  padding: 0 14px;
+}
+
 .panel-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
+  line-height: 20px;
 }
 
 .link-tabs {
   display: flex;
-  gap: 4px;
+  gap: 24px;
   border-bottom: 1px solid var(--c-border);
 }
 
 .link-tab {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   margin-bottom: -1px;
-  padding: 8px 12px;
+  padding: 10px 0;
   border-bottom: 2px solid transparent;
   color: var(--c-muted);
   font-weight: 500;
 }
 
 .link-tab.is-active {
-  border-bottom-color: var(--c-primary);
+  border-bottom-color: var(--c-ink);
   color: var(--c-ink);
-  font-weight: 600;
-}
-
-.link-tab-count {
-  padding: 0 6px;
-  border-radius: var(--r-pill);
-  background: var(--c-bg2);
-  color: var(--c-ink2);
-  font-size: 12px;
 }
 
 .detail-list {
@@ -140,7 +138,7 @@
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  padding: 9px 0;
+  padding: 10px 0;
   border-top: 1px solid var(--c-border);
 }
 

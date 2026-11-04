@@ -22,14 +22,14 @@ export const overflow = defineScreen({
       slug: "limit-reached",
       title: "The spend limit is reached",
       description:
-        "Boat spend reached the limit. Jobs wait for own machines until the month ends or the limit rises.",
+        "Boat spend reached the limit. Jobs run on own machines only until the month ends or the limit rises.",
       props: { state: "limit-reached" },
     },
     {
       slug: "boat-rejected",
       title: "Boat rejected the key",
       description:
-        "Boat stopped accepting the API key. Jobs wait for own machines until a new key connects.",
+        "Boat stopped accepting the API key. Jobs run on own machines only until a new key connects.",
       props: { state: "boat-rejected" },
     },
   ],
