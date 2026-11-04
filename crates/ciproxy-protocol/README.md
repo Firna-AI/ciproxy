@@ -13,6 +13,7 @@ workspace crates. This library performs no network, disk, or runtime work.
 ## What This Crate Does
 
 Compute VM slot requirements and machine capacity after the host reserve.
+Check complete fit, concurrent VM counts, and free slots and job disk.
 Carry registration, connection, runner, drain, cache, and image messages
 as JSON with a `type` tag and snake-case variant names.
 
@@ -48,6 +49,15 @@ Job facts carry cache-scope inputs without selecting their source or
 granting shared write access. Memory and disk fields use bytes.
 The documented resource sizes use decimal GB for slot arithmetic.
 Disk capacity does not enter the CPU and memory slot formula.
+Use `Resources` for a complete fit check that includes job disk.
+Pass the capacity of the disk used for images, VMs, and machine cache.
+The host reserve keeps one quarter of that disk.
+Filesystem free bytes stay a separate health measurement.
+
+Pass each held VM's recorded size to `Resources::available` once.
+Include starting, warm, running, and stopping VMs until their disk is free.
+Use the recorded VM size even after its label changes.
+Machine cache and unused Docker cache remain reclaimable job disk.
 `ProtocolVersion::CURRENT` keeps its JSON integer representation.
 
 ## Quick Start
@@ -59,18 +69,29 @@ cargo build --package ciproxy-protocol
 cargo test --package ciproxy-protocol
 ```
 
-For example, calculate the capacity and a VM requirement:
+For example, calculate capacity and the space left by two warm runners:
 
 ```rust
-use ciproxy_protocol::resources::{GIGABYTE, Slots, VmSize};
+use ciproxy_protocol::resources::{GIGABYTE, Resources, Slots, VmSize};
 
-let capacity = Slots::for_machine(4, 16 * GIGABYTE, true);
-let required = Slots::for_vm(VmSize {
+let capacity = Resources::for_machine(16, 64 * GIGABYTE, 256 * GIGABYTE, true);
+let size = VmSize {
     vcpu: 2,
     memory_bytes: 8 * GIGABYTE,
     disk_bytes: 60 * GIGABYTE,
-});
-assert!(capacity.fits(required));
+};
+assert_eq!(capacity.slots, Slots(6));
+assert_eq!(capacity.job_disk_bytes, 192 * GIGABYTE);
+assert!(capacity.fits(size));
+assert_eq!(capacity.concurrent_vms(size), 3);
+
+let free = capacity.available([size, size]);
+assert_eq!(free.job_disk_bytes, 72 * GIGABYTE);
+assert!(free.fits(size));
+
+let after_third_vm = free.available([size]);
+assert_eq!(after_third_vm.job_disk_bytes, 12 * GIGABYTE);
+assert!(!after_third_vm.fits(size));
 ```
 
 ## Development
@@ -82,7 +103,8 @@ Review snapshot changes before accepting them.
 
 ### Key Code
 
-- [src/resources.rs](src/resources.rs) calculates slot counts.
+- [src/resources.rs](src/resources.rs) calculates slots and job disk.
+  `Resources` checks fit, concurrency, and availability for complete sizes.
 - [src/identifiers.rs](src/identifiers.rs) distinguishes workspace,
   organization, machine, runner, and repository identities.
 - [src/agent.rs](src/agent.rs) defines both agent connection directions.
@@ -101,6 +123,6 @@ Review snapshot changes before accepting them.
 - [Control plane](../ciproxy-control-plane/README.md) consumes the same type.
 - [Architecture](../../docs/architecture.md) defines component boundaries.
 - [Agent protocol](../../docs/protocol/agent.md) defines connection and health.
-- [Job routing](../../docs/protocol/job-routing.md) defines slot arithmetic.
+- [Job routing](../../docs/protocol/job-routing.md) defines slots and job disk.
 - [Cache](../../docs/protocol/cache.md) defines cache scopes and reports.
 - [Security](../../docs/protocol/security.md) defines key custody.
