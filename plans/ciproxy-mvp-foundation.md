@@ -889,22 +889,37 @@ under `.context/ciproxy-mvp-foundation/spikes/`. The spikes need a GitHub
 App in a test organization, a KVM-capable Linux server, and a Boat API key
 from the user.
 
-- [ ] Scale set: create a scale set, open a message session, run a job on a
+- [x] Scale set: create a scale set, open a message session, run a job on a
       just-in-time runner, and record the fields of each job message. Use
       the Rust port `imumesh18/scaleset`. Where the port falls short, write
       a thin client that follows the Go client.
-- [ ] Firecracker: run a job with Docker in a fresh VM on the Linux server.
+      Evidence: `.context/ciproxy-mvp-foundation/spikes/scale-set/evidence.md`.
+      Passed: four real jobs, about 10 s to the first step cold and 2 to
+      4 s warm, with `scaleset` 0.1.0.
+- [x] Firecracker: run a job with Docker in a fresh VM on the Linux server.
       Measure the time from queue to first step, with and without a warm
       runner.
+      Evidence: `.context/ciproxy-mvp-foundation/spikes/firecracker/RESULT.md`.
+      Passed on a nested GCP VM: about 14 s cold and 3 s warm to the first
+      step.
 - [ ] Boat: run a just-in-time runner in a Boat sandbox that starts from a
       snapshot. Measure the boot time. Boat sells its own GitHub runner,
       so check that its terms allow this use. If they do not, AWS EC2
       becomes the first overflow backend. Measure the start limits of the
       Boat plan, and record what Boat returns when it refuses a start.
-- [ ] Cache: point `actions/cache` at a sidecar in the VM through a patched
+      Blocked: the Boat organization of Firna has no compute plan, so Boat
+      answers HTTP 402 `billing_required`. Evidence:
+      `.context/ciproxy-mvp-foundation/spikes/boat/RESULT.md`.
+- [x] Cache: point `actions/cache` at a sidecar in the VM through a patched
       runner. Confirm read-through and write-through to the GitHub cache.
-- [ ] Job hooks: attach a disk for one repository after the job starts,
+      Evidence: `.context/ciproxy-mvp-foundation/spikes/cache/RESULT.md`.
+      Passed: a miss with a save to both stores, a local hit, and a hit
+      through GitHub.
+- [x] Job hooks: attach a disk for one repository after the job starts,
       and start Docker on it.
+      Evidence: `.context/ciproxy-mvp-foundation/spikes/job-hooks/RESULT.md`.
+      Passed: the disk attaches in about 80 ms, and the second `docker
+      build` reuses every layer.
 
 ## Milestone 4: Repository bootstrap
 
