@@ -55,6 +55,15 @@ State and event receipts commit atomically.
 App removal stores a durable billing cancellation request.
 Services consume these boundaries through dyn.
 
+The gateway queries atomically register a machine and its hashed credential.
+GatewayStore reuses TokenStore authority lookup to derive the workspace from
+the install hash. Registration rechecks the token under its transaction
+locks before it inserts the machine.
+They retain the full typed protocol report with a connection identifier.
+Report writes preserve desired drain and warm settings.
+They reject replaced sessions and removed registrations.
+Gateway token issuance and registration serialize with workspace removal.
+
 ## Quick Start
 
 Use the same interface for PostgreSQL and service test doubles:
@@ -100,6 +109,7 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 - [src/secrets.rs](src/secrets.rs) owns opaque hashes and ciphertext.
 - [src/scale_sets.rs](src/scale_sets.rs) defines session lock ownership.
 - [src/jobs.rs](src/jobs.rs) defines metadata-only job records.
+- [src/gateway.rs](src/gateway.rs) defines atomic registration and reports.
 
 ### Related Docs
 

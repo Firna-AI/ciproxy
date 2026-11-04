@@ -15,7 +15,6 @@ fn register_has_install_token_and_initial_state() {
         "register",
         AgentMessage::Register {
             protocol_version: ProtocolVersion::CURRENT,
-            workspace_id: fixtures::workspace_id(),
             install_token: Secret::new(fixtures::INSTALL_TOKEN),
             report: fixtures::report(),
         },

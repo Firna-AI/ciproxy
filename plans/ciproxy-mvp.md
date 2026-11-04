@@ -255,13 +255,22 @@ Depends on: 3, 4
 `ciproxy-gateway` is the control plane side of "Install", "Connection", and
 "Machine identity" in `agent.md`.
 
-- [ ] Issue tokens for one hour and any number of machines, which an Admin
+- [x] Issue tokens for one hour and any number of machines, which an Admin
       can revoke. Register machines, and accept the agent WebSockets.
-- [ ] Store the reports, mark machines offline after 60 seconds, send the
+      My call, 4 November 2026: hash independent 256-bit secrets with SHA-256.
+      Reason: the store keeps only hashes, and each credential stays private.
+      Branch: `conductor/ciproxy-mvp-milestone-8-machine-gateway`.
+- [x] Store the reports, mark machines offline after 60 seconds, send the
       commands, and revoke a removed machine at once.
-- [ ] Accept this protocol version and the one before. My call: agents
+      My call, 4 November 2026: keep full typed reports in JSONB, apart from
+      desired settings, and fence them by connection ID. Reason: an old
+      report cannot undo an Admin action or replace a new connection.
+      Branch: `conductor/ciproxy-mvp-milestone-8-machine-gateway`.
+- [x] Accept this protocol version and the one before. My call: agents
       update themselves.
-- [ ] Test the gateway with a fake agent over a real WebSocket.
+      Branch: `conductor/ciproxy-mvp-milestone-8-machine-gateway`.
+- [x] Test the gateway with a fake agent over a real WebSocket.
+      Branch: `conductor/ciproxy-mvp-milestone-8-machine-gateway`.
 
 ## Milestone 9: Agent
 

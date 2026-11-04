@@ -5,6 +5,7 @@
 pub mod billing;
 pub mod boat;
 pub mod error;
+pub mod gateway;
 pub mod jobs;
 pub mod labels;
 pub mod machines;
