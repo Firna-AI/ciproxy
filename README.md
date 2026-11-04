@@ -132,12 +132,16 @@ The protocol docs hold the requirements and the decisions in force:
   identity, job VMs, the image, updates, health, drain, and remove.
 - [Security](docs/protocol/security.md): sign-in and access, GitHub App
   permissions, repository access, key custody, isolation, and job data.
+- [Removing or suspending the App](docs/protocol/app-removal.md): what
+  stops, what stays, and what ciproxy deletes when an organization removes
+  or suspends the App.
 - [Cache](docs/protocol/cache.md): the transparent cache, cache scopes,
   trusted write-back, the fallback to the GitHub cache, and Docker disks.
 - [Metering](docs/protocol/metering.md): starts, periods, the machine count,
-  soft limits, and the savings report.
-- [Billing](docs/protocol/billing.md): tiers, add-ons, Checkout, the
-  customer portal, tier changes, subscription states, and failed payments.
+  soft limits, the counts of a Business pool, and the savings report.
+- [Billing](docs/protocol/billing.md): tiers, tier features, Business
+  pools, add-ons, Checkout, the customer portal, tier changes, subscription
+  states, and failed payments.
 
 The [mockups README](docs/mockups/README.md) describes the mockup catalogue.
 The mockups are part of the spec.

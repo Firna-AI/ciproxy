@@ -190,6 +190,7 @@ where each job runs. It also states what happens when a part fails.
   after 30 seconds."
 - The waited time runs from the moment GitHub queued the job to the moment
   a runner took it.
+- The job page also shows the label of the job and the VM size that ran it.
 
 ## Warm runners
 

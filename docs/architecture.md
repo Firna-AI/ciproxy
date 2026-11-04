@@ -113,7 +113,8 @@ design tokens that the dashboard uses.
   [App permissions](protocol/security.md#github-app-permissions). It opens a
   message session for each scale set. GitHub sends the messages about the
   jobs of each label through its session. For each new runner, the control
-  plane gets a just-in-time runner registration from GitHub.
+  plane gets a just-in-time runner registration from GitHub. GitHub also
+  reports each [removal or suspension](protocol/app-removal.md) of the App.
 - **GitHub and the runners:** each runner opens its own connection to
   GitHub. It gets one job with its code and secrets, and it sends the logs
   and the artifacts to GitHub. These never pass through the control plane,
@@ -182,11 +183,9 @@ design tokens that the dashboard uses.
    saves other branches can restore.
 4. A job on Boat restores and saves through the GitHub cache only.
 5. The agent reports the cache hits of its machine to the control plane.
-   The cache contents stay on the machine and in the GitHub cache.
-
-- **Open:** what the job page shows about the cache of a job that the
-  machine cache did not serve, such as a Boat job. It waits for the
-  decision on the cache counts of Boat jobs.
+   It also reports the [cache counts](protocol/cache.md#terms) of each job
+   whose restores the machine cache handled. A sandbox reports no cache
+   counts. The cache contents stay on the machine and in the GitHub cache.
 
 ### A checkout and a failed payment
 
@@ -248,6 +247,7 @@ design tokens that the dashboard uses.
 - [Overflow](protocol/overflow.md)
 - [Agent](protocol/agent.md)
 - [Security](protocol/security.md)
+- [Removing or suspending the App](protocol/app-removal.md)
 - [Cache](protocol/cache.md)
 - [Metering](protocol/metering.md)
 - [Billing](protocol/billing.md)

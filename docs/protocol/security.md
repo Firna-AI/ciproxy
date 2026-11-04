@@ -42,6 +42,8 @@ GitHub permissions, keys, isolation, and job data.
   the invoices, as [Checkout](billing.md#checkout) says.
 - An Admin can do everything: manage the machines, the labels, the
   settings, the Boat account, the roles, and the billing.
+- Only an Admin sees Settings, because Settings changes only what an Admin
+  may change.
 - **Decision:** each role contains the one below it, so Billing contains
   Viewer, and Admin contains Billing. Rejected: a Billing role that sees
   only the billing pages.
@@ -52,6 +54,9 @@ GitHub permissions, keys, isolation, and job data.
 - Apart from adding a machine, the roles alone decide what a person can do.
 - So an Admin without the runner right, the first Admin included, can do
   everything except add a machine.
+- On Setup, on Machines, and under "Add machine", such an Admin sees who
+  can add a machine: an owner of the organization, or an Admin with the
+  runner right.
 - **Decision:** adding a machine needs the Admin role and the runner right,
   because an own machine receives the secrets of the jobs that its
   [runners](job-routing.md#terms) take. Rejected: the Admin role alone,
@@ -79,7 +84,16 @@ GitHub permissions, keys, isolation, and job data.
   a role. Rejected: a list of the members of the GitHub organization,
   because the GitHub App would then need the "Members" permission. Reason:
   the App keeps its runner-only permissions.
+- The Members tab of Settings shows the number of open requests for
+  access.
+- The page that asks for access names the Admins of the organization, so
+  that the person can ask them.
+- **Decision:** a count on the Members tab tells the Admins of a request,
+  and the page that asks for access names the Admins. Reason: ciproxy
+  sends no email.
 - An owner of the GitHub organization can always claim the Admin role.
+- An owner with the Billing or the Viewer role claims the Admin role from
+  the account menu.
 - ciproxy checks that a person is an owner with the GitHub sign-in of that
   person, from the list of that person's own organization memberships, not
   with a permission of the GitHub App.
@@ -138,9 +152,15 @@ GitHub permissions, keys, isolation, and job data.
 - Each organization has its own machines, [labels](job-routing.md#labels),
   settings, keys, caches, and data.
 - An own machine runs the jobs of its own organization only.
-- **Open:** whether the organizations of one [Business](billing.md#tiers)
-  [subscription](billing.md#subscription-states) can share own machines. It
-  waits for item 8, the tier features at launch.
+- These rules also hold for the organizations of a
+  [Business pool](billing.md#business-pools).
+- The organizations of a Business pool share only one count of starts and
+  one machine count, as [A Business pool](metering.md#a-business-pool)
+  says.
+- **Decision:** a Business pool shares the counts of its tier and nothing
+  else. Rejected: own machines that run the jobs of every organization of
+  the pool. Reason: tenant isolation stays, and the pool is a billing
+  count.
 
 ## Job isolation
 
@@ -173,10 +193,30 @@ GitHub permissions, keys, isolation, and job data.
   the logs, or the cache contents of a job.
 - The control plane stores the job metadata that the dashboard shows.
 - The job metadata is the name, workflow, repository, ref, result, place,
-  times, label, [size](job-routing.md#labels), and cache counts of a job.
+  times, label, [VM size](job-routing.md#terms) that ran, cache source, and
+  [cache counts](cache.md#terms) of a job.
 - The control plane also stores what the agent reports about each machine,
   as [Health](agent.md#health) says.
 - Job logs stay on GitHub, and the job page links to them.
+- [Removing the App](app-removal.md#removing-the-app) says when ciproxy
+  deletes the data of an organization that removes the App.
+
+## Data retention
+
+- ciproxy keeps the job metadata of each finished job for 90 days, on every
+  [tier](billing.md#tiers).
+- Each page shows only the jobs of the job history of the tier.
+- ciproxy keeps the daily totals of the
+  [savings report](metering.md#savings-report) for 90 days.
+- ciproxy keeps the last report of each own machine, and the cache hits of
+  its last 7 days.
+- ciproxy keeps the record of a person only while the person has a role or
+  an open request for access.
+- After 90 days, ciproxy deletes the job metadata and the daily totals.
+- **Decision:** 90 days of job metadata on every tier. Rejected: the window
+  of the current tier, 13 months of daily totals, and a setting that makes
+  the window shorter. Reason: a tier change then deletes nothing, and an
+  upgrade shows the older jobs at once.
 
 ## Related docs
 
@@ -185,4 +225,9 @@ GitHub permissions, keys, isolation, and job data.
 - [Cache](cache.md): cache scopes, trusted write-back, and Docker disks.
 - [Overflow](overflow.md): the Boat account and its sandboxes.
 - [Job routing](job-routing.md): labels and runners.
-- [Billing](billing.md): tiers, Checkout, and the customer portal.
+- [Billing](billing.md): tiers, Business pools, Checkout, and the customer
+  portal.
+- [Metering](metering.md#a-business-pool): the counts that a Business pool
+  shares.
+- [Removing or suspending the App](app-removal.md): what ciproxy revokes,
+  keeps, and deletes when an organization removes the App.

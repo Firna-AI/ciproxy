@@ -13,6 +13,8 @@ against a tier.
 - **add-on:** extra [starts](metering.md#terms) or an extra
   [own machine](agent.md#terms) that a paid tier buys by the month.
 - **subscription:** the Stripe subscription of a paid tier.
+- **Business pool:** the organizations that one Business subscription
+  covers.
 
 ## Tiers
 
@@ -24,10 +26,15 @@ against a tier.
 | Job history | 7 days | 30 days | 90 days |
 
 - Prices are in US dollars.
+- Prices do not include tax, and ciproxy collects no tax.
+- **Decision:** ciproxy collects no tax, for now. Rejected: Stripe Tax,
+  prices that include tax, Stripe Managed Payments, and tax rates that
+  ciproxy keeps itself. Reason: the launch then needs no tax setup.
 - Stripe bills each paid tier monthly.
 - A tier includes its starts in each [period](metering.md#periods).
-- ciproxy keeps the details of each finished job for the job history of the
-  tier.
+- The job history of a tier is the window of finished jobs that its pages
+  show. [Data retention](security.md#data-retention) says how long ciproxy
+  keeps them.
 - Every organization starts on Free.
 - The customer picks a paid tier by hand, and ciproxy never picks one by
   itself.
@@ -37,11 +44,36 @@ against a tier.
 - **Decision:** three tiers, each priced by the starts and the own machines
   that it includes. [Starts](metering.md#starts) gives the rejected price
   bases and the reason.
-- **Open:** which features ship at launch, and in which tier. It waits for
-  item 8, the tier features at launch.
-- **Open:** whether the organizations of one Business subscription share
-  one pool of starts and own machines. It waits for item 8, the tier
-  features at launch.
+
+### Tier features
+
+- Every tier includes own Linux machines, Boat overflow, the
+  [transparent cache](cache.md#transparent-cache), warm runners, the
+  dashboard, and the [savings report](metering.md#savings-report).
+- Team adds sticky Docker disks, alerts by email and Slack, and email
+  support.
+- Business adds several GitHub organizations, single sign-on, an audit log,
+  custom VM images, and priority support.
+- A tier also includes each feature of the tiers below it.
+- Sticky Docker disks and several GitHub organizations ship at launch, as
+  [Docker disks](cache.md#docker-disks) and
+  [Business pools](#business-pools) say.
+- Alerts by email and Slack, single sign-on, the audit log, and custom VM
+  images come later.
+- Each page that lists a feature that comes later marks it "Coming later".
+- **Decision:** each tier keeps its features, and a feature that comes
+  later shows "Coming later". Rejected: taking features out of the tiers
+  until they ship, and building some or all of them before the launch.
+  Reason: the tiers stay as priced, and no page sells a feature as ready
+  before it ships.
+
+### Business pools
+
+- One Business subscription can cover several organizations.
+- [A Business pool](metering.md#a-business-pool) says how these
+  organizations share one count of starts and own machines.
+- [Tenant isolation](security.md#tenant-isolation) says what each of them
+  keeps for itself.
 
 ## Add-ons
 
@@ -91,8 +123,15 @@ against a tier.
 - It offers to try again.
 - **Decision:** Stripe takes every payment. Reason: no card data reaches
   ciproxy, and the ciproxy team already uses Stripe for billing.
-- **Open:** how a visitor reaches a paid tier from the pricing page of the
-  site. It waits for item 10, the paid-tier flow from the pricing page.
+- Every sign-in button of the
+  [public site](../architecture.md#public-site) says "Start free", also on
+  the paid tiers of the pricing page.
+- **Decision:** every sign-in button of the site says "Start free".
+  Rejected: a caption that explains the upgrade, a sign-in that carries
+  the chosen tier into the dashboard, and Stripe Checkout before setup.
+  Reason: every organization starts on Free, and the
+  [offer](metering.md#the-use-and-the-offer) at a soft limit brings each
+  organization that outgrows Free to the right tier.
 
 ## Customer portal
 
@@ -110,6 +149,16 @@ against a tier.
   add-on quantities in the dashboard.
 - A move between paid tiers takes effect at once.
 - Stripe prorates the price difference for the rest of the period.
+- A move up, from Team to Business, needs no Stripe Checkout.
+- Stripe charges the prorated difference of a move up at once, on the
+  saved card.
+- **Decision:** a move up charges the saved card at once. Reason: the
+  higher tier starts at once.
+- The tier of a move up changes only after its charge succeeds.
+- When the charge fails, the organization keeps its tier, and the page
+  offers to try again or to update the card.
+- When the bank asks the customer to confirm the charge, the Stripe payment
+  page opens.
 - A move to Free that the customer chooses takes effect at the end of the
   paid period.
 - The customer chooses it with "Move to Free" on the Plans page, or with a
@@ -139,6 +188,13 @@ against a tier.
 - A successful payment makes the subscription active again.
 - The subscription ends after the last failed retry, or at the end of the
   period after a move to Free.
+- The subscription of one organization also ends at the end of the period
+  after the organization removes the GitHub App, as
+  [Removing the App](app-removal.md#removing-the-app) says.
+- In a Business pool, a removal of the App takes only that organization
+  out of the pool.
+- When the last organization of a Business pool leaves it, the
+  subscription ends at the end of the period.
 - When the subscription ends, the organization moves to Free that day.
 - No subscription state stops a job or keeps a job from starting.
 
@@ -163,8 +219,9 @@ against a tier.
 - [Architecture](../architecture.md#data-flow): the data flow of a checkout
   and of a failed payment.
 - [Metering](metering.md#soft-limits): the starts, the periods, the machine
-  count, and the soft limits.
+  count, the soft limits, and the counts of a Business pool.
 - [Security](security.md#key-custody): the custody of the Stripe keys and
-  of the card.
+  of the card, tenant isolation, and the removal of the App.
+- [Cache](cache.md#docker-disks): the Docker disks of Team and Business.
 - [Overflow](overflow.md#the-boat-account): the Boat account of the
   customer, which Boat bills for overflow.

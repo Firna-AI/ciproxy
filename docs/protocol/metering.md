@@ -56,8 +56,11 @@ of each tier.
 - The machine count of an organization is the number of own machines that
   are registered to it.
 - The count is the current number, not the highest number of the period.
-- The count includes every registered machine, also one that is offline or
-  [draining](agent.md#drain-and-remove).
+- The count includes every registered machine, also one that is offline,
+  [draining](agent.md#drain-and-remove), or unable to run jobs, such as a
+  machine without KVM.
+- **Decision:** a machine that cannot run jobs still counts. Reason: the
+  count stays stable while a machine recovers, and no limit stops a job.
 - A machine joins the count when it registers.
 - A machine leaves the count at once when the customer removes it.
 
@@ -114,14 +117,32 @@ of each tier.
 - The notice gives the day on which the starts pass the included starts at
   the current pace, and it gives the offer.
 
+### A Business pool
+
+- The organizations of a [Business pool](billing.md#business-pools) share
+  one count of starts and one machine count.
+- The shared count of starts is the sum of the starts of the organizations
+  of the pool, in the period of its subscription.
+- The shared machine count is the sum of the machine counts of these
+  organizations.
+- The soft limits, the use, the offer, and Plan and usage of each
+  organization of the pool use these shared counts.
+- [Tenant isolation](security.md#tenant-isolation) gives the decision that
+  the pool shares only these counts.
+
 ## Savings report
 
 - The Savings page shows the savings report of the organization.
 - The report compares the cost of the jobs with ciproxy with the cost of
   the same jobs on Blacksmith and on GitHub-hosted runners.
-- **Open:** the prices of the comparison. The mockups give list prices per
-  minute for the same VM sizes. It waits for item 9, the price basis of
-  the cost claim.
+- The cost on each alternative comes from its list prices per minute, for
+  the same VM sizes as the jobs.
+- When an alternative does not sell the VM size of a job, the report uses
+  its smallest size with at least the vCPU and the memory of the job.
+- In a [Business pool](#a-business-pool), the report of each organization
+  counts the share of the subscription price that matches its share of the
+  starts of the pool.
+- The report gives the date of each price list that it uses.
 - The report covers one of three ranges: the last 30 days, this calendar
   month, or the last calendar month.
 - It opens on the last 30 days.
@@ -147,8 +168,8 @@ of each tier.
   and the tier price.
 - The report shows the starts and the minutes on own machines and on Boat.
 - It shows the starts of each day, on own machines and on Boat.
-- On every tier, ciproxy keeps the daily totals of at least the current
-  calendar month, the last calendar month, and the last 30 days.
+- On every tier, ciproxy keeps the daily totals of 90 days, as
+  [Data retention](security.md#data-retention) says.
 - The daily totals stay also when the [job history](billing.md#tiers) of
   the tier is shorter.
 
@@ -156,7 +177,10 @@ of each tier.
 
 - [Architecture](../architecture.md#components): the components that count
   the use and show it.
-- [Billing](billing.md#tiers): the tiers, their numbers, and the add-ons.
+- [Billing](billing.md#tiers): the tiers, their numbers, the add-ons, and
+  Business pools.
+- [Security](security.md#tenant-isolation): what the organizations of a
+  Business pool keep apart.
 - [Job routing](job-routing.md#where-a-job-runs): where a runner takes each
   job.
 - [Agent](agent.md#machine-identity): how an own machine registers.

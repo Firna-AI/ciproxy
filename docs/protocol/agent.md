@@ -61,6 +61,9 @@ runs on own machines.
   [host reserve](job-routing.md#slots) connects and gets no slots.
 - The dashboard says why such a machine has no slots, as it does for a
   machine without KVM.
+- The page of a machine that cannot run jobs offers to remove the machine,
+  as [Drain and remove](#drain-and-remove) says.
+- [Own machines](metering.md#own-machines) says how such a machine counts.
 - When the install command runs again on a registered machine, the machine
   keeps its registration and its place in the
   [machine count](metering.md#own-machines).
@@ -123,9 +126,9 @@ runs on own machines.
 - **Decision:** one image definition serves the job VMs and the Boat
   sandboxes. Rejected: a separate image for each, because a job must behave
   the same wherever it runs.
-- **Open:** whether an organization can run its jobs on a custom VM image,
-  and on which [tier](billing.md#tiers). It waits for item 8, the tier
-  features at launch.
+- No organization can run its jobs on a custom VM image yet.
+- Custom VM images come later, on Business, as
+  [Tier features](billing.md#tier-features) says.
 
 ## Updates
 
@@ -170,6 +173,8 @@ runs on own machines.
 - The agent of a removed machine lets its running jobs finish, then stops
   its job VMs and stops.
 - "Remove" takes effect at once, also for an offline machine.
+- [Removing the App](app-removal.md#removing-the-app) says what happens to the
+  machines of an organization that removes the GitHub App.
 
 ## Related docs
 

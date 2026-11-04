@@ -50,6 +50,8 @@ backend must give ciproxy.
 - After Disconnect, ciproxy starts no new Boat runner.
 - Boat jobs that run at that moment finish, and ciproxy deletes the key
   when the last of their sandboxes ends.
+- [Removing the App](app-removal.md#removing-the-app) says what happens to the
+  key and the sandboxes of an organization that removes the GitHub App.
 
 ## Backend contract
 
@@ -83,6 +85,10 @@ backend must give ciproxy.
   account can start now. For Boat, this is the size list of its limits
   API. ciproxy reads it again at intervals, because the customer can change
   the Boat plan at any time.
+- The job page of a job on Boat names the Boat size that ran it, because
+  Boat bills that size.
+- So the job page can show a size that is larger than the size of the
+  label. With "Run on the largest Boat size", it can also be smaller.
 - ciproxy stops and deletes each sandbox when its job ends.
 - A Boat runner can stay without a job when an own machine took the
   waiting job first.
@@ -106,6 +112,8 @@ backend must give ciproxy.
   Overflow.
 - Each connection of a Boat account asks for the spend limit before Boat
   connects, in Setup and in Settings under Overflow.
+- A connection after Boat rejected the key also asks for the spend limit,
+  and the field starts with the saved limit.
 - The spend limit is an amount above zero. The customer can change it at
   any time, and the MVP has no "no limit" choice.
 - **Decision:** each connection of Boat asks for the spend limit, so the

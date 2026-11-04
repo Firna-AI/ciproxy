@@ -10,6 +10,8 @@ This doc states the cache rules for jobs on
 - **GitHub cache:** the cache service of GitHub Actions that
   `actions/cache` uses.
 - **cache scope:** the rule that says which jobs can restore a cache entry.
+- **cache counts:** how many entries a job restored, and the space of these
+  entries.
 - **Docker disk:** a disk for one repository on one own machine that keeps
   Docker data between the jobs of the repository.
 - The [tiers](billing.md#tiers) call the Docker disk feature "sticky Docker
@@ -41,6 +43,8 @@ This doc states the cache rules for jobs on
   every entry of the machine cache of one machine.
 - The dashboard shows "Clear cache" next to the cache use of that machine.
 - "Clear cache" never deletes an entry of the GitHub cache.
+- "Clear cache" never deletes a [Docker disk](#docker-disks) of the
+  machine.
 - **Decision:** the machine cache keeps entries after the GitHub cache
   evicts them, and "Clear cache" removes a bad entry. Rejected: restoring
   only the entries that the GitHub cache still has, because the machine
@@ -72,9 +76,15 @@ This doc states the cache rules for jobs on
 - The job page shows the cache source of each job: "This machine" or "The
   GitHub cache".
 - A job on Boat has the cache source "The GitHub cache".
-- **Open:** when the job page also shows how many entries the job restored
-  and their space, for example for a job on Boat. It waits for the
-  decision on the cache counts of Boat jobs.
+- The job page shows the cache counts of a job only when the machine cache
+  handled the restores of the job, for example "3 restored · 2.1 GB".
+- A job on Boat, and a job that fell back to the GitHub cache, show only
+  the cache source.
+- **Decision:** only a job whose restores the machine cache handled shows
+  cache counts. Rejected: counts that the image sends with a token, because
+  job code could fake them. Rejected: counts through the Boat API, and no
+  counts on any job. Reason: no new path leaves a sandbox, and the rule
+  holds for every later backend.
 - The Machines page and the machine page show the used space and the total
   space of the machine cache.
 - They also show the cache hits of the last 7 days.
@@ -107,8 +117,9 @@ This doc states the cache rules for jobs on
 - When a Docker disk cannot attach, the job runs without it.
 - The machine page shows how many repositories have a Docker disk on the
   machine, and the space that these disks take.
-- **Open:** which tiers include Docker disks. It waits for item 8, the tier
-  features at launch.
+- Only Team and Business include Docker disks, as
+  [Tier features](billing.md#tier-features) says.
+- A job of an organization on Free gets no Docker disk.
 
 ## Related docs
 
@@ -116,4 +127,4 @@ This doc states the cache rules for jobs on
 - [Agent](agent.md): own machines and job VMs.
 - [Security](security.md): job isolation and job data.
 - [Overflow](overflow.md): the jobs that run on Boat.
-- [Billing](billing.md): the tiers.
+- [Billing](billing.md#tier-features): the tiers that include Docker disks.
