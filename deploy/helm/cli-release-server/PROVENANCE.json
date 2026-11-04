@@ -1,0 +1,17 @@
+{
+  "repository": "https://github.com/futex-ai/cli-release",
+  "revision": "30513bd1a6e15d8e9c1b18f2ed92d1d4dfa11786",
+  "path": "helm/cli-release-server",
+  "chartVersion": "0.1.0",
+  "files": {
+    "Chart.yaml": "0fddb18fdabe9aad81dffaf1239aab7a774b1dd22ffa4bc266671c40c7eadfaa",
+    "templates/_helpers.tpl": "4a7867e3ededb64bcffd1ad63ecdd8dfaf7d99999f20c09ce98f130f1f34c4b4",
+    "templates/deployment.yaml": "ba952e3fc78b5f91c1785f75a65163e5a92713fddf1164ea1c1fbb7738cc6477",
+    "templates/external-secret.yaml": "850e6a3c72a2734756325812dc660975f803ef102276a82b312ed0004d152986",
+    "templates/ingress.yaml": "d4e878ac58ae82d90d3bf5bce749ccbb175dc69e8fd943b56e4ec22f5eef581b",
+    "templates/secret.yaml": "9f3ccc087463fb6563c847e9231b0489b52bf1d4265916025b5137b3b28fa7e4",
+    "templates/service.yaml": "7e35bdfc59aa3cc58b7b3e4194993dcf0a2c52783919e821d6a6900738303878",
+    "templates/serviceaccount.yaml": "6025800a82ddb0be1b79c6ff0ed7a192af07a06f2a8cee6e15d59124e266998f",
+    "values.yaml": "0cf4bfbed66bd15b57df64430f13e92459e65a0e21212b7d344b1bbcd4df87ae"
+  }
+}
