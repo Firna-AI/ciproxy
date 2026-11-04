@@ -73,7 +73,7 @@ gives their roles.
 | `deploy/scripts/register-cdn-key.sh` | Stores a CDN signing key as a numbered secret version, and registers it under the matching name | Operator |
 | `deploy/scripts/deploy.py` | The deploy command, with `deploy_support.py` and `publish_static.py` | Deploy workflow |
 | `deploy/scripts/install-helm.sh` | Installs Helm 4.3.1 after a checksum check | Deploy workflow or operator |
-| `deploy/tests/` | The regression test of the NEG zone wait | Offline check |
+| `deploy/tests/` | The regression tests of the NEG zone wait and the static publisher | Offline check |
 | `.github/workflows/deploy-<env>.yml` | The deploy workflow of each environment | GitHub Actions |
 
 The remote state is in the bucket `ciproxy-<env>-tfstate-<project>`, under
@@ -113,7 +113,7 @@ helm template ciproxy deploy/helm/ciproxy --set controlPlane.enabled=true \
 actionlint .github/workflows/deploy-staging.yml .github/workflows/deploy-production.yml
 for script in deploy/scripts/*.sh; do bash -n "$script"; done
 python3 -m py_compile deploy/scripts/*.py
-python3 -m unittest deploy/tests/test_neg_readiness.py
+python3 -m unittest deploy/tests/test_neg_readiness.py deploy/tests/test_publish_static.py
 python3 deploy/scripts/deploy.py --help
 npm --prefix ts run site:build
 python3 deploy/scripts/publish_static.py --directory=ts/site/dist \
