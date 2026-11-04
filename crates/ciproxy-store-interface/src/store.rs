@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 
+use crate::billing::store::BillingStore;
 use crate::boat::BoatStore;
 use crate::error::Result;
 use crate::jobs::JobStore;
@@ -17,6 +18,7 @@ use crate::workspaces::WorkspaceStore;
 /// The complete hosted persistence boundary.
 pub trait Store:
     WorkspaceStore
+    + BillingStore
     + OrganizationStore
     + LabelStore
     + ScaleSetStore

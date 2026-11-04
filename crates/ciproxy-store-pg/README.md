@@ -50,6 +50,14 @@ The database releases its advisory lock when that connection closes.
 The handle checks the connection so a listener can detect a lost session.
 Each scale set has a distinct sequence key, without hashing its identifier.
 
+Billing uses a separate live session lock per workspace.
+Each command persists before an external Stripe call.
+The shared read model exposes confirmed coverage and UTC period anchors.
+A transaction commits event receipts, state, and command completion together.
+A failed state write rolls its receipt back.
+The last organization removal also persists a cancellation request.
+It stays until billing handles it, including unfinished Checkout.
+
 Queries are synchronous.
 Async services must call them from blocking workers.
 This crate contains no scheduler, listener, gateway, KMS client, Boat
@@ -100,6 +108,7 @@ CI starts the database for the existing workspace test phase.
 
 ### Key Code
 
+- [src/billing/session.rs](src/billing/session.rs) commits billing state.
 - [src/factory.rs](src/factory.rs) opens stores and applies migrations.
 - [src/connection.rs](src/connection.rs) owns the private query connection.
 - [src/workspaces.rs](src/workspaces.rs) creates shared customer tenants.

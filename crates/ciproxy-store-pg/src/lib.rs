@@ -2,6 +2,7 @@
 
 #![warn(unreachable_pub)]
 
+mod billing;
 mod boat;
 mod connection;
 mod error;

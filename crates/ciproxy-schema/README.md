@@ -28,7 +28,12 @@ It stores job metadata and references to immutable runner placements.
 Cache measurements and restored content origins remain independent.
 The schema accepts measured GitHub-only fetches and zero-entry restores.
 It has no job-content, job-log, plaintext-token, or plaintext-key field.
-Later milestones own members, roles, billing, and metering.
+Billing accounts keep confirmed typed state and durable command inputs.
+Their creation time supplies the initial Free period anchor.
+Each has a distinct negative advisory-lock key.
+Billing events keep committed receipt identifiers.
+The last organization removal keeps a durable cancellation request.
+Later milestones own members, roles, and metering computations.
 Workspace deletion cascades through its retained records after 30 days.
 
 ## Quick Start
@@ -67,6 +72,8 @@ New migration names use a full date, hour, and minute prefix.
 Each migration has an up.sql and a down.sql.
 
 ### Key Code
+
+- [src/billing.rs](src/billing.rs) defines billing accounts and event receipts.
 
 - [build.rs](build.rs) tracks migration directory changes for Cargo.
 - [src/migrations.rs](src/migrations.rs) exports the embedded migrations.

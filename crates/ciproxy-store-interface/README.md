@@ -48,6 +48,13 @@ A new registration in another workspace leaves old history in place.
 Removal and retention queries change stored records only.
 They do not stop machines, call GitHub, or delete Boat sandboxes.
 
+BillingStore adds the confirmed tier, add-ons, paid bounds, and Free anchor.
+It exposes retry and ended-banner dates without changing job execution.
+BillingSession owns exclusive command and event reconciliation.
+State and event receipts commit atomically.
+App removal stores a durable billing cancellation request.
+Services consume these boundaries through dyn.
+
 ## Quick Start
 
 Use the same interface for PostgreSQL and service test doubles:
@@ -86,6 +93,7 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 ### Key Code
 
 - [src/store.rs](src/store.rs) defines Store and its connection factory.
+- [src/billing/store.rs](src/billing/store.rs) owns durable billing sessions.
 - [src/workspaces.rs](src/workspaces.rs) defines shared customer ownership.
 - [src/organizations.rs](src/organizations.rs) defines GitHub App records.
 - [src/error.rs](src/error.rs) owns typed failures and safe diagnostics.

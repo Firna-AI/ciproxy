@@ -2,6 +2,7 @@
 
 #![warn(unreachable_pub)]
 
+pub mod billing;
 pub mod boat;
 pub mod error;
 pub mod jobs;
