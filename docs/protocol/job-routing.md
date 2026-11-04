@@ -180,6 +180,12 @@ warm runners. It also states what happens when a part fails.
   machine stays one count.
 - ciproxy gives each warm runner to an organization by the recent jobs of
   the label `ciproxy` of each organization.
+- The recent jobs are the jobs of the last 24 hours, with equal weight.
+- Each organization gets a share of the count in proportion to its recent
+  jobs, rounded down. Each runner left over goes to the organization with
+  the most recent jobs that has the fewest warm runners.
+- When no organization has a recent job, the warm runners go to the
+  organizations in turn.
 - **Decision:** one warm runner count for each machine, shared by the
   organizations of the workspace by their recent jobs. Rejected: a count
   for each organization, because more VMs then stay idle. Rejected: a count

@@ -712,6 +712,13 @@ docs agent, 4 November 2026:
 - A `pull_request_target` job counts as a pull request for trusted
   write-back. Reason: its job often runs code from the pull request.
 - `AGENTS.md` gets the copy rule "workspace, never team".
+- Asked by the scaler workspace: the recent jobs that share the warm
+  runners are the jobs of `ciproxy` of the last 24 hours, with equal
+  weight. Each organization gets its share, rounded down, and each runner
+  left over goes to the organization with the most recent jobs and the
+  fewest warm runners. With no recent jobs, the runners go round in turn.
+  Reason: a short window follows the work of the day, and the rule is
+  simple to test.
 - Changed after the options check of items 50 and 51: an owner of an
   organization claims the Admin role only when the workspace has no Admin,
   or when the person owns every organization of the workspace. Reason: an
