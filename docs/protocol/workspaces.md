@@ -48,7 +48,7 @@ workspace and takes one out.
 
 - The workspace owns the tier, the subscription, the members and their
   roles, the [own machines](agent.md#terms), the
-  [install tokens](agent.md#install), the [labels](job-routing.md#labels),
+  [install tokens](agent.md#install), the [labels](labels.md),
   the settings, and the [Boat account](overflow.md#the-boat-account).
 - Each organization keeps its own repository access, as
   [Repository access](security.md#repository-access) says.
@@ -71,6 +71,16 @@ workspace and takes one out.
   organization.
 - While the request waits, the person can check again or install the app on
   another organization.
+- ciproxy serves GitHub organizations only.
+- When a person installs the app on a personal account, ciproxy makes no
+  workspace for it.
+- The page that GitHub then returns to says that ciproxy works with
+  organizations only.
+- The page offers to install the app on an organization, and it links to
+  the GitHub settings that remove the app from the personal account.
+- **Decision:** a personal account gets this page and no workspace.
+  Rejected: a workspace for a personal account. Reason: a GitHub
+  organization costs nothing.
 - An install that no Admin started with "Add an organization" makes a new
   workspace with that organization.
 - The one exception is a new install within 30 days of a removal, as
@@ -112,6 +122,6 @@ workspace and takes one out.
   workspace.
 - [Removing or suspending the App](app-removal.md): what a removal does to
   an organization and to its workspace.
-- [Job routing](job-routing.md): the labels and the warm runners of a
-  workspace.
+- [Labels](labels.md) and [Job routing](job-routing.md): the labels and the
+  warm runners of a workspace.
 - [Agent](agent.md): own machines and install tokens.

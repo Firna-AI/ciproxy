@@ -1,138 +1,75 @@
 # Job routing
 
-This doc states which jobs ciproxy takes, the VM size of each job, and
-where each job runs. It also states what happens when a part fails.
+This doc states the slots of an own machine, where each job runs, and the
+warm runners. It also states what happens when a part fails.
+[Labels](labels.md) states which jobs use ciproxy and the size of each job.
 
 ## Terms
 
-- **label:** the value in `runs-on` that sends a job to ciproxy and picks
-  the size of its VM.
-- **size:** the vCPU, memory, and disk that a label gives a job. The
-  product says "VM size" where the word needs a qualifier.
-- **Decision:** "size" is the one word for it. Rejected: "shape". Rejected:
-  "machine size", because "machine" names only the hardware of the customer.
 - **slot:** 2 vCPU and 8 GB of an [own machine](agent.md#terms).
-- **host reserve:** the threads and memory that the
+- **host reserve:** the threads, memory, and disk that the
   [agent](agent.md#terms) keeps for the host of an own machine.
+- **job disk:** the disk of an own machine that the host reserve leaves for
+  the [job VMs](agent.md#job-vms) and the [machine cache](cache.md#terms).
 - **runner:** the GitHub Actions runner program that takes one job, in a
   [job VM](agent.md#job-vms) or in a [sandbox](overflow.md#terms) on
   [Boat](overflow.md#terms).
 - **warm runner:** a runner on an own machine that is registered with
   GitHub before a job arrives.
-- **overflow wait:** how long a job waits for a slot on an own machine
-  before ciproxy starts a runner for it on Boat.
-
-## Labels
-
-- A job uses ciproxy when its `runs-on` names a ciproxy label.
-- **Decision:** ciproxy is the runner provider for its labels and gets the
-  jobs through the GitHub scale set API. Rejected: adopting existing
-  tools, because nothing is left to sell. Rejected: a label router that
-  picks a provider label before each job queues, because it needs a router
-  job and an edit in each job.
-- Only jobs of the repositories that the customer allows get a ciproxy
-  runner, as [Repository access](security.md#repository-access) says.
-
-### Default labels
-
-- Every [workspace](workspaces.md#terms) starts with these labels:
-
-| Label | vCPU | Memory | Disk | Slots |
-| --- | --- | --- | --- | --- |
-| `ciproxy` | 2 | 8 GB | 60 GB | 1 |
-| `ciproxy-4vcpu` | 4 | 16 GB | 80 GB | 2 |
-| `ciproxy-8vcpu` | 8 | 32 GB | 120 GB | 4 |
-
-- On an own machine, each job runs in a fresh job VM of the size of its
-  label.
-- On Boat, each job runs in a sandbox, as
-  [Overflow runners](overflow.md#overflow-runners) says.
-- The default labels allow both own machines and Boat.
-- The labels of a workspace serve the jobs of all its organizations.
-
-### Custom labels
-
-- The customer adds a label in the
-  [dashboard](../architecture.md#components), in Settings under Labels.
-- A new label has a name, vCPU, memory in GB, and disk in GB.
-- A label name follows the label rules of GitHub. When the customer saves a
-  new label, ciproxy checks its name with GitHub, and the dialog shows the
-  refusal of GitHub.
-- A label has no rename. A new label and a delete of the old one give the
-  same result.
-- The customer can delete any label except `ciproxy`.
-- The waiting jobs of a deleted label stay queued in GitHub, its running
-  jobs finish, and ciproxy removes its scale sets.
-- **Decision:** every label except `ciproxy` can be deleted. Rejected: a
-  delete of every label, because the warm runners serve `ciproxy`.
-  Rejected: a delete of custom labels only, because a workspace may drop a
-  default label that it never uses.
-- The customer edits the size of any label in the same place.
-- The dialog that adds or edits a label states how many jobs of its size
-  fit on each own machine at a time.
-- When the machines fit different numbers of jobs, the dialog shows a
-  range, such as "1 to 3 jobs".
-- When some machines fit no job of the size, the dialog says how many
-  machines it fits, such as "1 job on 3 of your 4 machines".
-- The dialog counts only the connected machines that can run jobs, and no
-  draining machine.
-- After the customer changes the size of a label, each job of the label
-  that a runner takes gets the new size.
-- So ciproxy stops the runners of the old size that have no job, and it
-  starts runners of the new size.
-- A job that runs during the change keeps its VM.
-
-### Own machines, Boat, or both
-
-- Each label allows own machines, Boat, or both, with the switches "Your
-  machines" and "Boat" of its dialog.
-- Jobs of a label that allows both start on own machines first, and on
-  Boat when the own machines are busy.
-- While the size of a label fits no own machine, the label runs on Boat
-  only.
-- The dialog says so before the customer saves the label.
-- When an own machine that fits the size connects, the jobs of the label
-  start on own machines first again.
-- This holds unless the customer turned "Your machines" off for the label.
-
-### A size that nothing can run
-
-- ciproxy reads the VM sizes that the customer's Boat account can start
-  now, through the backend contract in [Overflow](overflow.md).
-- A size fits Boat when one of those sizes has at least its vCPU, memory,
-  and disk.
-- Each label has the setting "When nothing fits". It applies while the
-  size fits no own machine and no size of the Boat account.
-- "Wait" is the default. The jobs of the label stay queued in GitHub until
-  an own machine that fits connects, or until the Boat account can start a
-  size that fits.
-- "Run on the largest Boat size" starts each job of the label on the
-  largest size that the Boat account can start, also when it is smaller
-  than the label.
-- The dialog, the label list, and the live queue show where the jobs of
-  each label run now: own machines, Boat, or wait.
-- **Decision:** the customer chooses between waiting and a smaller Boat VM.
-  Rejected: rejecting such a label on save, and failing its jobs at once,
-  because a label can stop fitting after a machine leaves or the Boat plan
-  changes.
+- **overflow wait:** how long a job waits for an own machine before
+  ciproxy starts a runner for it on Boat.
 
 ## Slots
 
 - A job takes the smallest number of slots that covers both the vCPU and
-  the memory of its size.
+  the memory of its [size](labels.md#terms).
 - That number is the larger of the vCPU divided by 2 and the memory
   divided by 8 GB, each rounded up.
-- A size fits an own machine when the machine has at least as many slots
-  as the size takes.
 - Each slot is free, holds a warm runner, or holds a job.
-- The host reserve of an own machine is a quarter of its hardware threads
-  and a quarter of its memory.
-- The rest of the machine forms whole slots.
+- The host reserve of an own machine is a quarter of its hardware threads,
+  a quarter of its memory, and a quarter of its disk.
+- The rest of the threads and the memory forms whole slots.
 - One vCPU is one hardware thread.
 - The slots of an own machine are the smaller of these two numbers:
   - three quarters of its hardware threads, divided by 2 and rounded down
   - three quarters of its memory, divided by 8 GB and rounded down
-- The agent reports the slots of a machine when it connects.
+- The agent reports the slots and the disk of a machine when it connects.
+
+### Disk
+
+- The disk of an own machine is the space in which the agent keeps the
+  images, the job VMs, and the machine cache.
+- The host reserve keeps its quarter of the disk for the system and the
+  images.
+- The other three quarters of the disk are the job disk.
+- Each job VM holds the disk of its size in the job disk, from its start
+  until it ends.
+- So a warm runner holds the disk of its size, as it holds its slots.
+- The machine cache uses the job disk that no job VM holds.
+- The machine cache frees space when a job VM needs it, so the machine
+  cache never keeps a job from starting.
+- The [Docker disks](cache.md#docker-disks) and their copies share the
+  free job disk with the machine cache.
+- When a job VM needs space, ciproxy deletes the Docker disk that no job
+  uses and that a job used least recently.
+- Reason: a Docker disk is a cache, so its loss costs only time.
+- **Decision:** a job needs job disk as well as slots, and the machine cache
+  gets the rest of the disk. Rejected: slots that ignore the disk, because
+  jobs could then fill a small disk. Reason: one rule serves every
+  resource, as for the threads and the memory.
+
+### Fit
+
+- A size fits an own machine when the machine has at least as many slots
+  as the size takes, and its job disk is at least the disk of the size.
+- A job VM starts on an own machine only when the machine has enough free
+  slots and enough free job disk for its size.
+- The free job disk is the job disk that no job VM holds. It includes the
+  space that the machine cache uses.
+- The jobs of one size that an own machine runs at a time are the smaller
+  of these two numbers:
+  - its slots, divided by the slots of the size and rounded down
+  - its job disk, divided by the disk of the size and rounded down
 
 ### Worked examples
 
@@ -147,6 +84,24 @@ where each job runs. It also states what happens when a part fails.
 - So every own machine that meets the
   [hardware minimum](agent.md#install) of 4 cores and 16 GB has at least
   1 slot.
+- A mini PC with 16 threads, 64 GB, and a 256 GB disk has 6 slots, as the
+  AX42 has.
+- Its host reserve keeps 64 GB of the disk, so its job disk is 192 GB.
+- A job of the label `ciproxy` holds 60 GB, so the job disk holds 3 such
+  jobs at a time, and the slots hold 6.
+- So the mini PC runs 3 jobs of `ciproxy` at a time.
+- While its 2 warm runners wait for jobs, they hold 120 GB, and the machine
+  cache can use the other 72 GB.
+- When a third job VM of `ciproxy` starts, the machine cache frees space
+  until it uses at most 12 GB.
+- For each [default label](labels.md#default-labels), the mini PC runs
+  these jobs at a time:
+
+| Label | Slots of a job | Disk of a job | By slots | By disk | At a time |
+| --- | --- | --- | --- | --- | --- |
+| `ciproxy` | 1 | 60 GB | 6 | 3 | 3 |
+| `ciproxy-4vcpu` | 2 | 80 GB | 3 | 2 | 2 |
+| `ciproxy-8vcpu` | 4 | 120 GB | 1 | 1 | 1 |
 
 ## Where a job runs
 
@@ -156,8 +111,8 @@ where each job runs. It also states what happens when a part fails.
 - ciproxy decides how many runners start and where, not which job a
   runner takes.
 - So the dashboard shows no machine for a waiting job.
-- A job waits up to the overflow wait for enough free slots for its size
-  on one own machine.
+- A job waits up to the overflow wait for enough free slots and free job
+  disk for its size on one own machine.
 - ciproxy starts one Boat runner for each job that has waited the overflow
   wait.
 - The overflow wait applies only to a job that an own machine can run.
@@ -191,7 +146,7 @@ where each job runs. It also states what happens when a part fails.
   says.
 - Boat is also unavailable at the [spend limit](overflow.md#spend-limit).
 - While Boat cannot take a job, the job runs on own machines only and
-  waits there for a free slot.
+  waits there for free slots and free job disk.
 - A job that neither an own machine nor Boat can take stays queued in
   GitHub until one of them can.
 
@@ -230,16 +185,17 @@ where each job runs. It also states what happens when a part fails.
   for each organization, because more VMs then stay idle. Rejected: a count
   for each organization on each machine page, because it adds a control.
   Reason: the warm runners go where the jobs arrive.
-- A job of another label gets a new runner in a fresh job VM in free
-  slots.
-- A warm runner holds the slots of the size of the label `ciproxy`, which
-  is 1 slot by default.
+- A job of another label gets a new runner in a fresh job VM, in free
+  slots and free job disk.
+- A warm runner holds the slots and the disk of the size of the label
+  `ciproxy`, which are 1 slot and 60 GB by default.
 - A warm runner never keeps a waiting job from an own machine.
-- ciproxy stops warm runners to free the slots that a waiting job needs.
+- ciproxy stops warm runners to free the slots and the job disk that a
+  waiting job needs.
 - ciproxy starts warm runners up to the count of a machine, only in free
-  slots that no waiting job needs.
+  slots and free job disk that no waiting job needs.
 - When a warm runner takes a job, ciproxy starts a new warm runner in a
-  fresh job VM when such a slot is free.
+  fresh job VM when its slots and its disk are free.
 - A draining machine keeps no warm runners.
 
 ## Failures
@@ -267,7 +223,7 @@ where each job runs. It also states what happens when a part fails.
 ### Boat fails
 
 - While Boat refuses or fails to start sandboxes, new jobs run on own
-  machines only and wait there for a free slot.
+  machines only and wait there for free slots and free job disk.
 - ciproxy keeps trying Boat for the waiting jobs, as
   [Refused sandboxes](overflow.md#refused-sandboxes) says.
 - A job that no own machine can run waits until Boat starts a sandbox for
@@ -282,8 +238,10 @@ where each job runs. It also states what happens when a part fails.
 ## Related docs
 
 - [Architecture](../architecture.md): the components and the data flow.
+- [Labels](labels.md): which jobs use ciproxy, the labels, and their sizes.
 - [Agent](agent.md): own machines, job VMs, the connection, and drain.
 - [Overflow](overflow.md): Boat, the spend limit, and refused starts.
+- [Cache](cache.md): the machine cache, which uses the free job disk.
 - [Security](security.md): repository access.
 - [Workspaces](workspaces.md): the organizations whose jobs the labels of a
   workspace serve.

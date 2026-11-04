@@ -206,9 +206,14 @@ against a tier.
 - After the last failed retry, Stripe ends the subscription.
 - Every page then shows that the tier ended, says that jobs keep running on
   all own machines, and offers "Choose a plan".
-- This banner takes the place of the soft limit banner.
 - This banner shows until the first Free period ends, or until the
   workspace moves to a paid tier.
+- The banner of a failed payment and the banner of an ended tier each take
+  the place of the [soft limit](metering.md#soft-limits) banner.
+- So a page shows one banner.
+- **Decision:** at a failed payment, the payment banner takes the place of
+  the soft limit banner. Rejected: the payment banner and the soft limit
+  banner on one page. Reason: a page keeps one banner.
 
 ## Related docs
 
