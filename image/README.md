@@ -27,6 +27,7 @@ Upstream's 75 GB virtual disk allocation does not measure installed bytes.
 
 Install Packer, QEMU, `xorriso`, `libguestfs-tools`, `zstd`, `e2fsprogs`,
 `curl`, `jq`, Python 3.9 or later, and the repository's Rust toolchain.
+The libguestfs tools must include the `guestfish` command.
 Kernel builds also need `make`, GCC, `flex`, `bison`, `bc`, `libelf-dev`,
 and `libssl-dev`.
 The build user needs KVM access and `sudo` for extraction and ext4 creation.
@@ -43,6 +44,9 @@ It retains the upstream software tests and software report.
 `prepare-template.py` replaces the Azure source and deprovision command.
 It adds the ciproxy guest, runner, kernel, and service after provisioning.
 No Azure account is needed.
+`rootfs-archive.sh` shares the export and extraction metadata policy.
+It saves numeric owners, extended attributes, and POSIX ACLs with guestfish.
+Both extraction paths use it to restore every saved attribute namespace.
 
 To prepare inputs and the recipe without starting a VM:
 
@@ -124,6 +128,8 @@ python3 image/boat.py status TEMPLATE_SANDBOX_ID
 python3 image/boat.py prepare TEMPLATE_SANDBOX_ID \
   .context/ciproxy-image-build/artifacts/rootfs.tar.zst
 python3 image/boat.py status TEMPLATE_SANDBOX_ID --process PREPARE_PROCESS_ID
+python3 image/boat.py metadata TEMPLATE_SANDBOX_ID \
+  > .context/rootfs-metadata-before.json
 python3 image/boat.py snapshot TEMPLATE_SANDBOX_ID IMAGE_RELEASE_NAME \
   --share-file .context/ciproxy-image-share.json
 python3 image/boat.py delete TEMPLATE_SANDBOX_ID
@@ -137,6 +143,10 @@ The snapshot contains no runner registration, callback token, or App key.
 Use a new release name so an existing share keeps the same image.
 `snapshot` waits for the saved snapshot and writes its share code to a
 new private file. Copy that code into the control plane's image settings.
+`metadata` runs [metadata-smoke.py](metadata-smoke.py) on the real
+`usr/bin/ping` file before the snapshot. It reads its owner, mode,
+capability, and ACL attributes. Keep this evidence on the host.
+Confirm that `security_capability` has a value before saving the snapshot.
 
 ## Boat small and default smoke
 
@@ -149,10 +159,21 @@ Keep the returned sandbox ID and process ID in the release evidence.
 python3 image/boat.py create --size small \
   --share-file .context/ciproxy-image-share.json
 python3 image/boat.py status SMOKE_SANDBOX_ID
+python3 image/boat.py metadata SMOKE_SANDBOX_ID \
+  --baseline .context/rootfs-metadata-before.json
 python3 image/boat.py run SMOKE_SANDBOX_ID .context/sandbox-registration.json
 python3 image/boat.py status SMOKE_SANDBOX_ID --process RUNNER_PROCESS_ID
 python3 image/boat.py delete SMOKE_SANDBOX_ID
 ```
+
+The metadata comparison runs after shared-snapshot restore and before a job.
+It prints `matches_baseline` and each difference as smoke evidence.
+Confirm that `matches_baseline` is `true` after each restore.
+It adds no build gate. Investigate a difference before using the image.
+Use `--file RELATIVE_PATH` in both metadata commands to check another file.
+For an ACL restore proof, choose a file with a populated ACL attribute.
+A `null` ACL records its absence and does not prove ACL restoration.
+The metadata script needs Python with Linux extended-attribute support.
 
 For each sandbox, mint a new JIT registration and a token for that sandbox.
 The existing control-plane callback must validate that token and delete

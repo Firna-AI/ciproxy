@@ -254,6 +254,7 @@ from a minimal snapshot, not from the full image.
       of `image/boat.py`, for each size. The
       [smoke guide](../image/README.md#boat-small-and-default-smoke) gives
       the arguments. Supply the overflow callback and its scoped token.
+      Compare `image/boat.py metadata` before and after snapshot restore.
       Bring the measured free bytes to the label disk decision.
       Branch: `conductor/ciproxy-mvp-milestone-10-job-vm-image`.
 

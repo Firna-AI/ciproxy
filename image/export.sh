@@ -14,9 +14,8 @@ virt-customize -a "$disk" \
     --delete /home/packer/.ssh --delete /root/.ssh \
     --delete /var/lib/cloud --delete /tmp/ciproxy-image \
     --run-command 'rm -f /etc/ssh/ssh_host_* /etc/machine-id /var/lib/dbus/machine-id; touch /etc/machine-id; rm -rf /var/log/*'
-virt-tar-out -a "$disk" / - | zstd -T0 -o "$artifacts/rootfs.tar.zst"
-sudo tar --numeric-owner --xattrs --acls -I zstd \
-    -xf "$artifacts/rootfs.tar.zst" -C "$rootfs"
+bash "$definition/rootfs-archive.sh" export "$disk" "$artifacts/rootfs.tar.zst"
+sudo bash "$definition/rootfs-archive.sh" extract "$artifacts/rootfs.tar.zst" "$rootfs"
 sudo python3 "$definition/measure.py" "$rootfs" > "$work_dir/installed-size.json"
 
 truncate -s "${ROOTFS_BYTES:-60000000000}" "$artifacts/rootfs.ext4"

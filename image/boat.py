@@ -72,6 +72,8 @@ def prepare(api, args):
     api.upload(args.sandbox, args.archive, "/tmp/ciproxy-rootfs.tar.zst")
     api.upload(args.sandbox, pathlib.Path(__file__).with_name("boat-prepare.sh"),
                "/tmp/ciproxy-prepare.sh")
+    api.upload(args.sandbox, pathlib.Path(__file__).with_name("rootfs-archive.sh"),
+               "/tmp/rootfs-archive.sh")
     answer = api.command(args.sandbox,
                          "sudo bash /tmp/ciproxy-prepare.sh "
                          "/tmp/ciproxy-rootfs.tar.zst " + digest, detached=True)
@@ -129,6 +131,24 @@ def status(api, args):
     print(json.dumps(output, indent=2))
 
 
+def metadata(api, args):
+    command = ("sudo python3 /opt/ciproxy/rootfs/opt/ciproxy-image/metadata-smoke.py "
+               "/opt/ciproxy/rootfs " + shlex.quote(args.file))
+    answer = api.command(args.sandbox, command)
+    if answer["exitCode"] != 0:
+        raise RuntimeError("The metadata smoke command could not read the file")
+    observed = json.loads(answer["stdout"])
+    if args.baseline:
+        baseline = json.loads(args.baseline.read_text())
+        differences = {key: {"before": baseline.get(key), "after": observed.get(key)}
+                       for key in sorted(baseline.keys() | observed.keys())
+                       if baseline.get(key) != observed.get(key)}
+        print(json.dumps({"metadata": observed, "matches_baseline": not differences,
+                          "differences": differences}, indent=2))
+    else:
+        print(json.dumps(observed, indent=2))
+
+
 def delete(api, args):
     api.request("DELETE", f"/sandboxes/{args.sandbox}", headers={
         "X-Ascii-Confirm-Delete": args.sandbox})
@@ -158,6 +178,10 @@ def main():
     command.add_argument("--process", type=int)
     command = commands.add_parser("delete")
     command.add_argument("sandbox")
+    command = commands.add_parser("metadata")
+    command.add_argument("sandbox")
+    command.add_argument("--file", default="usr/bin/ping")
+    command.add_argument("--baseline", type=pathlib.Path)
     args = parser.parse_args()
     try:
         globals()[args.action](Api(), args)
