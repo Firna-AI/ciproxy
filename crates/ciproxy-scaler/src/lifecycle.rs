@@ -53,7 +53,8 @@ fn obsolete(snapshot: &Snapshot, runner: &Runner, own_machine: bool) -> Option<S
 pub(crate) fn claim_existing(snapshot: &Snapshot, plan: &mut Plan, job: &WaitingJob) -> bool {
     for machine in &snapshot.machines {
         for runner in &machine.runners {
-            if claim(plan, runner, job) {
+            if (machine.connected || runner.state == RunnerState::Ready) && claim(plan, runner, job)
+            {
                 return true;
             }
         }

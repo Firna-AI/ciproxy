@@ -9,7 +9,7 @@ use crate::actions::{Action, Destination, StartReason, StopReason};
 use crate::decision::decide;
 use crate::snapshot::RunnerState;
 
-use super::fixtures::{boat, large, own, queued, running, small, snapshot, start, warm};
+use super::fixtures::{boat, large, own, queued, runner, running, small, snapshot, start, warm};
 
 fn warm_start(organization: &str) -> Action {
     start(
@@ -132,6 +132,27 @@ fn an_offline_ready_warm_runner_can_still_cover_github_demand() {
     state.machines[0].runners = vec![warm("ready", "a"), running("busy")];
     state.queue = vec![queued("a", "ciproxy", 100)];
     assert_eq!(decide(&state), vec![]);
+}
+
+#[test]
+fn an_offline_unconfirmed_start_does_not_hide_waiting_demand() {
+    let mut state = snapshot();
+    state.machines[0].connected = false;
+    state.machines[0].runners = vec![
+        runner("unconfirmed", "a", "ciproxy", RunnerState::Starting),
+        running("busy"),
+    ];
+    state.queue = vec![queued("a", "ciproxy", 0)];
+    assert_eq!(
+        decide(&state),
+        vec![boat(
+            "a",
+            "ciproxy",
+            small(),
+            "small",
+            StartReason::NoEligibleMachine
+        )]
+    );
 }
 
 #[test]
