@@ -181,6 +181,10 @@ machine or on Boat, stop a runner, or delete a sandbox.
       supplied allocation. Its history policy tests wait for the choice
       above, which the orchestrator must make before Milestone 13.
       Branch: `conductor/ciproxy-mvp-milestone-7-scaler`.
+- [ ] Use the shared protocol fit rule after its disk helper reaches the
+      primary branch. Check disk pressure and warm runner disk use.
+      Merge notes: `.context/ciproxy-mvp/scaler-merge-notes.md`.
+      Branch: `conductor/ciproxy-mvp-milestone-7-scaler`.
 
 ## Milestone 8: Machine gateway
 

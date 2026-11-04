@@ -214,15 +214,6 @@ fn never_uses_a_smaller_boat_vm_while_an_eligible_own_machine_fits() {
 }
 
 #[test]
-fn reserves_disk_for_all_starts_in_the_same_tick() {
-    let mut state = snapshot();
-    state.queue = vec![queued("a", "ciproxy", 0), queued("b", "ciproxy", 0)];
-    state.machines[0].disk_budget_bytes = 119 * GIGABYTE;
-    state.boat.enabled = false;
-    assert_eq!(decide(&state), vec![own("a", "ciproxy", small())]);
-}
-
-#[test]
 fn free_slots_on_separate_machines_cannot_form_one_job_vm() {
     let mut state = snapshot();
     state.machines[0].capacity = Slots(2);

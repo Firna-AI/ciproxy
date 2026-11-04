@@ -24,7 +24,7 @@ after the configured wait. Without an eligible own machine, it can start
 Boat at once. It selects the cheapest fitting catalog size or uses the
 label's explicit largest-size choice.
 
-Every own-machine start reserves slots and disk during the decision call.
+Every own-machine start reserves slots and job disk during the decision call.
 Waiting jobs can request warm runner retirement. Each waiting job gets a
 separate projected reservation. That reservation cannot release actual
 capacity or postpone the overflow threshold.
@@ -47,8 +47,9 @@ jobs retain their VM. Cleanup deletes only marked sandboxes with no job.
 - Preserve both the runner's original requested size and its actual size.
 - Derive `warm_allocation` from recent `ciproxy` jobs. Each entry requests
   one warm runner for its organization. `warm_count` caps the whole list.
-- Supply a total disk budget after the host reserve and cache reclamation
-  policy. Include disk already held by the listed VMs in this budget.
+- Supply the machine's total job disk as `disk_budget_bytes`. Include disk
+  held by the listed VMs and space used by the machine cache or Docker
+  disks. The machine cache and unused Docker disks free space for new VMs.
 - Supply current Boat dimensions, comparable catalog prices, and the
   largest available size. Exclude refused sizes from the largest choice.
 - Supply current UTC calendar month spend for ciproxy sandboxes only.
@@ -84,9 +85,10 @@ retry times, billing recovery, key recovery, and monthly spend. It also
 applies sandbox marks, exit reports, lifetime limits, deletion, and key
 retention.
 
-Disk checks use the caller-derived budget in addition to slots. The
-protocol's shared disk derivation helper is pending. Cache reclamation
-and host disk measurement remain external.
+Fit checks use total slots and total job disk. Starts need free slots and
+free job disk. Each VM holds its original disk until removal, including
+warm and retiring VMs. Cache reclamation and host disk measurement remain
+external.
 
 ## Quick Start
 
@@ -120,5 +122,6 @@ Tests use the public decision entry point with literal states and actions.
 - [Protocol crate](../ciproxy-protocol/README.md) owns wire values and slots.
 - [Architecture](../../docs/architecture.md) defines component boundaries.
 - [Job routing](../../docs/protocol/job-routing.md) defines routing rules.
+- [Labels](../../docs/protocol/labels.md) defines labels and size changes.
 - [Overflow](../../docs/protocol/overflow.md) defines the Boat rules.
 - [Workspaces](../../docs/protocol/workspaces.md) defines organization scope.

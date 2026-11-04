@@ -1,4 +1,4 @@
-//! CPU, memory, and caller-derived disk reservations on one own machine.
+//! CPU, memory, and job-disk reservations on one own machine.
 
 use ciproxy_protocol::resources::{Slots, VmSize};
 

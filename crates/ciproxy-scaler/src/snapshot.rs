@@ -87,10 +87,10 @@ pub struct Machine {
     pub draining: bool,
     /// Total slots after the protocol's CPU and memory host reserve.
     pub capacity: Slots,
-    /// Total disk budget after the host reserve and reclaimable cache policy.
+    /// Total job disk after the host reserve, including cache space.
     ///
-    /// This includes disk held by every runner below. It is not free disk.
-    /// The caller derives the budget after the quarter disk host reserve.
+    /// This includes disk held by every runner below. It is not free job disk.
+    /// The machine cache and unused Docker disks free space for new job VMs.
     pub disk_budget_bytes: u64,
     /// One shared warm count for this machine, across all organizations.
     pub warm_count: usize,
