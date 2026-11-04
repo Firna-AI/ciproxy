@@ -51,7 +51,11 @@
 - **Wider fix:** B. A maintained GitHub-compatible parser owns the heading
   model, so a change in a slug or parser detail needs no hand edit.
 - **Previous examples:** The collision case, fixed directly in pull
-  request #2.
+  request #2. The symbol case, review finding 6 of the same pull request,
+  fixed directly with GitHub's slug rule. Also open in the same checker: a
+  heading fragment on a `?plain=1` link passes, although GitHub's plain
+  view has no heading anchors. Rejecting it is a new rejection, which needs
+  the user.
 - **Related:** Links in the same file go through markdownlint's MD051
   rule, which this fix does not change. On 4 November 2026 the user kept
   that rule as it is.

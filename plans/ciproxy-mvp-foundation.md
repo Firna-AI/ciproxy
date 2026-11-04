@@ -93,6 +93,14 @@ User decisions, 3 November 2026:
   call, as the mockups show: the marketing pages live at `ciproxy.dev`, the
   docs at `ciproxy.dev/docs`, the dashboard at `app.ciproxy.dev`, and the
   install script of the agent at `get.ciproxy.dev`.
+- The agent ships through `futex-ai/cli-release`, which the user pointed
+  to on 4 November 2026. Its release server serves the install script and
+  the downloads at `get.ciproxy.dev` from GitHub Releases, and its updater
+  library can update the agent. My design call. Reason: the user's own
+  release tooling already does this, so ciproxy builds none of it.
+- GCP projects: `ciproxy` holds the product infrastructure only. Spikes
+  and tests run in `internal-498318`. The user set this on 4 November
+  2026, to keep the product project clean.
 - Review answers, 4 November 2026: the user unblocked Codex. The docs drop
   the promise that warm runners take new jobs during a control plane
   outage, because it highlights a risk needlessly. Corner radii rely on
@@ -102,6 +110,29 @@ User decisions, 3 November 2026:
   Boat size of the account follows its setting "When nothing fits": wait,
   the default, or run on the largest Boat size that the account can
   start. ciproxy reads the sizes that the Boat account can start.
+- Answers of 4 November 2026 to the docs and mockup items:
+  - Item 11, C: "size" names the vCPU, memory, and disk that a label gives a
+    job, and "VM size" where it needs a qualifier. Never "machine size" or
+    "shape".
+  - Item 12: ciproxy controls access with its own roles. My design call:
+    the roles are Admin, Billing, and Viewer. The person who installs the
+    App becomes the first Admin. A member of the GitHub organization with
+    no role sees a page that asks an Admin for access. Rejected: access by
+    the GitHub runner right only, and mirroring GitHub repository access.
+  - Item 13, A: a job VM reaches the internet only.
+  - Item 14, A: an install token adds any number of machines within its
+    hour.
+  - Item 15, A: the agent updates itself, through the updater of
+    `futex-ai/cli-release`.
+  - Item 16, C: the Boat step of setup asks for the spend limit.
+  - Item 17: people with the Admin or the Billing role choose the plan and
+    pay.
+  - Item 18, B: a machine keeps cache entries after GitHub evicts them, and
+    the dashboard gets "Clear cache". The sync of GitHub deletions, option
+    C, is a follow-up item.
+  - Item 20, F: every part that ciproxy ships to the customer's side is
+    Apache-2.0: the agent, the job image definition, the install script,
+    the cache sidecar, and the runner patch.
 - The options check of the `plans` skill ran over the last three decisions
   before the user answered. Its report is in
   `.context/ciproxy-mvp-foundation/options-check-1.md`.
@@ -785,6 +816,11 @@ up Mokly as `futex-ai/accounting` does.
 - [x] Fix the findings of the first screenshot review. They are in
       `.context/ciproxy-mvp-foundation/reviews/mockup-review-1.md`.
 - [x] Run the mockup check. Smoke-test the changed pages.
+- [ ] Apply the answers of 4 November 2026 in the mockups: "size" and "VM
+      size" in place of "shape", with the code names and a word rule in the
+      mockups README; the Viewer, Billing, and Admin roles, with a members
+      and roles screen in Settings and the page for a member with no role;
+      the spend limit in the Boat step of setup; and "Clear cache".
 - [ ] Apply the answers to items 8 to 11 in the mockups. Count only the
       Linux jobs where the landing page and the savings screen compare
       Linux prices.
