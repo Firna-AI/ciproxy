@@ -1,0 +1,129 @@
+{{- if .Values.controlPlane.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: control-plane
+spec:
+  replicas: {{ .Values.controlPlane.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ciproxy-control-plane
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ciproxy-control-plane
+    spec:
+      serviceAccountName: control-plane
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: topology.kubernetes.io/zone
+                    operator: In
+                    values:
+                      {{- toYaml .Values.allowedZones | nindent 22 }}
+      terminationGracePeriodSeconds: 300
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: control-plane
+          image: {{ .Values.controlPlane.image | quote }}
+          ports:
+            - name: http
+              containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          env:
+            - name: DATABASE_URL
+              value: {{ printf "postgresql://%s@127.0.0.1:5432/ciproxy" (.Values.controlPlane.sqlUser | urlquery) | quote }}
+            - name: HTTP_BIND
+              value: "0.0.0.0:8080"
+            - name: PUBLIC_URL
+              value: {{ .Values.controlPlane.publicUrl | quote }}
+            - name: IMAGE_URL_PREFIX
+              value: {{ .Values.controlPlane.imageUrlPrefix | quote }}
+            - name: BOAT_KMS_KEY
+              value: {{ .Values.controlPlane.kmsKey | quote }}
+            - name: SECRETS_DIRECTORY
+              value: /var/run/secrets/ciproxy
+            - name: CDN_SIGNING_KEY_NAME
+              value: {{ include "ciproxy.cdnSigningKeyName" . | quote }}
+            {{- with .Values.controlPlane.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          startupProbe:
+            httpGet:
+              path: /api/health/ready
+              port: http
+            failureThreshold: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /api/health/ready
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /api/health/live
+              port: http
+          resources:
+            {{- toYaml .Values.controlPlane.resources | nindent 12 }}
+          volumeMounts:
+            - name: secrets
+              mountPath: /var/run/secrets/ciproxy
+              readOnly: true
+        - name: cloud-sql-proxy
+          image: {{ .Values.controlPlane.sqlProxyImage | quote }}
+          args:
+            - --private-ip
+            - --auto-iam-authn
+            - --structured-logs
+            - --port=5432
+            - --health-check
+            - --http-address=0.0.0.0
+            - --http-port=9090
+            - {{ .Values.controlPlane.sqlConnection | quote }}
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          startupProbe:
+            httpGet:
+              path: /startup
+              port: 9090
+            failureThreshold: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readiness
+              port: 9090
+          livenessProbe:
+            httpGet:
+              path: /liveness
+              port: 9090
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+      volumes:
+        - name: secrets
+          csi:
+            driver: secrets-store-gke.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ include "ciproxy.secretProviderName" . }}
+{{- end }}
