@@ -220,10 +220,12 @@ each label. The scale set spike confirms it.
       jobs with no acquire step. Check that a Free organization can do it,
       or propose the requirement change.
       The selected private group is implemented and tested over HTTP.
+      Creation and removal were verified on GitHub Free at Firna-AI.
       Orchestrator: run `runner_group_probe.py` from
       `crates/ciproxy-github/scripts/` on a Free organization, with two
       App-visible private repositories and a clean runner launcher.
       The crate README gives the environment and arguments.
+      Enforcement waits for approval of the second private test repository.
       Branch:
       `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
 - [x] Store each message before you delete it, by job ID. Count the wait
@@ -242,6 +244,8 @@ each label. The scale set spike confirms it.
       Orchestrator: run `ref_metadata_probe.py` and `push_ref_probe.py`
       from `crates/ciproxy-github/scripts/`. Inspect supplied PR and
       reusable run IDs with `run_job_ref_probe.py` from that directory.
+      Run `workflow_ref_probe.py` there to inspect scale-message workflow
+      refs for all five cases with the approved existing fixtures.
       The crate README gives the environment and arguments.
       Ask the user to choose the full-ref source and unknown-ref policy.
       Then update the protocol and wire contracts in their owning scope,

@@ -201,6 +201,7 @@ python3 crates/ciproxy-github/scripts/runner_group_probe.py --help
 python3 crates/ciproxy-github/scripts/ref_metadata_probe.py --help
 python3 crates/ciproxy-github/scripts/push_ref_probe.py --help
 python3 crates/ciproxy-github/scripts/run_job_ref_probe.py --help
+python3 crates/ciproxy-github/scripts/workflow_ref_probe.py --help
 ```
 
 Each help page gives its prerequisites, resource scope, and cleanup steps.
@@ -233,6 +234,24 @@ They print safe JSON records and remove their unique resources.
 Check every cleanup result. `free_proven` requires successful execution
 on a GitHub organization whose reported plan is `free`.
 No live success is claimed by the local HTTP tests.
+
+The runner-free workflow-ref probe uses the existing `facts.yml` and
+`facts-target.yml` fixtures. It reserves the unused `ciproxy-facts` label
+and recreates the approved temporary `facts-pr` head. It collects direct
+and reusable assignments for branch and tag pushes, tag dispatch, PR, and
+`pull_request_target`. It creates no runner or JIT configuration.
+The output pairs four scale-message fields with trusted API run facts.
+It selects no ref source or cache policy.
+
+```sh
+python3 crates/ciproxy-github/scripts/workflow_ref_probe.py \
+  --repo Firna-AI/ciproxy-spike --expected-default-sha a76c008
+```
+
+The script preserves the default branch, cancels and deletes its runs,
+closes its PR, and removes its temporary refs, session, scale set, and
+runner group. The closed PR record stays on GitHub. Its help page gives
+the exact fixture contract and expected job counts.
 
 ### Key Code
 
