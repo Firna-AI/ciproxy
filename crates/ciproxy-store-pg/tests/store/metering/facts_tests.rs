@@ -17,8 +17,8 @@ use super::support::{free, time, usd};
 #[test]
 fn metering_reads_all_workspace_organizations_and_current_machines() {
     let database = Database::new();
-    let workspace = database.workspace();
-    let other = database.workspace();
+    let workspace = database.legacy_workspace();
+    let other = database.legacy_workspace();
     let org = database.organization(&workspace);
     let second = database.organization(&workspace);
     let foreign = database.organization(&other);

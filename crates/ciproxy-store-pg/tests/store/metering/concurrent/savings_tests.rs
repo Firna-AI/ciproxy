@@ -20,7 +20,7 @@ use super::support::{backend_pid, tagged_store, wait_for_blocker};
 #[test]
 fn savings_snapshot_cannot_omit_a_concurrently_registered_machine_cost() {
     let mut database = Database::new();
-    let workspace = database.workspace();
+    let workspace = database.legacy_workspace();
     let starts = time("2026-11-04T00:00:00Z");
     database
         .store

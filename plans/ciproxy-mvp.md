@@ -204,26 +204,94 @@ Depends on: 4
 `ciproxy-github` acts as the App, with one scale set and one listener for
 each label. The scale set spike confirms it.
 
-- [ ] Add the App tokens, the repositories, the default branch, and the
+- [x] Add the App tokens, the repositories, the default branch, and the
       installation events. Create the default labels of `labels.md`.
-- [ ] Handle a removed App, a suspended App, and a personal account, as
+      Branch:
+      `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
+- [x] Handle a removed App, a suspended App, and a personal account, as
       item 29 says.
-- [ ] Use the crate `scaleset`, with one session for each label under the
+      Branch:
+      `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
+- [x] Use the crate `scaleset`, with one session for each label under the
       lock of Milestone 4.
+      Branch:
+      `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
 - [ ] Limit the repositories with one runner group, because GitHub assigns
       jobs with no acquire step. Check that a Free organization can do it,
       or propose the requirement change.
-- [ ] Store each message before you delete it, by job ID. Count the wait
+      The selected private group is implemented and tested over HTTP.
+      Creation and removal were verified on GitHub Free at Firna-AI.
+      Orchestrator: run `runner_group_probe.py` from
+      `crates/ciproxy-github/scripts/` on a Free organization, with two
+      App-visible private repositories and a clean runner launcher.
+      The crate README gives the environment and arguments.
+      Enforcement waits for approval of the second private test repository.
+      Branch:
+      `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
+- [x] Store each message before you delete it, by job ID. Count the wait
       from `scaleSetAssignTime`. My call: `queueTime` is empty, and the
       spike found this time within about a second of the queue time.
+      My call, 4 November 2026: keep UUID demand separate from numeric
+      Actions job history. Reason: GitHub sends UUID job IDs and zero
+      request IDs. A first completion-observation time bounds retention
+      when GitHub omits the finish time. Replay keeps that observation.
+      Branch:
+      `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
 - [ ] Read the ref, the event, and the head repository of each run with
       the "Actions" read permission, and forward them to the agent, as item
       32 says.
-- [ ] Link each installation to the workspace of the Admin who started it,
+      Raw API metadata is implemented. Full-ref forwarding stays blocked.
+      Orchestrator: run `ref_metadata_probe.py` and `push_ref_probe.py`
+      from `crates/ciproxy-github/scripts/`. Inspect supplied PR and
+      reusable run IDs with `run_job_ref_probe.py` from that directory.
+      Run `workflow_ref_probe.py` there to inspect scale-message workflow
+      refs for all five cases with the approved existing fixtures.
+      The orchestrator verified all five cases with cleanup. A top-level
+      workflow ref distinguishes branch and tag pushes. A reusable
+      workflow ref names the called file. Owner items 54 and 55 stay open.
+      The crate README gives the environment and arguments.
+      Ask the user to choose the full-ref source and unknown-ref policy.
+      Then update the protocol and wire contracts in their owning scope,
+      and complete forwarding. No ref is guessed on this branch.
+      Branch:
+      `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
+- [x] Link each installation to the workspace of the Admin who started it,
       by the `requester` of the `installation` event, because GitHub sends
       an approving owner to the setup URL without the state of ciproxy.
       Keep one scale set for each organization and label.
-- [ ] Create and remove the just-in-time registrations.
+      Branch:
+      `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
+- [x] Create and remove the just-in-time registrations.
+      Evidence: `.context/ciproxy-mvp/milestone-6/verification.md`.
+      Branch:
+      `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
+- [x] Serialize organization policy operations across control-plane
+      processes, with state and repository reads inside the lease.
+      Branch:
+      `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
+- [x] Preserve current installation identity and App state when delayed
+      lifecycle deliveries arrive. Keep the authenticated requester.
+      Branch:
+      `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
+- [x] Reuse durable API facts for known runs when repository access ends.
+      First-read unknown handling still waits for owner item 55.
+      Branch:
+      `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
+- [x] Save current remote scale-set mappings without replacing internal
+      identities. Restart stale listeners and keep owned groups by ID.
+      Use a stable organization key across workspace registrations.
+      Branch:
+      `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
+- [x] Persist the verified organization login and App state together.
+      Restart a listener whose saved organization login changed.
+      Branch:
+      `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
+- [x] Save lifecycle notifications atomically with their state changes.
+      Replay them in order and confirm each only after consumer acceptance.
+      Cover failed replacement cleanup, refresh, and suspension delivery.
+      User-approved review fix: option B, 4 November 2026.
+      Branch:
+      `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
 
 ## Milestone 7: Scaler
 

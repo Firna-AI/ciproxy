@@ -2,12 +2,16 @@
 
 use chrono::{DateTime, Utc};
 use ciproxy_schema::billing::billing_accounts;
+use ciproxy_schema::metering::{metering_periods, metering_plan_costs};
 use ciproxy_schema::organizations::organizations;
 use ciproxy_schema::settings::settings;
 use ciproxy_schema::workspaces::workspaces;
 use ciproxy_store_interface::error::Result;
 use ciproxy_store_interface::workspaces::{Workspace, WorkspaceStore};
+use diesel::dsl::sql;
 use diesel::prelude::*;
+use diesel::sql_types::Timestamptz;
+use rust_decimal::Decimal;
 use uuid::Uuid;
 
 use crate::connection::PgStore;
@@ -32,24 +36,61 @@ impl From<WorkspaceRow> for Workspace {
     }
 }
 
+/// Insert the tenant, initial Free billing/settings, and trusted metering facts.
+pub(crate) fn create_workspace_on(
+    connection: &mut PgConnection,
+    workspace: &Workspace,
+) -> QueryResult<()> {
+    diesel::insert_into(workspaces::table)
+        .values((
+            workspaces::id.eq(workspace.id),
+            workspaces::name.eq(&workspace.name),
+        ))
+        .execute(connection)?;
+    let created_at = diesel::insert_into(billing_accounts::table)
+        .values(billing_accounts::workspace_id.eq(workspace.id))
+        .returning(billing_accounts::created_at)
+        .get_result::<DateTime<Utc>>(connection)?;
+    diesel::insert_into(settings::table)
+        .values(settings::workspace_id.eq(workspace.id))
+        .execute(connection)?;
+    initialize_metering_on(connection, workspace.id, created_at)?;
+    Ok(())
+}
+
+fn initialize_metering_on(
+    connection: &mut PgConnection,
+    workspace_id: Uuid,
+    created_at: DateTime<Utc>,
+) -> QueryResult<()> {
+    diesel::update(workspaces::table.find(workspace_id))
+        .set(workspaces::metering_started_at.eq(created_at))
+        .execute(connection)?;
+    diesel::insert_into(metering_plan_costs::table)
+        .values((
+            metering_plan_costs::id.eq(workspace_id),
+            metering_plan_costs::workspace_id.eq(workspace_id),
+            metering_plan_costs::starts_at.eq(created_at),
+            metering_plan_costs::monthly_usd.eq(Decimal::ZERO),
+        ))
+        .execute(connection)?;
+    let ends_at = sql::<Timestamptz>("((")
+        .bind::<Timestamptz, _>(created_at)
+        .sql(" AT TIME ZONE 'UTC') + INTERVAL '1 month') AT TIME ZONE 'UTC'");
+    diesel::insert_into(metering_periods::table)
+        .values((
+            metering_periods::workspace_id.eq(workspace_id),
+            metering_periods::starts_at.eq(created_at),
+            metering_periods::ends_at.eq(ends_at),
+        ))
+        .execute(connection)?;
+    Ok(())
+}
+
 impl WorkspaceStore for PgStore {
     fn create_workspace(&self, workspace: &Workspace) -> Result<()> {
         self.connection()?
-            .transaction(|connection| {
-                diesel::insert_into(workspaces::table)
-                    .values((
-                        workspaces::id.eq(workspace.id),
-                        workspaces::name.eq(&workspace.name),
-                    ))
-                    .execute(connection)?;
-                diesel::insert_into(billing_accounts::table)
-                    .values(billing_accounts::workspace_id.eq(workspace.id))
-                    .execute(connection)?;
-                diesel::insert_into(settings::table)
-                    .values(settings::workspace_id.eq(workspace.id))
-                    .execute(connection)?;
-                QueryResult::Ok(())
-            })
+            .transaction(|connection| create_workspace_on(connection, workspace))
             .store()
     }
 

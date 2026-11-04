@@ -8,8 +8,8 @@ use super::support::time;
 #[test]
 fn confirmed_paid_period_closes_free_and_reads_ordered_workspace_boundaries() {
     let database = Database::new();
-    let workspace = database.workspace();
-    let other = database.workspace();
+    let workspace = database.legacy_workspace();
+    let other = database.legacy_workspace();
     let store = &database.store;
     let free = Period {
         starts_at: time("2026-11-01T00:00:00Z"),

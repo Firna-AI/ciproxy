@@ -61,6 +61,27 @@ The metering service computes the rules and supplies the retention cutoff.
 Call its refresh before deleting retained job or organization data.
 The saved retention cutoff prevents stale refreshes from restoring old dates.
 
+Atomic GitHub registration creates the workspace, defaults, organization,
+and pending initial Admin together. A failed registration rolls back all
+of them. GitHub repository refresh atomically replaces one snapshot.
+Workspace creation and first GitHub registration share one transaction
+helper. It inserts the workspace, initial Free billing, and settings.
+It also records the trusted creation time, zero-dollar Free cost, and
+initial Free period from the same billing creation anchor.
+GitHub labels, pending Admin, and lifecycle events remain in the enclosing
+registration transaction.
+UUID scale-set demand stays separate from numeric Actions job history.
+Each demand write saves a pending delivery revision in the same statement.
+Stale replay cannot replace a later assignment or a terminal state.
+An exact UTC text key preserves nanosecond assignment order across the
+microsecond precision of PostgreSQL timestamps.
+Delivery confirmation cannot consume a newer revision.
+The GitHub retention query deletes completed demand after 90 days,
+including pending deliveries. Active work stays.
+When GitHub omitted its completion time, the first trusted observation
+supplied by the caller starts the period. Exact replay keeps that instant.
+The query stores this observation separately from GitHub's metadata.
+
 Gateway queries lock the workspace before registration or token issuance.
 They serialize against last-App removal and reject a retained empty workspace.
 Registration inserts the machine, report, and hashed credential together.
@@ -81,6 +102,25 @@ Each scale set lock owns a separate PostgreSQL connection.
 The database releases its advisory lock when that connection closes.
 The handle checks the connection so a listener can detect a lost session.
 Each scale set has a distinct sequence key, without hashing its identifier.
+Organization mutations use waiting leases on other dedicated connections.
+Two signed 32-bit keys preserve all 64 GitHub organization-ID bits.
+Their advisory namespace is separate from one-key scale-set locks.
+Waiting takes no ordinary shared-query connection and creates no key row.
+Trusted run-facts lookups use a tenant/organization/run index.
+Remote scale-set upserts retain internal UUIDs, lock keys, and history.
+Managed-group lookup can reuse a retained organization registration.
+A verified installation-state update saves the current login and App state
+in one statement and returns the saved organization. Workspace, account,
+installation, and non-removed state guards prevent stale identity writes.
+The original suspension-only API stays available to its existing callers.
+The GitHub App uses one transactional lifecycle path for registration,
+verified state, removal, and notification insertion. Prepared repository
+snapshots and scale-set bindings commit with activation. Removal captures
+credential revocation and the last-organization result in the same commit.
+Outbox events keep immutable metadata snapshots and sequence order. They
+have no cascading workspace or organization reference. Pending cleanup
+survives row reuse and retention purge. Confirmation deletes an accepted
+event. Pending-organization discovery supports replay after restart.
 
 Billing uses a separate live session lock per workspace.
 Each command persists before an external Stripe call.
@@ -150,6 +190,8 @@ CI starts the database for the existing workspace test phase.
 - [src/error.rs](src/error.rs) maps database failures to interface errors.
 - [src/scale_sets.rs](src/scale_sets.rs) owns advisory lock sessions.
 - [src/boat.rs](src/boat.rs) rotates and erases encrypted keys.
+- [src/github](src/github) owns atomic installation setup, repository
+  snapshots, durable job revisions, and demand retention.
 - [src/machine_removal.rs](src/machine_removal.rs) preserves removal times.
 - [src/metering](src/metering) stores cost histories and accounting deltas.
 - [src/metering/snapshot.rs](src/metering/snapshot.rs) configures shared

@@ -4,6 +4,7 @@ mod boat_tests;
 mod cleanup_tests;
 mod gateway_support;
 mod gateway_tests;
+mod github;
 mod install_revocation_tests;
 mod isolation_tests;
 mod jobs_tests;

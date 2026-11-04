@@ -16,7 +16,7 @@ use super::support::{prices, time, usd};
 #[test]
 fn removal_retries_preserve_first_registration_end_and_exclude_later_cost_days() {
     let database = Database::new();
-    let workspace = database.workspace();
+    let workspace = database.legacy_workspace();
     let starts = time("2026-11-04T00:00:00Z");
     let first = time("2026-11-04T12:00:00Z");
     let retry = time("2026-11-05T12:00:00Z");

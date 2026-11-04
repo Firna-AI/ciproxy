@@ -48,6 +48,32 @@ A new registration in another workspace leaves old history in place.
 Removal and retention queries change stored records only.
 They do not stop machines, call GitHub, or delete Boat sandboxes.
 
+The GitHub area stores visible repository metadata and default branches.
+It atomically registers a new workspace with labels and a pending first
+Admin assignment. Its demand records use the UUID from scale-set jobId.
+They keep the existing numeric Actions history identity separate.
+An atomic job update also saves a pending notification revision.
+Replay preserves terminal state and exact nanosecond assignment order.
+Confirmation of an older revision cannot consume a newer update.
+The demand retention query removes completed records after 90 days,
+including pending deliveries. When GitHub omitted its completion time,
+the first caller-supplied completion observation starts that period.
+Replay preserves that observation without fabricating a GitHub time.
+Trusted run facts preserve raw API fields. A branch name is not a full ref.
+GitHub lifecycle transitions save verified identity, App state, prepared
+resources, and immutable notification snapshots together. Only completed
+remote preparation permits activation. Failed delivery stays pending in
+sequence order even after organization rows change or a workspace purges.
+Consumer acceptance permits deletion. A crash before confirmation requires
+idempotent delivery. A pending-organization scan supports restart recovery.
+Verified installation snapshots save login and App state together.
+The scoped write returns the saved record. It cannot change another
+workspace or account, replace a newer installation, or revive removal.
+Known-run facts queries require workspace, organization, and run identity.
+Remote scale-set upserts preserve the internal row and lock key.
+Organization mutation leases wait on dedicated connections. They retain
+all GitHub identity bits in the separate two-key advisory namespace.
+
 MeteringStore reads coherent workspace facts across all organizations.
 It stores trusted creation times, registration times, and cost histories.
 It stores explicit Free and Stripe billing-period boundaries.
@@ -123,6 +149,10 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 - [src/secrets.rs](src/secrets.rs) owns opaque hashes and ciphertext.
 - [src/scale_sets.rs](src/scale_sets.rs) defines session lock ownership.
 - [src/jobs.rs](src/jobs.rs) defines metadata-only job records.
+- [src/github.rs](src/github.rs) defines repository snapshots and durable
+  UUID demand and pending role delivery.
+- [src/github_lifecycle.rs](src/github_lifecycle.rs) defines atomic App
+  transitions and immutable ordered lifecycle delivery.
 - [src/metering](src/metering) defines metering facts and history APIs.
 - [src/gateway.rs](src/gateway.rs) defines atomic registration and reports.
 
