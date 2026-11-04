@@ -1,6 +1,7 @@
 //! App-removal mutations and retained organization cleanup.
 
 use chrono::{DateTime, Duration, Utc};
+use ciproxy_schema::billing::billing_accounts;
 use ciproxy_schema::organizations::organizations;
 use ciproxy_schema::workspaces::workspaces;
 use diesel::dsl::max;
@@ -45,6 +46,9 @@ pub(crate) fn mark_app_removed(
         .count()
         .get_result::<i64>(connection)?;
     if remaining == 0 {
+        diesel::update(billing_accounts::table.find(workspace_id))
+            .set(billing_accounts::removal_cancel_requested.eq(true))
+            .execute(connection)?;
         revoke_workspace_access(connection, workspace_id, at)?;
         let last_removal = organizations::table
             .filter(organizations::workspace_id.eq(workspace_id))

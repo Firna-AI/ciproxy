@@ -36,7 +36,13 @@ Anonymous timestamp counts preserve exact period starts.
 Job and runner accounting cursors cascade with their source records.
 Anonymous aggregates belong only to the workspace.
 They survive organization deletion until their own retention expires.
-Later milestones own members, roles, and Stripe billing state.
+
+Billing accounts keep confirmed typed state and durable command inputs.
+Their creation time supplies the initial Free period anchor.
+Each has a distinct negative advisory-lock key.
+Billing events keep committed receipt identifiers.
+The last organization removal keeps a durable cancellation request.
+Later milestones own members and roles.
 Workspace deletion cascades through its retained records after 30 days.
 
 ## Quick Start
@@ -75,6 +81,8 @@ New migration names use a full date, hour, and minute prefix.
 Each migration has an up.sql and a down.sql.
 
 ### Key Code
+
+- [src/billing.rs](src/billing.rs) defines billing accounts and event receipts.
 
 - [build.rs](build.rs) tracks migration directory changes for Cargo.
 - [src/migrations.rs](src/migrations.rs) exports the embedded migrations.
