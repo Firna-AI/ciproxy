@@ -18,7 +18,10 @@ Its subscriber uses the gateway's mandatory frame-log guard.
 The guard permanently excludes unsafe WebSocket dependency targets.
 It checks native tracing and normalized log-to-tracing targets.
 Selected verbosity directives cannot override it.
-The default formatter still selects INFO and higher levels.
+`RUST_LOG` selects verbosity with the pinned Targets grammar.
+When it is not set, the default is INFO and higher levels.
+An empty value selects ERROR. Invalid directives print a notice and disable
+log output. A non-Unicode value prints a notice and uses INFO.
 The guard preserves unrelated diagnostics at their selected verbosity.
 
 ## Quick Start
@@ -40,8 +43,9 @@ cargo clippy --workspace --all-targets -- -D warnings
 
 - [src/main.rs](src/main.rs) is the composition root.
 - [src/cli.rs](src/cli.rs) defines the command line and startup log.
-- [Gateway logging](../ciproxy-gateway/src/logging.rs) supplies the mandatory
-  subscriber guard. Every later hosted subscriber must use this wrapper.
+- [Gateway logging](../ciproxy-gateway/src/logging.rs) supplies the shared
+  subscriber constructor. It preserves RUST_LOG selection and applies the
+  mandatory frame guard. The CLI prints its nonfatal configuration notices.
 - [src/_tests_/cli_tests.rs](src/_tests_/cli_tests.rs) checks version output.
 
 ### Related Docs

@@ -8,6 +8,7 @@ use uuid::Uuid;
 use crate::error::Result;
 use crate::machines::Machine;
 use crate::secrets::TokenHash;
+use crate::tokens::TokenStore;
 
 /// The full last report and the machine's desired settings.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -48,7 +49,7 @@ pub struct Contact {
 
 /// Synchronous queries used by the gateway from blocking workers.
 #[unimock(api = GatewayStoreMock)]
-pub trait GatewayStore: Send + Sync {
+pub trait GatewayStore: TokenStore + Send + Sync {
     /// Store an install hash with an exclusive expiry one hour after issuance.
     fn issue_install_token(
         &self,

@@ -26,7 +26,7 @@ async fn closes_stale_socket_before_a_queued_runner_start_can_reach_it() {
     let fixture = Fixture::start().await;
     let token = fixture.gateway.issue_token(ADMIN, WORKSPACE).unwrap();
     let mut agent = FakeAgent::connect(&fixture.url).await;
-    agent.send(register(WORKSPACE, token.token, report())).await;
+    agent.send(register(token.token, report())).await;
     let ControlMessage::Registered {
         machine_id,
         credential,

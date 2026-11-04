@@ -1,6 +1,7 @@
 //! Hash-only install, machine, and sandbox credential storage.
 
 use chrono::{DateTime, Utc};
+use unimock::unimock;
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -40,6 +41,7 @@ pub struct Token {
 }
 
 /// Create, authenticate, and revoke credentials without plaintext tokens.
+#[unimock(api = TokenStoreMock)]
 pub trait TokenStore: Send + Sync {
     /// Store a reusable install token with an exact one-hour lifetime.
     fn create_install_token(

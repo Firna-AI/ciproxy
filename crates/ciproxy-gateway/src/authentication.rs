@@ -7,6 +7,7 @@ use ciproxy_protocol::secret::Secret;
 use ciproxy_protocol::version::ProtocolVersion;
 use ciproxy_store_interface::gateway::{Contact, Registration};
 use ciproxy_store_interface::secrets::TokenHash;
+use ciproxy_store_interface::tokens::TokenSubject;
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
@@ -31,13 +32,24 @@ impl Gateway {
         match message {
             AgentMessage::Register {
                 protocol_version,
-                workspace_id,
                 install_token,
                 report,
             } => {
                 versions::accept(protocol_version)?;
+                let at = self.clock.now();
+                let install_hash = hash(&install_token);
+                let Some(token) = self
+                    .store
+                    .authenticate_token(&install_hash, at)
+                    .internal()?
+                else {
+                    return Err(Error::Unauthorized);
+                };
+                if token.subject != TokenSubject::Install {
+                    return Err(Error::Unauthorized);
+                }
                 let session = Session {
-                    workspace_id: identifier(&workspace_id.0)?,
+                    workspace_id: token.workspace_id,
                     machine_id: self.entropy.identifier()?,
                     id: self.entropy.identifier()?,
                 };
@@ -45,13 +57,13 @@ impl Gateway {
                 let registration = Registration {
                     workspace_id: session.workspace_id,
                     machine_id: session.machine_id,
-                    install_hash: hash(&install_token),
+                    install_hash,
                     credential_id: self.entropy.identifier()?,
                     credential_hash: hash(&credential),
                     contact: Contact {
                         session_id: session.id,
                         report,
-                        at: self.clock.now(),
+                        at,
                     },
                 };
                 if !self.store.register_machine(&registration).internal()? {

@@ -11,7 +11,7 @@ async fn tells_connected_agent_when_another_service_revokes_workspace_credential
     let fixture = Fixture::start().await;
     let token = fixture.gateway.issue_token(ADMIN, WORKSPACE).unwrap();
     let mut agent = FakeAgent::connect(&fixture.url).await;
-    agent.send(register(WORKSPACE, token.token, report())).await;
+    agent.send(register(token.token, report())).await;
     let registered = agent.next().await;
     assert!(matches!(registered, ControlMessage::Registered { .. }));
     fixture

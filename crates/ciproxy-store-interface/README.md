@@ -49,6 +49,9 @@ Removal and retention queries change stored records only.
 They do not stop machines, call GitHub, or delete Boat sandboxes.
 
 The gateway queries atomically register a machine and its hashed credential.
+GatewayStore reuses TokenStore authority lookup to derive the workspace from
+the install hash. Registration rechecks the token under its transaction
+locks before it inserts the machine.
 They retain the full typed protocol report with a connection identifier.
 Report writes preserve desired drain and warm settings.
 They reject replaced sessions and removed registrations.

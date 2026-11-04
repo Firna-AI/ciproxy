@@ -8,3 +8,4 @@ mod messages;
 mod revocation_tests;
 mod socket;
 mod stale_command_tests;
+mod token_owner_tests;

@@ -14,10 +14,9 @@ use tokio::runtime::Builder;
 use tokio::time::timeout;
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::Message;
-use tracing::Level;
-use tracing_subscriber::filter::Targets;
-use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::fmt::writer::BoxMakeWriter;
 use tracing_subscriber::util::SubscriberInitExt;
+use uuid::Uuid;
 
 use super::capture::Capture;
 use super::database::Database;
@@ -28,15 +27,11 @@ use super::support::{INSTALL, MACHINE, WORKSPACE, gateway};
 fn hosted_trace_logging_hides_registration_and_hello_credentials() {
     const NATIVE: &str = "dummy-native-frame-secret";
     let capture = Capture::default();
-    let directives: Targets = "trace,tungstenite=trace,tungstenite::protocol=trace,tungstenite::protocol::frame=trace,tokio_tungstenite=trace,tokio_tungstenite::compat=trace".parse().unwrap();
-    let subscriber = tracing_subscriber::fmt()
-        .with_max_level(Level::TRACE)
-        .with_ansi(false)
-        .without_time()
-        .with_writer(capture.clone())
-        .finish()
-        .with(directives);
-    logging::protect(Box::new(subscriber)).init();
+    let directives = "trace,tungstenite=trace,tungstenite::protocol=trace,tungstenite::protocol::frame=trace,tokio_tungstenite=trace,tokio_tungstenite::compat=trace";
+    let configured =
+        logging::subscriber(Ok(directives.into()), BoxMakeWriter::new(capture.clone()));
+    assert!(configured.notice.is_none());
+    configured.subscriber.init();
     let database = Database::new();
     database.workspace(WORKSPACE);
     let connections: Arc<dyn Connections> = Arc::new(LocalConnections::default());
@@ -55,14 +50,16 @@ fn hosted_trace_logging_hides_registration_and_hello_credentials() {
             let url = format!("ws://{}/agent/", listener.local_addr().unwrap());
             let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap(); });
             let mut first = connect_async(&url).await.unwrap().0;
-            let registration = register(WORKSPACE, token.token, report());
+            let registration = register(token.token, report());
             first.send(Message::Text(serde_json::to_string(&registration).unwrap().into())).await.unwrap();
             let frame = timeout(Duration::from_secs(10), first.next()).await.unwrap().unwrap().unwrap();
             let registered: ControlMessage = serde_json::from_str(frame.to_text().unwrap()).unwrap();
-            let ControlMessage::Registered { machine_id, credential, .. } = registered else { panic!("registration failed"); };
+            let ControlMessage::Registered { workspace_id, machine_id, credential } = registered else { panic!("registration failed"); };
+            let workspace = Uuid::parse_str(&workspace_id.0).unwrap();
+            assert_eq!(workspace, WORKSPACE);
             first.close(None).await.unwrap();
             let mut second = connect_async(&url).await.unwrap().0;
-            let authentication: AgentMessage = hello(WORKSPACE, machine_id, credential, 1, report());
+            let authentication: AgentMessage = hello(workspace, machine_id, credential, 1, report());
             second.send(Message::Text(serde_json::to_string(&authentication).unwrap().into())).await.unwrap();
             let frame = timeout(Duration::from_secs(10), second.next()).await.unwrap().unwrap().unwrap();
             let welcome: ControlMessage = serde_json::from_str(frame.to_text().unwrap()).unwrap();

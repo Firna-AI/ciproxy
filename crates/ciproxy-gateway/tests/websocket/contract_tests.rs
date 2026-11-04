@@ -30,21 +30,13 @@ fn identity(message: ControlMessage) -> (MachineId, Secret) {
 async fn serves_machine_lifecycle_without_losing_identity_or_latest_health() {
     let mut fixture = Fixture::start().await;
     let token = fixture.gateway.issue_token(ADMIN, WORKSPACE).unwrap();
-    let mut stranger = FakeAgent::connect(&fixture.url).await;
-    stranger
-        .send(register(OTHER, token.token.clone(), report()))
-        .await;
-    stranger.closed("[gateway] authentication failed").await;
-
     let mut first = FakeAgent::connect(&fixture.url).await;
     let mut no_kvm = report();
     no_kvm.hardware.kvm = false;
     no_kvm.capacity = Slots(0);
     no_kvm.slots.clear();
     no_kvm.runners.clear();
-    first
-        .send(register(WORKSPACE, token.token.clone(), no_kvm))
-        .await;
+    first.send(register(token.token.clone(), no_kvm)).await;
     let (first_id, first_credential) = identity(first.next().await);
     let first_uuid = Uuid::parse_str(&first_id.0).unwrap();
     let machine = fixture
@@ -58,9 +50,7 @@ async fn serves_machine_lifecycle_without_losing_identity_or_latest_health() {
 
     fixture.advance_to(3599);
     let mut second = FakeAgent::connect(&fixture.url).await;
-    second
-        .send(register(WORKSPACE, token.token.clone(), report()))
-        .await;
+    second.send(register(token.token.clone(), report())).await;
     let (second_id, credential) = identity(second.next().await);
     let second_uuid = Uuid::parse_str(&second_id.0).unwrap();
     assert_ne!(first_id, second_id);
@@ -68,16 +58,14 @@ async fn serves_machine_lifecycle_without_losing_identity_or_latest_health() {
 
     fixture.advance_to(3600);
     let mut expired = FakeAgent::connect(&fixture.url).await;
-    expired
-        .send(register(WORKSPACE, token.token, report()))
-        .await;
+    expired.send(register(token.token, report())).await;
     expired.closed("[gateway] authentication failed").await;
     assert_eq!(fixture.database.store.machines(WORKSPACE).unwrap().len(), 2);
 
     let live_token = fixture.gateway.issue_token(ADMIN, WORKSPACE).unwrap();
     let mut third = FakeAgent::connect(&fixture.url).await;
     third
-        .send(register(WORKSPACE, live_token.token.clone(), report()))
+        .send(register(live_token.token.clone(), report()))
         .await;
     let (third_id, third_credential) = identity(third.next().await);
     fixture
@@ -85,9 +73,7 @@ async fn serves_machine_lifecycle_without_losing_identity_or_latest_health() {
         .revoke_token(ADMIN, WORKSPACE, live_token.id)
         .unwrap();
     let mut revoked = FakeAgent::connect(&fixture.url).await;
-    revoked
-        .send(register(WORKSPACE, live_token.token, report()))
-        .await;
+    revoked.send(register(live_token.token, report())).await;
     revoked.closed("[gateway] authentication failed").await;
     third.disconnect().await;
     let mut retained = FakeAgent::connect(&fixture.url).await;

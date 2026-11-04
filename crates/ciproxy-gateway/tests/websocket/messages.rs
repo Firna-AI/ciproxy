@@ -97,10 +97,9 @@ pub(super) fn report() -> MachineReport {
     report
 }
 
-pub(super) fn register(workspace: Uuid, token: Secret, report: MachineReport) -> AgentMessage {
+pub(super) fn register(token: Secret, report: MachineReport) -> AgentMessage {
     AgentMessage::Register {
         protocol_version: ProtocolVersion::CURRENT,
-        workspace_id: WorkspaceId(workspace.to_string()),
         install_token: token,
         report,
     }

@@ -19,6 +19,9 @@ Revocation leaves existing machine credentials valid. The gateway stores
 SHA-256 hashes of independent 256-bit secrets. It returns plaintext only
 to the intended caller or agent. Diagnostics hide secret values.
 
+`Register` sends the install token and initial state without a workspace
+identifier. The gateway derives the workspace from the token's authority.
+Its atomic registration query rechecks that authority before insertion.
 `Register` receives `Registered` and continues on the same authenticated
 WebSocket. `Registered` supplies the workspace, stable machine identity,
 and credential. The agent must save that credential privately. A later
@@ -79,10 +82,12 @@ targets that can expose frame contents at every verbosity.
    Check each event's organization and runner ownership in that service.
    The callback can send a command through the same gateway. It runs
    without the gateway operation lock.
-8. Wrap every hosted tracing subscriber with `logging::protect` before
-   installation. This mandatory guard excludes `tungstenite` and
-   `tokio_tungstenite`, including their module targets and normalized
-   log-to-tracing records. User verbosity directives cannot re-enable
+8. Use `logging::subscriber` to construct every hosted tracing subscriber.
+   Pass the RUST_LOG environment result and output writer. Print its notice
+   in the CLI, then install its subscriber. The shared constructor preserves
+   the pinned Targets selection rules. Its mandatory guard excludes
+   `tungstenite` and `tokio_tungstenite`, including their module targets and
+   normalized log-to-tracing records. User verbosity directives cannot re-enable
    those targets. Other TRACE diagnostics remain available. Secret Debug
    redaction cannot protect serialized frames.
 
