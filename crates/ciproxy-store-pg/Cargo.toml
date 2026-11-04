@@ -1,0 +1,19 @@
+[package]
+name = "ciproxy-store-pg"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+chrono = "0.4.45"
+ciproxy-schema = { workspace = true }
+ciproxy-store-interface = { workspace = true }
+diesel = { version = "2.3.14", features = ["postgres", "chrono", "uuid"] }
+diesel_migrations = "2.3.2"
+thiserror = "2.0.21"
+uuid = "1.29.0"
+
+[dev-dependencies]
+url = "2.5.8"
+uuid = { version = "1.29.0", features = ["v4"] }

@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copy this workflow into a private smoke repository. Queue it separately.
+name: ciproxy full image smoke
+on: workflow_dispatch
+jobs:
+  image:
+    runs-on: ciproxy-image-smoke
+    steps:
+      - run: |
+          uname -a
+          python3 --version
+          node --version
+          dotnet --list-sdks
+          java -version
+          docker version
+          docker run --rm hello-world
+          df --block-size=1 /

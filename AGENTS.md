@@ -59,6 +59,27 @@ Run each command from the repository root.
 - Targeted tests: `cargo test --package <crate> <test name filter>` for
   Rust. TypeScript tests live in a `_tests_` folder beside the code and run
   on the Node test runner: `node --test ts/<package>/_tests_/<name>.test.ts`.
+- Store database: install the libpq development files for Diesel. On
+  Debian or Ubuntu, use `sudo apt-get install libpq-dev`. Start a local
+  PostgreSQL 15 database:
+
+  ```sh
+  docker run --detach --rm --name ciproxy-postgres \
+    -e POSTGRES_USER=ciproxy -e POSTGRES_PASSWORD=ciproxy \
+    -e POSTGRES_DB=ciproxy_test -p 127.0.0.1:5432:5432 postgres:15
+  until docker exec ciproxy-postgres pg_isready -U ciproxy -d ciproxy_test
+  do
+    sleep 1
+  done
+  export DATABASE_URL=postgresql://ciproxy:ciproxy@127.0.0.1:5432/ciproxy_test
+  cargo test --package ciproxy-store-interface --package ciproxy-store-pg
+  ```
+
+  Keep `DATABASE_URL` set for `cargo test --workspace` and the complete
+  gate. Store tests fail when it is missing. Each test creates and removes
+  its own database on the same PostgreSQL server. The database user needs
+  CREATEDB or superuser rights. The provided database stays unchanged.
+  Stop the local database with `docker stop ciproxy-postgres`.
 - Typecheck and lint: `npm --prefix ts run app:typecheck` and
   `npm --prefix ts run app:lint`. Use the `site:` and `tokens:` prefixes
   for the other packages.
