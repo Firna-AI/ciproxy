@@ -104,7 +104,14 @@ against a tier.
   charge, for example "the 4th of each month".
 - The customer then pays on Stripe Checkout.
 - ciproxy changes the tier only when Stripe confirms the payment.
+- Checkout takes cards only.
 - The return page waits a few seconds for the confirmation.
+- When Stripe still confirms the payment after that wait, the return page
+  says so and updates by itself.
+- While Stripe confirms a payment, Plan and usage says so, and the Plans
+  page opens no second checkout.
+- Reason: no page asks for a second payment while the first one
+  confirms.
 - After the confirmation, the workspace is on the new tier.
 - Stripe emails the receipt.
 - A checkout that does not finish leaves the tier as it was.
@@ -199,9 +206,14 @@ against a tier.
 - After the last failed retry, Stripe ends the subscription.
 - Every page then shows that the tier ended, says that jobs keep running on
   all own machines, and offers "Choose a plan".
-- This banner takes the place of the soft limit banner.
 - This banner shows until the first Free period ends, or until the
   workspace moves to a paid tier.
+- The banner of a failed payment and the banner of an ended tier each take
+  the place of the [soft limit](metering.md#soft-limits) banner.
+- So a page shows one banner.
+- **Decision:** at a failed payment, the payment banner takes the place of
+  the soft limit banner. Rejected: the payment banner and the soft limit
+  banner on one page. Reason: a page keeps one banner.
 
 ## Related docs
 

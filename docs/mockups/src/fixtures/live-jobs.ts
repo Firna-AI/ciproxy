@@ -2,7 +2,7 @@
 
 import { none, onBoat, own, rows } from "./jobs.ts";
 
-/** Wednesday 18 November, 14:32. 21 running; the first 10 are listed. */
+/** Wednesday 18 November, 14:32. 21 running; the first 11 are listed. */
 export const steadyRunning = rows("steady", [
   ["test (rust)", "CI", "mokly", "#1542", "running", own(1, 1), "4m 12s"],
   ["clippy", "CI", "mokly", "#1542", "running", own(1, 2), "2m 05s"],
@@ -46,6 +46,15 @@ export const steadyRunning = rows("steady", [
   ],
   ["visual diff", "CI", "mokly", "#1539", "running", own(1, 3), "52s"],
   ["typecheck", "CI", "mokly", "#1539", "running", own(2, 3), "41s"],
+  [
+    "eval (agents)",
+    "Evals",
+    "eval-runner",
+    "main",
+    "running",
+    own(3, 3),
+    "38s",
+  ],
 ]);
 
 /** Wednesday 18 November, 10:05, a release peak. 12 wait, 64 run. */

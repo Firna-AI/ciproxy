@@ -28,7 +28,7 @@ const faqs: readonly Faq[] = [
   {
     question: "What counts as an own machine?",
     answer:
-      "Every machine that is registered to your organization, also while it is offline. Remove a machine in the dashboard to free its place.",
+      "Every machine that is registered to your workspace, also while it is offline. Remove a machine in the dashboard to free its place.",
   },
   {
     question: "What happens when I pass a limit?",

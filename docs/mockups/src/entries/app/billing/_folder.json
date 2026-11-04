@@ -5,6 +5,7 @@
     "plans",
     "change-plan",
     "checkout",
+    "checkout-return",
     "loading-error"
   ]
 }

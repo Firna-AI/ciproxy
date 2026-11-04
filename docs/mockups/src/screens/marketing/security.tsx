@@ -21,8 +21,8 @@ const points: readonly Point[] = [
   },
   {
     icon: KeyRound,
-    title: "Runner access only",
-    text: "The GitHub App asks only to manage self-hosted runners and to list your repositories.",
+    title: "Three GitHub permissions",
+    text: "The GitHub App manages self-hosted runners, lists your repositories, and reads the branch and the event of each run.",
   },
   {
     icon: DatabaseZap,

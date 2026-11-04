@@ -8,6 +8,7 @@ import { TextLink } from "../../components/actions.tsx";
 import { CodeBlock } from "../../components/figures.tsx";
 import { installCommand } from "../../components/install-command.tsx";
 import { paths } from "../../components/paths.ts";
+import { appPermissions } from "../../fixtures/github-app.ts";
 import { runsOnDiff, workflowFile } from "../../fixtures/workflow.ts";
 import { Cells, Section, SectionHead } from "./section.tsx";
 
@@ -23,18 +24,14 @@ function Permissions() {
     <div className="hiw-permissions">
       <p className="caption">ciproxy asks GitHub for</p>
       <ul className="hiw-permission-list">
-        <li>
-          <Check size={14} className="hiw-check" />
-          <span>
-            <strong>Self-hosted runners</strong> · read and write
-          </span>
-        </li>
-        <li>
-          <Check size={14} className="hiw-check" />
-          <span>
-            <strong>Metadata</strong> · read
-          </span>
-        </li>
+        {appPermissions.map((permission) => (
+          <li key={permission.name}>
+            <Check size={14} className="hiw-check" />
+            <span>
+              <strong>{permission.name}</strong> · {permission.access}
+            </span>
+          </li>
+        ))}
       </ul>
     </div>
   );
@@ -43,7 +40,7 @@ function Permissions() {
 const steps: readonly { title: string; text: string; visual: ReactNode }[] = [
   {
     title: "Install the GitHub App",
-    text: "Pick your organization and its repositories on GitHub. ciproxy asks only to manage self-hosted runners.",
+    text: "Pick your organization and its repositories on GitHub. ciproxy asks to manage runners and to read your workflow runs.",
     visual: <Permissions />,
   },
   {

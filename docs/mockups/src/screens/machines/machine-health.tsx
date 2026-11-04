@@ -7,7 +7,11 @@ import type { ReactNode } from "react";
 import { DetailList, DetailRow, Panel } from "../../components/page.tsx";
 import { DotLabel } from "../../components/status.tsx";
 import { dotJoin, unbroken } from "../../fixtures/format.ts";
-import { ax42, type Machine } from "../../fixtures/machines.ts";
+import {
+  agentVersion,
+  offlineFor,
+  type Machine,
+} from "../../fixtures/machines.ts";
 
 function Check({ stale, children }: { stale: boolean; children: ReactNode }) {
   return stale ? (
@@ -35,18 +39,20 @@ export function MachineHealth({ machine }: { machine: Machine }) {
           )}
         </DetailRow>
         <DetailRow label="Disk">
-          <Check stale={offline}>{unbroken("312 GB")} free</Check>
+          <Check stale={offline}>
+            {unbroken(`${machine.freeDiskGb} GB`)} free
+          </Check>
         </DetailRow>
         <DetailRow label="Agent">
           <Check stale={offline}>
-            {offline ? ax42.agent : dotJoin(ax42.agent, "up to date")}
+            {offline ? agentVersion : dotJoin(agentVersion, "up to date")}
           </Check>
         </DetailRow>
       </DetailList>
       {offline ? (
         <p className="caption health-note">
-          KVM, disk, and agent show the values of the last contact,{" "}
-          {unbroken("14 minutes")} ago.
+          KVM, disk, and agent show the values of the last contact, {offlineFor}{" "}
+          ago.
         </p>
       ) : null}
     </Panel>

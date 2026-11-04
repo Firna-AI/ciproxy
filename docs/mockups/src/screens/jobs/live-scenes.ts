@@ -21,6 +21,7 @@ export const liveStates = [
   "quiet",
   "boat-refused",
   "nothing-fits",
+  "app-suspended",
   "loading",
   "error",
 ] as const;
@@ -37,11 +38,26 @@ export type LiveScene = {
   warm: number;
   runningJobs: readonly Job[];
   waitingJobs: readonly Job[];
+  /** ciproxy cannot see the jobs that wait, as while the App is suspended. */
+  waitingUnknown?: true;
 };
 
 const steadySlots = machineScenes.steady;
 const peakSlots = machineScenes.peak;
 const quietSlots = machineScenes.quiet;
+
+/** Thursday 19 November: the jobs that started before the suspension. */
+const suspendedRunning = steadyRunning.slice(0, 7);
+
+/** The slots of the three own machines. */
+const steadySlotCount = steadySlots.reduce(
+  (sum, machine) => sum + machine.slots.length,
+  0,
+);
+
+function countWhere(jobs: readonly Job[], kind: Job["where"]["kind"]) {
+  return jobs.filter((job) => job.where.kind === kind).length;
+}
 
 const steady: LiveScene = {
   tier: "team",
@@ -118,6 +134,18 @@ export const liveScenes: Readonly<Record<LiveState, LiveScene>> = {
     waiting: 2,
     onBoat: 4,
     waitingJobs: nothingFits.waiting,
+  },
+  "app-suspended": {
+    tier: "team",
+    running: suspendedRunning.length,
+    waiting: 0,
+    ownBusy: countWhere(suspendedRunning, "own"),
+    ownSlots: steadySlotCount,
+    onBoat: countWhere(suspendedRunning, "boat"),
+    warm: 0,
+    runningJobs: suspendedRunning,
+    waitingJobs: [],
+    waitingUnknown: true,
   },
   loading: steady,
   error: steady,

@@ -1,6 +1,7 @@
-// Members and roles: the people of the organization in ciproxy and the role
-// of each. An Admin gives each person a role. A member of the GitHub
-// organization with no role asks for access, and the request waits here.
+// Members and roles: the people of the workspace in ciproxy and the role of
+// each. An Admin gives each person a role. A member of one of the GitHub
+// organizations of the workspace with no role asks for access, and the
+// request waits here, with the organization that the person belongs to.
 
 import { Avatar } from "@firna/ui/avatar";
 import { DropdownSelector } from "@firna/ui/dropdown";
@@ -21,7 +22,7 @@ import {
   type Member,
   type Role,
 } from "../../fixtures/members.ts";
-import { org, user } from "../../fixtures/org.ts";
+import { org, organizationList, user } from "../../fixtures/org.ts";
 import { SettingsFrame } from "./settings-frame.tsx";
 import "./members.css";
 
@@ -140,7 +141,9 @@ function AccessRequest() {
       <div className="request-row">
         <span className="stack-tight">
           <PersonName person={requester} />
-          <span className="caption">Asked on {requester.asked}</span>
+          <span className="caption">
+            {dotJoin(`Asked on ${requester.asked}`, `member of ${org.login}`)}
+          </span>
         </span>
         <div className="request-actions">
           <RolePicker role="viewer" name={requester.name} />
@@ -174,8 +177,8 @@ export function MembersScreen({
         <MemberList viewport={viewport} />
       </Panel>
       <p className="caption">
-        Other members of <span className="nowrap">{org.login}</span> on GitHub
-        ask for access when they sign in.
+        Other members of {organizationList("and")} on GitHub ask for access when
+        they sign in.
       </p>
       <Panel title="Roles">
         <div className="stack">

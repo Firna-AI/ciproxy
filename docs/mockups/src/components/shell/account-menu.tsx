@@ -8,7 +8,7 @@ import { MockLink } from "@mokly/mokly";
 import { Avatar } from "@firna/ui/avatar";
 
 import { roles, type Role } from "../../fixtures/members.ts";
-import { org } from "../../fixtures/org.ts";
+import { org, workspace } from "../../fixtures/org.ts";
 import { Action } from "../actions.tsx";
 import { paths } from "../paths.ts";
 import { Tag } from "../status.tsx";
@@ -38,7 +38,7 @@ export function AccountMenu({
         </span>
       </div>
       <div className="account-section account-role">
-        <span className="small muted">Role in {org.login}</span>
+        <span className="small muted">Role in {workspace.name}</span>
         <Tag>{roles[role].name}</Tag>
       </div>
       {canClaim ? (

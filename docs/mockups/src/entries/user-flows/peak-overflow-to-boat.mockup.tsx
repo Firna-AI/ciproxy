@@ -3,18 +3,13 @@ import { defineUseCase } from "@mokly/mokly";
 import { paths } from "../../components/paths.ts";
 import { related } from "../../components/related-docs.ts";
 import { formatMoney } from "../../fixtures/format.ts";
-import {
-  ax42,
-  boat,
-  countSlots,
-  machineScenes,
-} from "../../fixtures/machines.ts";
+import { boat, countSlots, machineScenes } from "../../fixtures/machines.ts";
 import { savings, yourCost } from "../../fixtures/savings.ts";
 import { liveScenes } from "../../screens/jobs/live-scenes.ts";
 
 const steady = machineScenes.steady;
 const busySlots = countSlots(steady, "busy");
-const allSlots = steady.length * ax42.slotsTotal;
+const allSlots = steady.reduce((sum, machine) => sum + machine.slots.length, 0);
 const boatShare = Math.round(
   (savings.starts.boat / (savings.starts.own + savings.starts.boat)) * 100,
 );

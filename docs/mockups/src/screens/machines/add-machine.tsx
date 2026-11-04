@@ -1,8 +1,10 @@
 // Add another own machine with the one install command. A fourth machine on
 // Team passes the included machines: the banner of every page says so, and
-// the machine runs jobs at once. After Revoke token, the command adds no
-// machine, and a new command is one click away. An Admin whom GitHub does not
-// let manage self-hosted runners sees who can add a machine instead.
+// the machine runs jobs at once. The fourth machine, office-mini-1, reports
+// fewer slots than its threads and memory give, because of its disk. After
+// Revoke token, the command adds no machine, and a new command is one click
+// away. An Admin whom GitHub does not let manage self-hosted runners sees who
+// can add a machine instead.
 
 import type { Viewport } from "@mokly/mokly";
 
@@ -18,8 +20,9 @@ import { PageHeader, Panel } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
 import { AppShell } from "../../components/shell/app-shell.tsx";
 import { usageBanner } from "../../components/usage-banner.tsx";
+import { officeMini } from "../../fixtures/machines.ts";
 import { adminWithoutRight } from "../../fixtures/members.ts";
-import { org } from "../../fixtures/org.ts";
+import { workspace } from "../../fixtures/org.ts";
 import "./machines.css";
 
 export const addMachineStates = [
@@ -37,12 +40,15 @@ function AddMachineBody({ state }: { state: AddMachineState }) {
     <>
       <p className="small">
         Run this command on the new machine. It installs the ciproxy agent and
-        connects the machine to {org.login}.
+        connects the machine to {workspace.name}.
       </p>
       <InstallCommand revokeTo={paths.addMachineRevoked} />
       {state === "connected" ? (
         <>
-          <ConnectedMachine name="hetzner-ax42-4" />
+          <ConnectedMachine
+            name={officeMini.name}
+            hardware={officeMini.hardware}
+          />
           <div className="row">
             <LinkAction to={paths.machinesOverLimit} tone="primary">
               Open Machines

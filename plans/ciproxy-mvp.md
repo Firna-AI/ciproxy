@@ -55,16 +55,20 @@ Depends on: none
 Milestone 1 of the foundation plan applies the answers to items 8 to 20.
 This milestone adds the states of the new items, and the legal pages.
 
-- [ ] Add a removed App, an ended sign-in, and a personal account.
-- [ ] Add the install command, a refused label name, too little disk, and
+- [x] Add a removed App, an ended sign-in, and a personal account.
+- [x] Add the install command, a refused label name, too little disk, and
       mixed machines.
-- [ ] Add a payment that Stripe still confirms, and two banners at once.
-- [ ] Add the workspace of item 48: the switcher, the Organizations tab with
+- [x] Add a payment that Stripe still confirms, and two banners at once.
+- [x] Add the workspace of item 48: the switcher, the Organizations tab with
       "Add an organization", and the organization of each job. Show the
       third App permission of item 32.
-- [ ] Add the terms and privacy pages. Run the mockup check, and smoke-test
+- [x] Add the terms and privacy pages. Run the mockup check, and smoke-test
       the changed pages.
-- [ ] Update this plan for each problem that the mockups show.
+- [x] Update this plan for each problem that the mockups show.
+- [ ] Add the rename of a workspace, the banner of a Free workspace with
+      more than one organization, the job page with the mixed cache source
+      and with no entries restored, a `labels` key in `related-docs.ts`,
+      and the states that the answers to items 50 and 51 need.
 
 ## Milestone 2: Documentation and protocol
 
@@ -73,7 +77,10 @@ Depends on: 1
 Each answer goes into the protocol doc that it changes, and its `Open:`
 line goes.
 
-- [ ] Write each answer that changes a doc, and the disk rule of item 34.
+- [x] Write the disk rule of item 34, and each answer up to item 49.
+- [ ] Write the answers to items 50 and 51 into the docs.
+- [x] Write the design calls of items 33 to 36 and 41 to 44 into the docs.
+      Item 44 contradicts "Cache tiers" in `cache.md`, and item 44 wins.
 
 ## Milestone 3: Protocol crate
 
@@ -82,11 +89,14 @@ Depends on: none
 `ciproxy-protocol` holds the types of the agent connection. My call: one
 WebSocket over HTTPS with JSON. Reason: machines open no inbound port.
 
-- [ ] Add the rules of "Slots" in `job-routing.md`, tested on its examples.
-- [ ] Add the registration, the hello, the report every 10 seconds, and the
+- [x] Add the rules of "Slots" in `job-routing.md`, tested on its examples.
+      Branch: `conductor/ciproxy-mvp-milestone-3-protocol-crate`.
+- [x] Add the registration, the hello, the report every 10 seconds, and the
       commands for runners, job facts, drain, remove, cache, and images.
-- [ ] Add the vsock messages of `ciproxy-guest`. Use tagged enums, hide
+      Branch: `conductor/ciproxy-mvp-milestone-3-protocol-crate`.
+- [x] Add the vsock messages of `ciproxy-guest`. Use tagged enums, hide
       secrets from `Debug`, and snapshot each message with `insta`.
+      Branch: `conductor/ciproxy-mvp-milestone-3-protocol-crate`.
 - [ ] Add the disk rule of "Slots", after Milestone 2 writes it into
       `job-routing.md`.
 
@@ -136,7 +146,7 @@ Depends on: 4
 each label. The scale set spike confirms it.
 
 - [ ] Add the App tokens, the repositories, the default branch, and the
-      installation events. Create the default labels of `job-routing.md`.
+      installation events. Create the default labels of `labels.md`.
 - [ ] Handle a removed App, a suspended App, and a personal account, as
       item 29 says.
 - [ ] Use the crate `scaleset`, with one session for each label under the
@@ -150,7 +160,9 @@ each label. The scale set spike confirms it.
 - [ ] Read the ref, the event, and the head repository of each run with
       the "Actions" read permission, and forward them to the agent, as item
       32 says.
-- [ ] Link each installation to the workspace of the Admin who started it.
+- [ ] Link each installation to the workspace of the Admin who started it,
+      by the `requester` of the `installation` event, because GitHub sends
+      an approving owner to the setup URL without the state of ciproxy.
       Keep one scale set for each organization and label.
 - [ ] Create and remove the just-in-time registrations.
 
@@ -162,7 +174,8 @@ Depends on: 3
 machine or on Boat, stop a runner, or delete a sandbox.
 
 - [ ] Apply `job-routing.md` from "Where a job runs" to "Failures", and the
-      size changes of "Custom labels". Give each start a typed reason.
+      size changes of "Custom labels" in `labels.md`. Give each start a typed
+      reason.
 - [ ] Unit-test each rule with a hand-worked state.
 
 ## Milestone 8: Machine gateway
@@ -561,7 +574,7 @@ had a clearly best option:
 - Item 38: Checkout takes cards only, and its return page says when Stripe still
   confirms. Reason: the page never asks for a second payment.
 - Item 40, withdrawn on 4 November 2026: the disk of the default labels is a
-  requirement in `job-routing.md`, so a change goes to the user. Milestone
+  requirement in `labels.md`, so a change goes to the user. Milestone
   10 measures the free disk on Boat with the shared image, and then
   proposes the disk as a decision.
 - Item 41: A size that fits a different number of jobs on different machines
@@ -670,6 +683,80 @@ Design calls for the workspace of item 48, my calls, 4 November 2026:
 - Starts, machines, the soft limits, and the savings report count per
   workspace.
 
+Design calls on the docs work of items 32 and 48, my calls and those of the
+docs agent, 4 November 2026:
+
+- The model lives in a new doc, `workspaces.md`, with the App install flow.
+- An install that no Admin started makes a new workspace. A new workspace
+  takes the name of its first organization, and an Admin can rename it.
+- A take-out stops the runners without a job, lets running jobs finish, and
+  deletes no data.
+- Team and Business allow any number of organizations.
+- One warm runner count for each machine, shared by the organizations of
+  the workspace by their recent jobs. Reason: the warm runners go where the
+  jobs arrive, and the machine page keeps one control.
+- On Free, the number of organizations is a soft limit, with the banner and
+  the offer, and "Move to Free" stays possible. Reason: it treats
+  organizations as the machine count is treated.
+- When the last organization of a workspace leaves, the Boat key goes when
+  the last running sandbox ends, as after Disconnect. Reason: ciproxy needs
+  the key to delete those sandboxes.
+- A `pull_request_target` job counts as a pull request for trusted
+  write-back. Reason: its job often runs code from the pull request.
+- `AGENTS.md` gets the copy rule "workspace, never team".
+- Changed after the options check of items 50 and 51: an owner of an
+  organization claims the Admin role only when the workspace has no Admin,
+  or when the person owns every organization of the workspace. Reason: an
+  owner of a later organization must not take over the workspace of
+  another. With one organization, the rule stays as it was.
+
+Design calls of the docs work of Milestone 2, my calls and those of the
+docs agent, 4 November 2026:
+
+- The label sections move to a new doc, `labels.md`, so that
+  `job-routing.md` stays near its length target.
+- A warm runner holds the disk of its size, as it holds its slots. "Fits"
+  means enough capacity, and "starts" means enough free slots and free job
+  disk. The space of the machine cache counts as free job disk, because the
+  cache gives it back.
+- The new term "job disk" names the three quarters of the disk that the
+  host reserve leaves, because "free disk" already names a health check.
+- A person who fails the hourly membership check loses the role.
+- The Docker disks and their copies share the free job disk with the
+  machine cache. When a job needs space, ciproxy deletes the Docker disk
+  that no job uses and that a job used least recently. Reason: a Docker
+  disk is a cache, so its loss costs only time.
+- The hardware minimum adds 80 GB of disk. Reason: such a machine then fits
+  one job of `ciproxy`, as the memory minimum ensures one slot.
+- A job that restored no entry shows "No entries restored". Reason: it is
+  true for every such job.
+
+Design calls on the problems that the mockups of Milestone 1 showed, my
+calls and those of the mockups agent, 4 November 2026:
+
+- While Stripe confirms a payment, Plan and usage says so, and the Plans
+  page opens no second checkout. Reason: design call 38 says that no page
+  asks for a second payment.
+- A label name follows the label rules of GitHub, checked with GitHub when
+  the label is saved. Reason: design call 33 names the GitHub rules, so
+  ciproxy adds no rule of its own.
+- Every label except `ciproxy` can be deleted. Its waiting jobs stay queued,
+  its running jobs finish, and ciproxy removes its scale sets. Reason: the
+  warm runners serve `ciproxy`.
+- The fit line of the label dialog counts the connected machines that can
+  run jobs, and says "1 job on 3 of your 4 machines" when some fit none.
+  Reason: design call 41 covers different counts, and this covers none.
+- For 30 days, the Organizations tab shows a removed organization, with the
+  last day of a new install that keeps its history. Reason: an Admin
+  manages the organizations there.
+- A suspension shows a notice on Jobs, with no waiting count for that
+  organization. Reason: the other reasons why jobs wait show there.
+- The install command reads `curl -fsSL https://get.ciproxy.dev | sudo sh
+  -s -- install --token …`. Reason: design call 30 runs the agent with the
+  arguments of the install script.
+- The page of a removed App shows no data of the workspace, because ciproxy
+  cannot check a membership after a removal.
+
 Design calls on the questions of the docs work, my calls, 4 November 2026:
 
 - A move up between paid tiers changes the tier only after its charge
@@ -686,7 +773,8 @@ Design calls on the questions of the docs work, my calls, 4 November 2026:
   report. The savings report now covers the whole workspace, which pays
   one price.
 
-No item waits for the user.
+Items 50 and 51 wait for the user. Their options check ran, and its report
+is in `.context/ciproxy-mvp/options-check-50-51.md`.
 
 The options check of the `plans` skill ran over these items on 4 November
 2026. Its reports are under `.context/ciproxy-mvp-foundation/`:
@@ -1222,3 +1310,143 @@ organizations, close to G. See the answers above.
 - **Action:** ask the user, because the options trade the speed of the
   overflow work against a shared interface, and C changes the trait of
   Juno.
+
+### 50. Adding a machine needs an unclear runner right
+
+**Status, 4 November 2026:** its options check ran, and the item goes to
+the user.
+
+- **Severity:** High. **Effort:** Medium.
+- **Source:** Implementation, from the docs work of item 48.
+- **Category:** Security.
+- **Location:** `docs/protocol/security.md`, "Roles", and
+  `docs/protocol/workspaces.md`, "Add an organization".
+- **Terms:**
+  - **Runner right:** the GitHub right to manage the self-hosted runners of
+    one organization. Every owner has it, and so does GitHub's CI/CD admin
+    role.
+- **Background:**
+  - Item 28 decided that adding a machine needs the Admin role and the
+    runner right, because a machine gets the secrets of the jobs that it
+    runs. It rejected the Admin role alone.
+  - A machine now runs the jobs of every organization of its workspace, and
+    the Boat account of the workspace runs their overflow jobs.
+  - Secrets reach a machine or Boat by five paths: adding a machine,
+    connecting Boat, adding an organization, a re-join within 30 days of a
+    removal, and an install token made before an organization joined.
+  - When an owner approves an install that an Admin asked for, GitHub shows
+    that owner the App, not the workspace.
+- **Problem:** No rule says whose runner right each path needs, so the
+  secrets of one organization can reach machines that nobody with its
+  runner right accepted.
+- **Impact if no action:** A person with the runner right of one
+  organization can give a machine or a Boat account the job secrets of
+  another organization.
+- **Root question:** How do the job secrets of each organization reach only
+  the machines and the Boat account that a person with its runner right
+  accepted?
+- **Options:**
+  - **A.** Adding a machine needs the runner right of every organization of
+    the workspace. Adding an organization needs the runner right of that
+    organization. Effort: Medium.
+  - **B.** Adding a machine needs the runner right of one organization, and
+    the App install of each organization counts as its consent. Effort:
+    Small.
+  - **C.** A machine runs only the jobs of the organizations whose runner
+    right the person who added it had. Effort: Large.
+  - **D.** A person with the runner right of a new organization confirms its
+    join, on a page that names the workspace, its machines, and its Boat
+    account. Machines added later need the right of one organization only.
+    Effort: Medium.
+  - **E.** ciproxy records which organizations each machine and the Boat
+    account may serve, and the scaler starts a runner only where a record
+    exists. People with the runner right add the records. Effort: Large.
+  - **F.** A, plus the paths that A leaves open. Effort: Medium.
+    - Connecting or changing the Boat key needs the runner right of every
+      organization.
+    - When the person who started a join lacks the runner right of the new
+      organization, the join waits until a person with that right confirms
+      it, on a page that names the workspace, its machines, and its Boat
+      account.
+    - A re-join within 30 days follows the rule of an added organization.
+    - When an organization joins, ciproxy revokes the open install tokens.
+- **Left out:**
+  - The Admin role alone, because item 28 rejected it.
+  - A GitHub App for each workspace, so that GitHub names the workspace,
+    because GitHub allows at most 100 Apps for each account.
+  - VMs that hide a job from the host of its machine, because most customer
+    hardware lacks the processor support.
+  - A consent that ends when its person loses the right, because a machine
+    works until a person removes it.
+- **Wider fix:** E. It checks the one place where secrets go, the start of a
+  runner, so a new path needs no check of its own.
+- **Previous examples:** Item 28 of the foundation plan.
+- **Related:** Item 51: its options use the same runner right.
+- **Recommendation:** F, changed from A by the options check. It keeps the
+  reason of item 28 for every organization and closes the four paths that
+  A leaves open. E protects the codebase best, at a Large cost.
+- **Action:** ask the user, because item 28 covers one organization only,
+  and each option adds a rule.
+
+### 51. An organization with the App cannot join
+
+**Status, 4 November 2026:** its options check ran, and the item goes to
+the user.
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation, from the docs work of item 48.
+- **Category:** Docs or spec.
+- **Location:** `docs/protocol/workspaces.md`, "Take an organization out"
+  and "Add an organization".
+- **Terms:**
+  - **Take-out:** an Admin takes an organization out of its workspace.
+- **Background:**
+  - "Add an organization" works through a new App install, and GitHub
+    installs an App only once on each organization.
+  - Today a take-out leaves the App installed, so the organization cannot
+    join a workspace again until an owner removes the App.
+  - Any Admin can take out any organization. So an owner of a later
+    organization can take out the first one, and keep its machines and its
+    card.
+  - The App can remove its own install through the GitHub API.
+- **Problem:** No rule says how an organization leaves so that it can join
+  again, who may take it out, or what happens to the last organization.
+- **Impact if no action:** A taken-out organization cannot come back, and
+  one organization can push another out of the workspace that it paid for.
+- **Root question:** How does an organization leave a workspace so that it
+  can join one again later, who may make it leave, and what happens to the
+  last organization?
+- **Options:**
+  - **A.** No join while the App stays: an owner removes the App, and an
+    Admin adds the organization again. The last organization cannot be
+    taken out. Effort: Small.
+  - **B.** "Add an organization" also lists the organizations that have the
+    App and no workspace, to an Admin who owns them. Effort: Medium.
+  - **C.** B, and an owner can also move an organization out of another
+    workspace. Effort: Large.
+  - **D.** A take-out removes the App. Effort: Small.
+    - ciproxy deletes the scale sets of the organization, lets its running
+      jobs finish, and removes its own install through the GitHub API.
+    - The organization can join any workspace again as a new install.
+    - Only a person with the runner right of that organization can take it
+      out.
+    - The last organization cannot be taken out.
+  - **E.** A take-out only pauses the jobs of the organization, as a
+    suspension does, and an Admin can start them again. Effort: Small.
+  - **F.** An Admin can take out the last organization, which closes the
+    workspace as a removal of the last organization does. Effort: Small.
+- **Left out:**
+  - A join by a person without the runner right of the organization,
+    because that person could send its secrets to machines that GitHub does
+    not trust that person with.
+  - A join through the GitHub settings page of an install, because B is
+    better on every point.
+- **Wider fix:** D. Its rule is that ciproxy keeps no install that no
+  workspace serves.
+- **Previous examples:** None found.
+- **Related:** Item 50: D uses its runner right for the take-out.
+- **Recommendation:** D, changed from B by the options check. It removes the
+  cause, an install that no workspace serves, it needs no new join path,
+  and it stops one organization from pushing another out.
+- **Action:** ask the user, because no requirement covers the take-out, and
+  each option adds a rule.

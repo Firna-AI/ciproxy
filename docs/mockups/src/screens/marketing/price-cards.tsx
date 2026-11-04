@@ -1,7 +1,7 @@
 // The three tiers of the pricing page as cells: the price, the limits, the
 // action, and what each tier includes or adds. Every action says Start free
-// and opens sign-in, because every organization starts on Free and picks a
-// paid tier in the dashboard.
+// and opens sign-in, because every workspace starts on Free and picks a paid
+// tier in the dashboard.
 
 import { LinkAction } from "../../components/actions.tsx";
 import { paths } from "../../components/paths.ts";
@@ -19,8 +19,8 @@ import "./price-cards.css";
 
 const blurbs: Readonly<Record<TierKey, string>> = {
   free: "Try ciproxy on one machine.",
-  team: "For the daily CI of a team.",
-  business: "For several GitHub organizations on one plan.",
+  team: "For daily CI across your GitHub organizations.",
+  business: `For large fleets, with ${tiers.business.history} of job history.`,
 };
 
 function PriceCard({ tier }: { tier: Tier }) {

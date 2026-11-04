@@ -16,6 +16,7 @@ export type UsageScene =
   | "free"
   | "free-over"
   | "payment-failed"
+  | "payment-failed-over-limit"
   | "moved-to-free"
   | "free-scheduled";
 
@@ -36,9 +37,12 @@ export type Usage = {
   ends?: string;
 };
 
+/** The last day of the Team period of November. */
+export const teamPeriodEnd = unbroken("3 December");
+
 const team = {
   tier: "team",
-  period: dateRange("4 November", "3 December"),
+  period: dateRange("4 November", teamPeriodEnd),
   extraStarts: 0,
   extraMachines: 0,
   renews: unbroken("4 December"),
@@ -53,6 +57,16 @@ const free = {
   extraMachines: 0,
 } as const;
 
+/** Stripe could not charge the card for the December period. */
+const paymentFailed: Usage = {
+  ...team,
+  period: dateRange("4 December", "3 January"),
+  starts: 1_150,
+  projected: 18_300,
+  machines: 3,
+  renews: unbroken("4 January"),
+};
+
 export const usageScenes: Readonly<Record<UsageScene, Usage>> = {
   steady: { ...team, starts: 8_640, projected: 18_500, machines: 3 },
   "near-limit": {
@@ -66,14 +80,9 @@ export const usageScenes: Readonly<Record<UsageScene, Usage>> = {
   "over-machines": { ...team, starts: 8_640, projected: 18_500, machines: 4 },
   free: { ...free, starts: 1_240, passesOn: unbroken("3 September") },
   "free-over": { ...free, starts: 2_214, passesOn: unbroken("4 September") },
-  "payment-failed": {
-    ...team,
-    period: dateRange("4 December", "3 January"),
-    starts: 1_150,
-    projected: 18_300,
-    machines: 3,
-    renews: unbroken("4 January"),
-  },
+  "payment-failed": paymentFailed,
+  /** The payment failed while office-mini-1 runs as a fourth machine. */
+  "payment-failed-over-limit": { ...paymentFailed, machines: 4 },
   "moved-to-free": {
     ...free,
     period: dateRange("18 December", "17 January"),
@@ -88,7 +97,7 @@ export const usageScenes: Readonly<Record<UsageScene, Usage>> = {
     projected: 18_500,
     machines: 3,
     renews: undefined,
-    ends: unbroken("3 December"),
+    ends: teamPeriodEnd,
   },
 };
 

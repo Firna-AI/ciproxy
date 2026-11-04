@@ -10,7 +10,7 @@ import {
   formatRate,
   unbroken,
 } from "../../fixtures/format.ts";
-import { ax42 } from "../../fixtures/machines.ts";
+import { ax42 } from "../../fixtures/hardware.ts";
 import { planChoiceText } from "../../fixtures/plan-choice.ts";
 import { listPrices } from "../../fixtures/price-lists.ts";
 import { sizePhrase } from "../../fixtures/sizes.ts";

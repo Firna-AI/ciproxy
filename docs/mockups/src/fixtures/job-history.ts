@@ -1,4 +1,5 @@
-// Finished jobs of mokly-ai on Wednesday 18 November.
+// Finished jobs of the workspace mokly-ai on Wednesday 18 November, from its
+// two organizations.
 
 import {
   defaultLabel,
@@ -81,6 +82,17 @@ export const history: Job[] = (
       "1m 54s",
       "0s",
       "14:26",
+    ],
+    [
+      "eval (agents)",
+      "Evals",
+      "eval-runner",
+      "main",
+      "passed",
+      own(2, 3),
+      "5m 08s",
+      "0s",
+      "14:25",
     ],
     [
       "docker image",

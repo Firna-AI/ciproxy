@@ -12,7 +12,7 @@ import { Notice } from "../../components/feedback.tsx";
 import { paths } from "../../components/paths.ts";
 import { AskPayer } from "../../components/role-actions.tsx";
 import { formatCount, monthly } from "../../fixtures/format.ts";
-import { org } from "../../fixtures/org.ts";
+import { workspace } from "../../fixtures/org.ts";
 import { addOnPrices, startsText, tiers } from "../../fixtures/tiers.ts";
 import { freeFrom, type Usage, type UsageScene } from "../../fixtures/usage.ts";
 
@@ -27,7 +27,7 @@ export function usageNotice(
     return (
       <Notice
         tone="warning"
-        title={`At this pace, ${org.login} passes ${formatCount(tiers.team.starts)} starts on ${usage.passesOn}`}
+        title={`At this pace, ${workspace.name} passes ${formatCount(tiers.team.starts)} starts on ${usage.passesOn}`}
         actions={act(
           <Action tone="primary" size="sm">
             {`Add ${block} starts`}
@@ -43,7 +43,7 @@ export function usageNotice(
     return (
       <Notice
         tone="warning"
-        title={`At this pace, ${org.login} passes the ${formatCount(tiers.free.starts)} starts of Free on ${usage.passesOn}`}
+        title={`At this pace, ${workspace.name} passes the ${formatCount(tiers.free.starts)} starts of Free on ${usage.passesOn}`}
         actions={act(
           <LinkAction to={paths.plans} tone="primary" size="sm">
             Compare plans
@@ -66,8 +66,8 @@ export function usageNotice(
           </Action>,
         )}
       >
-        <span className="nowrap">{org.login}</span> moves to Free on {freeFrom}.
-        Jobs keep running on all {usage.machines} machines.
+        <span className="nowrap">{workspace.name}</span> moves to Free on{" "}
+        {freeFrom}. Jobs keep running on all {usage.machines} machines.
       </Notice>
     );
   }

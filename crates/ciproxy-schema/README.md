@@ -77,5 +77,5 @@ Each migration has an up.sql and a down.sql.
 - [Architecture](../../docs/architecture.md) gives the hosted boundaries.
 - [Security](../../docs/protocol/security.md) defines isolation and custody.
 - [Workspaces](../../docs/protocol/workspaces.md) defines organization joins.
-- [Job routing](../../docs/protocol/job-routing.md) defines labels.
+- [Labels](../../docs/protocol/labels.md) defines labels.
 - [App removal](../../docs/protocol/app-removal.md) defines retention.

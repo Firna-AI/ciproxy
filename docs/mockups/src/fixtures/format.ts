@@ -58,3 +58,14 @@ export function dotJoin(...parts: readonly string[]): string {
 export function dateRange(from: string, to: string): string {
   return `${unbroken(from)}${nbsp}– ${unbroken(to)}`;
 }
+
+const dayMonth = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "long",
+  timeZone: "UTC",
+});
+
+/** A day of the story in UTC, such as "20 December", whole on one line. */
+export function formatDay(date: Date): string {
+  return unbroken(dayMonth.format(date));
+}

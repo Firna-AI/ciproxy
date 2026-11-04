@@ -86,7 +86,7 @@ export const compareGroups: readonly CompareGroup[] = [
     ],
   },
   {
-    title: "Organization",
+    title: "Workspace",
     rows: [
       featureRow("organizations"),
       featureRow("singleSignOn"),

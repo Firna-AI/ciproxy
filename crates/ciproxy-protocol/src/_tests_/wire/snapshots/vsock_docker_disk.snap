@@ -1,0 +1,14 @@
+---
+source: crates/ciproxy-protocol/src/_tests_/wire/assertions.rs
+assertion_line: 20
+description: Tagged JSON for vsock_docker_disk; all credentials are dummy test values.
+expression: message
+---
+{
+  "type": "docker_disk",
+  "job_id": "job-1",
+  "disk": {
+    "drive_id": "docker_cache",
+    "access": "disposable_copy"
+  }
+}

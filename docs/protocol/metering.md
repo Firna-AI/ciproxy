@@ -40,6 +40,14 @@ of each tier.
   4 November to 3 December.
 - Free counts starts over periods of one month from the day that the
   workspace starts on Free, for example 1 September to 30 September.
+- Each later Free period starts on the same day of the month.
+- In a month without that day, the Free period starts on the last day of
+  the month, as Stripe does for a billing period.
+- For example, the Free periods from 31 January 2027 run 31 January to
+  27 February, 28 February to 30 March, and 31 March to 29 April.
+- **Decision:** a Free period that starts on day 29 to 31 follows the
+  Stripe rule. Rejected: a rule of ciproxy's own for the Free periods.
+  Reason: one rule serves every period.
 - The days and the dates of every period are in UTC.
 - A workspace is in one period only at any moment.
 - A start counts in the period in which a runner took the job.
@@ -83,6 +91,8 @@ of each tier.
 - While a workspace is above a soft limit, every page of the workspace
   shows one banner.
 - The banner says that jobs keep running, and it gives the offer.
+- While a payment fails, the banner of the failed payment shows in its
+  place, as [Failed payments](billing.md#failed-payments) says.
 - [Checkout](billing.md#checkout) says what a person who cannot pay sees in
   place of the action of the offer.
 - **Decision:** tier limits are soft. Rejected: a hard limit, because a

@@ -52,22 +52,31 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
 - Notes for reviewers go in the `description` and `rationale` of an entry,
   never inside the rendered screen.
 - Each entry names the protocol docs of its screens in `relatedDocs`, through
-  `related()` of `src/components/related-docs.ts`, which adds the plan.
+  `related()` of `src/components/related-docs.ts`, which adds the plan. An
+  entry that shows a design call or an answer of the MVP plan uses
+  `relatedMvp()`, which adds that plan too.
 - Fixture data lives in `src/fixtures/`. It tells one story: mokly-ai signs up
   on 1 September 2026, passes the Free starts on 4 September, moves to Team
   that day, and runs three Hetzner AX42 machines with Boat overflow from
-  mid-September. The November screens show the busy Team organization, and the
-  December screens the payment problems. Each tier counts only the starts of
-  its own period, which begins on the day the tier begins. Cal Moore installs
-  the GitHub App, so he is the first Admin. `members.ts` names the person of
-  each role, the owner with the Billing role, and the Admin without the GitHub
-  runner right.
+  mid-September. Its workspace takes the name mokly-ai, and adds a second
+  organization, mokly-labs, on 2 November. The November screens show the busy
+  Team workspace, and the December screens the payment problems. Each tier
+  counts only the starts of its own period, which begins on the day the tier
+  begins. Cal Moore installs the GitHub App, so he is the first Admin.
+  `members.ts` names the person of each role, the owner with the Billing role,
+  and the Admin without the GitHub runner right.
+- Some screens are what-ifs of November, in `access.ts` and `machines.ts`: a
+  fourth machine, the mini PC office-mini-1, whose disk holds fewer jobs than
+  its slots; Tom Becker suspends or removes the GitHub App; and Jonas Weber
+  leaves the organizations on GitHub. `hardware.ts` holds the slot rule and
+  the disk rule, in which each running job holds the disk of its size.
 - A screen takes the role of the signed-in person. The shell shows the person
   of the role, and Settings only to an Admin. In place of an action that the
   role does not allow, the screen shows the words of
   `src/components/role-actions.tsx`, such as "Ask an Admin".
-- The public site has two sections: Marketing, with the landing page and the
-  pricing page, and Docs, in the structure of Starlight: the sidebar of
+- The public site has two sections: Marketing, with the landing page, the
+  pricing page, and the frames of the terms and the privacy policy, and Docs,
+  in the structure of Starlight: the sidebar of
   sections, the top bar with search, the article, and "On this page". Both
   share the site top bar, on the domain `ciproxy.dev`. Every button that opens
   sign-in says "Start free". The landing page shows no customer logos, quotes,
@@ -91,12 +100,19 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   the Graphite theme.
 - A banner of a passed limit or a failed payment comes from
   `src/components/usage-banner.tsx`, so one state shows one banner on every
-  page.
+  page. At a failed payment, the payment banner takes the place of the
+  soft-limit banner.
+- The legal pages show grey lines in place of the text that the user writes
+  or approves before the launch. Only the data retention of the privacy policy
+  has text, from `legal.ts`.
 - Never edit or commit `docs/mockups/mokly-generated/`. Change the sources and
   build again.
 
 ## Words
 
+- "Workspace" is the customer of ciproxy: one or more GitHub organizations
+  with one tier, members, machines, labels, settings, and Boat account. Never
+  write "team" for it, because Team is a tier.
 - "Machine" is the customer's own hardware, on every screen and in the
   pricing. Never write "node" or "server", and never call a VM a machine.
 - "Size" is what a label gives a job: its vCPU, memory, and disk. Write "VM
@@ -138,16 +154,20 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   shared by the marketing pages and the docs, with the search box on the docs.
 - `src/screens/marketing/marketing-shell.tsx`: the frame of a marketing page:
   the sections between two hairline rails, and the footer. `section.tsx` holds
-  the section head and the cells divided by hairlines.
+  the section head and the cells divided by hairlines. `legal-page.tsx` is the
+  frame of the terms and the privacy policy, with their sections from
+  `src/fixtures/legal.ts`.
 - `src/screens/docs/docs-shell.tsx`: the frame of a docs page, in the structure
   of Starlight, with the sidebar from `docs-nav.ts` and the article parts in
   `docs-parts.tsx`.
 - `src/components/shell/app-shell.tsx`: the signed-in frame: a white sidebar
-  and a top bar with the organization and the page as breadcrumbs on desktop,
-  and a top bar with tabs on mobile, with the banner slot for soft-limit and
-  payment warnings. It shows the signed-in person, and Settings only to an
-  Admin. The avatar opens the account menu of `account-menu.tsx`, where an
-  owner with the Billing or the Viewer role claims the Admin role.
+  and a top bar with the workspace switch and the page as breadcrumbs on
+  desktop, and a top bar with tabs on mobile, with the banner slot for
+  soft-limit and payment warnings. It shows the signed-in person, and
+  Settings only to an Admin. The switch opens the workspaces of
+  `workspace-menu.tsx`. The avatar opens the account menu of
+  `account-menu.tsx`, where an owner with the Billing or the Viewer role
+  claims the Admin role.
 - `src/components/`: the shared parts, such as the dense `DataTable`, the
   figure strip in `kpis.tsx`, the status dots and tags in `status.tsx`, and the
   starts chart.
@@ -158,6 +178,14 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   which every connection of Boat asks for, in setup and in Settings.
 - `src/fixtures/sizes.ts`: the size of a label as text, and the sizes that the
   Boat account can start, which decide where the jobs of a label run.
+- `src/fixtures/hardware.ts`: the hardware of each machine, the slot rule,
+  and the disk rule: the host keeps a quarter of the disk, each running job
+  holds the disk of its size, and the machine cache uses the rest.
+- `src/fixtures/org.ts`: the workspace and its two GitHub organizations.
+  `github-app.ts` holds the permissions of the GitHub App, and `access.ts` the
+  sign-in length and the what-ifs of a suspended or removed App.
+- `src/components/install-command.tsx`: the one-line install command, and the
+  notices of a machine without KVM or with too little disk.
 - `src/fixtures/site.ts`: the host of the public site. `cost-claim.ts` holds
   the cost claim of the landing page and its calculation, `plan-choice.ts` the
   cheapest plan that covers a use, and `plan-compare.ts` the feature

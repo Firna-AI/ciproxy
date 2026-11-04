@@ -1,0 +1,11 @@
+---
+source: crates/ciproxy-protocol/src/_tests_/wire/assertions.rs
+assertion_line: 20
+description: Tagged JSON for guest_hello; all credentials are dummy test values.
+expression: message
+---
+{
+  "type": "hello",
+  "protocol_version": 1,
+  "image_id": "ubuntu-image-1"
+}

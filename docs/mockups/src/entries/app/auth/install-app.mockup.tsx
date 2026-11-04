@@ -1,7 +1,7 @@
 import { defineScreen } from "@mokly/mokly";
 
 import { paths } from "../../../components/paths.ts";
-import { related } from "../../../components/related-docs.ts";
+import { relatedMvp } from "../../../components/related-docs.ts";
 import { stateSchema } from "../../../components/state-schema.ts";
 import { host } from "../../../fixtures/org.ts";
 import { InstallAppScreen } from "../../../screens/auth/install-app.tsx";
@@ -9,10 +9,10 @@ import { InstallAppScreen } from "../../../screens/auth/install-app.tsx";
 export const installApp = defineScreen({
   title: "Install the GitHub App",
   description:
-    "After the first sign-in, before any organization uses ciproxy. Install on GitHub opens the GitHub page that picks the organization and its repositories, then returns to setup.",
+    "After the first sign-in, before any organization uses ciproxy. The page lists the three permissions of the app. Install on GitHub opens the GitHub page that picks the organization and its repositories, then returns to setup. The first install creates the workspace, which takes the name of the organization.",
   rationale:
-    "GitHub owns the choice of organization and repositories, so ciproxy shows only what the app asks for and hands over to GitHub.",
-  relatedDocs: related("security"),
+    "GitHub owns the choice of organization and repositories, so ciproxy shows only what the app asks for and hands over to GitHub. The answer A to item 32 adds Actions, read, so that ciproxy reads the branch and the event of each run from GitHub.",
+  relatedDocs: relatedMvp("security"),
   address: `${host}/install`,
   useCasePaths: [paths.flowFirstGreenJob],
   propSchema: stateSchema(["install", "pending-approval"]),

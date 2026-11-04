@@ -92,3 +92,12 @@
   border-color: var(--c-primary);
   background: var(--c-primary);
 }
+
+/* The actions of an organization row: its repositories and Take out. */
+.org-actions {
+  justify-content: flex-end;
+}
+
+.mockup-mobile .org-actions {
+  justify-content: flex-start;
+}

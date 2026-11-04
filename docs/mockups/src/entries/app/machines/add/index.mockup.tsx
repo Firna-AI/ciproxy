@@ -1,6 +1,6 @@
 import { defineScreen } from "@mokly/mokly";
 
-import { related } from "../../../../components/related-docs.ts";
+import { relatedMvp } from "../../../../components/related-docs.ts";
 import { stateSchema } from "../../../../components/state-schema.ts";
 import { orgAddress } from "../../../../fixtures/org.ts";
 import {
@@ -12,7 +12,9 @@ export const addMachine = defineScreen({
   title: "Add a machine",
   description:
     "The same install command as in setup, for another machine. The page waits for the machine to connect. Revoke token ends the token before its hour ends.",
-  relatedDocs: related("agent", "security", "metering"),
+  rationale:
+    "Design call 30: the command stays one line. The install script of get.ciproxy.dev installs the agent, then runs it with the arguments after the two dashes: install and the token.",
+  relatedDocs: relatedMvp("agent", "security", "metering"),
   address: orgAddress("machines/new"),
   propSchema: stateSchema(addMachineStates),
   props: { state: "waiting" },
@@ -24,7 +26,7 @@ export const addMachine = defineScreen({
       slug: "connected",
       title: "A fourth machine connected",
       description:
-        "hetzner-ax42-4 connected and runs jobs. Team includes three own machines, so the banner of every page offers the extra-machine add-on.",
+        "office-mini-1, a mini PC in the office, connected and runs jobs. Its disk holds 3 jobs of ciproxy at a time, fewer than its 6 slots, and the line under its name says so. Team includes three own machines, so the banner of every page offers the extra-machine add-on.",
       props: { state: "connected" },
     },
     {

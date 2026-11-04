@@ -29,6 +29,7 @@ export function JobsLiveScreen({
   state,
   role = "admin",
   accountMenu = false,
+  workspaceMenu = false,
 }: {
   viewport: Viewport;
   state: LiveState;
@@ -36,6 +37,8 @@ export function JobsLiveScreen({
   role?: Role;
   /** The account menu of the avatar is open. */
   accountMenu?: boolean;
+  /** The menu of the workspace switch is open. */
+  workspaceMenu?: boolean;
 }) {
   const scene = liveScenes[state];
   return (
@@ -45,6 +48,7 @@ export function JobsLiveScreen({
       active="jobs"
       role={role}
       accountMenu={accountMenu}
+      workspaceMenu={workspaceMenu}
       banner={
         state === "starts-passed"
           ? usageBanner("free-over", "other", canPay(role))
@@ -68,11 +72,14 @@ export function JobsLiveScreen({
   );
 }
 
+/** The figures of the queue; the waiting count only when ciproxy sees it. */
 function LiveFigures({ scene }: { scene: LiveScene }) {
   return (
     <KpiRow>
       <Kpi label="Running" value={scene.running} />
-      <Kpi label="Waiting" value={scene.waiting} />
+      {scene.waitingUnknown ? null : (
+        <Kpi label="Waiting" value={scene.waiting} />
+      )}
       <Kpi
         label="Own slots in use"
         value={scene.ownBusy}

@@ -14,7 +14,7 @@ export const members = defineScreen({
   description:
     "The people of mokly-ai in ciproxy and their roles: Admin, Billing, and Viewer. Cal Moore installed the GitHub App, so he is the first Admin. An Admin changes a role with its picker, or removes a person.",
   rationale:
-    "ciproxy cannot list the members of the GitHub organization without the Members permission, so a member asks for access by signing in, and the request shows here. A role needs current membership of the GitHub organization. Only Admins see Settings.",
+    "ciproxy cannot list the members of the GitHub organization without the Members permission, so a member asks for access by signing in, and the request shows here. A role needs current membership of one of the GitHub organizations of the workspace. Only Admins see Settings.",
   relatedDocs: related("security"),
   address: orgAddress("settings/members"),
   propSchema: stateSchema(membersStates),
