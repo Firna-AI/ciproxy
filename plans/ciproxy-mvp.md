@@ -228,10 +228,21 @@ Depends on: 3
 `ciproxy-scaler` turns a state snapshot into actions: start a runner on a
 machine or on Boat, stop a runner, or delete a sandbox.
 
-- [ ] Apply `job-routing.md` from "Where a job runs" to "Failures", and the
+- [x] Apply `job-routing.md` from "Where a job runs" to "Failures", and the
       size changes of "Custom labels" in `labels.md`. Give each start a typed
       reason.
-- [ ] Unit-test each rule with a hand-worked state.
+      The snapshot builder supplies the recent-job warm allocation under
+      "Warm runners" in `job-routing.md`. Milestone 13 applies that policy
+      when it builds the snapshot.
+      Branch: `conductor/ciproxy-mvp-milestone-7-scaler`.
+- [x] Unit-test each rule with a hand-worked state. The tests enforce the
+      supplied allocation. The snapshot builder's history and allocation
+      tests belong to Milestone 13.
+      Branch: `conductor/ciproxy-mvp-milestone-7-scaler`.
+- [x] Use the shared protocol fit rule for slots and job disk. Check disk
+      pressure and warm runner disk use.
+      Merge notes: `.context/ciproxy-mvp/scaler-merge-notes.md`.
+      Branch: `conductor/ciproxy-mvp-milestone-7-scaler`.
 
 ## Milestone 8: Machine gateway
 
