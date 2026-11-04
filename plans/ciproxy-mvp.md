@@ -499,11 +499,14 @@ Depends on: 1
 
 `ts/site` serves `ciproxy.dev` from the marketing and docs mockups.
 
-- [ ] Build the landing page, the pricing page, the footer, and the legal
+- [x] Build the landing page, the pricing page, the footer, and the legal
       page frames.
-- [ ] Theme the docs. Restyle the Starlight search to its mockup as far as
+      Branch: `conductor/ciproxy-mvp-milestone-23-site`.
+- [x] Theme the docs. Restyle the Starlight search to its mockup as far as
       CSS allows, and record each gap as a follow-up item.
-- [ ] Smoke-test each page at 1440, 720, and 390 pixels.
+      Branch: `conductor/ciproxy-mvp-milestone-23-site`.
+- [x] Smoke-test each page at 1440, 720, and 390 pixels.
+      Branch: `conductor/ciproxy-mvp-milestone-23-site`.
 
 ## Milestone 24: Site: the 14 launch docs pages
 

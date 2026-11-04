@@ -1,44 +1,105 @@
 ---
-// A link that looks like the large secondary button of the mockups: a white
-// box with a hairline edge. The label uses weight 500, the label weight of
-// the Graphite look. The Firna buttons of the mockups draw 700 only because
-// Firna has no label weight token yet.
+// A link that looks like a button of the mockups: the black primary button,
+// or the white secondary button with a hairline edge, in the three sizes of
+// the Firna buttons. The label uses weight 500, the label weight of the
+// Graphite look. The Firna buttons of the mockups draw 700 only because Firna
+// has no label weight token yet.
 
 interface Props {
   href: string;
+  tone?: "primary" | "secondary";
+  size?: "sm" | "md" | "lg";
+  /** The button fills the width of its column. */
+  block?: boolean;
+  class?: string;
 }
 
-const { href } = Astro.props;
+const {
+  href,
+  tone = "secondary",
+  size = "lg",
+  block = false,
+  class: className,
+} = Astro.props;
 ---
 
-<a href={href} class="link-button">
+<a
+  href={href}
+  class:list={[
+    "link-button",
+    `is-${tone}`,
+    `is-${size}`,
+    { "is-block": block },
+    className,
+  ]}
+>
   <slot />
 </a>
 
 <style>
   .link-button {
     display: inline-flex;
+    flex-shrink: 0;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    height: 46px;
-    padding: 0 20px;
     border: 1px solid var(--c-control-border);
     border-radius: var(--r-md);
     background: var(--c-surface);
     color: var(--c-ink);
-    font-size: 15px;
     font-weight: 500;
-    line-height: 18px;
     text-decoration: none;
     white-space: nowrap;
   }
 
-  .link-button:hover {
+  .is-sm {
+    gap: 6px;
+    height: 30px;
+    padding: 0 12px;
+    font-size: 12px;
+    line-height: 15px;
+  }
+
+  .is-md {
+    gap: 6px;
+    height: 38px;
+    padding: 0 16px;
+    font-size: 13px;
+    line-height: 16px;
+  }
+
+  .is-lg {
+    height: 46px;
+    padding: 0 20px;
+    font-size: 15px;
+    line-height: 18px;
+  }
+
+  .is-block {
+    display: flex;
+    width: 100%;
+  }
+
+  .is-secondary:hover {
     background: var(--c-soft);
   }
 
-  .link-button:active {
+  .is-secondary:active {
     background: var(--c-bg2);
+  }
+
+  .is-primary {
+    border-color: var(--c-primary);
+    background: var(--c-primary);
+    color: var(--c-on-solid);
+  }
+
+  .is-primary:hover {
+    border-color: var(--c-primary-deep);
+    background: var(--c-primary-deep);
+  }
+
+  .is-primary:active {
+    opacity: 0.88;
   }
 </style>

@@ -105,8 +105,22 @@
   --sl-content-width: 41rem;
 }
 
-@media (min-width: 50rem) {
+@media (min-width: 40rem) {
   :root {
     --sl-text-h1: 2.375rem;
+  }
+}
+
+/* The top bar of the docs mockup: 56 px high on a phone and 64 px from
+   40rem, with the gutter of the marketing pages. */
+
+:root {
+  --sl-nav-pad-x: 1.25rem;
+}
+
+@media (min-width: 40rem) {
+  :root {
+    --sl-nav-height: 4rem;
+    --sl-nav-pad-x: 1.5rem;
   }
 }

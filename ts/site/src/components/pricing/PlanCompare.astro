@@ -1,0 +1,93 @@
+---
+// The feature comparison of the pricing page: one column for each tier, and
+// rows by area. A check marks an included feature and a dash one that is
+// not. A feature that comes later says so under its name, and a clock marks
+// the tiers that will include it.
+
+import { formatMoney } from "../../data/format.ts";
+import { compareGroups } from "../../data/plan-compare.ts";
+import { tierOrder, tiers } from "../../data/tiers.ts";
+import Icon from "../icon/Icon.astro";
+import Section from "../marketing/Section.astro";
+import SectionHead from "../marketing/SectionHead.astro";
+import "./plan-compare.css";
+import "./tier-feature-list.css";
+---
+
+<Section id="compare">
+  <SectionHead title="Compare plans" />
+  <table class="compare">
+    <colgroup>
+      <col class="compare-label-col" />
+      {tierOrder.map(() => (
+        <col />
+      ))}
+    </colgroup>
+    <thead>
+      <tr>
+        <th scope="col">
+          <span class="sr-only">Feature</span>
+        </th>
+        {tierOrder.map((key) => (
+          <th scope="col" class="compare-tier">
+            <span class="compare-tier-name">{tiers[key].name}</span>
+            <span class="compare-tier-price num">
+              {formatMoney(tiers[key].price)}
+            </span>
+          </th>
+        ))}
+      </tr>
+    </thead>
+    {compareGroups.map((group) => (
+      <tbody>
+        <tr class="compare-group">
+          <th scope="colgroup" colspan={tierOrder.length + 1}>
+            {group.title}
+          </th>
+        </tr>
+        {group.rows.map((row) => (
+          <tr>
+            <th scope="row">
+              <span class="compare-label">{row.label}</span>
+              {row.later && <span class="coming-later">Coming later</span>}
+            </th>
+            {tierOrder.map((key) => {
+              const value = row.values[key];
+              return (
+                <td>
+                  {value === true && row.later && (
+                    <Icon
+                      name="clock"
+                      size={15}
+                      class="compare-later"
+                      label="Coming later"
+                    />
+                  )}
+                  {value === true && !row.later && (
+                    <Icon
+                      name="check"
+                      size={16}
+                      class="compare-yes"
+                      label="Included"
+                    />
+                  )}
+                  {value === false && (
+                    <Icon
+                      name="minus"
+                      size={14}
+                      class="compare-no"
+                      label="Not included"
+                    />
+                  )}
+                  {typeof value === "string" && (
+                    <span class="num">{value}</span>
+                  )}
+                </td>
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+    ))}
+  </table>
+</Section>

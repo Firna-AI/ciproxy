@@ -1,0 +1,91 @@
+---
+// How it works, in three steps: install the GitHub App, add machines with one
+// command, and change runs-on. Each step shows what the person sees there.
+// The link to the quickstart shows once the quickstart exists.
+
+import { docsLinks } from "../../data/docs-links.ts";
+import {
+  afterChange,
+  appPermissions,
+  installCommandLines,
+  runsOnDiff,
+  workflowFile,
+} from "../../data/workflow.ts";
+import Icon from "../icon/Icon.astro";
+import CodeBlock from "./CodeBlock.astro";
+import Section from "./Section.astro";
+import SectionHead from "./SectionHead.astro";
+import "./landing.css";
+
+const steps = [
+  {
+    title: "Install the GitHub App",
+    text: "Pick your organization and its repositories on GitHub. ciproxy asks to manage runners and to read your workflow runs.",
+    visual: "permissions",
+  },
+  {
+    title: "Add your machines",
+    text: "Run one command on each Linux machine. The agent connects out to ciproxy and keeps warm runners ready.",
+    visual: "install",
+  },
+  {
+    title: "Change runs-on",
+    text: "Point a workflow at ciproxy. Its jobs start on your machines, and on Boat when they are full.",
+    visual: "runs-on",
+  },
+] as const;
+
+const [quickstart] = await docsLinks(["quickstart"]);
+---
+
+<Section flush>
+  <SectionHead
+    eyebrow="How it works"
+    title={["Set up once.", "Change one line."]}
+    lead="ciproxy registers every runner for you. Your workflows keep their YAML, apart from one line."
+  />
+  <div class="mk-cells mk-cells-3">
+    {steps.map((step, index) => (
+      <div class="mk-cell hiw-step">
+        <span class="hiw-number">{String(index + 1).padStart(2, "0")}</span>
+        <h3 class="hiw-title">{step.title}</h3>
+        <p class="hiw-text">{step.text}</p>
+        <div class="hiw-visual">
+          {step.visual === "permissions" && (
+            <div class="hiw-permissions">
+              <p class="caption">ciproxy asks GitHub for</p>
+              <ul class="hiw-permission-list">
+                {appPermissions.map((permission) => (
+                  <li>
+                    <Icon name="check" size={14} class="hiw-check" />
+                    <span>
+                      <strong>{permission.name}</strong> · {permission.access}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {step.visual === "install" && (
+            <CodeBlock label="On each machine" lines={installCommandLines} />
+          )}
+          {step.visual === "runs-on" && (
+            <CodeBlock
+              label={workflowFile}
+              lines={runsOnDiff}
+              copy={afterChange(runsOnDiff)}
+            />
+          )}
+        </div>
+      </div>
+    ))}
+  </div>
+  {quickstart && (
+    <div class="mk-foot hiw-foot">
+      <a href={quickstart.href} class="text-link">
+        Follow the quickstart
+      </a>
+      <Icon name="arrow-right" size={14} class="icon-muted" />
+    </div>
+  )}
+</Section>

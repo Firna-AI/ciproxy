@@ -1,0 +1,267 @@
+/* The picture of the product in the hero (HeroPanel.astro): a window with a
+   bar, the machines with their slots, and the running jobs, then the caption
+   that names it an illustration. Colour marks status only: the blue dot of a
+   running job. */
+
+.hero-figure {
+  position: relative;
+  max-width: 960px;
+  margin: 72px auto 0;
+}
+
+.hero-panel {
+  overflow: hidden;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-xl);
+  background: var(--c-surface);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--c-ink) 4%, transparent),
+    0 16px 32px -20px color-mix(in srgb, var(--c-ink) 12%, transparent);
+  text-align: left;
+}
+
+.hero-caption {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.hp-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 44px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-bg);
+}
+
+.hp-org {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hp-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--r-sm);
+  background: var(--c-primary);
+  color: var(--c-on-solid);
+  font-size: 8px;
+  font-weight: 600;
+}
+
+.hp-slash {
+  color: var(--c-border2);
+  font-size: 18px;
+  font-weight: 300;
+}
+
+.hp-dot-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--c-ink2);
+}
+
+.hp-dot {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-pill);
+  background: var(--c-status-run);
+}
+
+.hp-body {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+}
+
+.hp-machines,
+.hp-jobs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 18px 20px 20px;
+}
+
+.hp-jobs {
+  border-left: 1px solid var(--c-border);
+}
+
+.hp-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.hp-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hp-machine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--c-border);
+}
+
+.hp-machine:first-child {
+  border-top: 0;
+}
+
+/* The slots of a machine: a segmented bar of large segments. A segment has
+   half the smallest token radius, so its corners stay small. */
+
+.hp-slots {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.hp-slot {
+  width: 22px;
+  height: 10px;
+  border-radius: calc(var(--r-sm) / 2);
+  background: var(--c-slot-free);
+}
+
+.hp-slot.is-busy {
+  background: var(--c-slot-busy);
+}
+
+.hp-slot.is-warm {
+  background: var(--c-slot-warm);
+}
+
+.hp-boat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  background: var(--c-bg);
+}
+
+.hp-boat-name,
+.hp-where {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hp-where {
+  color: var(--c-ink2);
+  white-space: nowrap;
+}
+
+.hp-where-machine {
+  color: var(--c-ink);
+}
+
+/* The Boat spend against its limit: a thin bar on the soft accent. */
+
+.hp-spend {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--c-border);
+}
+
+.hp-meter-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hp-meter-value {
+  color: var(--c-ink2);
+}
+
+.hp-meter {
+  display: block;
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--r-pill);
+  background: var(--c-primary-soft);
+}
+
+.hp-meter-fill {
+  display: block;
+  height: 100%;
+  background: var(--c-primary);
+}
+
+.hp-job {
+  display: grid;
+  grid-template-columns:
+    10px minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1.25fr)
+    52px;
+  align-items: center;
+  gap: 12px;
+  height: 38px;
+  border-top: 1px solid var(--c-border);
+  font-size: 13px;
+}
+
+.hp-job:first-child {
+  border-top: 0;
+}
+
+.hp-job-name,
+.hp-job-ref {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hp-job-time {
+  text-align: right;
+}
+
+/* A narrow window stacks the two columns. A phone also shows fewer jobs,
+   without their reference and time. */
+
+@media (width <= 960px) {
+  .hp-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hp-jobs {
+    border-top: 1px solid var(--c-border);
+    border-left: 0;
+  }
+}
+
+@media (width < 40rem) {
+  .hero-figure {
+    margin-top: 48px;
+  }
+
+  .hp-job {
+    grid-template-columns: 10px minmax(0, 1fr) auto;
+  }
+
+  .hp-job.is-extra,
+  .hp-job-ref,
+  .hp-job-time {
+    display: none;
+  }
+}
