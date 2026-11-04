@@ -10,10 +10,12 @@
   --sl-search-corners: var(--r-md);
 }
 
-/* The Cancel button and the search box share Starlight's space for the
-   button, so the value is on the dialog. */
+/* The Cancel button of a phone lies over the field, so the dialog holds the
+   values that both use: Starlight's space for the button, and the height of
+   the field. */
 site-search dialog {
   --sl-search-cancel-space: 5rem;
+  --search-field-height: 56px;
 
   border: 0;
   background: var(--c-surface);
@@ -29,15 +31,29 @@ site-search .dialog-frame {
   padding: 0;
 }
 
-/* The field: the search icon, the query, and a hairline under the row. On
-   a phone, the Cancel button ends the row, and its own hairline continues
-   the line of the field. */
+/* The field is the first row of a grid: the search icon, the query, the
+   clear button, the Escape badge from 760 px, and on a phone the space of
+   the Cancel button. Each control has its own track, so the query never
+   runs under a control. The results span the second row. A hairline under
+   the first row runs from edge to edge, also under the Cancel button. */
+
+#starlight__search .pagefind-ui__form {
+  display: grid;
+  grid-template:
+    "icon query clear badge cancel" var(--search-field-height)
+    "results results results results results" auto
+    / auto minmax(0, 1fr) auto auto var(--sl-search-cancel-space);
+  align-items: center;
+  background: linear-gradient(var(--c-border), var(--c-border)) 0
+    calc(var(--search-field-height) - 1px) / 100% 1px no-repeat;
+}
 
 #starlight__search .pagefind-ui__form::before {
-  top: 20px;
-  left: 16px;
+  position: static;
+  grid-area: icon;
   width: 16px;
   height: 16px;
+  margin-inline: 16px 10px;
   background-color: var(--c-faint);
   opacity: 1;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21 21-4.34-4.34'/%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3C/svg%3E")
@@ -45,10 +61,11 @@ site-search .dialog-frame {
 }
 
 #starlight__search .pagefind-ui__search-input {
-  height: 56px;
-  padding-inline: 42px 14px;
+  grid-area: query;
+  width: 100%;
+  height: 100%;
+  padding: 0 8px 0 0;
   border: 0;
-  border-bottom: 1px solid var(--c-border);
   border-radius: 0;
   background: transparent;
   color: var(--c-ink);
@@ -62,10 +79,13 @@ site-search .dialog-frame {
   opacity: 1;
 }
 
+/* The clear button stays clear of the hairline under the row. */
 #starlight__search .pagefind-ui__search-clear {
-  top: 0;
+  position: static;
+  grid-area: clear;
+  align-self: start;
   width: 40px;
-  height: 55px;
+  height: calc(var(--search-field-height) - 1px);
   border-radius: 0;
 }
 
@@ -74,14 +94,17 @@ site-search .dialog-frame {
   mask-size: 14px;
 }
 
+#starlight__search .pagefind-ui__drawer {
+  grid-area: results;
+}
+
 site-search button[data-close-modal] {
   top: 0;
   right: 0;
   justify-content: center;
   width: var(--sl-search-cancel-space);
-  height: 56px;
+  height: var(--search-field-height);
   padding: 0;
-  border-bottom: 1px solid var(--c-border);
   color: var(--c-ink);
   font-size: 12px;
   font-weight: 600;
@@ -93,6 +116,8 @@ site-search button[data-close-modal] {
 
 @media (min-width: 40rem) {
   site-search dialog {
+    --search-field-height: 52px;
+
     width: calc(100% - 48px);
     max-width: 640px;
     height: max-content;
@@ -111,25 +136,14 @@ site-search button[data-close-modal] {
   #starlight__search {
     --sl-search-cancel-space: 0px;
   }
-
-  #starlight__search .pagefind-ui__form::before {
-    top: 18px;
-  }
-
-  #starlight__search .pagefind-ui__search-input {
-    height: 52px;
-  }
-
-  #starlight__search .pagefind-ui__search-clear {
-    height: 51px;
-  }
 }
 
+/* The margins of the badge keep the clear button 52 px from the edge of
+   the dialog. */
 @media (min-width: 47.5rem) {
   #starlight__search .pagefind-ui__form::after {
-    position: absolute;
-    top: 15px;
-    right: 14px;
+    grid-area: badge;
+    margin-inline: 6px 14px;
     padding: 1px 6px;
     border: 1px solid var(--c-border);
     border-radius: var(--r-sm);
@@ -139,9 +153,5 @@ site-search button[data-close-modal] {
     font-size: 11.5px;
     line-height: 18px;
     pointer-events: none;
-  }
-
-  #starlight__search .pagefind-ui__search-clear {
-    inset-inline-end: 52px;
   }
 }

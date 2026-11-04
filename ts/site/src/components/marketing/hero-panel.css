@@ -124,7 +124,8 @@
   border-top: 0;
 }
 
-/* The slots of a machine: a segmented bar of large segments. */
+/* The slots of a machine: a segmented bar of large segments. A segment has
+   half the smallest token radius, so its corners stay small. */
 
 .hp-slots {
   display: inline-flex;
@@ -134,7 +135,7 @@
 .hp-slot {
   width: 22px;
   height: 10px;
-  border-radius: 2px;
+  border-radius: calc(var(--r-sm) / 2);
   background: var(--c-slot-free);
 }
 
