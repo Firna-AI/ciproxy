@@ -28,7 +28,16 @@ impl DurableListener {
         let queue = api
             .open(context.scale_set.github_id, &options.owner)
             .await?;
-        let result = self.poll(target, &options, stop, &*lease, &*queue).await;
+        let result = self
+            .poll(
+                target,
+                &options,
+                stop,
+                &*lease,
+                &*queue,
+                context.scale_set.github_id,
+            )
+            .await;
         let closed = queue.close().await;
         result?;
         closed
@@ -47,6 +56,20 @@ impl DurableListener {
         Ok(context)
     }
 
+    async fn bound_context(
+        &self,
+        target: ListenerTarget,
+        lease: &dyn SessionLease,
+        opened: i64,
+    ) -> Result<ListenerContext> {
+        let context = self.check(target, lease).await?;
+        let current = context.scale_set.github_id;
+        if current != opened {
+            return Err(Error::ScaleSetRestart { opened, current });
+        }
+        Ok(context)
+    }
+
     async fn poll(
         &self,
         target: ListenerTarget,
@@ -54,6 +77,7 @@ impl DurableListener {
         mut stop: watch::Receiver<bool>,
         lease: &dyn SessionLease,
         queue: &dyn MessageQueue,
+        opened: i64,
     ) -> Result<()> {
         let mut last_message: Option<MessageId> = None;
         let mut polls = 0;
@@ -61,13 +85,13 @@ impl DurableListener {
             if *stop.borrow() || options.max_polls.is_some_and(|limit| polls >= limit) {
                 return Ok(());
             }
-            let context = self.check(target, lease).await?;
+            let context = self.bound_context(target, lease, opened).await?;
             self.deliver(target).await?;
             let polled = tokio::select! {
                 _ = stop.changed() => return Ok(()),
                 result = queue.poll(last_message, options.capacity) => result,
             };
-            self.check(target, lease).await?;
+            self.bound_context(target, lease, opened).await?;
             let message = polled?;
             polls += 1;
             let Some(message) = message else {
@@ -83,7 +107,7 @@ impl DurableListener {
                 queue.acquire(&requests).await?;
             }
             self.deliver(target).await?;
-            self.check(target, lease).await?;
+            self.bound_context(target, lease, opened).await?;
             queue.acknowledge(message.id).await?;
             last_message = Some(message.id);
         }

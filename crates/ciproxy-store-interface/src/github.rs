@@ -7,6 +7,7 @@ use uuid::Uuid;
 use crate::error::Result;
 use crate::labels::Label;
 use crate::organizations::Organization;
+use crate::scale_sets::ScaleSet;
 use crate::workspaces::Workspace;
 
 /// The repository metadata visible to an App installation.
@@ -111,8 +112,29 @@ pub struct JobDelivery {
     pub revision: i64,
 }
 
+/// An owned, waiting organization mutation lease on a dedicated connection.
+pub trait OrganizationLease: Send {
+    /// Fail when the database session no longer owns the lease.
+    fn check_connection(&mut self) -> Result<()>;
+}
+
 /// Queries needed only by the hosted GitHub integration.
 pub trait GithubStore: Send + Sync {
+    /// Wait for exclusive mutation authority over a full GitHub organization ID.
+    ///
+    /// This uses the two-key advisory namespace, separate from scale-set locks.
+    fn lock_github_organization(&self, github_id: i64) -> Result<Box<dyn OrganizationLease>>;
+    /// Find the managed group from current or retained registrations of GitHub.
+    fn github_runner_group(&self, github_id: i64) -> Result<Option<i64>>;
+    /// Save remote identities while retaining the internal UUID and lock key.
+    fn save_github_scale_set(&self, workspace_id: Uuid, scale_set: &ScaleSet) -> Result<ScaleSet>;
+    /// Reuse trusted facts of a known run within the same tenant and registration.
+    fn github_run_facts(
+        &self,
+        workspace_id: Uuid,
+        organization_id: Uuid,
+        run_id: i64,
+    ) -> Result<Option<RunFacts>>;
     /// Atomically create a new workspace, defaults, and its registration.
     ///
     /// For an existing workspace, pass None and an empty defaults list.

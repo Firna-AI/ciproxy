@@ -66,11 +66,26 @@ impl MessageQueue for SdkQueue {
                 return Ok(None);
             }
             if response.status() == StatusCode::UNAUTHORIZED && attempt == 0 {
-                self.session
-                    .get_message(last_message_id, capacity)
-                    .await
-                    .internal()?;
+                match self.session.get_message(last_message_id, capacity).await {
+                    Ok(_) => {}
+                    Err(error)
+                        if error.is_not_found()
+                            || error.status() == Some(StatusCode::NO_CONTENT) =>
+                    {
+                        return Err(Error::ScaleSetMissing {
+                            scale_set_id: self.session.scale_set_id().get(),
+                        });
+                    }
+                    Err(error) => return Err(error).internal(),
+                }
                 continue;
+            }
+            if response.status() == StatusCode::NOT_FOUND
+                || response.status() == StatusCode::NO_CONTENT
+            {
+                return Err(Error::ScaleSetMissing {
+                    scale_set_id: self.session.scale_set_id().get(),
+                });
             }
             if response.status() != StatusCode::OK {
                 return Err(Error::AccessUnavailable(response.status().as_u16()));

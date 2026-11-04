@@ -34,7 +34,8 @@ pub trait ScaleSetFactory: Send + Sync {
 #[async_trait]
 pub trait ScaleSetApi: Send + Sync {
     /// Find or create one label in the dedicated group with updates disabled.
-    async fn ensure(&self, label: &str, runner_group_id: i64) -> Result<i64>;
+    async fn ensure(&self, label: &str, runner_group_id: i64, saved_id: Option<i64>)
+    -> Result<i64>;
     /// Open one message session after the caller has acquired the store lock.
     async fn open(&self, scale_set_id: i64, owner: &str) -> Result<Box<dyn MessageQueue>>;
     /// Create the ephemeral registration for one selected runner identity.

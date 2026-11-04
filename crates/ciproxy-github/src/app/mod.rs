@@ -1,5 +1,6 @@
 //! GitHub App installation, requester linkage, and lifecycle orchestration.
 
+mod coordination;
 mod installation;
 mod lifecycle;
 mod reconcile;
@@ -12,7 +13,9 @@ use ciproxy_store_interface::organizations::{Organization, RepositoryAccess};
 use uuid::Uuid;
 
 use crate::error::Result;
+use crate::installation_state::InstallationApi;
 use crate::persistence::installation::InstallationStore;
+use crate::persistence::mutation::OrganizationMutations;
 use crate::rest::GitHubRest;
 use crate::runtime::Runtime;
 use crate::scale_sets::ScaleSetFactory;
@@ -94,6 +97,10 @@ pub trait GitHubApp: Send + Sync {
 
 /// The App service, consumed through dyn GitHubApp at the composition root.
 pub struct AppService {
+    /// Waiting cross-process mutation authority for GitHub organizations.
+    pub leases: Arc<dyn OrganizationMutations>,
+    /// App-authenticated current installation identity and suspension state.
+    pub installations: Arc<dyn InstallationApi>,
     /// Installation persistence through blocking workers.
     pub store: Arc<dyn InstallationStore>,
     /// The three-permission REST client.

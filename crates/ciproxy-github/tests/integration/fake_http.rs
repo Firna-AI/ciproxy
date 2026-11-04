@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 
 use axum::body::Bytes;
 use axum::extract::State;
-use axum::http::{Method, StatusCode, Uri};
+use axum::http::{HeaderMap, Method, StatusCode, Uri};
 use axum::response::{IntoResponse, Response};
 use axum::{Json, Router};
 use ciproxy_store_interface::github::DemandPhase;
@@ -14,6 +14,7 @@ use serde_json::{Value, json};
 use tokio::net::TcpListener;
 use tokio::task::JoinHandle;
 
+use super::resource_http::{ResourceHttp, respond};
 use super::support::id;
 
 pub(super) struct Server {
@@ -32,6 +33,9 @@ pub(super) struct FakeState {
     pub(super) body_override: Mutex<Option<String>>,
     pub(super) reject_repository_token: AtomicBool,
     runner_present: AtomicBool,
+    pub(super) resource: ResourceHttp,
+    pub(super) fail_later_facts: AtomicBool,
+    pub(super) facts_reads: AtomicUsize,
 }
 
 impl Server {
@@ -48,6 +52,9 @@ impl Server {
             body_override: Mutex::new(None),
             reject_repository_token: AtomicBool::new(false),
             runner_present: AtomicBool::new(true),
+            resource: ResourceHttp::new(),
+            fail_later_facts: AtomicBool::new(false),
+            facts_reads: AtomicUsize::new(0),
         });
         let router = Router::new().fallback(handle).with_state(state.clone());
         let task = tokio::spawn(async move {
@@ -71,6 +78,7 @@ async fn handle(
     State(state): State<Arc<FakeState>>,
     method: Method,
     uri: Uri,
+    headers: HeaderMap,
     bytes: Bytes,
 ) -> Response {
     let body = if bytes.is_empty() {
@@ -83,7 +91,13 @@ async fn handle(
         .requests
         .lock()
         .unwrap()
-        .push((method.clone(), uri.to_string(), body));
+        .push((method.clone(), uri.to_string(), body.clone()));
+    let app_jwt = headers
+        .get("Authorization")
+        .is_some_and(|value| value == "Bearer test-app-jwt");
+    if let Some(response) = respond(&state.resource, &method, path, &body, app_jwt) {
+        return response;
+    }
     if path.ends_with("/access_tokens") {
         let number = state.tokens.fetch_add(1, Ordering::SeqCst) + 1;
         let expiry = if number == 1 {
@@ -177,6 +191,11 @@ async fn handle(
         return StatusCode::NO_CONTENT.into_response();
     }
     if path.ends_with("/actions/runs/31") {
+        if state.facts_reads.fetch_add(1, Ordering::SeqCst) > 0
+            && state.fail_later_facts.load(Ordering::SeqCst)
+        {
+            return StatusCode::NOT_FOUND.into_response();
+        }
         return Json(json!({"id":31,"repository":{"id":23,"full_name":"customer/private"},"event":"pull_request_target",
             "head_branch":"untrusted-feature","head_sha":"0123456789abcdef","head_repository":null,
             "path":".github/workflows/caller.yml@main","pull_requests":[]})).into_response();

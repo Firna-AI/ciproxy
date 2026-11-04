@@ -21,6 +21,7 @@ pub trait GitHubRest: Send + Sync {
         organization: &str,
         name: &str,
         repository_ids: &[i64],
+        saved_id: Option<i64>,
     ) -> Result<i64>;
     /// Read trusted run metadata with the Actions read permission.
     async fn run_facts(

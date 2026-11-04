@@ -1,6 +1,6 @@
 //! Dedicated runner-group reconciliation without editing existing groups.
 
-use reqwest::Method;
+use reqwest::{Method, StatusCode};
 use serde::{Deserialize, Serialize};
 
 use crate::error::{Result, ResultExt};
@@ -39,11 +39,23 @@ impl RestClient {
         organization: &str,
         name: &str,
         repository_ids: &[i64],
+        saved_id: Option<i64>,
     ) -> Result<i64> {
         let path = format!("orgs/{organization}/actions/runner-groups");
         let mut page = 1;
         let mut existing = None;
-        loop {
+        if let Some(id) = saved_id {
+            let response = self
+                .request(installation_id, Method::GET, &format!("{path}/{id}"), &())
+                .await?;
+            if response.status() != StatusCode::NOT_FOUND {
+                let group: Group = Self::success(response)?.json().await.internal()?;
+                if !group.inherited {
+                    existing = Some(group.id);
+                }
+            }
+        }
+        while existing.is_none() {
             let response = Self::success(
                 self.request(
                     installation_id,

@@ -13,6 +13,7 @@ pub(super) struct Database {
     pub(super) store: Arc<dyn Store>,
     admin: PgConnection,
     name: String,
+    pub(super) url: String,
 }
 
 impl Database {
@@ -28,7 +29,12 @@ impl Database {
         let mut url = Url::parse(&raw_url).unwrap();
         url.set_path(&name);
         let store = PgStoreFactory.connect(url.as_str()).unwrap();
-        Self { store, admin, name }
+        Self {
+            store,
+            admin,
+            name,
+            url: url.to_string(),
+        }
     }
 }
 

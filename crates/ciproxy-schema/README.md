@@ -39,6 +39,8 @@ The assignment order keeps nanoseconds independently of timestamp storage.
 The first trusted completion observation bounds retention when GitHub
 omitted its finish time. It does not replace that absent GitHub field.
 These records hold metadata only. They hold no runner registration secret.
+A forward M6 index supports scoped trusted run-facts lookup.
+Organization advisory leases need no persistent schema key rows.
 
 ## Quick Start
 

@@ -1,6 +1,7 @@
 //! Blocking-worker adapters from dyn Store to narrow async service seams.
 
 pub mod installation;
+pub mod mutation;
 pub mod session;
 
 use std::sync::Arc;

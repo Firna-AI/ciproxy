@@ -39,6 +39,22 @@ It resolves the persisted intent of the Admin who started adding an
 organization. It checks the Admin role and the Free organization limit.
 It does not ask for a GitHub runner right.
 
+Each organization mutation waits for a PostgreSQL advisory lease before
+reading policy, choosing a local registration, or listing repositories.
+The lease uses the full GitHub organization ID in the two-key namespace.
+It stays separate from listener locks. Its dedicated connection leaves
+ordinary queries available while another process waits.
+
+App-JWT lookups verify current installation identity and suspension inside
+that lease. A delayed event cannot replace another current installation.
+A transient 404 returns InstallationPending without mutation. Verified
+Deleted events apply immediately and make no GitHub lookup. The signed
+requester still selects ownership and the first Admin.
+When current GitHub installation B supersedes stored installation A,
+reconcile first applies A's removal bookkeeping and cleanup output.
+It uses the trusted observation time. B then resolves retained ownership
+or an explicit target. A delayed removal of A cannot remove active B.
+
 A first install atomically saves the workspace, its settings, its three
 default labels, its organization, and a pending first-Admin assignment.
 The Admin callback is idempotent. The store confirms it after delivery.
@@ -58,8 +74,11 @@ Subscribe the App to repository metadata events. Dispatch `repository` and
 `installation_repositories` through the authenticated webhook handler.
 The control plane can also call `refresh_repositories` after a reconnect.
 
-The group name includes the internal organization identity. This keeps
-the App's policy separate from the organization's other runner groups.
+Managed group names use the stable GitHub organization ID. Reconcile first
+reads a saved managed group ID, including retained registrations, so an
+owner rename does not create another group. It restores the managed name
+and repository policy on that same group. After local data is purged, the
+stable name finds the retained GitHub group again.
 GitHub supports self-hosted runner groups on its Free plan, as its
 [Free runner-group announcement][free-groups] confirms.
 The live selected-group probe still checks this on a real installation.
@@ -70,7 +89,12 @@ format and nanosecond timestamps.
 Scale-set creation uses GitHub's label acceptance and disables runner
 updates. The image release process controls runner versions.
 The API also exposes scale-set deletion for the later label and take-out
-services. It does not erase retained job history.
+services. Each reconcile upserts current remote IDs while preserving the
+internal UUID, advisory lock key, and retained job/runner references.
+A saved live set that reports a different group returns
+ScaleSetGroupChanged. The adapter makes no unproven remote move and deletes
+no unknown or retained resource. That case needs live move proof before
+automatic repair can be enabled. It does not erase retained job history.
 
 ### Durable demand and registrations
 
@@ -101,7 +125,13 @@ idempotent by organization and job UUID.
 The listener checks its database lease before and after each poll.
 Cancellation and errors close the GitHub session before releasing the lock.
 The runtime starts one listener for each active organization-label pair.
-It restarts failed listeners and retries failed webhook deliveries.
+A saved remote-ID change ends a live session with ScaleSetRestart.
+The runtime restarts it from the current internal row. On ScaleSetMissing,
+The control-plane runtime first calls refresh_repositories to reconcile.
+It then retries with the
+saved binding. It must not repeatedly open the obsolete remote ID.
+Missing lookups accept GitHub's observed 204 response as well as 404.
+The runtime also retries failed webhook deliveries.
 
 `RunnerRegistrations` creates one secret JIT configuration for one runner.
 Send it only to the selected runner. Use the runner's environment variable
@@ -140,7 +170,12 @@ The dashboard take-out service owns the intentional-removal distinction.
 ### Trusted run metadata
 
 Run facts come from the Actions read API for the message's repository and
-run ID. They preserve `event`, `head_branch`, `head_sha`, and nullable
+run ID. Known runs reuse their durable facts under workspace and
+organization scope. A repository removal, rename, or later API outage does
+not prevent known completion persistence and acknowledgement. A new run
+whose first facts read fails still leaves its batch unacknowledged. The
+broader outcome for unavailable facts remains an open product decision.
+Saved facts preserve `event`, `head_branch`, `head_sha`, and nullable
 `head_repository` from that API. A reusable workflow path stays separate.
 
 The API does not supply a guaranteed full job ref. Its `head_branch` does
@@ -187,71 +222,8 @@ They belong to the operator workflow under `scripts/`.
 
 ### Live probes
 
-Install Python 3, OpenSSL, and `gh` on Linux.
-Keep the App JSON outside tracked files. It has `id` and `pem` fields.
-The `id` accepts a number or a string. The `pem` holds the private key.
-Authenticate `gh` separately as an operator who can create fixture refs
-and workflows, cancel their runs, and read the organization plan.
-The App keeps its three permissions. Tokens never go on command arguments.
-
-```sh
-export CIPROXY_GITHUB_APP_PATH=/absolute/path/to/app.json
-export PYTHONPYCACHEPREFIX="$PWD/.context/ciproxy-mvp/milestone-6/pycache"
-python3 crates/ciproxy-github/scripts/runner_group_probe.py --help
-python3 crates/ciproxy-github/scripts/ref_metadata_probe.py --help
-python3 crates/ciproxy-github/scripts/push_ref_probe.py --help
-python3 crates/ciproxy-github/scripts/run_job_ref_probe.py --help
-python3 crates/ciproxy-github/scripts/workflow_ref_probe.py --help
-```
-
-Each help page gives its prerequisites, resource scope, and cleanup steps.
-Use two private disposable repositories with initial commits for the
-selected-group probe. Install the same App on both repositories.
-Provide an executable launcher for a clean, unconfigured Linux runner.
-It receives JIT only in `ACTIONS_RUNNER_INPUT_JITCONFIG`.
-It copies the runner into `CIPROXY_GITHUB_PROBE_WORK_DIR` and runs it there.
-The script withholds operator credentials from the runner environment.
-
-```sh
-python3 crates/ciproxy-github/scripts/runner_group_probe.py \
-  --allowed-repo Firna-AI/ciproxy-spike \
-  --refused-repo Firna-AI/ciproxy-spike-refused \
-  --runner-launcher /absolute/path/to/launcher
-python3 crates/ciproxy-github/scripts/ref_metadata_probe.py \
-  --repo Firna-AI/ciproxy-spike --create-temp
-python3 crates/ciproxy-github/scripts/push_ref_probe.py \
-  --repo Firna-AI/ciproxy-spike
-python3 crates/ciproxy-github/scripts/run_job_ref_probe.py \
-  --run "pull-request=Firna-AI/ciproxy-spike:$PR_RUN_ID"
-```
-
-Set `PR_RUN_ID` to an existing run. Repeat `--run` for other supplied cases.
-The push probe creates both same-name branch and tag push runs itself.
-It needs no existing workflow or run ID. It uses `ubuntu-latest` and one
-`true` step. It needs no ciproxy runner or Boat account.
-The probes read no job code, logs, artifacts, or cache contents.
-They print safe JSON records and remove their unique resources.
-Check every cleanup result. `free_proven` requires successful execution
-on a GitHub organization whose reported plan is `free`.
-No live success is claimed by the local HTTP tests.
-
-The runner-free workflow-ref probe uses the existing `facts.yml` and
-`facts-target.yml` fixtures. It reserves the unused `ciproxy-facts` label
-and recreates the approved temporary `facts-pr` head. It collects direct
-and reusable assignments for branch and tag pushes, tag dispatch, PR, and
-`pull_request_target`. It creates no runner or JIT configuration.
-The output pairs four scale-message fields with trusted API run facts.
-It selects no ref source or cache policy.
-
-```sh
-python3 crates/ciproxy-github/scripts/workflow_ref_probe.py \
-  --repo Firna-AI/ciproxy-spike --expected-default-sha a76c008
-```
-
-The script preserves the default branch, cancels and deletes its runs,
-closes its PR, and removes its temporary refs, session, scale set, and
-runner group. The closed PR record stays on GitHub. Its help page gives
-the exact fixture contract and expected job counts.
+The [live-probe guide](scripts/README.md) gives credentials, prerequisites,
+commands, fixture contracts, and cleanup for all five probes.
 
 ### Key Code
 
@@ -259,6 +231,8 @@ the exact fixture contract and expected job counts.
   lifecycle callbacks.
 - [src/hooks.rs](src/hooks.rs) verifies and dispatches webhook deliveries.
 - [src/auth](src/auth) signs App JWTs and rotates installation tokens.
+- [src/installation_state.rs](src/installation_state.rs) reads authoritative
+  current App identity and state with the App JWT.
 - [src/rest](src/rest) owns repository and workflow-run REST operations.
 - [src/listener](src/listener) holds session locks and delivers durable
   demand before acknowledgement.

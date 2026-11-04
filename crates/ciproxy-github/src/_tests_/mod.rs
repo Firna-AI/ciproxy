@@ -1,6 +1,7 @@
 //! Hand-worked requirements tested at narrow service boundaries.
 
 mod app_tests;
+mod coordination;
 mod lifecycle_tests;
 mod listener_tests;
 mod registration_tests;

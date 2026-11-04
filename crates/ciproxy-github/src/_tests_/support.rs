@@ -110,6 +110,8 @@ pub(super) fn facts() -> RunFacts {
 pub(super) fn app(mock: Unimock) -> AppService {
     let mock = Arc::new(mock);
     AppService {
+        leases: mock.clone(),
+        installations: mock.clone(),
         store: mock.clone(),
         rest: mock.clone(),
         scale_sets: mock.clone(),

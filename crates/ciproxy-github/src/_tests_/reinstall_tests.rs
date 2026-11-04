@@ -13,6 +13,8 @@ use crate::rest::GitHubRestMock;
 use crate::runtime::RuntimeMock;
 use crate::scale_sets::{ScaleSetApi, ScaleSetApiMock, ScaleSetFactoryMock};
 
+use super::coordination::coordination;
+
 use super::support::{app, at, context, event, id, labels, organization, repositories};
 
 #[tokio::test]
@@ -24,10 +26,11 @@ async fn retained_reinstall_reuses_workspace_and_preserves_shared_label_configur
     retained.delete_after = Some(at() + Duration::days(29));
     let api: Arc<dyn ScaleSetApi> = Arc::new(Unimock::new(
         ScaleSetApiMock::ensure
-            .some_call(matching!("ciproxy", 47))
+            .some_call(matching!("ciproxy", 47, Some(53)))
             .returns(Ok(53)),
     ));
     let service = app(Unimock::new((
+        coordination(false),
         InstallAuthorityMock::intended_workspace
             .some_call(matching!(41, 17))
             .returns(Ok(None)),
@@ -50,7 +53,7 @@ async fn retained_reinstall_reuses_workspace_and_preserves_shared_label_configur
             .some_call(matching!(19))
             .returns(Ok(repositories())),
         GitHubRestMock::restrict_runner_group
-            .some_call(matching!(_, _, _, _))
+            .some_call(matching!(_, _, _, _, _))
             .returns(Ok(47)),
         InstallationStoreMock::save_repositories
             .some_call(matching!(_, _))
@@ -64,6 +67,9 @@ async fn retained_reinstall_reuses_workspace_and_preserves_shared_label_configur
         InstallationStoreMock::labels
             .some_call(matching!(_))
             .returns(Ok(vec![labels().remove(0)])),
+        InstallationStoreMock::save_scale_set
+            .some_call(matching!(_, _))
+            .answers(&|_, _, set| Ok(set)),
         LifecycleOutputMock::changed
             .some_call(matching!(_))
             .returns(Ok(())),
@@ -87,10 +93,11 @@ async fn expired_retained_organization_joins_admin_workspace_as_new_registration
     expired.delete_after = Some(at());
     let api: Arc<dyn ScaleSetApi> = Arc::new(Unimock::new(
         ScaleSetApiMock::ensure
-            .some_call(matching!("ciproxy", 47))
+            .some_call(matching!("ciproxy", 47, Some(53)))
             .returns(Ok(53)),
     ));
     let service = app(Unimock::new((
+        coordination(false),
         InstallAuthorityMock::intended_workspace
             .some_call(matching!(41, 17))
             .returns(Ok(Some(id(1)))),
@@ -115,7 +122,7 @@ async fn expired_retained_organization_joins_admin_workspace_as_new_registration
             .some_call(matching!(19))
             .returns(Ok(repositories())),
         GitHubRestMock::restrict_runner_group
-            .some_call(matching!(_, _, _, _))
+            .some_call(matching!(_, _, _, _, _))
             .returns(Ok(47)),
         InstallationStoreMock::save_repositories
             .some_call(matching!(_, _))
@@ -129,6 +136,9 @@ async fn expired_retained_organization_joins_admin_workspace_as_new_registration
         InstallationStoreMock::labels
             .some_call(matching!(_))
             .returns(Ok(vec![labels().remove(0)])),
+        InstallationStoreMock::save_scale_set
+            .some_call(matching!(_, _))
+            .answers(&|_, _, set| Ok(set)),
         LifecycleOutputMock::changed
             .some_call(matching!(_))
             .returns(Ok(())),

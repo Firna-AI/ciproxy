@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use ciproxy_store_interface::organizations::Organization;
-use reqwest::Client;
+use reqwest::{Client, StatusCode};
 use scaleset::{
     Credentials, JitRunnerSetting, RunnerGroupId, RunnerId, RunnerScaleSetSpec, ScaleSetId,
 };
@@ -64,8 +64,29 @@ impl SdkScaleSetApi {
 
 #[async_trait]
 impl ScaleSetApi for SdkScaleSetApi {
-    async fn ensure(&self, label: &str, runner_group_id: i64) -> Result<i64> {
+    async fn ensure(
+        &self,
+        label: &str,
+        runner_group_id: i64,
+        saved_id: Option<i64>,
+    ) -> Result<i64> {
         let group = RunnerGroupId(runner_group_id);
+        if let Some(id) = saved_id {
+            match self.client.get_runner_scale_set_by_id(ScaleSetId(id)).await {
+                Ok(existing) => {
+                    if existing.runner_group_id != group {
+                        return Err(Error::ScaleSetGroupChanged {
+                            scale_set_id: id,
+                            expected_group: runner_group_id,
+                            actual_group: existing.runner_group_id.get(),
+                        });
+                    }
+                    return Ok(existing.id.get());
+                }
+                Err(error) if absent(&error) => {}
+                Err(error) => return Err(error).internal(),
+            }
+        }
         if let Some(existing) = self
             .client
             .get_runner_scale_set_by_name(group, label)
@@ -86,11 +107,15 @@ impl ScaleSetApi for SdkScaleSetApi {
     }
 
     async fn open(&self, scale_set_id: i64, owner: &str) -> Result<Box<dyn MessageQueue>> {
-        let session = self
+        let session = match self
             .client
             .create_message_session(ScaleSetId(scale_set_id), owner)
             .await
-            .internal()?;
+        {
+            Ok(session) => session,
+            Err(error) if absent(&error) => return Err(Error::ScaleSetMissing { scale_set_id }),
+            Err(error) => return Err(error).internal(),
+        };
         Ok(Box::new(SdkQueue {
             session,
             http: self.http.clone(),
@@ -98,11 +123,15 @@ impl ScaleSetApi for SdkScaleSetApi {
     }
 
     async fn register(&self, scale_set_id: i64, name: &str) -> Result<JitRegistration> {
-        let jit = self
+        let jit = match self
             .client
             .generate_jit_config(ScaleSetId(scale_set_id), &JitRunnerSetting::new(name))
             .await
-            .internal()?;
+        {
+            Ok(jit) => jit,
+            Err(error) if absent(&error) => return Err(Error::ScaleSetMissing { scale_set_id }),
+            Err(error) => return Err(error).internal(),
+        };
         let Some(runner) = jit.runner else {
             return Err(Error::OrganizationInactive);
         };
@@ -132,4 +161,8 @@ impl ScaleSetApi for SdkScaleSetApi {
             Err(error) => Err(error).internal(),
         }
     }
+}
+
+fn absent(error: &scaleset::Error) -> bool {
+    error.is_not_found() || error.status() == Some(StatusCode::NO_CONTENT)
 }

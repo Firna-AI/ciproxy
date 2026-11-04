@@ -42,14 +42,25 @@ impl DurableListener {
                 return Err(Error::MissingAssignmentTime);
             }
             let repository = format!("{}/{}", info.owner_name, info.repository_name);
-            let facts = self
-                .rest
-                .run_facts(
-                    context.organization.installation_id,
-                    &repository,
+            let facts = if let Some(facts) = self
+                .store
+                .facts(
+                    context.organization.workspace_id,
+                    context.organization.id,
                     info.workflow_run_id,
                 )
-                .await?;
+                .await?
+            {
+                facts
+            } else {
+                self.rest
+                    .run_facts(
+                        context.organization.installation_id,
+                        &repository,
+                        info.workflow_run_id,
+                    )
+                    .await?
+            };
             let job = GithubJob {
                 id: Uuid::parse_str(&info.job_id).internal()?,
                 organization_id: context.organization.id,

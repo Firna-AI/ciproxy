@@ -44,8 +44,10 @@ pub trait InstallationStore: Send + Sync {
     async fn labels(&self, workspace_id: Uuid) -> Result<Vec<Label>>;
     /// Read the scale sets that already belong to one organization.
     async fn scale_sets(&self, organization: &Organization) -> Result<Vec<ScaleSet>>;
-    /// Record one organization's label scale set.
-    async fn create_scale_set(&self, workspace_id: Uuid, scale_set: ScaleSet) -> Result<()>;
+    /// Read a retained managed group across this GitHub account's registrations.
+    async fn runner_group(&self, github_id: i64) -> Result<Option<i64>>;
+    /// Save current remote identities while preserving the stable internal row.
+    async fn save_scale_set(&self, workspace_id: Uuid, scale_set: ScaleSet) -> Result<ScaleSet>;
     /// Atomically replace the repository snapshot.
     async fn save_repositories(
         &self,
@@ -113,9 +115,15 @@ impl InstallationStore for StoreAdapter {
         })
         .await
     }
-    async fn create_scale_set(&self, workspace_id: Uuid, scale_set: ScaleSet) -> Result<()> {
+    async fn runner_group(&self, github_id: i64) -> Result<Option<i64>> {
         query(self.store.clone(), move |store| {
-            store.create_scale_set(workspace_id, &scale_set)
+            store.github_runner_group(github_id)
+        })
+        .await
+    }
+    async fn save_scale_set(&self, workspace_id: Uuid, scale_set: ScaleSet) -> Result<ScaleSet> {
+        query(self.store.clone(), move |store| {
+            store.save_github_scale_set(workspace_id, &scale_set)
         })
         .await
     }

@@ -1,6 +1,7 @@
 //! Locked listeners preserve assignment metadata and stop before unsafe ACKs.
 
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use ciproxy_store_interface::github::{DemandPhase, GithubJob, JobDelivery};
 use scaleset::{MessageId, ScaleSetMessage};
@@ -91,6 +92,9 @@ async fn assigned_job_is_durable_with_api_facts_before_output_and_ack() {
         MessageQueueMock::poll
             .some_call(matching!(None, 2))
             .returns(Ok(Some(message()))),
+        SessionStoreMock::facts
+            .some_call(matching!(_, _, 31))
+            .returns(Ok(None)),
         GitHubRestMock::run_facts
             .some_call(matching!(19, "customer/private", 31))
             .returns(Ok(facts())),
@@ -151,6 +155,9 @@ async fn failed_storage_keeps_message_unacknowledged_and_closes_session() {
         MessageQueueMock::poll
             .some_call(matching!(_, _))
             .returns(Ok(Some(message()))),
+        SessionStoreMock::facts
+            .some_call(matching!(_, _, 31))
+            .returns(Ok(None)),
         GitHubRestMock::run_facts
             .some_call(matching!(19, "customer/private", 31))
             .returns(Ok(facts())),
@@ -222,4 +229,58 @@ async fn lost_database_session_stops_processing_and_closes_github_session() {
         service.run(target(), options(), signal).await,
         Err(Error::OrganizationInactive)
     ));
+}
+
+#[tokio::test]
+async fn changed_remote_identity_closes_old_session_before_the_next_poll() {
+    let polls = Arc::new(AtomicUsize::new(0));
+    let observed = polls.clone();
+    let service = listener(Unimock::new((
+        SessionStoreMock::lock
+            .some_call(matching!(_))
+            .answers(&|mock, _| Ok(Some(Box::new(mock.clone()) as Box<dyn SessionLease>))),
+        SessionLeaseMock::check
+            .each_call(matching!())
+            .answers(&|_| Ok(())),
+        SessionStoreMock::context.stub(|each| {
+            each.call(matching!(_))
+                .answers(&|_, _| Ok(context()))
+                .n_times(3)
+                .then()
+                .answers(&|_, _| {
+                    let mut changed = context();
+                    changed.scale_set.github_id = 83;
+                    Ok(changed)
+                });
+        }),
+        ScaleSetFactoryMock::for_organization
+            .some_call(matching!(_))
+            .answers(&|mock, _| Ok(Arc::new(mock.clone()) as Arc<dyn ScaleSetApi>)),
+        ScaleSetApiMock::open
+            .some_call(matching!(53, _))
+            .answers(&|mock, _, _| Ok(Box::new(mock.clone()) as Box<dyn MessageQueue>)),
+        MessageQueueMock::poll
+            .each_call(matching!(None, 2))
+            .answers_arc(Arc::new(move |_, _, _| {
+                observed.fetch_add(1, Ordering::SeqCst);
+                Ok(None)
+            })),
+        SessionStoreMock::pending
+            .each_call(matching!(_))
+            .answers(&|_, _| Ok(vec![])),
+        MessageQueueMock::close
+            .some_call(matching!())
+            .returns(Ok(())),
+    )));
+    let (_stop, signal) = watch::channel(false);
+    let mut options = options();
+    options.max_polls = Some(2);
+    assert!(matches!(
+        service.run(target(), options, signal).await,
+        Err(Error::ScaleSetRestart {
+            opened: 53,
+            current: 83
+        })
+    ));
+    assert_eq!(polls.load(Ordering::SeqCst), 1);
 }

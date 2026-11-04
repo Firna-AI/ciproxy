@@ -26,6 +26,7 @@ pub(super) fn register(
     defaults: &[Label],
     initial_admin: i64,
 ) -> Result<()> {
+    let state: &str = organization.app_state.into();
     let (mode, ids) = repository_columns(&organization.repositories);
     store
         .connection()?
@@ -76,7 +77,7 @@ pub(super) fn register(
                         organizations::github_id.eq(organization.github_id),
                         organizations::login.eq(&organization.login),
                         organizations::installation_id.eq(organization.installation_id),
-                        organizations::app_state.eq("active"),
+                        organizations::app_state.eq(state),
                         organizations::repository_mode.eq(mode),
                         organizations::allowed_repository_ids.eq(ids),
                     ))
@@ -85,7 +86,7 @@ pub(super) fn register(
                     .set((
                         organizations::login.eq(&organization.login),
                         organizations::installation_id.eq(organization.installation_id),
-                        organizations::app_state.eq("active"),
+                        organizations::app_state.eq(state),
                         organizations::removed_at.eq(None::<DateTime<Utc>>),
                         organizations::delete_after.eq(None::<DateTime<Utc>>),
                     )),

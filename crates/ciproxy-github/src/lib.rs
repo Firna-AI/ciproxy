@@ -6,6 +6,7 @@ pub mod app;
 pub mod auth;
 pub mod error;
 pub mod hooks;
+pub mod installation_state;
 pub mod listener;
 pub mod persistence;
 pub mod registrations;

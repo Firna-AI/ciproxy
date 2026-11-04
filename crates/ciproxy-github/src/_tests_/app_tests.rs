@@ -16,6 +16,8 @@ use crate::scale_sets::{ScaleSetApi, ScaleSetApiMock, ScaleSetFactoryMock};
 
 use crate::runtime::RuntimeMock;
 
+use super::coordination::coordination;
+
 use super::support::{app, event, id, labels, organization, repositories};
 
 #[tokio::test]
@@ -25,22 +27,25 @@ async fn requester_creates_named_workspace_with_atomic_defaults_and_private_grou
     let observed = created.clone();
     let api: Arc<dyn ScaleSetApi> = Arc::new(Unimock::new((
         ScaleSetApiMock::ensure
-            .some_call(matching!("ciproxy", 47))
+            .some_call(matching!("ciproxy", 47, None))
             .returns(Ok(53)),
         ScaleSetApiMock::ensure
-            .some_call(matching!("ciproxy-4vcpu", 47))
+            .some_call(matching!("ciproxy-4vcpu", 47, None))
             .returns(Ok(59)),
         ScaleSetApiMock::ensure
-            .some_call(matching!("ciproxy-8vcpu", 47))
+            .some_call(matching!("ciproxy-8vcpu", 47, None))
             .returns(Ok(61)),
     )));
     let _keep_api = api.clone();
     let service = app(Unimock::new((
-        RuntimeMock::uuid
-            .each_call(matching!())
-            .answers_arc(Arc::new(move |_| {
-                id(u128::from(ids.fetch_add(1, Ordering::SeqCst)))
-            })),
+        (
+            coordination(false),
+            RuntimeMock::uuid
+                .each_call(matching!())
+                .answers_arc(Arc::new(move |_| {
+                    id(u128::from(ids.fetch_add(1, Ordering::SeqCst)))
+                })),
+        ),
         InstallAuthorityMock::intended_workspace
             .some_call(matching!(41, 17))
             .returns(Ok(None)),
@@ -69,8 +74,8 @@ async fn requester_creates_named_workspace_with_atomic_defaults_and_private_grou
             .some_call(matching!(19))
             .returns(Ok(repositories())),
         GitHubRestMock::restrict_runner_group
-            .some_call(matching!(_, _, _, _))
-            .answers(&|_, installation, login, _, ids| {
+            .some_call(matching!(_, _, _, _, _))
+            .answers(&|_, installation, login, _, ids, _| {
                 assert_eq!(installation, 19);
                 assert_eq!(login, "customer");
                 assert_eq!(ids, [23]);
@@ -82,13 +87,16 @@ async fn requester_creates_named_workspace_with_atomic_defaults_and_private_grou
         InstallationStoreMock::scale_sets
             .some_call(matching!(_))
             .returns(Ok(vec![])),
+        InstallationStoreMock::runner_group
+            .some_call(matching!(17))
+            .returns(Ok(None)),
         ScaleSetFactoryMock::for_organization
             .some_call(matching!(_))
             .returns(Ok(api)),
         InstallationStoreMock::labels
             .some_call(matching!(_))
             .returns(Ok(labels())),
-        InstallationStoreMock::create_scale_set
+        InstallationStoreMock::save_scale_set
             .each_call(matching!(_, _))
             .answers_arc(Arc::new(move |_, workspace_id, scale_set| {
                 assert_eq!(workspace_id, id(1));
@@ -98,7 +106,7 @@ async fn requester_creates_named_workspace_with_atomic_defaults_and_private_grou
                     scale_set.github_id,
                     scale_set.runner_group_id,
                 ));
-                Ok(())
+                Ok(scale_set)
             })),
         LifecycleOutputMock::changed
             .some_call(matching!(_))
@@ -131,10 +139,11 @@ async fn admin_intent_uses_shared_workspace_and_replay_keeps_label_edits() {
     edited.size.vcpus = 6;
     let api: Arc<dyn ScaleSetApi> = Arc::new(Unimock::new(
         ScaleSetApiMock::ensure
-            .some_call(matching!("ciproxy", 47))
+            .some_call(matching!("ciproxy", 47, Some(53)))
             .returns(Ok(53)),
     ));
     let service = app(Unimock::new((
+        coordination(false),
         InstallAuthorityMock::intended_workspace
             .some_call(matching!(41, 17))
             .returns(Ok(Some(id(1)))),
@@ -159,8 +168,8 @@ async fn admin_intent_uses_shared_workspace_and_replay_keeps_label_edits() {
             .some_call(matching!(19))
             .returns(Ok(repositories())),
         GitHubRestMock::restrict_runner_group
-            .some_call(matching!(_, _, _, _))
-            .answers(&|_, installation, login, _, ids| {
+            .some_call(matching!(_, _, _, _, _))
+            .answers(&|_, installation, login, _, ids, _| {
                 assert_eq!(installation, 19);
                 assert_eq!(login, "customer");
                 assert_eq!(ids, [23]);
@@ -184,6 +193,9 @@ async fn admin_intent_uses_shared_workspace_and_replay_keeps_label_edits() {
         InstallationStoreMock::labels
             .some_call(matching!(_))
             .returns(Ok(vec![edited])),
+        InstallationStoreMock::save_scale_set
+            .some_call(matching!(_, _))
+            .answers(&|_, _, set| Ok(set)),
         LifecycleOutputMock::changed
             .some_call(matching!(_))
             .returns(Ok(())),

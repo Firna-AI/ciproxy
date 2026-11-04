@@ -100,9 +100,16 @@ impl GitHubRest for RestClient {
         organization: &str,
         name: &str,
         repository_ids: &[i64],
+        saved_id: Option<i64>,
     ) -> Result<i64> {
-        self.sync_group(installation_id, organization, name, repository_ids)
-            .await
+        self.sync_group(
+            installation_id,
+            organization,
+            name,
+            repository_ids,
+            saved_id,
+        )
+        .await
     }
 
     async fn run_facts(

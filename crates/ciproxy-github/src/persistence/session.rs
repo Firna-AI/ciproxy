@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
 use ciproxy_store_interface::error;
-use ciproxy_store_interface::github::{GithubJob, JobDelivery};
+use ciproxy_store_interface::github::{GithubJob, JobDelivery, RunFacts};
 use ciproxy_store_interface::organizations::Organization;
 use ciproxy_store_interface::scale_sets::{ScaleSet, ScaleSetSession};
 use uuid::Uuid;
@@ -45,6 +45,13 @@ pub trait SessionLease: Send + Sync {
 #[cfg_attr(test, unimock::unimock(api = SessionStoreMock))]
 #[async_trait]
 pub trait SessionStore: Send + Sync {
+    /// Read saved trusted facts before requesting metadata for a known run again.
+    async fn facts(
+        &self,
+        workspace_id: Uuid,
+        organization_id: Uuid,
+        run_id: i64,
+    ) -> Result<Option<RunFacts>>;
     /// Read current organization and scale-set context under workspace scope.
     async fn context(&self, target: ListenerTarget) -> Result<ListenerContext>;
     /// Try to own the scale set's dedicated database session.
@@ -78,6 +85,17 @@ impl SessionLease for Lease {
 
 #[async_trait]
 impl SessionStore for StoreAdapter {
+    async fn facts(
+        &self,
+        workspace_id: Uuid,
+        organization_id: Uuid,
+        run_id: i64,
+    ) -> Result<Option<RunFacts>> {
+        query(self.store.clone(), move |store| {
+            store.github_run_facts(workspace_id, organization_id, run_id)
+        })
+        .await
+    }
     async fn context(&self, target: ListenerTarget) -> Result<ListenerContext> {
         query(self.store.clone(), move |store| {
             let organization = store

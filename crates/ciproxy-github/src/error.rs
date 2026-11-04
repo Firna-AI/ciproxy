@@ -19,6 +19,32 @@ pub enum Error {
     /// Another listener owns the scale set's database session lock.
     #[error("[github] scale set session is already owned")]
     SessionOwned,
+    /// The saved remote binding changed while this listener owned a session.
+    #[error("[github] restart scale-set listener from {opened} to {current}")]
+    ScaleSetRestart {
+        /// The remote ID used by the live session.
+        opened: i64,
+        /// The remote ID now saved for the same internal scale set.
+        current: i64,
+    },
+    /// GitHub no longer has the remote scale set; reconcile before retry.
+    #[error("[github] scale set {scale_set_id} is missing")]
+    ScaleSetMissing {
+        /// The missing remote identifier.
+        scale_set_id: i64,
+    },
+    /// A live remote resource would need a move that has not been proven.
+    #[error(
+        "[github] scale set {scale_set_id} belongs to group {actual_group}, expected {expected_group}"
+    )]
+    ScaleSetGroupChanged {
+        /// The retained remote scale set.
+        scale_set_id: i64,
+        /// The managed group of the organization now.
+        expected_group: i64,
+        /// The different group still reported by GitHub.
+        actual_group: i64,
+    },
     /// A message omits metadata required to persist correct demand.
     #[error("[github] job message has no scale-set assignment time")]
     MissingAssignmentTime,

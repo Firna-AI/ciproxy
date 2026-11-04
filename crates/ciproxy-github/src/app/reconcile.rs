@@ -1,21 +1,27 @@
-//! Visible private repositories, default branches, and one set per label.
+//! Leased repository policy and stable organization-label resource bindings.
 
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
 use ciproxy_store_interface::scale_sets::ScaleSet;
 
 use crate::error::{Error, Result};
+use crate::persistence::mutation::MutationLease;
 
 use super::AppService;
 
 impl AppService {
     pub(super) async fn refresh(&self, installation_id: i64) -> Result<()> {
-        let Some(organization) = self.store.by_installation(installation_id).await? else {
+        let Some(locked) = self.locked_registration(installation_id).await? else {
             return Ok(());
         };
-        if organization.app_state != AppState::Active {
+        let Some(organization) = locked.organization else {
+            return Ok(());
+        };
+        if organization.app_state == AppState::Removed {
             return Ok(());
         }
-        self.reconcile(&organization).await
+        self.synchronize(organization, locked.current, None, false, &*locked.lease)
+            .await?;
+        Ok(())
     }
 
     pub(super) async fn change_access(
@@ -23,18 +29,32 @@ impl AppService {
         installation_id: i64,
         access: RepositoryAccess,
     ) -> Result<()> {
-        let Some(mut organization) = self.store.by_installation(installation_id).await? else {
+        let Some(locked) = self.locked_registration(installation_id).await? else {
             return Err(Error::OrganizationInactive);
         };
-        if organization.app_state != AppState::Active {
+        let Some(organization) = locked.organization else {
+            return Err(Error::OrganizationInactive);
+        };
+        if organization.app_state == AppState::Removed {
             return Err(Error::OrganizationInactive);
         }
-        organization.repositories = access.clone();
-        self.reconcile(&organization).await?;
-        self.store.save_access(&organization, access).await
+        self.synchronize(
+            organization,
+            locked.current,
+            Some(access),
+            false,
+            &*locked.lease,
+        )
+        .await?;
+        Ok(())
     }
 
-    pub(super) async fn reconcile(&self, organization: &Organization) -> Result<()> {
+    pub(super) async fn reconcile(
+        &self,
+        organization: &Organization,
+        lease: &dyn MutationLease,
+    ) -> Result<()> {
+        lease.check().await?;
         let repositories = self.rest.repositories(organization.installation_id).await?;
         let allowed: Vec<i64> = repositories
             .iter()
@@ -45,7 +65,14 @@ impl AppService {
             })
             .map(|repository| repository.id)
             .collect();
-        let group_name = format!("ciproxy-{}", organization.id);
+        let existing = self.store.scale_sets(organization).await?;
+        let saved_group = if let Some(set) = existing.first() {
+            Some(set.runner_group_id)
+        } else {
+            self.store.runner_group(organization.github_id).await?
+        };
+        let group_name = format!("ciproxy-{}", organization.github_id);
+        lease.check().await?;
         let group_id = self
             .rest
             .restrict_runner_group(
@@ -53,23 +80,28 @@ impl AppService {
                 &organization.login,
                 &group_name,
                 &allowed,
+                saved_group,
             )
             .await?;
+        lease.check().await?;
         self.store
             .save_repositories(organization, repositories)
             .await?;
-        let existing = self.store.scale_sets(organization).await?;
         let api = self.scale_sets.for_organization(organization).await?;
         for label in self.store.labels(organization.workspace_id).await? {
-            let github_id = api.ensure(&label.name, group_id).await?;
-            if existing.iter().any(|set| set.label_id == label.id) {
-                continue;
-            }
+            let previous = existing.iter().find(|set| set.label_id == label.id);
+            lease.check().await?;
+            let github_id = api
+                .ensure(&label.name, group_id, previous.map(|set| set.github_id))
+                .await?;
+            lease.check().await?;
             self.store
-                .create_scale_set(
+                .save_scale_set(
                     organization.workspace_id,
                     ScaleSet {
-                        id: self.runtime.uuid(),
+                        id: previous
+                            .map(|set| set.id)
+                            .unwrap_or_else(|| self.runtime.uuid()),
                         organization_id: organization.id,
                         label_id: label.id,
                         github_id,

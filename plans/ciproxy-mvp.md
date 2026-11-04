@@ -246,6 +246,9 @@ each label. The scale set spike confirms it.
       reusable run IDs with `run_job_ref_probe.py` from that directory.
       Run `workflow_ref_probe.py` there to inspect scale-message workflow
       refs for all five cases with the approved existing fixtures.
+      The orchestrator verified all five cases with cleanup. A top-level
+      workflow ref distinguishes branch and tag pushes. A reusable
+      workflow ref names the called file. Owner items 54 and 55 stay open.
       The crate README gives the environment and arguments.
       Ask the user to choose the full-ref source and unknown-ref policy.
       Then update the protocol and wire contracts in their owning scope,
@@ -260,6 +263,23 @@ each label. The scale set spike confirms it.
       `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
 - [x] Create and remove the just-in-time registrations.
       Evidence: `.context/ciproxy-mvp/milestone-6/verification.md`.
+      Branch:
+      `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
+- [x] Serialize organization policy operations across control-plane
+      processes, with state and repository reads inside the lease.
+      Branch:
+      `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
+- [x] Preserve current installation identity and App state when delayed
+      lifecycle deliveries arrive. Keep the authenticated requester.
+      Branch:
+      `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
+- [x] Reuse durable API facts for known runs when repository access ends.
+      First-read unknown handling still waits for owner item 55.
+      Branch:
+      `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
+- [x] Save current remote scale-set mappings without replacing internal
+      identities. Restart stale listeners and keep owned groups by ID.
+      Use a stable organization key across workspace registrations.
       Branch:
       `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
 

@@ -64,6 +64,13 @@ Each scale set lock owns a separate PostgreSQL connection.
 The database releases its advisory lock when that connection closes.
 The handle checks the connection so a listener can detect a lost session.
 Each scale set has a distinct sequence key, without hashing its identifier.
+Organization mutations use waiting leases on other dedicated connections.
+Two signed 32-bit keys preserve all 64 GitHub organization-ID bits.
+Their advisory namespace is separate from one-key scale-set locks.
+Waiting takes no ordinary shared-query connection and creates no key row.
+Trusted run-facts lookups use a tenant/organization/run index.
+Remote scale-set upserts retain internal UUIDs, lock keys, and history.
+Managed-group lookup can reuse a retained organization registration.
 
 Queries are synchronous.
 Async services must call them from blocking workers.

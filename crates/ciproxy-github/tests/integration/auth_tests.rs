@@ -54,7 +54,7 @@ async fn installation_tokens_rotate_and_group_payload_restricts_selected_private
         ]
     );
     assert_eq!(
-        rest.restrict_runner_group(19, "customer", "ciproxy-test", &[23])
+        rest.restrict_runner_group(19, "customer", "ciproxy-test", &[23], None)
             .await
             .unwrap(),
         47

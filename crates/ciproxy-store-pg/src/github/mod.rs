@@ -1,20 +1,43 @@
 //! Queries for atomic installation setup and durable scale-set demand.
 
+mod facts;
 mod jobs;
+mod lease;
 mod registration;
 mod repositories;
+mod scale_sets;
 
 use chrono::{DateTime, Utc};
 use ciproxy_store_interface::error::Result;
-use ciproxy_store_interface::github::{GithubJob, GithubStore, JobDelivery, Repository};
+use ciproxy_store_interface::github::{
+    GithubJob, GithubStore, JobDelivery, OrganizationLease, Repository, RunFacts,
+};
 use ciproxy_store_interface::labels::Label;
 use ciproxy_store_interface::organizations::Organization;
+use ciproxy_store_interface::scale_sets::ScaleSet;
 use ciproxy_store_interface::workspaces::Workspace;
 use uuid::Uuid;
 
 use crate::connection::PgStore;
 
 impl GithubStore for PgStore {
+    fn lock_github_organization(&self, github_id: i64) -> Result<Box<dyn OrganizationLease>> {
+        lease::acquire(self, github_id)
+    }
+    fn github_runner_group(&self, github_id: i64) -> Result<Option<i64>> {
+        scale_sets::group(self, github_id)
+    }
+    fn save_github_scale_set(&self, workspace_id: Uuid, scale_set: &ScaleSet) -> Result<ScaleSet> {
+        scale_sets::save(self, workspace_id, scale_set)
+    }
+    fn github_run_facts(
+        &self,
+        workspace_id: Uuid,
+        organization_id: Uuid,
+        run_id: i64,
+    ) -> Result<Option<RunFacts>> {
+        facts::lookup(self, workspace_id, organization_id, run_id)
+    }
     fn register_github_installation(
         &self,
         workspace: Option<&Workspace>,

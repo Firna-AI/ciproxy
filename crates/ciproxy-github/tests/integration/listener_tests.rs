@@ -1,7 +1,7 @@
 //! The real SDK, listener, and store process fake HTTP end to end.
 
 use std::sync::Arc;
-use std::sync::atomic::AtomicI64;
+use std::sync::atomic::{AtomicI64, Ordering};
 
 use ciproxy_github::auth::tokens::RotatingTokens;
 use ciproxy_github::listener::{DurableListener, ListenerOptions, ScaleSetListener};
@@ -21,6 +21,7 @@ async fn http_listener_replays_uuid_jobs_without_duplicate_demand_or_terminal_re
     let database = Database::new();
     let target = setup(&*database.store);
     let server = Server::start(Some(database.store.clone())).await;
+    server.state.fail_later_facts.store(true, Ordering::SeqCst);
     let http = Client::builder().redirect(Policy::none()).build().unwrap();
     let api = Url::parse(&format!("{}/api/v3/", server.origin)).unwrap();
     let runtime = Arc::new(FixedRuntime(AtomicI64::new(1_793_793_600)));
@@ -38,7 +39,7 @@ async fn http_listener_replays_uuid_jobs_without_duplicate_demand_or_terminal_re
         output: output.clone(),
     };
     let (_stop, signal) = watch::channel(false);
-    listener
+    let result = listener
         .run(
             target,
             ListenerOptions {
@@ -48,8 +49,12 @@ async fn http_listener_replays_uuid_jobs_without_duplicate_demand_or_terminal_re
             },
             signal,
         )
-        .await
-        .unwrap();
+        .await;
+    assert!(
+        matches!(result, Ok(())),
+        "known completion must survive loss of repository API access"
+    );
+    assert_eq!(server.state.facts_reads.load(Ordering::SeqCst), 1);
     let saved = database
         .store
         .github_jobs(target.workspace_id, target.organization_id)
