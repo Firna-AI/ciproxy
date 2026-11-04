@@ -447,35 +447,41 @@ Depends on: 1
 The docs state the requirements and the decisions for the implementation
 plan. The design calls above give their first content.
 
-- [ ] Update `README.md`: the product summary, the `runs-on` labels, and
-      the developer get-started steps.
-- [ ] Write `docs/architecture.md`: the components, their
-      responsibilities, their boundaries, and the data flow.
-- [ ] Write `docs/protocol/job-routing.md`: labels and shapes, the order of
+- [x] Update `README.md`: the product summary, the `runs-on` labels, and
+      the developer get-started steps. Branch:
+      `conductor/ciproxy-mvp-foundation-m2-docs`.
+- [x] Write `docs/architecture.md`: the components, their
+      responsibilities, their boundaries, and the data flow. Branch:
+      `conductor/ciproxy-mvp-foundation-m2-docs`.
+- [x] Write `docs/protocol/job-routing.md`: labels and shapes, the order of
       own machines and overflow, the overflow trigger, warm runners, and
       the behaviour when the control plane, an own machine, or a backend
       fails. Name the default labels and the VM that each one starts, as
       the docs mockups show: `ciproxy`, `ciproxy-4vcpu`, and
       `ciproxy-8vcpu`. Define the host reserve, so that the smallest
-      machine, 4 cores and 16 GB, gets at least one slot.
-- [ ] Write `docs/protocol/agent.md`: install, the outbound-only connection,
+      machine, 4 cores and 16 GB, gets at least one slot. Branch:
+      `conductor/ciproxy-mvp-foundation-m2-docs`.
+- [x] Write `docs/protocol/agent.md`: install, the outbound-only connection,
       machine identity, a fresh VM for each job, the image, updates, health,
-      and drain.
-- [ ] Write `docs/protocol/overflow.md`: the backend contract, the customer
+      and drain. Branch: `conductor/ciproxy-mvp-foundation-m2-docs`.
+- [x] Write `docs/protocol/overflow.md`: the backend contract, the customer
       account, teardown, the spend limit, the cleanup of orphan VMs, and
       the behaviour when Boat refuses a start because of its start limits.
-- [ ] Write `docs/protocol/cache.md`: transparent `actions/cache`, cache
+      Branch: `conductor/ciproxy-mvp-foundation-m2-docs`.
+- [x] Write `docs/protocol/cache.md`: transparent `actions/cache`, cache
       scopes, trusted write-back, the cache tiers, and the fallback to the
-      GitHub cache.
-- [ ] Write `docs/protocol/security.md`: GitHub App permissions, key
-      custody, tenant isolation, job isolation, and secrets.
-- [ ] Write `docs/protocol/metering.md`: what a start is, how ciproxy
+      GitHub cache. Branch: `conductor/ciproxy-mvp-foundation-m2-docs`.
+- [x] Write `docs/protocol/security.md`: GitHub App permissions, key
+      custody, tenant isolation, job isolation, and secrets. Branch:
+      `conductor/ciproxy-mvp-foundation-m2-docs`.
+- [x] Write `docs/protocol/metering.md`: what a start is, how ciproxy
       counts starts and own machines for each month, the soft tier limits, and
-      the rules for the savings report.
-- [ ] Write `docs/protocol/billing.md`: the tiers, the add-ons, Stripe
+      the rules for the savings report. Branch:
+      `conductor/ciproxy-mvp-foundation-m2-docs`.
+- [x] Write `docs/protocol/billing.md`: the tiers, the add-ons, Stripe
       Checkout and the customer portal, the subscription states, failed
       payments, the move to the Free tier, and who in an organization may
-      choose a plan and pay.
+      choose a plan and pay. Branch: `conductor/ciproxy-mvp-foundation-m2-docs`.
 
 ## Milestone 3: Feasibility spikes
 
