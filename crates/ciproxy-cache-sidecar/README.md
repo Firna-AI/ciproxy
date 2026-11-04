@@ -1,0 +1,186 @@
+# ciproxy-cache-sidecar
+
+A transparent GitHub Actions cache for customer machines. The machine
+service owns persistent entries and measured reports. A proxy in each job
+VM keeps the runner interface unchanged. This crate depends only on
+`ciproxy-protocol` inside the workspace. It has the Apache-2.0 licence in
+[LICENSE](LICENSE).
+
+## Responsibilities
+
+Serve GitHub cache v1 and v2 requests. Keep repositories and pull requests
+apart. Keep hosted code out of the public dependency tree. Let cache faults
+fall back to GitHub or produce an unavailable cache result.
+
+## What This Crate Does
+
+Reads use the machine first, then GitHub with local fill. Saves stream to
+GitHub and capture a local copy. Only accepted saves own immutable local
+keys for a repository, ref, key, and version. The machine keeps them after
+GitHub
+deletes or evicts its copy. Lookup searches each allowed ref in order:
+own ref, pull request base ref, default ref. It checks an exact key before
+prefix matches. A prefix match uses the newest entry.
+
+The machine derives scopes from agent-supplied `JobFacts`. It ignores job
+metadata for scope, repository, permission, upstream destination, and
+counts. A GitHub fill stays within the reader's own scope because the
+GitHub lookup response does not identify the source ref. The service keeps
+fills separate from accepted saves. A fill cannot prevent a later save in
+that scope. An accepted save takes precedence over a fill of the same
+scoped key. Existing records without provenance stay readable as fills.
+
+A pull request writes only within a trusted `refs/pull/N/merge` ref.
+`pull_request_target` and pull requests with a normal branch ref cannot
+save safely through GitHub. These saves return an unavailable-cache
+result. They publish no shared entry in either tier. The proxy keeps this
+rule when the machine is unavailable. A foreign head repository also cannot
+write the default scope.
+
+Azure single uploads, staged blocks, committed blocklist order, ranged
+downloads, and legacy ranged PATCH uploads work. Lookup-only and HEAD
+requests do not increase restore counts. A transfer counts once when its
+served ranges cover the complete archive. Byte counts come from archive
+data at the machine boundary. A failed machine connection returns a cache
+miss. It starts no direct restore that could escape those counts. A known
+machine-side direct fallback hides per-job counts. A service restart also
+hides counts for jobs that were still active. Seven-day hit counts survive
+a restart.
+
+The v2 JSON interface accepts protobuf field names and camelCase names.
+For example, both `size_bytes` and `sizeBytes` work. Int64 values remain
+JSON strings, as in the official client.
+
+Persistent archives and staged bytes share one disk budget. The service
+evicts the least recently used entries. A smaller budget cancels staged
+captures. Clear cancels pending publication and removes all local entry
+files. It keeps report history. Neither operation calls GitHub deletion
+or touches sibling Docker disks. Archive transfers use bounded chunks.
+Each upload has one active archive: whole contents, committed ordered
+blocks, or legacy ranges. A whole upload releases the earlier archive and
+staged blocks before capture. Staged block writes keep committed bytes
+unchanged until a successful block-list commit. That commit selects the
+new archive and releases unselected staged bytes. A missing capture leaves
+no usable copy of that version. Assembly never selects an older archive
+form. GitHub still receives the upload when local capture fails.
+
+Other results requests go directly from the VM proxy to GitHub. The
+machine listener also supports results passthrough. Artifacts and logs
+therefore remain independent of cache availability. An opaque transfer
+ticket can become unavailable during an outage. The cache action then
+reports its usual cache warning or miss.
+
+## Quick Start
+
+Run the executable smoke check from the repository root:
+
+```sh
+cargo build --package ciproxy-cache-sidecar
+python3 image/runner-patch/smoke/check.py
+```
+
+Start a machine service with a dedicated cache directory:
+
+```sh
+cargo run --package ciproxy-cache-sidecar -- machine \
+  --listen 127.0.0.1:8228 --admin-listen 127.0.0.1:8229 \
+  --cache-dir .context/cache --capacity-bytes 1073741824 \
+  --admin-token-file .context/cache-admin-token
+```
+
+The agent creates the token file before startup. It contains an independent
+random secret. The service has no anonymous administration route.
+
+### Agent integration
+
+The agent owns VM network, image, and lifecycle wiring. Use one
+machine-service process for each dedicated cache directory. Expose its job
+listener only through the narrow machine-cache connection. Keep its admin
+listener and token outside every job VM. The default admin address is
+loopback. The agent must not bind it to a VM-reachable interface.
+
+The agent calls the admin listener with `Authorization: Bearer TOKEN`:
+
+| Method and path          | Input or result                                        |
+| ------------------------ | ------------------------------------------------------ |
+| `POST /sessions`         | `Registration` JSON. Returns `SessionCredential` JSON. |
+| `DELETE /sessions/TOKEN` | Revoke that VM's credential and finish its report.     |
+| `GET /report`            | `ciproxy_protocol::cache::MachineCacheReport` JSON.    |
+| `POST /clear`            | Clear this machine's local entries. Returns HTTP 204.  |
+| `PUT /budget`            | `{"capacity_bytes":12345}`. Returns HTTP 204.          |
+
+`Registration` contains `job_id`, `facts`, `permissions`, `github_token`,
+`cache_url`, `results_url`, and `proxy_url`. The exact types live in
+[session.rs](src/session.rs). `facts` is the existing protocol `JobFacts`.
+The control plane obtains those facts from GitHub. The agent supplies
+original runtime credentials and endpoint URLs from the assigned runner
+before job code runs. A job request cannot register or replace them.
+
+`permissions` has independent `read` and `write` booleans. Both default to
+false. The agent must get the effective cache mode from trusted runner
+assignment data. It must not read a job's environment override. Missing
+permission information leaves the cache unavailable. The machine and proxy
+both apply these permissions.
+
+The agent writes a `ProxyConfig` JSON file inside the VM. It contains
+`machine_url`, `machine_token`, and the same `registration`. `proxy_url`
+must be reachable from that VM's Docker containers. The runner listener
+can start before GitHub assigns its job. At job start, the agent's existing
+hook must register the assignment and start the proxy. It must wait for
+proxy readiness before action steps run. The new cache hook preserves
+that synchronization point. A shell hook does not supply the original
+runtime credentials. The trusted assignment handoff remains the agent's
+and image's responsibility.
+
+With an existing Docker bridge, use its VM gateway as `proxy_url`. Bind
+the proxy inside that job VM:
+
+```sh
+ciproxy-cache-sidecar proxy --listen 0.0.0.0:8230 \
+  --config /run/ciproxy/cache-proxy.json
+```
+
+The [runner guide](../../image/runner-patch/README.md#start-the-job-vm-runner)
+shows bridge-address discovery and the listener wrapper. Loopback-only
+addresses cannot serve Docker actions or job-container steps.
+
+The proxy supplies `X-Ciproxy-Session` to the machine. Each random transfer
+ticket belongs to that session. Job requests cannot reuse another VM's
+ticket. The credential grants no admin access. A session can suppress its
+own counts through `POST /ciproxy/fallback`. That operation accepts no
+counts. Machine-connection failures return a miss without a notification.
+The agent must revoke the session when the job ends.
+
+Run the original runner on Boat. Do not use the patch, wrapper, or proxy
+there. This crate adds no Boat, KVM, agent lifecycle, or image wiring.
+
+## Development
+
+The tests use real TCP listeners, files, and a Python fake GitHub service.
+They need Python 3 and no credential. Run from the repository root:
+
+```sh
+cargo test --package ciproxy-cache-sidecar
+cargo build --package ciproxy-cache-sidecar
+cargo fmt --all -- --check
+cargo clippy --package ciproxy-cache-sidecar --all-targets -- -D warnings
+```
+
+The [runner patch guide](../../image/runner-patch/README.md) gives the
+executable smoke, SDK conformance, and authenticated GitHub commands.
+
+### Key Code
+
+- [service.rs](src/service.rs) defines the HTTP service and separate routers.
+- [machine.rs](src/machine.rs) authenticates and routes machine requests.
+- [proxy.rs](src/proxy.rs) owns VM forwarding and cache misses during outages.
+- [storage/](src/storage/mod.rs) owns capture, persistence, and disk budgets.
+- [session.rs](src/session.rs) defines the agent registration contract.
+- [cache_tests.rs](tests/cache_tests.rs) starts the public HTTP tests.
+
+### Related Docs
+
+- [Architecture](../../docs/architecture.md) defines component boundaries.
+- [Cache protocol](../../docs/protocol/cache.md) defines cache requirements.
+- [Job isolation](../../docs/protocol/security.md#job-isolation) defines VM
+  network access.
