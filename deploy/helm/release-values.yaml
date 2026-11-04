@@ -1,0 +1,36 @@
+# Override the upstream chart without changing the vendored chart.
+replicaCount: 1
+config:
+  releaseGithubRepository: Firna-AI/ciproxy
+  defaultBinary: ciproxy-agent
+  binaries: [ciproxy-agent]
+  tagPrefix: ciproxy-agent-v
+  clientServerUrlEnv: CIPROXY_RELEASE_SERVER_URL
+  installDirEnv: CIPROXY_INSTALL_DIR
+secret:
+  create: false
+  existingSecret: release-github-token
+ingress:
+  enabled: false
+serviceAccount:
+  name: release-server
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: [ALL]
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+    ephemeral-storage: 1Gi
+  limits:
+    cpu: "1"
+    memory: 512Mi
+    ephemeral-storage: 1Gi

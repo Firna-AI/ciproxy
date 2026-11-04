@@ -126,16 +126,66 @@ Production runs in the GCP project `ciproxy`, and staging and tests in
 Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
 
 - [ ] Add Cloud SQL, Secret Manager, and Cloud KMS for the Boat keys.
+      Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [x] Define both projects, private SQL, secret containers, KMS, and IAM.
+        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [ ] User: apply both foundations with `deploy/scripts/bootstrap.sh`.
+        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
 - [ ] Run the control plane and the `futex-ai/cli-release` server on GKE
       Autopilot with Helm, as item 31 says.
+      Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [x] Define Autopilot, Helm charts, SQL proxy, and runtime identities.
+        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [ ] User: deploy Helm. Enable the control plane after its runtime exists.
+        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
 - [ ] Set the release server to `get.ciproxy.dev`, `ciproxy-agent`, the tag
       prefix `ciproxy-agent-v`, and a token for this repository only.
+      Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [x] Configure release hosts, binary, prefix, and an existing secret.
+        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [ ] User: prepare the pinned image and store the repository-only token.
+        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
 - [ ] Serve the site, the dashboard, and signed image URLs from a Cloud
       Storage bucket, through Cloud CDN and one HTTPS load balancer. My call:
       they are static files, so they need no runtime.
+      Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [x] Define public buckets, private images, CDN, routes, and publishing.
+        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [ ] User: deploy the edge and register a CDN signing key outside Terraform.
+        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
 - [ ] Create the DNS zone, which the user delegates.
+      Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [x] Define production and staging DNS zones and HTTPS records.
+        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [ ] User: apply the zones and delegate the domain and staging subzone.
+        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
 - [ ] Deploy staging on each push, and production on each `deploy-` tag. Add
       uptime alerts.
+      Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [x] Add both deploy workflows, restricted federation, and uptime alerts.
+        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [ ] User: set GitHub variables, deploy, check HTTPS, and enable alerts.
+        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+- [x] Keep runtime routing when Autopilot moves pods between zones.
+      My call, 4 November 2026: use Preview NEG preparation on GKE 1.36.4,
+      with matching pod placement. Reason: each zone then has a backend.
+      Evidence: `.context/ciproxy-mvp/zone-finding.md`.
+      Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+- [x] Keep signing key names and values together during secret rotation.
+      My call, 4 November 2026: require a pod rollout for secret updates.
+      Reason: a running pod then keeps its key and name together.
+      Evidence: `.context/ciproxy-mvp/secret-rotation-finding.md`.
+      Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+- [x] Bind each pod revision to a numbered signing key.
+      My call, 4 November 2026: derive names from versions and keep the
+      provider objects. Reason: replacements then keep matching keys.
+      Evidence: `.context/ciproxy-mvp/fix-round-1-report.md`.
+      Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+- [x] Match deploy identities with repository IDs and environment claims.
+      My call, 4 November 2026: avoid a subject format match and map each
+      condition claim. Reason: valid jobs then keep the same trust limits.
+      Evidence: `.context/ciproxy-mvp/fix-round-1-report.md`.
+      Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
 
 ## Milestone 6: GitHub App and scale sets
 
