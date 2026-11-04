@@ -14,7 +14,7 @@ from deploy_support import (
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("environment", choices=["staging", "production"])
+    parser.add_argument("environment", choices=["main-preview", "production"])
     args = parser.parse_args()
     digest, runtime_enabled, control_image = runtime_configuration(os.environ)
     environment = args.environment

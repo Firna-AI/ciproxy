@@ -2,10 +2,10 @@
 # Run locally after registry authentication. This command writes an image.
 set -euo pipefail
 
-environment="${1:?Usage: mirror-release-image.sh staging|production [source|published]}"
+environment="${1:?Usage: mirror-release-image.sh main-preview|production [source|published]}"
 mode="${2:-source}"
 case "${environment}" in
-  staging) project_id=internal-498318 ;;
+  main-preview) project_id=internal-498318 ;;
   production) project_id=ciproxy ;;
   *) echo "Unknown environment: ${environment}" >&2; exit 1 ;;
 esac
