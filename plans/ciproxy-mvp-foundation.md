@@ -1059,11 +1059,14 @@ from the user.
       Evidence: `.context/ciproxy-mvp-foundation/spikes/cache/RESULT.md`.
       Passed: a miss with a save to both stores, a local hit, and a hit
       through GitHub.
-- [ ] Job facts: prove that the first report of the job-started hook gives
+- [x] Job facts: prove that the first report of the job-started hook gives
       a ref, an event, and a head repository that the job cannot change,
       before any code of the workflow runs. The user asked for this spike on
       4 November 2026, for item 32 of `plans/ciproxy-mvp.md`. Evidence:
       `.context/ciproxy-mvp-foundation/spikes/job-facts/RESULT.md`.
+      Passed on runner 2.338.2: 31 first reports matched the GitHub API, the
+      hook ran before every kind of workflow code, and no tamper attempt
+      changed a first report. A fork was not tested.
 - [x] Job hooks: attach a disk for one repository after the job starts,
       and start Docker on it.
       Evidence: `.context/ciproxy-mvp-foundation/spikes/job-hooks/RESULT.md`.

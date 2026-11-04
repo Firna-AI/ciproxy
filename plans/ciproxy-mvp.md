@@ -568,8 +568,7 @@ Answers of 4 November 2026:
   My call: the daily totals also stay 90 days, so the privacy policy states
   one limit.
 - Item 32: the user asked for a spike of option B, the first report of the
-  job-started hook, before the choice. Milestone 3 of the foundation plan
-  runs it.
+  job-started hook, before the choice. It passed on 4 November 2026.
 - Item 47, G: the guest in each sandbox tells the control plane when its
   runner exits, with a token for that sandbox only, and the control plane
   deletes the sandbox at once. A Boat TTL of 6 hours, or 2 hours on a free
@@ -620,7 +619,7 @@ Design calls on the questions of the docs work, my calls, 4 November 2026:
   share of the subscription price that matches its share of the starts of
   the pool. Reason: the shares add up to the real price.
 
-Items 32 and 48 wait for the user. Item 32 waits for its spike.
+Items 32 and 48 wait for the user. The spike of item 32 passed.
 
 The options check of the `plans` skill ran over these items on 4 November
 2026. Its reports are under `.context/ciproxy-mvp-foundation/`:
@@ -741,8 +740,7 @@ The options check of the `plans` skill ran over these items on 4 November
 
 ### 32. No allowed source gives the branch of a job
 
-**Status, 4 November 2026:** the user asked for a spike of option B
-before the choice.
+**Status, 4 November 2026:** the spike of option B passed.
 
 - **Severity:** High. **Effort:** Medium.
 - **Source:** Implementation.
@@ -755,18 +753,22 @@ before the choice.
   - **Job-started hook:** a script that the runner runs in the job VM
     before the first step of the job.
 - **Background:**
-  - Trusted write-back needs the ref, the event, and the head repository of
-    each job. A branch name is not enough, because a fork can use the
-    name of the default branch.
-  - These facts must come from a source that job code and its author
-    cannot change.
-  - The scale set messages carry `jobWorkflowRef` and `eventName`. That ref
-    is the ref of the workflow file, and a push to any branch can call a
-    reusable workflow at the default branch.
+  - Trusted write-back needs the ref and the event of each job from a
+    source that job code and its author cannot change. Only own machines
+    need it, because the GitHub cache applies its own scopes on Boat.
+  - The scale set messages carry the ref of the workflow file, which
+    differs from the ref of the job in a reusable workflow.
   - The App asks for "Self-hosted runners" and "Metadata" only. The site
     promises "Runner access only".
+  - The spike ran 31 real jobs on runner 2.338.2. The first report of the
+    hook matched the GitHub API in each case, also for reusable workflows,
+    `pull_request_target`, and environment overrides.
+  - The hook ran before job containers, services, action pre-steps, steps,
+    and composite actions. No tamper attempt changed a first report.
+  - A fork was not tested. A pull request never writes shared entries, so
+    this does not affect trusted write-back.
 - **Problem:** With its two permissions, ciproxy has no trusted source for
-  the ref and the event of a job.
+  the ref and the event of a job unless it takes option B.
 - **Impact if no action:** A pull request can poison the cache and the
   Docker disk on a machine.
 - **Root question:** How does ciproxy learn the ref and the event of each
@@ -776,8 +778,11 @@ before the choice.
     GitHub API. It also reads the logs of every run. The docs and three
     mockups drop "Runner access only". Effort: Medium.
   - **B.** Take the facts from the first report of the job-started hook,
-    which runs before any job code. A spike must prove the order of the
-    runner's setup steps. Effort: Medium.
+    which the agent receives outside the VM. Effort: Medium.
+    - The spike proved it for runner 2.338.2. The image pins the runner,
+      and a test repeats the proof before each runner update.
+    - A pull request event never writes shared entries, and unknown facts
+      give a private cache scope.
   - **C.** Trust no ref. The cache on a machine serves only what the
     GitHub cache finds for the job. This undoes answer B to item 18, and
     no Docker disk keeps its changes. Effort: Small.
@@ -791,17 +796,19 @@ before the choice.
     workflow file.
   - The OIDC token of the job, because each workflow must then grant
     `id-token: write`, and the cache needs no workflow edits.
-- **Wider fix:** A. It holds whatever the runner does in the VM, and B
-  depends on the order of the runner's setup steps.
-- **Previous examples:** The job hooks spike, with the "Actions" permission
-  of the spike App.
-- **Related:** Item 8: the Docker disk of its option E needs a trusted ref.
-  Item 18: option C undoes its answer.
-- **Recommendation:** A, changed from B by the options check. It needs no
-  proof, and a later move to B drops the permission with no owner
-  approval, while a move from B to A needs each owner to approve.
-- **Action:** ask the user, because A adds a permission that `security.md`
-  and the site rule out.
+- **Wider fix:** A. It holds whatever the runner does in the VM. B depends on
+  the order of the runner's setup steps, which its test checks before each
+  update.
+- **Previous examples:** The job hooks spike, and the job facts spike.
+- **Related:** Item 8: the Docker disks also need a trusted ref. Item 18:
+  option C undoes its answer.
+- **Recommendation:** B, changed from A after the spike. It keeps the App at
+  two permissions and the "Runner access only" promise, and a test repeats
+  the proof for each runner update. A stays the fallback if an update
+  breaks the order.
+- **Action:** ask the user, because the options trade a wider permission
+  against a dependency on the runner, and the user asked to decide after
+  the spike.
 
 ### 37. Data retention has no rule
 
