@@ -155,7 +155,9 @@ each label. The scale set spike confirms it.
 - [ ] Read the ref, the event, and the head repository of each run with
       the "Actions" read permission, and forward them to the agent, as item
       32 says.
-- [ ] Link each installation to the workspace of the Admin who started it.
+- [ ] Link each installation to the workspace of the Admin who started it,
+      by the `requester` of the `installation` event, because GitHub sends
+      an approving owner to the setup URL without the state of ciproxy.
       Keep one scale set for each organization and label.
 - [ ] Create and remove the just-in-time registrations.
 
@@ -696,6 +698,11 @@ docs agent, 4 November 2026:
 - A `pull_request_target` job counts as a pull request for trusted
   write-back. Reason: its job often runs code from the pull request.
 - `AGENTS.md` gets the copy rule "workspace, never team".
+- Changed after the options check of items 50 and 51: an owner of an
+  organization claims the Admin role only when the workspace has no Admin,
+  or when the person owns every organization of the workspace. Reason: an
+  owner of a later organization must not take over the workspace of
+  another. With one organization, the rule stays as it was.
 
 Design calls on the problems that the mockups of Milestone 1 showed, my
 calls and those of the mockups agent, 4 November 2026:
@@ -739,7 +746,8 @@ Design calls on the questions of the docs work, my calls, 4 November 2026:
   report. The savings report now covers the whole workspace, which pays
   one price.
 
-Items 50 and 51 wait for the user. Their options check runs.
+Items 50 and 51 wait for the user. Their options check ran, and its report
+is in `.context/ciproxy-mvp/options-check-50-51.md`.
 
 The options check of the `plans` skill ran over these items on 4 November
 2026. Its reports are under `.context/ciproxy-mvp-foundation/`:
@@ -1278,8 +1286,8 @@ organizations, close to G. See the answers above.
 
 ### 50. Adding a machine needs an unclear runner right
 
-**Status, 4 November 2026:** its options check runs. The item goes to
-the user after it.
+**Status, 4 November 2026:** its options check ran, and the item goes to
+the user.
 
 - **Severity:** High. **Effort:** Medium.
 - **Source:** Implementation, from the docs work of item 48.
@@ -1288,85 +1296,130 @@ the user after it.
   `docs/protocol/workspaces.md`, "Add an organization".
 - **Terms:**
   - **Runner right:** the GitHub right to manage the self-hosted runners of
-    one organization. Every owner has it.
+    one organization. Every owner has it, and so does GitHub's CI/CD admin
+    role.
 - **Background:**
   - Item 28 decided that adding a machine needs the Admin role and the
     runner right, because a machine gets the secrets of the jobs that it
     runs. It rejected the Admin role alone.
-  - A machine now runs the jobs of every organization of its workspace.
-  - An Admin can add an organization after the machines exist. When the
-    Admin is not an owner, an owner approves on GitHub, and GitHub does not
-    show that owner the workspace.
-- **Problem:** No rule says whose runner right adding a machine needs. A new
-  organization also sends its secrets to machines that nobody with its
-  runner right added.
+  - A machine now runs the jobs of every organization of its workspace, and
+    the Boat account of the workspace runs their overflow jobs.
+  - Secrets reach a machine or Boat by five paths: adding a machine,
+    connecting Boat, adding an organization, a re-join within 30 days of a
+    removal, and an install token made before an organization joined.
+  - When an owner approves an install that an Admin asked for, GitHub shows
+    that owner the App, not the workspace.
+- **Problem:** No rule says whose runner right each path needs, so the
+  secrets of one organization can reach machines that nobody with its
+  runner right accepted.
 - **Impact if no action:** A person with the runner right of one
-  organization can give a machine the job secrets of another organization.
-- **Root question:** When a machine serves several organizations, how do
-  only people whom GitHub trusts with the runners of each organization
-  give its secrets to a machine?
+  organization can give a machine or a Boat account the job secrets of
+  another organization.
+- **Root question:** How do the job secrets of each organization reach only
+  the machines and the Boat account that a person with its runner right
+  accepted?
 - **Options:**
   - **A.** Adding a machine needs the runner right of every organization of
     the workspace. Adding an organization needs the runner right of that
     organization. Effort: Medium.
   - **B.** Adding a machine needs the runner right of one organization, and
-    the App install of each organization counts as its consent. This
-    weakens the reason of item 28. Effort: Small.
+    the App install of each organization counts as its consent. Effort:
+    Small.
   - **C.** A machine runs only the jobs of the organizations whose runner
-    right the person who added it had. This undoes a design call of item
-    48. Effort: Large.
-- **Left out:** The Admin role alone, because item 28 rejected it.
-- **Wider fix:** A, because it covers both ways in which secrets reach a
-  machine.
+    right the person who added it had. Effort: Large.
+  - **D.** A person with the runner right of a new organization confirms its
+    join, on a page that names the workspace, its machines, and its Boat
+    account. Machines added later need the right of one organization only.
+    Effort: Medium.
+  - **E.** ciproxy records which organizations each machine and the Boat
+    account may serve, and the scaler starts a runner only where a record
+    exists. People with the runner right add the records. Effort: Large.
+  - **F.** A, plus the paths that A leaves open. Effort: Medium.
+    - Connecting or changing the Boat key needs the runner right of every
+      organization.
+    - When the person who started a join lacks the runner right of the new
+      organization, the join waits until a person with that right confirms
+      it, on a page that names the workspace, its machines, and its Boat
+      account.
+    - A re-join within 30 days follows the rule of an added organization.
+    - When an organization joins, ciproxy revokes the open install tokens.
+- **Left out:**
+  - The Admin role alone, because item 28 rejected it.
+  - A GitHub App for each workspace, so that GitHub names the workspace,
+    because GitHub allows at most 100 Apps for each account.
+  - VMs that hide a job from the host of its machine, because most customer
+    hardware lacks the processor support.
+  - A consent that ends when its person loses the right, because a machine
+    works until a person removes it.
+- **Wider fix:** E. It checks the one place where secrets go, the start of a
+  runner, so a new path needs no check of its own.
 - **Previous examples:** Item 28 of the foundation plan.
-- **Related:** Item 51: a join of an organization that keeps the App needs
-  the same check.
-- **Recommendation:** A. It keeps the reason of item 28 true for every
-  machine and every organization.
+- **Related:** Item 51: its options use the same runner right.
+- **Recommendation:** F, changed from A by the options check. It keeps the
+  reason of item 28 for every organization and closes the four paths that
+  A leaves open. E protects the codebase best, at a Large cost.
 - **Action:** ask the user, because item 28 covers one organization only,
   and each option adds a rule.
 
 ### 51. An organization with the App cannot join
 
-**Status, 4 November 2026:** its options check runs. The item goes to
-the user after it.
+**Status, 4 November 2026:** its options check ran, and the item goes to
+the user.
 
-- **Severity:** Medium. **Effort:** Medium.
+- **Severity:** Medium. **Effort:** Small.
 - **Source:** Implementation, from the docs work of item 48.
 - **Category:** Docs or spec.
-- **Location:** `docs/protocol/workspaces.md`, "Take an organization out",
-  and the mockup `screens/settings/organizations.tsx`.
+- **Location:** `docs/protocol/workspaces.md`, "Take an organization out"
+  and "Add an organization".
 - **Terms:**
-  - **Take-out:** an Admin takes an organization out of its workspace. The
-    App stays installed on it.
+  - **Take-out:** an Admin takes an organization out of its workspace.
 - **Background:**
   - "Add an organization" works through a new App install, and GitHub
     installs an App only once on each organization.
-  - After a take-out, the App stays until an owner removes it.
-  - The take-out dialog of the mockups says that an Admin can add the
-    organization again at any time.
-- **Problem:** No rule says how an organization that has the App joins a
-  workspace, or whether an Admin can take out the last organization.
-- **Impact if no action:** A taken-out organization cannot come back until
-  an owner removes the App, and a workspace can pay with no organization.
-- **Root question:** How does an organization leave one workspace and join
-  another while the App stays installed?
+  - Today a take-out leaves the App installed, so the organization cannot
+    join a workspace again until an owner removes the App.
+  - Any Admin can take out any organization. So an owner of a later
+    organization can take out the first one, and keep its machines and its
+    card.
+  - The App can remove its own install through the GitHub API.
+- **Problem:** No rule says how an organization leaves so that it can join
+  again, who may take it out, or what happens to the last organization.
+- **Impact if no action:** A taken-out organization cannot come back, and
+  one organization can push another out of the workspace that it paid for.
+- **Root question:** How does an organization leave a workspace so that it
+  can join one again later, who may make it leave, and what happens to the
+  last organization?
 - **Options:**
   - **A.** No join while the App stays: an owner removes the App, and an
     Admin adds the organization again. The last organization cannot be
-    taken out. The mockup text changes. Effort: Small.
+    taken out. Effort: Small.
   - **B.** "Add an organization" also lists the organizations that have the
-    App and no workspace, to an Admin who owns them. The last organization
-    cannot be taken out. Effort: Medium.
+    App and no workspace, to an Admin who owns them. Effort: Medium.
   - **C.** B, and an owner can also move an organization out of another
-    workspace. A workspace that loses its last organization this way ends
-    as at a removal. Effort: Large.
-- **Left out:** A join without an owner of the organization, because GitHub
-  decides who may install the App.
-- **Wider fix:** None, because this is one new rule.
+    workspace. Effort: Large.
+  - **D.** A take-out removes the App. Effort: Small.
+    - ciproxy deletes the scale sets of the organization, lets its running
+      jobs finish, and removes its own install through the GitHub API.
+    - The organization can join any workspace again as a new install.
+    - Only a person with the runner right of that organization can take it
+      out.
+    - The last organization cannot be taken out.
+  - **E.** A take-out only pauses the jobs of the organization, as a
+    suspension does, and an Admin can start them again. Effort: Small.
+  - **F.** An Admin can take out the last organization, which closes the
+    workspace as a removal of the last organization does. Effort: Small.
+- **Left out:**
+  - A join by a person without the runner right of the organization,
+    because that person could send its secrets to machines that GitHub does
+    not trust that person with.
+  - A join through the GitHub settings page of an install, because B is
+    better on every point.
+- **Wider fix:** D. Its rule is that ciproxy keeps no install that no
+  workspace serves.
 - **Previous examples:** None found.
-- **Related:** Item 50: options B and C need its runner right check.
-- **Recommendation:** B. A taken-out organization can come back, as the
-  mockup says, and an owner still decides.
-- **Action:** ask the user, because no requirement covers this, and the
-  mockup and the docs disagree.
+- **Related:** Item 50: D uses its runner right for the take-out.
+- **Recommendation:** D, changed from B by the options check. It removes the
+  cause, an install that no workspace serves, it needs no new join path,
+  and it stops one organization from pushing another out.
+- **Action:** ask the user, because no requirement covers the take-out, and
+  each option adds a rule.
