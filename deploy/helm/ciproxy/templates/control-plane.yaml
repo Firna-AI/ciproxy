@@ -58,7 +58,7 @@ spec:
             - name: SECRETS_DIRECTORY
               value: /var/run/secrets/ciproxy
             - name: CDN_SIGNING_KEY_NAME
-              value: {{ .Values.controlPlane.cdnSigningKeyName | quote }}
+              value: {{ include "ciproxy.cdnSigningKeyName" . | quote }}
             {{- with .Values.controlPlane.env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -125,5 +125,5 @@ spec:
             driver: secrets-store-gke.csi.k8s.io
             readOnly: true
             volumeAttributes:
-              secretProviderClass: control-plane
+              secretProviderClass: {{ include "ciproxy.secretProviderName" . }}
 {{- end }}

@@ -160,6 +160,16 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
       Reason: a running pod then keeps its key and name together.
       Evidence: `.context/ciproxy-mvp/secret-rotation-finding.md`.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+- [x] Bind each pod revision to a numbered signing key.
+      My call, 4 November 2026: derive names from versions and keep the
+      provider objects. Reason: replacements then keep matching keys.
+      Evidence: `.context/ciproxy-mvp/fix-round-1-report.md`.
+      Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+- [x] Match deploy identities with repository IDs and environment claims.
+      My call, 4 November 2026: avoid a subject format match and map each
+      condition claim. Reason: valid jobs then keep the same trust limits.
+      Evidence: `.context/ciproxy-mvp/fix-round-1-report.md`.
+      Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
 
 ## Milestone 6: GitHub App and scale sets
 

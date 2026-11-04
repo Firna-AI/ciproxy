@@ -60,11 +60,14 @@ resource "google_iam_workload_identity_pool_provider" "github" {
     "attribute.repository_id"       = "assertion.repository_id"
     "attribute.repository_owner_id" = "assertion.repository_owner_id"
     "attribute.ref"                 = "assertion.ref"
+    "attribute.environment"         = "assertion.environment"
+    "attribute.event_name"          = "assertion.event_name"
+    "attribute.workflow_ref"        = "assertion.workflow_ref"
   }
   attribute_condition = join(" && ", [
     "assertion.repository_id == '${local.repository_id}'",
     "assertion.repository_owner_id == '${local.owner_id}'",
-    "assertion.sub == 'repo:Firna-AI/ciproxy:environment:${var.environment}'",
+    "assertion.environment == '${var.environment}'",
     "assertion.event_name == 'push'",
     "assertion.workflow_ref.startsWith('${local.workflow}')",
     local.ref_condition,

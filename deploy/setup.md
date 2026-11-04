@@ -29,11 +29,19 @@ reach the zone and the alert channels of the foundation, but the scripts
 change only edge resources. It has no admin role for Cloud SQL, KMS, the
 network, or service accounts.
 
-The federation provider accepts only a `push` run of `deploy-<env>.yml`
-with the GitHub environment `<env>`, from the numeric repository and owner
-IDs of `Firna-AI/ciproxy`. Staging also needs the ref
-`refs/heads/calummoore/ci-proxy-load-balancer`, and production a ref that
-starts with `refs/tags/deploy-`.
+The federation provider maps the GitHub token claims `repository_id`,
+`repository_owner_id`, `environment`, `event_name`, `workflow_ref`, and
+`ref`. Its condition checks each claim directly:
+
+- The repository and owner IDs are the numeric IDs of `Firna-AI/ciproxy`.
+- The environment is `<env>`, and the event is `push`.
+- The workflow ref starts with
+  `Firna-AI/ciproxy/.github/workflows/deploy-<env>.yml@`.
+- Staging needs the ref `refs/heads/calummoore/ci-proxy-load-balancer`.
+  Production needs a ref that starts with `refs/tags/deploy-`.
+
+The condition does not use the subject claim, so the trust needs no change
+to the OIDC settings of the repository.
 
 Secret values never go into Terraform, GitHub variables, Git, or a command
 line. Give each one at a hidden prompt or in a private file outside Git.
@@ -160,7 +168,7 @@ gh variable set GCP_WIF_PROVIDER --repo=Firna-AI/ciproxy --env="$DEPLOY_ENV" --b
 | `GCP_WIF_PROVIDER` | The bootstrap output | Before the first deploy |
 | `GCP_DEPLOY_SERVICE_ACCOUNT` | The bootstrap output | Before the first deploy |
 | `RELEASE_SERVER_IMAGE_DIGEST` | The `sha256:` digest of step 3 | Before the first deploy |
-| `CDN_SIGNING_KEY_NAME` | The key name of step 8 | After step 8 |
+| `CDN_SIGNING_KEY_NAME` | The name that step 8 prints, such as `ciproxy-staging-images-v1` | After step 8 |
 | `PUBLIC_UPTIME_ENABLED` | `true` | Step 9 |
 | `CONTROL_PLANE_RUNTIME_READY` | Unset or `false`, until a real runtime exists | [Runtime](operations.md#turn-on-the-runtime) |
 | `CONTROL_PLANE_IMAGE` | An image name with `@sha256:` and its digest | [Runtime](operations.md#turn-on-the-runtime) |
@@ -194,20 +202,28 @@ apply. Until steps 2 to 6 are done, each staging run fails.
 ## 8. Register the CDN signing key
 
 The first deploy creates the backend bucket `ciproxy-<env>-images`. Make a
-random 128-bit key in a private directory, register it, and delete the file.
-Use a new key name each time, such as `ciproxy-staging-images-1`.
+random 128-bit key in a private directory, register it, and delete the file:
 
 ```sh
 KEY_DIR="$(mktemp -d)"
 head -c 16 /dev/urandom | base64 | tr +/ -_ > "$KEY_DIR/key"
-bash deploy/scripts/register-cdn-key.sh "$DEPLOY_ENV" KEY_NAME "$KEY_DIR/key"
+bash deploy/scripts/register-cdn-key.sh "$DEPLOY_ENV" "$KEY_DIR/key"
 rm -rf "$KEY_DIR"
 ```
 
-The script registers the key on the backend bucket. It lets the Cloud CDN
-cache-fill account read the image bucket, and adds the key to the secret
-`ciproxy-<env>-cdn-signing-key`. Set `CDN_SIGNING_KEY_NAME` to the key name.
-Only the future runtime signs URLs.
+The script first adds the key file as a new version of the secret
+`ciproxy-<env>-cdn-signing-key`. It reads only the number N of that
+version, and makes the key name `ciproxy-<env>-images-v<N>`. Then it
+registers the key under that name on the backend bucket, and lets the Cloud
+CDN cache-fill account read the image bucket. Only when each step succeeds,
+it prints the name, such as `CDN_SIGNING_KEY_NAME=ciproxy-staging-images-v1`
+for the first staging key. Set the GitHub variable `CDN_SIGNING_KEY_NAME` to
+that value.
+
+This one name selects both the key name and the secret version of the
+future runtime. When the script stops early, it prints no name, so no deploy
+uses that version. Then run it again with a new key. Only the future runtime
+signs URLs.
 
 ## 9. Turn on uptime alerts
 

@@ -30,17 +30,21 @@ gcloud storage buckets add-iam-policy-binding "gs://$IMAGE_BUCKET" \
 gcloud storage cp FILE "gs://$IMAGE_BUCKET/images/NAME"
 ```
 
-Then check the signed access. This example signs URLs with the current key
-in a private directory, and uses the staging host:
+Then check the signed access. Set `KEY_NAME` to the current value of
+`CDN_SIGNING_KEY_NAME`. The probe reads the exact secret version N that this
+name selects, never `latest`, into a private directory. The example uses
+the staging host:
 
 ```sh
+KEY_NAME=ciproxy-staging-images-v1
 KEY_DIR="$(mktemp -d)"
-gcloud secrets versions access latest --secret="ciproxy-$DEPLOY_ENV-cdn-signing-key" \
-  --project="$PROJECT_ID" > "$KEY_DIR/key"
+gcloud secrets versions access "${KEY_NAME##*-v}" \
+  --secret="ciproxy-$DEPLOY_ENV-cdn-signing-key" --project="$PROJECT_ID" \
+  --out-file="$KEY_DIR/key"
 URL="https://app.staging.ciproxy.dev/images/NAME"
-SIGNED="$(gcloud compute sign-url "$URL" --key-name=KEY_NAME --key-file="$KEY_DIR/key" \
+SIGNED="$(gcloud compute sign-url "$URL" --key-name="$KEY_NAME" --key-file="$KEY_DIR/key" \
   --expires-in=10m --format='value(signedUrl)')"
-EXPIRED="$(gcloud compute sign-url "$URL" --key-name=KEY_NAME --key-file="$KEY_DIR/key" \
+EXPIRED="$(gcloud compute sign-url "$URL" --key-name="$KEY_NAME" --key-file="$KEY_DIR/key" \
   --expires-in=1s --format='value(signedUrl)')"
 rm -rf "$KEY_DIR"
 sleep 10
@@ -96,16 +100,26 @@ does not meet this interface of the `deploy/helm/ciproxy` chart:
 | HTTP | Listen on `HTTP_BIND`, which is `0.0.0.0:8080`. |
 | Health | Answer `GET /api/health/ready` when ready, and `GET /api/health/live` while alive. The load balancer checks the ready path with the `app.` host. |
 | Database | Use `DATABASE_URL`: the Cloud SQL Auth Proxy beside it, on `127.0.0.1:5432`, with IAM login and no password. |
-| Settings | Read `PUBLIC_URL`, `IMAGE_URL_PREFIX`, `BOAT_KMS_KEY`, and `CDN_SIGNING_KEY_NAME`. |
-| Secrets | Read the files `github-app-private-key`, `github-webhook-secret`, `github-oauth-secret`, `stripe-secret-key`, `stripe-webhook-secret`, `session-key`, and `cdn-signing-key` in `SECRETS_DIRECTORY`, which is `/var/run/secrets/ciproxy`. |
+| Settings | Read `PUBLIC_URL`, `IMAGE_URL_PREFIX`, `BOAT_KMS_KEY`, and `CDN_SIGNING_KEY_NAME`. The chart sets `CDN_SIGNING_KEY_NAME` to `ciproxy-<env>-images-v<N>`. |
+| Secrets | Read the files `github-app-private-key`, `github-webhook-secret`, `github-oauth-secret`, `stripe-secret-key`, `stripe-webhook-secret`, `session-key`, and `cdn-signing-key` in `SECRETS_DIRECTORY`, which is `/var/run/secrets/ciproxy`. The `cdn-signing-key` file holds secret version N, which `CDN_SIGNING_KEY_NAME` names. Each other file holds the latest version when the pod starts. |
 | Process | Run as a non-root user with a read-only root file system, and stop within 300 seconds. |
+
+The GitHub variable `CDN_SIGNING_KEY_NAME` is the one selector of the CDN
+key. From it, the chart sets both the key name and the secret version N of
+each pod. A value that is missing, malformed, or of the other environment
+selects version 0. That version cannot exist, so the pod cannot mount its
+secrets and does not start. Helm then waits ten minutes, and the deploy
+fails. The chart has no earlier check. Old pods keep running, because the
+rollout keeps each old pod until a new pod is ready. While the runtime is
+off, the chart renders no control plane, so the selector has no effect.
 
 Then do these steps:
 
 1. Push the image to the repository `ciproxy-<env>-runtime`. The GKE nodes
    pull only from there.
-2. Add a version to each secret `ciproxy-<env>-<file>` of the table, from a
-   private file. The pod cannot mount a secret without a version. For
+2. Add a version to each of the six other secrets `ciproxy-<env>-<file>` of
+   the table, from a private file. Setup step 8 already gave the CDN key its
+   numbered version. The pod cannot mount a secret without a version. For
    example:
 
    ```sh
@@ -114,7 +128,8 @@ Then do these steps:
    ```
 
 3. [Prepare the database](#prepare-the-database), and run the migrations.
-4. Set `CONTROL_PLANE_IMAGE` and `CONTROL_PLANE_RUNTIME_READY=true` in the
+4. Check that `CDN_SIGNING_KEY_NAME` holds the name of setup step 8. Set
+   `CONTROL_PLANE_IMAGE` and `CONTROL_PLANE_RUNTIME_READY=true` in the
    GitHub environment. Then deploy, and check the rollout with
    `kubectl rollout status deployment/control-plane --namespace=ciproxy`.
 
@@ -140,21 +155,30 @@ Then revoke the old token on GitHub.
 
 ## Rotate the CDN signing key
 
-1. Register a new key with a new name, as in
-   [step 8 of the setup](setup.md#8-register-the-cdn-signing-key). The old
-   key stays valid on the backend bucket.
-2. Set `CDN_SIGNING_KEY_NAME` to the new name.
-3. Deploy. The new key name starts new runtime pods. Each pod mounts the
-   new key file and gets the new key name together, when it starts.
+1. Register a new key, as in
+   [step 8 of the setup](setup.md#8-register-the-cdn-signing-key). The
+   script adds the next secret version N and prints
+   `ciproxy-<env>-images-v<N>`. The old key stays valid on the backend
+   bucket.
+2. Set `CDN_SIGNING_KEY_NAME` to the printed name.
+3. Deploy. The new name gives the pods a new key name and a new provider
+   object, so the rollout replaces each pod. Each new pod mounts version N
+   and gets its name together. Each old pod keeps the old pair until it
+   stops.
 4. When the runtime runs, confirm its rollout with
    `kubectl rollout status deployment/control-plane --namespace=ciproxy`.
 5. Wait until each URL that the old key signed has expired.
-6. Delete the old key:
+6. Delete the old key name from the backend bucket:
 
 ```sh
 gcloud compute backend-buckets delete-signed-url-key "ciproxy-$DEPLOY_ENV-images" \
   --key-name=OLD_KEY_NAME --project="$PROJECT_ID"
 ```
+
+After that, do not roll the control plane back to a Helm revision or a
+ReplicaSet that uses the old name, because its URLs would fail. To run an
+older application image, set `CONTROL_PLANE_IMAGE` to that image, keep the
+current `CDN_SIGNING_KEY_NAME`, and deploy.
 
 ## Rotate a runtime secret
 
@@ -167,6 +191,36 @@ secret from a private file, restart the control plane:
 ```sh
 kubectl rollout restart deployment/control-plane --namespace=ciproxy
 kubectl rollout status deployment/control-plane --namespace=ciproxy
+```
+
+This rule does not apply to the CDN key. Its pods mount the exact version
+that `CDN_SIGNING_KEY_NAME` names, so use the CDN key rotation instead.
+
+## Keep the old provider objects
+
+With the runtime on, a `SecretProviderClass` lists the secret files of the
+pods. Its name is `control-plane-` and a hash of its full file list, which
+includes the CDN key version. The pod template names that exact object. So
+a new CDN key or a new secret file gives a new object, and replaces the
+pods.
+
+Helm keeps each older object, because of the annotation
+`helm.sh/resource-policy: keep`, and then no longer manages it. So old pods,
+old ReplicaSets, and a rollback to a kept Helm revision can still mount
+their files. These objects hold secret names and version numbers, not
+secret values.
+
+Do not change or delete an old object while a pod, a ReplicaSet, or a Helm
+revision can still use it. Kubernetes keeps up to 10 old ReplicaSets of the
+control plane, and the deploy keeps 5 Helm revisions. Before you delete an
+object, check that no ReplicaSet and no kept Helm revision names it:
+
+```sh
+kubectl get secretproviderclasses --namespace=ciproxy
+kubectl get replicasets --namespace=ciproxy -l app.kubernetes.io/name=ciproxy-control-plane \
+  -o jsonpath='{range .items[*]}{.spec.template.spec.volumes[?(@.name=="secrets")].csi.volumeAttributes.secretProviderClass}{"\n"}{end}'
+helm history ciproxy --namespace=ciproxy
+helm get manifest ciproxy --namespace=ciproxy --revision=REVISION | grep secretProviderClass:
 ```
 
 ## Change the foundation or the bootstrap

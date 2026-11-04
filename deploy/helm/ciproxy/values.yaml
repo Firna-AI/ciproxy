@@ -18,6 +18,7 @@ controlPlane:
   kmsKey: ""
   publicUrl: https://app.staging.ciproxy.dev
   imageUrlPrefix: https://app.staging.ciproxy.dev/images/
+  # Registration prints <prefix>-images-v<N>. N pins the mounted key version.
   cdnSigningKeyName: ""
   # Map of file names to Secret Manager resource IDs, without /versions/...
   secrets: {}

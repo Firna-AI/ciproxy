@@ -70,7 +70,7 @@ gives their roles.
 | `deploy/helm/ciproxy/` | The NEG Service of the release server, and the disabled control plane | Deploy workflow |
 | `deploy/scripts/bootstrap.sh` | Applies the seed, bootstrap, and foundation roots | Operator |
 | `deploy/scripts/mirror-release-image.sh` | Pushes the release server image and prints its digest | Operator |
-| `deploy/scripts/register-cdn-key.sh` | Registers a CDN signing key | Operator |
+| `deploy/scripts/register-cdn-key.sh` | Stores a CDN signing key as a numbered secret version, and registers it under the matching name | Operator |
 | `deploy/scripts/deploy.py` | The deploy command, with `deploy_support.py` and `publish_static.py` | Deploy workflow |
 | `deploy/scripts/install-helm.sh` | Installs Helm 4.3.1 after a checksum check | Deploy workflow or operator |
 | `deploy/tests/` | The regression test of the NEG zone wait | Offline check |
@@ -107,7 +107,9 @@ helm template cli-release-server deploy/helm/cli-release-server \
 helm template ciproxy deploy/helm/ciproxy
 helm template ciproxy deploy/helm/ciproxy --set controlPlane.enabled=true \
   --set controlPlane.image=example.invalid/control-plane:render-check \
-  --set 'allowedZones={europe-west1-b,europe-west1-c,europe-west1-d}'
+  --set 'allowedZones={europe-west1-b,europe-west1-c,europe-west1-d}' \
+  --set controlPlane.cdnSigningKeyName=ciproxy-staging-images-v1 \
+  --set controlPlane.secrets.cdn-signing-key=projects/internal-498318/secrets/ciproxy-staging-cdn-signing-key
 actionlint .github/workflows/deploy-staging.yml .github/workflows/deploy-production.yml
 for script in deploy/scripts/*.sh; do bash -n "$script"; done
 python3 -m py_compile deploy/scripts/*.py
@@ -118,6 +120,8 @@ python3 deploy/scripts/publish_static.py --directory=ts/site/dist \
   --bucket=dry-run --dry-run
 ```
 
+The default `ciproxy` render has no control plane. The runtime render uses
+the first staging CDN key, so its provider object lists secret version 1.
 The last command lists each object and its headers, and uploads nothing.
 
 ## Setup checklist
@@ -142,7 +146,7 @@ its commands and permissions.
 7. [Run the first deploy](setup.md#7-run-the-first-deploy): push to the
    staging branch, or push a `deploy-*` tag. This applies the edge.
 8. [Register the CDN signing key](setup.md#8-register-the-cdn-signing-key):
-   then set `CDN_SIGNING_KEY_NAME`.
+   then set `CDN_SIGNING_KEY_NAME` to the name that it prints.
 9. [Turn on uptime alerts](setup.md#9-turn-on-uptime-alerts): check DNS,
    the certificate, and the hosts. Then set `PUBLIC_UPTIME_ENABLED` to
    `true`, and deploy again.
