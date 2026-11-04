@@ -68,7 +68,10 @@ This milestone adds the states of the new items, and the legal pages.
 - [ ] Add the rename of a workspace, the banner of a Free workspace with
       more than one organization, the job page with the mixed cache source
       and with no entries restored, a `labels` key in `related-docs.ts`,
-      and the states that the answers to items 50 and 51 need.
+      the warning when an Admin gives the Admin role, no state without the
+      runner right after item 50, and the take-out of item 51: the dialog
+      says that the App is removed, and the last organization has no
+      take-out.
 
 ## Milestone 2: Documentation and protocol
 
@@ -78,7 +81,7 @@ Each answer goes into the protocol doc that it changes, and its `Open:`
 line goes.
 
 - [x] Write the disk rule of item 34, and each answer up to item 49.
-- [ ] Write the answers to items 50 and 51 into the docs.
+- [x] Write the answers to items 50 and 51 into the docs.
 - [x] Write the design calls of items 33 to 36 and 41 to 44 into the docs.
       Item 44 contradicts "Cache tiers" in `cache.md`, and item 44 wins.
 
@@ -97,8 +100,9 @@ WebSocket over HTTPS with JSON. Reason: machines open no inbound port.
 - [x] Add the vsock messages of `ciproxy-guest`. Use tagged enums, hide
       secrets from `Debug`, and snapshot each message with `insta`.
       Branch: `conductor/ciproxy-mvp-milestone-3-protocol-crate`.
-- [ ] Add the disk rule of "Slots", after Milestone 2 writes it into
+- [x] Add the disk rule of "Slots", after Milestone 2 writes it into
       `job-routing.md`.
+      Branch: `conductor/ciproxy-mvp-milestone-3-disk-rule`.
 
 ## Milestone 4: Store
 
@@ -124,16 +128,66 @@ Production runs in the GCP project `ciproxy`, and staging and tests in
 Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
 
 - [ ] Add Cloud SQL, Secret Manager, and Cloud KMS for the Boat keys.
+      Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [x] Define both projects, private SQL, secret containers, KMS, and IAM.
+        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [ ] User: apply both foundations with `deploy/scripts/bootstrap.sh`.
+        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
 - [ ] Run the control plane and the `futex-ai/cli-release` server on GKE
       Autopilot with Helm, as item 31 says.
+      Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [x] Define Autopilot, Helm charts, SQL proxy, and runtime identities.
+        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [ ] User: deploy Helm. Enable the control plane after its runtime exists.
+        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
 - [ ] Set the release server to `get.ciproxy.dev`, `ciproxy-agent`, the tag
       prefix `ciproxy-agent-v`, and a token for this repository only.
+      Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [x] Configure release hosts, binary, prefix, and an existing secret.
+        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [ ] User: prepare the pinned image and store the repository-only token.
+        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
 - [ ] Serve the site, the dashboard, and signed image URLs from a Cloud
       Storage bucket, through Cloud CDN and one HTTPS load balancer. My call:
       they are static files, so they need no runtime.
+      Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [x] Define public buckets, private images, CDN, routes, and publishing.
+        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [ ] User: deploy the edge and register a CDN signing key outside Terraform.
+        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
 - [ ] Create the DNS zone, which the user delegates.
+      Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [x] Define production and staging DNS zones and HTTPS records.
+        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [ ] User: apply the zones and delegate the domain and staging subzone.
+        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
 - [ ] Deploy staging on each push, and production on each `deploy-` tag. Add
       uptime alerts.
+      Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [x] Add both deploy workflows, restricted federation, and uptime alerts.
+        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [ ] User: set GitHub variables, deploy, check HTTPS, and enable alerts.
+        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+- [x] Keep runtime routing when Autopilot moves pods between zones.
+      My call, 4 November 2026: use Preview NEG preparation on GKE 1.36.4,
+      with matching pod placement. Reason: each zone then has a backend.
+      Evidence: `.context/ciproxy-mvp/zone-finding.md`.
+      Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+- [x] Keep signing key names and values together during secret rotation.
+      My call, 4 November 2026: require a pod rollout for secret updates.
+      Reason: a running pod then keeps its key and name together.
+      Evidence: `.context/ciproxy-mvp/secret-rotation-finding.md`.
+      Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+- [x] Bind each pod revision to a numbered signing key.
+      My call, 4 November 2026: derive names from versions and keep the
+      provider objects. Reason: replacements then keep matching keys.
+      Evidence: `.context/ciproxy-mvp/fix-round-1-report.md`.
+      Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+- [x] Match deploy identities with repository IDs and environment claims.
+      My call, 4 November 2026: avoid a subject format match and map each
+      condition claim. Reason: valid jobs then keep the same trust limits.
+      Evidence: `.context/ciproxy-mvp/fix-round-1-report.md`.
+      Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
 
 ## Milestone 6: GitHub App and scale sets
 
@@ -333,7 +387,9 @@ UTC RFC 3339, and IDs as strings. Reason: JavaScript loses 64-bit numbers.
 - [ ] Sign in with the GitHub App. Apply "Roles" in `security.md` for each
       workspace, with the access requests.
 - [ ] Add an organization to a workspace, take one out, and keep the
-      repository access of each one.
+      repository access of each one. A take-out deletes the scale sets and
+      removes the install through the GitHub API, as item 51 says. ciproxy
+      tells its own removal apart from a removal by an owner.
 - [ ] Give the build of the API with each response, for the reload of an
       old dashboard tab in Milestone 19.
 - [ ] Give the install command to an Admin.
@@ -619,6 +675,22 @@ Answers of 4 November 2026:
   trial, is the backstop. Rejected: the TTL alone, a request to Boat, AWS
   EC2 first, Boat's in-sandbox key, a renewed TTL, and a key that ciproxy
   creates. The user proposed this option.
+- Item 50, in the user's words: "reverse the previous decision and have a
+  new machine be addable with a admin/runner role inside of ciproxy for
+  any of the installed installations". So the Admin role alone adds a
+  machine, connects Boat, and adds an organization, in a workspace with
+  any number of organizations, and ciproxy checks no GitHub runner right.
+  This reverses item 28 of the foundation plan. When an Admin gives the
+  Admin role, the dialog says that it covers the runners of every
+  organization, and an organization that wants other people to control its
+  runners uses its own workspace. Rejected: options A to F. Later: a
+  narrower right for chosen organizations or repositories, kept in the
+  follow-up item `scoped-runner-rights.md`.
+- Item 51, D: a take-out removes the App from the organization. ciproxy
+  deletes its scale sets, lets its running jobs finish, and removes its own
+  install through the GitHub API. The organization can join any workspace
+  again as a new install, and the last organization cannot be taken out.
+  Rejected: options A, B, C, E, and F.
 - Item 49, C: the Boat backend lives in `futex-ai/sandbox`. Its trait
   `SandboxBackend` splits into capabilities, and `sandbox-boat` starts with
   the lifecycle, snapshots, processes, and files. The interface gains VM
@@ -784,8 +856,9 @@ Design calls on the questions of the docs work, my calls, 4 November 2026:
   report. The savings report now covers the whole workspace, which pays
   one price.
 
-Items 50 and 51 wait for the user. Their options check ran, and its report
-is in `.context/ciproxy-mvp/options-check-50-51.md`.
+No item of this plan waits for the user. The options check of items 50 and
+51 ran, and its report is in
+`.context/ciproxy-mvp/options-check-50-51.md`.
 
 The options check of the `plans` skill ran over these items on 4 November
 2026. Its reports are under `.context/ciproxy-mvp-foundation/`:
@@ -1324,8 +1397,8 @@ organizations, close to G. See the answers above.
 
 ### 50. Adding a machine needs an unclear runner right
 
-**Status, 4 November 2026:** its options check ran, and the item goes to
-the user.
+**Answer, 4 November 2026:** the Admin role alone, which reverses item 28.
+See the answers above.
 
 - **Severity:** High. **Effort:** Medium.
 - **Source:** Implementation, from the docs work of item 48.
@@ -1401,8 +1474,7 @@ the user.
 
 ### 51. An organization with the App cannot join
 
-**Status, 4 November 2026:** its options check ran, and the item goes to
-the user.
+**Answer, 4 November 2026:** D.
 
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Implementation, from the docs work of item 48.
@@ -1416,17 +1488,16 @@ the user.
     installs an App only once on each organization.
   - Today a take-out leaves the App installed, so the organization cannot
     join a workspace again until an owner removes the App.
-  - Any Admin can take out any organization. So an owner of a later
-    organization can take out the first one, and keep its machines and its
-    card.
   - The App can remove its own install through the GitHub API.
+  - The answer to item 50 makes the Admin role the trust to control the
+    runners of every organization of the workspace, so an Admin takes an
+    organization out.
 - **Problem:** No rule says how an organization leaves so that it can join
-  again, who may take it out, or what happens to the last organization.
-- **Impact if no action:** A taken-out organization cannot come back, and
-  one organization can push another out of the workspace that it paid for.
+  again, or what happens to the last organization.
+- **Impact if no action:** A taken-out organization cannot come back until
+  an owner removes the App, and a workspace can pay with no organization.
 - **Root question:** How does an organization leave a workspace so that it
-  can join one again later, who may make it leave, and what happens to the
-  last organization?
+  can join one again later, and what happens to the last organization?
 - **Options:**
   - **A.** No join while the App stays: an owner removes the App, and an
     Admin adds the organization again. The last organization cannot be
@@ -1435,29 +1506,23 @@ the user.
     App and no workspace, to an Admin who owns them. Effort: Medium.
   - **C.** B, and an owner can also move an organization out of another
     workspace. Effort: Large.
-  - **D.** A take-out removes the App. Effort: Small.
-    - ciproxy deletes the scale sets of the organization, lets its running
-      jobs finish, and removes its own install through the GitHub API.
-    - The organization can join any workspace again as a new install.
-    - Only a person with the runner right of that organization can take it
-      out.
-    - The last organization cannot be taken out.
+  - **D.** A take-out removes the App. ciproxy deletes the scale sets of the
+    organization, lets its running jobs finish, and removes its own
+    install. The organization can join any workspace again as a new
+    install. The last organization cannot be taken out. Effort: Small.
   - **E.** A take-out only pauses the jobs of the organization, as a
     suspension does, and an Admin can start them again. Effort: Small.
   - **F.** An Admin can take out the last organization, which closes the
     workspace as a removal of the last organization does. Effort: Small.
-- **Left out:**
-  - A join by a person without the runner right of the organization,
-    because that person could send its secrets to machines that GitHub does
-    not trust that person with.
-  - A join through the GitHub settings page of an install, because B is
-    better on every point.
+- **Left out:** A join through the GitHub settings page of an install,
+  because B is better on every point.
 - **Wider fix:** D. Its rule is that ciproxy keeps no install that no
   workspace serves.
 - **Previous examples:** None found.
-- **Related:** Item 50: D uses its runner right for the take-out.
+- **Related:** Item 50: an Admin acts for every organization of the
+  workspace.
 - **Recommendation:** D, changed from B by the options check. It removes the
-  cause, an install that no workspace serves, it needs no new join path,
-  and it stops one organization from pushing another out.
+  cause, an install that no workspace serves, and it needs no new join
+  path.
 - **Action:** ask the user, because no requirement covers the take-out, and
   each option adds a rule.

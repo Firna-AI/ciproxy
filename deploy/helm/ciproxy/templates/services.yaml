@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: release-neg
+  annotations:
+    cloud.google.com/neg: {{ dict "exposed_ports" (dict "8080" (dict "name" (printf "%s-release" .Values.prefix))) "zones" .Values.allowedZones | toJson | quote }}
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: cli-release-server
+    app.kubernetes.io/instance: {{ .Values.releaseServer.instance }}
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: control-plane
+  annotations:
+    iam.gke.io/gcp-service-account: {{ .Values.controlPlane.serviceAccount | quote }}
+{{- if .Values.controlPlane.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: control-plane-neg
+  annotations:
+    cloud.google.com/neg: {{ dict "exposed_ports" (dict "8080" (dict "name" (printf "%s-control" .Values.prefix))) "zones" .Values.allowedZones | toJson | quote }}
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: ciproxy-control-plane
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+{{- end }}

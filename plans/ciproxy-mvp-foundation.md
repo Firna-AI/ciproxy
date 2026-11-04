@@ -163,7 +163,9 @@ User decisions, 3 November 2026:
   Admin role and the GitHub runner right of the organization. The
   installer becomes the first Admin, and without the runner right that
   Admin can do everything except add machines. Rejected: the Admin role
-  alone, and the runner right for the first Admin only.
+  alone, and the runner right for the first Admin only. Reversed on
+  4 November 2026 by the answer to item 50 of `plans/ciproxy-mvp.md`: the
+  Admin role alone adds a machine.
 - Answers of 4 November 2026 to items 8, 9, 10, and 19:
   - Item 8, A: each tier keeps its six features. Each feature without a
     screen shows "Coming later" on every page that lists it: alerts by
@@ -299,10 +301,9 @@ agent, 4 November 2026:
 Design calls on the problems that the mockups of the answers showed, my
 calls, 4 November 2026:
 
-- An Admin without the GitHub runner right sees, on Setup, Add machine, and
-  Machines, who can add a machine: an owner, or a person with that right.
-  Reason: item 28 keeps the runner right, and an owner can claim the Admin
-  role.
+- Withdrawn on 4 November 2026 after the answer to item 50 of
+  `plans/ciproxy-mvp.md`: the state of an Admin without the GitHub runner
+  right, because the Admin role alone adds a machine now.
 - Admins learn of a request for access from a count on the Members tab.
   The access page names the Admins, so that the person can ask them.
   Reason: the MVP sends no email.
