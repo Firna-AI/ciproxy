@@ -12,7 +12,6 @@ use super::fixtures;
 fn workspace_identity_crosses_registration_reply_and_authenticated_hello() {
     let register = AgentMessage::Register {
         protocol_version: ProtocolVersion::CURRENT,
-        workspace_id: fixtures::workspace_id(),
         install_token: Secret::new(fixtures::INSTALL_TOKEN),
         report: fixtures::report(),
     };
@@ -28,8 +27,9 @@ fn workspace_identity_crosses_registration_reply_and_authenticated_hello() {
         credential: Secret::new(fixtures::CREDENTIAL),
         report: fixtures::report(),
     };
+    let registration = serde_json::to_value(register).unwrap();
+    assert_eq!(registration.get("workspace_id"), None);
     let messages = [
-        ("register", serde_json::to_value(register).unwrap()),
         ("registered", serde_json::to_value(registered).unwrap()),
         ("hello", serde_json::to_value(hello).unwrap()),
     ];

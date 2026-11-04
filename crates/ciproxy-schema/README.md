@@ -22,6 +22,8 @@ It owns its installation, repository access, scale sets, runners, and jobs.
 Composite foreign keys enforce both ownership boundaries.
 One workspace machine can serve all organizations in that workspace.
 The machine area also stores the last report of each disk.
+The gateway report table retains the full latest protocol report as JSONB.
+Its connection identifier fences reports from replaced agent connections.
 
 The schema stores token hashes and encrypted Boat keys.
 It stores job metadata and references to immutable runner placements.

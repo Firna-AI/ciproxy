@@ -28,3 +28,12 @@ diesel::table! {
         free_bytes -> Int8,
     }
 }
+
+diesel::table! {
+    machine_reports (workspace_id, machine_id) {
+        workspace_id -> Uuid,
+        machine_id -> Uuid,
+        session_id -> Uuid,
+        report -> Jsonb,
+    }
+}

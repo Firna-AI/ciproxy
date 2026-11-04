@@ -61,6 +61,14 @@ Its registrations include removed machines for historical cost dates.
 The savings read excludes jobs, start counts, and accounting cursors.
 Deleting a job or runner deletes its cursor and preserves its aggregates.
 The metering service supplies all calculation rules and retention dates.
+The gateway queries atomically register a machine and its hashed credential.
+GatewayStore reuses TokenStore authority lookup to derive the workspace from
+the install hash. Registration rechecks the token under its transaction
+locks before it inserts the machine.
+They retain the full typed protocol report with a connection identifier.
+Report writes preserve desired drain and warm settings.
+They reject replaced sessions and removed registrations.
+Gateway token issuance and registration serialize with workspace removal.
 
 ## Quick Start
 
@@ -107,6 +115,7 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 - [src/scale_sets.rs](src/scale_sets.rs) defines session lock ownership.
 - [src/jobs.rs](src/jobs.rs) defines metadata-only job records.
 - [src/metering](src/metering) defines metering facts and history APIs.
+- [src/gateway.rs](src/gateway.rs) defines atomic registration and reports.
 
 ### Related Docs
 

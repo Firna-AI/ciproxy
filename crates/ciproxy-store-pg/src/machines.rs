@@ -1,7 +1,5 @@
 //! Machine registration, report replacement, and revocation queries.
 
-use std::collections::BTreeMap;
-
 use chrono::{DateTime, Utc};
 use ciproxy_schema::machines::{machine_disks, machines};
 use ciproxy_schema::tokens::tokens;
@@ -12,91 +10,28 @@ use uuid::Uuid;
 
 use crate::connection::PgStore;
 use crate::error::{QueryResultExt, require_record};
+use crate::gateway_transaction::read_snapshot;
+use crate::machine_reads::load_machines;
 use crate::machine_removal::mark_removed;
+use crate::machine_rows::{DiskRow, MachineRow};
 
-#[derive(Queryable, Selectable, Insertable, AsChangeset)]
-#[diesel(table_name = machines, treat_none_as_null = true)]
-struct MachineRow {
-    id: Uuid,
-    workspace_id: Uuid,
-    hostname: String,
-    processor: String,
-    hardware_threads: i32,
-    memory_bytes: i64,
-    kvm_available: bool,
-    slots: i32,
-    warm_runners: i32,
-    draining: bool,
-    last_contact_at: Option<DateTime<Utc>>,
-    agent_version: String,
-    removed_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Queryable, Selectable, Insertable)]
-#[diesel(table_name = machine_disks)]
-struct DiskRow {
-    workspace_id: Uuid,
-    machine_id: Uuid,
-    path: String,
-    total_bytes: i64,
-    free_bytes: i64,
-}
-
-impl MachineRow {
-    fn from_record(workspace_id: Uuid, machine: &Machine) -> Self {
-        Self {
-            id: machine.id,
-            workspace_id,
-            hostname: machine.hostname.clone(),
-            processor: machine.processor.clone(),
-            hardware_threads: machine.hardware_threads,
-            memory_bytes: machine.memory_bytes,
-            kvm_available: machine.kvm_available,
-            slots: machine.slots,
-            warm_runners: machine.warm_runners,
-            draining: machine.draining,
-            last_contact_at: machine.last_contact_at,
-            agent_version: machine.agent_version.clone(),
-            removed_at: machine.removed_at,
-        }
-    }
-
-    fn into_record(self, disks: Vec<MachineDisk>) -> Machine {
-        Machine {
-            id: self.id,
-            hostname: self.hostname,
-            processor: self.processor,
-            hardware_threads: self.hardware_threads,
-            memory_bytes: self.memory_bytes,
-            kvm_available: self.kvm_available,
-            slots: self.slots,
-            warm_runners: self.warm_runners,
-            draining: self.draining,
-            last_contact_at: self.last_contact_at,
-            agent_version: self.agent_version,
-            disks,
-            removed_at: self.removed_at,
-        }
-    }
-}
-
-fn replace_disks(
+pub(crate) fn replace_disks(
     connection: &mut PgConnection,
     workspace_id: Uuid,
-    machine: &Machine,
+    machine_id: Uuid,
+    disks: &[MachineDisk],
 ) -> QueryResult<()> {
     diesel::delete(
         machine_disks::table
             .filter(machine_disks::workspace_id.eq(workspace_id))
-            .filter(machine_disks::machine_id.eq(machine.id)),
+            .filter(machine_disks::machine_id.eq(machine_id)),
     )
     .execute(connection)?;
-    let rows: Vec<DiskRow> = machine
-        .disks
+    let rows: Vec<DiskRow> = disks
         .iter()
         .map(|disk| DiskRow {
             workspace_id,
-            machine_id: machine.id,
+            machine_id,
             path: disk.path.clone(),
             total_bytes: disk.total_bytes,
             free_bytes: disk.free_bytes,
@@ -116,44 +51,15 @@ impl MachineStore for PgStore {
                 diesel::insert_into(machines::table)
                     .values(&row)
                     .execute(connection)?;
-                replace_disks(connection, workspace_id, machine)
+                replace_disks(connection, workspace_id, machine.id, &machine.disks)
             })
             .store()
     }
 
     fn machines(&self, workspace_id: Uuid) -> Result<Vec<Machine>> {
-        let mut connection = self.connection()?;
-        let rows = machines::table
-            .filter(machines::workspace_id.eq(workspace_id))
-            .filter(machines::removed_at.is_null())
-            .order(machines::id)
-            .select(MachineRow::as_select())
-            .load::<MachineRow>(&mut *connection)
-            .store()?;
-        let disks = machine_disks::table
-            .filter(machine_disks::workspace_id.eq(workspace_id))
-            .order(machine_disks::path)
-            .select(DiskRow::as_select())
-            .load::<DiskRow>(&mut *connection)
-            .store()?;
-        let mut by_machine: BTreeMap<Uuid, Vec<MachineDisk>> = BTreeMap::new();
-        for disk in disks {
-            by_machine
-                .entry(disk.machine_id)
-                .or_default()
-                .push(MachineDisk {
-                    path: disk.path,
-                    total_bytes: disk.total_bytes,
-                    free_bytes: disk.free_bytes,
-                });
-        }
-        Ok(rows
-            .into_iter()
-            .map(|row| {
-                let disks = by_machine.remove(&row.id).unwrap_or_default();
-                row.into_record(disks)
-            })
-            .collect())
+        read_snapshot(&mut *self.connection()?, |connection| {
+            load_machines(connection, workspace_id)
+        })
     }
 
     fn update_machine(&self, workspace_id: Uuid, machine: &Machine) -> Result<()> {
@@ -171,7 +77,7 @@ impl MachineStore for PgStore {
                 if count == 0 {
                     return Err(diesel::result::Error::NotFound);
                 }
-                replace_disks(connection, workspace_id, machine)
+                replace_disks(connection, workspace_id, machine.id, &machine.disks)
             })
             .store()
     }
@@ -185,18 +91,27 @@ impl MachineStore for PgStore {
         let count = self
             .connection()?
             .transaction(|connection| {
-                let count = mark_removed(connection, workspace_id, Some(machine_id), at)?;
-                diesel::update(
-                    tokens::table
-                        .filter(tokens::workspace_id.eq(workspace_id))
-                        .filter(tokens::machine_id.eq(machine_id))
-                        .filter(tokens::revoked_at.is_null()),
-                )
-                .set(tokens::revoked_at.eq(at))
-                .execute(connection)?;
-                QueryResult::Ok(count)
+                remove_machine_records(connection, workspace_id, machine_id, at)
             })
             .store()?;
         require_record(count)
     }
+}
+
+pub(crate) fn remove_machine_records(
+    connection: &mut PgConnection,
+    workspace_id: Uuid,
+    machine_id: Uuid,
+    at: DateTime<Utc>,
+) -> QueryResult<usize> {
+    let count = mark_removed(connection, workspace_id, Some(machine_id), at)?;
+    diesel::update(
+        tokens::table
+            .filter(tokens::workspace_id.eq(workspace_id))
+            .filter(tokens::machine_id.eq(machine_id))
+            .filter(tokens::revoked_at.is_null()),
+    )
+    .set(tokens::revoked_at.eq(at))
+    .execute(connection)?;
+    Ok(count)
 }

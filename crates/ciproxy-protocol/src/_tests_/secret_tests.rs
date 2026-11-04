@@ -28,7 +28,6 @@ fn nested_debug_hides_secrets_while_json_delivers_them() {
     assert_hidden(
         AgentMessage::Register {
             protocol_version: ProtocolVersion::CURRENT,
-            workspace_id: fixtures::workspace_id(),
             install_token: Secret::new(fixtures::INSTALL_TOKEN),
             report: fixtures::report(),
         },

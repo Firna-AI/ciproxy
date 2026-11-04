@@ -61,6 +61,20 @@ The metering service computes the rules and supplies the retention cutoff.
 Call its refresh before deleting retained job or organization data.
 The saved retention cutoff prevents stale refreshes from restoring old dates.
 
+Gateway queries lock the workspace before registration or token issuance.
+They serialize against last-App removal and reject a retained empty workspace.
+Registration inserts the machine, report, and hashed credential together.
+It holds the install-token row until that transaction commits.
+Independent token revocation waits for that registration before it returns.
+Registrations that validate the token after revocation cannot use it.
+The full last report uses JSONB and a connection identifier.
+Replaced sessions and removed machines cannot overwrite it.
+Desired drain and warm settings stay separate from observed report fields.
+Machine reads keep machine fields and disks in one committed view.
+Gateway snapshots include the full report from that same view.
+A shared read snapshot prevents mixed report generations.
+Contact writes contain only observed columns.
+
 PgStoreFactory connects and applies pending migrations.
 One connection serializes ordinary queries across clones of the store.
 Each scale set lock owns a separate PostgreSQL connection.
@@ -131,6 +145,10 @@ CI starts the database for the existing workspace test phase.
 - [src/metering](src/metering) stores cost histories and accounting deltas.
 - [src/metering/snapshot.rs](src/metering/snapshot.rs) configures shared
   metering read transactions.
+- [src/gateway.rs](src/gateway.rs) owns atomic gateway persistence.
+- [src/machine_reads.rs](src/machine_reads.rs) loads coherent machine views.
+- [src/machine_observation.rs](src/machine_observation.rs) limits contact
+  writes to observed columns.
 - [tests/store](tests/store) tests the public API against PostgreSQL.
 
 ### Related Docs
