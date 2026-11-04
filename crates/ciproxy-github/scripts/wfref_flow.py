@@ -57,9 +57,13 @@ def execute(app, args):
         observer = Observer(app, service, resources, args.capacity)
 
         def phase(items):
+            names = [item["name"] for item in items]
+            emit("workflow_ref_phase", cases=names, step="discover_runs")
             for item in items:
                 resources.wait(lambda: resources.discover(item), deadline, item["name"] + " run")
+            emit("workflow_ref_phase", cases=names, step="collect_assignments")
             observer.collect(items, deadline)
+            emit("workflow_ref_phase", cases=names, step="cancel_and_drain")
             observer.cancel_and_drain(items, deadline)
 
         if selected & {"branch-push", "tag-push"}:
@@ -79,6 +83,7 @@ def execute(app, args):
             resources.tag(tag_name, resources.default_sha)
             dispatch = resources.intent("workflow-dispatch-on-tag", "workflow_dispatch", args.dispatch_workflow,
                                         args.dispatch_jobs, [resources.default_sha], [tag_name])
+            emit("workflow_ref_phase", cases=[dispatch["name"]], step="dispatch_tag")
             resources.dispatch(args.dispatch_workflow, tag_name)
             phase([dispatch])
         if needs_pr:

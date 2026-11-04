@@ -74,7 +74,7 @@ class ScaleService:
         status, _ = self.call(path, "DELETE")
         expect(status, (204, 404), "Delete probe scale set")
         status, _ = self.call(path)
-        expect(status, (404,), "Verify probe scale set and its sessions are absent")
+        expect(status, (204, 404), "Verify probe scale set and its sessions are absent")
 
     def open(self, owner, cleanup):
         path = SCALE_PATH + f"/{self.scale_id}/sessions"

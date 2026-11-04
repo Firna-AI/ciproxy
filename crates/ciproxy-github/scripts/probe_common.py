@@ -182,7 +182,7 @@ class App:
 
 
 class Cleanup:
-    """Run every registered cleanup step, even after another step fails."""
+    """Run every cleanup step without replacing an earlier body exception."""
 
     def __init__(self):
         self.steps = []
@@ -202,9 +202,20 @@ class Cleanup:
             except BaseException as failure:
                 failed.append(label)
                 detail = str(failure) if isinstance(failure, ProbeError) else type(failure).__name__
-                emit("cleanup_failed", resource=label, detail=detail)
-        if failed:
+                emit("cleanup_failed", resource=label, detail=detail, **safe_error_context(failure))
+        if failed and kind is None:
             raise ProbeError("Cleanup incomplete for " + ", ".join(failed)) from None
+
+
+def safe_error_context(error):
+    result = {"error_type": type(error).__name__}
+    frame = error.__traceback__
+    while frame is not None and frame.tb_next is not None:
+        frame = frame.tb_next
+    if frame is not None:
+        result["location"] = {"file": Path(frame.tb_frame.f_code.co_filename).name,
+                              "function": frame.tb_frame.f_code.co_name, "line": frame.tb_lineno}
+    return result
 
 
 def entrypoint(main):
@@ -214,12 +225,13 @@ def entrypoint(main):
     signal.signal(signal.SIGTERM, interrupt)
     try:
         main()
-    except KeyboardInterrupt:
-        emit("failed", detail="Interrupted; registered cleanup steps ran")
+    except KeyboardInterrupt as error:
+        emit("failed", detail="Interrupted; registered cleanup steps ran", **safe_error_context(error))
         sys.exit(130)
     except ProbeError as error:
-        emit("failed", detail=str(error))
+        emit("failed", detail=str(error), **safe_error_context(error))
         sys.exit(1)
     except Exception as error:
-        emit("failed", detail=f"Unexpected local failure: {type(error).__name__}; details withheld")
+        emit("failed", detail=f"Unexpected local failure: {type(error).__name__}; details withheld",
+             **safe_error_context(error))
         sys.exit(1)
