@@ -28,11 +28,7 @@ CREATE TABLE jobs (
     FOREIGN KEY (workspace_id, organization_id, scale_set_id, label_id)
         REFERENCES scale_sets(workspace_id, organization_id, id, label_id),
     FOREIGN KEY (workspace_id, organization_id, runner_id, label_id, scale_set_id)
-        REFERENCES runners(workspace_id, organization_id, id, label_id, scale_set_id),
-    CHECK (
-        (cache_source IS NOT NULL AND cache_source IN ('machine', 'machine_and_github'))
-        OR (cache_restores IS NULL AND cache_restored_bytes IS NULL)
-    )
+        REFERENCES runners(workspace_id, organization_id, id, label_id, scale_set_id)
 );
 CREATE INDEX jobs_retention ON jobs (completed_at) WHERE state = 'completed';
 CREATE INDEX jobs_organization_queue ON jobs (organization_id, queued_at);

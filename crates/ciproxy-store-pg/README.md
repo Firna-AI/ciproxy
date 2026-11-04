@@ -33,6 +33,10 @@ They delete removed organization data after 30 days.
 The workspace purge deletes one empty workspace after its 30-day deadline.
 A reinstall clears that deadline without restoring execution credentials.
 It preserves labels, settings, and job resource history.
+Job rows map machine-handled entry and byte measurements as one optional bundle.
+The content source stays independent of measurement presence.
+Measured GitHub-only and zero-entry restores both round-trip.
+Direct GitHub use and fallback keep no measured counts.
 Global GitHub-ID reads return current and retained registrations.
 A partial unique index permits only one current registration.
 An install into another workspace creates a separate registration.
@@ -110,5 +114,6 @@ CI starts the database for the existing workspace test phase.
 - [Schema](../ciproxy-schema/README.md) owns migrations and table definitions.
 - [Architecture](../../docs/architecture.md) gives the hosted boundaries.
 - [Security](../../docs/protocol/security.md) defines isolation and custody.
+- [Cache](../../docs/protocol/cache.md#cache-tiers) defines handling and counts.
 - [App removal](../../docs/protocol/app-removal.md) defines removal.
 - [Workspaces](../../docs/protocol/workspaces.md) defines organization joins.

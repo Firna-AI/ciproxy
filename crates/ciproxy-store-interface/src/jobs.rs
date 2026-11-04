@@ -41,16 +41,25 @@ pub enum JobResult {
     StartupFailure,
 }
 
-/// The cache source shown by the job page.
+/// The content origins of restored cache entries.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, strum::EnumString, strum::IntoStaticStr)]
 #[strum(serialize_all = "snake_case")]
 pub enum CacheSource {
-    /// The machine cache handled the restores.
+    /// All restored contents came from this machine's cache.
     Machine,
-    /// The GitHub cache handled the restores.
+    /// All restored contents came from the GitHub cache.
     Github,
-    /// Both the machine cache and GitHub handled restores.
+    /// Restored contents came from both cache stores.
     MachineAndGithub,
+}
+
+/// Entry and byte totals measured when the machine cache handled restores.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct MachineHandledCacheCounts {
+    /// Total entries restored from all content origins.
+    pub restored_entries: i64,
+    /// Total bytes restored from all content origins.
+    pub restored_bytes: i64,
 }
 
 /// Dashboard metadata from trusted control-plane inputs.
@@ -91,12 +100,13 @@ pub struct Job {
     pub completed_at: Option<DateTime<Utc>>,
     /// The stored explanation of runner placement.
     pub routing_reason: Option<String>,
-    /// The reported cache source.
+    /// Restored content origins, absent for zero entries or unknown metadata.
     pub cache_source: Option<CacheSource>,
-    /// Machine-cache restore count, absent when not measured there.
-    pub cache_restores: Option<i64>,
-    /// Bytes restored through the machine cache.
-    pub cache_restored_bytes: Option<i64>,
+    /// Machine-handled measurements, independent of restored content origins.
+    ///
+    /// Some includes GitHub-only fetches and zero-entry restores.
+    /// Direct GitHub use and fallback have no measured count bundle.
+    pub machine_handled_cache_counts: Option<MachineHandledCacheCounts>,
 }
 
 /// Queries for durable GitHub job messages and retained history.

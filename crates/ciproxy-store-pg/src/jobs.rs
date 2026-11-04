@@ -3,7 +3,7 @@
 use chrono::{DateTime, Duration, Utc};
 use ciproxy_schema::jobs::jobs;
 use ciproxy_store_interface::error::{Result, ResultExt};
-use ciproxy_store_interface::jobs::{Job, JobStore};
+use ciproxy_store_interface::jobs::{Job, JobStore, MachineHandledCacheCounts};
 use diesel::prelude::*;
 use uuid::Uuid;
 
@@ -38,6 +38,10 @@ struct JobRow {
 impl JobRow {
     fn from_record(workspace_id: Uuid, job: &Job) -> Self {
         let state: &str = job.state.into();
+        let (cache_restores, cache_restored_bytes) = match job.machine_handled_cache_counts {
+            Some(counts) => (Some(counts.restored_entries), Some(counts.restored_bytes)),
+            None => (None, None),
+        };
         Self {
             id: job.id,
             workspace_id,
@@ -63,8 +67,8 @@ impl JobRow {
                 let value: &str = source.into();
                 value.to_owned()
             }),
-            cache_restores: job.cache_restores,
-            cache_restored_bytes: job.cache_restored_bytes,
+            cache_restores,
+            cache_restored_bytes,
         }
     }
 
@@ -93,8 +97,12 @@ impl JobRow {
                 .cache_source
                 .map(|value| value.parse().internal())
                 .transpose()?,
-            cache_restores: self.cache_restores,
-            cache_restored_bytes: self.cache_restored_bytes,
+            machine_handled_cache_counts: self.cache_restores.zip(self.cache_restored_bytes).map(
+                |(restored_entries, restored_bytes)| MachineHandledCacheCounts {
+                    restored_entries,
+                    restored_bytes,
+                },
+            ),
         })
     }
 }

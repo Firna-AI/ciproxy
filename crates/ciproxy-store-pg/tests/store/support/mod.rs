@@ -203,7 +203,6 @@ pub(super) fn job(label: &Label, scale_set: &ScaleSet) -> Job {
         completed_at: None,
         routing_reason: None,
         cache_source: None,
-        cache_restores: None,
-        cache_restored_bytes: None,
+        machine_handled_cache_counts: None,
     }
 }

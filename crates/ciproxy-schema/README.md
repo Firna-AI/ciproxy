@@ -25,6 +25,8 @@ The machine area also stores the last report of each disk.
 
 The schema stores token hashes and encrypted Boat keys.
 It stores job metadata and references to immutable runner placements.
+Cache measurements and restored content origins remain independent.
+The schema accepts measured GitHub-only fetches and zero-entry restores.
 It has no job-content, job-log, plaintext-token, or plaintext-key field.
 Later milestones own members, roles, billing, and metering.
 Workspace deletion cascades through its retained records after 30 days.
@@ -76,6 +78,7 @@ Each migration has an up.sql and a down.sql.
 
 - [Architecture](../../docs/architecture.md) gives the hosted boundaries.
 - [Security](../../docs/protocol/security.md) defines isolation and custody.
+- [Cache](../../docs/protocol/cache.md#cache-tiers) defines handling and counts.
 - [Workspaces](../../docs/protocol/workspaces.md) defines organization joins.
 - [Labels](../../docs/protocol/labels.md) defines labels.
 - [App removal](../../docs/protocol/app-removal.md) defines retention.

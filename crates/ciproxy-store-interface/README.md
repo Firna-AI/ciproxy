@@ -31,6 +31,10 @@ KMS encryption and token hashing belong to callers.
 The store preserves runner placements and actual VM sizes for job history.
 It accepts optional ref metadata without choosing its provenance.
 The later job-facts service must supply trusted GitHub metadata.
+Job cache metadata separates content origin from machine-handled measurements.
+One optional count bundle holds restored entries and bytes together.
+Measured GitHub-only fetches and zero-entry restores keep that bundle.
+Direct GitHub use and fallback have no measured count bundle.
 Organization removal keeps shared resources while another App remains.
 Removal of the last App revokes machine and install credentials.
 Live sandbox-end tokens and retired Boat keys stay available for cleanup.
@@ -93,6 +97,7 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 
 - [Architecture](../../docs/architecture.md) gives the service boundaries.
 - [Security](../../docs/protocol/security.md) defines isolation and custody.
+- [Cache](../../docs/protocol/cache.md#cache-tiers) defines handling and counts.
 - [Agent](../../docs/protocol/agent.md) defines credentials and removal.
 - [Overflow](../../docs/protocol/overflow.md) defines Boat key rotation.
 - [App removal](../../docs/protocol/app-removal.md) defines retention.

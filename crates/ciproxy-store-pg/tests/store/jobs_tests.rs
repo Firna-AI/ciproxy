@@ -1,8 +1,7 @@
 //! Job message durability, historical resource snapshots, and retention.
 
 use chrono::Duration;
-use ciproxy_store_interface::error::Error;
-use ciproxy_store_interface::jobs::{CacheSource, JobResult, JobState};
+use ciproxy_store_interface::jobs::{CacheSource, JobResult, JobState, MachineHandledCacheCounts};
 use ciproxy_store_interface::runners::RunnerPlace;
 use ciproxy_store_interface::vm_size::VmSize;
 use uuid::Uuid;
@@ -36,8 +35,10 @@ fn job_messages_deduplicate_and_finished_metadata_expires_after_ninety_days() {
     completed.completed_at = Some(at() + Duration::minutes(2));
     completed.routing_reason = Some("A warm runner was ready.".to_owned());
     completed.cache_source = Some(CacheSource::MachineAndGithub);
-    completed.cache_restores = Some(3);
-    completed.cache_restored_bytes = Some(2_100_000_000);
+    completed.machine_handled_cache_counts = Some(MachineHandledCacheCounts {
+        restored_entries: 3,
+        restored_bytes: 2_100_000_000,
+    });
     store.update_job(owner.id, &completed).unwrap();
     let foreign_workspace = database.workspace();
     let foreign_organization = database.organization(&foreign_workspace);
@@ -67,16 +68,37 @@ fn job_messages_deduplicate_and_finished_metadata_expires_after_ninety_days() {
         store.runners(owner.id, organization.id).unwrap(),
         vec![runner]
     );
-    let mut unmeasured = completed.clone();
-    unmeasured.cache_source = Some(CacheSource::Github);
-    assert!(matches!(
-        store.update_job(owner.id, &unmeasured),
-        Err(Error::InvalidValue)
-    ));
-    assert_eq!(
-        store.jobs(owner.id, organization.id).unwrap(),
-        vec![completed.clone()]
-    );
+    let cache_cases = [
+        (
+            "github measured",
+            Some(CacheSource::Github),
+            Some(MachineHandledCacheCounts {
+                restored_entries: 3,
+                restored_bytes: 2_100_000_000,
+            }),
+        ),
+        (
+            "zero measured",
+            None,
+            Some(MachineHandledCacheCounts {
+                restored_entries: 0,
+                restored_bytes: 0,
+            }),
+        ),
+        ("github direct", Some(CacheSource::Github), None),
+    ];
+    for (scenario, source, counts) in cache_cases {
+        let mut observed = completed.clone();
+        observed.cache_source = source;
+        observed.machine_handled_cache_counts = counts;
+        let result = store.update_job(owner.id, &observed);
+        assert!(matches!(result, Ok(())), "{scenario}: {result:?}");
+        assert_eq!(
+            store.jobs(owner.id, organization.id).unwrap(),
+            vec![observed],
+            "{scenario}"
+        );
+    }
     let mut waiting = job(&label, &scale_set);
     waiting.github_id = 43;
     store.insert_job(owner.id, &waiting).unwrap();
