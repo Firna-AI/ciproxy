@@ -54,7 +54,7 @@ impl BillingService {
         if session.event_applied(&event.id).internal()? {
             return Ok(EventOutcome::Duplicate);
         }
-        let record = session.record().internal()?;
+        let mut record = session.record().internal()?;
         if checkout {
             let current = self.stripe.checkout_session(&target)?;
             match self.apply_checkout(&mut *session, &record, &current, Some(&event.id)) {
@@ -87,6 +87,9 @@ impl BillingService {
                     .failed_at
                     .map_or(failure_at, |old| old.max(failure_at)),
             );
+        }
+        if let Some(command) = record.command.as_mut() {
+            self.capture_pending_expiry(&mut *session, &state, command, &current)?;
         }
         let complete = record
             .command

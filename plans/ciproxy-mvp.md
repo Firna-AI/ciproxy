@@ -473,6 +473,9 @@ the event both read the session, so the tier changes once.
       Branch: `conductor/ciproxy-mvp-milestone-17-billing`.
 - [x] Apply the verified billing review fixes and rerun the complete gate.
       Branch: `conductor/ciproxy-mvp-milestone-17-billing`.
+- [x] Preserve pending upgrade expiry across billing reconciliation and
+      recover abandoned changes after the Stripe pending window.
+      Branch: `conductor/ciproxy-mvp-milestone-17-billing`.
 - [ ] Test each state with recorded events and the Stripe test mode.
       The fixed event fixtures and fake HTTP Stripe tests pass locally.
       Orchestrator: run the

@@ -29,7 +29,8 @@ They apply confirmed coverage through the same reconciliation method.
 Paid changes preserve the Stripe period and prorate the difference.
 Upgrades invoice at once with pending_if_incomplete.
 The old tier stays until payment succeeds.
-A hosted invoice URL handles failed payment or bank confirmation.
+An open subscription-update invoice supplies its upgrade payment page.
+A renewal invoice never supplies that page.
 Confirmed expiry releases the old change for a fresh attempt.
 Add-on changes apply at once with create_prorations.
 The portal permits invoices, card changes, and period-end cancellation.
@@ -40,7 +41,16 @@ Each command holds a dedicated PostgreSQL billing session lock.
 The command persists before the Stripe request.
 A retry reads current items before it replays a paid change.
 A definite rejected mutation releases its command for corrected input.
-Failed reads, HTTP 409 or 429, server errors, and network errors keep it.
+Failed reads, HTTP 409 or 429, server errors, and network errors retain the
+command while its outcome is unknown.
+Every reconciliation path saves an observed pending expiry for a Change.
+After a fresh read shows no pending update, an applied or ended result wins.
+An observed expiry or voided upgrade invoice can release the Change sooner.
+Otherwise, that read releases it 24 hours after the command started.
+This fallback applies to Change only.
+It never releases Checkout, Cancel, or a still-pending Stripe update.
+A pending change without matching saved input keeps PaymentConfirming.
+It creates no new command and offers no unrelated payment page.
 Current object reads also prevent delayed events from restoring old state.
 Shared completion rules release paid commands when a subscription ends.
 A late end event preserves a new Checkout command.
@@ -194,6 +204,16 @@ The renewal invoice and failure date must still appear.
 Pay the renewal and check that its banner clears.
 End a subscription with a paid command still pending.
 Check that a new Checkout opens and a late old end event preserves it.
+Lose an unpaid upgrade reply close to renewal.
+Let a webhook observe its expiry, then let renewal replace the latest invoice.
+Check that a different selection works after the observed expiry.
+Repeat with no observation during the pending window.
+A current read must keep it before 24 hours and release it at 24 hours.
+A still-pending update must stay protected after that limit.
+An applied selection must keep its paid result after that limit.
+An old-selection retry must never offer the renewal invoice as an upgrade page.
+Check that Move to Free leaves no payment page for an unrelated new selection
+while Stripe still holds the old pending update.
 Check signed recordings and repeat deliveries through the listener.
 These browser and account steps need real Stripe test-mode credentials.
 An offline test result does not prove that they passed.

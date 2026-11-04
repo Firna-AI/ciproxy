@@ -126,6 +126,9 @@ impl BillingService {
             return Err(Error::Ownership);
         }
         let state = self.confirmed_state(&record.state, &subscription, None)?;
+        if let Some(mut command) = record.command.clone() {
+            self.capture_pending_expiry(session, &state, &mut command, &subscription)?;
+        }
         let changed = if state != record.state {
             Some(&state)
         } else {

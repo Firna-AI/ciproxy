@@ -1,7 +1,8 @@
 //! Shared completion rules for durable paid commands and rejected mutations.
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use ciproxy_store_interface::billing::commands::{BillingCommand, CommandKind};
+use ciproxy_store_interface::billing::state::BillingState;
 use ciproxy_store_interface::billing::store::BillingSession;
 
 use crate::error::{Error, Result, ResultExt};
@@ -25,6 +26,7 @@ impl Completion {
     }
 }
 
+/// Classify only a fresh Stripe read while the billing session is held.
 pub(super) fn classify(
     command: &BillingCommand,
     current: &Subscription,
@@ -45,6 +47,7 @@ pub(super) fn classify(
                 return Completion::Applied;
             }
             let expired = command.payment_expires_at.is_some_and(|at| at <= now)
+                || now.signed_duration_since(command.started_at) >= Duration::hours(24)
                 || current.latest_invoice.as_ref().is_some_and(|invoice| {
                     invoice.billing_reason == BillingReason::SubscriptionUpdate
                         && invoice.created >= command.started_at.timestamp()
@@ -72,6 +75,33 @@ pub(super) fn classify(
 }
 
 impl BillingService {
+    pub(super) fn capture_pending_expiry(
+        &self,
+        session: &mut dyn BillingSession,
+        state: &BillingState,
+        command: &mut BillingCommand,
+        current: &Subscription,
+    ) -> Result<()> {
+        match command.kind {
+            CommandKind::Change { .. } => {}
+            CommandKind::Checkout { .. } | CommandKind::Cancel => return Ok(()),
+        }
+        if state.subscription_id.as_deref() != Some(current.id.as_str())
+            || current.metadata.workspace_id != Some(state.workspace_id)
+        {
+            return Ok(());
+        }
+        let Some(pending) = &current.pending_update else {
+            return Ok(());
+        };
+        let expiry = DateTime::from_timestamp(pending.expires_at, 0).ok_or(Error::StripeState)?;
+        if command.payment_expires_at != Some(expiry) {
+            command.payment_expires_at = Some(expiry);
+            session.save_command(command).internal()?;
+        }
+        Ok(())
+    }
+
     pub(super) fn release_rejected(
         &self,
         session: &mut dyn BillingSession,

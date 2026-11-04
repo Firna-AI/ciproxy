@@ -1,6 +1,5 @@
 //! Paid item changes and durable period-end cancellation.
 
-use chrono::DateTime;
 use ciproxy_store_interface::billing::commands::{BillingCommand, CommandKind};
 use ciproxy_store_interface::billing::state::{Selection, Tier};
 use ciproxy_store_interface::billing::store::BillingSession;
@@ -8,6 +7,7 @@ use uuid::Uuid;
 
 use crate::access::BillingAccess;
 use crate::error::{Error, Result, ResultExt};
+use crate::stripe::wire::invoice::{BillingReason, InvoiceStatus};
 
 use super::completion::{Completion, classify};
 use super::runtime::BillingService;
@@ -21,12 +21,15 @@ impl BillingService {
             return Err(Error::PaidTierRequired);
         }
         let mut session = self.lock(workspace)?;
-        let record = session.record().internal()?;
+        let mut record = session.record().internal()?;
         if record.state.tier == Tier::Free {
             return Err(Error::SubscriptionRequired);
         }
         let current = self.current_subscription(&record.state)?;
         let baseline = self.confirmed_state(&record.state, &current, None)?;
+        if let Some(command) = record.command.as_mut() {
+            self.capture_pending_expiry(&mut *session, &baseline, command, &current)?;
+        }
         let progress = record
             .command
             .as_ref()
@@ -65,6 +68,9 @@ impl BillingService {
             }
             Some(_) => return Err(Error::PaymentConfirming),
             None => {
+                if current.pending_update.is_some() {
+                    return Err(Error::PaymentConfirming);
+                }
                 if selection(&current)? == wanted {
                     return Err(Error::CurrentTier);
                 }
@@ -92,11 +98,8 @@ impl BillingService {
                 }
             }
         };
-        if let Some(pending) = &current.pending_update {
-            command.payment_expires_at = DateTime::from_timestamp(pending.expires_at, 0);
-            session.save_command(&command).internal()?;
-        }
         let state = self.confirmed_state(&baseline, &current, None)?;
+        self.capture_pending_expiry(&mut *session, &state, &mut command, &current)?;
         let progress = classify(&command, &current, self.clock.now());
         session
             .commit(
@@ -116,6 +119,10 @@ impl BillingService {
         Ok(ChangeOutcome::PaymentRequired {
             payment_url: current
                 .latest_invoice
+                .filter(|invoice| {
+                    invoice.billing_reason == BillingReason::SubscriptionUpdate
+                        && invoice.status == InvoiceStatus::Open
+                })
                 .and_then(|invoice| invoice.hosted_invoice_url),
         })
     }
@@ -152,9 +159,12 @@ impl BillingService {
     }
 
     fn cancel_subscription(&self, session: &mut dyn BillingSession, removal: bool) -> Result<()> {
-        let record = session.record().internal()?;
+        let mut record = session.record().internal()?;
         let current = self.current_subscription(&record.state)?;
         let baseline = self.confirmed_state(&record.state, &current, None)?;
+        if let Some(command) = record.command.as_mut() {
+            self.capture_pending_expiry(session, &baseline, command, &current)?;
+        }
         let completed = record
             .command
             .as_ref()
@@ -171,7 +181,7 @@ impl BillingService {
         if terminal(&current) || current.cancel_at_period_end {
             return Ok(());
         }
-        let command = match record.command.as_ref().filter(|_| !completed) {
+        let mut command = match record.command.as_ref().filter(|_| !completed) {
             Some(command) if matches!(command.kind, CommandKind::Cancel) => command.clone(),
             Some(command) if matches!(command.kind, CommandKind::Checkout { .. }) => {
                 return Err(Error::PaymentConfirming);
@@ -195,6 +205,7 @@ impl BillingService {
             }
         };
         let state = self.confirmed_state(&baseline, &current, None)?;
+        self.capture_pending_expiry(session, &state, &mut command, &current)?;
         session
             .commit(
                 Some(&state),
