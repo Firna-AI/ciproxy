@@ -9,7 +9,7 @@ run_previous_hook() {
   case "$cache_previous_hook" in
     *.sh)
       if command -v bash >/dev/null 2>&1; then
-        bash --noprofile --norc -e -o pipefail "$cache_previous_hook"
+        bash -e "$cache_previous_hook"
       else
         sh -e "$cache_previous_hook"
       fi
@@ -19,7 +19,7 @@ run_previous_hook() {
       if command -v pwsh >/dev/null 2>&1; then
         cache_powershell=pwsh
       fi
-      "$cache_powershell" -command '$ErrorActionPreference = "stop"; . $env:CIPROXY_PREVIOUS_JOB_STARTED_HOOK; if (Test-Path -LiteralPath variable:\LASTEXITCODE) { exit $LASTEXITCODE }'
+      "$cache_powershell" -command '. $env:CIPROXY_PREVIOUS_JOB_STARTED_HOOK'
       ;;
     *.js)
       local cache_node_version="${ACTIONS_RUNNER_FORCED_INTERNAL_NODE_VERSION:-node24}"

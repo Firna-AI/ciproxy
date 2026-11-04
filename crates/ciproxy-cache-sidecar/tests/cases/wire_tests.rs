@@ -1,8 +1,10 @@
 //! Protect the runner's two cache protocols and observed transfer counts.
 
 use ciproxy_protocol::cache::{CacheRestoreCounts, JobCacheUsage};
+use ciproxy_protocol::identifiers::RepositoryId;
 use serde_json::json;
 
+use crate::support::uploads::chunked;
 use crate::support::{Fixture, facts};
 
 #[tokio::test]
@@ -109,6 +111,7 @@ async fn v2_commits_ordered_blocks_and_counts_completed_restores_once() {
             .unwrap(),
         "abc"
     );
+    fixture.options(json!({"chunked_download":true})).await;
     fixture.seed("remote", "v1", "cmVtb3Rl").await;
     assert_eq!(job.contents("remote", "v1", &[]).await, "remote");
     let report = fixture.report().await;
@@ -152,6 +155,10 @@ async fn v2_commits_ordered_blocks_and_counts_completed_restores_once() {
 #[tokio::test]
 async fn v1_streams_ranged_patches_and_keeps_retained_entries() {
     let fixture = Fixture::new().await;
+    let mut other_repository = facts("refs/heads/main");
+    other_repository.repository.id = RepositoryId("99".into());
+    let retained = fixture.job("legacy-retained", other_repository).await;
+    retained.save("unrelated", "v1", "keep").await;
     let job = fixture.job("wire-v1", facts("refs/heads/main")).await;
     let response = job
         .client
@@ -168,7 +175,7 @@ async fn v1_streams_ranged_patches_and_keeps_retained_entries() {
             job.client
                 .patch(&upload)
                 .header("content-range", range)
-                .body(data)
+                .body(chunked(data))
                 .send()
                 .await
                 .unwrap()
@@ -187,6 +194,7 @@ async fn v1_streams_ranged_patches_and_keeps_retained_entries() {
         204
     );
     fixture.delete_upstream().await;
+    assert_eq!(retained.contents("unrelated", "v1", &[]).await, "keep");
     let response: serde_json::Value = job
         .client
         .get(format!(
@@ -212,16 +220,26 @@ async fn v1_streams_ranged_patches_and_keeps_retained_entries() {
         "abcdef"
     );
     let upstream = fixture.upstream().await;
+    let reservation_call = upstream["calls"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|call| call["path"] == "/legacy-prefix/_apis/artifactcache/caches")
+        .unwrap();
     assert_eq!(
-        upstream["calls"][0]["path"],
+        reservation_call["path"],
         "/legacy-prefix/_apis/artifactcache/caches"
     );
+    assert_eq!(reservation_call["authorization"], "Bearer github-wire-v1");
     assert_eq!(
-        upstream["calls"][0]["authorization"],
-        "Bearer github-wire-v1"
-    );
-    assert_eq!(
-        fixture.report().await.jobs[0].usage,
+        fixture
+            .report()
+            .await
+            .jobs
+            .iter()
+            .find(|job| job.job_id.0 == "wire-v1")
+            .unwrap()
+            .usage,
         JobCacheUsage::MachineHandled(CacheRestoreCounts {
             local_entries: 1,
             github_entries: 0,

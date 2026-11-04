@@ -15,37 +15,49 @@ use uuid::Uuid;
 
 use crate::error::{CacheError, Result, ResultExt};
 
+use super::allocation::{Allocation, DiskAllocation};
 use super::capture::{self, Capture, Captured, Reservation, hex};
-use super::index::{blob_names, entries, matching, next_order, remove};
+use super::index::{entries, matching, next_order, remove};
 use super::interface::{Entry, Lookup, ReadSource, Storage};
 use super::publication::persist;
 use super::{assembly, read};
 
 /// Filesystem storage. A machine must have only one service for this root.
 pub struct DiskStorage {
-    root: PathBuf,
-    capacity: Arc<AtomicU64>,
-    used: Arc<AtomicU64>,
-    generation: AtomicU64,
-    captures: Mutex<Vec<Weak<Reservation>>>,
-    lock: Mutex<()>,
+    pub(super) root: PathBuf,
+    pub(super) capacity: Arc<AtomicU64>,
+    pub(super) used: Arc<AtomicU64>,
+    pub(super) generation: AtomicU64,
+    pub(super) captures: Mutex<Vec<Weak<Reservation>>>,
+    pub(super) index: Arc<Mutex<Option<Vec<Entry>>>>,
+    pub(super) allocation: Arc<dyn Allocation>,
 }
 
 impl DiskStorage {
     /// Select a dedicated cache directory and its byte budget.
     pub fn new(root: PathBuf, capacity: u64) -> Self {
+        let used = Arc::new(AtomicU64::new(0));
+        let capacity = Arc::new(AtomicU64::new(capacity));
+        let index = Arc::new(Mutex::new(None));
+        let allocation = Arc::new(DiskAllocation::new(
+            root.clone(),
+            used.clone(),
+            capacity.clone(),
+            index.clone(),
+        ));
         Self {
             root,
-            capacity: Arc::new(AtomicU64::new(capacity)),
-            used: Arc::new(AtomicU64::new(0)),
+            capacity,
+            used,
             generation: AtomicU64::new(0),
             captures: Mutex::new(Vec::new()),
-            lock: Mutex::new(()),
+            index,
+            allocation,
         }
     }
 
     async fn invalidate(&self, entry: &Entry) -> Result<()> {
-        let _guard = self.lock.lock().await;
+        let mut index = self.index.lock().await;
         if entries(&self.root)
             .await?
             .iter()
@@ -53,35 +65,7 @@ impl DiskStorage {
         {
             remove(&self.root, entry).await?;
             self.used.fetch_sub(entry.size, Ordering::SeqCst);
-        }
-        Ok(())
-    }
-
-    async fn cancel_captures(&self) -> Result<()> {
-        let mut captures = self.captures.lock().await;
-        for capture in captures.iter().filter_map(Weak::upgrade) {
-            capture.release(false);
-            match fs::remove_file(&capture.path).await {
-                Ok(()) => {}
-                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-                result => result.internal()?,
-            }
-        }
-        captures.clear();
-        Ok(())
-    }
-
-    async fn free_for(&self, bytes: u64) -> Result<()> {
-        let mut records = entries(&self.root).await?;
-        records.sort_by_key(|entry| (entry.accessed, entry.created, entry.id.clone()));
-        for entry in records {
-            if self.used.load(Ordering::SeqCst).saturating_add(bytes)
-                <= self.capacity.load(Ordering::SeqCst)
-            {
-                break;
-            }
-            remove(&self.root, &entry).await?;
-            self.used.fetch_sub(entry.size, Ordering::SeqCst);
+            *index = None;
         }
         Ok(())
     }
@@ -90,25 +74,7 @@ impl DiskStorage {
 #[async_trait]
 impl Storage for DiskStorage {
     async fn recover(&self) -> Result<()> {
-        let _guard = self.lock.lock().await;
-        let records = entries(&self.root).await?;
-        let blobs: Vec<_> = records.iter().flat_map(blob_names).collect();
-        let mut files = fs::read_dir(&self.root).await.internal()?;
-        while let Some(file) = files.next_entry().await.internal()? {
-            let name = file.file_name().to_string_lossy().into_owned();
-            let orphan = (name.ends_with(".blob") || name.ends_with(".json"))
-                && !records
-                    .iter()
-                    .any(|entry| blobs.contains(&name) || name == format!("{}.json", entry.id));
-            if name.starts_with(".tmp") || name.ends_with(".pending") || orphan {
-                fs::remove_file(file.path()).await.internal()?;
-            }
-        }
-        self.used.store(
-            records.iter().map(|entry| entry.size).sum(),
-            Ordering::SeqCst,
-        );
-        self.free_for(0).await
+        self.recover_files().await
     }
 
     fn generation(&self) -> u64 {
@@ -120,7 +86,7 @@ impl Storage for DiskStorage {
     }
 
     async fn lookup(&self, lookup: &Lookup) -> Result<Option<Entry>> {
-        let _guard = self.lock.lock().await;
+        let _guard = self.index.lock().await;
         Ok(matching(&entries(&self.root).await?, lookup))
     }
 
@@ -152,7 +118,7 @@ impl Storage for DiskStorage {
     }
 
     async fn touch(&self, entry: &Entry) -> Result<()> {
-        let _guard = self.lock.lock().await;
+        let mut index = self.index.lock().await;
         let path = self.root.join(format!("{}.json", entry.id));
         if fs::metadata(&path).await.is_ok() {
             let mut entry = entry.clone();
@@ -167,15 +133,14 @@ impl Storage for DiskStorage {
                 .await
                 .internal()?;
             fs::rename(temporary, path).await.internal()?;
+            *index = None;
         }
         Ok(())
     }
 
     async fn capture(&self, body: Body, expected: Option<u64>) -> (Body, Option<Arc<Capture>>) {
-        let _guard = self.lock.lock().await;
-        let required = expected.unwrap_or(self.capacity.load(Ordering::SeqCst));
-        if required > self.capacity.load(Ordering::SeqCst) || self.free_for(required).await.is_err()
-        {
+        let _guard = self.index.lock().await;
+        if fs::create_dir_all(&self.root).await.is_err() {
             return (body, None);
         }
         match NamedTempFile::new_in(&self.root) {
@@ -187,6 +152,7 @@ impl Storage for DiskStorage {
                     self.capacity.clone(),
                     self.generation(),
                     expected,
+                    self.allocation.clone(),
                 );
                 let mut captures = self.captures.lock().await;
                 captures.retain(|capture| capture.strong_count() > 0);
@@ -198,7 +164,7 @@ impl Storage for DiskStorage {
     }
 
     async fn combine(&self, chunks: Vec<Arc<Captured>>) -> Result<Arc<Captured>> {
-        let _guard = self.lock.lock().await;
+        let _guard = self.index.lock().await;
         assembly::combine(
             &self.root,
             self,
@@ -211,7 +177,7 @@ impl Storage for DiskStorage {
     }
 
     async fn publish(&self, mut entry: Entry, blob: &Captured) -> Result<Entry> {
-        let _guard = self.lock.lock().await;
+        let mut index = self.index.lock().await;
         if blob.generation != self.generation() {
             return Err(CacheError::Unavailable);
         }
@@ -227,38 +193,17 @@ impl Storage for DiskStorage {
         entry.size = blob.size;
         entry.digest = blob.digest.clone();
         entry.id = Uuid::new_v4().to_string();
+        *index = None;
         persist(&self.root, &entry, blob).await?;
         Ok(entry)
     }
 
     async fn clear(&self) -> Result<()> {
-        let _guard = self.lock.lock().await;
-        self.generation.fetch_add(1, Ordering::SeqCst);
-        self.cancel_captures().await?;
-        fs::create_dir_all(&self.root).await.internal()?;
-        let mut files = fs::read_dir(&self.root).await.internal()?;
-        while let Some(file) = files.next_entry().await.internal()? {
-            let name = file.file_name().to_string_lossy().into_owned();
-            if name.ends_with(".json")
-                || name.ends_with(".blob")
-                || name.starts_with(".tmp")
-                || name.ends_with(".pending") && name != "reports.pending"
-            {
-                fs::remove_file(file.path()).await.internal()?;
-            }
-        }
-        self.used.store(0, Ordering::SeqCst);
-        Ok(())
+        self.clear_files().await
     }
 
     async fn resize(&self, bytes: u64) -> Result<()> {
-        let _guard = self.lock.lock().await;
-        let previous = self.capacity.swap(bytes, Ordering::SeqCst);
-        if bytes < previous {
-            self.generation.fetch_add(1, Ordering::SeqCst);
-            self.cancel_captures().await?;
-        }
-        self.free_for(0).await
+        self.resize_files(bytes).await
     }
 
     async fn usage(&self) -> Result<(u64, u64)> {

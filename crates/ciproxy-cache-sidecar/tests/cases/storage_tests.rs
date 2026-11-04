@@ -1,8 +1,12 @@
 //! Protect local clear, disk recovery, eviction, and report windows.
 
+use bytes::Bytes;
 use ciproxy_protocol::cache::JobCacheUsage;
+use ciproxy_protocol::identifiers::RepositoryId;
 use serde_json::json;
+use tokio::io::AsyncWriteExt;
 
+use crate::support::uploads::{empty_upload, stalled_upload, streaming_upload};
 use crate::support::{Fixture, facts};
 
 #[tokio::test]
@@ -11,9 +15,9 @@ async fn concurrent_vms_share_one_budget_and_resize_releases_staged_bytes() {
     let first = fixture
         .job("concurrent-one", facts("refs/heads/main"))
         .await;
-    let second = fixture
-        .job("concurrent-two", facts("refs/heads/main"))
-        .await;
+    let mut other_repository = facts("refs/heads/main");
+    other_repository.repository.id = RepositoryId("99".into());
+    let second = fixture.job("concurrent-two", other_repository).await;
     tokio::join!(
         first.save("first", "v1", "111111"),
         second.save("second", "v1", "222222")
@@ -25,18 +29,30 @@ async fn concurrent_vms_share_one_budget_and_resize_releases_staged_bytes() {
         ),
         (12, 12)
     );
-    let pending = first.reserve("pending-budget", "v1").await;
-    assert_eq!(
-        first
-            .client
-            .put(pending)
-            .body("12345678")
-            .send()
-            .await
-            .unwrap()
-            .status(),
-        201
-    );
+    assert_eq!(first.contents("first", "v1", &[]).await, "111111");
+    assert_eq!(second.contents("second", "v1", &[]).await, "222222");
+    fixture.options(json!({"lookup":false})).await;
+    {
+        let mut stalled = stalled_upload(&fixture, &first, "false-length", 12).await;
+        assert_eq!(fixture.report().await.used_bytes, 12);
+        assert_eq!(second.contents("second", "v1", &[]).await, "222222");
+        stalled.shutdown().await.unwrap();
+    }
+    assert_eq!(empty_upload(&first, "empty-chunked").await, 201);
+    assert_eq!(fixture.report().await.used_bytes, 12);
+    assert_eq!(second.contents("second", "v1", &[]).await, "222222");
+    let pending = {
+        let (sender, request) = streaming_upload(&first, "pending-budget").await;
+        sender.send(Bytes::from_static(b"1234")).await.unwrap();
+        fixture.wait_upload("pending-budget", 4).await;
+        assert_eq!(fixture.report().await.used_bytes, 10);
+        assert_eq!(first.lookup("first", "v1", &[]).await["ok"], false);
+        assert_eq!(second.lookup("second", "v1", &[]).await["ok"], true);
+        sender.send(Bytes::from_static(b"5678")).await.unwrap();
+        fixture.wait_upload("pending-budget", 8).await;
+        request
+    };
+    assert_eq!(pending.await.unwrap().unwrap().status(), 201);
     assert_eq!(fixture.report().await.used_bytes, 8);
     fixture.budget(4).await;
     assert_eq!(

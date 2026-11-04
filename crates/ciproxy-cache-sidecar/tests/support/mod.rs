@@ -3,6 +3,7 @@
 mod fixture;
 mod github;
 mod job;
+pub mod uploads;
 
 pub use fixture::{Fixture, facts};
 

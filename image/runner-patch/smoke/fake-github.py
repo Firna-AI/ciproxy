@@ -18,6 +18,8 @@ class State:
         self.uploads = {}
         self.calls = []
         self.options = {"lookup": True, "failure": False}
+        self.progress = {}
+        self.arrived = threading.Condition(self.lock)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -27,6 +29,11 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
     def read_body(self):
+        path = urlparse(self.path).path
+        state = self.server.state
+        with state.arrived:
+            state.progress[path] = 0
+            state.arrived.notify_all()
         if self.headers.get("Transfer-Encoding", "").lower() == "chunked":
             result = bytearray()
             while True:
@@ -35,7 +42,11 @@ class Handler(BaseHTTPRequestHandler):
                     while self.rfile.readline() not in (b"\r\n", b"\n", b""):
                         pass
                     return bytes(result)
-                result.extend(self.rfile.read(size))
+                chunk = self.rfile.read(size)
+                result.extend(chunk)
+                with state.arrived:
+                    state.progress[path] += len(chunk)
+                    state.arrived.notify_all()
                 self.rfile.read(2)
         return self.rfile.read(int(self.headers.get("Content-Length", "0")))
 
@@ -52,10 +63,22 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(body)
 
     def handle_request(self):
-        body = self.read_body()
         url = urlparse(self.path)
         query = parse_qs(url.query)
         state = self.server.state
+        if url.path == "/_fixture/wait-upload":
+            with state.arrived:
+                def received():
+                    identifiers = [identifier for identifier, upload in state.uploads.items()
+                                   if upload["key"] == query["key"][0]]
+                    return any(path.endswith("/" + identifier) and count >= int(query["bytes"][0])
+                               for path, count in state.progress.items() for identifier in identifiers)
+                ready = state.arrived.wait_for(received, timeout=10)
+                return self.send(200 if ready else 504, {})
+        body = self.read_body()
+        if len(body) < int(self.headers.get("Content-Length", "0")):
+            self.close_connection = True
+            return
         with state.lock:
             if url.path == "/_fixture/state":
                 return self.send(200, {"calls": state.calls, "entries": [
@@ -157,6 +180,15 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 upload["data"] = body
             return self.send(201, headers={"ETag": '"fixture"'})
+        if state.options.get("chunked_download") and self.command == "GET":
+            self.send_response(200)
+            self.send_header("Transfer-Encoding", "chunked")
+            self.end_headers()
+            for offset in range(0, len(upload["data"]), 2):
+                chunk = upload["data"][offset:offset + 2]
+                self.wfile.write(f"{len(chunk):x}\r\n".encode() + chunk + b"\r\n")
+            self.wfile.write(b"0\r\n\r\n")
+            return
         return self.send(200, upload["data"], {"ETag": '"fixture"', "Accept-Ranges": "bytes"})
 
     do_GET = handle_request

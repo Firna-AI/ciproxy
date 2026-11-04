@@ -15,12 +15,12 @@ fn wrapper_preserves_the_existing_hook_and_publishes_container_environment() {
     let prior = directory.path().join("existing hook.sh");
     let runner = directory.path().join("runner.sh");
     let environment = directory.path().join("workflow-environment");
-    fs::write(&runner, "status=0\nbash \"$ACTIONS_RUNNER_HOOK_JOB_STARTED\" || status=$?\nprintf '%s' \"$ACTIONS_RUNTIME_TOKEN\"\nexit \"$status\"\n").unwrap();
+    fs::write(&runner, "status=0\nbash -e \"$ACTIONS_RUNNER_HOOK_JOB_STARTED\" || status=$?\nprintf '%s' \"$ACTIONS_RUNTIME_TOKEN\"\nexit \"$status\"\n").unwrap();
     for status in [0, 7] {
         fs::write(&environment, "").unwrap();
         fs::write(
             &prior,
-            format!("printf 'PRIOR=kept\\n' >> \"$GITHUB_ENV\"\nexit {status}\n"),
+            format!("false | true\nprintf 'PRIOR=kept\\n' >> \"$GITHUB_ENV\"\nexit {status}\n"),
         )
         .unwrap();
         let output = Command::new("bash")

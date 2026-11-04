@@ -11,6 +11,8 @@ use tempfile::{NamedTempFile, TempPath};
 use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
 
+use super::allocation::Allocation;
+
 struct Charge {
     valid: bool,
     bytes: u64,
@@ -35,7 +37,11 @@ impl Reservation {
             capacity,
         }
     }
-    fn claim(&self, length: u64) -> bool {
+    pub(super) fn active(&self) -> bool {
+        self.charge.lock().is_ok_and(|charge| charge.valid)
+    }
+
+    pub(super) fn claim(&self, length: u64) -> bool {
         let Ok(mut charge) = self.charge.lock() else {
             return false;
         };
@@ -98,13 +104,14 @@ pub struct Capture {
     pub(crate) reservation: Arc<Reservation>,
 }
 
-pub(crate) fn tee(
+pub(super) fn tee(
     temporary: NamedTempFile,
     body: Body,
     used: Arc<AtomicU64>,
     capacity: Arc<AtomicU64>,
     generation: u64,
     expected: Option<u64>,
+    allocation: Arc<dyn Allocation>,
 ) -> (Body, Arc<Capture>) {
     let path = temporary.into_temp_path();
     let reservation = Arc::new(Reservation {
@@ -129,7 +136,11 @@ pub(crate) fn tee(
             let chunk = match chunk { Ok(chunk) => chunk, Err(error) => { yield Err(error); return; } };
             if let Some(active) = &mut blob {
                 let length = chunk.len() as u64;
-                let written = if active.reservation.claim(length) {
+                let claimed = match allocation.claim(&active.reservation, length).await {
+                    Ok(claimed) => claimed,
+                    Err(_) => { tracing::warn!("Local cache allocation unavailable"); false }
+                };
+                let written = if claimed {
                     match OpenOptions::new().append(true).open(&active.path).await {
                         Ok(mut writer) => writer.write_all(&chunk).await.is_ok(),
                         Err(_) => false,

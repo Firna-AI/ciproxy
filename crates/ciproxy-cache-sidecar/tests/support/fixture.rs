@@ -188,6 +188,15 @@ impl Fixture {
             .unwrap();
     }
 
+    pub async fn wait_upload(&self, key: &str, bytes: u64) {
+        let mut url =
+            url::Url::parse(&format!("{}/_fixture/wait-upload", self.github.origin)).unwrap();
+        url.query_pairs_mut()
+            .append_pair("key", key)
+            .append_pair("bytes", &bytes.to_string());
+        assert_eq!(self.client.get(url).send().await.unwrap().status(), 200);
+    }
+
     pub async fn seed(&self, key: &str, version: &str, base64: &str) {
         self.client
             .post(format!("{}/_fixture/seed", self.github.origin))
