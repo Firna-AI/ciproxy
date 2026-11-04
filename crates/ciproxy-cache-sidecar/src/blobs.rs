@@ -9,7 +9,7 @@ use futures_util::StreamExt;
 use crate::download::Download;
 use crate::error::{CacheError, Result, ResultExt};
 use crate::machine::{MachineCache, Session};
-use crate::storage::interface::ReadSource;
+use crate::storage::interface::{EntryOrigin, ReadSource};
 use crate::transport::Outbound;
 use crate::wire::status;
 
@@ -164,7 +164,12 @@ impl MachineCache {
         if expected.is_some_and(|size| size != blob.size) {
             return Err(CacheError::Unavailable);
         }
-        let entry = self.entry(session, download.key.clone(), download.version.clone());
+        let entry = self.entry(
+            session,
+            download.key.clone(),
+            download.version.clone(),
+            EntryOrigin::ReaderFill,
+        );
         if download.generation != self.store.generation() {
             return Err(CacheError::Unavailable);
         }

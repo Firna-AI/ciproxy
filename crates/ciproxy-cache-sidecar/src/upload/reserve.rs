@@ -10,6 +10,7 @@ use tokio::sync::Mutex;
 
 use crate::error::{Result, ResultExt};
 use crate::machine::{MachineCache, Session, identifier, transfer_url};
+use crate::storage::interface::EntryOrigin;
 use crate::wire::{CacheRequest, CacheResponse, Reservation, V2, json};
 
 use super::Upload;
@@ -131,7 +132,12 @@ impl MachineCache {
                 && let Some(blob) = self.assemble(&upload).await
                 && size == Some(blob.size)
             {
-                let entry = self.entry(&session, upload.key.clone(), upload.version.clone());
+                let entry = self.entry(
+                    &session,
+                    upload.key.clone(),
+                    upload.version.clone(),
+                    EntryOrigin::AcceptedSave,
+                );
                 if self.store.publish(entry, &blob).await.is_err() {
                     tracing::warn!("Local cache save unavailable");
                 }

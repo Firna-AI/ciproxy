@@ -183,7 +183,10 @@ impl Storage for DiskStorage {
         }
         let records = entries(&self.root).await?;
         if let Some(old) = records.iter().find(|old| {
-            old.scope == entry.scope && old.key == entry.key && old.version == entry.version
+            old.scope == entry.scope
+                && old.key == entry.key
+                && old.version == entry.version
+                && old.origin == entry.origin
         }) {
             return Ok(old.clone());
         }

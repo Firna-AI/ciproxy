@@ -1,6 +1,7 @@
 //! Reservation, upload capture, and immutable publication of cache entries.
 
 mod assemble;
+mod replacement;
 mod reserve;
 mod transfer;
 

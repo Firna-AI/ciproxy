@@ -10,6 +10,8 @@ use crate::error::{CacheError, Result, ResultExt};
 use crate::machine::{MachineCache, Session};
 use crate::transport::Outbound;
 
+use super::replacement::UploadPart;
+
 #[derive(Deserialize)]
 struct BlockList {
     #[serde(rename = "$value", default)]
@@ -76,11 +78,11 @@ impl MachineCache {
             }
             return Ok(response);
         }
-        if let Some((_, id)) = query.iter().find(|(key, _)| key == "blockid") {
-            upload.blocks.remove(id);
-        } else {
-            upload.whole = None;
-        }
+        let part = query
+            .iter()
+            .find(|(key, _)| key == "blockid")
+            .map_or(UploadPart::Whole, |(_, id)| UploadPart::Block(id.clone()));
+        upload.replace(part.clone(), None);
         let expected = headers
             .get("content-length")
             .and_then(|value| value.to_str().ok())
@@ -96,21 +98,11 @@ impl MachineCache {
             })
             .await?;
         if response.status().is_success() {
-            if let Some(capture) = capture {
-                let blob = capture.complete.lock().await.clone();
-                if let Some((_, id)) = query.iter().find(|(key, _)| key == "blockid") {
-                    if let Some(blob) = blob {
-                        upload.blocks.insert(id.clone(), blob);
-                    } else {
-                        upload.blocks.remove(id);
-                    }
-                } else {
-                    upload.whole = blob;
-                }
-            } else {
-                upload.whole = None;
-                upload.blocks.clear();
-            }
+            let blob = match capture {
+                Some(capture) => capture.complete.lock().await.clone(),
+                None => None,
+            };
+            upload.replace(part, blob);
         }
         Ok(response)
     }
@@ -135,6 +127,10 @@ impl MachineCache {
             .get("content-range")
             .and_then(|value| value.to_str().ok())
             .and_then(legacy_range);
+        let part = range.map_or(UploadPart::UnspecifiedRange, |(start, end)| {
+            UploadPart::Range { start, end }
+        });
+        upload.replace(part.clone(), None);
         let expected = headers
             .get("content-length")
             .and_then(|value| value.to_str().ok())
@@ -143,12 +139,12 @@ impl MachineCache {
         let response = self
             .upstream(&session, Method::PATCH, &upload.remote, headers, body)
             .await?;
-        if response.status().is_success()
-            && let (Some((start, end)), Some(capture)) = (range, capture)
-            && let Some(blob) = capture.complete.lock().await.clone()
-            && Some(blob.size) == end.checked_sub(start).and_then(|size| size.checked_add(1))
-        {
-            upload.ranges.insert(start, blob);
+        if response.status().is_success() {
+            let blob = match capture {
+                Some(capture) => capture.complete.lock().await.clone(),
+                None => None,
+            };
+            upload.replace(part, blob);
         }
         Ok(response)
     }

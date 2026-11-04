@@ -49,7 +49,7 @@ enum Command {
         #[arg(long)]
         admin_token_file: PathBuf,
     },
-    /// Forward this VM's cache requests with direct GitHub fallback.
+    /// Forward this VM's cache requests and return misses during machine outages.
     Proxy {
         #[arg(long, default_value = "127.0.0.1:8230")]
         listen: SocketAddr,

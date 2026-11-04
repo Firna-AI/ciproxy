@@ -15,31 +15,37 @@ fall back to GitHub or produce an unavailable cache result.
 ## What This Crate Does
 
 Reads use the machine first, then GitHub with local fill. Saves stream to
-GitHub and capture a local copy. Local archives are immutable for each
-repository, ref, key, and version. The machine keeps them after GitHub
+GitHub and capture a local copy. Only accepted saves own immutable local
+keys for a repository, ref, key, and version. The machine keeps them after
+GitHub
 deletes or evicts its copy. Lookup searches each allowed ref in order:
 own ref, pull request base ref, default ref. It checks an exact key before
 prefix matches. A prefix match uses the newest entry.
 
 The machine derives scopes from agent-supplied `JobFacts`. It ignores job
 metadata for scope, repository, permission, upstream destination, and
-counts. It keeps a GitHub fill within the reader's own scope because the
-GitHub lookup response does not identify the source ref.
+counts. A GitHub fill stays within the reader's own scope because the
+GitHub lookup response does not identify the source ref. The service keeps
+fills separate from accepted saves. A fill cannot prevent a later save in
+that scope. An accepted save takes precedence over a fill of the same
+scoped key. Existing records without provenance stay readable as fills.
 
 A pull request writes only within a trusted `refs/pull/N/merge` ref.
 `pull_request_target` and pull requests with a normal branch ref cannot
 save safely through GitHub. These saves return an unavailable-cache
 result. They publish no shared entry in either tier. The proxy keeps this
-rule during direct GitHub fallback. A foreign head repository also cannot
+rule when the machine is unavailable. A foreign head repository also cannot
 write the default scope.
 
 Azure single uploads, staged blocks, committed blocklist order, ranged
 downloads, and legacy ranged PATCH uploads work. Lookup-only and HEAD
 requests do not increase restore counts. A transfer counts once when its
 served ranges cover the complete archive. Byte counts come from archive
-data at the machine boundary. A known direct fallback hides per-job
-counts. A service restart also hides counts for jobs that were still
-active. Seven-day hit counts survive a restart.
+data at the machine boundary. A failed machine connection returns a cache
+miss. It starts no direct restore that could escape those counts. A known
+machine-side direct fallback hides per-job counts. A service restart also
+hides counts for jobs that were still active. Seven-day hit counts survive
+a restart.
 
 The v2 JSON interface accepts protobuf field names and camelCase names.
 For example, both `size_bytes` and `sizeBytes` work. Int64 values remain
@@ -50,6 +56,9 @@ evicts the least recently used entries. A smaller budget cancels staged
 captures. Clear cancels pending publication and removes all local entry
 files. It keeps report history. Neither operation calls GitHub deletion
 or touches sibling Docker disks. Archive transfers use bounded chunks.
+Upload replacements remove their previous local range or block before
+capture. A replacement then keeps new bytes or no usable local copy.
+GitHub still receives the upload when local capture fails.
 
 Other results requests go directly from the VM proxy to GitHub. The
 machine listener also supports results passthrough. Artifacts and logs
@@ -133,9 +142,9 @@ addresses cannot serve Docker actions or job-container steps.
 
 The proxy supplies `X-Ciproxy-Session` to the machine. Each random transfer
 ticket belongs to that session. Job requests cannot reuse another VM's
-ticket. The credential grants no admin access. The proxy reports a known
-fallback through `POST /ciproxy/fallback` with its own session credential.
-That operation can only suppress its own counts. It accepts no counts.
+ticket. The credential grants no admin access. A session can suppress its
+own counts through `POST /ciproxy/fallback`. That operation accepts no
+counts. Machine-connection failures return a miss without a notification.
 The agent must revoke the session when the job ends.
 
 Run the original runner on Boat. Do not use the patch, wrapper, or proxy
@@ -160,7 +169,7 @@ executable smoke, SDK conformance, and authenticated GitHub commands.
 
 - [service.rs](src/service.rs) defines the HTTP service and separate routers.
 - [machine.rs](src/machine.rs) authenticates and routes machine requests.
-- [proxy.rs](src/proxy.rs) owns VM forwarding and direct GitHub fallback.
+- [proxy.rs](src/proxy.rs) owns VM forwarding and cache misses during outages.
 - [storage/](src/storage/mod.rs) owns capture, persistence, and disk budgets.
 - [session.rs](src/session.rs) defines the agent registration contract.
 - [cache_tests.rs](tests/cache_tests.rs) starts the public HTTP tests.

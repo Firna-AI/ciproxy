@@ -12,6 +12,17 @@ use crate::scope::Scope;
 
 use super::capture::{Capture, Captured};
 
+/// Provenance of local bytes, without an invented upstream source ref.
+#[derive(Clone, Copy, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EntryOrigin {
+    /// A restored copy visible only in the original reader's allowed scope.
+    #[default]
+    ReaderFill,
+    /// Bytes of a save that GitHub accepted in the trusted writer's scope.
+    AcceptedSave,
+}
+
 /// Immutable local entry metadata.
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Entry {
@@ -21,6 +32,9 @@ pub struct Entry {
     pub key: String,
     /// Original GitHub archive version.
     pub version: String,
+    /// Whether the entry owns an immutable scoped save key or is a read copy.
+    #[serde(default)]
+    pub origin: EntryOrigin,
     pub(crate) scope: Scope,
     /// Physical archive size, measured while writing.
     pub size: u64,

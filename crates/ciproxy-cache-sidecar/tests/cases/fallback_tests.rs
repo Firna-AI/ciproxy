@@ -1,12 +1,58 @@
 //! Protect disk and HTTP fallback without accepting guest authority.
 
 use ciproxy_cache_sidecar::session::Permissions;
+use ciproxy_protocol::cache::{CacheRestoreCounts, JobCacheUsage};
 use serde_json::json;
 
+use crate::support::relay::Relay;
 use crate::support::{Fixture, V2, facts};
 
 #[tokio::test]
-async fn disk_faults_and_machine_outage_keep_github_cache_and_results_usable() {
+async fn disconnected_lookup_misses_then_reconnection_reports_every_restore() {
+    let fixture = Fixture::new().await;
+    fixture.seed("outage", "v1", "cGF5bG9hZA==").await;
+    let relay = Relay::start(fixture.machine.clone()).await;
+    let job = fixture
+        .job_via(
+            "reconnect",
+            facts("refs/heads/main"),
+            Permissions {
+                read: true,
+                write: true,
+            },
+            &relay.origin,
+        )
+        .await;
+    assert_eq!(job.lookup("outage", "v1", &[]).await["ok"], false);
+    assert_eq!(fixture.upstream().await["calls"], json!([]));
+    assert_eq!(
+        fixture.report().await.jobs[0].usage,
+        JobCacheUsage::MachineHandled(CacheRestoreCounts {
+            local_entries: 0,
+            github_entries: 0,
+            restored_bytes: 0
+        })
+    );
+    relay.reconnect();
+    assert_eq!(job.contents("outage", "v1", &[]).await, "payload");
+    assert_eq!(job.contents("outage", "v1", &[]).await, "payload");
+    let report = fixture.report().await;
+    assert_eq!(
+        (report.restores_last_7_days, report.hits_last_7_days),
+        (2, 1)
+    );
+    assert_eq!(
+        report.jobs[0].usage,
+        JobCacheUsage::MachineHandled(CacheRestoreCounts {
+            local_entries: 1,
+            github_entries: 1,
+            restored_bytes: 14
+        })
+    );
+}
+
+#[tokio::test]
+async fn disk_faults_use_github_and_machine_outage_misses_while_results_continue() {
     let fixture = Fixture::with_disk(true, 1024 * 1024).await;
     let job = fixture.job("disk-fault", facts("refs/heads/main")).await;
     job.save("upstream-only", "v1", "github").await;
@@ -22,8 +68,23 @@ async fn disk_faults_and_machine_outage_keep_github_cache_and_results_usable() {
             true,
         )
         .await;
-    assert_eq!(direct.contents("upstream-only", "v1", &[]).await, "github");
-    direct.save("fallback-save", "v1", "saved").await;
+    assert_eq!(direct.lookup("upstream-only", "v1", &[]).await["ok"], false);
+    assert_eq!(
+        direct
+            .rpc(
+                "CreateCacheEntry",
+                json!({"key":"fallback-save","version":"v1"})
+            )
+            .await["ok"],
+        false
+    );
+    assert_eq!(
+        fixture.upstream().await["entries"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
     let response = direct
         .client
         .post(format!(

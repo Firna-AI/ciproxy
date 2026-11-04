@@ -4,6 +4,8 @@ mod support;
 
 #[path = "cases/fallback_tests.rs"]
 mod fallback_tests;
+#[path = "cases/replacement_tests.rs"]
+mod replacement_tests;
 #[path = "cases/scope_tests.rs"]
 mod scope_tests;
 #[path = "cases/storage_tests.rs"]

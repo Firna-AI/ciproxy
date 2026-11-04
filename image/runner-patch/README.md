@@ -62,8 +62,9 @@ The wrapper also sets them in the listener's parent environment.
 The patched runner writes GitHub's original values to `ZCTIONS_*` instead.
 Its `ACTIONS_RUNTIME_TOKEN` remains the original runtime token. Cache v1
 and v2 requests reach the proxy. Other results requests go to GitHub.
-The proxy can use GitHub directly when machine metadata is unavailable.
-A lost transfer ticket produces the normal unavailable-cache result.
+A failed machine connection returns a cache miss. The proxy starts no
+direct cache restore during an outage. A lost transfer ticket produces
+the normal unavailable-cache result.
 
 `container-proxy-url.sh` prints the gateway of Docker's VM-local `bridge`
 network. Set `CIPROXY_DOCKER_BRIDGE` to use another existing bridge. A

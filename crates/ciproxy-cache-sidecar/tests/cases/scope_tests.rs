@@ -10,6 +10,53 @@ use tokio::net::TcpStream;
 use crate::support::{Fixture, facts};
 
 #[tokio::test]
+async fn accepted_branch_save_supersedes_reader_fill_and_survives_restart() {
+    let mut fixture = Fixture::new().await;
+    fixture.seed("borrowed", "v1", "ZGVmYXVsdC12YWx1ZQ==").await;
+    let branch = fixture
+        .job("borrowed-feature", facts("refs/heads/feature"))
+        .await;
+    assert_eq!(
+        branch.contents("borrowed", "v1", &[]).await,
+        "default-value"
+    );
+    fixture.delete_upstream().await;
+    assert_eq!(
+        branch.contents("borrowed", "v1", &[]).await,
+        "default-value"
+    );
+    fixture.restart().await;
+    let branch = fixture
+        .job("borrowed-after-restart", facts("refs/heads/feature"))
+        .await;
+    assert_eq!(
+        branch.contents("borrowed", "v1", &[]).await,
+        "default-value"
+    );
+    branch.save("borrowed", "v1", "feature-value").await;
+    let state = fixture.upstream().await;
+    assert_eq!(
+        state["entries"][0]["sha256"],
+        "6eef5a39b126b5ed818032eeee26c5ce1743dabb8501f95e97ca57ac8c337f47"
+    );
+    fixture.delete_upstream().await;
+    assert_eq!(
+        branch.contents("borrowed", "v1", &[]).await,
+        "feature-value"
+    );
+    branch.save("borrowed", "v1", "second-feature-value").await;
+    assert_eq!(
+        branch.contents("borrowed", "v1", &[]).await,
+        "feature-value"
+    );
+    fixture.restart().await;
+    let later = fixture
+        .job("saved-after-restart", facts("refs/heads/feature"))
+        .await;
+    assert_eq!(later.contents("borrowed", "v1", &[]).await, "feature-value");
+}
+
+#[tokio::test]
 async fn scopes_keep_own_prefix_before_default_exact_and_isolate_prs() {
     let fixture = Fixture::new().await;
     let main = fixture.job("scope-main", facts("refs/heads/main")).await;

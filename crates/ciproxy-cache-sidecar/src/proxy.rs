@@ -1,9 +1,9 @@
-//! VM proxy with a trusted fallback policy and streaming results passthrough.
+//! VM cache proxy with safe outage misses and direct results passthrough.
 
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use axum::body::{Body, to_bytes};
+use axum::body::Body;
 use axum::http::{HeaderMap, Method, Request, Response, StatusCode};
 use ciproxy_protocol::secret::Secret;
 use serde::{Deserialize, Serialize};
@@ -75,45 +75,20 @@ impl VmProxy {
                 .trim_end_matches('/'),
             path
         );
-        if cache && parts.method != Method::PATCH {
-            let bytes = to_bytes(body, 1024 * 1024).await.internal()?;
-            let response = self
-                .network
-                .send(Outbound {
-                    method: parts.method.clone(),
-                    url: machine,
-                    headers: headers.clone(),
-                    body: Body::from(bytes.clone()),
-                })
-                .await;
-            match response {
-                Ok(response)
-                    if response.status().is_success()
-                        || response.status().is_client_error()
-                            && response.status() != StatusCode::UNAUTHORIZED =>
-                {
-                    return Ok(response);
-                }
-                _ => tracing::warn!("Machine cache unavailable; using GitHub"),
-            }
-            self.report_fallback().await;
-            let response = self
-                .github(parts.method, path, headers, Body::from(bytes))
-                .await?;
-            return Ok(if response.status().is_server_error() {
-                miss(parts.uri.path())
-            } else {
-                response
-            });
-        }
-        self.network
+        let response = self
+            .network
             .send(Outbound {
                 method: parts.method,
                 url: machine,
                 headers,
                 body,
             })
-            .await
+            .await?;
+        if response.status().is_server_error() || response.status() == StatusCode::UNAUTHORIZED {
+            tracing::warn!("Machine cache unavailable; returning a miss");
+            return Ok(miss(parts.uri.path()));
+        }
+        Ok(response)
     }
 
     async fn github(
@@ -143,28 +118,6 @@ impl VmProxy {
             })
             .await
     }
-
-    async fn report_fallback(&self) {
-        let mut headers = HeaderMap::new();
-        if let Ok(token) = self.config.machine_token.expose_secret().parse() {
-            headers.insert("x-ciproxy-session", token);
-            let _ = self
-                .network
-                .send(Outbound {
-                    method: Method::POST,
-                    url: format!(
-                        "{}/ciproxy/fallback",
-                        self.config
-                            .machine_url
-                            .expose_secret()
-                            .trim_end_matches('/')
-                    ),
-                    headers,
-                    body: Body::empty(),
-                })
-                .await;
-        }
-    }
 }
 
 #[async_trait]
@@ -178,7 +131,7 @@ impl Service for VmProxy {
         match self.dispatch(request).await {
             Ok(response) => response,
             Err(_) if cache_path(&path) || path.starts_with("/ciproxy/blob/") => {
-                self.report_fallback().await;
+                tracing::warn!("Machine cache unavailable; returning a miss");
                 miss(&path)
             }
             Err(_) => status(StatusCode::BAD_GATEWAY),

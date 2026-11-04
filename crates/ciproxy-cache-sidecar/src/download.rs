@@ -10,7 +10,7 @@ use crate::error::{Result, ResultExt};
 use crate::machine::{MachineCache, Session, identifier, transfer_url};
 use crate::scope::{read_scopes, write_scope};
 use crate::storage::capture::Captured;
-use crate::storage::interface::{Entry, Lookup};
+use crate::storage::interface::{Entry, EntryOrigin, Lookup};
 use crate::wire::{CacheRequest, CacheResponse, LegacyEntry, V2, json, miss};
 
 pub(crate) struct Download {
@@ -189,11 +189,18 @@ impl MachineCache {
         transfer_url(session, &id)
     }
 
-    pub(crate) fn entry(&self, session: &Session, key: String, version: String) -> Entry {
+    pub(crate) fn entry(
+        &self,
+        session: &Session,
+        key: String,
+        version: String,
+        origin: EntryOrigin,
+    ) -> Entry {
         Entry {
             id: String::new(),
             key,
             version,
+            origin,
             scope: write_scope(&session.registration.facts, &session.registration.job_id),
             size: 0,
             digest: String::new(),

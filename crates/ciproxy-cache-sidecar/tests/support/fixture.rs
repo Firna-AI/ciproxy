@@ -121,6 +121,21 @@ impl Fixture {
         permissions: Permissions,
         machine_down: bool,
     ) -> Job {
+        let machine = if machine_down {
+            "http://127.0.0.1:1"
+        } else {
+            &self.machine
+        };
+        self.job_via(id, facts, permissions, machine).await
+    }
+
+    pub async fn job_via(
+        &self,
+        id: &str,
+        facts: JobFacts,
+        permissions: Permissions,
+        machine_url: &str,
+    ) -> Job {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let origin = format!("http://{}", listener.local_addr().unwrap());
         let registration = Registration {
@@ -143,11 +158,6 @@ impl Fixture {
             .json()
             .await
             .unwrap();
-        let machine_url = if machine_down {
-            "http://127.0.0.1:1"
-        } else {
-            &self.machine
-        };
         let config = ProxyConfig {
             machine_url: Secret::new(machine_url),
             machine_token: credential.token.clone(),

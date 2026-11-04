@@ -1,12 +1,13 @@
 //! Recoverable metadata reads and deterministic matching of local entries.
 
+use std::collections::HashSet;
 use std::path::Path;
 
 use tokio::fs;
 
 use crate::error::{CacheError, Result, ResultExt};
 
-use super::interface::{Entry, Lookup};
+use super::interface::{Entry, EntryOrigin, Lookup};
 
 pub(super) async fn entries(root: &Path) -> Result<Vec<Entry>> {
     fs::create_dir_all(root).await.internal()?;
@@ -34,6 +35,19 @@ pub(super) fn matching(entries: &[Entry], lookup: &Lookup) -> Option<Entry> {
             let candidates: Vec<_> = entries
                 .iter()
                 .filter(|entry| entry.scope == *scope && entry.version == lookup.version)
+                .collect();
+            let saved_keys: HashSet<_> = candidates
+                .iter()
+                .filter(|entry| entry.origin == EntryOrigin::AcceptedSave)
+                .map(|entry| entry.key.as_str())
+                .collect();
+            let candidates: Vec<_> = candidates
+                .iter()
+                .copied()
+                .filter(|entry| {
+                    entry.origin == EntryOrigin::AcceptedSave
+                        || !saved_keys.contains(entry.key.as_str())
+                })
                 .collect();
             if let Some(exact) = candidates.iter().find(|entry| entry.key == *key) {
                 return Some((*exact).clone());
