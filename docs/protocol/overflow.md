@@ -76,6 +76,13 @@ backend must give ciproxy.
 - Each sandbox runs one runner, which takes one job.
 - Each sandbox is the cheapest VM type of Boat with at least the vCPU,
   memory, and disk of the [label](job-routing.md#labels) of its runner.
+- When no size of the account fits, the setting "When nothing fits" of the
+  label decides, as [Job routing](job-routing.md#a-size-that-nothing-can-run)
+  says.
+- The backend contract includes a call that returns the VM sizes that the
+  account can start now. For Boat, this is the size list of its limits
+  API. ciproxy reads it again at intervals, because the customer can change
+  the Boat plan at any time.
 - ciproxy stops and deletes each sandbox when its job ends.
 - A Boat runner can stay without a job when an own machine took the
   waiting job first.

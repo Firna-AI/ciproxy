@@ -89,6 +89,19 @@ User decisions, 3 November 2026:
   docs site. Both are built with Astro. The user asked for them on
   3 November 2026, with mockups in Milestone 1 and the build in the
   implementation plan.
+- Domain: ciproxy.dev. The user bought it on 4 November 2026. My design
+  call, as the mockups show: the marketing pages live at `ciproxy.dev`, the
+  docs at `ciproxy.dev/docs`, the dashboard at `app.ciproxy.dev`, and the
+  install script of the agent at `get.ciproxy.dev`.
+- Review answers, 4 November 2026: the user unblocked Codex. The docs drop
+  the promise that warm runners take new jobs during a control plane
+  outage, because it highlights a risk needlessly. Corner radii rely on
+  review, with no new gate check. The docs search gets the look of its
+  mockup in the site work. The markdownlint rule for links to repeated
+  headings stays as it is. A label whose size fits no own machine and no
+  Boat size of the account follows its setting "When nothing fits": wait,
+  the default, or run on the largest Boat size that the account can
+  start. ciproxy reads the sizes that the Boat account can start.
 - The options check of the `plans` skill ran over the last three decisions
   before the user answered. Its report is in
   `.context/ciproxy-mvp-foundation/options-check-1.md`.
@@ -112,9 +125,7 @@ Design calls, my calls, 3 November 2026:
   such as a cache disk, attaches after the job starts. Reason: the scale set
   API has no call that pins a job to a runner.
 - Own machines keep warm runners that are registered before jobs arrive.
-  Reason: jobs start at once. Warm runners also keep work going through a
-  short control plane outage, because a queued ciproxy job cannot move to
-  another label.
+  Reason: jobs start at once.
 - Each job runs in a fresh VM. Reason: a job must not read the secrets or
   the files of another job.
 - One image definition serves own machines and overflow snapshots. It
@@ -779,7 +790,9 @@ up Mokly as `futex-ai/accounting` does.
       Linux prices.
 - [ ] Add the mockup states that the docs need: a refused Boat sandbox, a
       move between paid tiers, the "Move to Free" confirmation, and a
-      machine that cannot run jobs. Make the docs home say that the wait
+      machine that cannot run jobs. Give the label dialog the setting "When
+      nothing fits", and replace its 32 vCPU example. Make the docs home say
+      that the wait
       counts for each job, limit the instant-start claim of the features
       section to the `ciproxy` label, and apply item 12 to the text of the
       pending approval screen.
@@ -841,9 +854,7 @@ App in a test organization, a KVM-capable Linux server, and a Boat API key
 from the user.
 
 - [ ] Scale set: create a scale set, open a message session, run a job on a
-      just-in-time runner, and record the fields of each job message. Stop
-      the listener, queue a job, and check that a warm runner still takes
-      it, because the outage requirement depends on it. Use
+      just-in-time runner, and record the fields of each job message. Use
       the Rust port `imumesh18/scaleset`. Where the port falls short, write
       a thin client that follows the Go client.
 - [ ] Firecracker: run a job with Docker in a fresh VM on the Linux server.
@@ -905,6 +916,10 @@ Depends on: 2, 3, 4
 - [ ] Give the site milestone of that plan the 14 launch docs pages that
       the docs sidebar mockup lists, and a launch task for the terms of
       service and the privacy policy, which the user writes or approves.
+- [ ] Give the site milestone of that plan the restyle of the Starlight
+      search to match the docs search mockup, as far as CSS allows.
+- [ ] Give that plan the DNS and the hosting of `ciproxy.dev`,
+      `app.ciproxy.dev`, and `get.ciproxy.dev`.
 - [ ] Order the launch steps in that plan: the public copy of the agent
       goes live before the site, because the site links to it.
 - [ ] Settle in that plan the open questions of the docs workspace: label

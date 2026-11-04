@@ -75,6 +75,27 @@ where each job runs. It also states what happens when a part fails.
   start on own machines first again.
 - This holds unless the customer turned "Your machines" off for the label.
 
+### A size that nothing can run
+
+- ciproxy reads the VM sizes that the customer's Boat account can start
+  now, through the backend contract in [Overflow](overflow.md).
+- A size fits Boat when one of those sizes has at least its vCPU, memory,
+  and disk.
+- Each label has the setting "When nothing fits". It applies while the
+  size fits no own machine and no size of the Boat account.
+- "Wait" is the default. The jobs of the label stay queued in GitHub until
+  an own machine that fits connects, or until the Boat account can start a
+  size that fits.
+- "Run on the largest Boat size" starts each job of the label on the
+  largest size that the Boat account can start, also when it is smaller
+  than the label.
+- The dialog, the label list, and the live queue show where the jobs of
+  each label run now: own machines, Boat, or wait.
+- **Decision:** the customer chooses between waiting and a smaller Boat VM.
+  Rejected: rejecting such a label on save, and failing its jobs at once,
+  because a label can stop fitting after a machine leaves or the Boat plan
+  changes. Decided by the user on 4 November 2026.
+
 ## Slots
 
 - A job takes the smallest number of slots that covers both the vCPU and
@@ -172,9 +193,7 @@ where each job runs. It also states what happens when a part fails.
 ## Warm runners
 
 - **Decision:** own machines keep warm runners. Reason: jobs start at
-  once. Warm runners also keep work going through a short outage of the
-  [control plane](../architecture.md#components), because a queued ciproxy
-  job cannot move to another label.
+  once.
 - Each own machine has a warm runner count, which is 2 by default.
 - The customer sets the count of each machine on its machine page.
 - Warm runners serve the label `ciproxy` only.
@@ -196,8 +215,6 @@ where each job runs. It also states what happens when a part fails.
 
 ### Control plane outage
 
-- During a control plane outage, warm runners that are ready keep taking
-  jobs.
 - No new runner starts on an own machine or on Boat until the control
   plane is back.
 - Jobs without a runner stay queued in GitHub, and they start when the
@@ -211,7 +228,7 @@ where each job runs. It also states what happens when a part fails.
 - ciproxy starts no runner on an offline machine.
 - New jobs run on the other own machines and on Boat.
 - Ready warm runners of an offline machine that still reach GitHub keep
-  taking jobs, as in a control plane outage.
+  taking jobs.
 - ciproxy does not stop or re-run the running jobs of an offline machine.
 - GitHub decides the result of those jobs.
 - When the machine is back, the dashboard shows its slots again.
