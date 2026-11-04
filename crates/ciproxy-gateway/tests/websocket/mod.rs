@@ -1,6 +1,7 @@
 //! Isolated transport fixture and observable machine gateway contract.
 
 mod contract_tests;
+mod credential_tests;
 mod database;
 mod fixture;
 mod handshake_fence_tests;
