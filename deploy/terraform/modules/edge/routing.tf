@@ -110,7 +110,7 @@ resource "google_compute_global_forwarding_rule" "http" {
 resource "google_dns_record_set" "public" {
   for_each     = local.config.hosts
   name         = "${each.value}."
-  managed_zone = local.config.dns_zone
+  managed_zone = local.config.dns_zones[each.key]
   type         = "A"
   ttl          = 300
   rrdatas      = [google_compute_global_address.public.address]

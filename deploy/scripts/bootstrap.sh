@@ -2,10 +2,10 @@
 # Apply infrastructure only when a local operator deliberately runs this file.
 set -euo pipefail
 
-environment="${1:?Usage: deploy/scripts/bootstrap.sh staging|production operator@example.com}"
+environment="${1:?Usage: deploy/scripts/bootstrap.sh main-preview|production operator@example.com}"
 operator_email="${2:?Supply the uptime alert address.}"
 case "${environment}" in
-  staging) project_id=internal-498318 ;;
+  main-preview) project_id=internal-498318 ;;
   production) project_id=ciproxy ;;
   *) echo "Unknown environment: ${environment}" >&2; exit 1 ;;
 esac

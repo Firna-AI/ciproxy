@@ -81,8 +81,9 @@ resource "google_secret_manager_secret_iam_member" "release_sync" {
 }
 
 resource "google_dns_managed_zone" "public" {
-  name        = local.prefix
-  dns_name    = "${var.domain}."
+  for_each    = local.dns_domains
+  name        = each.key == "site" ? local.prefix : "${local.prefix}-${each.key}"
+  dns_name    = "${each.value}."
   description = "Delegate this zone before enabling public uptime checks."
   depends_on  = [google_project_service.service]
 }

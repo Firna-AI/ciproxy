@@ -20,7 +20,7 @@ interface that a future image must meet.
 
 | Environment | GCP project | Hosts | Deploys on |
 | --- | --- | --- | --- |
-| `staging` | `internal-498318` | `staging.ciproxy.dev`, `app.staging.ciproxy.dev`, `get.staging.ciproxy.dev` | Each push to `calummoore/ci-proxy-load-balancer` |
+| `main-preview` | `internal-498318` | `br-main.preview.ciproxy.dev`, `br-main.preview.app.ciproxy.dev`, `br-main.preview.get.ciproxy.dev` | Each push to `calummoore/ci-proxy-load-balancer`, then `main` after its merge |
 | `production` | `ciproxy` | `ciproxy.dev`, `app.ciproxy.dev`, `get.ciproxy.dev` | Each push of a `deploy-*` tag |
 
 Each environment has its own state, trust, accounts, cluster, database, and
@@ -31,10 +31,10 @@ IP address, with one Google-managed certificate. It redirects HTTP to HTTPS.
 | Host and path | Backend |
 | --- | --- |
 | Site host | The site bucket through Cloud CDN. The docs are at `/docs`. |
-| `app.` host | The dashboard bucket through Cloud CDN. |
-| `app.` host: `/api`, `/agent`, `/hooks` | The control-plane backend. It has no endpoints while the runtime is disabled, so these paths fail. |
-| `app.` host: `/images` | The private image bucket through Cloud CDN, for signed URLs. Objects go under `images/`. |
-| `get.` host | The `futex-ai/cli-release` server on GKE. |
+| Dashboard host | The dashboard bucket through Cloud CDN. |
+| Dashboard host: `/api`, `/agent`, `/hooks` | The control-plane backend. It has no endpoints while the runtime is disabled, so these paths fail. |
+| Dashboard host: `/images` | The private image bucket through Cloud CDN, for signed URLs. Objects go under `images/`. |
+| Download host | The `futex-ai/cli-release` server on GKE. |
 
 The release server serves the install script and the `ciproxy-agent`
 releases of `Firna-AI/ciproxy`, with the tag prefix `ciproxy-agent-v`. It
@@ -62,7 +62,7 @@ gives their roles.
 | --- | --- | --- |
 | `deploy/terraform/seed/` | The state bucket, with local state | Operator, once |
 | `deploy/terraform/bootstrap/` | The Workload Identity Federation pool and provider, and the deploy service account | Operator |
-| `deploy/environments/<env>/` | The foundation root: VPC, NAT, GKE Autopilot, Cloud SQL for PostgreSQL 17, the Boat KMS key, Artifact Registry, secrets, buckets, the DNS zone, and alert email channels | Operator |
+| `deploy/environments/<env>/` | The foundation root: VPC, NAT, GKE Autopilot, Cloud SQL for PostgreSQL 17, the Boat KMS key, Artifact Registry, secrets, buckets, DNS zones, and alert email channels | Operator |
 | `deploy/environments/<env>/edge/` | The edge root: load balancer, Cloud CDN, certificate, A records, uptime checks, and alerts | Deploy workflow |
 | `deploy/terraform/modules/` | The `foundation` and `edge` modules of these roots | None |
 | `deploy/helm/cli-release-server/` | The unchanged upstream chart | Deploy workflow |
@@ -73,7 +73,7 @@ gives their roles.
 | `deploy/scripts/register-cdn-key.sh` | Stores a CDN signing key as a numbered secret version, and registers it under the matching name | Operator |
 | `deploy/scripts/deploy.py` | The deploy command, with `deploy_support.py` and `publish_static.py` | Deploy workflow |
 | `deploy/scripts/install-helm.sh` | Installs Helm 4.3.1 after a checksum check | Deploy workflow or operator |
-| `deploy/tests/` | The regression tests of the NEG zone wait and the static publisher | Offline check |
+| `deploy/tests/` | The regression tests of the Helm installer, NEG zone wait, and static publisher | Offline check |
 | `.github/workflows/deploy-<env>.yml` | The deploy workflow of each environment | GitHub Actions |
 
 The remote state is in the bucket `ciproxy-<env>-tfstate-<project>`, under
@@ -92,10 +92,10 @@ terraform -chdir=deploy/terraform/seed init -backend=false -input=false
 terraform -chdir=deploy/terraform/seed validate
 terraform -chdir=deploy/terraform/bootstrap init -backend=false -input=false
 terraform -chdir=deploy/terraform/bootstrap validate
-terraform -chdir=deploy/environments/staging init -backend=false -input=false
-terraform -chdir=deploy/environments/staging validate
-terraform -chdir=deploy/environments/staging/edge init -backend=false -input=false
-terraform -chdir=deploy/environments/staging/edge validate
+terraform -chdir=deploy/environments/main-preview init -backend=false -input=false
+terraform -chdir=deploy/environments/main-preview validate
+terraform -chdir=deploy/environments/main-preview/edge init -backend=false -input=false
+terraform -chdir=deploy/environments/main-preview/edge validate
 terraform -chdir=deploy/environments/production init -backend=false -input=false
 terraform -chdir=deploy/environments/production validate
 terraform -chdir=deploy/environments/production/edge init -backend=false -input=false
@@ -108,12 +108,13 @@ helm template ciproxy deploy/helm/ciproxy
 helm template ciproxy deploy/helm/ciproxy --set controlPlane.enabled=true \
   --set controlPlane.image=example.invalid/control-plane:render-check \
   --set 'allowedZones={europe-west1-b,europe-west1-c,europe-west1-d}' \
-  --set controlPlane.cdnSigningKeyName=ciproxy-staging-images-v1 \
-  --set controlPlane.secrets.cdn-signing-key=projects/internal-498318/secrets/ciproxy-staging-cdn-signing-key
-actionlint .github/workflows/deploy-staging.yml .github/workflows/deploy-production.yml
+  --set controlPlane.cdnSigningKeyName=ciproxy-main-preview-images-v1 \
+  --set controlPlane.secrets.cdn-signing-key=projects/internal-498318/secrets/ciproxy-main-preview-cdn-signing-key
+actionlint .github/workflows/deploy-main-preview.yml .github/workflows/deploy-production.yml
 for script in deploy/scripts/*.sh; do bash -n "$script"; done
 python3 -m py_compile deploy/scripts/*.py
-python3 -m unittest deploy/tests/test_neg_readiness.py deploy/tests/test_publish_static.py
+python3 -m unittest deploy/tests/test_install_helm.py \
+  deploy/tests/test_neg_readiness.py deploy/tests/test_publish_static.py
 python3 deploy/scripts/deploy.py --help
 npm --prefix ts run site:build
 python3 deploy/scripts/publish_static.py --directory=ts/site/dist \
@@ -121,13 +122,13 @@ python3 deploy/scripts/publish_static.py --directory=ts/site/dist \
 ```
 
 The default `ciproxy` render has no control plane. The runtime render uses
-the first staging CDN key, so its provider object lists secret version 1.
+the first main preview CDN key, so its provider object lists secret version 1.
 The last command lists each object and its headers, and uploads nothing.
 
 ## Setup checklist
 
-Do every step for staging first, then for production. Each step links to
-its commands and permissions.
+Do every step for the main preview first, then for production. Each step
+links to its commands and permissions.
 
 1. [Prepare the project](setup.md#1-prepare-the-project): check billing and
    the organization policies, get the operator roles, install the tools, and
@@ -140,11 +141,11 @@ its commands and permissions.
 4. [Store the release token](setup.md#4-store-the-release-token): add a
    GitHub token for `Firna-AI/ciproxy` only to Secret Manager.
 5. [Delegate DNS](setup.md#5-delegate-dns): set the production name servers
-   at the registrar. Add the staging NS record to the parent zone.
+   at the registrar. Add the three preview NS records to the production zone.
 6. [Set up the GitHub environment](setup.md#6-set-up-the-github-environment):
    create it and set its variables.
 7. [Run the first deploy](setup.md#7-run-the-first-deploy): push to the
-   staging branch, or push a `deploy-*` tag. This applies the edge.
+   main preview branch, or push a `deploy-*` tag. This applies the edge.
 8. [Register the CDN signing key](setup.md#8-register-the-cdn-signing-key):
    then set `CDN_SIGNING_KEY_NAME` to the name that it prints.
 9. [Turn on uptime alerts](setup.md#9-turn-on-uptime-alerts): check DNS,

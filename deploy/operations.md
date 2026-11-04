@@ -33,15 +33,15 @@ gcloud storage cp FILE "gs://$IMAGE_BUCKET/images/NAME"
 Then check the signed access. Set `KEY_NAME` to the current value of
 `CDN_SIGNING_KEY_NAME`. The probe reads the exact secret version N that this
 name selects, never `latest`, into a private directory. The example uses
-the staging host:
+the main preview host:
 
 ```sh
-KEY_NAME=ciproxy-staging-images-v1
+KEY_NAME=ciproxy-main-preview-images-v1
 KEY_DIR="$(mktemp -d)"
 gcloud secrets versions access "${KEY_NAME##*-v}" \
   --secret="ciproxy-$DEPLOY_ENV-cdn-signing-key" --project="$PROJECT_ID" \
   --out-file="$KEY_DIR/key"
-URL="https://app.staging.ciproxy.dev/images/NAME"
+URL="https://br-main.preview.app.ciproxy.dev/images/NAME"
 SIGNED="$(gcloud compute sign-url "$URL" --key-name="$KEY_NAME" --key-file="$KEY_DIR/key" \
   --expires-in=10m --format='value(signedUrl)')"
 EXPIRED="$(gcloud compute sign-url "$URL" --key-name="$KEY_NAME" --key-file="$KEY_DIR/key" \
@@ -79,11 +79,11 @@ kubectl port-forward --namespace=ciproxy pod/ciproxy-sql-admin 15432:5432
 
 In a second terminal, connect with
 `psql -h 127.0.0.1 -p 15432 -U postgres -d ciproxy -W`, and grant the
-rights to the `sql_user` of the deployment output. For staging:
+rights to the `sql_user` of the deployment output. For the main preview:
 
 ```sql
-GRANT CONNECT ON DATABASE ciproxy TO "ciproxy-staging-control@internal-498318.iam";
-GRANT USAGE, CREATE ON SCHEMA public TO "ciproxy-staging-control@internal-498318.iam";
+GRANT CONNECT ON DATABASE ciproxy TO "ciproxy-main-preview-control@internal-498318.iam";
+GRANT USAGE, CREATE ON SCHEMA public TO "ciproxy-main-preview-control@internal-498318.iam";
 ```
 
 Stop the port forward, and run
@@ -98,7 +98,7 @@ does not meet this interface of the `deploy/helm/ciproxy` chart:
 | Part | What the image must do |
 | --- | --- |
 | HTTP | Listen on `HTTP_BIND`, which is `0.0.0.0:8080`. |
-| Health | Answer `GET /api/health/ready` when ready, and `GET /api/health/live` while alive. The load balancer checks the ready path with the `app.` host. |
+| Health | Answer `GET /api/health/ready` when ready, and `GET /api/health/live` while alive. The load balancer checks the ready path with the dashboard host. |
 | Database | Use `DATABASE_URL`: the Cloud SQL Auth Proxy beside it, on `127.0.0.1:5432`, with IAM login and no password. |
 | Settings | Read `PUBLIC_URL`, `IMAGE_URL_PREFIX`, `BOAT_KMS_KEY`, and `CDN_SIGNING_KEY_NAME`. The chart sets `CDN_SIGNING_KEY_NAME` to `ciproxy-<env>-images-v<N>`. |
 | Secrets | Read the files `github-app-private-key`, `github-webhook-secret`, `github-oauth-secret`, `stripe-secret-key`, `stripe-webhook-secret`, `session-key`, and `cdn-signing-key` in `SECRETS_DIRECTORY`, which is `/var/run/secrets/ciproxy`. The `cdn-signing-key` file holds secret version N, which `CDN_SIGNING_KEY_NAME` names. Each other file holds the latest version when the pod starts. |

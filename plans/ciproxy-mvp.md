@@ -163,8 +163,9 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
 - [ ] Deploy staging on each push, and production on each `deploy-` tag. Add
       uptime alerts.
-- [ ] Rename the staging environment to the main preview of item 53, with
+- [x] Rename the staging environment to the main preview of item 53, with
       its hosts under `br-main.preview`, before the first apply.
+      Branch: `conductor/ciproxy-mvp-milestone-5-main-preview`.
 - [ ] Set up the main preview from the checklist of `deploy/README.md`, as
       item 52 says.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
