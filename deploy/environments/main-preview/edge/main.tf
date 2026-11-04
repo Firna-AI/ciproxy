@@ -17,8 +17,8 @@ provider "google" {
 data "terraform_remote_state" "foundation" {
   backend = "gcs"
   config = {
-    bucket = "ciproxy-staging-tfstate-internal-498318"
-    prefix = "staging/foundation"
+    bucket = "ciproxy-main-preview-tfstate-internal-498318"
+    prefix = "main-preview/foundation"
   }
 }
 

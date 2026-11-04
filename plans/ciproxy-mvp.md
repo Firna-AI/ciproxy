@@ -166,8 +166,9 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
 - [ ] Deploy staging on each push, and production on each `deploy-` tag. Add
       uptime alerts.
-- [ ] Rename the staging environment to the main preview of item 53, with
+- [x] Rename the staging environment to the main preview of item 53, with
       its hosts under `br-main.preview`, before the first apply.
+      Branch: `conductor/ciproxy-mvp-milestone-5-main-preview`.
 - [ ] Set up the main preview from the checklist of `deploy/README.md`, as
       item 52 says.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
@@ -352,13 +353,20 @@ A patched runner sends the cache calls to a sidecar in the VM, which reads
 and writes through to GitHub. The machine cache keeps entries after GitHub
 evicts them. Boat runs the stock runner. The cache spike confirms it.
 
-- [ ] Rename `ACTIONS_CACHE_URL`, `ACTIONS_CACHE_SERVICE_V2`, and
+- [x] Rename `ACTIONS_CACHE_URL`, `ACTIONS_CACHE_SERVICE_V2`, and
       `ACTIONS_RESULTS_URL` in `Runner.Worker.dll` at equal length.
-- [ ] Add `ciproxy-cache-sidecar`. Pass other results calls through, and
+      Branch: `conductor/ciproxy-mvp-milestone-11-cache-sidecar`.
+- [x] Add `ciproxy-cache-sidecar`. Pass other results calls through, and
       fall back to GitHub on any error.
-- [ ] Scope each entry from the job facts, as "Cache scopes" says.
-- [ ] Add "Clear cache" for one machine, eviction, and the reports.
-- [ ] Test the sidecar against a fake GitHub cache.
+      Branch: `conductor/ciproxy-mvp-milestone-11-cache-sidecar`.
+- [x] Scope each entry from the job facts, as "Cache scopes" says.
+      Branch: `conductor/ciproxy-mvp-milestone-11-cache-sidecar`.
+- [x] Add "Clear cache" for one machine, eviction, and the reports.
+      Branch: `conductor/ciproxy-mvp-milestone-11-cache-sidecar`.
+- [x] Test the sidecar against a fake GitHub cache.
+      Branch: `conductor/ciproxy-mvp-milestone-11-cache-sidecar`.
+      Orchestrator: run `image/runner-patch/smoke/live-check.py` with
+      trusted registration and runtime credentials on a GitHub runner.
 
 ## Milestone 12: Boat backend on the shared sandbox interface
 

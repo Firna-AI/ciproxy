@@ -27,7 +27,7 @@ locals {
   # IDs are immutable. A renamed or re-created repository cannot inherit trust.
   repository_id = "1442045837"
   owner_id      = "307519338"
-  ref_condition = var.environment == "production" ? "assertion.ref.startsWith('refs/tags/deploy-')" : "assertion.ref == 'refs/heads/calummoore/ci-proxy-load-balancer'"
+  ref_condition = var.environment == "production" ? "assertion.ref.startsWith('refs/tags/deploy-')" : "assertion.ref in ['refs/heads/calummoore/ci-proxy-load-balancer', 'refs/heads/main']"
   workflow      = "Firna-AI/ciproxy/.github/workflows/deploy-${var.environment}.yml@"
 }
 

@@ -1,4 +1,4 @@
-prefix: ciproxy-staging
+prefix: ciproxy-main-preview
 # The deploy command supplies the foundation's complete allowed zone set.
 allowedZones: []
 
@@ -16,8 +16,8 @@ controlPlane:
   sqlUser: ""
   sqlProxyImage: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.27.0
   kmsKey: ""
-  publicUrl: https://app.staging.ciproxy.dev
-  imageUrlPrefix: https://app.staging.ciproxy.dev/images/
+  publicUrl: https://br-main.preview.app.ciproxy.dev
+  imageUrlPrefix: https://br-main.preview.app.ciproxy.dev/images/
   # Registration prints <prefix>-images-v<N>. N pins the mounted key version.
   cdnSigningKeyName: ""
   # Map of file names to Secret Manager resource IDs, without /versions/...
