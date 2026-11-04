@@ -1,5 +1,5 @@
 /* The headline figures (kpis.tsx): one box divided into cells by hairlines,
-   four in a row on desktop and two by two on mobile. */
+   in one row on desktop and two by two on mobile. */
 
 .kpis {
   display: grid;
@@ -54,6 +54,11 @@
 
 .mockup-mobile .kpi:nth-child(n + 3) {
   border-top: 1px solid var(--c-border);
+}
+
+/* An odd last figure, such as the third of three, takes the whole row. */
+.mockup-mobile .kpi:nth-child(odd):last-child {
+  grid-column: 1 / -1;
 }
 
 .mockup-mobile .kpi-value {

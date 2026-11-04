@@ -46,7 +46,7 @@ const features: readonly Feature[] = [
   {
     icon: ShieldCheck,
     title: "Secure by default",
-    text: "A fresh VM for every job, an agent that only connects out, and a GitHub App with runner access only.",
+    text: "A fresh VM for every job, an agent that only connects out, and a GitHub App with three permissions.",
   },
   {
     icon: Github,

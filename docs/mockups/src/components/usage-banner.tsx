@@ -1,14 +1,16 @@
 // The banner that every page of the organization shows while a soft limit is
 // passed or a payment failed. One state shows one banner on every page, with
-// the same title, text, and actions. On Plan and usage itself, the link to
-// that page drops out, and an add-on action saves in place. A person who
-// cannot pay sees the same banner with words in place of its actions.
+// the same title, text, and actions. At a failed payment, the payment banner
+// takes the place of the soft-limit banner, as design call 42 says. On Plan
+// and usage itself, the link to that page drops out, and an add-on action
+// saves in place. A person who cannot pay sees the same banner with words in
+// place of its actions.
 
 import type { ReactNode } from "react";
 import { ExternalLink } from "lucide-react";
 
 import { formatCount, monthly } from "../fixtures/format.ts";
-import { org } from "../fixtures/org.ts";
+import { workspace } from "../fixtures/org.ts";
 import {
   addOnPrices,
   ownMachines,
@@ -62,7 +64,7 @@ export function usageBanner(
       return (
         <Notice
           tone="warning"
-          title={`${org.login} used the ${formatCount(free.starts)} starts of Free`}
+          title={`${workspace.name} used the ${formatCount(free.starts)} starts of Free`}
           actions={act(
             <>
               {page === "billing" ? null : (
@@ -84,7 +86,7 @@ export function usageBanner(
       return (
         <Notice
           tone="warning"
-          title={`${org.login} passed the ${formatCount(team.starts)} starts of Team`}
+          title={`${workspace.name} passed the ${formatCount(team.starts)} starts of Team`}
           actions={act(
             <>
               <LinkAction to={paths.plansOnTeam} size="sm">
@@ -117,6 +119,7 @@ export function usageBanner(
         </Notice>
       );
     case "payment-failed":
+    case "payment-failed-over-limit":
       return (
         <Notice
           tone="danger"
@@ -142,7 +145,7 @@ export function usageBanner(
             </LinkAction>,
           )}
         >
-          {org.login} is on Free now: {startsText(free.starts)} a month and{" "}
+          {workspace.name} is on Free now: {startsText(free.starts)} a month and{" "}
           {ownMachines(free.machines)}. Jobs keep running on all{" "}
           {usage.machines} machines.
         </Notice>

@@ -12,11 +12,13 @@ import { SlotLegend, SlotStrip } from "../../components/figures.tsx";
 import { paths, type CataloguePath } from "../../components/paths.ts";
 import { MachineStatusLabel } from "../../components/status.tsx";
 import { dotJoin, unbroken } from "../../fixtures/format.ts";
-import { ax42Size, type Machine } from "../../fixtures/machines.ts";
+import { hardwareSize } from "../../fixtures/hardware.ts";
+import { officeMini, type Machine } from "../../fixtures/machines.ts";
 
 /**
- * The detail screens that exist: hetzner-ax42-1, and the offline machine. A
- * person who cannot change machines opens the read-only machine page.
+ * The detail screens that exist: hetzner-ax42-1, the offline machine, and
+ * office-mini-1, whose disk limits its slots. A person who cannot change
+ * machines opens the read-only machine page.
  */
 function detailPath(
   machine: Machine,
@@ -25,6 +27,7 @@ function detailPath(
   const first = machine.name === "hetzner-ax42-1";
   if (readOnly) return first ? paths.machineViewer : undefined;
   if (machine.status === "offline") return paths.machineOffline;
+  if (machine.name === officeMini.name) return paths.machineDiskLimit;
   return first ? paths.machine : undefined;
 }
 
@@ -45,7 +48,7 @@ function MachineName({
       ) : (
         <span className="machine-link mono">{machine.name}</span>
       )}
-      <span className="caption">{ax42Size}</span>
+      <span className="caption">{hardwareSize(machine.hardware)}</span>
     </span>
   );
 }

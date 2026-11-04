@@ -1,8 +1,11 @@
 // Labels and their sizes. A workflow picks a label in runs-on; each label
 // starts a VM of its size on an own machine, or on Boat. The dialog states
 // open over the list: edit ciproxy-8vcpu, add a label that fits no machine,
-// and edit ciproxy-32vcpu, which nothing fits. The list is the moment of 18
-// November, when a request for access waits on the Members tab.
+// edit ciproxy-32vcpu, which nothing fits, edit ciproxy-4vcpu while the
+// machines fit different numbers of its jobs, and add a label whose name
+// GitHub refuses. The
+// list is the moment of 18 November, when a request for access waits on the
+// Members tab.
 
 import { Plus } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -11,9 +14,11 @@ import { LinkAction } from "../../components/actions.tsx";
 import { ReadFailure } from "../../components/feedback.tsx";
 import { Panel } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
-import { unbroken } from "../../fixtures/format.ts";
+import { usageBanner } from "../../components/usage-banner.tsx";
+import { slotSize } from "../../fixtures/hardware.ts";
 import { openRequests } from "../../fixtures/members.ts";
 import { labels, nothingFitsLabel } from "../../fixtures/settings.ts";
+import { sizePhrase } from "../../fixtures/sizes.ts";
 import { LabelDialog, type LabelDialogMode } from "./label-dialog.tsx";
 import { LabelList } from "./label-list.tsx";
 import { SettingsFrame } from "./settings-frame.tsx";
@@ -24,6 +29,8 @@ export const labelsStates = [
   "no-machine-fits",
   "nothing-fits",
   "label-waits",
+  "mixed-machines",
+  "refused-name",
   "loading",
   "error",
 ] as const;
@@ -33,6 +40,8 @@ const dialogModes: Partial<Record<LabelsState, LabelDialogMode>> = {
   "edit-label": "edit",
   "no-machine-fits": "no-machine-fits",
   "nothing-fits": "nothing-fits",
+  "mixed-machines": "mixed-machines",
+  "refused-name": "refused-name",
 };
 
 /** The list holds ciproxy-32vcpu once mokly-ai added it for load tests. */
@@ -55,6 +64,11 @@ export function LabelsScreen({
       viewport={viewport}
       active={paths.settings}
       openRequests={state === "list" ? openRequests.length : 0}
+      banner={
+        state === "mixed-machines"
+          ? usageBanner("over-machines", "other")
+          : undefined
+      }
       overlay={mode ? <LabelDialog mode={mode} /> : undefined}
     >
       {state === "error" ? (
@@ -85,8 +99,9 @@ export function LabelsScreen({
             />
           </Panel>
           <p className="caption">
-            A slot on your machines is {unbroken("2 vCPU")} and{" "}
-            {unbroken("8 GB")}. A larger size takes several slots.
+            A slot on your machines is {sizePhrase(slotSize)}. A larger size
+            takes several slots, and each running job holds the disk of its
+            size.
           </p>
         </>
       )}

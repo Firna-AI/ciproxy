@@ -55,9 +55,27 @@ where each job runs. It also states what happens when a part fails.
 - The customer adds a label in the
   [dashboard](../architecture.md#components), in Settings under Labels.
 - A new label has a name, vCPU, memory in GB, and disk in GB.
+- A label name follows the label rules of GitHub. When the customer saves a
+  new label, ciproxy checks its name with GitHub, and the dialog shows the
+  refusal of GitHub.
+- A label has no rename. A new label and a delete of the old one give the
+  same result.
+- The customer can delete any label except `ciproxy`.
+- The waiting jobs of a deleted label stay queued in GitHub, its running
+  jobs finish, and ciproxy removes its scale sets.
+- **Decision:** every label except `ciproxy` can be deleted. Rejected: a
+  delete of every label, because the warm runners serve `ciproxy`.
+  Rejected: a delete of custom labels only, because a workspace may drop a
+  default label that it never uses.
 - The customer edits the size of any label in the same place.
 - The dialog that adds or edits a label states how many jobs of its size
-  fit on one own machine at a time.
+  fit on each own machine at a time.
+- When the machines fit different numbers of jobs, the dialog shows a
+  range, such as "1 to 3 jobs".
+- When some machines fit no job of the size, the dialog says how many
+  machines it fits, such as "1 job on 3 of your 4 machines".
+- The dialog counts only the connected machines that can run jobs, and no
+  draining machine.
 - After the customer changes the size of a label, each job of the label
   that a runner takes gets the new size.
 - So ciproxy stops the runners of the old size that have no job, and it

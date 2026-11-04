@@ -19,8 +19,7 @@ import {
 } from "../../components/status.tsx";
 import { dotJoin } from "../../fixtures/format.ts";
 import { jobDetails } from "../../fixtures/job-details.ts";
-import type { Job } from "../../fixtures/jobs.ts";
-import { org } from "../../fixtures/org.ts";
+import { repositoryName, type Job } from "../../fixtures/jobs.ts";
 
 export type JobListKind = "running" | "waiting" | "finished";
 
@@ -59,7 +58,10 @@ function LabelName({ job }: { job: Job }) {
 }
 
 function JobName({ job, kind }: { job: Job; kind: JobListKind }) {
-  const context = dotJoin(job.workflow, `${org.login}/${job.repo} ${job.ref}`);
+  const context = dotJoin(
+    job.workflow,
+    `${repositoryName(job.repo)} ${job.ref}`,
+  );
   return (
     <span className="job-name">
       {kind === "finished" ? (

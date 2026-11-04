@@ -65,9 +65,8 @@ export function PricingScreen({ viewport }: { viewport: Viewport }) {
         />
         <PriceCards />
         <p className="mk-foot caption pricing-note">
-          Prices in US dollars, billed monthly through Stripe. Every
-          organization starts on Free and can change its plan in the dashboard
-          at any time.
+          Prices in US dollars, billed monthly through Stripe. Every workspace
+          starts on Free and can change its plan in the dashboard at any time.
         </p>
       </Section>
       <AddOns />

@@ -17,8 +17,9 @@ import {
 } from "../../components/install-command.tsx";
 import { paths } from "../../components/paths.ts";
 import { unbroken } from "../../fixtures/format.ts";
+import { ax42 } from "../../fixtures/hardware.ts";
 import { boat } from "../../fixtures/machines.ts";
-import { org } from "../../fixtures/org.ts";
+import { org, workspace } from "../../fixtures/org.ts";
 import { runsOnDiff, workflowFile } from "../../fixtures/workflow.ts";
 import type { OnboardingState } from "./onboarding.tsx";
 
@@ -40,7 +41,7 @@ export function MachineStep({ state }: { state: OnboardingState }) {
     <div className="stack">
       <p className="small">
         Run this command on a Linux machine. It installs the ciproxy agent and
-        connects the machine to {org.login}.
+        connects the machine to {workspace.name}.
       </p>
       {state === "machine-no-kvm" ? (
         <NoKvmNotice name="hetzner-ax42-1" />
@@ -48,7 +49,7 @@ export function MachineStep({ state }: { state: OnboardingState }) {
       <InstallCommand />
       {state === "machine-connected" ? (
         <>
-          <ConnectedMachine name="hetzner-ax42-1" />
+          <ConnectedMachine name="hetzner-ax42-1" hardware={ax42} />
           <div className="row">
             <LinkAction to={paths.connectBoat} tone="primary">
               Continue

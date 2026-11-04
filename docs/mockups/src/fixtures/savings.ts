@@ -3,7 +3,7 @@
 // mokly-ai (.context/ciproxy-pricing).
 
 import { dateRange } from "./format.ts";
-import { ax42 } from "./machines.ts";
+import { ax42 } from "./hardware.ts";
 import { tiers } from "./tiers.ts";
 
 export const savingsPeriod = dateRange("19 October", "17 November");

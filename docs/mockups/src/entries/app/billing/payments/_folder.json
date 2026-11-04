@@ -1,4 +1,9 @@
 {
   "title": "Payment problems",
-  "order": ["payment-failed", "payment-failed-viewer", "moved-to-free"]
+  "order": [
+    "payment-failed",
+    "payment-failed-viewer",
+    "payment-failed-over-limit",
+    "moved-to-free"
+  ]
 }

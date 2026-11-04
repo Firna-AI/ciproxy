@@ -1,4 +1,1 @@
-{
-  "title": "Checkout",
-  "order": ["review", "stripe", "confirming", "confirmed", "cancelled"]
-}
+{ "title": "Checkout", "order": ["review", "stripe"] }

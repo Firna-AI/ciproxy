@@ -1,65 +1,83 @@
 // The dialog that edits a label or adds one: its name, its size, where its
 // jobs may run, and what they do when nothing fits. Before the save, it says
 // how many jobs of the size one machine runs, or that no machine fits it, or
-// that no machine and no Boat size fits it.
+// that no machine and no Boat size fits it. A label name follows the GitHub
+// label rules and never changes, as design call 33 says: the add dialog
+// refuses a name that breaks the rules, and the edit dialog shows the name
+// with a lock, beside Delete label, which a rename uses.
 
 import { RadioCard, RadioCardGroup } from "@firna/ui/radio";
 import { Switch } from "@firna/ui/switch";
 
-import { LinkAction, noop } from "../../components/actions.tsx";
+import { Action, LinkAction, noop } from "../../components/actions.tsx";
 import { Dialog } from "../../components/dialog.tsx";
-import { Notice } from "../../components/feedback.tsx";
 import { TextField } from "../../components/fields.tsx";
 import { paths, type CataloguePath } from "../../components/paths.ts";
-import { ax42, slotSize } from "../../fixtures/machines.ts";
+import { machineScenes, type Machine } from "../../fixtures/machines.ts";
 import {
   boatOnlyLabel,
-  fitsOwnMachine,
-  jobsPerMachine,
   labelNamed,
   nothingFitsLabel,
+  refusedLabel,
   type Label,
 } from "../../fixtures/settings.ts";
-import { fitsBoat, largestBoatSize, sizePhrase } from "../../fixtures/sizes.ts";
+import { largestBoatSize, sizePhrase } from "../../fixtures/sizes.ts";
+import { FitNote } from "./label-fit.tsx";
 
-export type LabelDialogMode = "edit" | "no-machine-fits" | "nothing-fits";
+export type LabelDialogMode =
+  | "edit"
+  | "no-machine-fits"
+  | "nothing-fits"
+  | "mixed-machines"
+  | "refused-name";
 
 type DialogCopy = {
   label: Label;
-  title: string;
-  save: string;
+  /** The dialog edits a label; otherwise it adds one. */
+  edits: boolean;
   /** The list behind the dialog, where Cancel and the save return. */
   list: CataloguePath;
+  /** The machines that decide how many jobs of the size fit. */
+  machines: readonly Machine[];
+  /** The refusal of the name, when the GitHub label rules refuse it. */
+  nameError?: string;
 };
 
-const edited = labelNamed("ciproxy-8vcpu");
+const steady = machineScenes.steady;
 
 const dialogs: Record<LabelDialogMode, DialogCopy> = {
   edit: {
-    label: edited,
-    title: `Edit ${edited.name}`,
-    save: "Save label",
+    label: labelNamed("ciproxy-8vcpu"),
+    edits: true,
     list: paths.settings,
+    machines: steady,
   },
   "no-machine-fits": {
     label: boatOnlyLabel,
-    title: "Add a label",
-    save: "Add label",
+    edits: false,
     list: paths.settings,
+    machines: steady,
   },
   "nothing-fits": {
     label: nothingFitsLabel,
-    title: `Edit ${nothingFitsLabel.name}`,
-    save: "Save label",
+    edits: true,
     list: paths.labelWaits,
+    machines: steady,
+  },
+  "mixed-machines": {
+    label: labelNamed("ciproxy-4vcpu"),
+    edits: true,
+    list: paths.settings,
+    machines: machineScenes.fourMachines,
+  },
+  "refused-name": {
+    label: refusedLabel,
+    edits: false,
+    list: paths.settings,
+    machines: steady,
+    nameError: `A label name cannot have spaces. Use ${refusedLabel.name.replaceAll(" ", "-")} instead.`,
   },
 };
-
-/** The part of one own machine that jobs can use. */
-const machineOffer = sizePhrase({
-  vcpu: ax42.slotsTotal * slotSize.vcpu,
-  memoryGb: ax42.slotsTotal * slotSize.memoryGb,
-});
 
 function Toggle({ label, caption }: { label: string; caption: string }) {
   return (
@@ -73,58 +91,63 @@ function Toggle({ label, caption }: { label: string; caption: string }) {
   );
 }
 
-function FitNote({ label }: { label: Label }) {
-  if (fitsOwnMachine(label)) {
-    const jobs = jobsPerMachine(label);
-    return (
-      <p className="caption">
-        Each of your machines runs {jobs} {jobs === 1 ? "job" : "jobs"} of this
-        size at a time.
-      </p>
-    );
-  }
-  if (fitsBoat(label)) {
-    return (
-      <Notice tone="warning" title={`No machine fits ${sizePhrase(label)}`}>
-        Jobs with this label run on Boat. Your machines offer {machineOffer}{" "}
-        each.
-      </Notice>
-    );
-  }
+function Footer({ copy }: { copy: DialogCopy }) {
   return (
-    <Notice
-      tone="warning"
-      title={`No machine and no Boat size fits ${sizePhrase(label)}`}
-    >
-      Your machines offer {machineOffer} each, and the largest Boat size offers{" "}
-      {sizePhrase(largestBoatSize)}.
-    </Notice>
+    <>
+      {copy.edits ? (
+        <span className="dialog-footer-start">
+          <Action tone="danger">Delete label</Action>
+        </span>
+      ) : null}
+      <LinkAction to={copy.list} tone="ghost">
+        Cancel
+      </LinkAction>
+      {copy.nameError ? (
+        <Action tone="primary" disabled>
+          Add label
+        </Action>
+      ) : (
+        <LinkAction to={copy.list} tone="primary">
+          {copy.edits ? "Save label" : "Add label"}
+        </LinkAction>
+      )}
+    </>
   );
 }
 
 export function LabelDialog({ mode }: { mode: LabelDialogMode }) {
-  const { label, title, save, list } = dialogs[mode];
+  const copy = dialogs[mode];
+  const { label } = copy;
   return (
     <Dialog
-      title={title}
-      footer={
-        <>
-          <LinkAction to={list} tone="ghost">
-            Cancel
-          </LinkAction>
-          <LinkAction to={list} tone="primary">
-            {save}
-          </LinkAction>
-        </>
-      }
+      title={copy.edits ? `Edit ${label.name}` : "Add a label"}
+      footer={<Footer copy={copy} />}
     >
-      <TextField label="Label" value={label.name} />
+      {copy.edits ? (
+        <TextField
+          label="Label"
+          value={label.name}
+          hint="A label keeps its name. To rename it, add a new label, then delete this one."
+          readOnly
+        />
+      ) : (
+        <TextField
+          label="Label"
+          value={label.name}
+          hint={
+            copy.nameError
+              ? undefined
+              : "The name that workflows use in runs-on. It cannot change later."
+          }
+          error={copy.nameError}
+        />
+      )}
       <div className="field-row">
         <TextField label="vCPU" value={String(label.vcpu)} />
         <TextField label="Memory, GB" value={String(label.memoryGb)} />
         <TextField label="Disk, GB" value={String(label.diskGb)} />
       </div>
-      <FitNote label={label} />
+      <FitNote label={label} machines={copy.machines} />
       <Toggle label="Your machines" caption="Jobs start here first" />
       <Toggle
         label="Boat"

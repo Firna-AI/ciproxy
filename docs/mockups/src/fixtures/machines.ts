@@ -1,76 +1,41 @@
-// Own machines of mokly-ai: three Hetzner AX42 machines. A slot holds one job
-// VM of 2 vCPU and 8 GB; a larger VM size takes several slots. A machine
-// without KVM connects with no slots, so it cannot run jobs.
+// Own machines of mokly-ai: three Hetzner AX42 machines, and in some scenes a
+// fourth, the mini PC office-mini-1, whose disk holds fewer jobs than its
+// slots. A slot holds one job VM of the smallest size; a larger VM size takes
+// several slots. A machine without KVM connects with no slots, so it cannot
+// run jobs.
 
-import { dotJoin, unbroken } from "./format.ts";
+import { unbroken } from "./format.ts";
+import { ax42, machineSlots, miniPc, type Hardware } from "./hardware.ts";
 
 export type SlotState = "busy" | "warm" | "free";
 export type MachineStatus = "healthy" | "draining" | "offline" | "no-slots";
 
 export type Machine = {
   name: string;
+  hardware: Hardware;
   status: MachineStatus;
   slots: readonly SlotState[];
   /** The machine can start a VM for each job. */
   kvm: boolean;
   warmTarget: number;
   cacheUsedGb: number;
+  /** The disk of the machine cache now: the disk that running jobs leave. */
   cacheSizeGb: number;
+  /** The free disk that the agent reported last. */
+  freeDiskGb: number;
   /** The repositories with a Docker disk on the machine, and their space. */
   dockerDisks: { repositories: number; sizeGb: number };
   lastSeen: string;
 };
 
-/** One slot of a machine: the size of the smallest job VM. */
-export const slotSize = { vcpu: 2, memoryGb: 8 } as const;
-
-/** Jobs get three quarters of a machine; the host reserve keeps the rest. */
-const jobShare = 3 / 4;
-
-/** The slots of a machine, by the rule of Slots in job-routing.md. */
-export function machineSlots(threads: number, memoryGb: number): number {
-  return Math.min(
-    Math.floor((threads * jobShare) / slotSize.vcpu),
-    Math.floor((memoryGb * jobShare) / slotSize.memoryGb),
-  );
-}
-
-const ax42Threads = 16;
-const ax42MemoryGb = 64;
-
-/**
- * The hardware the agent reports; the same for each AX42. The monthly cost is
- * what mokly-ai entered for its machines, which it bought at auction.
- */
-export const ax42 = {
-  cpu: "AMD Ryzen 7 PRO 8700GE",
-  threads: ax42Threads,
-  memoryGb: ax42MemoryGb,
-  disk: unbroken("2 × 512 GB NVMe"),
-  slotsTotal: machineSlots(ax42Threads, ax42MemoryGb),
-  agent: "0.4.2",
-  monthlyCost: 53.4,
-} as const;
-
 /** The warm runners that each machine keeps unless the customer changes it. */
 export const defaultWarmRunners = 2;
 
-/** The slots that a job VM of this size takes on a machine. */
-export function slotsFor(size: { vcpu: number; memoryGb: number }): number {
-  return Math.max(
-    Math.ceil(size.vcpu / slotSize.vcpu),
-    Math.ceil(size.memoryGb / slotSize.memoryGb),
-  );
-}
+/** The agent version of every machine, which is the newest. */
+export const agentVersion = "0.4.2";
 
-/** "16 threads · 64 GB", the line under a machine name. */
-export const ax42Size = dotJoin(
-  unbroken(`${ax42.threads} threads`),
-  unbroken(`${ax42.memoryGb} GB`),
-);
-
-function slots(busy: number, warm: number): SlotState[] {
-  const free = ax42.slotsTotal - busy - warm;
+function slots(total: number, busy: number, warm: number): SlotState[] {
+  const free = total - busy - warm;
   return [
     ...Array<SlotState>(busy).fill("busy"),
     ...Array<SlotState>(warm).fill("warm"),
@@ -86,19 +51,40 @@ function machine(
 ): Machine {
   return {
     name: `hetzner-ax42-${index}`,
+    hardware: ax42,
     status,
-    slots: slots(busy, warm),
+    slots: slots(machineSlots(ax42), busy, warm),
     kvm: true,
     warmTarget: defaultWarmRunners,
-    cacheUsedGb: [182, 167, 154, 12][index - 1] ?? 0,
+    cacheUsedGb: [182, 167, 154][index - 1] ?? 0,
     cacheSizeGb: 400,
+    freeDiskGb: 312,
     dockerDisks: {
-      repositories: [3, 2, 2, 0][index - 1] ?? 0,
-      sizeGb: [96, 58, 61, 0][index - 1] ?? 0,
+      repositories: [3, 2, 2][index - 1] ?? 0,
+      sizeGb: [96, 58, 61][index - 1] ?? 0,
     },
     lastSeen: status === "offline" ? "14m ago" : "3s ago",
   };
 }
+
+/**
+ * office-mini-1 joined on 18 November: two warm runners wait in its slots.
+ * They hold 120 GB of the 192 GB that jobs can use, and the cache has the
+ * other 72 GB.
+ */
+export const officeMini: Machine = {
+  name: "office-mini-1",
+  hardware: miniPc,
+  status: "healthy",
+  slots: slots(machineSlots(miniPc), 0, 2),
+  kvm: true,
+  warmTarget: defaultWarmRunners,
+  cacheUsedGb: 6,
+  cacheSizeGb: 72,
+  freeDiskGb: 206,
+  dockerDisks: { repositories: 0, sizeGb: 0 },
+  lastSeen: "3s ago",
+};
 
 /** hetzner-ax42-3 after a firmware update turned virtualization off. */
 const withoutKvm: Machine = {
@@ -122,12 +108,12 @@ export const machineScenes = {
   noKvm: [machine(1, 5, 1), machine(2, 6, 0), withoutKvm],
   /** hetzner-ax42-1 finishes its jobs and takes no new ones. */
   draining: [machine(1, 3, 0, "draining"), machine(2, 6, 0), machine(3, 5, 1)],
-  /** A fourth machine joined; Team includes three. */
+  /** office-mini-1 joined as a fourth machine; Team includes three. */
   fourMachines: [
     machine(1, 5, 1),
     machine(2, 6, 0),
     machine(3, 4, 2),
-    machine(4, 0, 2),
+    officeMini,
   ],
 } as const satisfies Record<string, readonly Machine[]>;
 

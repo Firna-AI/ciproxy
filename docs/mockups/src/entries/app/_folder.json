@@ -3,6 +3,7 @@
   "order": [
     "auth",
     "access",
+    "github-app",
     "onboarding",
     "jobs",
     "machines",

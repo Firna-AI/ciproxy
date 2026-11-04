@@ -31,7 +31,10 @@ const columns: readonly { title: string; links: readonly FooterLink[] }[] = [
   },
   {
     title: "Legal",
-    links: [{ label: "Terms" }, { label: "Privacy policy" }],
+    links: [
+      { label: "Terms", to: paths.terms },
+      { label: "Privacy policy", to: paths.privacy },
+    ],
   },
 ];
 

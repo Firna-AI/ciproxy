@@ -1,0 +1,177 @@
+/* The legal pages (legal-page.tsx): the head with the switch between the
+   terms and the privacy policy, then "On this page" beside the article on a
+   wide desktop. Grey lines hold the place of the text that the user writes. */
+
+.mk-section.legal-top {
+  padding-bottom: 48px;
+}
+
+.mockup-mobile .mk-section.legal-top {
+  padding-bottom: 36px;
+}
+
+.legal-top .mk-head {
+  margin-bottom: 28px;
+}
+
+.legal-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.legal-switch-link {
+  padding: 6px 12px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  color: var(--c-ink2);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.legal-switch-link.is-active {
+  border-color: var(--c-ink);
+  color: var(--c-ink);
+}
+
+.mk-section.legal-body {
+  padding-top: 56px;
+}
+
+.mockup-mobile .mk-section.legal-body {
+  padding-top: 40px;
+}
+
+.legal-grid {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 64px;
+  align-items: start;
+}
+
+.mockup-mobile .legal-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.legal-toc {
+  position: sticky;
+  top: 88px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.legal-toc-title {
+  color: var(--c-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.legal-toc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legal-toc-link {
+  color: var(--c-muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.legal-toc-link:hover {
+  color: var(--c-ink);
+}
+
+.legal-article {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  max-width: 680px;
+}
+
+.legal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.legal-h2 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 28px;
+}
+
+.legal-section p {
+  color: var(--c-ink2);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.legal-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 6px 0;
+}
+
+.legal-line {
+  height: 10px;
+  border-radius: var(--r-sm);
+  background: var(--c-soft);
+}
+
+.legal-table-frame {
+  overflow: hidden;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-xl);
+}
+
+.legal-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.legal-table th {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-bg);
+  color: var(--c-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: left;
+}
+
+.legal-table td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--c-border);
+  color: var(--c-ink);
+  vertical-align: top;
+}
+
+.legal-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.mockup-mobile .legal-table th,
+.mockup-mobile .legal-table td {
+  padding-right: 10px;
+  padding-left: 10px;
+}
+
+/* A narrow desktop window drops "On this page", as the docs move it. */
+
+@media (max-width: 880px) {
+  .mockup-desktop .legal-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mockup-desktop .legal-toc {
+    display: none;
+  }
+}

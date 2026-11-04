@@ -5,7 +5,7 @@
 import { LinkAction } from "../../components/actions.tsx";
 import { Dialog } from "../../components/dialog.tsx";
 import { paths } from "../../components/paths.ts";
-import { org } from "../../fixtures/org.ts";
+import { workspace } from "../../fixtures/org.ts";
 import { ownMachines, startsText, tiers } from "../../fixtures/tiers.ts";
 import { freeFrom, usageScenes } from "../../fixtures/usage.ts";
 
@@ -14,7 +14,7 @@ export function MoveToFreeDialog() {
   const { free, team } = tiers;
   return (
     <Dialog
-      title={`Move ${org.login} to Free?`}
+      title={`Move ${workspace.name} to Free?`}
       footer={
         <>
           <LinkAction to={paths.plansOnTeam} tone="ghost">
@@ -28,7 +28,7 @@ export function MoveToFreeDialog() {
     >
       <p className="small">
         {team.name} stays until {usage.ends}, the end of this period. From{" "}
-        {freeFrom}, <span className="nowrap">{org.login}</span> is on Free:{" "}
+        {freeFrom}, <span className="nowrap">{workspace.name}</span> is on Free:{" "}
         {startsText(free.starts)} a month and {ownMachines(free.machines)}.
       </p>
       <p className="small">

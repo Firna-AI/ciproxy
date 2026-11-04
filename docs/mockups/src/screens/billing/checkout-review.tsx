@@ -18,7 +18,7 @@ import {
 import { paths } from "../../components/paths.ts";
 import { AppShell } from "../../components/shell/app-shell.tsx";
 import { formatCount, formatMoney, monthly } from "../../fixtures/format.ts";
-import { org } from "../../fixtures/org.ts";
+import { workspace } from "../../fixtures/org.ts";
 import {
   addOnPrices,
   ownMachines,
@@ -54,7 +54,7 @@ function ChargeNote({ move }: { move: ReviewMove }) {
     return (
       <p className="caption">
         Stripe charges {formatMoney(team.price)} today, then on the 4th of each
-        month. You pay on Stripe; ciproxy never sees your card.
+        month. You pay by card on Stripe; ciproxy never sees your card.
       </p>
     );
   }
@@ -83,7 +83,7 @@ export function CheckoutReviewScreen({
       <PageHeader
         crumbs={[{ label: "Plans", to: review.back }]}
         title={`Move to ${tier.name}`}
-        subtitle={`For ${org.login}: ${startsText(tier.starts)} a month and ${ownMachines(tier.machines)}.`}
+        subtitle={`For ${workspace.name}: ${startsText(tier.starts)} a month and ${ownMachines(tier.machines)}.`}
       />
       <div className="checkout">
         <Panel title="Add-ons">

@@ -1,7 +1,7 @@
 // Install the ciproxy GitHub App on an organization. GitHub owns the choice of
-// organization and repositories; ciproxy shows what the app asks for. A member
-// who is not an owner asks the owners on GitHub; when one approves, the member
-// who asked becomes the first Admin in ciproxy.
+// organization and repositories; ciproxy shows the three permissions that the
+// app asks for. A member who is not an owner asks the owners on GitHub; when
+// one approves, the member who asked becomes the first Admin in ciproxy.
 
 import { Check, Github } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -9,6 +9,7 @@ import type { Viewport } from "@mokly/mokly";
 import { Action, LinkAction } from "../../components/actions.tsx";
 import { Notice } from "../../components/feedback.tsx";
 import { paths } from "../../components/paths.ts";
+import { appPermissions } from "../../fixtures/github-app.ts";
 import { requester } from "../../fixtures/members.ts";
 import { org, user } from "../../fixtures/org.ts";
 import { AuthShell } from "./auth-shell.tsx";
@@ -44,19 +45,15 @@ export function InstallAppScreen({
         </Notice>
       ) : (
         <ul className="permission-list small">
-          <li>
-            <Check size={16} />
-            <span>
-              <strong>Self-hosted runners</strong> · read and write, to start a
-              runner for each job
-            </span>
-          </li>
-          <li>
-            <Check size={16} />
-            <span>
-              <strong>Metadata</strong> · read, to list your repositories
-            </span>
-          </li>
+          {appPermissions.map((permission) => (
+            <li key={permission.name}>
+              <Check size={16} />
+              <span>
+                <strong>{permission.name}</strong> · {permission.access},{" "}
+                {permission.use}
+              </span>
+            </li>
+          ))}
         </ul>
       )}
       <div className="auth-actions">

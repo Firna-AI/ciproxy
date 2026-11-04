@@ -10,7 +10,7 @@ import { AppShell } from "../../components/shell/app-shell.tsx";
 import { dotJoin, monthly } from "../../fixtures/format.ts";
 import { boat } from "../../fixtures/machines.ts";
 import { requester } from "../../fixtures/members.ts";
-import { org } from "../../fixtures/org.ts";
+import { org, workspace } from "../../fixtures/org.ts";
 import { BoatStep, FirstJobStep, MachineStep } from "./step-bodies.tsx";
 import "./onboarding.css";
 
@@ -105,7 +105,7 @@ export function OnboardingScreen({
     >
       <PageHeader
         title="Set up ciproxy"
-        subtitle={`${done} of ${steps.length} steps done for ${org.login}`}
+        subtitle={`${done} of ${steps.length} steps done for ${workspace.name}`}
       />
       <ol className="setup-steps">
         {steps.map((step, index) => {
