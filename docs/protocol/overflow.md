@@ -23,6 +23,8 @@ backend must give ciproxy.
 - The customer connects Boat with an API key of its own Boat account.
 - The customer does this in Setup or in Settings under Overflow, in the
   [dashboard](../architecture.md#components).
+- One Boat account serves the jobs of every organization of the
+  [workspace](workspaces.md#terms).
 - The customer can skip the Boat step of Setup.
 - Without Boat, jobs run on own machines only, as
   [Where a job runs](job-routing.md#where-a-job-runs) says.
@@ -50,8 +52,8 @@ backend must give ciproxy.
 - After Disconnect, ciproxy starts no new Boat runner.
 - Boat jobs that run at that moment finish, and ciproxy deletes the key
   when the last of their sandboxes ends.
-- [Removing the App](app-removal.md#removing-the-app) says what happens to the
-  key and the sandboxes of an organization that removes the GitHub App.
+- [Removing the App](app-removal.md#removing-the-app) says what happens to
+  the sandboxes and the key when an organization removes the GitHub App.
 
 ## Backend contract
 
@@ -138,7 +140,7 @@ backend must give ciproxy.
   a large Boat bill. Rejected: a default limit, and overflow that stays off
   until the customer sets a limit.
 - The spend is the Boat cost of the sandboxes that ciproxy starts for the
-  [organization](security.md#terms).
+  workspace.
 - The spend does not count other use of the Boat account.
 - The spend limit counts over the calendar month in UTC.
 - Settings under Overflow and the Machines page show the spend of the

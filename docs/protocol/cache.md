@@ -58,8 +58,14 @@ This doc states the cache rules for jobs on
   restore.
 - A pull request cannot write an entry that another branch or another pull
   request restores.
+- A job of a `pull_request_target` event counts as a pull request, also
+  when its ref is the default branch. Reason: its job often runs code from
+  the pull request.
 - The cache scope of a save comes from GitHub, not from the job, so the
   code of a job cannot choose it.
+- The control plane reads the ref, the event, and the head repository of
+  the run of each job from the GitHub API, as
+  [GitHub App permissions](security.md#github-app-permissions) says.
 - **Decision:** only jobs on the default branch write entries for every
   branch. Rejected: shared writes from every branch, because a pull request
   could then poison the cache.
@@ -119,7 +125,7 @@ This doc states the cache rules for jobs on
   machine, and the space that these disks take.
 - Only Team and Business include Docker disks, as
   [Tier features](billing.md#tier-features) says.
-- A job of an organization on Free gets no Docker disk.
+- A job of a workspace on Free gets no Docker disk.
 
 ## Related docs
 

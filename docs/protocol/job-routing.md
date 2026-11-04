@@ -35,7 +35,7 @@ where each job runs. It also states what happens when a part fails.
 
 ### Default labels
 
-- Every [organization](security.md#terms) starts with these labels:
+- Every [workspace](workspaces.md#terms) starts with these labels:
 
 | Label | vCPU | Memory | Disk | Slots |
 | --- | --- | --- | --- | --- |
@@ -48,6 +48,7 @@ where each job runs. It also states what happens when a part fails.
 - On Boat, each job runs in a sandbox, as
   [Overflow runners](overflow.md#overflow-runners) says.
 - The default labels allow both own machines and Boat.
+- The labels of a workspace serve the jobs of all its organizations.
 
 ### Custom labels
 
@@ -153,8 +154,8 @@ where each job runs. It also states what happens when a part fails.
 
 ### The overflow wait
 
-- The customer sets the overflow wait of the organization in Settings
-  under Overflow, with "Start on Boat after a job waits".
+- The customer sets the overflow wait of the workspace in Settings under
+  Overflow, with "Start on Boat after a job waits".
 - The overflow wait is 0, 15, 30, 60, or 120 seconds, and 30 seconds by
   default.
 - The dashboard shows these values as "At once", "15 seconds",
@@ -163,7 +164,7 @@ where each job runs. It also states what happens when a part fails.
 ### When Boat cannot take a job
 
 - The customer turns [overflow](overflow.md#terms) on or off for the
-  organization with "Use Boat when your machines are busy".
+  workspace with "Use Boat when your machines are busy".
 - This switch is in Settings under Overflow.
 - ciproxy starts a Boat runner for a job only when overflow is on, the
   label of the job allows Boat, and Boat is available.
@@ -199,8 +200,18 @@ where each job runs. It also states what happens when a part fails.
 - Each own machine has a warm runner count, which is 2 by default.
 - The customer sets the count of each machine on its machine page.
 - Warm runners serve the label `ciproxy` only.
+- Each warm runner belongs to one organization of the workspace.
 - GitHub gives a waiting job of the label `ciproxy` to a ready warm runner
-  at once.
+  of its organization at once.
+- In a workspace with several organizations, the warm runner count of a
+  machine stays one count.
+- ciproxy gives each warm runner to an organization by the recent jobs of
+  the label `ciproxy` of each organization.
+- **Decision:** one warm runner count for each machine, shared by the
+  organizations of the workspace by their recent jobs. Rejected: a count
+  for each organization, because more VMs then stay idle. Rejected: a count
+  for each organization on each machine page, because it adds a control.
+  Reason: the warm runners go where the jobs arrive.
 - A job of another label gets a new runner in a fresh job VM in free
   slots.
 - A warm runner holds the slots of the size of the label `ciproxy`, which
@@ -255,4 +266,6 @@ where each job runs. It also states what happens when a part fails.
 - [Architecture](../architecture.md): the components and the data flow.
 - [Agent](agent.md): own machines, job VMs, the connection, and drain.
 - [Overflow](overflow.md): Boat, the spend limit, and refused starts.
-- [Security](security.md): organizations and repository access.
+- [Security](security.md): repository access.
+- [Workspaces](workspaces.md): the organizations whose jobs the labels of a
+  workspace serve.

@@ -2,13 +2,13 @@
 
 This doc states the security requirements of ciproxy: sign-in, access,
 GitHub permissions, keys, isolation, and job data.
+[Workspaces](workspaces.md) states which organizations a workspace holds.
 
 ## Terms
 
-- **organization:** a GitHub organization that installed the ciproxy GitHub
-  App.
 - **runner right:** the GitHub right to manage the self-hosted runners of
-  an organization. Every owner of the organization has it.
+  an [organization](workspaces.md#terms). Every owner of the organization
+  has it.
 
 ## Sign-in and access
 
@@ -17,18 +17,13 @@ GitHub permissions, keys, isolation, and job data.
 - ciproxy has no password of its own.
 - When a sign-in does not finish, the dashboard shows an error and the same
   sign-in button.
-- A person installs the ciproxy GitHub App on an organization on GitHub.
-- On GitHub, the person picks the organization and its repositories.
-- A member who is not an owner can ask for the install, and GitHub sends the
-  request to the owners.
-- When an owner approves the request, GitHub installs the app on the
-  organization.
-- While the request waits, the person can check again or install the app on
-  another organization.
+- [Add an organization](workspaces.md#add-an-organization) says how a
+  person installs the ciproxy GitHub App on an organization, and which
+  [workspace](workspaces.md#terms) the organization joins.
 
 ### Roles
 
-- ciproxy controls access to an organization with its own roles: Admin,
+- ciproxy controls access to a workspace with its own roles: Admin,
   Billing, and Viewer.
 - **Decision:** ciproxy controls access with its own roles. Rejected:
   access by the runner right only, because a person who only pays or only
@@ -41,16 +36,21 @@ GitHub permissions, keys, isolation, and job data.
 - A person with the Billing role also manages the plan, the add-ons, and
   the invoices, as [Checkout](billing.md#checkout) says.
 - An Admin can do everything: manage the machines, the labels, the
-  settings, the Boat account, the roles, and the billing.
+  settings, the organizations, the Boat account, the roles, and the
+  billing.
 - Only an Admin sees Settings, because Settings changes only what an Admin
   may change.
 - **Decision:** each role contains the one below it, so Billing contains
   Viewer, and Admin contains Billing. Rejected: a Billing role that sees
   only the billing pages.
-- A person who can see the jobs sees the jobs of all repositories, also of
-  those that the person cannot read on GitHub.
-- To add an own machine, an Admin also needs the runner right of the
-  organization.
+- A person who can see the jobs sees the jobs of all repositories of every
+  organization of the workspace, also of those that the person cannot read
+  on GitHub.
+- In a workspace with one organization, an Admin also needs the runner
+  right of that organization to add an own machine.
+- **Open:** which runner right adding a machine needs when the workspace
+  holds more than one organization. It waits for the decision on the
+  runner right in a workspace.
 - Apart from adding a machine, the roles alone decide what a person can do.
 - So an Admin without the runner right, the first Admin included, can do
   everything except add a machine.
@@ -67,45 +67,64 @@ GitHub permissions, keys, isolation, and job data.
 
 ### Who gets a role
 
-- The person who installs the ciproxy GitHub App on an organization becomes
-  its first Admin. When an owner approves an install that a member asked
-  for, the member who asked becomes the first Admin.
-- A role needs current membership of the GitHub organization.
-- A person who leaves the GitHub organization loses access to it in ciproxy
-  at the next sign-in check.
-- **Decision:** a role needs current membership of the GitHub organization.
-  Rejected: roles for people outside the organization. Reason: GitHub stays
-  the source of who belongs to the organization.
-- A member of the GitHub organization with no role asks for access by
-  signing in.
+- The person who installs the ciproxy GitHub App on the first organization
+  of a new workspace becomes the first Admin of the workspace. When an
+  owner approves an install that a member asked for, the member who asked
+  becomes the first Admin.
+- A role needs current membership of an organization of the workspace.
+- A person who is no longer a member of any organization of the workspace
+  loses access to the workspace at the next sign-in check.
+- **Decision:** a role needs current membership of an organization of the
+  workspace. Rejected: roles for people outside its organizations. Reason:
+  GitHub stays the source of who belongs to the customer.
+- A member of an organization of the workspace with no role asks for access
+  by signing in.
 - Such a member sees only a page that asks an Admin for access.
 - An Admin sees each request for access, and can give the person a role.
 - **Decision:** a member asks for access by signing in, and an Admin grants
   a role. Rejected: a list of the members of the GitHub organization,
   because the GitHub App would then need the "Members" permission. Reason:
-  the App keeps its runner-only permissions.
+  the App keeps to the narrow permissions of
+  [GitHub App permissions](#github-app-permissions).
 - The Members tab of Settings shows the number of open requests for
   access.
-- The page that asks for access names the Admins of the organization, so
-  that the person can ask them.
+- The page that asks for access names the Admins of the workspace, so that
+  the person can ask them.
 - **Decision:** a count on the Members tab tells the Admins of a request,
   and the page that asks for access names the Admins. Reason: ciproxy
   sends no email.
-- An owner of the GitHub organization can always claim the Admin role.
+- An owner of any organization of the workspace can always claim the Admin
+  role.
 - An owner with the Billing or the Viewer role claims the Admin role from
   the account menu.
 - ciproxy checks that a person is an owner with the GitHub sign-in of that
   person, from the list of that person's own organization memberships, not
   with a permission of the GitHub App.
-- **Decision:** an owner of the GitHub organization can always claim the
-  Admin role. Reason: an organization never loses control of ciproxy.
+- **Decision:** an owner of any organization of the workspace can always
+  claim the Admin role. Reason: no organization loses control of the
+  workspace that runs its jobs.
 
 ## GitHub App permissions
 
 - The ciproxy GitHub App asks for "Self-hosted runners", read and write, to
   start a runner for each job.
 - The app asks for "Metadata", read, to list the repositories.
+- The app asks for "Actions", read, to read the ref, the event, and the head
+  repository of the run of each job from the GitHub API.
+- ciproxy needs these facts for
+  [trusted write-back](cache.md#trusted-write-back) and for the
+  [Docker disks](cache.md#docker-disks).
+- The "Actions" permission also lets the app read the logs and the
+  artifacts of each run. The control plane never reads them.
 - The app asks for no other permission.
+- **Decision:** the control plane reads the facts of each run from the
+  GitHub API with the "Actions" permission. Rejected for now: the first
+  report of the job-started hook in the job VM, because it depends on the
+  order of the setup steps of each runner version. Rejected: trust in no
+  ref, because the machine cache then serves only what the GitHub cache
+  finds, and no Docker disk keeps its changes. Rejected: an organization
+  webhook, because an owner must add it by hand. Reason: job code cannot
+  change what the GitHub API returns.
 
 ## Repository access
 
@@ -115,8 +134,9 @@ GitHub permissions, keys, isolation, and job data.
 - GitHub runner groups exclude public repositories by default, so a job
   from a fork of a public repository never reaches an
   [own machine](agent.md#terms).
-- In Settings under Repositories, the customer allows all private
-  repositories or selected repositories.
+- Each organization of a workspace keeps its own repository access.
+- In Settings under Organizations, the customer allows all private
+  repositories or selected repositories of each organization.
 - The choice of all private repositories includes the new private
   repositories that ciproxy can see.
 - A job of a repository that is not allowed gets no ciproxy runner, and
@@ -129,18 +149,18 @@ GitHub permissions, keys, isolation, and job data.
 - The GitHub App private key stays in the
   [control plane](../architecture.md#components).
 - The Stripe keys stay in the control plane.
-- ciproxy stores the [Boat](overflow.md#the-boat-account) key of an
-  organization encrypted.
+- ciproxy stores the [Boat](overflow.md#the-boat-account) key of a
+  workspace encrypted.
 - ciproxy uses the Boat key only for the
-  [sandboxes](overflow.md#overflow-runners) of that organization.
+  [sandboxes](overflow.md#overflow-runners) of that workspace.
 - The dashboard never shows the Boat key after the customer saves it.
 - ciproxy never sends the Boat key to an own machine, a
   [job VM](agent.md#job-vms), or a sandbox.
 - A sandbox holds only a token that reports the end of its own runner, as
   [Overflow runners](overflow.md#overflow-runners) says. Job code can read
   this token, but it can only end its own job.
-- [Install](agent.md#install) says which organization an install token
-  belongs to and how long it works.
+- [Install](agent.md#install) says which workspace an install token belongs
+  to and how long it works.
 - The [machine credential](agent.md#machine-identity) stays on its machine,
   where only root can read it.
 - The machine credential stops working when a person removes the machine,
@@ -152,18 +172,18 @@ GitHub permissions, keys, isolation, and job data.
 
 ## Tenant isolation
 
-- Each organization has its own machines, [labels](job-routing.md#labels),
+- Each workspace has its own machines, [labels](job-routing.md#labels),
   settings, keys, caches, and data.
-- An own machine runs the jobs of its own organization only.
-- These rules also hold for the organizations of a
-  [Business pool](billing.md#business-pools).
-- The organizations of a Business pool share only one count of starts and
-  one machine count, as [A Business pool](metering.md#a-business-pool)
+- An own machine runs the jobs of every organization of its workspace, each
+  in a fresh [job VM](agent.md#job-vms).
+- An own machine never runs a job of another workspace.
+- The repositories of all the organizations of a workspace keep their cache
+  entries and their Docker disks apart, as [Job isolation](#job-isolation)
   says.
-- **Decision:** a Business pool shares the counts of its tier and nothing
-  else. Rejected: own machines that run the jobs of every organization of
-  the pool. Reason: tenant isolation stays, and the pool is a billing
-  count.
+- **Decision:** an own machine runs the jobs of every organization of its
+  workspace, and tenant isolation holds between workspaces. Rejected: own
+  machines for each organization. Reason: one fleet serves the customer,
+  and the cache scopes already keep the repositories apart.
 
 ## Job isolation
 
@@ -224,13 +244,12 @@ GitHub permissions, keys, isolation, and job data.
 ## Related docs
 
 - [Architecture](../architecture.md): the components and their boundaries.
+- [Workspaces](workspaces.md): the organizations of a workspace, and what
+  the workspace owns.
 - [Agent](agent.md): machine identity, job VMs, and removal.
 - [Cache](cache.md): cache scopes, trusted write-back, and Docker disks.
 - [Overflow](overflow.md): the Boat account and its sandboxes.
 - [Job routing](job-routing.md): labels and runners.
-- [Billing](billing.md): tiers, Business pools, Checkout, and the customer
-  portal.
-- [Metering](metering.md#a-business-pool): the counts that a Business pool
-  shares.
+- [Billing](billing.md): tiers, Checkout, and the customer portal.
 - [Removing or suspending the App](app-removal.md): what ciproxy revokes,
   keeps, and deletes when an organization removes the App.

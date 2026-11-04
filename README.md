@@ -1,10 +1,12 @@
 # ciproxy
 
-ciproxy runs the GitHub Actions jobs of an
-[organization](docs/protocol/security.md#terms) on the customer's
+ciproxy runs the GitHub Actions jobs of a customer's GitHub
+[organizations](docs/protocol/workspaces.md#terms) on the customer's
 [own machines](docs/protocol/agent.md#terms) first. When those machines are
 busy, it starts runners in the customer's own
-[Boat](docs/protocol/overflow.md#the-boat-account) account.
+[Boat](docs/protocol/overflow.md#the-boat-account) account. A
+[workspace](docs/protocol/workspaces.md#terms) holds the organizations, the
+machines, and the plan of one customer.
 
 ## What ciproxy does
 
@@ -29,7 +31,7 @@ on a free own machine, or else on Boat.
   [machine cache](docs/protocol/cache.md#transparent-cache).
 - **Soft limits.** Each [tier](docs/protocol/billing.md#tiers) includes a
   number of [starts](docs/protocol/metering.md#starts) and own machines.
-  When an organization passes a
+  When a workspace passes a
   [soft limit](docs/protocol/metering.md#soft-limits), its jobs keep
   running.
 - **Open source on the customer's side.** Every part that ciproxy ships
@@ -55,7 +57,7 @@ To move a job to ciproxy, change one line. Replace `ubuntu-latest` in its
 ```
 
 The label picks the [size](docs/protocol/job-routing.md#labels) of the VM
-that runs the job. Every organization starts with these labels:
+that runs the job. Every workspace starts with these labels:
 
 | Label | vCPU | Memory | Disk | Slots |
 | --- | --- | --- | --- | --- |
@@ -124,6 +126,9 @@ ciproxy, their responsibilities and boundaries, and the data flow.
 
 The protocol docs hold the requirements and the decisions in force:
 
+- [Workspaces](docs/protocol/workspaces.md): the GitHub organizations of a
+  workspace, what the workspace owns, and how an Admin adds an organization
+  or takes one out.
 - [Job routing](docs/protocol/job-routing.md): labels, sizes, slots, where a
   job runs, warm runners, and failures.
 - [Overflow](docs/protocol/overflow.md): the Boat account, the backend
@@ -134,14 +139,15 @@ The protocol docs hold the requirements and the decisions in force:
   permissions, repository access, key custody, isolation, and job data.
 - [Removing or suspending the App](docs/protocol/app-removal.md): what
   stops, what stays, and what ciproxy deletes when an organization removes
-  or suspends the App.
+  or suspends the App, and when the last organization of a workspace
+  leaves.
 - [Cache](docs/protocol/cache.md): the transparent cache, cache scopes,
   trusted write-back, the fallback to the GitHub cache, and Docker disks.
 - [Metering](docs/protocol/metering.md): starts, periods, the machine count,
-  soft limits, the counts of a Business pool, and the savings report.
-- [Billing](docs/protocol/billing.md): tiers, tier features, Business
-  pools, add-ons, Checkout, the customer portal, tier changes, subscription
-  states, and failed payments.
+  soft limits, and the savings report of a workspace.
+- [Billing](docs/protocol/billing.md): tiers, tier features, add-ons,
+  Checkout, the customer portal, tier changes, subscription states, and
+  failed payments.
 
 The [mockups README](docs/mockups/README.md) describes the mockup catalogue.
 The mockups are part of the spec.
