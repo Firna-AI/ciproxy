@@ -95,11 +95,14 @@ Postgres through Diesel, as the `databases` skill says: `ciproxy-schema`,
 `ciproxy-store-interface`, and `ciproxy-store-pg`. My call: one schema file
 for each area. Reason: parallel branches then do not conflict.
 
-- [ ] Add the core tables: organizations, labels, scale sets, machines,
-      tokens, runners, jobs, settings, and Boat accounts.
-- [ ] Keep tokens as hashes and Boat keys as ciphertext. Add an advisory
-      lock for each scale set session.
-- [ ] Test the queries on the Postgres of `DATABASE_URL`, which CI starts.
+- [x] Add the core tables: organizations, labels, scale sets, machines,
+      tokens, runners, jobs, settings, and Boat accounts. Branch:
+      `conductor/ciproxy-mvp-milestone-4-store`.
+- [x] Keep tokens as hashes and Boat keys as ciphertext. Add an advisory
+      lock for each scale set session. Branch:
+      `conductor/ciproxy-mvp-milestone-4-store`.
+- [x] Test the queries on the Postgres of `DATABASE_URL`, which CI starts.
+      Branch: `conductor/ciproxy-mvp-milestone-4-store`.
 
 ## Milestone 5: Deployment: hosting and DNS
 

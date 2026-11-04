@@ -9,3 +9,6 @@ rust-version = "1.99"
 
 [workspace.dependencies]
 ciproxy-protocol = { path = "crates/ciproxy-protocol" }
+ciproxy-schema = { path = "crates/ciproxy-schema" }
+ciproxy-store-interface = { path = "crates/ciproxy-store-interface" }
+ciproxy-store-pg = { path = "crates/ciproxy-store-pg" }

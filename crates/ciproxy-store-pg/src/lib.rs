@@ -1,0 +1,17 @@
+//! Diesel query implementations of the hosted store interfaces.
+
+#![warn(unreachable_pub)]
+
+mod boat;
+mod connection;
+mod error;
+mod jobs;
+mod labels;
+mod machines;
+mod organizations;
+mod runners;
+mod scale_sets;
+mod settings;
+mod tokens;
+
+pub mod factory;

@@ -15,6 +15,22 @@ jobs:
   check:
     name: Repository gate
     runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: ciproxy
+          POSTGRES_PASSWORD: ciproxy
+          POSTGRES_DB: ciproxy_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ciproxy -d ciproxy_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://ciproxy:ciproxy@127.0.0.1:5432/ciproxy_test
     steps:
       - name: Checkout
         uses: actions/checkout@v5
