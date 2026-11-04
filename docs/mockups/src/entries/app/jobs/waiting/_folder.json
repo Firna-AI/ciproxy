@@ -1,1 +1,4 @@
-{ "title": "Why jobs wait", "order": ["boat-refused", "nothing-fits"] }
+{
+  "title": "Why jobs wait",
+  "order": ["boat-refused", "nothing-fits", "app-suspended"]
+}

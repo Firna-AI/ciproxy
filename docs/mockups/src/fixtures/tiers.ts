@@ -2,7 +2,8 @@
 // Every screen that shows a price, a limit, or a tier feature reads it from
 // here. A feature starts at one tier and stays in every tier above it. A
 // feature that does not ship at launch shows "Coming later" on every page
-// that lists it.
+// that lists it. A workspace on Free holds one GitHub organization; Team and
+// Business hold several, as the answer to item 48 says.
 
 import { formatCount, unbroken } from "./format.ts";
 import type { TierKey } from "./org.ts";
@@ -16,6 +17,8 @@ export type Tier = {
   machines: number;
   history: string;
   addOns: boolean;
+  /** The GitHub organizations that a workspace holds, when the tier limits it. */
+  organizations?: number;
 };
 
 export const tiers: Readonly<Record<TierKey, Tier>> = {
@@ -27,6 +30,7 @@ export const tiers: Readonly<Record<TierKey, Tier>> = {
     machines: 1,
     history: "7 days",
     addOns: false,
+    organizations: 1,
   },
   team: {
     key: "team",
@@ -81,14 +85,14 @@ export const features: Readonly<Record<FeatureKey, TierFeature>> = {
   cache: { name: "Transparent cache", from: "free", launch: true },
   warmRunners: { name: "Warm runners", from: "free", launch: true },
   savings: { name: "Savings report", from: "free", launch: true },
+  organizations: {
+    name: "Several GitHub organizations",
+    from: "team",
+    launch: true,
+  },
   stickyDisks: { name: "Sticky Docker disks", from: "team", launch: true },
   alerts: { name: "Alerts by email and Slack", from: "team", launch: false },
   emailSupport: { name: "Email support", from: "team", launch: true },
-  organizations: {
-    name: "Several GitHub organizations",
-    from: "business",
-    launch: true,
-  },
   singleSignOn: { name: "Single sign-on", from: "business", launch: false },
   auditLog: { name: "Audit log", from: "business", launch: false },
   images: { name: "Custom VM images", from: "business", launch: false },

@@ -1,4 +1,10 @@
 {
   "title": "Labels and sizes",
-  "order": ["edit-label", "no-machine-fits", "nothing-fits", "label-waits"]
+  "order": [
+    "edit-label",
+    "no-machine-fits",
+    "nothing-fits",
+    "mixed-machines",
+    "label-waits"
+  ]
 }

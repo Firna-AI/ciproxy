@@ -16,7 +16,6 @@ import { canPay } from "../../components/role-actions.tsx";
 import { AppShell } from "../../components/shell/app-shell.tsx";
 import { usageBanner } from "../../components/usage-banner.tsx";
 import {
-  ax42,
   cacheHitsPercent,
   countSlots,
   machineScenes,
@@ -163,8 +162,9 @@ function MachinesBody({
       </Panel>
     );
   }
-  const online = machines.filter((machine) => machine.status !== "offline");
-  const slots = online.length * ax42.slotsTotal;
+  const slots = machines
+    .filter((machine) => machine.status !== "offline")
+    .reduce((sum, machine) => sum + machine.slots.length, 0);
   return (
     <>
       <KpiRow>

@@ -1,7 +1,8 @@
 // The notices above the live queue: why jobs wait. Every notice says what
 // happens to the waiting jobs and offers one way forward. The way forward is
 // a setting or the Boat account, which only an Admin changes, so a Viewer or
-// a Billing person reads Ask an Admin in its place.
+// a Billing person reads Ask an Admin in its place. A suspended App is the
+// exception: an owner unsuspends it on GitHub, so everyone gets the link.
 
 import type { ReactNode } from "react";
 import { ExternalLink } from "lucide-react";
@@ -12,9 +13,11 @@ import { paths } from "../../components/paths.ts";
 import { AskAdmin } from "../../components/role-actions.tsx";
 import { formatMoney } from "../../fixtures/format.ts";
 import { boat } from "../../fixtures/machines.ts";
+import { org } from "../../fixtures/org.ts";
 import type { Role } from "../../fixtures/members.ts";
 import { nothingFitsLabel } from "../../fixtures/settings.ts";
 import { sizePhrase } from "../../fixtures/sizes.ts";
+import { appSuspension } from "../../fixtures/access.ts";
 import { boatRefused } from "../../fixtures/waiting-jobs.ts";
 import type { LiveScene, LiveState } from "./live-scenes.ts";
 
@@ -77,6 +80,22 @@ export function liveNotice(
         >
           No machine and no Boat size has {sizePhrase(nothingFitsLabel)}. Change
           the label, or let it run on the largest Boat size.
+        </Notice>
+      );
+    case "app-suspended":
+      return (
+        <Notice
+          tone="warning"
+          title={`The GitHub App is suspended on ${org.login}`}
+          actions={
+            <Action size="sm" icon={ExternalLink}>
+              Open GitHub
+            </Action>
+          }
+        >
+          {appSuspension.by} suspended it on GitHub on {appSuspension.on}. New
+          jobs of <span className="nowrap">{org.login}</span> wait there until
+          an owner unsuspends it, and running jobs finish.
         </Notice>
       );
     default:

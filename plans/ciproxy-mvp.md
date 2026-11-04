@@ -55,16 +55,19 @@ Depends on: none
 Milestone 1 of the foundation plan applies the answers to items 8 to 20.
 This milestone adds the states of the new items, and the legal pages.
 
-- [ ] Add a removed App, an ended sign-in, and a personal account.
-- [ ] Add the install command, a refused label name, too little disk, and
+- [x] Add a removed App, an ended sign-in, and a personal account.
+- [x] Add the install command, a refused label name, too little disk, and
       mixed machines.
-- [ ] Add a payment that Stripe still confirms, and two banners at once.
-- [ ] Add the workspace of item 48: the switcher, the Organizations tab with
+- [x] Add a payment that Stripe still confirms, and two banners at once.
+- [x] Add the workspace of item 48: the switcher, the Organizations tab with
       "Add an organization", and the organization of each job. Show the
       third App permission of item 32.
-- [ ] Add the terms and privacy pages. Run the mockup check, and smoke-test
+- [x] Add the terms and privacy pages. Run the mockup check, and smoke-test
       the changed pages.
-- [ ] Update this plan for each problem that the mockups show.
+- [x] Update this plan for each problem that the mockups show.
+- [ ] Add the rename of a workspace, the banner of a Free workspace with
+      more than one organization, and the states that the answers to items
+      50 and 51 need.
 
 ## Milestone 2: Documentation and protocol
 
@@ -693,6 +696,32 @@ docs agent, 4 November 2026:
 - A `pull_request_target` job counts as a pull request for trusted
   write-back. Reason: its job often runs code from the pull request.
 - `AGENTS.md` gets the copy rule "workspace, never team".
+
+Design calls on the problems that the mockups of Milestone 1 showed, my
+calls and those of the mockups agent, 4 November 2026:
+
+- While Stripe confirms a payment, Plan and usage says so, and the Plans
+  page opens no second checkout. Reason: design call 38 says that no page
+  asks for a second payment.
+- A label name follows the label rules of GitHub, checked with GitHub when
+  the label is saved. Reason: design call 33 names the GitHub rules, so
+  ciproxy adds no rule of its own.
+- Every label except `ciproxy` can be deleted. Its waiting jobs stay queued,
+  its running jobs finish, and ciproxy removes its scale sets. Reason: the
+  warm runners serve `ciproxy`.
+- The fit line of the label dialog counts the connected machines that can
+  run jobs, and says "1 job on 3 of your 4 machines" when some fit none.
+  Reason: design call 41 covers different counts, and this covers none.
+- For 30 days, the Organizations tab shows a removed organization, with the
+  last day of a new install that keeps its history. Reason: an Admin
+  manages the organizations there.
+- A suspension shows a notice on Jobs, with no waiting count for that
+  organization. Reason: the other reasons why jobs wait show there.
+- The install command reads `curl -fsSL https://get.ciproxy.dev | sudo sh
+  -s -- install --token …`. Reason: design call 30 runs the agent with the
+  arguments of the install script.
+- The page of a removed App shows no data of the workspace, because ciproxy
+  cannot check a membership after a removal.
 
 Design calls on the questions of the docs work, my calls, 4 November 2026:
 

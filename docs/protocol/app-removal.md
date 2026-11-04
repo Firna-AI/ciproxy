@@ -21,6 +21,9 @@ person installs the App.
   because ciproxy has no GitHub access left to delete them.
 - After a removal, the [dashboard](../architecture.md#components) says that
   the App was removed from the organization, and how to install it again.
+- For 30 days, the Organizations tab of Settings shows the organization as
+  removed, with the last day on which a new install keeps its job
+  history.
 - 30 days after the removal, ciproxy deletes the data of the organization.
 - A new install within these 30 days joins the organization to the
   workspace that it left, with its job history.
@@ -73,6 +76,9 @@ person installs the App.
   stay.
 - After an unsuspend, the jobs of the organization start on ciproxy runners
   again.
+- While an organization is suspended, the Jobs page shows a notice that
+  names it and links to GitHub. The page shows no waiting count for it.
+- Reason: the other reasons why jobs wait also show on the Jobs page.
 - **Decision:** a suspension stops only the jobs, because the owner can undo
   a suspension at any time.
 

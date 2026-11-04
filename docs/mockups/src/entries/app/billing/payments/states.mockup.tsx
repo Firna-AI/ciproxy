@@ -1,6 +1,6 @@
 import { defineScreen } from "@mokly/mokly";
 
-import { related } from "../../../../components/related-docs.ts";
+import { related, relatedMvp } from "../../../../components/related-docs.ts";
 import { orgAddress } from "../../../../fixtures/org.ts";
 import { PlanUsageScreen } from "../../../../screens/billing/plan-usage.tsx";
 
@@ -32,6 +32,23 @@ export const paymentFailedViewer = defineScreen({
       viewport={context.viewport}
       state="payment-failed"
       role="viewer"
+    />
+  ),
+});
+
+export const paymentFailedOverLimit = defineScreen({
+  slug: "payment-failed-over-limit",
+  title: "A failed payment above a soft limit",
+  description:
+    "Stripe could not charge the card for the December period, and mokly-ai runs 4 own machines on Team, which includes 3. The page shows one banner, the failed payment. Own machines still shows 1 over, and the add-ons suggest nothing while the card fails.",
+  rationale:
+    "Design call 42: at a failed payment, the payment banner replaces the soft-limit banner, so a page keeps one banner.",
+  relatedDocs: relatedMvp("billing", "metering"),
+  address,
+  render: (_props, context) => (
+    <PlanUsageScreen
+      viewport={context.viewport}
+      state="payment-failed-over-limit"
     />
   ),
 });

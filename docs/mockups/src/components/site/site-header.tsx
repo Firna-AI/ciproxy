@@ -15,7 +15,7 @@ import { paths } from "../paths.ts";
 import "./site-header.css";
 
 /** The part of the site that a page belongs to. */
-export type SiteSection = "home" | "pricing" | "docs";
+export type SiteSection = "home" | "pricing" | "legal" | "docs";
 
 type HeaderProps = { viewport: Viewport; section: SiteSection };
 

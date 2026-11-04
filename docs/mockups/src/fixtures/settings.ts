@@ -3,7 +3,14 @@
 // fits no machine runs on Boat only, and a size that fits nothing follows the
 // label setting "When nothing fits".
 
-import { ax42, slotsFor } from "./machines.ts";
+import {
+  jobsAtOnce,
+  machineSlots,
+  slotsFor,
+  type Hardware,
+} from "./hardware.ts";
+import { machineScenes, type Machine } from "./machines.ts";
+import { labsOrg, org, type Organization } from "./org.ts";
 import { fitsBoat, type Size } from "./sizes.ts";
 
 /** The label setting "When nothing fits". */
@@ -70,13 +77,61 @@ export const nothingFitsLabel: Label = {
   whenNothingFits: "wait",
 };
 
-export function fitsOwnMachine(size: Size): boolean {
-  return slotsFor(size) <= ax42.slotsTotal;
+/** A label named in the add dialog that the GitHub label rules refuse. */
+export const refusedLabel: Label = {
+  name: "load tests",
+  vcpu: 4,
+  memoryGb: 16,
+  diskGb: 100,
+  jobs: 0,
+  whenNothingFits: "wait",
+};
+
+/** The machines of the busy afternoon, three Hetzner AX42 machines. */
+const steadyMachines = machineScenes.steady;
+
+/** The jobs of a size that a machine runs at a time, by its slots and disk. */
+function machineJobs(machine: Machine, size: Size): number {
+  return jobsAtOnce(machine.hardware, machine.slots.length, size);
 }
 
-/** How many jobs of this size one own machine runs at a time. */
-export function jobsPerMachine(size: Size): number {
-  return Math.floor(ax42.slotsTotal / slotsFor(size));
+export function fitsOwnMachine(
+  size: Size,
+  machines: readonly Machine[] = steadyMachines,
+): boolean {
+  return machines.some((machine) => machineJobs(machine, size) > 0);
+}
+
+/**
+ * The fewest and the most jobs of this size that one own machine runs at a
+ * time, over the machines that fit the size. Machines with different slots
+ * or disks give a range, as design call 41 says.
+ */
+export function jobsPerMachine(
+  size: Size,
+  machines: readonly Machine[] = steadyMachines,
+): { fewest: number; most: number } {
+  const counts = machines
+    .map((machine) => machineJobs(machine, size))
+    .filter((count) => count > 0);
+  return { fewest: Math.min(...counts), most: Math.max(...counts) };
+}
+
+/**
+ * The jobs of the label ciproxy that a machine runs at a time: by its slots
+ * alone, and by its slots and its disk. The disk limits the machine when the
+ * second number is the smaller.
+ */
+export function defaultLabelJobs(hardware: Hardware): {
+  bySlots: number;
+  atOnce: number;
+} {
+  const label = labelNamed("ciproxy");
+  const slots = machineSlots(hardware);
+  return {
+    bySlots: Math.floor(slots / slotsFor(label)),
+    atOnce: jobsAtOnce(hardware, slots, label),
+  };
 }
 
 /** Where the jobs of a label run now. */
@@ -91,6 +146,19 @@ export function placementOf(label: Label): Placement {
 
 /** Overflow wait times the customer can pick, in seconds. */
 export const waitChoices = [0, 15, 30, 60, 120] as const;
+
+/** The repository access of an organization: all private, or a count. */
+export type OrganizationAccess = {
+  organization: Organization;
+  /** The selected repositories, when the access is not all of them. */
+  selected?: number;
+};
+
+/** mokly-ai allows all its private repositories, mokly-labs three. */
+export const organizationAccess: readonly OrganizationAccess[] = [
+  { organization: org },
+  { organization: labsOrg, selected: 3 },
+];
 
 export type Repository = { name: string; selected: boolean };
 

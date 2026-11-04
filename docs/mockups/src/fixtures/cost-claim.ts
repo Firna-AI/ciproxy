@@ -5,7 +5,7 @@
 // runners count the same job minutes at their list prices per minute, for the
 // same VM size. The prices and their sources are in price-lists.ts.
 
-import { ax42, machineSlots, slotSize } from "./machines.ts";
+import { ax42, machineSlots, slotSize } from "./hardware.ts";
 import { cheapestPlan } from "./plan-choice.ts";
 import { listPrices, type ListPrice } from "./price-lists.ts";
 
@@ -16,7 +16,7 @@ function cents(amount: number): number {
 
 const averageJobMinutes = 5;
 const monthDays = 30;
-const slots = machineSlots(ax42.threads, ax42.memoryGb);
+const slots = machineSlots(ax42);
 const jobMinutes = slots * monthDays * 24 * 60;
 const starts = Math.ceil(jobMinutes / averageJobMinutes);
 const plan = cheapestPlan(starts, 1);

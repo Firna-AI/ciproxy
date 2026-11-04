@@ -1,3 +1,10 @@
 {
-  "order": ["labels", "overflow", "repositories", "members", "loading-error"]
+  "order": [
+    "labels",
+    "label-names",
+    "overflow",
+    "organizations",
+    "members",
+    "loading-error"
+  ]
 }

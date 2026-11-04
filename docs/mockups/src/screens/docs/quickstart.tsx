@@ -62,8 +62,8 @@ export function QuickstartScreen({ viewport }: { viewport: Viewport }) {
             </p>
             <CodeBlock label="Terminal" lines={[installCommand]} />
             <p>
-              The command holds a token for your organization, which works for
-              one hour. The machine shows in Machines with its slots and{" "}
+              The command holds a token for your workspace, which works for one
+              hour. The machine shows in Machines with its slots and{" "}
               {defaultWarmRunners} warm runners.
             </p>
           </Step>

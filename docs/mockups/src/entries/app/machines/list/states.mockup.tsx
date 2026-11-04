@@ -34,7 +34,7 @@ export const overLimit = defineScreen({
   slug: "over-limit",
   title: "More own machines than the tier includes",
   description:
-    "A fourth machine joined on Team, which includes three. All four run jobs; the banner on every page offers the extra-machine add-on.",
+    "office-mini-1, a mini PC with a small disk, joined as the fourth machine on Team, which includes three. All four run jobs; the banner on every page offers the extra-machine add-on. office-mini-1 has 6 slots, but its disk holds 3 jobs of ciproxy at a time; its row opens its machine page, which says why.",
   relatedDocs: related("agent", "metering"),
   address,
   render: (_props, context) => (

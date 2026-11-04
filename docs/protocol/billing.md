@@ -104,7 +104,14 @@ against a tier.
   charge, for example "the 4th of each month".
 - The customer then pays on Stripe Checkout.
 - ciproxy changes the tier only when Stripe confirms the payment.
+- Checkout takes cards only.
 - The return page waits a few seconds for the confirmation.
+- When Stripe still confirms the payment after that wait, the return page
+  says so and updates by itself.
+- While Stripe confirms a payment, Plan and usage says so, and the Plans
+  page opens no second checkout.
+- Reason: no page asks for a second payment while the first one
+  confirms.
 - After the confirmation, the workspace is on the new tier.
 - Stripe emails the receipt.
 - A checkout that does not finish leaves the tier as it was.

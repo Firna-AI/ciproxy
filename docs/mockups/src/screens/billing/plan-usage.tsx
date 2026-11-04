@@ -169,6 +169,10 @@ function UsagePanel({ usage }: { usage: Usage }) {
               : undefined
           }
         />
+        <p className="caption">
+          Counts the starts and machines of every organization of this
+          workspace.
+        </p>
       </div>
     </Panel>
   );

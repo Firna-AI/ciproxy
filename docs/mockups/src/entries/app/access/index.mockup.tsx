@@ -1,7 +1,7 @@
 import { defineScreen } from "@mokly/mokly";
 
 import { paths } from "../../../components/paths.ts";
-import { related } from "../../../components/related-docs.ts";
+import { related, relatedMvp } from "../../../components/related-docs.ts";
 import { stateSchema } from "../../../components/state-schema.ts";
 import { orgAddress } from "../../../fixtures/org.ts";
 import { NoRoleScreen, noRoleStates } from "../../../screens/auth/no-role.tsx";
@@ -27,6 +27,16 @@ export const access = defineScreen({
       description:
         "Tom Becker is an owner of mokly-ai on GitHub with no role in ciproxy. An owner can always claim the Admin role, so an organization never loses control of ciproxy. ciproxy checks the ownership with his own GitHub sign-in.",
       props: { state: "owner" },
+    },
+    {
+      slug: "left",
+      title: "A person who left the organization",
+      description:
+        "Jonas Weber, a Viewer, left mokly-ai on GitHub, and he is no member of mokly-labs either. The membership check of the next hour ended his role, so every page of the workspace opens this page. He sees no data of the workspace. When an owner adds him again to one of its organizations, Check again leads to the page that asks the Admins for access.",
+      rationale:
+        "Design call 35: ciproxy checks the membership of each person each hour, so access ends soon after a person leaves the organization. A role needs current membership, and ciproxy keeps no record of a person without a role or a request.",
+      relatedDocs: relatedMvp("security"),
+      props: { state: "left" },
     },
   ],
 });

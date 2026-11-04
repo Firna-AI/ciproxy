@@ -1,14 +1,23 @@
-// The one install command that connects a Linux machine to the organization,
+// The one install command that connects a Linux machine to the workspace,
 // shared by setup and Add machine, and the lines that follow it: the wait for
-// the machine, the machine that connected, a machine without KVM, and the
-// command after Revoke token. An Admin whom GitHub does not let manage
-// self-hosted runners sees who can add a machine in place of the command.
+// the machine, the machine that connected, a machine without KVM, a machine
+// whose disk holds fewer jobs than its slots, and the command after Revoke
+// token. An Admin whom GitHub does not let manage self-hosted runners sees
+// who can add a machine in place of the command. The command is one line:
+// the install script of get.ciproxy.dev installs the agent, then runs it with
+// the arguments after "--", as design call 30 says.
 
 import type { ReactNode } from "react";
 import { CircleCheck } from "lucide-react";
 
 import { dotJoin, unbroken } from "../fixtures/format.ts";
-import { ax42, ax42Size } from "../fixtures/machines.ts";
+import {
+  hardwareSize,
+  jobDiskGb,
+  machineSlots,
+  type Hardware,
+} from "../fixtures/hardware.ts";
+import { defaultLabelJobs, labelNamed } from "../fixtures/settings.ts";
 import { Action, LinkAction } from "./actions.tsx";
 import { Busy, Notice } from "./feedback.tsx";
 import { CodeBlock } from "./figures.tsx";
@@ -16,7 +25,7 @@ import type { CataloguePath } from "./paths.ts";
 import "./install-command.css";
 
 export const installCommand =
-  "curl -fsSL https://get.ciproxy.dev | sudo sh -s -- --token cpx_8Hq2Lw7Xr4Tz";
+  "curl -fsSL https://get.ciproxy.dev | sudo sh -s -- install --token cpx_8Hq2Lw7Xr4Tz";
 
 export function InstallCommand({
   revokeTo,
@@ -89,7 +98,14 @@ export function WaitingLine({ children }: { children: string }) {
 }
 
 /** A machine that the agent just connected, with what it reported. */
-export function ConnectedMachine({ name }: { name: string }) {
+export function ConnectedMachine({
+  name,
+  hardware,
+}: {
+  name: string;
+  hardware: Hardware;
+}) {
+  const { bySlots, atOnce } = defaultLabelJobs(hardware);
   return (
     <div className="connected-machine">
       <CircleCheck size={18} className="icon-ok" />
@@ -99,13 +115,43 @@ export function ConnectedMachine({ name }: { name: string }) {
         </p>
         <p className="caption">
           {dotJoin(
-            ax42Size,
+            hardwareSize(hardware),
             unbroken("KVM ready"),
-            unbroken(`${ax42.slotsTotal} slots`),
+            unbroken(`${machineSlots(hardware)} slots`),
           )}
         </p>
+        {atOnce < bySlots ? (
+          <p className="caption">
+            Its disk holds {atOnce} jobs of ciproxy at a time.
+          </p>
+        ) : null}
       </div>
     </div>
+  );
+}
+
+/**
+ * A machine whose disk holds fewer jobs of the label ciproxy than its slots:
+ * each running job holds the disk of its size, after the host reserve.
+ */
+export function DiskLimitNotice({
+  name,
+  hardware,
+}: {
+  name: string;
+  hardware: Hardware;
+}) {
+  const label = labelNamed("ciproxy");
+  const { atOnce } = defaultLabelJobs(hardware);
+  return (
+    <Notice
+      tone="warning"
+      title={`Disk limits ${name} to ${atOnce} jobs of ciproxy at a time`}
+    >
+      A job of ciproxy holds {unbroken(`${label.diskGb} GB`)} of disk, and the
+      machine has {unbroken(`${jobDiskGb(hardware)} GB`)} for jobs after the
+      host reserve. Add disk to run more jobs at once.
+    </Notice>
   );
 }
 

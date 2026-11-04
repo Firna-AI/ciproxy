@@ -1,7 +1,9 @@
-// The return from Stripe Checkout: while ciproxy confirms the payment, the
-// confirmed plan, and the return after a payment that did not finish.
+// The return from Stripe Checkout: while ciproxy confirms the payment, a
+// payment that Stripe still confirms after the wait, the confirmed plan, and
+// the return after a payment that did not finish. Checkout takes cards only,
+// and the page never asks for a second payment, as design call 38 says.
 
-import { CircleCheck, CreditCard } from "lucide-react";
+import { CircleCheck, Clock, CreditCard } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
 
 import { LinkAction } from "../../components/actions.tsx";
@@ -11,12 +13,17 @@ import { Panel } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
 import { AppShell } from "../../components/shell/app-shell.tsx";
 import { formatCount } from "../../fixtures/format.ts";
-import { org } from "../../fixtures/org.ts";
+import { workspace } from "../../fixtures/org.ts";
 import { ownMachines, startsText, tiers } from "../../fixtures/tiers.ts";
 import { firstTeamPeriod } from "../../fixtures/usage.ts";
 import "./billing.css";
 
-export const resultStates = ["confirming", "confirmed", "cancelled"] as const;
+export const resultStates = [
+  "confirming",
+  "still-confirming",
+  "confirmed",
+  "cancelled",
+] as const;
 export type ResultState = (typeof resultStates)[number];
 
 export function CheckoutResultScreen({
@@ -53,6 +60,14 @@ function ResultBody({ state }: { state: ResultState }) {
       </div>
     );
   }
+  if (state === "still-confirming") {
+    return (
+      <StateBlock icon={Clock} title="Stripe is still confirming your payment">
+        {workspace.name} moves to Team when Stripe confirms it. This page
+        updates by itself, and jobs keep running.
+      </StateBlock>
+    );
+  }
   if (state === "cancelled") {
     return (
       <StateBlock
@@ -68,7 +83,7 @@ function ResultBody({ state }: { state: ResultState }) {
           </>
         }
       >
-        Stripe took no payment. {org.login} is still on Free, and jobs keep
+        Stripe took no payment. {workspace.name} is still on Free, and jobs keep
         running.
       </StateBlock>
     );
@@ -79,7 +94,7 @@ function ResultBody({ state }: { state: ResultState }) {
       <StateBlock
         icon={CircleCheck}
         tone="success"
-        title={`${org.login} is on Team`}
+        title={`${workspace.name} is on Team`}
         action={
           <>
             <LinkAction to={paths.addMachine} tone="primary">

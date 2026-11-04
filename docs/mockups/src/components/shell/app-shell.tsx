@@ -1,18 +1,19 @@
 // The signed-in frame of every dashboard screen. On desktop: a white sidebar
-// with the main navigation beside a top bar that holds the organization and
-// the page as breadcrumbs. On mobile: a top bar and a bottom tab bar. A
-// banner, such as a soft-limit warning, sits above the page content on every
-// page of the organization. The avatar opens the account menu.
+// with the main navigation beside a top bar that holds the workspace and the
+// page as breadcrumbs. On mobile: a top bar and a bottom tab bar. A banner,
+// such as a soft-limit warning, sits above the page content on every page of
+// the workspace. The avatar opens the account menu.
 
 import type { ReactNode } from "react";
 import { BookOpen, ChevronDown, ChevronRight, Rocket } from "lucide-react";
 import { MockLink, type Viewport } from "@mokly/mokly";
 
 import { personFor, type Member, type Role } from "../../fixtures/members.ts";
-import { org, type TierKey } from "../../fixtures/org.ts";
+import { workspace, type TierKey } from "../../fixtures/org.ts";
 import { Brand, BrandMark } from "../brand.tsx";
 import { paths } from "../paths.ts";
 import { Account, SetupItem, TopBar } from "./app-shell-parts.tsx";
+import { WorkspaceMenu } from "./workspace-menu.tsx";
 import { navFor, navItems, type NavKey } from "./nav.ts";
 import "./app-shell.css";
 import "./app-shell-mobile.css";
@@ -35,6 +36,8 @@ export type AppShellProps = {
   setup?: SetupProgress;
   /** The account menu of the avatar is open. */
   accountMenu?: boolean;
+  /** The menu of the workspace switch is open. */
+  workspaceMenu?: boolean;
   banner?: ReactNode;
   children: ReactNode;
 };
@@ -54,6 +57,7 @@ function DesktopShell({
   person,
   setup,
   accountMenu = false,
+  workspaceMenu = false,
   banner,
   children,
 }: AppShellProps) {
@@ -92,6 +96,7 @@ function DesktopShell({
         <TopBar
           tier={tier}
           page={page}
+          workspaceMenu={workspaceMenu}
           account={
             <Account
               person={signedIn}
@@ -116,6 +121,7 @@ function MobileShell({
   person,
   setup,
   accountMenu = false,
+  workspaceMenu = false,
   banner,
   children,
 }: AppShellProps) {
@@ -123,11 +129,12 @@ function MobileShell({
   return (
     <div className="m-shell">
       <header className="m-top">
-        <span className="m-org">
+        <span className="m-org workspace-switch">
           <BrandMark size={18} />
           <span className="m-divider" aria-hidden="true" />
-          <span className="m-org-name">{org.login}</span>
+          <span className="m-org-name">{workspace.name}</span>
           <ChevronDown size={14} className="m-chevron" />
+          {workspaceMenu ? <WorkspaceMenu /> : null}
         </span>
         <Account person={signedIn} role={role} open={accountMenu} size={26} />
       </header>
