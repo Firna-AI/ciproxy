@@ -4,6 +4,7 @@
 
 pub mod boat;
 pub mod error;
+pub mod gateway;
 pub mod github;
 pub mod jobs;
 pub mod labels;

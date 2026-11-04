@@ -21,20 +21,26 @@ impl<T> QueryResultExt<T> for QueryResult<T> {
     fn store(self) -> Result<T> {
         match self {
             Ok(value) => Ok(value),
-            Err(diesel::result::Error::NotFound) => Err(Error::NotFound),
-            Err(diesel::result::Error::DatabaseError(DatabaseErrorKind::UniqueViolation, _)) => {
-                Err(Error::Conflict)
-            }
-            Err(diesel::result::Error::DatabaseError(
-                DatabaseErrorKind::ForeignKeyViolation,
-                _,
-            )) => Err(Error::InvalidReference),
-            Err(diesel::result::Error::DatabaseError(
-                DatabaseErrorKind::CheckViolation | DatabaseErrorKind::NotNullViolation,
-                _,
-            )) => Err(Error::InvalidValue),
-            Err(source) => Err(Error::internal(source)),
+            Err(source) => Err(query_error(source)),
         }
+    }
+}
+
+#[track_caller]
+pub(crate) fn query_error(source: diesel::result::Error) -> Error {
+    match source {
+        diesel::result::Error::NotFound => Error::NotFound,
+        diesel::result::Error::DatabaseError(DatabaseErrorKind::UniqueViolation, _) => {
+            Error::Conflict
+        }
+        diesel::result::Error::DatabaseError(DatabaseErrorKind::ForeignKeyViolation, _) => {
+            Error::InvalidReference
+        }
+        diesel::result::Error::DatabaseError(
+            DatabaseErrorKind::CheckViolation | DatabaseErrorKind::NotNullViolation,
+            _,
+        ) => Error::InvalidValue,
+        source => Error::internal(source),
     }
 }
 

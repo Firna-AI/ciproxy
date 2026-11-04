@@ -68,6 +68,15 @@ Remote scale-set upserts preserve the internal row and lock key.
 Organization mutation leases wait on dedicated connections. They retain
 all GitHub identity bits in the separate two-key advisory namespace.
 
+The gateway queries atomically register a machine and its hashed credential.
+GatewayStore reuses TokenStore authority lookup to derive the workspace from
+the install hash. Registration rechecks the token under its transaction
+locks before it inserts the machine.
+They retain the full typed protocol report with a connection identifier.
+Report writes preserve desired drain and warm settings.
+They reject replaced sessions and removed registrations.
+Gateway token issuance and registration serialize with workspace removal.
+
 ## Quick Start
 
 Use the same interface for PostgreSQL and service test doubles:
@@ -114,6 +123,8 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 - [src/jobs.rs](src/jobs.rs) defines metadata-only job records.
 - [src/github.rs](src/github.rs) defines repository snapshots and durable
   UUID demand, including pending role and scaler deliveries.
+
+- [src/gateway.rs](src/gateway.rs) defines atomic registration and reports.
 
 ### Related Docs
 
