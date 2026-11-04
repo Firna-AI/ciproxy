@@ -1,0 +1,14 @@
+---
+source: crates/ciproxy-protocol/src/_tests_/wire/assertions.rs
+assertion_line: 20
+description: Tagged JSON for agent_command_result; all credentials are dummy test values.
+expression: message
+---
+{
+  "type": "command_result",
+  "command_id": "command-1",
+  "outcome": {
+    "status": "failed",
+    "reason": "image_verification"
+  }
+}

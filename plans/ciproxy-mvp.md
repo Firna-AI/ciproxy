@@ -81,11 +81,14 @@ Depends on: none
 `ciproxy-protocol` holds the types of the agent connection. My call: one
 WebSocket over HTTPS with JSON. Reason: machines open no inbound port.
 
-- [ ] Add the rules of "Slots" in `job-routing.md`, tested on its examples.
-- [ ] Add the registration, the hello, the report every 10 seconds, and the
+- [x] Add the rules of "Slots" in `job-routing.md`, tested on its examples.
+      Branch: `conductor/ciproxy-mvp-milestone-3-protocol-crate`.
+- [x] Add the registration, the hello, the report every 10 seconds, and the
       commands for runners, job facts, drain, remove, cache, and images.
-- [ ] Add the vsock messages of `ciproxy-guest`. Use tagged enums, hide
+      Branch: `conductor/ciproxy-mvp-milestone-3-protocol-crate`.
+- [x] Add the vsock messages of `ciproxy-guest`. Use tagged enums, hide
       secrets from `Debug`, and snapshot each message with `insta`.
+      Branch: `conductor/ciproxy-mvp-milestone-3-protocol-crate`.
 
 ## Milestone 4: Store
 

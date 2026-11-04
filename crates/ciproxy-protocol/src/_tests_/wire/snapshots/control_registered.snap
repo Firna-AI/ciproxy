@@ -1,0 +1,11 @@
+---
+source: crates/ciproxy-protocol/src/_tests_/wire/assertions.rs
+assertion_line: 20
+description: Tagged JSON for control_registered; all credentials are dummy test values.
+expression: message
+---
+{
+  "type": "registered",
+  "machine_id": "machine-1",
+  "credential": "dummy-machine-credential"
+}

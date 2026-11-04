@@ -1,0 +1,16 @@
+---
+source: crates/ciproxy-protocol/src/_tests_/wire/assertions.rs
+assertion_line: 20
+description: Tagged JSON for vsock_configure_runner; all credentials are dummy test values.
+expression: message
+---
+{
+  "type": "configure_runner",
+  "protocol_version": 1,
+  "runner_id": "runner-1",
+  "registration": "dummy-one-use-registration",
+  "cache": {
+    "url": "http://cache.example/?access=dummy-url-token",
+    "token": "dummy-cache-token"
+  }
+}

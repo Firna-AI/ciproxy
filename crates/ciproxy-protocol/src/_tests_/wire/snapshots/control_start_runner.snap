@@ -1,0 +1,20 @@
+---
+source: crates/ciproxy-protocol/src/_tests_/wire/assertions.rs
+assertion_line: 20
+description: Tagged JSON for control_start_runner; all credentials are dummy test values.
+expression: message
+---
+{
+  "type": "start_runner",
+  "command_id": "command-1",
+  "runner": {
+    "runner_id": "runner-1",
+    "label": "ciproxy",
+    "size": {
+      "vcpu": 2,
+      "memory_bytes": 8000000000,
+      "disk_bytes": 60000000000
+    },
+    "registration": "dummy-one-use-registration"
+  }
+}
