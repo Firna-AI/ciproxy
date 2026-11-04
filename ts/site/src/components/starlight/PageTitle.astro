@@ -1,0 +1,11 @@
+---
+// Starlight's PageTitle override: the default title, then the description of
+// the page as its lead, as the docs title of the mockups shows it.
+
+import DefaultPageTitle from "@astrojs/starlight/components/PageTitle.astro";
+
+const { description } = Astro.locals.starlightRoute.entry.data;
+---
+
+<DefaultPageTitle />
+{description && <p class="sl-page-lead">{description}</p>}

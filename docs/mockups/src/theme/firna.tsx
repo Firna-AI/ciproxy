@@ -7,13 +7,14 @@ import { domBackendCss } from "@firna/ui";
 import { focusRingCssVariablesFor } from "@firna/ui/focusRing";
 import { SharedUiThemeProvider } from "@firna/ui/theme";
 
+import "@ciproxy/tokens/fonts";
 import {
   chartColors,
   navColors,
   slotColors,
   statusColors,
-  theme,
-} from "./graphite.ts";
+} from "@ciproxy/tokens";
+import { theme } from "@ciproxy/tokens/firna";
 
 /** "primaryDeep" -> "primary-deep", the custom property spelling. */
 function kebab(name: string): string {

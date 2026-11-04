@@ -1,0 +1,11 @@
+---
+// Starlight's Head override: the default head, then the shared tokens and
+// fonts, which the Starlight theme in styles/starlight reads.
+
+import DefaultHead from "@astrojs/starlight/components/Head.astro";
+
+import Tokens from "../Tokens.astro";
+---
+
+<DefaultHead />
+<Tokens />

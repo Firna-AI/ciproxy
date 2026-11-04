@@ -1,0 +1,14 @@
+[package]
+name = "xtask"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+clap = { version = "4.6.7", features = ["derive"] }
+pulldown-cmark = "0.13.6"
+thiserror = "2.0.21"
+
+[dev-dependencies]
+unimock = "0.6.8"

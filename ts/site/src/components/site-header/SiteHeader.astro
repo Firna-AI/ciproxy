@@ -1,0 +1,58 @@
+---
+// The top bar of the public site, after the site header of the mockups.
+// Marketing pages: the wordmark and the main links. Docs: the wordmark with
+// "Docs" and the search box that the Starlight header passes in. A link joins
+// the bar only when its page exists.
+
+import Brand from "../Brand.astro";
+import "./site-header.css";
+
+/** The part of the site that a page belongs to. */
+type SiteSection = "home" | "docs";
+
+interface Props {
+  section: SiteSection;
+}
+
+/** The main links of the marketing pages. Pricing joins when its page exists. */
+const mainLinks = [{ label: "Docs", href: "/docs/" }] as const;
+
+const { section } = Astro.props;
+const docs = section === "docs";
+// Starlight draws the fixed bar of a docs page, so the docs form is only the
+// content of that bar.
+const Bar = docs ? "div" : "header";
+---
+
+<Bar class:list={["site-header", { "is-docs": docs }]}>
+  <div class="site-header-inner">
+    <div class="site-title">
+      <a href="/" class="site-home">
+        <Brand />
+      </a>
+      {docs && (
+        <>
+          <span class="site-slash" aria-hidden="true">
+            /
+          </span>
+          <a href="/docs/" class="site-section">
+            Docs
+          </a>
+        </>
+      )}
+    </div>
+    {docs ? (
+      <div class="site-header-search">
+        <slot name="search" />
+      </div>
+    ) : (
+      <nav class="site-nav" aria-label="Main">
+        {mainLinks.map((link) => (
+          <a href={link.href} class="site-nav-link">
+            {link.label}
+          </a>
+        ))}
+      </nav>
+    )}
+  </div>
+</Bar>

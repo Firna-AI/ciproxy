@@ -1,0 +1,44 @@
+---
+// A link that looks like the large secondary button of the mockups: a white
+// box with a hairline edge. The label uses weight 500, the label weight of
+// the Graphite look. The Firna buttons of the mockups draw 700 only because
+// Firna has no label weight token yet.
+
+interface Props {
+  href: string;
+}
+
+const { href } = Astro.props;
+---
+
+<a href={href} class="link-button">
+  <slot />
+</a>
+
+<style>
+  .link-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 46px;
+    padding: 0 20px;
+    border: 1px solid var(--c-control-border);
+    border-radius: var(--r-md);
+    background: var(--c-surface);
+    color: var(--c-ink);
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 18px;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .link-button:hover {
+    background: var(--c-soft);
+  }
+
+  .link-button:active {
+    background: var(--c-bg2);
+  }
+</style>
