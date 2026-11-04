@@ -68,7 +68,8 @@ This milestone adds the states of the new items, and the legal pages.
 - [ ] Add the rename of a workspace, the banner of a Free workspace with
       more than one organization, the job page with the mixed cache source
       and with no entries restored, a `labels` key in `related-docs.ts`,
-      and the states that the answers to items 50 and 51 need.
+      the warning when an Admin gives the Admin role, no state without the
+      runner right after item 50, and the states that item 51 needs.
 
 ## Milestone 2: Documentation and protocol
 
@@ -78,7 +79,7 @@ Each answer goes into the protocol doc that it changes, and its `Open:`
 line goes.
 
 - [x] Write the disk rule of item 34, and each answer up to item 49.
-- [ ] Write the answers to items 50 and 51 into the docs.
+- [ ] Write the answer to item 51 into the docs. Item 50 is written.
 - [x] Write the design calls of items 33 to 36 and 41 to 44 into the docs.
       Item 44 contradicts "Cache tiers" in `cache.md`, and item 44 wins.
 
@@ -612,6 +613,17 @@ Answers of 4 November 2026:
   trial, is the backstop. Rejected: the TTL alone, a request to Boat, AWS
   EC2 first, Boat's in-sandbox key, a renewed TTL, and a key that ciproxy
   creates. The user proposed this option.
+- Item 50, in the user's words: "reverse the previous decision and have a
+  new machine be addable with a admin/runner role inside of ciproxy for
+  any of the installed installations". So the Admin role alone adds a
+  machine, connects Boat, and adds an organization, in a workspace with
+  any number of organizations, and ciproxy checks no GitHub runner right.
+  This reverses item 28 of the foundation plan. When an Admin gives the
+  Admin role, the dialog says that it covers the runners of every
+  organization, and an organization that wants other people to control its
+  runners uses its own workspace. Rejected: options A to F. Later: a
+  narrower right for chosen organizations or repositories, kept in the
+  follow-up item `scoped-runner-rights.md`.
 - Item 49, C: the Boat backend lives in `futex-ai/sandbox`. Its trait
   `SandboxBackend` splits into capabilities, and `sandbox-boat` starts with
   the lifecycle, snapshots, processes, and files. The interface gains VM
@@ -777,8 +789,8 @@ Design calls on the questions of the docs work, my calls, 4 November 2026:
   report. The savings report now covers the whole workspace, which pays
   one price.
 
-Items 50 and 51 wait for the user. Their options check ran, and its report
-is in `.context/ciproxy-mvp/options-check-50-51.md`.
+Item 51 waits for the user. The options check of items 50 and 51 ran, and
+its report is in `.context/ciproxy-mvp/options-check-50-51.md`.
 
 The options check of the `plans` skill ran over these items on 4 November
 2026. Its reports are under `.context/ciproxy-mvp-foundation/`:
@@ -1317,8 +1329,8 @@ organizations, close to G. See the answers above.
 
 ### 50. Adding a machine needs an unclear runner right
 
-**Status, 4 November 2026:** its options check ran, and the item goes to
-the user.
+**Answer, 4 November 2026:** the Admin role alone, which reverses item 28.
+See the answers above.
 
 - **Severity:** High. **Effort:** Medium.
 - **Source:** Implementation, from the docs work of item 48.
@@ -1394,8 +1406,8 @@ the user.
 
 ### 51. An organization with the App cannot join
 
-**Status, 4 November 2026:** its options check ran, and the item goes to
-the user.
+**Status, 4 November 2026:** changed after the answer to item 50. The item
+goes to the user.
 
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Implementation, from the docs work of item 48.
@@ -1409,17 +1421,16 @@ the user.
     installs an App only once on each organization.
   - Today a take-out leaves the App installed, so the organization cannot
     join a workspace again until an owner removes the App.
-  - Any Admin can take out any organization. So an owner of a later
-    organization can take out the first one, and keep its machines and its
-    card.
   - The App can remove its own install through the GitHub API.
+  - The answer to item 50 makes the Admin role the trust to control the
+    runners of every organization of the workspace, so an Admin takes an
+    organization out.
 - **Problem:** No rule says how an organization leaves so that it can join
-  again, who may take it out, or what happens to the last organization.
-- **Impact if no action:** A taken-out organization cannot come back, and
-  one organization can push another out of the workspace that it paid for.
+  again, or what happens to the last organization.
+- **Impact if no action:** A taken-out organization cannot come back until
+  an owner removes the App, and a workspace can pay with no organization.
 - **Root question:** How does an organization leave a workspace so that it
-  can join one again later, who may make it leave, and what happens to the
-  last organization?
+  can join one again later, and what happens to the last organization?
 - **Options:**
   - **A.** No join while the App stays: an owner removes the App, and an
     Admin adds the organization again. The last organization cannot be
@@ -1428,29 +1439,23 @@ the user.
     App and no workspace, to an Admin who owns them. Effort: Medium.
   - **C.** B, and an owner can also move an organization out of another
     workspace. Effort: Large.
-  - **D.** A take-out removes the App. Effort: Small.
-    - ciproxy deletes the scale sets of the organization, lets its running
-      jobs finish, and removes its own install through the GitHub API.
-    - The organization can join any workspace again as a new install.
-    - Only a person with the runner right of that organization can take it
-      out.
-    - The last organization cannot be taken out.
+  - **D.** A take-out removes the App. ciproxy deletes the scale sets of the
+    organization, lets its running jobs finish, and removes its own
+    install. The organization can join any workspace again as a new
+    install. The last organization cannot be taken out. Effort: Small.
   - **E.** A take-out only pauses the jobs of the organization, as a
     suspension does, and an Admin can start them again. Effort: Small.
   - **F.** An Admin can take out the last organization, which closes the
     workspace as a removal of the last organization does. Effort: Small.
-- **Left out:**
-  - A join by a person without the runner right of the organization,
-    because that person could send its secrets to machines that GitHub does
-    not trust that person with.
-  - A join through the GitHub settings page of an install, because B is
-    better on every point.
+- **Left out:** A join through the GitHub settings page of an install,
+  because B is better on every point.
 - **Wider fix:** D. Its rule is that ciproxy keeps no install that no
   workspace serves.
 - **Previous examples:** None found.
-- **Related:** Item 50: D uses its runner right for the take-out.
+- **Related:** Item 50: an Admin acts for every organization of the
+  workspace.
 - **Recommendation:** D, changed from B by the options check. It removes the
-  cause, an install that no workspace serves, it needs no new join path,
-  and it stops one organization from pushing another out.
+  cause, an install that no workspace serves, and it needs no new join
+  path.
 - **Action:** ask the user, because no requirement covers the take-out, and
   each option adds a rule.
