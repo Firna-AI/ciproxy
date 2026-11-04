@@ -45,6 +45,10 @@ It transfers no history or shared resource from the old workspace.
 
 Metering reads use repeatable-read transactions for coherent snapshots.
 Boat source costs and cost cursors share one repeatable-read snapshot.
+Savings registrations, range totals, and monthly costs share one
+repeatable-read read-only snapshot.
+The savings read includes removed registrations without loading retained
+jobs, start counts, or accounting cursors.
 Daily aggregates keep VM sizes and Boat costs without job identifiers.
 Timestamp aggregates keep exact starts without organization identifiers.
 Cursor writes apply caller-supplied signed corrections atomically.

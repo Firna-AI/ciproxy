@@ -6,7 +6,8 @@ use chrono::Duration;
 use ciproxy_metering::service::{Metering, StoredMetering};
 use ciproxy_metering::usage::PaymentNotice;
 use ciproxy_store_interface::jobs::{JobResult, JobState};
-use ciproxy_store_interface::metering::history::{MachineCost, Period, PlanCost};
+use ciproxy_store_interface::metering::facts::MachineRegistration;
+use ciproxy_store_interface::metering::history::{BoatCost, MachineCost, Period, PlanCost};
 use ciproxy_store_interface::runners::RunnerPlace;
 use uuid::Uuid;
 
@@ -34,6 +35,10 @@ fn metering_reads_all_workspace_organizations_and_current_machines() {
         .unwrap();
     database
         .store
+        .record_machine_registration(workspace.id, removed.id, time("2026-11-01T00:00:00Z"))
+        .unwrap();
+    database
+        .store
         .remove_machine(workspace.id, removed.id, at())
         .unwrap();
     for organization in [&org, &second, &foreign] {
@@ -50,6 +55,19 @@ fn metering_reads_all_workspace_organizations_and_current_machines() {
         database
             .store
             .create_runner(organization.workspace_id, &vm)
+            .unwrap();
+        database
+            .store
+            .save_boat_cost(
+                organization.workspace_id,
+                &BoatCost {
+                    runner_id: vm.id,
+                    starts_at: at(),
+                    ends_at: Some(at() + Duration::minutes(10)),
+                    start_usd: usd("0.1"),
+                    minute_usd: usd("0.02"),
+                },
+            )
             .unwrap();
         let mut taken = job(&label, &scale);
         taken.runner_id = Some(vm.id);
@@ -131,7 +149,21 @@ fn metering_reads_all_workspace_organizations_and_current_machines() {
             },
         )
         .unwrap();
-    let history = database.store.cost_history(workspace.id).unwrap();
+    service
+        .refresh(workspace.id, at() + Duration::hours(1))
+        .unwrap();
+    service
+        .refresh(other.id, at() + Duration::hours(1))
+        .unwrap();
+    let snapshot = database
+        .store
+        .savings_snapshot(
+            workspace.id,
+            at().date_naive(),
+            (at() + Duration::days(1)).date_naive(),
+        )
+        .unwrap();
+    let history = snapshot.costs;
     assert_eq!(
         (
             history.workspace_started_at,
@@ -145,7 +177,80 @@ fn metering_reads_all_workspace_organizations_and_current_machines() {
         Err(ciproxy_store_interface::error::Error::NotFound)
     ));
     assert_eq!(
-        database.store.cost_history(other.id).unwrap().machines,
+        database
+            .store
+            .savings_snapshot(
+                other.id,
+                at().date_naive(),
+                (at() + Duration::days(1)).date_naive()
+            )
+            .unwrap()
+            .costs
+            .machines,
         vec![]
     );
+    let mut registrations = snapshot.machines;
+    registrations.sort_by_key(|machine| machine.machine_id);
+    let mut expected = vec![
+        MachineRegistration {
+            machine_id: own.id,
+            registered_at: Some(at()),
+            removed_at: None,
+        },
+        MachineRegistration {
+            machine_id: removed.id,
+            registered_at: Some(time("2026-11-01T00:00:00Z")),
+            removed_at: Some(at()),
+        },
+    ];
+    expected.sort_by_key(|machine| machine.machine_id);
+    assert_eq!(registrations, expected);
+    assert_eq!(snapshot.days.len(), 1);
+    assert_eq!(snapshot.days[0].sizes.len(), 1);
+    assert_eq!(
+        (
+            snapshot.days[0].day,
+            snapshot.days[0].sizes[0].boat.starts,
+            snapshot.days[0].sizes[0].boat.minutes,
+            snapshot.days[0].boat_usd
+        ),
+        (at().date_naive(), 2, usd("10"), usd("0.6"))
+    );
+    let foreign = database
+        .store
+        .savings_snapshot(
+            other.id,
+            at().date_naive(),
+            (at() + Duration::days(1)).date_naive(),
+        )
+        .unwrap();
+    assert_eq!(
+        (
+            foreign.machines.len(),
+            foreign.costs.workspace_started_at,
+            foreign.costs.plans.len()
+        ),
+        (1, None, 0)
+    );
+    assert_eq!(
+        (
+            foreign.days[0].sizes[0].boat.starts,
+            foreign.days[0].sizes[0].boat.minutes,
+            foreign.days[0].boat_usd
+        ),
+        (1, usd("5"), usd("0.3"))
+    );
+    for (from, until) in [
+        (at() - Duration::days(1), at()),
+        (at() + Duration::days(1), at() + Duration::days(2)),
+    ] {
+        assert_eq!(
+            database
+                .store
+                .savings_snapshot(workspace.id, from.date_naive(), until.date_naive())
+                .unwrap()
+                .days,
+            vec![]
+        );
+    }
 }

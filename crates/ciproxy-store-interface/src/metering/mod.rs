@@ -2,5 +2,6 @@
 
 pub mod facts;
 pub mod history;
+pub mod report;
 pub mod store;
 pub mod totals;

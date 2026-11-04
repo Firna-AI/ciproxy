@@ -67,20 +67,7 @@ pub(super) fn load(
             },
         })
         .collect();
-    let machines = machines::table
-        .filter(machines::workspace_id.eq(workspace_id))
-        .order(machines::id)
-        .select((machines::id, machines::registered_at, machines::removed_at))
-        .load::<(Uuid, Option<DateTime<Utc>>, Option<DateTime<Utc>>)>(connection)?
-        .into_iter()
-        .map(
-            |(machine_id, registered_at, removed_at)| MachineRegistration {
-                machine_id,
-                registered_at,
-                removed_at,
-            },
-        )
-        .collect();
+    let machines = registrations(connection, workspace_id)?;
     let organizations = organizations::table
         .filter(organizations::workspace_id.eq(workspace_id))
         .filter(organizations::removed_at.is_null())
@@ -104,4 +91,24 @@ pub(super) fn load(
         starts,
         accounted_jobs: job_cursors::load(connection, workspace_id)?,
     })
+}
+
+pub(super) fn registrations(
+    connection: &mut PgConnection,
+    workspace_id: Uuid,
+) -> QueryResult<Vec<MachineRegistration>> {
+    Ok(machines::table
+        .filter(machines::workspace_id.eq(workspace_id))
+        .order(machines::id)
+        .select((machines::id, machines::registered_at, machines::removed_at))
+        .load::<(Uuid, Option<DateTime<Utc>>, Option<DateTime<Utc>>)>(connection)?
+        .into_iter()
+        .map(
+            |(machine_id, registered_at, removed_at)| MachineRegistration {
+                machine_id,
+                registered_at,
+                removed_at,
+            },
+        )
+        .collect())
 }

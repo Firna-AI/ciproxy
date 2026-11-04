@@ -55,6 +55,10 @@ Anonymous daily aggregates keep actual VM sizes and Boat costs.
 Anonymous timestamp counts preserve exact period boundaries.
 Job and runner cursors support atomic signed aggregate corrections.
 BoatAccounting holds source costs and cursors from one coherent snapshot.
+SavingsSnapshot holds registrations, range totals, and monthly costs
+from one coherent snapshot.
+Its registrations include removed machines for historical cost dates.
+The savings read excludes jobs, start counts, and accounting cursors.
 Deleting a job or runner deletes its cursor and preserves its aggregates.
 The metering service supplies all calculation rules and retention dates.
 

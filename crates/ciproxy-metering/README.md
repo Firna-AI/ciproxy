@@ -34,6 +34,9 @@ Each partial own-machine registration date counts as one cost date.
 Stored monthly prices supply machine and tier costs.
 Stored Boat rates supply start charges and elapsed sandbox costs.
 A Boat sandbox can cost money without taking a job.
+Each savings report reads registrations, range totals, and monthly costs
+from one coherent store snapshot.
+The report read loads no retained jobs, start counts, or accounting cursors.
 
 Callers supply dated USD price lists for Blacksmith and GitHub.
 Matching requires both CPU and memory.

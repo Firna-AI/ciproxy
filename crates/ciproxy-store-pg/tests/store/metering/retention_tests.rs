@@ -77,12 +77,13 @@ fn anonymous_totals_survive_organization_purge_and_expire_after_ninety_days() {
         .unwrap();
     let totals = database
         .store
-        .daily_totals(
+        .savings_snapshot(
             workspace.id,
             at().date_naive(),
             (at() + Duration::days(1)).date_naive(),
         )
-        .unwrap();
+        .unwrap()
+        .days;
     assert_eq!(
         (
             totals[0].sizes[0].boat.starts,
@@ -111,12 +112,13 @@ fn anonymous_totals_survive_organization_purge_and_expire_after_ninety_days() {
     assert_eq!(
         database
             .store
-            .daily_totals(
+            .savings_snapshot(
                 workspace.id,
                 at().date_naive(),
                 (at() + Duration::days(1)).date_naive()
             )
-            .unwrap(),
+            .unwrap()
+            .days,
         vec![]
     );
 }

@@ -162,17 +162,15 @@ impl Metering for StoredMetering {
         lists: &[PriceList; 2],
         divisor: MonthlyDivisor,
     ) -> Result<SavingsReport> {
-        let facts = self.store.workspace_usage(workspace_id)?;
-        let days = self
+        let snapshot = self
             .store
-            .daily_totals(workspace_id, range.from, range.until)?;
-        let costs = self.store.cost_history(workspace_id)?;
+            .savings_snapshot(workspace_id, range.from, range.until)?;
         Ok(savings_report(ReportInput {
             range,
             at,
-            days: &days,
-            machines: &facts.machines,
-            costs: &costs,
+            days: &snapshot.days,
+            machines: &snapshot.machines,
+            costs: &snapshot.costs,
             price_lists: lists,
             monthly_divisor: divisor,
         }))
@@ -186,3 +184,7 @@ mod service_tests;
 #[cfg(test)]
 #[path = "_tests_/refresh/mod.rs"]
 mod refresh_tests;
+
+#[cfg(test)]
+#[path = "_tests_/savings_read_tests.rs"]
+mod savings_read_tests;

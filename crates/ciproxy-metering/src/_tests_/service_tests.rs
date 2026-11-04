@@ -4,6 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use ciproxy_store_interface::metering::facts::{JobPlace, WorkspaceUsage};
 use ciproxy_store_interface::metering::history::{BoatAccounting, Period};
+use ciproxy_store_interface::metering::report::SavingsSnapshot;
 use ciproxy_store_interface::metering::store::MeteringStoreMock;
 use ciproxy_store_interface::metering::totals::{
     AccountedJob, DailyTotal, LocationTotals, SizeTotal,
@@ -165,17 +166,15 @@ fn store_savings_use_retained_totals_after_job_details_disappear() {
             boat: LocationTotals::default(),
         }],
     };
-    let mock = Unimock::new((
-        MeteringStoreMock::workspace_usage
-            .some_call(matching!(_))
-            .returns(Ok(WorkspaceUsage::default())),
-        MeteringStoreMock::daily_totals
+    let mock = Unimock::new(
+        MeteringStoreMock::savings_snapshot
             .some_call(matching!(_, _, _))
-            .returns(Ok(vec![retained])),
-        MeteringStoreMock::cost_history
-            .some_call(matching!(_))
-            .returns(Ok(free_history())),
-    ));
+            .returns(Ok(SavingsSnapshot {
+                days: vec![retained],
+                costs: free_history(),
+                ..SavingsSnapshot::default()
+            })),
+    );
     let service: Arc<dyn Metering> = Arc::new(StoredMetering::new(Arc::new(mock)));
     let lists = [
         catalog(Alternative::Blacksmith, "0.2"),

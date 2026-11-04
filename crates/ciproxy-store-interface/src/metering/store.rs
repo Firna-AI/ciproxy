@@ -6,12 +6,9 @@ use uuid::Uuid;
 
 use crate::error::Result;
 use crate::metering::facts::WorkspaceUsage;
-use crate::metering::history::{
-    BoatAccounting, BoatCost, CostHistory, MachineCost, Period, PlanCost,
-};
-use crate::metering::totals::{
-    AccountedBoat, AccountedJob, DailyBoatCost, DailyDelta, DailyTotal, StartTotal,
-};
+use crate::metering::history::{BoatAccounting, BoatCost, MachineCost, Period, PlanCost};
+use crate::metering::report::SavingsSnapshot;
+use crate::metering::totals::{AccountedBoat, AccountedJob, DailyBoatCost, DailyDelta, StartTotal};
 
 /// Queries and writes used by metering and its trusted fact producers.
 #[unimock(api = MeteringStoreMock)]
@@ -33,8 +30,13 @@ pub trait MeteringStore: Send + Sync {
     fn save_plan_cost(&self, workspace_id: Uuid, cost: &PlanCost) -> Result<()>;
     /// Store one ciproxy Boat runner's start and runtime price snapshot.
     fn save_boat_cost(&self, workspace_id: Uuid, cost: &BoatCost) -> Result<()>;
-    /// Read retained monthly machine and plan costs for one workspace.
-    fn cost_history(&self, workspace_id: Uuid) -> Result<CostHistory>;
+    /// Read report registrations, range totals, and monthly costs in one snapshot.
+    fn savings_snapshot(
+        &self,
+        workspace_id: Uuid,
+        from: NaiveDate,
+        until: NaiveDate,
+    ) -> Result<SavingsSnapshot>;
     /// Save or close a billing period using its original start as the key.
     fn save_metering_period(&self, workspace_id: Uuid, period: &Period) -> Result<()>;
     /// Read stored Free and Stripe period boundaries in start order.
@@ -65,13 +67,6 @@ pub trait MeteringStore: Send + Sync {
         current: &AccountedBoat,
         deltas: &[DailyBoatCost],
     ) -> Result<bool>;
-    /// Read UTC daily totals in the half-open date range.
-    fn daily_totals(
-        &self,
-        workspace_id: Uuid,
-        from: NaiveDate,
-        until: NaiveDate,
-    ) -> Result<Vec<DailyTotal>>;
     /// Delete daily totals before the first retained UTC day.
     /// Keep this cutoff monotonic so stale refreshes cannot restore old dates.
     fn purge_daily_totals(&self, workspace_id: Uuid, before: NaiveDate) -> Result<usize>;

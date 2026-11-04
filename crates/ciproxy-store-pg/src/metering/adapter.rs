@@ -7,11 +7,12 @@ use ciproxy_schema::workspaces::workspaces;
 use ciproxy_store_interface::error::Result;
 use ciproxy_store_interface::metering::facts::WorkspaceUsage;
 use ciproxy_store_interface::metering::history::{
-    BoatAccounting, BoatCost, CostHistory, MachineCost, Period, PlanCost,
+    BoatAccounting, BoatCost, MachineCost, Period, PlanCost,
 };
+use ciproxy_store_interface::metering::report::SavingsSnapshot;
 use ciproxy_store_interface::metering::store::MeteringStore;
 use ciproxy_store_interface::metering::totals::{
-    AccountedBoat, AccountedJob, DailyBoatCost, DailyDelta, DailyTotal, StartTotal,
+    AccountedBoat, AccountedJob, DailyBoatCost, DailyDelta, StartTotal,
 };
 use diesel::prelude::*;
 use uuid::Uuid;
@@ -73,12 +74,23 @@ impl MeteringStore for PgStore {
         history::save_boat(&mut *self.connection()?, workspace_id, cost)
     }
 
-    fn cost_history(&self, workspace_id: Uuid) -> Result<CostHistory> {
+    fn savings_snapshot(
+        &self,
+        workspace_id: Uuid,
+        from: NaiveDate,
+        until: NaiveDate,
+    ) -> Result<SavingsSnapshot> {
         self.connection()?
             .build_transaction()
             .repeatable_read()
             .read_only()
-            .run(|connection| history::load(connection, workspace_id))
+            .run(|connection| {
+                Ok(SavingsSnapshot {
+                    machines: facts::registrations(connection, workspace_id)?,
+                    days: aggregates::load(connection, workspace_id, from, until)?,
+                    costs: history::load(connection, workspace_id)?,
+                })
+            })
             .store()
     }
 
@@ -150,20 +162,6 @@ impl MeteringStore for PgStore {
             .transaction(|connection| {
                 boat_cursors::apply(connection, workspace_id, previous, current, deltas)
             })
-            .store()
-    }
-
-    fn daily_totals(
-        &self,
-        workspace_id: Uuid,
-        from: NaiveDate,
-        until: NaiveDate,
-    ) -> Result<Vec<DailyTotal>> {
-        self.connection()?
-            .build_transaction()
-            .repeatable_read()
-            .read_only()
-            .run(|connection| aggregates::load(connection, workspace_id, from, until))
             .store()
     }
 

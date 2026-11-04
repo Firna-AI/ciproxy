@@ -56,8 +56,9 @@ fn stale_accounting_snapshot_cannot_apply_the_same_delta_twice() {
     );
     let totals = database
         .store
-        .daily_totals(workspace.id, range.from, range.until)
-        .unwrap();
+        .savings_snapshot(workspace.id, range.from, range.until)
+        .unwrap()
+        .days;
     assert_eq!(
         (
             totals[0].sizes[0].boat.starts,
@@ -83,8 +84,9 @@ fn stale_accounting_snapshot_cannot_apply_the_same_delta_twice() {
     assert_eq!(
         database
             .store
-            .daily_totals(workspace.id, range.from, range.until)
-            .unwrap(),
+            .savings_snapshot(workspace.id, range.from, range.until)
+            .unwrap()
+            .days,
         vec![]
     );
 }
