@@ -3,6 +3,8 @@
 use rust_decimal::Decimal;
 use rust_decimal::prelude::ToPrimitive;
 
+const START_BLOCK_SIZE: u64 = 10_000;
+
 /// A published ciproxy pricing tier.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Tier {
@@ -55,7 +57,8 @@ pub fn plan_choice(plan: Plan) -> PlanChoice {
     };
     PlanChoice {
         plan: Plan { add_ons, ..plan },
-        starts: Decimal::from(starts) + Decimal::from(add_ons.start_blocks) * Decimal::from(10_000),
+        starts: Decimal::from(starts)
+            + Decimal::from(add_ons.start_blocks) * Decimal::from(START_BLOCK_SIZE),
         machines: u128::from(machines) + u128::from(add_ons.machines),
         monthly_usd: Decimal::from(price)
             + Decimal::from(add_ons.start_blocks) * Decimal::from(10)
@@ -80,10 +83,11 @@ pub fn cheapest_offer(expected_starts: Decimal, machines: u64, current: Tier) ->
 
 fn covering(tier: Tier, expected: Decimal, machine_count: u64) -> PlanChoice {
     let (starts, machines, _) = base(tier);
-    let blocks = ((expected - Decimal::from(starts)).max(Decimal::ZERO) / Decimal::from(10_000))
-        .ceil()
-        .to_u64()
-        .unwrap_or_default();
+    let blocks = ((expected - Decimal::from(starts)).max(Decimal::ZERO)
+        / Decimal::from(START_BLOCK_SIZE))
+    .ceil()
+    .to_u64()
+    .unwrap_or_default();
     plan_choice(Plan {
         tier,
         add_ons: AddOns {

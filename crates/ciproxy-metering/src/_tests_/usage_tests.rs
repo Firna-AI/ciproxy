@@ -5,7 +5,7 @@ use ciproxy_store_interface::metering::history::Period;
 use ciproxy_store_interface::metering::totals::{AccountedJob, StartTotal};
 use uuid::Uuid;
 
-use crate::pricing::Tier;
+use crate::pricing::{AddOns, Plan, Tier};
 use crate::test_support::{at, day, job, plan, usd};
 use crate::usage::{Banner, PaymentNotice, workspace_usage};
 
@@ -156,6 +156,46 @@ fn soft_limits_use_strict_excess_and_payment_banner_precedence() {
         assert_eq!(
             workspace_usage(&facts, period(), plan(Tier::Free), now, notice).banner,
             Some(banner)
+        );
+    }
+    for (tier, starts, machines, over) in [
+        (Tier::Team, 35_000, 4, false),
+        (Tier::Team, 35_001, 5, true),
+        (Tier::Free, 2_000, 1, false),
+        (Tier::Free, 2_001, 2, true),
+    ] {
+        let saved = Plan {
+            tier,
+            add_ons: AddOns {
+                start_blocks: 1,
+                machines: 1,
+            },
+        };
+        let facts = WorkspaceUsage {
+            starts: vec![StartTotal {
+                taken_at: now,
+                starts,
+            }],
+            machines: (1..=machines)
+                .map(|id| MachineRegistration {
+                    machine_id: Uuid::from_u128(id),
+                    registered_at: None,
+                    removed_at: None,
+                })
+                .collect(),
+            organizations: 1,
+            ..WorkspaceUsage::default()
+        };
+        let use_now = workspace_usage(&facts, period(), saved, now, PaymentNotice::None);
+        let expected = if over {
+            (usd("1"), 1, Some(Banner::SoftLimit))
+        } else {
+            (usd("0"), 0, None)
+        };
+        assert_eq!(
+            (use_now.starts_over, use_now.machines_over, use_now.banner),
+            expected,
+            "{tier:?}/{starts}/{machines}"
         );
     }
 }

@@ -92,9 +92,6 @@ impl Metering for StoredMetering {
         let Some(from) = retention_start(at) else {
             return Ok(Refresh::default());
         };
-        let Some(until) = at.date_naive().succ_opt() else {
-            return Ok(Refresh::default());
-        };
         let facts = self.store.workspace_usage(workspace_id)?;
         let previous: BTreeMap<_, _> = facts
             .accounted_jobs
@@ -103,11 +100,14 @@ impl Metering for StoredMetering {
             .collect();
         let mut outcome = Refresh::default();
         for job in facts.jobs {
+            let before = previous.get(&job.id);
             let current = AccountedJob {
                 job,
-                observed_at: at,
+                observed_at: before.map_or(at, |previous| at.max(previous.observed_at)),
             };
-            let before = previous.get(&current.job.id);
+            let Some(until) = current.observed_at.date_naive().succ_opt() else {
+                continue;
+            };
             let changes = accounting_deltas(before, &current, DateRange { from, until });
             let starts = start_deltas(before, &current, DateRange { from, until });
             if changes.is_empty() && starts.is_empty() && before.is_some() {
@@ -122,19 +122,21 @@ impl Metering for StoredMetering {
                 outcome.stale_jobs += 1;
             }
         }
-        let costs = self.store.cost_history(workspace_id)?;
-        let previous: BTreeMap<_, _> = self
-            .store
-            .accounted_boat_costs(workspace_id)?
+        let boat = self.store.boat_accounting(workspace_id)?;
+        let previous: BTreeMap<_, _> = boat
+            .accounted
             .into_iter()
             .map(|cost| (cost.cost.runner_id, cost))
             .collect();
-        for cost in costs.boat {
+        for cost in boat.costs {
+            let before = previous.get(&cost.runner_id);
             let current = AccountedBoat {
                 cost,
-                observed_at: at,
+                observed_at: before.map_or(at, |previous| at.max(previous.observed_at)),
             };
-            let before = previous.get(&current.cost.runner_id);
+            let Some(until) = current.observed_at.date_naive().succ_opt() else {
+                continue;
+            };
             let changes = boat_cost_deltas(before, &current, DateRange { from, until });
             if changes.is_empty() && before.is_some() {
                 continue;
@@ -180,3 +182,7 @@ impl Metering for StoredMetering {
 #[cfg(test)]
 #[path = "_tests_/service_tests.rs"]
 mod service_tests;
+
+#[cfg(test)]
+#[path = "_tests_/refresh/mod.rs"]
+mod refresh_tests;

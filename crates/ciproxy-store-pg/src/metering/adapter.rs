@@ -7,7 +7,7 @@ use ciproxy_schema::workspaces::workspaces;
 use ciproxy_store_interface::error::Result;
 use ciproxy_store_interface::metering::facts::WorkspaceUsage;
 use ciproxy_store_interface::metering::history::{
-    BoatCost, CostHistory, MachineCost, Period, PlanCost,
+    BoatAccounting, BoatCost, CostHistory, MachineCost, Period, PlanCost,
 };
 use ciproxy_store_interface::metering::store::MeteringStore;
 use ciproxy_store_interface::metering::totals::{
@@ -125,8 +125,18 @@ impl MeteringStore for PgStore {
             .store()
     }
 
-    fn accounted_boat_costs(&self, workspace_id: Uuid) -> Result<Vec<AccountedBoat>> {
-        boat_cursors::load(&mut *self.connection()?, workspace_id).store()
+    fn boat_accounting(&self, workspace_id: Uuid) -> Result<BoatAccounting> {
+        self.connection()?
+            .build_transaction()
+            .repeatable_read()
+            .read_only()
+            .run(|connection| {
+                Ok(BoatAccounting {
+                    costs: history::load_boat(connection, workspace_id)?,
+                    accounted: boat_cursors::load(connection, workspace_id)?,
+                })
+            })
+            .store()
     }
 
     fn apply_boat_accounting(

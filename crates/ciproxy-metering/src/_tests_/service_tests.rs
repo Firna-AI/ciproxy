@@ -3,7 +3,7 @@
 use std::sync::{Arc, Mutex};
 
 use ciproxy_store_interface::metering::facts::{JobPlace, WorkspaceUsage};
-use ciproxy_store_interface::metering::history::{CostHistory, Period};
+use ciproxy_store_interface::metering::history::{BoatAccounting, Period};
 use ciproxy_store_interface::metering::store::MeteringStoreMock;
 use ciproxy_store_interface::metering::totals::{
     AccountedJob, DailyTotal, LocationTotals, SizeTotal,
@@ -82,12 +82,9 @@ fn refresh_applies_literal_deltas_and_reports_concurrent_writes() {
                 ));
                 Ok(false)
             })),
-        MeteringStoreMock::cost_history
+        MeteringStoreMock::boat_accounting
             .some_call(matching!(_))
-            .returns(Ok(CostHistory::default())),
-        MeteringStoreMock::accounted_boat_costs
-            .some_call(matching!(_))
-            .returns(Ok(vec![])),
+            .returns(Ok(BoatAccounting::default())),
         MeteringStoreMock::purge_daily_totals
             .some_call(matching!(_, _))
             .returns(Ok(3)),
@@ -138,12 +135,9 @@ fn refresh_skips_unchanged_completed_job_cursors() {
                 accounted_jobs: vec![current],
                 ..WorkspaceUsage::default()
             })),
-        MeteringStoreMock::cost_history
+        MeteringStoreMock::boat_accounting
             .some_call(matching!(_))
-            .returns(Ok(CostHistory::default())),
-        MeteringStoreMock::accounted_boat_costs
-            .some_call(matching!(_))
-            .returns(Ok(vec![])),
+            .returns(Ok(BoatAccounting::default())),
         MeteringStoreMock::purge_daily_totals
             .some_call(matching!(_, _))
             .returns(Ok(0)),

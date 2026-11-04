@@ -6,7 +6,9 @@ use uuid::Uuid;
 
 use crate::error::Result;
 use crate::metering::facts::WorkspaceUsage;
-use crate::metering::history::{BoatCost, CostHistory, MachineCost, Period, PlanCost};
+use crate::metering::history::{
+    BoatAccounting, BoatCost, CostHistory, MachineCost, Period, PlanCost,
+};
 use crate::metering::totals::{
     AccountedBoat, AccountedJob, DailyBoatCost, DailyDelta, DailyTotal, StartTotal,
 };
@@ -31,7 +33,7 @@ pub trait MeteringStore: Send + Sync {
     fn save_plan_cost(&self, workspace_id: Uuid, cost: &PlanCost) -> Result<()>;
     /// Store one ciproxy Boat runner's start and runtime price snapshot.
     fn save_boat_cost(&self, workspace_id: Uuid, cost: &BoatCost) -> Result<()>;
-    /// Read retained monthly costs and Boat price snapshots for one workspace.
+    /// Read retained monthly machine and plan costs for one workspace.
     fn cost_history(&self, workspace_id: Uuid) -> Result<CostHistory>;
     /// Save or close a billing period using its original start as the key.
     fn save_metering_period(&self, workspace_id: Uuid, period: &Period) -> Result<()>;
@@ -50,8 +52,8 @@ pub trait MeteringStore: Send + Sync {
         deltas: &[DailyDelta],
         starts: &[StartTotal],
     ) -> Result<bool>;
-    /// Read Boat cost cursors while their runners remain retained.
-    fn accounted_boat_costs(&self, workspace_id: Uuid) -> Result<Vec<AccountedBoat>>;
+    /// Read Boat source facts and cost cursors in one coherent snapshot.
+    fn boat_accounting(&self, workspace_id: Uuid) -> Result<BoatAccounting>;
     /// Apply Boat cost corrections and a cursor in one transaction.
     ///
     /// Return false when another refresh changed the previous cursor.

@@ -54,6 +54,7 @@ It stores explicit Free and Stripe billing-period boundaries.
 Anonymous daily aggregates keep actual VM sizes and Boat costs.
 Anonymous timestamp counts preserve exact period boundaries.
 Job and runner cursors support atomic signed aggregate corrections.
+BoatAccounting holds source costs and cursors from one coherent snapshot.
 Deleting a job or runner deletes its cursor and preserves its aggregates.
 The metering service supplies all calculation rules and retention dates.
 

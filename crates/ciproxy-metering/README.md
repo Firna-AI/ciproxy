@@ -56,6 +56,9 @@ Anonymous timestamp counts preserve exact billing-period boundaries.
 These aggregates retain no job or organization identifier.
 Accounting cursors retain job and runner references only until deletion.
 Their signed corrections make refresh idempotent.
+Boat source costs and cost cursors come from one coherent store snapshot.
+Each new observation preserves the stored cursor's later observation time.
+Corrections include every affected UTC date through that time.
 Organization deletion keeps the anonymous workspace aggregates.
 Refresh removes aggregate dates outside the ninety retained UTC dates.
 

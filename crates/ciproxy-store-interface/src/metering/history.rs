@@ -4,6 +4,8 @@ use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
+use crate::metering::totals::AccountedBoat;
+
 /// Half-open boundaries of one Free or Stripe billing period.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Period {
@@ -65,6 +67,13 @@ pub struct CostHistory {
     pub machines: Vec<MachineCost>,
     /// Confirmed monthly tier and add-on price intervals.
     pub plans: Vec<PlanCost>,
+}
+
+/// Coherent source facts and cost cursors from one database snapshot.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct BoatAccounting {
     /// Ciproxy-created Boat sandboxes, including those that took no job.
-    pub boat: Vec<BoatCost>,
+    pub costs: Vec<BoatCost>,
+    /// Accounting cursors read from the same snapshot as the source costs.
+    pub accounted: Vec<AccountedBoat>,
 }

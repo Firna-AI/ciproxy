@@ -132,18 +132,23 @@ pub(super) fn load(connection: &mut PgConnection, workspace_id: Uuid) -> QueryRe
         .into_iter()
         .map(PlanCostRow::into_record)
         .collect();
-    let boat = metering_boat_costs::table
+    Ok(CostHistory {
+        workspace_started_at,
+        machines,
+        plans,
+    })
+}
+
+pub(super) fn load_boat(
+    connection: &mut PgConnection,
+    workspace_id: Uuid,
+) -> QueryResult<Vec<BoatCost>> {
+    Ok(metering_boat_costs::table
         .filter(metering_boat_costs::workspace_id.eq(workspace_id))
         .order(metering_boat_costs::runner_id)
         .select(BoatCostRow::as_select())
         .load(connection)?
         .into_iter()
         .map(BoatCostRow::into_record)
-        .collect();
-    Ok(CostHistory {
-        workspace_started_at,
-        machines,
-        plans,
-        boat,
-    })
+        .collect())
 }

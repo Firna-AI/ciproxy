@@ -462,6 +462,11 @@ Depends on: 4
       Branch: `conductor/ciproxy-mvp-milestone-16-metering`.
 - [x] Unit-test each rule with hand-worked numbers.
       Branch: `conductor/ciproxy-mvp-milestone-16-metering`.
+- [ ] Orchestrator: settle the monthly divisor and same-day price allocation
+      in `metering.md`. Build the approved same-day rule, then run
+      `cargo test --package ciproxy-metering` and `cargo xtask check` with
+      `DATABASE_URL` set. The current report leaves changed-day costs unknown.
+      Branch: `conductor/ciproxy-mvp-milestone-16-metering`.
 
 ## Milestone 17: Billing with Stripe
 
