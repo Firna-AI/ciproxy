@@ -14,15 +14,20 @@ Keep database rows inside the store implementation.
 ## What This Crate Does
 
 Embeds ordered forward and reverse SQL migrations.
-Defines organization ownership for labels, scale sets, machines, tokens,
-runners, jobs, settings, and Boat key versions.
-Composite foreign keys keep related records in the same organization.
+Defines workspaces as the customer tenant.
+Workspaces own labels, machines, tokens, settings, and Boat key versions.
+Each GitHub organization has at most one current workspace registration.
+Removed registrations keep their old workspace history during retention.
+It owns its installation, repository access, scale sets, runners, and jobs.
+Composite foreign keys enforce both ownership boundaries.
+One workspace machine can serve all organizations in that workspace.
 The machine area also stores the last report of each disk.
 
 The schema stores token hashes and encrypted Boat keys.
 It stores job metadata and references to immutable runner placements.
 It has no job-content, job-log, plaintext-token, or plaintext-key field.
 Later milestones own members, roles, billing, and metering.
+Workspace deletion cascades through its retained records after 30 days.
 
 ## Quick Start
 
@@ -63,12 +68,14 @@ Each migration has an up.sql and a down.sql.
 
 - [src/migrations.rs](src/migrations.rs) exports the embedded migrations.
 - [migrations](migrations) holds the forward and reverse schema history.
-- [src/organizations.rs](src/organizations.rs) defines tenant ownership.
+- [src/workspaces.rs](src/workspaces.rs) defines the shared customer tenant.
+- [src/organizations.rs](src/organizations.rs) defines GitHub installations.
 - [src/runners.rs](src/runners.rs) defines stored runner placements.
 
 ### Related Docs
 
 - [Architecture](../../docs/architecture.md) gives the hosted boundaries.
 - [Security](../../docs/protocol/security.md) defines isolation and custody.
+- [Workspaces](../../docs/protocol/workspaces.md) defines organization joins.
 - [Job routing](../../docs/protocol/job-routing.md) defines labels.
 - [App removal](../../docs/protocol/app-removal.md) defines retention.

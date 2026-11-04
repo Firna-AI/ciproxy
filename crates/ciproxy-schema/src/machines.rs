@@ -3,7 +3,7 @@
 diesel::table! {
     machines (id) {
         id -> Uuid,
-        organization_id -> Uuid,
+        workspace_id -> Uuid,
         hostname -> Text,
         processor -> Text,
         hardware_threads -> Int4,
@@ -19,8 +19,8 @@ diesel::table! {
 }
 
 diesel::table! {
-    machine_disks (organization_id, machine_id, path) {
-        organization_id -> Uuid,
+    machine_disks (workspace_id, machine_id, path) {
+        workspace_id -> Uuid,
         machine_id -> Uuid,
         path -> Text,
         total_bytes -> Int8,

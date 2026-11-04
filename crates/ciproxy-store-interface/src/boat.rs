@@ -26,23 +26,19 @@ pub trait BoatStore: Send + Sync {
     /// Save ciphertext and a positive spend limit, retiring the previous key.
     fn connect_boat(
         &self,
-        organization_id: Uuid,
+        workspace_id: Uuid,
         account: &BoatAccount,
         key: &EncryptedBoatKey,
         spend_limit_usd_micros: i64,
     ) -> Result<()>;
     /// Read safe account metadata, including retained old key versions.
-    fn boat_accounts(&self, organization_id: Uuid) -> Result<Vec<BoatAccount>>;
-    /// Read ciphertext for an organization's specific key version.
-    fn encrypted_boat_key(
-        &self,
-        organization_id: Uuid,
-        id: Uuid,
-    ) -> Result<Option<EncryptedBoatKey>>;
+    fn boat_accounts(&self, workspace_id: Uuid) -> Result<Vec<BoatAccount>>;
+    /// Read ciphertext for an workspace's specific key version.
+    fn encrypted_boat_key(&self, workspace_id: Uuid, id: Uuid) -> Result<Option<EncryptedBoatKey>>;
     /// Mark the active key as rejected without deleting live sandbox access.
-    fn reject_boat_key(&self, organization_id: Uuid, id: Uuid, at: DateTime<Utc>) -> Result<()>;
+    fn reject_boat_key(&self, workspace_id: Uuid, id: Uuid, at: DateTime<Utc>) -> Result<()>;
     /// Stop new runners from using every currently active key.
-    fn disconnect_boat(&self, organization_id: Uuid, at: DateTime<Utc>) -> Result<()>;
+    fn disconnect_boat(&self, workspace_id: Uuid, at: DateTime<Utc>) -> Result<()>;
     /// Erase retired keys after their last live sandbox runner ends.
-    fn delete_unused_boat_keys(&self, organization_id: Uuid) -> Result<usize>;
+    fn delete_unused_boat_keys(&self, workspace_id: Uuid) -> Result<usize>;
 }

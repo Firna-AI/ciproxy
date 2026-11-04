@@ -15,3 +15,5 @@ pub mod settings;
 pub mod store;
 pub mod tokens;
 pub mod vm_size;
+
+pub mod workspaces;

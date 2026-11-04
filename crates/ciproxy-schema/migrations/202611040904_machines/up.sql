@@ -1,6 +1,6 @@
 CREATE TABLE machines (
     id UUID PRIMARY KEY,
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
     hostname TEXT NOT NULL,
     processor TEXT NOT NULL,
     hardware_threads INTEGER NOT NULL,
@@ -12,15 +12,15 @@ CREATE TABLE machines (
     last_contact_at TIMESTAMPTZ,
     agent_version TEXT NOT NULL,
     removed_at TIMESTAMPTZ,
-    UNIQUE (organization_id, id)
+    UNIQUE (workspace_id, id)
 );
 CREATE TABLE machine_disks (
-    organization_id UUID NOT NULL,
+    workspace_id UUID NOT NULL,
     machine_id UUID NOT NULL,
     path TEXT NOT NULL,
     total_bytes BIGINT NOT NULL,
     free_bytes BIGINT NOT NULL,
-    PRIMARY KEY (organization_id, machine_id, path),
-    FOREIGN KEY (organization_id, machine_id)
-        REFERENCES machines(organization_id, id) ON DELETE CASCADE
+    PRIMARY KEY (workspace_id, machine_id, path),
+    FOREIGN KEY (workspace_id, machine_id)
+        REFERENCES machines(workspace_id, id) ON DELETE CASCADE
 );

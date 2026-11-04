@@ -3,7 +3,7 @@
 diesel::table! {
     boat_accounts (id) {
         id -> Uuid,
-        organization_id -> Uuid,
+        workspace_id -> Uuid,
         account_name -> Text,
         key_ciphertext -> Bytea,
         connected_at -> Timestamptz,

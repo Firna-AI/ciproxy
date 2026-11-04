@@ -1,4 +1,4 @@
-//! Per-test PostgreSQL schemas and public API fixtures.
+//! Per-test PostgreSQL databases and public API fixtures.
 
 use std::env;
 use std::sync::Arc;
@@ -8,12 +8,13 @@ use ciproxy_store_interface::boat::BoatAccount;
 use ciproxy_store_interface::jobs::{Job, JobState};
 use ciproxy_store_interface::labels::{Label, WhenNothingFits};
 use ciproxy_store_interface::machines::{Machine, MachineDisk};
-use ciproxy_store_interface::organizations::{AppState, Organization};
+use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
 use ciproxy_store_interface::runners::{Runner, RunnerPlace, RunnerState};
 use ciproxy_store_interface::scale_sets::ScaleSet;
 use ciproxy_store_interface::secrets::TokenHash;
 use ciproxy_store_interface::store::{Store, StoreFactory};
 use ciproxy_store_interface::vm_size::VmSize;
+use ciproxy_store_interface::workspaces::Workspace;
 use ciproxy_store_pg::factory::PgStoreFactory;
 use diesel::prelude::*;
 use url::Url;
@@ -23,7 +24,12 @@ pub(super) struct Database {
     pub(super) store: Arc<dyn Store>,
     pub(super) connection: PgConnection,
     pub(super) url: String,
-    schema: String,
+    _database: TestDatabase,
+}
+
+struct TestDatabase {
+    maintenance: PgConnection,
+    name: String,
 }
 
 impl Database {
@@ -31,29 +37,45 @@ impl Database {
         let raw_url = env::var("DATABASE_URL")
             .expect("DATABASE_URL is required for real PostgreSQL store tests");
         let mut admin = PgConnection::establish(&raw_url).expect("connect test PostgreSQL");
-        let schema = format!("ciproxy_test_{}", Uuid::new_v4().simple());
-        diesel::sql_query(format!("CREATE SCHEMA {schema}"))
+        let name = format!("ciproxy_test_{}", Uuid::new_v4().simple());
+        diesel::sql_query(format!("CREATE DATABASE {name} TEMPLATE template0"))
             .execute(&mut admin)
-            .expect("create isolated test schema");
+            .expect("create isolated test database");
+        let database = TestDatabase {
+            maintenance: admin,
+            name,
+        };
         let mut url = Url::parse(&raw_url).expect("DATABASE_URL must be a PostgreSQL URL");
-        url.query_pairs_mut()
-            .append_pair("options", &format!("-csearch_path={schema}"));
+        url.set_path(&database.name);
         let url = url.to_string();
         let store: Arc<dyn Store> = PgStoreFactory.connect(&url).expect("open migrated store");
-        let connection = PgConnection::establish(&url).expect("connect schema administrator");
+        let connection = PgConnection::establish(&url).expect("connect test database");
         Self {
             store,
             connection,
             url,
-            schema,
+            _database: database,
         }
     }
 
-    pub(super) fn organization(&self) -> Organization {
+    pub(super) fn workspace(&self) -> Workspace {
+        let id = Uuid::new_v4();
+        let record = Workspace {
+            id,
+            name: format!("Workspace {id}"),
+            delete_after: None,
+        };
+        self.store.create_workspace(&record).unwrap();
+        record
+    }
+
+    pub(super) fn organization(&self, workspace: &Workspace) -> Organization {
         let id = Uuid::new_v4();
         let github_id = i64::from_be_bytes(id.as_bytes()[..8].try_into().unwrap()) & i64::MAX;
         let record = Organization {
             id,
+            workspace_id: workspace.id,
+            repositories: RepositoryAccess::AllPrivate,
             github_id,
             login: format!("org-{id}"),
             installation_id: github_id,
@@ -78,25 +100,34 @@ impl Database {
             allow_boat: true,
             when_nothing_fits: WhenNothingFits::Wait,
         };
-        let scale_set = ScaleSet {
-            id: Uuid::new_v4(),
+        self.store
+            .create_label(organization.workspace_id, &label)
+            .unwrap();
+        let scale_set = self.scale_set(organization, &label);
+        (label, scale_set)
+    }
+
+    pub(super) fn scale_set(&self, organization: &Organization, label: &Label) -> ScaleSet {
+        let id = Uuid::new_v4();
+        let record = ScaleSet {
+            id,
+            organization_id: organization.id,
             label_id: label.id,
-            github_id: i64::from_be_bytes(label.id.as_bytes()[..8].try_into().unwrap()) & i64::MAX,
+            github_id: i64::from_be_bytes(id.as_bytes()[..8].try_into().unwrap()) & i64::MAX,
             runner_group_id: 41,
         };
-        self.store.create_label(organization.id, &label).unwrap();
         self.store
-            .create_scale_set(organization.id, &scale_set)
+            .create_scale_set(organization.workspace_id, &record)
             .unwrap();
-        (label, scale_set)
+        record
     }
 }
 
-impl Drop for Database {
+impl Drop for TestDatabase {
     fn drop(&mut self) {
-        diesel::sql_query(format!("DROP SCHEMA {} CASCADE", self.schema))
-            .execute(&mut self.connection)
-            .expect("remove isolated test schema");
+        diesel::sql_query(format!("DROP DATABASE {} WITH (FORCE)", self.name))
+            .execute(&mut self.maintenance)
+            .expect("remove isolated test database");
     }
 }
 
@@ -142,6 +173,7 @@ pub(super) fn hash() -> TokenHash {
 
 pub(super) fn runner(label: &Label, scale_set: &ScaleSet, place: RunnerPlace) -> Runner {
     Runner {
+        organization_id: scale_set.organization_id,
         id: Uuid::new_v4(),
         label_id: label.id,
         scale_set_id: scale_set.id,
@@ -154,6 +186,7 @@ pub(super) fn runner(label: &Label, scale_set: &ScaleSet, place: RunnerPlace) ->
 
 pub(super) fn job(label: &Label, scale_set: &ScaleSet) -> Job {
     Job {
+        organization_id: scale_set.organization_id,
         id: Uuid::new_v4(),
         github_id: 42,
         label_id: label.id,

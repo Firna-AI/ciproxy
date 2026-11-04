@@ -17,36 +17,42 @@ struct Termination {
 #[test]
 fn scale_set_locks_exclude_other_sessions_and_release_on_disconnect() {
     let mut database = Database::new();
-    let owner = database.organization();
-    let stranger = database.organization();
-    let (_, first) = database.label_and_scale_set(&owner);
-    let (_, second) = database.label_and_scale_set(&owner);
+    let owner = database.workspace();
+    let organization = database.organization(&owner);
+    let another_organization = database.organization(&owner);
+    let stranger = database.workspace();
+    let (_, first) = database.label_and_scale_set(&organization);
+    let (_, second) = database.label_and_scale_set(&organization);
     let other = PgStoreFactory.connect(&database.url).unwrap();
     assert!(matches!(
-        other.try_lock_scale_set(stranger.id, first.id),
+        other.try_lock_scale_set(stranger.id, organization.id, first.id),
+        Err(Error::NotFound)
+    ));
+    assert!(matches!(
+        other.try_lock_scale_set(owner.id, another_organization.id, first.id),
         Err(Error::NotFound)
     ));
     {
         let mut held = database
             .store
-            .try_lock_scale_set(owner.id, first.id)
+            .try_lock_scale_set(owner.id, organization.id, first.id)
             .unwrap()
             .unwrap();
         held.check_connection().unwrap();
         assert!(
             other
-                .try_lock_scale_set(owner.id, first.id)
+                .try_lock_scale_set(owner.id, organization.id, first.id)
                 .unwrap()
                 .is_none()
         );
         let mut independent = other
-            .try_lock_scale_set(owner.id, second.id)
+            .try_lock_scale_set(owner.id, organization.id, second.id)
             .unwrap()
             .unwrap();
         independent.check_connection().unwrap();
     }
     let mut held = other
-        .try_lock_scale_set(owner.id, first.id)
+        .try_lock_scale_set(owner.id, organization.id, first.id)
         .unwrap()
         .unwrap();
     held.check_connection().unwrap();
@@ -65,7 +71,7 @@ fn scale_set_locks_exclude_other_sessions_and_release_on_disconnect() {
     assert!(matches!(held.check_connection(), Err(Error::Internal(_))));
     let mut replacement = database
         .store
-        .try_lock_scale_set(owner.id, first.id)
+        .try_lock_scale_set(owner.id, organization.id, first.id)
         .unwrap()
         .unwrap();
     replacement.check_connection().unwrap();

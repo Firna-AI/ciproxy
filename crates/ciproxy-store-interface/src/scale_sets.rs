@@ -9,7 +9,9 @@ use crate::error::Result;
 pub struct ScaleSet {
     /// The internal scale set identifier.
     pub id: Uuid,
-    /// The organization label served by the scale set.
+    /// The GitHub organization served by the scale set.
+    pub organization_id: Uuid,
+    /// The shared workspace label served for this organization.
     pub label_id: Uuid,
     /// The GitHub scale set identifier.
     pub github_id: i64,
@@ -28,15 +30,16 @@ pub trait ScaleSetSession: Send {
 /// Queries and exclusive session locks for scale sets.
 pub trait ScaleSetStore: Send + Sync {
     /// Insert a scale set for an organization label.
-    fn create_scale_set(&self, organization_id: Uuid, scale_set: &ScaleSet) -> Result<()>;
+    fn create_scale_set(&self, workspace_id: Uuid, scale_set: &ScaleSet) -> Result<()>;
     /// Read all scale sets of one organization.
-    fn scale_sets(&self, organization_id: Uuid) -> Result<Vec<ScaleSet>>;
+    fn scale_sets(&self, workspace_id: Uuid, organization_id: Uuid) -> Result<Vec<ScaleSet>>;
     /// Try to own a session, returning None when another session owns it.
     ///
     /// An unknown scale set returns NotFound. Keep the returned handle alive
     /// for the entire GitHub message session.
     fn try_lock_scale_set(
         &self,
+        workspace_id: Uuid,
         organization_id: Uuid,
         scale_set_id: Uuid,
     ) -> Result<Option<Box<dyn ScaleSetSession>>>;

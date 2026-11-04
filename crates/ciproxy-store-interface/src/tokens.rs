@@ -9,12 +9,17 @@ use crate::secrets::TokenHash;
 /// The one authority granted by a token.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TokenSubject {
-    /// Register machines in the organization.
+    /// Register machines in the workspace.
     Install,
     /// Connect as one registered machine.
     Machine(Uuid),
     /// Report the end of one sandbox runner.
-    Sandbox(Uuid),
+    Sandbox {
+        /// The organization that owns this sandbox runner.
+        organization_id: Uuid,
+        /// The one runner whose sandbox may report its end.
+        runner_id: Uuid,
+    },
 }
 
 /// Credential metadata returned after hash authentication.
@@ -22,8 +27,8 @@ pub enum TokenSubject {
 pub struct Token {
     /// The token record identifier.
     pub id: Uuid,
-    /// The organization authorized by the token.
-    pub organization_id: Uuid,
+    /// The workspace authorized by the token.
+    pub workspace_id: Uuid,
     /// The restricted token authority.
     pub subject: TokenSubject,
     /// When the token was issued.
@@ -39,7 +44,7 @@ pub trait TokenStore: Send + Sync {
     /// Store a reusable install token with an exact one-hour lifetime.
     fn create_install_token(
         &self,
-        organization_id: Uuid,
+        workspace_id: Uuid,
         id: Uuid,
         hash: &TokenHash,
         at: DateTime<Utc>,
@@ -48,9 +53,9 @@ pub trait TokenStore: Send + Sync {
     fn create_scoped_token(&self, token: &Token, hash: &TokenHash) -> Result<()>;
     /// Find an unrevoked, unexpired token by its precomputed hash.
     ///
-    /// This authentication lookup returns the token's organization. All
-    /// subsequent resource queries must use that organization identifier.
+    /// This authentication lookup returns the token's workspace. All
+    /// subsequent resource queries must use that workspace identifier.
     fn authenticate_token(&self, hash: &TokenHash, at: DateTime<Utc>) -> Result<Option<Token>>;
-    /// Revoke one token inside its organization.
-    fn revoke_token(&self, organization_id: Uuid, id: Uuid, at: DateTime<Utc>) -> Result<()>;
+    /// Revoke one token inside its workspace.
+    fn revoke_token(&self, workspace_id: Uuid, id: Uuid, at: DateTime<Utc>) -> Result<()>;
 }

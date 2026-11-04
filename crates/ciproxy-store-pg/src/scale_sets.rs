@@ -14,6 +14,7 @@ use crate::error::QueryResultExt;
 #[diesel(table_name = scale_sets)]
 struct ScaleSetRow {
     id: Uuid,
+    organization_id: Uuid,
     label_id: Uuid,
     github_id: i64,
     runner_group_id: i64,
@@ -23,6 +24,7 @@ impl From<ScaleSetRow> for ScaleSet {
     fn from(row: ScaleSetRow) -> Self {
         Self {
             id: row.id,
+            organization_id: row.organization_id,
             label_id: row.label_id,
             github_id: row.github_id,
             runner_group_id: row.runner_group_id,
@@ -50,11 +52,12 @@ impl ScaleSetSession for Session {
 }
 
 impl ScaleSetStore for PgStore {
-    fn create_scale_set(&self, organization_id: Uuid, scale_set: &ScaleSet) -> Result<()> {
+    fn create_scale_set(&self, workspace_id: Uuid, scale_set: &ScaleSet) -> Result<()> {
         diesel::insert_into(scale_sets::table)
             .values((
                 scale_sets::id.eq(scale_set.id),
-                scale_sets::organization_id.eq(organization_id),
+                scale_sets::workspace_id.eq(workspace_id),
+                scale_sets::organization_id.eq(scale_set.organization_id),
                 scale_sets::label_id.eq(scale_set.label_id),
                 scale_sets::github_id.eq(scale_set.github_id),
                 scale_sets::runner_group_id.eq(scale_set.runner_group_id),
@@ -64,8 +67,9 @@ impl ScaleSetStore for PgStore {
         Ok(())
     }
 
-    fn scale_sets(&self, organization_id: Uuid) -> Result<Vec<ScaleSet>> {
+    fn scale_sets(&self, workspace_id: Uuid, organization_id: Uuid) -> Result<Vec<ScaleSet>> {
         Ok(scale_sets::table
+            .filter(scale_sets::workspace_id.eq(workspace_id))
             .filter(scale_sets::organization_id.eq(organization_id))
             .order(scale_sets::github_id)
             .select(ScaleSetRow::as_select())
@@ -78,10 +82,12 @@ impl ScaleSetStore for PgStore {
 
     fn try_lock_scale_set(
         &self,
+        workspace_id: Uuid,
         organization_id: Uuid,
         scale_set_id: Uuid,
     ) -> Result<Option<Box<dyn ScaleSetSession>>> {
         let key = scale_sets::table
+            .filter(scale_sets::workspace_id.eq(workspace_id))
             .filter(scale_sets::organization_id.eq(organization_id))
             .find(scale_set_id)
             .select(scale_sets::lock_key)

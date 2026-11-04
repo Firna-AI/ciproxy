@@ -77,7 +77,8 @@ Run each command from the repository root.
 
   Keep `DATABASE_URL` set for `cargo test --workspace` and the complete
   gate. Store tests fail when it is missing. Each test creates and removes
-  its own schema. The database user needs permission to create schemas.
+  its own database on the same PostgreSQL server. The database user needs
+  CREATEDB or superuser rights. The provided database stays unchanged.
   Stop the local database with `docker stop ciproxy-postgres`.
 - Typecheck and lint: `npm --prefix ts run app:typecheck` and
   `npm --prefix ts run app:lint`. Use the `site:` and `tokens:` prefixes

@@ -3,6 +3,7 @@
 diesel::table! {
     scale_sets (id) {
         id -> Uuid,
+        workspace_id -> Uuid,
         organization_id -> Uuid,
         label_id -> Uuid,
         github_id -> Int8,

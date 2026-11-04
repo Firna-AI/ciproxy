@@ -12,10 +12,12 @@ use crate::runners::RunnerStore;
 use crate::scale_sets::ScaleSetStore;
 use crate::settings::SettingsStore;
 use crate::tokens::TokenStore;
+use crate::workspaces::WorkspaceStore;
 
 /// The complete hosted persistence boundary.
 pub trait Store:
-    OrganizationStore
+    WorkspaceStore
+    + OrganizationStore
     + LabelStore
     + ScaleSetStore
     + MachineStore

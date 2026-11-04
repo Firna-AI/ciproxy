@@ -41,12 +41,12 @@ impl LabelRow {
 }
 
 impl LabelStore for PgStore {
-    fn create_label(&self, organization_id: Uuid, label: &Label) -> Result<()> {
+    fn create_label(&self, workspace_id: Uuid, label: &Label) -> Result<()> {
         let fallback: &str = label.when_nothing_fits.into();
         diesel::insert_into(labels::table)
             .values((
                 labels::id.eq(label.id),
-                labels::organization_id.eq(organization_id),
+                labels::workspace_id.eq(workspace_id),
                 labels::name.eq(&label.name),
                 labels::vcpus.eq(label.size.vcpus),
                 labels::memory_gb.eq(label.size.memory_gb),
@@ -60,9 +60,9 @@ impl LabelStore for PgStore {
         Ok(())
     }
 
-    fn labels(&self, organization_id: Uuid) -> Result<Vec<Label>> {
+    fn labels(&self, workspace_id: Uuid) -> Result<Vec<Label>> {
         labels::table
-            .filter(labels::organization_id.eq(organization_id))
+            .filter(labels::workspace_id.eq(workspace_id))
             .order(labels::name)
             .select(LabelRow::as_select())
             .load(&mut *self.connection()?)
@@ -72,11 +72,11 @@ impl LabelStore for PgStore {
             .collect()
     }
 
-    fn update_label(&self, organization_id: Uuid, label: &Label) -> Result<()> {
+    fn update_label(&self, workspace_id: Uuid, label: &Label) -> Result<()> {
         let fallback: &str = label.when_nothing_fits.into();
         let count = diesel::update(
             labels::table
-                .filter(labels::organization_id.eq(organization_id))
+                .filter(labels::workspace_id.eq(workspace_id))
                 .find(label.id),
         )
         .set((

@@ -3,6 +3,7 @@
 diesel::table! {
     runners (id) {
         id -> Uuid,
+        workspace_id -> Uuid,
         organization_id -> Uuid,
         label_id -> Uuid,
         scale_set_id -> Uuid,

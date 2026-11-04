@@ -1,4 +1,4 @@
-//! Token hash insertion, scoped authentication, and revocation queries.
+//! Workspace token hashes, scoped authentication, and revocation queries.
 
 use chrono::{DateTime, Duration, Utc};
 use ciproxy_schema::runners::runners;
@@ -17,8 +17,9 @@ use crate::error::{InternalCause, QueryResultExt, require_record};
 #[diesel(table_name = tokens)]
 struct TokenRow {
     id: Uuid,
-    organization_id: Uuid,
+    workspace_id: Uuid,
     purpose: String,
+    organization_id: Option<Uuid>,
     machine_id: Option<Uuid>,
     runner_id: Option<Uuid>,
     created_at: DateTime<Utc>,
@@ -28,15 +29,23 @@ struct TokenRow {
 
 impl TokenRow {
     fn into_record(self) -> Result<Token> {
-        let subject = match (self.purpose.as_str(), self.machine_id, self.runner_id) {
-            ("install", None, None) => TokenSubject::Install,
-            ("machine", Some(id), None) => TokenSubject::Machine(id),
-            ("sandbox", None, Some(id)) => TokenSubject::Sandbox(id),
+        let subject = match (
+            self.purpose.as_str(),
+            self.organization_id,
+            self.machine_id,
+            self.runner_id,
+        ) {
+            ("install", None, None, None) => TokenSubject::Install,
+            ("machine", None, Some(id), None) => TokenSubject::Machine(id),
+            ("sandbox", Some(organization_id), None, Some(runner_id)) => TokenSubject::Sandbox {
+                organization_id,
+                runner_id,
+            },
             _ => return Err(Error::internal(InternalCause::InvalidRow)),
         };
         Ok(Token {
             id: self.id,
-            organization_id: self.organization_id,
+            workspace_id: self.workspace_id,
             subject,
             created_at: self.created_at,
             expires_at: self.expires_at,
@@ -46,17 +55,21 @@ impl TokenRow {
 }
 
 fn insert_token(connection: &mut PgConnection, token: &Token, hash: &TokenHash) -> QueryResult<()> {
-    let (purpose, machine_id, runner_id) = match token.subject {
-        TokenSubject::Install => ("install", None, None),
-        TokenSubject::Machine(id) => ("machine", Some(id), None),
-        TokenSubject::Sandbox(id) => ("sandbox", None, Some(id)),
+    let (purpose, organization_id, machine_id, runner_id) = match token.subject {
+        TokenSubject::Install => ("install", None, None, None),
+        TokenSubject::Machine(id) => ("machine", None, Some(id), None),
+        TokenSubject::Sandbox {
+            organization_id,
+            runner_id,
+        } => ("sandbox", Some(organization_id), None, Some(runner_id)),
     };
     diesel::insert_into(tokens::table)
         .values((
             tokens::id.eq(token.id),
-            tokens::organization_id.eq(token.organization_id),
+            tokens::workspace_id.eq(token.workspace_id),
             tokens::token_hash.eq(hash.as_bytes()),
             tokens::purpose.eq(purpose),
+            tokens::organization_id.eq(organization_id),
             tokens::machine_id.eq(machine_id),
             tokens::runner_id.eq(runner_id),
             tokens::created_at.eq(token.created_at),
@@ -70,7 +83,7 @@ fn insert_token(connection: &mut PgConnection, token: &Token, hash: &TokenHash) 
 impl TokenStore for PgStore {
     fn create_install_token(
         &self,
-        organization_id: Uuid,
+        workspace_id: Uuid,
         id: Uuid,
         hash: &TokenHash,
         at: DateTime<Utc>,
@@ -79,7 +92,7 @@ impl TokenStore for PgStore {
             &mut *self.connection()?,
             &Token {
                 id,
-                organization_id,
+                workspace_id,
                 subject: TokenSubject::Install,
                 created_at: at,
                 expires_at: Some(at + Duration::hours(1)),
@@ -95,9 +108,14 @@ impl TokenStore for PgStore {
             return Err(Error::InvalidValue);
         }
         let mut connection = self.connection()?;
-        if let TokenSubject::Sandbox(runner_id) = token.subject {
+        if let TokenSubject::Sandbox {
+            organization_id,
+            runner_id,
+        } = token.subject
+        {
             let sandbox = runners::table
-                .filter(runners::organization_id.eq(token.organization_id))
+                .filter(runners::workspace_id.eq(token.workspace_id))
+                .filter(runners::organization_id.eq(organization_id))
                 .filter(runners::sandbox_id.is_not_null())
                 .find(runner_id)
                 .select(runners::id)
@@ -113,17 +131,22 @@ impl TokenStore for PgStore {
 
     fn authenticate_token(&self, hash: &TokenHash, at: DateTime<Utc>) -> Result<Option<Token>> {
         let row = diesel::sql_query(
-            "SELECT credential.id, credential.organization_id, credential.purpose,
-                 credential.machine_id, credential.runner_id, credential.created_at,
-                 credential.expires_at, credential.revoked_at
+            "SELECT credential.id, credential.workspace_id, credential.purpose,
+                 credential.organization_id, credential.machine_id, credential.runner_id,
+                 credential.created_at, credential.expires_at, credential.revoked_at
              FROM tokens AS credential
-             JOIN organizations ON organizations.id = credential.organization_id
              WHERE credential.token_hash = $1 AND credential.revoked_at IS NULL
              AND (credential.expires_at IS NULL OR credential.expires_at > $2)
-             AND organizations.app_state <> 'removed'
+             AND (credential.purpose <> 'sandbox' OR EXISTS (
+                 SELECT 1 FROM runners
+                 WHERE runners.workspace_id = credential.workspace_id
+                 AND runners.organization_id = credential.organization_id
+                 AND runners.id = credential.runner_id AND runners.sandbox_id IS NOT NULL
+                 AND runners.state <> 'stopped'
+             ))
              AND (credential.purpose <> 'machine' OR EXISTS (
                  SELECT 1 FROM machines
-                 WHERE machines.organization_id = credential.organization_id
+                 WHERE machines.workspace_id = credential.workspace_id
                  AND machines.id = credential.machine_id AND machines.removed_at IS NULL
              ))",
         )
@@ -135,10 +158,10 @@ impl TokenStore for PgStore {
         row.map(TokenRow::into_record).transpose()
     }
 
-    fn revoke_token(&self, organization_id: Uuid, id: Uuid, at: DateTime<Utc>) -> Result<()> {
+    fn revoke_token(&self, workspace_id: Uuid, id: Uuid, at: DateTime<Utc>) -> Result<()> {
         let count = diesel::update(
             tokens::table
-                .filter(tokens::organization_id.eq(organization_id))
+                .filter(tokens::workspace_id.eq(workspace_id))
                 .find(id),
         )
         .set(tokens::revoked_at.eq(at))

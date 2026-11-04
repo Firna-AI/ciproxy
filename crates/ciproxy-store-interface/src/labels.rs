@@ -32,12 +32,12 @@ pub struct Label {
     pub when_nothing_fits: WhenNothingFits,
 }
 
-/// Queries scoped to the organization that owns each label.
+/// Queries scoped to the workspace that owns each label.
 pub trait LabelStore: Send + Sync {
     /// Insert a label. Label names do not change after insertion.
-    fn create_label(&self, organization_id: Uuid, label: &Label) -> Result<()>;
-    /// Read all labels of one organization.
-    fn labels(&self, organization_id: Uuid) -> Result<Vec<Label>>;
+    fn create_label(&self, workspace_id: Uuid, label: &Label) -> Result<()>;
+    /// Read all labels of one workspace.
+    fn labels(&self, workspace_id: Uuid) -> Result<Vec<Label>>;
     /// Change the size, source switches, and fallback of a label.
-    fn update_label(&self, organization_id: Uuid, label: &Label) -> Result<()>;
+    fn update_label(&self, workspace_id: Uuid, label: &Label) -> Result<()>;
 }

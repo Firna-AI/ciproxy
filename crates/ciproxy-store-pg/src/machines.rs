@@ -17,7 +17,7 @@ use crate::error::{QueryResultExt, require_record};
 #[diesel(table_name = machines, treat_none_as_null = true)]
 struct MachineRow {
     id: Uuid,
-    organization_id: Uuid,
+    workspace_id: Uuid,
     hostname: String,
     processor: String,
     hardware_threads: i32,
@@ -34,7 +34,7 @@ struct MachineRow {
 #[derive(Queryable, Selectable, Insertable)]
 #[diesel(table_name = machine_disks)]
 struct DiskRow {
-    organization_id: Uuid,
+    workspace_id: Uuid,
     machine_id: Uuid,
     path: String,
     total_bytes: i64,
@@ -42,10 +42,10 @@ struct DiskRow {
 }
 
 impl MachineRow {
-    fn from_record(organization_id: Uuid, machine: &Machine) -> Self {
+    fn from_record(workspace_id: Uuid, machine: &Machine) -> Self {
         Self {
             id: machine.id,
-            organization_id,
+            workspace_id,
             hostname: machine.hostname.clone(),
             processor: machine.processor.clone(),
             hardware_threads: machine.hardware_threads,
@@ -81,12 +81,12 @@ impl MachineRow {
 
 fn replace_disks(
     connection: &mut PgConnection,
-    organization_id: Uuid,
+    workspace_id: Uuid,
     machine: &Machine,
 ) -> QueryResult<()> {
     diesel::delete(
         machine_disks::table
-            .filter(machine_disks::organization_id.eq(organization_id))
+            .filter(machine_disks::workspace_id.eq(workspace_id))
             .filter(machine_disks::machine_id.eq(machine.id)),
     )
     .execute(connection)?;
@@ -94,7 +94,7 @@ fn replace_disks(
         .disks
         .iter()
         .map(|disk| DiskRow {
-            organization_id,
+            workspace_id,
             machine_id: machine.id,
             path: disk.path.clone(),
             total_bytes: disk.total_bytes,
@@ -108,29 +108,29 @@ fn replace_disks(
 }
 
 impl MachineStore for PgStore {
-    fn create_machine(&self, organization_id: Uuid, machine: &Machine) -> Result<()> {
-        let row = MachineRow::from_record(organization_id, machine);
+    fn create_machine(&self, workspace_id: Uuid, machine: &Machine) -> Result<()> {
+        let row = MachineRow::from_record(workspace_id, machine);
         self.connection()?
             .transaction(|connection| {
                 diesel::insert_into(machines::table)
                     .values(&row)
                     .execute(connection)?;
-                replace_disks(connection, organization_id, machine)
+                replace_disks(connection, workspace_id, machine)
             })
             .store()
     }
 
-    fn machines(&self, organization_id: Uuid) -> Result<Vec<Machine>> {
+    fn machines(&self, workspace_id: Uuid) -> Result<Vec<Machine>> {
         let mut connection = self.connection()?;
         let rows = machines::table
-            .filter(machines::organization_id.eq(organization_id))
+            .filter(machines::workspace_id.eq(workspace_id))
             .filter(machines::removed_at.is_null())
             .order(machines::id)
             .select(MachineRow::as_select())
             .load::<MachineRow>(&mut *connection)
             .store()?;
         let disks = machine_disks::table
-            .filter(machine_disks::organization_id.eq(organization_id))
+            .filter(machine_disks::workspace_id.eq(workspace_id))
             .order(machine_disks::path)
             .select(DiskRow::as_select())
             .load::<DiskRow>(&mut *connection)
@@ -155,13 +155,13 @@ impl MachineStore for PgStore {
             .collect())
     }
 
-    fn update_machine(&self, organization_id: Uuid, machine: &Machine) -> Result<()> {
-        let row = MachineRow::from_record(organization_id, machine);
+    fn update_machine(&self, workspace_id: Uuid, machine: &Machine) -> Result<()> {
+        let row = MachineRow::from_record(workspace_id, machine);
         self.connection()?
             .transaction(|connection| {
                 let count = diesel::update(
                     machines::table
-                        .filter(machines::organization_id.eq(organization_id))
+                        .filter(machines::workspace_id.eq(workspace_id))
                         .filter(machines::removed_at.is_null())
                         .find(machine.id),
                 )
@@ -170,14 +170,14 @@ impl MachineStore for PgStore {
                 if count == 0 {
                     return Err(diesel::result::Error::NotFound);
                 }
-                replace_disks(connection, organization_id, machine)
+                replace_disks(connection, workspace_id, machine)
             })
             .store()
     }
 
     fn remove_machine(
         &self,
-        organization_id: Uuid,
+        workspace_id: Uuid,
         machine_id: Uuid,
         at: DateTime<Utc>,
     ) -> Result<()> {
@@ -186,14 +186,14 @@ impl MachineStore for PgStore {
             .transaction(|connection| {
                 let count = diesel::update(
                     machines::table
-                        .filter(machines::organization_id.eq(organization_id))
+                        .filter(machines::workspace_id.eq(workspace_id))
                         .find(machine_id),
                 )
                 .set((machines::removed_at.eq(at), machines::draining.eq(true)))
                 .execute(connection)?;
                 diesel::update(
                     tokens::table
-                        .filter(tokens::organization_id.eq(organization_id))
+                        .filter(tokens::workspace_id.eq(workspace_id))
                         .filter(tokens::machine_id.eq(machine_id))
                         .filter(tokens::revoked_at.is_null()),
                 )

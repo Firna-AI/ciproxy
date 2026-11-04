@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::error::Result;
 
-/// The allowed organization overflow waits.
+/// The allowed workspace overflow waits.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, strum::EnumString, strum::IntoStaticStr)]
 #[strum(serialize_all = "snake_case")]
 pub enum OverflowWait {
@@ -20,32 +20,21 @@ pub enum OverflowWait {
     Seconds120,
 }
 
-/// The private repositories allowed to use ciproxy.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum RepositoryAccess {
-    /// All visible private repositories, including future repositories.
-    AllPrivate,
-    /// Only the named GitHub repository identifiers.
-    Selected(Vec<i64>),
-}
-
-/// Routing settings of one organization.
+/// Routing settings of one workspace.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Settings {
-    /// Whether the organization permits new Boat runners.
+    /// Whether the workspace permits new Boat runners.
     pub overflow_enabled: bool,
     /// How long an eligible job waits for an own machine.
     pub overflow_wait: OverflowWait,
-    /// The allowed private repositories.
-    pub repositories: RepositoryAccess,
     /// The saved monthly Boat spend limit in US dollar millionths.
     pub boat_spend_limit_usd_micros: Option<i64>,
 }
 
 /// Read and replace tenant routing settings.
 pub trait SettingsStore: Send + Sync {
-    /// Read the saved settings of one organization.
-    fn settings(&self, organization_id: Uuid) -> Result<Settings>;
+    /// Read the saved settings of one workspace.
+    fn settings(&self, workspace_id: Uuid) -> Result<Settings>;
     /// Replace settings without changing Boat key versions.
-    fn save_settings(&self, organization_id: Uuid, settings: &Settings) -> Result<()>;
+    fn save_settings(&self, workspace_id: Uuid, settings: &Settings) -> Result<()>;
 }

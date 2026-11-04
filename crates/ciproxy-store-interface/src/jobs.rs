@@ -56,11 +56,13 @@ pub enum CacheSource {
 /// Dashboard metadata from trusted control-plane inputs.
 ///
 /// A runner reference preserves its place and actual VM size. Optional ref
-/// metadata does not choose its source. Job-branch provenance remains open.
+/// metadata comes from trusted GitHub job facts supplied by the caller.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Job {
     /// The internal job identifier.
     pub id: Uuid,
+    /// The GitHub organization whose repository owns the job.
+    pub organization_id: Uuid,
     /// The GitHub job identifier used for message deduplication.
     pub github_id: i64,
     /// The label selected by the workflow.
@@ -75,7 +77,7 @@ pub struct Job {
     pub workflow: String,
     /// The repository reported by GitHub.
     pub repository: String,
-    /// The optional trusted ref, with its source decided by a later milestone.
+    /// The optional ref supplied by the trusted GitHub job-facts service.
     pub git_ref: Option<String>,
     /// The visible lifecycle state.
     pub state: JobState,
@@ -102,11 +104,11 @@ pub trait JobStore: Send + Sync {
     /// Persist a new message once per organization and GitHub job identifier.
     ///
     /// Return false for a duplicate without replacing its current metadata.
-    fn insert_job(&self, organization_id: Uuid, job: &Job) -> Result<bool>;
+    fn insert_job(&self, workspace_id: Uuid, job: &Job) -> Result<bool>;
     /// Replace metadata for an existing job in its organization.
-    fn update_job(&self, organization_id: Uuid, job: &Job) -> Result<()>;
+    fn update_job(&self, workspace_id: Uuid, job: &Job) -> Result<()>;
     /// Read the retained job metadata of an organization.
-    fn jobs(&self, organization_id: Uuid) -> Result<Vec<Job>>;
+    fn jobs(&self, workspace_id: Uuid, organization_id: Uuid) -> Result<Vec<Job>>;
     /// Delete completed job metadata after its 90-day retention.
-    fn purge_finished_jobs(&self, at: DateTime<Utc>) -> Result<usize>;
+    fn purge_finished_jobs(&self, workspace_id: Uuid, at: DateTime<Utc>) -> Result<usize>;
 }

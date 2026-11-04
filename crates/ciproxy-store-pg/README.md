@@ -13,12 +13,30 @@ Return the error contract of ciproxy-store-interface.
 
 ## What This Crate Does
 
-Scopes resource reads and writes to an organization.
+Scopes resource reads and writes to a workspace.
+Keeps GitHub installations and repository access per organization.
+Keeps each scale set, runner, and job attached to its organization.
+Shared machines can serve every organization of their own workspace.
 Stores only caller-supplied token hashes and Boat key ciphertext.
 Keeps retired Boat key versions while their sandbox runners are live.
-App removal revokes credentials and erases Boat keys atomically.
-Retention queries delete finished jobs after 90 days and removed
-organization data after 30 days.
+Removing one organization preserves live sandbox-end tokens.
+It preserves shared execution resources while another organization remains.
+Removal of the last App revokes machine and install credentials.
+It retires Boat keys and erases those that no live sandbox needs.
+Live sandbox-end tokens stay usable after App removal.
+They name one workspace, organization, and runner.
+They stop working after that runner reaches its stopped state.
+These mutations run in one transaction under a workspace row lock.
+Install, removal, and purge queries serialize on that workspace lock.
+Retention queries delete finished jobs after 90 days.
+They delete removed organization data after 30 days.
+The workspace purge deletes one empty workspace after its 30-day deadline.
+A reinstall clears that deadline without restoring execution credentials.
+It preserves labels, settings, and job resource history.
+Global GitHub-ID reads return current and retained registrations.
+A partial unique index permits only one current registration.
+An install into another workspace creates a separate registration.
+It transfers no history or shared resource from the old workspace.
 
 PgStoreFactory connects and applies pending migrations.
 One connection serializes ordinary queries across clones of the store.
@@ -67,8 +85,11 @@ cargo clippy --package ciproxy-store-pg --all-targets -- -D warnings
 ```
 
 Tests fail when DATABASE_URL is missing.
-Each test creates and removes a unique schema.
-The database user must own the database or have CREATE permission.
+Each test creates and removes a unique database on the same server.
+The database user needs CREATEDB or superuser rights.
+The provided database serves as the maintenance connection.
+The fixture removes only the database that it created.
+Separate databases isolate sequence keys and advisory locks.
 Lock tests terminate only their own lock session.
 CI starts the database for the existing workspace test phase.
 
@@ -76,6 +97,8 @@ CI starts the database for the existing workspace test phase.
 
 - [src/factory.rs](src/factory.rs) opens stores and applies migrations.
 - [src/connection.rs](src/connection.rs) owns the private query connection.
+- [src/workspaces.rs](src/workspaces.rs) creates shared customer tenants.
+- [src/organizations.rs](src/organizations.rs) updates App installation state.
 - [src/error.rs](src/error.rs) maps database failures to interface errors.
 - [src/scale_sets.rs](src/scale_sets.rs) owns advisory lock sessions.
 - [src/boat.rs](src/boat.rs) rotates and erases encrypted keys.
@@ -88,3 +111,4 @@ CI starts the database for the existing workspace test phase.
 - [Architecture](../../docs/architecture.md) gives the hosted boundaries.
 - [Security](../../docs/protocol/security.md) defines isolation and custody.
 - [App removal](../../docs/protocol/app-removal.md) defines removal.
+- [Workspaces](../../docs/protocol/workspaces.md) defines organization joins.

@@ -11,8 +11,9 @@ use super::support::{Database, account, at, runner};
 fn boat_rotation_retains_live_keys_and_requires_a_spend_limit() {
     let database = Database::new();
     let store = &database.store;
-    let owner = database.organization();
-    let (label, scale_set) = database.label_and_scale_set(&owner);
+    let owner = database.workspace();
+    let organization = database.organization(&owner);
+    let (label, scale_set) = database.label_and_scale_set(&organization);
     let old = account();
     let old_key = EncryptedBoatKey::new(vec![10, 20, 30]);
     assert!(matches!(
@@ -40,6 +41,18 @@ fn boat_rotation_retains_live_keys_and_requires_a_spend_limit() {
         },
     );
     store.create_runner(owner.id, &live).unwrap();
+    let second = database.organization(&owner);
+    let second_scale = database.scale_set(&second, &label);
+    let second_live = runner(
+        &label,
+        &second_scale,
+        RunnerPlace::Boat {
+            key_id: Some(old.id),
+            sandbox_id: "second-sandbox".to_owned(),
+            size_name: "default".to_owned(),
+        },
+    );
+    store.create_runner(owner.id, &second_live).unwrap();
     let mut new = account();
     new.connected_at += Duration::minutes(1);
     let new_key = EncryptedBoatKey::new(vec![40, 50, 60]);
@@ -85,7 +98,23 @@ fn boat_rotation_retains_live_keys_and_requires_a_spend_limit() {
         Err(Error::InvalidValue)
     ));
     store
-        .update_runner(owner.id, live.id, RunnerState::Stopped, live.github_id)
+        .update_runner(
+            owner.id,
+            organization.id,
+            live.id,
+            RunnerState::Stopped,
+            live.github_id,
+        )
+        .unwrap();
+    assert_eq!(store.delete_unused_boat_keys(owner.id).unwrap(), 0);
+    store
+        .update_runner(
+            owner.id,
+            second.id,
+            second_live.id,
+            RunnerState::Stopped,
+            second_live.github_id,
+        )
         .unwrap();
     assert_eq!(store.delete_unused_boat_keys(owner.id).unwrap(), 1);
     assert_eq!(store.encrypted_boat_key(owner.id, old.id).unwrap(), None);
@@ -96,5 +125,8 @@ fn boat_rotation_retains_live_keys_and_requires_a_spend_limit() {
         sandbox_id: "sandbox-live".to_owned(),
         size_name: "default".to_owned(),
     };
-    assert_eq!(store.runners(owner.id).unwrap(), vec![stopped]);
+    assert_eq!(
+        store.runners(owner.id, organization.id).unwrap(),
+        vec![stopped]
+    );
 }

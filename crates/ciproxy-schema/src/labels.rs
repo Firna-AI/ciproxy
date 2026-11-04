@@ -3,7 +3,7 @@
 diesel::table! {
     labels (id) {
         id -> Uuid,
-        organization_id -> Uuid,
+        workspace_id -> Uuid,
         name -> Text,
         vcpus -> Int4,
         memory_gb -> Int4,

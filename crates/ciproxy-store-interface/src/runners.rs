@@ -26,14 +26,14 @@ pub enum RunnerState {
 pub enum RunnerPlace {
     /// A job VM on one own machine.
     Machine {
-        /// The organization's machine identifier.
+        /// The workspace's machine identifier.
         machine_id: Uuid,
         /// The first slot assigned to the VM.
         first_slot: i32,
     },
-    /// A sandbox in the organization's Boat account.
+    /// A sandbox in the workspace's Boat account.
     Boat {
-        /// The retained key version, absent after App removal erases keys.
+        /// The retained key version, absent after the key is erased.
         key_id: Option<Uuid>,
         /// The Boat sandbox identifier.
         sandbox_id: String,
@@ -47,6 +47,8 @@ pub enum RunnerPlace {
 pub struct Runner {
     /// The internal runner identifier.
     pub id: Uuid,
+    /// The GitHub organization that owns this runner registration.
+    pub organization_id: Uuid,
     /// The label that the runner serves.
     pub label_id: Uuid,
     /// The scale set that owns the GitHub registration.
@@ -64,12 +66,13 @@ pub struct Runner {
 /// Tenant-scoped runner records used by later lifecycle services.
 pub trait RunnerStore: Send + Sync {
     /// Insert one runner without its GitHub registration secret.
-    fn create_runner(&self, organization_id: Uuid, runner: &Runner) -> Result<()>;
+    fn create_runner(&self, workspace_id: Uuid, runner: &Runner) -> Result<()>;
     /// Read all retained runners of one organization.
-    fn runners(&self, organization_id: Uuid) -> Result<Vec<Runner>>;
+    fn runners(&self, workspace_id: Uuid, organization_id: Uuid) -> Result<Vec<Runner>>;
     /// Record a lifecycle state and the optional GitHub runner identifier.
     fn update_runner(
         &self,
+        workspace_id: Uuid,
         organization_id: Uuid,
         id: Uuid,
         state: RunnerState,

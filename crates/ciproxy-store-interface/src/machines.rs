@@ -50,16 +50,12 @@ pub struct Machine {
 /// Queries for machine registration, reports, drain, and removal.
 pub trait MachineStore: Send + Sync {
     /// Insert a machine without a plaintext credential.
-    fn create_machine(&self, organization_id: Uuid, machine: &Machine) -> Result<()>;
+    fn create_machine(&self, workspace_id: Uuid, machine: &Machine) -> Result<()>;
     /// Read active registrations, including offline and draining machines.
-    fn machines(&self, organization_id: Uuid) -> Result<Vec<Machine>>;
-    /// Replace a machine report and desired settings within its organization.
-    fn update_machine(&self, organization_id: Uuid, machine: &Machine) -> Result<()>;
+    fn machines(&self, workspace_id: Uuid) -> Result<Vec<Machine>>;
+    /// Replace a machine report and desired settings within its workspace.
+    fn update_machine(&self, workspace_id: Uuid, machine: &Machine) -> Result<()>;
     /// Remove a machine and revoke every machine credential atomically.
-    fn remove_machine(
-        &self,
-        organization_id: Uuid,
-        machine_id: Uuid,
-        at: DateTime<Utc>,
-    ) -> Result<()>;
+    fn remove_machine(&self, workspace_id: Uuid, machine_id: Uuid, at: DateTime<Utc>)
+    -> Result<()>;
 }

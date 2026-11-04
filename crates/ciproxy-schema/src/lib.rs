@@ -12,3 +12,5 @@ pub mod runners;
 pub mod scale_sets;
 pub mod settings;
 pub mod tokens;
+
+pub mod workspaces;

@@ -14,6 +14,7 @@ use crate::error::{InternalCause, QueryResultExt, require_record};
 #[diesel(table_name = runners)]
 struct RunnerRow {
     id: Uuid,
+    workspace_id: Uuid,
     organization_id: Uuid,
     label_id: Uuid,
     scale_set_id: Uuid,
@@ -30,7 +31,7 @@ struct RunnerRow {
 }
 
 impl RunnerRow {
-    fn from_record(organization_id: Uuid, runner: &Runner) -> Self {
+    fn from_record(workspace_id: Uuid, runner: &Runner) -> Self {
         let (machine_id, first_slot, boat_key_id, sandbox_id, boat_size_name) = match &runner.place
         {
             RunnerPlace::Machine {
@@ -52,7 +53,8 @@ impl RunnerRow {
         let state: &str = runner.state.into();
         Self {
             id: runner.id,
-            organization_id,
+            workspace_id,
+            organization_id: runner.organization_id,
             label_id: runner.label_id,
             scale_set_id: runner.scale_set_id,
             github_id: runner.github_id,
@@ -88,6 +90,7 @@ impl RunnerRow {
         };
         Ok(Runner {
             id: self.id,
+            organization_id: self.organization_id,
             label_id: self.label_id,
             scale_set_id: self.scale_set_id,
             github_id: self.github_id,
@@ -103,16 +106,17 @@ impl RunnerRow {
 }
 
 impl RunnerStore for PgStore {
-    fn create_runner(&self, organization_id: Uuid, runner: &Runner) -> Result<()> {
+    fn create_runner(&self, workspace_id: Uuid, runner: &Runner) -> Result<()> {
         diesel::insert_into(runners::table)
-            .values(RunnerRow::from_record(organization_id, runner))
+            .values(RunnerRow::from_record(workspace_id, runner))
             .execute(&mut *self.connection()?)
             .store()?;
         Ok(())
     }
 
-    fn runners(&self, organization_id: Uuid) -> Result<Vec<Runner>> {
+    fn runners(&self, workspace_id: Uuid, organization_id: Uuid) -> Result<Vec<Runner>> {
         runners::table
+            .filter(runners::workspace_id.eq(workspace_id))
             .filter(runners::organization_id.eq(organization_id))
             .order(runners::id)
             .select(RunnerRow::as_select())
@@ -125,6 +129,7 @@ impl RunnerStore for PgStore {
 
     fn update_runner(
         &self,
+        workspace_id: Uuid,
         organization_id: Uuid,
         id: Uuid,
         state: RunnerState,
@@ -133,6 +138,7 @@ impl RunnerStore for PgStore {
         let state: &str = state.into();
         let count = diesel::update(
             runners::table
+                .filter(runners::workspace_id.eq(workspace_id))
                 .filter(runners::organization_id.eq(organization_id))
                 .find(id),
         )

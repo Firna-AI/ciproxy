@@ -14,6 +14,7 @@ use crate::error::{QueryResultExt, require_record};
 #[diesel(table_name = jobs, treat_none_as_null = true)]
 struct JobRow {
     id: Uuid,
+    workspace_id: Uuid,
     organization_id: Uuid,
     github_id: i64,
     label_id: Uuid,
@@ -35,11 +36,12 @@ struct JobRow {
 }
 
 impl JobRow {
-    fn from_record(organization_id: Uuid, job: &Job) -> Self {
+    fn from_record(workspace_id: Uuid, job: &Job) -> Self {
         let state: &str = job.state.into();
         Self {
             id: job.id,
-            organization_id,
+            workspace_id,
+            organization_id: job.organization_id,
             github_id: job.github_id,
             label_id: job.label_id,
             scale_set_id: job.scale_set_id,
@@ -69,6 +71,7 @@ impl JobRow {
     fn into_record(self) -> Result<Job> {
         Ok(Job {
             id: self.id,
+            organization_id: self.organization_id,
             github_id: self.github_id,
             label_id: self.label_id,
             scale_set_id: self.scale_set_id,
@@ -97,9 +100,9 @@ impl JobRow {
 }
 
 impl JobStore for PgStore {
-    fn insert_job(&self, organization_id: Uuid, job: &Job) -> Result<bool> {
+    fn insert_job(&self, workspace_id: Uuid, job: &Job) -> Result<bool> {
         let count = diesel::insert_into(jobs::table)
-            .values(JobRow::from_record(organization_id, job))
+            .values(JobRow::from_record(workspace_id, job))
             .on_conflict((jobs::organization_id, jobs::github_id))
             .do_nothing()
             .execute(&mut *self.connection()?)
@@ -107,11 +110,12 @@ impl JobStore for PgStore {
         Ok(count == 1)
     }
 
-    fn update_job(&self, organization_id: Uuid, job: &Job) -> Result<()> {
-        let row = JobRow::from_record(organization_id, job);
+    fn update_job(&self, workspace_id: Uuid, job: &Job) -> Result<()> {
+        let row = JobRow::from_record(workspace_id, job);
         let count = diesel::update(
             jobs::table
-                .filter(jobs::organization_id.eq(organization_id))
+                .filter(jobs::workspace_id.eq(workspace_id))
+                .filter(jobs::organization_id.eq(job.organization_id))
                 .find(job.id),
         )
         .set(&row)
@@ -120,8 +124,9 @@ impl JobStore for PgStore {
         require_record(count)
     }
 
-    fn jobs(&self, organization_id: Uuid) -> Result<Vec<Job>> {
+    fn jobs(&self, workspace_id: Uuid, organization_id: Uuid) -> Result<Vec<Job>> {
         jobs::table
+            .filter(jobs::workspace_id.eq(workspace_id))
             .filter(jobs::organization_id.eq(organization_id))
             .order(jobs::queued_at)
             .select(JobRow::as_select())
@@ -132,9 +137,10 @@ impl JobStore for PgStore {
             .collect()
     }
 
-    fn purge_finished_jobs(&self, at: DateTime<Utc>) -> Result<usize> {
+    fn purge_finished_jobs(&self, workspace_id: Uuid, at: DateTime<Utc>) -> Result<usize> {
         diesel::delete(
             jobs::table
+                .filter(jobs::workspace_id.eq(workspace_id))
                 .filter(jobs::state.eq("completed"))
                 .filter(jobs::completed_at.le(at - Duration::days(90))),
         )

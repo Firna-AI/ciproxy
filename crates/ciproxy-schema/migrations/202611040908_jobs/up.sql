@@ -1,6 +1,7 @@
 CREATE TABLE jobs (
     id UUID PRIMARY KEY,
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    organization_id UUID NOT NULL,
     github_id BIGINT NOT NULL,
     label_id UUID NOT NULL,
     scale_set_id UUID NOT NULL,
@@ -22,10 +23,12 @@ CREATE TABLE jobs (
     cache_restores BIGINT,
     cache_restored_bytes BIGINT,
     UNIQUE (organization_id, github_id),
-    FOREIGN KEY (organization_id, scale_set_id, label_id)
-        REFERENCES scale_sets(organization_id, id, label_id),
-    FOREIGN KEY (organization_id, runner_id, label_id, scale_set_id)
-        REFERENCES runners(organization_id, id, label_id, scale_set_id),
+    FOREIGN KEY (workspace_id, organization_id)
+        REFERENCES organizations(workspace_id, id) ON DELETE CASCADE,
+    FOREIGN KEY (workspace_id, organization_id, scale_set_id, label_id)
+        REFERENCES scale_sets(workspace_id, organization_id, id, label_id),
+    FOREIGN KEY (workspace_id, organization_id, runner_id, label_id, scale_set_id)
+        REFERENCES runners(workspace_id, organization_id, id, label_id, scale_set_id),
     CHECK (
         (cache_source IS NOT NULL AND cache_source IN ('machine', 'machine_and_github'))
         OR (cache_restores IS NULL AND cache_restored_bytes IS NULL)

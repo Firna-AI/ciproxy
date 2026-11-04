@@ -3,6 +3,7 @@
 diesel::table! {
     jobs (id) {
         id -> Uuid,
+        workspace_id -> Uuid,
         organization_id -> Uuid,
         github_id -> Int8,
         label_id -> Uuid,

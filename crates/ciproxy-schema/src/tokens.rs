@@ -3,9 +3,10 @@
 diesel::table! {
     tokens (id) {
         id -> Uuid,
-        organization_id -> Uuid,
+        workspace_id -> Uuid,
         token_hash -> Bytea,
         purpose -> Text,
+        organization_id -> Nullable<Uuid>,
         machine_id -> Nullable<Uuid>,
         runner_id -> Nullable<Uuid>,
         created_at -> Timestamptz,

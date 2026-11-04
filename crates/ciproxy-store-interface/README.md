@@ -13,9 +13,14 @@ Keep persistence separate from scheduling and external services.
 
 ## What This Crate Does
 
-Defines object-safe traits for organization data and each store area.
-Resource queries require the owning organization identifier.
-Token authentication finds that identifier from a precomputed hash.
+Defines object-safe traits for workspace data and each store area.
+A workspace owns shared machines, labels, credentials, settings, and Boat.
+Each GitHub organization keeps its installation and repository access.
+Scale sets serve one organization and one shared workspace label.
+Runners and jobs keep their organization identity.
+Resource queries require the workspace identifier.
+Organization-specific queries also require the organization identifier.
+Token authentication finds workspace authority from a precomputed hash.
 
 TokenHash and EncryptedBoatKey accept bytes from trusted callers.
 Their Debug output hides the bytes.
@@ -25,7 +30,17 @@ KMS encryption and token hashing belong to callers.
 
 The store preserves runner placements and actual VM sizes for job history.
 It accepts optional ref metadata without choosing its provenance.
-The later job-facts work must choose a trusted source.
+The later job-facts service must supply trusted GitHub metadata.
+Organization removal keeps shared resources while another App remains.
+Removal of the last App revokes machine and install credentials.
+Live sandbox-end tokens and retired Boat keys stay available for cleanup.
+Sandbox-end tokens stop working when their runner ends.
+Organization and empty-workspace records have 30-day deletion deadlines.
+Reinstall clears the workspace deadline and preserves its retained data.
+The purge query deletes one expired workspace and its owned records.
+GitHub-ID lookup returns current and retained registrations.
+The caller selects a workspace from the install intent.
+A new registration in another workspace leaves old history in place.
 Removal and retention queries change stored records only.
 They do not stop machines, call GitHub, or delete Boat sandboxes.
 
@@ -39,11 +54,11 @@ use ciproxy_store_interface::labels::Label;
 use ciproxy_store_interface::store::Store;
 use uuid::Uuid;
 
-fn organization_labels(
+fn workspace_labels(
     store: &dyn Store,
-    organization_id: Uuid,
+    workspace_id: Uuid,
 ) -> Result<Vec<Label>> {
-    store.labels(organization_id)
+    store.labels(workspace_id)
 }
 ```
 
@@ -67,6 +82,8 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 ### Key Code
 
 - [src/store.rs](src/store.rs) defines Store and its connection factory.
+- [src/workspaces.rs](src/workspaces.rs) defines shared customer ownership.
+- [src/organizations.rs](src/organizations.rs) defines GitHub App records.
 - [src/error.rs](src/error.rs) owns typed failures and safe diagnostics.
 - [src/secrets.rs](src/secrets.rs) owns opaque hashes and ciphertext.
 - [src/scale_sets.rs](src/scale_sets.rs) defines session lock ownership.
@@ -78,3 +95,5 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 - [Security](../../docs/protocol/security.md) defines isolation and custody.
 - [Agent](../../docs/protocol/agent.md) defines credentials and removal.
 - [Overflow](../../docs/protocol/overflow.md) defines Boat key rotation.
+- [App removal](../../docs/protocol/app-removal.md) defines retention.
+- [Workspaces](../../docs/protocol/workspaces.md) defines organization joins.
