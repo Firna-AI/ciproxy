@@ -1,0 +1,60 @@
+---
+// The frame of a marketing page, after the marketing shell of the mockups:
+// the site top bar, then the page between two hairline rails that run to the
+// bottom of the window.
+
+import SiteHeader from "../components/site-header/SiteHeader.astro";
+import Tokens from "../components/Tokens.astro";
+import "../styles/site.css";
+
+interface Props {
+  title: string;
+  description: string;
+}
+
+const { title, description } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <Tokens />
+  </head>
+  <body>
+    <div class="site-frame marketing">
+      <SiteHeader section="home" />
+      <div class="rails">
+        <main>
+          <slot />
+        </main>
+      </div>
+    </div>
+  </body>
+</html>
+
+<style>
+  .marketing {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  .rails {
+    flex: 1;
+    width: min(var(--site-width), 100%);
+    margin: 0 auto;
+    border-right: 1px solid var(--c-border);
+    border-left: 1px solid var(--c-border);
+  }
+
+  @media (width < 40rem) {
+    .rails {
+      border: 0;
+    }
+  }
+</style>

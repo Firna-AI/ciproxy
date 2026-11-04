@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Repository gate
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Set up Rust
+        run: |
+          set -euo pipefail
+          rustup toolchain install
+          rustup default "$(rustup show active-toolchain | cut -d ' ' -f 1)"
+      - name: Cache Cargo builds
+        uses: Swatinem/rust-cache@v2
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ts/package-lock.json
+      - name: Install TypeScript packages
+        run: npm --prefix ts ci
+      - name: Run the complete gate
+        run: cargo xtask check --keep-going

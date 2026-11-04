@@ -1,0 +1,155 @@
+---
+// The landing page: the hero of the landing mockup, with the one-line
+// workflow change, the outcome as the title, and the way to the docs. The
+// product panel and the other sections of the mockup come with the full site.
+
+import LinkButton from "../components/LinkButton.astro";
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+
+const lead =
+  "ciproxy runs your GitHub Actions jobs on your own machines first, and starts runners in your Boat account only when they are full.";
+---
+
+<MarketingLayout title="ciproxy" description={lead}>
+  <section class="hero">
+    <div class="hero-copy">
+      <p class="hero-chip">
+        <span class="hero-chip-label">One line in your workflow</span>
+        <code class="hero-chip-code">runs-on: ciproxy</code>
+      </p>
+      <h1 class="hero-title">
+        <span class="hero-line">Pay less for CI.</span>{" "}
+        <span class="hero-line hero-soft">Keep your jobs fast.</span>
+      </h1>
+      <p class="hero-lead">{lead}</p>
+      <div class="hero-actions">
+        <LinkButton href="/docs/">Read the docs</LinkButton>
+      </div>
+    </div>
+  </section>
+</MarketingLayout>
+
+<style>
+  /* A large title with tight tracking over a faint grid that fades out. */
+
+  .hero {
+    position: relative;
+    padding: 120px var(--site-gutter) 88px;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(to right, var(--c-border) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--c-border) 1px, transparent 1px);
+    background-position: -1px -1px;
+    background-size: 56px 56px;
+    content: "";
+    mask-image: radial-gradient(
+      ellipse 64% 52% at 50% 0%,
+      var(--c-ink) 0%,
+      transparent 100%
+    );
+    pointer-events: none;
+  }
+
+  .hero-copy {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    text-align: center;
+  }
+
+  .hero-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 4px 4px 12px;
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-lg);
+    background: var(--c-surface);
+    font-size: 13px;
+  }
+
+  .hero-chip-label {
+    color: var(--c-muted);
+  }
+
+  .hero-chip-code {
+    padding: 2px 8px;
+    border-radius: var(--r-sm);
+    background: var(--c-ink);
+    color: var(--c-on-solid);
+    font-size: 12.5px;
+    line-height: 18px;
+    white-space: nowrap;
+  }
+
+  .hero-title {
+    margin-top: 4px;
+    font-size: 76px;
+    font-weight: 600;
+    letter-spacing: -0.05em;
+    line-height: 1;
+  }
+
+  .hero-line {
+    display: block;
+  }
+
+  .hero-soft {
+    color: var(--c-muted);
+  }
+
+  .hero-lead {
+    max-width: 600px;
+    color: var(--c-ink2);
+    font-size: 18px;
+    line-height: 1.6;
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  /* A narrow window: a smaller title. A phone: the title of the mobile
+     mockup, and less space around the copy. */
+
+  @media (width <= 960px) {
+    .hero {
+      padding-top: 88px;
+    }
+
+    .hero-title {
+      font-size: 56px;
+    }
+  }
+
+  @media (width < 40rem) {
+    .hero {
+      padding: 64px var(--site-gutter) 48px;
+    }
+
+    .hero-title {
+      font-size: 44px;
+      letter-spacing: -0.045em;
+      line-height: 1.04;
+    }
+
+    .hero-lead {
+      font-size: 16px;
+    }
+
+    .hero-actions {
+      align-self: stretch;
+    }
+  }
+</style>

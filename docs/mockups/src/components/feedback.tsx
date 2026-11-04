@@ -7,7 +7,7 @@ import type { LucideIcon } from "lucide-react";
 import { CircleAlert, Info, TriangleAlert } from "lucide-react";
 import { Spinner } from "@firna/ui/spinner";
 
-import { theme } from "../theme/graphite.ts";
+import { theme } from "@ciproxy/tokens/firna";
 import { LinkAction } from "./actions.tsx";
 import type { CataloguePath } from "./paths.ts";
 import "./feedback.css";

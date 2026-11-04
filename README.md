@@ -70,43 +70,52 @@ labels, slots, and where a job runs.
 
 ## Get started as a developer
 
-The mockup catalogue is the only part of the repository that runs. It shows
-every screen of the dashboard and the public site. Run each command from the
-repository root.
+The Rust workspace contains the agent, control plane, and repository gate.
+The npm workspace contains the dashboard, site, shared tokens, and mockups.
+Run each command from the repository root.
 
-1. Install Node 22.15 or newer. Do not use Node 23 or Node 24.14 to 24.18.
-2. Install the npm workspace:
+1. Install the Node version in [.nvmrc](.nvmrc).
+2. Use rustup to install the Rust toolchain in
+   [rust-toolchain.toml](rust-toolchain.toml).
+3. Install the npm workspace:
 
    ```sh
    npm --prefix ts ci
    ```
 
-3. Serve the catalogue with live reload:
+4. Run the repository gate:
 
    ```sh
-   npm --prefix ts run mockups:serve
+   cargo xtask check
    ```
 
-4. Build the catalogue and run its checks:
+Use `--keep-going` to continue after failures and `--include` or `--exclude`
+to select phases, as the [gate guide](xtask/README.md) describes.
 
-   ```sh
-   npm --prefix ts run mockups:check
-   ```
+The package guides give their commands and main code entry points:
 
-The [mockups README](docs/mockups/README.md) gives the other commands and
-the rules of the catalogue.
+- [ciproxy-agent](crates/ciproxy-agent/README.md): the agent CLI skeleton.
+- [ciproxy-protocol](crates/ciproxy-protocol/README.md): shared wire types.
+- [ciproxy-control-plane](crates/ciproxy-control-plane/README.md): the hosted
+  control plane CLI skeleton.
+- [xtask](xtask/README.md): the repository gate.
+- [@ciproxy/app](ts/app/README.md): the Expo dashboard skeleton.
+- [@ciproxy/site](ts/site/README.md): the Astro marketing and Starlight docs.
+- [@ciproxy/tokens](ts/tokens/README.md): the shared Graphite design tokens.
+- [@ciproxy/mockups](docs/mockups/README.md): the Mokly mockup catalogue.
 
 ## Repository layout
 
-- `docs/architecture.md`: the components of ciproxy and the data flow
-  between them.
-- `docs/protocol/`: the protocol docs, with the requirements and the
-  decisions in force.
-- `docs/mockups/`: the mockup catalogue. Its sources are under
-  `docs/mockups/src`.
-- `ts/`: the npm workspace of the mockups.
-- `mokly.config.json`: the configuration of Mokly, which builds the mockup
-  catalogue.
+- `crates/`: the Rust agent, shared protocol, and hosted control plane.
+- `xtask/`: the Rust task runner and repository gate.
+- `ts/`: the npm workspace, with `tokens/`, `app/`, `site/`, and `mockups/`.
+- `docs/`: the architecture, protocol docs, and mockup sources.
+- `plans/`: active plans and follow-up items.
+- `AGENTS.md`: the repository rules for agents.
+- `rust-toolchain.toml`: the Rust version, with rustfmt and clippy.
+- `.cargo/config.toml`: the `cargo xtask` alias.
+- `.nvmrc`: the Node version for development and CI.
+- `mokly.config.json`: the mockup catalogue and renderer configuration.
 
 ## Documentation
 
