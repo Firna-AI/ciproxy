@@ -14,9 +14,9 @@ Node 23 and not Node 24.14 to 24.18.
 
 ```sh
 npm --prefix ts ci                   # install the workspace
-npm --prefix ts run mockups:build    # strict build into docs/mockups/mokly-generated
-npm --prefix ts run mockups:check    # build, typecheck, lint, format check, policy check
-npm --prefix ts run mockups:serve    # browse with live reload and Changes against origin/main
+npm --prefix ts run mockups:build    # strict build into mokly-generated
+npm --prefix ts run mockups:check    # build, types, lint, format, policy
+npm --prefix ts run mockups:serve    # browse, with changes against main
 npm --prefix ts run mockups:format   # format the mockup sources with Prettier
 ```
 

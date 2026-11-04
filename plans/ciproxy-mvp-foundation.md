@@ -393,6 +393,346 @@ changed each recommendation. Its report is in
 - **Action:** ask the user, because the options are correct words, and no
   copy rule picks one.
 
+Design calls of the Milestone 2 docs workspace, 4 November 2026. The docs
+state each one for the user's review:
+
+- The host reserve is a quarter of the threads and the memory, which gives
+  an AX42 six slots.
+- Warm runners serve only the label `ciproxy`, and give up their slot to a
+  waiting job of another label.
+- The overflow wait applies only when an own machine can run the job.
+  Otherwise Boat starts the job at once.
+- ciproxy never re-runs a job by itself.
+- Periods, the spend month, and the report days use UTC.
+- The spend limit counts only sandboxes that ciproxy starts, and running
+  jobs finish at the limit.
+- Each sandbox is the cheapest Boat type that fits the label, and ciproxy
+  deletes only its own marked sandboxes.
+- Re-running the install command keeps the registration. A machine with no
+  room for a slot connects with no slots, and the page says why.
+- A Docker disk follows trusted write-back, with one default-branch job at
+  a time.
+- The usage offer is the cheapest paid tier with the add-ons that cover the
+  use.
+- The savings report offers the last 30 days, this month, and last month.
+- The Stripe portal shows invoices, changes the card, and cancels. Tier
+  changes stay in the dashboard.
+
+Open decisions from Milestone 2, 4 November 2026. They wait for the user.
+The docs workspace raised them in pull request #1, and its options check
+ran over them. The docs mark each one as `Open:`.
+
+### 12. Who can manage an organization in ciproxy
+
+- **Severity:** High. **Effort:** Medium.
+- **Source:** Design.
+- **Category:** Security.
+- **Location:** `docs/protocol/security.md`, "Sign-in and access". Mockup
+  `app/auth/install-app/pending-approval`.
+- **Background:** In the dashboard, a person adds machines, changes settings and
+  billing, and sees the jobs of private repositories. A registered machine gets
+  the secrets of the jobs that it runs. On GitHub, only people with the runner
+  right can add a self-hosted runner.
+- **Problem:** No source says which people of an organization can use the
+  dashboard. The mockup "Waiting for an owner to approve" says that setup
+  continues for the member who asked.
+- **Impact if no action:** The implementation must guess. If every member can
+  add a machine, a member can take the secrets of repositories that the member
+  cannot read.
+- **Root question:** Which people can see and change an organization in ciproxy,
+  so that nobody gets more runner power or repository sight than GitHub gives?
+- **Options:**
+  - **A.** Only people with the runner right can open the organization. Other
+    members see a page that says so. ciproxy checks the right with the person's
+    own token, so the app keeps its two permissions. Effort: Medium.
+  - **B.** Every member sees everything. Only people with the runner right
+    change things. Members then see the jobs of repositories that GitHub hides
+    from them. Effort: Large.
+  - **D.** Mirror GitHub. A person sees the jobs of the repositories that the
+    person can read. People with the runner right change things. Many pages need
+    filtered states. Effort: Large.
+- **Left out:**
+  - Every member manages everything, because a member could take secrets.
+  - C, an admin list kept in ciproxy, because an admin could give runner power
+    that GitHub does not give.
+- **Assumptions:** Every option changes the text of "Waiting for an owner to
+  approve".
+- **Related:** Item 17 waits for this answer.
+- **Wider fix:** None.
+- **Previous examples:** None found.
+- **Recommendation:** A. It copies the GitHub rule for runners and needs the
+  least mockup work. D is the next step if members ask to see jobs.
+- **Action:** ask the user, because it adds an access rule that no requirement
+  covers, and it changes a mockup.
+
+### 13. What a job VM on an own machine can reach
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Design.
+- **Category:** Security.
+- **Location:** `docs/protocol/security.md`, "Job isolation".
+- **Background:** A job VM cannot reach other job VMs, the agent, or the host.
+  The only exception is the cache service of its machine. Own machines often sit
+  next to internal hosts and a cloud metadata service.
+- **Problem:** No source says whether a job VM can reach the private networks
+  around its machine.
+- **Impact if no action:** If the private networks are open, the code of a pull
+  request can probe the internal network and read the cloud credentials of the
+  host. If they are closed, jobs that deploy to internal hosts break.
+- **Root question:** Which networks can a job on an own machine reach?
+- **Options:**
+  - **A.** The internet only, as on GitHub-hosted runners. Effort: Small.
+  - **B.** The internet and the private networks, as on a classic self-hosted
+    runner. Effort: Small.
+  - **C.** A, plus a label switch that opens the private networks. Effort:
+    Medium.
+  - **D.** A, plus a list of private hosts for each label. Effort: Medium.
+  - **E.** A, plus a label switch that opens the private networks to
+    default-branch jobs only. Effort: Medium.
+- **Left out:**
+  - No network rule, because a job could reach other job VMs.
+  - An allow list for all traffic, because jobs fetch packages from many hosts.
+- **Assumptions:** A Boat sandbox reaches no private network, so a label with
+  private access must run on own machines only.
+- **Wider fix:** None.
+- **Previous examples:** None found.
+- **Recommendation:** A. Jobs come from GitHub-hosted runners, where they had no
+  private access. With A, a job also behaves the same on an own machine and on
+  Boat. E or D is the next step.
+- **Action:** ask the user, because the options trade safety against access.
+
+### 14. A leaked install command
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Design.
+- **Category:** Security.
+- **Location:** `docs/protocol/agent.md`, "Install".
+- **Background:** Setup shows one install command, and so does "Add machine".
+  The command holds an install token that works for one hour. A machine that
+  registers gets the jobs and secrets of the organization.
+- **Problem:** No source says whether one token adds one machine or many.
+- **Impact if no action:** A token that adds many machines stays useful to an
+  attacker for the rest of its hour.
+- **Root question:** How does ciproxy keep a leaked install command from adding
+  a machine that the organization did not choose?
+- **Options:**
+  - **A.** Any number of machines within the hour. Effort: Small.
+  - **B.** One machine. The page then shows a new command. Effort: Small.
+  - **C.** A or B, and each new machine waits for an approval in the dashboard.
+    Effort: Medium.
+  - **D.** The command holds no secret. The agent prints a code, and a signed-in
+    person enters it in the dashboard. Effort: Medium.
+- **Left out:**
+  - A token with no expiry.
+  - An alert when a machine joins, because the machine gets secrets first.
+  - A token bound to a host name, because an attacker can set any host name.
+- **Wider fix:** None.
+- **Previous examples:** None found.
+- **Recommendation:** B. The token is useless after its machine registers, and a
+  person sees each new host name. D protects best, but it needs new setup
+  screens.
+- **Action:** ask the user, because the options trade install speed against
+  safety.
+
+### 15. How the agent gets a new version
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Design.
+- **Category:** Docs or spec.
+- **Location:** `docs/protocol/agent.md`, "Updates".
+- **Background:** The machine page shows the agent version and "up to date". An
+  update never stops a running job.
+- **Problem:** No source says how a machine gets a new version.
+- **Impact if no action:** Old agents stay in use, and the control plane must
+  support every old version.
+- **Root question:** How does each own machine come to run a supported agent
+  version?
+- **Options:**
+  - **A.** The agent updates itself. Effort: Small.
+  - **B.** A person runs the install command again when the page shows "Update
+    available". Effort: Small.
+  - **C.** A, with a switch on each machine that turns updates off. Effort:
+    Medium.
+  - **D.** A package source, so that the package manager of the machine installs
+    each release. Effort: Medium.
+  - **E.** C, with a support window. A machine that falls too far behind takes
+    no new jobs. This is a new rejection. Effort: Medium.
+- **Left out:** None.
+- **Wider fix:** None.
+- **Previous examples:** None found.
+- **Recommendation:** A. One version keeps the agent and the control plane in
+  step, and the GitHub runner also updates itself. E is the next step for
+  customers who approve each version.
+- **Action:** ask the user, because the options trade control against upkeep.
+
+### 16. Which spend limit applies when Boat connects
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Design.
+- **Category:** Docs or spec.
+- **Location:** `docs/protocol/overflow.md`, "Spend limit".
+- **Background:** Boat bills the customer by the second. The customer sets a
+  monthly spend limit in Settings, under Overflow. Setup asks only for the Boat
+  key.
+- **Problem:** No source says which limit applies from the moment Boat connects.
+- **Impact if no action:** Without a limit, a broken workflow can run up a large
+  Boat bill.
+- **Root question:** How does a customer avoid an unexpected Boat bill from the
+  moment Boat connects, in setup or later?
+- **Options:**
+  - **A.** No limit until the customer sets one. Effort: Small.
+  - **B.** A default limit, for example $100 a month. The Boat step names it.
+    Effort: Small.
+  - **C.** The Boat step asks for the limit. Effort: Medium.
+  - **D.** Boat connects with overflow off. Turning overflow on asks for the
+    limit. Effort: Medium.
+- **Left out:**
+  - A limit derived from use, because a new customer has no use yet.
+  - Alerts in place of a limit, because jobs keep running after an alert.
+- **Wider fix:** None.
+- **Previous examples:** None found.
+- **Recommendation:** B. It protects from the first job and keeps setup to one
+  field. You pick the amount.
+- **Action:** ask the user, because the options trade protection against setup
+  effort.
+
+### 17. Who can choose a plan and pay
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Design. The plan's orchestrator added this to the billing TODO.
+- **Category:** Security.
+- **Location:** `docs/protocol/billing.md`, "Checkout".
+- **Background:** A person picks a tier and add-ons in the dashboard, and pays
+  on Stripe Checkout. The Stripe customer portal shows the invoices, changes the
+  card, and cancels.
+- **Problem:** No source says who may change what an organization pays, or see
+  its invoices.
+- **Impact if no action:** A member could commit the organization to a charge,
+  or end its tier.
+- **Root question:** Who may change what an organization pays ciproxy, and see
+  its invoices and card?
+- **Options:**
+  - **A.** The people who can manage the organization, as item 12 decides.
+    Effort: Small.
+  - **B.** Those people, plus the GitHub billing managers. The app then needs
+    the "Members" permission, which breaks the "Runner access only" promise.
+    Effort: Medium.
+  - **D.** A, plus one billing contact that a manager names in ciproxy. Effort:
+    Medium.
+- **Left out:** C, everyone who can open the organization, because members could
+  then commit to charges.
+- **Related:** Item 12. This item waits for its answer.
+- **Wider fix:** None.
+- **Previous examples:** None found.
+- **Recommendation:** A. On GitHub, the runner right already lets a person add
+  paid larger runners.
+- **Action:** ask the user, because it adds an access rule and depends on item
+  12.
+
+### 18. Cache entries that leave the GitHub cache
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation.
+- **Category:** Docs or spec.
+- **Location:** `docs/protocol/cache.md`, "Cache scopes".
+- **Background:** A save goes to the machine cache and to the GitHub cache.
+  GitHub evicts old entries, and a person can delete a broken entry on GitHub.
+  For a restore key, GitHub gives the newest match.
+- **Problem:** No source says which entry a job gets when the two caches differ.
+- **Impact if no action:** A machine can serve a broken entry that a person
+  deleted. It can also give an older entry than GitHub would.
+- **Root question:** Which entries can a job on an own machine restore, so that
+  a person can keep a bad entry out of later jobs?
+- **Options:**
+  - **A.** The machine picks from its copies, and it serves an entry only while
+    GitHub still has it. Effort: Small.
+  - **B.** The machine keeps entries after GitHub evicts them. The dashboard
+    gets a "clear cache" action. Effort: Medium.
+  - **C.** B, plus a sync with deletions on GitHub. This needs the "Actions"
+    permission, and it cannot tell a deletion from an eviction. Effort: Large.
+  - **D.** GitHub names the entry of each restore. The machine only holds the
+    contents. A GitHub outage then gives misses. Effort: Small.
+- **Left out:**
+  - Entries with no way to clear them.
+  - A time limit on each entry.
+  - Local hits during a GitHub outage.
+  - All three let a bad entry come back.
+- **Wider fix:** D.
+- **Previous examples:** None found.
+- **Recommendation:** D. The options check changed it from A at the same cost. D
+  follows GitHub for deletions, restore keys, and new saves of a key.
+- **Action:** ask the user, because the options trade cache capacity against
+  control.
+
+### 19. The cache counts of a Boat job
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation.
+- **Category:** Docs or spec.
+- **Location:** `docs/protocol/cache.md`, "Cache tiers", and
+  `docs/architecture.md`. Mockup `app/jobs/job/boat`.
+- **Background:** The mockup job page shows "3 restored · 2.1 GB" and the cache
+  source. The agent can count restores on an own machine. No agent runs on Boat.
+- **Problem:** No source says how the counts of a Boat job reach the control
+  plane.
+- **Impact if no action:** The implementation adds a new path out of each
+  sandbox, or the page cannot show what the mockup shows.
+- **Root question:** What does the job page show about the cache of a job whose
+  restores the machine cache did not handle?
+- **Options:**
+  - **A.** Boat jobs show only the cache source. Effort: Small.
+  - **B.** The image sends counts with a token for each job. Job code can read
+    that token and fake the counts. Effort: Medium.
+  - **C.** The counts go through the Boat API. This depends on the Boat spike.
+    Effort: Medium.
+  - **D.** The page shows counts only when the machine cache handled the
+    restores. Effort: Small.
+  - **E.** No job page shows counts. Effort: Small.
+- **Left out:**
+  - Counts from the logs, because ciproxy never receives the logs.
+  - The GitHub cache list, because it needs a new permission and names no job.
+  - A cache proxy run by ciproxy, because cache contents must not pass through
+    ciproxy.
+- **Wider fix:** D.
+- **Previous examples:** None found.
+- **Recommendation:** D. The options check changed it from A at the same cost. D
+  also covers a job that fell back to the GitHub cache, and every later backend.
+- **Action:** ask the user, because each option changes a mockup or adds a
+  boundary.
+
+### 20. The licence of the image definition
+
+- **Severity:** Low. **Effort:** Small.
+- **Source:** Implementation.
+- **Category:** Docs or spec.
+- **Location:** `docs/architecture.md`, "Open source and hosted parts".
+- **Background:** The agent is open source under Apache-2.0. The hosted parts
+  are closed. The image runs every job, with the patched runner that handles
+  secrets. The landing page says "Read and audit the code that runs on your
+  machines".
+- **Problem:** No source says whether the image definition, the install script,
+  and the code inside the job VM are open source.
+- **Impact if no action:** The public copy at launch can include or leave out
+  these parts by accident.
+- **Root question:** What can people read, check, and reuse of the code that
+  runs on the customer's side?
+- **Options:**
+  - **A.** The image definition is open source. Effort: Small.
+  - **B.** The image definition stays closed, and the landing page claim
+    changes. Effort: Small.
+  - **C.** B, plus a public software list for each release. Effort: Small.
+  - **D.** A source-available licence that forbids a competing service. Effort:
+    Small.
+  - **E.** Decide at launch. Effort: Small.
+  - **F.** A rule: every part that ciproxy ships to the customer's side is
+    Apache-2.0. Effort: Small.
+- **Left out:** None.
+- **Wider fix:** F.
+- **Previous examples:** None found.
+- **Recommendation:** F. It keeps the audit promise, and every machine holds the
+  built image anyway.
+- **Action:** ask the user, because the options have real trade-offs.
+
 ## Milestone 1: Mockups
 
 Tags: mockup
@@ -437,6 +777,12 @@ up Mokly as `futex-ai/accounting` does.
 - [ ] Apply the answers to items 8 to 11 in the mockups. Count only the
       Linux jobs where the landing page and the savings screen compare
       Linux prices.
+- [ ] Add the mockup states that the docs need: a refused Boat sandbox, a
+      move between paid tiers, the "Move to Free" confirmation, and a
+      machine that cannot run jobs. Make the docs home say that the wait
+      counts for each job, limit the instant-start claim of the features
+      section to the `ciproxy` label, and apply item 12 to the text of the
+      pending approval screen.
 - [ ] Update the design and the TODOs of this plan for each problem that
       the mockups show.
 
@@ -489,7 +835,9 @@ App in a test organization, a KVM-capable Linux server, and a Boat API key
 from the user.
 
 - [ ] Scale set: create a scale set, open a message session, run a job on a
-      just-in-time runner, and record the fields of each job message. Use
+      just-in-time runner, and record the fields of each job message. Stop
+      the listener, queue a job, and check that a warm runner still takes
+      it, because the outage requirement depends on it. Use
       the Rust port `imumesh18/scaleset`. Where the port falls short, write
       a thin client that follows the Go client.
 - [ ] Firecracker: run a job with Docker in a fresh VM on the Linux server.
@@ -545,6 +893,13 @@ Depends on: 2, 3, 4
       service and the privacy policy, which the user writes or approves.
 - [ ] Order the launch steps in that plan: the public copy of the agent
       goes live before the site, because the site links to it.
+- [ ] Settle in that plan the open questions of the docs workspace: label
+      name rules and renames, the minimum disk and the cache size of a
+      machine, the jobs that fit on one machine when machines differ, an
+      expired sign-in, the App on a personal account and its removal, job
+      data retention, the banner order at a failed payment, a late
+      checkout confirmation, Free periods that start on day 29 to 31, a
+      broken Docker disk, the cache source of a mixed job, and taxes.
 - [ ] Run the options check over its decisions.
 
 ## Milestone 6: Verification, commit, review, and pull request
