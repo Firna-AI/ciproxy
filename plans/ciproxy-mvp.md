@@ -1026,8 +1026,9 @@ Design calls on the questions of the docs work, my calls, 4 November 2026:
   report. The savings report now covers the whole workspace, which pays
   one price.
 
-No item of this plan waits for the user. The options check of items 50 and
-51 ran, and its report is in
+Items 54 to 65 wait for the user. They are under "Open items of
+4 November 2026" at the end of this plan. The options check of items 50
+and 51 ran, and its report is in
 `.context/ciproxy-mvp/options-check-50-51.md`.
 
 The options check of the `plans` skill ran over these items on 4 November
@@ -1696,3 +1697,226 @@ See the answers above.
   path.
 - **Action:** ask the user, because no requirement covers the take-out, and
   each option adds a rule.
+
+## Open items of 4 November 2026
+
+These items wait for the user. The conversation gave each in full in the layout
+of the `decisions-and-findings` skill. Each holds one root question, and its
+options keep the letters that the user saw.
+
+### 54. The GitHub API cannot name the full ref of a job
+
+- **Severity:** High. **Effort:** Medium.
+- **Source:** Implementation, Milestone 6, pull request #16.
+- **Background:** The run API gives only `head_branch`, a short name. A live
+  probe on 4 November 2026 pushed a branch and a tag with the same name, and the
+  API data of the two runs was the same. `jobWorkflowRef` of the scale set
+  message ended in `@refs/heads/<name>`, `@refs/tags/<name>`, `@refs/tags/<tag>`
+  for a dispatch on a tag, `@refs/pull/2/merge`, and `@refs/heads/main` for
+  `pull_request_target`. A job in a reusable workflow called at `main` got
+  `@refs/heads/main`, also from a tag or a pull request.
+- **Options:**
+  - **A.** The API only. No push gets a shared write. Effort: Small.
+  - **B.** A, and `jobWorkflowRef` for each job that the workflow file of the
+    run defines directly, when it agrees with the event and `head_branch`. A job
+    in a reusable workflow gets an unknown ref. It reverses the "left out" line
+    of item 32. Effort: Medium.
+  - **C.** A, and the first hook report for the full ref, which must agree with
+    the API. Each runner version needs a repeat test. Effort: Medium.
+  - **D.** A, and a test cache entry with the job's token, whose ref GitHub
+    reports. Effort: Large.
+- **Recommendation:** B. It gave the right full ref in all five live cases for
+  direct jobs, and it keeps every fact outside the job VM.
+- **Action:** ask the user.
+
+### 55. No rule for a job whose ref is unknown
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Implementation, Milestone 6.
+- **Background:** Each option of item 54 leaves some jobs without a full ref,
+  such as a job in a reusable workflow and a pull request from a fork.
+  `JobFacts` cannot say "unknown".
+- **Options:**
+  - **A.** Fail closed: restore default-branch entries from the machine cache
+    and other entries through the GitHub cache, save where no other job
+    restores, and give the job its own Docker disk copy. Effort: Small.
+  - **B.** The machine cache does not handle the job, which uses the GitHub
+    cache only and gets its own Docker disk copy. Effort: Small.
+  - **C.** Keep the saves private, and promote them when GitHub shows a
+    default-branch ref. It needs D of item 54. Effort: Large.
+- **Recommendation:** A. It never widens what a job may write, and the job keeps
+  its hits on default-branch entries.
+- **Action:** ask the user.
+
+### 56. Merged Terraform changes still need a person to apply them
+
+- **Severity:** High. **Effort:** Large.
+- **Source:** Design, the brainstorm of the user's request of 4 November 2026:
+  "we should set it up, so that main can deploy terraform changes - I don't want
+  to have to do anything manually when in prod".
+- **Background:** A person applies the seed, bootstrap, and foundation roots
+  from a laptop. The deploy workflow applies only the edge. The seed and the
+  first bootstrap need a person once for each environment. The report is
+  `.context/terraform-ci/brainstorm-report.md`.
+- **Options:**
+  - **A.** Widen the deploy run: the deploy identity gets the admin roles and
+    applies the foundation. Effort: Medium.
+  - **B.** A, and a GCP deny policy on production that refuses the irreversible
+    deletes. It needs a GCP organization. Effort: Medium.
+  - **C.** Plan on each pull request, and apply on merge. Effort: Large.
+  - **D.** Plan, check, and promote: a read-only plan, a policy that needs an
+    approval file for each destructive change, an apply of that saved plan by an
+    identity that one workflow file can use, then production after the main
+    preview. Effort: Large.
+  - **E.** Apply outside GitHub Actions, with HCP Terraform or Cloud Build.
+    Effort: Large.
+- **Recommendation:** D, as in `mokly-cloud`. Add the deny policy of B before
+  launch when the projects sit in a GCP organization.
+- **Action:** ask the user.
+
+### 57. `main` has no branch protection
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Design, the same brainstorm.
+- **Background:** `Firna-AI` is on GitHub Free, and the repository is private,
+  so GitHub offers no ruleset. Any session with push access can push straight to
+  `main`.
+- **Options:**
+  - **A.** Stay on GitHub Free, and keep "Agent merges: off". Effort: Small.
+  - **B.** Move `Firna-AI` to GitHub Team, and add a ruleset on `main` that
+    needs a pull request and the gate. Effort: Small.
+- **Recommendation:** B. It is the only option where GitHub itself stops an
+  unchecked push.
+- **Action:** ask the user.
+
+### 58. Production waits for a manual tag
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Design, the same brainstorm.
+- **Background:** Milestone 5 deploys production on each `deploy-*` tag, and a
+  tag can point at any commit.
+- **Options:**
+  - **A.** Keep the `deploy-*` tag. Effort: Small.
+  - **B.** Deploy on each merge into `main`, after the main preview run of the
+    same commit passes, with a variable that keeps production off until launch.
+    Effort: Small.
+  - **C.** Promote once a day. Effort: Medium.
+- **Recommendation:** B. Only merged code runs with production rights, and no
+  person acts.
+- **Action:** ask the user.
+
+### 59. A workflow can let pull request code write the shared cache
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Review of pull request #10, finding 1. Follow-up item
+  `cache-runtime-token-write-bypass.md`.
+- **Background:** GitHub gives jobs of untrusted events read-only shared caches,
+  unless the workflow sets `cache-mode: write`. The job VM holds the runtime
+  token. Only 7 events write default-branch entries on GitHub, and `cache.md`
+  names only `pull_request_target` as untrusted.
+- **Options:**
+  - **A.** Require read-only cache rights for these jobs, which needs workflow
+    edits. Effort: Small.
+  - **B.** Keep the runtime token outside the job VM, and forward its calls.
+    Effort: Large.
+  - **C.** Match GitHub's rule: only the 7 trusted events write shared entries
+    in the machine cache, and a direct write that a workflow opted into follows
+    GitHub's rule. Effort: Small.
+- **Recommendation:** C. ciproxy cannot be safer than the GitHub cache that it
+  writes through, and the risk needs the customer's choice.
+- **Action:** ask the user.
+
+### 60. Create a second test repository
+
+- **Severity:** Low. **Effort:** Small.
+- **Source:** Implementation, the live probe of Milestone 6.
+- **Background:** A Free organization created a runner group limited to one
+  repository. The check that GitHub keeps a refused repository away needs a
+  second private repository.
+- **Options:**
+  - **A.** Create `Firna-AI/ciproxy-spike-refused`, run `runner_group_probe.py`,
+    and delete it. Effort: Small.
+  - **B.** As A, and keep the repository. Effort: Small.
+  - **C.** Skip the check. Effort: Small.
+- **Recommendation:** A. It proves the limit and leaves nothing behind.
+- **Action:** ask the user.
+
+### 61. No Stripe test-mode key for the live billing test
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation, Milestone 17.
+- **Background:** `crates/ciproxy-billing/scripts/stripe-test-mode.sh` needs a
+  test secret key and a webhook signing secret.
+- **Options:**
+  - **A.** A Stripe account or sandbox for ciproxy. Effort: Small.
+  - **B.** A test key of the Stripe account of `futex-ai/accounting`. Effort:
+    Small.
+  - **C.** Skip the live test until the main preview runs with Stripe. Effort:
+    Small.
+- **Recommendation:** A. It keeps ciproxy in its own Stripe account from the
+  start.
+- **Action:** ask the user.
+
+### 62. The install command does not prepare the machine
+
+- **Severity:** High. **Effort:** Large.
+- **Source:** Implementation, Milestone 9, draft pull request #12.
+- **Background:** The install sets up no Firecracker, no jailer, no host tools,
+  and no disk area with reflinks. ext4, the default of Ubuntu and Debian, has no
+  reflinks.
+- **Options:**
+  - **A.** The customer prepares them first, which breaks the one-command
+    promise. Effort: Small.
+  - **B.** The install sets up the tools, and uses full copies where the file
+    system has no reflinks. Effort: Medium.
+  - **C.** The install sets up the tools and a reflink disk area on any file
+    system: one file formatted as XFS. Effort: Large.
+  - **D.** B now, and C as a follow-up item after launch. Effort: Medium.
+- **Recommendation:** C. B would make the slow path the common case on Ubuntu
+  and Debian.
+- **Action:** ask the user.
+
+### 63. No rule for a day on which a price changes
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation, Milestone 16.
+- **Background:** The savings report counts monthly costs "for the days of the
+  range". The merged code marks such a day as unknown.
+- **Options:**
+  - **A.** The first price counts for the whole day. Effort: Small.
+  - **B.** The last price counts for the whole day. Effort: Small.
+  - **C.** Split the cost of the day by the hours of each price. Effort: Small.
+  - **D.** Count only the time used, for every monthly cost. Effort: Medium.
+- **Recommendation:** C. It counts each price for the time that it applied.
+- **Action:** ask the user.
+
+### 64. No rule for how a monthly price becomes a cost per day
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation, Milestone 16.
+- **Background:** The report covers the last 30 days, this calendar month, or
+  the last calendar month.
+- **Options:**
+  - **A.** 30 days. Effort: Small.
+  - **B.** The days of the calendar month. Effort: Small.
+  - **C.** 365 divided by 12 days. Effort: Small.
+  - **D.** 30 days in the 30-day view, and calendar days in the calendar views.
+    Effort: Small.
+  - **E.** The length of each billing period. Effort: Medium.
+  - **F.** Calendar days for machines, and billing period days for the tier.
+    Effort: Medium.
+- **Recommendation:** B. Each day has the same cost in every view. The Savings
+  mockup then needs a small fix.
+- **Action:** ask the user.
+
+### 65. Merge `futex-ai/sandbox` #11
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation, Milestone 12, part 1.
+- **Background:** #11 adds the capability split and the Boat backend of item 49.
+  Its review findings are fixed. That repository says "Agent merges: off".
+- **Options:**
+  - **A.** The user merges #11. Effort: Small.
+  - **B.** The user allows the orchestrator to merge it once. Effort: Small.
+- **Recommendation:** A. It keeps the merge rule of that repository.
+- **Action:** ask the user.
