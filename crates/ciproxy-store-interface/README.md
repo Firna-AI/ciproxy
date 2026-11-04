@@ -60,6 +60,9 @@ including pending deliveries. When GitHub omitted its completion time,
 the first caller-supplied completion observation starts that period.
 Replay preserves that observation without fabricating a GitHub time.
 Trusted run facts preserve raw API fields. A branch name is not a full ref.
+Verified installation snapshots save login and App state together.
+The scoped write returns the saved record. It cannot change another
+workspace or account, replace a newer installation, or revive removal.
 Known-run facts queries require workspace, organization, and run identity.
 Remote scale-set upserts preserve the internal row and lock key.
 Organization mutation leases wait on dedicated connections. They retain

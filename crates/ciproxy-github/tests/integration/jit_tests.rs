@@ -3,8 +3,10 @@
 use std::sync::Arc;
 use std::sync::atomic::AtomicI64;
 
+use ciproxy_github::error::Error;
 use ciproxy_github::persistence::StoreAdapter;
 use ciproxy_github::registrations::{RegistrationService, Removal, RunnerRegistrations};
+use ciproxy_github::scale_sets::ScaleSetFactory;
 use reqwest::Method;
 use secrecy::ExposeSecret;
 use serde_json::json;
@@ -42,10 +44,33 @@ async fn jit_http_registers_one_runner_and_removal_accepts_missing_but_preserves
         service.remove(target, 73).await,
         Ok(Removal::Busy)
     ));
-    let requests = server.state.requests.lock().unwrap();
+    let requests = server.state.requests.lock().unwrap().clone();
     let jit = requests
         .iter()
         .find(|(method, path, _)| *method == Method::POST && path.contains("/53/generatejitconfig"))
         .unwrap();
     assert_eq!(jit.2, json!({"name":"runner-71","workFolder":""}));
+    for route in ["/access_tokens", "/registration-token"] {
+        *server.state.resource.auth_failure.lock().unwrap() = Some(route.to_owned());
+        assert!(
+            matches!(service.remove(target, 73).await, Err(Error::Internal(_))),
+            "{route}: auth failure must not claim a busy runner was removed"
+        );
+        assert!(
+            matches!(
+                service.create(target, "still-busy").await,
+                Err(Error::Internal(_))
+            ),
+            "{route}: auth failure must not claim the scale set is missing"
+        );
+        let context = service.store.context(target).await.unwrap();
+        let api = Factory(server.origin.clone())
+            .for_organization(&context.organization)
+            .await
+            .unwrap();
+        assert!(
+            matches!(api.open(53, "auth-failure").await, Err(Error::Internal(_))),
+            "{route}: auth failure must not request scale-set replacement"
+        );
+    }
 }

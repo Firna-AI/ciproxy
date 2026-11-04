@@ -60,12 +60,13 @@ impl ScaleSetFactory for Factory {
             .redirect(reqwest::redirect::Policy::none())
             .build()
             .unwrap();
-        let client = scaleset::Client::builder(format!("{}/customer", self.0), credentials)
-            .http_client(http.clone())
-            .allow_http()
-            .retry_policy(RetryPolicy::none())
-            .build()
-            .unwrap();
+        let client =
+            scaleset::Client::builder(format!("{}/{}", self.0, organization.login), credentials)
+                .http_client(http.clone())
+                .allow_http()
+                .retry_policy(RetryPolicy::none())
+                .build()
+                .unwrap();
         Ok(Arc::new(SdkScaleSetApi::new(client, http)))
     }
 }

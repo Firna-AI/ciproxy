@@ -1,5 +1,6 @@
 //! Authoritative suspension and immediate verified removal under one lease.
 
+use ciproxy_store_interface::github::GithubInstallationState;
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
 
 use crate::error::{Error, Result};
@@ -76,13 +77,23 @@ impl AppService {
         } else {
             AppState::Active
         };
-        let changed = organization.app_state != desired;
+        let changed =
+            organization.app_state != desired || organization.login != current.account.login;
         if changed {
             lease.check().await?;
-            self.store.suspend(&organization, current.suspended).await?;
+            organization = self
+                .store
+                .save_snapshot(
+                    &organization,
+                    GithubInstallationState {
+                        github_id: current.account.id,
+                        installation_id: current.id,
+                        login: current.account.login,
+                        suspended: current.suspended,
+                    },
+                )
+                .await?;
         }
-        organization.app_state = desired;
-        organization.login = current.account.login;
         if desired == AppState::Active {
             if let Some(access) = &access {
                 organization.repositories = access.clone();

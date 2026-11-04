@@ -118,8 +118,31 @@ pub trait OrganizationLease: Send {
     fn check_connection(&mut self) -> Result<()>;
 }
 
+/// Identity and App state verified by an authoritative GitHub installation read.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GithubInstallationState {
+    /// The stable GitHub organization identity.
+    pub github_id: i64,
+    /// The current installation that owns this identity.
+    pub installation_id: i64,
+    /// The current organization login used by GitHub API URLs.
+    pub login: String,
+    /// Whether GitHub currently suspends this installation.
+    pub suspended: bool,
+}
+
 /// Queries needed only by the hosted GitHub integration.
 pub trait GithubStore: Send + Sync {
+    /// Atomically save verified login and App state for this current installation.
+    ///
+    /// Wrong tenant/identity, stale installations, and removed rows return NotFound.
+    /// This operation never changes repository access or removal bookkeeping.
+    fn save_github_installation_state(
+        &self,
+        workspace_id: Uuid,
+        organization_id: Uuid,
+        state: &GithubInstallationState,
+    ) -> Result<Organization>;
     /// Wait for exclusive mutation authority over a full GitHub organization ID.
     ///
     /// This uses the two-key advisory namespace, separate from scale-set locks.

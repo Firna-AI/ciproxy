@@ -18,6 +18,9 @@ pub(super) struct ResourceHttp {
     pub(super) installation_hidden: AtomicBool,
     pub(super) suspended: AtomicBool,
     pub(super) app_jwt_reads: AtomicUsize,
+    pub(super) organization_login: Mutex<String>,
+    pub(super) account_id: AtomicI64,
+    pub(super) auth_failure: Mutex<Option<String>>,
 }
 
 impl ResourceHttp {
@@ -32,6 +35,9 @@ impl ResourceHttp {
             installation_hidden: AtomicBool::new(false),
             suspended: AtomicBool::new(false),
             app_jwt_reads: AtomicUsize::new(0),
+            organization_login: Mutex::new("customer".to_owned()),
+            account_id: AtomicI64::new(17),
+            auth_failure: Mutex::new(None),
         }
     }
 }
@@ -43,7 +49,19 @@ pub(super) fn respond(
     body: &Value,
     app_jwt: bool,
 ) -> Option<Response> {
-    if path.ends_with("/orgs/customer/installation") || path.ends_with("/app/installations/19") {
+    if state
+        .auth_failure
+        .lock()
+        .unwrap()
+        .as_ref()
+        .is_some_and(|route| path.ends_with(route))
+    {
+        return Some(StatusCode::NOT_FOUND.into_response());
+    }
+    let login = state.organization_login.lock().unwrap().clone();
+    if path.ends_with(&format!("/orgs/{login}/installation"))
+        || path.ends_with("/app/installations/19")
+    {
         if !app_jwt {
             return Some(StatusCode::UNAUTHORIZED.into_response());
         }
@@ -55,7 +73,7 @@ pub(super) fn respond(
             .suspended
             .load(Ordering::SeqCst)
             .then_some("2026-11-04T12:00:00Z");
-        return Some(Json(json!({"id":19,"account":{"id":17,"login":"customer","type":"Organization"},"suspended_at":suspended})).into_response());
+        return Some(Json(json!({"id":19,"account":{"id":state.account_id.load(Ordering::SeqCst),"login":login,"type":"Organization"},"suspended_at":suspended})).into_response());
     }
     if path.ends_with("/runner-groups")
         && *method == Method::GET

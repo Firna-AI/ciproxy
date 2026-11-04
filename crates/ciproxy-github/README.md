@@ -46,8 +46,14 @@ It stays separate from listener locks. Its dedicated connection leaves
 ordinary queries available while another process waits.
 
 App-JWT lookups verify current installation identity and suspension inside
-that lease. A delayed event cannot replace another current installation.
-A transient 404 returns InstallationPending without mutation. Verified
+that lease. Synchronization atomically saves both the verified login and
+App state. Later contexts use that saved record. A rename also restarts
+live listeners so new SDK routes use the current login. A delayed event
+cannot replace another current installation.
+When an event still names the previous login, an InstallationPending
+lookup falls back to its installation ID under the same lease. It verifies
+the account ID before using that current identity. An unknown or deleted
+installation stays retryable and changes nothing. Verified
 Deleted events apply immediately and make no GitHub lookup. The signed
 requester still selects ownership and the first Admin.
 When current GitHub installation B supersedes stored installation A,
@@ -125,12 +131,14 @@ idempotent by organization and job UUID.
 The listener checks its database lease before and after each poll.
 Cancellation and errors close the GitHub session before releasing the lock.
 The runtime starts one listener for each active organization-label pair.
-A saved remote-ID change ends a live session with ScaleSetRestart.
+A saved remote-ID or login change ends a session with ScaleSetRestart.
 The runtime restarts it from the current internal row. On ScaleSetMissing,
 The control-plane runtime first calls refresh_repositories to reconcile.
 It then retries with the
 saved binding. It must not repeatedly open the obsolete remote ID.
-Missing lookups accept GitHub's observed 204 response as well as 404.
+Actual Actions-resource lookups accept GitHub's observed 204 absence and
+404. SDK errors from token or organization-auth routes remain errors.
+They cannot claim runner deletion or trigger scale-set replacement.
 The runtime also retries failed webhook deliveries.
 
 `RunnerRegistrations` creates one secret JIT configuration for one runner.

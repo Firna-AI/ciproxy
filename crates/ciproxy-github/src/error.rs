@@ -19,12 +19,12 @@ pub enum Error {
     /// Another listener owns the scale set's database session lock.
     #[error("[github] scale set session is already owned")]
     SessionOwned,
-    /// The saved remote binding changed while this listener owned a session.
+    /// The saved remote ID or organization login changed during a live session.
     #[error("[github] restart scale-set listener from {opened} to {current}")]
     ScaleSetRestart {
         /// The remote ID used by the live session.
         opened: i64,
-        /// The remote ID now saved for the same internal scale set.
+        /// The current remote ID. It can match opened when only the login changed.
         current: i64,
     },
     /// GitHub no longer has the remote scale set; reconcile before retry.

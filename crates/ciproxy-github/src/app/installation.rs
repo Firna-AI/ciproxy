@@ -36,7 +36,7 @@ impl AppService {
             return self.remove_installation(event, &*lease).await;
         }
         let current = self
-            .current_installation(&event.installation.account, &*lease)
+            .current_installation(&event.installation.account, event.installation.id, &*lease)
             .await?;
         if current.id != event.installation.id {
             return Ok(InstallationOutcome::Ignored);

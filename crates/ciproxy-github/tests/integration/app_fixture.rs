@@ -202,10 +202,18 @@ impl Fixture {
         }
     }
     pub(super) fn app(&self, store: Arc<dyn Store>) -> Arc<dyn GitHubApp> {
+        self.app_with_installations(store, self.state.clone())
+    }
+
+    pub(super) fn app_with_installations(
+        &self,
+        store: Arc<dyn Store>,
+        installations: Arc<dyn InstallationApi>,
+    ) -> Arc<dyn GitHubApp> {
         let adapter = Arc::new(StoreAdapter::new(store, self.runtime.clone()));
         Arc::new(AppService {
             leases: adapter.clone(),
-            installations: self.state.clone(),
+            installations,
             store: adapter,
             rest: self.remote.clone(),
             scale_sets: Arc::new(ResourceFactory(self.resources.clone())),

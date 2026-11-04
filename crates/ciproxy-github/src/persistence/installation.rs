@@ -2,7 +2,7 @@
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use ciproxy_store_interface::github::Repository;
+use ciproxy_store_interface::github::{GithubInstallationState, Repository};
 use ciproxy_store_interface::labels::Label;
 use ciproxy_store_interface::organizations::{Organization, RepositoryAccess};
 use ciproxy_store_interface::scale_sets::ScaleSet;
@@ -60,8 +60,12 @@ pub trait InstallationStore: Send + Sync {
         organization: &Organization,
         access: RepositoryAccess,
     ) -> Result<()>;
-    /// Change suspension without revoking shared resources.
-    async fn suspend(&self, organization: &Organization, suspended: bool) -> Result<()>;
+    /// Atomically save verified login and state without reviving removed access.
+    async fn save_snapshot(
+        &self,
+        organization: &Organization,
+        snapshot: GithubInstallationState,
+    ) -> Result<Organization>;
     /// Record removal, credential revocation, and retained-data deadlines.
     async fn remove(&self, organization: &Organization, at: DateTime<Utc>) -> Result<()>;
     /// Report whether the workspace has any surviving installed organization.
@@ -149,10 +153,18 @@ impl InstallationStore for StoreAdapter {
         })
         .await
     }
-    async fn suspend(&self, organization: &Organization, suspended: bool) -> Result<()> {
+    async fn save_snapshot(
+        &self,
+        organization: &Organization,
+        snapshot: GithubInstallationState,
+    ) -> Result<Organization> {
         let organization = organization.clone();
         query(self.store.clone(), move |store| {
-            store.set_app_suspended(organization.workspace_id, organization.id, suspended)
+            store.save_github_installation_state(
+                organization.workspace_id,
+                organization.id,
+                &snapshot,
+            )
         })
         .await
     }

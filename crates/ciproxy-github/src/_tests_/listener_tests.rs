@@ -233,54 +233,60 @@ async fn lost_database_session_stops_processing_and_closes_github_session() {
 
 #[tokio::test]
 async fn changed_remote_identity_closes_old_session_before_the_next_poll() {
-    let polls = Arc::new(AtomicUsize::new(0));
-    let observed = polls.clone();
-    let service = listener(Unimock::new((
-        SessionStoreMock::lock
-            .some_call(matching!(_))
-            .answers(&|mock, _| Ok(Some(Box::new(mock.clone()) as Box<dyn SessionLease>))),
-        SessionLeaseMock::check
-            .each_call(matching!())
-            .answers(&|_| Ok(())),
-        SessionStoreMock::context.stub(|each| {
-            each.call(matching!(_))
-                .answers(&|_, _| Ok(context()))
-                .n_times(3)
-                .then()
-                .answers(&|_, _| {
-                    let mut changed = context();
-                    changed.scale_set.github_id = 83;
-                    Ok(changed)
-                });
-        }),
-        ScaleSetFactoryMock::for_organization
-            .some_call(matching!(_))
-            .answers(&|mock, _| Ok(Arc::new(mock.clone()) as Arc<dyn ScaleSetApi>)),
-        ScaleSetApiMock::open
-            .some_call(matching!(53, _))
-            .answers(&|mock, _, _| Ok(Box::new(mock.clone()) as Box<dyn MessageQueue>)),
-        MessageQueueMock::poll
-            .each_call(matching!(None, 2))
-            .answers_arc(Arc::new(move |_, _, _| {
-                observed.fetch_add(1, Ordering::SeqCst);
-                Ok(None)
-            })),
-        SessionStoreMock::pending
-            .each_call(matching!(_))
-            .answers(&|_, _| Ok(vec![])),
-        MessageQueueMock::close
-            .some_call(matching!())
-            .returns(Ok(())),
-    )));
-    let (_stop, signal) = watch::channel(false);
-    let mut options = options();
-    options.max_polls = Some(2);
-    assert!(matches!(
-        service.run(target(), options, signal).await,
-        Err(Error::ScaleSetRestart {
-            opened: 53,
-            current: 83
-        })
-    ));
-    assert_eq!(polls.load(Ordering::SeqCst), 1);
+    for renamed_login in [false, true] {
+        let polls = Arc::new(AtomicUsize::new(0));
+        let observed = polls.clone();
+        let service = listener(Unimock::new((
+            SessionStoreMock::lock
+                .some_call(matching!(_))
+                .answers(&|mock, _| Ok(Some(Box::new(mock.clone()) as Box<dyn SessionLease>))),
+            SessionLeaseMock::check
+                .each_call(matching!())
+                .answers(&|_| Ok(())),
+            SessionStoreMock::context.stub(|each| {
+                each.call(matching!(_))
+                    .answers(&|_, _| Ok(context()))
+                    .n_times(3)
+                    .then()
+                    .answers_arc(Arc::new(move |_, _| {
+                        let mut changed = context();
+                        if renamed_login {
+                            changed.organization.login = "renamed".to_owned();
+                        } else {
+                            changed.scale_set.github_id = 83;
+                        }
+                        Ok(changed)
+                    }));
+            }),
+            ScaleSetFactoryMock::for_organization
+                .some_call(matching!(_))
+                .answers(&|mock, _| Ok(Arc::new(mock.clone()) as Arc<dyn ScaleSetApi>)),
+            ScaleSetApiMock::open
+                .some_call(matching!(53, _))
+                .answers(&|mock, _, _| Ok(Box::new(mock.clone()) as Box<dyn MessageQueue>)),
+            MessageQueueMock::poll
+                .each_call(matching!(None, 2))
+                .answers_arc(Arc::new(move |_, _, _| {
+                    observed.fetch_add(1, Ordering::SeqCst);
+                    Ok(None)
+                })),
+            SessionStoreMock::pending
+                .each_call(matching!(_))
+                .answers(&|_, _| Ok(vec![])),
+            MessageQueueMock::close
+                .some_call(matching!())
+                .returns(Ok(())),
+        )));
+        let (_stop, signal) = watch::channel(false);
+        let mut options = options();
+        options.max_polls = Some(2);
+        assert!(matches!(
+            service.run(target(), options, signal).await,
+            Err(Error::ScaleSetRestart {
+                opened: 53,
+                current
+            }) if current == if renamed_login {53} else {83}
+        ));
+        assert_eq!(polls.load(Ordering::SeqCst), 1);
+    }
 }

@@ -1,6 +1,7 @@
 //! Queries for atomic installation setup and durable scale-set demand.
 
 mod facts;
+mod installation_state;
 mod jobs;
 mod lease;
 mod registration;
@@ -10,7 +11,8 @@ mod scale_sets;
 use chrono::{DateTime, Utc};
 use ciproxy_store_interface::error::Result;
 use ciproxy_store_interface::github::{
-    GithubJob, GithubStore, JobDelivery, OrganizationLease, Repository, RunFacts,
+    GithubInstallationState, GithubJob, GithubStore, JobDelivery, OrganizationLease, Repository,
+    RunFacts,
 };
 use ciproxy_store_interface::labels::Label;
 use ciproxy_store_interface::organizations::Organization;
@@ -21,6 +23,14 @@ use uuid::Uuid;
 use crate::connection::PgStore;
 
 impl GithubStore for PgStore {
+    fn save_github_installation_state(
+        &self,
+        workspace_id: Uuid,
+        organization_id: Uuid,
+        snapshot: &GithubInstallationState,
+    ) -> Result<Organization> {
+        installation_state::save(self, workspace_id, organization_id, snapshot)
+    }
     fn lock_github_organization(&self, github_id: i64) -> Result<Box<dyn OrganizationLease>> {
         lease::acquire(self, github_id)
     }

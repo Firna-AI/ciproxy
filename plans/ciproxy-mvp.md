@@ -282,6 +282,10 @@ each label. The scale set spike confirms it.
       Use a stable organization key across workspace registrations.
       Branch:
       `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
+- [x] Persist the verified organization login and App state together.
+      Restart a listener whose saved organization login changed.
+      Branch:
+      `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
 
 ## Milestone 7: Scaler
 

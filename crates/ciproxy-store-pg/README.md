@@ -71,6 +71,10 @@ Waiting takes no ordinary shared-query connection and creates no key row.
 Trusted run-facts lookups use a tenant/organization/run index.
 Remote scale-set upserts retain internal UUIDs, lock keys, and history.
 Managed-group lookup can reuse a retained organization registration.
+A verified installation-state update saves the current login and App state
+in one statement and returns the saved organization. Workspace, account,
+installation, and non-removed state guards prevent stale identity writes.
+The original suspension-only API stays available to its existing callers.
 
 Queries are synchronous.
 Async services must call them from blocking workers.

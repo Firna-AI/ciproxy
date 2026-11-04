@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use ciproxy_store_interface::organizations::Organization;
-use reqwest::{Client, StatusCode};
+use reqwest::Client;
 use scaleset::{
     Credentials, JitRunnerSetting, RunnerGroupId, RunnerId, RunnerScaleSetSpec, ScaleSetId,
 };
@@ -12,6 +12,7 @@ use scaleset::{
 use crate::auth::{AppJwt, ScaleSetJwt};
 use crate::error::{Error, Result, ResultExt};
 
+use super::failure::{Operation, matches, missing};
 use super::queue::SdkQueue;
 use super::{JitRegistration, MessageQueue, ScaleSetApi, ScaleSetFactory};
 
@@ -83,7 +84,7 @@ impl ScaleSetApi for SdkScaleSetApi {
                     }
                     return Ok(existing.id.get());
                 }
-                Err(error) if absent(&error) => {}
+                Err(error) if missing(&error, Operation::ScaleSet(id)) => {}
                 Err(error) => return Err(error).internal(),
             }
         }
@@ -113,7 +114,9 @@ impl ScaleSetApi for SdkScaleSetApi {
             .await
         {
             Ok(session) => session,
-            Err(error) if absent(&error) => return Err(Error::ScaleSetMissing { scale_set_id }),
+            Err(error) if missing(&error, Operation::Open(scale_set_id)) => {
+                return Err(Error::ScaleSetMissing { scale_set_id });
+            }
             Err(error) => return Err(error).internal(),
         };
         Ok(Box::new(SdkQueue {
@@ -129,7 +132,9 @@ impl ScaleSetApi for SdkScaleSetApi {
             .await
         {
             Ok(jit) => jit,
-            Err(error) if absent(&error) => return Err(Error::ScaleSetMissing { scale_set_id }),
+            Err(error) if missing(&error, Operation::Jit(scale_set_id)) => {
+                return Err(Error::ScaleSetMissing { scale_set_id });
+            }
             Err(error) => return Err(error).internal(),
         };
         let Some(runner) = jit.runner else {
@@ -144,8 +149,13 @@ impl ScaleSetApi for SdkScaleSetApi {
     async fn remove_runner(&self, runner_id: i64) -> Result<()> {
         match self.client.remove_runner(RunnerId(runner_id)).await {
             Ok(()) => Ok(()),
-            Err(error) if error.is_not_found() || error.is_runner_not_found() => Ok(()),
-            Err(error) if error.is_job_still_running() => Err(Error::RunnerBusy),
+            Err(error) if missing(&error, Operation::Runner(runner_id)) => Ok(()),
+            Err(error)
+                if error.is_job_still_running()
+                    && matches(&error, Operation::Runner(runner_id)) =>
+            {
+                Err(Error::RunnerBusy)
+            }
             Err(error) => Err(error).internal(),
         }
     }
@@ -157,12 +167,8 @@ impl ScaleSetApi for SdkScaleSetApi {
             .await
         {
             Ok(()) => Ok(()),
-            Err(error) if error.is_not_found() => Ok(()),
+            Err(error) if missing(&error, Operation::ScaleSet(scale_set_id)) => Ok(()),
             Err(error) => Err(error).internal(),
         }
     }
-}
-
-fn absent(error: &scaleset::Error) -> bool {
-    error.is_not_found() || error.status() == Some(StatusCode::NO_CONTENT)
 }

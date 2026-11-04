@@ -29,14 +29,7 @@ impl DurableListener {
             .open(context.scale_set.github_id, &options.owner)
             .await?;
         let result = self
-            .poll(
-                target,
-                &options,
-                stop,
-                &*lease,
-                &*queue,
-                context.scale_set.github_id,
-            )
+            .poll(target, &options, stop, &*lease, &*queue, &context)
             .await;
         let closed = queue.close().await;
         result?;
@@ -60,12 +53,17 @@ impl DurableListener {
         &self,
         target: ListenerTarget,
         lease: &dyn SessionLease,
-        opened: i64,
+        opened: &ListenerContext,
     ) -> Result<ListenerContext> {
         let context = self.check(target, lease).await?;
         let current = context.scale_set.github_id;
-        if current != opened {
-            return Err(Error::ScaleSetRestart { opened, current });
+        if current != opened.scale_set.github_id
+            || context.organization.login != opened.organization.login
+        {
+            return Err(Error::ScaleSetRestart {
+                opened: opened.scale_set.github_id,
+                current,
+            });
         }
         Ok(context)
     }
@@ -77,7 +75,7 @@ impl DurableListener {
         mut stop: watch::Receiver<bool>,
         lease: &dyn SessionLease,
         queue: &dyn MessageQueue,
-        opened: i64,
+        opened: &ListenerContext,
     ) -> Result<()> {
         let mut last_message: Option<MessageId> = None;
         let mut polls = 0;

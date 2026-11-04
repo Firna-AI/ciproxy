@@ -28,6 +28,9 @@ async fn removal_revokes_store_state_before_last_workspace_cleanup_delivery() {
         InstallationApiMock::for_organization
             .some_call(matching!("customer"))
             .returns(Err(Error::InstallationPending)),
+        InstallationApiMock::by_id
+            .some_call(matching!(19))
+            .returns(Err(Error::InstallationPending)),
         InstallationStoreMock::by_installation
             .some_call(matching!(19))
             .returns(Ok(Some(organization()))),
@@ -80,9 +83,15 @@ async fn suspension_stops_idle_organization_capacity_without_revoking_workspace(
         InstallationStoreMock::by_installation
             .some_call(matching!(19))
             .returns(Ok(Some(organization()))),
-        InstallationStoreMock::suspend
-            .some_call(matching!(_, true))
-            .returns(Ok(())),
+        InstallationStoreMock::save_snapshot
+            .some_call(matching!(_, _))
+            .answers(&|_, previous, snapshot| {
+                assert!(snapshot.suspended);
+                let mut saved = previous.clone();
+                saved.login = snapshot.login;
+                saved.app_state = AppState::Suspended;
+                Ok(saved)
+            }),
         InstallAuthorityMock::intended_workspace
             .some_call(matching!(41, 17))
             .returns(Ok(None)),
@@ -134,9 +143,15 @@ async fn unsuspend_reconciles_access_and_resumes_organization_capacity() {
         InstallationStoreMock::by_installation
             .some_call(matching!(19))
             .returns(Ok(Some(suspended))),
-        InstallationStoreMock::suspend
-            .some_call(matching!(_, false))
-            .returns(Ok(())),
+        InstallationStoreMock::save_snapshot
+            .some_call(matching!(_, _))
+            .answers(&|_, previous, snapshot| {
+                assert!(!snapshot.suspended);
+                let mut saved = previous.clone();
+                saved.login = snapshot.login;
+                saved.app_state = AppState::Active;
+                Ok(saved)
+            }),
         GitHubRestMock::repositories
             .some_call(matching!(19))
             .returns(Ok(repositories())),

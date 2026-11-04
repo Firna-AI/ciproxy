@@ -19,10 +19,15 @@ impl AppService {
     pub(super) async fn current_installation(
         &self,
         account: &Account,
+        installation_id: i64,
         lease: &dyn MutationLease,
     ) -> Result<InstalledApp> {
         lease.check().await?;
-        let current = self.installations.for_organization(&account.login).await?;
+        let current = match self.installations.for_organization(&account.login).await {
+            Ok(current) => current,
+            Err(Error::InstallationPending) => self.installations.by_id(installation_id).await?,
+            Err(error) => return Err(error),
+        };
         lease.check().await?;
         if current.account.id != account.id {
             return Err(Error::InstallationPending);
@@ -40,7 +45,7 @@ impl AppService {
         }
         let lease = self.leases.acquire(identity.account.id).await?;
         let current = self
-            .current_installation(&identity.account, &*lease)
+            .current_installation(&identity.account, installation_id, &*lease)
             .await?;
         if current.id != installation_id {
             return Ok(None);

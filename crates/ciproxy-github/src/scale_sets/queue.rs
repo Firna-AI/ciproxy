@@ -11,6 +11,7 @@ use serde::Deserialize;
 use crate::error::{Error, Result, ResultExt};
 
 use super::MessageQueue;
+use super::failure::{Operation, missing};
 
 pub(super) struct SdkQueue {
     pub(super) session: MessageSession,
@@ -69,8 +70,14 @@ impl MessageQueue for SdkQueue {
                 match self.session.get_message(last_message_id, capacity).await {
                     Ok(_) => {}
                     Err(error)
-                        if error.is_not_found()
-                            || error.status() == Some(StatusCode::NO_CONTENT) =>
+                        if missing(&error, Operation::Queue(&info.message_queue_url))
+                            || missing(
+                                &error,
+                                Operation::Session(
+                                    self.session.scale_set_id().get(),
+                                    info.session_id.as_str(),
+                                ),
+                            ) =>
                     {
                         return Err(Error::ScaleSetMissing {
                             scale_set_id: self.session.scale_set_id().get(),
