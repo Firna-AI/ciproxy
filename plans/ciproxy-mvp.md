@@ -479,12 +479,36 @@ Depends on: 4
 `billing.md` says, after `futex-ai/accounting`. My call: the return page and
 the event both read the session, so the tier changes once.
 
-- [ ] Create the prices, and open Checkout, with no tax, as item 39 says.
-- [ ] Take each signed event once. Change tiers and add-ons with proration,
+- [x] Create the prices, and open Checkout, with no tax, as item 39 says.
+      Branch: `conductor/ciproxy-mvp-milestone-17-billing`.
+- [x] Take each signed event once. Change tiers and add-ons with proration,
       and open the portal.
-- [ ] End the subscription of a workspace at the end of its period when
+      Branch: `conductor/ciproxy-mvp-milestone-17-billing`.
+- [x] End the subscription of a workspace at the end of its period when
       its last organization leaves.
+      Branch: `conductor/ciproxy-mvp-milestone-17-billing`.
+- [x] Apply the verified billing review fixes and rerun the complete gate.
+      Branch: `conductor/ciproxy-mvp-milestone-17-billing`.
+- [x] Preserve pending upgrade expiry across billing reconciliation and
+      recover abandoned changes after the Stripe pending window.
+      Branch: `conductor/ciproxy-mvp-milestone-17-billing`.
+- [x] Tie failure dates to typed invoice evidence and test invalid
+      signatures through the public billing service.
+      Branch: `conductor/ciproxy-mvp-milestone-17-billing`.
+- [x] Require expected requests for each scripted Stripe subscription
+      outcome and prove that wrong prices fail the integration tests.
+      Branch: `conductor/ciproxy-mvp-milestone-17-billing`.
 - [ ] Test each state with recorded events and the Stripe test mode.
+      The fixed event fixtures and fake HTTP Stripe tests pass locally.
+      Orchestrator: run the
+      [Stripe test mode checklist](../crates/ciproxy-billing/README.md#stripe-test-mode)
+      with `crates/ciproxy-billing/scripts/stripe-test-mode.sh`.
+      Start with `provision` and `listen`, then run `checkout`,
+      `reconcile`, `upgrade`, `addons`, `portal`, `cancel`, and `status`.
+      Supply test-mode credentials through environment variables.
+      Capture real signed events and check retries and period end.
+      No Stripe key is available in this workspace.
+      Branch: `conductor/ciproxy-mvp-milestone-17-billing`.
 
 ## Milestone 18: Dashboard API: jobs, usage, savings, and billing
 
