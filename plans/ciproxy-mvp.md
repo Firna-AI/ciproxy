@@ -69,7 +69,9 @@ This milestone adds the states of the new items, and the legal pages.
       more than one organization, the job page with the mixed cache source
       and with no entries restored, a `labels` key in `related-docs.ts`,
       the warning when an Admin gives the Admin role, no state without the
-      runner right after item 50, and the states that item 51 needs.
+      runner right after item 50, and the take-out of item 51: the dialog
+      says that the App is removed, and the last organization has no
+      take-out.
 
 ## Milestone 2: Documentation and protocol
 
@@ -79,7 +81,7 @@ Each answer goes into the protocol doc that it changes, and its `Open:`
 line goes.
 
 - [x] Write the disk rule of item 34, and each answer up to item 49.
-- [ ] Write the answer to item 51 into the docs. Item 50 is written.
+- [x] Write the answers to items 50 and 51 into the docs.
 - [x] Write the design calls of items 33 to 36 and 41 to 44 into the docs.
       Item 44 contradicts "Cache tiers" in `cache.md`, and item 44 wins.
 
@@ -389,7 +391,9 @@ UTC RFC 3339, and IDs as strings. Reason: JavaScript loses 64-bit numbers.
 - [ ] Sign in with the GitHub App. Apply "Roles" in `security.md` for each
       workspace, with the access requests.
 - [ ] Add an organization to a workspace, take one out, and keep the
-      repository access of each one.
+      repository access of each one. A take-out deletes the scale sets and
+      removes the install through the GitHub API, as item 51 says. ciproxy
+      tells its own removal apart from a removal by an owner.
 - [ ] Give the build of the API with each response, for the reload of an
       old dashboard tab in Milestone 19.
 - [ ] Give the install command to an Admin.
@@ -686,6 +690,11 @@ Answers of 4 November 2026:
   runners uses its own workspace. Rejected: options A to F. Later: a
   narrower right for chosen organizations or repositories, kept in the
   follow-up item `scoped-runner-rights.md`.
+- Item 51, D: a take-out removes the App from the organization. ciproxy
+  deletes its scale sets, lets its running jobs finish, and removes its own
+  install through the GitHub API. The organization can join any workspace
+  again as a new install, and the last organization cannot be taken out.
+  Rejected: options A, B, C, E, and F.
 - Item 49, C: the Boat backend lives in `futex-ai/sandbox`. Its trait
   `SandboxBackend` splits into capabilities, and `sandbox-boat` starts with
   the lifecycle, snapshots, processes, and files. The interface gains VM
@@ -851,8 +860,9 @@ Design calls on the questions of the docs work, my calls, 4 November 2026:
   report. The savings report now covers the whole workspace, which pays
   one price.
 
-Item 51 waits for the user. The options check of items 50 and 51 ran, and
-its report is in `.context/ciproxy-mvp/options-check-50-51.md`.
+No item of this plan waits for the user. The options check of items 50 and
+51 ran, and its report is in
+`.context/ciproxy-mvp/options-check-50-51.md`.
 
 The options check of the `plans` skill ran over these items on 4 November
 2026. Its reports are under `.context/ciproxy-mvp-foundation/`:
@@ -1468,8 +1478,7 @@ See the answers above.
 
 ### 51. An organization with the App cannot join
 
-**Status, 4 November 2026:** changed after the answer to item 50. The item
-goes to the user.
+**Answer, 4 November 2026:** D.
 
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Implementation, from the docs work of item 48.
