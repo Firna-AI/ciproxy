@@ -164,6 +164,39 @@ User decisions, 3 November 2026:
   installer becomes the first Admin, and without the runner right that
   Admin can do everything except add machines. Rejected: the Admin role
   alone, and the runner right for the first Admin only.
+- Answers of 4 November 2026 to items 8, 9, 10, and 19:
+  - Item 8, A: each tier keeps its six features. Each feature without a
+    screen shows "Coming later" on every page that lists it: alerts by
+    email and Slack, single sign-on, the audit log, and custom VM images.
+    Sticky Docker disks on Team, and several GitHub organizations on
+    Business, ship at launch. Rejected: moving all six to the later
+    features, building only the cheap ones, building all six, and keeping
+    only the two designed features.
+  - Item 9: the site claims a saving "up to" a percentage. The saving
+    assumes one new Hetzner server, at its list price and not from the
+    server auction, that runs jobs in every minute of the month. The same
+    minutes at the list prices of Blacksmith and GitHub-hosted runners give
+    the comparison. A small caption names this basis and links to the
+    calculation. The sample of the `mokly-ai` organization leaves the
+    site, because it was internal sampling. Rejected: auction prices, a
+    fixed saving, a range, a title with no number, a comparison with Boat's
+    own runner, and a calculator.
+  - Item 10, D: every sign-in button of the site says "Start free".
+    Rejected: a caption that explains the upgrade, carrying the tier
+    through sign-in, and Checkout before setup.
+  - Item 19, D: the job page shows the cache counts only when the machine
+    cache handled the restores. A Boat job, and a job that fell back to
+    the GitHub cache, show only the cache source. Rejected: counts that the
+    image sends with a token, counts through the Boat API, and no counts
+    on any job.
+- Design calls for these answers, my calls, 4 November 2026:
+  - The saving of item 9 uses the Hetzner AX42, which the example already
+    uses, at the list price of the day on the Hetzner site.
+  - The organizations of one Business subscription share one count of
+    starts and own machines. Each organization keeps its own machines and
+    jobs. Reason: tenant isolation stays, and the pool is a billing count.
+  - Sticky Docker disks come with Team and Business. Custom VM images come
+    later, on Business.
 - The options check of the `plans` skill ran over the last three decisions
   before the user answered. Its report is in
   `.context/ciproxy-mvp-foundation/options-check-1.md`.
@@ -263,6 +296,29 @@ agent, 4 November 2026:
   32 GB fits only Boat, and 32 vCPU and 128 GB fits nothing. Reason: the
   largest Boat size is 16 vCPU and 32 GB.
 
+Design calls on the problems that the mockups of the answers showed, my
+calls, 4 November 2026:
+
+- An Admin without the GitHub runner right sees, on Setup, Add machine, and
+  Machines, who can add a machine: an owner, or a person with that right.
+  Reason: item 28 keeps the runner right, and an owner can claim the Admin
+  role.
+- Admins learn of a request for access from a count on the Members tab.
+  The access page names the Admins, so that the person can ask them.
+  Reason: the MVP sends no email.
+- The job page shows the label and the VM size that ran. For a Boat job,
+  it names the Boat size. Reason: Boat bills the size that ran, which can
+  be larger than the size of the label.
+- A machine that cannot run jobs still counts toward the tier, and its page
+  offers "Remove machine". Reason: the count stays stable while a machine
+  recovers, and no limit stops a job.
+- An owner with the Billing or the Viewer role claims the Admin role from
+  the account menu. Reason: every owner can claim it.
+- "Clear cache" clears the cache entries, not the Docker disks. Reason:
+  Docker disks wait for item 8, and their own screen can clear them.
+- A reconnect after Boat rejects the key asks for the spend limit, filled
+  with the saved limit. Reason: every Boat connection asks for it.
+
 ### Pricing
 
 My proposal, which the user approved for the MVP on 3 November 2026. It
@@ -288,12 +344,16 @@ The numbers can still change before launch.
   machines from Team, Blacksmith sandboxes and a customer cache bucket from
   Business.
 
-Open decisions, 4 November 2026. They wait for the user. The site mockups
-showed them. The options check of the `plans` skill ran over them and
-changed each recommendation. Its report is in
+Decisions from the mockups and the docs, 4 November 2026. The user
+answered each item. Each answered
+item keeps its options as the record of the alternatives. The options check
+of the `plans` skill ran over items 8 to 10 and changed each
+recommendation. Its report is in
 `.context/ciproxy-mvp-foundation/options-check-2.md`.
 
 ### 8. Tier features have no screens
+
+**Answer, 4 November 2026:** A.
 
 - **Severity:** High. **Effort:** Medium.
 - **Source:** Implementation.
@@ -351,6 +411,9 @@ changed each recommendation. Its report is in
 
 ### 9. The cost claim needs a price basis
 
+**Answer, 4 November 2026:** a saving "up to" a percentage, as the
+Decisions section says.
+
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Implementation.
 - **Category:** UX wording.
@@ -401,6 +464,8 @@ changed each recommendation. Its report is in
 
 ### 10. Paid-tier buttons drop the chosen tier
 
+**Answer, 4 November 2026:** D.
+
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Implementation.
 - **Category:** Docs or spec.
@@ -441,6 +506,8 @@ changed each recommendation. Its report is in
   buyers who arrive decided against a simpler flow.
 
 ### 11. Two words name one VM size
+
+**Answer, 4 November 2026:** C.
 
 - **Severity:** Low. **Effort:** Small.
 - **Source:** Implementation.
@@ -509,6 +576,8 @@ ran over them. The docs mark each one as `Open:`.
 
 ### 12. Who can manage an organization in ciproxy
 
+**Answer, 4 November 2026:** ciproxy controls access with its own roles.
+
 - **Severity:** High. **Effort:** Medium.
 - **Source:** Design.
 - **Category:** Security.
@@ -552,6 +621,8 @@ ran over them. The docs mark each one as `Open:`.
 
 ### 13. What a job VM on an own machine can reach
 
+**Answer, 4 November 2026:** A.
+
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Design.
 - **Category:** Security.
@@ -588,6 +659,8 @@ ran over them. The docs mark each one as `Open:`.
 
 ### 14. A leaked install command
 
+**Answer, 4 November 2026:** A.
+
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Design.
 - **Category:** Security.
@@ -621,6 +694,8 @@ ran over them. The docs mark each one as `Open:`.
 
 ### 15. How the agent gets a new version
 
+**Answer, 4 November 2026:** A.
+
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Design.
 - **Category:** Docs or spec.
@@ -652,6 +727,8 @@ ran over them. The docs mark each one as `Open:`.
 
 ### 16. Which spend limit applies when Boat connects
 
+**Answer, 4 November 2026:** C.
+
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Design.
 - **Category:** Docs or spec.
@@ -682,6 +759,8 @@ ran over them. The docs mark each one as `Open:`.
   effort.
 
 ### 17. Who can choose a plan and pay
+
+**Answer, 4 November 2026:** people with the Admin or the Billing role.
 
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Design. The plan's orchestrator added this to the billing TODO.
@@ -715,6 +794,8 @@ ran over them. The docs mark each one as `Open:`.
   12.
 
 ### 18. Cache entries that leave the GitHub cache
+
+**Answer, 4 November 2026:** B, with C as a follow-up item.
 
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Implementation.
@@ -751,6 +832,8 @@ ran over them. The docs mark each one as `Open:`.
 
 ### 19. The cache counts of a Boat job
 
+**Answer, 4 November 2026:** D.
+
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Implementation.
 - **Category:** Docs or spec.
@@ -786,6 +869,8 @@ ran over them. The docs mark each one as `Open:`.
   boundary.
 
 ### 20. The licence of the image definition
+
+**Answer, 4 November 2026:** F.
 
 - **Severity:** Low. **Effort:** Small.
 - **Source:** Implementation.
@@ -875,6 +960,17 @@ up Mokly as `futex-ai/accounting` does.
       counts for each job, limit the instant-start claim of the features
       section to the `ciproxy` label, and apply item 12 to the text of the
       pending approval screen.
+- [ ] Add the Viewer and Billing states of Jobs, Machines, Savings, and
+      Plans. Add the state without the runner right to Setup, Add machine,
+      and Machines.
+- [ ] Add the count of access requests on the Members tab, the Admin claim
+      in the account menu, the page after "Revoke token", the spend limit
+      of a reconnect, the label of a waiting job in the live queue, and the
+      VM size that ran on the job page.
+- [ ] Name the protocol docs of each mockup entry in its `relatedDocs`.
+- [ ] Check the disks of the default labels against the Boat sizes. The
+      labels ask for 60, 80, and 120 GB, and Boat `small` and `default`
+      give 51 GB. Waits for the Boat spike.
 - [ ] Update the design and the TODOs of this plan for each problem that
       the mockups show.
 
