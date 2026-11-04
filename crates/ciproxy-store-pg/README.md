@@ -44,7 +44,8 @@ An install into another workspace creates a separate registration.
 It transfers no history or shared resource from the old workspace.
 Individual and workspace removal preserve each machine's first removal time.
 
-Metering reads use repeatable-read transactions for coherent snapshots.
+One helper gives workspace usage, savings, and Boat accounting read-only
+repeatable-read snapshots.
 Boat source costs and cost cursors share one repeatable-read snapshot.
 Savings registrations, range totals, and monthly costs share one
 repeatable-read read-only snapshot.
@@ -128,6 +129,8 @@ CI starts the database for the existing workspace test phase.
 - [src/boat.rs](src/boat.rs) rotates and erases encrypted keys.
 - [src/machine_removal.rs](src/machine_removal.rs) preserves removal times.
 - [src/metering](src/metering) stores cost histories and accounting deltas.
+- [src/metering/snapshot.rs](src/metering/snapshot.rs) configures shared
+  metering read transactions.
 - [tests/store](tests/store) tests the public API against PostgreSQL.
 
 ### Related Docs

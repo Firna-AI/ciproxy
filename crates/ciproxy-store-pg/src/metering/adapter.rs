@@ -20,14 +20,11 @@ use uuid::Uuid;
 use crate::connection::PgStore;
 use crate::error::{QueryResultExt, require_record};
 
-use super::{aggregates, boat_cursors, facts, history, job_cursors};
+use super::{aggregates, boat_cursors, facts, history, job_cursors, snapshot};
 
 impl MeteringStore for PgStore {
     fn workspace_usage(&self, workspace_id: Uuid) -> Result<WorkspaceUsage> {
-        self.connection()?
-            .build_transaction()
-            .repeatable_read()
-            .read_only()
+        snapshot::transaction(&mut *self.connection()?)
             .run(|connection| facts::load(connection, workspace_id))
             .store()
     }
@@ -80,10 +77,7 @@ impl MeteringStore for PgStore {
         from: NaiveDate,
         until: NaiveDate,
     ) -> Result<SavingsSnapshot> {
-        self.connection()?
-            .build_transaction()
-            .repeatable_read()
-            .read_only()
+        snapshot::transaction(&mut *self.connection()?)
             .run(|connection| {
                 Ok(SavingsSnapshot {
                     machines: facts::registrations(connection, workspace_id)?,
@@ -138,10 +132,7 @@ impl MeteringStore for PgStore {
     }
 
     fn boat_accounting(&self, workspace_id: Uuid) -> Result<BoatAccounting> {
-        self.connection()?
-            .build_transaction()
-            .repeatable_read()
-            .read_only()
+        snapshot::transaction(&mut *self.connection()?)
             .run(|connection| {
                 Ok(BoatAccounting {
                     costs: history::load_boat(connection, workspace_id)?,
