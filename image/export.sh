@@ -8,14 +8,17 @@ work_dir=$(realpath "${1:?Usage: image/export.sh WORK_DIR}")
 disk="$work_dir/qemu-output/ciproxy.qcow2"
 artifacts="$work_dir/artifacts"
 rootfs="$work_dir/rootfs"
+source_archive="$work_dir/source-rootfs.tar.zst"
 mkdir -p "$artifacts" "$rootfs"
 
 virt-customize -a "$disk" \
     --delete /home/packer/.ssh --delete /root/.ssh \
     --delete /var/lib/cloud --delete /tmp/ciproxy-image \
     --run-command 'rm -f /etc/ssh/ssh_host_* /etc/machine-id /var/lib/dbus/machine-id; touch /etc/machine-id; rm -rf /var/log/*'
-bash "$definition/rootfs-archive.sh" export "$disk" "$artifacts/rootfs.tar.zst"
-sudo bash "$definition/rootfs-archive.sh" extract "$artifacts/rootfs.tar.zst" "$rootfs"
+bash "$definition/rootfs-archive.sh" export "$disk" "$source_archive"
+sudo bash "$definition/rootfs-archive.sh" extract "$source_archive" "$rootfs"
+printf '/dev/vda / ext4 defaults 0 1\n' | sudo tee "$rootfs/etc/fstab" > /dev/null
+sudo bash "$definition/rootfs-archive.sh" pack "$rootfs" "$artifacts/rootfs.tar.zst"
 sudo python3 "$definition/measure.py" "$rootfs" > "$work_dir/installed-size.json"
 
 truncate -s "${ROOTFS_BYTES:-60000000000}" "$artifacts/rootfs.ext4"

@@ -30,5 +30,4 @@ Name=eth0
 DHCP=yes
 EOF
 systemctl enable systemd-networkd systemd-resolved
-printf '/dev/vda / ext4 defaults 0 1\n' > /etc/fstab
 rm -f /tmp/ciproxy-runner.tar.gz /tmp/ciproxy-guest /tmp/vmlinux-ciproxy

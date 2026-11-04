@@ -47,6 +47,10 @@ No Azure account is needed.
 `rootfs-archive.sh` shares the export and extraction metadata policy.
 It saves numeric owners, extended attributes, and POSIX ACLs with guestfish.
 Both extraction paths use it to restore every saved attribute namespace.
+The partitioned source keeps its mount configuration through inspection and
+export. `source-rootfs.tar.zst` stays in `WORK_DIR` as an intermediate.
+The export extracts one release tree and sets `/dev/vda` in its `etc/fstab`.
+Both the Boat archive and Firecracker ext4 disk come from that finalized tree.
 
 To prepare inputs and the recipe without starting a VM:
 
@@ -87,6 +91,20 @@ The image enables DHCP on `eth0`.
 The guest listens on vsock port 5252 by default in its systemd unit.
 Change `/etc/ciproxy/guest.env` when the agent uses another port.
 The agent must send one JSON object per line over that connection.
+
+Run the mount-order regression without KVM:
+
+```sh
+sudo python3 image/check-export.py \
+  --work-dir .context/ciproxy-mvp/orchestrator-fix-1
+```
+
+It needs `chroot`, `ldd`, Bash, Python, tar, zstd, e2fsprogs, `acl`, and
+`setcap` from the Linux capability tools. It keeps all fixtures as evidence.
+It runs provisioning inside a fixture chroot with stub provisioning tools.
+It runs the real export script with stub libguestfs transport boundaries.
+Real archive, ext4, and package tools check both outputs and their metadata.
+This check cannot prove real guestfish inspection, mounts, or a VM boot.
 
 ## Publish and keep the runner current
 
