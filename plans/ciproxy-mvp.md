@@ -1,8 +1,9 @@
 # ciproxy MVP
 
 Status: Active. On branch `calummoore/ci-proxy-load-balancer`, no pull
-request yet. The pull request that completes the work deletes this plan, as
-the `plans` skill says.
+request yet. The user approved this plan on 4 November 2026, in the words
+"plan is approved". The pull request that completes the work deletes this
+plan, as the `plans` skill says.
 
 This plan builds and launches the MVP of ciproxy: the agent, the control
 plane, the dashboard, billing, the site, and the deployment. A job names a
@@ -27,9 +28,10 @@ Design calls, my calls, 4 November 2026:
 - **Parallel work:** a milestone depends only on the code that it needs. An
   open item blocks only the TODOs that end with "Waits for item N." Reason:
   an answer then blocks only the work that uses it.
-- **Spikes:** the scale set, Firecracker, cache, and job hooks spikes
-  confirm their mechanisms. The Boat spike got HTTP 402 `billing_required`,
-  and it runs again when Firna has a Boat plan. The Boat work waits for it.
+- **Spikes:** all five spikes confirm their mechanisms. The Boat spike ran
+  on 4 November 2026 with the paid plan: two jobs ran with Docker, 17.6 to
+  20.6 seconds from the queue to the first step. It found that a sandbox
+  cannot end itself without the account key. Item 47 settles it.
 - **Actions:** `Tags:` milestones go to the `ui implementor`, Milestones 2
   and 24 to the `docs implementor`, and the rest to the `non-ui implementor`.
 - **Open parts:** `ciproxy-protocol`, `ciproxy-agent`, `ciproxy-guest`,
@@ -50,14 +52,13 @@ Tags: mockup
 
 Depends on: none
 
-Milestone 1 of the foundation plan applies the answers and items 8 to 11.
+Milestone 1 of the foundation plan applies the answers to items 8 to 20.
 This milestone adds the states of the new items, and the legal pages.
 
 - [ ] Add a removed App, an ended sign-in, and a personal account.
 - [ ] Add the install command, a refused label name, too little disk, and
       mixed machines.
 - [ ] Add a payment that Stripe still confirms, and two banners at once.
-- [ ] Update the cache fields of the job page, as item 19 says.
 - [ ] Add the terms and privacy pages. Run the mockup check, and smoke-test
       the changed pages.
 - [ ] Update this plan for each problem that the mockups show.
@@ -69,7 +70,7 @@ Depends on: 1
 Each answer goes into the protocol doc that it changes, and its `Open:`
 line goes.
 
-- [ ] Write each answer that changes a doc. Waits for items 32 and 37.
+- [ ] Write each answer that changes a doc. Waits for items 32 and 48.
 
 ## Milestone 3: Protocol crate
 
@@ -195,16 +196,22 @@ ships through `futex-ai/cli-release`.
 Depends on: 3
 
 One image serves the job VMs and Boat, as "The image" in `agent.md` says.
-The Firecracker spike confirms it for VMs. Boat waits for its spike.
+The Firecracker spike confirms it for VMs. The Boat spike ran the runner
+from a minimal snapshot, not from the full image.
 
 - [ ] Measure the full image first. If it fits no size, propose a smaller
       image as a decision.
 - [ ] Define it under `image/` from a pinned `actions/runner-images`, with
       Docker, the runner, and a kernel.
 - [ ] Add `ciproxy-guest`: it takes the registration over vsock, starts the
-      runner, and powers off the VM after the runner exits.
+      runner, and powers off the VM after the runner exits. On Boat, it
+      tells the control plane when the runner exits, as item 47 says.
 - [ ] Publish it with its SHA-256, and as a shared Boat snapshot. Rebuild
       before GitHub stops accepting the runner.
+- [ ] Run a job from the shared snapshot on Boat `small` and `default`, and
+      measure the free disk. The label `ciproxy` asks for 60 GB, and Boat
+      gives 51 GB for files. Propose the disk of the default labels as a
+      decision.
 
 ## Milestone 11: Cache sidecar and runner patch
 
@@ -223,22 +230,52 @@ evicts them. Boat runs the stock runner. The cache spike confirms it.
 - [ ] Add "Clear cache" for one machine, eviction, and the reports.
 - [ ] Test the sidecar against a fake GitHub cache.
 
-## Milestone 12: Boat backend and the size list
+## Milestone 12: Boat backend on the shared sandbox interface
 
 Depends on: 4
 
-`ciproxy-backend-interface` holds the contract of `overflow.md`, and
-`ciproxy-backend-boat` implements it. **Unconfirmed:** the Boat spike.
-**Fallback:** AWS EC2 behind the same trait, which needs a user decision.
+Item 49 puts the Boat backend in `futex-ai/sandbox`, behind a split of its
+trait into capabilities. A pull request in that repository, from its own
+workspace, does the first four TODOs. ciproxy then uses `sandbox-interface`
+and `sandbox-boat` at the reviewed revision. `ciproxy-overflow` keeps the
+rules of `overflow.md`: the size choice, the refusals, the spend, the end
+report, and the orphan cleanup. The Boat spike confirms the runner in a
+sandbox, the refusals, and the limits. **Fallback:** AWS EC2 behind the same
+interface, which needs a user decision.
 
-- [ ] Check keys. Read `machineTypes` of `GET /limits` every 5 minutes. My
-      call: a Boat plan can change at any time.
+- [ ] In `futex-ai/sandbox`, write the plan of the change, as its
+      `AGENTS.md` says.
+- [ ] In `futex-ai/sandbox`, split `SandboxBackend` into capability traits:
+      the lifecycle, snapshots, image preparation, processes, files,
+      terminals, ports, and screens. Move `sandbox-e2b`, the mocks, and the
+      conformance harness to them. Record the adoption steps for Juno.
+- [ ] In `futex-ai/sandbox`, add a VM size request, the sizes that an
+      account can start with their prices, a start refusal with a retry
+      time, and one-shot lifetimes up to the limit of each provider.
+- [ ] In `futex-ai/sandbox`, add `sandbox-boat` with the lifecycle,
+      snapshots, processes, and files. Use marks, `noEnv`, `ttlSeconds`,
+      and an `Idempotency-Key`. Join `machineTypes` of `GET /limits` with
+      the published sizes and prices, because the API gives no dimensions.
+      Map HTTP 429 `rate_limited` to a refusal with its `Retry-After`, 403
+      `machine_class_plan_required` to a size that the plan lacks, and 402
+      `billing_required` to a billing refusal. Test it against a fake Boat
+      server and the conformance harness.
+- [ ] Add `ciproxy-overflow` on `sandbox-interface`, with the Boat adapter
+      of the reviewed revision. Read the sizes of each account every 5
+      minutes. My call: a Boat plan can change at any time.
 - [ ] Pick the cheapest size that fits, or the largest.
 - [ ] Start from the shared snapshot with marks, a private registration
-      file, a `ttlSeconds` backstop, and an `Idempotency-Key`.
-- [ ] Delete idle marked sandboxes, and map each refusal. Count the spend as
-      run time and start charges. My call: Boat bills these two parts.
-- [ ] Encrypt the keys with Cloud KMS. Test against a fake Boat server.
+      file, a token for the end report, a lifetime of 6 hours, or 2 on a
+      free trial, and a delivery key for each start.
+- [ ] Delete a sandbox at once when its guest reports the end of its
+      runner. Accept one report for each token.
+- [ ] Delete idle marked sandboxes. Wait out a refusal with a retry time,
+      drop a size that the plan lacks, and stop Boat starts at a billing
+      refusal. Treat `canStart` as a hint, as the spike saw a refusal after
+      `canStart: true`. Count the spend as run time and start charges. My
+      call: Boat bills these two parts.
+- [ ] Encrypt the keys with Cloud KMS. Test with the mock of
+      `sandbox-interface`.
 
 ## Milestone 13: Own machines end to end
 
@@ -292,8 +329,8 @@ Depends on: 4
 
 - [ ] Count the starts of each period, the machines, the soft limits, and
       the offer.
-- [ ] Compute the savings report, and keep the daily totals. Waits for item
-      37.
+- [ ] Compute the savings report, and keep the daily totals for 90 days, as
+      item 37 says.
 - [ ] Unit-test each rule with hand-worked numbers.
 
 ## Milestone 17: Billing with Stripe
@@ -439,7 +476,7 @@ The public copy goes live before the site, because the site links to it.
 - [ ] Run the CI of ciproxy on ciproxy, and fix or record each problem.
       Close the follow-up item `expo-56-npm-advisories.md`.
 - [ ] Draft the terms and the privacy policy, which the user writes or
-      approves. Waits for item 37.
+      approves. They state the limits of "Data retention" in `security.md`.
 - [ ] Register the production App and the Stripe live mode, which need the
       accounts of the user.
 - [ ] Deploy production. Smoke-test a first job, an overflow, and a live
@@ -447,6 +484,9 @@ The public copy goes live before the site, because the site links to it.
 - [ ] Publish the open parts in a public repository that the user creates,
       and check that it builds alone. Check the licence of the installer
       of `futex-ai/cli-release`.
+- [ ] Ask Boat to confirm in writing that a customer may run ciproxy
+      runners on its own Boat account. The user sends the request. My call:
+      the terms allow this use by inference only.
 - [ ] Publish the site. Then make the GitHub App public.
 
 ## Milestone 28: Verification, commit, review, and pull request
@@ -488,8 +528,10 @@ had a clearly best option:
   organization costs nothing.
 - Item 38: Checkout takes cards only, and its return page says when Stripe still
   confirms. Reason: the page never asks for a second payment.
-- Item 40: The label `ciproxy` gets 50 GB of disk, if the Boat spike shows that
-  space free on `default`. Reason: it then fits the cheaper Boat size.
+- Item 40, withdrawn on 4 November 2026: the disk of the default labels is a
+  requirement in `job-routing.md`, so a change goes to the user. Milestone
+  10 measures the free disk on Boat with the shared image, and then
+  proposes the disk as a decision.
 - Item 41: A size that fits a different number of jobs on different machines
   shows a range, such as "1 to 3 jobs". Reason: it keeps the rule of one
   machine.
@@ -515,6 +557,27 @@ Answers of 4 November 2026:
   rates.
 - Item 45, B: a gate phase regenerates the API types and fails on a diff.
   Rejected: review only.
+- Item 37, B: ciproxy keeps 90 days of job details on every tier, and each
+  page shows only the window of its tier. Rejected: the window of the
+  current tier, 13 months of totals, and a setting for a shorter window.
+  My call: the daily totals also stay 90 days, so the privacy policy states
+  one limit.
+- Item 32: the user asked for a spike of option B, the first report of the
+  job-started hook, before the choice. Milestone 3 of the foundation plan
+  runs it.
+- Item 47, G: the guest in each sandbox tells the control plane when its
+  runner exits, with a token for that sandbox only, and the control plane
+  deletes the sandbox at once. A Boat TTL of 6 hours, or 2 hours on a free
+  trial, is the backstop. Rejected: the TTL alone, a request to Boat, AWS
+  EC2 first, Boat's in-sandbox key, a renewed TTL, and a key that ciproxy
+  creates. The user proposed this option.
+- Item 49, C: the Boat backend lives in `futex-ai/sandbox`. Its trait
+  `SandboxBackend` splits into capabilities, and `sandbox-boat` starts with
+  the lifecycle, snapshots, processes, and files. The interface gains VM
+  sizes, the size list with prices, refusals with a retry time, and longer
+  lifetimes. Juno adopts the split. Rejected: ciproxy's own trait until
+  after launch, and the full trait for Boat. The user first wrote A, and
+  then C, which stands.
 
 Design calls for the parts that answer B to item 29 leaves open, my calls,
 4 November 2026. The options check named these parts:
@@ -536,8 +599,25 @@ Design calls for the parts that answer B to item 29 leaves open, my calls,
 - The scale sets and the runners of the organization stay on GitHub. The
   docs say so. Reason: ciproxy has no GitHub access left to delete them.
 
-Items 32 and 37 wait for the user. The options check of the `plans` skill
-ran over items 29 to 45 on 4 November 2026 and changed the recommendations
+Design calls on the questions of the docs work, my calls, 4 November 2026:
+
+- A move up between paid tiers changes the tier only after its charge
+  succeeds. A failed charge keeps the old tier, and the page offers to try
+  again or to update the card. When the bank asks for a confirmation, the
+  Stripe payment page opens. Reason: the tier already changes only after
+  Stripe confirms a checkout, and Stripe supports this for a subscription
+  change.
+- The savings report prices a job whose VM size an alternative does not
+  sell at the smallest size of that alternative with at least its vCPU and
+  memory. Reason: the job would need that size there, and each price stays
+  a real list price.
+- In a Business pool, the savings report of each organization counts the
+  share of the subscription price that matches its share of the starts of
+  the pool. Reason: the shares add up to the real price.
+
+Items 32 and 48 wait for the user. Item 32 waits for its spike. The
+options check of the `plans` skill ran over items 29 to 45 on 4 November
+2026 and changed the recommendations
 of items 29, 32, 37, and 39. Its report is in
 `.context/ciproxy-mvp-foundation/options-check-3.md`.
 
@@ -648,6 +728,9 @@ of items 29, 32, 37, and 39. Its report is in
 
 ### 32. No allowed source gives the branch of a job
 
+**Status, 4 November 2026:** the user asked for a spike of option B
+before the choice.
+
 - **Severity:** High. **Effort:** Medium.
 - **Source:** Implementation.
 - **Category:** Security.
@@ -708,6 +791,8 @@ of items 29, 32, 37, and 39. Its report is in
   and the site rule out.
 
 ### 37. Data retention has no rule
+
+**Answer, 4 November 2026:** B.
 
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Design.
@@ -820,3 +905,196 @@ of items 29, 32, 37, and 39. Its report is in
 - **Recommendation:** B. It is the drift check that the `shared-types` skill
   names.
 - **Action:** ask the user, because a new gate check needs the user.
+
+### 47. A Boat sandbox cannot end itself
+
+**Answer, 4 November 2026:** G.
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation, from the Boat spike.
+- **Category:** Docs or spec.
+- **Location:** `docs/protocol/overflow.md`, "Backend contract". Milestones
+  10 and 12.
+- **Terms:**
+  - **TTL:** `ttlSeconds`, the lifetime that Boat gives a sandbox at its
+    start. Boat stops the sandbox when it ends, with no call.
+  - **In-sandbox key:** a key that Boat writes into each sandbox. It works
+    only on that sandbox, and it can stop it.
+- **Background:**
+  - The backend contract says that a backend ends a VM by itself when its
+    runner exits, so the end needs neither the key nor the control plane.
+  - The reason: an outage, or a lost key, must not leave sandboxes billing.
+  - `overflow.md` also requires that the control plane deletes each sandbox
+    when its job ends, and deletes orphans after an outage. So the end
+    without ciproxy is a backstop.
+  - The spike used `noEnv: true`, which keeps the secrets of the customer's
+    Boat account out, and also removes the in-sandbox key.
+  - So `boat stop self` returned HTTP 401. A guest poweroff left the
+    sandbox `idle`, and Boat kept counting its time.
+  - A TTL of 90 seconds removed a sandbox after about 95 seconds.
+  - Job code runs as root, so it can read every credential in the sandbox.
+- **Problem:** With no credential in the sandbox, nothing ends it when its
+  runner exits, so Boat fails the backend contract.
+- **Impact if no action:** The Boat backend cannot meet its contract, and
+  the overflow milestone cannot finish.
+- **Root question:** What ends a Boat sandbox after its runner exits when
+  ciproxy cannot delete it, and how long may it bill before that?
+- **Options:**
+  - **A.** Change the contract: a VM ends by itself when its runner exits,
+    or at a lifetime that ciproxy sets at the start. Each sandbox gets a
+    TTL of 6 hours, or 2 hours on a Boat free trial. Effort: Small.
+    - A Boat job then stops at the TTL, as a GitHub-hosted job stops at 6
+      hours. On an own machine, a job can run for up to 5 days.
+    - In an outage, each idle sandbox bills until ciproxy is back or its
+      TTL ends: about $7 an hour for 100 `large` sandboxes.
+  - **B.** A, and the user asks Boat to end a sandbox when its guest powers
+    off. The contract can then come back. Effort: Small.
+  - **C.** Keep the contract, and make AWS EC2 the first backend. EC2 can
+    end an instance at its own shutdown. Effort: Large.
+  - **D.** Keep the contract with the in-sandbox key. Each sandbox starts in
+    a Boat environment that passes only this key. The guest runs `boat stop
+    self` after the runner exits, and A's TTL stays as a backstop. Effort:
+    Medium.
+    - Job code gets the key, and can stop, run commands, use SSH, publish a
+      port, and prompt Boat's agent, on its own sandbox.
+    - A spike must confirm the environment, the stop, and what the key can
+      change. Large if Setup must ask the customer to create it.
+  - **E.** A, and the control plane renews each TTL every hour while its
+    runner runs. A Boat job then has no 6-hour cap. Effort: Small.
+  - **F.** Keep the contract, with a stop-only key that ciproxy creates for
+    each sandbox. Only an admin key can create keys in Boat, so ciproxy
+    must hold an admin key of each customer's account. Effort: Medium.
+  - **G.** A, and the guest in the sandbox tells the control plane when its
+    runner exits, with a token for that sandbox only. The control plane
+    then deletes the sandbox at once. This is the user's proposal of
+    4 November 2026. Effort: Small.
+    - It ends a sandbox seconds after its runner exits, also when GitHub's
+      message comes late, or never, as for a runner that fails at start.
+    - Job code can send the message too, but it can only end its own job.
+    - Like the message from GitHub, it needs the control plane and the key,
+      so the TTL of A stays the backstop for an outage.
+- **Left out:**
+  - The customer's key in the sandbox, because job code would control the
+    whole Boat account, which `security.md` forbids.
+  - No TTL, because a sandbox would then bill without end after ciproxy
+    loses the key.
+  - A separate cleanup service, because it needs the same key, and the
+    same outage stops it.
+  - A powered-off sandbox that stops billing, because Boat does not
+    document it.
+- **Wider fix:** A. Its contract text bounds every backend: Boat meets it
+  with a TTL, and EC2 with its shutdown behaviour.
+- **Previous examples:** None found.
+- **Related:** Item 19, answered D, gives the reason that no new path leaves
+  a sandbox. G adds one path, for the end of the runner only.
+- **Recommendation:** G, changed from A after the user's question. It keeps
+  the TTL backstop of A, and it ends each sandbox at once when its runner
+  exits. D is the way back to the strict contract.
+- **Action:** ask the user, because A changes a requirement of the backend
+  contract in `overflow.md`.
+
+### 48. No rule says how organizations join a pool
+
+**Status, 4 November 2026:** its options check runs. The item goes to
+the user after it.
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Implementation, from the docs work of item 8.
+- **Category:** Docs or spec.
+- **Location:** `docs/protocol/billing.md`, "Business pools", and
+  `docs/protocol/metering.md`, "A Business pool". Milestones 25 and 26.
+- **Background:**
+  - Answer A to item 8 keeps the six features in the tiers, and marks each
+    feature without a screen "Coming later".
+  - The plan records "several GitHub organizations" as shipping at launch,
+    because a design call shares one count across the organizations of a
+    Business subscription.
+  - No mockup shows how an organization joins or leaves a pool.
+  - Milestones 25 and 26 build "the joining of organizations".
+- **Problem:** No rule says who can add an organization to a Business
+  subscription, or where. A join also needs a rule for the subscription
+  that the joining organization has, and for its starts so far.
+- **Impact if no action:** The build guesses a flow for a launch feature.
+  A guess could let a person tie an organization to a subscription without
+  a role there.
+- **Root question:** How does an organization join or leave the Business
+  subscription of another organization, and who can do it?
+- **Options:**
+  - **A.** A person with the Admin or the Billing role in both
+    organizations joins them on Plan and usage, and can take one out.
+    Effort: Medium.
+  - **B.** A payer of the Business organization creates an invite, and an
+    Admin of the other organization accepts it. Effort: Medium.
+  - **C.** The ciproxy team joins the organizations on request, with no
+    screen. Effort: Small.
+  - **D.** Mark "several GitHub organizations" "Coming later" too, because
+    it has no screen. Business then sells its larger counts and priority
+    support at launch. Effort: Small.
+- **Left out:**
+  - A pool from the GitHub enterprise account, because the App would need
+    more access than "Runner access only".
+  - A join by any member, because item 17 lets only Admin and Billing
+    people commit an organization to a charge.
+- **Wider fix:** None, because this is one flow.
+- **Previous examples:** None found.
+- **Recommendation:** D. It follows answer A for a feature with no screen,
+  it is the fastest, and Business still sells on its larger counts. A is
+  best if the pool must ship at launch.
+- **Action:** ask the user, because D changes the record of answer A, and
+  A, B, and C add a flow that no requirement covers.
+
+### 49. Where the Boat backend lives
+
+**Answer, 4 November 2026:** C.
+
+- **Severity:** Medium. **Effort:** Large.
+- **Source:** Design, from the user's question of 4 November 2026.
+- **Category:** Code structure.
+- **Location:** Milestone 12, and the repository `futex-ai/sandbox`.
+- **Terms:**
+  - **`futex-ai/sandbox`:** a public Rust workspace under MIT. Its crate
+    `sandbox-interface` holds a trait for remote sandboxes of any provider,
+    and `sandbox-e2b` implements it for E2B. Juno uses it.
+- **Background:**
+  - Milestone 12 plans `ciproxy-backend-interface`, a small trait for the
+    backend contract of `overflow.md`, and `ciproxy-backend-boat`.
+  - `SandboxBackend` has 28 functions: the lifecycle, snapshots, image
+    preparation, processes, files, terminals, ports, and desktop screens.
+  - It has no VM size request, no list of the sizes of an account, no
+    refusal with a retry time, and no price. A one-shot lifetime is at
+    most 1 hour.
+  - ciproxy needs each of these, and a lifetime of 6 hours.
+  - Boat has processes, files, SSH, a desktop, ports, and snapshots, so a
+    Boat adapter can implement most of the trait.
+  - That repository allows breaking changes, because nothing runs on it in
+    production.
+- **Problem:** A shared interface for sandbox providers exists, but the
+  plan does not use it, and it lacks what ciproxy needs.
+- **Impact if no action:** ciproxy builds a second sandbox interface, and
+  Boat support does not reach the other products.
+- **Root question:** Where do the Boat backend and its interface live, so
+  that other products and providers share them, without delaying overflow?
+- **Options:**
+  - **A.** Keep ciproxy's own small trait for the MVP, as planned. Move it
+    onto `sandbox-interface` after launch, with a second provider. Effort:
+    Medium.
+  - **B.** Add `sandbox-boat` to `futex-ai/sandbox` on the full trait, and
+    add sizes, the size list, refusals, prices, and longer lifetimes to the
+    interface. Boat must first implement all 28 functions, also the
+    terminals and the desktop screens. Effort: Large.
+  - **C.** B, but first split `SandboxBackend` into capabilities: the
+    lifecycle, snapshots, processes, files, terminals, and screens.
+    `sandbox-boat` starts with the four that ciproxy needs. Juno must
+    adopt the split. Effort: Large.
+- **Left out:** Only the types of `sandbox-interface` in ciproxy's own
+  trait, because that gives no shared interface.
+- **Wider fix:** C. Each provider then implements only what it supports, and
+  each product depends only on what it uses.
+- **Previous examples:** The extraction of `sandbox-interface` and
+  `sandbox-e2b` out of Juno, in the plan
+  `extract-sandbox-interface-and-e2b.md` of that repository.
+- **Recommendation:** C. It gives the shared interface that the user wants,
+  and Boat does not wait for terminals and screens that ciproxy never uses.
+- **Action:** ask the user, because the options trade the speed of the
+  overflow work against a shared interface, and C changes the trait of
+  Juno.

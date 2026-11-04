@@ -968,9 +968,12 @@ up Mokly as `futex-ai/accounting` does.
       of a reconnect, the label of a waiting job in the live queue, and the
       VM size that ran on the job page.
 - [ ] Name the protocol docs of each mockup entry in its `relatedDocs`.
-- [ ] Check the disks of the default labels against the Boat sizes. The
+- [x] Check the disks of the default labels against the Boat sizes. The
       labels ask for 60, 80, and 120 GB, and Boat `small` and `default`
-      give 51 GB. Waits for the Boat spike.
+      give 51 GB for files. So `ciproxy` overflows on `large`. The spike
+      found 57 GB free with a minimal runner. Milestone 10 of
+      `plans/ciproxy-mvp.md` measures the shared image, and then proposes
+      the disk as a decision.
 - [ ] Update the design and the TODOs of this plan for each problem that
       the mockups show.
 
@@ -1041,19 +1044,26 @@ from the user.
       Evidence: `.context/ciproxy-mvp-foundation/spikes/firecracker/RESULT.md`.
       Passed on a nested GCP VM: about 14 s cold and 3 s warm to the first
       step.
-- [ ] Boat: run a just-in-time runner in a Boat sandbox that starts from a
+- [x] Boat: run a just-in-time runner in a Boat sandbox that starts from a
       snapshot. Measure the boot time. Boat sells its own GitHub runner,
       so check that its terms allow this use. If they do not, AWS EC2
       becomes the first overflow backend. Measure the start limits of the
       Boat plan, and record what Boat returns when it refuses a start.
-      Blocked: the Boat organization of Firna has no compute plan, so Boat
-      answers HTTP 402 `billing_required`. Evidence:
-      `.context/ciproxy-mvp-foundation/spikes/boat/RESULT.md`.
+      Evidence: `.context/ciproxy-mvp-foundation/spikes/boat/RESULT.md`.
+      Passed with the paid plan: two jobs with Docker, 17.6 s from the queue
+      to the first step from a snapshot, and 20.6 s without. The terms
+      allow the use by inference. A sandbox cannot end itself without the
+      key, which item 47 of `plans/ciproxy-mvp.md` decides.
 - [x] Cache: point `actions/cache` at a sidecar in the VM through a patched
       runner. Confirm read-through and write-through to the GitHub cache.
       Evidence: `.context/ciproxy-mvp-foundation/spikes/cache/RESULT.md`.
       Passed: a miss with a save to both stores, a local hit, and a hit
       through GitHub.
+- [ ] Job facts: prove that the first report of the job-started hook gives
+      a ref, an event, and a head repository that the job cannot change,
+      before any code of the workflow runs. The user asked for this spike on
+      4 November 2026, for item 32 of `plans/ciproxy-mvp.md`. Evidence:
+      `.context/ciproxy-mvp-foundation/spikes/job-facts/RESULT.md`.
 - [x] Job hooks: attach a disk for one repository after the job starts,
       and start Docker on it.
       Evidence: `.context/ciproxy-mvp-foundation/spikes/job-hooks/RESULT.md`.
@@ -1096,31 +1106,31 @@ Depends on: 2, 3, 4
 
 - [ ] Align the protocol docs with the spike results. Propose each
       requirement change as a decision.
-- [ ] Write `plans/ciproxy-mvp.md`. Give it milestones for the GitHub App
+- [x] Write `plans/ciproxy-mvp.md`. Give it milestones for the GitHub App
       and scale sets, the Linux agent, the scaler, the Boat backend, the
       cache layer, the dashboard backend and UI, metering, billing with
       Stripe, the marketing site and the docs in Astro, and the public copy
       of the agent at launch.
-- [ ] Give the site milestone of that plan the 14 launch docs pages that
+- [x] Give the site milestone of that plan the 14 launch docs pages that
       the docs sidebar mockup lists, and a launch task for the terms of
       service and the privacy policy, which the user writes or approves.
-- [ ] Give the site milestone of that plan the restyle of the Starlight
+- [x] Give the site milestone of that plan the restyle of the Starlight
       search to match the docs search mockup, as far as CSS allows.
-- [ ] Give that plan the DNS and the hosting of `ciproxy.dev`,
+- [x] Give that plan the DNS and the hosting of `ciproxy.dev`,
       `app.ciproxy.dev`, and `get.ciproxy.dev`.
-- [ ] License every part that ships to the customer's side under
+- [x] License every part that ships to the customer's side under
       Apache-2.0 in that plan: the agent, the job image definition, the
       install script, the cache sidecar, and the runner patch.
-- [ ] Order the launch steps in that plan: the public copy of the agent
+- [x] Order the launch steps in that plan: the public copy of the agent
       goes live before the site, because the site links to it.
-- [ ] Settle in that plan the open questions of the docs workspace: label
+- [x] Settle in that plan the open questions of the docs workspace: label
       name rules and renames, the minimum disk and the cache size of a
       machine, the jobs that fit on one machine when machines differ, an
       expired sign-in, the App on a personal account and its removal, job
       data retention, the banner order at a failed payment, a late
       checkout confirmation, Free periods that start on day 29 to 31, a
       broken Docker disk, the cache source of a mixed job, and taxes.
-- [ ] Run the options check over its decisions.
+- [x] Run the options check over its decisions.
 
 ## Milestone 6: Verification, commit, review, and pull request
 
