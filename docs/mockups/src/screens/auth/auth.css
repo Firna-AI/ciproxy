@@ -17,6 +17,10 @@
   background: var(--c-surface);
 }
 
+.auth-home {
+  display: inline-flex;
+}
+
 .auth-card {
   display: flex;
   flex-direction: column;

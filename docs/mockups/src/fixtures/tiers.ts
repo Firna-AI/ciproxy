@@ -17,6 +17,23 @@ export type Tier = {
   adds: readonly string[];
 };
 
+/** The names of the tier features, shared by the tier cards and the comparison. */
+export const feature = {
+  ownMachines: "Own Linux machines",
+  boat: "Boat overflow",
+  cache: "Transparent cache",
+  warmRunners: "Warm runners",
+  savings: "Savings report",
+  stickyDisks: "Sticky Docker disks",
+  alerts: "Alerts by email and Slack",
+  emailSupport: "Email support",
+  organizations: "Several GitHub organizations",
+  singleSignOn: "Single sign-on",
+  auditLog: "Audit log",
+  images: "Custom VM images",
+  prioritySupport: "Priority support",
+} as const;
+
 export const tiers: Readonly<Record<TierKey, Tier>> = {
   free: {
     key: "free",
@@ -37,10 +54,10 @@ export const tiers: Readonly<Record<TierKey, Tier>> = {
     history: "30 days",
     addOns: true,
     adds: [
-      "Sticky Docker disks",
-      "Alerts by email and Slack",
+      feature.stickyDisks,
+      feature.alerts,
       "30 days of job history",
-      "Email support",
+      feature.emailSupport,
     ],
   },
   business: {
@@ -52,12 +69,12 @@ export const tiers: Readonly<Record<TierKey, Tier>> = {
     history: "90 days",
     addOns: true,
     adds: [
-      "Several GitHub organizations",
-      "Single sign-on",
-      "Audit log",
-      "Custom VM images",
+      feature.organizations,
+      feature.singleSignOn,
+      feature.auditLog,
+      feature.images,
       "90 days of job history",
-      "Priority support",
+      feature.prioritySupport,
     ],
   },
 };
@@ -66,12 +83,23 @@ export const tierOrder: readonly TierKey[] = ["free", "team", "business"];
 
 /** Included in every tier. */
 export const everyTier: readonly string[] = [
-  "Own Linux machines",
-  "Boat overflow",
-  "Transparent cache",
-  "Warm runners",
-  "Savings report",
+  feature.ownMachines,
+  feature.boat,
+  feature.cache,
+  feature.warmRunners,
+  feature.savings,
 ];
+
+/** Free lists all it includes; each tier above lists what it adds. */
+export function tierFeatures(tier: Tier): {
+  lead: string;
+  items: readonly string[];
+} {
+  if (tier.key === "free")
+    return { lead: "Free includes", items: [...everyTier, ...tier.adds] };
+  const below = tier.key === "team" ? "Free" : "Team";
+  return { lead: `Everything in ${below}, plus`, items: tier.adds };
+}
 
 /** Monthly add-ons on Team and Business. */
 export const addOnPrices = {
@@ -89,3 +117,6 @@ export function ownMachines(count: number): string {
 export function startsText(count: number): string {
   return unbroken(`${formatCount(count)} starts`);
 }
+
+/** What Free includes, in one line, for the public site. */
+export const freePlanNote = `Free for ${tiers.free.machines === 1 ? "one machine" : `${tiers.free.machines} machines`} and ${formatCount(tiers.free.starts)} starts a month.`;

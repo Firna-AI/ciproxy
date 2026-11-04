@@ -1,0 +1,161 @@
+/* The cost comparison of the landing page (cost-compare.tsx): the saved
+   amount, thick bars with the ciproxy bar in the ink, and the parts of the
+   ciproxy total beside them. */
+
+.cost-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
+  overflow: hidden;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-xl);
+  background: var(--c-surface);
+}
+
+.mockup-mobile .cost-panel {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.cost-main {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 28px 32px 32px;
+}
+
+.mockup-mobile .cost-main {
+  gap: 22px;
+  padding: 20px 16px 22px;
+}
+
+.cost-saved {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
+.cost-saved-value {
+  font-size: 44px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 48px;
+}
+
+.mockup-mobile .cost-saved-value {
+  font-size: 36px;
+  line-height: 40px;
+}
+
+.cost-saved-text {
+  color: var(--c-ink2);
+  font-size: 15px;
+}
+
+.cost-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+}
+
+.cost-row {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+}
+
+.mockup-mobile .cost-row {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+
+.cost-label {
+  color: var(--c-ink2);
+  font-size: 13px;
+}
+
+.cost-track {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Square at the baseline, a small rounded data end. */
+.cost-fill {
+  display: inline-block;
+  height: 22px;
+  border-radius: 0 3px 3px 0;
+  background: var(--c-chart-context);
+}
+
+.cost-fill.is-accent {
+  background: var(--c-chart-accent);
+}
+
+.cost-value {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.cost-parts {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin: 0;
+  padding: 24px 28px;
+  border-left: 1px solid var(--c-border);
+  background: var(--c-bg);
+}
+
+.mockup-mobile .cost-parts {
+  padding: 8px 16px;
+  border-top: 1px solid var(--c-border);
+  border-left: 0;
+}
+
+.cost-part {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--c-border);
+}
+
+.cost-part:first-child {
+  border-top: 0;
+}
+
+.cost-part dt {
+  color: var(--c-ink2);
+}
+
+.cost-part dd {
+  margin: 0;
+}
+
+.cost-part.is-total {
+  border-top-color: var(--c-border2);
+  font-weight: 600;
+}
+
+.cost-part.is-total dt {
+  color: var(--c-ink);
+}
+
+.cost-note {
+  max-width: 720px;
+  margin-top: 16px;
+}
+
+@media (max-width: 960px) {
+  .mockup-desktop .cost-panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mockup-desktop .cost-parts {
+    border-top: 1px solid var(--c-border);
+    border-left: 0;
+  }
+}

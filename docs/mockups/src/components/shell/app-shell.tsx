@@ -68,10 +68,10 @@ function DesktopShell({
             ))}
           </nav>
           <div className="side-foot">
-            <span className="side-item">
+            <MockLink to={paths.docsHome} className="side-item">
               <BookOpen size={16} strokeWidth={1.75} />
               <span className="side-label">Docs</span>
-            </span>
+            </MockLink>
           </div>
         </div>
       </aside>

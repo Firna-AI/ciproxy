@@ -1,0 +1,89 @@
+/* The feature comparison of the pricing page (plan-compare.tsx): hairline
+   rows, the area as a band, and a check or a dash in each tier column. */
+
+.compare {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.compare-label-col {
+  width: 40%;
+}
+
+.compare th,
+.compare td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--c-border);
+  font-size: 14px;
+  font-weight: 400;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.compare td {
+  text-align: center;
+}
+
+.compare tbody th {
+  padding-left: 0;
+  color: var(--c-ink2);
+}
+
+.compare thead th {
+  padding-top: 0;
+  border-bottom-color: var(--c-border2);
+  vertical-align: bottom;
+}
+
+.compare-tier {
+  text-align: center;
+}
+
+.compare th.compare-tier {
+  text-align: center;
+}
+
+.compare-tier-name {
+  display: block;
+  color: var(--c-ink);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.compare-tier-price {
+  display: block;
+  color: var(--c-muted);
+  font-size: 13px;
+}
+
+.compare-group th {
+  padding-top: 28px;
+  color: var(--c-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.compare-yes {
+  color: var(--c-ink);
+  vertical-align: middle;
+}
+
+.compare-no {
+  color: var(--c-faint);
+  vertical-align: middle;
+}
+
+.mockup-mobile .compare-label-col {
+  width: 37%;
+}
+
+.mockup-mobile .compare th,
+.mockup-mobile .compare td {
+  padding: 10px 4px;
+  font-size: 13px;
+}
+
+.mockup-mobile .compare tbody th {
+  padding-left: 0;
+}

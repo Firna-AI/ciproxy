@@ -1,8 +1,16 @@
-// Catalogue paths of the dashboard screens and the user flows. Screens link
-// with these paths and flows step through them; the strict build fails on a
-// path that names no entry.
+// Catalogue paths of the public site, the dashboard screens, and the user
+// flows. Screens link with these paths and flows step through them; the strict
+// build fails on a path that names no entry.
 
 export const paths = {
+  landing: "marketing/landing",
+  pricing: "marketing/pricing",
+
+  docsHome: "docs/home",
+  docsSearch: "docs/home/search",
+  quickstart: "docs/quickstart",
+  labelsReference: "docs/labels",
+
   signIn: "app/auth/sign-in",
   signInFailed: "app/auth/sign-in/failed",
   installApp: "app/auth/install-app",
@@ -78,6 +86,7 @@ export const paths = {
   flowFirstGreenJob: "user-flows/first-green-job",
   flowPeakOverflow: "user-flows/peak-overflow-to-boat",
   flowFreeToTeam: "user-flows/free-upgrades-to-team",
+  flowLandingToSignIn: "user-flows/landing-to-sign-in",
 } as const;
 
 export type CataloguePath = (typeof paths)[keyof typeof paths];

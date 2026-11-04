@@ -1,0 +1,73 @@
+/* The tier cells of the pricing page (price-cards.tsx): the name and blurb,
+   the price, the limits, the action, and the features. */
+
+.price-cells > .mk-cell {
+  gap: 20px;
+}
+
+.price-name {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.price-blurb {
+  color: var(--c-muted);
+}
+
+.price-amount-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.price-amount {
+  font-size: 44px;
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  line-height: 48px;
+}
+
+.price-limits {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  color: var(--c-ink2);
+  list-style: none;
+}
+
+.price-limits strong {
+  color: var(--c-ink);
+}
+
+.price-features {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 20px;
+  border-top: 1px solid var(--c-border);
+}
+
+.price-feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.price-feature-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--c-ink2);
+}
+
+.price-check {
+  margin-top: 3px;
+  color: var(--c-ink);
+  flex-shrink: 0;
+}

@@ -65,10 +65,23 @@ function slotSummary(slots: readonly SlotState[]): string {
   return `${busy} of ${slots.length} busy, ${warm} warm`;
 }
 
-/** One segment per slot of a machine: busy, warm runner, or free. */
-export function SlotStrip({ slots }: { slots: readonly SlotState[] }) {
+/**
+ * One segment per slot of a machine: busy, warm runner, or free. The large
+ * size is for a picture of the product, such as the landing page hero.
+ */
+export function SlotStrip({
+  slots,
+  size = "sm",
+}: {
+  slots: readonly SlotState[];
+  size?: "sm" | "lg";
+}) {
   return (
-    <span className="slot-strip" role="img" aria-label={slotSummary(slots)}>
+    <span
+      className={`slot-strip slot-strip-${size}`}
+      role="img"
+      aria-label={slotSummary(slots)}
+    >
       {slots.map((slot, i) => (
         <span
           key={i}

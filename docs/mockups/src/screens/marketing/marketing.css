@@ -1,0 +1,186 @@
+/* The marketing pages: white, with the sections stacked between two hairline
+   rails and divided by hairlines. Titles use tight tracking; colour marks
+   status only, as on the dashboard. */
+
+.mk {
+  min-height: 100vh;
+  background: var(--c-surface);
+}
+
+.mk-rails {
+  width: min(var(--site-width), 100%);
+  margin: 0 auto;
+  border-right: 1px solid var(--c-border);
+  border-left: 1px solid var(--c-border);
+}
+
+.mockup-mobile .mk-rails {
+  border: 0;
+}
+
+.mk-section {
+  padding: 96px var(--site-gutter);
+  border-top: 1px solid var(--c-border);
+}
+
+.mockup-mobile .mk-section {
+  padding: 56px var(--site-gutter);
+}
+
+/* A section whose cells run to the rails: the head keeps the gutter, and the
+   cells meet the hairline of the next section. */
+
+.mk-section.is-flush {
+  padding-right: 0;
+  padding-bottom: 0;
+  padding-left: 0;
+}
+
+.mk-section.is-flush > .mk-head,
+.mk-section.is-flush > .mk-foot {
+  padding-right: var(--site-gutter);
+  padding-left: var(--site-gutter);
+}
+
+.mk-head {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 720px;
+  margin-bottom: 48px;
+}
+
+.mockup-mobile .mk-head {
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.mk-head.is-center {
+  align-items: center;
+  margin-right: auto;
+  margin-left: auto;
+  text-align: center;
+}
+
+.mk-eyebrow {
+  color: var(--c-muted);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 16px;
+}
+
+.mk-title {
+  font-size: 40px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+}
+
+.mk-title.is-page {
+  font-size: 52px;
+  letter-spacing: -0.045em;
+  line-height: 1.04;
+}
+
+.mockup-mobile .mk-title {
+  font-size: 30px;
+  letter-spacing: -0.03em;
+}
+
+.mockup-mobile .mk-title.is-page {
+  font-size: 38px;
+}
+
+.mk-title-line {
+  display: block;
+}
+
+.mk-lead {
+  max-width: 640px;
+  color: var(--c-ink2);
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+.mockup-mobile .mk-lead {
+  font-size: 16px;
+}
+
+/* Cells divided by hairlines: the grid shows its border colour through a
+   1px gap between white cells. */
+
+.mk-cells {
+  display: grid;
+  gap: 1px;
+  border-top: 1px solid var(--c-border);
+  background: var(--c-border);
+}
+
+.mk-cells-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mk-cells-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mockup-mobile .mk-cells {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.mk-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 32px var(--site-gutter) 36px;
+  background: var(--c-surface);
+}
+
+.mockup-mobile .mk-cells > .mk-cell {
+  padding: 28px var(--site-gutter);
+}
+
+/* The row under a flush grid, such as the actions under the tiers. */
+
+.mk-foot {
+  padding-top: 28px;
+  padding-bottom: 28px;
+  border-top: 1px solid var(--c-border);
+}
+
+.mk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.mk-actions.is-center {
+  justify-content: center;
+}
+
+/* A narrow desktop window: smaller titles and fewer columns. */
+
+@media (max-width: 960px) {
+  .mockup-desktop .mk-section {
+    padding-top: 72px;
+    padding-bottom: 72px;
+  }
+
+  .mockup-desktop .mk-section.is-flush {
+    padding-bottom: 0;
+  }
+
+  .mockup-desktop .mk-title {
+    font-size: 32px;
+  }
+
+  .mockup-desktop .mk-title.is-page {
+    font-size: 42px;
+  }
+
+  .mockup-desktop .mk-cells-3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

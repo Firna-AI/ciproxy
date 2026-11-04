@@ -27,6 +27,20 @@ export const ax42 = {
   monthlyCost: 53.4,
 } as const;
 
+/** The warm runners that each machine keeps unless the customer changes it. */
+export const defaultWarmRunners = 2;
+
+/** One slot of a machine: the size of the smallest job VM. */
+export const slotSize = { vcpu: 2, memoryGb: 8 } as const;
+
+/** The slots that a job VM of this size takes on a machine. */
+export function slotsFor(size: { vcpu: number; memoryGb: number }): number {
+  return Math.max(
+    Math.ceil(size.vcpu / slotSize.vcpu),
+    Math.ceil(size.memoryGb / slotSize.memoryGb),
+  );
+}
+
 /** "16 threads · 64 GB", the line under a machine name. */
 export const ax42Size = dotJoin(
   unbroken(`${ax42.threads} threads`),
@@ -52,7 +66,7 @@ function machine(
     name: `hetzner-ax42-${index}`,
     status,
     slots: slots(busy, warm),
-    warmTarget: 2,
+    warmTarget: defaultWarmRunners,
     cacheUsedGb: [182, 167, 154, 12][index - 1] ?? 0,
     cacheSizeGb: 400,
     lastSeen: status === "offline" ? "14m ago" : "3s ago",

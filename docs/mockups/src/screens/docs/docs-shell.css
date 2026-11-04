@@ -1,0 +1,218 @@
+/* The docs frame (docs-shell.tsx), at the breakpoints of Starlight: the right
+   column gives way to the "On this page" bar under 1152 px, and the sidebar
+   moves behind the menu button under 800 px. */
+
+.docs {
+  min-height: 100vh;
+  background: var(--c-surface);
+}
+
+.docs-body {
+  display: grid;
+  grid-template-columns: var(--docs-side) minmax(0, 1fr) 248px;
+}
+
+.docs-mobile .docs-body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* The sidebar: groups of links, the page in a soft fill. */
+
+.docs-side {
+  border-right: 1px solid var(--c-border);
+}
+
+.docs-side-inner {
+  position: sticky;
+  top: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 24px 16px 40px;
+}
+
+.docs-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.docs-group-title {
+  padding: 0 10px 4px;
+  color: var(--c-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.docs-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.docs-link {
+  display: block;
+  padding: 5px 10px;
+  border-radius: var(--r-md);
+  color: var(--c-ink2);
+  line-height: 20px;
+}
+
+.docs-link:hover {
+  background: var(--c-soft);
+  color: var(--c-ink);
+}
+
+.docs-link.is-active {
+  background: var(--c-primary-soft);
+  color: var(--c-ink);
+  font-weight: 500;
+}
+
+/* The article column. */
+
+.docs-main {
+  min-width: 0;
+}
+
+.docs-article {
+  max-width: 768px;
+  margin: 0 auto;
+  padding: 48px 56px 72px;
+}
+
+.docs-mobile .docs-article {
+  padding: 28px var(--site-gutter) 48px;
+}
+
+/* "On this page" on the right: the current heading in the ink. */
+
+.docs-toc-inner {
+  position: sticky;
+  top: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 48px 24px 32px 8px;
+}
+
+.docs-toc-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.docs-toc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.docs-toc-link {
+  display: block;
+  padding: 3px 0;
+  color: var(--c-muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.docs-toc-link:hover {
+  color: var(--c-ink);
+}
+
+.docs-toc-link.is-nested {
+  padding-left: 12px;
+}
+
+.docs-toc-link.is-current {
+  color: var(--c-ink);
+  font-weight: 500;
+}
+
+/* The "On this page" bar of a narrow page. */
+
+.docs-tocbar {
+  position: sticky;
+  top: 64px;
+  z-index: 5;
+  display: none;
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-surface);
+}
+
+.docs-mobile .docs-tocbar {
+  top: 56px;
+  display: block;
+}
+
+/* The same width and padding as the article, so the two line up. */
+.docs-tocbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 768px;
+  height: 48px;
+  margin: 0 auto;
+  padding: 0 56px;
+}
+
+.docs-mobile .docs-tocbar-inner {
+  padding: 0 var(--site-gutter);
+}
+
+.docs-tocbar-label {
+  color: var(--c-muted);
+  font-size: 13px;
+}
+
+.docs-tocbar-current {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 8px 0 10px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+@media (max-width: 1151px) {
+  .docs-desktop .docs-body {
+    grid-template-columns: var(--docs-side) minmax(0, 1fr);
+  }
+
+  .docs-desktop .docs-toc {
+    display: none;
+  }
+
+  .docs-desktop .docs-tocbar {
+    display: block;
+  }
+}
+
+@media (max-width: 799px) {
+  .docs-desktop .docs-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .docs-desktop .docs-side {
+    display: none;
+  }
+
+  .docs-desktop .docs-article,
+  .docs-desktop .docs-tocbar-inner {
+    padding-right: 24px;
+    padding-left: 24px;
+  }
+
+  .docs-desktop .docs-article {
+    padding-top: 32px;
+  }
+}

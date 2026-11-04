@@ -1,0 +1,151 @@
+/* A docs article (docs-parts.tsx): the title and lead, prose in a flow,
+   headings, and steps on a rail. The link cards, the table, and the pager are
+   in docs-blocks.css. */
+
+.docs-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.docs-title {
+  font-size: 38px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.12;
+}
+
+.docs-mobile .docs-title {
+  font-size: 30px;
+}
+
+.docs-lead {
+  color: var(--c-ink2);
+  font-size: 18px;
+  line-height: 1.55;
+}
+
+.docs-mobile .docs-lead {
+  font-size: 16px;
+}
+
+.docs-lead .inline-code {
+  font-size: 14.5px;
+}
+
+/* Prose: paragraphs, lists, code, and notices, spaced in one flow. */
+
+.docs-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.docs-flow p,
+.docs-flow li {
+  color: var(--c-ink2);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.docs-flow strong {
+  color: var(--c-ink);
+}
+
+.docs-flow .inline-code {
+  font-size: 12.5px;
+}
+
+.docs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.docs-list li::marker {
+  color: var(--c-faint);
+}
+
+ol.docs-list li::marker {
+  color: var(--c-muted);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.docs-h2 {
+  margin-top: 32px;
+  color: var(--c-ink);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.3;
+}
+
+.docs-h3 {
+  color: var(--c-ink);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 26px;
+}
+
+/* Steps: a number on a rail. The rail is a line beside the list, not an
+   edge of a box. */
+
+.docs-steps {
+  display: flex;
+  flex-direction: column;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: docs-step;
+}
+
+.docs-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 0 36px 44px;
+  counter-increment: docs-step;
+}
+
+.docs-step::before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--c-border2);
+  border-radius: var(--r-pill);
+  background: var(--c-surface);
+  color: var(--c-ink);
+  content: counter(docs-step);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.docs-step::after {
+  position: absolute;
+  top: 34px;
+  bottom: 8px;
+  left: 13px;
+  width: 1px;
+  background: var(--c-border);
+  content: "";
+}
+
+.docs-step:last-child {
+  padding-bottom: 8px;
+}
+
+.docs-step:last-child::after {
+  display: none;
+}

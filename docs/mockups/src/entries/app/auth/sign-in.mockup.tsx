@@ -11,7 +11,7 @@ export const signIn = defineScreen({
     "The first screen of ciproxy. A person signs in with GitHub; ciproxy has no password of its own.",
   relatedDocs: [planDoc],
   address: `${host}/sign-in`,
-  useCasePaths: [paths.flowFirstGreenJob],
+  useCasePaths: [paths.flowFirstGreenJob, paths.flowLandingToSignIn],
   propSchema: stateSchema(["ready", "failed"]),
   props: { state: "ready" },
   render: (props, context) => (

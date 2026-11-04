@@ -1,0 +1,38 @@
+/* The pricing page (pricing.tsx): the head and the add-ons. The tier cells,
+   the comparison, and the questions have their own stylesheets. */
+
+.pricing-top {
+  padding-top: 88px;
+}
+
+.mockup-mobile .pricing-top {
+  padding-top: 48px;
+}
+
+.pricing-note {
+  text-align: center;
+}
+
+/* The add-ons. */
+
+.addon-price {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.addon-amount {
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 40px;
+}
+
+.addon-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.addon-text {
+  color: var(--c-ink2);
+}

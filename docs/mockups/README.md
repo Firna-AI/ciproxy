@@ -1,10 +1,11 @@
 # Mockups
 
-The mockups of the ciproxy dashboard, the hosted web product. They are part of
-the spec: each screen of the MVP renders in a mobile and a desktop variant, with
-the empty, loading, and error states that it needs, and the user flows step
-through those screens. [Mokly](https://github.com/mokly-ai/mokly) builds the
-catalogue from React entry modules.
+The mockups of ciproxy: the hosted dashboard, and the public site with the
+marketing pages and the docs. They are part of the spec: each screen of the MVP
+renders in a mobile and a desktop variant, with the empty, loading, and error
+states that it needs, and the user flows step through those screens.
+[Mokly](https://github.com/mokly-ai/mokly) builds the catalogue from React entry
+modules.
 
 ## Commands
 
@@ -56,6 +57,12 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   its own period, which begins on the day the tier begins.
 - The customer's own hardware is a "machine" on every screen, also in the
   pricing: never "node" or "server".
+- The public site has two sections: Marketing, with the landing page and the
+  pricing page, and Docs, in the structure of Starlight: the sidebar of
+  sections, the top bar with search, the article, and "On this page". Both
+  share the site top bar, and `ciproxy.dev` stands in for the domain. The
+  landing page shows real numbers from the fixtures and no customer logos,
+  quotes, or press.
 - One value has one format: `src/fixtures/format.ts` holds the money, count,
   and date formats, and `unbroken()` keeps a short value such as a date on one
   line.
@@ -102,6 +109,14 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
 - `src/theme/firna.tsx`: publishes the tokens as CSS custom properties, such as
   `--c-ink`, `--c-status-ok`, `--r-md`, and `--font-mono`, beside the static
   Firna CSS.
+- `src/components/site/site-header.tsx`: the top bar of the public site,
+  shared by the marketing pages and the docs, with the search box on the docs.
+- `src/screens/marketing/marketing-shell.tsx`: the frame of a marketing page:
+  the sections between two hairline rails, and the footer. `section.tsx` holds
+  the section head and the cells divided by hairlines.
+- `src/screens/docs/docs-shell.tsx`: the frame of a docs page, in the structure
+  of Starlight, with the sidebar from `docs-nav.ts` and the article parts in
+  `docs-parts.tsx`.
 - `src/components/shell/app-shell.tsx`: the signed-in frame: a white sidebar
   and a top bar with the organization and the page as breadcrumbs on desktop,
   and a top bar with tabs on mobile, with the banner slot for soft-limit and
@@ -110,6 +125,9 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   figure strip in `kpis.tsx`, the status dots and tags in `status.tsx`, and the
   starts chart.
 - `src/components/paths.ts`: every catalogue path of a screen and a flow.
+- `src/fixtures/site.ts`: the placeholder host of the public site and the
+  worked example of the landing page; `plan-compare.ts` holds the feature
+  comparison of the pricing page, from the tiers in `tiers.ts`.
 - `src/components/state-schema.ts`: the closed prop schema of a screen whose
   states differ by one `state` prop.
 - `src/screens/`: one component per screen, by area.

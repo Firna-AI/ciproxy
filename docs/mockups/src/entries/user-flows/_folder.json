@@ -1,4 +1,9 @@
 {
   "title": "User flows",
-  "order": ["first-green-job", "peak-overflow-to-boat", "free-upgrades-to-team"]
+  "order": [
+    "landing-to-sign-in",
+    "first-green-job",
+    "peak-overflow-to-boat",
+    "free-upgrades-to-team"
+  ]
 }

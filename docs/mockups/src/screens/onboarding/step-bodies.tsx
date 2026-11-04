@@ -14,6 +14,7 @@ import {
 import { paths } from "../../components/paths.ts";
 import { unbroken } from "../../fixtures/format.ts";
 import { org } from "../../fixtures/org.ts";
+import { runsOnDiff, workflowFile } from "../../fixtures/workflow.ts";
 import type { OnboardingState } from "./onboarding.tsx";
 
 export function MachineStep({ state }: { state: OnboardingState }) {
@@ -113,15 +114,7 @@ export function FirstJobStep({ passed }: { passed: boolean }) {
       <p className="small">
         Change runs-on in one workflow file, then push the change.
       </p>
-      <CodeBlock
-        label=".github/workflows/ci.yml"
-        lines={[
-          "  jobs:",
-          "    test:",
-          "-     runs-on: ubuntu-latest",
-          "+     runs-on: ciproxy",
-        ]}
-      />
+      <CodeBlock label={workflowFile} lines={runsOnDiff} />
       <WaitingLine>Waiting for a job with runs-on: ciproxy…</WaitingLine>
       <div className="row">
         <Action size="sm">See an example workflow</Action>

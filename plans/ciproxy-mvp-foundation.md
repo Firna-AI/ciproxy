@@ -231,11 +231,11 @@ up Mokly as `futex-ai/accounting` does.
       confirmed plan, and the return after a failed payment.
 - [x] Settings: labels and machine shapes, the overflow wait time, the
       overflow spend limit, and repository access.
-- [ ] Marketing site: the landing page and the pricing page, in the
+- [x] Marketing site: the landing page and the pricing page, in the
       Graphite look.
-- [ ] Docs site: the docs home, the getting-started guide, and a reference
+- [x] Docs site: the docs home, the getting-started guide, and a reference
       page, in the Graphite look.
-- [ ] User flows: from sign-in to the first green job, a peak in which
+- [x] User flows: from sign-in to the first green job, a peak in which
       jobs overflow to Boat, a Free organization that passes its starts and
       upgrades to Team, and a visitor who goes from the landing page to
       sign-in.
@@ -243,7 +243,7 @@ up Mokly as `futex-ai/accounting` does.
       screens. Apply the direction that the user picks to every screen.
 - [x] Fix the findings of the first screenshot review. They are in
       `.context/ciproxy-mvp-foundation/reviews/mockup-review-1.md`.
-- [ ] Run the mockup check. Smoke-test the changed pages.
+- [x] Run the mockup check. Smoke-test the changed pages.
 - [ ] Update the design and the TODOs of this plan for each problem that
       the mockups show.
 
@@ -261,12 +261,16 @@ plan. The design calls above give their first content.
 - [ ] Write `docs/protocol/job-routing.md`: labels and shapes, the order of
       own machines and overflow, the overflow trigger, warm runners, and
       the behaviour when the control plane, an own machine, or a backend
-      fails.
+      fails. Name the default labels and the VM that each one starts, as
+      the docs mockups show: `ciproxy`, `ciproxy-4vcpu`, and
+      `ciproxy-8vcpu`. Define the host reserve, so that the smallest
+      machine, 4 cores and 16 GB, gets at least one slot.
 - [ ] Write `docs/protocol/agent.md`: install, the outbound-only connection,
       machine identity, a fresh VM for each job, the image, updates, health,
       and drain.
 - [ ] Write `docs/protocol/overflow.md`: the backend contract, the customer
-      account, teardown, the spend limit, and the cleanup of orphan VMs.
+      account, teardown, the spend limit, the cleanup of orphan VMs, and
+      the behaviour when Boat refuses a start because of its start limits.
 - [ ] Write `docs/protocol/cache.md`: transparent `actions/cache`, cache
       scopes, trusted write-back, the cache tiers, and the fallback to the
       GitHub cache.
@@ -300,7 +304,8 @@ from the user.
 - [ ] Boat: run a just-in-time runner in a Boat sandbox that starts from a
       snapshot. Measure the boot time. Boat sells its own GitHub runner,
       so check that its terms allow this use. If they do not, AWS EC2
-      becomes the first overflow backend.
+      becomes the first overflow backend. Measure the start limits of the
+      Boat plan, and record what Boat returns when it refuses a start.
 - [ ] Cache: point `actions/cache` at a sidecar in the VM through a patched
       runner. Confirm read-through and write-through to the GitHub cache.
 - [ ] Job hooks: attach a disk for one repository after the job starts,
@@ -315,7 +320,11 @@ Depends on: 1
       package for the dashboard under `ts/`. Keep the agent in its own
       crates, so that a public copy can publish them at launch.
 - [ ] Add the Astro package for the marketing site and the docs under
-      `ts/site`, with Starlight, and add its build to the gate.
+      `ts/site`, with Starlight, and add its build to the gate. Use light
+      mode only with no theme switch, give notes a full border instead of
+      a left accent edge, and use the shared site top bar.
+- [ ] Move the Graphite tokens into a shared package under `ts/`, which the
+      mockups, the dashboard, and the site import.
 - [ ] Write `AGENTS.md` from the `agents-md` template. Create `CLAUDE.md` as
       a symlink to it.
 - [ ] Add a `.gitignore` that holds `.context/`.
@@ -337,6 +346,11 @@ Depends on: 2, 3, 4
       cache layer, the dashboard backend and UI, metering, billing with
       Stripe, the marketing site and the docs in Astro, and the public copy
       of the agent at launch.
+- [ ] Give the site milestone of that plan the 14 launch docs pages that
+      the docs sidebar mockup lists, and a launch task for the terms of
+      service and the privacy policy, which the user writes or approves.
+- [ ] Order the launch steps in that plan: the public copy of the agent
+      goes live before the site, because the site links to it.
 - [ ] Run the options check over its decisions.
 
 ## Milestone 6: Verification, commit, review, and pull request

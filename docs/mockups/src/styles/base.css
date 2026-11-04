@@ -102,6 +102,16 @@ code,
   font-variant-numeric: tabular-nums;
 }
 
+/* Text for screen readers only, such as the name of an empty header cell. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .nowrap {
   white-space: nowrap;
 }

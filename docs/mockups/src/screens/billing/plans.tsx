@@ -13,9 +13,9 @@ import { formatCount, formatMoney, monthly } from "../../fixtures/format.ts";
 import type { TierKey } from "../../fixtures/org.ts";
 import {
   addOnPrices,
-  everyTier,
   ownMachines,
   startsText,
+  tierFeatures,
   tierOrder,
   tiers,
   type Tier,
@@ -43,14 +43,6 @@ const context: Record<
     use: `Your last 30 days: ${formatCount(17_772)} starts on ${ownMachines(3)}.`,
   },
 };
-
-/** Free lists all it includes; each tier above lists what it adds. */
-function features(tier: Tier): { lead: string; items: readonly string[] } {
-  if (tier.key === "free")
-    return { lead: "Free includes", items: [...everyTier, ...tier.adds] };
-  const below = tier.key === "team" ? "Free" : "Team";
-  return { lead: `Everything in ${below}, plus`, items: tier.adds };
-}
 
 export function PlansScreen({
   viewport,
@@ -100,7 +92,7 @@ function TierCard({
   current: boolean;
   covers: boolean;
 }) {
-  const list = features(tier);
+  const list = tierFeatures(tier);
   return (
     <section className={`tier-card${covers ? " is-recommended" : ""}`}>
       <div className="spread">

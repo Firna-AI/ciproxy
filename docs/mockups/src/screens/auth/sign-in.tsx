@@ -20,6 +20,7 @@ export function SignInScreen({
   return (
     <AuthShell
       viewport={viewport}
+      brandTo={paths.landing}
       footer="By signing in, you agree to the ciproxy Terms and Privacy policy."
     >
       <div className="stack-tight">

@@ -38,6 +38,16 @@
   background: var(--c-slot-free);
 }
 
+.slot-strip-lg {
+  gap: 3px;
+}
+
+.slot-strip-lg .slot {
+  width: 22px;
+  height: 10px;
+  border-radius: 2px;
+}
+
 .slot-legend {
   display: inline-flex;
   flex-wrap: wrap;
