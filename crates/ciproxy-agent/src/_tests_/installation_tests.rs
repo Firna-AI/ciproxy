@@ -1,18 +1,19 @@
-//! Reinstall preserves identity and new registration binds to the resolved workspace.
+//! Registration saves the gateway identity. Reinstall preserves identity and drain.
 
 use std::sync::{Arc, Mutex};
 
 use ciproxy_protocol::agent::{AgentMessage, ControlMessage};
 use ciproxy_protocol::identifiers::{MachineId, WorkspaceId};
 use ciproxy_protocol::secret::Secret;
+use ciproxy_protocol::version::ProtocolVersion;
 use unimock::{MockFn, Unimock, matching};
 
-use crate::boundaries::{ConnectionMock, HostMock, ServiceMock, StoreMock, WorkspaceResolverMock};
+use crate::boundaries::{ConnectionMock, HostMock, ServiceMock, StoreMock};
 use crate::controller::AgentMock;
 use crate::error::Error;
 use crate::fixtures::{identity, report};
 use crate::installation::{Install, Installer};
-use crate::state::{MachineState, Mode};
+use crate::state::{Identity, MachineState, Mode};
 
 fn installer(mock: Unimock) -> Installer {
     let mock = Arc::new(mock);
@@ -20,7 +21,6 @@ fn installer(mock: Unimock) -> Installer {
         store: mock.clone(),
         host: mock.clone(),
         service: mock.clone(),
-        resolver: mock.clone(),
         connection: mock.clone(),
         agent: mock,
     }
@@ -47,41 +47,13 @@ async fn reinstall_keeps_registration_without_reusing_the_install_token() {
 }
 
 #[tokio::test]
-async fn registration_saves_only_the_workspace_bound_machine_credential() {
+async fn registration_saves_the_workspace_and_credential_returned_by_gateway() {
     let report = report().await;
+    let initial_report = report.clone();
     let saved = Arc::new(Mutex::new(Vec::new()));
     let observations = saved.clone();
-    let mock = Unimock::new((
-        HostMock::require_root.some_call(matching!()).returns(Ok(())),
-        StoreMock::load.some_call(matching!()).returns(Ok(MachineState::default())),
-        WorkspaceResolverMock::workspace.some_call(matching!((token) if token.expose_secret() == "install-secret")).returns(Ok(WorkspaceId("workspace-1".to_owned()))),
-        StoreMock::save.each_call(matching!(_)).answers_arc(Arc::new(move |_, state| {
-            assert!(!serde_json::to_string(state).unwrap().contains("install-secret"));
-            observations.lock().unwrap().push(state.clone());
-            Ok(())
-        })),
-        AgentMock::report.some_call(matching!()).returns(Ok(report)),
-        ConnectionMock::connect.some_call(matching!()).returns(Ok(())),
-        ConnectionMock::send.some_call(matching!((message) if matches!(message, AgentMessage::Register { workspace_id, install_token, .. }
-            if workspace_id.0 == "workspace-1" && install_token.expose_secret() == "install-secret"))).returns(Ok(())),
-        ConnectionMock::receive_handshake.some_call(matching!()).returns(Ok(ControlMessage::Registered {
-            workspace_id: WorkspaceId("workspace-1".to_owned()), machine_id: MachineId("machine-1".to_owned()), credential: Secret::new("machine-secret"),
-        })),
-        ServiceMock::install.some_call(matching!()).returns(Ok(())),
-    ));
-    installer(mock)
-        .install(Secret::new("install-secret"))
-        .await
-        .unwrap();
-    assert_eq!(
-        saved.lock().unwrap().last().unwrap().identity,
-        Some(identity())
-    );
-}
-
-#[tokio::test]
-async fn registration_does_not_save_a_credential_for_another_workspace() {
-    let report = report().await;
+    let sent = Arc::new(Mutex::new(Vec::new()));
+    let messages = sent.clone();
     let mock = Unimock::new((
         HostMock::require_root
             .some_call(matching!())
@@ -89,12 +61,77 @@ async fn registration_does_not_save_a_credential_for_another_workspace() {
         StoreMock::load
             .some_call(matching!())
             .returns(Ok(MachineState::default())),
-        WorkspaceResolverMock::workspace
-            .some_call(matching!(_))
-            .returns(Ok(WorkspaceId("workspace-1".to_owned()))),
         StoreMock::save
-            .some_call(matching!((state) if state.identity.is_none()))
+            .each_call(matching!(_))
+            .answers_arc(Arc::new(move |_, state| {
+                observations.lock().unwrap().push(state.clone());
+                Ok(())
+            })),
+        AgentMock::report.some_call(matching!()).returns(Ok(report)),
+        ConnectionMock::connect
+            .some_call(matching!())
             .returns(Ok(())),
+        ConnectionMock::send
+            .some_call(matching!(_))
+            .answers_arc(Arc::new(move |_, message| {
+                messages.lock().unwrap().push(message.clone());
+                Ok(())
+            })),
+        ConnectionMock::receive_handshake
+            .some_call(matching!())
+            .returns(Ok(ControlMessage::Registered {
+                workspace_id: WorkspaceId("gateway-workspace-7b3".to_owned()),
+                machine_id: MachineId("gateway-machine-c8".to_owned()),
+                credential: Secret::new("gateway-machine-secret"),
+            })),
+        ServiceMock::install.some_call(matching!()).returns(Ok(())),
+    ));
+    installer(mock)
+        .install(Secret::new("install-secret"))
+        .await
+        .unwrap();
+    assert_eq!(
+        *sent.lock().unwrap(),
+        vec![AgentMessage::Register {
+            protocol_version: ProtocolVersion::CURRENT,
+            install_token: Secret::new("install-secret"),
+            report: initial_report,
+        }]
+    );
+    let states = saved.lock().unwrap();
+    assert_eq!(
+        states.last().unwrap().identity,
+        Some(Identity {
+            workspace_id: WorkspaceId("gateway-workspace-7b3".to_owned()),
+            machine_id: MachineId("gateway-machine-c8".to_owned()),
+            credential: Secret::new("gateway-machine-secret"),
+        })
+    );
+    assert!(states.iter().all(|state| {
+        !serde_json::to_string(state)
+            .unwrap()
+            .contains("install-secret")
+    }));
+}
+
+#[tokio::test]
+async fn registration_rejects_a_wrong_handshake_without_saving_identity() {
+    let report = report().await;
+    let saved = Arc::new(Mutex::new(Vec::new()));
+    let observations = saved.clone();
+    let mock = Unimock::new((
+        HostMock::require_root
+            .some_call(matching!())
+            .returns(Ok(())),
+        StoreMock::load
+            .some_call(matching!())
+            .returns(Ok(MachineState::default())),
+        StoreMock::save
+            .each_call(matching!(_))
+            .answers_arc(Arc::new(move |_, state| {
+                observations.lock().unwrap().push(state.clone());
+                Ok(())
+            })),
         AgentMock::report.some_call(matching!()).returns(Ok(report)),
         ConnectionMock::connect
             .some_call(matching!())
@@ -102,14 +139,13 @@ async fn registration_does_not_save_a_credential_for_another_workspace() {
         ConnectionMock::send.some_call(matching!(_)).returns(Ok(())),
         ConnectionMock::receive_handshake
             .some_call(matching!())
-            .returns(Ok(ControlMessage::Registered {
-                workspace_id: WorkspaceId("workspace-2".to_owned()),
-                machine_id: MachineId("machine-1".to_owned()),
-                credential: Secret::new("wrong-credential"),
+            .returns(Ok(ControlMessage::Welcome {
+                protocol_version: ProtocolVersion::CURRENT,
             })),
     ));
     assert!(matches!(
         installer(mock).install(Secret::new("install-secret")).await,
         Err(Error::IdentityMismatch)
     ));
+    assert_eq!(*saved.lock().unwrap(), vec![MachineState::default()]);
 }

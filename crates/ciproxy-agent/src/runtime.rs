@@ -135,6 +135,11 @@ impl AgentDaemon {
                             if let ControlMessage::Remove { command_id } = &message { pending_remove = Some(command_id.clone()); }
                             pending_work = Some(Work::Control(Box::new(message)));
                         }
+                        Err(Error::Revoked) => {
+                            self.agent.remove().await?;
+                            removing = true;
+                            channels.connected.send_replace(false);
+                        }
                         Err(error) => {
                             tracing::warn!(error = %error, "control connection failed; preserve VMs");
                             channels.connected.send_replace(false);

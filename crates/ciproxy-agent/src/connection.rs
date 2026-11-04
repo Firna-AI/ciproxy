@@ -9,6 +9,7 @@ use futures_util::{SinkExt, StreamExt};
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 use tokio::time::timeout;
+use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
 use tokio_tungstenite::tungstenite::{self, Message};
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async};
 
@@ -82,13 +83,35 @@ impl Connection for WebSocketConnection {
         let reader = reader.as_mut().ok_or(Error::Disconnected)?;
         loop {
             match reader.next().await {
-                Some(Ok(Message::Text(text))) => {
-                    return serde_json::from_str(&text).context("decode control message");
+                Some(Ok(frame)) => {
+                    if let Some(message) = decode_frame(frame)? {
+                        return Ok(message);
+                    }
                 }
-                Some(Ok(Message::Close(_))) | None => return Err(Error::Disconnected),
-                Some(Ok(_)) => {}
+                None => return Err(Error::Disconnected),
                 Some(Err(error)) => return Err(error).context("read control message"),
             }
         }
     }
 }
+
+/// Decode control messages and permanent credential rejection from wire frames.
+pub(crate) fn decode_frame(frame: Message) -> Result<Option<ControlMessage>> {
+    match frame {
+        Message::Text(text) => Ok(Some(
+            serde_json::from_str(&text).context("decode control message")?,
+        )),
+        Message::Close(Some(close))
+            if close.code == CloseCode::Policy
+                && close.reason.as_str() == "[gateway] authentication failed" =>
+        {
+            Err(Error::Revoked)
+        }
+        Message::Close(_) => Err(Error::Disconnected),
+        _ => Ok(None),
+    }
+}
+
+#[cfg(test)]
+#[path = "_tests_/connection_tests.rs"]
+mod connection_tests;

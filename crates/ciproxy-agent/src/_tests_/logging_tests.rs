@@ -60,7 +60,6 @@ async fn trace_websocket_traffic_never_logs_install_or_machine_credentials() {
         let logging = subscriber(BoxMakeWriter::new(move || writer.clone()), directives);
         let register = AgentMessage::Register {
             protocol_version: ProtocolVersion::CURRENT,
-            workspace_id: WorkspaceId("logging-workspace".to_owned()),
             install_token: Secret::new(INSTALL_TOKEN),
             report: snapshot.clone(),
         };

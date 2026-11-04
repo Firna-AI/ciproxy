@@ -1,6 +1,7 @@
 //! Reconnect delays and revoked identities do not stop running jobs.
 
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use ciproxy_protocol::agent::{AgentMessage, ControlMessage};
 use ciproxy_protocol::identifiers::CommandId;
@@ -41,30 +42,58 @@ async fn reconnect_grows_its_delay_and_sends_the_full_retained_state() {
 #[tokio::test]
 async fn a_revoked_hello_removes_the_machine_before_waiting_for_welcome() {
     let report = report().await;
-    let mock = Arc::new(Unimock::new((
-        ConnectionMock::connect
-            .some_call(matching!())
-            .returns(Ok(())),
-        AgentMock::report.some_call(matching!()).returns(Ok(report)),
-        ConnectionMock::send.some_call(matching!(_)).returns(Ok(())),
-        ConnectionMock::receive_handshake
-            .some_call(matching!())
-            .returns(Ok(ControlMessage::Remove {
+    for (scenario, handshake) in [
+        ("permanent rejection", Err(Error::Revoked)),
+        (
+            "remove command",
+            Ok(ControlMessage::Remove {
                 command_id: CommandId("remove-1".to_owned()),
-            })),
-        AgentMock::control
-            .some_call(matching!(ControlMessage::Remove { .. }))
-            .returns(Ok(None)),
-        AgentMock::remove.some_call(matching!()).returns(Ok(())),
-    )));
-    assert!(matches!(
-        ReconnectingGateway {
+            }),
+        ),
+    ] {
+        let removals = Arc::new(AtomicUsize::new(0));
+        let removed = removals.clone();
+        let dependencies = (
+            ConnectionMock::connect
+                .some_call(matching!())
+                .returns(Ok(())),
+            AgentMock::report
+                .some_call(matching!())
+                .returns(Ok(report.clone())),
+            ConnectionMock::send.some_call(matching!(_)).returns(Ok(())),
+            AgentMock::remove
+                .some_call(matching!())
+                .answers_arc(Arc::new(move |_| {
+                    removed.fetch_add(1, Ordering::SeqCst);
+                    Ok(())
+                })),
+        );
+        let mock = match handshake {
+            Ok(message) => Unimock::new((
+                dependencies,
+                ConnectionMock::receive_handshake
+                    .some_call(matching!())
+                    .returns(Ok(message)),
+                AgentMock::control
+                    .some_call(matching!(ControlMessage::Remove { .. }))
+                    .returns(Ok(None)),
+            )),
+            Err(error) => Unimock::new((
+                dependencies,
+                ConnectionMock::receive_handshake
+                    .some_call(matching!())
+                    .returns(Err(error)),
+            )),
+        };
+        let mock = Arc::new(mock);
+        let result = ReconnectingGateway {
             connection: mock.clone(),
             agent: mock.clone(),
-            delay: mock
+            delay: mock.clone(),
         }
         .reconnect(&identity())
-        .await,
-        Err(Error::Revoked)
-    ));
+        .await;
+        assert!(matches!(result, Err(Error::Revoked)), "{scenario}");
+        assert_eq!(removals.load(Ordering::SeqCst), 1, "{scenario}");
+    }
 }

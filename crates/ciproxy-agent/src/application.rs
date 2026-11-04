@@ -24,7 +24,7 @@ use crate::hardware::LinuxHost;
 use crate::image_download::HttpsImageDownload;
 use crate::image_store::LinuxImageStore;
 use crate::images::ManagedImages;
-use crate::installation::{Install, Installer, PendingWorkspaceResolver};
+use crate::installation::{Install, Installer};
 use crate::layout::Layout;
 use crate::logging::subscriber;
 use crate::maintenance::{HourlyMaintenance, TokioDelay};
@@ -123,7 +123,6 @@ async fn execute(action: Action) -> Result<()> {
                 service,
                 connection,
                 agent,
-                resolver: Arc::new(PendingWorkspaceResolver),
             });
             installer.install(token).await?;
             println!("ciproxy agent installed");

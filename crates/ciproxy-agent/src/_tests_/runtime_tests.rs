@@ -1,4 +1,4 @@
-//! The production daemon keeps its report wait and delivery while work is blocked.
+//! The production daemon preserves independent reports and terminal revocation.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -13,6 +13,7 @@ use unimock::{MockFn, Unimock, matching};
 
 use crate::boundaries::{ConnectionMock, DelayMock};
 use crate::controller::AgentMock;
+use crate::error::Error;
 use crate::fixtures::{identity, report, spec};
 use crate::gateway::GatewayMock;
 use crate::maintenance::MaintenanceMock;
@@ -134,4 +135,76 @@ async fn daemon_reports_every_wait_beyond_queue_capacity_while_control_stays_pen
     remove.send(()).await.unwrap();
     run.await.unwrap();
     assert_eq!(reports.load(Ordering::SeqCst), 130);
+}
+
+#[tokio::test]
+async fn daemon_removes_a_rejected_connected_machine_without_another_handshake() {
+    let finished = Arc::new(AtomicBool::new(false));
+    let is_finished = finished.clone();
+    let removals = Arc::new(AtomicUsize::new(0));
+    let removed = removals.clone();
+    let reconnections = Arc::new(AtomicUsize::new(0));
+    let reconnected = reconnections.clone();
+    let (gateway, mut gateway_ready) = mpsc::unbounded_channel();
+    let (maintenance, mut maintenance_ready) = mpsc::unbounded_channel();
+    let mock = Arc::new(Unimock::new((
+        AgentMock::restore.some_call(matching!()).returns(Ok(())),
+        AgentMock::finished
+            .each_call(matching!())
+            .answers_arc(Arc::new(move |_| is_finished.load(Ordering::SeqCst))),
+        AgentMock::remove
+            .some_call(matching!())
+            .answers_arc(Arc::new(move |_| {
+                removed.fetch_add(1, Ordering::SeqCst);
+                finished.store(true, Ordering::SeqCst);
+                Ok(())
+            })),
+        GatewayMock::reconnect
+            .each_call(matching!(_))
+            .answers_arc(Arc::new(move |_, _| {
+                reconnected.fetch_add(1, Ordering::SeqCst);
+                gateway.send(()).unwrap();
+                Ok(())
+            })),
+        MaintenanceMock::run
+            .some_call(matching!())
+            .answers_arc(Arc::new(move |_| {
+                maintenance.send(()).unwrap();
+            })),
+        DelayMock::wait.each_call(matching!(10)).returns(()),
+        ConnectionMock::receive
+            .some_call(matching!())
+            .returns(Err(Error::Revoked)),
+    )));
+    let (permit, receive) = mpsc::unbounded_channel();
+    permit.send(()).unwrap();
+    let (requests, _waits) = mpsc::unbounded_channel();
+    let daemon = AgentDaemon {
+        agent: mock.clone(),
+        connection: Arc::new(IncomingConnection {
+            delegate: mock.clone(),
+            permit: Mutex::new(receive),
+        }),
+        gateway: mock.clone(),
+        maintenance: mock.clone(),
+        report_delay: Arc::new(ManualDelay {
+            delegate: mock.clone(),
+            requests,
+        }),
+    };
+    let (_guests, guest_events) = mpsc::channel(1);
+    let (_remove, removal) = mpsc::channel(1);
+    let run = unconstrained(daemon.run(identity(), guest_events, false, removal));
+    pin_mut!(run);
+    assert!(matches!(poll!(run.as_mut()), Poll::Pending));
+    gateway_ready.recv().await.unwrap();
+    maintenance_ready.recv().await.unwrap();
+    let result = poll!(run.as_mut());
+    assert_eq!(removals.load(Ordering::SeqCst), 1);
+    assert_eq!(reconnections.load(Ordering::SeqCst), 1);
+    match result {
+        Poll::Ready(result) => result,
+        Poll::Pending => run.await,
+    }
+    .unwrap();
 }

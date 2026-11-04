@@ -26,10 +26,10 @@ Uninstall reclaims its image downloads and binary staging files.
 Uninstall does not revoke the registration in the hosted control plane.
 Use Remove in the dashboard to revoke the machine credential.
 
-**Fresh registration needs a gateway contract.** The protocol requires a
-workspace ID, but the opaque install token has no defined workspace
-resolver. The CLI reports this condition before registration.
-Reinstall of an existing machine works without that resolver.
+Fresh registration sends the install token and the initial machine report.
+The gateway returns the workspace ID, machine ID, and machine credential.
+The agent saves these values in its root-only identity state.
+
 The shared release installer also needs its approved argument-forwarding
 step. It must invoke the installed binary with the script arguments.
 
@@ -105,7 +105,9 @@ The default route is `wss://app.ciproxy.dev/agent/`.
 `CIPROXY_AGENT_URL` can select a staging WSS route.
 The agent requires a valid TLS certificate.
 The gateway authenticates Hello before sending Welcome.
-For a revoked Hello, it must send Remove before closing the connection.
+WebSocket policy close 1008 with reason
+`[gateway] authentication failed` also removes the machine.
+Other policy closes preserve the identity and reconnect.
 An HTTP 401 or 403 during the upgrade also removes the machine.
 The gateway binds every runner organization to the machine workspace.
 It withdraws idle GitHub registrations before StopRunner, Drain, or Remove.

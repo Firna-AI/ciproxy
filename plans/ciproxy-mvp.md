@@ -282,8 +282,7 @@ ships through `futex-ai/cli-release`.
 
 - [ ] Add `install --token` and `uninstall`. My call: "Remove a machine" needs
       `uninstall`.
-      Orchestrator: after notice that gateway PR #13 merged, merge the
-      primary. Adapt registration to the workspace returned by the gateway.
+      Registration now saves the workspace returned by the gateway.
       Host setup waits for the user's answer to item 62.
       Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
 - [x] Report the hardware and the slots every 10 seconds. Reconnect after a

@@ -6,12 +6,11 @@ use async_trait::async_trait;
 use ciproxy_protocol::agent::{AgentMessage, ControlMessage};
 use ciproxy_protocol::cache::{CacheConnection, MachineCacheReport};
 use ciproxy_protocol::guest::{AgentToGuest, GuestToAgent};
-use ciproxy_protocol::identifiers::{RunnerId, WorkspaceId};
+use ciproxy_protocol::identifiers::RunnerId;
 use ciproxy_protocol::images::{ImageDownload, ImageReport};
 use ciproxy_protocol::jobs::JobFacts;
 use ciproxy_protocol::reports::HardwareReport;
 use ciproxy_protocol::runners::RunnerReport;
-use ciproxy_protocol::secret::Secret;
 
 use crate::error::Result;
 use crate::image_registry::ImageLease;
@@ -36,12 +35,6 @@ pub(crate) trait Service: Send + Sync {
     fn install(&self) -> Result<()>;
     fn stop(&self) -> Result<()>;
     fn uninstall(&self) -> Result<()>;
-}
-
-#[cfg_attr(test, unimock::unimock(api = WorkspaceResolverMock))]
-#[async_trait]
-pub(crate) trait WorkspaceResolver: Send + Sync {
-    async fn workspace(&self, token: &Secret) -> Result<WorkspaceId>;
 }
 
 #[cfg_attr(test, unimock::unimock(api = ConnectionMock))]

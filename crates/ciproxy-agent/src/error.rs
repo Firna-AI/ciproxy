@@ -9,9 +9,6 @@ pub enum Error {
     /// Run this command as root on x64 Linux.
     #[error("[agent] run this command as root on x64 Linux")]
     HostUnsupported,
-    /// Install-token workspace resolution is not defined by the gateway.
-    #[error("[agent] install-token workspace resolution is not defined by the gateway")]
-    WorkspaceResolutionUnavailable,
     /// Install the agent before starting it.
     #[error("[agent] install the agent before starting it")]
     NotInstalled,
