@@ -35,8 +35,8 @@ Each arrow leaves the side that opens the connection or starts the VM.
 
 The control plane is closed source and written in Rust. It has these parts:
 
-- **Dashboard API:** serves the data and the actions of the dashboard, and
-  [signs people in](protocol/security.md#sign-in-and-access).
+- **Dashboard API:** serves the data and the actions of the dashboard. It
+  signs people in and checks their [roles](protocol/security.md#roles).
 - **GitHub integration:** keeps one scale set for each
   [label](protocol/job-routing.md#labels) of an organization. The scale set
   makes ciproxy the runner provider of the label.
@@ -103,6 +103,8 @@ design tokens that the dashboard uses.
   account, and it bills the customer for them.
 - **Stripe:** Checkout, the customer portal, and the events that confirm
   payments and subscription changes.
+- **Download site:** the release server of `futex-ai/cli-release` at
+  `get.ciproxy.dev`. It serves the install script and the agent releases.
 
 ## Boundaries
 
@@ -124,7 +126,7 @@ design tokens that the dashboard uses.
   [Connection](protocol/agent.md#connection) holds the rules.
 - **The agent and its job VMs:** the agent passes one runner registration
   into each job VM. [Job isolation](protocol/security.md#job-isolation)
-  says what a job VM can reach on its machine.
+  says what a job VM can reach.
 - **The control plane and Boat:** the backend client calls Boat with the
   Boat key of the customer. The
   [backend contract](protocol/overflow.md#backend-contract) says what Boat
@@ -228,16 +230,17 @@ design tokens that the dashboard uses.
 
 ## Open source and hosted parts
 
-- The agent and its connection protocol are the open-source part of
-  ciproxy, under Apache-2.0.
+- Every part that ciproxy ships to the customer's side is open source under
+  Apache-2.0: the agent with its connection protocol, the image definition,
+  the install script, and the cache sidecar and runner patch in the image.
 - The control plane, the dashboard, and the public site are closed source.
   The hosted control plane and the dashboard are the paid part.
 - **Decision:** open core. Rejected: open source only, because it gives no
   revenue. Rejected: a paid licence, because adoption is slower. Rejected:
   reselling overflow minutes, because the margins are thin.
-- **Open:** which code on the side of the customer, beyond the agent, is
-  open source, such as the image definition and the install script. It
-  waits for the decision on the licence of the image.
+- **Decision:** every part on the customer's side is Apache-2.0. Rejected:
+  a closed image definition, and a source-available licence. Reason: the
+  customer can audit each part, and its machines hold the built image anyway.
 
 ## Related docs
 

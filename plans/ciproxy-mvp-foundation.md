@@ -133,6 +133,37 @@ User decisions, 3 November 2026:
   - Item 20, F: every part that ciproxy ships to the customer's side is
     Apache-2.0: the agent, the job image definition, the install script,
     the cache sidecar, and the runner patch.
+- Design calls for the roles and the docs answers, my calls and those of
+  the docs agent, 4 November 2026:
+  - A role needs current membership of the GitHub organization. A member
+    asks for access by signing in, and Admins grant a role from the
+    requests, so the App needs no "Members" permission.
+  - An owner of the GitHub organization can always claim the Admin role,
+    checked with the person's own sign-in token.
+  - Viewer sees jobs, machines, savings, and Plan and usage, read-only.
+    Billing also manages the plan, the add-ons, and the invoices. Admin
+    does everything.
+  - A person who cannot pay sees the failed-payment banner and the
+    soft-limit offer with "Ask an Admin or a Billing person".
+  - An Admin can revoke an install token before its hour ends.
+  - Every connection of a Boat account asks for the spend limit, also in
+    Settings.
+  - "Clear cache" acts on one machine.
+  - The owner check reads the person's own list of organization
+    memberships, which a GitHub App user token can read. A test with
+    another App's user token returned the roles. The sign-in work of the
+    implementation plan confirms it with the ciproxy App.
+  - When an owner approves an install that a member asked for, that member
+    becomes the first Admin.
+  - The spend limit is an amount above zero, with no "no limit" choice in
+    the MVP.
+  - The agent gets new versions from the download site at
+    `get.ciproxy.dev`.
+- Item 28, A, answered 4 November 2026: adding a machine needs the ciproxy
+  Admin role and the GitHub runner right of the organization. The
+  installer becomes the first Admin, and without the runner right that
+  Admin can do everything except add machines. Rejected: the Admin role
+  alone, and the runner right for the first Admin only.
 - The options check of the `plans` skill ran over the last three decisions
   before the user answered. Its report is in
   `.context/ciproxy-mvp-foundation/options-check-1.md`.
@@ -963,6 +994,9 @@ Depends on: 2, 3, 4
       search to match the docs search mockup, as far as CSS allows.
 - [ ] Give that plan the DNS and the hosting of `ciproxy.dev`,
       `app.ciproxy.dev`, and `get.ciproxy.dev`.
+- [ ] License every part that ships to the customer's side under
+      Apache-2.0 in that plan: the agent, the job image definition, the
+      install script, the cache sidecar, and the runner patch.
 - [ ] Order the launch steps in that plan: the public copy of the agent
       goes live before the site, because the site links to it.
 - [ ] Settle in that plan the open questions of the docs workspace: label

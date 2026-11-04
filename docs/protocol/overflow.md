@@ -74,8 +74,8 @@ backend must give ciproxy.
 ## Overflow runners
 
 - Each sandbox runs one runner, which takes one job.
-- Each sandbox is the cheapest VM type of Boat with at least the vCPU,
-  memory, and disk of the [label](job-routing.md#labels) of its runner.
+- Each sandbox has the cheapest Boat size with at least the vCPU, memory,
+  and disk of the [label](job-routing.md#labels) of its runner.
 - When no size of the account fits, the setting "When nothing fits" of the
   label decides, as [Job routing](job-routing.md#a-size-that-nothing-can-run)
   says.
@@ -104,9 +104,15 @@ backend must give ciproxy.
 
 - The customer sets a monthly spend limit in US dollars in Settings under
   Overflow.
-- **Open:** the spend limit that applies from the moment the customer
-  connects Boat. It waits for the decision on the spend limit when Boat
-  connects.
+- Each connection of a Boat account asks for the spend limit before Boat
+  connects, in Setup and in Settings under Overflow.
+- The spend limit is an amount above zero. The customer can change it at
+  any time, and the MVP has no "no limit" choice.
+- **Decision:** each connection of Boat asks for the spend limit, so the
+  customer picks the amount in the same step as the key. Rejected: no limit
+  until the customer sets one, because a broken workflow could then run up
+  a large Boat bill. Rejected: a default limit, and overflow that stays off
+  until the customer sets a limit.
 - The spend is the Boat cost of the sandboxes that ciproxy starts for the
   [organization](security.md#terms).
 - The spend does not count other use of the Boat account.

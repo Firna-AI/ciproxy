@@ -12,6 +12,8 @@ runs on own machines.
 - **image:** the disk image of the job VMs and of the
   [Boat sandboxes](overflow.md#overflow-runners).
 - **install token:** the token in the install command.
+- **download site:** the site of ciproxy that serves the install script and
+  each version of the agent.
 - **machine credential:** the secret of one registered own machine.
 - **drain:** a machine finishes its jobs and takes no new ones.
 - The product says "machine" for an own machine, never "node" or "server".
@@ -26,13 +28,23 @@ runs on own machines.
   [organization](security.md#terms).
 - The [dashboard](../architecture.md#components) shows the command in Setup
   and in Machines under "Add machine".
-- The command fetches the install script over HTTPS and runs it as root with
-  an install token.
+- Only a person who may add a machine sees the command, as
+  [Roles](security.md#roles) says.
+- The command fetches the install script over HTTPS from the download site,
+  and runs it as root with an install token.
 - An install token belongs to one organization.
 - An install token works for one hour.
-- **Open:** how ciproxy keeps a leaked install command from adding a
-  machine that the organization did not choose. It waits for the decision
-  on the install token.
+- Within its hour, an install token adds any number of machines.
+- **Decision:** one install token adds any number of machines within its
+  hour. Rejected: one machine for each token, an approval of each new
+  machine in the dashboard, and a code that the agent prints for a person
+  to enter in the dashboard, because each one adds a step for every machine.
+- An Admin can revoke an install token before its hour ends.
+- After the revoke, the install token adds no machine.
+- The machines that registered with the token stay registered.
+- **Decision:** an Admin can revoke an install token. Rejected: a token
+  that always works for its whole hour, because a leaked token must not
+  stay usable.
 - An own machine needs x64 Linux with KVM, 4 cores, and 16 GB of memory or
   more.
 - Next to the command, the dashboard says how long the install token works
@@ -60,7 +72,8 @@ runs on own machines.
 - The agent connects out to the
   [control plane](../architecture.md#components).
 - The own machine opens no inbound port.
-- The own machine needs outbound HTTPS to the control plane and to GitHub.
+- The own machine needs outbound HTTPS to the control plane, to GitHub, and
+  to the download site.
 - The agent reports to the control plane every 10 seconds.
 - The dashboard shows a machine without contact for 60 seconds as offline.
 - [Failures](job-routing.md#failures) says what happens to the jobs of an
@@ -116,10 +129,15 @@ runs on own machines.
 
 ## Updates
 
-- **Open:** how the agent gets a new version. It waits for the decision on
-  agent updates.
+- The agent updates itself to the newest version.
+- The agent gets each new version from the download site.
 - An update never stops a running job.
 - The dashboard shows whether the agent of each machine is up to date.
+- **Decision:** the agent updates itself. Rejected: a new run of the install
+  command for each version, a package source for the package manager of the
+  machine, and a switch that turns updates off, because old agents would
+  then stay in use, and the control plane would have to support each old
+  version.
 
 ## Health
 

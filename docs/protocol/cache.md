@@ -33,10 +33,20 @@ This doc states the cache rules for jobs on
 - A job restores the entries of its own branch and of the default branch.
 - A job of a pull request also restores the entries of its base branch.
 - The machine cache keeps these rules for every job on its machine.
-- **Open:** which entries a job on an own machine can restore, so that a
-  person can keep a bad entry out of later jobs. An example is an
-  entry that a person deleted on GitHub. It waits for the decision on
-  entries that leave the GitHub cache.
+- The machine cache keeps an entry after the GitHub cache evicts it.
+- Later jobs on the machine can still restore such an entry.
+- The machine cache also keeps its copy of an entry that a person deletes
+  on GitHub.
+- "Clear cache" in the [dashboard](../architecture.md#components) deletes
+  every entry of the machine cache of one machine.
+- The dashboard shows "Clear cache" next to the cache use of that machine.
+- "Clear cache" never deletes an entry of the GitHub cache.
+- **Decision:** the machine cache keeps entries after the GitHub cache
+  evicts them, and "Clear cache" removes a bad entry. Rejected: restoring
+  only the entries that the GitHub cache still has, because the machine
+  cache could then serve no more entries than the GitHub cache holds.
+- **Decision:** "Clear cache" acts on one machine. Reason: it sits with the
+  cache use of that machine.
 
 ## Trusted write-back
 

@@ -2,7 +2,7 @@
 
 - **Severity:** Low. **Effort:** Medium. **Confidence:** Medium. **Harder
   later:** No.
-- **Kind:** Fix after merge.
+- **Kind:** Needs decision.
 - **Added:** 2026-11-04, from the answer of the user to item 18 of
   `plans/ciproxy-mvp-foundation.md`.
 - **Location:** `docs/protocol/cache.md`, "Cache scopes", and the cache
@@ -24,14 +24,17 @@
   people make on GitHub?
 - **Options:**
   - **A.** Keep the manual "Clear cache" only. Effort: Small.
-  - **B.** Sync deletions from the GitHub Actions caches API. The App
-    already has the Actions read permission. The sync cannot tell a deletion
-    from an eviction, so it drops a machine entry only when GitHub drops it
-    and the entry is newer than GitHub's eviction window. Effort: Medium.
+  - **B.** Sync deletions from the GitHub Actions caches API. The product
+    App has runner access only, so the sync needs the "Actions" read
+    permission. That is a new App permission, which the user must approve,
+    and which each organization must then accept on GitHub. The sync cannot
+    tell a deletion from an eviction, so it drops a machine entry only when
+    GitHub drops it and the entry is newer than GitHub's eviction window.
+    Effort: Medium.
 - **Left out:** A time limit on each entry, because it also drops good
   entries.
 - **Wider fix:** B.
 - **Previous examples:** None found.
 - **Recommendation:** B, after the MVP.
-- **Action:** fix after merge, apply B, because the user asked for it as a
-  follow-up.
+- **Action:** ask the user, because B needs a new permission of the GitHub
+  App, which the user must approve.

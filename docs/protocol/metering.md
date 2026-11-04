@@ -75,6 +75,8 @@ of each tier.
 - While an organization is above a soft limit, every page of the
   organization shows one banner.
 - The banner says that jobs keep running, and it gives the offer.
+- [Checkout](billing.md#checkout) says what a person who cannot pay sees in
+  place of the action of the offer.
 - **Decision:** tier limits are soft. Rejected: a hard limit, because a
   pricing limit must never stop the CI of a customer.
 
@@ -118,7 +120,7 @@ of each tier.
 - The report compares the cost of the jobs with ciproxy with the cost of
   the same jobs on Blacksmith and on GitHub-hosted runners.
 - **Open:** the prices of the comparison. The mockups give list prices per
-  minute for the same runner sizes. It waits for item 9, the price basis of
+  minute for the same VM sizes. It waits for item 9, the price basis of
   the cost claim.
 - The report covers one of three ranges: the last 30 days, this calendar
   month, or the last calendar month.

@@ -7,9 +7,10 @@ where each job runs. It also states what happens when a part fails.
 
 - **label:** the value in `runs-on` that sends a job to ciproxy and picks
   the size of its VM.
-- **size:** the vCPU, memory, and disk of the VM that a label starts.
-- **Open:** the word for the vCPU, memory, and disk of a label. It waits
-  for item 11, the word "size" or "shape".
+- **size:** the vCPU, memory, and disk that a label gives a job. The
+  product says "VM size" where the word needs a qualifier.
+- **Decision:** "size" is the one word for it. Rejected: "shape". Rejected:
+  "machine size", because "machine" names only the hardware of the customer.
 - **slot:** 2 vCPU and 8 GB of an [own machine](agent.md#terms).
 - **host reserve:** the threads and memory that the
   [agent](agent.md#terms) keeps for the host of an own machine.
@@ -94,7 +95,7 @@ where each job runs. It also states what happens when a part fails.
 - **Decision:** the customer chooses between waiting and a smaller Boat VM.
   Rejected: rejecting such a label on save, and failing its jobs at once,
   because a label can stop fitting after a machine leaves or the Boat plan
-  changes. Decided by the user on 4 November 2026.
+  changes.
 
 ## Slots
 

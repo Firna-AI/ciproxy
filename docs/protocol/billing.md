@@ -62,9 +62,19 @@ against a tier.
 
 ## Checkout
 
-- **Open:** who in an organization may choose a tier, change the add-ons,
-  pay, and open the customer portal. It waits for the decision on who can
-  choose a plan and pay.
+- Only an Admin or a person with the Billing role can choose a tier, change
+  the add-ons, pay, or open the customer portal with its invoices.
+- [Roles](security.md#roles) defines these roles.
+- **Decision:** the roles of ciproxy decide who pays. Rejected: the billing
+  managers of the GitHub organization, because the GitHub App would then
+  need the "Members" permission.
+- A person who cannot pay still sees the banners of a failed payment, and
+  the [offer](metering.md#the-use-and-the-offer) at a soft limit.
+- In place of the action of a banner or an offer, that person sees the
+  words "Ask an Admin or a Billing person".
+- **Decision:** a person who cannot pay sees the state without the action.
+  Rejected: hiding the banners from that person. Reason: everyone sees the
+  state, and only the payers act.
 - A move from Free to a paid tier goes through Stripe Checkout.
 - The customer picks the tier and the add-on quantities in the dashboard,
   then reviews the monthly total.

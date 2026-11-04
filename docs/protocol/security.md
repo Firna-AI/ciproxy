@@ -7,6 +7,8 @@ GitHub permissions, keys, isolation, and job data.
 
 - **organization:** a GitHub organization that installed the ciproxy GitHub
   App.
+- **runner right:** the GitHub right to manage the self-hosted runners of
+  an organization. Every owner of the organization has it.
 
 ## Sign-in and access
 
@@ -23,12 +25,66 @@ GitHub permissions, keys, isolation, and job data.
   organization.
 - While the request waits, the person can check again or install the app on
   another organization.
-- **Open:** who can view and change an organization in ciproxy. It waits
-  for the decision on organization access.
-- A person can add an own machine to an organization only when GitHub lets
-  that person add a self-hosted runner to it.
-- Reason: an own machine receives the secrets of the jobs that its
-  [runners](job-routing.md#terms) take.
+
+### Roles
+
+- ciproxy controls access to an organization with its own roles: Admin,
+  Billing, and Viewer.
+- **Decision:** ciproxy controls access with its own roles. Rejected:
+  access by the runner right only, because a person who only pays or only
+  views the jobs would then need the runner right. Rejected: mirroring the
+  repository access of GitHub, because many pages would then need states
+  that are filtered for each person.
+- A Viewer sees the jobs, the machines, the savings report, and Plan and
+  usage, and changes nothing.
+- A person with the Billing role sees all that a Viewer sees.
+- A person with the Billing role also manages the plan, the add-ons, and
+  the invoices, as [Checkout](billing.md#checkout) says.
+- An Admin can do everything: manage the machines, the labels, the
+  settings, the Boat account, the roles, and the billing.
+- **Decision:** each role contains the one below it, so Billing contains
+  Viewer, and Admin contains Billing. Rejected: a Billing role that sees
+  only the billing pages.
+- A person who can see the jobs sees the jobs of all repositories, also of
+  those that the person cannot read on GitHub.
+- To add an own machine, an Admin also needs the runner right of the
+  organization.
+- Apart from adding a machine, the roles alone decide what a person can do.
+- So an Admin without the runner right, the first Admin included, can do
+  everything except add a machine.
+- **Decision:** adding a machine needs the Admin role and the runner right,
+  because an own machine receives the secrets of the jobs that its
+  [runners](job-routing.md#terms) take. Rejected: the Admin role alone,
+  because an Admin could then give a machine the job secrets of
+  repositories that GitHub would not trust that person with. Rejected: the
+  runner right for the first Admin only, because later Admins would then
+  add machines without it.
+
+### Who gets a role
+
+- The person who installs the ciproxy GitHub App on an organization becomes
+  its first Admin. When an owner approves an install that a member asked
+  for, the member who asked becomes the first Admin.
+- A role needs current membership of the GitHub organization.
+- A person who leaves the GitHub organization loses access to it in ciproxy
+  at the next sign-in check.
+- **Decision:** a role needs current membership of the GitHub organization.
+  Rejected: roles for people outside the organization. Reason: GitHub stays
+  the source of who belongs to the organization.
+- A member of the GitHub organization with no role asks for access by
+  signing in.
+- Such a member sees only a page that asks an Admin for access.
+- An Admin sees each request for access, and can give the person a role.
+- **Decision:** a member asks for access by signing in, and an Admin grants
+  a role. Rejected: a list of the members of the GitHub organization,
+  because the GitHub App would then need the "Members" permission. Reason:
+  the App keeps its runner-only permissions.
+- An owner of the GitHub organization can always claim the Admin role.
+- ciproxy checks that a person is an owner with the GitHub sign-in of that
+  person, from the list of that person's own organization memberships, not
+  with a permission of the GitHub App.
+- **Decision:** an owner of the GitHub organization can always claim the
+  Admin role. Reason: an organization never loses control of ciproxy.
 
 ## GitHub App permissions
 
@@ -97,8 +153,14 @@ GitHub permissions, keys, isolation, and job data.
   machine.
 - A job VM can reach the [machine cache](cache.md#cache-tiers) of its own
   machine.
-- **Open:** which networks a job VM on an own machine can reach, beyond the
-  machine cache. It waits for the decision on the network reach of job VMs.
+- Apart from the machine cache, a job VM reaches the internet only.
+- A job VM cannot reach a private network or a cloud metadata service, also
+  when its machine can reach them.
+- **Decision:** a job VM reaches the internet only, as on GitHub-hosted
+  runners, so a job behaves the same on an own machine and on Boat.
+  Rejected: the private networks too, as on a classic self-hosted runner,
+  because the code of a pull request could then probe the internal network
+  and read the cloud credentials of the host.
 - Cache entries and Docker disks follow the isolation rules of
   [Cache scopes](cache.md#cache-scopes),
   [Trusted write-back](cache.md#trusted-write-back), and

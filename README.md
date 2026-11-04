@@ -32,9 +32,12 @@ on a free own machine, or else on Boat.
   When an organization passes a
   [soft limit](docs/protocol/metering.md#soft-limits), its jobs keep
   running.
-- **An open-source agent.** The agent is open source under Apache-2.0. The
-  hosted [control plane](docs/architecture.md#components) and the
-  [dashboard](docs/architecture.md#components) are the paid part.
+- **Open source on the customer's side.** Every part that ciproxy ships
+  there is open source under Apache-2.0: the agent, the job image
+  definition, the install script, the cache sidecar, and the runner patch.
+  [Open source and hosted parts](docs/architecture.md#open-source-and-hosted-parts)
+  gives the rule. The hosted [control plane](docs/architecture.md#components)
+  and the [dashboard](docs/architecture.md#components) are the paid part.
 
 ciproxy runs x64 Linux jobs of
 [private repositories](docs/protocol/security.md#repository-access) only.
