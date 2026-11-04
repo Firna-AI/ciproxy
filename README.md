@@ -11,7 +11,7 @@ machines, and the plan of one customer.
 ## What ciproxy does
 
 A job uses ciproxy when its `runs-on` line names a ciproxy
-[label](docs/protocol/job-routing.md#labels). ciproxy is the runner provider
+[label](docs/protocol/labels.md). ciproxy is the runner provider
 for its labels. It starts each [runner](docs/protocol/job-routing.md#terms)
 on a free own machine, or else on Boat.
 
@@ -56,8 +56,8 @@ To move a job to ciproxy, change one line. Replace `ubuntu-latest` in its
 +    runs-on: ciproxy
 ```
 
-The label picks the [size](docs/protocol/job-routing.md#labels) of the VM
-that runs the job. Every workspace starts with these labels:
+The label picks the [size](docs/protocol/labels.md#terms) of the VM that
+runs the job. Every workspace starts with these labels:
 
 | Label | vCPU | Memory | Disk | Slots |
 | --- | --- | --- | --- | --- |
@@ -67,8 +67,10 @@ that runs the job. Every workspace starts with these labels:
 
 A [slot](docs/protocol/job-routing.md#slots) is 2 vCPU and 8 GB of an own
 machine. The Slots column gives the slots that one job of the label takes
-there. [Job routing](docs/protocol/job-routing.md) gives the rules for
-labels, slots, and where a job runs.
+there. The job also holds the disk of its label there.
+[Labels](docs/protocol/labels.md) gives the rules for labels.
+[Job routing](docs/protocol/job-routing.md) gives the rules for slots, the
+disk of a job, and where a job runs.
 
 ## Get started as a developer
 
@@ -129,8 +131,10 @@ The protocol docs hold the requirements and the decisions in force:
 - [Workspaces](docs/protocol/workspaces.md): the GitHub organizations of a
   workspace, what the workspace owns, and how an Admin adds an organization
   or takes one out.
-- [Job routing](docs/protocol/job-routing.md): labels, sizes, slots, where a
-  job runs, warm runners, and failures.
+- [Labels](docs/protocol/labels.md): the jobs that use ciproxy, the default
+  and custom labels, their sizes, and where the jobs of each label may run.
+- [Job routing](docs/protocol/job-routing.md): slots, the disk of a job,
+  where a job runs, warm runners, and failures.
 - [Overflow](docs/protocol/overflow.md): the Boat account, the backend
   contract, overflow runners, the spend limit, and refused sandboxes.
 - [Agent](docs/protocol/agent.md): install, the connection, machine

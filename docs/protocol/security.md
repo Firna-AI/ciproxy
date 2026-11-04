@@ -17,6 +17,15 @@ GitHub permissions, keys, isolation, and job data.
 - ciproxy has no password of its own.
 - When a sign-in does not finish, the dashboard shows an error and the same
   sign-in button.
+- A sign-in lasts 30 days.
+- After that, every page of the dashboard opens sign-in with a notice that
+  says why, and the same button signs in again.
+- While a sign-in lasts, ciproxy checks the organization memberships of the
+  person with GitHub each hour.
+- **Decision:** a sign-in lasts 30 days, with a membership check each hour.
+  Rejected: a check only at sign-in, because a person could then keep
+  access for 30 days after leaving. Reason: access ends soon after a person
+  leaves the organization.
 - [Add an organization](workspaces.md#add-an-organization) says how a
   person installs the ciproxy GitHub App on an organization, and which
   [workspace](workspaces.md#terms) the organization joins.
@@ -73,7 +82,7 @@ GitHub permissions, keys, isolation, and job data.
   becomes the first Admin.
 - A role needs current membership of an organization of the workspace.
 - A person who is no longer a member of any organization of the workspace
-  loses access to the workspace at the next sign-in check.
+  loses the role and the access at the next membership check.
 - **Decision:** a role needs current membership of an organization of the
   workspace. Rejected: roles for people outside its organizations. Reason:
   GitHub stays the source of who belongs to the customer.
@@ -93,16 +102,20 @@ GitHub permissions, keys, isolation, and job data.
 - **Decision:** a count on the Members tab tells the Admins of a request,
   and the page that asks for access names the Admins. Reason: ciproxy
   sends no email.
-- An owner of any organization of the workspace can always claim the Admin
-  role.
+- An owner of an organization of the workspace can claim the Admin role
+  when the workspace has no Admin, or when the person owns every
+  organization of the workspace.
 - An owner with the Billing or the Viewer role claims the Admin role from
   the account menu.
 - ciproxy checks that a person is an owner with the GitHub sign-in of that
   person, from the list of that person's own organization memberships, not
   with a permission of the GitHub App.
-- **Decision:** an owner of any organization of the workspace can always
-  claim the Admin role. Reason: no organization loses control of the
-  workspace that runs its jobs.
+- **Decision:** an owner claims the Admin role when the workspace has no
+  Admin, or when the person owns every organization of it. Rejected: a
+  claim by every owner of any organization, because an owner of a later
+  organization could then take over the workspace of another. Reason: no
+  workspace loses control of its runners, and no organization takes over
+  another.
 
 ## GitHub App permissions
 
@@ -172,7 +185,7 @@ GitHub permissions, keys, isolation, and job data.
 
 ## Tenant isolation
 
-- Each workspace has its own machines, [labels](job-routing.md#labels),
+- Each workspace has its own machines, [labels](labels.md),
   settings, keys, caches, and data.
 - An own machine runs the jobs of every organization of its workspace, each
   in a fresh [job VM](agent.md#job-vms).
@@ -216,7 +229,7 @@ GitHub permissions, keys, isolation, and job data.
   the logs, or the cache contents of a job.
 - The control plane stores the job metadata that the dashboard shows.
 - The job metadata is the name, workflow, repository, ref, result, place,
-  times, label, [VM size](job-routing.md#terms) that ran, cache source, and
+  times, label, [VM size](labels.md#terms) that ran, cache source, and
   [cache counts](cache.md#terms) of a job.
 - The control plane also stores what the agent reports about each machine,
   as [Health](agent.md#health) says.
@@ -249,7 +262,8 @@ GitHub permissions, keys, isolation, and job data.
 - [Agent](agent.md): machine identity, job VMs, and removal.
 - [Cache](cache.md): cache scopes, trusted write-back, and Docker disks.
 - [Overflow](overflow.md): the Boat account and its sandboxes.
-- [Job routing](job-routing.md): labels and runners.
+- [Labels](labels.md) and [Job routing](job-routing.md): labels and
+  runners.
 - [Billing](billing.md): tiers, Checkout, and the customer portal.
 - [Removing or suspending the App](app-removal.md): what ciproxy revokes,
   keeps, and deletes when an organization removes the App.

@@ -60,7 +60,7 @@ backend must give ciproxy.
 - **Decision:** Boat is the only backend. Reason: Boat has a per-second
   sandbox API.
 - A backend gives ciproxy these functions in the account of the customer:
-  - It starts a VM of at least a given [size](job-routing.md#terms) from
+  - It starts a VM of at least a given [size](labels.md#terms) from
     the [image](agent.md#the-image), with the registration of one runner.
   - It bills the customer by the second or finer.
   - It reports the state of each VM.
@@ -80,9 +80,10 @@ backend must give ciproxy.
 
 - Each sandbox runs one runner, which takes one job.
 - Each sandbox has the cheapest Boat size with at least the vCPU, memory,
-  and disk of the [label](job-routing.md#labels) of its runner.
+  and disk of the [label](labels.md#terms) of its runner.
 - When no size of the account fits, the setting "When nothing fits" of the
-  label decides, as [Job routing](job-routing.md#a-size-that-nothing-can-run)
+  label decides, as
+  [A size that nothing can run](labels.md#a-size-that-nothing-can-run)
   says.
 - The backend contract includes a call that returns the VM sizes that the
   account can start now. For Boat, this is the size list of its limits
@@ -146,8 +147,8 @@ backend must give ciproxy.
 - Settings under Overflow and the Machines page show the spend of the
   month against the limit, for example "$61.20 of $200".
 - At the limit, ciproxy starts no new Boat runner.
-- Jobs then run on own machines only and wait there for a free
-  [slot](job-routing.md#slots).
+- Jobs then run on own machines only and wait there for free
+  [slots](job-routing.md#slots) and free [job disk](job-routing.md#terms).
 - Boat jobs that run when the spend reaches the limit finish.
 - So the spend can pass the limit by the cost of those jobs.
 - The Jobs page and Settings under Overflow say that the spend reached the
@@ -160,7 +161,8 @@ backend must give ciproxy.
 
 - When Boat refuses to start a sandbox, for example at a limit of the Boat
   account on new sandboxes, the job keeps waiting.
-- The job takes the first free slot on an own machine.
+- The job starts on an own machine as soon as one has the free slots and
+  the free job disk for it.
 - ciproxy tries again to start a sandbox while the job waits.
 - The live queue shows the job as waiting.
 - When the reason is a rejected key, jobs run on own machines only until
@@ -170,7 +172,8 @@ backend must give ciproxy.
 
 - [Architecture](../architecture.md): the components and the open-core
   decision.
-- [Job routing](job-routing.md): labels, slots, and where a job runs.
+- [Labels](labels.md): the labels, their sizes, and "When nothing fits".
+- [Job routing](job-routing.md): slots and where a job runs.
 - [Agent](agent.md): own machines and the image.
 - [Security](security.md): key custody.
 - [Metering](metering.md): starts.

@@ -30,8 +30,21 @@ runs on own machines.
   and in Machines under "Add machine".
 - Only a person who may add a machine sees the command, as
   [Roles](security.md#roles) says.
+- The command is one line, with the install token after `--token`:
+
+  ```sh
+  curl -fsSL https://get.ciproxy.dev | sudo sh -s -- install --token <install token>
+  ```
+
 - The command fetches the install script over HTTPS from the download site,
-  and runs it as root with an install token.
+  and runs it as root.
+- The install script installs the agent, then runs the agent with the
+  arguments that the command gives the script.
+- So the agent runs `install` with the install token, and the machine needs
+  no second command.
+- **Decision:** the install script runs the agent with the arguments of the
+  script. Rejected: a second command that runs the agent after the
+  install. Reason: the install command stays one line.
 - An install token belongs to one workspace.
 - An install token works for one hour.
 - Within its hour, an install token adds any number of machines.
@@ -45,8 +58,10 @@ runs on own machines.
 - **Decision:** an Admin can revoke an install token. Rejected: a token
   that always works for its whole hour, because a leaked token must not
   stay usable.
-- An own machine needs x64 Linux with KVM, 4 cores, and 16 GB of memory or
-  more.
+- An own machine needs x64 Linux with KVM, 4 cores, 16 GB of memory, and
+  80 GB of disk or more.
+- Reason: with the host reserve of a quarter, such a machine fits one job
+  of the label `ciproxy`, which needs 60 GB of disk.
 - Next to the command, the dashboard says how long the install token works
   and what the machine needs.
 - Until the machine connects, the dashboard shows that it waits for the
@@ -61,6 +76,11 @@ runs on own machines.
   [host reserve](job-routing.md#slots) connects and gets no slots.
 - The dashboard says why such a machine has no slots, as it does for a
   machine without KVM.
+- A machine can run fewer jobs of the label `ciproxy` at a time than its
+  slots hold, because each job also holds disk, as
+  [Disk](job-routing.md#disk) says.
+- The dashboard then says how many such jobs the machine runs at a time.
+- The machine page also gives the reason and the fix: add disk.
 - The page of a machine that cannot run jobs offers to remove the machine,
   as [Drain and remove](#drain-and-remove) says.
 - [Own machines](metering.md#own-machines) says how such a machine counts.
@@ -106,8 +126,8 @@ runs on own machines.
 - Each job VM runs one [runner](job-routing.md#terms), which takes one job.
 - A job VM ends when its job ends.
 - The agent never uses the disk of a job VM again.
-- A job VM has the [size](job-routing.md#labels) of the
-  [label](job-routing.md#labels) of its runner.
+- A job VM has the [size](labels.md#terms) of the
+  [label](labels.md#terms) of its runner.
 - **Decision:** each job runs in a fresh VM. Rejected: a VM that runs
   several jobs, because a job must not read the secrets or the files of
   another job.
@@ -180,7 +200,9 @@ runs on own machines.
 ## Related docs
 
 - [Architecture](../architecture.md): the components and the data flow.
-- [Job routing](job-routing.md): labels, slots, warm runners, and failures.
+- [Labels](labels.md): the labels and the size of each job VM.
+- [Job routing](job-routing.md): slots, the disk of a job, warm runners, and
+  failures.
 - [Overflow](overflow.md): the Boat sandboxes, which use the same image.
 - [Cache](cache.md): the machine cache and the Docker disks.
 - [Security](security.md): key custody and job isolation.

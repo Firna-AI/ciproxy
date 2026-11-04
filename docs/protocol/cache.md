@@ -79,9 +79,19 @@ This doc states the cache rules for jobs on
 - A save goes to the machine cache and through to the GitHub cache, so
   other own machines and jobs on Boat can restore it.
 - A job on Boat uses the GitHub cache only.
-- The job page shows the cache source of each job: "This machine" or "The
+- The job page shows the cache source of each job: "This machine", "The
+  GitHub cache", or "This machine and the GitHub cache".
+- On an own machine, the cache source names the caches that gave the
+  contents of the entries that the job restored.
+- A job that restored entries from both caches shows "This machine and the
   GitHub cache".
+- **Decision:** a job that restored from both caches shows "This machine
+  and the GitHub cache". Rejected: one of the two sources for such a job,
+  because it is false for some of its entries. Reason: the cache source is
+  then true for every job.
 - A job on Boat has the cache source "The GitHub cache".
+- A job that restored no entry shows "No entries restored". Reason: it is
+  true for every such job.
 - The job page shows the cache counts of a job only when the machine cache
   handled the restores of the job, for example "3 restored · 2.1 GB".
 - A job on Boat, and a job that fell back to the GitHub cache, show only
@@ -93,6 +103,8 @@ This doc states the cache rules for jobs on
   the rule holds for every later backend.
 - The Machines page and the machine page show the used space and the total
   space of the machine cache.
+- The total space of the machine cache changes as job VMs start and end,
+  as [Disk](job-routing.md#disk) says.
 - They also show the cache hits of the last 7 days.
 - The cache hits of a machine are the share of its cache restores of the
   last 7 days that the machine cache served.
