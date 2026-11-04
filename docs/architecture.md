@@ -40,7 +40,7 @@ The control plane is closed source and written in Rust. It has these parts:
 - **Dashboard API:** serves the data and the actions of the dashboard. It
   signs people in and checks their [roles](protocol/security.md#roles).
 - **GitHub integration:** keeps one scale set for each
-  [label](protocol/job-routing.md#labels) of a workspace in each of its
+  [label](protocol/labels.md) of a workspace in each of its
   organizations. The scale set makes ciproxy the runner provider of the
   label.
 - **Scaler:** decides how many [runners](protocol/job-routing.md#terms)
@@ -162,8 +162,8 @@ design tokens that the dashboard uses.
    the run of the job from the GitHub API. It sends them to the agent for
    the [cache scopes](protocol/cache.md#cache-scopes) and the Docker disk of
    the job.
-4. Metering counts one start. When a slot is free, the scaler sends the
-   agent a registration for a new warm runner.
+4. Metering counts one start. When a slot and its disk are free, the
+   scaler sends the agent a registration for a new warm runner.
 5. When the job ends, the agent ends the job VM and reports it.
 
 ### A job on Boat
@@ -255,6 +255,7 @@ design tokens that the dashboard uses.
 ## Related docs
 
 - [Workspaces](protocol/workspaces.md)
+- [Labels](protocol/labels.md)
 - [Job routing](protocol/job-routing.md)
 - [Overflow](protocol/overflow.md)
 - [Agent](protocol/agent.md)

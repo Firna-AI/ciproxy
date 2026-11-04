@@ -66,8 +66,9 @@ This milestone adds the states of the new items, and the legal pages.
       the changed pages.
 - [x] Update this plan for each problem that the mockups show.
 - [ ] Add the rename of a workspace, the banner of a Free workspace with
-      more than one organization, and the states that the answers to items
-      50 and 51 need.
+      more than one organization, the job page with the mixed cache source
+      and with no entries restored, a `labels` key in `related-docs.ts`,
+      and the states that the answers to items 50 and 51 need.
 
 ## Milestone 2: Documentation and protocol
 
@@ -76,8 +77,9 @@ Depends on: 1
 Each answer goes into the protocol doc that it changes, and its `Open:`
 line goes.
 
-- [ ] Write each answer that changes a doc, and the disk rule of item 34.
-- [ ] Write the design calls of items 33 to 36 and 41 to 44 into the docs.
+- [x] Write the disk rule of item 34, and each answer up to item 49.
+- [ ] Write the answers to items 50 and 51 into the docs.
+- [x] Write the design calls of items 33 to 36 and 41 to 44 into the docs.
       Item 44 contradicts "Cache tiers" in `cache.md`, and item 44 wins.
 
 ## Milestone 3: Protocol crate
@@ -141,7 +143,7 @@ Depends on: 4
 each label. The scale set spike confirms it.
 
 - [ ] Add the App tokens, the repositories, the default branch, and the
-      installation events. Create the default labels of `job-routing.md`.
+      installation events. Create the default labels of `labels.md`.
 - [ ] Handle a removed App, a suspended App, and a personal account, as
       item 29 says.
 - [ ] Use the crate `scaleset`, with one session for each label under the
@@ -169,7 +171,8 @@ Depends on: 3
 machine or on Boat, stop a runner, or delete a sandbox.
 
 - [x] Apply `job-routing.md` from "Where a job runs" to "Failures", and the
-      size changes of "Custom labels". Give each start a typed reason.
+      size changes of "Custom labels" in `labels.md`. Give each start a typed
+      reason.
       The snapshot supplies the recent-job warm allocation. Orchestrator
       before Milestone 13: define its history window, weighting, empty
       history fallback, and share rounding. This policy is still open.
@@ -575,7 +578,7 @@ had a clearly best option:
 - Item 38: Checkout takes cards only, and its return page says when Stripe still
   confirms. Reason: the page never asks for a second payment.
 - Item 40, withdrawn on 4 November 2026: the disk of the default labels is a
-  requirement in `job-routing.md`, so a change goes to the user. Milestone
+  requirement in `labels.md`, so a change goes to the user. Milestone
   10 measures the free disk on Boat with the shared image, and then
   proposes the disk as a decision.
 - Item 41: A size that fits a different number of jobs on different machines
@@ -710,6 +713,27 @@ docs agent, 4 November 2026:
   or when the person owns every organization of the workspace. Reason: an
   owner of a later organization must not take over the workspace of
   another. With one organization, the rule stays as it was.
+
+Design calls of the docs work of Milestone 2, my calls and those of the
+docs agent, 4 November 2026:
+
+- The label sections move to a new doc, `labels.md`, so that
+  `job-routing.md` stays near its length target.
+- A warm runner holds the disk of its size, as it holds its slots. "Fits"
+  means enough capacity, and "starts" means enough free slots and free job
+  disk. The space of the machine cache counts as free job disk, because the
+  cache gives it back.
+- The new term "job disk" names the three quarters of the disk that the
+  host reserve leaves, because "free disk" already names a health check.
+- A person who fails the hourly membership check loses the role.
+- The Docker disks and their copies share the free job disk with the
+  machine cache. When a job needs space, ciproxy deletes the Docker disk
+  that no job uses and that a job used least recently. Reason: a Docker
+  disk is a cache, so its loss costs only time.
+- The hardware minimum adds 80 GB of disk. Reason: such a machine then fits
+  one job of `ciproxy`, as the memory minimum ensures one slot.
+- A job that restored no entry shows "No entries restored". Reason: it is
+  true for every such job.
 
 Design calls on the problems that the mockups of Milestone 1 showed, my
 calls and those of the mockups agent, 4 November 2026:
