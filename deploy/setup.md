@@ -1,12 +1,12 @@
 # Deployment setup
 
 This page gives the one-time setup of one environment of the
-[deployment](README.md). Do each step for staging first, then for
+[deployment](README.md). Do each step for the main preview first, then for
 production. Run every command from the repository root, with the shell
 variables of the environment:
 
 ```sh
-DEPLOY_ENV=staging PROJECT_ID=internal-498318
+DEPLOY_ENV=main-preview PROJECT_ID=internal-498318
 # For production: DEPLOY_ENV=production PROJECT_ID=ciproxy
 ```
 
@@ -15,9 +15,9 @@ DEPLOY_ENV=staging PROJECT_ID=internal-498318
 | Identity | Used for | Permissions |
 | --- | --- | --- |
 | Operator: your own Google account | Steps 1 to 5, 8, and 9 here, and the image, database, runtime, rotation, and foundation work of [Operations](operations.md) | The Owner role, or these project roles: `roles/serviceusage.serviceUsageAdmin`, `roles/resourcemanager.projectIamAdmin`, `roles/iam.serviceAccountAdmin`, `roles/iam.serviceAccountUser`, `roles/iam.workloadIdentityPoolAdmin`, `roles/storage.admin`, `roles/compute.networkAdmin`, `roles/compute.securityAdmin`, `roles/compute.loadBalancerAdmin`, `roles/container.admin`, `roles/servicenetworking.networksAdmin`, `roles/cloudsql.admin`, `roles/secretmanager.admin`, `roles/cloudkms.admin`, `roles/artifactregistry.admin`, `roles/dns.admin`, and `roles/monitoring.editor` |
-| Registrar or parent zone owner | Step 5 | Change the name servers of `ciproxy.dev`, or add an NS record to its zone |
+| Registrar or parent zone owner | Step 5 | Change the name servers of `ciproxy.dev`, or add the three preview NS records to its active parent zone |
 | GitHub repository admin | Step 6 | Create environments and their variables in `Firna-AI/ciproxy` |
-| GitHub writer | Step 7 and each later deploy | Push to `calummoore/ci-proxy-load-balancer`, or push a `deploy-*` tag |
+| GitHub writer | Step 7 and each later deploy | Push to `calummoore/ci-proxy-load-balancer`, then `main` after its merge, or push a `deploy-*` tag |
 | Image publisher | [Publish job images](operations.md#publish-job-images) | `roles/storage.objectCreator` on the image bucket, or the operator roles |
 | Deploy identity: `ciproxy-<env>-deploy` | Steps 7 and 9, and each later deploy run, through Workload Identity Federation with no key | `roles/compute.loadBalancerAdmin`, `roles/compute.networkViewer`, `roles/container.developer`, `roles/dns.admin`, `roles/monitoring.editor`, and `roles/serviceusage.serviceUsageConsumer`. It reads each state and writes only the edge state. It writes the site and dashboard buckets, and reads the release token. |
 | GKE nodes: `ciproxy-<env>-gke` | Image pulls | Read the runtime Artifact Registry repository |
@@ -37,8 +37,9 @@ The federation provider maps the GitHub token claims `repository_id`,
 - The environment is `<env>`, and the event is `push`.
 - The workflow ref starts with
   `Firna-AI/ciproxy/.github/workflows/deploy-<env>.yml@`.
-- Staging needs the ref `refs/heads/calummoore/ci-proxy-load-balancer`.
-  Production needs a ref that starts with `refs/tags/deploy-`.
+- Main preview accepts `refs/heads/calummoore/ci-proxy-load-balancer` and
+  `refs/heads/main`. Its workflow triggers on the same two branches.
+- Production needs a ref that starts with `refs/tags/deploy-`.
 
 The condition does not use the subject claim, so the trust needs no change
 to the OIDC settings of the repository.
@@ -53,18 +54,30 @@ site and dashboard buckets grant read access to `allUsers`, so an
 organization policy for domain-restricted sharing or public access
 prevention stops the foundation apply. Get the operator roles of the table.
 
+A zone on the last free Cloud DNS name-server set needs a TXT ownership check.
+Complete the check before retrying setup. See the
+[DNS limits](https://docs.cloud.google.com/dns/quotas#name_server_limits).
+
 Install the Google Cloud CLI with `kubectl` and `gke-gcloud-auth-plugin`,
 Terraform 1.17.1, Helm 4.3.1, Docker, the GitHub CLI, Python 3, and `psql`.
-The workflows use gcloud 592.0.0. `bash deploy/scripts/install-helm.sh`
-puts Helm in `.context/tools/ciproxy-helm/`. Terraform uses the application
-default credentials. Set the quota project again when you change the
-environment.
+The workflows use gcloud 592.0.0. The Helm installer supports Linux and
+macOS on amd64 and arm64. It selects the native archive and checks its
+pinned SHA-256 before extraction. It uses `sha256sum` or `shasum -a 256`.
+The pins come from the
+[Helm 4.3.1 release](https://github.com/helm/helm/releases/tag/v4.3.1).
+The installer puts Helm in `.context/tools/ciproxy-helm/`. It adds that
+directory to `GITHUB_PATH` in CI. For an operator, add it to `PATH`:
 
 ```sh
+bash deploy/scripts/install-helm.sh
+export PATH="$PWD/.context/tools/ciproxy-helm:$PATH"
 gcloud auth login
 gcloud auth application-default login
 gcloud auth application-default set-quota-project "$PROJECT_ID"
 ```
+
+Terraform uses the application default credentials. Set the quota project
+again when you change the environment.
 
 ## 2. Bootstrap the environment
 
@@ -133,23 +146,54 @@ unset RELEASE_TOKEN
 
 ## 5. Delegate DNS
 
-The foundation creates the zone `ciproxy-<env>`: `ciproxy.dev` for
-production and `staging.ciproxy.dev` for staging. The first deploy adds the
-A records. Terraform never changes the registrar or a parent zone. Get the
-name servers with
-`terraform -chdir=deploy/environments/$DEPLOY_ENV output dns_name_servers`.
+The main preview foundation creates three zones in `internal-498318`:
 
-- **Production:** first copy each record that `ciproxy.dev` still needs,
-  such as MX and TXT, into the zone. The zone has no DNSSEC, so remove any
-  DS record. Then set the four name servers at the registrar.
-- **Staging:** add an NS record for `staging.ciproxy.dev` in the zone that
-  serves `ciproxy.dev` at that time. Before a later production switch, copy
-  it into the production zone. With `roles/dns.admin` in `ciproxy`, run:
+| Managed zone | DNS name |
+| --- | --- |
+| `ciproxy-main-preview` | `preview.ciproxy.dev` |
+| `ciproxy-main-preview-dashboard` | `preview.app.ciproxy.dev` |
+| `ciproxy-main-preview-releases` | `preview.get.ciproxy.dev` |
+
+Terraform leaves the registrar and delegations to the operator. The first
+deploy adds `br-main` A records. Read each zone's four name servers:
 
 ```sh
-gcloud dns record-sets create staging.ciproxy.dev. --project=ciproxy \
-  --zone=ciproxy-production --type=NS --ttl=3600 --rrdatas=NS1,NS2,NS3,NS4
+terraform -chdir=deploy/environments/$DEPLOY_ENV output -json dns_name_servers
 ```
+
+The output maps full DNS names with trailing dots to their name servers.
+
+For the main preview, find the active parent zone in project `ciproxy`:
+
+```sh
+gcloud dns managed-zones list --project=ciproxy --filter='dnsName=ciproxy.dev.' \
+  --format='table(name,nameServers)'
+dig +short NS ciproxy.dev
+PARENT_ZONE=ACTIVE_ZONE_ID
+```
+
+Set `PARENT_ZONE` to the `NAME` whose name servers match the `dig` output.
+Use each preview zone's servers for its `SITE_NS`, `APP_NS`, or `GET_NS`.
+
+```sh
+gcloud dns record-sets create preview.ciproxy.dev. --project=ciproxy \
+  --zone="$PARENT_ZONE" --type=NS --ttl=3600 \
+  --rrdatas=SITE_NS1,SITE_NS2,SITE_NS3,SITE_NS4
+gcloud dns record-sets create preview.app.ciproxy.dev. --project=ciproxy \
+  --zone="$PARENT_ZONE" --type=NS --ttl=3600 \
+  --rrdatas=APP_NS1,APP_NS2,APP_NS3,APP_NS4
+gcloud dns record-sets create preview.get.ciproxy.dev. --project=ciproxy \
+  --zone="$PARENT_ZONE" --type=NS --ttl=3600 \
+  --rrdatas=GET_NS1,GET_NS2,GET_NS3,GET_NS4
+```
+
+After production foundation setup, copy the active zone's required records
+to `ciproxy-production` in `ciproxy`. Include MX, TXT, and the three preview
+NS records unchanged. Use `PARENT_ZONE=ciproxy-production` above. The new
+zone has no DNSSEC. Remove any DS record before the registrar switch. Then
+set the registrar to the four name servers in the `ciproxy.dev.` output.
+
+These zones permit later wildcard records without another parent-zone edit.
 
 ## 6. Set up the GitHub environment
 
@@ -168,7 +212,7 @@ gh variable set GCP_WIF_PROVIDER --repo=Firna-AI/ciproxy --env="$DEPLOY_ENV" --b
 | `GCP_WIF_PROVIDER` | The bootstrap output | Before the first deploy |
 | `GCP_DEPLOY_SERVICE_ACCOUNT` | The bootstrap output | Before the first deploy |
 | `RELEASE_SERVER_IMAGE_DIGEST` | The `sha256:` digest of step 3 | Before the first deploy |
-| `CDN_SIGNING_KEY_NAME` | The name that step 8 prints, such as `ciproxy-staging-images-v1` | After step 8 |
+| `CDN_SIGNING_KEY_NAME` | The name that step 8 prints, such as `ciproxy-main-preview-images-v1` | After step 8 |
 | `PUBLIC_UPTIME_ENABLED` | `true` | Step 9 |
 | `CONTROL_PLANE_RUNTIME_READY` | Unset or `false`, until a real runtime exists | [Runtime](operations.md#turn-on-the-runtime) |
 | `CONTROL_PLANE_IMAGE` | An image name with `@sha256:` and its digest | [Runtime](operations.md#turn-on-the-runtime) |
@@ -180,9 +224,12 @@ tags of the environment to the ref that the trust accepts.
 
 ## 7. Run the first deploy
 
-Do steps 2 to 6 first. DNS can still be pending. For staging, push to
-`calummoore/ci-proxy-load-balancer`, or run the last "Deploy staging" run
-again. For production, push a new tag:
+Do steps 2 to 6 first. DNS can still be pending. For the main preview, push
+to `calummoore/ci-proxy-load-balancer`, or run the last "Deploy main preview"
+run again. After that branch merges into `main`, stop pushes to it and use
+`main`. The workflow and federation accept both refs, so the merge needs
+no trust change. This change adds no pull request preview environment.
+For production, push a new tag:
 
 ```sh
 git tag deploy-20261104-1 COMMIT
@@ -197,7 +244,7 @@ the static files without a delete. It waits until GKE reports the NEGs of
 each Service in all three zones. Then it applies the edge root, which
 attaches the NEGs of all three zones, and invalidates the CDN cache. When a
 zone is still missing after ten minutes, the deploy stops before the edge
-apply. Until steps 2 to 6 are done, each staging run fails.
+apply. Until steps 2 to 6 are done, each main preview run fails.
 
 ## 8. Register the CDN signing key
 
@@ -216,9 +263,9 @@ The script first adds the key file as a new version of the secret
 version, and makes the key name `ciproxy-<env>-images-v<N>`. Then it
 registers the key under that name on the backend bucket, and lets the Cloud
 CDN cache-fill account read the image bucket. Only when each step succeeds,
-it prints the name, such as `CDN_SIGNING_KEY_NAME=ciproxy-staging-images-v1`
-for the first staging key. Set the GitHub variable `CDN_SIGNING_KEY_NAME` to
-that value.
+it prints the name, such as
+`CDN_SIGNING_KEY_NAME=ciproxy-main-preview-images-v1` for the first main
+preview key. Set the GitHub variable `CDN_SIGNING_KEY_NAME` to that value.
 
 This one name selects both the key name and the secret version of the
 future runtime. When the script stops early, it prints no name, so no deploy
@@ -228,22 +275,24 @@ signs URLs.
 ## 9. Turn on uptime alerts
 
 After the delegation and the first deploy, check DNS, the certificate, and
-the hosts. The example uses the staging hosts. The certificate is ready when
-its status and each domain status are `ACTIVE`. Browsers open `.dev` hosts
-over HTTPS only, so no page loads before then.
+the hosts. The example uses the main preview hosts. The certificate is
+ready when its status and each domain status are `ACTIVE`. Browsers open
+`.dev` hosts over HTTPS only, so no page loads before then.
 
 ```sh
-dig +short NS staging.ciproxy.dev
+dig +short NS preview.ciproxy.dev
+dig +short NS preview.app.ciproxy.dev
+dig +short NS preview.get.ciproxy.dev
 gcloud compute ssl-certificates describe "ciproxy-$DEPLOY_ENV" --global \
   --project="$PROJECT_ID" --format="yaml(managed)"
-curl -fsSI https://staging.ciproxy.dev/ https://staging.ciproxy.dev/docs/
-curl -fsSI https://app.staging.ciproxy.dev/
-curl -fsS https://get.staging.ciproxy.dev/ciproxy-agent | head -n 5
+curl -fsSI https://br-main.preview.ciproxy.dev/ https://br-main.preview.ciproxy.dev/docs/
+curl -fsSI https://br-main.preview.app.ciproxy.dev/
+curl -fsS https://br-main.preview.get.ciproxy.dev/ciproxy-agent | head -n 5
 ```
 
 Then set `PUBLIC_UPTIME_ENABLED` to `true` and deploy again. The edge adds
-uptime checks for `/` and `/docs/` on the site host, `/` on the `app.` host,
-and `/ciproxy-agent` on the `get.` host. Each check runs each minute from
+uptime checks for `/` and `/docs/` on the site host, `/` on the dashboard host,
+and `/ciproxy-agent` on the download host. Each check runs each minute from
 Europe, the USA, and Asia Pacific. Its alert policy sends an email to the
 alert address when two or more checker locations fail for five minutes.
 

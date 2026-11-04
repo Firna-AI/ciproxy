@@ -23,12 +23,16 @@ output "deployment" {
 
 output "edge" {
   value = {
-    project_id            = var.project_id
-    environment           = var.environment
-    prefix                = local.prefix
-    allowed_zones         = local.allowed_zones
-    hosts                 = local.hosts
-    dns_zone              = google_dns_managed_zone.public.name
+    project_id    = var.project_id
+    environment   = var.environment
+    prefix        = local.prefix
+    allowed_zones = local.allowed_zones
+    hosts         = local.hosts
+    dns_zones = {
+      for key, host in local.hosts : key => google_dns_managed_zone.public[
+        var.environment == "production" ? "site" : key
+      ].name
+    }
     buckets               = { for key, bucket in google_storage_bucket.public : key => bucket.name }
     images_bucket         = google_storage_bucket.images.name
     notification_channels = [for channel in google_monitoring_notification_channel.email : channel.name]
@@ -36,5 +40,7 @@ output "edge" {
 }
 
 output "dns_name_servers" {
-  value = google_dns_managed_zone.public.name_servers
+  value = {
+    for zone in google_dns_managed_zone.public : zone.dns_name => zone.name_servers
+  }
 }
