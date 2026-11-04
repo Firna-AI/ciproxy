@@ -46,6 +46,10 @@ It transfers no history or shared resource from the old workspace.
 Atomic GitHub registration creates the workspace, defaults, organization,
 and pending initial Admin together. A failed registration rolls back all
 of them. GitHub repository refresh atomically replaces one snapshot.
+Workspace creation and first GitHub registration share one transaction
+helper. It inserts the workspace, initial Free billing, and settings.
+GitHub labels, pending Admin, and lifecycle events remain in the enclosing
+registration transaction.
 UUID scale-set demand stays separate from numeric Actions job history.
 Each demand write saves a pending delivery revision in the same statement.
 Stale replay cannot replace a later assignment or a terminal state.
@@ -98,6 +102,14 @@ have no cascading workspace or organization reference. Pending cleanup
 survives row reuse and retention purge. Confirmation deletes an accepted
 event. Pending-organization discovery supports replay after restart.
 
+Billing uses a separate live session lock per workspace.
+Each command persists before an external Stripe call.
+The shared read model exposes confirmed coverage and UTC period anchors.
+A transaction commits event receipts, state, and command completion together.
+A failed state write rolls its receipt back.
+The last organization removal also persists a cancellation request.
+It stays until billing handles it, including unfinished Checkout.
+
 Queries are synchronous.
 Async services must call them from blocking workers.
 This crate contains no scheduler, listener, gateway, KMS client, Boat
@@ -148,6 +160,7 @@ CI starts the database for the existing workspace test phase.
 
 ### Key Code
 
+- [src/billing/session.rs](src/billing/session.rs) commits billing state.
 - [src/factory.rs](src/factory.rs) opens stores and applies migrations.
 - [src/connection.rs](src/connection.rs) owns the private query connection.
 - [src/workspaces.rs](src/workspaces.rs) creates shared customer tenants.

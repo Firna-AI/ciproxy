@@ -74,6 +74,13 @@ Remote scale-set upserts preserve the internal row and lock key.
 Organization mutation leases wait on dedicated connections. They retain
 all GitHub identity bits in the separate two-key advisory namespace.
 
+BillingStore adds the confirmed tier, add-ons, paid bounds, and Free anchor.
+It exposes retry and ended-banner dates without changing job execution.
+BillingSession owns exclusive command and event reconciliation.
+State and event receipts commit atomically.
+App removal stores a durable billing cancellation request.
+Services consume these boundaries through dyn.
+
 The gateway queries atomically register a machine and its hashed credential.
 GatewayStore reuses TokenStore authority lookup to derive the workspace from
 the install hash. Registration rechecks the token under its transaction
@@ -121,6 +128,7 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 ### Key Code
 
 - [src/store.rs](src/store.rs) defines Store and its connection factory.
+- [src/billing/store.rs](src/billing/store.rs) owns durable billing sessions.
 - [src/workspaces.rs](src/workspaces.rs) defines shared customer ownership.
 - [src/organizations.rs](src/organizations.rs) defines GitHub App records.
 - [src/error.rs](src/error.rs) owns typed failures and safe diagnostics.

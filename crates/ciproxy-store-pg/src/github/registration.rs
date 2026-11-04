@@ -4,7 +4,6 @@ use chrono::{DateTime, Utc};
 use ciproxy_schema::github::github_initial_admin;
 use ciproxy_schema::labels::labels;
 use ciproxy_schema::organizations::organizations;
-use ciproxy_schema::settings::settings;
 use ciproxy_schema::workspaces::workspaces;
 use ciproxy_store_interface::error::Result;
 use ciproxy_store_interface::labels::Label;
@@ -18,6 +17,7 @@ use uuid::Uuid;
 use crate::connection::PgStore;
 use crate::error::QueryResultExt;
 use crate::organization_rows::repository_columns;
+use crate::workspaces::create_workspace_on;
 
 pub(super) fn register(
     connection: &mut PgConnection,
@@ -29,15 +29,7 @@ pub(super) fn register(
     let state: &str = organization.app_state.into();
     let (mode, ids) = repository_columns(&organization.repositories);
     if let Some(workspace) = workspace {
-        diesel::insert_into(workspaces::table)
-            .values((
-                workspaces::id.eq(workspace.id),
-                workspaces::name.eq(&workspace.name),
-            ))
-            .execute(connection)?;
-        diesel::insert_into(settings::table)
-            .values(settings::workspace_id.eq(workspace.id))
-            .execute(connection)?;
+        create_workspace_on(connection, workspace)?;
         diesel::insert_into(github_initial_admin::table)
             .values((
                 github_initial_admin::workspace_id.eq(workspace.id),

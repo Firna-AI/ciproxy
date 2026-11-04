@@ -1,5 +1,6 @@
 //! Atomic defaults and repository snapshots preserve tenant boundaries.
 
+use ciproxy_store_interface::billing::state::{AddOns, SubscriptionState, Tier};
 use ciproxy_store_interface::error::Error;
 use ciproxy_store_interface::github::Repository;
 use ciproxy_store_interface::organizations::Organization;
@@ -81,6 +82,41 @@ fn atomic_install_preserves_first_admin_and_replay_keeps_workspace_defaults() {
     assert_eq!(
         store.workspace(workspace.id).unwrap(),
         Some(workspace.clone())
+    );
+    let billing = store.billing(workspace.id);
+    assert!(
+        billing.is_ok(),
+        "GitHub workspace must have Free billing: {billing:?}"
+    );
+    let billing = billing.unwrap();
+    assert_eq!(
+        (
+            billing.state.workspace_id,
+            billing.state.tier,
+            billing.state.add_ons,
+            billing.state.status,
+            billing.state.customer_id,
+            billing.state.subscription_id
+        ),
+        (
+            workspace.id,
+            Tier::Free,
+            AddOns {
+                start_blocks: 0,
+                machines: 0
+            },
+            SubscriptionState::None,
+            None,
+            None
+        )
+    );
+    assert_eq!(
+        (
+            billing.command,
+            billing.checkout,
+            billing.removal_cancel_requested
+        ),
+        (None, None, false)
     );
     assert_eq!(store.pending_initial_admin(workspace.id).unwrap(), Some(41));
     label.size.vcpus = 6;

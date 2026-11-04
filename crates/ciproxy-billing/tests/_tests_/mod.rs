@@ -1,0 +1,21 @@
+//! Public service scenarios, sharing only infrastructure fixtures.
+
+mod changes_tests;
+mod checked_stripe;
+mod checkout_tests;
+mod database;
+mod expiry_recovery_tests;
+mod expiry_support;
+mod fake;
+mod fake_requests;
+mod fake_routes;
+mod fake_subscriptions;
+mod fixture;
+mod http_tests;
+mod ownership_tests;
+mod pending_context_tests;
+mod removal_tests;
+mod renewal_upgrade_tests;
+mod states_tests;
+mod subscription_requests;
+mod terminal_tests;

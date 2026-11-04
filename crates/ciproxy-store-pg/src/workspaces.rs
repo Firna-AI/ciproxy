@@ -1,6 +1,7 @@
 //! Workspace creation and explicit credential revocation queries.
 
 use chrono::{DateTime, Utc};
+use ciproxy_schema::billing::billing_accounts;
 use ciproxy_schema::organizations::organizations;
 use ciproxy_schema::settings::settings;
 use ciproxy_schema::workspaces::workspaces;
@@ -31,21 +32,30 @@ impl From<WorkspaceRow> for Workspace {
     }
 }
 
+/// Insert the tenant, initial Free billing, and settings in the caller's transaction.
+pub(crate) fn create_workspace_on(
+    connection: &mut PgConnection,
+    workspace: &Workspace,
+) -> QueryResult<()> {
+    diesel::insert_into(workspaces::table)
+        .values((
+            workspaces::id.eq(workspace.id),
+            workspaces::name.eq(&workspace.name),
+        ))
+        .execute(connection)?;
+    diesel::insert_into(billing_accounts::table)
+        .values(billing_accounts::workspace_id.eq(workspace.id))
+        .execute(connection)?;
+    diesel::insert_into(settings::table)
+        .values(settings::workspace_id.eq(workspace.id))
+        .execute(connection)?;
+    Ok(())
+}
+
 impl WorkspaceStore for PgStore {
     fn create_workspace(&self, workspace: &Workspace) -> Result<()> {
         self.connection()?
-            .transaction(|connection| {
-                diesel::insert_into(workspaces::table)
-                    .values((
-                        workspaces::id.eq(workspace.id),
-                        workspaces::name.eq(&workspace.name),
-                    ))
-                    .execute(connection)?;
-                diesel::insert_into(settings::table)
-                    .values(settings::workspace_id.eq(workspace.id))
-                    .execute(connection)?;
-                QueryResult::Ok(())
-            })
+            .transaction(|connection| create_workspace_on(connection, workspace))
             .store()
     }
 
