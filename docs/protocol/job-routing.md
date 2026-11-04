@@ -172,9 +172,7 @@ where each job runs. It also states what happens when a part fails.
 ## Warm runners
 
 - **Decision:** own machines keep warm runners. Reason: jobs start at
-  once. Warm runners also keep work going through a short outage of the
-  [control plane](../architecture.md#components), because a queued ciproxy
-  job cannot move to another label.
+  once.
 - Each own machine has a warm runner count, which is 2 by default.
 - The customer sets the count of each machine on its machine page.
 - Warm runners serve the label `ciproxy` only.
@@ -196,8 +194,6 @@ where each job runs. It also states what happens when a part fails.
 
 ### Control plane outage
 
-- During a control plane outage, warm runners that are ready keep taking
-  jobs.
 - No new runner starts on an own machine or on Boat until the control
   plane is back.
 - Jobs without a runner stay queued in GitHub, and they start when the
@@ -211,7 +207,7 @@ where each job runs. It also states what happens when a part fails.
 - ciproxy starts no runner on an offline machine.
 - New jobs run on the other own machines and on Boat.
 - Ready warm runners of an offline machine that still reach GitHub keep
-  taking jobs, as in a control plane outage.
+  taking jobs.
 - ciproxy does not stop or re-run the running jobs of an offline machine.
 - GitHub decides the result of those jobs.
 - When the machine is back, the dashboard shows its slots again.

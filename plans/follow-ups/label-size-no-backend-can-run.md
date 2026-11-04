@@ -54,9 +54,7 @@
   sizes that the backend reports.
 - **Previous examples:** The dialog promise came in `d790413`, the docs
   labels page in `661d1f8`, and the plan design call in `aa5d2d9`.
-- **Related:** `plans/follow-ups/outage-new-jobs-need-listener.md`, which
-  shares the class: a doc that states vendor behaviour without a source.
-  Also: the dialog locks "Your machines" off for such a label, but
+- **Related:** The dialog locks "Your machines" off for such a label, but
   `job-routing.md` moves the label back to own machines when a machine
   that fits connects.
 - **Recommendation:** D. It covers the oversized example and the default

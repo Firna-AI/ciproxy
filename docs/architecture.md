@@ -217,14 +217,12 @@ design tokens that the dashboard uses.
 ### A control plane outage
 
 1. Running jobs go on, because each runner talks to GitHub directly.
-2. Warm runners that are ready keep taking jobs, because they are registered
-   with GitHub already.
-3. No new runner starts on an own machine or on Boat. Jobs without a runner
+2. No new runner starts on an own machine or on Boat. Jobs without a runner
    stay queued in GitHub. [Failures](protocol/job-routing.md#failures)
    holds the rules.
-4. The agents keep their job VMs and warm runners, and they try to connect
+3. The agents keep their job VMs and warm runners, and they try to connect
    again.
-5. When the control plane is back, the scaler starts runners for the queued
+4. When the control plane is back, the scaler starts runners for the queued
    jobs. The backend client deletes each sandbox that ciproxy started, that
    runs no job, and that no waiting job needs.
 
