@@ -1,0 +1,10 @@
+---
+source: crates/ciproxy-protocol/src/_tests_/wire/assertions.rs
+assertion_line: 20
+description: Tagged JSON for control_welcome; all credentials are dummy test values.
+expression: message
+---
+{
+  "type": "welcome",
+  "protocol_version": 1
+}

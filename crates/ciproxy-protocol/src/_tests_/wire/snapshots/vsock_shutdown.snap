@@ -1,0 +1,9 @@
+---
+source: crates/ciproxy-protocol/src/_tests_/wire/assertions.rs
+assertion_line: 20
+description: Tagged JSON for vsock_shutdown; all credentials are dummy test values.
+expression: message
+---
+{
+  "type": "shutdown"
+}

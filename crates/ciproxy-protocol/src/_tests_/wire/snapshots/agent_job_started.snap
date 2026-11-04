@@ -1,0 +1,11 @@
+---
+source: crates/ciproxy-protocol/src/_tests_/wire/assertions.rs
+assertion_line: 20
+description: Tagged JSON for agent_job_started; all credentials are dummy test values.
+expression: message
+---
+{
+  "type": "job_started",
+  "runner_id": "runner-1",
+  "job_id": "job-1"
+}

@@ -1,0 +1,137 @@
+---
+source: crates/ciproxy-protocol/src/_tests_/wire/assertions.rs
+assertion_line: 20
+description: Tagged JSON for agent_register; all credentials are dummy test values.
+expression: message
+---
+{
+  "type": "register",
+  "protocol_version": 1,
+  "workspace_id": "workspace-1",
+  "install_token": "dummy-install-token",
+  "report": {
+    "hostname": "build-machine",
+    "agent_version": "0.1.0",
+    "hardware": {
+      "processor": "Example x64 CPU",
+      "threads": 8,
+      "memory_bytes": 32000000000,
+      "kvm": true,
+      "disks": [
+        {
+          "name": "nvme0n1",
+          "capacity_bytes": 512000000000,
+          "free_bytes": 300000000000
+        }
+      ]
+    },
+    "capacity": 3,
+    "slots": [
+      {
+        "index": 0,
+        "occupancy": {
+          "state": "free"
+        }
+      },
+      {
+        "index": 1,
+        "occupancy": {
+          "state": "warm",
+          "runner_id": "runner-warm"
+        }
+      },
+      {
+        "index": 2,
+        "occupancy": {
+          "state": "job",
+          "runner_id": "runner-1",
+          "job_id": "job-1"
+        }
+      }
+    ],
+    "runners": [
+      {
+        "runner_id": "runner-warm",
+        "organization_id": "organization-2",
+        "label": "ciproxy",
+        "size": {
+          "vcpu": 2,
+          "memory_bytes": 8000000000,
+          "disk_bytes": 60000000000
+        },
+        "image_id": "ubuntu-image-1",
+        "state": {
+          "state": "warm"
+        }
+      },
+      {
+        "runner_id": "runner-1",
+        "organization_id": "organization-1",
+        "label": "ciproxy",
+        "size": {
+          "vcpu": 2,
+          "memory_bytes": 8000000000,
+          "disk_bytes": 60000000000
+        },
+        "image_id": "ubuntu-image-0",
+        "state": {
+          "state": "running",
+          "job_id": "job-1"
+        }
+      }
+    ],
+    "drain": "active",
+    "cache": {
+      "used_bytes": 20000000000,
+      "capacity_bytes": 100000000000,
+      "restores_last_7_days": 100,
+      "hits_last_7_days": 75,
+      "jobs": [
+        {
+          "job_id": "job-1",
+          "usage": {
+            "handling": "machine_handled",
+            "local_entries": 3,
+            "github_entries": 0,
+            "restored_bytes": 2000000000
+          }
+        },
+        {
+          "job_id": "job-2",
+          "usage": {
+            "handling": "machine_handled",
+            "local_entries": 1,
+            "github_entries": 1,
+            "restored_bytes": 1000000000
+          }
+        },
+        {
+          "job_id": "job-3",
+          "usage": {
+            "handling": "github"
+          }
+        },
+        {
+          "job_id": "job-4",
+          "usage": {
+            "handling": "machine_handled",
+            "local_entries": 0,
+            "github_entries": 2,
+            "restored_bytes": 3000000000
+          }
+        }
+      ]
+    },
+    "docker_disks": {
+      "repositories": 2,
+      "used_bytes": 15000000000
+    },
+    "images": {
+      "available": [
+        "ubuntu-image-0",
+        "ubuntu-image-1"
+      ],
+      "newest": "ubuntu-image-1"
+    }
+  }
+}

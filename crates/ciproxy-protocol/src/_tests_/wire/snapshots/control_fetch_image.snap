@@ -1,0 +1,16 @@
+---
+source: crates/ciproxy-protocol/src/_tests_/wire/assertions.rs
+assertion_line: 20
+description: Tagged JSON for control_fetch_image; all credentials are dummy test values.
+expression: message
+---
+{
+  "type": "fetch_image",
+  "command_id": "command-1",
+  "image": {
+    "image_id": "ubuntu-image-1",
+    "download_url": "https://download.example/image?signature=dummy-image-key",
+    "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "size_bytes": 12000000000
+  }
+}
