@@ -168,22 +168,23 @@ design tokens that the dashboard uses.
 
 ### A cache restore and save
 
-1. On an own machine, a step such as `actions/cache` restores an entry from
-   the machine cache. The [cache scope](protocol/cache.md#cache-scopes) of
-   the job decides which entries it can restore.
-2. On a miss, the machine cache reads the entry through from the GitHub
-   cache. When the machine cache fails, the job falls back to the
+1. On an own machine, a step such as `actions/cache` restores an entry. The
+   [cache scope](protocol/cache.md#cache-scopes) of the job decides which
+   entries it can restore.
+2. The machine cache gives the contents when it has them. Otherwise they
+   come from the GitHub cache, and the machine cache keeps them. When the
+   machine cache fails, the job falls back to the
    [GitHub cache](protocol/cache.md#fallback-to-the-github-cache).
 3. A save goes to the machine cache and through to the GitHub cache.
    [Trusted write-back](protocol/cache.md#trusted-write-back) says which
    saves other branches can restore.
 4. A job on Boat restores and saves through the GitHub cache only.
-5. The agent reports the cache counts of each job to the control plane.
+5. The agent reports the cache hits of its machine to the control plane.
    The cache contents stay on the machine and in the GitHub cache.
 
-- **Open:** how the control plane gets the cache counts of a job on Boat,
-  where no agent runs. It waits for the decision on the cache counts of
-  Boat jobs.
+- **Open:** what the job page shows about the cache of a job that the
+  machine cache did not serve, such as a Boat job. It waits for the
+  decision on the cache counts of Boat jobs.
 
 ### A checkout and a failed payment
 
@@ -236,8 +237,9 @@ design tokens that the dashboard uses.
 - **Decision:** open core. Rejected: open source only, because it gives no
   revenue. Rejected: a paid licence, because adoption is slower. Rejected:
   reselling overflow minutes, because the margins are thin.
-- **Open:** whether the definition of the image is open source. It waits
-  for the decision on the licence of the image.
+- **Open:** which code on the side of the customer, beyond the agent, is
+  open source, such as the image definition and the install script. It
+  waits for the decision on the licence of the image.
 
 ## Related docs
 

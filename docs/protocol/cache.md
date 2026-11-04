@@ -33,9 +33,10 @@ This doc states the cache rules for jobs on
 - A job restores the entries of its own branch and of the default branch.
 - A job of a pull request also restores the entries of its base branch.
 - The machine cache keeps these rules for every job on its machine.
-- **Open:** whether the machine cache serves an entry that the GitHub
-  cache no longer has, for example after a person deletes it on GitHub. It
-  waits for the decision on entries that leave the GitHub cache.
+- **Open:** which entries a job on an own machine can restore, so that a
+  person can keep a bad entry out of later jobs. An example is an
+  entry that a person deleted on GitHub. It waits for the decision on
+  entries that leave the GitHub cache.
 
 ## Trusted write-back
 
@@ -51,20 +52,19 @@ This doc states the cache rules for jobs on
 
 ## Cache tiers
 
-- On an own machine, a restore tries the machine cache first, then the
-  GitHub cache.
-- A restore that misses the machine cache reads through from the GitHub
-  cache, and the machine cache keeps the entry.
+- On an own machine, the machine cache gives the contents of a restored
+  entry when it has them.
+- Otherwise the contents come from the GitHub cache, and the machine cache
+  keeps them.
 - A save goes to the machine cache and through to the GitHub cache, so
   other own machines and jobs on Boat can restore it.
 - A job on Boat uses the GitHub cache only.
-- For a job on an own machine, the job page shows the restored entries,
-  the space that they take, and the cache source.
-- The cache source is "This machine" or "The GitHub cache".
-- The job page of a job on Boat shows the cache source "The GitHub cache".
-- **Open:** whether the job page of a job on Boat also shows how many
-  entries the job restored and their space. It waits for the decision on
-  the cache counts of Boat jobs.
+- The job page shows the cache source of each job: "This machine" or "The
+  GitHub cache".
+- A job on Boat has the cache source "The GitHub cache".
+- **Open:** when the job page also shows how many entries the job restored
+  and their space, for example for a job on Boat. It waits for the
+  decision on the cache counts of Boat jobs.
 - The Machines page and the machine page show the used space and the total
   space of the machine cache.
 - They also show the cache hits of the last 7 days.

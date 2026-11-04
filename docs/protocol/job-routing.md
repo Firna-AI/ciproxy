@@ -206,8 +206,7 @@ where each job runs. It also states what happens when a part fails.
 
 ### Own machine offline
 
-- An own machine is offline when the control plane has had no contact
-  with it for 60 seconds, as [Connection](agent.md#connection) says.
+- [Connection](agent.md#connection) says when an own machine is offline.
 - The dashboard shows no slots for an offline machine.
 - ciproxy starts no runner on an offline machine.
 - New jobs run on the other own machines and on Boat.
