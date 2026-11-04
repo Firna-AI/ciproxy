@@ -12,6 +12,7 @@ use crate::connection::PgStore;
 use crate::error::{QueryResultExt, require_record};
 use crate::gateway_transaction::read_snapshot;
 use crate::machine_reads::load_machines;
+use crate::machine_removal::mark_removed;
 use crate::machine_rows::{DiskRow, MachineRow};
 
 pub(crate) fn replace_disks(
@@ -103,13 +104,7 @@ pub(crate) fn remove_machine_records(
     machine_id: Uuid,
     at: DateTime<Utc>,
 ) -> QueryResult<usize> {
-    let count = diesel::update(
-        machines::table
-            .filter(machines::workspace_id.eq(workspace_id))
-            .find(machine_id),
-    )
-    .set((machines::removed_at.eq(at), machines::draining.eq(true)))
-    .execute(connection)?;
+    let count = mark_removed(connection, workspace_id, Some(machine_id), at)?;
     diesel::update(
         tokens::table
             .filter(tokens::workspace_id.eq(workspace_id))

@@ -9,6 +9,7 @@ pub mod gateway;
 pub mod jobs;
 pub mod labels;
 pub mod machines;
+pub mod metering;
 pub mod organizations;
 pub mod runners;
 pub mod scale_sets;

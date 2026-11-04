@@ -57,6 +57,7 @@ pub trait MachineStore: Send + Sync {
     /// Replace a machine report and desired settings within its workspace.
     fn update_machine(&self, workspace_id: Uuid, machine: &Machine) -> Result<()>;
     /// Remove a machine and revoke every machine credential atomically.
+    /// Repeated requests keep the first removal time.
     fn remove_machine(&self, workspace_id: Uuid, machine_id: Uuid, at: DateTime<Utc>)
     -> Result<()>;
 }

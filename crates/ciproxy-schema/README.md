@@ -30,12 +30,19 @@ It stores job metadata and references to immutable runner placements.
 Cache measurements and restored content origins remain independent.
 The schema accepts measured GitHub-only fetches and zero-entry restores.
 It has no job-content, job-log, plaintext-token, or plaintext-key field.
+Metering tables hold trusted times, costs, and billing-period boundaries.
+Anonymous aggregates hold daily VM-size totals and Boat costs.
+Anonymous timestamp counts preserve exact period starts.
+Job and runner accounting cursors cascade with their source records.
+Anonymous aggregates belong only to the workspace.
+They survive organization deletion until their own retention expires.
+
 Billing accounts keep confirmed typed state and durable command inputs.
 Their creation time supplies the initial Free period anchor.
 Each has a distinct negative advisory-lock key.
 Billing events keep committed receipt identifiers.
 The last organization removal keeps a durable cancellation request.
-Later milestones own members, roles, and metering computations.
+Later milestones own members and roles.
 Workspace deletion cascades through its retained records after 30 days.
 
 ## Quick Start
@@ -83,6 +90,7 @@ Each migration has an up.sql and a down.sql.
 - [src/workspaces.rs](src/workspaces.rs) defines the shared customer tenant.
 - [src/organizations.rs](src/organizations.rs) defines GitHub installations.
 - [src/runners.rs](src/runners.rs) defines stored runner placements.
+- [src/metering.rs](src/metering.rs) defines histories and aggregates.
 
 ### Related Docs
 
@@ -92,3 +100,4 @@ Each migration has an up.sql and a down.sql.
 - [Workspaces](../../docs/protocol/workspaces.md) defines organization joins.
 - [Labels](../../docs/protocol/labels.md) defines labels.
 - [App removal](../../docs/protocol/app-removal.md) defines retention.
+- [Metering](../../docs/protocol/metering.md) defines counts and reports.

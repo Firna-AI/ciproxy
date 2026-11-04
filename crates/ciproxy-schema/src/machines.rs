@@ -15,6 +15,7 @@ diesel::table! {
         last_contact_at -> Nullable<Timestamptz>,
         agent_version -> Text,
         removed_at -> Nullable<Timestamptz>,
+        registered_at -> Nullable<Timestamptz>,
     }
 }
 
