@@ -140,3 +140,27 @@ fn actual_end_starts_free_month_and_ended_banner_without_changing_workspace_reso
     assert_eq!(state(&database), free);
     assert_eq!(fake.posts("/v1/subscriptions/sub_recorded").len(), 0);
 }
+
+#[test]
+fn unrelated_subscription_event_keeps_unknown_failed_payment_date_absent() {
+    let database = Database::new(workspace());
+    seed_paid(&database);
+    let mut current = subscription();
+    current.status = Status::PastDue;
+    let latest = current.latest_invoice.as_mut().unwrap();
+    latest.billing_reason = BillingReason::SubscriptionUpdate;
+    latest.status = InvoiceStatus::Open;
+    let fake = Fake::new(current);
+    let now = "2026-11-04T12:00:00Z".parse().unwrap();
+    let billing = read_service(&database, &fake, now);
+    let raw = br#"{"id":"evt_unrelated_subscription_update","created":1793793600,"type":"customer.subscription.updated","data":{"object":{"id":"sub_recorded"}}}"#;
+    assert_eq!(
+        billing.webhook(&signature(raw, now), raw).unwrap(),
+        EventOutcome::Applied
+    );
+    let result = state(&database);
+    assert_eq!(
+        (result.status, result.failed_invoice_id, result.failed_at),
+        (SubscriptionState::PaymentFailed, None, None)
+    );
+}

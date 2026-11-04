@@ -1,7 +1,6 @@
 //! Signed events refresh current Stripe objects under the workspace lock.
 
-use chrono::DateTime;
-use ciproxy_store_interface::billing::state::SubscriptionState;
+use chrono::{DateTime, Utc};
 
 use crate::error::{Error, Result, ResultExt};
 use crate::webhook::{Payload, parse};
@@ -15,8 +14,11 @@ impl BillingService {
         self.signing_secret
             .verify(signature, raw, self.clock.now().timestamp())?;
         let event = parse(raw)?;
-        let failure_invoice = match &event.payload {
-            Payload::InvoiceFailed(object) => Some(object.object.id.clone()),
+        let failure_evidence = match &event.payload {
+            Payload::InvoiceFailed(object) => Some(FailedPaymentEvidence {
+                invoice_id: object.object.id.clone(),
+                failed_at: DateTime::from_timestamp(event.created, 0).ok_or(Error::StripeState)?,
+            }),
             _ => None,
         };
         let (workspace, target, checkout) = match event.payload {
@@ -75,19 +77,7 @@ impl BillingService {
                 .internal()?;
             return Ok(EventOutcome::Ignored);
         }
-        let mut state =
-            self.confirmed_state(&record.state, &current, failure_invoice.as_deref())?;
-        if state.status == SubscriptionState::PaymentFailed
-            && failure_invoice.as_ref() == state.failed_invoice_id.as_ref()
-        {
-            let failure_at =
-                DateTime::from_timestamp(event.created, 0).ok_or(Error::StripeState)?;
-            state.failed_at = Some(
-                state
-                    .failed_at
-                    .map_or(failure_at, |old| old.max(failure_at)),
-            );
-        }
+        let state = self.confirmed_state(&record.state, &current, failure_evidence.as_ref())?;
         if let Some(command) = record.command.as_mut() {
             self.capture_pending_expiry(&mut *session, &state, command, &current)?;
         }
@@ -108,5 +98,21 @@ impl BillingService {
             self.cancel_removed(&mut *session)?;
         }
         Ok(EventOutcome::Applied)
+    }
+}
+
+/// Failure identity and time built only from the verified failed-payment branch.
+pub(super) struct FailedPaymentEvidence {
+    invoice_id: String,
+    failed_at: DateTime<Utc>,
+}
+
+impl FailedPaymentEvidence {
+    pub(super) fn invoice_id(&self) -> &str {
+        &self.invoice_id
+    }
+
+    pub(super) fn failed_at(&self) -> DateTime<Utc> {
+        self.failed_at
     }
 }

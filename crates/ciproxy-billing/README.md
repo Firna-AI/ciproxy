@@ -76,6 +76,9 @@ Past-due subscriptions keep the failed-payment state while details arrive.
 An unpaid renewal keeps that state even after another charge succeeds.
 A paid renewal, or subscription end, clears its failure.
 Failed renewal dates come from signed invoice.payment_failed events.
+Reconciliation keeps the failed invoice identity and event date together.
+It applies the date only to that concrete failed renewal.
+Unrelated events cannot supply a missing failed-payment date.
 An invoice creation date is not a failed-payment date.
 The failed date can be absent until that event arrives.
 The next retry can be absent while Stripe schedules it.

@@ -16,3 +16,6 @@ mod access_tests;
 #[cfg(test)]
 #[path = "_tests_/signature_tests.rs"]
 mod signature_tests;
+#[cfg(test)]
+#[path = "_tests_/webhook_tests.rs"]
+mod webhook_tests;

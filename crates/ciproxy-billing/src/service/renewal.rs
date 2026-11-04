@@ -6,6 +6,7 @@ use crate::error::{Error, Result};
 use crate::stripe::wire::invoice::{BillingReason, Invoice, InvoiceStatus};
 use crate::stripe::wire::types::{Status, Subscription};
 
+use super::events::FailedPaymentEvidence;
 use super::runtime::BillingService;
 use super::transition::{confirmed, terminal};
 
@@ -25,21 +26,28 @@ impl BillingService {
         &self,
         old: &BillingState,
         current: &Subscription,
-        failure_hint: Option<&str>,
+        failure_evidence: Option<&FailedPaymentEvidence>,
     ) -> Result<BillingState> {
         let renewal = if terminal(current) {
             RenewalState::Unknown
         } else {
-            self.failed_renewal(old, current, failure_hint)?
+            self.failed_renewal(old, current, failure_evidence)?
         };
-        confirmed(old, current, self.clock.now(), &renewal)
+        let mut state = confirmed(old, current, self.clock.now(), &renewal)?;
+        if let (Some(evidence), RenewalState::Failed(invoice)) = (failure_evidence, &renewal)
+            && evidence.invoice_id() == invoice.id
+        {
+            let failed_at = evidence.failed_at();
+            state.failed_at = Some(state.failed_at.map_or(failed_at, |old| old.max(failed_at)));
+        }
+        Ok(state)
     }
 
     fn failed_renewal(
         &self,
         old: &BillingState,
         current: &Subscription,
-        failure_hint: Option<&str>,
+        failure_evidence: Option<&FailedPaymentEvidence>,
     ) -> Result<RenewalState> {
         let mut recovered = false;
         let known_id = if old.subscription_id.as_ref() == Some(&current.id) {
@@ -54,8 +62,8 @@ impl BillingService {
             }
             recovered |= invoice.billing_reason == BillingReason::SubscriptionCycle;
         }
-        if let Some(id) = failure_hint {
-            let invoice = self.owned_invoice(current, id)?;
+        if let Some(evidence) = failure_evidence {
+            let invoice = self.owned_invoice(current, evidence.invoice_id())?;
             if unresolved(&invoice) {
                 return Ok(RenewalState::Failed(invoice));
             }
