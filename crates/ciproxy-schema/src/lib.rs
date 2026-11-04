@@ -8,6 +8,7 @@ pub mod github;
 pub mod jobs;
 pub mod labels;
 pub mod machines;
+pub mod metering;
 pub mod migrations;
 pub mod organizations;
 pub mod runners;

@@ -42,12 +42,32 @@ Global GitHub-ID reads return current and retained registrations.
 A partial unique index permits only one current registration.
 An install into another workspace creates a separate registration.
 It transfers no history or shared resource from the old workspace.
+Individual and workspace removal preserve each machine's first removal time.
+
+One helper gives workspace usage, savings, and Boat accounting read-only
+repeatable-read snapshots.
+Boat source costs and cost cursors share one repeatable-read snapshot.
+Savings registrations, range totals, and monthly costs share one
+repeatable-read read-only snapshot.
+The savings read includes removed registrations without loading retained
+jobs, start counts, or accounting cursors.
+Daily aggregates keep VM sizes and Boat costs without job identifiers.
+Timestamp aggregates keep exact starts without organization identifiers.
+Cursor writes apply caller-supplied signed corrections atomically.
+They return false for a stale cursor or a deleted source record.
+Accounting and Boat history writes lock the workspace before its children.
+Deleting organization data preserves anonymous workspace totals.
+The metering service computes the rules and supplies the retention cutoff.
+Call its refresh before deleting retained job or organization data.
+The saved retention cutoff prevents stale refreshes from restoring old dates.
 
 Atomic GitHub registration creates the workspace, defaults, organization,
 and pending initial Admin together. A failed registration rolls back all
 of them. GitHub repository refresh atomically replaces one snapshot.
 Workspace creation and first GitHub registration share one transaction
 helper. It inserts the workspace, initial Free billing, and settings.
+It also records the trusted creation time, zero-dollar Free cost, and
+initial Free period from the same billing creation anchor.
 GitHub labels, pending Admin, and lifecycle events remain in the enclosing
 registration transaction.
 UUID scale-set demand stays separate from numeric Actions job history.
@@ -156,6 +176,8 @@ The provided database serves as the maintenance connection.
 The fixture removes only the database that it created.
 Separate databases isolate sequence keys and advisory locks.
 Lock tests terminate only their own lock session.
+Metering concurrency tests coordinate tagged sessions through exact database
+lock dependencies. They check production cursor writes and report snapshots.
 CI starts the database for the existing workspace test phase.
 
 ### Key Code
@@ -170,7 +192,10 @@ CI starts the database for the existing workspace test phase.
 - [src/boat.rs](src/boat.rs) rotates and erases encrypted keys.
 - [src/github](src/github) owns atomic installation setup, repository
   snapshots, durable job revisions, and demand retention.
-
+- [src/machine_removal.rs](src/machine_removal.rs) preserves removal times.
+- [src/metering](src/metering) stores cost histories and accounting deltas.
+- [src/metering/snapshot.rs](src/metering/snapshot.rs) configures shared
+  metering read transactions.
 - [src/gateway.rs](src/gateway.rs) owns atomic gateway persistence.
 - [src/machine_reads.rs](src/machine_reads.rs) loads coherent machine views.
 - [src/machine_observation.rs](src/machine_observation.rs) limits contact
@@ -186,3 +211,4 @@ CI starts the database for the existing workspace test phase.
 - [Cache](../../docs/protocol/cache.md#cache-tiers) defines handling and counts.
 - [App removal](../../docs/protocol/app-removal.md) defines removal.
 - [Workspaces](../../docs/protocol/workspaces.md) defines organization joins.
+- [Metering](../ciproxy-metering/README.md) documents trusted producer calls.

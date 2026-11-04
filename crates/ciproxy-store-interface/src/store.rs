@@ -11,6 +11,7 @@ use crate::github_lifecycle::GithubLifecycleStore;
 use crate::jobs::JobStore;
 use crate::labels::LabelStore;
 use crate::machines::MachineStore;
+use crate::metering::store::MeteringStore;
 use crate::organizations::OrganizationStore;
 use crate::runners::RunnerStore;
 use crate::scale_sets::ScaleSetStore;
@@ -31,6 +32,7 @@ pub trait Store:
     + JobStore
     + SettingsStore
     + BoatStore
+    + MeteringStore
     + GatewayStore
     + GithubStore
     + GithubLifecycleStore

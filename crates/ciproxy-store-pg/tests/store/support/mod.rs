@@ -17,6 +17,7 @@ use ciproxy_store_interface::vm_size::VmSize;
 use ciproxy_store_interface::workspaces::Workspace;
 use ciproxy_store_pg::factory::PgStoreFactory;
 use diesel::prelude::*;
+use diesel::sql_types;
 use url::Url;
 use uuid::Uuid;
 
@@ -66,6 +67,33 @@ impl Database {
             delete_after: None,
         };
         self.store.create_workspace(&record).unwrap();
+        record
+    }
+
+    /// Seed a pre-metering workspace with unknown creation and no supplied history.
+    pub(super) fn legacy_workspace(&self) -> Workspace {
+        let id = Uuid::new_v4();
+        let record = Workspace {
+            id,
+            name: format!("Legacy workspace {id}"),
+            delete_after: None,
+        };
+        let mut connection = PgConnection::establish(&self.url).unwrap();
+        connection
+            .transaction(|connection| {
+                diesel::sql_query("INSERT INTO workspaces (id, name) VALUES ($1, $2)")
+                    .bind::<sql_types::Uuid, _>(id)
+                    .bind::<sql_types::Text, _>(&record.name)
+                    .execute(connection)?;
+                diesel::sql_query("INSERT INTO billing_accounts (workspace_id) VALUES ($1)")
+                    .bind::<sql_types::Uuid, _>(id)
+                    .execute(connection)?;
+                diesel::sql_query("INSERT INTO settings (workspace_id) VALUES ($1)")
+                    .bind::<sql_types::Uuid, _>(id)
+                    .execute(connection)?;
+                QueryResult::Ok(())
+            })
+            .unwrap();
         record
     }
 

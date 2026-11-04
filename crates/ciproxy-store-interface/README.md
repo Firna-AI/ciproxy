@@ -74,6 +74,20 @@ Remote scale-set upserts preserve the internal row and lock key.
 Organization mutation leases wait on dedicated connections. They retain
 all GitHub identity bits in the separate two-key advisory namespace.
 
+MeteringStore reads coherent workspace facts across all organizations.
+It stores trusted creation times, registration times, and cost histories.
+It stores explicit Free and Stripe billing-period boundaries.
+Anonymous daily aggregates keep actual VM sizes and Boat costs.
+Anonymous timestamp counts preserve exact period boundaries.
+Job and runner cursors support atomic signed aggregate corrections.
+BoatAccounting holds source costs and cursors from one coherent snapshot.
+SavingsSnapshot holds registrations, range totals, and monthly costs
+from one coherent snapshot.
+Its registrations include removed machines for historical cost dates.
+The savings read excludes jobs, start counts, and accounting cursors.
+Deleting a job or runner deletes its cursor and preserves its aggregates.
+The metering service supplies all calculation rules and retention dates.
+
 BillingStore adds the confirmed tier, add-ons, paid bounds, and Free anchor.
 It exposes retry and ended-banner dates without changing job execution.
 BillingSession owns exclusive command and event reconciliation.
@@ -139,7 +153,7 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
   UUID demand and pending role delivery.
 - [src/github_lifecycle.rs](src/github_lifecycle.rs) defines atomic App
   transitions and immutable ordered lifecycle delivery.
-
+- [src/metering](src/metering) defines metering facts and history APIs.
 - [src/gateway.rs](src/gateway.rs) defines atomic registration and reports.
 
 ### Related Docs
@@ -151,3 +165,4 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 - [Overflow](../../docs/protocol/overflow.md) defines Boat key rotation.
 - [App removal](../../docs/protocol/app-removal.md) defines retention.
 - [Workspaces](../../docs/protocol/workspaces.md) defines organization joins.
+- [Metering](../ciproxy-metering/README.md) documents trusted producer calls.

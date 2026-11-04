@@ -5,5 +5,7 @@ diesel::table! {
         id -> Uuid,
         name -> Text,
         delete_after -> Nullable<Timestamptz>,
+        metering_started_at -> Nullable<Timestamptz>,
+        metering_retained_from -> Nullable<Date>,
     }
 }
