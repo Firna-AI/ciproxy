@@ -83,8 +83,8 @@ This doc states the cache rules for jobs on
 - **Decision:** only a job whose restores the machine cache handled shows
   cache counts. Rejected: counts that the image sends with a token, because
   job code could fake them. Rejected: counts through the Boat API, and no
-  counts on any job. Reason: no new path leaves a sandbox, and the rule
-  holds for every later backend.
+  counts on any job. Reason: the counts need no data from a sandbox, and
+  the rule holds for every later backend.
 - The Machines page and the machine page show the used space and the total
   space of the machine cache.
 - They also show the cache hits of the last 7 days.

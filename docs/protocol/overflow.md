@@ -63,8 +63,9 @@ backend must give ciproxy.
   - It bills the customer by the second or finer.
   - It reports the state of each VM.
   - It stops and deletes a VM.
-  - It ends a VM by itself when the runner in the VM exits. So the end of a
-    VM needs neither the key nor the control plane.
+  - It ends a VM by itself, at the latest at a lifetime that ciproxy sets
+    when the VM starts. So the end of a VM needs neither the key nor the
+    control plane.
   - It lists the VMs that ciproxy started, by a mark that ciproxy sets.
   - It gives the cost of each VM, or the price that ciproxy needs to
     compute it.
@@ -90,6 +91,21 @@ backend must give ciproxy.
 - So the job page can show a size that is larger than the size of the
   label. With "Run on the largest Boat size", it can also be smaller.
 - ciproxy stops and deletes each sandbox when its job ends.
+- The ciproxy program in each sandbox tells the control plane when its
+  runner exits, with a token that works only for that sandbox.
+- The control plane then deletes the sandbox at once, also when GitHub
+  reports no job for the runner.
+- Each sandbox gets a lifetime of 6 hours, or 2 hours on a Boat free
+  trial. Boat ends the sandbox at that time, also during an outage of the
+  control plane.
+- So a job on Boat runs for at most 6 hours, as a job on a GitHub-hosted
+  runner does.
+- **Decision:** the sandbox reports the end of its runner, and a lifetime
+  set at the start is the backstop. Rejected: a Boat key in each sandbox,
+  a lifetime that the control plane renews, a key that ciproxy creates for
+  each sandbox, and AWS EC2 as the first backend. Reason: each sandbox
+  ends at once when its runner exits, and no sandbox bills past its
+  lifetime.
 - A Boat runner can stay without a job when an own machine took the
   waiting job first.
 - ciproxy stops and deletes the sandbox of such a runner as soon as no

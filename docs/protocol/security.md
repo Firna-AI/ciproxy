@@ -136,6 +136,9 @@ GitHub permissions, keys, isolation, and job data.
 - The dashboard never shows the Boat key after the customer saves it.
 - ciproxy never sends the Boat key to an own machine, a
   [job VM](agent.md#job-vms), or a sandbox.
+- A sandbox holds only a token that reports the end of its own runner, as
+  [Overflow runners](overflow.md#overflow-runners) says. Job code can read
+  this token, but it can only end its own job.
 - [Install](agent.md#install) says which organization an install token
   belongs to and how long it works.
 - The [machine credential](agent.md#machine-identity) stays on its machine,
