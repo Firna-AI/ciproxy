@@ -9,3 +9,4 @@ rust-version = "1.99"
 
 [workspace.dependencies]
 ciproxy-protocol = { path = "crates/ciproxy-protocol" }
+internal-error = { git = "https://github.com/futex-ai/internal-error", rev = "d7b94d766bf2844aa0b4a801fd21c465543e8a58" }
