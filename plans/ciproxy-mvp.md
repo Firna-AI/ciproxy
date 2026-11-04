@@ -73,7 +73,7 @@ Depends on: 1
 Each answer goes into the protocol doc that it changes, and its `Open:`
 line goes.
 
-- [ ] Write each answer that changes a doc. Waits for items 32 and 48.
+- [ ] Write each answer that changes a doc, and the disk rule of item 34.
 
 ## Milestone 3: Protocol crate
 
@@ -87,6 +87,8 @@ WebSocket over HTTPS with JSON. Reason: machines open no inbound port.
       commands for runners, job facts, drain, remove, cache, and images.
 - [ ] Add the vsock messages of `ciproxy-guest`. Use tagged enums, hide
       secrets from `Debug`, and snapshot each message with `insta`.
+- [ ] Add the disk rule of "Slots", after Milestone 2 writes it into
+      `job-routing.md`.
 
 ## Milestone 4: Store
 
@@ -541,6 +543,13 @@ had a clearly best option:
   Reason: a new label and a delete give a safe rename.
 - Item 34: Slots also count disk, and the machine cache gets the rest of the
   disk. Reason: the machine page already says why a machine has no slots.
+  The rule, my call of 4 November 2026: a size fits an own machine when the
+  machine has enough free slots and enough free disk for it. The host
+  reserve also keeps a quarter of the disk, for the system and the images.
+  Each running job holds the disk of its size, and the machine cache uses
+  the rest and frees space when a job needs it. Reason: one rule for every
+  resource, as for the threads and the memory. Milestone 2 writes it into
+  "Slots" of `job-routing.md`, and the protocol crate follows.
 - Item 35: A sign-in lasts 30 days, with a membership check each hour. Reason:
   access ends soon after a person leaves the organization.
 - Item 36: On a personal account, ciproxy shows a page that says it serves
