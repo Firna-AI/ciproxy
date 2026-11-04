@@ -34,6 +34,8 @@ The shared release installer also needs its approved argument-forwarding
 step. It must invoke the installed binary with the script arguments.
 
 The daemon sends a full hello and reports every ten seconds.
+Report waits and delivery do not wait for command work.
+Reconciliation requests coalesce while the worker is busy.
 It reports CPU, threads, memory, KVM, disk space, slots, VMs, and images.
 Missing KVM gives zero slots. It does not reject registration.
 Connection failures keep running jobs and warm runners.
@@ -41,6 +43,9 @@ Reconnect waits grow from one second to sixty seconds.
 Drain requests idle shutdown and preserves running jobs.
 Resume permits new runners. Remove is permanent until a new install.
 The daemon stops after the jobs of a removed machine finish.
+Runtime mode actions use one locked owner. Removal remains terminal.
+A late Drain remains applied and cannot undo removal.
+Reconciliation enforces current mode after each wait.
 
 State lives in `/var/lib/ciproxy/state.json` with mode `0600`.
 Its parent directory has mode `0700`.
@@ -130,6 +135,8 @@ The guest exits its runner before it reports RunnerExited.
 The agent retains VM ownership and disk space until that report or unit exit.
 A late JobStarted changes a pending shutdown to Running.
 The agent retries pending shutdown requests after connection recovery.
+Repeated Shutdown requests share one per-VM flag.
+A guest that cannot connect does not fill the normal message queue.
 
 The optional machine cache uses `/run/ciproxy-cache/control.sock`.
 Root owns this socket with mode `0600`.
@@ -160,12 +167,16 @@ The daemon checks for a new agent version every hour with `cli-updater`.
 The default release server is `https://get.ciproxy.dev`.
 `CIPROXY_RELEASE_SERVER_URL` can select a staging HTTPS release server.
 The update requires a checksum and restarts only the agent unit.
+A failed update cycle keeps the next hourly check.
 The updater source is pinned in the workspace manifest.
 The systemd service reads `/etc/ciproxy-agent/environment` when present.
 Keep this root-only settings file at mode `0600`.
 
 Release-plz tags only the agent, with `ciproxy-agent-vVERSION`.
-The release workflow runs the existing repository gate first.
+The release workflow runs the complete gate in a read-only PostgreSQL job.
+Versioning requires that job to pass.
+Package builds run read-only. A separate job uploads the verified assets.
+Action commits and release tool versions are pinned.
 Set `RELEASE_PLZ_TOKEN` to a repository-scoped token with release and pull
 request write access. Its tags must trigger the archive workflow.
 The release server needs access to the private release assets.
@@ -249,7 +260,9 @@ Missing resources produce `SKIP` and exit 77. Failed checks exit 1.
 
 - [src/application.rs](src/application.rs) composes the Linux adapters.
 - [src/controller.rs](src/controller.rs) defines durable machine control.
-- [src/runtime.rs](src/runtime.rs) separates reports from command work.
+- [src/runtime.rs](src/runtime.rs) owns daemon inputs and task lifetimes.
+- [src/runtime_reports.rs](src/runtime_reports.rs) schedules independent reports.
+- [src/mode.rs](src/mode.rs) owns terminal runtime mode transitions.
 - [src/vms.rs](src/vms.rs) owns separate jailed VM units.
 - [src/vsock_stream.rs](src/vsock_stream.rs) delivers registrations in memory.
 - [src/images.rs](src/images.rs) coordinates checked image fetches.

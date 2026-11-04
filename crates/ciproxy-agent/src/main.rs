@@ -23,6 +23,7 @@ mod installation;
 mod launches;
 mod layout;
 mod maintenance;
+mod mode;
 mod network;
 mod network_rules;
 mod observations;
@@ -30,6 +31,8 @@ mod persistence;
 mod process;
 mod reporting;
 mod runtime;
+mod runtime_reports;
+mod runtime_worker;
 mod state;
 mod system_service;
 mod updates;
@@ -89,3 +92,15 @@ mod image_response_tests;
 #[cfg(test)]
 #[path = "_tests_/image_concurrency_tests.rs"]
 mod image_concurrency_tests;
+
+#[cfg(test)]
+#[path = "_tests_/mode_reconcile_tests.rs"]
+mod mode_reconcile_tests;
+
+#[cfg(test)]
+#[path = "_tests_/timed_fakes.rs"]
+mod timed_fakes;
+
+#[cfg(test)]
+#[path = "_tests_/runtime_fakes.rs"]
+mod runtime_fakes;

@@ -1,22 +1,20 @@
-//! A report timer, control worker, and guest channels run independently.
+//! Independent report delivery keeps working while command work is pending.
 
 use std::sync::Arc;
-use std::time::Duration;
 
 use async_trait::async_trait;
 use ciproxy_protocol::agent::{AgentMessage, ControlMessage};
 use ciproxy_protocol::identifiers::CommandId;
-use ciproxy_protocol::reports::REPORT_INTERVAL_SECONDS;
-use tokio::signal::unix::{SignalKind, signal};
-use tokio::sync::mpsc;
-use tokio::task::JoinHandle;
-use tokio::time::{MissedTickBehavior, interval};
+use tokio::sync::{Notify, mpsc, watch};
+use tokio::task::JoinSet;
 
-use crate::boundaries::{Connection, GuestEvent};
+use crate::boundaries::{Connection, Delay, GuestEvent};
 use crate::controller::Agent;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::gateway::Gateway;
 use crate::maintenance::Maintenance;
+use crate::runtime_reports::reporting;
+use crate::runtime_worker::{Work, control_worker};
 use crate::state::Identity;
 
 #[async_trait]
@@ -26,6 +24,7 @@ pub(crate) trait Daemon: Send + Sync {
         identity: Identity,
         guests: mpsc::Receiver<GuestEvent>,
         removing: bool,
+        removal: mpsc::Receiver<()>,
     ) -> Result<()>;
 }
 
@@ -34,12 +33,13 @@ pub(crate) struct AgentDaemon {
     pub(crate) connection: Arc<dyn Connection>,
     pub(crate) gateway: Arc<dyn Gateway>,
     pub(crate) maintenance: Arc<dyn Maintenance>,
+    pub(crate) report_delay: Arc<dyn Delay>,
 }
 
-enum Work {
-    Control(Box<ControlMessage>),
-    Guest(GuestEvent),
-    Reconcile,
+struct LoopChannels {
+    outgoing: mpsc::Receiver<AgentMessage>,
+    work: mpsc::Sender<Work>,
+    connected: watch::Sender<bool>,
 }
 
 #[async_trait]
@@ -47,77 +47,118 @@ impl Daemon for AgentDaemon {
     async fn run(
         &self,
         identity: Identity,
-        mut guests: mpsc::Receiver<GuestEvent>,
-        mut removing: bool,
+        guests: mpsc::Receiver<GuestEvent>,
+        removing: bool,
+        removal: mpsc::Receiver<()>,
     ) -> Result<()> {
         self.agent.restore().await?;
-        let (outbound_tx, mut outbound_rx) = mpsc::channel(128);
-        let (control_tx, control_rx) = mpsc::channel(128);
-        let worker = tokio::spawn(control_worker(self.agent.clone(), control_rx, outbound_tx));
-        let (connected_tx, mut connected_rx) = mpsc::channel(1);
-        let mut reconnect = if removing {
-            None
-        } else {
-            Some(start_reconnect(
-                self.gateway.clone(),
-                identity.clone(),
-                connected_tx.clone(),
-            ))
-        };
+        let (outgoing, receive) = mpsc::channel(128);
+        let (work, commands) = mpsc::channel(128);
+        let reconciliation = Arc::new(Notify::new());
+        let (connected, _) = watch::channel(false);
+        let mut tasks = JoinSet::new();
+        tasks.spawn(control_worker(
+            self.agent.clone(),
+            commands,
+            outgoing,
+            reconciliation.clone(),
+        ));
         let maintenance = self.maintenance.clone();
-        let updater = tokio::spawn(async move {
+        tasks.spawn(async move {
             maintenance.run().await;
         });
-        let mut report_timer = interval(Duration::from_secs(REPORT_INTERVAL_SECONDS));
-        report_timer.set_missed_tick_behavior(MissedTickBehavior::Skip);
-        let mut removal_signal =
-            signal(SignalKind::user_defined1()).context("listen for local uninstall")?;
-        let mut connected = false;
+        let reports = reporting(
+            self.agent.clone(),
+            self.connection.clone(),
+            self.report_delay.clone(),
+            connected.clone(),
+            reconciliation,
+        );
+        let input = LoopChannels {
+            outgoing: receive,
+            work,
+            connected,
+        };
+        let result = tokio::select! {
+            result = self.run_loop(identity, guests, removing, removal, input) => result,
+            result = reports => result,
+        };
+        tasks.shutdown().await;
+        result
+    }
+}
+
+impl AgentDaemon {
+    async fn run_loop(
+        &self,
+        identity: Identity,
+        mut guests: mpsc::Receiver<GuestEvent>,
+        mut removing: bool,
+        mut removal: mpsc::Receiver<()>,
+        mut channels: LoopChannels,
+    ) -> Result<()> {
+        let mut reconnections = JoinSet::new();
+        let (reconnected, mut status) = mpsc::channel(1);
+        let mut connection_state = channels.connected.subscribe();
+        let mut connecting = false;
+        let mut removal_open = true;
+        let mut pending_work = None;
         let mut pending_remove: Option<CommandId> = None;
-        loop {
+        let result = loop {
             if pending_remove.is_none() && self.agent.finished().await {
-                break;
+                break Ok(());
+            }
+            let connected = *connection_state.borrow_and_update();
+            if !connected && !removing && !connecting {
+                let gateway = self.gateway.clone();
+                let identity = identity.clone();
+                let result = reconnected.clone();
+                reconnections.spawn(async move {
+                    let _ = result.send(gateway.reconnect(&identity).await).await;
+                });
+                connecting = true;
             }
             let outbound = tokio::select! {
-                status = connected_rx.recv(), if !removing && !connected => {
-                    reconnect = None;
-                    match status {
-                        Some(Ok(())) => connected = true,
-                        Some(Err(Error::Revoked)) => removing = true,
-                        Some(Err(error)) => return Err(error),
-                        None => return Err(Error::Disconnected),
+                result = status.recv(), if connecting => {
+                    connecting = false;
+                    match result {
+                        Some(Ok(())) => { channels.connected.send_replace(true); }
+                        Some(Err(Error::Revoked)) => { removing = true; channels.connected.send_replace(false); }
+                        Some(Err(error)) => break Err(error),
+                        None => break Err(Error::Disconnected),
                     }
                     None
                 }
-                message = self.connection.receive(), if connected => {
+                message = self.connection.receive(), if connected && pending_work.is_none() => {
                     match message {
                         Ok(message) => {
                             if let ControlMessage::Remove { command_id } = &message { pending_remove = Some(command_id.clone()); }
-                            control_tx.send(Work::Control(Box::new(message))).await.context("queue control message")?;
+                            pending_work = Some(Work::Control(Box::new(message)));
                         }
                         Err(error) => {
                             tracing::warn!(error = %error, "control connection failed; preserve VMs");
-                            connected = false;
+                            channels.connected.send_replace(false);
                         }
                     }
                     None
                 }
-                event = guests.recv() => {
-                    match event {
-                        Some(event) => { control_tx.send(Work::Guest(event)).await.context("queue guest observation")?; None },
-                        None => return Err(Error::Disconnected),
-                    }
-                }
-                message = outbound_rx.recv() => { message }
-                _ = report_timer.tick() => {
-                    control_tx.send(Work::Reconcile).await.context("queue machine reconciliation")?;
-                    if connected { Some(AgentMessage::Report { report: self.agent.report().await? }) } else { None }
-                }
-                _ = removal_signal.recv() => {
-                    self.agent.remove().await?;
-                    removing = true;
+                event = guests.recv(), if pending_work.is_none() => {
+                    match event { Some(event) => pending_work = Some(Work::Guest(event)), None => break Err(Error::Disconnected) }
                     None
                 }
+                permit = channels.work.reserve(), if pending_work.is_some() => {
+                    let permit = permit.context("reserve control queue capacity")?;
+                    if let Some(work) = pending_work.take() { permit.send(work); }
+                    None
+                }
+                message = channels.outgoing.recv() => {
+                    match message { Some(message) => Some(message), None => break Err(Error::Disconnected) }
+                }
+                event = removal.recv(), if removal_open => {
+                    match event { Some(()) => { self.agent.remove().await?; removing = true; }, None => removal_open = false }
+                    None
+                }
+                _ = connection_state.changed() => { None }
             };
             if let Some(AgentMessage::CommandResult { command_id, .. }) = &outbound
                 && pending_remove.as_ref() == Some(command_id)
@@ -129,64 +170,14 @@ impl Daemon for AgentDaemon {
                 && let Err(error) = self.connection.send(&message).await
             {
                 tracing::warn!(error = %error, "control send failed; preserve VMs");
-                connected = false;
+                channels.connected.send_replace(false);
             }
-            if !connected && !removing && reconnect.is_none() {
-                reconnect = Some(start_reconnect(
-                    self.gateway.clone(),
-                    identity.clone(),
-                    connected_tx.clone(),
-                ));
-            }
-        }
-        if let Some(task) = reconnect {
-            task.abort();
-        }
-        worker.abort();
-        updater.abort();
-        Ok(())
-    }
-}
-
-fn start_reconnect(
-    gateway: Arc<dyn Gateway>,
-    identity: Identity,
-    result: mpsc::Sender<Result<()>>,
-) -> JoinHandle<()> {
-    tokio::spawn(async move {
-        let _ = result.send(gateway.reconnect(&identity).await).await;
-    })
-}
-
-async fn control_worker(
-    agent: Arc<dyn Agent>,
-    mut commands: mpsc::Receiver<Work>,
-    outgoing: mpsc::Sender<AgentMessage>,
-) {
-    while let Some(work) = commands.recv().await {
-        let result = match work {
-            Work::Control(message) if matches!(*message, ControlMessage::FetchImage { .. }) => {
-                let agent = agent.clone();
-                let outgoing = outgoing.clone();
-                tokio::spawn(async move {
-                    if let Ok(Some(reply)) = agent.control(*message).await {
-                        let _ = outgoing.send(reply).await;
-                    }
-                });
-                continue;
-            }
-            Work::Control(message) => agent.control(*message).await,
-            Work::Guest(event) => agent.guest(&event.runner_id.0, event.message).await,
-            Work::Reconcile => agent.reconcile().await.map(|()| None),
         };
-        match result {
-            Ok(Some(message)) => {
-                if outgoing.send(message).await.is_err() {
-                    return;
-                }
-            }
-            Ok(None) => {}
-            Err(error) => tracing::warn!(error = %error, "control message failed"),
-        }
+        reconnections.shutdown().await;
+        result
     }
 }
+
+#[cfg(test)]
+#[path = "_tests_/runtime_tests.rs"]
+mod runtime_tests;

@@ -7,7 +7,7 @@ use ciproxy_protocol::version::ProtocolVersion;
 
 use crate::controller::Controller;
 use crate::error::{Error, Result};
-use crate::state::Mode;
+use crate::mode::ModeAction;
 
 impl Controller {
     pub(crate) async fn apply(&self, message: ControlMessage) -> Result<Option<AgentMessage>> {
@@ -76,20 +76,17 @@ impl Controller {
             }
             ControlMessage::Drain { command_id } => (
                 command_id,
-                self.set_mode(Mode::Draining).await,
+                self.change_mode(ModeAction::Drain).await,
                 CommandFailure::RunnerStop,
             ),
-            ControlMessage::Resume { command_id } => {
-                let result = if self.state.lock().await.mode == Mode::Removed {
-                    Err(Error::Revoked)
-                } else {
-                    self.set_mode(Mode::Active).await
-                };
-                (command_id, result, CommandFailure::RunnerStart)
-            }
+            ControlMessage::Resume { command_id } => (
+                command_id,
+                self.change_mode(ModeAction::Resume).await,
+                CommandFailure::RunnerStart,
+            ),
             ControlMessage::Remove { command_id } => (
                 command_id,
-                self.set_mode(Mode::Removed).await,
+                self.change_mode(ModeAction::Remove).await,
                 CommandFailure::RunnerStop,
             ),
             ControlMessage::ClearCache { command_id } => (
@@ -125,35 +122,5 @@ impl Controller {
             command_id,
             outcome,
         }))
-    }
-
-    pub(crate) async fn set_mode(&self, mode: Mode) -> Result<()> {
-        let runners = {
-            let mut state = self.state.lock().await;
-            if state.mode != mode {
-                let mut next = state.clone();
-                next.mode = mode;
-                self.store.save(&next)?;
-                *state = next;
-            }
-            state.runners.clone()
-        };
-        let mut failure = None;
-        if mode != Mode::Active {
-            for vm in runners {
-                if !matches!(vm.report.state, RunnerState::Running { .. })
-                    && let Err(error) = self.request_idle_stop(&vm).await
-                {
-                    tracing::warn!(error = %error, "idle VM cleanup failed; retry on reconciliation");
-                    if failure.is_none() {
-                        failure = Some(error);
-                    }
-                }
-            }
-        }
-        match failure {
-            Some(error) => Err(error),
-            None => Ok(()),
-        }
     }
 }

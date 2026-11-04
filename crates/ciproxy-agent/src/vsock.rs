@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use ciproxy_protocol::guest::AgentToGuest;
-use tokio::sync::{Mutex, mpsc};
+use tokio::sync::{Mutex, mpsc, watch};
 use tokio::task::AbortHandle;
 
 use crate::boundaries::{Cache, GuestEvent};
@@ -25,6 +25,7 @@ pub(crate) trait Guests: Send + Sync {
 
 struct Channel {
     sender: mpsc::Sender<AgentToGuest>,
+    shutdown: watch::Sender<bool>,
     task: AbortHandle,
 }
 
@@ -61,6 +62,7 @@ impl Guests for LinuxGuests {
             return Ok(());
         }
         let (sender, receiver) = mpsc::channel(16);
+        let (shutdown, stop_requested) = watch::channel(false);
         let bridge = GuestBridge {
             layout: self.layout.clone(),
             commands: self.commands.clone(),
@@ -69,12 +71,13 @@ impl Guests for LinuxGuests {
             vm: vm.clone(),
         };
         let task = tokio::spawn(async move {
-            bridge.run(config, receiver).await;
+            bridge.run(config, receiver, stop_requested).await;
         });
         channels.insert(
             vm.local_id.clone(),
             Channel {
                 sender,
+                shutdown,
                 task: task.abort_handle(),
             },
         );
@@ -89,13 +92,22 @@ impl Guests for LinuxGuests {
     }
 
     async fn send(&self, vm: &VmRecord, message: &AgentToGuest) -> Result<()> {
-        let sender = self
-            .channels
-            .lock()
-            .await
-            .get(&vm.local_id)
-            .map(|channel| channel.sender.clone())
-            .ok_or(Error::Disconnected)?;
+        let sender = {
+            let channels = self.channels.lock().await;
+            let channel = channels.get(&vm.local_id).ok_or(Error::Disconnected)?;
+            if *message == AgentToGuest::Shutdown {
+                channel.shutdown.send_if_modified(|pending| {
+                    if *pending {
+                        false
+                    } else {
+                        *pending = true;
+                        true
+                    }
+                });
+                return Ok(());
+            }
+            channel.sender.clone()
+        };
         sender
             .send(message.clone())
             .await
@@ -103,3 +115,7 @@ impl Guests for LinuxGuests {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "_tests_/vsock_tests.rs"]
+mod vsock_tests;

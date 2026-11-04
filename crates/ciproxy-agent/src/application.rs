@@ -7,6 +7,7 @@ use std::time::Duration;
 use ciproxy_protocol::reports::REPORT_INTERVAL_SECONDS;
 use clap::Parser;
 use reqwest::Client;
+use tokio::signal::unix::{SignalKind, signal};
 use tokio::sync::{Mutex, mpsc};
 use tokio::time::interval;
 
@@ -136,6 +137,7 @@ async fn execute(action: Action) -> Result<()> {
                     agent: agent.clone(),
                     delay: delay.clone(),
                 }),
+                report_delay: delay.clone(),
                 maintenance: Arc::new(HourlyMaintenance {
                     delay,
                     updates: Arc::new(AgentUpdates {
@@ -145,7 +147,20 @@ async fn execute(action: Action) -> Result<()> {
                     }),
                 }),
             });
-            daemon.run(identity, guest_rx, removing).await?;
+            let mut signal =
+                signal(SignalKind::user_defined1()).context("listen for local uninstall")?;
+            let (remove, removal) = mpsc::channel(1);
+            let input = tokio::spawn(async move {
+                while signal.recv().await.is_some() {
+                    if remove.send(()).await.is_err() {
+                        return;
+                    }
+                }
+            });
+            let result = daemon.run(identity, guest_rx, removing, removal).await;
+            input.abort();
+            let _ = input.await;
+            result?;
             let mut state = store.load()?;
             state.identity = None;
             store.save(&state)?;

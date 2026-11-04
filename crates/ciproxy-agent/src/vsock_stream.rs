@@ -8,7 +8,7 @@ use ciproxy_protocol::runners::RunnerExit;
 use ciproxy_protocol::version::ProtocolVersion;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, watch};
 use tokio::time::{MissedTickBehavior, interval, sleep, timeout};
 
 use crate::boundaries::{Cache, GuestEvent};
@@ -30,6 +30,7 @@ impl GuestBridge {
         self,
         mut config: Option<AgentToGuest>,
         mut receiver: mpsc::Receiver<AgentToGuest>,
+        mut shutdown: watch::Receiver<bool>,
     ) {
         loop {
             match self.commands.unit(&unit_name(&self.vm)).await {
@@ -54,7 +55,10 @@ impl GuestBridge {
                 Ok(UnitState::Active) => {}
                 Err(error) => tracing::warn!(error = %error, "cannot inspect VM; preserve it"),
             }
-            if let Err(error) = self.session(&mut config, &mut receiver).await {
+            if let Err(error) = self
+                .session(&mut config, &mut receiver, &mut shutdown)
+                .await
+            {
                 tracing::debug!(error = %error, "guest channel unavailable; preserve VM and reconnect");
             }
             sleep(Duration::from_secs(1)).await;
@@ -65,6 +69,7 @@ impl GuestBridge {
         &self,
         config: &mut Option<AgentToGuest>,
         receiver: &mut mpsc::Receiver<AgentToGuest>,
+        shutdown: &mut watch::Receiver<bool>,
     ) -> Result<()> {
         let stream = UnixStream::connect(self.layout.jail_root(&self.vm).join("vsock.sock"))
             .await
@@ -119,6 +124,13 @@ impl GuestBridge {
                 .context("send registration over vsock")?;
             *config = None;
         }
+        let stop_requested = *shutdown.borrow_and_update();
+        if stop_requested {
+            write
+                .write_all(&frame(&AgentToGuest::Shutdown)?)
+                .await
+                .context("request idle guest shutdown")?;
+        }
         let mut health = interval(Duration::from_secs(10));
         health.set_missed_tick_behavior(MissedTickBehavior::Skip);
         let mut bytes = Vec::new();
@@ -137,6 +149,10 @@ impl GuestBridge {
                     let mut bytes = serde_json::to_vec(&message).context("encode guest message")?;
                     bytes.push(b'\n');
                     write.write_all(&bytes).await.context("send guest message")?;
+                }
+                changed = shutdown.changed() => {
+                    changed.context("read pending guest shutdown")?;
+                    write.write_all(&frame(&AgentToGuest::Shutdown)?).await.context("request idle guest shutdown")?;
                 }
                 _ = health.tick() => {
                     if self.commands.unit(&unit_name(&self.vm)).await? != UnitState::Active {
@@ -157,4 +173,10 @@ impl GuestBridge {
             .context("deliver guest event")?;
         Ok(())
     }
+}
+
+fn frame(message: &AgentToGuest) -> Result<Vec<u8>> {
+    let mut bytes = serde_json::to_vec(message).context("encode guest message")?;
+    bytes.push(b'\n');
+    Ok(bytes)
 }

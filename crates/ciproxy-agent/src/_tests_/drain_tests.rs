@@ -56,6 +56,16 @@ async fn drain_requests_idle_shutdown_and_keeps_jobs_until_resume() {
     assert_eq!(agent.state.lock().await.mode, Mode::Active);
     agent.remove().await.unwrap();
     assert_eq!(agent.state.lock().await.mode, Mode::Removed);
+    assert_eq!(
+        agent
+            .control(ControlMessage::Drain {
+                command_id: CommandId("command-1".to_owned())
+            })
+            .await
+            .unwrap(),
+        applied()
+    );
+    assert_eq!(agent.state.lock().await.mode, Mode::Removed);
     assert!(!agent.finished().await);
     assert_eq!(
         agent

@@ -18,6 +18,7 @@ impl Delay for TokioDelay {
     }
 }
 
+#[cfg_attr(test, unimock::unimock(api = MaintenanceMock))]
 #[async_trait]
 pub(crate) trait Maintenance: Send + Sync {
     async fn cycle(&self) -> Result<()>;

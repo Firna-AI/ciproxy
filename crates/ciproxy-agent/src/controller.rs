@@ -6,12 +6,12 @@ use async_trait::async_trait;
 use ciproxy_protocol::agent::{AgentMessage, ControlMessage};
 use ciproxy_protocol::guest::GuestToAgent;
 use ciproxy_protocol::reports::MachineReport;
-use ciproxy_protocol::runners::RunnerState;
 use tokio::sync::Mutex;
 
 use crate::boundaries::{Cache, Host, Images, Store, Vms};
 use crate::capacity::machine_resources;
 use crate::error::Result;
+use crate::mode::ModeAction;
 use crate::state::{MachineState, Mode};
 
 #[cfg_attr(test, unimock::unimock(api = AgentMock))]
@@ -43,35 +43,16 @@ impl Agent for Controller {
         for vm in owned {
             self.vms.restore(&vm).await?;
         }
-        let (mode, budget) = {
+        let budget = {
             let state = self.state.lock().await;
-            (
-                state.mode,
-                machine_resources(&hardware)
-                    .available(state.runners.iter().map(|vm| vm.report.size))
-                    .job_disk_bytes,
-            )
+            machine_resources(&hardware)
+                .available(state.runners.iter().map(|vm| vm.report.size))
+                .job_disk_bytes
         };
         if let Err(error) = self.cache.budget(budget).await {
             tracing::warn!(error = %error, "cache budget unavailable; keep jobs running");
         }
-        if mode != Mode::Active {
-            self.set_mode(mode).await?;
-        } else {
-            let stopping = self
-                .state
-                .lock()
-                .await
-                .runners
-                .iter()
-                .filter(|vm| vm.report.state == RunnerState::Stopping)
-                .cloned()
-                .collect::<Vec<_>>();
-            for vm in stopping {
-                self.request_idle_stop(&vm).await?;
-            }
-        }
-        Ok(())
+        self.enforce_mode().await
     }
 
     async fn restore(&self) -> Result<()> {
@@ -79,11 +60,7 @@ impl Agent for Controller {
         for vm in runners {
             self.vms.restore(&vm).await?;
         }
-        let mode = self.state.lock().await.mode;
-        if mode != Mode::Active {
-            self.set_mode(mode).await?;
-        }
-        Ok(())
+        self.enforce_mode().await
     }
 
     async fn report(&self) -> Result<MachineReport> {
@@ -99,7 +76,7 @@ impl Agent for Controller {
     }
 
     async fn remove(&self) -> Result<()> {
-        self.set_mode(Mode::Removed).await
+        self.change_mode(ModeAction::Remove).await
     }
 
     async fn finished(&self) -> bool {

@@ -11,6 +11,7 @@ use crate::controller::Agent;
 use crate::error::{Error, Result};
 use crate::state::Identity;
 
+#[cfg_attr(test, unimock::unimock(api = GatewayMock))]
 #[async_trait]
 pub(crate) trait Gateway: Send + Sync {
     async fn reconnect(&self, identity: &Identity) -> Result<()>;
