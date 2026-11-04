@@ -140,8 +140,9 @@ links to its commands and permissions.
    record the printed `RELEASE_SERVER_IMAGE_DIGEST`.
 4. [Store the release token](setup.md#4-store-the-release-token): add a
    GitHub token for `Firna-AI/ciproxy` only to Secret Manager.
-5. [Delegate DNS](setup.md#5-delegate-dns): set the production name servers
-   at the registrar. Add the three preview NS records to the production zone.
+5. [Delegate DNS](setup.md#5-delegate-dns): add the three preview NS records
+   to the active parent zone. During production setup, copy them before the
+   registrar switch.
 6. [Set up the GitHub environment](setup.md#6-set-up-the-github-environment):
    create it and set its variables.
 7. [Run the first deploy](setup.md#7-run-the-first-deploy): push to the

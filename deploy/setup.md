@@ -15,7 +15,7 @@ DEPLOY_ENV=main-preview PROJECT_ID=internal-498318
 | Identity | Used for | Permissions |
 | --- | --- | --- |
 | Operator: your own Google account | Steps 1 to 5, 8, and 9 here, and the image, database, runtime, rotation, and foundation work of [Operations](operations.md) | The Owner role, or these project roles: `roles/serviceusage.serviceUsageAdmin`, `roles/resourcemanager.projectIamAdmin`, `roles/iam.serviceAccountAdmin`, `roles/iam.serviceAccountUser`, `roles/iam.workloadIdentityPoolAdmin`, `roles/storage.admin`, `roles/compute.networkAdmin`, `roles/compute.securityAdmin`, `roles/compute.loadBalancerAdmin`, `roles/container.admin`, `roles/servicenetworking.networksAdmin`, `roles/cloudsql.admin`, `roles/secretmanager.admin`, `roles/cloudkms.admin`, `roles/artifactregistry.admin`, `roles/dns.admin`, and `roles/monitoring.editor` |
-| Registrar or parent zone owner | Step 5 | Change the name servers of `ciproxy.dev`, or add the three preview NS records to its production zone |
+| Registrar or parent zone owner | Step 5 | Change the name servers of `ciproxy.dev`, or add the three preview NS records to its active parent zone |
 | GitHub repository admin | Step 6 | Create environments and their variables in `Firna-AI/ciproxy` |
 | GitHub writer | Step 7 and each later deploy | Push to `calummoore/ci-proxy-load-balancer`, then `main` after its merge, or push a `deploy-*` tag |
 | Image publisher | [Publish job images](operations.md#publish-job-images) | `roles/storage.objectCreator` on the image bucket, or the operator roles |
@@ -53,6 +53,10 @@ Check billing with `gcloud billing projects describe "$PROJECT_ID"`. The
 site and dashboard buckets grant read access to `allUsers`, so an
 organization policy for domain-restricted sharing or public access
 prevention stops the foundation apply. Get the operator roles of the table.
+
+A zone on the last free Cloud DNS name-server set needs a TXT ownership check.
+Complete the check before retrying setup. See the
+[DNS limits](https://docs.cloud.google.com/dns/quotas#name_server_limits).
 
 Install the Google Cloud CLI with `kubectl` and `gke-gcloud-auth-plugin`,
 Terraform 1.17.1, Helm 4.3.1, Docker, the GitHub CLI, Python 3, and `psql`.
@@ -142,9 +146,7 @@ unset RELEASE_TOKEN
 
 ## 5. Delegate DNS
 
-The production foundation creates `ciproxy-production` for `ciproxy.dev`
-in project `ciproxy`. The main preview foundation creates three delegated
-zones in project `internal-498318`:
+The main preview foundation creates three zones in `internal-498318`:
 
 | Managed zone | DNS name |
 | --- | --- |
@@ -152,43 +154,46 @@ zones in project `internal-498318`:
 | `ciproxy-main-preview-dashboard` | `preview.app.ciproxy.dev` |
 | `ciproxy-main-preview-releases` | `preview.get.ciproxy.dev` |
 
-The first deploy adds the `br-main` A record in each preview zone.
-Terraform never changes the registrar or adds delegation records. Get the
-name servers of the selected environment:
+Terraform leaves the registrar and delegations to the operator. The first
+deploy adds `br-main` A records. Read each zone's four name servers:
 
 ```sh
 terraform -chdir=deploy/environments/$DEPLOY_ENV output -json dns_name_servers
 ```
 
-The output maps each full DNS name, with a trailing dot, to its four name
-servers. For the main preview, the keys are `preview.ciproxy.dev.`,
-`preview.app.ciproxy.dev.`, and `preview.get.ciproxy.dev.`. For production,
-the key is `ciproxy.dev.`. Use the values of each matching key.
+The output maps full DNS names with trailing dots to their name servers.
 
-At the production registrar, set the four production name servers for
-`ciproxy.dev`. First copy each required record, such as MX and TXT, into
-`ciproxy-production`. The zone has no DNSSEC, so remove any DS record
-before the switch.
+For the main preview, find the active parent zone in project `ciproxy`:
 
-For the main preview, add three NS records to `ciproxy-production` in
-project `ciproxy`. Replace each `SITE_NS`, `APP_NS`, or `GET_NS` value below
-with a name server from its matching preview zone. Each zone has its own
-list. With `roles/dns.admin` in project `ciproxy`, run:
+```sh
+gcloud dns managed-zones list --project=ciproxy --filter='dnsName=ciproxy.dev.' \
+  --format='table(name,nameServers)'
+dig +short NS ciproxy.dev
+PARENT_ZONE=ACTIVE_ZONE_ID
+```
+
+Set `PARENT_ZONE` to the `NAME` whose name servers match the `dig` output.
+Use each preview zone's servers for its `SITE_NS`, `APP_NS`, or `GET_NS`.
 
 ```sh
 gcloud dns record-sets create preview.ciproxy.dev. --project=ciproxy \
-  --zone=ciproxy-production --type=NS --ttl=3600 \
+  --zone="$PARENT_ZONE" --type=NS --ttl=3600 \
   --rrdatas=SITE_NS1,SITE_NS2,SITE_NS3,SITE_NS4
 gcloud dns record-sets create preview.app.ciproxy.dev. --project=ciproxy \
-  --zone=ciproxy-production --type=NS --ttl=3600 \
+  --zone="$PARENT_ZONE" --type=NS --ttl=3600 \
   --rrdatas=APP_NS1,APP_NS2,APP_NS3,APP_NS4
 gcloud dns record-sets create preview.get.ciproxy.dev. --project=ciproxy \
-  --zone=ciproxy-production --type=NS --ttl=3600 \
+  --zone="$PARENT_ZONE" --type=NS --ttl=3600 \
   --rrdatas=GET_NS1,GET_NS2,GET_NS3,GET_NS4
 ```
 
-These delegations also permit later wildcard records in all three preview
-zones. Those records need no further change to the production zone.
+After production foundation setup, copy the active zone's required records
+to `ciproxy-production` in `ciproxy`. Include MX, TXT, and the three preview
+NS records unchanged. Use `PARENT_ZONE=ciproxy-production` above. The new
+zone has no DNSSEC. Remove any DS record before the registrar switch. Then
+set the registrar to the four name servers in the `ciproxy.dev.` output.
+
+These zones permit later wildcard records without another parent-zone edit.
 
 ## 6. Set up the GitHub environment
 
