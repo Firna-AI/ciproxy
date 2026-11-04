@@ -5,7 +5,8 @@ use crate::cache::{
     MachineCacheReport,
 };
 use crate::identifiers::{
-    CommandId, GitRef, ImageId, JobEvent, JobId, LabelName, MachineId, RepositoryId, RunnerId,
+    CommandId, GitRef, ImageId, JobEvent, JobId, LabelName, MachineId, OrganizationId,
+    RepositoryId, RunnerId, WorkspaceId,
 };
 use crate::images::{ImageDownload, ImageReport};
 use crate::jobs::{JobFacts, Repository};
@@ -25,6 +26,12 @@ pub(crate) const CACHE_TOKEN: &str = "dummy-cache-token";
 
 pub(crate) fn machine_id() -> MachineId {
     MachineId("machine-1".into())
+}
+pub(crate) fn workspace_id() -> WorkspaceId {
+    WorkspaceId("workspace-1".into())
+}
+pub(crate) fn organization_id() -> OrganizationId {
+    OrganizationId("organization-1".into())
 }
 pub(crate) fn runner_id() -> RunnerId {
     RunnerId("runner-1".into())
@@ -50,6 +57,7 @@ pub(crate) fn size() -> VmSize {
 pub(crate) fn runner() -> RunnerSpec {
     RunnerSpec {
         runner_id: runner_id(),
+        organization_id: organization_id(),
         label: LabelName("ciproxy".into()),
         size: size(),
         registration: Secret::new(REGISTRATION),
@@ -74,6 +82,7 @@ pub(crate) fn cache_connection() -> CacheConnection {
 
 pub(crate) fn facts() -> JobFacts {
     JobFacts {
+        organization_id: organization_id(),
         repository: Repository {
             id: RepositoryId("repository-1".into()),
             full_name: "example/project".into(),
@@ -127,6 +136,7 @@ pub(crate) fn report() -> MachineReport {
         runners: vec![
             RunnerReport {
                 runner_id: RunnerId("runner-warm".into()),
+                organization_id: OrganizationId("organization-2".into()),
                 label: LabelName("ciproxy".into()),
                 size: size(),
                 image_id: image_id(),
@@ -134,6 +144,7 @@ pub(crate) fn report() -> MachineReport {
             },
             RunnerReport {
                 runner_id: runner_id(),
+                organization_id: organization_id(),
                 label: LabelName("ciproxy".into()),
                 size: size(),
                 image_id: ImageId("ubuntu-image-0".into()),

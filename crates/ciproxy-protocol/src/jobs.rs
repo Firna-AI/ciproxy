@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::identifiers::{GitRef, JobEvent, RepositoryId};
+use crate::identifiers::{GitRef, JobEvent, OrganizationId, RepositoryId};
 
 /// A repository identity supplied with the facts of a job.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -19,6 +19,8 @@ pub struct Repository {
 /// Their presence does not grant shared-cache or Docker-disk write access.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct JobFacts {
+    /// GitHub organization to which the assigned job belongs.
+    pub organization_id: OrganizationId,
     /// Repository to which the job belongs.
     pub repository: Repository,
     /// The job's ref, rather than the ref of a reusable workflow file.

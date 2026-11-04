@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::identifiers::{CommandId, JobId, MachineId, RunnerId};
+use crate::identifiers::{CommandId, JobId, MachineId, OrganizationId, RunnerId, WorkspaceId};
 use crate::images::ImageDownload;
 use crate::jobs::JobFacts;
 use crate::reports::MachineReport;
@@ -14,11 +14,13 @@ use crate::version::ProtocolVersion;
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum AgentMessage {
-    /// Register a new machine with an organization install token.
+    /// Register a new machine with its workspace's install token.
     Register {
         /// The wire version understood by this agent.
         protocol_version: ProtocolVersion,
-        /// Organization install token, never shown in diagnostics.
+        /// Workspace that owns the machine and its install token.
+        workspace_id: WorkspaceId,
+        /// Install token for the named workspace, hidden from diagnostics.
         install_token: Secret,
         /// Initial hardware, capacity, and agent state.
         report: MachineReport,
@@ -27,9 +29,11 @@ pub enum AgentMessage {
     Hello {
         /// The wire version understood by this agent.
         protocol_version: ProtocolVersion,
+        /// Workspace that owns this registered machine.
+        workspace_id: WorkspaceId,
         /// The machine registered by the gateway.
         machine_id: MachineId,
-        /// Persistent credential of this machine only.
+        /// Persistent credential of this machine within the named workspace.
         credential: Secret,
         /// Full current state for reconnect reconciliation.
         report: MachineReport,
@@ -73,9 +77,11 @@ pub enum AgentMessage {
 pub enum ControlMessage {
     /// Return the identity and credential of a newly registered machine.
     Registered {
+        /// Workspace that owns the registered machine and its credential.
+        workspace_id: WorkspaceId,
         /// Identity retained across later agent connections.
         machine_id: MachineId,
-        /// Credential retained privately by the machine.
+        /// Workspace-scoped machine credential retained privately by the machine.
         credential: Secret,
     },
     /// Confirm the version used by an authenticated connection.
@@ -94,6 +100,8 @@ pub enum ControlMessage {
     StopRunner {
         /// Identifier used for the result of this command.
         command_id: CommandId,
+        /// Organization whose GitHub runner registration was removed.
+        organization_id: OrganizationId,
         /// The idle runner to stop, never a running job.
         runner_id: RunnerId,
     },

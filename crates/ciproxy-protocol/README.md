@@ -21,6 +21,17 @@ Reports include hardware, health, slots, runners, images, cache counts,
 and Docker disk use. The report interval is ten seconds.
 The guest uses separate message types for both directions over vsock.
 
+A ciproxy workspace owns each machine, its install token, and its machine
+credential. Registration and the authenticated hello name that workspace.
+A workspace can hold several GitHub organizations.
+Its machines can run jobs for each of those organizations.
+
+Runner starts, current runner reports, idle-runner stops, and guest
+configuration carry the runner's organization. A warm runner knows its
+organization before GitHub assigns its job.
+Job facts then carry that organization and the actual assigned repository.
+GitHub selects the job, so a runner start carries no repository assignment.
+
 Cache reports keep measured counts for every restore that the machine
 cache handled, including contents fetched entirely from GitHub.
 The counts separate local entries from GitHub entries and include total
@@ -72,6 +83,8 @@ Review snapshot changes before accepting them.
 ### Key Code
 
 - [src/resources.rs](src/resources.rs) calculates slot counts.
+- [src/identifiers.rs](src/identifiers.rs) distinguishes workspace,
+  organization, machine, runner, and repository identities.
 - [src/agent.rs](src/agent.rs) defines both agent connection directions.
 - [src/guest.rs](src/guest.rs) defines both guest vsock directions.
 - [src/reports.rs](src/reports.rs) defines current machine state.

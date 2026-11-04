@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::cache::{CacheConnection, DockerDiskAttachment};
-use crate::identifiers::{ImageId, JobId, RunnerId};
+use crate::identifiers::{ImageId, JobId, OrganizationId, RunnerId};
 use crate::jobs::JobFacts;
 use crate::runners::RunnerExit;
 use crate::secret::Secret;
@@ -19,6 +19,8 @@ pub enum AgentToGuest {
         protocol_version: ProtocolVersion,
         /// Identity of the runner owned by this guest.
         runner_id: RunnerId,
+        /// Organization whose scale set issued the runner registration.
+        organization_id: OrganizationId,
         /// One-use registration, passed over vsock rather than a disk.
         registration: Secret,
         /// Access to this machine's cache, when available.

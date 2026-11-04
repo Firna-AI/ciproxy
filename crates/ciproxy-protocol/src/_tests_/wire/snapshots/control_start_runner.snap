@@ -9,6 +9,7 @@ expression: message
   "command_id": "command-1",
   "runner": {
     "runner_id": "runner-1",
+    "organization_id": "organization-1",
     "label": "ciproxy",
     "size": {
       "vcpu": 2,

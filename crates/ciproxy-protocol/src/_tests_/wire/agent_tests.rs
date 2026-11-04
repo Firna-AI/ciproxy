@@ -15,6 +15,7 @@ fn register_has_install_token_and_initial_state() {
         "register",
         AgentMessage::Register {
             protocol_version: ProtocolVersion::CURRENT,
+            workspace_id: fixtures::workspace_id(),
             install_token: Secret::new(fixtures::INSTALL_TOKEN),
             report: fixtures::report(),
         },
@@ -28,6 +29,7 @@ fn hello_authenticates_and_restores_current_runner_state() {
         "hello",
         AgentMessage::Hello {
             protocol_version: ProtocolVersion::CURRENT,
+            workspace_id: fixtures::workspace_id(),
             machine_id: fixtures::machine_id(),
             credential: Secret::new(fixtures::CREDENTIAL),
             report: fixtures::report(),

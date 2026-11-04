@@ -6,6 +6,7 @@ expression: message
 ---
 {
   "type": "registered",
+  "workspace_id": "workspace-1",
   "machine_id": "machine-1",
   "credential": "dummy-machine-credential"
 }

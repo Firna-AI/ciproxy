@@ -17,6 +17,7 @@ fn configure_runner_delivers_registration_and_cache_access_over_vsock() {
         AgentToGuest::ConfigureRunner {
             protocol_version: ProtocolVersion::CURRENT,
             runner_id: fixtures::runner_id(),
+            organization_id: fixtures::organization_id(),
             registration: Secret::new(fixtures::REGISTRATION),
             cache: Some(fixtures::cache_connection()),
         },

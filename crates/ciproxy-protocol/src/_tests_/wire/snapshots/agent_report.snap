@@ -49,6 +49,7 @@ expression: message
     "runners": [
       {
         "runner_id": "runner-warm",
+        "organization_id": "organization-2",
         "label": "ciproxy",
         "size": {
           "vcpu": 2,
@@ -62,6 +63,7 @@ expression: message
       },
       {
         "runner_id": "runner-1",
+        "organization_id": "organization-1",
         "label": "ciproxy",
         "size": {
           "vcpu": 2,

@@ -8,6 +8,7 @@ expression: message
   "type": "configure_runner",
   "protocol_version": 1,
   "runner_id": "runner-1",
+  "organization_id": "organization-1",
   "registration": "dummy-one-use-registration",
   "cache": {
     "url": "http://cache.example/?access=dummy-url-token",

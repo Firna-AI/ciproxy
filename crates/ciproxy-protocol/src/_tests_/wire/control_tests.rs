@@ -13,6 +13,7 @@ fn registered_delivers_a_machine_specific_identity_and_credential() {
         "control_registered",
         "registered",
         ControlMessage::Registered {
+            workspace_id: fixtures::workspace_id(),
             machine_id: fixtures::machine_id(),
             credential: Secret::new(fixtures::CREDENTIAL),
         },
@@ -49,6 +50,7 @@ fn stop_runner_targets_one_idle_runner() {
         "stop_runner",
         ControlMessage::StopRunner {
             command_id: fixtures::command_id(),
+            organization_id: fixtures::organization_id(),
             runner_id: fixtures::runner_id(),
         },
     );

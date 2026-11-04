@@ -28,6 +28,7 @@ fn nested_debug_hides_secrets_while_json_delivers_them() {
     assert_hidden(
         AgentMessage::Register {
             protocol_version: ProtocolVersion::CURRENT,
+            workspace_id: fixtures::workspace_id(),
             install_token: Secret::new(fixtures::INSTALL_TOKEN),
             report: fixtures::report(),
         },
@@ -36,6 +37,7 @@ fn nested_debug_hides_secrets_while_json_delivers_them() {
     assert_hidden(
         AgentMessage::Hello {
             protocol_version: ProtocolVersion::CURRENT,
+            workspace_id: fixtures::workspace_id(),
             machine_id: fixtures::machine_id(),
             credential: Secret::new(fixtures::CREDENTIAL),
             report: fixtures::report(),
@@ -44,6 +46,7 @@ fn nested_debug_hides_secrets_while_json_delivers_them() {
     );
     assert_hidden(
         ControlMessage::Registered {
+            workspace_id: fixtures::workspace_id(),
             machine_id: fixtures::machine_id(),
             credential: Secret::new(fixtures::CREDENTIAL),
         },
@@ -67,6 +70,7 @@ fn nested_debug_hides_secrets_while_json_delivers_them() {
         AgentToGuest::ConfigureRunner {
             protocol_version: ProtocolVersion::CURRENT,
             runner_id: fixtures::runner_id(),
+            organization_id: fixtures::organization_id(),
             registration: Secret::new(fixtures::REGISTRATION),
             cache: Some(fixtures::cache_connection()),
         },

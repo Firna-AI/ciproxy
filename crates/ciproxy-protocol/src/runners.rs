@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::identifiers::{ImageId, JobId, LabelName, RunnerId};
+use crate::identifiers::{ImageId, JobId, LabelName, OrganizationId, RunnerId};
 use crate::resources::VmSize;
 use crate::secret::Secret;
 
@@ -11,6 +11,8 @@ use crate::secret::Secret;
 pub struct RunnerSpec {
     /// The runner and VM identity assigned by the control plane.
     pub runner_id: RunnerId,
+    /// GitHub organization whose scale set owns this runner registration.
+    pub organization_id: OrganizationId,
     /// Label whose jobs this runner can take.
     pub label: LabelName,
     /// Resources of the fresh VM.
@@ -24,6 +26,8 @@ pub struct RunnerSpec {
 pub struct RunnerReport {
     /// The runner and VM identity.
     pub runner_id: RunnerId,
+    /// Organization scope retained by this runner across agent reconnects.
+    pub organization_id: OrganizationId,
     /// Label used when the runner started.
     pub label: LabelName,
     /// Resources of the running VM, even if its label changes later.

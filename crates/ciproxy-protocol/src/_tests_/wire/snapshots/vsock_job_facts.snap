@@ -8,6 +8,7 @@ expression: message
   "type": "job_facts",
   "job_id": "job-1",
   "facts": {
+    "organization_id": "organization-1",
     "repository": {
       "id": "repository-1",
       "full_name": "example/project"

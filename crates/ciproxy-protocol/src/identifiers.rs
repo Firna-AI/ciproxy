@@ -11,7 +11,12 @@ macro_rules! identifier {
     };
 }
 
-identifier!(MachineId, "The identifier of one registered own machine.");
+identifier!(WorkspaceId, "The ciproxy workspace that owns a machine.");
+identifier!(OrganizationId, "The GitHub identifier of one organization.");
+identifier!(
+    MachineId,
+    "The identifier of one own machine registered in a workspace."
+);
 identifier!(RunnerId, "The identifier of one runner and its fresh VM.");
 identifier!(JobId, "The GitHub identifier of one job.");
 identifier!(RepositoryId, "The GitHub identifier of one repository.");
