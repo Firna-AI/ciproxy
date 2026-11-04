@@ -24,15 +24,15 @@ runs on own machines.
 
 ## Install
 
-- One command installs the agent and connects the own machine to an
-  [organization](security.md#terms).
+- One command installs the agent and connects the own machine to a
+  [workspace](workspaces.md#terms).
 - The [dashboard](../architecture.md#components) shows the command in Setup
   and in Machines under "Add machine".
 - Only a person who may add a machine sees the command, as
   [Roles](security.md#roles) says.
 - The command fetches the install script over HTTPS from the download site,
   and runs it as root with an install token.
-- An install token belongs to one organization.
+- An install token belongs to one workspace.
 - An install token works for one hour.
 - Within its hour, an install token adds any number of machines.
 - **Decision:** one install token adds any number of machines within its
@@ -126,7 +126,7 @@ runs on own machines.
 - **Decision:** one image definition serves the job VMs and the Boat
   sandboxes. Rejected: a separate image for each, because a job must behave
   the same wherever it runs.
-- No organization can run its jobs on a custom VM image yet.
+- No workspace can run its jobs on a custom VM image yet.
 - Custom VM images come later, on Business, as
   [Tier features](billing.md#tier-features) says.
 
@@ -173,8 +173,9 @@ runs on own machines.
 - The agent of a removed machine lets its running jobs finish, then stops
   its job VMs and stops.
 - "Remove" takes effect at once, also for an offline machine.
-- [Removing the App](app-removal.md#removing-the-app) says what happens to the
-  machines of an organization that removes the GitHub App.
+- [The last organization](app-removal.md#the-last-organization-of-a-workspace)
+  says what happens to the machines of a workspace when its last
+  organization removes the GitHub App.
 
 ## Related docs
 

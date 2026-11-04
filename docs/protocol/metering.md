@@ -1,7 +1,7 @@
 # Metering
 
-This doc states how ciproxy counts the use of an
-[organization](security.md#terms): its starts, its periods, and its
+This doc states how ciproxy counts the use of a
+[workspace](workspaces.md#terms): its starts, its periods, and its
 [own machines](agent.md#terms). It also states the soft limits and the
 savings report. [Billing](billing.md#tiers) gives the price and the numbers
 of each tier.
@@ -9,8 +9,8 @@ of each tier.
 ## Terms
 
 - **start:** one job that a ciproxy [runner](job-routing.md#terms) takes.
-- **period:** the time over which ciproxy counts the starts of an
-  organization.
+- **period:** the time over which ciproxy counts the starts of a
+  workspace.
 - **soft limit:** a limit that the
   [dashboard](../architecture.md#components) shows but that never stops a
   job.
@@ -19,6 +19,8 @@ of each tier.
 
 - A start is one job that a ciproxy runner takes, on an own machine or on
   [Boat](overflow.md#terms), whatever its result.
+- The starts of a workspace count the jobs of all its
+  [organizations](workspaces.md#terms).
 - A job becomes a start at the moment that a runner takes it.
 - A re-run of a job is a new start.
 - A [warm runner](job-routing.md#warm-runners) that takes no job is not a
@@ -37,9 +39,9 @@ of each tier.
 - A paid tier counts starts over its Stripe billing period, for example
   4 November to 3 December.
 - Free counts starts over periods of one month from the day that the
-  organization starts on Free, for example 1 September to 30 September.
+  workspace starts on Free, for example 1 September to 30 September.
 - The days and the dates of every period are in UTC.
-- An organization is in one period only at any moment.
+- A workspace is in one period only at any moment.
 - A start counts in the period in which a runner took the job.
 - Plan and usage shows the dates of the current period.
 - A move from Free to a paid tier ends the Free period when Stripe confirms
@@ -53,8 +55,8 @@ of each tier.
 
 ## Own machines
 
-- The machine count of an organization is the number of own machines that
-  are registered to it.
+- The machine count of a workspace is the number of own machines that are
+  registered to it.
 - The count is the current number, not the highest number of the period.
 - The count includes every registered machine, also one that is offline,
   [draining](agent.md#drain-and-remove), or unable to run jobs, such as a
@@ -66,17 +68,20 @@ of each tier.
 
 ## Soft limits
 
-- The included starts and the included own machines of an organization are
-  the numbers of its tier plus its [add-ons](billing.md#add-ons).
-- These two numbers are the soft limits of the organization.
-- An organization passes a soft limit when the starts of the period or the
-  machine count go above it.
+- The included starts and the included own machines of a workspace are the
+  numbers of its tier plus its [add-ons](billing.md#add-ons).
+- These two numbers are the soft limits of the workspace.
+- On Free, the one included organization is a third soft limit, as
+  [Organizations of a workspace](workspaces.md#organizations-of-a-workspace)
+  says.
+- A workspace passes a soft limit when the starts of the period, the
+  machine count, or on Free the number of organizations go above it.
 - A soft limit never stops a job and never keeps a job from starting.
 - Jobs keep running on every own machine, also when the machine count is
   above the included own machines.
 - Passing a soft limit adds no charge.
-- While an organization is above a soft limit, every page of the
-  organization shows one banner.
+- While a workspace is above a soft limit, every page of the workspace
+  shows one banner.
 - The banner says that jobs keep running, and it gives the offer.
 - [Checkout](billing.md#checkout) says what a person who cannot pay sees in
   place of the action of the offer.
@@ -88,7 +93,7 @@ of each tier.
 - The expected starts are the starts of the period so far, divided by the
   days so far, times the days of the period.
 - The days so far include the current day.
-- The use of an organization is its expected starts and its machine count.
+- The use of a workspace is its expected starts and its machine count.
 - A tier with its add-ons covers the use when it includes at least the
   expected starts and at least the machine count.
 - The offer is the cheapest choice of a paid tier and add-on quantities
@@ -117,31 +122,20 @@ of each tier.
 - The notice gives the day on which the starts pass the included starts at
   the current pace, and it gives the offer.
 
-### A Business pool
-
-- The organizations of a [Business pool](billing.md#business-pools) share
-  one count of starts and one machine count.
-- The shared count of starts is the sum of the starts of the organizations
-  of the pool, in the period of its subscription.
-- The shared machine count is the sum of the machine counts of these
-  organizations.
-- The soft limits, the use, the offer, and Plan and usage of each
-  organization of the pool use these shared counts.
-- [Tenant isolation](security.md#tenant-isolation) gives the decision that
-  the pool shares only these counts.
-
 ## Savings report
 
-- The Savings page shows the savings report of the organization.
+- The Savings page shows the savings report of the workspace.
+- The report covers the jobs of all the organizations of the workspace.
+- **Decision:** one savings report covers the whole workspace, which pays
+  one price. Rejected: a report for each organization with a share of the
+  price. Reason: every organization of the workspace uses the same machines
+  and the same plan.
 - The report compares the cost of the jobs with ciproxy with the cost of
   the same jobs on Blacksmith and on GitHub-hosted runners.
 - The cost on each alternative comes from its list prices per minute, for
   the same VM sizes as the jobs.
 - When an alternative does not sell the VM size of a job, the report uses
   its smallest size with at least the vCPU and the memory of the job.
-- In a [Business pool](#a-business-pool), the report of each organization
-  counts the share of the subscription price that matches its share of the
-  starts of the pool.
 - The report gives the date of each price list that it uses.
 - The report covers one of three ranges: the last 30 days, this calendar
   month, or the last calendar month.
@@ -177,11 +171,10 @@ of each tier.
 
 - [Architecture](../architecture.md#components): the components that count
   the use and show it.
-- [Billing](billing.md#tiers): the tiers, their numbers, the add-ons, and
-  Business pools.
-- [Security](security.md#tenant-isolation): what the organizations of a
-  Business pool keep apart.
+- [Billing](billing.md#tiers): the tiers, their numbers, and the add-ons.
+- [Workspaces](workspaces.md): the organizations whose use a workspace
+  counts.
 - [Job routing](job-routing.md#where-a-job-runs): where a runner takes each
   job.
 - [Agent](agent.md#machine-identity): how an own machine registers.
-- [Overflow](overflow.md#spend-limit): the Boat spend of the organization.
+- [Overflow](overflow.md#spend-limit): the Boat spend of the workspace.

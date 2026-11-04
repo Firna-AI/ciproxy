@@ -115,6 +115,8 @@ Run each command from the repository root.
   Starlight components instead.
 - Product copy calls a customer's own hardware a "machine", never a "node"
   or a "server".
+- Product copy calls the account of a customer a "workspace", never a
+  "team", because Team is a tier.
 
 ## Review focus
 

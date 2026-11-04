@@ -1,11 +1,13 @@
 # Architecture
 
-ciproxy runs the GitHub Actions jobs of an
-[organization](protocol/security.md#terms) on the customer's
+ciproxy runs the GitHub Actions jobs of a customer's GitHub
+[organizations](protocol/workspaces.md#terms) on the customer's
 [own machines](protocol/agent.md#terms) first. When those machines are busy,
 it starts runners in the customer's own
-[Boat](protocol/overflow.md#the-boat-account) account. The protocol docs
-hold the rules. Each section links to the doc that owns them.
+[Boat](protocol/overflow.md#the-boat-account) account. A
+[workspace](protocol/workspaces.md#terms) holds the organizations, the
+machines, and the plan of one customer. The protocol docs hold the rules.
+Each section links to the doc that owns them.
 
 ## Components
 
@@ -38,8 +40,9 @@ The control plane is closed source and written in Rust. It has these parts:
 - **Dashboard API:** serves the data and the actions of the dashboard. It
   signs people in and checks their [roles](protocol/security.md#roles).
 - **GitHub integration:** keeps one scale set for each
-  [label](protocol/job-routing.md#labels) of an organization. The scale set
-  makes ciproxy the runner provider of the label.
+  [label](protocol/job-routing.md#labels) of a workspace in each of its
+  organizations. The scale set makes ciproxy the runner provider of the
+  label.
 - **Scaler:** decides how many [runners](protocol/job-routing.md#terms)
   start, and where they start. This includes the
   [warm runners](protocol/job-routing.md#warm-runners) of each own machine.
@@ -50,12 +53,12 @@ The control plane is closed source and written in Rust. It has these parts:
   [backend](protocol/overflow.md#backend-contract), Boat. It counts the Boat
   spend against the [spend limit](protocol/overflow.md#spend-limit).
 - **Metering:** counts the [starts](protocol/metering.md#starts) and the own
-  machines of each organization. It builds the
+  machines of each workspace. It builds the
   [savings report](protocol/metering.md#savings-report).
 - **Billing:** keeps the [tier](protocol/billing.md#tiers), the
   [add-ons](protocol/billing.md#add-ons), and the
   [subscription](protocol/billing.md#subscription-states) of each
-  organization in step with Stripe.
+  workspace in step with Stripe.
 - **Store:** keeps the state of the control plane.
   [Secrets and job data](protocol/security.md#secrets-and-job-data) says
   what ciproxy stores.
@@ -113,8 +116,10 @@ design tokens that the dashboard uses.
   [App permissions](protocol/security.md#github-app-permissions). It opens a
   message session for each scale set. GitHub sends the messages about the
   jobs of each label through its session. For each new runner, the control
-  plane gets a just-in-time runner registration from GitHub. GitHub also
-  reports each [removal or suspension](protocol/app-removal.md) of the App.
+  plane gets a just-in-time runner registration from GitHub. It reads the
+  ref, the event, and the head repository of the run of each job from the
+  GitHub API. GitHub also reports each
+  [removal or suspension](protocol/app-removal.md) of the App.
 - **GitHub and the runners:** each runner opens its own connection to
   GitHub. It gets one job with its code and secrets, and it sends the logs
   and the artifacts to GitHub. These never pass through the control plane,
@@ -122,7 +127,8 @@ design tokens that the dashboard uses.
 - **The control plane and the agents:** each agent opens an outbound
   connection to the machine gateway, with its
   [machine credential](protocol/agent.md#machine-identity). The agent sends
-  reports. The control plane sends runner registrations and the
+  reports. The control plane sends runner registrations, the ref, the
+  event, and the head repository of each job, and the
   [drain](protocol/agent.md#drain-and-remove) and remove actions.
   [Connection](protocol/agent.md#connection) holds the rules.
 - **The agent and its job VMs:** the agent passes one runner registration
@@ -148,12 +154,17 @@ design tokens that the dashboard uses.
 
 1. GitHub queues a job whose `runs-on` names a ciproxy label. It sends a
    message about the job to the control plane.
-2. GitHub gives the job to a ready warm runner of the label, and the job
-   starts at once. Without a warm runner, the scaler starts a runner in
-   free [slots](protocol/job-routing.md#slots) of an own machine.
-3. Metering counts one start. When a slot is free, the scaler sends the
+2. GitHub gives the job to a ready warm runner of its organization and
+   label, and the job starts at once. Without a warm runner, the scaler
+   starts a runner in free [slots](protocol/job-routing.md#slots) of an own
+   machine of the workspace.
+3. The control plane reads the ref, the event, and the head repository of
+   the run of the job from the GitHub API. It sends them to the agent for
+   the [cache scopes](protocol/cache.md#cache-scopes) and the Docker disk of
+   the job.
+4. Metering counts one start. When a slot is free, the scaler sends the
    agent a registration for a new warm runner.
-4. When the job ends, the agent ends the job VM and reports it.
+5. When the job ends, the agent ends the job VM and reports it.
 
 ### A job on Boat
 
@@ -200,7 +211,7 @@ design tokens that the dashboard uses.
 4. The customer changes the card in the Stripe customer portal. Stripe
    sends an event for each later charge.
 5. After the last failed retry, Stripe ends the subscription. Billing moves
-   the organization to Free.
+   the workspace to Free.
 
 ### Machine reports and offline detection
 
@@ -243,6 +254,7 @@ design tokens that the dashboard uses.
 
 ## Related docs
 
+- [Workspaces](protocol/workspaces.md)
 - [Job routing](protocol/job-routing.md)
 - [Overflow](protocol/overflow.md)
 - [Agent](protocol/agent.md)

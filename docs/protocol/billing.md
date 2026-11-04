@@ -1,7 +1,7 @@
 # Billing
 
-This doc states the tiers of ciproxy, their add-ons, and how an
-[organization](security.md#terms) pays for them through Stripe.
+This doc states the tiers of ciproxy, their add-ons, and how a
+[workspace](workspaces.md#terms) pays for them through Stripe.
 [Metering](metering.md#soft-limits) states how ciproxy counts the use
 against a tier.
 
@@ -13,8 +13,6 @@ against a tier.
 - **add-on:** extra [starts](metering.md#terms) or an extra
   [own machine](agent.md#terms) that a paid tier buys by the month.
 - **subscription:** the Stripe subscription of a paid tier.
-- **Business pool:** the organizations that one Business subscription
-  covers.
 
 ## Tiers
 
@@ -35,7 +33,7 @@ against a tier.
 - The job history of a tier is the window of finished jobs that its pages
   show. [Data retention](security.md#data-retention) says how long ciproxy
   keeps them.
-- Every organization starts on Free.
+- Every workspace starts on Free.
 - The customer picks a paid tier by hand, and ciproxy never picks one by
   itself.
 - Free needs no Stripe customer and no card.
@@ -50,14 +48,14 @@ against a tier.
 - Every tier includes own Linux machines, Boat overflow, the
   [transparent cache](cache.md#transparent-cache), warm runners, the
   dashboard, and the [savings report](metering.md#savings-report).
-- Team adds sticky Docker disks, alerts by email and Slack, and email
-  support.
-- Business adds several GitHub organizations, single sign-on, an audit log,
-  custom VM images, and priority support.
+- Team adds several GitHub organizations, sticky Docker disks, alerts by
+  email and Slack, and email support.
+- Business adds single sign-on, an audit log, custom VM images, and
+  priority support.
 - A tier also includes each feature of the tiers below it.
-- Sticky Docker disks and several GitHub organizations ship at launch, as
-  [Docker disks](cache.md#docker-disks) and
-  [Business pools](#business-pools) say.
+- Several GitHub organizations and sticky Docker disks ship at launch, as
+  [Organizations of a workspace](workspaces.md#organizations-of-a-workspace)
+  and [Docker disks](cache.md#docker-disks) say.
 - Alerts by email and Slack, single sign-on, the audit log, and custom VM
   images come later.
 - Each page that lists a feature that comes later marks it "Coming later".
@@ -66,14 +64,6 @@ against a tier.
   until they ship, and building some or all of them before the launch.
   Reason: the tiers stay as priced, and no page sells a feature as ready
   before it ships.
-
-### Business pools
-
-- One Business subscription can cover several organizations.
-- [A Business pool](metering.md#a-business-pool) says how these
-  organizations share one count of starts and own machines.
-- [Tenant isolation](security.md#tenant-isolation) says what each of them
-  keeps for itself.
 
 ## Add-ons
 
@@ -115,7 +105,7 @@ against a tier.
 - The customer then pays on Stripe Checkout.
 - ciproxy changes the tier only when Stripe confirms the payment.
 - The return page waits a few seconds for the confirmation.
-- After the confirmation, the organization is on the new tier.
+- After the confirmation, the workspace is on the new tier.
 - Stripe emails the receipt.
 - A checkout that does not finish leaves the tier as it was.
 - The return page then says that the tier stays as it was and that jobs
@@ -129,9 +119,9 @@ against a tier.
 - **Decision:** every sign-in button of the site says "Start free".
   Rejected: a caption that explains the upgrade, a sign-in that carries
   the chosen tier into the dashboard, and Stripe Checkout before setup.
-  Reason: every organization starts on Free, and the
+  Reason: every workspace starts on Free, and the
   [offer](metering.md#the-use-and-the-offer) at a soft limit brings each
-  organization that outgrows Free to the right tier.
+  workspace that outgrows Free to the right tier.
 
 ## Customer portal
 
@@ -155,15 +145,15 @@ against a tier.
 - **Decision:** a move up charges the saved card at once. Reason: the
   higher tier starts at once.
 - The tier of a move up changes only after its charge succeeds.
-- When the charge fails, the organization keeps its tier, and the page
-  offers to try again or to update the card.
+- When the charge fails, the workspace keeps its tier, and the page offers
+  to try again or to update the card.
 - When the bank asks the customer to confirm the charge, the Stripe payment
   page opens.
 - A move to Free that the customer chooses takes effect at the end of the
   paid period.
 - The customer chooses it with "Move to Free" on the Plans page, or with a
   cancel in the portal.
-- The organization keeps the paid tier and its add-ons until the end of the
+- The workspace keeps the paid tier and its add-ons until the end of the
   period.
 - After the move to Free, jobs keep running, also past the soft limits of
   Free.
@@ -179,29 +169,28 @@ against a tier.
 ## Subscription states
 
 - A subscription is active, payment failed, or ended.
-- While the subscription is active, the organization has its paid tier.
+- While the subscription is active, the workspace has its paid tier.
 - While the subscription is active, Plan and usage shows the day on which
   it renews.
 - The subscription is in the payment failed state while Stripe retries a
   failed payment.
-- The organization keeps its paid tier while Stripe retries.
+- The workspace keeps its paid tier while Stripe retries.
 - A successful payment makes the subscription active again.
 - The subscription ends after the last failed retry, or at the end of the
   period after a move to Free.
-- The subscription of one organization also ends at the end of the period
-  after the organization removes the GitHub App, as
-  [Removing the App](app-removal.md#removing-the-app) says.
-- In a Business pool, a removal of the App takes only that organization
-  out of the pool.
-- When the last organization of a Business pool leaves it, the
-  subscription ends at the end of the period.
-- When the subscription ends, the organization moves to Free that day.
+- The subscription also ends at the end of the period after the last
+  organization of the workspace removes the GitHub App, as
+  [The last organization](app-removal.md#the-last-organization-of-a-workspace)
+  says.
+- A removal of the App by any other organization of the workspace leaves
+  the subscription as it is.
+- When the subscription ends, the workspace moves to Free that day.
 - No subscription state stops a job or keeps a job from starting.
 
 ## Failed payments
 
-- When Stripe cannot charge the card, every page of the organization shows
-  a banner.
+- When Stripe cannot charge the card, every page of the workspace shows a
+  banner.
 - The banner gives the date of the failed payment and the date of the next
   try.
 - The banner says that the tier stays active and that jobs keep running.
@@ -212,16 +201,20 @@ against a tier.
   all own machines, and offers "Choose a plan".
 - This banner takes the place of the soft limit banner.
 - This banner shows until the first Free period ends, or until the
-  organization moves to a paid tier.
+  workspace moves to a paid tier.
 
 ## Related docs
 
 - [Architecture](../architecture.md#data-flow): the data flow of a checkout
   and of a failed payment.
+- [Workspaces](workspaces.md#organizations-of-a-workspace): the
+  organizations that a workspace on each tier can hold.
 - [Metering](metering.md#soft-limits): the starts, the periods, the machine
-  count, the soft limits, and the counts of a Business pool.
+  count, and the soft limits of a workspace.
 - [Security](security.md#key-custody): the custody of the Stripe keys and
-  of the card, tenant isolation, and the removal of the App.
+  of the card.
+- [Removing or suspending the App](app-removal.md): the end of the
+  subscription when the last organization of a workspace removes the App.
 - [Cache](cache.md#docker-disks): the Docker disks of Team and Business.
 - [Overflow](overflow.md#the-boat-account): the Boat account of the
   customer, which Boat bills for overflow.
