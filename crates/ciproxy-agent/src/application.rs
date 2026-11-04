@@ -10,6 +10,8 @@ use reqwest::Client;
 use tokio::signal::unix::{SignalKind, signal};
 use tokio::sync::{Mutex, mpsc};
 use tokio::time::interval;
+use tracing_subscriber::fmt::writer::BoxMakeWriter;
+use tracing_subscriber::util::SubscriberInitExt;
 
 use crate::boundaries::{Cache, Connection, Host, Images, Service, Store, Vms};
 use crate::cache::UnixCache;
@@ -24,6 +26,7 @@ use crate::image_store::LinuxImageStore;
 use crate::images::ManagedImages;
 use crate::installation::{Install, Installer, PendingWorkspaceResolver};
 use crate::layout::Layout;
+use crate::logging::subscriber;
 use crate::maintenance::{HourlyMaintenance, TokioDelay};
 use crate::network::LinuxNetwork;
 use crate::persistence::FileStore;
@@ -38,7 +41,10 @@ use crate::vsock::LinuxGuests;
 
 pub(crate) async fn main() -> Result<()> {
     let cli = Cli::parse();
-    tracing_subscriber::fmt().json().init();
+    let directives = std::env::var("RUST_LOG").unwrap_or_default();
+    subscriber(BoxMakeWriter::new(std::io::stderr), &directives)
+        .try_init()
+        .context("initialize safe JSON logging")?;
     execute(cli.action()).await
 }
 

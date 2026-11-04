@@ -22,6 +22,7 @@ mod images;
 mod installation;
 mod launches;
 mod layout;
+mod logging;
 mod maintenance;
 mod mode;
 mod network;

@@ -292,6 +292,9 @@ ships through `futex-ai/cli-release`.
 - [x] Release with release-plz and `scripts/cli-release.sh package`, as
       `x86_64-unknown-linux-gnu` for old glibc versions.
       Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
+- [x] Keep install tokens and machine credentials out of WebSocket logs at
+      every verbosity. Test real transport traffic with TRACE enabled.
+      Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
 - [ ] Test with fakes. Smoke-test a Docker job, a warm runner, and a restart
       during a job.
       Orchestrator: align the image bundle, root/Docker disk allocation,

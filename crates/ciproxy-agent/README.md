@@ -138,7 +138,8 @@ The agent retries pending shutdown requests after connection recovery.
 Repeated Shutdown requests share one per-VM flag.
 A guest that cannot connect does not fill the normal message queue.
 
-The optional machine cache uses `/run/ciproxy-cache/control.sock`.
+The current agent expects an optional machine cache at
+`/run/ciproxy-cache/control.sock`.
 Root owns this socket with mode `0600`.
 Requests and replies are newline-delimited JSON with a `type` field:
 
@@ -155,11 +156,15 @@ The cache address uses the VM's host link address and TCP port 7887.
 Before VM disk preparation, the agent reduces the cache budget.
 The cache must reclaim space before it replies to that budget request.
 The budget includes cache and unused Docker disk space.
-The cache component owns eviction of unused Docker disks in LRU order.
+The integrated cache component must evict unused Docker disks in LRU order.
 An absent cache gives direct GitHub caching and zero observed cache use.
 An absent cache makes ClearCache fail. It cannot confirm deletion.
-Cache eviction and sticky Docker disks need the later cache component.
-Persistent Docker disk reports stay zero until that component exists.
+The merged [cache sidecar](../ciproxy-cache-sidecar/README.md#agent-integration)
+instead exposes HTTP administration and runtime-session registration.
+The agent does not yet start or configure that service.
+Own-machine integration must align these control and credential boundaries.
+Cache-sidecar wiring and sticky Docker disk ownership remain integration work.
+Persistent Docker disk reports stay zero until that ownership is implemented.
 
 ### Agent updates and releases
 
@@ -169,6 +174,11 @@ The default release server is `https://get.ciproxy.dev`.
 The update requires a checksum and restarts only the agent unit.
 A failed update cycle keeps the next hourly check.
 The updater source is pinned in the workspace manifest.
+`RUST_LOG` selects logging verbosity. JSON operation events remain available.
+An outer safety filter always excludes `tungstenite` and `tokio_tungstenite`.
+This filter also checks normalized targets from the log-to-tracing bridge.
+User directives cannot enable transport payload diagnostics.
+
 The systemd service reads `/etc/ciproxy-agent/environment` when present.
 Keep this root-only settings file at mode `0600`.
 
