@@ -7,6 +7,7 @@ mod connection;
 mod error;
 mod jobs;
 mod labels;
+mod machine_removal;
 mod machines;
 mod metering;
 mod organization_lifecycle;

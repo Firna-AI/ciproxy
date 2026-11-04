@@ -12,6 +12,7 @@ use uuid::Uuid;
 
 use crate::connection::PgStore;
 use crate::error::{QueryResultExt, require_record};
+use crate::machine_removal::mark_removed;
 
 #[derive(Queryable, Selectable, Insertable, AsChangeset)]
 #[diesel(table_name = machines, treat_none_as_null = true)]
@@ -184,13 +185,7 @@ impl MachineStore for PgStore {
         let count = self
             .connection()?
             .transaction(|connection| {
-                let count = diesel::update(
-                    machines::table
-                        .filter(machines::workspace_id.eq(workspace_id))
-                        .find(machine_id),
-                )
-                .set((machines::removed_at.eq(at), machines::draining.eq(true)))
-                .execute(connection)?;
+                let count = mark_removed(connection, workspace_id, Some(machine_id), at)?;
                 diesel::update(
                     tokens::table
                         .filter(tokens::workspace_id.eq(workspace_id))

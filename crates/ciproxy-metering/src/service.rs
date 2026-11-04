@@ -180,11 +180,3 @@ impl Metering for StoredMetering {
 #[cfg(test)]
 #[path = "_tests_/service_tests.rs"]
 mod service_tests;
-
-#[cfg(test)]
-#[path = "_tests_/refresh/mod.rs"]
-mod refresh_tests;
-
-#[cfg(test)]
-#[path = "_tests_/savings_read_tests.rs"]
-mod savings_read_tests;

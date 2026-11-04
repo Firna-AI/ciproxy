@@ -42,6 +42,7 @@ Global GitHub-ID reads return current and retained registrations.
 A partial unique index permits only one current registration.
 An install into another workspace creates a separate registration.
 It transfers no history or shared resource from the old workspace.
+Individual and workspace removal preserve each machine's first removal time.
 
 Metering reads use repeatable-read transactions for coherent snapshots.
 Boat source costs and cost cursors share one repeatable-read snapshot.
@@ -112,6 +113,8 @@ The provided database serves as the maintenance connection.
 The fixture removes only the database that it created.
 Separate databases isolate sequence keys and advisory locks.
 Lock tests terminate only their own lock session.
+Metering concurrency tests coordinate tagged sessions through exact database
+lock dependencies. They check production cursor writes and report snapshots.
 CI starts the database for the existing workspace test phase.
 
 ### Key Code
@@ -123,6 +126,7 @@ CI starts the database for the existing workspace test phase.
 - [src/error.rs](src/error.rs) maps database failures to interface errors.
 - [src/scale_sets.rs](src/scale_sets.rs) owns advisory lock sessions.
 - [src/boat.rs](src/boat.rs) rotates and erases encrypted keys.
+- [src/machine_removal.rs](src/machine_removal.rs) preserves removal times.
 - [src/metering](src/metering) stores cost histories and accounting deltas.
 - [tests/store](tests/store) tests the public API against PostgreSQL.
 

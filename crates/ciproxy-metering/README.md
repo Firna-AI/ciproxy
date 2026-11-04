@@ -119,6 +119,8 @@ cargo clippy --package ciproxy-metering --all-targets -- -D warnings
 Unit tests use explicit times and hand-worked literal results.
 Store-boundary unit tests use unimock.
 PostgreSQL integration tests live in ciproxy-store-pg.
+Those tests cover competing cursor writes, aggregate changes, and report
+snapshots through the production adapter.
 
 ### Key Code
 
