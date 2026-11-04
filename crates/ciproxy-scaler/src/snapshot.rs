@@ -94,10 +94,11 @@ pub struct Machine {
     pub disk_budget_bytes: u64,
     /// One shared warm count for this machine, across all organizations.
     pub warm_count: usize,
-    /// Ordered organization allocation derived from recent `ciproxy` jobs.
+    /// Per-machine targets from the documented warm-runner allocation policy.
     ///
+    /// The snapshot builder applies "Warm runners" in job-routing.md.
     /// One entry means one desired warm runner. The scaler caps the list at
-    /// `warm_count`. The caller owns the recent window and share rounding.
+    /// `warm_count`.
     pub warm_allocation: Vec<OrganizationId>,
     /// All VMs whose slots and disk have not yet been released.
     pub runners: Vec<Runner>,

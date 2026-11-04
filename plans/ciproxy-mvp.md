@@ -173,13 +173,13 @@ machine or on Boat, stop a runner, or delete a sandbox.
 - [x] Apply `job-routing.md` from "Where a job runs" to "Failures", and the
       size changes of "Custom labels" in `labels.md`. Give each start a typed
       reason.
-      The snapshot supplies the recent-job warm allocation. Orchestrator
-      before Milestone 13: define its history window, weighting, empty
-      history fallback, and share rounding. This policy is still open.
+      The snapshot builder supplies the recent-job warm allocation under
+      "Warm runners" in `job-routing.md`. Milestone 13 applies that policy
+      when it builds the snapshot.
       Branch: `conductor/ciproxy-mvp-milestone-7-scaler`.
 - [x] Unit-test each rule with a hand-worked state. The tests enforce the
-      supplied allocation. Its history policy tests wait for the choice
-      above, which the orchestrator must make before Milestone 13.
+      supplied allocation. The snapshot builder's history and allocation
+      tests belong to Milestone 13.
       Branch: `conductor/ciproxy-mvp-milestone-7-scaler`.
 - [ ] Use the shared protocol fit rule after its disk helper reaches the
       primary branch. Check disk pressure and warm runner disk use.

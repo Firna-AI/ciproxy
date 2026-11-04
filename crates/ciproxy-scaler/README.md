@@ -45,8 +45,9 @@ jobs retain their VM. Cleanup deletes only marked sandboxes with no job.
 - Supply only organizations that can receive new runners.
 - Use one clock origin for `now`, queue timestamps, and retry timestamps.
 - Preserve both the runner's original requested size and its actual size.
-- Derive `warm_allocation` from recent `ciproxy` jobs. Each entry requests
-  one warm runner for its organization. `warm_count` caps the whole list.
+- Supply each machine's `warm_allocation` under the documented
+  [warm allocation policy](../../docs/protocol/job-routing.md#warm-runners).
+  Each entry requests one runner. `warm_count` caps the whole list.
 - Supply the machine's total job disk as `disk_budget_bytes`. Include disk
   held by the listed VMs and space used by the machine cache or Docker
   disks. The machine cache and unused Docker disks free space for new VMs.
@@ -76,9 +77,11 @@ Coalesce pending stop and deletion requests during action delivery.
 
 The GitHub integration supplies durable demand and organization facts.
 The control plane builds the consistent snapshot and applies machine
-actions. Its warm allocation builder needs a defined recent-job window,
-weighting rule, no-history fallback, and share rounding rule. These tests
-check allocation enforcement. They do not choose that missing policy.
+actions. Its snapshot builder applies the documented
+[warm allocation policy](../../docs/protocol/job-routing.md#warm-runners)
+and supplies the per-machine targets. The scaler enforces those targets.
+Its tests check allocation enforcement. The snapshot builder owns the
+history calculation.
 
 The overflow integration supplies the Boat catalog, prices, largest size,
 retry times, billing recovery, key recovery, and monthly spend. It also
