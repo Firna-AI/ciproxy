@@ -23,7 +23,10 @@ and Docker disk use. The report interval is ten seconds.
 The guest uses separate message types for both directions over vsock.
 
 A ciproxy workspace owns each machine, its install token, and its machine
-credential. Registration and the authenticated hello name that workspace.
+credential. Register carries the install token without a workspace ID.
+The token's authority determines the workspace. Registered returns that
+workspace ID with the machine identity and credential.
+The authenticated Hello names the workspace returned at registration.
 A workspace can hold several GitHub organizations.
 Its machines can run jobs for each of those organizations.
 

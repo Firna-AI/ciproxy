@@ -18,9 +18,7 @@ pub enum AgentMessage {
     Register {
         /// The wire version understood by this agent.
         protocol_version: ProtocolVersion,
-        /// Workspace that owns the machine and its install token.
-        workspace_id: WorkspaceId,
-        /// Install token for the named workspace, hidden from diagnostics.
+        /// Install token whose authority identifies the workspace, hidden from diagnostics.
         install_token: Secret,
         /// Initial hardware, capacity, and agent state.
         report: MachineReport,

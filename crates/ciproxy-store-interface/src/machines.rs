@@ -51,7 +51,8 @@ pub struct Machine {
 pub trait MachineStore: Send + Sync {
     /// Insert a machine without a plaintext credential.
     fn create_machine(&self, workspace_id: Uuid, machine: &Machine) -> Result<()>;
-    /// Read active registrations, including offline and draining machines.
+    /// Read active registrations and disks from one committed state.
+    /// Include offline and draining machines.
     fn machines(&self, workspace_id: Uuid) -> Result<Vec<Machine>>;
     /// Replace a machine report and desired settings within its workspace.
     fn update_machine(&self, workspace_id: Uuid, machine: &Machine) -> Result<()>;

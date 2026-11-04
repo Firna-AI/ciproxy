@@ -43,6 +43,20 @@ A partial unique index permits only one current registration.
 An install into another workspace creates a separate registration.
 It transfers no history or shared resource from the old workspace.
 
+Gateway queries lock the workspace before registration or token issuance.
+They serialize against last-App removal and reject a retained empty workspace.
+Registration inserts the machine, report, and hashed credential together.
+It holds the install-token row until that transaction commits.
+Independent token revocation waits for that registration before it returns.
+Registrations that validate the token after revocation cannot use it.
+The full last report uses JSONB and a connection identifier.
+Replaced sessions and removed machines cannot overwrite it.
+Desired drain and warm settings stay separate from observed report fields.
+Machine reads keep machine fields and disks in one committed view.
+Gateway snapshots include the full report from that same view.
+A shared read snapshot prevents mixed report generations.
+Contact writes contain only observed columns.
+
 PgStoreFactory connects and applies pending migrations.
 One connection serializes ordinary queries across clones of the store.
 Each scale set lock owns a separate PostgreSQL connection.
@@ -107,6 +121,10 @@ CI starts the database for the existing workspace test phase.
 - [src/error.rs](src/error.rs) maps database failures to interface errors.
 - [src/scale_sets.rs](src/scale_sets.rs) owns advisory lock sessions.
 - [src/boat.rs](src/boat.rs) rotates and erases encrypted keys.
+- [src/gateway.rs](src/gateway.rs) owns atomic gateway persistence.
+- [src/machine_reads.rs](src/machine_reads.rs) loads coherent machine views.
+- [src/machine_observation.rs](src/machine_observation.rs) limits contact
+  writes to observed columns.
 - [tests/store](tests/store) tests the public API against PostgreSQL.
 
 ### Related Docs
