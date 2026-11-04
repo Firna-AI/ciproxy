@@ -200,19 +200,32 @@ ships through `futex-ai/cli-release`.
 
 - [ ] Add `install --token` and `uninstall`. My call: "Remove a machine" needs
       `uninstall`.
-- [ ] Report the hardware and the slots every 10 seconds. Reconnect after a
+      Orchestrator: settle the workspace source of an install token and
+      the host setup that the one-line install command must prepare.
+      Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
+- [x] Report the hardware and the slots every 10 seconds. Reconnect after a
       growing wait, and apply "Drain and remove".
+      Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
 - [ ] Run each VM under the jailer in its own systemd unit, on a reflink
       copy of the image, with the internet and the machine cache only. My
       call: an agent restart then keeps the VMs.
-- [ ] Pass registrations over vsock only. Give each VM an empty drive for a
+      Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
+- [x] Pass registrations over vsock only. Give each VM an empty drive for a
       Docker disk.
-- [ ] Fetch and check the newest image. Update the agent with `cli-updater`
+      Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
+- [x] Fetch and check the newest image. Update the agent with `cli-updater`
       every hour.
-- [ ] Release with release-plz and `scripts/cli-release.sh package`, as
+      Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
+- [x] Release with release-plz and `scripts/cli-release.sh package`, as
       `x86_64-unknown-linux-gnu` for old glibc versions.
+      Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
 - [ ] Test with fakes. Smoke-test a Docker job, a warm runner, and a restart
       during a job.
+      Orchestrator: run `crates/ciproxy-agent/scripts/smoke-docker.sh`,
+      `crates/ciproxy-agent/scripts/smoke-warm.sh`, and
+      `crates/ciproxy-agent/scripts/smoke-restart.sh` on the KVM test host
+      with the staging gateway, image, guest, and GitHub App.
+      Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
 
 ## Milestone 10: Job VM image
 

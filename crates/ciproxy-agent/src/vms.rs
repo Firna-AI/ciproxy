@@ -1,0 +1,119 @@
+//! Separate systemd units own the jailed VMs across agent process restarts.
+
+use std::sync::Arc;
+
+use async_trait::async_trait;
+use ciproxy_protocol::guest::AgentToGuest;
+use ciproxy_protocol::runners::RunnerReport;
+use tokio::sync::Mutex;
+use uuid::Uuid;
+
+use crate::boundaries::Vms;
+use crate::error::{Error, Result};
+use crate::layout::{Layout, jail_uid, unit_name};
+use crate::network::{Network, network_name};
+use crate::process::{Commands, UnitState, arguments};
+use crate::state::VmRecord;
+use crate::vm_files::VmFiles;
+use crate::vsock::Guests;
+
+pub(crate) struct LinuxVms {
+    pub(crate) layout: Layout,
+    pub(crate) commands: Arc<dyn Commands>,
+    pub(crate) network: Arc<dyn Network>,
+    pub(crate) files: Arc<dyn VmFiles>,
+    pub(crate) guests: Arc<dyn Guests>,
+    pub(crate) operation: Mutex<()>,
+}
+
+#[async_trait]
+impl Vms for LinuxVms {
+    fn allocate(&self, report: RunnerReport, used: &[VmRecord]) -> Result<VmRecord> {
+        let network_index = (1..16_383)
+            .find(|index| !used.iter().any(|vm| vm.network_index == *index))
+            .ok_or(Error::Capacity)?;
+        Ok(VmRecord {
+            local_id: Uuid::new_v4().simple().to_string(),
+            network_index,
+            report,
+        })
+    }
+
+    async fn start(&self, vm: &VmRecord, config: AgentToGuest) -> Result<()> {
+        {
+            let _operation = self.operation.lock().await;
+            self.files.prepare(vm).await?;
+            self.network.create(vm).await?;
+            self.commands
+                .run("systemd-run", &self.start_arguments(vm), &[])
+                .await?;
+        }
+        self.guests.attach(vm, Some(config)).await
+    }
+
+    async fn restore(&self, vm: &VmRecord) -> Result<()> {
+        self.guests.attach(vm, None).await
+    }
+
+    async fn request_stop(&self, vm: &VmRecord) -> Result<()> {
+        self.guests.send(vm, &AgentToGuest::Shutdown).await
+    }
+
+    async fn stop(&self, vm: &VmRecord) -> Result<()> {
+        let _operation = self.operation.lock().await;
+        self.guests.detach(vm).await?;
+        let unit = unit_name(vm);
+        if self.commands.unit(&unit).await? == UnitState::Active {
+            self.commands
+                .run("systemctl", &arguments(&["stop", &unit]), &[])
+                .await?;
+        }
+        self.network.remove(vm).await?;
+        self.files.remove(vm)?;
+        Ok(())
+    }
+
+    async fn send(&self, vm: &VmRecord, message: &AgentToGuest) -> Result<()> {
+        self.guests.send(vm, message).await
+    }
+}
+
+impl LinuxVms {
+    fn start_arguments(&self, vm: &VmRecord) -> Vec<String> {
+        let uid = jail_uid(vm).to_string();
+        arguments(&[
+            "--quiet",
+            "--collect",
+            "--service-type=exec",
+            "--unit",
+            &unit_name(vm),
+            "--property=Delegate=yes",
+            "--property=KillMode=control-group",
+            "--property=StandardOutput=null",
+            "--property=StandardError=null",
+            &self.layout.jailer.to_string_lossy(),
+            "--id",
+            &vm.local_id,
+            "--exec-file",
+            &self.layout.firecracker.to_string_lossy(),
+            "--uid",
+            &uid,
+            "--gid",
+            &uid,
+            "--cgroup-version",
+            "2",
+            "--chroot-base-dir",
+            &self.layout.data.join("jailer").to_string_lossy(),
+            "--netns",
+            &format!("/run/netns/{}", network_name(vm.network_index)),
+            "--",
+            "--config-file",
+            "/config.json",
+            "--no-api",
+        ])
+    }
+}
+
+#[cfg(test)]
+#[path = "_tests_/vms_tests.rs"]
+mod vms_tests;

@@ -1,0 +1,39 @@
+# Apache-2.0. Copy to .github/workflows/ciproxy-agent-smoke.yml in a private
+# test repository that the staging ciproxy GitHub App can run.
+name: ciproxy agent smoke
+run-name: ciproxy agent smoke ${{ inputs.smoke_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        required: true
+        type: choice
+        options: [docker, warm, restart]
+      smoke_id:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ciproxy
+    timeout-minutes: 10
+    steps:
+      - name: Give the host time to observe or restart this VM
+        env:
+          MODE: ${{ inputs.mode }}
+        run: |
+          if [ "$MODE" = restart ]; then sleep 120; else sleep 45; fi
+      - name: Build and run a Docker image in the fresh VM
+        env:
+          SMOKE_ID: ${{ inputs.smoke_id }}
+        run: |
+          set -euo pipefail
+          work="$(mktemp -d)"
+          printf 'FROM busybox:1.37\nRUN printf ciproxy-docker-ok > /result\nCMD ["cat", "/result"]\n' > "$work/Dockerfile"
+          docker build --tag ciproxy-smoke "$work"
+          [ "$(docker run --rm ciproxy-smoke)" = ciproxy-docker-ok ]
+          printf 'ciproxy-docker-ok=%s\n' "$SMOKE_ID"

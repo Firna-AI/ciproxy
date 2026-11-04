@@ -1,0 +1,77 @@
+name: Agent release
+
+on:
+  push:
+    branches: [main]
+    tags: ['ciproxy-agent-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.99.1
+          components: rustfmt, clippy
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ts/package-lock.json
+      - name: Install TypeScript packages
+        run: npm --prefix ts ci
+      - name: Run the existing repository gate before release
+        run: cargo xtask check --keep-going
+      - name: Release the agent and open its version pull request
+        uses: release-plz/action@v0.5
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
+
+  package:
+    if: startsWith(github.ref, 'refs/tags/ciproxy-agent-v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.99.1
+          targets: x86_64-unknown-linux-gnu
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install the old-glibc linker
+        run: python -m pip install cargo-zigbuild
+      - name: Resolve the release version
+        id: release
+        run: scripts/cli-release.sh resolve-agent-tag "$GITHUB_REF" Cargo.toml >> "$GITHUB_OUTPUT"
+      - name: Build for glibc 2.17
+        run: cargo zigbuild --locked --release --package ciproxy-agent --target x86_64-unknown-linux-gnu.2.17
+      - name: Check the binary and package the release
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          binary=target/x86_64-unknown-linux-gnu/release/ciproxy-agent
+          "$binary" --version
+          scripts/cli-release.sh verify-glibc "$binary" 2.17
+          scripts/cli-release.sh package ciproxy-agent "$VERSION" x86_64-unknown-linux-gnu "$binary" .context/agent-release
+      - name: Publish the archive and its checksum
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release upload "$GITHUB_REF_NAME" .context/agent-release/*.tar.gz .context/agent-release/*.sha256 --clobber
+          gh release edit "$GITHUB_REF_NAME" --draft=false
