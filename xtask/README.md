@@ -57,6 +57,7 @@ The lint uses default rules with MD013 disabled for code blocks and tables.
 Use the Node version in [.nvmrc](../.nvmrc).
 Use the npm version in the `packageManager` field of
 [ts/package.json](../ts/package.json).
+Set up the [Store database](../AGENTS.md#commands) first.
 Run these commands from the repository root:
 
 ```sh
