@@ -13,13 +13,26 @@ impl DestinationParts<'_> {
     /// Plain-view line numbers are not Markdown heading IDs.
     pub(super) fn is_line_link(&self) -> bool {
         self.plain
-            && self.fragment.is_some_and(|fragment| {
-                percent_decode(fragment)
-                    .strip_prefix('L')
-                    .is_some_and(|number| {
-                        !number.is_empty() && number.bytes().all(|byte| byte.is_ascii_digit())
-                    })
-            })
+            && self
+                .fragment
+                .is_some_and(|fragment| is_line_fragment(&percent_decode(fragment)))
+    }
+}
+
+fn is_line_fragment(fragment: &str) -> bool {
+    let is_number =
+        |value: &str| !value.is_empty() && value.bytes().all(|byte| byte.is_ascii_digit());
+    let Some(fragment) = fragment.strip_prefix('L') else {
+        return false;
+    };
+    match fragment.split_once("-L") {
+        Some((start, end)) => [start, end].into_iter().all(|position| {
+            let (line, column) = position
+                .split_once('C')
+                .map_or((position, None), |(line, column)| (line, Some(column)));
+            is_number(line) && column.is_none_or(is_number)
+        }),
+        None => is_number(fragment),
     }
 }
 

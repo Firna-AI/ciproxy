@@ -51,6 +51,11 @@ fn valid_links_use_relative_paths_and_github_heading_ids() {
             "[Read](../README.md?plain=1#use-ciproxy)\n\
              [Again](../README.md#use-ciproxy-1)\n\
              [Collision](../README.md#intro-2)\n\
+             [Emoji](../README.md#-setup)\n\
+             [Empty](../README.md#-1)\n\
+             [Tab](../README.md#tabheading)\n\
+             [Soft break](../README.md#softbreak)\n\
+             [Hard break](../README.md#hardbreak)\n\
              [Space](<setup%20guide.md#install>)\n\
              [Local](#start)\n\
              [Web](https://example.com/missing#heading)\n\
@@ -60,7 +65,10 @@ fn valid_links_use_relative_paths_and_github_heading_ids() {
         ),
         (
             "README.md".to_owned(),
-            "# Use `ciproxy`!\n\n# Use ciproxy!\n\n# Intro\n\n# Intro-1\n\n# Intro?\n".to_owned(),
+            "# Use `ciproxy`!\n\n# Use ciproxy!\n\n# Intro\n\n# Intro-1\n\n# Intro?\n\n\
+             # 🚀 Setup\n\n# ?\n\n# ?\n\n# Tab\tHeading\n\n\
+             Soft\nBreak\n---\n\nHard\\\nBreak\n---\n"
+                .to_owned(),
         ),
         ("docs/setup guide.md".to_owned(), "## Install\n".to_owned()),
     ];
@@ -76,7 +84,11 @@ fn line_fragments_pass_only_on_plain_links() {
     let documents = vec![
         (
             "docs/start.md".to_owned(),
-            "[Plain](../README.md?plain=1#L5)\n[Heading](../README.md#L5)\n".to_owned(),
+            "[Plain](../README.md?plain=1#L5)\n\
+             [Heading](../README.md#L5)\n\
+             [Range](../README.md?plain=1#L5-L9)\n\
+             [Columns](../README.md?plain=1#L5C2-L9C4)\n"
+                .to_owned(),
         ),
         (
             "README.md".to_owned(),
@@ -97,4 +109,26 @@ fn line_fragments_pass_only_on_plain_links() {
             problem: Problem::MissingFragment,
         }]
     );
+}
+
+#[test]
+fn top_fragments_pass_without_headings_in_local_and_other_files() {
+    let documents = vec![
+        (
+            "docs/start.md".to_owned(),
+            "# Start\n\n\
+             [Local](#top)\n\
+             [Other](../README.md#top)\n\
+             [Mixed case](#ToP)\n\
+             [Upper case](../README.md#TOP)\n"
+                .to_owned(),
+        ),
+        ("README.md".to_owned(), "# Project\n".to_owned()),
+    ];
+    let paths = documents
+        .iter()
+        .map(|(path, _)| path.clone())
+        .collect::<Vec<_>>();
+
+    assert_eq!(violations(&documents, &paths), Vec::new());
 }

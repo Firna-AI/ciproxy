@@ -52,8 +52,9 @@ skill at that moment instead of guessing the rule.
 Run each command from the repository root.
 
 - Install: `npm --prefix ts ci`. `rust-toolchain.toml` pins the Rust
-  version, with rustfmt and clippy. Use Node 24.22.1, as CI does. The mockup
-  tool Mokly rejects Node older than 22.15, Node 23, and Node 24.14 to 24.18.
+  version, with rustfmt and clippy. Use Node from [.nvmrc](.nvmrc).
+  The [mockups guide](docs/mockups/README.md#commands) gives the Node limits
+  of Mokly.
 - Build: `cargo build --workspace`
 - Targeted tests: `cargo test --package <crate> <test name filter>` for
   Rust. TypeScript tests live in a `_tests_` folder beside the code and run

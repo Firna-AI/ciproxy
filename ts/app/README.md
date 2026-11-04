@@ -14,7 +14,8 @@ browser that darkens pages leaves it light.
 
 ## Development
 
-Run from the repository root with Node 24.22.1:
+Use the Node version in [.nvmrc](../../.nvmrc).
+Run these commands from the repository root:
 
 ```sh
 npm --prefix ts ci

@@ -49,10 +49,12 @@ pub(crate) fn violations(
                 Some(target) => parts
                     .fragment
                     .filter(|fragment| !fragment.is_empty() && !parts.is_line_link())
+                    .map(percent_decode)
+                    .filter(|fragment| !fragment.eq_ignore_ascii_case("top"))
                     .filter(|fragment| {
                         anchors
                             .get(target.as_str())
-                            .is_some_and(|ids| !ids.contains(&percent_decode(fragment)))
+                            .is_some_and(|ids| !ids.contains(fragment))
                     })
                     .map(|_| Problem::MissingFragment),
             };

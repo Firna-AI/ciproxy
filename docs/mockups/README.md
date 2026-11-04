@@ -9,8 +9,10 @@ modules.
 
 ## Commands
 
-Run these from the repository root. Mokly needs Node 22.15 or newer, but not
-Node 23 and not Node 24.14 to 24.18.
+Use the Node version in [.nvmrc](../../.nvmrc).
+The `.nvmrc` file must name a Node version that Mokly accepts.
+Mokly rejects Node older than 22.15, Node 23, and Node 24.14 to 24.18.
+Run these commands from the repository root:
 
 ```sh
 npm --prefix ts ci                   # install the workspace

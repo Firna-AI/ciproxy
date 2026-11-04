@@ -22,7 +22,8 @@ The mockups and the site use the same declaration builder from the CSS entry.
 
 ## Development
 
-Run from the repository root with Node 24.22.1:
+Use the Node version in [.nvmrc](../../.nvmrc).
+Run these commands from the repository root:
 
 ```sh
 npm --prefix ts ci

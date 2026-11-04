@@ -34,7 +34,8 @@ The site typecheck uses `astro check`.
 Format uses Prettier, with its Astro plugin for the site.
 
 The length check reads Rust under `crates/` and `xtask/`.
-It also reads TypeScript, JavaScript, Astro, and CSS under the new packages.
+It also reads TypeScript, JavaScript, Astro, and CSS under `ts/tokens/`,
+`ts/app/`, and `ts/site/`.
 It skips dependencies, lockfiles, and generated output.
 The mockups retain their own length check.
 
@@ -42,6 +43,10 @@ Markdown checks cover `AGENTS.md`, all `README.md` files, `docs/`, `plans/`,
 and the Markdown content of `ts/site/`.
 They skip `CLAUDE.md`, dependencies, build output, and `.context/`.
 Local links resolve from the source file and use GitHub heading IDs.
+A `?plain=1` link with `#L5`, `#L5-L9`, or `#L5C2-L9C4` is a line link.
+Line links need no heading.
+The `#top` fragment needs no heading, also without `?plain=1`.
+It matches without regard to ASCII case.
 URLs with a scheme and site-root routes are outside the local link check.
 The lint uses default rules with MD013 disabled for code blocks and tables.
 
@@ -49,7 +54,9 @@ The lint uses default rules with MD013 disabled for code blocks and tables.
 
 `rust-toolchain.toml` pins Rust, with rustfmt and clippy.
 `.cargo/config.toml` holds the `cargo xtask` alias.
-Use Node 24.22.1 with npm 11.19.1.
+Use the Node version in [.nvmrc](../.nvmrc).
+Use the npm version in the `packageManager` field of
+[ts/package.json](../ts/package.json).
 Run these commands from the repository root:
 
 ```sh

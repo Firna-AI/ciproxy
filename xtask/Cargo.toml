@@ -8,6 +8,7 @@ publish = false
 [dependencies]
 clap = { version = "4.6.7", features = ["derive"] }
 pulldown-cmark = "0.13.6"
+regex-syntax = { version = "0.8.11", default-features = false, features = ["unicode-perl"] }
 thiserror = "2.0.21"
 
 [dev-dependencies]

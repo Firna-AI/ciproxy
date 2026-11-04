@@ -29,7 +29,8 @@ Rules for work on the site:
 
 ## Development
 
-Run from the repository root with Node 24.22.1:
+Use the Node version in [.nvmrc](../../.nvmrc).
+Run these commands from the repository root:
 
 ```sh
 npm --prefix ts ci

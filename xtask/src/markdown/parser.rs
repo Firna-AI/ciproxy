@@ -3,6 +3,7 @@
 use std::collections::BTreeSet;
 
 use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
+use regex_syntax::is_word_character;
 
 pub(super) fn link_destinations(source: &str) -> Vec<(String, usize)> {
     Parser::new_ext(source, parser_options())
@@ -36,7 +37,7 @@ pub(super) fn heading_anchors(source: &str) -> BTreeSet<String> {
             }
             Event::SoftBreak | Event::HardBreak => {
                 if let Some((heading_text, _id)) = &mut heading {
-                    heading_text.push(' ');
+                    heading_text.push('\n');
                 }
             }
             Event::End(TagEnd::Heading(_)) => {
@@ -60,9 +61,6 @@ fn parser_options() -> Options {
 }
 
 fn insert_anchor(anchors: &mut BTreeSet<String>, base: String) {
-    if base.is_empty() {
-        return;
-    }
     let mut candidate = base.clone();
     let mut counter = 0;
     while anchors.contains(&candidate) {
@@ -77,19 +75,13 @@ fn github_heading_slug(heading: &str) -> String {
         .to_lowercase()
         .chars()
         .filter_map(|character| {
-            if character.is_whitespace() {
+            if character == ' ' {
                 Some('-')
-            } else if github_slug_punctuation(character) {
-                None
-            } else {
+            } else if character == '-' || is_word_character(character) {
                 Some(character)
+            } else {
+                None
             }
         })
         .collect()
-}
-
-fn github_slug_punctuation(character: char) -> bool {
-    (character.is_ascii_punctuation() && !matches!(character, '-' | '_'))
-        || ('\u{2000}'..='\u{206f}').contains(&character)
-        || ('\u{2e00}'..='\u{2e7f}').contains(&character)
 }
