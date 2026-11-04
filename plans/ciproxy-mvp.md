@@ -112,12 +112,15 @@ Postgres through Diesel, as the `databases` skill says: `ciproxy-schema`,
 `ciproxy-store-interface`, and `ciproxy-store-pg`. My call: one schema file
 for each area. Reason: parallel branches then do not conflict.
 
-- [ ] Add the core tables: workspaces, organizations, labels, scale sets,
+- [x] Add the core tables: workspaces, organizations, labels, scale sets,
       machines, tokens, runners, jobs, settings, and Boat accounts. A
-      workspace owns the rest, as item 48 says.
-- [ ] Keep tokens as hashes and Boat keys as ciphertext. Add an advisory
-      lock for each scale set session.
-- [ ] Test the queries on the Postgres of `DATABASE_URL`, which CI starts.
+      workspace owns the rest, as item 48 says. Branch:
+      `conductor/ciproxy-mvp-milestone-4-store`.
+- [x] Keep tokens as hashes and Boat keys as ciphertext. Add an advisory
+      lock for each scale set session. Branch:
+      `conductor/ciproxy-mvp-milestone-4-store`.
+- [x] Test the queries on the Postgres of `DATABASE_URL`, which CI starts.
+      Branch: `conductor/ciproxy-mvp-milestone-4-store`.
 
 ## Milestone 5: Deployment: hosting and DNS
 
@@ -163,6 +166,10 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
 - [ ] Deploy staging on each push, and production on each `deploy-` tag. Add
       uptime alerts.
+- [ ] Rename the staging environment to the main preview of item 53, with
+      its hosts under `br-main.preview`, before the first apply.
+- [ ] Set up the main preview from the checklist of `deploy/README.md`, as
+      item 52 says.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
   - [x] Add both deploy workflows, restricted federation, and uptime alerts.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
@@ -224,10 +231,21 @@ Depends on: 3
 `ciproxy-scaler` turns a state snapshot into actions: start a runner on a
 machine or on Boat, stop a runner, or delete a sandbox.
 
-- [ ] Apply `job-routing.md` from "Where a job runs" to "Failures", and the
+- [x] Apply `job-routing.md` from "Where a job runs" to "Failures", and the
       size changes of "Custom labels" in `labels.md`. Give each start a typed
       reason.
-- [ ] Unit-test each rule with a hand-worked state.
+      The snapshot builder supplies the recent-job warm allocation under
+      "Warm runners" in `job-routing.md`. Milestone 13 applies that policy
+      when it builds the snapshot.
+      Branch: `conductor/ciproxy-mvp-milestone-7-scaler`.
+- [x] Unit-test each rule with a hand-worked state. The tests enforce the
+      supplied allocation. The snapshot builder's history and allocation
+      tests belong to Milestone 13.
+      Branch: `conductor/ciproxy-mvp-milestone-7-scaler`.
+- [x] Use the shared protocol fit rule for slots and job disk. Check disk
+      pressure and warm runner disk use.
+      Merge notes: `.context/ciproxy-mvp/scaler-merge-notes.md`.
+      Branch: `conductor/ciproxy-mvp-milestone-7-scaler`.
 
 ## Milestone 8: Machine gateway
 
@@ -293,17 +311,38 @@ from a minimal snapshot, not from the full image.
 
 - [ ] Measure the full image first. If it fits no size, propose a smaller
       image as a decision.
-- [ ] Define it under `image/` from a pinned `actions/runner-images`, with
+      Orchestrator: run `bash image/build.sh .context/image-build` on a
+      KVM host. Read `artifacts/measurement.json` in that build directory.
+      The full image size remains unmeasured here.
+      Evidence: `.context/ciproxy-mvp/image/measurement-preflight.json`.
+      Branch: `conductor/ciproxy-mvp-milestone-10-job-vm-image`.
+- [x] Define it under `image/` from a pinned `actions/runner-images`, with
       Docker, the runner, and a kernel.
-- [ ] Add `ciproxy-guest`: it takes the registration over vsock, starts the
+      Branch: `conductor/ciproxy-mvp-milestone-10-job-vm-image`.
+- [x] Add `ciproxy-guest`: it takes the registration over vsock, starts the
       runner, and powers off the VM after the runner exits. On Boat, it
       tells the control plane when the runner exits, as item 47 says.
+      Branch: `conductor/ciproxy-mvp-milestone-10-job-vm-image`.
 - [ ] Publish it with its SHA-256, and as a shared Boat snapshot. Rebuild
       before GitHub stops accepting the runner.
+      Orchestrator: run `image/publish.sh` and the create, prepare, and
+      snapshot commands of `image/boat.py` from the
+      [image guide](../image/README.md#boat-shared-snapshot).
+      Use `image/check-runner.sh` and `image/github.py runner-support`
+      to plan the next rebuild before runner support ends.
+      Branch: `conductor/ciproxy-mvp-milestone-10-job-vm-image`.
 - [ ] Run a job from the shared snapshot on Boat `small` and `default`, and
       measure the free disk. The label `ciproxy` asks for 60 GB, and Boat
       gives 51 GB for files. Propose the disk of the default labels as a
       decision.
+      Orchestrator: run the registration and result commands of
+      `image/github.py`, and the create, run, status, and delete commands
+      of `image/boat.py`, for each size. The
+      [smoke guide](../image/README.md#boat-small-and-default-smoke) gives
+      the arguments. Supply the overflow callback and its scoped token.
+      Compare `image/boat.py metadata` before and after snapshot restore.
+      Bring the measured free bytes to the label disk decision.
+      Branch: `conductor/ciproxy-mvp-milestone-10-job-vm-image`.
 
 ## Milestone 11: Cache sidecar and runner patch
 
@@ -514,11 +553,14 @@ Depends on: 1
 
 `ts/site` serves `ciproxy.dev` from the marketing and docs mockups.
 
-- [ ] Build the landing page, the pricing page, the footer, and the legal
+- [x] Build the landing page, the pricing page, the footer, and the legal
       page frames.
-- [ ] Theme the docs. Restyle the Starlight search to its mockup as far as
+      Branch: `conductor/ciproxy-mvp-milestone-23-site`.
+- [x] Theme the docs. Restyle the Starlight search to its mockup as far as
       CSS allows, and record each gap as a follow-up item.
-- [ ] Smoke-test each page at 1440, 720, and 390 pixels.
+      Branch: `conductor/ciproxy-mvp-milestone-23-site`.
+- [x] Smoke-test each page at 1440, 720, and 390 pixels.
+      Branch: `conductor/ciproxy-mvp-milestone-23-site`.
 
 ## Milestone 24: Site: the 14 launch docs pages
 
@@ -699,6 +741,18 @@ Answers of 4 November 2026:
   install through the GitHub API. The organization can join any workspace
   again as a new install, and the last organization cannot be taken out.
   Rejected: options A, B, C, E, and F.
+- Item 52, A: staging comes up now. The orchestrator runs the GCP steps of
+  `deploy/README.md` from the user's Mac, with the user's approval of each
+  command. The user creates the release token and sets the name servers at
+  the registrar.
+- Item 53, D: the staging environment becomes the main preview, as in
+  `mokly-cloud` and `futex-ai/accounting`: `br-main.preview.ciproxy.dev` for
+  the site, `br-main.preview.app.ciproxy.dev` for the dashboard and the API,
+  and `br-main.preview.get.ciproxy.dev` for the downloads. It deploys from
+  the primary branch until that branch merges into `main`, then from
+  `main`. Previews of labelled pull requests at `pr-<number>.preview.*`
+  wait for the follow-up item `pr-preview-environments.md`. Rejected:
+  `staging.ciproxy.dev`, and pull request previews now.
 - Item 49, C: the Boat backend lives in `futex-ai/sandbox`. Its trait
   `SandboxBackend` splits into capabilities, and `sandbox-boat` starts with
   the lifecycle, snapshots, processes, and files. The interface gains VM

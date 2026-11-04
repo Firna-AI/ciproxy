@@ -1,0 +1,12 @@
+[package]
+name = "ciproxy-store-interface"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+chrono = "0.4.45"
+strum = { version = "0.28.0", features = ["derive"] }
+thiserror = "2.0.21"
+uuid = "1.29.0"

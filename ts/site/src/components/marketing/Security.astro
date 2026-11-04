@@ -1,0 +1,59 @@
+---
+// The security section of the landing page: where code and secrets run, and
+// the four guarantees behind it.
+
+import type { IconName } from "../icon/icons.ts";
+import Icon from "../icon/Icon.astro";
+import Section from "./Section.astro";
+import SectionHead from "./SectionHead.astro";
+import "./landing.css";
+
+type Point = { icon: IconName; title: string; text: string };
+
+const points: readonly Point[] = [
+  {
+    icon: "box",
+    title: "A fresh VM for every job",
+    text: "Each job starts in a new VM, so it never reads the files or secrets of another job.",
+  },
+  {
+    icon: "plug-zap",
+    title: "An agent that connects out",
+    text: "Your machines open no inbound ports. The agent connects out to ciproxy.",
+  },
+  {
+    icon: "key-round",
+    title: "Three GitHub permissions",
+    text: "The GitHub App manages self-hosted runners, lists your repositories, and reads the branch and the event of each run.",
+  },
+  {
+    icon: "database-zap",
+    title: "Trusted cache writes",
+    text: "Only jobs on the default branch write to shared caches, so a pull request cannot poison them.",
+  },
+];
+---
+
+<Section id="security">
+  <div class="security">
+    <SectionHead
+      eyebrow="Security"
+      title="Your code stays in your accounts"
+      lead="Jobs run on your machines and in your Boat account. Code and secrets go from GitHub straight to the runner; ciproxy decides only where the runner starts."
+    />
+    <ul class="security-points">
+      {points.map((point) => (
+        <li class="security-point">
+          <Icon
+            name={point.icon}
+            size={18}
+            strokeWidth={1.75}
+            class="icon-muted"
+          />
+          <h3 class="security-title">{point.title}</h3>
+          <p class="security-text">{point.text}</p>
+        </li>
+      ))}
+    </ul>
+  </div>
+</Section>

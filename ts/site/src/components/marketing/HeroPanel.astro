@@ -1,0 +1,127 @@
+---
+// The picture of the product in the hero: the Jobs page of an example
+// workspace at a release peak. Every slot of its three machines is busy, the
+// overflow runs on Boat, and each running job shows where it runs. It is a
+// static illustration with the fixed values of hero-illustration.ts, and its
+// caption says so. A phone shows fewer jobs.
+
+import { formatCount, formatMoney } from "../../data/format.ts";
+import {
+  heroIllustration as scene,
+  phoneJobCount,
+} from "../../data/hero-illustration.ts";
+import Icon from "../icon/Icon.astro";
+import "./hero-panel.css";
+
+const slots = scene.machines.flatMap((machine) => machine.slots);
+const busy = slots.filter((slot) => slot === "busy").length;
+const spentPercent = Math.min(scene.boatSpent / scene.boatLimit, 1) * 100;
+const spent = `${formatMoney(scene.boatSpent)} of ${formatMoney(scene.boatLimit)}`;
+---
+
+<figure class="hero-figure">
+  <div class="hero-panel">
+    <div class="hp-bar">
+      <span class="hp-org">
+        <span class="hp-avatar" aria-hidden="true">
+          {scene.initial}
+        </span>
+        <span class="strong">{scene.workspace}</span>
+        <span class="hp-slash" aria-hidden="true">
+          /
+        </span>
+        <span class="muted">Jobs</span>
+      </span>
+      <span class="hp-dot-label">
+        <span class="hp-dot"></span>
+        <span>Live</span>
+      </span>
+    </div>
+    <div class="hp-body">
+      <div class="hp-machines">
+        <p class="hp-label">
+          <span>Your machines</span>
+          <span class="num muted">
+            {busy} of {slots.length} slots busy
+          </span>
+        </p>
+        <ul class="hp-list">
+          {scene.machines.map((machine) => (
+            <li class="hp-machine">
+              <span class="mono hp-machine-name">{machine.name}</span>
+              <span
+                class="hp-slots"
+                role="img"
+                aria-label={`${machine.slots.length} of ${machine.slots.length} slots busy`}
+              >
+                {machine.slots.map((slot) => (
+                  <span class:list={["hp-slot", `is-${slot}`]} />
+                ))}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <div class="hp-boat">
+          <span class="hp-boat-name">
+            <Icon
+              name="cloud"
+              size={15}
+              strokeWidth={1.75}
+              class="icon-muted"
+            />
+            <span class="strong">Boat</span>
+          </span>
+          <span class="num">{formatCount(scene.onBoat)} running</span>
+        </div>
+        <p class="caption">
+          {scene.waiting} jobs wait for a slot. Each starts on Boat after{" "}
+          {scene.boatWaitSeconds} seconds.
+        </p>
+        <div class="hp-spend">
+          <p class="hp-meter-head">
+            <span class="strong">Boat this month</span>
+            <span class="num hp-meter-value">{spent}</span>
+          </p>
+          <span class="hp-meter" role="img" aria-label={spent}>
+            <span
+              class="hp-meter-fill"
+              style={`width: ${spentPercent}%`}
+            ></span>
+          </span>
+        </div>
+      </div>
+      <div class="hp-jobs">
+        <p class="hp-label">
+          <span>Running</span>
+          <span class="num muted">{formatCount(scene.running)}</span>
+        </p>
+        <ul class="hp-list">
+          {scene.jobs.map((job, index) => (
+            <li class:list={["hp-job", { "is-extra": index >= phoneJobCount }]}>
+              <span class="hp-dot" role="img" aria-label="Running" />
+              <span class="hp-job-name">{job.name}</span>
+              <span class="hp-job-ref muted">
+                {job.repo} {job.ref}
+              </span>
+              {job.place === "boat" ? (
+                <span class="hp-where">
+                  <Icon name="cloud" size={14} class="icon-muted" />
+                  <span>Boat</span>
+                </span>
+              ) : (
+                <span class="hp-where">
+                  <Icon name="server" size={14} class="icon-muted" />
+                  <span class="mono hp-where-machine">{job.place.machine}</span>
+                </span>
+              )}
+              <span class="hp-job-time num muted">{job.time}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </div>
+  <figcaption class="caption hero-caption">
+    Illustration of the Jobs page at a release peak.
+  </figcaption>
+</figure>
