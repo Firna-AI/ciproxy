@@ -1,0 +1,147 @@
+/* The search dialog after the search mockup: Starlight's dialog with the
+   Pagefind results, restyled with CSS only. From 40rem it is a white card
+   under the top bar, and on a phone it fills the screen. The field runs to
+   the edges of the dialog. search-results.css styles the results. The icon
+   in the mask is the Lucide search icon (ISC licence, see icons.ts). */
+
+#starlight__search {
+  --pagefind-ui-font: var(--font-sans);
+  --pagefind-ui-border-radius: var(--r-md);
+  --sl-search-corners: var(--r-md);
+}
+
+/* The Cancel button and the search box share Starlight's space for the
+   button, so the value is on the dialog. */
+site-search dialog {
+  --sl-search-cancel-space: 5rem;
+
+  border: 0;
+  background: var(--c-surface);
+}
+
+site-search dialog::backdrop {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+site-search .dialog-frame {
+  gap: 0;
+  padding: 0;
+}
+
+/* The field: the search icon, the query, and a hairline under the row. On
+   a phone, the Cancel button ends the row, and its own hairline continues
+   the line of the field. */
+
+#starlight__search .pagefind-ui__form::before {
+  top: 20px;
+  left: 16px;
+  width: 16px;
+  height: 16px;
+  background-color: var(--c-faint);
+  opacity: 1;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21 21-4.34-4.34'/%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3C/svg%3E")
+    center / 16px no-repeat;
+}
+
+#starlight__search .pagefind-ui__search-input {
+  height: 56px;
+  padding-inline: 42px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--c-border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--c-ink);
+  font-size: 15px;
+  font-weight: 400;
+  outline: none;
+}
+
+#starlight__search .pagefind-ui__search-input::placeholder {
+  color: var(--c-placeholder);
+  opacity: 1;
+}
+
+#starlight__search .pagefind-ui__search-clear {
+  top: 0;
+  width: 40px;
+  height: 55px;
+  border-radius: 0;
+}
+
+#starlight__search .pagefind-ui__search-clear::before {
+  background-color: var(--c-muted);
+  mask-size: 14px;
+}
+
+site-search button[data-close-modal] {
+  top: 0;
+  right: 0;
+  justify-content: center;
+  width: var(--sl-search-cancel-space);
+  height: 56px;
+  padding: 0;
+  border-bottom: 1px solid var(--c-border);
+  color: var(--c-ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* From 40rem: a card under the top bar. Escape or a click outside closes it,
+   so it needs no Cancel button. From 760 px, the field shows the Escape key
+   as a badge, as the mockup does. */
+
+@media (min-width: 40rem) {
+  site-search dialog {
+    width: calc(100% - 48px);
+    max-width: 640px;
+    height: max-content;
+    min-height: 0;
+    max-height: calc(100% - 112px);
+    margin: 88px auto auto;
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-xl);
+    box-shadow: var(--sl-shadow-lg);
+  }
+
+  site-search button[data-close-modal] {
+    display: none;
+  }
+
+  #starlight__search {
+    --sl-search-cancel-space: 0px;
+  }
+
+  #starlight__search .pagefind-ui__form::before {
+    top: 18px;
+  }
+
+  #starlight__search .pagefind-ui__search-input {
+    height: 52px;
+  }
+
+  #starlight__search .pagefind-ui__search-clear {
+    height: 51px;
+  }
+}
+
+@media (min-width: 47.5rem) {
+  #starlight__search .pagefind-ui__form::after {
+    position: absolute;
+    top: 15px;
+    right: 14px;
+    padding: 1px 6px;
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-sm);
+    background: var(--c-surface);
+    color: var(--c-muted);
+    content: "esc";
+    font-size: 11.5px;
+    line-height: 18px;
+    pointer-events: none;
+  }
+
+  #starlight__search .pagefind-ui__search-clear {
+    inset-inline-end: 52px;
+  }
+}

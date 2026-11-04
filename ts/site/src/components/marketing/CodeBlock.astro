@@ -1,0 +1,56 @@
+---
+// A command or a file excerpt, after the code block of the mockups: a light
+// head that names where the code goes, then the lines on the page grey. A
+// line that starts with "+" or "-" is a diff line with a faint status tint.
+// With `copy`, the head has a Copy button for that text. The button shows
+// only where the browser offers the clipboard.
+
+import Icon from "../icon/Icon.astro";
+import "./code-block.css";
+
+interface Props {
+  label: string;
+  lines: readonly string[];
+  copy?: string;
+}
+
+const { label, lines, copy } = Astro.props;
+
+function lineClass(line: string): string {
+  if (line.startsWith("+")) return "code-add";
+  if (line.startsWith("-")) return "code-remove";
+  return "code-line";
+}
+---
+
+<div class="code-block">
+  <div class="code-head">
+    <span class="code-label">{label}</span>
+    {copy !== undefined && (
+      <button type="button" class="code-copy" data-copy={copy} hidden>
+        <Icon name="copy" size={14} />
+        <span class="code-copy-label">Copy</span>
+      </button>
+    )}
+  </div>
+  <pre class="code-lines">{lines.map((line) => <span class={lineClass(line)}>{line}</span>)}</pre>
+</div>
+
+<script>
+  for (const button of document.querySelectorAll<HTMLButtonElement>(
+    "button[data-copy]",
+  )) {
+    if (!("clipboard" in navigator)) continue;
+    const label = button.querySelector(".code-copy-label");
+    button.hidden = false;
+    button.addEventListener("click", () => {
+      void navigator.clipboard.writeText(button.dataset.copy ?? "").then(() => {
+        if (!label) return;
+        label.textContent = "Copied";
+        window.setTimeout(() => {
+          label.textContent = "Copy";
+        }, 2000);
+      });
+    });
+  }
+</script>

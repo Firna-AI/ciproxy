@@ -1,18 +1,21 @@
 ---
 // The frame of a marketing page, after the marketing shell of the mockups:
-// the site top bar, then the page between two hairline rails that run to the
-// bottom of the window.
+// the site top bar, then the page and the footer between two hairline rails
+// that run to the bottom of the window.
 
+import "../styles/site.css";
+import SiteFooter from "../components/marketing/SiteFooter.astro";
 import SiteHeader from "../components/site-header/SiteHeader.astro";
 import Tokens from "../components/Tokens.astro";
-import "../styles/site.css";
+import type { SiteSection } from "../data/site.ts";
 
 interface Props {
   title: string;
   description: string;
+  section: Exclude<SiteSection, "docs">;
 }
 
-const { title, description } = Astro.props;
+const { title, description, section } = Astro.props;
 ---
 
 <!doctype html>
@@ -27,11 +30,12 @@ const { title, description } = Astro.props;
   </head>
   <body>
     <div class="site-frame marketing">
-      <SiteHeader section="home" />
+      <SiteHeader section={section} />
       <div class="rails">
         <main>
           <slot />
         </main>
+        <SiteFooter />
       </div>
     </div>
   </body>

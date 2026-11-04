@@ -1,0 +1,31 @@
+---
+// The features of a tier as a list: a check for each feature that ships at
+// launch, and a clock with "Coming later" for each feature that comes later.
+// The comparison table marks its rows with the same words.
+
+import type { TierListItem } from "../../data/tiers.ts";
+import Icon from "../icon/Icon.astro";
+import "./tier-feature-list.css";
+
+interface Props {
+  items: readonly TierListItem[];
+}
+
+const { items } = Astro.props;
+---
+
+<ul class="tier-feature-list">
+  {items.map((item) => (
+    <li class:list={{ "is-later": item.later }}>
+      <Icon
+        name={item.later ? "clock" : "check"}
+        size={14}
+        class="tier-feature-icon"
+      />
+      <span class="tier-feature-text">
+        <span>{item.name}</span>
+        {item.later && <span class="coming-later">Coming later</span>}
+      </span>
+    </li>
+  ))}
+</ul>

@@ -1,0 +1,109 @@
+---
+// A legal page of ciproxy.dev, the terms of service or the privacy policy,
+// after the legal mockups: the title, the switch between the two pages, "On
+// this page" on a wide window, and the section headings. The owner writes or
+// approves the text of each section before the launch, so grey lines hold
+// its place. Only the data retention of the privacy policy has text: the
+// limits that docs/protocol/security.md decides.
+
+import {
+  historyWindows,
+  legalPageOrder,
+  legalPages,
+  retentionId,
+  retentionRows,
+  type LegalPageKey,
+} from "../../data/legal.ts";
+import Section from "../marketing/Section.astro";
+import SectionHead from "../marketing/SectionHead.astro";
+import "./legal.css";
+
+interface Props {
+  page: LegalPageKey;
+}
+
+const { page } = Astro.props;
+const { title, sections } = legalPages[page];
+
+/** The widths of the grey lines of a section, which vary by section. */
+const lineSets: readonly (readonly number[])[] = [
+  [100, 96, 88, 54],
+  [100, 91, 72],
+  [98, 100, 94, 83, 41],
+];
+---
+
+<Section class="legal-top">
+  <SectionHead page eyebrow="Legal" title={title} />
+  <nav class="legal-switch" aria-label="Legal pages">
+    {legalPageOrder.map((key) => (
+      <a
+        href={legalPages[key].href}
+        class:list={["legal-switch-link", { "is-active": key === page }]}
+        aria-current={key === page ? "page" : undefined}
+      >
+        {legalPages[key].title}
+      </a>
+    ))}
+  </nav>
+</Section>
+<Section class="legal-body">
+  <div class="legal-grid">
+    <nav class="legal-toc" aria-label="On this page">
+      <p class="legal-toc-title">On this page</p>
+      <ul class="legal-toc-list">
+        {sections.map((section) => (
+          <li>
+            <a href={`#${section.id}`} class="legal-toc-link">
+              {section.title}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+    <article class="legal-article">
+      {sections.map((section, index) => (
+        <section class="legal-section">
+          <h2 id={section.id} class="legal-h2">
+            {section.title}
+          </h2>
+          {page === "privacy" && section.id === retentionId ? (
+            <>
+              <p>
+                ciproxy keeps each kind of data for the period below, then
+                deletes it.
+              </p>
+              <div class="legal-table-frame">
+                <table class="legal-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Data</th>
+                      <th scope="col">Kept for</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {retentionRows.map((row) => (
+                      <tr>
+                        <td>{row.data}</td>
+                        <td>{row.kept}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p>
+                Each plan shows only its own job history: {historyWindows()}.
+              </p>
+            </>
+          ) : (
+            <div class="legal-lines" aria-hidden="true">
+              {(lineSets[index % lineSets.length] ?? []).map((width) => (
+                <span class="legal-line" style={`width: ${width}%`} />
+              ))}
+            </div>
+          )}
+        </section>
+      ))}
+    </article>
+  </div>
+</Section>

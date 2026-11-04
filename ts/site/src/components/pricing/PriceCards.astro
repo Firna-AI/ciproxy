@@ -1,0 +1,67 @@
+---
+// The three tiers of the pricing page as cells: the price, the limits, the
+// action, and what each tier includes or adds. Every action says Start free
+// and opens sign-in, because every workspace starts on Free and picks a paid
+// tier in the dashboard. Team carries the black button, with no claim such
+// as "Most popular".
+
+import { formatCount, formatMoney } from "../../data/format.ts";
+import { signInUrl } from "../../data/site.ts";
+import {
+  tierFeatures,
+  tierOrder,
+  tiers,
+  type TierKey,
+} from "../../data/tiers.ts";
+import LinkButton from "../LinkButton.astro";
+import "../marketing/marketing.css";
+import TierFeatureList from "./TierFeatureList.astro";
+import "./price-cards.css";
+
+const blurbs: Readonly<Record<TierKey, string>> = {
+  free: "Try ciproxy on one machine.",
+  team: "For daily CI across your GitHub organizations.",
+  business: `For large fleets, with ${tiers.business.history} of job history.`,
+};
+---
+
+<div class="mk-cells mk-cells-3 price-cells">
+  {tierOrder.map((key) => {
+    const tier = tiers[key];
+    const list = tierFeatures(tier);
+    return (
+      <div class="mk-cell price-card">
+        <div class="price-head">
+          <h2 class="price-name">{tier.name}</h2>
+          <p class="price-blurb">{blurbs[key]}</p>
+        </div>
+        <p class="price-amount-row">
+          <span class="price-amount num">{formatMoney(tier.price)}</span>
+          <span class="muted">a month</span>
+        </p>
+        <ul class="price-limits">
+          <li>
+            <strong class="num">{formatCount(tier.starts)}</strong> starts a
+            month
+          </li>
+          <li>
+            <strong class="num">{tier.machines}</strong> own{" "}
+            {tier.machines === 1 ? "machine" : "machines"}
+          </li>
+        </ul>
+        <LinkButton
+          href={signInUrl}
+          tone={key === "team" ? "primary" : "secondary"}
+          size="md"
+          block
+        >
+          Start free
+        </LinkButton>
+        <div class="price-features">
+          <p class="caption">{list.lead}</p>
+          <TierFeatureList items={list.items} />
+        </div>
+      </div>
+    );
+  })}
+</div>

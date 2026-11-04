@@ -1,0 +1,39 @@
+---
+// The pricing page of ciproxy.dev, after the pricing mockup: the three tiers,
+// the add-ons, the feature comparison, the common questions, and the closing
+// call to action. Every price, limit, and feature comes from data/tiers.ts.
+
+import ClosingCta from "../components/marketing/ClosingCta.astro";
+import Section from "../components/marketing/Section.astro";
+import SectionHead from "../components/marketing/SectionHead.astro";
+import AddOns from "../components/pricing/AddOns.astro";
+import PlanCompare from "../components/pricing/PlanCompare.astro";
+import PriceCards from "../components/pricing/PriceCards.astro";
+import PricingFaq from "../components/pricing/PricingFaq.astro";
+import "../components/pricing/pricing.css";
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+
+const lead =
+  "Every plan runs your jobs on your own machines first, and on Boat when they are full. Limits are soft, so your jobs keep running past them.";
+---
+
+<MarketingLayout title="Pricing | ciproxy" description={lead} section="pricing">
+  <Section flush class="pricing-top">
+    <SectionHead
+      page
+      center
+      eyebrow="Pricing"
+      title="Priced by jobs, not by minutes"
+      lead={lead}
+    />
+    <PriceCards />
+    <p class="mk-foot caption pricing-note">
+      Prices in US dollars, billed monthly through Stripe. Every workspace
+      starts on Free and can change its plan in the dashboard at any time.
+    </p>
+  </Section>
+  <AddOns />
+  <PlanCompare />
+  <PricingFaq />
+  <ClosingCta />
+</MarketingLayout>

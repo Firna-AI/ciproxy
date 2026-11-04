@@ -1,0 +1,40 @@
+/* The features of a tier (TierFeatureList.astro): a check or a clock beside
+   each feature, and "Coming later" under a feature that ships later. The
+   comparison table uses .coming-later too. */
+
+.tier-feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tier-feature-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--c-ink2);
+}
+
+.tier-feature-icon {
+  margin-top: 3px;
+  color: var(--c-ink);
+}
+
+.tier-feature-list li.is-later .tier-feature-icon {
+  color: var(--c-muted);
+}
+
+.tier-feature-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.coming-later {
+  color: var(--c-muted);
+  font-size: 12px;
+  line-height: 16px;
+}

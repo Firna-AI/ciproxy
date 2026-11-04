@@ -9,6 +9,7 @@
 }
 
 #_top {
+  margin-top: 0;
   letter-spacing: -0.035em;
   line-height: 1.12;
 }
@@ -21,7 +22,7 @@
   text-wrap: pretty;
 }
 
-@media (width < 50rem) {
+@media (width < 40rem) {
   .sl-page-lead {
     font-size: 16px;
   }
@@ -60,4 +61,42 @@
   border: 1px solid var(--c-border);
   border-radius: var(--r-sm);
   color: var(--c-ink);
+}
+
+/* A section heading has 32 px above it, on top of the space of the flow.
+   Starlight wraps each heading for its anchor link, so the wrapper takes the
+   space. */
+
+.sl-markdown-content
+  :not(h1, h2, h3, h4, h5, h6, .sl-heading-wrapper)
+  + .sl-heading-wrapper.level-h2 {
+  margin-top: 48px;
+}
+
+.sl-markdown-content > .sl-heading-wrapper.level-h2:first-child {
+  margin-top: 32px;
+}
+
+/* Lists: the markers in a light grey, the numbers of an ordered list in the
+   mono face. Steps are an ordered list too, with a look of their own. */
+
+.sl-markdown-content :is(ul, ol):not(.sl-steps, :where(.not-content *)) {
+  padding-inline-start: 20px;
+}
+
+.sl-markdown-content
+  :is(ul, ol):not(.sl-steps, :where(.not-content *))
+  > li
+  + li {
+  margin-top: 6px;
+}
+
+.sl-markdown-content ul:not(:where(.not-content *)) > li::marker {
+  color: var(--c-faint);
+}
+
+.sl-markdown-content ol:not(.sl-steps, :where(.not-content *)) > li::marker {
+  color: var(--c-muted);
+  font-family: var(--font-mono);
+  font-size: 13px;
 }
