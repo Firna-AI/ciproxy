@@ -97,20 +97,27 @@ workspace and takes one out.
 ## Take an organization out
 
 - An Admin can take an organization out of the workspace.
+- An Admin cannot take out the last organization of a workspace.
 - No new job of the organization then gets a ciproxy
   [runner](job-routing.md#terms).
 - Its runners that have no job stop at once, and its running jobs finish.
-- The App stays installed on the organization until an owner removes it on
-  GitHub.
+- ciproxy deletes the scale sets of the organization, and then removes its
+  own install of the App from the organization through the GitHub API.
+- The organization can then join any workspace again, with "Add an
+  organization", as a new install.
+- The rules of [Removing the App](app-removal.md#removing-the-app) do not
+  apply to a take-out, because ciproxy itself removed the App.
 - A take-out deletes no data. The jobs of the organization stay in the job
   history of the workspace, as [Data retention](security.md#data-retention)
   says.
 - A person keeps a role only while the person is a member of an
   organization that stays in the workspace, as
   [Who gets a role](security.md#who-gets-a-role) says.
-- **Open:** how an organization that still has the App joins a workspace,
-  and whether an Admin can take out the last organization of a workspace.
-  It waits for the decision on organizations that leave a workspace.
+- **Decision:** a take-out removes the App from the organization, and the
+  last organization stays. Rejected: a take-out that leaves the App, a join
+  of organizations that keep the App, a pause in place of a take-out, and a
+  take-out of the last organization. Reason: ciproxy keeps no install that
+  no workspace serves, and the organization needs no new way to join.
 
 ## Related docs
 

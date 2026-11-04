@@ -1,0 +1,34 @@
+prefix: ciproxy-staging
+# The deploy command supplies the foundation's complete allowed zone set.
+allowedZones: []
+
+releaseServer:
+  instance: cli-release-server
+
+# The current binary is a CLI skeleton. It cannot serve these HTTP routes.
+# Enable only when a real runtime implements this deployment contract.
+controlPlane:
+  enabled: false
+  image: ""
+  serviceAccount: ""
+  replicas: 1
+  sqlConnection: ""
+  sqlUser: ""
+  sqlProxyImage: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.27.0
+  kmsKey: ""
+  publicUrl: https://app.staging.ciproxy.dev
+  imageUrlPrefix: https://app.staging.ciproxy.dev/images/
+  # Registration prints <prefix>-images-v<N>. N pins the mounted key version.
+  cdnSigningKeyName: ""
+  # Map of file names to Secret Manager resource IDs, without /versions/...
+  secrets: {}
+  env: []
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+      ephemeral-storage: 1Gi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+      ephemeral-storage: 1Gi
