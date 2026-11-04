@@ -203,6 +203,196 @@ The numbers can still change before launch.
   machines from Team, Blacksmith sandboxes and a customer cache bucket from
   Business.
 
+Open decisions, 4 November 2026. They wait for the user. The site mockups
+showed them. The options check of the `plans` skill ran over them and
+changed each recommendation. Its report is in
+`.context/ciproxy-mvp-foundation/options-check-2.md`.
+
+### 8. Tier features have no screens
+
+- **Severity:** High. **Effort:** Medium.
+- **Source:** Implementation.
+- **Category:** Docs or spec.
+- **Location:** `docs/mockups/src/fixtures/tiers.ts`,
+  `docs/mockups/src/fixtures/plan-compare.ts`, and the Pricing section of
+  this plan.
+- **Background:** The approved pricing gives Team two extra features:
+  sticky Docker disks, and alerts by email and Slack. Business adds four:
+  several GitHub organizations, single sign-on, an audit log, and custom
+  VM images. This plan designs two of them: the job-hook spike of
+  Milestone 3 covers the sticky Docker disk, and a design call shares one
+  pool across the organizations of a Business subscription. The other four
+  have no design. The pricing page and the dashboard Plans page list all
+  six, and the Business card description names two of them.
+- **Problem:** The site sells four features that the plan neither designs
+  nor builds, and the Milestone 5 plan names none of the six.
+- **Impact if no action:** Customers pay for Team or Business and find
+  features that do not exist, or the MVP grows late when someone finds
+  the gap.
+- **Root question:** What does ciproxy promise for Team and Business at
+  launch?
+- **Options:**
+  - **A.** Keep all six features in the tiers, and mark each one without a
+    screen as "Coming later" on every page that lists it. Effort: Small.
+  - **B.** Move all six features to the later-features line of the
+    pricing. Effort: Small.
+  - **C.** Build the cheap features, such as email alerts, in the MVP, and
+    mark the others "Coming later". Effort: Medium.
+  - **D.** Design and build all six features in the MVP. This delays the
+    paid launch. Effort: Large.
+  - **E.** Keep the two features that the plan designs: sticky Docker disks
+    on Team, and several GitHub organizations on Business. Add their
+    missing mockup states, and name both in the Milestone 5 plan. Move
+    alerts, single sign-on, the audit log, and custom VM images to the
+    later-features line. Effort: Medium.
+- **Left out:**
+  - Removing the features from the site only: the dashboard Plans page
+    would still list them.
+  - Launching with Free and Team only: it breaks the decision of three
+    tiers, and Team with add-ons costs about the same as Business.
+  - Selling Business through "Contact us": it breaks the decision to bill
+    every tier in the product.
+- **Wider fix:** One record for each feature in the tier fixture, with its
+  first tier and whether it ships at launch, used by every page and by the
+  comparison table. A Milestone 5 TODO then names the milestone that
+  builds each launch feature. This works with A, B, or E.
+- **Previous examples:** None found.
+- **Recommendation:** E, changed from A by the options check. Limits are
+  soft, so features that only paid tiers get are the main reason to pay,
+  and E keeps one real feature in each paid tier while it sells only what
+  the MVP builds.
+- **Action:** ask the user, because the recommended option changes the
+  features of the approved pricing, and no recorded decision covers that.
+
+### 9. The cost claim needs a price basis
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation.
+- **Category:** UX wording.
+- **Location:** `docs/mockups/src/screens/marketing/cost-compare.tsx`,
+  `docs/mockups/src/fixtures/site.ts`, and the peak-overflow user flow.
+- **Background:** The landing page compares 30 days of the Linux CI of
+  `mokly-ai`: $309.20 with ciproxy, $698 on Blacksmith, and $1,045 on
+  GitHub-hosted runners. The ciproxy total uses three Hetzner AX42 servers
+  at the auction price of $53.40 each. Hetzner lists a new AX42 at €99 a
+  month, which gives about $494. The page says 17,772 jobs, but 16,350 of
+  them run on Linux. The peak-overflow flow repeats the claim. Boat also
+  sells its own runner, and the options check estimates the same Linux
+  jobs on Boat alone at about $360 to $760 a month, mostly start charges.
+- **Problem:** The title "less than half the price" holds only with auction
+  prices, and the job count includes jobs that the MVP cannot run.
+- **Impact if no action:** A visitor who checks the prices finds the
+  headline wrong, which damages trust before the first sign-in.
+- **Root question:** Which cost claim can ciproxy make in public and
+  defend?
+- **Options:**
+  - **A.** Keep the auction prices and the title, and name the Hetzner
+    server auction in the caption. Effort: Small.
+  - **B.** Use new-server prices with a fixed claim, such as "about $200
+    less a month". Effort: Small.
+  - **C.** Show a range, such as "30 to 55% less than Blacksmith", with
+    both bases in the caption. Effort: Small.
+  - **D.** Use a title with no fixed number, such as "The same jobs for
+    less". The fixture computes the numbers from the list price of a new
+    AX42, and the caption names each price source and its date. It can add
+    that auction servers cost less. Effort: Small.
+  - **E.** Add Boat's own runner to the comparison, and claim only what
+    holds against it. ciproxy may cost about the same as Boat alone, so
+    the section may argue speed instead: warm runners and the local cache.
+    Effort: Medium.
+  - **F.** Replace the fixed example with a calculator, where visitors
+    enter their own jobs and machine price. Effort: Large.
+- **Left out:** Removing the comparison: the hero says "Pay less for CI"
+  and needs evidence.
+- **Wider fix:** D. A title with no fixed number cannot drift when a price
+  changes, and the fixture computes every number, also in the user flow.
+- **Previous examples:** None found.
+- **Recommendation:** D, changed from C by the options check. It stays
+  true at any server price and after each price change, and the computed
+  saving still gives a concrete figure. Every option also fixes the job
+  count to the 16,350 Linux jobs.
+- **Action:** ask the user, because the options trade a stronger headline
+  against a claim that any buyer can check.
+
+### 10. Paid-tier buttons drop the chosen tier
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation.
+- **Category:** Docs or spec.
+- **Location:** `docs/mockups/src/screens/marketing/price-cards.tsx`
+- **Background:** On the pricing page, Free has "Start free", and Team and
+  Business have "Get started". All three open sign-in. Every new
+  organization starts on Free and picks a paid tier in the dashboard.
+  When an organization passes the Free limit, a banner on every page
+  offers the tier that covers its use.
+- **Problem:** A visitor who selects "Get started" on Team is on Free after
+  setup, and must choose Team again in the dashboard.
+- **Impact if no action:** Some visitors who want to pay at once find the
+  upgrade later, so their first payment comes later.
+- **Root question:** How does a visitor who picks a paid tier on the site
+  get to that tier?
+- **Options:**
+  - **A.** Keep the mockup. A caption explains the upgrade. Effort: Small.
+  - **B.** Carry the tier through sign-in. After setup, Plans opens with
+    that tier selected and a button to Stripe Checkout. This needs a rule
+    for who in an organization may pay. Effort: Medium.
+  - **C.** Open Stripe Checkout before setup. Buyers pay before their first
+    job runs, so more of them may leave. Effort: Medium.
+  - **D.** Label every button "Start free", as the hero and the other calls
+    to action do. The soft-limit banner moves each growing organization to
+    the right tier. Effort: Small.
+- **Left out:**
+  - A free trial of the chosen tier: the first payment waits, and with soft
+    limits a trial gives little more than Free.
+  - Paying on the site before sign-in: it breaks the design call that the
+    customer picks the tier in the dashboard, and C gives the same early
+    payment.
+- **Wider fix:** None. D also gives every sign-in button the same label.
+- **Previous examples:** None found.
+- **Recommendation:** D, changed from B by the options check. It is the
+  cheapest, adds no behaviour at sign-in, and the banner already sends each
+  organization that outgrows Free to the right tier.
+- **Action:** ask the user, because the options trade early payment from
+  buyers who arrive decided against a simpler flow.
+
+### 11. Two words name one VM size
+
+- **Severity:** Low. **Effort:** Small.
+- **Source:** Implementation.
+- **Category:** UX wording.
+- **Location:** `docs/mockups/src/screens/settings/`, the docs labels page,
+  the job and machine detail screens, and the code names with "shape".
+- **Background:** A label in `runs-on` gives a job a VM with vCPUs, memory,
+  and a disk. The dashboard calls this a "shape", and the docs and the
+  savings note call it a "size". Some text says "machine size" or "machine
+  shape", which uses "machine" for the VM, although "machine" means the
+  customer's own hardware since 3 November 2026.
+- **Problem:** The product uses several terms for one thing.
+- **Impact if no action:** A reader who moves between the docs and the
+  dashboard may think that these are different things, and the
+  implementation copies the mixed words into its types.
+- **Root question:** Which one term names the vCPU, memory, and disk that a
+  label gives a job, in the dashboard, the docs, and the code?
+- **Options:**
+  - **A.** Use "size" in the screens that the item first listed. Effort:
+    Small.
+  - **B.** Use "shape" everywhere. Effort: Small.
+  - **C.** Use "size", and "VM size" where the word needs a qualifier.
+    Never write "machine size". Rename the code and catalogue names, and
+    add the word to the word rules of the mockups README. Effort: Small.
+  - **D.** Use no size word, only "VM", as in "A larger VM takes several
+    slots". Effort: Small.
+- **Left out:** Keeping several words: it fails the goal.
+- **Wider fix:** C. A word rule in the mockups README and matching code
+  names carry one word into the implementation.
+- **Previous examples:** "Machine" against "node" and "server", decided on
+  3 November 2026.
+- **Recommendation:** C, changed from A by the options check. It is A plus
+  the places that A misses, and it keeps "machine" for the customer's own
+  hardware only.
+- **Action:** ask the user, because the options are correct words, and no
+  copy rule picks one.
+
 ## Milestone 1: Mockups
 
 Tags: mockup
@@ -244,6 +434,9 @@ up Mokly as `futex-ai/accounting` does.
 - [x] Fix the findings of the first screenshot review. They are in
       `.context/ciproxy-mvp-foundation/reviews/mockup-review-1.md`.
 - [x] Run the mockup check. Smoke-test the changed pages.
+- [ ] Apply the answers to items 8 to 11 in the mockups. Count only the
+      Linux jobs where the landing page and the savings screen compare
+      Linux prices.
 - [ ] Update the design and the TODOs of this plan for each problem that
       the mockups show.
 
@@ -281,7 +474,8 @@ plan. The design calls above give their first content.
       the rules for the savings report.
 - [ ] Write `docs/protocol/billing.md`: the tiers, the add-ons, Stripe
       Checkout and the customer portal, the subscription states, failed
-      payments, and the move to the Free tier.
+      payments, the move to the Free tier, and who in an organization may
+      choose a plan and pay.
 
 ## Milestone 3: Feasibility spikes
 
