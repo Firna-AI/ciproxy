@@ -1,12 +1,12 @@
 //! Gateway query composition with atomic credential and report changes.
 
 use chrono::{DateTime, Duration, Utc};
-use ciproxy_schema::machines::{machine_reports, machines};
+use ciproxy_schema::machines::machines;
 use ciproxy_schema::tokens::tokens;
 use ciproxy_schema::workspaces::workspaces;
-use ciproxy_store_interface::error::{Error, Result, ResultExt};
+use ciproxy_store_interface::error::{Error, Result};
 use ciproxy_store_interface::gateway::{Contact, GatewayStore, MachineSnapshot, Registration};
-use ciproxy_store_interface::machines::{Machine, MachineStore};
+use ciproxy_store_interface::machines::Machine;
 use ciproxy_store_interface::secrets::TokenHash;
 use ciproxy_store_interface::tokens::{Token, TokenSubject};
 use diesel::prelude::*;
@@ -16,7 +16,8 @@ use crate::connection::PgStore;
 use crate::error::{QueryResultExt, require_record};
 use crate::gateway_contacts::{lock_machine, session, write_contact};
 use crate::gateway_registration::{connect, lock_workspace, register};
-use crate::gateway_transaction::transaction;
+use crate::gateway_transaction::{read_snapshot, transaction};
+use crate::machine_reads::load_snapshots;
 use crate::machines::remove_machine_records;
 use crate::tokens::insert_token;
 
@@ -137,22 +138,9 @@ impl GatewayStore for PgStore {
     }
 
     fn machine_snapshots(&self, workspace_id: Uuid) -> Result<Vec<MachineSnapshot>> {
-        let machines = self.machines(workspace_id)?;
-        let mut connection = self.connection()?;
-        machines
-            .into_iter()
-            .map(|machine| {
-                let raw = machine_reports::table
-                    .filter(machine_reports::workspace_id.eq(workspace_id))
-                    .filter(machine_reports::machine_id.eq(machine.id))
-                    .select(machine_reports::report)
-                    .first::<serde_json::Value>(&mut *connection)
-                    .optional()
-                    .store()?;
-                let report = raw.map(serde_json::from_value).transpose().internal()?;
-                Ok(MachineSnapshot { machine, report })
-            })
-            .collect()
+        read_snapshot(&mut *self.connection()?, |connection| {
+            load_snapshots(connection, workspace_id)
+        })
     }
 
     fn set_machine_draining(

@@ -12,8 +12,9 @@ use diesel::prelude::*;
 use uuid::Uuid;
 
 use crate::error::QueryResultExt;
-use crate::gateway_contacts::{lock_machine, observed_machine, write_contact};
-use crate::machines::MachineRow;
+use crate::gateway_contacts::{lock_machine, write_contact};
+use crate::machine_observation::MachineObservation;
+use crate::machine_reads::load_machine;
 use crate::tokens::insert_token;
 
 pub(crate) fn lock_workspace(connection: &mut PgConnection, workspace_id: Uuid) -> Result<()> {
@@ -55,9 +56,13 @@ pub(crate) fn register(connection: &mut PgConnection, registration: &Registratio
     if token.is_none() {
         return Ok(false);
     }
-    let machine = observed_machine(registration.machine_id, &registration.contact);
+    let observed = MachineObservation::from_contact(&registration.contact);
     diesel::insert_into(machines::table)
-        .values(&MachineRow::from_record(workspace, &machine))
+        .values((
+            machines::id.eq(registration.machine_id),
+            machines::workspace_id.eq(workspace),
+            &observed,
+        ))
         .execute(connection)
         .store()?;
     insert_token(
@@ -65,7 +70,7 @@ pub(crate) fn register(connection: &mut PgConnection, registration: &Registratio
         &Token {
             id: registration.credential_id,
             workspace_id: workspace,
-            subject: TokenSubject::Machine(machine.id),
+            subject: TokenSubject::Machine(registration.machine_id),
             created_at: registration.contact.at,
             expires_at: None,
             revoked_at: None,
@@ -76,7 +81,7 @@ pub(crate) fn register(connection: &mut PgConnection, registration: &Registratio
     write_contact(
         connection,
         workspace,
-        machine.id,
+        registration.machine_id,
         &registration.contact,
         true,
     )?;
@@ -115,13 +120,5 @@ pub(crate) fn connect(
         return Ok(None);
     }
     write_contact(connection, workspace_id, machine_id, contact, true)?;
-    let (draining, warm_runners) = machines::table
-        .find(machine_id)
-        .select((machines::draining, machines::warm_runners))
-        .first::<(bool, i32)>(connection)
-        .store()?;
-    let mut machine = observed_machine(machine_id, contact);
-    machine.draining = draining;
-    machine.warm_runners = warm_runners;
-    Ok(Some(machine))
+    Ok(Some(load_machine(connection, workspace_id, machine_id)?))
 }

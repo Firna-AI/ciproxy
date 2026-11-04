@@ -76,6 +76,7 @@ impl WebSocketTransport {
                     .await
                     .internal()??;
                 if !current {
+                    self.connections.detach(handshake.session)?;
                     return Err(Error::Replaced);
                 }
             }

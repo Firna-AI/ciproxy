@@ -82,7 +82,7 @@ pub trait GatewayStore: Send + Sync {
     ) -> Result<()>;
     /// Read the current connection of an unremoved machine.
     fn machine_session(&self, workspace_id: Uuid, machine_id: Uuid) -> Result<Option<Uuid>>;
-    /// Read active machines and their last full reports.
+    /// Read active machines, disks, and last full reports from one committed state.
     fn machine_snapshots(&self, workspace_id: Uuid) -> Result<Vec<MachineSnapshot>>;
     /// Change desired drain state without changing observed reports.
     fn set_machine_draining(

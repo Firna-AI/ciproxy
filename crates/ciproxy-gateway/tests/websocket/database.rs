@@ -12,6 +12,7 @@ use uuid::Uuid;
 
 pub(super) struct Database {
     pub(super) store: Arc<dyn Store>,
+    pub(super) url: String,
     maintenance: PgConnection,
     name: String,
 }
@@ -30,6 +31,7 @@ impl Database {
         let store = PgStoreFactory.connect(url.as_str()).unwrap();
         Self {
             store,
+            url: url.to_string(),
             maintenance,
             name,
         }

@@ -76,6 +76,7 @@ impl AgentEvents for Events {
 pub(super) struct Fixture {
     pub(super) database: Database,
     pub(super) gateway: Arc<dyn MachineGateway>,
+    pub(super) connections: Arc<dyn Connections>,
     pub(super) clock: Arc<FakeClock>,
     pub(super) events: UnboundedReceiver<(Session, AgentMessage)>,
     pub(super) url: String,
@@ -99,7 +100,8 @@ impl Fixture {
             connections.clone(),
             Arc::new(Events(sender)),
         ));
-        let transport: &dyn AgentTransport = &WebSocketTransport::new(gateway.clone(), connections);
+        let transport: &dyn AgentTransport =
+            &WebSocketTransport::new(gateway.clone(), connections.clone());
         let router = transport.router();
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let url = format!("ws://{}/agent/", listener.local_addr().unwrap());
@@ -109,6 +111,7 @@ impl Fixture {
         Self {
             database,
             gateway,
+            connections,
             clock,
             events,
             url,

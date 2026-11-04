@@ -26,3 +26,22 @@ pub(crate) fn transaction<T>(
         Err(TransactionFailure(error)) => Err(error),
     }
 }
+
+/// Keep every statement of one machine aggregate read on the same database snapshot.
+pub(crate) fn read_snapshot<T>(
+    connection: &mut PgConnection,
+    operation: impl FnOnce(&mut PgConnection) -> Result<T>,
+) -> Result<T> {
+    let result = connection
+        .build_transaction()
+        .read_only()
+        .repeatable_read()
+        .run(|connection| match operation(connection) {
+            Ok(value) => Ok(value),
+            Err(error) => Err(TransactionFailure(error)),
+        });
+    match result {
+        Ok(value) => Ok(value),
+        Err(TransactionFailure(error)) => Err(error),
+    }
+}

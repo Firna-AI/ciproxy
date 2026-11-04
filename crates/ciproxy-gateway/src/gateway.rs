@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use chrono::Duration;
 use ciproxy_protocol::agent::{AgentMessage, ControlMessage};
 use ciproxy_store_interface::gateway::{Contact, GatewayStore};
+use unimock::unimock;
 use uuid::Uuid;
 
 use crate::authentication::hash;
@@ -16,6 +17,7 @@ use crate::types::{
 };
 
 /// Machine gateway API used by the hosted HTTP and lifecycle services.
+#[unimock(api = MachineGatewayMock)]
 pub trait MachineGateway: Send + Sync {
     /// Issue a reusable one-hour token after checking the workspace Admin role.
     fn issue_token(&self, principal: Uuid, workspace_id: Uuid) -> Result<IssuedToken>;
