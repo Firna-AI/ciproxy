@@ -50,6 +50,7 @@ fn valid_links_use_relative_paths_and_github_heading_ids() {
             "docs/start.md".to_owned(),
             "[Read](../README.md?plain=1#use-ciproxy)\n\
              [Again](../README.md#use-ciproxy-1)\n\
+             [Collision](../README.md#intro-2)\n\
              [Space](<setup%20guide.md#install>)\n\
              [Local](#start)\n\
              [Web](https://example.com/missing#heading)\n\
@@ -59,7 +60,7 @@ fn valid_links_use_relative_paths_and_github_heading_ids() {
         ),
         (
             "README.md".to_owned(),
-            "# Use `ciproxy`!\n\n# Use ciproxy!\n".to_owned(),
+            "# Use `ciproxy`!\n\n# Use ciproxy!\n\n# Intro\n\n# Intro-1\n\n# Intro?\n".to_owned(),
         ),
         ("docs/setup guide.md".to_owned(), "## Install\n".to_owned()),
     ];
@@ -68,4 +69,32 @@ fn valid_links_use_relative_paths_and_github_heading_ids() {
         .map(|(path, _)| path.clone())
         .collect::<Vec<_>>();
     assert_eq!(violations(&documents, &paths), Vec::new());
+}
+
+#[test]
+fn line_fragments_pass_only_on_plain_links() {
+    let documents = vec![
+        (
+            "docs/start.md".to_owned(),
+            "[Plain](../README.md?plain=1#L5)\n[Heading](../README.md#L5)\n".to_owned(),
+        ),
+        (
+            "README.md".to_owned(),
+            "# Project\n\nSome text.\n\nLine five.\n".to_owned(),
+        ),
+    ];
+    let paths = documents
+        .iter()
+        .map(|(path, _)| path.clone())
+        .collect::<Vec<_>>();
+
+    assert_eq!(
+        violations(&documents, &paths),
+        vec![Violation {
+            source: "docs/start.md".to_owned(),
+            destination: "../README.md#L5".to_owned(),
+            line: 2,
+            problem: Problem::MissingFragment,
+        }]
+    );
 }

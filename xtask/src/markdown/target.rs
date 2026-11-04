@@ -2,20 +2,45 @@
 
 use std::path::{Component, Path, PathBuf};
 
+/// A local destination with its fragment and GitHub plain-view mode preserved.
+pub(super) struct DestinationParts<'a> {
+    pub(super) path: &'a str,
+    pub(super) fragment: Option<&'a str>,
+    plain: bool,
+}
+
+impl DestinationParts<'_> {
+    /// Plain-view line numbers are not Markdown heading IDs.
+    pub(super) fn is_line_link(&self) -> bool {
+        self.plain
+            && self.fragment.is_some_and(|fragment| {
+                percent_decode(fragment)
+                    .strip_prefix('L')
+                    .is_some_and(|number| {
+                        !number.is_empty() && number.bytes().all(|byte| byte.is_ascii_digit())
+                    })
+            })
+    }
+}
+
 pub(super) fn ignored_destination(destination: &str) -> bool {
     destination.starts_with('/') || has_url_scheme(destination)
 }
 
-pub(super) fn destination_parts(destination: &str) -> (&str, Option<&str>) {
+pub(super) fn destination_parts(destination: &str) -> DestinationParts<'_> {
     let (path_and_query, fragment) = destination
         .split_once('#')
         .map_or((destination, None), |(path, fragment)| {
             (path, Some(fragment))
         });
-    let path = path_and_query
+    let (path, query) = path_and_query
         .split_once('?')
-        .map_or(path_and_query, |(path, _query)| path);
-    (path, fragment)
+        .map_or((path_and_query, None), |(path, query)| (path, Some(query)));
+    DestinationParts {
+        path,
+        fragment,
+        plain: query.is_some_and(|query| query.split('&').any(|part| part == "plain=1")),
+    }
 }
 
 pub(super) fn resolve_target_path(source_path: &str, destination_path: &str) -> Option<String> {

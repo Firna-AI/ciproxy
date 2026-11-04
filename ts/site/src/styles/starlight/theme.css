@@ -2,8 +2,11 @@
    from the shared tokens. Black is the one accent, and colour marks status
    only. The site is light only, so these values apply whatever data-theme
    says, also before the theme script runs and without JavaScript. Starlight
-   has no radius variables; frame.css, content.css, and asides.css set the
-   token radii on the parts that show. */
+   has one radius variable, --sl-search-corners, for the search results, and
+   Pagefind has --pagefind-ui-border-radius. Both are set on the search
+   element in frame.css. Starlight gives its other parts fixed radii, so
+   frame.css, content.css, and asides.css set the token radii on the parts
+   that show. */
 
 :root {
   color-scheme: light;

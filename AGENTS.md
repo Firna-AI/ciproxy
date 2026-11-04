@@ -51,9 +51,9 @@ skill at that moment instead of guessing the rule.
 
 Run each command from the repository root.
 
-- Install: `npm --prefix ts ci`. Use Node 24.22.1 and Rust 1.99.1 with
-  rustfmt and clippy, as CI does. The mockup tool Mokly rejects Node older
-  than 22.15, Node 23, and Node 24.14 to 24.18.
+- Install: `npm --prefix ts ci`. `rust-toolchain.toml` pins the Rust
+  version, with rustfmt and clippy. Use Node 24.22.1, as CI does. The mockup
+  tool Mokly rejects Node older than 22.15, Node 23, and Node 24.14 to 24.18.
 - Build: `cargo build --workspace`
 - Targeted tests: `cargo test --package <crate> <test name filter>` for
   Rust. TypeScript tests live in a `_tests_` folder beside the code and run
@@ -64,15 +64,15 @@ Run each command from the repository root.
 - Early check (format, lint, typecheck, file length):
 
   ```sh
-  cargo run --package xtask -- check --include rust-fmt,typescript-fmt,file-length,rust-clippy,typescript
+  cargo xtask check --include rust-fmt,typescript-fmt,file-length,rust-clippy,typescript
   ```
 
-- Complete gate: `cargo run --package xtask -- check`. It stops at the
-  first failed phase and prints the error. With `--keep-going`, it runs
-  every selected phase and ends with a `FAILED` line for each failed
-  phase. `--include` and `--exclude` select phases. `--help` and
-  [the gate README](xtask/README.md) list them.
-- Markdown check: `cargo run --package xtask -- check --include markdown`
+- Complete gate: `cargo xtask check`. It stops at the first failed phase
+  and prints the error. With `--keep-going`, it runs every selected phase
+  and ends with a `FAILED` line for each failed phase. `--include` and
+  `--exclude` select phases. `--help` and [the gate README](xtask/README.md)
+  list them.
+- Markdown check: `cargo xtask check --include markdown`
 - Format: `cargo fmt --all`, `npm --prefix ts run format`, and
   `npm --prefix ts run mockups:format`.
 - Mockup check: `npm --prefix ts run mockups:check`. It builds the

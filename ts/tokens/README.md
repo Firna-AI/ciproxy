@@ -18,7 +18,7 @@ The package is private and has no open licence.
 
 The root-level TypeScript entries also support the mockup path mapping.
 Keep values here so every consumer reads the same source.
-The mockups retain their existing declaration builder to preserve their output.
+The mockups and the site use the same declaration builder from the CSS entry.
 
 ## Development
 

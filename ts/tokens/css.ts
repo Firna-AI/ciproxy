@@ -20,16 +20,13 @@ export function colorDeclarations(
   );
 }
 
-/** Plain custom properties, with the same order as the Firna theme. */
+/** The shared tokens as CSS custom property declarations. */
 export function tokenDeclarations(): string[] {
-  const sortedColors = Object.fromEntries(
-    Object.entries(colors).sort(([left], [right]) => left.localeCompare(right)),
+  const radiusDeclarations = Object.entries(radii).map(
+    ([name, value]) => `--r-${name}:${value}px`,
   );
-  const radiusDeclarations = Object.entries(radii)
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([name, value]) => `--r-${name}:${value}px`);
   return [
-    ...colorDeclarations("", sortedColors),
+    ...colorDeclarations("", colors),
     ...colorDeclarations("status", statusColors),
     ...colorDeclarations("chart", chartColors),
     ...colorDeclarations("slot", slotColors),

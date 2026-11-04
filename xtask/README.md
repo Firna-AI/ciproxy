@@ -47,14 +47,16 @@ The lint uses default rules with MD013 disabled for code blocks and tables.
 
 ## Quick Start
 
-Use Rust 1.99.1 with rustfmt and clippy, and Node 24.22.1 with npm 11.19.1.
+`rust-toolchain.toml` pins Rust, with rustfmt and clippy.
+`.cargo/config.toml` holds the `cargo xtask` alias.
+Use Node 24.22.1 with npm 11.19.1.
 Run these commands from the repository root:
 
 ```sh
 npm --prefix ts ci
 cargo build --workspace
-cargo run --package xtask -- check
-cargo run --package xtask -- check --help
+cargo xtask check
+cargo xtask check --help
 ```
 
 Use `--keep-going` to run all selected phases after a failure.
@@ -63,7 +65,7 @@ It exits with a failure if any selected phase failed.
 CI uses this mode so every selected phase has a result:
 
 ```sh
-cargo run --package xtask -- check --keep-going
+cargo xtask check --keep-going
 ```
 
 Select phases with `--include` or `--exclude`.
@@ -71,9 +73,9 @@ Repeat an option or separate phase names with commas.
 The execution order stays fixed, and exclusion takes priority.
 
 ```sh
-cargo run --package xtask -- check --include rust-fmt,typescript-fmt,file-length
-cargo run --package xtask -- check --include markdown
-cargo run --package xtask -- check --exclude markdown
+cargo xtask check --include rust-fmt,typescript-fmt,file-length
+cargo xtask check --include markdown
+cargo xtask check --exclude markdown
 ```
 
 The Markdown phase invokes this command with the discovered files appended:

@@ -41,13 +41,14 @@ pub(crate) fn violations(
             if ignored_destination(&destination) {
                 continue;
             }
-            let (path, fragment) = destination_parts(&destination);
-            let target = resolve_target_path(source_path, &percent_decode(path));
+            let parts = destination_parts(&destination);
+            let target = resolve_target_path(source_path, &percent_decode(parts.path));
             let problem = match target {
                 None => Some(Problem::MissingFile),
                 Some(target) if !paths.contains(target.as_str()) => Some(Problem::MissingFile),
-                Some(target) => fragment
-                    .filter(|fragment| !fragment.is_empty())
+                Some(target) => parts
+                    .fragment
+                    .filter(|fragment| !fragment.is_empty() && !parts.is_line_link())
                     .filter(|fragment| {
                         anchors
                             .get(target.as_str())

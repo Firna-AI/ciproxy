@@ -1,6 +1,6 @@
 //! Markdown link destinations and GitHub-style heading anchors.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
 
@@ -23,7 +23,6 @@ pub(super) fn link_destinations(source: &str) -> Vec<(String, usize)> {
 
 pub(super) fn heading_anchors(source: &str) -> BTreeSet<String> {
     let mut anchors = BTreeSet::new();
-    let mut counts = BTreeMap::<String, usize>::new();
     let mut heading = None::<(String, Option<String>)>;
     for event in Parser::new_ext(source, parser_options()) {
         match event {
@@ -44,7 +43,6 @@ pub(super) fn heading_anchors(source: &str) -> BTreeSet<String> {
                 if let Some((heading_text, explicit_id)) = heading.take() {
                     insert_anchor(
                         &mut anchors,
-                        &mut counts,
                         explicit_id.unwrap_or_else(|| github_heading_slug(&heading_text)),
                     );
                 }
@@ -61,22 +59,17 @@ fn parser_options() -> Options {
     options
 }
 
-fn insert_anchor(
-    anchors: &mut BTreeSet<String>,
-    counts: &mut BTreeMap<String, usize>,
-    base: String,
-) {
+fn insert_anchor(anchors: &mut BTreeSet<String>, base: String) {
     if base.is_empty() {
         return;
     }
-    let count = counts.entry(base.clone()).or_default();
-    let anchor = if *count == 0 {
-        base
-    } else {
-        format!("{base}-{count}")
-    };
-    *count += 1;
-    anchors.insert(anchor);
+    let mut candidate = base.clone();
+    let mut counter = 0;
+    while anchors.contains(&candidate) {
+        counter += 1;
+        candidate = format!("{base}-{counter}");
+    }
+    anchors.insert(candidate);
 }
 
 fn github_heading_slug(heading: &str) -> String {

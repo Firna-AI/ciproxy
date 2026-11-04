@@ -72,6 +72,15 @@ site-search dialog {
   }
 }
 
+/* The search field and the results in the dialog. Starlight sets the corners
+   of a result on this element, so the token radius goes here, not on :root.
+   Pagefind reads its own radius for the field and its buttons. */
+
+#starlight__search {
+  --pagefind-ui-border-radius: var(--r-md);
+  --sl-search-corners: var(--r-md);
+}
+
 /* The menu button of a narrow page: a plain icon button in the bar. */
 
 .sl-menu-button {
@@ -151,6 +160,7 @@ starlight-toc h2 {
 
 starlight-toc a {
   padding: 3px 0 3px calc(12px * var(--depth, 0));
+  border-radius: var(--r-md);
   color: var(--c-muted);
   font-size: 13px;
   line-height: 18px;

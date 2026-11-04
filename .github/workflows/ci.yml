@@ -19,9 +19,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
       - name: Set up Rust
-        uses: dtolnay/rust-toolchain@1.99.1
-        with:
-          components: rustfmt, clippy
+        run: |
+          set -euo pipefail
+          rustup toolchain install
+          rustup default "$(rustup show active-toolchain | cut -d ' ' -f 1)"
       - name: Cache Cargo builds
         uses: Swatinem/rust-cache@v2
       - name: Set up Node
@@ -33,4 +34,4 @@ jobs:
       - name: Install TypeScript packages
         run: npm --prefix ts ci
       - name: Run the complete gate
-        run: cargo run --package xtask -- check --keep-going
+        run: cargo xtask check --keep-going
