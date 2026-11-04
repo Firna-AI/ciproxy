@@ -41,8 +41,8 @@ Design calls, my calls, 4 November 2026:
 - **One host:** the control plane serves `app.ciproxy.dev/api/`, `/agent/`,
   and `/hooks/`. Reason: three hosts in all, and no cross-origin calls.
 - **Job facts:** the repository of a job comes from the scale set messages,
-  never from the VM. Item 32 decides the source of its branch. Reason: job
-  code runs in the VM.
+  and its ref, event, and head repository from the GitHub API, as item 32
+  says. Never from the VM. Reason: job code runs in the VM.
 - **Docs of the code:** each milestone updates the READMEs and the
   `AGENTS.md` commands that it changes.
 
@@ -59,8 +59,9 @@ This milestone adds the states of the new items, and the legal pages.
 - [ ] Add the install command, a refused label name, too little disk, and
       mixed machines.
 - [ ] Add a payment that Stripe still confirms, and two banners at once.
-- [ ] Add the states of a Business pool: its organizations, the shared Plan
-      and usage, and the join. Waits for item 48.
+- [ ] Add the workspace of item 48: the switcher, the Organizations tab with
+      "Add an organization", and the organization of each job. Show the
+      third App permission of item 32.
 - [ ] Add the terms and privacy pages. Run the mockup check, and smoke-test
       the changed pages.
 - [ ] Update this plan for each problem that the mockups show.
@@ -95,8 +96,9 @@ Postgres through Diesel, as the `databases` skill says: `ciproxy-schema`,
 `ciproxy-store-interface`, and `ciproxy-store-pg`. My call: one schema file
 for each area. Reason: parallel branches then do not conflict.
 
-- [ ] Add the core tables: organizations, labels, scale sets, machines,
-      tokens, runners, jobs, settings, and Boat accounts.
+- [ ] Add the core tables: workspaces, organizations, labels, scale sets,
+      machines, tokens, runners, jobs, settings, and Boat accounts. A
+      workspace owns the rest, as item 48 says.
 - [ ] Keep tokens as hashes and Boat keys as ciphertext. Add an advisory
       lock for each scale set session.
 - [ ] Test the queries on the Postgres of `DATABASE_URL`, which CI starts.
@@ -140,7 +142,11 @@ each label. The scale set spike confirms it.
 - [ ] Store each message before you delete it, by job ID. Count the wait
       from `scaleSetAssignTime`. My call: `queueTime` is empty, and the
       spike found this time within about a second of the queue time.
-- [ ] Forward the facts of each job to its agent. Waits for item 32.
+- [ ] Read the ref, the event, and the head repository of each run with
+      the "Actions" read permission, and forward them to the agent, as item
+      32 says.
+- [ ] Link each installation to the workspace of the Admin who started it.
+      Keep one scale set for each organization and label.
 - [ ] Create and remove the just-in-time registrations.
 
 ## Milestone 7: Scaler
@@ -227,8 +233,7 @@ evicts them. Boat runs the stock runner. The cache spike confirms it.
       `ACTIONS_RESULTS_URL` in `Runner.Worker.dll` at equal length.
 - [ ] Add `ciproxy-cache-sidecar`. Pass other results calls through, and
       fall back to GitHub on any error.
-- [ ] Scope each entry from the job facts, as "Cache scopes" says. Waits for
-      item 32.
+- [ ] Scope each entry from the job facts, as "Cache scopes" says.
 - [ ] Add "Clear cache" for one machine, eviction, and the reports.
 - [ ] Test the sidecar against a fake GitHub cache.
 
@@ -303,8 +308,10 @@ UTC RFC 3339, and IDs as strings. Reason: JavaScript loses 64-bit numbers.
 
 - [ ] Name the generator and the wire forms in `AGENTS.md`. Add a gate phase
       that regenerates the types and fails on a diff, as item 45 says.
-- [ ] Sign in with the GitHub App. Apply "Roles" in
-      `security.md`, with the access requests.
+- [ ] Sign in with the GitHub App. Apply "Roles" in `security.md` for each
+      workspace, with the access requests.
+- [ ] Add an organization to a workspace, take one out, and keep the
+      repository access of each one.
 - [ ] Give the build of the API with each response, for the reload of an
       old dashboard tab in Milestone 19.
 - [ ] Give the install command to an Admin.
@@ -331,8 +338,8 @@ Depends on: 4
 
 - [ ] Count the starts of each period, the machines, the soft limits, and
       the offer.
-- [ ] Count the shared starts and machines of a Business pool. Waits for
-      item 48.
+- [ ] Count the starts and the machines of each workspace across its
+      organizations.
 - [ ] Compute the savings report, and keep the daily totals for 90 days, as
       item 37 says.
 - [ ] Unit-test each rule with hand-worked numbers.
@@ -348,9 +355,8 @@ the event both read the session, so the tier changes once.
 - [ ] Create the prices, and open Checkout, with no tax, as item 39 says.
 - [ ] Take each signed event once. Change tiers and add-ons with proration,
       and open the portal.
-- [ ] End the subscription of a removed App at the end of its period.
-- [ ] Take a leaving organization out of its Business pool. Waits for item
-      48.
+- [ ] End the subscription of a workspace at the end of its period when
+      its last organization leaves.
 - [ ] Test each state with recorded events and the Stripe test mode.
 
 ## Milestone 18: Dashboard API: jobs, usage, savings, and billing
@@ -447,19 +453,19 @@ require and the product does.
 
 Depends on: 13, 18
 
-This milestone builds the features that ship at launch, as item 8 says:
-Docker disks on Team and Business, and several organizations on Business.
-The job hooks spike confirms the Docker disks.
+This milestone builds the Docker disks of Team and Business, which ship at
+launch, as item 8 says. Several organizations come with the workspace of
+item 48 in Milestones 6, 14, and 20. The job hooks spike confirms the Docker
+disks.
 
 - [ ] Attach the Docker disk in the job-started hook, as "Docker disks" in
       `cache.md` says.
 - [ ] Give the disk to the first default-branch job, and a reflink copy to
-      each other job. Waits for item 32.
+      each other job.
 - [ ] Use drive IDs of letters, digits, and underscores. Keep each Docker
       image store on the disk.
 - [ ] Discard a disk that fails to mount. My call: a rebuild loses only
       time.
-- [ ] Join organizations in one Business pool. Waits for item 48.
 
 ## Milestone 26: Dashboard UI: tier features
 
@@ -470,7 +476,6 @@ Depends on: 20, 21, 25
 Each screen follows its mockup, as Milestone 19 says.
 
 - [ ] Build the Docker disks of the machine page.
-- [ ] Build the joining of organizations. Waits for item 48.
 
 ## Milestone 27: Launch
 
@@ -592,15 +597,30 @@ Answers of 4 November 2026:
   lifetimes. Juno adopts the split. Rejected: ciproxy's own trait until
   after launch, and the full trait for Boat. The user first wrote A, and
   then C, which stands.
+- Item 32, A: the App asks for a third permission, "Actions" read, and the
+  control plane reads the ref, the event, and the head repository of each
+  run from the GitHub API. Rejected for now: the first report of the
+  job-started hook, which the spike proved and which the follow-up item
+  `job-facts-from-the-hook.md` keeps; trust in no ref; and an organization
+  webhook.
+- Item 48, in the user's words: "multiple github orgs just count as
+  multiple orgs and can be in the same workspace/team on ciproxy", an
+  Admin adds an organization at any time, and Team also allows several
+  organizations. So a ciproxy workspace holds one or more GitHub
+  organizations, close to option G. Rejected: options A to F.
 
 Design calls for the parts that answer B to item 29 leaves open, my calls,
 4 November 2026. The options check named these parts:
 
 - The revoke covers every credential: the machine keys and the Boat key go
   at once. Reason: no credential of an organization that left stays usable.
-- In a Business pool, a removal takes only that organization out of the
-  pool. The subscription ends when its last organization leaves. Reason:
-  the other organizations still use it.
+  After item 48, the machines and the Boat key belong to the workspace, so
+  they go when the last organization of the workspace leaves. A removal of
+  one organization stops its runners, and deletes its data after 30 days.
+- A removal takes only that organization out of its workspace. The
+  subscription ends when the last organization of the workspace leaves.
+  Reason: the other organizations still use it. Item 48 replaced the
+  Business pool with the workspace.
 - A new install within 30 days finds the labels, the settings, and the job
   history. Each machine needs the install command again. Reason: the data
   stays for 30 days, and the machines are revoked.
@@ -612,6 +632,31 @@ Design calls for the parts that answer B to item 29 leaves open, my calls,
   organization without the App.
 - The scale sets and the runners of the organization stay on GitHub. The
   docs say so. Reason: ciproxy has no GitHub access left to delete them.
+
+Design calls for the workspace of item 48, my calls, 4 November 2026:
+
+- The customer entity is a "workspace". Reason: "team" would clash with the
+  Team tier.
+- Free allows one organization. Team and Business allow several, and
+  "several GitHub organizations" moves from Business to Team. Reason: the
+  user named Team.
+- An Admin adds an organization with "Add an organization", which installs
+  the App on it. GitHub decides who may finish the install. ciproxy links
+  the installation to the workspace of the Admin who started it.
+- The workspace owns the tier, the members and their roles, the machines,
+  the install tokens, the labels, the settings, and the Boat account. Each
+  organization keeps its own repository access.
+- A machine runs the jobs of every organization of its workspace, each in
+  a fresh VM. Tenant isolation holds between workspaces. Reason: one fleet
+  serves the customer, and the cache scopes already separate repositories.
+- A person joins a workspace when the person is a member of one of its
+  organizations, through the access request. An owner of any organization
+  of the workspace can claim the Admin role. Reason: the access model stays
+  as it was.
+- An Admin can take an organization out. Its runners stop, and the App
+  stays installed until an owner removes it on GitHub.
+- Starts, machines, the soft limits, and the savings report count per
+  workspace.
 
 Design calls on the questions of the docs work, my calls, 4 November 2026:
 
@@ -625,11 +670,11 @@ Design calls on the questions of the docs work, my calls, 4 November 2026:
   sell at the smallest size of that alternative with at least its vCPU and
   memory. Reason: the job would need that size there, and each price stays
   a real list price.
-- In a Business pool, the savings report of each organization counts the
-  share of the subscription price that matches its share of the starts of
-  the pool. Reason: the shares add up to the real price.
+- Withdrawn after item 48: the share of a pool's price in each savings
+  report. The savings report now covers the whole workspace, which pays
+  one price.
 
-Items 32 and 48 wait for the user. The spike of item 32 passed.
+No item waits for the user.
 
 The options check of the `plans` skill ran over these items on 4 November
 2026. Its reports are under `.context/ciproxy-mvp-foundation/`:
@@ -749,6 +794,8 @@ The options check of the `plans` skill ran over these items on 4 November
   limits, and only the user knows whether the team runs GKE.
 
 ### 32. No allowed source gives the branch of a job
+
+**Answer, 4 November 2026:** A, with B as a follow-up item.
 
 **Status, 4 November 2026:** the spike of option B passed.
 
@@ -1024,6 +1071,9 @@ The options check of the `plans` skill ran over these items on 4 November
   contract in `overflow.md`.
 
 ### 48. No rule says how organizations join a pool
+
+**Answer, 4 November 2026:** a ciproxy workspace that holds several
+organizations, close to G. See the answers above.
 
 - **Severity:** High. **Effort:** Small.
 - **Source:** Implementation, from the docs work of item 8.
