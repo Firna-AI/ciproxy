@@ -55,24 +55,24 @@ GitHub permissions, keys, isolation, and job data.
 - A person who can see the jobs sees the jobs of all repositories of every
   organization of the workspace, also of those that the person cannot read
   on GitHub.
-- In a workspace with one organization, an Admin also needs the runner
-  right of that organization to add an own machine.
-- **Open:** which runner right adding a machine needs when the workspace
-  holds more than one organization. It waits for the decision on the
-  runner right in a workspace.
-- Apart from adding a machine, the roles alone decide what a person can do.
-- So an Admin without the runner right, the first Admin included, can do
-  everything except add a machine.
-- On Setup, on Machines, and under "Add machine", such an Admin sees who
-  can add a machine: an owner of the organization, or an Admin with the
-  runner right.
-- **Decision:** adding a machine needs the Admin role and the runner right,
-  because an own machine receives the secrets of the jobs that its
-  [runners](job-routing.md#terms) take. Rejected: the Admin role alone,
-  because an Admin could then give a machine the job secrets of
-  repositories that GitHub would not trust that person with. Rejected: the
-  runner right for the first Admin only, because later Admins would then
-  add machines without it.
+- An Admin adds own machines and connects the Boat account. ciproxy checks
+  no GitHub right for it.
+- An own machine and the Boat account run the jobs of every organization of
+  the workspace, with their secrets.
+- So the Admin role is the trust to control the runners of every
+  organization of the workspace.
+- When an Admin gives a person the Admin role, the dialog says that an
+  Admin can add machines and connect Boat, which run the jobs and their
+  secrets of every organization of the workspace.
+- An organization that wants other people to control its runners uses a
+  workspace of its own.
+- **Decision:** adding a machine needs the Admin role only, in a workspace
+  with any number of organizations. Rejected: the Admin role together with
+  the runner right, because with several organizations the rule became too
+  complex to understand and manage. Rejected: the runner right of every
+  organization, a confirmation by each new organization, and a consent for
+  each pair of machine and organization. Reason: the grant of the role is
+  the one explicit step of trust, and its dialog names it.
 
 ### Who gets a role
 
