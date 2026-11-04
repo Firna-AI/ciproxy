@@ -54,7 +54,11 @@ impl TokenRow {
     }
 }
 
-fn insert_token(connection: &mut PgConnection, token: &Token, hash: &TokenHash) -> QueryResult<()> {
+pub(crate) fn insert_token(
+    connection: &mut PgConnection,
+    token: &Token,
+    hash: &TokenHash,
+) -> QueryResult<()> {
     let (purpose, organization_id, machine_id, runner_id) = match token.subject {
         TokenSubject::Install => ("install", None, None, None),
         TokenSubject::Machine(id) => ("machine", None, Some(id), None),

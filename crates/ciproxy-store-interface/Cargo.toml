@@ -6,7 +6,9 @@ rust-version.workspace = true
 publish = false
 
 [dependencies]
+ciproxy-protocol = { workspace = true }
 chrono = "0.4.45"
 strum = { version = "0.28.0", features = ["derive"] }
 thiserror = "2.0.21"
 uuid = "1.29.0"
+unimock = "0.6.8"

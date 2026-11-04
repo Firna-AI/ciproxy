@@ -7,10 +7,12 @@ publish = false
 
 [dependencies]
 chrono = "0.4.45"
+ciproxy-protocol = { workspace = true }
 ciproxy-schema = { workspace = true }
 ciproxy-store-interface = { workspace = true }
-diesel = { version = "2.3.14", features = ["postgres", "chrono", "uuid"] }
+diesel = { version = "2.3.14", features = ["postgres", "chrono", "uuid", "serde_json"] }
 diesel_migrations = "2.3.2"
+serde_json = "1.0.154"
 thiserror = "2.0.21"
 uuid = "1.29.0"
 

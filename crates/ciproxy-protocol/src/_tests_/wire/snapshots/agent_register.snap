@@ -7,7 +7,6 @@ expression: message
 {
   "type": "register",
   "protocol_version": 1,
-  "workspace_id": "workspace-1",
   "install_token": "dummy-install-token",
   "report": {
     "hostname": "build-machine",
