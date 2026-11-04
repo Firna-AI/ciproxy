@@ -87,7 +87,8 @@ Run each command from the repository root.
    npm --prefix ts ci
    ```
 
-4. Run the repository gate:
+4. Set up the [Store database](AGENTS.md#commands).
+5. Run the repository gate:
 
    ```sh
    cargo xtask check

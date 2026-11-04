@@ -68,6 +68,7 @@ Each migration has an up.sql and a down.sql.
 
 ### Key Code
 
+- [build.rs](build.rs) tracks migration directory changes for Cargo.
 - [src/migrations.rs](src/migrations.rs) exports the embedded migrations.
 - [migrations](migrations) holds the forward and reverse schema history.
 - [src/workspaces.rs](src/workspaces.rs) defines the shared customer tenant.
