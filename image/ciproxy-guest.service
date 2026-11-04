@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0
+[Unit]
+Description=One ephemeral ciproxy runner
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/ciproxy/guest.env
+ExecStart=/usr/local/bin/ciproxy-guest --image-id ${IMAGE_ID} vsock --port ${VSOCK_PORT}
+ExecStopPost=/sbin/poweroff
+Restart=no
+KillMode=control-group
+
+[Install]
+WantedBy=multi-user.target

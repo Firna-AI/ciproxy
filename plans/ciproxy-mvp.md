@@ -296,17 +296,38 @@ from a minimal snapshot, not from the full image.
 
 - [ ] Measure the full image first. If it fits no size, propose a smaller
       image as a decision.
-- [ ] Define it under `image/` from a pinned `actions/runner-images`, with
+      Orchestrator: run `bash image/build.sh .context/image-build` on a
+      KVM host. Read `artifacts/measurement.json` in that build directory.
+      The full image size remains unmeasured here.
+      Evidence: `.context/ciproxy-mvp/image/measurement-preflight.json`.
+      Branch: `conductor/ciproxy-mvp-milestone-10-job-vm-image`.
+- [x] Define it under `image/` from a pinned `actions/runner-images`, with
       Docker, the runner, and a kernel.
-- [ ] Add `ciproxy-guest`: it takes the registration over vsock, starts the
+      Branch: `conductor/ciproxy-mvp-milestone-10-job-vm-image`.
+- [x] Add `ciproxy-guest`: it takes the registration over vsock, starts the
       runner, and powers off the VM after the runner exits. On Boat, it
       tells the control plane when the runner exits, as item 47 says.
+      Branch: `conductor/ciproxy-mvp-milestone-10-job-vm-image`.
 - [ ] Publish it with its SHA-256, and as a shared Boat snapshot. Rebuild
       before GitHub stops accepting the runner.
+      Orchestrator: run `image/publish.sh` and the create, prepare, and
+      snapshot commands of `image/boat.py` from the
+      [image guide](../image/README.md#boat-shared-snapshot).
+      Use `image/check-runner.sh` and `image/github.py runner-support`
+      to plan the next rebuild before runner support ends.
+      Branch: `conductor/ciproxy-mvp-milestone-10-job-vm-image`.
 - [ ] Run a job from the shared snapshot on Boat `small` and `default`, and
       measure the free disk. The label `ciproxy` asks for 60 GB, and Boat
       gives 51 GB for files. Propose the disk of the default labels as a
       decision.
+      Orchestrator: run the registration and result commands of
+      `image/github.py`, and the create, run, status, and delete commands
+      of `image/boat.py`, for each size. The
+      [smoke guide](../image/README.md#boat-small-and-default-smoke) gives
+      the arguments. Supply the overflow callback and its scoped token.
+      Compare `image/boat.py metadata` before and after snapshot restore.
+      Bring the measured free bytes to the label disk decision.
+      Branch: `conductor/ciproxy-mvp-milestone-10-job-vm-image`.
 
 ## Milestone 11: Cache sidecar and runner patch
 
