@@ -1,0 +1,48 @@
+---
+// The pricing teaser of the landing page: the three tiers with their price
+// and limits, and the way to the pricing page.
+
+import { formatMoney } from "../../data/format.ts";
+import { signInUrl, sitePages } from "../../data/site.ts";
+import { ownMachines, startsText, tierOrder, tiers } from "../../data/tiers.ts";
+import Icon from "../icon/Icon.astro";
+import LinkButton from "../LinkButton.astro";
+import Section from "./Section.astro";
+import SectionHead from "./SectionHead.astro";
+import "./landing.css";
+---
+
+<Section flush>
+  <SectionHead
+    eyebrow="Pricing"
+    title={["Start free.", "Upgrade when your CI grows."]}
+    lead="Plans count the jobs that ciproxy starts. Every limit is soft, so your jobs keep running past it."
+  />
+  <div class="mk-cells mk-cells-3">
+    {tierOrder.map((key) => (
+      <div class="mk-cell teaser">
+        <h3 class="teaser-name">{tiers[key].name}</h3>
+        <p class="teaser-price">
+          <span class="teaser-amount num">{formatMoney(tiers[key].price)}</span>
+          <span class="muted">a month</span>
+        </p>
+        <p class="small teaser-limits">
+          {startsText(tiers[key].starts)} a month
+          <br />
+          {ownMachines(tiers[key].machines)}
+        </p>
+      </div>
+    ))}
+  </div>
+  <div class="mk-foot">
+    <div class="mk-actions">
+      <LinkButton href={signInUrl} tone="primary" size="md">
+        Start free
+      </LinkButton>
+      <LinkButton href={sitePages.pricing} size="md">
+        Compare plans
+        <Icon name="arrow-right" size={14} />
+      </LinkButton>
+    </div>
+  </div>
+</Section>

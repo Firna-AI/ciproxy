@@ -1,61 +1,145 @@
 /* The base of the marketing pages, after the base styles of the mockups:
-   Geist at 14 px on 20 px in the black ink, on white. The page is light only.
-   The docs pages use the Starlight theme in styles/starlight instead. */
+   Geist at 14 px on 20 px in the black ink, on white, and the shared text
+   classes. The page is light only. The docs pages use the Starlight theme in
+   styles/starlight instead. The rules are in a cascade layer, so that the
+   unlayered styles of each section win over them, whatever the order of the
+   stylesheets on the page. */
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
 
-:root {
-  /* Light only: keep the light scheme, also when the browser asks for dark. */
-  color-scheme: light;
-  color-scheme: only light;
-}
+  :root {
+    /* Light only: keep the light scheme, also when the browser asks for
+       dark. */
+    color-scheme: light;
+    color-scheme: only light;
+  }
 
-html,
-body {
-  margin: 0;
-  min-height: 100%;
-}
+  html,
+  body {
+    margin: 0;
+    min-height: 100%;
+  }
 
-body {
-  background: var(--c-surface);
-  color: var(--c-ink);
-  font-family: var(--font-sans);
-  font-size: 14px;
-  line-height: 20px;
-  -webkit-font-smoothing: antialiased;
-}
+  body {
+    background: var(--c-surface);
+    color: var(--c-ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 20px;
+    -webkit-font-smoothing: antialiased;
+  }
 
-h1,
-h2,
-h3,
-p {
-  margin: 0;
-}
+  h1,
+  h2,
+  h3,
+  p {
+    margin: 0;
+  }
 
-/* A title breaks into lines of even length, and a paragraph never ends on a
-   lone word. */
+  /* A title breaks into lines of even length, and a paragraph never ends on a
+     lone word. */
 
-h1,
-h2,
-h3 {
-  text-wrap: balance;
-}
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
 
-p {
-  text-wrap: pretty;
-}
+  p,
+  .caption {
+    text-wrap: pretty;
+  }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 
-code {
-  font-family: var(--font-mono);
-  font-size: 12.5px;
-  letter-spacing: 0;
+  strong {
+    font-weight: 600;
+  }
+
+  code,
+  .mono {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    letter-spacing: 0;
+  }
+
+  /* The shared text classes. */
+
+  .text-link {
+    color: var(--c-ink2);
+    font-weight: 500;
+    text-decoration: underline;
+    text-decoration-color: var(--c-border2);
+    text-underline-offset: 3px;
+  }
+
+  .text-link:hover {
+    color: var(--c-ink);
+    text-decoration-color: currentColor;
+  }
+
+  .strong {
+    font-weight: 500;
+  }
+
+  .muted {
+    color: var(--c-muted);
+  }
+
+  .small {
+    font-size: 13px;
+    line-height: 18px;
+  }
+
+  .caption {
+    color: var(--c-muted);
+    font-size: 12px;
+    line-height: 16px;
+  }
+
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .nowrap {
+    white-space: nowrap;
+  }
+
+  /* Text for screen readers only, such as the name of an empty header cell. */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .icon {
+    flex-shrink: 0;
+  }
+
+  .icon-muted {
+    flex-shrink: 0;
+    color: var(--c-faint);
+  }
+
+  .inline-code {
+    padding: 1px 5px;
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-sm);
+    background: var(--c-soft);
+    color: var(--c-ink);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    white-space: nowrap;
+  }
 }

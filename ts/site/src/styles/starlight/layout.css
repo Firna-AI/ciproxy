@@ -1,0 +1,182 @@
+/* The columns of a docs page after the docs mockup: the sidebar of 17rem,
+   the article in the middle, and "On this page" in a column of 248 px. The
+   article is 768 px at most with 56 px of padding, so its text column is
+   656 px, centred in the middle column. Under 72rem, "On this page" is a bar
+   above the article, and under 50rem the sidebar is behind the menu button.
+   Starlight puts the title and the article in two content panels. */
+
+main > .content-panel {
+  padding-inline: 20px;
+}
+
+main > .content-panel > .sl-container {
+  max-width: 720px;
+  margin-inline: auto;
+}
+
+main > .content-panel:first-of-type {
+  padding-top: 28px;
+  padding-bottom: 0;
+}
+
+main > .content-panel + .content-panel {
+  padding-top: 32px;
+  padding-bottom: 48px;
+}
+
+@media (min-width: 40rem) {
+  main > .content-panel {
+    padding-inline: 24px;
+  }
+
+  main > .content-panel:first-of-type {
+    padding-top: 32px;
+  }
+
+  main > .content-panel + .content-panel {
+    padding-bottom: 72px;
+  }
+}
+
+@media (min-width: 50rem) {
+  main > .content-panel {
+    padding-inline: 56px;
+  }
+
+  main > .content-panel > .sl-container {
+    max-width: var(--sl-content-width);
+  }
+
+  main > .content-panel:first-of-type {
+    padding-top: 48px;
+  }
+}
+
+/* "On this page" on the right: no edge of its own, the current heading in
+   the ink, the others muted. */
+
+@media (min-width: 72rem) {
+  .right-sidebar-container {
+    width: 248px;
+  }
+
+  [data-has-sidebar][data-has-toc] .main-pane {
+    width: calc(100% - 248px);
+  }
+
+  /* Starlight's right column is fixed, so it takes the width of the column
+     itself, and its list the width of the column without the padding. */
+  .right-sidebar {
+    width: 248px;
+  }
+
+  .right-sidebar-panel {
+    padding: 48px 24px 32px 8px;
+  }
+
+  .right-sidebar-panel .sl-container {
+    width: auto;
+    max-width: none;
+  }
+}
+
+.right-sidebar {
+  border-inline-start: 0;
+}
+
+starlight-toc h2 {
+  margin-bottom: 10px;
+  color: var(--c-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+starlight-toc a {
+  padding: 3px 0 3px calc(12px * var(--depth, 0));
+  color: var(--c-muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+starlight-toc a:hover,
+starlight-toc a[aria-current="true"] {
+  color: var(--c-ink);
+}
+
+starlight-toc a[aria-current="true"] {
+  font-weight: 500;
+}
+
+/* The "On this page" bar of a narrow page: the label on the left, and the
+   current heading in a small box with a chevron on the right, in line with
+   the article. */
+
+mobile-starlight-toc nav {
+  border-top-color: var(--c-border);
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-surface);
+}
+
+mobile-starlight-toc summary {
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 768px;
+  margin-inline: auto;
+  padding: 0 20px;
+  border-bottom: 0;
+  font-size: 13px;
+}
+
+mobile-starlight-toc .toggle,
+mobile-starlight-toc details[open] .toggle,
+mobile-starlight-toc details .toggle:hover {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--c-muted);
+}
+
+mobile-starlight-toc .toggle .caret {
+  display: none;
+}
+
+mobile-starlight-toc .display-current {
+  position: relative;
+  max-width: 60%;
+  height: 30px;
+  padding: 0 28px 0 10px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  color: var(--c-ink);
+  font-weight: 500;
+  line-height: 28px;
+}
+
+/* The chevron: the Lucide chevron-down (ISC licence, see icons.ts). */
+mobile-starlight-toc .display-current::after {
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  width: 14px;
+  height: 14px;
+  background: var(--c-faint);
+  content: "";
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+
+mobile-starlight-toc .dropdown {
+  border-color: var(--c-border);
+}
+
+@media (min-width: 40rem) {
+  mobile-starlight-toc summary {
+    padding-inline: 24px;
+  }
+}
+
+@media (min-width: 50rem) {
+  mobile-starlight-toc summary {
+    padding-inline: 56px;
+  }
+}

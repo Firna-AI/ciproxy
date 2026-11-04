@@ -1,0 +1,96 @@
+---
+// The cost comparison of the landing page: one new Hetzner AX42 at its list
+// price that runs jobs in every minute of a month, against the same job
+// minutes on Blacksmith and on GitHub-hosted runners. Every number comes from
+// the claim of cost-claim.ts. A small caption names the basis, and links to
+// the calculation, the last question of the pricing page.
+
+import { costClaim, savingId } from "../../data/cost-claim.ts";
+import { formatMoney, formatMoneyCents, unbroken } from "../../data/format.ts";
+import { planChoiceText } from "../../data/plan-choice.ts";
+import { sitePages } from "../../data/site.ts";
+import Section from "./Section.astro";
+import SectionHead from "./SectionHead.astro";
+import "./cost.css";
+
+const bars = [
+  { label: "With ciproxy", value: costClaim.withCiproxy, accent: true },
+  ...costClaim.alternatives.map((alternative) => ({
+    label: alternative.name,
+    value: alternative.cost,
+    accent: false,
+  })),
+];
+const max = Math.max(...bars.map((bar) => bar.value));
+
+// A sentence with values is one string, so that no line break of the markup
+// can drop a space before a value.
+const basis = `One new ${costClaim.machine} at its list price runs jobs in every minute of a ${costClaim.monthDays}-day month, at ${unbroken(`${costClaim.averageJobMinutes} minutes`)} a job.`;
+
+const parts = [
+  { label: costClaim.machine, value: costClaim.machinePrice },
+  {
+    label: `ciproxy ${planChoiceText(costClaim.plan)}`,
+    value: costClaim.plan.price,
+  },
+];
+---
+
+<Section class="cost">
+  <SectionHead
+    eyebrow="Cost"
+    title={`The same jobs for up to ${costClaim.upToPercent}% less`}
+  >
+    <Fragment slot="lead">
+      Your own machine against the same job minutes on Blacksmith and on{" "}
+      <span class="nowrap">GitHub-hosted</span> runners.
+    </Fragment>
+  </SectionHead>
+  <div class="cost-panel">
+    <div class="cost-main">
+      <p class="cost-saved">
+        <span class="cost-saved-value num">{formatMoney(costClaim.saved)}</span>
+        <span class="cost-saved-text">
+          a month less than {costClaim.cheaper.runners}
+        </span>
+      </p>
+      <figure
+        class="cost-chart"
+        aria-label="Cost of the same job minutes in a month"
+      >
+        {bars.map((bar) => (
+          <div class="cost-row">
+            <span class:list={["cost-label", { strong: bar.accent }]}>
+              {bar.label}
+            </span>
+            <span class="cost-track">
+              <span
+                class:list={["cost-fill", { "is-accent": bar.accent }]}
+                style={`width: calc((100% - 88px) * ${bar.value / max})`}
+              />
+              <span class="cost-value num">{formatMoney(bar.value)}</span>
+            </span>
+          </div>
+        ))}
+      </figure>
+    </div>
+    <dl class="cost-parts">
+      {parts.map((part) => (
+        <div class="cost-part">
+          <dt>{part.label}</dt>
+          <dd class="num">{formatMoneyCents(part.value)}</dd>
+        </div>
+      ))}
+      <div class="cost-part is-total">
+        <dt>Total with ciproxy</dt>
+        <dd class="num">{formatMoneyCents(costClaim.withCiproxy)}</dd>
+      </div>
+    </dl>
+  </div>
+  <p class="caption cost-note">
+    {basis}{" "}
+    <a href={`${sitePages.pricing}#${savingId}`} class="text-link">
+      See the calculation
+    </a>
+  </p>
+</Section>

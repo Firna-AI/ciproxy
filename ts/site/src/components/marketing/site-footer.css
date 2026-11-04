@@ -1,0 +1,77 @@
+/* The footer of the marketing pages (SiteFooter.astro), inside the rails. */
+
+.foot {
+  padding: 56px var(--site-gutter) 28px;
+  border-top: 1px solid var(--c-border);
+}
+
+.foot-top {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 40px;
+}
+
+.foot-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.foot-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.foot-title {
+  margin-bottom: 12px;
+  color: var(--c-ink);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.foot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.foot-link {
+  color: var(--c-muted);
+  font-size: 13px;
+}
+
+.foot-link:hover {
+  color: var(--c-ink);
+}
+
+.foot-base {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 48px;
+  padding-top: 20px;
+  border-top: 1px solid var(--c-border);
+}
+
+@media (40rem <= width <= 880px) {
+  .foot-top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (width < 40rem) {
+  .foot-top {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+  }
+
+  .foot-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px 16px;
+  }
+}

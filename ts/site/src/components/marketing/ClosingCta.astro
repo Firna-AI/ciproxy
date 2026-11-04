@@ -1,0 +1,25 @@
+---
+// The closing call to action of a marketing page: one line to act on, what
+// Free includes, and the two actions of the hero.
+
+import { signInUrl, sitePages } from "../../data/site.ts";
+import { freePlanNote } from "../../data/tiers.ts";
+import LinkButton from "../LinkButton.astro";
+import Section from "./Section.astro";
+import SectionHead from "./SectionHead.astro";
+import "./landing.css";
+---
+
+<Section class="mk-closing">
+  <SectionHead
+    center
+    title="Run your next job on your own machine"
+    lead={freePlanNote}
+  />
+  <div class="mk-actions is-center">
+    <LinkButton href={signInUrl} tone="primary">
+      Start free
+    </LinkButton>
+    <LinkButton href={sitePages.docs}>Read the docs</LinkButton>
+  </div>
+</Section>

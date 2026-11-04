@@ -1,0 +1,201 @@
+/* The blocks of a docs article after the docs mockup: link cards, steps on
+   a rail, tables, badges, and the previous and next pages. Starlight draws
+   them from <LinkCard>, <CardGrid>, <Steps>, <Badge>, Markdown tables, and
+   its pagination; these rules restyle them with the tokens. */
+
+/* Link cards: a title, a line, and an arrow, in a box with a hairline. */
+
+.card-grid {
+  gap: 12px;
+}
+
+.sl-link-card {
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-xl);
+  background: var(--c-surface);
+  box-shadow: none;
+}
+
+.sl-link-card:hover {
+  border-color: var(--c-border2);
+  background: var(--c-bg);
+}
+
+.sl-link-card .stack {
+  gap: 2px;
+}
+
+.sl-link-card .title {
+  color: var(--c-ink);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.sl-link-card .description {
+  color: var(--c-ink2);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.sl-link-card .icon,
+.sl-link-card:hover .icon {
+  --sl-icon-size: 16px;
+
+  color: var(--c-faint);
+}
+
+/* Steps: a number in a ring, on a rail. The rail is a line beside the list,
+   not an edge of a box. */
+
+.sl-steps {
+  --bullet-size: 26px;
+  --bullet-margin: 8px;
+}
+
+.sl-steps > li {
+  padding-inline-start: 44px;
+  padding-bottom: 36px;
+}
+
+.sl-steps > li:last-child {
+  padding-bottom: 8px;
+}
+
+.sl-steps > li::before {
+  background-color: var(--c-surface);
+  box-shadow: inset 0 0 0 1px var(--c-border2);
+  color: var(--c-ink);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.sl-steps > li::after {
+  background-color: var(--c-border);
+}
+
+.sl-steps > li:last-child::after {
+  display: none;
+}
+
+/* The parts of a step are 10 px apart, and the step ends with its padding. */
+
+.sl-steps > li > * + * {
+  margin-top: 10px;
+}
+
+.sl-steps > li > :last-child {
+  margin-bottom: 0;
+}
+
+/* A code block: a white head with the place of the code on the left, as
+   the code blocks of the mockups. astro.config.mjs sets its colours. */
+
+.expressive-code .frame.is-terminal .header {
+  justify-content: flex-start;
+  padding-inline: 12px;
+  font-weight: 400;
+}
+
+/* A table: a header band and hairline rows that wrap, in a frame with a
+   hairline. */
+
+.sl-markdown-content table:not(:where(.not-content *)) {
+  display: table;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-xl);
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.sl-markdown-content :is(th, td):not(:where(.not-content *)) {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--c-border);
+  color: var(--c-ink);
+  vertical-align: top;
+}
+
+.sl-markdown-content th:not(:where(.not-content *)) {
+  padding-block: 9px;
+  background: var(--c-bg);
+  color: var(--c-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: left;
+}
+
+.sl-markdown-content tr:last-child > td:not(:where(.not-content *)) {
+  border-bottom: 0;
+}
+
+@media (width < 40rem) {
+  .sl-markdown-content :is(th, td):not(:where(.not-content *)) {
+    padding-inline: 10px;
+  }
+}
+
+/* A badge is a small label with a hairline, as the tags of the mockups.
+   Colour marks status only, as a dot beside its word, so every badge is
+   neutral. */
+
+.sl-badge {
+  --sl-color-border-badge: var(--c-border);
+  --sl-color-bg-badge: transparent;
+  --sl-color-text-badge: var(--c-muted);
+
+  padding: 0 6px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+/* The previous and next pages: two boxes with a hairline, 56 px under the
+   article. Starlight's footer row for the edit link and the date is empty
+   on this site, so it does not show. */
+
+.content-panel footer .meta:empty {
+  display: none;
+}
+
+.pagination-links {
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.pagination-links a {
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-xl);
+  box-shadow: none;
+  color: var(--c-muted);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.pagination-links a:hover {
+  border-color: var(--c-border2);
+}
+
+.pagination-links .link-title {
+  color: var(--c-ink);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.pagination-links svg {
+  --sl-icon-size: 16px;
+
+  color: var(--c-faint);
+}

@@ -1,0 +1,71 @@
+---
+// What ciproxy does, in six cells: own machines first, overflow on demand,
+// the transparent cache, the savings report, security, and the open-source
+// agent. Warm runners serve the label ciproxy only, so only its jobs start
+// at once.
+
+import type { IconName } from "../icon/icons.ts";
+import Icon from "../icon/Icon.astro";
+import Section from "./Section.astro";
+import SectionHead from "./SectionHead.astro";
+import "./landing.css";
+
+type Feature = { icon: IconName; title: string; text: string };
+
+const features: readonly Feature[] = [
+  {
+    icon: "cloud",
+    title: "Overflow on demand",
+    text: "When every slot is busy, ciproxy starts runners in your Boat account, billed by the second, up to the limit you set.",
+  },
+  {
+    icon: "hard-drive",
+    title: "Transparent cache",
+    text: "actions/cache reads and writes on the local disk of the machine. Your workflows stay as they are.",
+  },
+  {
+    icon: "piggy-bank",
+    title: "Savings report",
+    text: "See what your jobs cost each day, next to the same jobs on GitHub-hosted runners and Blacksmith.",
+  },
+  {
+    icon: "shield-check",
+    title: "Secure by default",
+    text: "A fresh VM for every job, an agent that only connects out, and a GitHub App with three permissions.",
+  },
+  {
+    icon: "github",
+    title: "Open-source agent",
+    text: "Read and audit the code that runs on your machines. The agent is open source under Apache-2.0.",
+  },
+];
+---
+
+<Section flush>
+  <SectionHead
+    eyebrow="Features"
+    title={["Your machines first.", "The cloud when they are full."]}
+    lead="ciproxy decides where each runner starts, so your hardware stays busy and no job waits for long."
+  />
+  <div class="mk-cells mk-cells-3 feature-cells">
+    <div class="mk-cell feature">
+      <span class="feature-icon" aria-hidden="true">
+        <Icon name="server" size={18} strokeWidth={1.75} />
+      </span>
+      <h3 class="feature-title">Own machines first</h3>
+      <p class="feature-text">
+        Jobs with <span class="inline-code">runs-on: ciproxy</span> start at
+        once on warm runners on your machines, each in a fresh VM.
+      </p>
+    </div>
+    {features.map((feature) => (
+      <div class="mk-cell feature">
+        <span class="feature-icon" aria-hidden="true">
+          <Icon name={feature.icon} size={18} strokeWidth={1.75} />
+        </span>
+        <h3 class="feature-title">{feature.title}</h3>
+        <p class="feature-text">{feature.text}</p>
+      </div>
+    ))}
+  </div>
+</Section>

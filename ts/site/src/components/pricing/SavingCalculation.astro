@@ -1,0 +1,72 @@
+---
+// The answer of the pricing question that the cost caption of the landing
+// page links to: how the claim counts the saving. Every number comes from
+// the claim of cost-claim.ts, with the day on which each price was checked.
+// A sentence with values is one string, so that no line break of the markup
+// can drop a space before a value.
+
+import { costClaim } from "../../data/cost-claim.ts";
+import {
+  formatCount,
+  formatMoney,
+  formatMoneyCents,
+  formatRate,
+  unbroken,
+} from "../../data/format.ts";
+import { ax42, slotSize } from "../../data/hardware.ts";
+import { planChoiceText } from "../../data/plan-choice.ts";
+import { listPrices } from "../../data/price-lists.ts";
+import "./saving-calculation.css";
+
+const { machine, plan, alternatives, cheaper } = costClaim;
+const minutes = formatCount(costClaim.jobMinutes);
+const vcpu = unbroken(`${slotSize.vcpu} vCPU`);
+const slotPhrase = `${vcpu} and ${unbroken(`${slotSize.memoryGb} GB`)}`;
+const jobLength = unbroken(`${costClaim.averageJobMinutes} minutes`);
+
+const basis = `One new ${machine} at its list price runs jobs in every minute of a ${costClaim.monthDays}-day month. After a quarter for the host, its ${ax42.threads} threads and ${ax42.memoryGb} GB give ${costClaim.slots} slots of ${slotPhrase}, so it runs ${minutes} job minutes. At ${jobLength} a job, that is ${formatCount(costClaim.starts)} starts, which ${planChoiceText(plan)} covers.`;
+const result = `That is ${costClaim.upToPercent}% less than ${cheaper.runners}, the cheaper of the two.`;
+const sourceDetails = ` on ${unbroken(listPrices.machine.checked)}, without tax. Both hosted runners have ${vcpu}, as one slot does. The ${machine} also costs ${formatMoney(listPrices.machineSetup.amount)} once to set up. Free minutes of the hosted runners are not subtracted.`;
+---
+
+<div class="saving">
+  <p>{basis}</p>
+  <dl class="saving-table">
+    <div class="saving-row">
+      <dt>{machine}, list price</dt>
+      <dd class="num">{formatMoneyCents(costClaim.machinePrice)}</dd>
+    </div>
+    <div class="saving-row">
+      <dt>ciproxy {planChoiceText(plan)}</dt>
+      <dd class="num">{formatMoneyCents(plan.price)}</dd>
+    </div>
+    <div class="saving-row is-total">
+      <dt>Total with ciproxy</dt>
+      <dd class="num">{formatMoneyCents(costClaim.withCiproxy)}</dd>
+    </div>
+    {alternatives.map((alternative) => (
+      <div class="saving-row">
+        <dt>
+          {`${alternative.runners}, ${minutes} minutes at ${formatRate(alternative.price.amount)}`}
+        </dt>
+        <dd class="num">{formatMoneyCents(alternative.cost)}</dd>
+      </div>
+    ))}
+  </dl>
+  <p>{result}</p>
+  <p class="caption">
+    The list prices come from the pages of{" "}
+    <a href={listPrices.machine.source} class="text-link">
+      Hetzner
+    </a>
+    ,{" "}
+    <a href={listPrices.blacksmith.source} class="text-link">
+      Blacksmith
+    </a>
+    , and{" "}
+    <a href={listPrices.github.source} class="text-link">
+      GitHub
+    </a>
+    {sourceDetails}
+  </p>
+</div>
