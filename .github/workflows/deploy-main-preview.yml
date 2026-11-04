@@ -1,22 +1,22 @@
-name: Deploy staging
+name: Deploy main preview
 
 on:
   push:
-    branches: [calummoore/ci-proxy-load-balancer]
+    branches: [calummoore/ci-proxy-load-balancer, main]
 
 permissions:
   contents: read
   id-token: write
 
 concurrency:
-  group: deploy-staging
+  group: deploy-main-preview
   cancel-in-progress: false
 
 jobs:
   deploy:
-    name: Deploy staging
+    name: Deploy main preview
     runs-on: ubuntu-24.04
-    environment: staging
+    environment: main-preview
     env:
       RELEASE_SERVER_IMAGE_DIGEST: ${{ vars.RELEASE_SERVER_IMAGE_DIGEST }}
       CONTROL_PLANE_RUNTIME_READY: ${{ vars.CONTROL_PLANE_RUNTIME_READY }}
@@ -57,4 +57,4 @@ jobs:
       - name: Set up Helm
         run: bash deploy/scripts/install-helm.sh
       - name: Deploy static files, Helm releases, and HTTPS edge
-        run: python3 deploy/scripts/deploy.py staging
+        run: python3 deploy/scripts/deploy.py main-preview

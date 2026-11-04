@@ -5,7 +5,7 @@ variable "configuration" {
     prefix                = string
     allowed_zones         = list(string)
     hosts                 = map(string)
-    dns_zone              = string
+    dns_zones             = map(string)
     buckets               = map(string)
     images_bucket         = string
     notification_channels = list(string)

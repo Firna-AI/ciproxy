@@ -22,8 +22,8 @@ variable "notification_emails" {
 module "foundation" {
   source              = "../../terraform/modules/foundation"
   project_id          = "internal-498318"
-  environment         = "staging"
-  domain              = "staging.ciproxy.dev"
+  environment         = "main-preview"
+  domain              = "ciproxy.dev"
   notification_emails = var.notification_emails
 }
 

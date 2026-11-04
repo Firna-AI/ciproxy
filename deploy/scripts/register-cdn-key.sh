@@ -2,10 +2,10 @@
 # Deliberately changes live signing configuration. Never run during validation.
 set -euo pipefail
 
-environment="${1:?Usage: register-cdn-key.sh staging|production KEY_FILE}"
+environment="${1:?Usage: register-cdn-key.sh main-preview|production KEY_FILE}"
 key_file="${2:?Supply a file with a user-provided 128-bit base64url key.}"
 case "${environment}" in
-  staging) project_id=internal-498318 ;;
+  main-preview) project_id=internal-498318 ;;
   production) project_id=ciproxy ;;
   *) echo "Unknown environment: ${environment}" >&2; exit 1 ;;
 esac
