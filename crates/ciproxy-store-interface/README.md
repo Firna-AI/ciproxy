@@ -48,6 +48,19 @@ A new registration in another workspace leaves old history in place.
 Removal and retention queries change stored records only.
 They do not stop machines, call GitHub, or delete Boat sandboxes.
 
+The GitHub area stores visible repository metadata and default branches.
+It atomically registers a new workspace with labels and a pending first
+Admin assignment. Its demand records use the UUID from scale-set jobId.
+They keep the existing numeric Actions history identity separate.
+An atomic job update also saves a pending notification revision.
+Replay preserves terminal state and exact nanosecond assignment order.
+Confirmation of an older revision cannot consume a newer update.
+The demand retention query removes completed records after 90 days,
+including pending deliveries. When GitHub omitted its completion time,
+the first caller-supplied completion observation starts that period.
+Replay preserves that observation without fabricating a GitHub time.
+Trusted run facts preserve raw API fields. A branch name is not a full ref.
+
 ## Quick Start
 
 Use the same interface for PostgreSQL and service test doubles:
@@ -92,6 +105,8 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 - [src/secrets.rs](src/secrets.rs) owns opaque hashes and ciphertext.
 - [src/scale_sets.rs](src/scale_sets.rs) defines session lock ownership.
 - [src/jobs.rs](src/jobs.rs) defines metadata-only job records.
+- [src/github.rs](src/github.rs) defines repository snapshots and durable
+  UUID demand, including pending role and scaler deliveries.
 
 ### Related Docs
 

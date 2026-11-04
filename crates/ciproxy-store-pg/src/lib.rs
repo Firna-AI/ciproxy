@@ -5,6 +5,7 @@
 mod boat;
 mod connection;
 mod error;
+mod github;
 mod jobs;
 mod labels;
 mod machines;

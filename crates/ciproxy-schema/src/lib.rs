@@ -3,6 +3,7 @@
 #![warn(unreachable_pub)]
 
 pub mod boat;
+pub mod github;
 pub mod jobs;
 pub mod labels;
 pub mod machines;

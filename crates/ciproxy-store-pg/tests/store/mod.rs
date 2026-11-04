@@ -2,6 +2,7 @@
 
 mod boat_tests;
 mod cleanup_tests;
+mod github;
 mod isolation_tests;
 mod jobs_tests;
 mod key_erasure_tests;

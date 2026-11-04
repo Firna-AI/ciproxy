@@ -31,6 +31,15 @@ It has no job-content, job-log, plaintext-token, or plaintext-key field.
 Later milestones own members, roles, billing, and metering.
 Workspace deletion cascades through its retained records after 30 days.
 
+The GitHub area adds visible repository snapshots and pending initial
+Admin delivery. UUID scale-set demand is separate from numeric Actions
+history. Each demand record keeps a monotonic assignment and phase, its
+trusted raw run facts, and durable notification revisions.
+The assignment order keeps nanoseconds independently of timestamp storage.
+The first trusted completion observation bounds retention when GitHub
+omitted its finish time. It does not replace that absent GitHub field.
+These records hold metadata only. They hold no runner registration secret.
+
 ## Quick Start
 
 Use the migration constant through Diesel's migration harness:
@@ -74,6 +83,8 @@ Each migration has an up.sql and a down.sql.
 - [src/workspaces.rs](src/workspaces.rs) defines the shared customer tenant.
 - [src/organizations.rs](src/organizations.rs) defines GitHub installations.
 - [src/runners.rs](src/runners.rs) defines stored runner placements.
+- [src/github.rs](src/github.rs) defines repository snapshots and durable
+  UUID job notifications.
 
 ### Related Docs
 
