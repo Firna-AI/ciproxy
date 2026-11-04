@@ -18,7 +18,7 @@ use crate::service::Service;
 use crate::session::Registration;
 use crate::storage::interface::Storage;
 use crate::transport::{Outbound, Transport};
-use crate::upload::Upload;
+use crate::upload::state::Upload;
 use crate::upstream::{canonicalize, destination};
 use crate::wire::{V2, cache_path, miss, save_path, status};
 

@@ -13,7 +13,7 @@ use crate::machine::{MachineCache, Session, identifier, transfer_url};
 use crate::storage::interface::EntryOrigin;
 use crate::wire::{CacheRequest, CacheResponse, Reservation, V2, json};
 
-use super::Upload;
+use super::state::{Archive, Upload};
 
 impl MachineCache {
     pub(crate) async fn reserve(
@@ -64,10 +64,12 @@ impl MachineCache {
                 key: query.key,
                 version: query.version,
                 remote,
-                whole: None,
-                blocks: BTreeMap::new(),
-                ranges: BTreeMap::new(),
-                order: Vec::new(),
+                active: if path.starts_with(V2) {
+                    Archive::Whole(None)
+                } else {
+                    Archive::Ranges(BTreeMap::new())
+                },
+                staged: BTreeMap::new(),
                 generation: self.store.generation(),
             })),
         );

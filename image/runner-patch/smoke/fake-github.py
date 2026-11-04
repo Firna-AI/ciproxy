@@ -112,7 +112,7 @@ class Handler(BaseHTTPRequestHandler):
     def reserve(self, request, state):
         identifier = str(len(state.uploads) + 1)
         state.uploads[identifier] = {"key": request["key"], "version": request["version"],
-                                     "data": b"", "blocks": {}, "ranges": {}}
+                                     "data": b"", "blocks": {}, "committed": {}, "ranges": {}}
         return identifier
 
     def cache_response(self, body):
@@ -175,10 +175,21 @@ class Handler(BaseHTTPRequestHandler):
             if query.get("comp") == ["block"]:
                 upload["blocks"][query["blockid"][0]] = body
             elif query.get("comp") == ["blocklist"]:
-                upload["data"] = b"".join(upload["blocks"][block.text]
-                                           for block in ElementTree.fromstring(body))
+                selected = []
+                for block in ElementTree.fromstring(body):
+                    source = upload["committed"] if block.tag == "Committed" else upload["blocks"]
+                    if block.tag == "Latest" and block.text not in source:
+                        source = upload["committed"]
+                    if block.text not in source:
+                        return self.send(400, {"msg": "missing block"})
+                    selected.append((block.text, source[block.text]))
+                upload["data"] = b"".join(data for _, data in selected)
+                upload["committed"] = dict(selected)
+                upload["blocks"].clear()
             else:
                 upload["data"] = body
+                upload["blocks"].clear()
+                upload["committed"].clear()
             return self.send(201, headers={"ETag": '"fixture"'})
         if state.options.get("chunked_download") and self.command == "GET":
             self.send_response(200)

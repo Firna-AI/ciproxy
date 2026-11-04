@@ -2,7 +2,7 @@
 
 mod fixture;
 mod github;
-mod job;
+pub mod job;
 pub mod relay;
 pub mod uploads;
 

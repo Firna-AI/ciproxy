@@ -10,19 +10,12 @@ use crate::error::{CacheError, Result, ResultExt};
 use crate::machine::{MachineCache, Session};
 use crate::transport::Outbound;
 
-use super::replacement::UploadPart;
+use super::replacement::{BlockSelection, UploadPart};
 
 #[derive(Deserialize)]
 struct BlockList {
     #[serde(rename = "$value", default)]
-    blocks: Vec<Block>,
-}
-
-#[derive(Deserialize)]
-enum Block {
-    Latest(String),
-    Uncommitted(String),
-    Committed(String),
+    blocks: Vec<BlockSelection>,
 }
 
 impl MachineCache {
@@ -67,14 +60,7 @@ impl MachineCache {
                 })
                 .await?;
             if response.status().is_success() {
-                upload.whole = None;
-                upload.order = blocks
-                    .blocks
-                    .into_iter()
-                    .map(|block| match block {
-                        Block::Latest(id) | Block::Uncommitted(id) | Block::Committed(id) => id,
-                    })
-                    .collect();
+                upload.replace(UploadPart::Commit(blocks.blocks), None);
             }
             return Ok(response);
         }

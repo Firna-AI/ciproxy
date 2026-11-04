@@ -74,6 +74,10 @@
 
 Waits for the user: item 59 of plans/ciproxy-mvp.md
 
+Item 59 is the identifier that the user assigned this open decision on
+4 November 2026. This file holds the complete decision while the
+orchestrator coordinates its plan entry. No trust option is selected.
+
 Sources:
 
 - [GitHub cache permission override](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#bypassing-the-default-untrusted-trigger-cache-restriction)

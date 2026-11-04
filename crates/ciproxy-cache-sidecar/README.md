@@ -56,9 +56,13 @@ evicts the least recently used entries. A smaller budget cancels staged
 captures. Clear cancels pending publication and removes all local entry
 files. It keeps report history. Neither operation calls GitHub deletion
 or touches sibling Docker disks. Archive transfers use bounded chunks.
-Upload replacements remove their previous local range or block before
-capture. A replacement then keeps new bytes or no usable local copy.
-GitHub still receives the upload when local capture fails.
+Each upload has one active archive: whole contents, committed ordered
+blocks, or legacy ranges. A whole upload releases the earlier archive and
+staged blocks before capture. Staged block writes keep committed bytes
+unchanged until a successful block-list commit. That commit selects the
+new archive and releases unselected staged bytes. A missing capture leaves
+no usable copy of that version. Assembly never selects an older archive
+form. GitHub still receives the upload when local capture fails.
 
 Other results requests go directly from the VM proxy to GitHub. The
 machine listener also supports results passthrough. Artifacts and logs
