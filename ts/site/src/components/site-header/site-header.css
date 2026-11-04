@@ -1,0 +1,144 @@
+/* The top bar of the public site (SiteHeader.astro). The frame of a marketing
+   page carries .site-frame, which sets the content width and the gutter that
+   the top bar and the page sections share. The docs form fills the fixed bar
+   of Starlight, which the Starlight theme gives the same fill and hairline.
+   Under 50rem, the bar is 56 px high, as the bar of Starlight is. */
+
+.site-frame {
+  --site-width: 1120px;
+  --site-gutter: 32px;
+}
+
+.site-header {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+header.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid var(--c-border);
+  background: color-mix(in srgb, var(--c-surface) 90%, transparent);
+  backdrop-filter: saturate(1.6) blur(10px);
+}
+
+.site-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  width: min(var(--site-width), 100%);
+  height: 64px;
+  margin: 0 auto;
+  padding: 0 var(--site-gutter);
+}
+
+.site-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.site-home,
+.site-section,
+.site-nav-link {
+  text-decoration: none;
+}
+
+.site-home {
+  display: inline-flex;
+}
+
+.site-slash {
+  color: var(--c-border2);
+  font-size: 20px;
+  font-weight: 300;
+}
+
+.site-section {
+  color: var(--c-ink);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.site-nav {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 28px;
+}
+
+.site-nav-link {
+  color: var(--c-ink2);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.site-nav-link:hover {
+  color: var(--c-ink);
+}
+
+/* The docs form: the search box sits in the middle of the bar. The right
+   column holds the actions of the mockup once their pages exist. */
+
+.site-header.is-docs {
+  height: 100%;
+}
+
+.is-docs .site-header-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  column-gap: 24px;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+}
+
+.site-header-search {
+  width: 340px;
+}
+
+/* A narrow window: the gaps and the search box give way first. */
+
+@media (width <= 1000px) {
+  .site-header-search {
+    width: 220px;
+  }
+}
+
+@media (width <= 760px) {
+  .site-header-inner {
+    gap: 20px;
+  }
+
+  .site-nav {
+    gap: 18px;
+  }
+}
+
+@media (width < 50rem) {
+  .site-frame {
+    --site-gutter: 20px;
+  }
+
+  .site-header-inner,
+  .is-docs .site-header-inner {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .site-header-inner {
+    height: 56px;
+  }
+
+  .site-nav {
+    justify-content: flex-end;
+  }
+
+  .site-header-search {
+    width: auto;
+  }
+}

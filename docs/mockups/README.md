@@ -9,8 +9,10 @@ modules.
 
 ## Commands
 
-Run these from the repository root. Mokly needs Node 22.15 or newer, but not
-Node 23 and not Node 24.14 to 24.18.
+Use the Node version in [.nvmrc](../../.nvmrc).
+The `.nvmrc` file must name a Node version that Mokly accepts.
+Mokly rejects Node older than 22.15, Node 23, and Node 24.14 to 24.18.
+Run these commands from the repository root:
 
 ```sh
 npm --prefix ts ci                   # install the workspace
@@ -68,8 +70,9 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   line.
 - The look is Graphite: light and monochrome, Geist and Geist Mono, hairline
   borders, small radii, and black primary buttons. Colour marks status only,
-  as a dot beside its word. Its tokens live in `src/theme/graphite.ts`, and a
-  stylesheet reads them as custom properties, never as colour literals.
+  as a dot beside its word. Its tokens live in
+  [`@ciproxy/tokens`](../../ts/tokens/README.md), and a stylesheet reads them
+  as custom properties, never as colour literals.
 - Check `@firna/ui` and `src/components/` before you build a control. The Firna
   DOM build renders without React Native; the renderer adds its static CSS and
   the Graphite theme.
@@ -104,11 +107,12 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   root `ts` for module resolution. Mokly 0.18 reads only a JSON configuration.
 - `src/render.tsx`: the renderer. It adds the base stylesheet, the static
   Firna CSS with the tokens, and the Firna theme provider around every screen.
-- `src/theme/graphite.ts`: the Graphite tokens: the Firna theme with the Geist
-  faces, and the status, chart, slot, and sidebar colours.
-- `src/theme/firna.tsx`: publishes the tokens as CSS custom properties, such as
-  `--c-ink`, `--c-status-ok`, `--r-md`, and `--font-mono`, beside the static
-  Firna CSS.
+- [`@ciproxy/tokens`](../../ts/tokens/README.md): the Graphite tokens: the
+  Firna theme with the Geist faces, and the status, chart, slot, and sidebar
+  colours.
+- `src/theme/firna.tsx`: takes the `--c-*`, `--r-*`, and `--font-*` custom
+  properties from `tokenDeclarations()` of `@ciproxy/tokens/css`, adds the
+  two Firna focus-ring properties, and puts them beside the static Firna CSS.
 - `src/components/site/site-header.tsx`: the top bar of the public site,
   shared by the marketing pages and the docs, with the search box on the docs.
 - `src/screens/marketing/marketing-shell.tsx`: the frame of a marketing page:

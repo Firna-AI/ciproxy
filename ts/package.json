@@ -3,7 +3,10 @@
   "private": true,
   "packageManager": "npm@11.19.1",
   "workspaces": [
-    "mockups"
+    "mockups",
+    "tokens",
+    "app",
+    "site"
   ],
   "overrides": {
     "react-native": "0.85.3",
@@ -13,6 +16,23 @@
     "mockups:build": "npm --workspace @ciproxy/mockups run build",
     "mockups:check": "npm --workspace @ciproxy/mockups run check",
     "mockups:serve": "npm --workspace @ciproxy/mockups run serve --",
-    "mockups:format": "npm --workspace @ciproxy/mockups run format"
+    "mockups:format": "npm --workspace @ciproxy/mockups run format",
+    "tokens:check": "npm --workspace @ciproxy/tokens run check",
+    "tokens:lint": "npm --workspace @ciproxy/tokens run lint",
+    "tokens:typecheck": "npm --workspace @ciproxy/tokens run typecheck",
+    "tokens:test": "npm --workspace @ciproxy/tokens run test",
+    "app:lint": "npm --workspace @ciproxy/app run lint",
+    "app:typecheck": "npm --workspace @ciproxy/app run typecheck",
+    "app:export": "npm --workspace @ciproxy/app run export",
+    "app:start": "npm --workspace @ciproxy/app run start --",
+    "site:lint": "npm --workspace @ciproxy/site run lint",
+    "site:typecheck": "npm --workspace @ciproxy/site run typecheck",
+    "site:build": "npm --workspace @ciproxy/site run build",
+    "site:dev": "npm --workspace @ciproxy/site run dev --",
+    "format": "npm --workspace @ciproxy/tokens run format && npm --workspace @ciproxy/app run format && npm --workspace @ciproxy/site run format",
+    "format:check": "npm --workspace @ciproxy/tokens run format:check && npm --workspace @ciproxy/app run format:check && npm --workspace @ciproxy/site run format:check"
+  },
+  "devDependencies": {
+    "markdownlint-cli2": "0.24.0"
   }
 }

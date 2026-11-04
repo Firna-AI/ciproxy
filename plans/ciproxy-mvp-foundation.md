@@ -925,25 +925,33 @@ from the user.
 
 Depends on: 1
 
-- [ ] Create the workspace skeleton as in `futex-ai/accounting`: a Rust
+- [x] Create the workspace skeleton as in `futex-ai/accounting`: a Rust
       workspace under `crates/`, the gate in `xtask/`, and a TypeScript
       package for the dashboard under `ts/`. Keep the agent in its own
-      crates, so that a public copy can publish them at launch.
-- [ ] Add the Astro package for the marketing site and the docs under
+      crates, so that a public copy can publish them at launch. Branch:
+      `conductor/ciproxy-mvp-foundation-m4-bootstrap`.
+- [x] Add the Astro package for the marketing site and the docs under
       `ts/site`, with Starlight, and add its build to the gate. Use light
       mode only with no theme switch, give notes a full border instead of
-      a left accent edge, and use the shared site top bar.
-- [ ] Move the Graphite tokens into a shared package under `ts/`, which the
-      mockups, the dashboard, and the site import.
-- [ ] Write `AGENTS.md` from the `agents-md` template. Create `CLAUDE.md` as
-      a symlink to it.
-- [ ] Add a `.gitignore` that holds `.context/`.
-- [ ] Add the gate: format, lint, the file-length check, tests, and the
-      Markdown link check.
-- [ ] Add CI on GitHub-hosted runners. Move the CI of ciproxy to ciproxy
-      when the first own machine runs jobs.
-- [ ] Add the Apache-2.0 licence to the agent crates. Keep the rest of the
-      repository without an open licence.
+      a left accent edge, and use the shared site top bar. Branch:
+      `conductor/ciproxy-mvp-foundation-m4-bootstrap`.
+- [x] Move the Graphite tokens into a shared package under `ts/`, which the
+      mockups, the dashboard, and the site import. Branch:
+      `conductor/ciproxy-mvp-foundation-m4-bootstrap`.
+- [x] Write `AGENTS.md` from the `agents-md` template. Create `CLAUDE.md` as
+      a symlink to it. Branch: `conductor/ciproxy-mvp-foundation-m4-bootstrap`.
+- [x] Add a `.gitignore` that holds `.context/`. Branch:
+      `conductor/ciproxy-mvp-foundation-m4-bootstrap`.
+- [x] Add the gate: format, lint, the file-length check, tests, and the
+      Markdown link check. Branch:
+      `conductor/ciproxy-mvp-foundation-m4-bootstrap`.
+- [x] Add CI on GitHub-hosted runners. Branch:
+      `conductor/ciproxy-mvp-foundation-m4-bootstrap`.
+- [ ] Move the CI of ciproxy to ciproxy when the first own machine runs
+      jobs.
+- [x] Add the Apache-2.0 licence to the agent crates. Keep the rest of the
+      repository without an open licence. Branch:
+      `conductor/ciproxy-mvp-foundation-m4-bootstrap`.
 
 ## Milestone 5: Implementation plan
 

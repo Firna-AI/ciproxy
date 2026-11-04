@@ -1,0 +1,40 @@
+---
+// The ciproxy mark and wordmark, after the brand of the mockups. The mark is
+// two bars that meet as a chevron: one flow of jobs, routed to an own machine
+// or to overflow. It takes the text colour, with no tile behind it.
+---
+
+<span class="brand">
+  <svg
+    aria-hidden="true"
+    class="brand-mark"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+  >
+    <path d="M2 3h8.6l8.4 8.1h-8.6z"></path>
+    <path d="M10.4 12.9H19L10.6 21H2z"></path>
+  </svg>
+  <span class="brand-word">ciproxy</span>
+</span>
+
+<style>
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--c-ink);
+  }
+
+  .brand-mark {
+    flex-shrink: 0;
+  }
+
+  .brand-word {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 20px;
+  }
+</style>

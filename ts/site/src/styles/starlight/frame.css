@@ -1,0 +1,185 @@
+/* The frame of a docs page after the docs mockup: the fixed top bar, its
+   search box and menu button, the sidebar, and "On this page". Starlight
+   draws these parts; these rules restyle them with the tokens. */
+
+/* The top bar of Starlight: a translucent white fill over the page. */
+
+.page > .header {
+  backdrop-filter: saturate(1.6) blur(10px);
+}
+
+/* The search box: a button that looks like a field, with the shortcut. On a
+   narrow page, it is an icon button. */
+
+.site-header-search button[data-open-modal] {
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: var(--r-md);
+  color: var(--c-ink);
+  font-size: 16px;
+}
+
+.site-header-search button[data-open-modal]:hover {
+  background: var(--c-soft);
+}
+
+@media (min-width: 50rem) {
+  .site-header-search button[data-open-modal] {
+    justify-content: flex-start;
+    gap: 8px;
+    width: 100%;
+    max-width: none;
+    height: 36px;
+    padding: 0 6px 0 12px;
+    border: 1px solid var(--c-border);
+    background: var(--c-bg);
+    color: var(--c-muted);
+    font-size: 14px;
+  }
+
+  .site-header-search button[data-open-modal]:hover {
+    border-color: var(--c-border2);
+    background: var(--c-bg);
+    color: var(--c-muted);
+  }
+}
+
+.site-header-search button[data-open-modal] > kbd {
+  gap: 2px;
+  padding: 1px 6px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-sm);
+  background: var(--c-surface);
+  color: var(--c-muted);
+  font-size: 11.5px;
+  line-height: 18px;
+}
+
+/* The search dialog: the whole screen of a narrow page, else a white card
+   with a hairline over the dimmed page. */
+
+site-search dialog {
+  border: 0;
+  background: var(--c-surface);
+}
+
+@media (min-width: 50rem) {
+  site-search dialog {
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-xl);
+  }
+}
+
+/* The search field and the results in the dialog. Starlight sets the corners
+   of a result on this element, so the token radius goes here, not on :root.
+   Pagefind reads its own radius for the field and its buttons. */
+
+#starlight__search {
+  --pagefind-ui-border-radius: var(--r-md);
+  --sl-search-corners: var(--r-md);
+}
+
+/* The menu button of a narrow page: a plain icon button in the bar. */
+
+.sl-menu-button {
+  border-radius: var(--r-md);
+  background-color: transparent;
+  color: var(--c-ink);
+  box-shadow: none;
+}
+
+.sl-menu-button:hover,
+.sl-menu-button:has(~ :popover-open) {
+  background-color: var(--c-soft);
+}
+
+/* The foot of the mobile menu holds the social links and the language
+   choice, which the site does not have yet. Its rule shows only with them. */
+
+.mobile-preferences:not(:has(> :not(:empty))) {
+  display: none;
+}
+
+/* The sidebar: group titles in the ink, links in one column, and the
+   current page in a soft fill. */
+
+#starlight__sidebar summary {
+  padding: 0 10px 4px;
+}
+
+#starlight__sidebar .group-label .large {
+  color: var(--c-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+#starlight__sidebar .caret {
+  color: var(--c-faint);
+}
+
+#starlight__sidebar ul ul li {
+  margin-inline-start: 0;
+  padding-inline-start: 0;
+  border-inline-start: 0;
+}
+
+#starlight__sidebar a {
+  padding: 5px 10px;
+  border-radius: var(--r-md);
+  color: var(--c-ink2);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+#starlight__sidebar a:hover {
+  background: var(--c-soft);
+  color: var(--c-ink);
+}
+
+#starlight__sidebar a[aria-current="page"] {
+  background: var(--c-primary-soft);
+  color: var(--c-ink);
+  font-weight: 500;
+}
+
+/* "On this page" on the right: no edge of its own, the current heading in
+   the ink, the others muted. A narrow page shows it as a bar above the
+   article. */
+
+.right-sidebar {
+  border-inline-start: 0;
+}
+
+starlight-toc h2 {
+  color: var(--c-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+starlight-toc a {
+  padding: 3px 0 3px calc(12px * var(--depth, 0));
+  border-radius: var(--r-md);
+  color: var(--c-muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+starlight-toc a:hover,
+starlight-toc a[aria-current="true"] {
+  color: var(--c-ink);
+}
+
+starlight-toc a[aria-current="true"] {
+  font-weight: 500;
+}
+
+mobile-starlight-toc nav {
+  border-top-color: var(--c-border);
+}
+
+mobile-starlight-toc .toggle {
+  border-color: var(--c-border);
+  border-radius: var(--r-md);
+}

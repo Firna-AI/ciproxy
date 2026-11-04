@@ -1,0 +1,63 @@
+/* A docs article after the docs mockup: the title and its lead as one block,
+   then prose in the second ink with links and inline code in the Graphite
+   look. The sizes come from theme.css. */
+
+/* The title and its lead read as one block, with no rule under them. */
+
+.content-panel + .content-panel {
+  border-top: 0;
+}
+
+#_top {
+  letter-spacing: -0.035em;
+  line-height: 1.12;
+}
+
+.sl-page-lead {
+  margin-top: 12px;
+  color: var(--c-ink2);
+  font-size: 18px;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+@media (width < 50rem) {
+  .sl-page-lead {
+    font-size: 16px;
+  }
+}
+
+/* Prose. */
+
+.sl-markdown-content {
+  font-size: 15px;
+}
+
+.sl-markdown-content h2:not(:where(.not-content *)) {
+  letter-spacing: -0.025em;
+  line-height: 1.3;
+}
+
+.sl-markdown-content h3:not(:where(.not-content *)) {
+  letter-spacing: -0.01em;
+  line-height: 26px;
+}
+
+.sl-markdown-content a:not(:where(.not-content *)) {
+  color: var(--c-ink2);
+  font-weight: 500;
+  text-decoration-color: var(--c-border2);
+  text-underline-offset: 3px;
+}
+
+.sl-markdown-content a:hover:not(:where(.not-content *)) {
+  color: var(--c-ink);
+  text-decoration-color: currentColor;
+}
+
+.sl-markdown-content :not(pre) > code:not(:where(.not-content *)) {
+  padding: 1px 5px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-sm);
+  color: var(--c-ink);
+}

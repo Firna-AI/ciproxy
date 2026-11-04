@@ -1,0 +1,12 @@
+---
+// Starlight's Header override: the docs form of the site top bar, with the
+// Starlight search. It leaves out the theme switch and the social links.
+
+import Search from "@astrojs/starlight/components/Search.astro";
+
+import SiteHeader from "../site-header/SiteHeader.astro";
+---
+
+<SiteHeader section="docs">
+  <Search slot="search" />
+</SiteHeader>

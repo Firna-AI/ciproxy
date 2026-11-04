@@ -8,7 +8,7 @@ import { StatusDot } from "@firna/ui/status-dot";
 
 import type { JobState, Where } from "../fixtures/jobs.ts";
 import type { MachineStatus } from "../fixtures/machines.ts";
-import { statusColors, type StatusTone } from "../theme/graphite.ts";
+import { statusColors, type StatusTone } from "@ciproxy/tokens";
 import "./status.css";
 
 type StateLook = { label: string; tone: StatusTone };

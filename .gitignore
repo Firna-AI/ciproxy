@@ -7,3 +7,13 @@ node_modules/
 # Mokly build output and its reservation directory. Never commit them.
 docs/mockups/mokly-generated/
 .mokly-export-reservations/
+
+# Rust build output.
+target/
+
+# App and site build output and caches.
+ts/app/dist/
+ts/app/.expo/
+ts/app/expo-env.d.ts
+ts/site/dist/
+ts/site/.astro/
