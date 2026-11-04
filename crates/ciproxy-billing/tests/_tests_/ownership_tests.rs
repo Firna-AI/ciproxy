@@ -85,12 +85,9 @@ fn return_session_from_another_workspace_cannot_apply_a_paid_tier() {
     seed_paid(&database);
     let mut wrong = subscription();
     wrong.metadata.workspace_id = Some(other);
-    let mut changed = wrong.clone();
-    changed.items.data[0].price.lookup_key = ciproxy_billing::catalog::PriceCode::Business;
     {
         let mut remote = fake.state.lock().unwrap();
         remote.subscription = wrong;
-        remote.next_subscriptions.push_back(changed);
     }
     assert!(matches!(
         service.change(access(), wanted(Tier::Business, 2, 1)),

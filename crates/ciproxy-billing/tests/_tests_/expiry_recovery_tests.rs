@@ -6,7 +6,9 @@ use ciproxy_billing::stripe::wire::types::{CheckoutSession, CheckoutStatus, Paym
 use ciproxy_store_interface::billing::state::{SubscriptionState, Tier};
 
 use super::expiry_support::{event, lost_upgrade, renewal, started};
+use super::fake_subscriptions::SubscriptionOutcome;
 use super::fixture::{access, read_service, service, signature, state, wanted, workspace};
+use super::subscription_requests::{business_upgrade, remove_all_addons};
 
 #[derive(Debug)]
 enum Observer {
@@ -83,11 +85,7 @@ fn every_observer_saves_lost_upgrade_expiry_before_a_renewal_replaces_latest_inv
         assert_eq!(database.store.billing(workspace()).unwrap().command, None);
         let mut updated = renewal();
         updated.items.data.truncate(1);
-        fake.state
-            .lock()
-            .unwrap()
-            .next_subscriptions
-            .push_back(updated);
+        fake.expect_subscription(remove_all_addons(), SubscriptionOutcome::respond(updated));
         assert!(matches!(
             billing.change(access(), wanted(Tier::Team, 0, 0)),
             Ok(ChangeOutcome::Applied(_))
@@ -119,11 +117,7 @@ fn unobserved_upgrade_releases_at_one_day_without_showing_the_renewal_payment_pa
         .command
         .unwrap();
     assert_eq!(saved.payment_expires_at, None);
-    fake.state
-        .lock()
-        .unwrap()
-        .next_subscriptions
-        .push_back(renewal());
+    fake.expect_subscription(business_upgrade(), SubscriptionOutcome::respond(renewal()));
     assert_eq!(
         reader
             .change(access(), wanted(Tier::Business, 2, 1))
@@ -144,11 +138,7 @@ fn unobserved_upgrade_releases_at_one_day_without_showing_the_renewal_payment_pa
     let billing = service(&database, &fake, boundary);
     let mut updated = renewal();
     updated.items.data.truncate(1);
-    fake.state
-        .lock()
-        .unwrap()
-        .next_subscriptions
-        .push_back(updated);
+    fake.expect_subscription(remove_all_addons(), SubscriptionOutcome::respond(updated));
     assert!(matches!(
         billing.change(access(), wanted(Tier::Team, 0, 0)),
         Ok(ChangeOutcome::Applied(_))

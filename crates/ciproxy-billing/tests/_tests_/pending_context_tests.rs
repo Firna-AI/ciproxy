@@ -8,9 +8,11 @@ use ciproxy_store_interface::billing::state::Tier;
 use super::database::Database;
 use super::expiry_support::{lost_upgrade, pending, started};
 use super::fake::Fake;
+use super::fake_subscriptions::{SubscriptionOutcome, SubscriptionRequest};
 use super::fixture::{
     access, read_service, seed_paid, service, state, subscription, wanted, workspace,
 };
+use super::subscription_requests::business_upgrade;
 
 #[test]
 fn current_pending_update_survives_age_then_applied_selection_wins_over_age() {
@@ -63,22 +65,17 @@ fn canceling_a_pending_upgrade_keeps_other_selections_out_of_its_payment_context
     seed_paid(&database);
     let fake = Fake::new(subscription());
     let billing = service(&database, &fake, started());
-    fake.state
-        .lock()
-        .unwrap()
-        .next_subscriptions
-        .push_back(pending());
+    fake.expect_subscription(business_upgrade(), SubscriptionOutcome::respond(pending()));
     assert!(matches!(
         billing.change(access(), wanted(Tier::Business, 2, 1)),
         Ok(ChangeOutcome::PaymentRequired { .. })
     ));
     let mut canceling = pending();
     canceling.cancel_at_period_end = true;
-    fake.state
-        .lock()
-        .unwrap()
-        .next_subscriptions
-        .push_back(canceling);
+    fake.expect_subscription(
+        SubscriptionRequest::CancelAtPeriodEnd,
+        SubscriptionOutcome::respond(canceling),
+    );
     billing.move_to_free(access()).unwrap();
     assert_eq!(database.store.billing(workspace()).unwrap().command, None);
     let result = billing.change(access(), wanted(Tier::Team, 0, 0));

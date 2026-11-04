@@ -1,4 +1,4 @@
-//! A real HTTP Stripe double with scripted provider outcomes.
+//! A real HTTP Stripe double with mandatory subscription exchanges.
 
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
@@ -6,28 +6,78 @@ use std::thread::{self, JoinHandle};
 
 use ciproxy_billing::stripe::wire::invoice::Invoice;
 use ciproxy_billing::stripe::wire::types::{CheckoutSession, Subscription};
-use serde_json::json;
 use tiny_http::{Response, Server};
 use url::form_urlencoded;
 
-#[derive(Clone, Debug)]
-pub(super) struct Request {
-    pub(super) method: String,
-    pub(super) path: String,
-    pub(super) form: Vec<(String, String)>,
-    pub(super) key: Option<String>,
-}
+use super::fake_requests::Request;
+use super::fake_routes::handle;
+use super::fake_subscriptions::{SubscriptionExchange, SubscriptionOutcome, SubscriptionRequest};
 
 pub(super) struct State {
     pub(super) checkout: Option<CheckoutSession>,
     pub(super) subscription: Subscription,
     pub(super) invoices: Vec<Invoice>,
-    pub(super) next_subscriptions: VecDeque<Subscription>,
     pub(super) requests: Vec<Request>,
     pub(super) lose_next_post: bool,
-    pub(super) reject_next_mutation: Option<u16>,
+    pub(super) reject_next_checkout: Option<u16>,
     pub(super) create_prices: bool,
     pub(super) rejected_price_codes: Vec<String>,
+    exchanges: VecDeque<SubscriptionExchange>,
+    failures: Vec<String>,
+}
+
+impl State {
+    pub(super) fn expect_subscription(
+        &mut self,
+        expected: SubscriptionRequest,
+        outcome: SubscriptionOutcome,
+    ) {
+        self.exchanges
+            .push_back(SubscriptionExchange::new(expected, outcome));
+    }
+
+    pub(super) fn failure(&mut self, message: String) {
+        self.failures.push(message);
+    }
+
+    pub(super) fn subscription_post(&mut self, request: &Request) -> Option<SubscriptionOutcome> {
+        let Some(exchange) = self.exchanges.pop_front() else {
+            self.failure(format!(
+                "unexpected subscription request with no pair: {request:#?}"
+            ));
+            return None;
+        };
+        let (errors, outcome) = exchange.consume(request);
+        self.failures.extend(errors);
+        Some(outcome)
+    }
+}
+
+#[derive(Clone)]
+pub(super) struct Probe(Arc<Mutex<State>>);
+
+impl Probe {
+    pub(super) fn check(&self) {
+        let (failures, versions) = {
+            let state = self.0.lock().unwrap();
+            (
+                state.failures.clone(),
+                state
+                    .requests
+                    .iter()
+                    .map(|request| request.stripe_version.clone())
+                    .collect::<Vec<_>>(),
+            )
+        };
+        for version in versions {
+            assert_eq!(version.as_deref(), Some("2026-10-28.endive"));
+        }
+        assert!(
+            failures.is_empty(),
+            "Stripe request mismatch on test thread:\n{}",
+            failures.join("\n")
+        );
+    }
 }
 
 pub(super) struct Fake {
@@ -44,20 +94,21 @@ impl Fake {
         let state = Arc::new(Mutex::new(State {
             checkout: None,
             subscription,
-            next_subscriptions: VecDeque::new(),
             invoices: Vec::new(),
             requests: Vec::new(),
             lose_next_post: false,
-            reject_next_mutation: None,
+            reject_next_checkout: None,
             create_prices: false,
             rejected_price_codes: Vec::new(),
+            exchanges: VecDeque::new(),
+            failures: Vec::new(),
         }));
         let worker_server = server.clone();
         let worker_state = state.clone();
         let thread = thread::spawn(move || {
             while let Ok(mut incoming) = worker_server.recv() {
                 let mut body = String::new();
-                incoming.as_reader().read_to_string(&mut body).unwrap();
+                let read = incoming.as_reader().read_to_string(&mut body);
                 let request = Request {
                     method: incoming.method().to_string(),
                     path: incoming.url().to_owned(),
@@ -69,21 +120,29 @@ impl Fake {
                         .iter()
                         .find(|header| header.field.equiv("Idempotency-Key"))
                         .map(|header| header.value.as_str().to_owned()),
-                };
-                assert_eq!(
-                    incoming
+                    stripe_version: incoming
                         .headers()
                         .iter()
                         .find(|header| header.field.equiv("Stripe-Version"))
+                        .map(|header| header.value.as_str().to_owned()),
+                };
+                let (status, response) = {
+                    let mut state = worker_state.lock().unwrap();
+                    if let Err(error) = read {
+                        state.failure(format!("read fake HTTP request: {error}"));
+                        (400, "{}".into())
+                    } else {
+                        handle(&mut state, &request)
+                    }
+                };
+                if let Err(error) =
+                    incoming.respond(Response::from_string(response).with_status_code(status))
+                {
+                    worker_state
+                        .lock()
                         .unwrap()
-                        .value
-                        .as_str(),
-                    "2026-10-28.endive"
-                );
-                let (status, response) = handle(&mut worker_state.lock().unwrap(), &request);
-                incoming
-                    .respond(Response::from_string(response).with_status_code(status))
-                    .unwrap();
+                        .failure(format!("send fake HTTP response: {error}"));
+                }
             }
         });
         Self {
@@ -94,7 +153,23 @@ impl Fake {
         }
     }
 
+    pub(super) fn expect_subscription(
+        &self,
+        expected: SubscriptionRequest,
+        outcome: SubscriptionOutcome,
+    ) {
+        self.state
+            .lock()
+            .unwrap()
+            .expect_subscription(expected, outcome);
+    }
+
+    pub(super) fn probe(&self) -> Probe {
+        Probe(self.state.clone())
+    }
+
     pub(super) fn posts(&self, path: &str) -> Vec<Request> {
+        self.probe().check();
         self.state
             .lock()
             .unwrap()
@@ -109,126 +184,42 @@ impl Fake {
 impl Drop for Fake {
     fn drop(&mut self) {
         self.server.unblock();
-        self.thread.take().unwrap().join().unwrap();
-    }
-}
-
-fn handle(state: &mut State, request: &Request) -> (u16, String) {
-    state.requests.push(request.clone());
-    let path = request.path.split('?').next().unwrap();
-    if request.method == "POST"
-        && matches!(
-            path,
-            "/v1/checkout/sessions" | "/v1/subscriptions/sub_recorded"
-        )
-        && let Some(status) = state.reject_next_mutation.take()
-    {
-        return (status, "{}".into());
-    }
-    let body = if request.method == "GET" {
-        match path {
-            "/v1/prices" => {
-                let query = request.path.split('?').nth(1).unwrap();
-                let code = form_urlencoded::parse(query.as_bytes())
-                    .find(|(key, _)| key == "lookup_keys[0]")
-                    .unwrap()
-                    .1
-                    .into_owned();
-                if state.create_prices && !state.rejected_price_codes.contains(&code) {
-                    json!({"data":[], "has_more":false}).to_string()
-                } else {
-                    json!({"data":[price(&code)], "has_more":false}).to_string()
-                }
-            }
-            "/v1/checkout/sessions" => {
-                json!({"data":state.checkout.iter().collect::<Vec<_>>(),"has_more":false})
-                    .to_string()
-            }
-            "/v1/checkout/sessions/cs_recorded" => {
-                serde_json::to_string(state.checkout.as_ref().unwrap()).unwrap()
-            }
-            "/v1/subscriptions/sub_recorded" => serde_json::to_string(&state.subscription).unwrap(),
-            path if path.starts_with("/v1/invoices/") => {
-                let id = path.strip_prefix("/v1/invoices/").unwrap();
-                let invoice = state
-                    .invoices
-                    .iter()
-                    .find(|invoice| invoice.id == id)
-                    .or_else(|| {
-                        state
-                            .subscription
-                            .latest_invoice
-                            .as_ref()
-                            .filter(|invoice| invoice.id == id)
-                    });
-                let Some(invoice) = invoice else {
-                    return (404, "{}".into());
-                };
-                let mut body = serde_json::to_value(invoice).unwrap();
-                body["customer"] = json!(state.subscription.customer);
-                body["parent"] =
-                    json!({"subscription_details":{"subscription":state.subscription.id}});
-                body.to_string()
-            }
-            _ => return (404, "{}".into()),
+        let worker_failed = self
+            .thread
+            .take()
+            .is_some_and(|thread| thread.join().is_err());
+        let mut failures = {
+            let state = self.state.lock().unwrap();
+            let mut failures = state.failures.clone();
+            failures.extend(state.exchanges.iter().map(|exchange| {
+                format!(
+                    "unconsumed subscription request pair: {}",
+                    exchange.describe()
+                )
+            }));
+            failures
+        };
+        if worker_failed {
+            failures.push("fake HTTP worker failed".into());
         }
-    } else {
-        match path {
-            "/v1/prices" => {
-                let code = field(request, "lookup_key");
-                state.rejected_price_codes.push(code.clone());
-                price(&code).to_string()
+        if thread::panicking() {
+            if !failures.is_empty() {
+                eprintln!(
+                    "Stripe fake verification on test thread:\n{}",
+                    failures.join("\n")
+                );
             }
-            "/v1/billing_portal/configurations" => json!({"id":"bpc_restricted"}).to_string(),
-            "/v1/billing_portal/sessions" => {
-                json!({"url":"https://billing.stripe.test/portal"}).to_string()
-            }
-            "/v1/checkout/sessions" => {
-                let mut checkout: CheckoutSession =
-                    serde_json::from_str(include_str!("fixtures/checkout.json")).unwrap();
-                checkout.metadata.command_id =
-                    Some(field(request, "metadata[command_id]").parse().unwrap());
-                state.checkout = Some(checkout.clone());
-                serde_json::to_string(&checkout).unwrap()
-            }
-            "/v1/subscriptions/sub_recorded" => {
-                state.subscription = state
-                    .next_subscriptions
-                    .pop_front()
-                    .expect("script a literal Stripe update outcome");
-                serde_json::to_string(&state.subscription).unwrap()
-            }
-            _ => return (404, "{}".into()),
+        } else {
+            self.probe().check();
+            assert!(
+                failures.is_empty(),
+                "Stripe fake verification on test thread:\n{}",
+                failures.join("\n")
+            );
         }
-    };
-    if request.method == "POST" && state.lose_next_post && !path.ends_with("/prices") {
-        state.lose_next_post = false;
-        return (
-            503,
-            "{\"error\":{\"message\":\"hidden provider details\"}}".into(),
-        );
     }
-    (200, body)
 }
 
 pub(super) fn field(request: &Request, name: &str) -> String {
-    request
-        .form
-        .iter()
-        .find(|(key, _)| key == name)
-        .unwrap()
-        .1
-        .clone()
-}
-
-fn price(code: &str) -> serde_json::Value {
-    let (id, amount) = match code {
-        "ciproxy_team_monthly_usd" => ("price_team", 4900),
-        "ciproxy_business_monthly_usd" => ("price_business", 29900),
-        "ciproxy_starts_monthly_usd" => ("price_starts", 1000),
-        "ciproxy_machine_monthly_usd" => ("price_machine", 2000),
-        _ => panic!("unexpected catalog lookup"),
-    };
-    json!({"id":id,"lookup_key":code,"currency":"usd","unit_amount":amount,
-        "recurring":{"interval":"month","interval_count":1},"active":true})
+    request.value(name).unwrap().to_owned()
 }

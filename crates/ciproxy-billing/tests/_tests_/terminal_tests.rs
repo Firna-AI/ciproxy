@@ -23,11 +23,6 @@ fn prepare(cancel: bool) -> (Database, Fake) {
         expires_at: 1793966400,
     });
     let fake = Fake::new(current.clone());
-    fake.state
-        .lock()
-        .unwrap()
-        .next_subscriptions
-        .push_back(current);
     {
         let mut lock = database
             .store

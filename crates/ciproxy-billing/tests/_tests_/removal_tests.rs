@@ -9,6 +9,7 @@ use uuid::Uuid;
 
 use super::database::Database;
 use super::fake::{Fake, field};
+use super::fake_subscriptions::{SubscriptionOutcome, SubscriptionRequest};
 use super::fixture::{
     at, command, seed_checkout, seed_paid, service, signature, state, subscription, wanted,
     workspace,
@@ -80,7 +81,10 @@ fn only_last_removal_cancels_and_a_pending_upgrade_cannot_block_it() {
     {
         let mut remote = fake.state.lock().unwrap();
         remote.subscription = pending;
-        remote.next_subscriptions.push_back(canceled);
+        remote.expect_subscription(
+            SubscriptionRequest::CancelAtPeriodEnd,
+            SubscriptionOutcome::respond(canceled),
+        );
     }
     database
         .store
@@ -131,11 +135,10 @@ fn last_removal_during_checkout_cancels_the_subscription_when_payment_confirms()
     );
     let mut canceled = subscription();
     canceled.cancel_at_period_end = true;
-    fake.state
-        .lock()
-        .unwrap()
-        .next_subscriptions
-        .push_back(canceled);
+    fake.expect_subscription(
+        SubscriptionRequest::CancelAtPeriodEnd,
+        SubscriptionOutcome::respond(canceled),
+    );
     let raw = include_bytes!("fixtures/checkout_completed.json");
     assert_eq!(
         service.webhook(&signature(raw, at()), raw).unwrap(),

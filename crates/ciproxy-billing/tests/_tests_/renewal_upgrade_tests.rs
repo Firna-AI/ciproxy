@@ -8,9 +8,11 @@ use ciproxy_store_interface::billing::state::{SubscriptionState, Tier};
 
 use super::database::Database;
 use super::fake::Fake;
+use super::fake_subscriptions::SubscriptionOutcome;
 use super::fixture::{
     access, at, read_service, seed_paid, service, signature, state, subscription, wanted, workspace,
 };
+use super::subscription_requests::business_upgrade;
 
 #[test]
 fn known_renewal_failure_survives_upgrade_expiry_until_actual_recovery() {
@@ -68,7 +70,10 @@ fn renewal_and_upgrade(delayed: bool, after_upgrade: SubscriptionState) {
     {
         let mut remote = fake.state.lock().unwrap();
         remote.invoices[0].next_payment_attempt = Some(1794139200);
-        remote.next_subscriptions.push_back(current.clone());
+        remote.expect_subscription(
+            business_upgrade(),
+            SubscriptionOutcome::respond(current.clone()),
+        );
     }
     assert_eq!(
         billing

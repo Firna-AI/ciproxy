@@ -8,7 +8,12 @@ use ciproxy_store_interface::billing::state::{SubscriptionState, Tier};
 
 use super::database::Database;
 use super::fake::{Fake, field};
+use super::fake_subscriptions::{SubscriptionOutcome, SubscriptionRequest};
 use super::fixture::{access, at, seed_paid, service, state, subscription, wanted, workspace};
+use super::subscription_requests::{
+    add_one_start_block, business_upgrade, rejected_large_selection, remove_all_addons,
+    remove_remaining_machine, remove_starts,
+};
 
 #[test]
 fn upgrade_waits_for_payment_then_applies_and_expired_payment_can_retry() {
@@ -23,11 +28,7 @@ fn upgrade_waits_for_payment_then_applies_and_expired_payment_can_retry() {
     let invoice = pending.latest_invoice.as_mut().unwrap();
     invoice.billing_reason = BillingReason::SubscriptionUpdate;
     invoice.status = InvoiceStatus::Open;
-    fake.state
-        .lock()
-        .unwrap()
-        .next_subscriptions
-        .push_back(pending);
+    fake.expect_subscription(business_upgrade(), SubscriptionOutcome::respond(pending));
     assert_eq!(
         service
             .change(access(), wanted(Tier::Business, 2, 1))
@@ -66,7 +67,7 @@ fn upgrade_waits_for_payment_then_applies_and_expired_payment_can_retry() {
     {
         let mut remote = fake.state.lock().unwrap();
         remote.subscription = expired;
-        remote.next_subscriptions.push_back(business);
+        remote.expect_subscription(business_upgrade(), SubscriptionOutcome::respond(business));
     }
     let outcome = retry
         .change(access(), wanted(Tier::Business, 2, 1))
@@ -92,7 +93,10 @@ fn saved_addon_removal_prorates_at_once_and_lost_reply_does_not_replay_a_changed
     without_starts.items.data.remove(1);
     {
         let mut remote = fake.state.lock().unwrap();
-        remote.next_subscriptions.push_back(without_starts);
+        remote.expect_subscription(
+            remove_starts(),
+            SubscriptionOutcome::respond(without_starts),
+        );
         remote.lose_next_post = true;
     }
     assert!(matches!(
@@ -102,11 +106,10 @@ fn saved_addon_removal_prorates_at_once_and_lost_reply_does_not_replay_a_changed
     assert_eq!(state(&database).add_ons.start_blocks, 2);
     let mut second_change = subscription();
     second_change.items.data.truncate(1);
-    fake.state
-        .lock()
-        .unwrap()
-        .next_subscriptions
-        .push_back(second_change);
+    fake.expect_subscription(
+        remove_remaining_machine(),
+        SubscriptionOutcome::respond(second_change),
+    );
     assert!(matches!(
         service.change(access(), wanted(Tier::Team, 0, 0)),
         Ok(ChangeOutcome::Applied(_))
@@ -124,7 +127,10 @@ fn saved_addon_removal_prorates_at_once_and_lost_reply_does_not_replay_a_changed
         Err(Error::CurrentTier)
     ));
     for status in [409, 429] {
-        fake.state.lock().unwrap().reject_next_mutation = Some(status);
+        fake.expect_subscription(
+            rejected_large_selection(),
+            SubscriptionOutcome::Reject(status),
+        );
         let result = service.change(access(), wanted(Tier::Team, u32::MAX, 1));
         assert!(matches!(result, Err(Error::StripeHttp { status: actual }) if actual == status));
         assert!(
@@ -136,7 +142,7 @@ fn saved_addon_removal_prorates_at_once_and_lost_reply_does_not_replay_a_changed
                 .is_some()
         );
     }
-    fake.state.lock().unwrap().reject_next_mutation = Some(400);
+    fake.expect_subscription(rejected_large_selection(), SubscriptionOutcome::Reject(400));
     assert!(matches!(
         service.change(access(), wanted(Tier::Team, u32::MAX, 1)),
         Err(Error::StripeRejected { status: 400 })
@@ -145,11 +151,10 @@ fn saved_addon_removal_prorates_at_once_and_lost_reply_does_not_replay_a_changed
     let mut corrected = subscription();
     corrected.items.data.truncate(2);
     corrected.items.data[1].quantity = 1;
-    fake.state
-        .lock()
-        .unwrap()
-        .next_subscriptions
-        .push_back(corrected);
+    fake.expect_subscription(
+        add_one_start_block(),
+        SubscriptionOutcome::respond(corrected),
+    );
     assert!(matches!(
         service.change(access(), wanted(Tier::Team, 1, 0)),
         Ok(ChangeOutcome::Applied(_))
@@ -162,7 +167,10 @@ fn cancel_lost_reply_clears_claim_and_portal_undo_allows_later_paid_change() {
     seed_paid(&database);
     let fake = Fake::new(subscription());
     let service = service(&database, &fake, at());
-    fake.state.lock().unwrap().reject_next_mutation = Some(400);
+    fake.expect_subscription(
+        SubscriptionRequest::CancelAtPeriodEnd,
+        SubscriptionOutcome::Reject(400),
+    );
     assert!(matches!(
         service.move_to_free(access()),
         Err(Error::StripeRejected { status: 400 })
@@ -172,7 +180,10 @@ fn cancel_lost_reply_clears_claim_and_portal_undo_allows_later_paid_change() {
     canceled.cancel_at_period_end = true;
     {
         let mut remote = fake.state.lock().unwrap();
-        remote.next_subscriptions.push_back(canceled);
+        remote.expect_subscription(
+            SubscriptionRequest::CancelAtPeriodEnd,
+            SubscriptionOutcome::respond(canceled),
+        );
         remote.lose_next_post = true;
     }
     assert!(matches!(
@@ -194,7 +205,7 @@ fn cancel_lost_reply_clears_claim_and_portal_undo_allows_later_paid_change() {
     {
         let mut remote = fake.state.lock().unwrap();
         remote.subscription = subscription();
-        remote.next_subscriptions.push_back(no_addons);
+        remote.expect_subscription(remove_all_addons(), SubscriptionOutcome::respond(no_addons));
     }
     assert!(matches!(
         service.change(access(), wanted(Tier::Team, 0, 0)).unwrap(),
@@ -214,11 +225,7 @@ fn successful_pending_upgrade_after_deadline_syncs_without_second_charge() {
     pending.pending_update = Some(PendingUpdate {
         expires_at: 1793793700,
     });
-    fake.state
-        .lock()
-        .unwrap()
-        .next_subscriptions
-        .push_back(pending);
+    fake.expect_subscription(business_upgrade(), SubscriptionOutcome::respond(pending));
     assert!(matches!(
         billing.change(access(), wanted(Tier::Business, 2, 1)),
         Ok(ChangeOutcome::PaymentRequired { .. })

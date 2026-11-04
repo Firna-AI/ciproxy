@@ -9,7 +9,9 @@ use serde_json::json;
 
 use super::database::Database;
 use super::fake::Fake;
+use super::fake_subscriptions::SubscriptionOutcome;
 use super::fixture::{access, seed_paid, service, subscription, wanted, workspace};
+use super::subscription_requests::business_upgrade;
 
 pub(super) fn started() -> DateTime<Utc> {
     "2026-12-04T11:00:00Z".parse().unwrap()
@@ -52,7 +54,7 @@ pub(super) fn lost_upgrade() -> (Database, Fake) {
     let fake = Fake::new(subscription());
     {
         let mut remote = fake.state.lock().unwrap();
-        remote.next_subscriptions.push_back(pending());
+        remote.expect_subscription(business_upgrade(), SubscriptionOutcome::respond(pending()));
         remote.lose_next_post = true;
     }
     let billing = service(&database, &fake, started());

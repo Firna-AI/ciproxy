@@ -101,7 +101,7 @@ fn checkout_lost_reply_and_concurrent_callers_keep_one_session_until_confirmatio
     assert_eq!(state(&database).tier, Tier::Free);
     assert_eq!(database.store.billing(workspace()).unwrap().command, None);
     for status in [409, 429] {
-        fake.state.lock().unwrap().reject_next_mutation = Some(status);
+        fake.state.lock().unwrap().reject_next_checkout = Some(status);
         let result = service.open_checkout(access(), wanted(Tier::Team, u32::MAX, 1));
         assert!(matches!(result, Err(Error::StripeHttp { status: actual }) if actual == status));
         assert!(
@@ -113,7 +113,7 @@ fn checkout_lost_reply_and_concurrent_callers_keep_one_session_until_confirmatio
                 .is_some()
         );
     }
-    fake.state.lock().unwrap().reject_next_mutation = Some(400);
+    fake.state.lock().unwrap().reject_next_checkout = Some(400);
     assert!(matches!(
         service.open_checkout(access(), wanted(Tier::Team, u32::MAX, 1)),
         Err(Error::StripeRejected { status: 400 })

@@ -133,6 +133,12 @@ cargo clippy --package ciproxy-billing --all-targets -- -D warnings
 
 Unit tests use unimock boundaries.
 Integration tests use a real HTTP fake Stripe and isolated PostgreSQL databases.
+Each scripted subscription mutation requires an expected request and outcome.
+Literal request fixtures specify prices, quantities, deletions, and flags.
+Complete form comparison catches missing, extra, and duplicate fields.
+The checked provider reports mismatches on the calling test thread.
+The fake also fails on unused required request pairs.
+GET snapshot edits need no mutation pair.
 Fixtures retain Stripe's event shape with public documentation example values.
 They contain no account credential or card data.
 They are synthetic recorded-shape samples, not a claimed live Stripe capture.

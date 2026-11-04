@@ -19,6 +19,7 @@ use sha2::Sha256;
 use unimock::{MockFn, Unimock, matching};
 use uuid::Uuid;
 
+use super::checked_stripe::CheckedStripe;
 use super::database::Database;
 use super::fake::Fake;
 
@@ -84,7 +85,12 @@ pub(super) fn idle_service(database: &Database, fake: &Fake) -> Box<dyn BillingA
 fn compose(database: &Database, fake: &Fake, clock: Arc<dyn Clock>) -> Box<dyn BillingApi> {
     Box::new(BillingService::new(
         database.store.clone(),
-        Arc::new(HttpStripe::with_base_url("sk_test_offline_only".into(), &fake.url).unwrap()),
+        Arc::new(CheckedStripe {
+            provider: Arc::new(
+                HttpStripe::with_base_url("sk_test_offline_only".into(), &fake.url).unwrap(),
+            ),
+            probe: fake.probe(),
+        }),
         clock,
         SigningSecret::new("whsec_offline_only".into()),
         Redirects {
