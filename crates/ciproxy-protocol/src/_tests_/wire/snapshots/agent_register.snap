@@ -87,23 +87,34 @@ expression: message
         {
           "job_id": "job-1",
           "usage": {
-            "source": "machine",
-            "restored_entries": 3,
+            "handling": "machine_handled",
+            "local_entries": 3,
+            "github_entries": 0,
             "restored_bytes": 2000000000
           }
         },
         {
           "job_id": "job-2",
           "usage": {
-            "source": "machine_and_github",
-            "restored_entries": 2,
+            "handling": "machine_handled",
+            "local_entries": 1,
+            "github_entries": 1,
             "restored_bytes": 1000000000
           }
         },
         {
           "job_id": "job-3",
           "usage": {
-            "source": "github"
+            "handling": "github"
+          }
+        },
+        {
+          "job_id": "job-4",
+          "usage": {
+            "handling": "machine_handled",
+            "local_entries": 0,
+            "github_entries": 2,
+            "restored_bytes": 3000000000
           }
         }
       ]

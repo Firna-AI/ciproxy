@@ -1,7 +1,8 @@
 //! Fixed public message values with dummy credentials and no ambient input.
 
 use crate::cache::{
-    CacheConnection, DockerDiskReport, JobCacheReport, JobCacheUsage, MachineCacheReport,
+    CacheConnection, CacheRestoreCounts, DockerDiskReport, JobCacheReport, JobCacheUsage,
+    MachineCacheReport,
 };
 use crate::identifiers::{
     CommandId, GitRef, ImageId, JobEvent, JobId, LabelName, MachineId, RepositoryId, RunnerId,
@@ -148,21 +149,31 @@ pub(crate) fn report() -> MachineReport {
             jobs: vec![
                 JobCacheReport {
                     job_id: job_id(),
-                    usage: JobCacheUsage::Machine {
-                        restored_entries: 3,
+                    usage: JobCacheUsage::MachineHandled(CacheRestoreCounts {
+                        local_entries: 3,
+                        github_entries: 0,
                         restored_bytes: 2 * GIGABYTE,
-                    },
+                    }),
                 },
                 JobCacheReport {
                     job_id: JobId("job-2".into()),
-                    usage: JobCacheUsage::MachineAndGithub {
-                        restored_entries: 2,
+                    usage: JobCacheUsage::MachineHandled(CacheRestoreCounts {
+                        local_entries: 1,
+                        github_entries: 1,
                         restored_bytes: GIGABYTE,
-                    },
+                    }),
                 },
                 JobCacheReport {
                     job_id: JobId("job-3".into()),
                     usage: JobCacheUsage::Github,
+                },
+                JobCacheReport {
+                    job_id: JobId("job-4".into()),
+                    usage: JobCacheUsage::MachineHandled(CacheRestoreCounts {
+                        local_entries: 0,
+                        github_entries: 2,
+                        restored_bytes: 3 * GIGABYTE,
+                    }),
                 },
             ],
         },

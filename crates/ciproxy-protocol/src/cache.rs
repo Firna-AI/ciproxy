@@ -25,30 +25,55 @@ pub struct MachineCacheReport {
 pub struct JobCacheReport {
     /// The job whose cache use this describes.
     pub job_id: JobId,
-    /// The contents' source and, only when eligible, the restore counts.
+    /// How restores were handled, with measured counts when available.
     pub usage: JobCacheUsage,
 }
 
-/// Cache sources with counts only when the machine cache handled restores.
+/// Restore handling with counts for every job served by the machine cache.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(tag = "source", rename_all = "snake_case")]
+#[serde(tag = "handling", rename_all = "snake_case")]
 pub enum JobCacheUsage {
-    /// All restored contents came from this machine's cache.
-    Machine {
-        /// Entries restored by the job.
-        restored_entries: u64,
-        /// Total size of the restored entries.
-        restored_bytes: u64,
-    },
-    /// The machine cache handled restores from both content stores.
-    MachineAndGithub {
-        /// Entries restored by the job.
-        restored_entries: u64,
-        /// Total size of the restored entries.
-        restored_bytes: u64,
-    },
+    /// The machine cache handled restores, including any fetches from GitHub.
+    MachineHandled(
+        /// Measured content origins and the total restored bytes.
+        CacheRestoreCounts,
+    ),
     /// Direct GitHub use or fallback, for which no counts are reported.
     Github,
+}
+
+/// Measured restores handled by the machine cache, including local misses.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct CacheRestoreCounts {
+    /// Entries whose contents came from this machine's cache.
+    pub local_entries: u64,
+    /// Entries whose contents the machine cache fetched from GitHub.
+    pub github_entries: u64,
+    /// Total size of restored entries from both content stores.
+    pub restored_bytes: u64,
+}
+
+impl CacheRestoreCounts {
+    /// Derive the content source, or none when no entry was restored.
+    pub fn source(self) -> Option<CacheSource> {
+        match (self.local_entries > 0, self.github_entries > 0) {
+            (true, false) => Some(CacheSource::Machine),
+            (false, true) => Some(CacheSource::Github),
+            (true, true) => Some(CacheSource::MachineAndGithub),
+            (false, false) => None,
+        }
+    }
+}
+
+/// Content origins derived from observed restore entry counts.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CacheSource {
+    /// All restored contents came from this machine's cache.
+    Machine,
+    /// All restored contents came from the GitHub cache.
+    Github,
+    /// Restored contents came from both cache stores.
+    MachineAndGithub,
 }
 
 /// The guest's access to its own machine cache.
@@ -87,3 +112,7 @@ pub enum DockerDiskAccess {
     /// The guest works on a copy that the agent discards after its job.
     DisposableCopy,
 }
+
+#[cfg(test)]
+#[path = "_tests_/cache_tests.rs"]
+mod cache_tests;

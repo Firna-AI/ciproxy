@@ -21,6 +21,13 @@ Reports include hardware, health, slots, runners, images, cache counts,
 and Docker disk use. The report interval is ten seconds.
 The guest uses separate message types for both directions over vsock.
 
+Cache reports keep measured counts for every restore that the machine
+cache handled, including contents fetched entirely from GitHub.
+The counts separate local entries from GitHub entries and include total
+restored bytes. A pure method derives the content source from these
+counts. Zero entries give no observed source.
+Direct GitHub use and fallback carry no counts.
+
 `Secret` hides credentials, tokens, registrations, and URLs from `Debug`.
 Its `expose_secret` method gives explicit access to the original value.
 JSON serialization also carries the original value for delivery.
@@ -68,6 +75,8 @@ Review snapshot changes before accepting them.
 - [src/agent.rs](src/agent.rs) defines both agent connection directions.
 - [src/guest.rs](src/guest.rs) defines both guest vsock directions.
 - [src/reports.rs](src/reports.rs) defines current machine state.
+- [src/cache.rs](src/cache.rs) defines restore handling and
+  `CacheRestoreCounts::source`, which derives the measured content source.
 - [src/jobs.rs](src/jobs.rs) carries job identity and cache-scope inputs.
 - [src/secret.rs](src/secret.rs) protects secret diagnostic output.
 - [src/version.rs](src/version.rs) preserves the shared version API.
