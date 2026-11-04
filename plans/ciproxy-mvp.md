@@ -59,6 +59,8 @@ This milestone adds the states of the new items, and the legal pages.
 - [ ] Add the install command, a refused label name, too little disk, and
       mixed machines.
 - [ ] Add a payment that Stripe still confirms, and two banners at once.
+- [ ] Add the states of a Business pool: its organizations, the shared Plan
+      and usage, and the join. Waits for item 48.
 - [ ] Add the terms and privacy pages. Run the mockup check, and smoke-test
       the changed pages.
 - [ ] Update this plan for each problem that the mockups show.
@@ -329,6 +331,8 @@ Depends on: 4
 
 - [ ] Count the starts of each period, the machines, the soft limits, and
       the offer.
+- [ ] Count the shared starts and machines of a Business pool. Waits for
+      item 48.
 - [ ] Compute the savings report, and keep the daily totals for 90 days, as
       item 37 says.
 - [ ] Unit-test each rule with hand-worked numbers.
@@ -344,8 +348,9 @@ the event both read the session, so the tier changes once.
 - [ ] Create the prices, and open Checkout, with no tax, as item 39 says.
 - [ ] Take each signed event once. Change tiers and add-ons with proration,
       and open the portal.
-- [ ] End the subscription of a removed App at the end of its period, and
-      take a leaving organization out of its Business pool.
+- [ ] End the subscription of a removed App at the end of its period.
+- [ ] Take a leaving organization out of its Business pool. Waits for item
+      48.
 - [ ] Test each state with recorded events and the Stripe test mode.
 
 ## Milestone 18: Dashboard API: jobs, usage, savings, and billing
@@ -454,7 +459,7 @@ The job hooks spike confirms the Docker disks.
       image store on the disk.
 - [ ] Discard a disk that fails to mount. My call: a rebuild loses only
       time.
-- [ ] Join organizations in one Business pool.
+- [ ] Join organizations in one Business pool. Waits for item 48.
 
 ## Milestone 26: Dashboard UI: tier features
 
@@ -464,8 +469,8 @@ Depends on: 20, 21, 25
 
 Each screen follows its mockup, as Milestone 19 says.
 
-- [ ] Build the Docker disks of the machine page and the joining of
-      organizations.
+- [ ] Build the Docker disks of the machine page.
+- [ ] Build the joining of organizations. Waits for item 48.
 
 ## Milestone 27: Launch
 
@@ -615,11 +620,19 @@ Design calls on the questions of the docs work, my calls, 4 November 2026:
   share of the subscription price that matches its share of the starts of
   the pool. Reason: the shares add up to the real price.
 
-Items 32 and 48 wait for the user. Item 32 waits for its spike. The
-options check of the `plans` skill ran over items 29 to 45 on 4 November
-2026 and changed the recommendations
-of items 29, 32, 37, and 39. Its report is in
-`.context/ciproxy-mvp-foundation/options-check-3.md`.
+Items 32 and 48 wait for the user. Item 32 waits for its spike.
+
+The options check of the `plans` skill ran over these items on 4 November
+2026. Its reports are under `.context/ciproxy-mvp-foundation/`:
+
+- `options-check-3.md`, over items 29 to 45. It changed the
+  recommendations of items 29, 32, 37, and 39.
+- `options-check-4.md`, over item 47. It kept the recommendation and added
+  options D, E, and F.
+- `options-check-5.md`, over item 48. It kept the recommendation and added
+  options E, F, and G.
+- The check of item 49 stopped when its session ended. The user answered
+  before it, so it did not run again.
 
 ### 29. Removing the App leaves billing running
 
@@ -995,30 +1008,36 @@ before the choice.
 
 ### 48. No rule says how organizations join a pool
 
-**Status, 4 November 2026:** its options check runs. The item goes to
-the user after it.
-
 - **Severity:** High. **Effort:** Small.
 - **Source:** Implementation, from the docs work of item 8.
 - **Category:** Docs or spec.
-- **Location:** `docs/protocol/billing.md`, "Business pools", and
-  `docs/protocol/metering.md`, "A Business pool". Milestones 25 and 26.
+- **Location:** `docs/protocol/billing.md`, "Business pools", "Checkout", and
+  "Subscription states", and `docs/protocol/metering.md`, "A Business
+  pool". The mockup `screens/marketing/price-cards.tsx:23`. Milestones 1,
+  16, 17, 25, and 26.
+- **Terms:**
+  - **Business pool:** the organizations that one Business subscription
+    pays for. They share one count of starts and one count of machines.
+  - **Paying organization:** the organization whose Stripe subscription
+    pays for the pool.
 - **Background:**
   - Answer A to item 8 keeps the six features in the tiers, and marks each
     feature without a screen "Coming later".
-  - The plan records "several GitHub organizations" as shipping at launch,
-    because a design call shares one count across the organizations of a
-    Business subscription.
-  - No mockup shows how an organization joins or leaves a pool.
-  - Milestones 25 and 26 build "the joining of organizations".
-- **Problem:** No rule says who can add an organization to a Business
-  subscription, or where. A join also needs a rule for the subscription
-  that the joining organization has, and for its starts so far.
-- **Impact if no action:** The build guesses a flow for a launch feature.
-  A guess could let a person tie an organization to a subscription without
-  a role there.
-- **Root question:** How does an organization join or leave the Business
-  subscription of another organization, and who can do it?
+  - The plan listed "several GitHub organizations" as a launch feature,
+    because a design call defined its shared counts. The docs now state it.
+  - No mockup shows a pool at all: no list of its organizations, no shared
+    Plan and usage, and no join.
+  - Depot and Ubicloud bill an account of their own that holds several
+    GitHub organizations. Blacksmith bills each organization on its own.
+- **Problem:** No rule says who joins an organization to a pool, where, or
+  what happens to its plan and its starts. No rule says who manages the
+  shared subscription.
+- **Impact if no action:** The build guesses a launch flow. As the docs are
+  now, each payer of each joined organization can change the card and the
+  add-ons of the paying organization.
+- **Root question:** How does a customer pay one Business subscription for
+  several organizations, so that no person binds or charges an
+  organization where that person cannot pay?
 - **Options:**
   - **A.** A person with the Admin or the Billing role in both
     organizations joins them on Plan and usage, and can take one out.
@@ -1028,20 +1047,46 @@ the user after it.
   - **C.** The ciproxy team joins the organizations on request, with no
     screen. Effort: Small.
   - **D.** Mark "several GitHub organizations" "Coming later" too, because
-    it has no screen. Business then sells its larger counts and priority
-    support at launch. Effort: Small.
+    it has no screen. Effort: Small.
+    - Business then sells its larger counts, 90 days of job history, and
+      priority support. It costs at most $20 a month less than Team with
+      add-ons, and only above 136,000 starts and 10 machines.
+    - The Business card stops leading with several organizations.
+    - The pool rules leave the protocol docs for a follow-up item, with
+      the rules of E.
+  - **E.** A, with the rules that A leaves open. Effort: Medium.
+    - Only an organization on Free can join. Its starts count in the pool
+      from the join.
+    - Only the payers of the paying organization change the tier, the
+      add-ons, and the card.
+    - The payers of a joined organization can only take it out. It then
+      moves to Free at once.
+    - When the paying organization leaves, the subscription ends at the
+      end of the period, and the others move to Free.
+  - **F.** E, but an organization joins only at its first install, from "Add
+    an organization" on Plan and usage. An organization that already uses
+    ciproxy cannot join at launch. Effort: Medium.
+  - **G.** A billing account above the organizations holds the Stripe
+    customer and has its own payers, as at Depot. It changes the roles and
+    every billing page. Effort: Large.
 - **Left out:**
-  - A pool from the GitHub enterprise account, because the App would need
-    more access than "Runner access only".
-  - A join by any member, because item 17 lets only Admin and Billing
-    people commit an organization to a charge.
-- **Wider fix:** None, because this is one flow.
+  - A pool from a GitHub enterprise account, because it fails for
+    organizations outside an enterprise.
+  - A join by any member, because a join changes the plan of both
+    organizations, and only Admin and Billing people choose a plan.
+  - The switch between organizations as the feature, because every tier
+    already lets one sign-in use several organizations.
+  - A price for each extra organization, because it changes the approved
+    pricing.
+- **Wider fix:** E. Its rule holds for every join path: only the payers of
+  the paying organization manage the subscription.
 - **Previous examples:** None found.
-- **Recommendation:** D. It follows answer A for a feature with no screen,
-  it is the fastest, and Business still sells on its larger counts. A is
-  best if the pool must ship at launch.
-- **Action:** ask the user, because D changes the record of answer A, and
-  A, B, and C add a flow that no requirement covers.
+- **Recommendation:** D, kept by the options check. It applies the rule of
+  answer A to a feature with no screen, and it is the only Small option. If
+  the pool must ship at launch, E is better than A, because A leaves the
+  card of the paying organization open to every joined organization.
+- **Action:** ask the user, because D changes a launch feature that the docs
+  state, and the other options add a flow that no requirement covers.
 
 ### 49. Where the Boat backend lives
 
