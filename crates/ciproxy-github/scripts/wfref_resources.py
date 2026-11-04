@@ -102,7 +102,7 @@ class Resources:
 
     def dispatch(self, workflow, tag):
         checked(self.prefix + "/actions/workflows/" + segment(workflow.rsplit("/", 1)[-1]) + "/dispatches",
-                "POST", {"ref": "refs/tags/" + tag}, (204,))
+                "POST", {"ref": "refs/tags/" + tag}, (200, 204))
 
     def find_prs(self):
         head = segment(self.repo.split("/")[0] + ":" + PR_HEAD)
