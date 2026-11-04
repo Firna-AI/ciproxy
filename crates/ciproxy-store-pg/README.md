@@ -19,6 +19,7 @@ Keeps each scale set, runner, and job attached to its organization.
 Shared machines can serve every organization of their own workspace.
 Stores only caller-supplied token hashes and Boat key ciphertext.
 Keeps retired Boat key versions while their sandbox runners are live.
+Key erasure waits for concurrent runner inserts before it checks references.
 Removing one organization preserves live sandbox-end tokens.
 It preserves shared execution resources while another organization remains.
 Removal of the last App revokes machine and install credentials.

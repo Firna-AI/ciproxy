@@ -138,20 +138,33 @@ pub(crate) fn retire_keys(
     Ok(())
 }
 
-/// Erase retired keys that no live runner still references.
+/// Erase retired keys after pending workspace runner inserts finish.
+///
+/// A separate lock statement gives the later DELETE a current snapshot.
 pub(crate) fn erase_unused_keys(
     connection: &mut PgConnection,
     workspace_id: Uuid,
 ) -> QueryResult<usize> {
-    diesel::sql_query(
-        "DELETE FROM boat_accounts AS account
-         WHERE account.workspace_id = $1 AND account.retired_at IS NOT NULL
-         AND NOT EXISTS (
-             SELECT 1 FROM runners
-             WHERE runners.workspace_id = account.workspace_id
-             AND runners.boat_key_id = account.id AND runners.state <> 'stopped'
-         )",
-    )
-    .bind::<sql_types::Uuid, _>(workspace_id)
-    .execute(connection)
+    connection.transaction(|connection| {
+        let workspace = workspaces::table
+            .find(workspace_id)
+            .select(workspaces::id)
+            .for_update()
+            .first::<Uuid>(connection)
+            .optional()?;
+        if workspace.is_none() {
+            return Ok(0);
+        }
+        diesel::sql_query(
+            "DELETE FROM boat_accounts AS account
+             WHERE account.workspace_id = $1 AND account.retired_at IS NOT NULL
+             AND NOT EXISTS (
+                 SELECT 1 FROM runners
+                 WHERE runners.workspace_id = account.workspace_id
+                 AND runners.boat_key_id = account.id AND runners.state <> 'stopped'
+             )",
+        )
+        .bind::<sql_types::Uuid, _>(workspace_id)
+        .execute(connection)
+    })
 }
