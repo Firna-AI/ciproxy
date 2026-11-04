@@ -163,9 +163,16 @@ Depends on: 3
 `ciproxy-scaler` turns a state snapshot into actions: start a runner on a
 machine or on Boat, stop a runner, or delete a sandbox.
 
-- [ ] Apply `job-routing.md` from "Where a job runs" to "Failures", and the
+- [x] Apply `job-routing.md` from "Where a job runs" to "Failures", and the
       size changes of "Custom labels". Give each start a typed reason.
-- [ ] Unit-test each rule with a hand-worked state.
+      The snapshot supplies the recent-job warm allocation. Orchestrator
+      before Milestone 13: define its history window, weighting, empty
+      history fallback, and share rounding. This policy is still open.
+      Branch: `conductor/ciproxy-mvp-milestone-7-scaler`.
+- [x] Unit-test each rule with a hand-worked state. The tests enforce the
+      supplied allocation. Its history policy tests wait for the choice
+      above, which the orchestrator must make before Milestone 13.
+      Branch: `conductor/ciproxy-mvp-milestone-7-scaler`.
 
 ## Milestone 8: Machine gateway
 
