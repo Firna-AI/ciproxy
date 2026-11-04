@@ -1,5 +1,7 @@
 //! Mockable host, transport, storage, image, cache, and VM boundaries.
 
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use ciproxy_protocol::agent::{AgentMessage, ControlMessage};
 use ciproxy_protocol::cache::{CacheConnection, MachineCacheReport};
@@ -12,6 +14,7 @@ use ciproxy_protocol::runners::RunnerReport;
 use ciproxy_protocol::secret::Secret;
 
 use crate::error::Result;
+use crate::image_registry::ImageLease;
 use crate::state::{MachineState, VmRecord};
 
 #[cfg_attr(test, unimock::unimock(api = StoreMock))]
@@ -54,6 +57,9 @@ pub(crate) trait Connection: Send + Sync {
 #[async_trait]
 pub(crate) trait Images: Send + Sync {
     fn report(&self) -> Result<ImageReport>;
+    fn recover(&self) -> Result<()>;
+    fn hold_newest(&self) -> Result<Arc<dyn ImageLease>>;
+    fn purge(&self) -> Result<()>;
     async fn fetch(&self, image: &ImageDownload) -> Result<()>;
 }
 

@@ -10,7 +10,7 @@ prerequisites() {
   [ "$(uname -m)" = x86_64 ] || skip 'an x64 Linux machine is required'
   [ "$(id -u)" -eq 0 ] || skip 'root is required to inspect VM ownership'
   [ -r /dev/kvm ] && [ -w /dev/kvm ] || skip 'a usable /dev/kvm is required'
-  for tool in gh jq rg systemctl; do
+  for tool in gh jq rg systemctl journalctl; do
     command -v "$tool" >/dev/null 2>&1 || skip "$tool is required"
   done
   [ -n "${CIPROXY_SMOKE_REPO:-}" ] || skip 'set CIPROXY_SMOKE_REPO to the private test repository'
@@ -71,19 +71,7 @@ check_result() {
   for attempt in $(seq 1 90); do
     if ! jq -e --arg id "$smoke_local_id" '.runners[] | select(.local_id == $id)' "$smoke_state" >/dev/null; then
       [ ! -d "/var/lib/ciproxy/jailer/firecracker/$smoke_local_id" ] || fail 'the used job disk still exists'
-      if [ "$smoke_mode" = warm ]; then
-        local warm_attempt replacement
-        for warm_attempt in $(seq 1 90); do
-          replacement="$(jq -c --arg previous "$smoke_local_id" '[.runners[] |
-            select(.local_id != $previous and .report.state.state == "warm") | .local_id]' "$smoke_state")"
-          if [ "$replacement" != '[]' ]; then
-            printf '%s\n' "$replacement" >"$smoke_evidence/warm-after.json"
-            break
-          fi
-          sleep 1
-        done
-        [ -f "$smoke_evidence/warm-after.json" ] || fail 'no fresh warm VM replaced the used VM'
-      fi
+      if [ "$smoke_mode" = warm ]; then wait_for_new_warm; fi
       printf 'PASS: %s; GitHub run %s; evidence %s\n' "$smoke_mode" "$smoke_run" "$smoke_evidence"
       return
     fi
@@ -92,35 +80,74 @@ check_result() {
   fail 'the finished VM was not removed'
 }
 
+snapshot_vms() {
+  jq -c '[.runners[] | {local_id, runner_id: .report.runner_id, state: .report.state.state}] | sort_by(.local_id)' "$smoke_state"
+}
+
+wait_for_warm() {
+  local attempt
+  for attempt in $(seq 1 90); do
+    if jq -e '.runners[] | select(.report.state.state == "warm")' "$smoke_state" >/dev/null; then return; fi
+    sleep 1
+  done
+  fail 'the active staging machine did not reach warm readiness'
+}
+
+wait_for_new_warm() {
+  local attempt replacement
+  for attempt in $(seq 1 90); do
+    snapshot_vms >"$smoke_evidence/vms-after.json"
+    replacement="$(jq -c --argjson previous "$smoke_initial_ids" '[.[] |
+      select(.state == "warm" and (.local_id as $id | $previous | index($id) == null))]' "$smoke_evidence/vms-after.json")"
+    if [ "$replacement" != '[]' ]; then
+      printf '%s\n' "$replacement" >"$smoke_evidence/warm-after.json"
+      return
+    fi
+    sleep 1
+  done
+  fail 'no warm VM with a new local ID replaced the used VM'
+}
+
+restart_during_job() {
+  local before after previous_invocation invocation attempt
+  before="$(systemctl show --property=MainPID --value "$smoke_unit")"
+  previous_invocation="$(systemctl show --property=InvocationID --value ciproxy-agent.service)"
+  [ -n "$before" ] && [ "$before" != 0 ] || fail 'the job has no independent VM process'
+  systemctl restart ciproxy-agent.service
+  systemctl is-active --quiet ciproxy-agent.service || fail 'the agent did not restart'
+  after="$(systemctl show --property=MainPID --value "$smoke_unit")"
+  [ "$before" = "$after" ] || fail 'the VM process changed during agent restart'
+  invocation="$(systemctl show --property=InvocationID --value ciproxy-agent.service)"
+  [ -n "$invocation" ] && [ "$invocation" != "$previous_invocation" ] || fail 'the agent has no fresh service invocation'
+  for attempt in $(seq 1 60); do
+    journalctl --quiet --no-pager --output=json "_SYSTEMD_INVOCATION_ID=$invocation" >"$smoke_evidence/restart-observations.jsonl"
+    if jq -e --arg vm "$smoke_local_id" --arg invocation "$invocation" '
+      select(._SYSTEMD_INVOCATION_ID == $invocation) |
+      (.MESSAGE | fromjson?) | select(.fields.event == "job_started_observed" and .fields.vm_id == $vm)
+    ' "$smoke_evidence/restart-observations.jsonl" >"$smoke_evidence/recovered-vm.json"; then
+      printf 'before=%s\nafter=%s\ninvocation=%s\n' "$before" "$after" "$invocation" >"$smoke_evidence/vm-pid.txt"
+      return
+    fi
+    sleep 1
+  done
+  fail 'the new agent invocation did not observe the running VM again'
+}
+
 run_smoke() {
   smoke_mode="$1"
   prerequisites
+  if [ "$smoke_mode" = warm ]; then wait_for_warm; fi
+  snapshot_vms >"$smoke_evidence/vms-before.json"
+  smoke_initial_ids="$(jq -c '[.[].local_id]' "$smoke_evidence/vms-before.json")"
   if [ "$smoke_mode" = warm ]; then
-    smoke_warm="$(jq -c '[.runners[] | select(.report.state.state == "warm") | .report.runner_id]' "$smoke_state")"
-    [ "$smoke_warm" != '[]' ] || skip 'the staging gateway must keep at least one warm runner on this machine'
-    printf '%s\n' "$smoke_warm" >"$smoke_evidence/warm-before.json"
+    jq -c '[.[] | select(.state == "warm")]' "$smoke_evidence/vms-before.json" >"$smoke_evidence/warm-before.json"
+    smoke_warm="$(jq -c '[.[].runner_id]' "$smoke_evidence/warm-before.json")"
   fi
   dispatch
   wait_for_local_job
   if [ "$smoke_mode" = warm ]; then
     printf '%s\n' "$smoke_warm" | jq -e --arg runner "$smoke_runner_id" 'index($runner) != null' >/dev/null || fail 'the job did not use a runner that was already warm'
   fi
-  if [ "$smoke_mode" = restart ]; then
-    local before after attempt
-    before="$(systemctl show --property=MainPID --value "$smoke_unit")"
-    [ -n "$before" ] && [ "$before" != 0 ] || fail 'the job has no independent VM process'
-    systemctl restart ciproxy-agent.service
-    systemctl is-active --quiet ciproxy-agent.service || fail 'the agent did not restart'
-    after="$(systemctl show --property=MainPID --value "$smoke_unit")"
-    [ "$before" = "$after" ] || fail 'the VM process changed during agent restart'
-    for attempt in $(seq 1 60); do
-      if jq -e --arg id "$smoke_local_id" '.runners[] | select(.local_id == $id and .report.state.state == "running")' "$smoke_state" >/dev/null; then
-        printf 'before=%s\nafter=%s\n' "$before" "$after" >"$smoke_evidence/vm-pid.txt"
-        break
-      fi
-      sleep 1
-    done
-    [ -f "$smoke_evidence/vm-pid.txt" ] || fail 'the agent did not recover the running VM'
-  fi
+  if [ "$smoke_mode" = restart ]; then restart_during_job; fi
   check_result
 }

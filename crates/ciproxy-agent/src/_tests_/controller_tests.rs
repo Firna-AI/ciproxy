@@ -12,12 +12,13 @@ use unimock::{MockFn, Unimock, matching};
 use crate::boundaries::{CacheMock, StoreMock, VmsMock};
 use crate::controller::Agent;
 use crate::error::Error;
-use crate::fixtures::{applied, controller, report_dependencies, spec, vm};
+use crate::fixtures::{applied, controller, report_dependencies, spec, start_image, vm};
 use crate::state::{MachineState, Mode};
 
 #[tokio::test]
 async fn starts_a_fresh_vm_and_keeps_registration_out_of_durable_state() {
     let mock = Unimock::new((report_dependencies(),
+        start_image(),
         VmsMock::allocate.some_call(matching!((report, used) if report.state == RunnerState::Starting && used.is_empty()))
             .returns(Ok(vm("runner-1", false))),
         StoreMock::save.some_call(matching!((state) if state.runners.len() == 1))
@@ -47,6 +48,7 @@ async fn starts_a_fresh_vm_and_keeps_registration_out_of_durable_state() {
 async fn failed_state_save_leaves_no_phantom_runner() {
     let mock = Unimock::new((
         report_dependencies(),
+        start_image(),
         VmsMock::allocate
             .each_call(matching!(_, _))
             .answers(&|_, _, _| Ok(vm("runner-1", false))),

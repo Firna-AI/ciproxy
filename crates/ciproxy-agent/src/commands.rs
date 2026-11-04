@@ -99,8 +99,7 @@ impl Controller {
             ),
             ControlMessage::FetchImage { command_id, image } => {
                 let result = self.images.fetch(&image).await;
-                let reason = if matches!(result, Err(Error::ImageVerification | Error::ImageLayout))
-                {
+                let reason = if matches!(result, Err(Error::ImageVerification)) {
                     CommandFailure::ImageVerification
                 } else {
                     CommandFailure::ImageDownload

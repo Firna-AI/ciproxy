@@ -39,6 +39,9 @@ pub enum Error {
     /// No verified image is available.
     #[error("[agent] no verified image is available")]
     NoImage,
+    /// Only the active runtime can mutate the owned image cache.
+    #[error("[agent] image cache ownership is unavailable")]
+    ImageOwnership,
     /// The machine cache service is unavailable.
     #[error("[agent] the machine cache service is unavailable")]
     CacheUnavailable,

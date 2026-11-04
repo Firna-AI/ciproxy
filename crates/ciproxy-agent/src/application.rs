@@ -18,7 +18,9 @@ use crate::controller::{Agent, Controller};
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::gateway::ReconnectingGateway;
 use crate::hardware::LinuxHost;
-use crate::images::LinuxImages;
+use crate::image_download::HttpsImageDownload;
+use crate::image_store::LinuxImageStore;
+use crate::images::ManagedImages;
 use crate::installation::{Install, Installer, PendingWorkspaceResolver};
 use crate::layout::Layout;
 use crate::maintenance::{HourlyMaintenance, TokioDelay};
@@ -35,7 +37,7 @@ use crate::vsock::LinuxGuests;
 
 pub(crate) async fn main() -> Result<()> {
     let cli = Cli::parse();
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt().json().init();
     execute(cli.action()).await
 }
 
@@ -63,16 +65,17 @@ async fn execute(action: Action) -> Result<()> {
     let cache: Arc<dyn Cache> = Arc::new(UnixCache {
         socket: PathBuf::from("/run/ciproxy-cache/control.sock"),
     });
-    let images: Arc<dyn Images> = Arc::new(LinuxImages {
-        layout: layout.clone(),
-        client: Client::builder()
-            .https_only(true)
-            .connect_timeout(Duration::from_secs(20))
-            .timeout(Duration::from_secs(3600))
-            .build()
-            .context("configure image downloads")?,
-        operation: Arc::new(Mutex::new(())),
-    });
+    let images: Arc<dyn Images> = Arc::new(ManagedImages::new(
+        Arc::new(LinuxImageStore::new(layout.clone())),
+        Arc::new(HttpsImageDownload {
+            client: Client::builder()
+                .https_only(true)
+                .connect_timeout(Duration::from_secs(20))
+                .timeout(Duration::from_secs(3600))
+                .build()
+                .context("configure image downloads")?,
+        }),
+    ));
     let (guest_tx, mut guest_rx) = mpsc::channel(256);
     let guests = Arc::new(LinuxGuests::new(
         layout.clone(),
@@ -98,7 +101,7 @@ async fn execute(action: Action) -> Result<()> {
         store: store.clone(),
         host: host.clone(),
         vms,
-        images,
+        images: images.clone(),
         cache,
     });
     let connection: Arc<dyn Connection> = Arc::new(WebSocketConnection::new(
@@ -119,6 +122,7 @@ async fn execute(action: Action) -> Result<()> {
             println!("ciproxy agent installed");
         }
         Action::Run => {
+            images.recover()?;
             if removing && agent.finished().await {
                 return Ok(());
             }
@@ -147,6 +151,7 @@ async fn execute(action: Action) -> Result<()> {
             store.save(&state)?;
         }
         Action::Uninstall => {
+            images.recover()?;
             agent.restore().await?;
             agent.remove().await?;
             let mut timer = interval(Duration::from_secs(REPORT_INTERVAL_SECONDS));
@@ -162,6 +167,7 @@ async fn execute(action: Action) -> Result<()> {
                     tracing::warn!(error = %error, "uninstall is waiting for job and VM cleanup");
                 }
             }
+            images.purge()?;
             store.clear()?;
             service.uninstall()?;
             println!("ciproxy agent uninstalled");

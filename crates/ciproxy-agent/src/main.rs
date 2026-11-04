@@ -3,6 +3,7 @@
 mod application;
 mod boundaries;
 mod cache;
+mod capacity;
 mod cli;
 mod commands;
 mod connection;
@@ -10,6 +11,12 @@ mod controller;
 mod error;
 mod gateway;
 mod hardware;
+mod image_artifact;
+mod image_download;
+mod image_extract;
+mod image_files;
+mod image_registry;
+mod image_store;
 mod image_verification;
 mod images;
 mod installation;
@@ -52,6 +59,10 @@ mod network_tests;
 #[path = "_tests_/capacity_tests.rs"]
 mod capacity_tests;
 
+#[cfg(test)]
+#[path = "_tests_/image_fixtures.rs"]
+mod image_fixtures;
+
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
     match application::main().await {
@@ -62,3 +73,19 @@ async fn main() -> std::process::ExitCode {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "_tests_/admission_tests.rs"]
+mod admission_tests;
+
+#[cfg(test)]
+#[path = "_tests_/recovery_tests.rs"]
+mod recovery_tests;
+
+#[cfg(test)]
+#[path = "_tests_/image_response_tests.rs"]
+mod image_response_tests;
+
+#[cfg(test)]
+#[path = "_tests_/image_concurrency_tests.rs"]
+mod image_concurrency_tests;

@@ -84,6 +84,7 @@ impl Controller {
                 };
                 self.store.save(&next)?;
                 *state = next;
+                tracing::info!(event = "job_started_observed", vm_id = %vm.local_id, "accepted guest job state");
                 AgentMessage::JobStarted { runner_id, job_id }
             }
             GuestToAgent::RunnerExited { runner_id, exit } => {

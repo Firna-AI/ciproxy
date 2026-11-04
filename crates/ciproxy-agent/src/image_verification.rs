@@ -2,13 +2,47 @@
 
 use std::path::Path;
 
+use ciproxy_protocol::identifiers::ImageId;
 use ciproxy_protocol::images::ImageDownload;
 use sha2::{Digest, Sha256};
 
 use crate::error::{Error, Result};
+use crate::image_artifact::PendingImage;
 
+/// Proof that the complete download matched its authenticated metadata.
+#[derive(Debug)]
+pub struct CheckedDownload {
+    pending: PendingImage,
+    image_id: ImageId,
+}
+
+impl CheckedDownload {
+    pub(crate) fn pending(&self) -> &PendingImage {
+        &self.pending
+    }
+    pub(crate) fn image_id(&self) -> &ImageId {
+        &self.image_id
+    }
+}
+
+/// Proof that a verified download contains both required non-empty members.
+#[derive(Debug)]
+pub struct CheckedBundle {
+    checked: CheckedDownload,
+}
+
+impl CheckedBundle {
+    pub(crate) fn pending(&self) -> &PendingImage {
+        self.checked.pending()
+    }
+    pub(crate) fn image_id(&self) -> &ImageId {
+        self.checked.image_id()
+    }
+}
+
+/// Raw download observations. This value grants no right to extract or publish.
 #[derive(Default)]
-pub(crate) struct DownloadDigest {
+pub struct DownloadDigest {
     digest: Sha256,
     bytes: u64,
 }
@@ -19,13 +53,60 @@ impl DownloadDigest {
         self.bytes = self.bytes.saturating_add(bytes.len() as u64);
     }
 
-    pub(crate) fn finish(self, image: &ImageDownload) -> Result<()> {
+    pub(crate) fn exceeds(&self, bytes: u64) -> bool {
+        self.bytes > bytes
+    }
+
+    pub(crate) fn finish(
+        self,
+        image: &ImageDownload,
+        pending: PendingImage,
+    ) -> Result<CheckedDownload> {
         if self.bytes != image.size_bytes
             || !hex::encode(self.digest.finalize()).eq_ignore_ascii_case(&image.sha256)
         {
             return Err(Error::ImageVerification);
         }
-        Ok(())
+        Ok(CheckedDownload {
+            pending,
+            image_id: image.image_id.clone(),
+        })
+    }
+}
+
+#[derive(Default)]
+pub(crate) struct BundleMembers {
+    kernel: bool,
+    rootfs: bool,
+    invalid: bool,
+}
+
+impl BundleMembers {
+    pub(crate) fn record(&mut self, path: &Path, regular: bool, bytes: u64) -> Result<ImageMember> {
+        let member = match ImageMember::parse(path, regular) {
+            Ok(member) => member,
+            Err(error) => {
+                self.invalid = true;
+                return Err(error);
+            }
+        };
+        let seen = match member {
+            ImageMember::Kernel => &mut self.kernel,
+            ImageMember::Rootfs => &mut self.rootfs,
+        };
+        if *seen || bytes == 0 {
+            self.invalid = true;
+            return Err(Error::ImageLayout);
+        }
+        *seen = true;
+        Ok(member)
+    }
+
+    pub(crate) fn finish(self, checked: CheckedDownload) -> Result<CheckedBundle> {
+        if self.invalid || !self.kernel || !self.rootfs {
+            return Err(Error::ImageLayout);
+        }
+        Ok(CheckedBundle { checked })
     }
 }
 

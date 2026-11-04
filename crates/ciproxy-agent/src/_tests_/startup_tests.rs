@@ -15,7 +15,7 @@ use unimock::{MockFn, Unimock, matching};
 use crate::boundaries::{CacheMock, StoreMock, Vms, VmsMock};
 use crate::controller::Agent;
 use crate::error::Result;
-use crate::fixtures::{applied, controller, report_dependencies, spec, vm};
+use crate::fixtures::{applied, controller, report_dependencies, spec, start_image, vm};
 use crate::state::{MachineState, VmRecord};
 
 struct PausedVms {
@@ -51,6 +51,7 @@ impl Vms for PausedVms {
 async fn hardware_reports_continue_while_vm_startup_is_pending() {
     let mock = Unimock::new((
         report_dependencies(),
+        start_image(),
         StoreMock::save.some_call(matching!(_)).returns(Ok(())),
         VmsMock::allocate
             .some_call(matching!(_, _))

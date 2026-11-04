@@ -16,6 +16,7 @@ use unimock::{Clause, MockFn, Unimock, matching};
 
 use crate::boundaries::{CacheMock, HostMock, ImagesMock};
 use crate::controller::{Agent, Controller};
+use crate::image_registry::{ImageLease, ImageLeaseMock};
 use crate::reporting::empty_cache;
 use crate::state::{Identity, MachineState, VmRecord};
 
@@ -128,4 +129,18 @@ pub(super) async fn report() -> MachineReport {
         .report()
         .await
         .unwrap()
+}
+
+pub(super) fn start_image() -> impl Clause {
+    ImagesMock::hold_newest
+        .each_call(matching!())
+        .answers(&|_| Ok(lease("image-1")))
+}
+
+pub(super) fn lease(id: &str) -> Arc<dyn ImageLease> {
+    Arc::new(Unimock::new(
+        ImageLeaseMock::image_id
+            .some_call(matching!())
+            .returns(ImageId(id.to_owned())),
+    ))
 }

@@ -1,13 +1,15 @@
 //! Checked bytes and fixed file members protect the host image boundary.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use ciproxy_protocol::identifiers::ImageId;
 use ciproxy_protocol::images::ImageDownload;
 use ciproxy_protocol::secret::Secret;
 
 use crate::error::Error;
-use crate::image_verification::{DownloadDigest, ImageMember};
+use crate::image_artifact::PendingImage;
+use crate::image_fixtures::{digest, image, pending};
+use crate::image_verification::{BundleMembers, DownloadDigest, ImageMember};
 
 #[test]
 fn only_the_complete_expected_download_passes_checksum_verification() {
@@ -21,14 +23,19 @@ fn only_the_complete_expected_download_passes_checksum_verification() {
         let mut digest = DownloadDigest::default();
         digest.update(bytes);
         assert!(
-            matches!(digest.finish(&image), Err(Error::ImageVerification)),
+            matches!(
+                digest.finish(&image, PendingImage::new(PathBuf::from("/fixture/pending"))),
+                Err(Error::ImageVerification)
+            ),
             "{bytes:?}"
         );
     }
     let mut digest = DownloadDigest::default();
     digest.update(b"a");
     digest.update(b"bc");
-    digest.finish(&image).unwrap();
+    digest
+        .finish(&image, PendingImage::new(PathBuf::from("/fixture/pending")))
+        .unwrap();
 }
 
 #[test]
@@ -55,4 +62,45 @@ fn bundle_members_cannot_write_paths_or_follow_links() {
         ImageMember::parse(Path::new("rootfs.ext4"), true).unwrap(),
         ImageMember::Rootfs
     );
+}
+
+#[test]
+fn bundle_completion_requires_both_non_empty_members_exactly_once() {
+    for members in [
+        vec![],
+        vec![("vmlinux", true, 8)],
+        vec![("rootfs.ext4", true, 20)],
+        vec![
+            ("vmlinux", true, 8),
+            ("vmlinux", true, 8),
+            ("rootfs.ext4", true, 20),
+        ],
+        vec![
+            ("vmlinux", true, 0),
+            ("vmlinux", true, 8),
+            ("rootfs.ext4", true, 20),
+        ],
+        vec![
+            ("other", true, 8),
+            ("vmlinux", true, 8),
+            ("rootfs.ext4", true, 20),
+        ],
+        vec![
+            ("vmlinux", false, 8),
+            ("vmlinux", true, 8),
+            ("rootfs.ext4", true, 20),
+        ],
+    ] {
+        let mut count = BundleMembers::default();
+        for (path, regular, bytes) in members {
+            let _ = count.record(Path::new(path), regular, bytes);
+        }
+        let checked = digest(b"abc").finish(&image(), pending()).unwrap();
+        assert!(matches!(count.finish(checked), Err(Error::ImageLayout)));
+    }
+    let mut count = BundleMembers::default();
+    count.record(Path::new("vmlinux"), true, 8).unwrap();
+    count.record(Path::new("rootfs.ext4"), true, 20).unwrap();
+    let checked = digest(b"abc").finish(&image(), pending()).unwrap();
+    assert_eq!(count.finish(checked).unwrap().image_id().0, "new");
 }

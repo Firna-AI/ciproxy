@@ -260,7 +260,7 @@ ships through `futex-ai/cli-release`.
 - [x] Report the hardware and the slots every 10 seconds. Reconnect after a
       growing wait, and apply "Drain and remove".
       Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
-- [ ] Run each VM under the jailer in its own systemd unit, on a reflink
+- [x] Run each VM under the jailer in its own systemd unit, on a reflink
       copy of the image, with the internet and the machine cache only. My
       call: an agent restart then keeps the VMs.
       Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
@@ -275,6 +275,8 @@ ships through `futex-ai/cli-release`.
       Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
 - [ ] Test with fakes. Smoke-test a Docker job, a warm runner, and a restart
       during a job.
+      Orchestrator: align the image bundle, root/Docker disk allocation,
+      vsock port, and guest state/reconnect/shutdown behavior first.
       Orchestrator: run `crates/ciproxy-agent/scripts/smoke-docker.sh`,
       `crates/ciproxy-agent/scripts/smoke-warm.sh`, and
       `crates/ciproxy-agent/scripts/smoke-restart.sh` on the KVM test host

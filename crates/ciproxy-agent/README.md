@@ -22,6 +22,7 @@ This crate does not implement those components.
 A reinstall preserves the machine identity and its drain state.
 `ciproxy-agent run` starts the daemon.
 `ciproxy-agent uninstall` stops the daemon, finishes jobs, and removes it.
+Uninstall reclaims its image downloads and binary staging files.
 Uninstall does not revoke the registration in the hosted control plane.
 Use Remove in the dashboard to revoke the machine credential.
 
@@ -47,14 +48,24 @@ State contains the machine credential and VM ownership.
 It contains no one-use runner registration or install token.
 Each VM has a generated local ID and a separate systemd unit.
 The agent service does not own those units.
+Stopping the service also stops its preparation helpers.
 
 Each VM gets a reflink root disk and a new, formatted Docker disk.
 The two disks together use the disk size of the runner label.
 The Docker disk gets the label size minus the root image size.
 The agent discards both disks after the runner exits.
 VMs use the newest verified local image. Existing VMs keep their image.
+The image owner holds a selected base until VM preparation ends.
+It reclaims obsolete bases after publication and after a hold ends.
+Running VMs keep independent root and kernel copies.
+Runtime recovery reclaims abandoned downloads and interrupted removals.
+The store renames cache entries before it deletes their contents.
+An exclusive runtime lock protects this image folder.
+The install CLI only reads the index and never runs destructive recovery.
 Each VM reserves its full label disk, including a warm VM.
 The host and images keep one quarter of disk capacity.
+Admission and cache budgets use the shared protocol Resources API.
+Filesystem free bytes are a health measurement.
 
 A separate network namespace permits public IPv4 egress.
 It blocks IPv6, private networks, metadata addresses, and host access.
@@ -77,6 +88,14 @@ Installation on a host with only the documented hardware remains unfinished.
 
 ### Gateway, image, and cache integration
 
+The current image and guest need alignment before live smoke checks.
+The image producer uses a zstd bundle with metadata and a 60 GB root disk.
+Its guest uses vsock port 5252, accepts one connection, and does not emit
+`JobStarted`. It stops the runner on `Shutdown`.
+These behaviors do not yet meet the agent contract below.
+The guest must reconnect, report current job state, and preserve a job
+before it acknowledges shutdown. Those components need a separate change.
+
 The default route is `wss://app.ciproxy.dev/agent/`.
 `CIPROXY_AGENT_URL` can select a staging WSS route.
 The agent requires a valid TLS certificate.
@@ -88,17 +107,24 @@ It withdraws idle GitHub registrations before StopRunner, Drain, or Remove.
 It preserves runners to which GitHub has already assigned a job.
 JobFacts come from that authenticated gateway and the GitHub API.
 The agent matches their organization and job ID to its current runner.
+The gateway retains and replays StartRunner until RunnerReady.
+A matching Starting retry delivers ConfigureRunner to the existing VM.
+A retry cannot change the runner organization, label, or size.
 
 The gateway sends FetchImage with the newest image metadata.
 The HTTPS `.tar.gz` bundle contains exactly two regular files:
 `vmlinux` and `rootfs.ext4` at the archive root.
 The byte count and SHA-256 must match before extraction.
+Only a checked download can enter extraction.
+Only a complete checked bundle can become the newest image.
 The rootfs is an ext4 disk smaller than the requested label disk.
 The guest configures DNS and mounts `/dev/vdb` for Docker data.
 The guest listens on vsock port 52 with newline-delimited protocol JSON.
 It sends Hello with its image ID before runner configuration.
 On reconnect, it repeats Hello and its current runner state.
 It preserves a configured runner across that connection change.
+ConfigureRunner is idempotent for that same runner.
+A repeated registration never starts a second runner or replaces its job.
 Shutdown requests are graceful. The guest must preserve an already-taken job.
 The guest exits its runner before it reports RunnerExited.
 The agent retains VM ownership and disk space until that report or unit exit.
@@ -207,8 +233,14 @@ crates/ciproxy-agent/scripts/smoke-restart.sh
 Optional inputs are `CIPROXY_SMOKE_WORKFLOW` and `CIPROXY_SMOKE_STATE`.
 The restart check restarts the agent during a real Docker job.
 It checks the same VM process and a successful job result.
+It also requires a fresh accepted JobStarted observation from the new agent.
+The script filters structured JSON journal events by service invocation.
+The observation contains only the generated local VM ID.
 The warm check proves that the runner was ready before dispatch.
-It also checks a replacement warm VM.
+It snapshots every VM ID before dispatch, including Starting VMs.
+The replacement warm VM must have an ID absent from that snapshot.
+An active machine that never reaches warm readiness fails the check.
+The smoke host also needs journalctl.
 Each check waits for the used VM and disks to disappear.
 Evidence stays under `.context/ciproxy-mvp/`.
 Missing resources produce `SKIP` and exit 77. Failed checks exit 1.
@@ -220,7 +252,12 @@ Missing resources produce `SKIP` and exit 77. Failed checks exit 1.
 - [src/runtime.rs](src/runtime.rs) separates reports from command work.
 - [src/vms.rs](src/vms.rs) owns separate jailed VM units.
 - [src/vsock_stream.rs](src/vsock_stream.rs) delivers registrations in memory.
-- [src/images.rs](src/images.rs) verifies and publishes immutable images.
+- [src/images.rs](src/images.rs) coordinates checked image fetches.
+- [src/image_registry.rs](src/image_registry.rs) owns holds and reclamation.
+- [src/image_store.rs](src/image_store.rs) defines the mockable cache boundary.
+- [src/image_files.rs](src/image_files.rs) owns Linux image files and recovery.
+- [src/image_verification.rs](src/image_verification.rs) seals checked values.
+- [src/capacity.rs](src/capacity.rs) selects shared machine resources.
 - [scripts/](scripts/) contains real KVM and GitHub smoke checks.
 
 ### Related Docs

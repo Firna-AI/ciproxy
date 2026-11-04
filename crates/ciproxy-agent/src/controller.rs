@@ -10,6 +10,7 @@ use ciproxy_protocol::runners::RunnerState;
 use tokio::sync::Mutex;
 
 use crate::boundaries::{Cache, Host, Images, Store, Vms};
+use crate::capacity::machine_resources;
 use crate::error::Result;
 use crate::state::{MachineState, Mode};
 
@@ -42,20 +43,15 @@ impl Agent for Controller {
         for vm in owned {
             self.vms.restore(&vm).await?;
         }
-        let (mode, reserved) = {
+        let (mode, budget) = {
             let state = self.state.lock().await;
             (
                 state.mode,
-                state
-                    .runners
-                    .iter()
-                    .map(|vm| vm.report.size.disk_bytes)
-                    .sum::<u64>(),
+                machine_resources(&hardware)
+                    .available(state.runners.iter().map(|vm| vm.report.size))
+                    .job_disk_bytes,
             )
         };
-        let budget = hardware.disks.first().map_or(0, |disk| {
-            (disk.capacity_bytes.saturating_mul(3) / 4).saturating_sub(reserved)
-        });
         if let Err(error) = self.cache.budget(budget).await {
             tracing::warn!(error = %error, "cache budget unavailable; keep jobs running");
         }

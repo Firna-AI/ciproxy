@@ -12,7 +12,7 @@ pub(crate) struct SystemService;
 
 const UNIT_PATH: &str = "/etc/systemd/system/ciproxy-agent.service";
 const BINARY: &str = "/usr/local/bin/ciproxy-agent";
-const UNIT: &str = "[Unit]\nDescription=ciproxy machine agent\nAfter=network-online.target\nWants=network-online.target\n\n[Service]\nType=simple\nUser=root\nGroup=root\nEnvironmentFile=-/etc/ciproxy-agent/environment\nExecStart=/usr/local/bin/ciproxy-agent run\nRestart=on-failure\nRestartSec=5\nKillMode=process\nStateDirectory=ciproxy\nStateDirectoryMode=0700\nRuntimeDirectory=ciproxy-agent\nRuntimeDirectoryMode=0700\n\n[Install]\nWantedBy=multi-user.target\n";
+const UNIT: &str = "[Unit]\nDescription=ciproxy machine agent\nAfter=network-online.target\nWants=network-online.target\n\n[Service]\nType=simple\nUser=root\nGroup=root\nEnvironmentFile=-/etc/ciproxy-agent/environment\nExecStart=/usr/local/bin/ciproxy-agent run\nRestart=on-failure\nRestartSec=5\nKillMode=control-group\nStateDirectory=ciproxy\nStateDirectoryMode=0700\nRuntimeDirectory=ciproxy-agent\nRuntimeDirectoryMode=0700\n\n[Install]\nWantedBy=multi-user.target\n";
 
 impl Service for SystemService {
     fn install(&self) -> Result<()> {
@@ -30,6 +30,9 @@ impl Service for SystemService {
     }
 
     fn stop(&self) -> Result<()> {
+        if !fs::exists(UNIT_PATH).context("inspect owned agent unit")? {
+            return Ok(());
+        }
         let output = Command::new("systemctl")
             .args([
                 "show",
@@ -47,8 +50,15 @@ impl Service for SystemService {
 
     fn uninstall(&self) -> Result<()> {
         self.stop()?;
-        systemctl(&["disable", "ciproxy-agent.service"])?;
-        for path in [UNIT_PATH, BINARY] {
+        if fs::exists(UNIT_PATH).context("inspect owned agent unit")? {
+            systemctl(&["disable", "ciproxy-agent.service"])?;
+        }
+        for path in [
+            UNIT_PATH,
+            BINARY,
+            "/usr/local/bin/ciproxy-agent.pending",
+            "/usr/local/bin/ciproxy-agent.old",
+        ] {
             match fs::remove_file(path) {
                 Ok(()) => {}
                 Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
