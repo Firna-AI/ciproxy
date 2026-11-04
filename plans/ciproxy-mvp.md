@@ -470,6 +470,8 @@ the event both read the session, so the tier changes once.
 - [x] End the subscription of a workspace at the end of its period when
       its last organization leaves.
       Branch: `conductor/ciproxy-mvp-milestone-17-billing`.
+- [x] Apply the verified billing review fixes and rerun the complete gate.
+      Branch: `conductor/ciproxy-mvp-milestone-17-billing`.
 - [ ] Test each state with recorded events and the Stripe test mode.
       The fixed event fixtures and fake HTTP Stripe tests pass locally.
       Orchestrator: run the

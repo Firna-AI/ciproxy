@@ -9,24 +9,10 @@ use crate::catalog::PriceCode;
 use crate::error::{Error, Result, ResultExt};
 use crate::stripe::api::StripeApi;
 use crate::stripe::forms;
+use crate::stripe::wire::invoice::RetrievedInvoice;
 use crate::stripe::wire::types::{CheckoutSession, Subscription};
 
 use super::client::HttpStripe;
-
-#[derive(Deserialize)]
-struct InvoiceParent {
-    parent: Option<Parent>,
-}
-
-#[derive(Deserialize)]
-struct Parent {
-    subscription_details: Option<SubscriptionDetails>,
-}
-
-#[derive(Deserialize)]
-struct SubscriptionDetails {
-    subscription: String,
-}
 
 #[derive(Deserialize)]
 struct Portal {
@@ -76,15 +62,10 @@ impl StripeApi for HttpStripe {
         Ok(subscription)
     }
 
-    fn invoice_subscription(&self, invoice_id: &str) -> Result<Option<String>> {
-        let invoice = self
-            .get(&format!("/v1/invoices/{invoice_id}"), &[])?
-            .json::<InvoiceParent>()
-            .internal()?;
-        Ok(invoice
-            .parent
-            .and_then(|parent| parent.subscription_details)
-            .map(|details| details.subscription))
+    fn invoice(&self, invoice_id: &str) -> Result<RetrievedInvoice> {
+        self.get(&format!("/v1/invoices/{invoice_id}"), &[])?
+            .json::<RetrievedInvoice>()
+            .internal()
     }
 
     fn change(

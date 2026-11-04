@@ -42,6 +42,9 @@ A retry reads current items before it replays a paid change.
 A definite rejected mutation releases its command for corrected input.
 Failed reads, HTTP 409 or 429, server errors, and network errors keep it.
 Current object reads also prevent delayed events from restoring old state.
+Shared completion rules release paid commands when a subscription ends.
+A late end event preserves a new Checkout command.
+Direct paid commands reconcile an ended subscription before any mutation.
 State, command completion, and an event receipt commit in one transaction.
 The store creates the Free anchor when it creates the workspace.
 Confirmed paid bounds and later Free anchors are available to metering.
@@ -54,6 +57,14 @@ BillingApi::reconcile_removal for every result.
 Retry Busy and provider failures.
 The request stays durable during unfinished Checkout and failed HTTP calls.
 The paid tier and add-ons stay until Stripe actually ends the subscription.
+Billing tracks the failed renewal invoice independently of the upgrade invoice.
+It refreshes the renewal retry date through its own invoice read.
+A change saves a renewal seen before its Stripe mutation.
+A delayed failed-payment event can also supply the renewal reference.
+The upgrade invoice supplies only its payment page and change progress.
+Past-due subscriptions keep the failed-payment state while details arrive.
+An unpaid renewal keeps that state even after another charge succeeds.
+A paid renewal, or subscription end, clears its failure.
 Failed renewal dates come from signed invoice.payment_failed events.
 An invoice creation date is not a failed-payment date.
 The failed date can be absent until that event arrives.
@@ -172,7 +183,17 @@ The portal must offer no tier or quantity editor.
 Use Stripe test cards for failed charges and bank confirmation.
 Use a test-clock customer or Stripe's subscription simulation to exercise
 renewal retries, recovery, final failure, and the actual paid-period end.
-Check that failed upgrade attempts retain Team without a renewal banner.
+Check that a failed upgrade on an Active subscription retains Team.
+It must not create a renewal banner.
+Also fail a renewal, then attempt an upgrade before that renewal recovers.
+Keep the renewal banner and its failed-payment date after the upgrade invoice
+becomes latest, including after its unpaid update expires.
+Check that later renewal retries update the next-try date.
+Delay the renewal event until after the upgrade, then repeat its delivery.
+The renewal invoice and failure date must still appear.
+Pay the renewal and check that its banner clears.
+End a subscription with a paid command still pending.
+Check that a new Checkout opens and a late old end event preserves it.
 Check signed recordings and repeat deliveries through the listener.
 These browser and account steps need real Stripe test-mode credentials.
 An offline test result does not prove that they passed.
@@ -188,6 +209,9 @@ Never run this smoke script with a live key.
 
 - [src/service/api.rs](src/service/api.rs) owns the dyn BillingApi entry points.
 - [src/service/runtime.rs](src/service/runtime.rs) constructs BillingService.
+- [src/service/completion.rs](src/service/completion.rs) owns the rules for
+  command completion.
+- [src/service/renewal.rs](src/service/renewal.rs) refreshes failed renewals.
 - [src/stripe/api.rs](src/stripe/api.rs) owns the dyn StripeApi boundary.
 - [src/stripe/http/client.rs](src/stripe/http/client.rs) owns the HTTP adapter.
 - [src/webhook.rs](src/webhook.rs) verifies raw signatures and routes events.

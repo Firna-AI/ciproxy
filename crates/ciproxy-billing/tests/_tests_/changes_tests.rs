@@ -100,18 +100,27 @@ fn saved_addon_removal_prorates_at_once_and_lost_reply_does_not_replay_a_changed
         Err(Error::StripeHttp { status: 503 })
     ));
     assert_eq!(state(&database).add_ons.start_blocks, 2);
+    let mut second_change = subscription();
+    second_change.items.data.truncate(1);
+    fake.state
+        .lock()
+        .unwrap()
+        .next_subscriptions
+        .push_back(second_change);
     assert!(matches!(
-        service.change(access(), wanted(Tier::Team, 0, 1)).unwrap(),
-        ChangeOutcome::Applied(_)
+        service.change(access(), wanted(Tier::Team, 0, 0)),
+        Ok(ChangeOutcome::Applied(_))
     ));
     assert_eq!(state(&database).add_ons.start_blocks, 0);
     let posts = fake.posts("/v1/subscriptions/sub_recorded");
-    assert_eq!(posts.len(), 1);
+    assert_eq!(posts.len(), 2);
     assert_eq!(field(&posts[0], "proration_behavior"), "create_prorations");
     assert_eq!(field(&posts[0], "items[1][deleted]"), "true");
+    assert_eq!(field(&posts[1], "items[1][deleted]"), "true");
+    assert_eq!(state(&database).add_ons.machines, 0);
     assert_eq!(database.store.billing(workspace()).unwrap().command, None);
     assert!(matches!(
-        service.change(access(), wanted(Tier::Team, 0, 1)),
+        service.change(access(), wanted(Tier::Team, 0, 0)),
         Err(Error::CurrentTier)
     ));
     for status in [409, 429] {
@@ -134,14 +143,15 @@ fn saved_addon_removal_prorates_at_once_and_lost_reply_does_not_replay_a_changed
     ));
     assert_eq!(database.store.billing(workspace()).unwrap().command, None);
     let mut corrected = subscription();
-    corrected.items.data.truncate(1);
+    corrected.items.data.truncate(2);
+    corrected.items.data[1].quantity = 1;
     fake.state
         .lock()
         .unwrap()
         .next_subscriptions
         .push_back(corrected);
     assert!(matches!(
-        service.change(access(), wanted(Tier::Team, 0, 0)),
+        service.change(access(), wanted(Tier::Team, 1, 0)),
         Ok(ChangeOutcome::Applied(_))
     ));
 }
@@ -152,6 +162,12 @@ fn cancel_lost_reply_clears_claim_and_portal_undo_allows_later_paid_change() {
     seed_paid(&database);
     let fake = Fake::new(subscription());
     let service = service(&database, &fake, at());
+    fake.state.lock().unwrap().reject_next_mutation = Some(400);
+    assert!(matches!(
+        service.move_to_free(access()),
+        Err(Error::StripeRejected { status: 400 })
+    ));
+    assert_eq!(database.store.billing(workspace()).unwrap().command, None);
     let mut canceled = subscription();
     canceled.cancel_at_period_end = true;
     {
@@ -185,7 +201,7 @@ fn cancel_lost_reply_clears_claim_and_portal_undo_allows_later_paid_change() {
         ChangeOutcome::Applied(_)
     ));
     assert_eq!(state(&database).cancel_at, None);
-    assert_eq!(fake.posts("/v1/subscriptions/sub_recorded").len(), 2);
+    assert_eq!(fake.posts("/v1/subscriptions/sub_recorded").len(), 3);
 }
 
 #[test]

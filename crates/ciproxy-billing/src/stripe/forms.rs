@@ -19,7 +19,7 @@ pub(super) fn checkout(workspace: Uuid, command: &BillingCommand) -> Result<Vec<
     };
     Ok(vec![
         ("mode".into(), "subscription".into()),
-        ("payment_method_types[0]".into(), "card".into()),
+        ("allowed_payment_method_types[0]".into(), "card".into()),
         ("automatic_tax[enabled]".into(), "false".into()),
         ("tax_id_collection[enabled]".into(), "false".into()),
         ("success_url".into(), success_url.clone()),

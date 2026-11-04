@@ -67,3 +67,40 @@ pub enum CancelReason {
     #[serde(other)]
     Other,
 }
+
+/// A retrieved invoice with the ownership needed for renewal reconciliation.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct RetrievedInvoice {
+    /// The current invoice state, independent of subscription.latest_invoice.
+    #[serde(flatten)]
+    pub invoice: Invoice,
+    /// The customer that owes the invoice.
+    pub customer: String,
+    /// The subscription parent, absent for unrelated invoices.
+    pub parent: Option<InvoiceParent>,
+}
+
+/// The typed parent of a subscription invoice.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct InvoiceParent {
+    /// Subscription ownership, absent for another invoice parent kind.
+    pub subscription_details: Option<SubscriptionDetails>,
+}
+
+/// The subscription that generated this invoice.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct SubscriptionDetails {
+    /// The stable Stripe subscription identifier.
+    pub subscription: String,
+}
+
+impl RetrievedInvoice {
+    /// Return the subscription identifier without losing typed invoice state.
+    pub fn subscription_id(&self) -> Option<&str> {
+        self.parent
+            .as_ref()?
+            .subscription_details
+            .as_ref()
+            .map(|details| details.subscription.as_str())
+    }
+}

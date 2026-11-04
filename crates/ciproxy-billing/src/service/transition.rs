@@ -7,7 +7,9 @@ use ciproxy_store_interface::billing::state::{
 
 use crate::catalog::PriceCode;
 use crate::error::{Error, Result};
-use crate::stripe::wire::invoice::{BillingReason, CancelReason, InvoiceStatus};
+use crate::stripe::wire::invoice::CancelReason;
+
+use super::renewal::RenewalState;
 use crate::stripe::wire::types::{Status, Subscription};
 
 pub(super) fn selection(subscription: &Subscription) -> Result<Selection> {
@@ -48,6 +50,7 @@ pub(super) fn confirmed(
     old: &BillingState,
     current: &Subscription,
     now: DateTime<Utc>,
+    renewal: &RenewalState,
 ) -> Result<BillingState> {
     if current.metadata.workspace_id != Some(old.workspace_id)
         || old
@@ -60,7 +63,7 @@ pub(super) fn confirmed(
     let mut state = old.clone();
     state.customer_id = Some(current.customer.clone());
     state.subscription_id = Some(current.id.clone());
-    if matches!(current.status, Status::Canceled | Status::IncompleteExpired) {
+    if terminal(current) {
         if old.subscription_id.as_ref() != Some(&current.id)
             || old.status != SubscriptionState::Ended
         {
@@ -118,24 +121,23 @@ pub(super) fn confirmed(
         }
     });
     state.ended_banner_until = None;
-    let renewal_failed = matches!(current.status, Status::PastDue | Status::Unpaid)
-        && current.latest_invoice.as_ref().is_some_and(|invoice| {
-            invoice.billing_reason == BillingReason::SubscriptionCycle
-                && invoice.status != InvoiceStatus::Paid
-        });
-    if renewal_failed {
+    if let RenewalState::Failed(invoice) = renewal {
         state.status = SubscriptionState::PaymentFailed;
-        if let Some(invoice) = &current.latest_invoice {
-            state.failed_at = if old.failed_invoice_id.as_ref() == Some(&invoice.id) {
-                old.failed_at
-            } else {
-                None
-            };
-            state.failed_invoice_id = Some(invoice.id.clone());
-            state.next_retry_at = invoice.next_payment_attempt.map(timestamp).transpose()?;
-        }
+        state.failed_at = if old.failed_invoice_id.as_ref() == Some(&invoice.id) {
+            old.failed_at
+        } else {
+            None
+        };
+        state.failed_invoice_id = Some(invoice.id.clone());
+        state.next_retry_at = invoice.next_payment_attempt.map(timestamp).transpose()?;
     } else {
-        state.status = SubscriptionState::Active;
+        state.status = if matches!(renewal, RenewalState::Unknown)
+            && matches!(current.status, Status::PastDue | Status::Unpaid)
+        {
+            SubscriptionState::PaymentFailed
+        } else {
+            SubscriptionState::Active
+        };
         state.failed_at = None;
         state.failed_invoice_id = None;
         state.next_retry_at = None;
@@ -145,4 +147,8 @@ pub(super) fn confirmed(
 
 fn timestamp(seconds: i64) -> Result<DateTime<Utc>> {
     DateTime::from_timestamp(seconds, 0).ok_or(Error::StripeState)
+}
+
+pub(super) fn terminal(current: &Subscription) -> bool {
+    matches!(current.status, Status::Canceled | Status::IncompleteExpired)
 }

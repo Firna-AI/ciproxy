@@ -8,10 +8,10 @@ use uuid::Uuid;
 
 use crate::access::BillingAccess;
 use crate::error::{Error, Result, ResultExt};
-use crate::stripe::wire::invoice::InvoiceStatus;
 
+use super::completion::{Completion, classify};
 use super::runtime::BillingService;
-use super::transition::{confirmed, selection};
+use super::transition::{selection, terminal};
 use super::view::ChangeOutcome;
 
 impl BillingService {
@@ -26,27 +26,40 @@ impl BillingService {
             return Err(Error::SubscriptionRequired);
         }
         let current = self.current_subscription(&record.state)?;
-        let already_applied = record.command.as_ref().is_some_and(|command| {
-            matches!(command.kind, CommandKind::Change { selection: wanted, .. }
-                if selection(&current).is_ok_and(|actual| actual == wanted))
-                && current.pending_update.is_none()
-        });
-        let expired = !already_applied
-            && record.command.as_ref().is_some_and(|command| {
-                matches!(command.kind, CommandKind::Change { .. })
-                    && current.pending_update.is_none()
-                    && (command
-                        .payment_expires_at
-                        .is_some_and(|at| at <= self.clock.now())
-                        || current.latest_invoice.as_ref().is_some_and(|invoice| {
-                            invoice.created >= command.started_at.timestamp()
-                                && matches!(
-                                    invoice.status,
-                                    InvoiceStatus::Void | InvoiceStatus::Uncollectible
-                                )
-                        }))
+        let baseline = self.confirmed_state(&record.state, &current, None)?;
+        let progress = record
+            .command
+            .as_ref()
+            .map(|command| classify(command, &current, self.clock.now()));
+        session
+            .commit(
+                Some(&baseline),
+                None,
+                progress.is_some_and(Completion::finished),
+                false,
+                self.clock.now(),
+            )
+            .internal()?;
+        if terminal(&current) {
+            return Err(Error::SubscriptionRequired);
+        }
+        let original_retry = record
+            .command
+            .as_ref()
+            .is_some_and(|command| match command.kind {
+                CommandKind::Change { selection, .. } => {
+                    selection == wanted && progress == Some(Completion::Applied)
+                }
+                CommandKind::Cancel | CommandKind::Checkout { .. } => false,
             });
-        let mut command = match record.command.as_ref().filter(|_| !expired) {
+        if original_retry {
+            return Ok(ChangeOutcome::Applied(baseline));
+        }
+        let mut command = match record
+            .command
+            .as_ref()
+            .filter(|_| !progress.is_some_and(Completion::finished))
+        {
             Some(command) if matches!(command.kind, CommandKind::Change { selection, .. } if selection == wanted) => {
                 command.clone()
             }
@@ -61,7 +74,7 @@ impl BillingService {
                     payment_expires_at: None,
                     kind: CommandKind::Change {
                         selection: wanted,
-                        upgrade: record.state.tier == Tier::Team && wanted.tier == Tier::Business,
+                        upgrade: baseline.tier == Tier::Team && wanted.tier == Tier::Business,
                     },
                 };
                 session.save_command(&command).internal()?;
@@ -73,25 +86,31 @@ impl BillingService {
         } else {
             match self.stripe.change(&current, wanted, &command) {
                 Ok(current) => current,
-                Err(Error::StripeRejected { status }) => {
-                    session
-                        .commit(None, None, true, false, self.clock.now())
-                        .internal()?;
-                    return Err(Error::StripeRejected { status });
+                Err(error) => {
+                    self.release_rejected(&mut *session, &error)?;
+                    return Err(error);
                 }
-                Err(error) => return Err(error),
             }
         };
         if let Some(pending) = &current.pending_update {
             command.payment_expires_at = DateTime::from_timestamp(pending.expires_at, 0);
             session.save_command(&command).internal()?;
         }
-        let state = confirmed(&record.state, &current, self.clock.now())?;
-        let applied = current.pending_update.is_none() && selection(&current)? == wanted;
+        let state = self.confirmed_state(&baseline, &current, None)?;
+        let progress = classify(&command, &current, self.clock.now());
         session
-            .commit(Some(&state), None, applied, false, self.clock.now())
+            .commit(
+                Some(&state),
+                None,
+                progress.finished(),
+                false,
+                self.clock.now(),
+            )
             .internal()?;
-        if applied {
+        if progress == Completion::Ended {
+            return Err(Error::SubscriptionRequired);
+        }
+        if progress == Completion::Applied {
             return Ok(ChangeOutcome::Applied(state));
         }
         Ok(ChangeOutcome::PaymentRequired {
@@ -134,29 +153,25 @@ impl BillingService {
 
     fn cancel_subscription(&self, session: &mut dyn BillingSession, removal: bool) -> Result<()> {
         let record = session.record().internal()?;
-        let id = record
-            .state
-            .subscription_id
-            .as_deref()
-            .ok_or(Error::SubscriptionRequired)?;
         let current = self.current_subscription(&record.state)?;
-        if current.cancel_at_period_end {
-            let state = confirmed(&record.state, &current, self.clock.now())?;
-            session
-                .commit(
-                    Some(&state),
-                    None,
-                    matches!(
-                        record.command.as_ref().map(|command| &command.kind),
-                        Some(CommandKind::Cancel)
-                    ),
-                    removal,
-                    self.clock.now(),
-                )
-                .internal()?;
+        let baseline = self.confirmed_state(&record.state, &current, None)?;
+        let completed = record
+            .command
+            .as_ref()
+            .is_some_and(|command| classify(command, &current, self.clock.now()).finished());
+        session
+            .commit(
+                Some(&baseline),
+                None,
+                completed,
+                removal && (terminal(&current) || current.cancel_at_period_end),
+                self.clock.now(),
+            )
+            .internal()?;
+        if terminal(&current) || current.cancel_at_period_end {
             return Ok(());
         }
-        let command = match &record.command {
+        let command = match record.command.as_ref().filter(|_| !completed) {
             Some(command) if matches!(command.kind, CommandKind::Cancel) => command.clone(),
             Some(command) if matches!(command.kind, CommandKind::Checkout { .. }) => {
                 return Err(Error::PaymentConfirming);
@@ -172,10 +187,22 @@ impl BillingService {
                 command
             }
         };
-        let current = self.stripe.cancel(id, command.id)?;
-        let state = confirmed(&record.state, &current, self.clock.now())?;
+        let current = match self.stripe.cancel(&current.id, command.id) {
+            Ok(current) => current,
+            Err(error) => {
+                self.release_rejected(session, &error)?;
+                return Err(error);
+            }
+        };
+        let state = self.confirmed_state(&baseline, &current, None)?;
         session
-            .commit(Some(&state), None, true, removal, self.clock.now())
+            .commit(
+                Some(&state),
+                None,
+                classify(&command, &current, self.clock.now()).finished(),
+                removal,
+                self.clock.now(),
+            )
             .internal()
     }
 }

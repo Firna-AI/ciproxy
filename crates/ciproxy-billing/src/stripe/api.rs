@@ -7,6 +7,7 @@ use uuid::Uuid;
 
 use crate::error::Result;
 
+use super::wire::invoice::RetrievedInvoice;
 use super::wire::types::{CheckoutSession, Subscription};
 
 /// The provider operations used by billing orchestration.
@@ -25,8 +26,8 @@ pub trait StripeApi: Send + Sync {
     fn checkout_session(&self, session_id: &str) -> Result<CheckoutSession>;
     /// Retrieve current subscription with items and latest invoice expanded.
     fn subscription(&self, subscription_id: &str) -> Result<Subscription>;
-    /// Read the current invoice parent for verified invoice-event routing.
-    fn invoice_subscription(&self, invoice_id: &str) -> Result<Option<String>>;
+    /// Retrieve a current invoice and its customer and subscription ownership.
+    fn invoice(&self, invoice_id: &str) -> Result<RetrievedInvoice>;
     /// Replace paid items with proration and payment-gated upgrades.
     fn change(
         &self,

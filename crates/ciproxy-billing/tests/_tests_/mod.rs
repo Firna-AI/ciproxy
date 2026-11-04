@@ -8,4 +8,6 @@ mod fixture;
 mod http_tests;
 mod ownership_tests;
 mod removal_tests;
+mod renewal_upgrade_tests;
 mod states_tests;
+mod terminal_tests;

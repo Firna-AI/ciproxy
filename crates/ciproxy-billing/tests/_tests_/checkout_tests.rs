@@ -57,7 +57,21 @@ fn checkout_lost_reply_and_concurrent_callers_keep_one_session_until_confirmatio
     );
     let post = fake.posts("/v1/checkout/sessions");
     assert_eq!(post.len(), 1);
-    assert_eq!(field(&post[0], "payment_method_types[0]"), "card");
+    assert_eq!(
+        post[0]
+            .form
+            .iter()
+            .find(|(key, _)| key == "allowed_payment_method_types[0]")
+            .map(|(_, value)| value.as_str()),
+        Some("card")
+    );
+    assert!(
+        !post[0]
+            .form
+            .iter()
+            .any(|(key, _)| key == "payment_method_types"
+                || key.starts_with("payment_method_types["))
+    );
     assert_eq!(field(&post[0], "automatic_tax[enabled]"), "false");
     assert_eq!(field(&post[0], "line_items[0][price]"), "price_team");
     assert_eq!(field(&post[0], "line_items[1][quantity]"), "2");

@@ -9,7 +9,6 @@ use crate::error::{Error, Result, ResultExt};
 use crate::stripe::wire::types::{CheckoutSession, CheckoutStatus, PaymentStatus};
 
 use super::runtime::BillingService;
-use super::transition::confirmed;
 use super::view::CheckoutOutcome;
 
 impl BillingService {
@@ -57,13 +56,10 @@ impl BillingService {
                 .checkout(workspace, record.state.customer_id.as_deref(), &command)
             {
                 Ok(current) => current,
-                Err(Error::StripeRejected { status }) => {
-                    session
-                        .commit(None, None, true, false, self.clock.now())
-                        .internal()?;
-                    return Err(Error::StripeRejected { status });
+                Err(error) => {
+                    self.release_rejected(&mut *session, &error)?;
+                    return Err(error);
                 }
-                Err(error) => return Err(error),
             };
         session
             .save_checkout(&CheckoutProgress {
@@ -129,7 +125,7 @@ impl BillingService {
         if subscription.id != id || current.customer.as_ref() != Some(&subscription.customer) {
             return Err(Error::Ownership);
         }
-        let state = confirmed(&record.state, &subscription, now)?;
+        let state = self.confirmed_state(&record.state, &subscription, None)?;
         let changed = if state != record.state {
             Some(&state)
         } else {

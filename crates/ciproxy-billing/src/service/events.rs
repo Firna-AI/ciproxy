@@ -1,14 +1,13 @@
 //! Signed events refresh current Stripe objects under the workspace lock.
 
 use chrono::DateTime;
-use ciproxy_store_interface::billing::commands::CommandKind;
 use ciproxy_store_interface::billing::state::SubscriptionState;
 
 use crate::error::{Error, Result, ResultExt};
 use crate::webhook::{Payload, parse};
 
+use super::completion::classify;
 use super::runtime::BillingService;
-use super::transition::{confirmed, selection};
 use super::view::EventOutcome;
 
 impl BillingService {
@@ -38,13 +37,14 @@ impl BillingService {
                 )
             }
             Payload::Invoice(object) | Payload::InvoiceFailed(object) => {
-                let Some(id) = self.stripe.invoice_subscription(&object.object.id)? else {
+                let invoice = self.stripe.invoice(&object.object.id)?;
+                let Some(id) = invoice.subscription_id() else {
                     return Ok(EventOutcome::Ignored);
                 };
-                let current = self.stripe.subscription(&id)?;
+                let current = self.stripe.subscription(id)?;
                 (
                     current.metadata.workspace_id.ok_or(Error::Ownership)?,
-                    id,
+                    id.to_owned(),
                     false,
                 )
             }
@@ -75,7 +75,8 @@ impl BillingService {
                 .internal()?;
             return Ok(EventOutcome::Ignored);
         }
-        let mut state = confirmed(&record.state, &current, self.clock.now())?;
+        let mut state =
+            self.confirmed_state(&record.state, &current, failure_invoice.as_deref())?;
         if state.status == SubscriptionState::PaymentFailed
             && failure_invoice.as_ref() == state.failed_invoice_id.as_ref()
         {
@@ -90,19 +91,7 @@ impl BillingService {
         let complete = record
             .command
             .as_ref()
-            .is_some_and(|command| match command.kind {
-                CommandKind::Change {
-                    selection: wanted, ..
-                } => {
-                    current.pending_update.is_none()
-                        && (selection(&current).is_ok_and(|actual| actual == wanted)
-                            || command
-                                .payment_expires_at
-                                .is_some_and(|at| at <= self.clock.now()))
-                }
-                CommandKind::Cancel => current.cancel_at_period_end,
-                _ => false,
-            });
+            .is_some_and(|command| classify(command, &current, self.clock.now()).finished());
         session
             .commit(
                 Some(&state),

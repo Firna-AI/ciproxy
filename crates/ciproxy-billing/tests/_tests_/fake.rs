@@ -4,6 +4,7 @@ use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 
+use ciproxy_billing::stripe::wire::invoice::Invoice;
 use ciproxy_billing::stripe::wire::types::{CheckoutSession, Subscription};
 use serde_json::json;
 use tiny_http::{Response, Server};
@@ -20,6 +21,7 @@ pub(super) struct Request {
 pub(super) struct State {
     pub(super) checkout: Option<CheckoutSession>,
     pub(super) subscription: Subscription,
+    pub(super) invoices: Vec<Invoice>,
     pub(super) next_subscriptions: VecDeque<Subscription>,
     pub(super) requests: Vec<Request>,
     pub(super) lose_next_post: bool,
@@ -43,6 +45,7 @@ impl Fake {
             checkout: None,
             subscription,
             next_subscriptions: VecDeque::new(),
+            invoices: Vec::new(),
             requests: Vec::new(),
             lose_next_post: false,
             reject_next_mutation: None,
@@ -145,9 +148,27 @@ fn handle(state: &mut State, request: &Request) -> (u16, String) {
                 serde_json::to_string(state.checkout.as_ref().unwrap()).unwrap()
             }
             "/v1/subscriptions/sub_recorded" => serde_json::to_string(&state.subscription).unwrap(),
-            "/v1/invoices/in_recorded" => {
-                json!({"parent":{"subscription_details":{"subscription":"sub_recorded"}}})
-                    .to_string()
+            path if path.starts_with("/v1/invoices/") => {
+                let id = path.strip_prefix("/v1/invoices/").unwrap();
+                let invoice = state
+                    .invoices
+                    .iter()
+                    .find(|invoice| invoice.id == id)
+                    .or_else(|| {
+                        state
+                            .subscription
+                            .latest_invoice
+                            .as_ref()
+                            .filter(|invoice| invoice.id == id)
+                    });
+                let Some(invoice) = invoice else {
+                    return (404, "{}".into());
+                };
+                let mut body = serde_json::to_value(invoice).unwrap();
+                body["customer"] = json!(state.subscription.customer);
+                body["parent"] =
+                    json!({"subscription_details":{"subscription":state.subscription.id}});
+                body.to_string()
             }
             _ => return (404, "{}".into()),
         }
