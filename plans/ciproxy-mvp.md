@@ -492,6 +492,10 @@ The public copy goes live before the site, because the site links to it.
 - [ ] Ask Boat to confirm in writing that a customer may run ciproxy
       runners on its own Boat account. The user sends the request. My call:
       the terms allow this use by inference only.
+- [ ] Check the three prices of the cost claim and the GitHub charge for
+      self-hosted runners again. Update the price list of the site and its
+      date. Reason: GitHub only postponed a charge of $0.002 a minute, which
+      would lower the claim to about 54%.
 - [ ] Publish the site. Then make the GitHub App public.
 
 ## Milestone 28: Verification, commit, review, and pull request
@@ -512,6 +516,12 @@ The gate, the review, and the pull request stay with the orchestrator.
 - [ ] Open the pull request. Its description gives the decisions and the
       design calls of this plan with their dates, a permalink to this plan,
       and the follow-up items that the change adds.
+
+## Post-merge follow-up (non-blocking)
+
+- [ ] Check the prices of the cost claim each month after the launch, and
+      update the price list of the site and its date. My call of 4 November
+      2026: the claim names its date, so a monthly check keeps it true.
 
 ## Open decisions
 

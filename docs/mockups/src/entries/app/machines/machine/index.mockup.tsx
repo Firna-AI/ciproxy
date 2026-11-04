@@ -1,6 +1,7 @@
 import { defineScreen } from "@mokly/mokly";
 
-import { planDoc, stateSchema } from "../../../../components/state-schema.ts";
+import { related } from "../../../../components/related-docs.ts";
+import { stateSchema } from "../../../../components/state-schema.ts";
 import { orgAddress } from "../../../../fixtures/org.ts";
 import {
   MachineDetailScreen,
@@ -11,7 +12,7 @@ export const machine = defineScreen({
   title: "Machine detail",
   description:
     "hetzner-ax42-1 with what runs in each slot, its warm runner count, health checks, cache use with Clear cache, and the monthly cost that the savings report uses.",
-  relatedDocs: [planDoc],
+  relatedDocs: related("agent", "jobRouting", "cache", "metering"),
   address: orgAddress("machines/hetzner-ax42-1"),
   propSchema: stateSchema(machineStates),
   props: { state: "healthy" },

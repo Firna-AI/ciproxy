@@ -1,7 +1,8 @@
 import { defineScreen } from "@mokly/mokly";
 
 import { paths } from "../../../components/paths.ts";
-import { planDoc, stateSchema } from "../../../components/state-schema.ts";
+import { related } from "../../../components/related-docs.ts";
+import { stateSchema } from "../../../components/state-schema.ts";
 import { host } from "../../../fixtures/org.ts";
 import { InstallAppScreen } from "../../../screens/auth/install-app.tsx";
 
@@ -11,7 +12,7 @@ export const installApp = defineScreen({
     "After the first sign-in, before any organization uses ciproxy. Install on GitHub opens the GitHub page that picks the organization and its repositories, then returns to setup.",
   rationale:
     "GitHub owns the choice of organization and repositories, so ciproxy shows only what the app asks for and hands over to GitHub.",
-  relatedDocs: [planDoc],
+  relatedDocs: related("security"),
   address: `${host}/install`,
   useCasePaths: [paths.flowFirstGreenJob],
   propSchema: stateSchema(["install", "pending-approval"]),

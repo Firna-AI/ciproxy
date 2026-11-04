@@ -65,27 +65,6 @@
   line-height: 36px;
 }
 
-.tier-features {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.tier-features li {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.tier-check {
-  margin-top: 2px;
-  color: var(--c-ink2);
-  flex-shrink: 0;
-}
-
 .tier-addons {
   margin-top: auto;
   padding-top: 10px;

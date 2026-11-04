@@ -51,19 +51,33 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   text links.
 - Notes for reviewers go in the `description` and `rationale` of an entry,
   never inside the rendered screen.
+- Each entry names the protocol docs of its screens in `relatedDocs`, through
+  `related()` of `src/components/related-docs.ts`, which adds the plan.
 - Fixture data lives in `src/fixtures/`. It tells one story: mokly-ai signs up
   on 1 September 2026, passes the Free starts on 4 September, moves to Team
   that day, and runs three Hetzner AX42 machines with Boat overflow from
   mid-September. The November screens show the busy Team organization, and the
   December screens the payment problems. Each tier counts only the starts of
   its own period, which begins on the day the tier begins. Cal Moore installs
-  the GitHub App, so he is the first Admin.
+  the GitHub App, so he is the first Admin. `members.ts` names the person of
+  each role, the owner with the Billing role, and the Admin without the GitHub
+  runner right.
+- A screen takes the role of the signed-in person. The shell shows the person
+  of the role, and Settings only to an Admin. In place of an action that the
+  role does not allow, the screen shows the words of
+  `src/components/role-actions.tsx`, such as "Ask an Admin".
 - The public site has two sections: Marketing, with the landing page and the
   pricing page, and Docs, in the structure of Starlight: the sidebar of
   sections, the top bar with search, the article, and "On this page". Both
-  share the site top bar, on the domain `ciproxy.dev`. The
-  landing page shows real numbers from the fixtures and no customer logos,
-  quotes, or press.
+  share the site top bar, on the domain `ciproxy.dev`. Every button that opens
+  sign-in says "Start free". The landing page shows no customer logos, quotes,
+  or press. Its cost claim uses no sample of an organization: `cost-claim.ts`
+  computes every number from the list prices in `price-lists.ts`, each with
+  its source and the day it was checked.
+- Each tier feature has one record in `tiers.ts`, with its first tier and
+  whether it ships at launch. Every page that lists a feature reads the record,
+  and a feature that ships later says "Coming later", through
+  `src/components/tier-feature-list.tsx`.
 - One value has one format: `src/fixtures/format.ts` holds the money, count,
   and date formats, and `unbroken()` keeps a short value such as a date on one
   line.
@@ -132,7 +146,8 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   and a top bar with the organization and the page as breadcrumbs on desktop,
   and a top bar with tabs on mobile, with the banner slot for soft-limit and
   payment warnings. It shows the signed-in person, and Settings only to an
-  Admin.
+  Admin. The avatar opens the account menu of `account-menu.tsx`, where an
+  owner with the Billing or the Viewer role claims the Admin role.
 - `src/components/`: the shared parts, such as the dense `DataTable`, the
   figure strip in `kpis.tsx`, the status dots and tags in `status.tsx`, and the
   starts chart.
@@ -143,9 +158,12 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   which every connection of Boat asks for, in setup and in Settings.
 - `src/fixtures/sizes.ts`: the size of a label as text, and the sizes that the
   Boat account can start, which decide where the jobs of a label run.
-- `src/fixtures/site.ts`: the host of the public site and the
-  worked example of the landing page; `plan-compare.ts` holds the feature
-  comparison of the pricing page, from the tiers in `tiers.ts`.
+- `src/fixtures/site.ts`: the host of the public site. `cost-claim.ts` holds
+  the cost claim of the landing page and its calculation, `plan-choice.ts` the
+  cheapest plan that covers a use, and `plan-compare.ts` the feature
+  comparison of the pricing page, from the tier features in `tiers.ts`.
+- `src/fixtures/job-details.ts`: the jobs of the job page, with the label, the
+  Boat size that ran a job on Boat, and the cache source and counts.
 - `src/components/state-schema.ts`: the closed prop schema of a screen whose
   states differ by one `state` prop.
 - `src/screens/`: one component per screen, by area.
@@ -157,6 +175,8 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
 
 ### Related Docs
 
+- [The protocol docs](../protocol/) hold the requirements that the screens
+  show, and the entries name them in `relatedDocs`.
 - [The plan of the MVP foundation](../../plans/ciproxy-mvp-foundation.md)
-  holds the decisions that the screens show. The entries name it in
-  `relatedDocs` until the protocol docs exist.
+  holds the decisions that the docs do not, such as the claims of the public
+  site.

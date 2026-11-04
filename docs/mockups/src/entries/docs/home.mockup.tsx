@@ -1,6 +1,7 @@
 import { defineScreen } from "@mokly/mokly";
 
-import { planDoc, stateSchema } from "../../components/state-schema.ts";
+import { related } from "../../components/related-docs.ts";
+import { stateSchema } from "../../components/state-schema.ts";
 import { siteAddress } from "../../fixtures/site.ts";
 import {
   DocsHomeScreen,
@@ -13,7 +14,7 @@ export const docsHome = defineScreen({
     "The first page of the docs at ciproxy.dev/docs: what ciproxy does, cards to the main pages, how a job runs, and what a team needs.",
   rationale:
     "The Starlight structure, themed with the Graphite tokens: the sidebar of sections, the top bar with search, the article, and On this page. The page in the sidebar takes a soft fill, as in the dashboard sidebar.",
-  relatedDocs: [planDoc],
+  relatedDocs: related("architecture"),
   address: siteAddress("docs"),
   propSchema: stateSchema(docsHomeStates),
   props: { state: "page" },

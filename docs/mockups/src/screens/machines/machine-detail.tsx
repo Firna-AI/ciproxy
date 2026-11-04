@@ -1,6 +1,7 @@
 // One own machine: its slots and warm runners, health, cache, and the monthly
 // cost that the savings report uses. A machine without KVM connects with no
-// slots, so it cannot run jobs, and the page names the fix.
+// slots, so it cannot run jobs, and the page names the fix. Every role sees
+// the machine; only an Admin drains, removes, or changes it.
 
 import { Pencil } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -13,14 +14,18 @@ import { PageHeader, Panel } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
 import { AppShell } from "../../components/shell/app-shell.tsx";
 import { MachineStatusLabel } from "../../components/status.tsx";
-import { dotJoin, monthly, unbroken } from "../../fixtures/format.ts";
+import { dotJoin, monthly } from "../../fixtures/format.ts";
 import {
   ax42,
   ax42Size,
   machineScenes,
+  offlineFor,
+  slotSize,
   type Machine,
   type MachineScene,
 } from "../../fixtures/machines.ts";
+import type { Role } from "../../fixtures/members.ts";
+import { sizePhrase } from "../../fixtures/sizes.ts";
 import { ClearCacheDialog, MachineCache } from "./machine-cache.tsx";
 import { MachineHealth } from "./machine-health.tsx";
 import { MachineSlots } from "./machine-slots.tsx";
@@ -66,41 +71,48 @@ function HeaderActions({ state }: { state: MachineState }) {
 export function MachineDetailScreen({
   viewport,
   state,
+  role = "admin",
 }: {
   viewport: Viewport;
   state: MachineState;
+  /** The role of the signed-in person: only an Admin changes the machine. */
+  role?: Role;
 }) {
   const machine = machineOf(state);
   const offline = state === "offline";
   const noSlots = machine.slots.length === 0;
+  const admin = role === "admin";
+  const finishing = machine.slots.filter((slot) => slot === "busy").length;
   return (
-    <AppShell viewport={viewport} tier="team" active="machines">
+    <AppShell viewport={viewport} tier="team" active="machines" role={role}>
       <PageHeader
         crumbs={[{ label: "Machines", to: paths.machines }]}
         title={machine.name}
         status={<MachineStatusLabel status={machine.status} />}
         subtitle={dotJoin(ax42.cpu, ax42Size, ax42.disk)}
-        actions={<HeaderActions state={state} />}
+        actions={admin ? <HeaderActions state={state} /> : undefined}
       />
       {state === "draining" ? (
         <Notice tone="warning" title="Draining">
-          3 jobs are finishing. The machine takes no new jobs, and it keeps no
-          warm runners.
+          {finishing} jobs are finishing. The machine takes no new jobs, and it
+          keeps no warm runners.
         </Notice>
       ) : null}
       {offline ? (
         <Notice tone="danger" title={`${machine.name} is offline`}>
-          ciproxy lost contact with it {unbroken("14 minutes")} ago. Check that
-          the machine is on and can reach ciproxy.dev.
+          ciproxy lost contact with it {offlineFor} ago. Check that the machine
+          is on and can reach ciproxy.dev.
         </Notice>
       ) : null}
       {state === "no-slots" ? (
         <NoKvmNotice
           name={machine.name}
           actions={
-            <LinkAction to={paths.addMachine} size="sm">
-              Show install command
-            </LinkAction>
+            admin ? (
+              <LinkAction to={paths.addMachine} size="sm">
+                Show install command
+              </LinkAction>
+            ) : undefined
           }
         />
       ) : null}
@@ -113,29 +125,32 @@ export function MachineDetailScreen({
             <SlotsBody machine={machine} />
             {noSlots ? null : (
               <p className="caption">
-                {ax42.slotsTotal} slots of {unbroken("2 vCPU")} and{" "}
-                {unbroken("8 GB")}. A larger VM size takes several slots.
+                {ax42.slotsTotal} slots of {sizePhrase(slotSize)}. A larger VM
+                size takes several slots.
               </p>
             )}
             <Quantity
               label="Warm runners"
               value={machine.status === "healthy" ? machine.warmTarget : 0}
               caption="Ready for the next job when a slot is free"
+              readOnly={!admin}
             />
           </div>
         </Panel>
         <div className="stack">
           <MachineHealth machine={machine} />
-          <MachineCache machine={machine} />
+          <MachineCache machine={machine} canClear={admin} />
           <Panel title="Cost">
             <div className="spread">
               <div className="stack-tight">
                 <p className="strong num">{monthly(ax42.monthlyCost)}</p>
                 <p className="caption">The savings report uses this cost.</p>
               </div>
-              <Action icon={Pencil} size="sm">
-                Edit
-              </Action>
+              {admin ? (
+                <Action icon={Pencil} size="sm">
+                  Edit
+                </Action>
+              ) : null}
             </div>
           </Panel>
         </div>

@@ -1,35 +1,40 @@
-// The cost comparison: one real month of the Linux CI of mokly-ai, with
-// ciproxy against the same jobs on Blacksmith and on GitHub-hosted runners,
-// and what the ciproxy total is made of. The values are the savings report's.
+// The cost comparison of the landing page: one new Hetzner AX42 at its list
+// price that runs jobs in every minute of a month, against the same job
+// minutes on Blacksmith and on GitHub-hosted runners. Every number comes from
+// fixtures/cost-claim.ts. A small caption names the basis and links to the
+// calculation, a question of the pricing page.
 
+import { TextLink } from "../../components/actions.tsx";
+import { paths } from "../../components/paths.ts";
+import { costClaim } from "../../fixtures/cost-claim.ts";
 import {
-  formatCount,
   formatMoney,
   formatMoneyCents,
+  unbroken,
 } from "../../fixtures/format.ts";
-import { ax42 } from "../../fixtures/machines.ts";
-import { savings, yourCost } from "../../fixtures/savings.ts";
-import { reference } from "../../fixtures/site.ts";
-import { ownMachines, tiers } from "../../fixtures/tiers.ts";
+import { planChoiceText } from "../../fixtures/plan-choice.ts";
+import { listPrices } from "../../fixtures/price-lists.ts";
+import { savingId } from "./saving-calculation.tsx";
 import { Section, SectionHead } from "./section.tsx";
 import "./cost.css";
 
 type Bar = { label: string; value: number; accent: boolean };
 
 const bars: readonly Bar[] = [
-  { label: "With ciproxy", value: yourCost, accent: true },
-  {
-    label: "Blacksmith",
-    value: savings.alternatives.blacksmith,
+  { label: "With ciproxy", value: costClaim.withCiproxy, accent: true },
+  ...costClaim.alternatives.map((alternative) => ({
+    label: alternative.name,
+    value: alternative.cost,
     accent: false,
-  },
-  { label: "GitHub-hosted", value: savings.alternatives.github, accent: false },
+  })),
 ];
 
 const parts: readonly { label: string; value: number }[] = [
-  { label: ownMachines(3), value: savings.cost.own },
-  { label: "Boat overflow", value: savings.cost.boat },
-  { label: `ciproxy ${tiers.team.name}`, value: savings.cost.plan },
+  { label: costClaim.machine, value: listPrices.machine.amount },
+  {
+    label: `ciproxy ${planChoiceText(costClaim.plan)}`,
+    value: costClaim.plan.price,
+  },
 ];
 
 function CostBars() {
@@ -37,7 +42,7 @@ function CostBars() {
   return (
     <figure
       className="cost-chart"
-      aria-label="Cost of the same jobs in 30 days"
+      aria-label="Cost of the same job minutes in a month"
     >
       {bars.map((bar) => (
         <div key={bar.label} className="cost-row">
@@ -47,7 +52,7 @@ function CostBars() {
           <span className="cost-track">
             <span
               className={`cost-fill${bar.accent ? " is-accent" : ""}`}
-              style={{ width: `calc((100% - 72px) * ${bar.value / max})` }}
+              style={{ width: `calc((100% - 88px) * ${bar.value / max})` }}
             />
             <span className="cost-value num">{formatMoney(bar.value)}</span>
           </span>
@@ -58,20 +63,26 @@ function CostBars() {
 }
 
 export function CostCompare() {
-  const saved = savings.alternatives.blacksmith - yourCost;
   return (
     <Section className="cost">
       <SectionHead
         eyebrow="Cost"
-        title="The same jobs for less than half the price"
-        lead={`The Linux CI of ${reference.org} in 30 days: ${formatCount(reference.jobs)} jobs, with up to ${reference.peakJobs} at once.`}
+        title={`The same jobs for up to ${costClaim.upToPercent}% less`}
+        lead={
+          <>
+            Your own machine against the same job minutes on Blacksmith and on{" "}
+            <span className="nowrap">GitHub-hosted</span> runners.
+          </>
+        }
       />
       <div className="cost-panel">
         <div className="cost-main">
           <p className="cost-saved">
-            <span className="cost-saved-value num">{formatMoney(saved)}</span>
+            <span className="cost-saved-value num">
+              {formatMoney(costClaim.saved)}
+            </span>
             <span className="cost-saved-text">
-              a month less than Blacksmith
+              a month less than {costClaim.cheaper.runners}
             </span>
           </p>
           <CostBars />
@@ -85,14 +96,17 @@ export function CostCompare() {
           ))}
           <div className="cost-part is-total">
             <dt>Total with ciproxy</dt>
-            <dd className="num">{formatMoneyCents(yourCost)}</dd>
+            <dd className="num">{formatMoneyCents(costClaim.withCiproxy)}</dd>
           </div>
         </dl>
       </div>
       <p className="caption cost-note">
-        Blacksmith and GitHub-hosted costs use their list prices per minute for
-        the same VM sizes. The machines are three Hetzner AX42 at{" "}
-        {formatMoney(ax42.monthlyCost)} a month each.
+        One new {costClaim.machine} at its list price runs jobs in every minute
+        of a {costClaim.monthDays}-day month, at{" "}
+        {unbroken(`${costClaim.averageJobMinutes} minutes`)} a job.{" "}
+        <TextLink to={paths.pricing} fragment={savingId}>
+          See the calculation
+        </TextLink>
       </p>
     </Section>
   );

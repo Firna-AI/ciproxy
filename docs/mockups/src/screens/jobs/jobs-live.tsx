@@ -1,6 +1,7 @@
 // The live queue: what waits for a runner and what runs now, on own machines
 // and on Boat. GitHub gives a waiting job to any idle runner, so a waiting job
 // has no machine yet; ciproxy shows how many runners it starts, and where.
+// Every role sees the queue; only an Admin gets the actions of its notices.
 
 import { Zap } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -9,8 +10,10 @@ import { ReadFailure, StateBlock } from "../../components/feedback.tsx";
 import { Kpi, KpiRow } from "../../components/kpis.tsx";
 import { LinkTabs, PageHeader, Panel } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
+import { canPay } from "../../components/role-actions.tsx";
 import { AppShell } from "../../components/shell/app-shell.tsx";
 import { usageBanner } from "../../components/usage-banner.tsx";
+import type { Role } from "../../fixtures/members.ts";
 import { type LiveScene, liveScenes, type LiveState } from "./live-scenes.ts";
 import { liveNotice } from "./live-notices.tsx";
 import { JobList, LoadingJobList } from "./job-tables.tsx";
@@ -24,9 +27,15 @@ export const jobTabs = [
 export function JobsLiveScreen({
   viewport,
   state,
+  role = "admin",
+  accountMenu = false,
 }: {
   viewport: Viewport;
   state: LiveState;
+  /** The role of the signed-in person, which decides the actions. */
+  role?: Role;
+  /** The account menu of the avatar is open. */
+  accountMenu?: boolean;
 }) {
   const scene = liveScenes[state];
   return (
@@ -34,9 +43,11 @@ export function JobsLiveScreen({
       viewport={viewport}
       tier={scene.tier}
       active="jobs"
+      role={role}
+      accountMenu={accountMenu}
       banner={
         state === "starts-passed"
-          ? usageBanner("free-over", "other")
+          ? usageBanner("free-over", "other", canPay(role))
           : undefined
       }
     >
@@ -49,7 +60,7 @@ export function JobsLiveScreen({
       ) : (
         <>
           {state === "loading" ? null : <LiveFigures scene={scene} />}
-          {liveNotice(state, scene)}
+          {liveNotice(state, scene, role)}
           <LiveLists viewport={viewport} state={state} scene={scene} />
         </>
       )}

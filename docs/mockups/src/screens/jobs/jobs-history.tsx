@@ -10,7 +10,9 @@ import { StateBlock } from "../../components/feedback.tsx";
 import { LinkTabs, PageHeader, Panel } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
 import { AppShell } from "../../components/shell/app-shell.tsx";
-import { history } from "../../fixtures/job-history.ts";
+import { formatCount } from "../../fixtures/format.ts";
+import { history, jobsToday } from "../../fixtures/job-history.ts";
+import { tiers } from "../../fixtures/tiers.ts";
 import { jobTabs } from "./jobs-live.tsx";
 import { JobList } from "./job-tables.tsx";
 import "./jobs.css";
@@ -72,7 +74,8 @@ export function JobsHistoryScreen({
           <Panel flush>
             <JobList viewport={viewport} kind="finished" jobs={history} />
             <p className="more-row caption">
-              10 of 612 jobs today · Team keeps 30 days of history
+              {history.length} of {formatCount(jobsToday)} jobs today ·{" "}
+              {tiers.team.name} keeps {tiers.team.history} of history
             </p>
           </Panel>
         </>

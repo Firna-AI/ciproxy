@@ -1,6 +1,6 @@
 // Plan and usage: the tier, the starts and own machines of the period against
 // the tier, the add-ons, and the way to the Stripe billing portal. A Viewer
-// sees the same page without its payment actions.
+// sees the same page without its payment actions, and can compare the plans.
 
 import { ExternalLink } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -11,10 +11,11 @@ import { ReadFailure } from "../../components/feedback.tsx";
 import { Meter } from "../../components/figures.tsx";
 import { PageHeader, Panel } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
+import { AskPayer, canPay } from "../../components/role-actions.tsx";
 import { AppShell } from "../../components/shell/app-shell.tsx";
-import { AskPayer, usageBanner } from "../../components/usage-banner.tsx";
+import { usageBanner } from "../../components/usage-banner.tsx";
 import { dotJoin, formatCount, monthly } from "../../fixtures/format.ts";
-import { viewer } from "../../fixtures/members.ts";
+import type { Role } from "../../fixtures/members.ts";
 import {
   addOnPrices,
   ownMachines,
@@ -35,25 +36,25 @@ export type PlanUsageState = UsageScene | "loading" | "error";
 export function PlanUsageScreen({
   viewport,
   state,
-  canPay = true,
+  role = "admin",
 }: {
   viewport: Viewport;
   state: PlanUsageState;
-  /** An Admin or a Billing person can pay; a Viewer cannot. */
-  canPay?: boolean;
+  /** The role of the signed-in person: a Viewer cannot pay. */
+  role?: Role;
 }) {
   const scene: UsageScene =
     state === "loading" || state === "error" ? "steady" : state;
   const usage = usageScenes[scene];
   const system = state === "loading" || state === "error";
+  const payer = canPay(role);
   return (
     <AppShell
       viewport={viewport}
       tier={usage.tier}
       active="billing"
-      person={canPay ? undefined : viewer}
-      role={canPay ? undefined : "viewer"}
-      banner={system ? undefined : usageBanner(scene, "billing", canPay)}
+      role={role}
+      banner={system ? undefined : usageBanner(scene, "billing", payer)}
     >
       <PageHeader title="Plan and usage" />
       {state === "error" ? (
@@ -64,12 +65,12 @@ export function PlanUsageScreen({
         <LoadingUsage />
       ) : (
         <>
-          {usageNotice(scene, usage, canPay)}
+          {usageNotice(scene, usage, payer)}
           <div className="grid-2">
-            <CurrentPlan usage={usage} canPay={canPay} />
+            <CurrentPlan usage={usage} canPay={payer} />
             <UsagePanel usage={usage} />
           </div>
-          <AddOns scene={scene} usage={usage} canPay={canPay} />
+          <AddOns scene={scene} usage={usage} canPay={payer} />
         </>
       )}
     </AppShell>
@@ -111,7 +112,10 @@ function CurrentPlan({ usage, canPay }: { usage: Usage; canPay: boolean }) {
             ) : null}
           </div>
         ) : (
-          <AskPayer />
+          <div className="row-wrap">
+            <LinkAction to={paths.plansViewer}>Compare plans</LinkAction>
+            <AskPayer />
+          </div>
         )}
         {paid && canPay ? (
           <p className="caption">

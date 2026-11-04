@@ -1,7 +1,8 @@
 // Labels and their sizes. A workflow picks a label in runs-on; each label
 // starts a VM of its size on an own machine, or on Boat. The dialog states
 // open over the list: edit ciproxy-8vcpu, add a label that fits no machine,
-// and edit ciproxy-32vcpu, which nothing fits.
+// and edit ciproxy-32vcpu, which nothing fits. The list is the moment of 18
+// November, when a request for access waits on the Members tab.
 
 import { Plus } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -11,6 +12,7 @@ import { ReadFailure } from "../../components/feedback.tsx";
 import { Panel } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
 import { unbroken } from "../../fixtures/format.ts";
+import { openRequests } from "../../fixtures/members.ts";
 import { labels, nothingFitsLabel } from "../../fixtures/settings.ts";
 import { LabelDialog, type LabelDialogMode } from "./label-dialog.tsx";
 import { LabelList } from "./label-list.tsx";
@@ -52,6 +54,7 @@ export function LabelsScreen({
     <SettingsFrame
       viewport={viewport}
       active={paths.settings}
+      openRequests={state === "list" ? openRequests.length : 0}
       overlay={mode ? <LabelDialog mode={mode} /> : undefined}
     >
       {state === "error" ? (

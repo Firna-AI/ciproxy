@@ -1,19 +1,20 @@
 import { defineUseCase } from "@mokly/mokly";
 
 import { paths } from "../../components/paths.ts";
-import { planDoc } from "../../components/state-schema.ts";
+import { related } from "../../components/related-docs.ts";
+import { costClaim } from "../../fixtures/cost-claim.ts";
+import { freePlanNote } from "../../fixtures/tiers.ts";
 
 export const landingToSignIn = defineUseCase({
   title: "A visitor goes from the landing page to sign-in",
   description:
     "A developer whose team pays too much for hosted runners finds ciproxy.dev, checks the setup in the quickstart, compares the plans, and signs in with GitHub.",
-  relatedDocs: [planDoc],
+  relatedDocs: related("architecture", "billing", "security"),
   steps: [
     {
       screenPath: paths.landing,
       title: "The landing page",
-      description:
-        "The hero leads with the outcome, and a real month of CI shows the cost. Follow the quickstart, under How it works, opens the docs.",
+      description: `The hero leads with the outcome, and the cost section claims a saving of up to ${costClaim.upToPercent}% with one own machine. Its caption links to the calculation. Follow the quickstart, under How it works, opens the docs.`,
     },
     {
       screenPath: paths.quickstart,
@@ -24,8 +25,7 @@ export const landingToSignIn = defineUseCase({
     {
       screenPath: paths.pricing,
       title: "Compare the plans",
-      description:
-        "Free covers one machine and 2,000 starts a month, and every limit is soft. Start free opens sign-in.",
+      description: `${freePlanNote} Every limit is soft, and every tier says Start free, which opens sign-in.`,
     },
     {
       screenPath: paths.signIn,

@@ -1,5 +1,7 @@
 // What CI cost with ciproxy in the last 30 days, against the same jobs on
-// Blacksmith and on GitHub-hosted runners.
+// Blacksmith and on GitHub-hosted runners. Every role sees the report; only
+// an Admin enters what a machine costs, so a Viewer or a Billing person reads
+// Ask an Admin in place of Add costs.
 
 import { PiggyBank } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -10,9 +12,12 @@ import { LinkAction, noop } from "../../components/actions.tsx";
 import { Notice, ReadFailure, StateBlock } from "../../components/feedback.tsx";
 import { PageHeader, Panel } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
+import { AskAdmin } from "../../components/role-actions.tsx";
 import { AppShell } from "../../components/shell/app-shell.tsx";
 import { StartsChart } from "../../components/starts-chart.tsx";
-import { formatCount, formatMoney } from "../../fixtures/format.ts";
+import { formatCount, formatMoney, unbroken } from "../../fixtures/format.ts";
+import type { Role } from "../../fixtures/members.ts";
+import { listPrices } from "../../fixtures/price-lists.ts";
 import {
   dailyStarts,
   savings,
@@ -32,6 +37,13 @@ export const savingsStates = [
 ] as const;
 export type SavingsState = (typeof savingsStates)[number];
 
+/** The days of the price lists that the report uses, once for each day. */
+const priceListDays = [
+  ...new Set([listPrices.blacksmith.checked, listPrices.github.checked]),
+]
+  .map(unbroken)
+  .join(" and ");
+
 const periods = [
   { label: "Last 30 days", value: "30" },
   { label: "This month", value: "month" },
@@ -41,15 +53,19 @@ const periods = [
 export function SavingsScreen({
   viewport,
   state,
+  role = "admin",
 }: {
   viewport: Viewport;
   state: SavingsState;
+  /** The role of the signed-in person. */
+  role?: Role;
 }) {
   return (
     <AppShell
       viewport={viewport}
       tier={state === "empty" ? "free" : "team"}
       active="savings"
+      role={role}
       setup={
         state === "empty" ? { done: 3, total: 4, active: false } : undefined
       }
@@ -68,12 +84,12 @@ export function SavingsScreen({
           accessibilityLabel="Period"
         />
       )}
-      <SavingsBody state={state} />
+      <SavingsBody state={state} role={role} />
     </AppShell>
   );
 }
 
-function SavingsBody({ state }: { state: SavingsState }) {
+function SavingsBody({ state, role }: { state: SavingsState; role: Role }) {
   if (state === "error") {
     return (
       <Panel>
@@ -110,9 +126,13 @@ function SavingsBody({ state }: { state: SavingsState }) {
           tone="warning"
           title="Add what your machines cost"
           actions={
-            <LinkAction to={paths.machine} size="sm">
-              Add costs
-            </LinkAction>
+            role === "admin" ? (
+              <LinkAction to={paths.machine} size="sm">
+                Add costs
+              </LinkAction>
+            ) : (
+              <AskAdmin />
+            )
           }
         >
           The report needs the monthly cost of each machine to show your
@@ -133,7 +153,7 @@ function SavingsBody({ state }: { state: SavingsState }) {
         <CostBars withCiproxy={!missing} />
         <p className="caption cost-note">
           Blacksmith and GitHub-hosted costs use their list prices per minute
-          for the same VM sizes.
+          for the same VM sizes, from the price lists of {priceListDays}.
         </p>
       </Panel>
       <div className="grid-2">

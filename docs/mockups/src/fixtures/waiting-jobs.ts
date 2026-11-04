@@ -2,14 +2,33 @@
 // new sandboxes, and while no machine and no Boat size fits their label.
 
 import { none, onBoat, own, rows } from "./jobs.ts";
+import { nothingFitsLabel } from "./settings.ts";
 
 /** Wednesday 25 November, 10:12: the start limit of the Boat plan is full. */
 export const boatRefused = {
   /** The time when Boat takes new sandboxes again. */
   retryAt: "10:13",
   waiting: rows("refused-wait", [
-    ["e2e (webkit) 1/2", "E2E", "mokly", "#1571", "waiting", none, "1m 42s"],
-    ["e2e (webkit) 2/2", "E2E", "mokly", "#1571", "waiting", none, "1m 42s"],
+    [
+      "e2e (webkit) 1/2",
+      "E2E",
+      "mokly",
+      "#1571",
+      "waiting",
+      none,
+      "1m 42s",
+      "ciproxy-4vcpu",
+    ],
+    [
+      "e2e (webkit) 2/2",
+      "E2E",
+      "mokly",
+      "#1571",
+      "waiting",
+      none,
+      "1m 42s",
+      "ciproxy-4vcpu",
+    ],
     ["storybook", "CI", "mokly", "#1571", "waiting", none, "1m 20s"],
     ["unit (node 24)", "CI", "mokly-cloud", "#331", "waiting", none, "58s"],
     ["typecheck", "CI", "mokly-cloud", "#331", "waiting", none, "51s"],
@@ -78,6 +97,7 @@ export const nothingFits = {
       "waiting",
       none,
       "41m 10s",
+      nothingFitsLabel.name,
     ],
     [
       "load test (viewer)",
@@ -87,6 +107,7 @@ export const nothingFits = {
       "waiting",
       none,
       "41m 10s",
+      nothingFitsLabel.name,
     ],
   ]),
 };

@@ -1,13 +1,13 @@
 import { defineUseCase } from "@mokly/mokly";
 
 import { paths } from "../../components/paths.ts";
-import { planDoc } from "../../components/state-schema.ts";
+import { related } from "../../components/related-docs.ts";
 
 export const memberAsksForAccess = defineUseCase({
   title: "A member of the organization asks for access",
   description:
     "Lena Fischer is a member of mokly-ai on GitHub and signs in to ciproxy on 18 November. She has no role, so her sign-in asks the Admins for access, and Cal Moore gives her a role.",
-  relatedDocs: [planDoc],
+  relatedDocs: related("security"),
   steps: [
     {
       screenPath: paths.signIn,
@@ -20,6 +20,12 @@ export const memberAsksForAccess = defineUseCase({
       title: "Waiting for an Admin",
       description:
         "Every page of mokly-ai shows only this one. Her sign-in sent the request to the Admins, whom the page names.",
+    },
+    {
+      screenPath: paths.settings,
+      title: "The count on the Members tab",
+      description:
+        "Cal opens Settings. The Members tab counts one open request, so he learns of it without an email.",
     },
     {
       screenPath: paths.membersRequest,

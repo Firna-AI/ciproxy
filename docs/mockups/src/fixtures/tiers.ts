@@ -1,5 +1,8 @@
-// The approved MVP pricing (plan: Pricing). Every screen that shows a price, a
-// limit, or a tier feature reads it from here.
+// The approved MVP pricing (plan: Pricing) and the features of each tier.
+// Every screen that shows a price, a limit, or a tier feature reads it from
+// here. A feature starts at one tier and stays in every tier above it. A
+// feature that does not ship at launch shows "Coming later" on every page
+// that lists it.
 
 import { formatCount, unbroken } from "./format.ts";
 import type { TierKey } from "./org.ts";
@@ -13,26 +16,7 @@ export type Tier = {
   machines: number;
   history: string;
   addOns: boolean;
-  /** What the tier adds to the tier below it. */
-  adds: readonly string[];
 };
-
-/** The names of the tier features, shared by the tier cards and the comparison. */
-export const feature = {
-  ownMachines: "Own Linux machines",
-  boat: "Boat overflow",
-  cache: "Transparent cache",
-  warmRunners: "Warm runners",
-  savings: "Savings report",
-  stickyDisks: "Sticky Docker disks",
-  alerts: "Alerts by email and Slack",
-  emailSupport: "Email support",
-  organizations: "Several GitHub organizations",
-  singleSignOn: "Single sign-on",
-  auditLog: "Audit log",
-  images: "Custom VM images",
-  prioritySupport: "Priority support",
-} as const;
 
 export const tiers: Readonly<Record<TierKey, Tier>> = {
   free: {
@@ -43,7 +27,6 @@ export const tiers: Readonly<Record<TierKey, Tier>> = {
     machines: 1,
     history: "7 days",
     addOns: false,
-    adds: ["7 days of job history"],
   },
   team: {
     key: "team",
@@ -53,12 +36,6 @@ export const tiers: Readonly<Record<TierKey, Tier>> = {
     machines: 3,
     history: "30 days",
     addOns: true,
-    adds: [
-      feature.stickyDisks,
-      feature.alerts,
-      "30 days of job history",
-      feature.emailSupport,
-    ],
   },
   business: {
     key: "business",
@@ -68,37 +45,90 @@ export const tiers: Readonly<Record<TierKey, Tier>> = {
     machines: 10,
     history: "90 days",
     addOns: true,
-    adds: [
-      feature.organizations,
-      feature.singleSignOn,
-      feature.auditLog,
-      feature.images,
-      "90 days of job history",
-      feature.prioritySupport,
-    ],
   },
 };
 
 export const tierOrder: readonly TierKey[] = ["free", "team", "business"];
 
-/** Included in every tier. */
-export const everyTier: readonly string[] = [
-  feature.ownMachines,
-  feature.boat,
-  feature.cache,
-  feature.warmRunners,
-  feature.savings,
-];
+export type FeatureKey =
+  | "ownMachines"
+  | "boat"
+  | "cache"
+  | "warmRunners"
+  | "savings"
+  | "stickyDisks"
+  | "alerts"
+  | "emailSupport"
+  | "organizations"
+  | "singleSignOn"
+  | "auditLog"
+  | "images"
+  | "prioritySupport";
 
-/** Free lists all it includes; each tier above lists what it adds. */
+/** One tier feature: its name, the first tier that has it, and its launch. */
+export type TierFeature = {
+  name: string;
+  /** The first tier that includes the feature. Every tier above has it too. */
+  from: TierKey;
+  /** The feature ships at launch. Otherwise each page says "Coming later". */
+  launch: boolean;
+};
+
+/** One record for each feature, in the order of the tier lists. */
+export const features: Readonly<Record<FeatureKey, TierFeature>> = {
+  ownMachines: { name: "Own Linux machines", from: "free", launch: true },
+  boat: { name: "Boat overflow", from: "free", launch: true },
+  cache: { name: "Transparent cache", from: "free", launch: true },
+  warmRunners: { name: "Warm runners", from: "free", launch: true },
+  savings: { name: "Savings report", from: "free", launch: true },
+  stickyDisks: { name: "Sticky Docker disks", from: "team", launch: true },
+  alerts: { name: "Alerts by email and Slack", from: "team", launch: false },
+  emailSupport: { name: "Email support", from: "team", launch: true },
+  organizations: {
+    name: "Several GitHub organizations",
+    from: "business",
+    launch: true,
+  },
+  singleSignOn: { name: "Single sign-on", from: "business", launch: false },
+  auditLog: { name: "Audit log", from: "business", launch: false },
+  images: { name: "Custom VM images", from: "business", launch: false },
+  prioritySupport: { name: "Priority support", from: "business", launch: true },
+};
+
+/** The tier includes the feature: it starts at this tier or below. */
+export function includes(tier: TierKey, feature: TierFeature): boolean {
+  return tierOrder.indexOf(tier) >= tierOrder.indexOf(feature.from);
+}
+
+/** One line of a tier list. A feature that ships later says so. */
+export type TierListItem = { name: string; later: boolean };
+
+/**
+ * Free lists all that it includes, and each tier above lists what it adds:
+ * the features that ship at launch, the job history, then the features that
+ * come later.
+ */
 export function tierFeatures(tier: Tier): {
   lead: string;
-  items: readonly string[];
+  items: readonly TierListItem[];
 } {
-  if (tier.key === "free")
-    return { lead: "Free includes", items: [...everyTier, ...tier.adds] };
-  const below = tier.key === "team" ? "Free" : "Team";
-  return { lead: `Everything in ${below}, plus`, items: tier.adds };
+  const added = Object.values(features).filter(
+    (feature) => feature.from === tier.key,
+  );
+  const items: TierListItem[] = [
+    ...added
+      .filter((feature) => feature.launch)
+      .map((feature) => ({ name: feature.name, later: false })),
+    { name: `${tier.history} of job history`, later: false },
+    ...added
+      .filter((feature) => !feature.launch)
+      .map((feature) => ({ name: feature.name, later: true })),
+  ];
+  const below = tierOrder[tierOrder.indexOf(tier.key) - 1];
+  return {
+    lead: below ? `Everything in ${tiers[below].name}, plus` : "Free includes",
+    items,
+  };
 }
 
 /** Monthly add-ons on Team and Business. */

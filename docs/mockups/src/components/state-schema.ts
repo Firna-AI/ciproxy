@@ -12,6 +12,3 @@ export function stateSchema<const S extends readonly [string, ...string[]]>(
     properties: { state: { enum: states } },
   } as const;
 }
-
-/** The planning record of the dashboard until the protocol docs exist. */
-export const planDoc = "plans/ciproxy-mvp-foundation.md";

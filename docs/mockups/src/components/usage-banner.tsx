@@ -23,14 +23,10 @@ import {
 import { Action, LinkAction } from "./actions.tsx";
 import { Notice } from "./feedback.tsx";
 import { paths, type CataloguePath } from "./paths.ts";
+import { AskPayer } from "./role-actions.tsx";
 
 /** The page that shows the banner: Plan and usage, or any other page. */
 export type BannerPage = "billing" | "other";
-
-/** What a person who cannot pay sees in place of a payment action. */
-export function AskPayer() {
-  return <span className="caption">Ask an Admin or a Billing person</span>;
-}
 
 /** An add-on action: in place on Plan and usage, a link from other pages. */
 function AddOnAction({

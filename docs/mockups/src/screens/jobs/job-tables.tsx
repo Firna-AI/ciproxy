@@ -1,6 +1,7 @@
 // Job lists: a table on desktop and a dense list on mobile. Running and
-// waiting jobs lead with a status dot and show where they run; finished jobs
-// show their result, where they ran, and how long they waited.
+// waiting jobs lead with a status dot. A running job shows where it runs, and
+// a waiting job shows its label, because no machine holds it yet. Finished
+// jobs show their result, where they ran, and how long they waited.
 
 import type { Viewport } from "@mokly/mokly";
 import { MockLink } from "@mokly/mokly";
@@ -16,8 +17,9 @@ import {
   JobStateLabel,
   WhereLabel,
 } from "../../components/status.tsx";
-import type { Job } from "../../fixtures/jobs.ts";
 import { dotJoin } from "../../fixtures/format.ts";
+import { jobDetails } from "../../fixtures/job-details.ts";
+import type { Job } from "../../fixtures/jobs.ts";
 import { org } from "../../fixtures/org.ts";
 
 export type JobListKind = "running" | "waiting" | "finished";
@@ -30,6 +32,7 @@ const columns: Record<JobListKind, readonly Column[]> = {
   ],
   waiting: [
     { key: "job", label: "Job", flex: 3 },
+    { key: "label", label: "Label", flex: 1 },
     { key: "time", label: "Waiting for", width: 110, align: "right" },
   ],
   finished: [
@@ -42,8 +45,17 @@ const columns: Record<JobListKind, readonly Column[]> = {
   ],
 };
 
+/** The job page of a finished job: the Boat job, the fallback, or the own. */
 function detailPath(job: Job) {
-  return job.where.kind === "boat" ? paths.jobBoat : paths.job;
+  if (job.where.kind === "boat") return paths.jobBoat;
+  const fallback = jobDetails.fallback;
+  return job.name === fallback.name && job.ref === fallback.ref
+    ? paths.jobFallback
+    : paths.job;
+}
+
+function LabelName({ job }: { job: Job }) {
+  return <span className="inline-code">{job.label}</span>;
 }
 
 function JobName({ job, kind }: { job: Job; kind: JobListKind }) {
@@ -77,6 +89,8 @@ function cell(job: Job, key: string, kind: JobListKind) {
       );
     case "where":
       return <WhereLabel where={job.where} slot={kind !== "finished"} />;
+    case "label":
+      return <LabelName job={job} />;
     case "waited":
       return <span className="duration">{job.waited}</span>;
     case "finished":
@@ -124,6 +138,10 @@ function JobRows({ kind, jobs }: { kind: JobListKind; jobs: readonly Job[] }) {
                 <JobStateLabel state={job.state} />
                 <WhereLabel where={job.where} />
                 <span className="caption">waited {job.waited}</span>
+              </span>
+            ) : kind === "waiting" ? (
+              <span className="job-row-meta">
+                <LabelName job={job} />
               </span>
             ) : (
               <WhereLabel where={job.where} />

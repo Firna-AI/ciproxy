@@ -1,8 +1,11 @@
 // The people of mokly-ai in ciproxy and their roles. Each role contains the
 // one below it. Cal Moore installed the GitHub App on 1 September, so he is
-// the first Admin. Lena Fischer is a member of mokly-ai on GitHub with no
-// role yet: her sign-in asks the Admins for access. Tom Becker is an owner of
-// mokly-ai on GitHub, so he can claim the Admin role.
+// the first Admin. Ana Souza is an Admin whom GitHub does not let manage
+// self-hosted runners, so she cannot add machines. Dana Kim has the Billing
+// role and is an owner of mokly-ai on GitHub, so she can claim the Admin role
+// from the account menu. Lena Fischer is a member of mokly-ai on GitHub with
+// no role yet: her sign-in asks the Admins for access. Tom Becker is an owner
+// of mokly-ai on GitHub with no role, so he can claim the Admin role at once.
 
 import { unbroken } from "./format.ts";
 import { user } from "./org.ts";
@@ -37,6 +40,8 @@ export type Member = {
   since: string;
   /** How the person got it, when not from an Admin. */
   note?: string;
+  /** An owner of the organization on GitHub, who can claim the Admin role. */
+  owner?: boolean;
 };
 
 /** Jonas Weber, a Viewer, whose view the read-only billing screens show. */
@@ -48,29 +53,47 @@ export const viewer: Member = {
   since: unbroken("21 September"),
 };
 
+/** Ana Souza, an Admin without the GitHub right to add self-hosted runners. */
+export const adminWithoutRight: Member = {
+  name: "Ana Souza",
+  login: "anasouza",
+  initials: "AS",
+  role: "admin",
+  since: unbroken("2 September"),
+};
+
+/** Dana Kim, who pays, and who is an owner of mokly-ai on GitHub. */
+export const billingPerson: Member = {
+  name: "Dana Kim",
+  login: "danakim",
+  initials: "DK",
+  role: "billing",
+  since: unbroken("4 September"),
+  owner: true,
+};
+
+/** Cal Moore, who installed the GitHub App, so he is the first Admin. */
+export const firstAdmin: Member = {
+  ...user,
+  role: "admin",
+  since: unbroken("1 September"),
+  note: "installed the GitHub App",
+  owner: true,
+};
+
 export const members: readonly Member[] = [
-  {
-    ...user,
-    role: "admin",
-    since: unbroken("1 September"),
-    note: "installed the GitHub App",
-  },
-  {
-    name: "Ana Souza",
-    login: "anasouza",
-    initials: "AS",
-    role: "admin",
-    since: unbroken("2 September"),
-  },
-  {
-    name: "Dana Kim",
-    login: "danakim",
-    initials: "DK",
-    role: "billing",
-    since: unbroken("4 September"),
-  },
+  firstAdmin,
+  adminWithoutRight,
+  billingPerson,
   viewer,
 ];
+
+/** The person whose view a screen of each role shows. */
+export const personFor: Readonly<Record<Role, Member>> = {
+  admin: firstAdmin,
+  billing: billingPerson,
+  viewer,
+};
 
 /** The member of mokly-ai on GitHub who has no role and asks for access. */
 export const requester = {
@@ -79,6 +102,9 @@ export const requester = {
   initials: "LF",
   asked: unbroken("18 November"),
 } as const;
+
+/** The requests for access that wait for an Admin, from 18 November. */
+export const openRequests: readonly (typeof requester)[] = [requester];
 
 /** An owner of mokly-ai on GitHub who has no role in ciproxy yet. */
 export const owner = {

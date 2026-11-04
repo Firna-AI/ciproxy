@@ -17,6 +17,7 @@ export const paths = {
   installPending: "app/auth/install-app/pending-approval",
   noRole: "app/access",
   noRoleOwner: "app/access/owner",
+  accountMenu: "app/access/account-menu",
 
   onboarding: "app/onboarding",
   machineConnected: "app/onboarding/add-machine/connected",
@@ -38,6 +39,9 @@ export const paths = {
   jobsHistoryEmpty: "app/jobs/history/empty",
   job: "app/jobs/job",
   jobBoat: "app/jobs/job/boat",
+  jobFallback: "app/jobs/job/fallback",
+  jobsViewer: "app/jobs/roles/viewer",
+  jobsBilling: "app/jobs/roles/billing",
   jobsLoading: "app/jobs/loading-error/loading",
   jobsError: "app/jobs/loading-error/error",
 
@@ -52,6 +56,12 @@ export const paths = {
   machineClearCache: "app/machines/machine/clear-cache",
   addMachine: "app/machines/add",
   addMachineConnected: "app/machines/add/connected",
+  addMachineRevoked: "app/machines/add/revoked",
+  addMachineNoRight: "app/machines/add/no-runner-right",
+  machinesViewer: "app/machines/roles/viewer",
+  machinesBilling: "app/machines/roles/billing",
+  machinesNoRight: "app/machines/roles/no-runner-right",
+  machineViewer: "app/machines/roles/machine-viewer",
   machinesLoading: "app/machines/loading-error/loading",
   machinesError: "app/machines/loading-error/error",
 
@@ -60,6 +70,7 @@ export const paths = {
   savingsEmpty: "app/savings/states/empty",
   savingsLoading: "app/savings/states/loading",
   savingsError: "app/savings/states/error",
+  savingsViewer: "app/savings/roles/viewer",
 
   billing: "app/billing",
   usageNearLimit: "app/billing/usage/near-limit",
@@ -72,6 +83,8 @@ export const paths = {
   movedToFree: "app/billing/payments/moved-to-free",
   plans: "app/billing/plans",
   plansOnTeam: "app/billing/plans/on-team",
+  plansViewer: "app/billing/plans/viewer",
+  plansBilling: "app/billing/plans/billing",
   moveToBusiness: "app/billing/change-plan/to-business",
   moveToFree: "app/billing/change-plan/move-to-free",
   freeScheduled: "app/billing/change-plan/free-scheduled",

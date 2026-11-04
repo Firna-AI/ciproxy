@@ -1,5 +1,6 @@
 // The Boat account that takes overflow: where jobs go when the own machines
-// are busy, and the spend of the month against its limit.
+// are busy, and the spend of the month against its limit. Only an Admin gets
+// the link to the overflow settings.
 
 import { Cloud } from "lucide-react";
 
@@ -10,11 +11,15 @@ import { paths } from "../../components/paths.ts";
 import { dotJoin, formatMoney, unbroken } from "../../fixtures/format.ts";
 import { boat } from "../../fixtures/machines.ts";
 
-export function OverflowPanel() {
+export function OverflowPanel({ settings }: { settings: boolean }) {
   return (
     <Panel
       title="Overflow"
-      action={<TextLink to={paths.overflow}>Overflow settings</TextLink>}
+      action={
+        settings ? (
+          <TextLink to={paths.overflow}>Overflow settings</TextLink>
+        ) : undefined
+      }
     >
       <div className="overflow-row">
         <span className="icon-tile">

@@ -1,11 +1,11 @@
 // The three tiers of the pricing page as cells: the price, the limits, the
-// action, and what each tier includes or adds. Every action opens sign-in,
-// because every organization starts on Free.
-
-import { Check } from "lucide-react";
+// action, and what each tier includes or adds. Every action says Start free
+// and opens sign-in, because every organization starts on Free and picks a
+// paid tier in the dashboard.
 
 import { LinkAction } from "../../components/actions.tsx";
 import { paths } from "../../components/paths.ts";
+import { TierFeatureList } from "../../components/tier-feature-list.tsx";
 import { formatCount, formatMoney } from "../../fixtures/format.ts";
 import type { TierKey } from "../../fixtures/org.ts";
 import {
@@ -20,7 +20,7 @@ import "./price-cards.css";
 const blurbs: Readonly<Record<TierKey, string>> = {
   free: "Try ciproxy on one machine.",
   team: "For the daily CI of a team.",
-  business: "For several organizations and single sign-on.",
+  business: "For several GitHub organizations on one plan.",
 };
 
 function PriceCard({ tier }: { tier: Tier }) {
@@ -47,18 +47,11 @@ function PriceCard({ tier }: { tier: Tier }) {
         </li>
       </ul>
       <LinkAction to={paths.signIn} tone={team ? "primary" : "secondary"} block>
-        {tier.key === "free" ? "Start free" : "Get started"}
+        Start free
       </LinkAction>
       <div className="price-features">
         <p className="caption">{list.lead}</p>
-        <ul className="price-feature-list">
-          {list.items.map((item) => (
-            <li key={item}>
-              <Check size={14} className="price-check" />
-              <span>{item}</span>
-            </li>
-          ))}
-        </ul>
+        <TierFeatureList items={list.items} />
       </div>
     </div>
   );

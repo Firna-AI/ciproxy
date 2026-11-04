@@ -21,24 +21,35 @@ export function sizePhrase(size: Pick<Size, "vcpu" | "memoryGb">): string {
   return `${unbroken(`${size.vcpu} vCPU`)} and ${unbroken(`${size.memoryGb} GB`)}`;
 }
 
-/** The sizes that the Boat account can start now, smallest first. */
-export const boatSizes: readonly Size[] = [
-  { vcpu: 2, memoryGb: 4, diskGb: 51 },
-  { vcpu: 4, memoryGb: 8, diskGb: 51 },
-  { vcpu: 8, memoryGb: 16, diskGb: 111 },
-  { vcpu: 16, memoryGb: 32, diskGb: 251 },
+/** A size that the Boat account can start, with the name of its Boat type. */
+export type BoatSize = Size & { name: string };
+
+/** The sizes that the Boat account can start now, smallest and cheapest first. */
+export const boatSizes: readonly BoatSize[] = [
+  { name: "small", vcpu: 2, memoryGb: 4, diskGb: 51 },
+  { name: "default", vcpu: 4, memoryGb: 8, diskGb: 51 },
+  { name: "large", vcpu: 8, memoryGb: 16, diskGb: 111 },
+  { name: "xlarge", vcpu: 16, memoryGb: 32, diskGb: 251 },
 ];
 
-export const largestBoatSize: Size = boatSizes.reduce((largest, size) =>
+export const largestBoatSize: BoatSize = boatSizes.reduce((largest, size) =>
   size.vcpu > largest.vcpu ? size : largest,
 );
 
-/** A size fits Boat when one Boat size has at least its vCPU, memory, and disk. */
-export function fitsBoat(size: Size): boolean {
-  return boatSizes.some(
+/**
+ * The cheapest Boat size with at least the vCPU, memory, and disk of a size,
+ * which a sandbox for a job of that size gets. It can be larger than the size.
+ */
+export function boatSizeFor(size: Size): BoatSize | undefined {
+  return boatSizes.find(
     (boatSize) =>
       boatSize.vcpu >= size.vcpu &&
       boatSize.memoryGb >= size.memoryGb &&
       boatSize.diskGb >= size.diskGb,
   );
+}
+
+/** A size fits Boat when one Boat size has at least its vCPU, memory, and disk. */
+export function fitsBoat(size: Size): boolean {
+  return boatSizeFor(size) !== undefined;
 }

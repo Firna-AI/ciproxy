@@ -1,8 +1,11 @@
 // The feature comparison of the pricing page: one column for each tier, rows
-// by area. A check marks an included feature and a dash one that is not.
+// by area. A check marks an included feature and a dash one that is not. A
+// feature that comes later says so under its name, and a clock marks the
+// tiers that will include it.
 
-import { Check, Minus } from "lucide-react";
+import { Check, Clock, Minus } from "lucide-react";
 
+import { ComingLater } from "../../components/tier-feature-list.tsx";
 import {
   compareGroups,
   type CompareValue,
@@ -12,7 +15,18 @@ import { tierOrder, tiers } from "../../fixtures/tiers.ts";
 import { Section, SectionHead } from "./section.tsx";
 import "./plan-compare.css";
 
-function CompareCell({ value }: { value: CompareValue }) {
+function CompareCell({
+  value,
+  later,
+}: {
+  value: CompareValue;
+  later: boolean;
+}) {
+  if (value === true && later) {
+    return (
+      <Clock size={15} className="compare-later" aria-label="Coming later" />
+    );
+  }
   if (value === true) {
     return <Check size={16} className="compare-yes" aria-label="Included" />;
   }
@@ -57,10 +71,16 @@ export function PlanCompare() {
             </tr>
             {group.rows.map((row) => (
               <tr key={row.label}>
-                <th scope="row">{row.label}</th>
+                <th scope="row">
+                  <span className="compare-label">{row.label}</span>
+                  {row.later ? <ComingLater /> : null}
+                </th>
                 {tierOrder.map((key) => (
                   <td key={key}>
-                    <CompareCell value={row.values[key]} />
+                    <CompareCell
+                      value={row.values[key]}
+                      later={row.later ?? false}
+                    />
                   </td>
                 ))}
               </tr>

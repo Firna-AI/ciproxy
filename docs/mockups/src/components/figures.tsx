@@ -143,15 +143,20 @@ function codeLineClass(line: string): string {
   return "code-line";
 }
 
-/** A quantity the customer sets, such as an add-on or a warm runner count. */
+/**
+ * A quantity the customer sets, such as an add-on or a warm runner count. A
+ * person whose role cannot change it sees the value without the buttons.
+ */
 export function Quantity({
   value,
   label,
   caption,
+  readOnly = false,
 }: {
   value: number;
   label: string;
   caption: string;
+  readOnly?: boolean;
 }) {
   return (
     <div className="quantity">
@@ -159,25 +164,35 @@ export function Quantity({
         <span className="quantity-label">{label}</span>
         <span className="caption">{caption}</span>
       </div>
-      <span className="quantity-control">
-        <Button
-          tone="secondary"
-          size="sm"
-          shape="square"
-          icon={Minus}
-          accessibilityLabel="Fewer"
-          onPress={value > 0 ? noop : undefined}
-        />
+      {readOnly ? (
         <span className="quantity-value num">{value}</span>
-        <Button
-          tone="secondary"
-          size="sm"
-          shape="square"
-          icon={Plus}
-          accessibilityLabel="More"
-          onPress={noop}
-        />
-      </span>
+      ) : (
+        <QuantityControl value={value} />
+      )}
     </div>
+  );
+}
+
+function QuantityControl({ value }: { value: number }) {
+  return (
+    <span className="quantity-control">
+      <Button
+        tone="secondary"
+        size="sm"
+        shape="square"
+        icon={Minus}
+        accessibilityLabel="Fewer"
+        onPress={value > 0 ? noop : undefined}
+      />
+      <span className="quantity-value num">{value}</span>
+      <Button
+        tone="secondary"
+        size="sm"
+        shape="square"
+        icon={Plus}
+        accessibilityLabel="More"
+        onPress={noop}
+      />
+    </span>
   );
 }

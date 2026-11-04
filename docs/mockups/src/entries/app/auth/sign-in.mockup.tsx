@@ -1,7 +1,8 @@
 import { defineScreen } from "@mokly/mokly";
 
 import { paths } from "../../../components/paths.ts";
-import { planDoc, stateSchema } from "../../../components/state-schema.ts";
+import { related } from "../../../components/related-docs.ts";
+import { stateSchema } from "../../../components/state-schema.ts";
 import { host } from "../../../fixtures/org.ts";
 import { SignInScreen } from "../../../screens/auth/sign-in.tsx";
 
@@ -9,7 +10,7 @@ export const signIn = defineScreen({
   title: "Sign in",
   description:
     "The first screen of ciproxy. A person signs in with GitHub; ciproxy has no password of its own.",
-  relatedDocs: [planDoc],
+  relatedDocs: related("security"),
   address: `${host}/sign-in`,
   useCasePaths: [
     paths.flowFirstGreenJob,

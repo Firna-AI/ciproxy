@@ -2,18 +2,17 @@
 // with the main navigation beside a top bar that holds the organization and
 // the page as breadcrumbs. On mobile: a top bar and a bottom tab bar. A
 // banner, such as a soft-limit warning, sits above the page content on every
-// page of the organization.
+// page of the organization. The avatar opens the account menu.
 
 import type { ReactNode } from "react";
 import { BookOpen, ChevronDown, ChevronRight, Rocket } from "lucide-react";
 import { MockLink, type Viewport } from "@mokly/mokly";
-import { Avatar } from "@firna/ui/avatar";
 
-import type { Role } from "../../fixtures/members.ts";
-import { org, user, type TierKey } from "../../fixtures/org.ts";
+import { personFor, type Member, type Role } from "../../fixtures/members.ts";
+import { org, type TierKey } from "../../fixtures/org.ts";
 import { Brand, BrandMark } from "../brand.tsx";
 import { paths } from "../paths.ts";
-import { SetupItem, TopBar } from "./app-shell-parts.tsx";
+import { Account, SetupItem, TopBar } from "./app-shell-parts.tsx";
 import { navFor, navItems, type NavKey } from "./nav.ts";
 import "./app-shell.css";
 import "./app-shell-mobile.css";
@@ -21,18 +20,21 @@ import "./app-shell-rail.css";
 
 export type SetupProgress = { done: number; total: number; active: boolean };
 
-/** The signed-in person: Cal Moore, unless a screen shows another person. */
-export type ShellPerson = { name: string; initials: string };
+/** The signed-in person, and whether GitHub names the person an owner. */
+export type ShellPerson = Pick<Member, "name" | "login" | "initials" | "owner">;
 
 export type AppShellProps = {
   viewport: Viewport;
   tier: TierKey;
   active?: NavKey;
-  person?: ShellPerson;
   /** The role of the person, which decides the navigation. */
   role?: Role;
+  /** The signed-in person; by default the person of the role. */
+  person?: ShellPerson;
   /** While setup is open, the sidebar leads with a Set up item. */
   setup?: SetupProgress;
+  /** The account menu of the avatar is open. */
+  accountMenu?: boolean;
   banner?: ReactNode;
   children: ReactNode;
 };
@@ -48,13 +50,15 @@ export function AppShell(props: AppShellProps) {
 function DesktopShell({
   tier,
   active,
-  person = user,
   role = "admin",
+  person,
   setup,
+  accountMenu = false,
   banner,
   children,
 }: AppShellProps) {
   const page = navItems.find((item) => item.key === active)?.label ?? "Set up";
+  const signedIn = person ?? personFor[role];
   return (
     <div className="shell">
       <aside className="side">
@@ -85,7 +89,18 @@ function DesktopShell({
         </div>
       </aside>
       <div className="shell-body">
-        <TopBar tier={tier} page={page} person={person} />
+        <TopBar
+          tier={tier}
+          page={page}
+          account={
+            <Account
+              person={signedIn}
+              role={role}
+              open={accountMenu}
+              size={28}
+            />
+          }
+        />
         <main className="shell-main">
           {banner}
           {children}
@@ -97,12 +112,14 @@ function DesktopShell({
 
 function MobileShell({
   active,
-  person = user,
   role = "admin",
+  person,
   setup,
+  accountMenu = false,
   banner,
   children,
 }: AppShellProps) {
+  const signedIn = person ?? personFor[role];
   return (
     <div className="m-shell">
       <header className="m-top">
@@ -112,12 +129,7 @@ function MobileShell({
           <span className="m-org-name">{org.login}</span>
           <ChevronDown size={14} className="m-chevron" />
         </span>
-        <Avatar
-          label={person.initials}
-          accessibilityLabel={person.name}
-          size={26}
-          tone="soft"
-        />
+        <Account person={signedIn} role={role} open={accountMenu} size={26} />
       </header>
       {setup && !setup.active ? (
         <MockLink to={paths.onboarding} className="m-setup">

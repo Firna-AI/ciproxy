@@ -1,17 +1,18 @@
 // The open step of setup: the install command, the Boat key with the monthly
-// spend limit, and the first job. Only an Admin whom GitHub lets add
-// self-hosted runners sees the install command.
+// spend limit, and the first job. Only an Admin whom GitHub lets manage
+// self-hosted runners sees the install command; another Admin sees who can
+// add the machine.
 
 import { CircleCheck } from "lucide-react";
 
 import { Action, LinkAction } from "../../components/actions.tsx";
 import { BoatFields } from "../../components/boat-fields.tsx";
-import { Notice } from "../../components/feedback.tsx";
 import { CodeBlock } from "../../components/figures.tsx";
 import {
   ConnectedMachine,
   InstallCommand,
   NoKvmNotice,
+  NoRunnerRightNotice,
   WaitingLine,
 } from "../../components/install-command.tsx";
 import { paths } from "../../components/paths.ts";
@@ -25,14 +26,7 @@ import type { OnboardingState } from "./onboarding.tsx";
 function NoRunnerRight() {
   return (
     <div className="stack">
-      <Notice
-        tone="info"
-        title={`An owner of ${org.login} can add the machine`}
-        actions={<Action size="sm">Check again</Action>}
-      >
-        Adding a machine needs the right on GitHub to add self-hosted runners.
-        Ask an owner to add it, or to give you that right.
-      </Notice>
+      <NoRunnerRightNotice />
       <div className="row">
         <LinkAction to={paths.connectBoat}>Skip for now</LinkAction>
       </div>

@@ -49,25 +49,3 @@
   padding-top: 20px;
   border-top: 1px solid var(--c-border);
 }
-
-.price-feature-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.price-feature-list li {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  color: var(--c-ink2);
-}
-
-.price-check {
-  margin-top: 3px;
-  color: var(--c-ink);
-  flex-shrink: 0;
-}

@@ -319,6 +319,26 @@ calls, 4 November 2026:
 - A reconnect after Boat rejects the key asks for the spend limit, filled
   with the saved limit. Reason: every Boat connection asks for it.
 
+Design calls of the mockups agent for items 8, 9, 10, and 19, 4 November
+2026:
+
+- The claim compares with the cheaper alternative, Blacksmith, and rounds
+  down: "The same jobs for up to 80% less". Reason: it then holds against
+  both alternatives.
+- The claim assumes 5-minute jobs. For jobs of 2 to 10 minutes, the saving
+  stays between 73% and 82%.
+- The calculation names the setup fee of the server but keeps it out of the
+  monthly cost, and it says that it ignores the free minutes of the hosted
+  runners.
+- The calculation is the last question on the pricing page, and the small
+  caption of the landing page links to it.
+- "Start free" is the only button that opens sign-in. "Sign in" in the top
+  bar of the site is a text link.
+- The hero picture keeps the example organization `mokly-ai`, because it
+  shows the product. The cost example of `mokly-ai` is gone.
+- A Viewer or a Billing person reads "Ask an Admin" where only an Admin may
+  act.
+
 ### Pricing
 
 My proposal, which the user approved for the MVP on 3 November 2026. It
@@ -949,7 +969,7 @@ up Mokly as `futex-ai/accounting` does.
       mockups README; the Viewer, Billing, and Admin roles, with a members
       and roles screen in Settings and the page for a member with no role;
       the spend limit in the Boat step of setup; and "Clear cache".
-- [ ] Apply the answers to items 8, 9, and 10 in the mockups. Count only
+- [x] Apply the answers to items 8, 9, and 10 in the mockups. Count only
       the Linux jobs where the landing page and the savings screen compare
       Linux prices.
 - [x] Add the mockup states that the docs need: a refused Boat sandbox, a
@@ -960,21 +980,21 @@ up Mokly as `futex-ai/accounting` does.
       counts for each job, limit the instant-start claim of the features
       section to the `ciproxy` label, and apply item 12 to the text of the
       pending approval screen.
-- [ ] Add the Viewer and Billing states of Jobs, Machines, Savings, and
+- [x] Add the Viewer and Billing states of Jobs, Machines, Savings, and
       Plans. Add the state without the runner right to Setup, Add machine,
       and Machines.
-- [ ] Add the count of access requests on the Members tab, the Admin claim
+- [x] Add the count of access requests on the Members tab, the Admin claim
       in the account menu, the page after "Revoke token", the spend limit
       of a reconnect, the label of a waiting job in the live queue, and the
       VM size that ran on the job page.
-- [ ] Name the protocol docs of each mockup entry in its `relatedDocs`.
+- [x] Name the protocol docs of each mockup entry in its `relatedDocs`.
 - [x] Check the disks of the default labels against the Boat sizes. The
       labels ask for 60, 80, and 120 GB, and Boat `small` and `default`
       give 51 GB for files. So `ciproxy` overflows on `large`. The spike
       found 57 GB free with a minimal runner. Milestone 10 of
       `plans/ciproxy-mvp.md` measures the shared image, and then proposes
       the disk as a decision.
-- [ ] Update the design and the TODOs of this plan for each problem that
+- [x] Update the design and the TODOs of this plan for each problem that
       the mockups show.
 
 ## Milestone 2: Documentation and protocol

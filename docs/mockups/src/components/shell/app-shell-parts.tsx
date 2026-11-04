@@ -1,14 +1,18 @@
 // The small parts of the desktop frame: the setup item of the sidebar, and the
-// top bar with the organization switch and the page as breadcrumbs.
+// top bar with the organization switch, the page as breadcrumbs, and the
+// avatar of the signed-in person.
 
+import type { ReactNode } from "react";
 import { ChevronsUpDown, Rocket } from "lucide-react";
 import { MockLink } from "@mokly/mokly";
 import { Avatar } from "@firna/ui/avatar";
 
+import type { Role } from "../../fixtures/members.ts";
 import { org, type TierKey } from "../../fixtures/org.ts";
 import { tiers } from "../../fixtures/tiers.ts";
 import { paths } from "../paths.ts";
 import { Tag } from "../status.tsx";
+import { AccountMenu } from "./account-menu.tsx";
 import type { SetupProgress, ShellPerson } from "./app-shell.tsx";
 
 export function SetupItem({ setup }: { setup: SetupProgress }) {
@@ -29,11 +33,12 @@ export function SetupItem({ setup }: { setup: SetupProgress }) {
 export function TopBar({
   tier,
   page,
-  person,
+  account,
 }: {
   tier: TierKey;
   page: string;
-  person: ShellPerson;
+  /** The avatar of the signed-in person, with its account menu. */
+  account: ReactNode;
 }) {
   return (
     <header className="topbar">
@@ -56,12 +61,32 @@ export function TopBar({
           {page}
         </span>
       </nav>
+      {account}
+    </header>
+  );
+}
+
+/** The avatar of the top bar, with the account menu when it is open. */
+export function Account({
+  person,
+  role,
+  open,
+  size,
+}: {
+  person: ShellPerson;
+  role: Role;
+  open: boolean;
+  size: number;
+}) {
+  return (
+    <span className="account">
       <Avatar
         label={person.initials}
         accessibilityLabel={person.name}
-        size={28}
+        size={size}
         tone="soft"
       />
-    </header>
+      {open ? <AccountMenu person={person} role={role} /> : null}
+    </span>
   );
 }

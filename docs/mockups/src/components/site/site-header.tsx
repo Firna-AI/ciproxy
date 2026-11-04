@@ -1,7 +1,9 @@
 // The top bar of the public site, shared by the marketing pages and the docs.
-// Marketing: the wordmark, Pricing and Docs, then Sign in and Start free. The
-// docs: the wordmark with "Docs", the search box, and the same actions. On
-// mobile, a menu button holds the links that do not fit.
+// Marketing: the wordmark, Pricing and Docs, then the Sign in link and the
+// Start free button. The docs: the wordmark with "Docs", the search box, and
+// the same actions. Every button that opens sign-in says Start free; the link
+// serves people who already use ciproxy. On mobile, a menu button holds the
+// links that do not fit.
 
 import { Command, Github, Menu, Search } from "lucide-react";
 import { MockLink, type Viewport } from "@mokly/mokly";
@@ -98,9 +100,9 @@ function DesktopParts({ section }: { section: SiteSection }) {
             </span>
           </>
         ) : null}
-        <LinkAction to={paths.signIn} size="sm">
+        <MockLink to={paths.signIn} className={navClass(false)}>
           Sign in
-        </LinkAction>
+        </MockLink>
         <LinkAction to={paths.signIn} size="sm" tone="primary">
           Start free
         </LinkAction>

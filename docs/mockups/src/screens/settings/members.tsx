@@ -14,6 +14,7 @@ import { Tag } from "../../components/status.tsx";
 import { dotJoin } from "../../fixtures/format.ts";
 import {
   members,
+  openRequests,
   requester,
   roleOrder,
   roles,
@@ -163,7 +164,11 @@ export function MembersScreen({
   state: MembersState;
 }) {
   return (
-    <SettingsFrame viewport={viewport} active={paths.members}>
+    <SettingsFrame
+      viewport={viewport}
+      active={paths.members}
+      openRequests={state === "request" ? openRequests.length : 0}
+    >
       {state === "request" ? <AccessRequest /> : null}
       <Panel title="Members" flush>
         <MemberList viewport={viewport} />
@@ -183,8 +188,7 @@ export function MembersScreen({
             ))}
           </ul>
           <p className="caption">
-            To add a machine, an Admin also needs the right on GitHub to add
-            self-hosted runners.
+            To add a machine, an Admin also needs the GitHub runner right.
           </p>
         </div>
       </Panel>

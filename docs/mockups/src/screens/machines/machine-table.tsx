@@ -14,14 +14,28 @@ import { MachineStatusLabel } from "../../components/status.tsx";
 import { dotJoin, unbroken } from "../../fixtures/format.ts";
 import { ax42Size, type Machine } from "../../fixtures/machines.ts";
 
-/** The detail screens that exist: hetzner-ax42-1, and the offline machine. */
-function detailPath(machine: Machine): CataloguePath | undefined {
+/**
+ * The detail screens that exist: hetzner-ax42-1, and the offline machine. A
+ * person who cannot change machines opens the read-only machine page.
+ */
+function detailPath(
+  machine: Machine,
+  readOnly: boolean,
+): CataloguePath | undefined {
+  const first = machine.name === "hetzner-ax42-1";
+  if (readOnly) return first ? paths.machineViewer : undefined;
   if (machine.status === "offline") return paths.machineOffline;
-  return machine.name === "hetzner-ax42-1" ? paths.machine : undefined;
+  return first ? paths.machine : undefined;
 }
 
-function MachineName({ machine }: { machine: Machine }) {
-  const to = detailPath(machine);
+function MachineName({
+  machine,
+  readOnly,
+}: {
+  machine: Machine;
+  readOnly: boolean;
+}) {
+  const to = detailPath(machine, readOnly);
   return (
     <span className="machine-name">
       {to ? (
@@ -44,10 +58,10 @@ function slotText(machine: Machine): string {
   return dotJoin(unbroken(`${busy} busy`), unbroken(`${warm} warm`));
 }
 
-function cell(machine: Machine, key: string) {
+function cell(machine: Machine, key: string, readOnly: boolean) {
   switch (key) {
     case "machine":
-      return <MachineName machine={machine} />;
+      return <MachineName machine={machine} readOnly={readOnly} />;
     case "status":
       return <MachineStatusLabel status={machine.status} />;
     case "slots":
@@ -81,9 +95,12 @@ const columns: readonly Column[] = [
 export function MachineTable({
   viewport,
   machines,
+  readOnly = false,
 }: {
   viewport: Viewport;
   machines: readonly Machine[];
+  /** The person cannot change machines, so a row opens the read-only page. */
+  readOnly?: boolean;
 }) {
   if (viewport === "mobile") {
     return (
@@ -91,7 +108,7 @@ export function MachineTable({
         {machines.map((machine) => (
           <div key={machine.name} className="machine-card">
             <div className="spread">
-              <MachineName machine={machine} />
+              <MachineName machine={machine} readOnly={readOnly} />
               <MachineStatusLabel status={machine.status} />
             </div>
             <div className="spread">
@@ -116,7 +133,7 @@ export function MachineTable({
         columns={columns}
         rows={machines}
         rowKey={(machine) => machine.name}
-        cell={cell}
+        cell={(machine, key) => cell(machine, key, readOnly)}
       />
       <div className="machine-legend">
         <SlotLegend />

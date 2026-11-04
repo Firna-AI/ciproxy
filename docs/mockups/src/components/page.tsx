@@ -1,13 +1,14 @@
 // Page building blocks: the page header with its breadcrumb, panels, the link
 // tabs that switch between sibling pages, such as Live and History, and the
-// details list. A tab with live data leads with a live dot.
+// details list. A tab with live data leads with a live dot, and a tab with
+// open items, such as requests for access, ends with their count.
 
 import type { ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
 import { MockLink } from "@mokly/mokly";
 
 import type { CataloguePath } from "./paths.ts";
-import { Dot } from "./status.tsx";
+import { Dot, Tag } from "./status.tsx";
 import "./page.css";
 
 export type Crumb = { label: string; to: CataloguePath };
@@ -81,6 +82,8 @@ export type TabLink = {
   to: CataloguePath;
   /** The tab shows live data, so it leads with a live dot. */
   live?: boolean;
+  /** Open items on the tab, such as requests for access. */
+  count?: number;
 };
 
 export function LinkTabs({
@@ -101,6 +104,7 @@ export function LinkTabs({
         >
           {tab.live ? <Dot tone="run" /> : null}
           {tab.label}
+          {tab.count ? <Tag tone="accent">{tab.count}</Tag> : null}
         </MockLink>
       ))}
     </nav>

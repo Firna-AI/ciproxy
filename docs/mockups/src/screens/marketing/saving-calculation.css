@@ -1,0 +1,42 @@
+/* The calculation of the saving (saving-calculation.tsx): the basis in a
+   sentence, the costs of a month in hairline rows, and the price sources. */
+
+.saving {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.saving-table {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  border-top: 1px solid var(--c-border);
+}
+
+.saving-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--c-border);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.saving-row dt {
+  min-width: 0;
+}
+
+.saving-row dd {
+  margin: 0;
+  color: var(--c-ink);
+  white-space: nowrap;
+}
+
+.saving-row.is-total {
+  border-bottom-color: var(--c-border2);
+  color: var(--c-ink);
+  font-weight: 600;
+}

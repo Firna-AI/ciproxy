@@ -29,6 +29,16 @@ export function formatMoneyCents(value: number): string {
   return `$${cents.format(value)}`;
 }
 
+const rate = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 3,
+  maximumFractionDigits: 4,
+});
+
+/** A price per minute: 0.004 -> "$0.004". */
+export function formatRate(value: number): string {
+  return `$${rate.format(value)}`;
+}
+
 /** "4 December" with no-break spaces, so a line never splits the value. */
 export function unbroken(text: string): string {
   return text.replaceAll(" ", nbsp);

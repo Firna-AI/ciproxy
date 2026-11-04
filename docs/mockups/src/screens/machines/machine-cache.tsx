@@ -1,7 +1,7 @@
 // The machine cache of one machine: its use, the cache hits, and the Docker
 // disks. Clear cache deletes every entry of the machine cache, for example to
 // drop a bad entry that the machine kept after GitHub deleted it. It never
-// deletes an entry of the GitHub cache.
+// deletes an entry of the GitHub cache. Only an Admin clears a cache.
 
 import { Action, LinkAction } from "../../components/actions.tsx";
 import { Dialog } from "../../components/dialog.tsx";
@@ -9,7 +9,7 @@ import { Meter } from "../../components/figures.tsx";
 import { DetailList, DetailRow, Panel } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
 import { dotJoin, unbroken } from "../../fixtures/format.ts";
-import type { Machine } from "../../fixtures/machines.ts";
+import { cacheHitsPercent, type Machine } from "../../fixtures/machines.ts";
 
 /** Clear cache has its dialog screen for hetzner-ax42-1. */
 function ClearCache({ machine }: { machine: Machine }) {
@@ -22,12 +22,22 @@ function ClearCache({ machine }: { machine: Machine }) {
   );
 }
 
-export function MachineCache({ machine }: { machine: Machine }) {
+export function MachineCache({
+  machine,
+  canClear,
+}: {
+  machine: Machine;
+  /** An Admin can clear the cache. */
+  canClear: boolean;
+}) {
   const offline = machine.status === "offline";
+  const { repositories, sizeGb } = machine.dockerDisks;
   return (
     <Panel
       title="Cache"
-      action={offline ? undefined : <ClearCache machine={machine} />}
+      action={
+        offline || !canClear ? undefined : <ClearCache machine={machine} />
+      }
     >
       <div className="stack">
         <Meter
@@ -37,9 +47,12 @@ export function MachineCache({ machine }: { machine: Machine }) {
           value={`${machine.cacheUsedGb} of ${machine.cacheSizeGb} GB`}
         />
         <DetailList>
-          <DetailRow label="Cache hits, 7 days">91%</DetailRow>
+          <DetailRow label="Cache hits, 7 days">{cacheHitsPercent}%</DetailRow>
           <DetailRow label="Docker disks">
-            {dotJoin("3 repositories", unbroken("96 GB"))}
+            {dotJoin(
+              unbroken(`${repositories} repositories`),
+              unbroken(`${sizeGb} GB`),
+            )}
           </DetailRow>
         </DetailList>
       </div>

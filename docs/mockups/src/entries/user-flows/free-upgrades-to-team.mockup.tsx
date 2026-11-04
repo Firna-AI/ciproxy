@@ -1,13 +1,13 @@
 import { defineUseCase } from "@mokly/mokly";
 
 import { paths } from "../../components/paths.ts";
-import { planDoc } from "../../components/state-schema.ts";
+import { related } from "../../components/related-docs.ts";
 
 export const freeUpgradesToTeam = defineUseCase({
   title: "A Free organization passes its starts and upgrades to Team",
   description:
     "mokly-ai runs about 600 jobs a day, so on 4 September it passes the 2,000 starts of Free. Jobs keep running; the dashboard offers Team, and Cal pays through Stripe Checkout.",
-  relatedDocs: [planDoc],
+  relatedDocs: related("metering", "billing"),
   steps: [
     {
       screenPath: paths.jobsStartsPassed,

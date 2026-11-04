@@ -49,3 +49,18 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* A detail value with a line under it, such as the Boat size, keeps to the
+   right edge, and a label chip keeps its own width. */
+.detail-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+/* The labels of the job details are short; each stays on one line. */
+.job-detail .detail-row dt {
+  flex-shrink: 0;
+  white-space: nowrap;
+}

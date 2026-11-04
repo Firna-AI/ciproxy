@@ -1,6 +1,13 @@
 // Finished jobs of mokly-ai on Wednesday 18 November.
 
-import { type Job, type JobState, onBoat, own, type Where } from "./jobs.ts";
+import {
+  defaultLabel,
+  type Job,
+  type JobState,
+  onBoat,
+  own,
+  type Where,
+} from "./jobs.ts";
 
 type Done = [
   string,
@@ -13,6 +20,9 @@ type Done = [
   string,
   string,
 ];
+
+/** The jobs that finished on Wednesday 18 November up to 14:31. */
+export const jobsToday = 612;
 
 /** Finished jobs on Wednesday 18 November, newest first. */
 export const history: Job[] = (
@@ -128,6 +138,7 @@ export const history: Job[] = (
     state,
     where,
     time,
+    label: defaultLabel,
     waited,
     finished,
   }),

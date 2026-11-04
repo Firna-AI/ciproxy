@@ -10,7 +10,7 @@ import { ExternalLink } from "lucide-react";
 import { Action, LinkAction } from "../../components/actions.tsx";
 import { Notice } from "../../components/feedback.tsx";
 import { paths } from "../../components/paths.ts";
-import { AskPayer } from "../../components/usage-banner.tsx";
+import { AskPayer } from "../../components/role-actions.tsx";
 import { formatCount, monthly } from "../../fixtures/format.ts";
 import { org } from "../../fixtures/org.ts";
 import { addOnPrices, startsText, tiers } from "../../fixtures/tiers.ts";

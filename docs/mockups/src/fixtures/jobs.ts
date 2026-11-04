@@ -18,11 +18,16 @@ export type Job = {
   where: Where;
   /** Running for, waiting for, or the duration of a finished job. */
   time: string;
+  /** The label in runs-on, which gives the job its size. */
+  label: string;
   /** Finished jobs: the time the job waited for a runner. */
   waited?: string;
   /** Finished jobs: the clock time it finished. */
   finished?: string;
 };
+
+/** The label of a job whose row names no other: the default label. */
+export const defaultLabel = "ciproxy";
 
 export const own = (index: number, slot: number): Where => ({
   kind: "own",
@@ -40,18 +45,28 @@ export type Row = [
   JobState,
   Where,
   string,
+  string?,
 ];
 
-/** Jobs from compact rows: name, workflow, repo, ref, state, where, time. */
+/**
+ * Jobs from compact rows: name, workflow, repo, ref, state, where, time, and
+ * the label when it is not the default label.
+ */
 export function rows(prefix: string, list: readonly Row[]): Job[] {
-  return list.map(([name, workflow, repo, ref, state, where, time], i) => ({
-    id: `${prefix}-${i + 1}`,
-    name,
-    workflow,
-    repo,
-    ref,
-    state,
-    where,
-    time,
-  }));
+  return list.map(
+    (
+      [name, workflow, repo, ref, state, where, time, label = defaultLabel],
+      i,
+    ) => ({
+      id: `${prefix}-${i + 1}`,
+      name,
+      workflow,
+      repo,
+      ref,
+      state,
+      where,
+      time,
+      label,
+    }),
+  );
 }

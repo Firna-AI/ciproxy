@@ -1,6 +1,6 @@
 import { defineScreen } from "@mokly/mokly";
 
-import { planDoc } from "../../../../components/state-schema.ts";
+import { related } from "../../../../components/related-docs.ts";
 import { orgAddress } from "../../../../fixtures/org.ts";
 import { SavingsScreen } from "../../../../screens/savings/savings.tsx";
 
@@ -11,7 +11,7 @@ export const missingCosts = defineScreen({
   title: "Machine costs are missing",
   description:
     "No machine has a monthly cost yet, so the report cannot show savings. It still shows the alternatives and the Boat and plan costs.",
-  relatedDocs: [planDoc],
+  relatedDocs: related("metering"),
   address,
   render: (_props, context) => (
     <SavingsScreen viewport={context.viewport} state="missing-costs" />
@@ -22,7 +22,7 @@ export const empty = defineScreen({
   slug: "empty",
   title: "No jobs yet",
   description: "A new organization before its first job.",
-  relatedDocs: [planDoc],
+  relatedDocs: related("metering"),
   address,
   render: (_props, context) => (
     <SavingsScreen viewport={context.viewport} state="empty" />
@@ -33,7 +33,7 @@ export const loading = defineScreen({
   slug: "loading",
   title: "While the report loads",
   description: "Skeleton bars keep the layout of the report.",
-  relatedDocs: [planDoc],
+  relatedDocs: related("metering"),
   address,
   render: (_props, context) => (
     <SavingsScreen viewport={context.viewport} state="loading" />
@@ -44,7 +44,7 @@ export const error = defineScreen({
   slug: "error",
   title: "When the report fails to load",
   description: "The shared failed-read state with Try again.",
-  relatedDocs: [planDoc],
+  relatedDocs: related("metering"),
   address,
   render: (_props, context) => (
     <SavingsScreen viewport={context.viewport} state="error" />

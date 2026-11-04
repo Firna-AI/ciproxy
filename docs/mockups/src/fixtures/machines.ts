@@ -16,25 +16,44 @@ export type Machine = {
   warmTarget: number;
   cacheUsedGb: number;
   cacheSizeGb: number;
+  /** The repositories with a Docker disk on the machine, and their space. */
+  dockerDisks: { repositories: number; sizeGb: number };
   lastSeen: string;
 };
 
-/** The hardware the agent reports; the same for each AX42. */
+/** One slot of a machine: the size of the smallest job VM. */
+export const slotSize = { vcpu: 2, memoryGb: 8 } as const;
+
+/** Jobs get three quarters of a machine; the host reserve keeps the rest. */
+const jobShare = 3 / 4;
+
+/** The slots of a machine, by the rule of Slots in job-routing.md. */
+export function machineSlots(threads: number, memoryGb: number): number {
+  return Math.min(
+    Math.floor((threads * jobShare) / slotSize.vcpu),
+    Math.floor((memoryGb * jobShare) / slotSize.memoryGb),
+  );
+}
+
+const ax42Threads = 16;
+const ax42MemoryGb = 64;
+
+/**
+ * The hardware the agent reports; the same for each AX42. The monthly cost is
+ * what mokly-ai entered for its machines, which it bought at auction.
+ */
 export const ax42 = {
   cpu: "AMD Ryzen 7 PRO 8700GE",
-  threads: 16,
-  memoryGb: 64,
+  threads: ax42Threads,
+  memoryGb: ax42MemoryGb,
   disk: unbroken("2 × 512 GB NVMe"),
-  slotsTotal: 6,
+  slotsTotal: machineSlots(ax42Threads, ax42MemoryGb),
   agent: "0.4.2",
   monthlyCost: 53.4,
 } as const;
 
 /** The warm runners that each machine keeps unless the customer changes it. */
 export const defaultWarmRunners = 2;
-
-/** One slot of a machine: the size of the smallest job VM. */
-export const slotSize = { vcpu: 2, memoryGb: 8 } as const;
 
 /** The slots that a job VM of this size takes on a machine. */
 export function slotsFor(size: { vcpu: number; memoryGb: number }): number {
@@ -73,6 +92,10 @@ function machine(
     warmTarget: defaultWarmRunners,
     cacheUsedGb: [182, 167, 154, 12][index - 1] ?? 0,
     cacheSizeGb: 400,
+    dockerDisks: {
+      repositories: [3, 2, 2, 0][index - 1] ?? 0,
+      sizeGb: [96, 58, 61, 0][index - 1] ?? 0,
+    },
     lastSeen: status === "offline" ? "14m ago" : "3s ago",
   };
 }
@@ -110,6 +133,12 @@ export const machineScenes = {
 
 export type MachineScene = keyof typeof machineScenes;
 
+/** The share of the cache restores of the last 7 days that the caches served. */
+export const cacheHitsPercent = 91;
+
+/** How long ago ciproxy lost contact with the offline machine. */
+export const offlineFor = unbroken("14 minutes");
+
 export function countSlots(
   machines: readonly Machine[],
   state: SlotState,
@@ -126,4 +155,10 @@ export const boat = {
   spendLimit: 200,
   spentThisMonth: 61.2,
   waitSeconds: 30,
+  /** The day Boat stopped accepting the key. */
+  keyRejectedOn: unbroken("12 November"),
+  /** The day the Boat spend of November reached the limit. */
+  limitReachedOn: unbroken("26 November"),
+  /** The first day of the next month, when Boat takes jobs again. */
+  nextMonth: unbroken("1 December"),
 } as const;

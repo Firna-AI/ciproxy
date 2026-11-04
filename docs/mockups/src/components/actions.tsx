@@ -49,16 +49,19 @@ export function LinkAction({
   );
 }
 
-/** An inline text link to another screen of the catalogue. */
+/** An inline text link to another screen, or to a section of it. */
 export function TextLink({
   to,
+  fragment,
   children,
 }: {
   to: CataloguePath;
+  /** The id of the section that the link opens. */
+  fragment?: string;
   children: ReactNode;
 }) {
   return (
-    <MockLink to={to} className="text-link">
+    <MockLink to={to} fragment={fragment} className="text-link">
       {children}
     </MockLink>
   );

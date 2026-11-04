@@ -74,6 +74,16 @@
   vertical-align: middle;
 }
 
+.compare-later {
+  color: var(--c-muted);
+  vertical-align: middle;
+}
+
+.compare-label,
+.compare .coming-later {
+  display: block;
+}
+
 .mockup-mobile .compare-label-col {
   width: 37%;
 }

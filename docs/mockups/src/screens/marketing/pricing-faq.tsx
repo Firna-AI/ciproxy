@@ -1,15 +1,25 @@
 // The common questions of the pricing page: what a start is, what counts as
-// a machine, what happens past a limit, who pays for overflow, and how to
-// cancel. Every answer follows a decision or a design call of the plan.
+// a machine, what happens past a limit, who pays for overflow, how to cancel,
+// and how the landing page counts its saving. Every answer follows a decision
+// or a design call of the plan.
+
+import type { ReactNode } from "react";
 
 import { TextLink } from "../../components/actions.tsx";
 import { paths } from "../../components/paths.ts";
 import { formatCount } from "../../fixtures/format.ts";
 import { tiers } from "../../fixtures/tiers.ts";
+import {
+  SavingCalculation,
+  savingId,
+  savingQuestion,
+} from "./saving-calculation.tsx";
 import { Section, SectionHead } from "./section.tsx";
 import "./pricing-faq.css";
 
-const faqs: readonly { question: string; answer: string }[] = [
+type Faq = { question: string; answer: ReactNode; id?: string };
+
+const faqs: readonly Faq[] = [
   {
     question: "What is a start?",
     answer:
@@ -34,6 +44,11 @@ const faqs: readonly { question: string; answer: string }[] = [
     answer:
       "Open Plan and usage in the dashboard and manage your plan in the Stripe customer portal. A move to Free takes effect at the end of the paid period, and your jobs keep running.",
   },
+  {
+    id: savingId,
+    question: savingQuestion,
+    answer: <SavingCalculation />,
+  },
 ];
 
 export function PricingFaq() {
@@ -51,7 +66,7 @@ export function PricingFaq() {
         />
         <dl className="faq-list">
           {faqs.map((faq) => (
-            <div key={faq.question} className="faq-item">
+            <div key={faq.question} id={faq.id} className="faq-item">
               <dt className="faq-question">{faq.question}</dt>
               <dd className="faq-answer">{faq.answer}</dd>
             </div>

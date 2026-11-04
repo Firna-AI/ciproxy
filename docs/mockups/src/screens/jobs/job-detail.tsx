@@ -1,6 +1,9 @@
-// One finished job: where it ran, why it ran there, and how long it waited.
+// One finished job: where it ran, why it ran there, how long it waited, its
+// label, and the VM size that ran it. A job on Boat names the Boat size,
+// which Boat bills. The cache counts show only when the machine cache handled
+// the restores; a job on Boat, and a job that fell back to the GitHub cache,
+// show only the cache source.
 
-import type { ReactNode } from "react";
 import { Cloud, ExternalLink, Server } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
 
@@ -14,71 +17,17 @@ import {
 import { paths } from "../../components/paths.ts";
 import { AppShell } from "../../components/shell/app-shell.tsx";
 import { JobStateLabel } from "../../components/status.tsx";
-import { onBoat, own, type Where } from "../../fixtures/jobs.ts";
-import { org } from "../../fixtures/org.ts";
-import { labelNamed } from "../../fixtures/settings.ts";
+import { dotJoin, unbroken } from "../../fixtures/format.ts";
+import {
+  jobDetails,
+  type CacheUse,
+  type JobDetail,
+  type JobDetailState,
+} from "../../fixtures/job-details.ts";
+import type { Where } from "../../fixtures/jobs.ts";
 import { sizeText } from "../../fixtures/sizes.ts";
 import "./jobs.css";
 import "./job-detail.css";
-
-export const jobDetailStates = ["own", "boat"] as const;
-
-/** Both jobs use the default label. */
-const jobLabel = labelNamed("ciproxy");
-export type JobDetailState = (typeof jobDetailStates)[number];
-
-type Detail = {
-  name: string;
-  context: string;
-  where: Where;
-  why: string;
-  timeline: readonly [string, ReactNode][];
-  waited: string;
-  duration: string;
-  cache: string;
-  cacheSource: string;
-};
-
-const details: Record<JobDetailState, Detail> = {
-  own: {
-    name: "test (rust)",
-    context: `${org.login}/mokly · CI · #1542 Add catalogue search`,
-    where: own(1, 3),
-    why: "A warm runner was ready, so the job started at once.",
-    timeline: [
-      ["14:25:09", "Queued on GitHub"],
-      [
-        "14:25:09",
-        <>
-          Taken by a warm runner on{" "}
-          <span className="mono nowrap">hetzner-ax42-1</span>
-        </>,
-      ],
-      ["14:31:21", "Passed"],
-    ],
-    waited: "0s",
-    duration: "6m 12s",
-    cache: "3 restored · 2.1 GB",
-    cacheSource: "This machine",
-  },
-  boat: {
-    name: "e2e (chromium) 3/4",
-    context: `${org.login}/mokly · E2E · main`,
-    where: onBoat,
-    why: "Your machines were full, so the job started on Boat after 30 seconds.",
-    timeline: [
-      ["14:23:04", "Queued on GitHub"],
-      ["14:23:04", "No free slot on your machines"],
-      ["14:23:34", "Runner started on Boat"],
-      ["14:23:35", "Taken by the Boat runner"],
-      ["14:30:40", "Passed"],
-    ],
-    waited: "31s",
-    duration: "7m 05s",
-    cache: "3 restored · 2.1 GB",
-    cacheSource: "The GitHub cache",
-  },
-};
 
 function WhereTitle({ where }: { where: Where }) {
   if (where.kind !== "own") return "Boat";
@@ -90,6 +39,52 @@ function WhereTitle({ where }: { where: Where }) {
   );
 }
 
+/** The VM size that ran the job: the label's on a machine, Boat's on Boat. */
+function VmSize({ job }: { job: JobDetail }) {
+  if (!job.boatSize) return <>{sizeText(job.label)}</>;
+  return (
+    <span className="detail-stack">
+      <span>
+        {dotJoin(`Boat ${job.boatSize.name}`, sizeText(job.boatSize))}
+      </span>
+      <span className="caption">
+        The cheapest Boat size that fits the label. Boat bills this size.
+      </span>
+    </span>
+  );
+}
+
+function CacheRows({ cache, job }: { cache: CacheUse; job: JobDetail }) {
+  if (cache.source === "machine") {
+    return (
+      <>
+        <DetailRow label="Cache">
+          {dotJoin(
+            unbroken(`${cache.restored} restored`),
+            unbroken(`${cache.sizeGb} GB`),
+          )}
+        </DetailRow>
+        <DetailRow label="Cache source">This machine</DetailRow>
+      </>
+    );
+  }
+  return (
+    <DetailRow label="Cache source">
+      {cache.fallback && job.where.kind === "own" ? (
+        <span className="detail-stack">
+          <span>The GitHub cache</span>
+          <span className="caption">
+            The cache of <span className="mono">{job.where.machine}</span> was
+            not available, so the job used the GitHub cache.
+          </span>
+        </span>
+      ) : (
+        "The GitHub cache"
+      )}
+    </DetailRow>
+  );
+}
+
 export function JobDetailScreen({
   viewport,
   state,
@@ -97,7 +92,7 @@ export function JobDetailScreen({
   viewport: Viewport;
   state: JobDetailState;
 }) {
-  const job = details[state];
+  const job = jobDetails[state];
   const Icon = job.where.kind === "boat" ? Cloud : Server;
   return (
     <AppShell viewport={viewport} tier="team" active="jobs">
@@ -122,10 +117,18 @@ export function JobDetailScreen({
             </div>
           </div>
           <ol className="timeline">
-            {job.timeline.map(([time, event], i) => (
-              <li key={`${time}-${i}`}>
-                <span className="mono timeline-time">{time}</span>
-                <span className="small">{event}</span>
+            {job.timeline.map((event, i) => (
+              <li key={`${event.time}-${i}`}>
+                <span className="mono timeline-time">{event.time}</span>
+                <span className="small">
+                  {event.text}
+                  {event.machine ? (
+                    <>
+                      {" "}
+                      <span className="mono nowrap">{event.machine}</span>
+                    </>
+                  ) : null}
+                </span>
               </li>
             ))}
           </ol>
@@ -133,17 +136,25 @@ export function JobDetailScreen({
         <Panel title="Details">
           <DetailList>
             <DetailRow label="Label">
-              <span className="inline-code">{jobLabel.name}</span>
+              {job.boatSize ? (
+                <span className="detail-stack">
+                  <span className="inline-code">{job.label.name}</span>
+                  <span className="caption">{sizeText(job.label)}</span>
+                </span>
+              ) : (
+                <span className="inline-code">{job.label.name}</span>
+              )}
             </DetailRow>
-            <DetailRow label="Size">{sizeText(jobLabel)}</DetailRow>
+            <DetailRow label="VM size">
+              <VmSize job={job} />
+            </DetailRow>
             <DetailRow label="Waited">
               <span className="duration">{job.waited}</span>
             </DetailRow>
             <DetailRow label="Duration">
               <span className="duration">{job.duration}</span>
             </DetailRow>
-            <DetailRow label="Cache">{job.cache}</DetailRow>
-            <DetailRow label="Cache source">{job.cacheSource}</DetailRow>
+            <CacheRows cache={job.cache} job={job} />
             <DetailRow label="Starts">Counts as 1 start</DetailRow>
           </DetailList>
         </Panel>

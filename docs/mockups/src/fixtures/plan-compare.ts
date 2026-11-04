@@ -1,10 +1,16 @@
 // The feature comparison of the pricing page, by area. The limits, prices,
-// and feature names come from tiers.ts; a feature that a tier adds is in every
-// tier above it too.
+// and features come from tiers.ts: a feature that a tier adds is in every
+// tier above it too, and a feature that comes later says so in its row.
 
 import { formatCount, formatMoney } from "./format.ts";
 import type { TierKey } from "./org.ts";
-import { addOnPrices, feature, tierOrder, tiers } from "./tiers.ts";
+import {
+  addOnPrices,
+  features,
+  includes,
+  tiers,
+  type FeatureKey,
+} from "./tiers.ts";
 
 /** A cell: included, not included, or a value such as "30 days". */
 export type CompareValue = boolean | string;
@@ -12,6 +18,8 @@ export type CompareValue = boolean | string;
 export type CompareRow = {
   label: string;
   values: Readonly<Record<TierKey, CompareValue>>;
+  /** The feature comes later, so an included cell says "Coming later". */
+  later?: boolean;
 };
 
 export type CompareGroup = { title: string; rows: readonly CompareRow[] };
@@ -31,10 +39,13 @@ function each(
   };
 }
 
-/** A feature that starts at one tier and stays in every tier above it. */
-function from(start: TierKey, label: string): CompareRow {
-  const first = tierOrder.indexOf(start);
-  return each(label, (key) => tierOrder.indexOf(key) >= first);
+/** The row of a tier feature, from its record. */
+function featureRow(key: FeatureKey): CompareRow {
+  const feature = features[key];
+  return {
+    ...each(feature.name, (tier) => includes(tier, feature)),
+    later: !feature.launch,
+  };
 }
 
 /** A monthly add-on price on the tiers that offer add-ons. */
@@ -58,35 +69,32 @@ export const compareGroups: readonly CompareGroup[] = [
   {
     title: "Runners",
     rows: [
-      from("free", feature.ownMachines),
-      from("free", feature.boat),
-      from("free", feature.warmRunners),
-      from("free", feature.cache),
-      from("team", feature.stickyDisks),
-      from("business", feature.images),
+      featureRow("ownMachines"),
+      featureRow("boat"),
+      featureRow("warmRunners"),
+      featureRow("cache"),
+      featureRow("stickyDisks"),
+      featureRow("images"),
     ],
   },
   {
     title: "Dashboard",
     rows: [
-      from("free", feature.savings),
+      featureRow("savings"),
       each("Job history", (key) => tiers[key].history),
-      from("team", feature.alerts),
+      featureRow("alerts"),
     ],
   },
   {
     title: "Organization",
     rows: [
-      from("business", feature.organizations),
-      from("business", feature.singleSignOn),
-      from("business", feature.auditLog),
+      featureRow("organizations"),
+      featureRow("singleSignOn"),
+      featureRow("auditLog"),
     ],
   },
   {
     title: "Support",
-    rows: [
-      from("team", feature.emailSupport),
-      from("business", feature.prioritySupport),
-    ],
+    rows: [featureRow("emailSupport"), featureRow("prioritySupport")],
   },
 ];

@@ -1,6 +1,8 @@
 // Overflow settings: the Boat account, how long a job waits for an own
 // machine before it starts on Boat, and the monthly Boat spend limit. Before
 // Boat connects, the page asks for the key and the limit, as setup does.
+// After Boat rejects the key, it asks for a new key and the limit again, and
+// the limit starts with the saved limit.
 
 import type { Viewport } from "@mokly/mokly";
 import { DropdownSelector } from "@firna/ui/dropdown";
@@ -13,7 +15,7 @@ import { TextField } from "../../components/fields.tsx";
 import { Meter } from "../../components/figures.tsx";
 import { Panel } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
-import { formatMoney, unbroken } from "../../fixtures/format.ts";
+import { formatMoney } from "../../fixtures/format.ts";
 import { boat } from "../../fixtures/machines.ts";
 import { waitChoices } from "../../fixtures/settings.ts";
 import { SettingsFrame } from "./settings-frame.tsx";
@@ -71,34 +73,30 @@ export function OverflowScreen({
   }
   const spent =
     state === "limit-reached" ? boat.spendLimit : boat.spentThisMonth;
+  const rejected = state === "boat-rejected";
   return (
     <SettingsFrame viewport={viewport} active={paths.overflow}>
       {state === "limit-reached" ? (
         <Notice
           tone="warning"
-          title={`Boat spend reached the ${formatMoney(boat.spendLimit)} limit on ${unbroken("26 November")}`}
+          title={`Boat spend reached the ${formatMoney(boat.spendLimit)} limit on ${boat.limitReachedOn}`}
         >
           Jobs run on your machines only, and wait there for a free slot. Boat
-          takes jobs again on {unbroken("1 December")}, or when you raise the
-          limit.
+          takes jobs again on {boat.nextMonth}, or when you raise the limit.
         </Notice>
       ) : null}
-      {state === "boat-rejected" ? (
+      {rejected ? (
         <Notice
           tone="danger"
-          title={`Boat rejected the API key on ${unbroken("12 November")}`}
+          title={`Boat rejected the API key on ${boat.keyRejectedOn}`}
         >
           Jobs run on your machines only until you connect Boat with a new key.
         </Notice>
       ) : null}
       <Panel title="Boat">
-        {state === "boat-rejected" ? (
+        {rejected ? (
           <div className="stack settings-form">
-            <TextField
-              label="New Boat API key"
-              placeholder="boat_live_…"
-              hint="Create a key in the Boat console, under Settings."
-            />
+            <BoatFields reconnect limit={boat.spendLimit} />
             <div className="row">
               <Action tone="primary">Connect Boat</Action>
             </div>
@@ -140,25 +138,31 @@ export function OverflowScreen({
           />
         </div>
       </Panel>
-      <Panel title="Monthly spend limit">
-        <div className="stack settings-form">
-          <TextField
-            label="Limit, US dollars"
-            value={String(state === "limit-reached" ? 200 : boat.spendLimit)}
-          />
-          <Meter
-            label="Spent this month"
-            used={spent}
-            max={boat.spendLimit}
-            tone={state === "limit-reached" ? "warning" : "normal"}
-            value={`${formatMoney(spent)} of ${formatMoney(boat.spendLimit)}`}
-            detail="At the limit, jobs run on your machines only."
-          />
-          <div className="row">
-            <Action tone="primary">Save</Action>
-          </div>
-        </div>
-      </Panel>
+      {rejected ? null : (
+        <SpendLimit spent={spent} reached={state === "limit-reached"} />
+      )}
     </SettingsFrame>
+  );
+}
+
+/** The limit and the spend of the month, while Boat is connected. */
+function SpendLimit({ spent, reached }: { spent: number; reached: boolean }) {
+  return (
+    <Panel title="Monthly spend limit">
+      <div className="stack settings-form">
+        <TextField label="Limit, US dollars" value={String(boat.spendLimit)} />
+        <Meter
+          label="Spent this month"
+          used={spent}
+          max={boat.spendLimit}
+          tone={reached ? "warning" : "normal"}
+          value={`${formatMoney(spent)} of ${formatMoney(boat.spendLimit)}`}
+          detail="At the limit, jobs run on your machines only."
+        />
+        <div className="row">
+          <Action tone="primary">Save</Action>
+        </div>
+      </div>
+    </Panel>
   );
 }

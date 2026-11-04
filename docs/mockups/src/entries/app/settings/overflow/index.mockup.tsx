@@ -1,7 +1,8 @@
 import { defineScreen } from "@mokly/mokly";
 
 import { paths } from "../../../../components/paths.ts";
-import { planDoc, stateSchema } from "../../../../components/state-schema.ts";
+import { related } from "../../../../components/related-docs.ts";
+import { stateSchema } from "../../../../components/state-schema.ts";
 import { orgAddress } from "../../../../fixtures/org.ts";
 import {
   OverflowScreen,
@@ -12,7 +13,7 @@ export const overflow = defineScreen({
   title: "Overflow",
   description:
     "The Boat account, the wait before a job starts on Boat (30 seconds), and the monthly Boat spend limit with the spend so far.",
-  relatedDocs: [planDoc],
+  relatedDocs: related("overflow", "jobRouting"),
   address: orgAddress("settings/overflow"),
   useCasePaths: [paths.flowPeakOverflow],
   propSchema: stateSchema(overflowStates),
@@ -32,7 +33,7 @@ export const overflow = defineScreen({
       slug: "boat-rejected",
       title: "Boat rejected the key",
       description:
-        "Boat stopped accepting the API key. Jobs run on own machines only until a new key connects.",
+        "Boat stopped accepting the API key on 12 November. Jobs run on own machines only until a new key connects. The reconnect asks for the new key and the spend limit, and the limit starts with the saved $200.",
       props: { state: "boat-rejected" },
     },
     {

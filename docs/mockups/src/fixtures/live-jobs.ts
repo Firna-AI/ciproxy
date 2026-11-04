@@ -50,11 +50,38 @@ export const steadyRunning = rows("steady", [
 
 /** Wednesday 18 November, 10:05, a release peak. 12 wait, 64 run. */
 export const peakWaiting = rows("peak-wait", [
-  ["e2e (webkit) 1/2", "E2E", "mokly", "#1544", "waiting", none, "24s"],
-  ["e2e (webkit) 2/2", "E2E", "mokly", "#1544", "waiting", none, "24s"],
+  [
+    "e2e (webkit) 1/2",
+    "E2E",
+    "mokly",
+    "#1544",
+    "waiting",
+    none,
+    "24s",
+    "ciproxy-4vcpu",
+  ],
+  [
+    "e2e (webkit) 2/2",
+    "E2E",
+    "mokly",
+    "#1544",
+    "waiting",
+    none,
+    "24s",
+    "ciproxy-4vcpu",
+  ],
   ["storybook", "CI", "mokly", "#1544", "waiting", none, "19s"],
   ["unit (node 24)", "CI", "mokly-cloud", "#320", "waiting", none, "15s"],
-  ["docker image", "Release", "mokly-cloud", "main", "waiting", none, "9s"],
+  [
+    "docker image",
+    "Release",
+    "mokly-cloud",
+    "main",
+    "waiting",
+    none,
+    "9s",
+    "ciproxy-8vcpu",
+  ],
   ["fmt", "CI", "mokly", "#1545", "waiting", none, "4s"],
 ]);
 
