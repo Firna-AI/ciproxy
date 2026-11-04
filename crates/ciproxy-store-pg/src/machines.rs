@@ -15,7 +15,7 @@ use crate::error::{QueryResultExt, require_record};
 
 #[derive(Queryable, Selectable, Insertable, AsChangeset)]
 #[diesel(table_name = machines, treat_none_as_null = true)]
-struct MachineRow {
+pub(crate) struct MachineRow {
     id: Uuid,
     workspace_id: Uuid,
     hostname: String,
@@ -42,7 +42,7 @@ struct DiskRow {
 }
 
 impl MachineRow {
-    fn from_record(workspace_id: Uuid, machine: &Machine) -> Self {
+    pub(crate) fn from_record(workspace_id: Uuid, machine: &Machine) -> Self {
         Self {
             id: machine.id,
             workspace_id,
@@ -79,7 +79,7 @@ impl MachineRow {
     }
 }
 
-fn replace_disks(
+pub(crate) fn replace_disks(
     connection: &mut PgConnection,
     workspace_id: Uuid,
     machine: &Machine,
@@ -184,24 +184,33 @@ impl MachineStore for PgStore {
         let count = self
             .connection()?
             .transaction(|connection| {
-                let count = diesel::update(
-                    machines::table
-                        .filter(machines::workspace_id.eq(workspace_id))
-                        .find(machine_id),
-                )
-                .set((machines::removed_at.eq(at), machines::draining.eq(true)))
-                .execute(connection)?;
-                diesel::update(
-                    tokens::table
-                        .filter(tokens::workspace_id.eq(workspace_id))
-                        .filter(tokens::machine_id.eq(machine_id))
-                        .filter(tokens::revoked_at.is_null()),
-                )
-                .set(tokens::revoked_at.eq(at))
-                .execute(connection)?;
-                QueryResult::Ok(count)
+                remove_machine_records(connection, workspace_id, machine_id, at)
             })
             .store()?;
         require_record(count)
     }
+}
+
+pub(crate) fn remove_machine_records(
+    connection: &mut PgConnection,
+    workspace_id: Uuid,
+    machine_id: Uuid,
+    at: DateTime<Utc>,
+) -> QueryResult<usize> {
+    let count = diesel::update(
+        machines::table
+            .filter(machines::workspace_id.eq(workspace_id))
+            .find(machine_id),
+    )
+    .set((machines::removed_at.eq(at), machines::draining.eq(true)))
+    .execute(connection)?;
+    diesel::update(
+        tokens::table
+            .filter(tokens::workspace_id.eq(workspace_id))
+            .filter(tokens::machine_id.eq(machine_id))
+            .filter(tokens::revoked_at.is_null()),
+    )
+    .set(tokens::revoked_at.eq(at))
+    .execute(connection)?;
+    Ok(count)
 }

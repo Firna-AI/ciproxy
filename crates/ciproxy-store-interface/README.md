@@ -48,6 +48,12 @@ A new registration in another workspace leaves old history in place.
 Removal and retention queries change stored records only.
 They do not stop machines, call GitHub, or delete Boat sandboxes.
 
+The gateway queries atomically register a machine and its hashed credential.
+They retain the full typed protocol report with a connection identifier.
+Report writes preserve desired drain and warm settings.
+They reject replaced sessions and removed registrations.
+Gateway token issuance and registration serialize with workspace removal.
+
 ## Quick Start
 
 Use the same interface for PostgreSQL and service test doubles:
@@ -92,6 +98,7 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 - [src/secrets.rs](src/secrets.rs) owns opaque hashes and ciphertext.
 - [src/scale_sets.rs](src/scale_sets.rs) defines session lock ownership.
 - [src/jobs.rs](src/jobs.rs) defines metadata-only job records.
+- [src/gateway.rs](src/gateway.rs) defines atomic registration and reports.
 
 ### Related Docs
 

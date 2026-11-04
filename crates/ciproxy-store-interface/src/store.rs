@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use crate::boat::BoatStore;
 use crate::error::Result;
+use crate::gateway::GatewayStore;
 use crate::jobs::JobStore;
 use crate::labels::LabelStore;
 use crate::machines::MachineStore;
@@ -26,6 +27,7 @@ pub trait Store:
     + JobStore
     + SettingsStore
     + BoatStore
+    + GatewayStore
 {
 }
 

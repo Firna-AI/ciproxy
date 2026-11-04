@@ -2,6 +2,7 @@
 
 mod boat_tests;
 mod cleanup_tests;
+mod gateway_tests;
 mod isolation_tests;
 mod jobs_tests;
 mod key_erasure_tests;

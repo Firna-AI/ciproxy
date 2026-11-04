@@ -5,6 +5,10 @@
 mod boat;
 mod connection;
 mod error;
+mod gateway;
+mod gateway_contacts;
+mod gateway_registration;
+mod gateway_transaction;
 mod jobs;
 mod labels;
 mod machines;

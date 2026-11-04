@@ -43,6 +43,13 @@ A partial unique index permits only one current registration.
 An install into another workspace creates a separate registration.
 It transfers no history or shared resource from the old workspace.
 
+Gateway queries lock the workspace before registration or token issuance.
+They serialize against last-App removal and reject a retained empty workspace.
+Registration inserts the machine, report, and hashed credential together.
+The full last report uses JSONB and a connection identifier.
+Replaced sessions and removed machines cannot overwrite it.
+Desired drain and warm settings stay separate from observed report fields.
+
 PgStoreFactory connects and applies pending migrations.
 One connection serializes ordinary queries across clones of the store.
 Each scale set lock owns a separate PostgreSQL connection.
@@ -107,6 +114,7 @@ CI starts the database for the existing workspace test phase.
 - [src/error.rs](src/error.rs) maps database failures to interface errors.
 - [src/scale_sets.rs](src/scale_sets.rs) owns advisory lock sessions.
 - [src/boat.rs](src/boat.rs) rotates and erases encrypted keys.
+- [src/gateway.rs](src/gateway.rs) owns atomic gateway persistence.
 - [tests/store](tests/store) tests the public API against PostgreSQL.
 
 ### Related Docs
