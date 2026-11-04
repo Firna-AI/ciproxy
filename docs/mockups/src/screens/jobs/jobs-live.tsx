@@ -2,20 +2,17 @@
 // and on Boat. GitHub gives a waiting job to any idle runner, so a waiting job
 // has no machine yet; ciproxy shows how many runners it starts, and where.
 
-import type { ReactNode } from "react";
 import { Zap } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
 
-import { LinkAction } from "../../components/actions.tsx";
-import { Notice, ReadFailure, StateBlock } from "../../components/feedback.tsx";
+import { ReadFailure, StateBlock } from "../../components/feedback.tsx";
 import { Kpi, KpiRow } from "../../components/kpis.tsx";
 import { LinkTabs, PageHeader, Panel } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
 import { AppShell } from "../../components/shell/app-shell.tsx";
 import { usageBanner } from "../../components/usage-banner.tsx";
-import { formatMoney, unbroken } from "../../fixtures/format.ts";
-import { boat } from "../../fixtures/machines.ts";
 import { type LiveScene, liveScenes, type LiveState } from "./live-scenes.ts";
+import { liveNotice } from "./live-notices.tsx";
 import { JobList, LoadingJobList } from "./job-tables.tsx";
 import "./jobs.css";
 
@@ -23,34 +20,6 @@ export const jobTabs = [
   { label: "Live", to: paths.jobs, live: true },
   { label: "History", to: paths.jobsHistory },
 ] as const;
-
-function notices(state: LiveState, scene: LiveScene): ReactNode {
-  if (state === "peak") {
-    return (
-      <Notice tone="info" title="Your machines are full">
-        {scene.waiting} jobs wait for a free slot. Each one starts on Boat when
-        it has waited {boat.waitSeconds} seconds.
-      </Notice>
-    );
-  }
-  if (state === "spend-limit") {
-    return (
-      <Notice
-        tone="warning"
-        title={`Boat reached its ${formatMoney(boat.spendLimit)} limit for November`}
-        actions={
-          <LinkAction to={paths.overflowLimitReached} size="sm">
-            Raise the limit
-          </LinkAction>
-        }
-      >
-        Jobs run on your machines only, and wait there for a free slot. Boat
-        takes jobs again on {unbroken("1 December")}.
-      </Notice>
-    );
-  }
-  return null;
-}
 
 export function JobsLiveScreen({
   viewport,
@@ -80,7 +49,7 @@ export function JobsLiveScreen({
       ) : (
         <>
           {state === "loading" ? null : <LiveFigures scene={scene} />}
-          {notices(state, scene)}
+          {liveNotice(state, scene)}
           <LiveLists viewport={viewport} state={state} scene={scene} />
         </>
       )}

@@ -5,11 +5,11 @@ import { ChevronsUpDown, Rocket } from "lucide-react";
 import { MockLink } from "@mokly/mokly";
 import { Avatar } from "@firna/ui/avatar";
 
-import { org, user, type TierKey } from "../../fixtures/org.ts";
+import { org, type TierKey } from "../../fixtures/org.ts";
 import { tiers } from "../../fixtures/tiers.ts";
 import { paths } from "../paths.ts";
 import { Tag } from "../status.tsx";
-import type { SetupProgress } from "./app-shell.tsx";
+import type { SetupProgress, ShellPerson } from "./app-shell.tsx";
 
 export function SetupItem({ setup }: { setup: SetupProgress }) {
   return (
@@ -26,7 +26,15 @@ export function SetupItem({ setup }: { setup: SetupProgress }) {
   );
 }
 
-export function TopBar({ tier, page }: { tier: TierKey; page: string }) {
+export function TopBar({
+  tier,
+  page,
+  person,
+}: {
+  tier: TierKey;
+  page: string;
+  person: ShellPerson;
+}) {
   return (
     <header className="topbar">
       <nav className="topbar-crumbs" aria-label="Breadcrumb">
@@ -49,8 +57,8 @@ export function TopBar({ tier, page }: { tier: TierKey; page: string }) {
         </span>
       </nav>
       <Avatar
-        label={user.initials}
-        accessibilityLabel={user.name}
+        label={person.initials}
+        accessibilityLabel={person.name}
         size={28}
         tone="soft"
       />

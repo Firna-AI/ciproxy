@@ -1,0 +1,85 @@
+/* Members and roles: a person with an avatar, the member cards on mobile,
+   the request for access, and the list of roles. */
+
+.person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.person-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.role-picker {
+  display: block;
+  flex-shrink: 0;
+  width: 108px;
+}
+
+.member-cards {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.member-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--c-border);
+}
+
+.member-card:first-child {
+  border-top: 0;
+}
+
+.request-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.mockup-mobile .request-row {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.request-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.role-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.role-row {
+  display: flex;
+  gap: 16px;
+}
+
+.mockup-mobile .role-row {
+  flex-direction: column;
+  gap: 2px;
+}
+
+.role-name {
+  flex-shrink: 0;
+  width: 72px;
+}

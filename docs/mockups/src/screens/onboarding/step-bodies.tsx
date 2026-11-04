@@ -1,23 +1,47 @@
-// The open step of setup: the install command, the Boat key, and the first job.
+// The open step of setup: the install command, the Boat key with the monthly
+// spend limit, and the first job. Only an Admin whom GitHub lets add
+// self-hosted runners sees the install command.
 
 import { CircleCheck } from "lucide-react";
 
 import { Action, LinkAction } from "../../components/actions.tsx";
+import { BoatFields } from "../../components/boat-fields.tsx";
 import { Notice } from "../../components/feedback.tsx";
-import { TextField } from "../../components/fields.tsx";
 import { CodeBlock } from "../../components/figures.tsx";
 import {
   ConnectedMachine,
   InstallCommand,
+  NoKvmNotice,
   WaitingLine,
 } from "../../components/install-command.tsx";
 import { paths } from "../../components/paths.ts";
 import { unbroken } from "../../fixtures/format.ts";
+import { boat } from "../../fixtures/machines.ts";
 import { org } from "../../fixtures/org.ts";
 import { runsOnDiff, workflowFile } from "../../fixtures/workflow.ts";
 import type { OnboardingState } from "./onboarding.tsx";
 
+/** The first Admin asked for the install, so GitHub gives no runner right. */
+function NoRunnerRight() {
+  return (
+    <div className="stack">
+      <Notice
+        tone="info"
+        title={`An owner of ${org.login} can add the machine`}
+        actions={<Action size="sm">Check again</Action>}
+      >
+        Adding a machine needs the right on GitHub to add self-hosted runners.
+        Ask an owner to add it, or to give you that right.
+      </Notice>
+      <div className="row">
+        <LinkAction to={paths.connectBoat}>Skip for now</LinkAction>
+      </div>
+    </div>
+  );
+}
+
 export function MachineStep({ state }: { state: OnboardingState }) {
+  if (state === "machine-no-right") return <NoRunnerRight />;
   return (
     <div className="stack">
       <p className="small">
@@ -25,10 +49,7 @@ export function MachineStep({ state }: { state: OnboardingState }) {
         connects the machine to {org.login}.
       </p>
       {state === "machine-no-kvm" ? (
-        <Notice tone="danger" title="hetzner-ax42-1 cannot start VMs">
-          ciproxy runs each job in its own VM, which needs KVM. Turn on
-          virtualization for this machine, then run the command again.
-        </Notice>
+        <NoKvmNotice name="hetzner-ax42-1" />
       ) : null}
       <InstallCommand />
       {state === "machine-connected" ? (
@@ -55,21 +76,9 @@ export function BoatStep({ invalid }: { invalid: boolean }) {
         When your machines are busy, ciproxy starts jobs in your own Boat
         account. Boat bills you by the second.
       </p>
-      <TextField
-        label="Boat API key"
-        placeholder="boat_live_…"
-        value={invalid ? "boat_live_3kQ9xV2" : undefined}
-        hint={
-          invalid
-            ? undefined
-            : "Create a key in the Boat console, under Settings."
-        }
-        error={
-          invalid
-            ? "Boat did not accept this key. Copy the whole key from the Boat console."
-            : undefined
-        }
-        secret={invalid}
+      <BoatFields
+        invalid={invalid}
+        limit={invalid ? boat.spendLimit : undefined}
       />
       <div className="row-wrap">
         <LinkAction to={paths.firstJob} tone="primary">

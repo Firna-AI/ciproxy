@@ -1,1 +1,10 @@
-{ "order": ["usage", "payments", "plans", "checkout", "loading-error"] }
+{
+  "order": [
+    "usage",
+    "payments",
+    "plans",
+    "change-plan",
+    "checkout",
+    "loading-error"
+  ]
+}

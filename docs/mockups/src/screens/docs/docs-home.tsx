@@ -54,7 +54,7 @@ export function DocsHomeScreen({
             text="Warm runners, slots, overflow, and the cache."
           />
           <LinkCard
-            title="Labels and machine sizes"
+            title="Labels and VM sizes"
             text="Pick the size of the VM for each job."
             to={paths.labelsReference}
           />
@@ -74,13 +74,13 @@ export function DocsHomeScreen({
             fresh VM.
           </li>
           <li>
-            When every slot is busy for {boat.waitSeconds} seconds, ciproxy
-            starts a runner in your Boat account instead.
+            When a job has waited {boat.waitSeconds} seconds for a free slot,
+            ciproxy starts a runner for it in your Boat account instead.
           </li>
           <li>
-            The job reads and writes its{" "}
+            On your machines, the job reads and writes its{" "}
             <span className="inline-code">actions/cache</span> entries on the
-            disk of the machine.
+            local disk.
           </li>
         </ol>
         <DocsH2 id="what-you-need">What you need</DocsH2>

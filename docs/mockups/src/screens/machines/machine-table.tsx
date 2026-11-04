@@ -38,6 +38,7 @@ function MachineName({ machine }: { machine: Machine }) {
 
 function slotText(machine: Machine): string {
   if (machine.status === "offline") return "No slots available";
+  if (machine.slots.length === 0) return "No slots";
   const busy = machine.slots.filter((slot) => slot === "busy").length;
   const warm = machine.slots.filter((slot) => slot === "warm").length;
   return dotJoin(unbroken(`${busy} busy`), unbroken(`${warm} warm`));

@@ -54,9 +54,8 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   that day, and runs three Hetzner AX42 machines with Boat overflow from
   mid-September. The November screens show the busy Team organization, and the
   December screens the payment problems. Each tier counts only the starts of
-  its own period, which begins on the day the tier begins.
-- The customer's own hardware is a "machine" on every screen, also in the
-  pricing: never "node" or "server".
+  its own period, which begins on the day the tier begins. Cal Moore installs
+  the GitHub App, so he is the first Admin.
 - The public site has two sections: Marketing, with the landing page and the
   pricing page, and Docs, in the structure of Starlight: the sidebar of
   sections, the top bar with search, the article, and "On this page". Both
@@ -78,6 +77,14 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   page.
 - Never edit or commit `docs/mockups/mokly-generated/`. Change the sources and
   build again.
+
+## Words
+
+- "Machine" is the customer's own hardware, on every screen and in the
+  pricing. Never write "node" or "server", and never call a VM a machine.
+- "Size" is what a label gives a job: its vCPU, memory, and disk. Write "VM
+  size" where the word needs a qualifier. Never write "shape" or "machine
+  size". Code names use the same words, such as `sizeText` and `LabelDialog`.
 
 ## Visual smoke test
 
@@ -120,11 +127,18 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
 - `src/components/shell/app-shell.tsx`: the signed-in frame: a white sidebar
   and a top bar with the organization and the page as breadcrumbs on desktop,
   and a top bar with tabs on mobile, with the banner slot for soft-limit and
-  payment warnings.
+  payment warnings. It shows the signed-in person, and Settings only to an
+  Admin.
 - `src/components/`: the shared parts, such as the dense `DataTable`, the
   figure strip in `kpis.tsx`, the status dots and tags in `status.tsx`, and the
   starts chart.
 - `src/components/paths.ts`: every catalogue path of a screen and a flow.
+- `src/components/dialog.tsx`: the dialog over a page, a sheet on mobile, such
+  as Edit label, Clear cache, and Move to Free.
+- `src/components/boat-fields.tsx`: the Boat key and the monthly spend limit,
+  which every connection of Boat asks for, in setup and in Settings.
+- `src/fixtures/sizes.ts`: the size of a label as text, and the sizes that the
+  Boat account can start, which decide where the jobs of a label run.
 - `src/fixtures/site.ts`: the host of the public site and the
   worked example of the landing page; `plan-compare.ts` holds the feature
   comparison of the pricing page, from the tiers in `tiers.ts`.

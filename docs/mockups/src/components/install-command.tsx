@@ -1,12 +1,14 @@
 // The one install command that connects a Linux machine to the organization,
 // shared by setup and Add machine, and the lines that follow it: the wait for
-// the machine, and the machine that connected.
+// the machine, the machine that connected, and a machine without KVM.
 
+import type { ReactNode } from "react";
 import { CircleCheck } from "lucide-react";
 
 import { dotJoin, unbroken } from "../fixtures/format.ts";
 import { ax42, ax42Size } from "../fixtures/machines.ts";
-import { Busy } from "./feedback.tsx";
+import { Action } from "./actions.tsx";
+import { Busy, Notice } from "./feedback.tsx";
 import { CodeBlock } from "./figures.tsx";
 import "./install-command.css";
 
@@ -17,10 +19,16 @@ export function InstallCommand() {
   return (
     <div className="stack-tight">
       <CodeBlock label="On the machine" lines={[installCommand]} />
-      <p className="caption">
-        The token works for one hour. The machine needs x64 Linux with KVM, 4
-        cores, and 16 GB of memory or more.
-      </p>
+      <div className="install-note">
+        <p className="caption">
+          The token adds any number of machines for one hour. A machine needs
+          x64 Linux with KVM, {unbroken("4 cores")}, and {unbroken("16 GB")} of
+          memory or more.
+        </p>
+        <Action size="sm" tone="ghost">
+          Revoke token
+        </Action>
+      </div>
     </div>
   );
 }
@@ -52,5 +60,21 @@ export function ConnectedMachine({ name }: { name: string }) {
         </p>
       </div>
     </div>
+  );
+}
+
+/** A machine that connected without KVM: it gets no slots until it has KVM. */
+export function NoKvmNotice({
+  name,
+  actions,
+}: {
+  name: string;
+  actions?: ReactNode;
+}) {
+  return (
+    <Notice tone="danger" title={`${name} cannot start VMs`} actions={actions}>
+      ciproxy runs each job in its own VM, which needs KVM. Turn on
+      virtualization for this machine, then run the command again.
+    </Notice>
   );
 }

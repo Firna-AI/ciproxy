@@ -13,6 +13,6 @@ export const review = defineScreen({
   address: orgAddress("billing/checkout"),
   useCasePaths: [paths.flowFreeToTeam],
   render: (_props, context) => (
-    <CheckoutReviewScreen viewport={context.viewport} />
+    <CheckoutReviewScreen viewport={context.viewport} move="to-team" />
   ),
 });

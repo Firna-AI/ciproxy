@@ -1,19 +1,93 @@
-// Labels, shapes, and repositories of mokly-ai.
+// The labels of mokly-ai with their sizes, and its repositories. A label
+// runs on the own machines first and on Boat when they are busy. A size that
+// fits no machine runs on Boat only, and a size that fits nothing follows the
+// label setting "When nothing fits".
 
-export type Label = {
+import { ax42, slotsFor } from "./machines.ts";
+import { fitsBoat, type Size } from "./sizes.ts";
+
+/** The label setting "When nothing fits". */
+export type WhenNothingFits = "wait" | "largest-boat-size";
+
+export type Label = Size & {
   name: string;
-  vcpu: number;
-  memoryGb: number;
-  diskGb: number;
   /** Jobs in the last 30 days. */
   jobs: number;
+  whenNothingFits: WhenNothingFits;
 };
 
 export const labels: readonly Label[] = [
-  { name: "ciproxy", vcpu: 2, memoryGb: 8, diskGb: 60, jobs: 14_371 },
-  { name: "ciproxy-4vcpu", vcpu: 4, memoryGb: 16, diskGb: 80, jobs: 502 },
-  { name: "ciproxy-8vcpu", vcpu: 8, memoryGb: 32, diskGb: 120, jobs: 2_899 },
+  {
+    name: "ciproxy",
+    vcpu: 2,
+    memoryGb: 8,
+    diskGb: 60,
+    jobs: 14_371,
+    whenNothingFits: "wait",
+  },
+  {
+    name: "ciproxy-4vcpu",
+    vcpu: 4,
+    memoryGb: 16,
+    diskGb: 80,
+    jobs: 502,
+    whenNothingFits: "wait",
+  },
+  {
+    name: "ciproxy-8vcpu",
+    vcpu: 8,
+    memoryGb: 32,
+    diskGb: 120,
+    jobs: 2_899,
+    whenNothingFits: "wait",
+  },
 ];
+
+/** A default label by its name. */
+export function labelNamed(name: string): Label {
+  const label = labels.find((entry) => entry.name === name);
+  if (!label) throw new Error(`No label ${name}`);
+  return label;
+}
+
+/** A new label that no own machine fits, but a Boat size does. */
+export const boatOnlyLabel: Label = {
+  name: "ciproxy-16vcpu",
+  vcpu: 16,
+  memoryGb: 32,
+  diskGb: 200,
+  jobs: 0,
+  whenNothingFits: "wait",
+};
+
+/** A new label for load tests that no machine and no Boat size fits. */
+export const nothingFitsLabel: Label = {
+  name: "ciproxy-32vcpu",
+  vcpu: 32,
+  memoryGb: 128,
+  diskGb: 200,
+  jobs: 0,
+  whenNothingFits: "wait",
+};
+
+export function fitsOwnMachine(size: Size): boolean {
+  return slotsFor(size) <= ax42.slotsTotal;
+}
+
+/** How many jobs of this size one own machine runs at a time. */
+export function jobsPerMachine(size: Size): number {
+  return Math.floor(ax42.slotsTotal / slotsFor(size));
+}
+
+/** Where the jobs of a label run now. */
+export type Placement = "machines-then-boat" | "boat-only" | "waits";
+
+export function placementOf(label: Label): Placement {
+  if (fitsOwnMachine(label)) return "machines-then-boat";
+  if (fitsBoat(label) || label.whenNothingFits === "largest-boat-size")
+    return "boat-only";
+  return "waits";
+}
 
 /** Overflow wait times the customer can pick, in seconds. */
 export const waitChoices = [0, 15, 30, 60, 120] as const;

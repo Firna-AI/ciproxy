@@ -94,7 +94,7 @@ export function QuickstartScreen({ viewport }: { viewport: Viewport }) {
         <DocsH2 id="next-steps">Next steps</DocsH2>
         <CardGrid>
           <LinkCard
-            title="Labels and machine sizes"
+            title="Labels and VM sizes"
             text="Give each job the VM size that it needs."
             to={paths.labelsReference}
           />

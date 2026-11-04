@@ -1,11 +1,13 @@
 // Overflow settings: the Boat account, how long a job waits for an own
-// machine before it starts on Boat, and the monthly Boat spend limit.
+// machine before it starts on Boat, and the monthly Boat spend limit. Before
+// Boat connects, the page asks for the key and the limit, as setup does.
 
 import type { Viewport } from "@mokly/mokly";
 import { DropdownSelector } from "@firna/ui/dropdown";
 import { Switch } from "@firna/ui/switch";
 
 import { Action, noop } from "../../components/actions.tsx";
+import { BoatFields } from "../../components/boat-fields.tsx";
 import { Notice } from "../../components/feedback.tsx";
 import { TextField } from "../../components/fields.tsx";
 import { Meter } from "../../components/figures.tsx";
@@ -20,6 +22,7 @@ export const overflowStates = [
   "settings",
   "limit-reached",
   "boat-rejected",
+  "not-connected",
 ] as const;
 export type OverflowState = (typeof overflowStates)[number];
 
@@ -34,6 +37,24 @@ const waitOptions = waitChoices.map((seconds) => ({
   value: String(seconds),
 }));
 
+/** Boat is not connected yet, for example after Skip for now in setup. */
+function ConnectBoat() {
+  return (
+    <Panel title="Boat">
+      <div className="stack settings-form">
+        <p className="small">
+          When your machines are busy, ciproxy starts jobs in your own Boat
+          account. Boat bills you by the second.
+        </p>
+        <BoatFields />
+        <div className="row">
+          <Action tone="primary">Connect Boat</Action>
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
 export function OverflowScreen({
   viewport,
   state,
@@ -41,6 +62,13 @@ export function OverflowScreen({
   viewport: Viewport;
   state: OverflowState;
 }) {
+  if (state === "not-connected") {
+    return (
+      <SettingsFrame viewport={viewport} active={paths.overflow}>
+        <ConnectBoat />
+      </SettingsFrame>
+    );
+  }
   const spent =
     state === "limit-reached" ? boat.spendLimit : boat.spentThisMonth;
   return (

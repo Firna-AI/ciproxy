@@ -22,7 +22,7 @@ export const plans = defineScreen({
       slug: "on-team",
       title: "Plans, on Team",
       description:
-        "The same page for an organization on Team, which sees Business as the next tier.",
+        "The same page for an organization on Team, which sees Business as the next tier. Choose Business reviews a move between paid tiers, and Move to Free asks first.",
       props: { state: "on-team" },
     },
   ],

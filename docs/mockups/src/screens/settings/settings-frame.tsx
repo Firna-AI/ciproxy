@@ -12,6 +12,7 @@ const tabs = [
   { label: "Labels", to: paths.settings },
   { label: "Overflow", to: paths.overflow },
   { label: "Repositories", to: paths.repositories },
+  { label: "Members", to: paths.members },
 ] as const;
 
 export function SettingsFrame({
@@ -33,26 +34,5 @@ export function SettingsFrame({
       {children}
       {overlay}
     </AppShell>
-  );
-}
-
-/** A static dialog: a scrim over the page and a card, or a sheet on mobile. */
-export function Dialog({
-  title,
-  children,
-  footer,
-}: {
-  title: string;
-  children: ReactNode;
-  footer: ReactNode;
-}) {
-  return (
-    <div className="dialog-scrim">
-      <section className="dialog" role="dialog" aria-label={title}>
-        <h2 className="dialog-title">{title}</h2>
-        <div className="dialog-body">{children}</div>
-        <div className="dialog-footer">{footer}</div>
-      </section>
-    </div>
   );
 }

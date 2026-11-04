@@ -1,1 +1,4 @@
-{ "title": "Add a machine", "order": ["connected", "no-kvm"] }
+{
+  "title": "Add a machine",
+  "order": ["connected", "no-kvm", "no-runner-right"]
+}

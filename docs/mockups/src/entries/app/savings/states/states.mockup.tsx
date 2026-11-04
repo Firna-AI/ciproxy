@@ -32,7 +32,7 @@ export const empty = defineScreen({
 export const loading = defineScreen({
   slug: "loading",
   title: "While the report loads",
-  description: "Skeleton bars keep the shape of the report.",
+  description: "Skeleton bars keep the layout of the report.",
   relatedDocs: [planDoc],
   address,
   render: (_props, context) => (

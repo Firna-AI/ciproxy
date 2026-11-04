@@ -1,6 +1,8 @@
 // What ciproxy does, in six cells: own machines first, overflow on demand, the
 // transparent cache, the savings report, security, and the open-source agent.
+// Warm runners serve the label ciproxy only, so only its jobs start at once.
 
+import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Cloud,
@@ -13,13 +15,18 @@ import {
 
 import { Cells, Section, SectionHead } from "./section.tsx";
 
-type Feature = { icon: LucideIcon; title: string; text: string };
+type Feature = { icon: LucideIcon; title: string; text: ReactNode };
 
 const features: readonly Feature[] = [
   {
     icon: Server,
     title: "Own machines first",
-    text: "Jobs start at once on warm runners on your machines, each in a fresh VM.",
+    text: (
+      <>
+        Jobs with <span className="inline-code">runs-on: ciproxy</span> start at
+        once on warm runners on your machines, each in a fresh VM.
+      </>
+    ),
   },
   {
     icon: Cloud,

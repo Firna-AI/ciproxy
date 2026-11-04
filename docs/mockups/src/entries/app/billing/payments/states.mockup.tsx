@@ -18,6 +18,24 @@ export const paymentFailed = defineScreen({
   ),
 });
 
+export const paymentFailedViewer = defineScreen({
+  slug: "payment-failed-viewer",
+  title: "A failed payment, seen by a Viewer",
+  description:
+    "Jonas Weber, a Viewer, sees the same banner and the same page, read-only. In place of Update card and the plan buttons, he reads Ask an Admin or a Billing person, and Settings is not in his navigation.",
+  rationale:
+    "Everyone sees the state of the organization, and only an Admin or a Billing person acts on it.",
+  relatedDocs: [planDoc],
+  address,
+  render: (_props, context) => (
+    <PlanUsageScreen
+      viewport={context.viewport}
+      state="payment-failed"
+      canPay={false}
+    />
+  ),
+});
+
 export const movedToFree = defineScreen({
   slug: "moved-to-free",
   title: "Moved to Free after failed payments",

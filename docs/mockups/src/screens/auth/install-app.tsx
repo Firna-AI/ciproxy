@@ -1,5 +1,7 @@
 // Install the ciproxy GitHub App on an organization. GitHub owns the choice of
-// organization and repositories; ciproxy shows what the app asks for.
+// organization and repositories; ciproxy shows what the app asks for. A member
+// who is not an owner asks the owners on GitHub; when one approves, the member
+// who asked becomes the first Admin in ciproxy.
 
 import { Check, Github } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -7,6 +9,7 @@ import type { Viewport } from "@mokly/mokly";
 import { Action, LinkAction } from "../../components/actions.tsx";
 import { Notice } from "../../components/feedback.tsx";
 import { paths } from "../../components/paths.ts";
+import { requester } from "../../fixtures/members.ts";
 import { org, user } from "../../fixtures/org.ts";
 import { AuthShell } from "./auth-shell.tsx";
 
@@ -19,11 +22,10 @@ export function InstallAppScreen({
   viewport: Viewport;
   state: InstallState;
 }) {
+  const pending = state === "pending-approval";
+  const login = pending ? requester.login : user.login;
   return (
-    <AuthShell
-      viewport={viewport}
-      footer={`Signed in as ${user.login} on GitHub.`}
-    >
+    <AuthShell viewport={viewport} footer={`Signed in as ${login} on GitHub.`}>
       <div className="stack-tight">
         <h1 className="auth-title">Install ciproxy on GitHub</h1>
         <p className="auth-lead">
@@ -32,10 +34,13 @@ export function InstallAppScreen({
           <span className="inline-code">runs-on: ciproxy</span>.
         </p>
       </div>
-      {state === "pending-approval" ? (
+      {pending ? (
         <Notice tone="info" title={`Waiting for an owner of ${org.login}`}>
-          GitHub sent your request to the owners of {org.login}. Setup continues
-          here when one of them approves.
+          GitHub sent your request to the owners of{" "}
+          <span className="nowrap">{org.login}</span>. When one of them approves
+          it, you become the first Admin of{" "}
+          <span className="nowrap">{org.login}</span> in ciproxy, and setup
+          continues here.
         </Notice>
       ) : (
         <ul className="permission-list small">
@@ -55,11 +60,16 @@ export function InstallAppScreen({
         </ul>
       )}
       <div className="auth-actions">
-        {state === "pending-approval" ? (
+        {pending ? (
           <>
-            <Action tone="primary" size="lg" block>
+            <LinkAction
+              to={paths.machineNoRunnerRight}
+              tone="primary"
+              size="lg"
+              block
+            >
               Check again
-            </Action>
+            </LinkAction>
             <Action tone="secondary" size="lg" block>
               Install on another organization
             </Action>

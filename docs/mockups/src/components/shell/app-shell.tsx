@@ -9,21 +9,28 @@ import { BookOpen, ChevronDown, ChevronRight, Rocket } from "lucide-react";
 import { MockLink, type Viewport } from "@mokly/mokly";
 import { Avatar } from "@firna/ui/avatar";
 
+import type { Role } from "../../fixtures/members.ts";
 import { org, user, type TierKey } from "../../fixtures/org.ts";
 import { Brand, BrandMark } from "../brand.tsx";
 import { paths } from "../paths.ts";
 import { SetupItem, TopBar } from "./app-shell-parts.tsx";
-import { navItems, type NavKey } from "./nav.ts";
+import { navFor, navItems, type NavKey } from "./nav.ts";
 import "./app-shell.css";
 import "./app-shell-mobile.css";
 import "./app-shell-rail.css";
 
 export type SetupProgress = { done: number; total: number; active: boolean };
 
+/** The signed-in person: Cal Moore, unless a screen shows another person. */
+export type ShellPerson = { name: string; initials: string };
+
 export type AppShellProps = {
   viewport: Viewport;
   tier: TierKey;
   active?: NavKey;
+  person?: ShellPerson;
+  /** The role of the person, which decides the navigation. */
+  role?: Role;
   /** While setup is open, the sidebar leads with a Set up item. */
   setup?: SetupProgress;
   banner?: ReactNode;
@@ -41,6 +48,8 @@ export function AppShell(props: AppShellProps) {
 function DesktopShell({
   tier,
   active,
+  person = user,
+  role = "admin",
   setup,
   banner,
   children,
@@ -55,7 +64,7 @@ function DesktopShell({
           </div>
           <nav className="side-nav" aria-label="Main">
             {setup ? <SetupItem setup={setup} /> : null}
-            {navItems.map((item) => (
+            {navFor(role).map((item) => (
               <MockLink
                 key={item.key}
                 to={item.to}
@@ -76,7 +85,7 @@ function DesktopShell({
         </div>
       </aside>
       <div className="shell-body">
-        <TopBar tier={tier} page={page} />
+        <TopBar tier={tier} page={page} person={person} />
         <main className="shell-main">
           {banner}
           {children}
@@ -86,7 +95,14 @@ function DesktopShell({
   );
 }
 
-function MobileShell({ active, setup, banner, children }: AppShellProps) {
+function MobileShell({
+  active,
+  person = user,
+  role = "admin",
+  setup,
+  banner,
+  children,
+}: AppShellProps) {
   return (
     <div className="m-shell">
       <header className="m-top">
@@ -97,8 +113,8 @@ function MobileShell({ active, setup, banner, children }: AppShellProps) {
           <ChevronDown size={14} className="m-chevron" />
         </span>
         <Avatar
-          label={user.initials}
-          accessibilityLabel={user.name}
+          label={person.initials}
+          accessibilityLabel={person.name}
           size={26}
           tone="soft"
         />
@@ -118,7 +134,7 @@ function MobileShell({ active, setup, banner, children }: AppShellProps) {
         {children}
       </main>
       <nav className="m-tabs" aria-label="Main">
-        {navItems.map((item) => (
+        {navFor(role).map((item) => (
           <MockLink
             key={item.key}
             to={item.to}

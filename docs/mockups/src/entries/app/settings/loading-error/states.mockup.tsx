@@ -8,7 +8,7 @@ export const loading = defineScreen({
   slug: "loading",
   title: "While settings load",
   description:
-    "Skeleton rows keep the shape of the labels table. The other tabs load the same way.",
+    "Skeleton rows keep the layout of the labels table. The other tabs load the same way.",
   relatedDocs: [planDoc],
   address: orgAddress("settings/labels"),
   render: (_props, context) => (

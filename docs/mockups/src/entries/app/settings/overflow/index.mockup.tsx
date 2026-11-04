@@ -3,7 +3,10 @@ import { defineScreen } from "@mokly/mokly";
 import { paths } from "../../../../components/paths.ts";
 import { planDoc, stateSchema } from "../../../../components/state-schema.ts";
 import { orgAddress } from "../../../../fixtures/org.ts";
-import { OverflowScreen } from "../../../../screens/settings/overflow.tsx";
+import {
+  OverflowScreen,
+  overflowStates,
+} from "../../../../screens/settings/overflow.tsx";
 
 export const overflow = defineScreen({
   title: "Overflow",
@@ -12,7 +15,7 @@ export const overflow = defineScreen({
   relatedDocs: [planDoc],
   address: orgAddress("settings/overflow"),
   useCasePaths: [paths.flowPeakOverflow],
-  propSchema: stateSchema(["settings", "limit-reached", "boat-rejected"]),
+  propSchema: stateSchema(overflowStates),
   props: { state: "settings" },
   render: (props, context) => (
     <OverflowScreen viewport={context.viewport} state={props.state} />
@@ -31,6 +34,13 @@ export const overflow = defineScreen({
       description:
         "Boat stopped accepting the API key. Jobs run on own machines only until a new key connects.",
       props: { state: "boat-rejected" },
+    },
+    {
+      slug: "not-connected",
+      title: "Boat is not connected",
+      description:
+        "An organization that skipped the Boat step of setup. Connecting Boat here asks for the key and the monthly spend limit, as setup does, so a limit applies from the first job on Boat.",
+      props: { state: "not-connected" },
     },
   ],
 });

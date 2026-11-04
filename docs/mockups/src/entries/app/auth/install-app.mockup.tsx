@@ -24,7 +24,7 @@ export const installApp = defineScreen({
       slug: "pending-approval",
       title: "Waiting for an owner to approve",
       description:
-        "A member who is not an owner asked to install the app. GitHub sends the request to the owners, and setup continues when one approves.",
+        "Lena Fischer, a member who is not an owner, asked to install the app. GitHub sends the request to the owners. When one approves, Lena becomes the first Admin, and Check again continues to setup, where an owner adds the machine.",
       props: { state: "pending-approval" },
     },
   ],

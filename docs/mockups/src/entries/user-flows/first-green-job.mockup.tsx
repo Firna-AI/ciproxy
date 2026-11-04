@@ -36,7 +36,7 @@ export const firstGreenJob = defineUseCase({
       screenPath: paths.connectBoat,
       title: "Connect Boat",
       description:
-        "Cal pastes an API key of the mokly Boat account for overflow.",
+        "Cal pastes an API key of the mokly Boat account for overflow, and sets a spend limit of $200 a month.",
     },
     {
       screenPath: paths.firstJob,

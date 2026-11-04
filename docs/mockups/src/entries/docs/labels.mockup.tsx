@@ -5,9 +5,9 @@ import { siteAddress } from "../../fixtures/site.ts";
 import { LabelsReferenceScreen } from "../../screens/docs/labels-reference.tsx";
 
 export const labelsReference = defineScreen({
-  title: "Labels and machine sizes",
+  title: "Labels and VM sizes",
   description:
-    "The reference page of labels: the default labels with their sizes and slots, how slots work, custom labels, and where a job runs.",
+    "The reference page of labels: the default labels with their sizes and slots, how slots work, custom labels with the setting When nothing fits, and where a job runs.",
   rationale:
     "The labels and sizes are the ones that Settings shows for mokly-ai, so a reader finds the same values in the dashboard.",
   relatedDocs: [planDoc],

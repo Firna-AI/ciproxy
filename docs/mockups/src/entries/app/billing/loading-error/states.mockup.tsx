@@ -7,7 +7,7 @@ import { PlanUsageScreen } from "../../../../screens/billing/plan-usage.tsx";
 export const loading = defineScreen({
   slug: "loading",
   title: "While plan and usage load",
-  description: "Skeleton panels keep the shape of the page.",
+  description: "Skeleton panels keep the layout of the page.",
   relatedDocs: [planDoc],
   address: orgAddress("billing"),
   render: (_props, context) => (

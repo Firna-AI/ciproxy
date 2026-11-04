@@ -1,5 +1,6 @@
 // The health of one machine. While it is offline, only the last contact is
-// current: the other checks show their last values in grey, with a note.
+// current: the other checks show their last values in grey, with a note. A
+// machine without KVM shows that check as failed.
 
 import type { ReactNode } from "react";
 
@@ -27,7 +28,11 @@ export function MachineHealth({ machine }: { machine: Machine }) {
           <DotLabel tone={offline ? "err" : "ok"}>{machine.lastSeen}</DotLabel>
         </DetailRow>
         <DetailRow label="KVM">
-          <Check stale={offline}>Ready</Check>
+          {machine.kvm ? (
+            <Check stale={offline}>Ready</Check>
+          ) : (
+            <DotLabel tone="err">Not available</DotLabel>
+          )}
         </DetailRow>
         <DetailRow label="Disk">
           <Check stale={offline}>{unbroken("312 GB")} free</Check>

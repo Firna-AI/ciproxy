@@ -14,13 +14,17 @@ import {
 import { paths } from "../../components/paths.ts";
 import { AppShell } from "../../components/shell/app-shell.tsx";
 import { JobStateLabel } from "../../components/status.tsx";
-import { unbroken } from "../../fixtures/format.ts";
 import { onBoat, own, type Where } from "../../fixtures/jobs.ts";
 import { org } from "../../fixtures/org.ts";
+import { labelNamed } from "../../fixtures/settings.ts";
+import { sizeText } from "../../fixtures/sizes.ts";
 import "./jobs.css";
 import "./job-detail.css";
 
 export const jobDetailStates = ["own", "boat"] as const;
+
+/** Both jobs use the default label. */
+const jobLabel = labelNamed("ciproxy");
 export type JobDetailState = (typeof jobDetailStates)[number];
 
 type Detail = {
@@ -129,11 +133,9 @@ export function JobDetailScreen({
         <Panel title="Details">
           <DetailList>
             <DetailRow label="Label">
-              <span className="inline-code">ciproxy</span>
+              <span className="inline-code">{jobLabel.name}</span>
             </DetailRow>
-            <DetailRow label="Shape">
-              {unbroken("2 vCPU")} · {unbroken("8 GB")}
-            </DetailRow>
+            <DetailRow label="Size">{sizeText(jobLabel)}</DetailRow>
             <DetailRow label="Waited">
               <span className="duration">{job.waited}</span>
             </DetailRow>

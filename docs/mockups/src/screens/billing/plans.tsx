@@ -1,12 +1,13 @@
 // Compare the three tiers and choose one. The tier that covers the recent use
-// carries a tag; the current tier cannot be chosen again.
+// carries a tag; the current tier cannot be chosen again. On Team, Choose
+// Business reviews a move between paid tiers, and Move to Free asks first.
 
 import { Check } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
 
 import { Action, LinkAction } from "../../components/actions.tsx";
 import { PageHeader } from "../../components/page.tsx";
-import { paths } from "../../components/paths.ts";
+import { paths, type CataloguePath } from "../../components/paths.ts";
 import { AppShell } from "../../components/shell/app-shell.tsx";
 import { Tag } from "../../components/status.tsx";
 import { formatCount, formatMoney, monthly } from "../../fixtures/format.ts";
@@ -21,28 +22,42 @@ import {
   type Tier,
 } from "../../fixtures/tiers.ts";
 import { freePeriodEnd, usageScenes } from "../../fixtures/usage.ts";
+import { MoveToFreeDialog } from "./move-to-free-dialog.tsx";
 import "./billing.css";
 
-export const plansStates = ["from-free", "on-team"] as const;
+export const plansStates = ["from-free", "on-team", "move-to-free"] as const;
 export type PlansState = (typeof plansStates)[number];
 
 const freeUse = usageScenes["free-over"];
 
-const context: Record<
-  PlansState,
-  { current: TierKey; covers: TierKey; use: string }
-> = {
+type PlansContext = { current: TierKey; covers: TierKey; use: string };
+
+const onTeam: PlansContext = {
+  current: "team",
+  covers: "team",
+  use: `Your last 30 days: ${formatCount(17_772)} starts on ${ownMachines(3)}.`,
+};
+
+const context: Record<PlansState, PlansContext> = {
   "from-free": {
     current: "free",
     covers: "team",
     use: `This month so far: ${formatCount(freeUse.starts)} starts on ${ownMachines(freeUse.machines)}. At this pace, about ${formatCount(freeUse.projected)} starts by ${freePeriodEnd}.`,
   },
-  "on-team": {
-    current: "team",
-    covers: "team",
-    use: `Your last 30 days: ${formatCount(17_772)} starts on ${ownMachines(3)}.`,
-  },
+  "on-team": onTeam,
+  "move-to-free": onTeam,
 };
+
+/** The screen that a tier button opens, where the catalogue has one. */
+function choicePath(
+  current: TierKey,
+  tier: TierKey,
+): CataloguePath | undefined {
+  if (current === "free" && tier === "team") return paths.checkoutReview;
+  if (current === "team" && tier === "business") return paths.moveToBusiness;
+  if (current === "team" && tier === "free") return paths.moveToFree;
+  return undefined;
+}
 
 export function PlansScreen({
   viewport,
@@ -71,6 +86,7 @@ export function PlansScreen({
             tier={tiers[key]}
             current={key === current}
             covers={key === covers && key !== current}
+            to={choicePath(current, key)}
           />
         ))}
       </div>
@@ -79,6 +95,7 @@ export function PlansScreen({
         plan or add-on that covers your use. Prices in US dollars, billed
         monthly through Stripe.
       </p>
+      {state === "move-to-free" ? <MoveToFreeDialog /> : null}
     </AppShell>
   );
 }
@@ -87,10 +104,12 @@ function TierCard({
   tier,
   current,
   covers,
+  to,
 }: {
   tier: Tier;
   current: boolean;
   covers: boolean;
+  to: CataloguePath | undefined;
 }) {
   const list = tierFeatures(tier);
   return (
@@ -112,7 +131,7 @@ function TierCard({
         <strong>{tier.machines}</strong> own{" "}
         {tier.machines === 1 ? "machine" : "machines"}
       </p>
-      <TierAction tier={tier} current={current} covers={covers} />
+      <TierAction tier={tier} current={current} covers={covers} to={to} />
       <div className="stack-tight">
         <p className="caption">{list.lead}</p>
         <ul className="tier-features">
@@ -139,10 +158,12 @@ function TierAction({
   tier,
   current,
   covers,
+  to,
 }: {
   tier: Tier;
   current: boolean;
   covers: boolean;
+  to: CataloguePath | undefined;
 }) {
   if (current) {
     return (
@@ -151,16 +172,15 @@ function TierAction({
       </Action>
     );
   }
-  if (covers) {
-    return (
-      <LinkAction to={paths.checkoutReview} tone="primary" block>
-        {`Choose ${tier.name}`}
-      </LinkAction>
-    );
-  }
-  return (
-    <Action block>
-      {tier.key === "free" ? "Move to Free" : `Choose ${tier.name}`}
+  const label = tier.key === "free" ? "Move to Free" : `Choose ${tier.name}`;
+  const tone = covers ? "primary" : "secondary";
+  return to ? (
+    <LinkAction to={to} tone={tone} block>
+      {label}
+    </LinkAction>
+  ) : (
+    <Action tone={tone} block>
+      {label}
     </Action>
   );
 }

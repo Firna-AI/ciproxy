@@ -25,7 +25,7 @@ const columns: readonly { title: string; links: readonly FooterLink[] }[] = [
     title: "Docs",
     links: [
       { label: "Quickstart", to: paths.quickstart },
-      { label: "Labels and machine sizes", to: paths.labelsReference },
+      { label: "Labels and VM sizes", to: paths.labelsReference },
       { label: "Security" },
     ],
   },

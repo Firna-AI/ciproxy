@@ -30,7 +30,7 @@ export const docsNav: readonly DocsNavGroup[] = [
   {
     title: "Reference",
     items: [
-      { label: "Labels and machine sizes", to: paths.labelsReference },
+      { label: "Labels and VM sizes", to: paths.labelsReference },
       { label: "Agent install options" },
       { label: "GitHub App permissions" },
       { label: "Plans and starts" },

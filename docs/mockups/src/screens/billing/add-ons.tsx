@@ -1,9 +1,10 @@
 // The monthly add-ons on Team and Business: extra starts and extra own
 // machines. A state over a soft limit suggests the quantity that covers it.
+// A person who cannot pay sees the saved quantities only.
 
 import { Action } from "../../components/actions.tsx";
 import { Quantity } from "../../components/figures.tsx";
-import { Panel } from "../../components/page.tsx";
+import { DetailList, DetailRow, Panel } from "../../components/page.tsx";
 import { formatCount, monthly } from "../../fixtures/format.ts";
 import { addOnPrices, tiers } from "../../fixtures/tiers.ts";
 import type { Usage, UsageScene } from "../../fixtures/usage.ts";
@@ -16,7 +17,15 @@ const suggested: Partial<
   "over-machines": { starts: 0, machines: 1 },
 };
 
-export function AddOns({ scene, usage }: { scene: UsageScene; usage: Usage }) {
+export function AddOns({
+  scene,
+  usage,
+  canPay,
+}: {
+  scene: UsageScene;
+  usage: Usage;
+  canPay: boolean;
+}) {
   const tier = tiers[usage.tier];
   if (!tier.addOns) {
     return (
@@ -27,6 +36,7 @@ export function AddOns({ scene, usage }: { scene: UsageScene; usage: Usage }) {
       </Panel>
     );
   }
+  if (!canPay) return <SavedAddOns usage={usage} />;
   const quantities = suggested[scene] ?? {
     starts: usage.extraStarts,
     machines: usage.extraMachines,
@@ -63,6 +73,24 @@ export function AddOns({ scene, usage }: { scene: UsageScene; usage: Usage }) {
           </Action>
         </div>
       </div>
+    </Panel>
+  );
+}
+
+/** The saved add-on quantities and the monthly total, without controls. */
+function SavedAddOns({ usage }: { usage: Usage }) {
+  const tier = tiers[usage.tier];
+  const total =
+    tier.price +
+    usage.extraStarts * addOnPrices.startsPrice +
+    usage.extraMachines * addOnPrices.machinePrice;
+  return (
+    <Panel title="Add-ons">
+      <DetailList>
+        <DetailRow label="Extra starts">{usage.extraStarts}</DetailRow>
+        <DetailRow label="Extra own machines">{usage.extraMachines}</DetailRow>
+        <DetailRow label="Your plan with add-ons">{monthly(total)}</DetailRow>
+      </DetailList>
     </Panel>
   );
 }

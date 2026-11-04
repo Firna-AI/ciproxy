@@ -1,5 +1,6 @@
 // Plan and usage: the tier, the starts and own machines of the period against
-// the tier, the add-ons, and the way to the Stripe billing portal.
+// the tier, the add-ons, and the way to the Stripe billing portal. A Viewer
+// sees the same page without its payment actions.
 
 import { ExternalLink } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -11,8 +12,9 @@ import { Meter } from "../../components/figures.tsx";
 import { PageHeader, Panel } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
 import { AppShell } from "../../components/shell/app-shell.tsx";
-import { usageBanner } from "../../components/usage-banner.tsx";
+import { AskPayer, usageBanner } from "../../components/usage-banner.tsx";
 import { dotJoin, formatCount, monthly } from "../../fixtures/format.ts";
+import { viewer } from "../../fixtures/members.ts";
 import {
   addOnPrices,
   ownMachines,
@@ -33,9 +35,12 @@ export type PlanUsageState = UsageScene | "loading" | "error";
 export function PlanUsageScreen({
   viewport,
   state,
+  canPay = true,
 }: {
   viewport: Viewport;
   state: PlanUsageState;
+  /** An Admin or a Billing person can pay; a Viewer cannot. */
+  canPay?: boolean;
 }) {
   const scene: UsageScene =
     state === "loading" || state === "error" ? "steady" : state;
@@ -46,7 +51,9 @@ export function PlanUsageScreen({
       viewport={viewport}
       tier={usage.tier}
       active="billing"
-      banner={system ? undefined : usageBanner(scene, "billing")}
+      person={canPay ? undefined : viewer}
+      role={canPay ? undefined : "viewer"}
+      banner={system ? undefined : usageBanner(scene, "billing", canPay)}
     >
       <PageHeader title="Plan and usage" />
       {state === "error" ? (
@@ -57,45 +64,56 @@ export function PlanUsageScreen({
         <LoadingUsage />
       ) : (
         <>
-          {usageNotice(scene, usage)}
+          {usageNotice(scene, usage, canPay)}
           <div className="grid-2">
-            <CurrentPlan usage={usage} />
+            <CurrentPlan usage={usage} canPay={canPay} />
             <UsagePanel usage={usage} />
           </div>
-          <AddOns scene={scene} usage={usage} />
+          <AddOns scene={scene} usage={usage} canPay={canPay} />
         </>
       )}
     </AppShell>
   );
 }
 
-function CurrentPlan({ usage }: { usage: Usage }) {
+/** When a paid tier renews, or the day it ends after a move to Free. */
+function renewal(usage: Usage): string | undefined {
+  if (usage.ends) return `ends on ${usage.ends}`;
+  return usage.renews ? `renews on ${usage.renews}` : undefined;
+}
+
+function CurrentPlan({ usage, canPay }: { usage: Usage; canPay: boolean }) {
   const tier = tiers[usage.tier];
   const paid = tier.price > 0;
+  const when = paid ? renewal(usage) : undefined;
   return (
     <Panel title="Plan">
       <div className="stack">
         <div className="stack-tight">
           <p className="plan-name">{tier.name}</p>
           <p className="muted">
-            {paid
-              ? dotJoin(monthly(tier.price), `renews on ${usage.renews}`)
-              : monthly(tier.price)}
+            {when ? dotJoin(monthly(tier.price), when) : monthly(tier.price)}
           </p>
           <p className="small">
             {startsText(tier.starts)} a month and {ownMachines(tier.machines)}
           </p>
         </div>
-        <div className="row-wrap">
-          <LinkAction
-            to={paid ? paths.plansOnTeam : paths.plans}
-            tone={paid ? "secondary" : "primary"}
-          >
-            {paid ? "Change plan" : "Compare plans"}
-          </LinkAction>
-          {paid ? <Action icon={ExternalLink}>Invoices and card</Action> : null}
-        </div>
-        {paid ? (
+        {canPay ? (
+          <div className="row-wrap">
+            <LinkAction
+              to={paid ? paths.plansOnTeam : paths.plans}
+              tone={paid ? "secondary" : "primary"}
+            >
+              {paid ? "Change plan" : "Compare plans"}
+            </LinkAction>
+            {paid ? (
+              <Action icon={ExternalLink}>Invoices and card</Action>
+            ) : null}
+          </div>
+        ) : (
+          <AskPayer />
+        )}
+        {paid && canPay ? (
           <p className="caption">
             Invoices and the card are in the Stripe billing portal.
           </p>

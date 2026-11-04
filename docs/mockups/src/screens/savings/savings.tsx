@@ -133,7 +133,7 @@ function SavingsBody({ state }: { state: SavingsState }) {
         <CostBars withCiproxy={!missing} />
         <p className="caption cost-note">
           Blacksmith and GitHub-hosted costs use their list prices per minute
-          for the same runner sizes.
+          for the same VM sizes.
         </p>
       </Panel>
       <div className="grid-2">

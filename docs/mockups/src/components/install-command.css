@@ -22,3 +22,15 @@
 .connected-title {
   font-weight: 500;
 }
+
+.install-note {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mockup-mobile .install-note {
+  flex-direction: column;
+  gap: 4px;
+}

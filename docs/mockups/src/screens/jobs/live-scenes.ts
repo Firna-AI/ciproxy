@@ -11,6 +11,7 @@ import {
 } from "../../fixtures/live-jobs.ts";
 import { countSlots, machineScenes } from "../../fixtures/machines.ts";
 import type { TierKey } from "../../fixtures/org.ts";
+import { boatRefused, nothingFits } from "../../fixtures/waiting-jobs.ts";
 
 export const liveStates = [
   "steady",
@@ -18,6 +19,8 @@ export const liveStates = [
   "spend-limit",
   "starts-passed",
   "quiet",
+  "boat-refused",
+  "nothing-fits",
   "loading",
   "error",
 ] as const;
@@ -97,6 +100,24 @@ export const liveScenes: Readonly<Record<LiveState, LiveScene>> = {
     warm: countSlots(quietSlots, "warm"),
     runningJobs: [],
     waitingJobs: [],
+  },
+  "boat-refused": {
+    tier: "team",
+    running: 54,
+    waiting: 9,
+    ownBusy: 18,
+    ownSlots: 18,
+    onBoat: 36,
+    warm: 0,
+    runningJobs: boatRefused.running,
+    waitingJobs: boatRefused.waiting,
+  },
+  "nothing-fits": {
+    ...steady,
+    running: 19,
+    waiting: 2,
+    onBoat: 4,
+    waitingJobs: nothingFits.waiting,
   },
   loading: steady,
   error: steady,

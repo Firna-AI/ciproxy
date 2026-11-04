@@ -37,11 +37,11 @@ const results: readonly PageHits[] = [
     ],
   },
   {
-    page: "Labels and machine sizes",
+    page: "Labels and VM sizes",
     to: paths.labelsReference,
     hits: [
       {
-        heading: "Labels and machine sizes",
+        heading: "Labels and VM sizes",
         fragment: topId,
         before: "The label in ",
         after: " picks the size of the VM that runs the job.",

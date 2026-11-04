@@ -1,1 +1,1 @@
-{ "order": ["live", "history", "job", "loading-error"] }
+{ "order": ["live", "waiting", "history", "job", "loading-error"] }

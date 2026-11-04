@@ -25,6 +25,7 @@ const machineStates: Readonly<Record<MachineStatus, StateLook>> = {
   healthy: { label: "Healthy", tone: "ok" },
   draining: { label: "Draining", tone: "warn" },
   offline: { label: "Offline", tone: "err" },
+  "no-slots": { label: "No slots", tone: "err" },
 };
 
 /** The dot alone. Pass a label when no word beside it names the state. */

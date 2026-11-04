@@ -8,7 +8,7 @@ export const loading = defineScreen({
   slug: "loading",
   title: "While jobs load",
   description:
-    "Skeleton rows keep the shape of the list until the first read returns.",
+    "Skeleton rows keep the layout of the list until the first read returns.",
   relatedDocs: [planDoc],
   address: orgAddress("jobs"),
   render: (_props, context) => (

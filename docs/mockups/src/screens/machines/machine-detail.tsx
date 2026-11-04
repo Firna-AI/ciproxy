@@ -1,18 +1,15 @@
 // One own machine: its slots and warm runners, health, cache, and the monthly
-// cost that the savings report uses.
+// cost that the savings report uses. A machine without KVM connects with no
+// slots, so it cannot run jobs, and the page names the fix.
 
 import { Pencil } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
 
-import { Action, TextLink } from "../../components/actions.tsx";
+import { Action, LinkAction, TextLink } from "../../components/actions.tsx";
 import { Notice } from "../../components/feedback.tsx";
-import { Meter, Quantity, SlotStrip } from "../../components/figures.tsx";
-import {
-  DetailList,
-  DetailRow,
-  PageHeader,
-  Panel,
-} from "../../components/page.tsx";
+import { Quantity, SlotStrip } from "../../components/figures.tsx";
+import { NoKvmNotice } from "../../components/install-command.tsx";
+import { PageHeader, Panel } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
 import { AppShell } from "../../components/shell/app-shell.tsx";
 import { MachineStatusLabel } from "../../components/status.tsx";
@@ -22,20 +19,48 @@ import {
   ax42Size,
   machineScenes,
   type Machine,
+  type MachineScene,
 } from "../../fixtures/machines.ts";
+import { ClearCacheDialog, MachineCache } from "./machine-cache.tsx";
 import { MachineHealth } from "./machine-health.tsx";
 import { MachineSlots } from "./machine-slots.tsx";
 import "./machines.css";
 
-export const machineStates = ["healthy", "draining", "offline"] as const;
+export const machineStates = [
+  "healthy",
+  "draining",
+  "offline",
+  "no-slots",
+  "clear-cache",
+] as const;
 export type MachineState = (typeof machineStates)[number];
 
+/** The scene of each state, and the machine of that scene that it shows. */
+const machineIn: Record<MachineState, [MachineScene, number]> = {
+  healthy: ["steady", 0],
+  draining: ["draining", 0],
+  offline: ["offline", 2],
+  "no-slots": ["noKvm", 2],
+  "clear-cache": ["steady", 0],
+};
+
 function machineOf(state: MachineState): Machine {
-  const scene = state === "healthy" ? "steady" : state;
-  const index = state === "offline" ? 2 : 0;
+  const [scene, index] = machineIn[state];
   const machine = machineScenes[scene][index];
   if (!machine) throw new Error(`No machine for ${state}`);
   return machine;
+}
+
+function HeaderActions({ state }: { state: MachineState }) {
+  if (state === "offline") return <Action tone="danger">Remove machine</Action>;
+  if (state === "draining") return <Action>Stop draining</Action>;
+  if (state === "no-slots") return <Action tone="danger">Remove</Action>;
+  return (
+    <>
+      <Action>Drain</Action>
+      <Action tone="danger">Remove</Action>
+    </>
+  );
 }
 
 export function MachineDetailScreen({
@@ -47,6 +72,7 @@ export function MachineDetailScreen({
 }) {
   const machine = machineOf(state);
   const offline = state === "offline";
+  const noSlots = machine.slots.length === 0;
   return (
     <AppShell viewport={viewport} tier="team" active="machines">
       <PageHeader
@@ -54,18 +80,7 @@ export function MachineDetailScreen({
         title={machine.name}
         status={<MachineStatusLabel status={machine.status} />}
         subtitle={dotJoin(ax42.cpu, ax42Size, ax42.disk)}
-        actions={
-          offline ? (
-            <Action tone="danger">Remove machine</Action>
-          ) : state === "draining" ? (
-            <Action>Stop draining</Action>
-          ) : (
-            <>
-              <Action>Drain</Action>
-              <Action tone="danger">Remove</Action>
-            </>
-          )
-        }
+        actions={<HeaderActions state={state} />}
       />
       {state === "draining" ? (
         <Notice tone="warning" title="Draining">
@@ -79,49 +94,39 @@ export function MachineDetailScreen({
           the machine is on and can reach ciproxy.dev.
         </Notice>
       ) : null}
+      {state === "no-slots" ? (
+        <NoKvmNotice
+          name={machine.name}
+          actions={
+            <LinkAction to={paths.addMachine} size="sm">
+              Show install command
+            </LinkAction>
+          }
+        />
+      ) : null}
       <div className="grid-2">
         <Panel
           title="Slots"
           action={<TextLink to={paths.jobsHistory}>Job history</TextLink>}
         >
           <div className="stack">
-            {offline ? null : <SlotStrip slots={machine.slots} />}
-            {offline ? (
-              <p className="small muted">
-                Slots show again when the machine is back.
+            <SlotsBody machine={machine} />
+            {noSlots ? null : (
+              <p className="caption">
+                {ax42.slotsTotal} slots of {unbroken("2 vCPU")} and{" "}
+                {unbroken("8 GB")}. A larger VM size takes several slots.
               </p>
-            ) : (
-              <MachineSlots slots={machine.slots} />
             )}
-            <p className="caption">
-              6 slots of {unbroken("2 vCPU")} and {unbroken("8 GB")}. A larger
-              shape takes several slots.
-            </p>
             <Quantity
               label="Warm runners"
-              value={state === "healthy" ? machine.warmTarget : 0}
+              value={machine.status === "healthy" ? machine.warmTarget : 0}
               caption="Ready for the next job when a slot is free"
             />
           </div>
         </Panel>
         <div className="stack">
           <MachineHealth machine={machine} />
-          <Panel title="Cache">
-            <div className="stack">
-              <Meter
-                label="Cache disk"
-                used={machine.cacheUsedGb}
-                max={machine.cacheSizeGb}
-                value={`${machine.cacheUsedGb} of ${machine.cacheSizeGb} GB`}
-              />
-              <DetailList>
-                <DetailRow label="Cache hits, 7 days">91%</DetailRow>
-                <DetailRow label="Docker disks">
-                  {dotJoin("3 repositories", unbroken("96 GB"))}
-                </DetailRow>
-              </DetailList>
-            </div>
-          </Panel>
+          <MachineCache machine={machine} />
           <Panel title="Cost">
             <div className="spread">
               <div className="stack-tight">
@@ -135,6 +140,29 @@ export function MachineDetailScreen({
           </Panel>
         </div>
       </div>
+      {state === "clear-cache" ? <ClearCacheDialog machine={machine} /> : null}
     </AppShell>
+  );
+}
+
+/** The slot bar and what each slot runs, or why the machine shows none. */
+function SlotsBody({ machine }: { machine: Machine }) {
+  if (machine.status === "offline") {
+    return (
+      <p className="small muted">Slots show again when the machine is back.</p>
+    );
+  }
+  if (machine.slots.length === 0) {
+    return (
+      <p className="small muted">
+        No slots. Jobs run on your other machines and on Boat.
+      </p>
+    );
+  }
+  return (
+    <>
+      <SlotStrip slots={machine.slots} />
+      <MachineSlots slots={machine.slots} />
+    </>
   );
 }

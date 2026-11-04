@@ -1,15 +1,18 @@
 // Own machines of mokly-ai: three Hetzner AX42 machines. A slot holds one job
-// VM of 2 vCPU and 8 GB; a larger shape takes several slots.
+// VM of 2 vCPU and 8 GB; a larger VM size takes several slots. A machine
+// without KVM connects with no slots, so it cannot run jobs.
 
 import { dotJoin, unbroken } from "./format.ts";
 
 export type SlotState = "busy" | "warm" | "free";
-export type MachineStatus = "healthy" | "draining" | "offline";
+export type MachineStatus = "healthy" | "draining" | "offline" | "no-slots";
 
 export type Machine = {
   name: string;
   status: MachineStatus;
   slots: readonly SlotState[];
+  /** The machine can start a VM for each job. */
+  kvm: boolean;
   warmTarget: number;
   cacheUsedGb: number;
   cacheSizeGb: number;
@@ -66,12 +69,21 @@ function machine(
     name: `hetzner-ax42-${index}`,
     status,
     slots: slots(busy, warm),
+    kvm: true,
     warmTarget: defaultWarmRunners,
     cacheUsedGb: [182, 167, 154, 12][index - 1] ?? 0,
     cacheSizeGb: 400,
     lastSeen: status === "offline" ? "14m ago" : "3s ago",
   };
 }
+
+/** hetzner-ax42-3 after a firmware update turned virtualization off. */
+const withoutKvm: Machine = {
+  ...machine(3, 0, 0),
+  status: "no-slots",
+  slots: [],
+  kvm: false,
+};
 
 /** The moments that the machine screens show. */
 export const machineScenes = {
@@ -83,6 +95,8 @@ export const machineScenes = {
   quiet: [machine(1, 0, 2), machine(2, 0, 2), machine(3, 0, 2)],
   /** ciproxy lost contact with hetzner-ax42-3 14 minutes ago. */
   offline: [machine(1, 6, 0), machine(2, 5, 1), machine(3, 0, 0, "offline")],
+  /** hetzner-ax42-3 connects without KVM, so it gets no slots. */
+  noKvm: [machine(1, 5, 1), machine(2, 6, 0), withoutKvm],
   /** hetzner-ax42-1 finishes its jobs and takes no new ones. */
   draining: [machine(1, 3, 0, "draining"), machine(2, 6, 0), machine(3, 5, 1)],
   /** A fourth machine joined; Team includes three. */

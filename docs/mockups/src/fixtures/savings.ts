@@ -15,7 +15,7 @@ export const savings = {
   starts: { own: 13_329, boat: 4_443 },
   minutes: { own: 81_250, boat: 34_819 },
   cost: { own: ownCost, boat: boatCost, plan: tiers.team.price },
-  /** The same jobs at list prices, for the same runner sizes. */
+  /** The same jobs at list prices, for the same VM sizes. */
   alternatives: { blacksmith: 698, github: 1_045 },
 } as const;
 

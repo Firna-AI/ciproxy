@@ -8,7 +8,7 @@ import { OnboardingScreen } from "../../../../screens/onboarding/onboarding.tsx"
 export const connectBoat = defineScreen({
   title: "Connect Boat",
   description:
-    "The third step. The customer pastes an API key of its own Boat account, where ciproxy starts overflow jobs. Skip for now continues without overflow.",
+    "The third step. The customer pastes an API key of its own Boat account, where ciproxy starts overflow jobs, and sets the monthly spend limit before Boat connects. Skip for now continues without overflow.",
   relatedDocs: [planDoc],
   address: orgAddress("setup"),
   useCasePaths: [paths.flowFirstGreenJob],
@@ -22,7 +22,7 @@ export const connectBoat = defineScreen({
       slug: "invalid-key",
       title: "Boat rejected the key",
       description:
-        "Boat did not accept the key. The field error says how to get a complete key.",
+        "Boat did not accept the key. The field error says how to get a complete key; the spend limit keeps its value.",
       props: { state: "boat-invalid" },
     },
   ],

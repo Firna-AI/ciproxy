@@ -1,1 +1,4 @@
-{ "title": "Labels and shapes", "order": ["edit-shape", "no-machine-fits"] }
+{
+  "title": "Labels and sizes",
+  "order": ["edit-label", "no-machine-fits", "nothing-fits", "label-waits"]
+}

@@ -1,4 +1,4 @@
-// The reference page of labels and machine sizes,
+// The reference page of labels and VM sizes,
 // ciproxy.dev/docs/reference/labels: the default labels with their sizes and
 // slots, how slots work, custom labels, and where a job with a label runs.
 
@@ -8,9 +8,10 @@ import { Notice } from "../../components/feedback.tsx";
 import { CodeBlock } from "../../components/figures.tsx";
 import { paths } from "../../components/paths.ts";
 import { Tag } from "../../components/status.tsx";
-import { dotJoin, unbroken } from "../../fixtures/format.ts";
+import { unbroken } from "../../fixtures/format.ts";
 import { ax42, boat, slotSize, slotsFor } from "../../fixtures/machines.ts";
-import { labels, waitChoices, type Label } from "../../fixtures/settings.ts";
+import { labels, waitChoices } from "../../fixtures/settings.ts";
+import { sizeText } from "../../fixtures/sizes.ts";
 import { DocsShell, type TocItem } from "./docs-shell.tsx";
 import { DocsH2, DocsTitle } from "./docs-parts.tsx";
 
@@ -25,14 +26,6 @@ const toc: readonly TocItem[] = [
 const large = labels.reduce((largest, label) =>
   label.vcpu > largest.vcpu ? label : largest,
 );
-
-function sizeText(label: Label): string {
-  return dotJoin(
-    unbroken(`${label.vcpu} vCPU`),
-    unbroken(`${label.memoryGb} GB`),
-    unbroken(`${label.diskGb} GB disk`),
-  );
-}
 
 /** "0, 15, 30, 60, or 120 seconds". */
 function waitText(): string {
@@ -75,7 +68,7 @@ export function LabelsReferenceScreen({ viewport }: { viewport: Viewport }) {
   return (
     <DocsShell viewport={viewport} page={paths.labelsReference} toc={toc}>
       <DocsTitle
-        title="Labels and machine sizes"
+        title="Labels and VM sizes"
         lead={
           <>
             The label in <span className="inline-code">runs-on</span> picks the
@@ -124,7 +117,10 @@ export function LabelsReferenceScreen({ viewport }: { viewport: Viewport }) {
           on both.
         </p>
         <Notice tone="info" title="Sizes larger than your machines">
-          A job whose size fits none of your machines runs on Boat only.
+          A job whose size fits none of your machines runs on Boat only. When no
+          Boat size fits either, the label setting{" "}
+          <strong>When nothing fits</strong> decides: its jobs wait, or run on
+          the largest Boat size.
         </Notice>
         <DocsH2 id="where-jobs-run">Where a job runs</DocsH2>
         <p>

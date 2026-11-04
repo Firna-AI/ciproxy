@@ -29,3 +29,17 @@ export const noKvm = defineScreen({
     <OnboardingScreen viewport={context.viewport} state="machine-no-kvm" />
   ),
 });
+
+export const noRunnerRight = defineScreen({
+  slug: "no-runner-right",
+  title: "The Admin cannot add machines",
+  description:
+    "Lena Fischer asked for the install, so she is the first Admin, but GitHub does not let her add self-hosted runners. She sees no install command, and an owner adds the machine or gives her the right. She can set up everything else.",
+  rationale:
+    "A machine gets the job secrets of the repositories, so adding one needs the Admin role and the runner right of the organization.",
+  relatedDocs: [planDoc],
+  address: orgAddress("setup"),
+  render: (_props, context) => (
+    <OnboardingScreen viewport={context.viewport} state="machine-no-right" />
+  ),
+});

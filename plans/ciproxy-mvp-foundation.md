@@ -251,6 +251,18 @@ them into the protocol docs, where the user reviews each requirement.
 - The agent reports to the control plane every 10 seconds. A machine
   without contact for 60 seconds shows as offline.
 
+Design calls from the mockups of the answers, the calls of the mockups
+agent, 4 November 2026:
+
+- Only an Admin sees Settings. Reason: Settings changes the machines, the
+  labels, Boat, and the roles, which only an Admin may change.
+- A move up between paid tiers charges the prorated difference at once,
+  on the saved card, with no Stripe Checkout. Reason: the higher tier
+  starts at once.
+- The label dialog gives two examples from the Boat sizes: 16 vCPU and
+  32 GB fits only Boat, and 32 vCPU and 128 GB fits nothing. Reason: the
+  largest Boat size is 16 vCPU and 32 GB.
+
 ### Pricing
 
 My proposal, which the user approved for the MVP on 3 November 2026. It
@@ -847,15 +859,15 @@ up Mokly as `futex-ai/accounting` does.
 - [x] Fix the findings of the first screenshot review. They are in
       `.context/ciproxy-mvp-foundation/reviews/mockup-review-1.md`.
 - [x] Run the mockup check. Smoke-test the changed pages.
-- [ ] Apply the answers of 4 November 2026 in the mockups: "size" and "VM
+- [x] Apply the answers of 4 November 2026 in the mockups: "size" and "VM
       size" in place of "shape", with the code names and a word rule in the
       mockups README; the Viewer, Billing, and Admin roles, with a members
       and roles screen in Settings and the page for a member with no role;
       the spend limit in the Boat step of setup; and "Clear cache".
-- [ ] Apply the answers to items 8 to 11 in the mockups. Count only the
-      Linux jobs where the landing page and the savings screen compare
+- [ ] Apply the answers to items 8, 9, and 10 in the mockups. Count only
+      the Linux jobs where the landing page and the savings screen compare
       Linux prices.
-- [ ] Add the mockup states that the docs need: a refused Boat sandbox, a
+- [x] Add the mockup states that the docs need: a refused Boat sandbox, a
       move between paid tiers, the "Move to Free" confirmation, and a
       machine that cannot run jobs. Give the label dialog the setting "When
       nothing fits", and replace its 32 vCPU example. Make the docs home say

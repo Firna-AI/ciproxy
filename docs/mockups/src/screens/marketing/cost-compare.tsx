@@ -91,7 +91,7 @@ export function CostCompare() {
       </div>
       <p className="caption cost-note">
         Blacksmith and GitHub-hosted costs use their list prices per minute for
-        the same runner sizes. The machines are three Hetzner AX42 at{" "}
+        the same VM sizes. The machines are three Hetzner AX42 at{" "}
         {formatMoney(ax42.monthlyCost)} a month each.
       </p>
     </Section>

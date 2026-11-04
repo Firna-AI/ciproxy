@@ -2,7 +2,8 @@
 // tier counts only the starts inside its own period, and a period begins on
 // the day its tier begins: Free from sign-up on 1 September, Team from 4
 // September, so a Team period runs from the 4th to the 3rd, and Free again
-// from 18 December, when Stripe ended Team after failed payments.
+// from 18 December, when Stripe ended Team after failed payments. A move
+// between paid tiers keeps the period, and a move to Free waits for its end.
 
 import { dateRange, unbroken } from "./format.ts";
 import type { TierKey } from "./org.ts";
@@ -15,7 +16,8 @@ export type UsageScene =
   | "free"
   | "free-over"
   | "payment-failed"
-  | "moved-to-free";
+  | "moved-to-free"
+  | "free-scheduled";
 
 export type Usage = {
   tier: TierKey;
@@ -30,6 +32,8 @@ export type Usage = {
   extraStarts: number;
   extraMachines: number;
   renews?: string;
+  /** The last day of a paid tier after a move to Free. */
+  ends?: string;
 };
 
 const team = {
@@ -78,7 +82,18 @@ export const usageScenes: Readonly<Record<UsageScene, Usage>> = {
     passesOn: unbroken("23 December"),
     machines: 3,
   },
+  "free-scheduled": {
+    ...team,
+    starts: 8_640,
+    projected: 18_500,
+    machines: 3,
+    renews: undefined,
+    ends: unbroken("3 December"),
+  },
 };
+
+/** The first day of Free after the move to Free of the November period. */
+export const freeFrom = unbroken("4 December");
 
 /** The last day of the Free period of September, for the pace of the use. */
 export const freePeriodEnd = unbroken("30 September");
@@ -95,3 +110,19 @@ export const paymentDates = {
   retry: unbroken("7 December"),
   ended: unbroken("18 December"),
 } as const;
+
+/**
+ * A move from Team to Business on 18 November: Stripe charges the price
+ * difference for the 16 days left of the 30-day period.
+ */
+export const businessMove = {
+  daysLeft: 16,
+  periodDays: 30,
+  starts: usageScenes.steady.starts,
+} as const;
+
+/** The prorated charge of a move between two monthly prices, in dollars. */
+export function proratedCharge(from: number, to: number): number {
+  const share = businessMove.daysLeft / businessMove.periodDays;
+  return Math.round((to - from) * share * 100) / 100;
+}
