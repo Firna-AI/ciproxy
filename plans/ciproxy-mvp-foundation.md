@@ -947,8 +947,6 @@ Depends on: 1
       `conductor/ciproxy-mvp-foundation-m4-bootstrap`.
 - [x] Add CI on GitHub-hosted runners. Branch:
       `conductor/ciproxy-mvp-foundation-m4-bootstrap`.
-- [ ] Move the CI of ciproxy to ciproxy when the first own machine runs
-      jobs.
 - [x] Add the Apache-2.0 licence to the agent crates. Keep the rest of the
       repository without an open licence. Branch:
       `conductor/ciproxy-mvp-foundation-m4-bootstrap`.
@@ -998,3 +996,10 @@ Depends on: every other milestone
 - [ ] Open the pull request. Its description gives the decisions and the
       design calls of this plan with their dates, a permalink to this plan,
       and the follow-up items that the change adds.
+
+## Post-merge follow-up (non-blocking)
+
+- [ ] Move the CI of ciproxy to ciproxy runners when the first own machine
+      runs jobs. It waits for the MVP, which comes after this plan. My
+      design call of 4 November 2026: the `plans` skill puts work that
+      cannot complete in the plan here.
