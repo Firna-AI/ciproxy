@@ -163,6 +163,10 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
 - [ ] Deploy staging on each push, and production on each `deploy-` tag. Add
       uptime alerts.
+- [ ] Rename the staging environment to the main preview of item 53, with
+      its hosts under `br-main.preview`, before the first apply.
+- [ ] Set up the main preview from the checklist of `deploy/README.md`, as
+      item 52 says.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
   - [x] Add both deploy workflows, restricted federation, and uptime alerts.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
@@ -687,6 +691,18 @@ Answers of 4 November 2026:
   install through the GitHub API. The organization can join any workspace
   again as a new install, and the last organization cannot be taken out.
   Rejected: options A, B, C, E, and F.
+- Item 52, A: staging comes up now. The orchestrator runs the GCP steps of
+  `deploy/README.md` from the user's Mac, with the user's approval of each
+  command. The user creates the release token and sets the name servers at
+  the registrar.
+- Item 53, D: the staging environment becomes the main preview, as in
+  `mokly-cloud` and `futex-ai/accounting`: `br-main.preview.ciproxy.dev` for
+  the site, `br-main.preview.app.ciproxy.dev` for the dashboard and the API,
+  and `br-main.preview.get.ciproxy.dev` for the downloads. It deploys from
+  the primary branch until that branch merges into `main`, then from
+  `main`. Previews of labelled pull requests at `pr-<number>.preview.*`
+  wait for the follow-up item `pr-preview-environments.md`. Rejected:
+  `staging.ciproxy.dev`, and pull request previews now.
 - Item 49, C: the Boat backend lives in `futex-ai/sandbox`. Its trait
   `SandboxBackend` splits into capabilities, and `sandbox-boat` starts with
   the lifecycle, snapshots, processes, and files. The interface gains VM
