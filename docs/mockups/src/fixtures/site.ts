@@ -1,7 +1,7 @@
 // The public site of ciproxy: the marketing pages at the root and the docs
-// under /docs, on one host. ciproxy.dev is a placeholder until the domain is
-// chosen. The landing page uses the CI of mokly-ai as its worked example,
-// from the same 30 days as the savings report.
+// under /docs, on one host, ciproxy.dev. The landing page uses the CI of
+// mokly-ai as its worked example, from the same 30 days as the savings
+// report.
 
 import { org } from "./org.ts";
 import { savings } from "./savings.ts";

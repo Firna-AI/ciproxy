@@ -89,6 +89,10 @@ User decisions, 3 November 2026:
   docs site. Both are built with Astro. The user asked for them on
   3 November 2026, with mockups in Milestone 1 and the build in the
   implementation plan.
+- Domain: ciproxy.dev. The user bought it on 4 November 2026. My design
+  call, as the mockups show: the marketing pages live at `ciproxy.dev`, the
+  docs at `ciproxy.dev/docs`, the dashboard at `app.ciproxy.dev`, and the
+  install script of the agent at `get.ciproxy.dev`.
 - Review answers, 4 November 2026: the user unblocked Codex. The docs drop
   the promise that warm runners take new jobs during a control plane
   outage, because it highlights a risk needlessly. Corner radii rely on
@@ -906,6 +910,8 @@ Depends on: 2, 3, 4
       service and the privacy policy, which the user writes or approves.
 - [ ] Give the site milestone of that plan the restyle of the Starlight
       search to match the docs search mockup, as far as CSS allows.
+- [ ] Give that plan the DNS and the hosting of `ciproxy.dev`,
+      `app.ciproxy.dev`, and `get.ciproxy.dev`.
 - [ ] Order the launch steps in that plan: the public copy of the agent
       goes live before the site, because the site links to it.
 - [ ] Settle in that plan the open questions of the docs workspace: label

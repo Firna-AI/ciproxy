@@ -60,7 +60,7 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
 - The public site has two sections: Marketing, with the landing page and the
   pricing page, and Docs, in the structure of Starlight: the sidebar of
   sections, the top bar with search, the article, and "On this page". Both
-  share the site top bar, and `ciproxy.dev` stands in for the domain. The
+  share the site top bar, on the domain `ciproxy.dev`. The
   landing page shows real numbers from the fixtures and no customer logos,
   quotes, or press.
 - One value has one format: `src/fixtures/format.ts` holds the money, count,
@@ -125,7 +125,7 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   figure strip in `kpis.tsx`, the status dots and tags in `status.tsx`, and the
   starts chart.
 - `src/components/paths.ts`: every catalogue path of a screen and a flow.
-- `src/fixtures/site.ts`: the placeholder host of the public site and the
+- `src/fixtures/site.ts`: the host of the public site and the
   worked example of the landing page; `plan-compare.ts` holds the feature
   comparison of the pricing page, from the tiers in `tiers.ts`.
 - `src/components/state-schema.ts`: the closed prop schema of a screen whose
