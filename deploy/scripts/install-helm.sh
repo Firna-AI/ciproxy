@@ -40,10 +40,10 @@ scratch="${RUNNER_TEMP:-${PWD}/.context/tools}/ciproxy-helm"
 mkdir -p "${scratch}"
 curl --fail --silent --show-error --location \
   "https://get.helm.sh/${archive}" --output "${scratch}/${archive}"
-if ! (
-  cd "${scratch}"
-  printf '%s  %s\n' "${checksum}" "${archive}" | "${checker[@]}" -c
-); then
+# Compare the digest directly. The check mode of the macOS sha256sum does not
+# read a checksum list from standard input.
+digest_line="$("${checker[@]}" "${scratch}/${archive}")"
+if [[ "${digest_line%% *}" != "${checksum}" ]]; then
   printf 'SHA-256 verification failed for %s. Helm was not installed.\n' "${archive}" >&2
   exit 1
 fi
