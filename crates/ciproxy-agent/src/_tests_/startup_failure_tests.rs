@@ -1,0 +1,167 @@
+//! Root faults release only the failed startup's durable slots and job disk.
+
+use std::sync::{Arc, Mutex};
+
+use ciproxy_protocol::identifiers::ImageId;
+use ciproxy_protocol::reports::SlotOccupancy;
+use ciproxy_protocol::runners::{RunnerReport, RunnerState};
+use unimock::{MockFn, Unimock, matching};
+
+use crate::boundaries::{CacheMock, StoreMock, VmsMock};
+use crate::controller::Agent;
+use crate::fixtures::{
+    controller, hardware, identity, report_dependencies_for, spec, start_image, vm,
+};
+use crate::root_failure_fixtures::{RootFailure, Stage, error_facts, expected_trace, layout};
+use crate::state::{MachineState, VmRecord};
+
+#[derive(Debug, Eq, PartialEq)]
+enum Event {
+    Saved(MachineState),
+    Budget(u64),
+    Started(VmRecord),
+    Cleanup(VmRecord),
+    Restored(VmRecord),
+}
+
+#[tokio::test]
+async fn root_preparation_failures_clean_up_the_new_vm_and_release_its_reservation() {
+    let failure = RootFailure::new();
+    for stage in Stage::ALL {
+        failure.reset(stage);
+        let events = Arc::new(Mutex::new(Vec::new()));
+        let initial = MachineState {
+            identity: Some(identity()),
+            runners: vec![vm("warm-existing", false)],
+            ..MachineState::default()
+        };
+        let mut runner = spec();
+        runner.size.vcpu = 4;
+        runner.size.memory_bytes = 16_000_000_000;
+        runner.size.disk_bytes = 100_000_000_000;
+        let mut allocated = vm("new", false);
+        allocated.network_index = 2;
+        allocated.report = RunnerReport {
+            runner_id: runner.runner_id.clone(),
+            organization_id: runner.organization_id.clone(),
+            label: runner.label.clone(),
+            size: runner.size,
+            image_id: ImageId("image-1".to_owned()),
+            state: RunnerState::Starting,
+        };
+        let mut reserved = initial.clone();
+        reserved.runners.push(allocated.clone());
+        let mut machine = hardware();
+        machine.disks[0].capacity_bytes = 512_000_000_000;
+        machine.disks[0].free_bytes = 400_000_000_000;
+        let saving = events.clone();
+        let budgets = events.clone();
+        let starts = events.clone();
+        let cleanups = events.clone();
+        let restores = events.clone();
+        let root = failure.clone();
+        let mock = Unimock::new((
+            report_dependencies_for(machine),
+            start_image(),
+            VmsMock::allocate
+                .each_call(matching!(_, _))
+                .answers(&|_, report, _| {
+                    let mut allocated = vm("new", false);
+                    allocated.network_index = 2;
+                    allocated.report = report;
+                    Ok(allocated)
+                })
+                .at_least_times(0),
+            StoreMock::save
+                .each_call(matching!(_))
+                .answers_arc(Arc::new(move |_, state| {
+                    saving.lock().unwrap().push(Event::Saved(state.clone()));
+                    Ok(())
+                }))
+                .at_least_times(0),
+            CacheMock::budget
+                .each_call(matching!(_))
+                .answers_arc(Arc::new(move |_, bytes| {
+                    budgets.lock().unwrap().push(Event::Budget(bytes));
+                    Ok(())
+                }))
+                .at_least_times(0),
+            VmsMock::start
+                .each_call(matching!(_, _))
+                .answers_arc(Arc::new(move |_, record, _| {
+                    starts.lock().unwrap().push(Event::Started(record.clone()));
+                    let paths = layout();
+                    root.prepare_ready(
+                        &paths.image(&record.report.image_id).join("rootfs.ext4"),
+                        &paths.jail_root(record).join("rootfs.ext4"),
+                        record.report.size.disk_bytes,
+                    )
+                }))
+                .at_least_times(0),
+            VmsMock::stop
+                .each_call(matching!(_))
+                .answers_arc(Arc::new(move |_, record| {
+                    cleanups
+                        .lock()
+                        .unwrap()
+                        .push(Event::Cleanup(record.clone()));
+                    Ok(())
+                }))
+                .at_least_times(0),
+            VmsMock::restore
+                .each_call(matching!(_))
+                .answers_arc(Arc::new(move |_, record| {
+                    restores
+                        .lock()
+                        .unwrap()
+                        .push(Event::Restored(record.clone()));
+                    Ok(())
+                }))
+                .at_least_times(0),
+        ));
+        let agent = controller(initial.clone(), mock);
+        assert_eq!(
+            agent.start(runner).await.map_err(error_facts),
+            Err(stage.expected_error()),
+            "{stage:?}",
+        );
+        let paths = layout();
+        let image = paths.image(&allocated.report.image_id).join("rootfs.ext4");
+        let copy = paths.jail_root(&allocated).join("rootfs.ext4");
+        assert_eq!(
+            failure.trace(),
+            expected_trace(stage, &image, &copy),
+            "{stage:?}"
+        );
+        assert_eq!(*agent.state.lock().await, initial, "{stage:?}");
+        agent.reconcile().await.unwrap();
+        let report = agent.report().await.unwrap();
+        assert_eq!(
+            report.runners,
+            vec![initial.runners[0].report.clone()],
+            "{stage:?}"
+        );
+        assert_eq!(
+            report
+                .slots
+                .iter()
+                .filter(|slot| slot.occupancy == SlotOccupancy::Free)
+                .count(),
+            5,
+            "{stage:?}"
+        );
+        assert_eq!(
+            *events.lock().unwrap(),
+            vec![
+                Event::Saved(reserved),
+                Event::Budget(99_000_000_000),
+                Event::Started(allocated.clone()),
+                Event::Cleanup(allocated),
+                Event::Saved(initial.clone()),
+                Event::Restored(initial.runners[0].clone()),
+                Event::Budget(199_000_000_000),
+            ],
+            "{stage:?}"
+        );
+    }
+}

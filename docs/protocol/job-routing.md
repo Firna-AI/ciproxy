@@ -9,7 +9,8 @@ warm runners. It also states what happens when a part fails.
 - **slot:** 2 vCPU and 8 GB of an [own machine](agent.md#terms).
 - **host reserve:** the threads, memory, and disk that the
   [agent](agent.md#terms) keeps for the host of an own machine.
-- **job disk:** the disk of an own machine that the host reserve leaves for
+- **image budget:** the separate disk space for images and their downloads.
+- **job disk:** the disk that the image budget and host reserve leave for
   the [job VMs](agent.md#job-vms) and the [machine cache](cache.md#terms).
 - **runner:** the GitHub Actions runner program that takes one job, in a
   [job VM](agent.md#job-vms) or in a [sandbox](overflow.md#terms) on
@@ -26,8 +27,8 @@ warm runners. It also states what happens when a part fails.
 - That number is the larger of the vCPU divided by 2 and the memory
   divided by 8 GB, each rounded up.
 - Each slot is free, holds a warm runner, or holds a job.
-- The host reserve of an own machine is a quarter of its hardware threads,
-  a quarter of its memory, and a quarter of its disk.
+- The host reserve keeps a quarter of the hardware threads and memory.
+- [Disk](#disk) gives the separate image budget and disk reserve.
 - The rest of the threads and the memory forms whole slots.
 - One vCPU is one hardware thread.
 - The slots of an own machine are the smaller of these two numbers:
@@ -39,9 +40,17 @@ warm runners. It also states what happens when a part fails.
 
 - The disk of an own machine is the space in which the agent keeps the
   images, the job VMs, and the machine cache.
-- The host reserve keeps its quarter of the disk for the system and the
-  images.
-- The other three quarters of the disk are the job disk.
+- First subtract the image budget from the disk capacity.
+- The default image budget is 140,000,000,000 bytes, or 140 GB.
+- It holds two full images and one compressed download during an update.
+- An explicit image budget override stays separate from the job disk.
+- The host reserve keeps a quarter of the remaining disk for the system
+  and filesystem overhead.
+- The other three quarters of the remaining disk are the job disk.
+- A disk smaller than the image budget has no job disk.
+- **Decision:** reserve images first, then split the remaining disk 1:3 for
+  host and jobs. Rejected: a slim image and shared read-only job roots.
+  Reason: keep all `ubuntu-latest` software and independent writable disks.
 - Each job VM holds the disk of its size in the job disk, from its start
   until it ends.
 - So a warm runner holds the disk of its size, as it holds its slots.
@@ -73,35 +82,8 @@ warm runners. It also states what happens when a part fails.
 
 ### Worked examples
 
-- An own machine with 16 threads and 64 GB, such as a Hetzner AX42, keeps
-  4 threads and 16 GB as its host reserve.
-- Its other 12 threads give 6 slots, and its other 48 GB give 6 slots.
-- So it has 6 slots, which offer 12 vCPU and 48 GB to jobs.
-- An own machine with 4 threads and 16 GB keeps 1 thread and 4 GB as its
-  host reserve.
-- Its other 3 threads give 1.5 slots, and its other 12 GB give 1.5 slots.
-- Both numbers round down, so it has 1 slot.
-- So every own machine that meets the
-  [hardware minimum](agent.md#install) of 4 cores and 16 GB has at least
-  1 slot.
-- A mini PC with 16 threads, 64 GB, and a 256 GB disk has 6 slots, as the
-  AX42 has.
-- Its host reserve keeps 64 GB of the disk, so its job disk is 192 GB.
-- A job of the label `ciproxy` holds 60 GB, so the job disk holds 3 such
-  jobs at a time, and the slots hold 6.
-- So the mini PC runs 3 jobs of `ciproxy` at a time.
-- While its 2 warm runners wait for jobs, they hold 120 GB, and the machine
-  cache can use the other 72 GB.
-- When a third job VM of `ciproxy` starts, the machine cache frees space
-  until it uses at most 12 GB.
-- For each [default label](labels.md#default-labels), the mini PC runs
-  these jobs at a time:
-
-| Label | Slots of a job | Disk of a job | By slots | By disk | At a time |
-| --- | --- | --- | --- | --- | --- |
-| `ciproxy` | 1 | 60 GB | 6 | 3 | 3 |
-| `ciproxy-4vcpu` | 2 | 80 GB | 3 | 2 | 2 |
-| `ciproxy-8vcpu` | 4 | 120 GB | 1 | 1 | 1 |
+[Worked examples](job-routing-examples.md) covers slots, the 250 GB minimum,
+and a mini PC whose disk limits concurrent jobs.
 
 ## Where a job runs
 
@@ -194,7 +176,7 @@ warm runners. It also states what happens when a part fails.
 - A job of another label gets a new runner in a fresh job VM, in free
   slots and free job disk.
 - A warm runner holds the slots and the disk of the size of the label
-  `ciproxy`, which are 1 slot and 60 GB by default.
+  `ciproxy`, which are 1 slot and 80 GB by default.
 - A warm runner never keeps a waiting job from an own machine.
 - ciproxy stops warm runners to free the slots and the job disk that a
   waiting job needs.

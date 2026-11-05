@@ -13,7 +13,7 @@ fn main() {
     let size = VmSize {
         vcpu: 2,
         memory_bytes: 8 * GIGABYTE,
-        disk_bytes: 60 * GIGABYTE,
+        disk_bytes: 80 * GIGABYTE,
     };
     let snapshot = Snapshot {
         workspace_id: WorkspaceId("example-workspace".into()),
@@ -39,7 +39,7 @@ fn main() {
             connected: true,
             draining: false,
             capacity: Slots(1),
-            disk_budget_bytes: 100 * GIGABYTE,
+            disk_budget_bytes: 82_500_000_000,
             warm_count: 0,
             warm_allocation: Vec::new(),
             runners: Vec::new(),

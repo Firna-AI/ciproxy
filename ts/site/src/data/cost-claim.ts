@@ -5,7 +5,12 @@
 // runners count the same job minutes at their list prices per minute, for the
 // same VM size. The prices and their sources are in price-lists.ts.
 
-import { ax42, machineSlots, type Hardware } from "./hardware.ts";
+import {
+  ax42,
+  machineConcurrentJobs,
+  machineSlots,
+  type Hardware,
+} from "./hardware.ts";
 import { cheapestPlan, type PlanChoice } from "./plan-choice.ts";
 import { listPrices, type ListPrice } from "./price-lists.ts";
 
@@ -24,7 +29,7 @@ export type Alternative = Runner & { cost: number };
 /** What the claim assumes: one machine that runs jobs all month. */
 export type ClaimBasis = {
   machine: string;
-  hardware: Pick<Hardware, "threads" | "memoryGb">;
+  hardware: Pick<Hardware, "threads" | "memoryGb" | "diskGb">;
   /** The list price of the machine, a month. */
   machinePrice: number;
   runners: readonly [Runner, ...Runner[]];
@@ -37,9 +42,11 @@ export type CostClaim = {
   machine: string;
   averageJobMinutes: number;
   monthDays: number;
-  /** The slots of the machine; each runs one job VM of the slot size. */
+  /** The CPU and memory slots of the machine, before disk limits. */
   slots: number;
-  /** The job minutes of every slot in every minute of the month. */
+  /** The default jobs that fit both slots and job disk at the same time. */
+  concurrentJobs: number;
+  /** The minutes of every concurrent job in every minute of the month. */
   jobMinutes: number;
   starts: number;
   /** The cheapest tier with add-ons that covers the starts. */
@@ -64,7 +71,8 @@ function cents(amount: number): number {
 /** The claim of one machine that runs jobs in every minute of a month. */
 export function costClaimFor(basis: ClaimBasis): CostClaim {
   const slots = machineSlots(basis.hardware);
-  const jobMinutes = slots * basis.monthDays * 24 * 60;
+  const concurrentJobs = machineConcurrentJobs(basis.hardware);
+  const jobMinutes = concurrentJobs * basis.monthDays * 24 * 60;
   const starts = Math.ceil(jobMinutes / basis.averageJobMinutes);
   const plan = cheapestPlan(starts, 1);
   const withCiproxy = basis.machinePrice + plan.price;
@@ -85,6 +93,7 @@ export function costClaimFor(basis: ClaimBasis): CostClaim {
     averageJobMinutes: basis.averageJobMinutes,
     monthDays: basis.monthDays,
     slots,
+    concurrentJobs,
     jobMinutes,
     starts,
     plan,

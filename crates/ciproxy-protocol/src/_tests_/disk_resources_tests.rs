@@ -9,31 +9,31 @@ fn machine_resources_keep_the_disk_reserve_and_existing_slots() {
             "mini PC",
             16,
             64 * GIGABYTE,
-            256 * GIGABYTE,
+            512 * GIGABYTE,
             true,
             6,
-            192 * GIGABYTE,
-            64 * GIGABYTE,
+            279 * GIGABYTE,
+            233 * GIGABYTE,
         ),
         (
             "hardware minimum",
             4,
             16 * GIGABYTE,
-            80 * GIGABYTE,
+            250 * GIGABYTE,
             true,
             1,
-            60 * GIGABYTE,
-            20 * GIGABYTE,
+            82_500_000_000,
+            167_500_000_000,
         ),
         (
             "no KVM",
             16,
             64 * GIGABYTE,
-            256 * GIGABYTE,
+            512 * GIGABYTE,
             false,
             0,
-            192 * GIGABYTE,
-            64 * GIGABYTE,
+            279 * GIGABYTE,
+            233 * GIGABYTE,
         ),
         (
             "largest disk",
@@ -42,8 +42,8 @@ fn machine_resources_keep_the_disk_reserve_and_existing_slots() {
             u64::MAX,
             true,
             6,
-            13_835_058_055_282_163_711,
-            4_611_686_018_427_387_904,
+            13_835_057_950_282_163_711,
+            4_611_686_123_427_387_904,
         ),
     ];
     for (name, threads, memory, disk, kvm, slots, job_disk, reserve) in examples {
@@ -70,7 +70,7 @@ fn vm_fit_requires_slots_and_job_disk_on_one_machine() {
     let examples = [
         (
             "hardware minimum",
-            Resources::for_machine(4, 16 * GIGABYTE, 80 * GIGABYTE, true),
+            Resources::for_machine(4, 16 * GIGABYTE, 250 * GIGABYTE, true),
             size,
             true,
         ),
@@ -78,7 +78,7 @@ fn vm_fit_requires_slots_and_job_disk_on_one_machine() {
             "disk one byte too small",
             Resources {
                 slots: Slots(6),
-                job_disk_bytes: 60 * GIGABYTE - 1,
+                job_disk_bytes: 80 * GIGABYTE - 1,
             },
             size,
             false,
@@ -87,14 +87,14 @@ fn vm_fit_requires_slots_and_job_disk_on_one_machine() {
             "slots too small",
             Resources {
                 slots: Slots(0),
-                job_disk_bytes: 192 * GIGABYTE,
+                job_disk_bytes: 279 * GIGABYTE,
             },
             size,
             false,
         ),
         (
             "no KVM",
-            Resources::for_machine(16, 64 * GIGABYTE, 256 * GIGABYTE, false),
+            Resources::for_machine(16, 64 * GIGABYTE, 512 * GIGABYTE, false),
             size,
             false,
         ),
@@ -111,7 +111,7 @@ fn vm_fit_requires_slots_and_job_disk_on_one_machine() {
             "ciproxy-4vcpu disk too small",
             Resources {
                 slots: Slots(2),
-                job_disk_bytes: 60 * GIGABYTE,
+                job_disk_bytes: 80 * GIGABYTE - 1,
             },
             four_vcpu,
             false,
@@ -172,8 +172,8 @@ fn default_sizes_use_the_smaller_slot_or_disk_concurrency() {
             },
             2,
             3,
-            2,
-            2,
+            3,
+            3,
         ),
         (
             "ciproxy-8vcpu",
@@ -184,7 +184,7 @@ fn default_sizes_use_the_smaller_slot_or_disk_concurrency() {
             },
             4,
             1,
-            1,
+            2,
             1,
         ),
     ];
@@ -203,9 +203,9 @@ fn default_sizes_use_the_smaller_slot_or_disk_concurrency() {
         assert_eq!(resources.concurrent_vms(size), concurrent, "{name}");
     }
 
-    let minimum = Resources::for_machine(4, 16 * GIGABYTE, 80 * GIGABYTE, true);
+    let minimum = Resources::for_machine(4, 16 * GIGABYTE, 250 * GIGABYTE, true);
     assert_eq!(minimum.concurrent_vms(ciproxy_size()), 1);
-    let cpu_limited = Resources::for_machine(4, 16 * GIGABYTE, 256 * GIGABYTE, true);
+    let cpu_limited = Resources::for_machine(4, 16 * GIGABYTE, 512 * GIGABYTE, true);
     assert_eq!(cpu_limited.concurrent_vms(ciproxy_size()), 1);
 }
 
@@ -218,12 +218,12 @@ fn warm_and_running_vms_hold_their_full_slots_and_disk() {
         two_warm,
         Resources {
             slots: Slots(4),
-            job_disk_bytes: 72 * GIGABYTE
+            job_disk_bytes: 119 * GIGABYTE
         }
     );
     assert_eq!(
         resources.job_disk_bytes - two_warm.job_disk_bytes,
-        120 * GIGABYTE
+        160 * GIGABYTE
     );
     assert!(two_warm.fits(size));
     assert_eq!(two_warm.concurrent_vms(size), 1);
@@ -233,7 +233,7 @@ fn warm_and_running_vms_hold_their_full_slots_and_disk() {
         third_vm,
         Resources {
             slots: Slots(3),
-            job_disk_bytes: 12 * GIGABYTE
+            job_disk_bytes: 39 * GIGABYTE
         }
     );
     assert!(!third_vm.fits(size));
@@ -243,27 +243,27 @@ fn warm_and_running_vms_hold_their_full_slots_and_disk() {
     let larger_running = VmSize {
         vcpu: 4,
         memory_bytes: 16 * GIGABYTE,
-        disk_bytes: 80 * GIGABYTE,
+        disk_bytes: 120 * GIGABYTE,
     };
     let mixed = resources.available([size, larger_running]);
     assert_eq!(
         mixed,
         Resources {
             slots: Slots(3),
-            job_disk_bytes: 52 * GIGABYTE
+            job_disk_bytes: 79 * GIGABYTE
         }
     );
     assert!(!mixed.fits(size));
 }
 
 fn mini_pc() -> Resources {
-    Resources::for_machine(16, 64 * GIGABYTE, 256 * GIGABYTE, true)
+    Resources::for_machine(16, 64 * GIGABYTE, 512 * GIGABYTE, true)
 }
 
 fn ciproxy_size() -> VmSize {
     VmSize {
         vcpu: 2,
         memory_bytes: 8 * GIGABYTE,
-        disk_bytes: 60 * GIGABYTE,
+        disk_bytes: 80 * GIGABYTE,
     }
 }

@@ -461,9 +461,36 @@ reserve. The image measurement sets the real budget later.
       [quota item](follow-ups/agent-xfs-image-project-quota.md), and A does
       not wait for it.
       Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
+- [x] Apply item 73 = A to the label disks, image budget, machine minimum,
+      storage split, protocol docs, READMEs, and site calculations. Keep the
+      image budget apart from the job disk, and test the 250 GB minimum.
+      Apply item 75 = A to the AX42 calculation and setup docs. Keep the
+      site and mockup wording and six-job count aligned.
+      Orchestrator call, 5 November 2026: use one resource calculation with
+      an explicit image budget. Pass the recorded budget to agent
+      admission and cache sizing. Keep raw hardware capacity and the wire
+      schema. The scaler still receives its job-disk budget from its
+      caller. Reason: the override then uses the same disk split without
+      adding a report field or new scheduler integration.
+      Mockup calls, 5 November 2026: give the mini PC 512 GB so that it
+      still shows the disk limit. The mixed-machine dialog edits an
+      unsaved 100 GB draft of `ciproxy-4vcpu` to retain its job-count range.
+      The saved default remains 80 GB.
+      Branch: `conductor/ciproxy-mvp-73a-disk-sizes`.
+- [x] Test the five existing root-preparation failures and failed-start
+      cleanup for PR #25 review finding 1, option A. Check returned errors,
+      cleanup requests, and released disk and slots at both boundaries.
+      Branch: `conductor/ciproxy-mvp-73a-disk-sizes`.
 - [ ] Smoke-test a Docker job, a warm runner, and a restart during a job.
       Orchestrator: align the image bundle, root/Docker disk allocation,
       vsock port, and guest state/reconnect/shutdown behavior first.
+      Item 73 integration: each VM gets one root disk of its label size.
+      Reflink the image, extend a larger copy, and grow ext4 before boot.
+      Docker shares that disk. Remove the unused empty Docker drive.
+      Sticky Docker disks remain the separate cache integration below.
+      Keep the capacity error for a label smaller than the image. The
+      [smaller-label policy](follow-ups/labels-smaller-than-job-image.md)
+      waits for a user decision.
       Orchestrator: run `crates/ciproxy-agent/scripts/smoke-docker.sh`,
       `crates/ciproxy-agent/scripts/smoke-warm.sh`, and
       `crates/ciproxy-agent/scripts/smoke-restart.sh` on the KVM test host
@@ -535,14 +562,16 @@ VM hardware. The exported Firecracker disk stays ext4 on `/dev/vda`.
       Branch: `conductor/ciproxy-mvp-milestone-10-job-vm-image`.
 - [ ] Run a job from the shared snapshot on Boat `large`, and measure the
       free disk. Item 73 = A selects the full image and an 80 GB default
-      label. Boat `small` and `default` provide only 51 GB for files.
+      label. Boat `large` provides 111 GB and fits that label. The full
+      image does not fit the 51 GB of `small` or `default`.
       Orchestrator: run the registration and result commands of
       `image/github.py`, and the create, run, status, and delete commands
       of `image/boat.py` on `large`. The
       [smoke guide](../image/README.md#boat-smoke) gives
       the arguments. Supply the overflow callback and its scoped token.
       Compare `image/boat.py metadata` before and after snapshot restore.
-      Keep the measured free bytes with the release evidence.
+      Record the measured free bytes against the approved label disk in
+      the release evidence.
       Branch: `conductor/ciproxy-mvp-milestone-10-job-vm-image`.
 
 ## Milestone 11: Cache sidecar and runner patch
@@ -1160,6 +1189,12 @@ Answers of 5 November 2026:
   stays a quarter of the disk that the image budget leaves. An own machine
   needs 250 GB of disk. Boat stays on `large`. Rejected: a slim image, and a
   shared read-only image with a writable layer for each job.
+  User calls in the item 73 implementation brief, 5 November 2026: set the
+  default image budget to 140 GB for two 58.3 GB images and one 18.3 GB
+  download, with about 2 GB for image growth. Subtract that budget first,
+  then reserve a quarter of the remaining disk for the host. The other
+  three quarters hold jobs. A 250 GB machine leaves 27.5 GB for the host
+  and 82.5 GB for jobs. The existing budget override stays available.
   My call, 5 November 2026: each job VM gets one root disk of its label
   size, so Docker data shares the free space as on GitHub, and the cached
   Docker images of the image stay visible. The agent grows the reflink copy
@@ -2083,7 +2118,8 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 75 on 5 November 2026. Item 76 still waits. The
+The user answered items 54 to 75 on 5 November 2026, and item 76 became a
+design call. Item 77 still waits. The
 conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
@@ -2769,6 +2805,9 @@ keep the letters that the user saw.
 
 ### 76. The organization forbids the public site buckets
 
+**Outcome, 5 November 2026:** D, a design call after the user asked why the
+buckets must be public.
+
 - **Severity:** High. **Effort:** Small.
 - **Source:** Implementation, the read-only checks before the GCP setup.
 - **Category:** Process.
@@ -2803,13 +2842,32 @@ keep the letters that the user saw.
   - **C.** Serve the static files from a small web server in the cluster, so
     no bucket needs a public grant. It adds a workload and changes the
     deploy design. Effort: Medium.
+  - **D.** Use the private bucket access of Cloud CDN. The buckets stay
+    private, and only the load balancer service agent
+    `service-PROJECT_NUMBER@https-lb.iam.gserviceaccount.com` reads them.
+    Visitors still get the files through the load balancer and the CDN.
+    The organization rule stays. Effort: Small.
 - **Left out:** Signed URLs for the whole site: browsers cannot fetch a
   public site with them.
 - **Wider fix:** B. Only the resources with the tag can be public.
 - **Previous examples:** None found. The projects `mokly-508518` and
   `internal-498318` keep the rule with no exception.
-- **Recommendation:** A. The project exists to serve a public product,
-  Terraform is the only writer of its grants, and it unblocks the setup
-  today. B protects the project best.
-- **Action:** ask the user, because each option changes an organization
-  policy or the deploy design, outside the project.
+- **Recommendation:** D. It keeps the organization rule and the deploy
+  design, and no one can read the buckets directly.
+- **Action:** design call D. It changes no requirement and needs no change
+  outside the project. Google creates the service agent after the first
+  backend bucket, so the grant follows the backend buckets. If the
+  organization rule refuses the grant, the item returns to the user with A,
+  B, and C.
+
+### 77. A label can be smaller than the job image
+
+- **Severity:** Medium. **Effort:** Medium.
+- **Source:** Implementation, pull request #25.
+- **Record:** the follow-up item
+  [labels smaller than the job image](follow-ups/labels-smaller-than-job-image.md)
+  holds the background, the options A to D, and the recommendation.
+- **Recommendation:** A. A job of such a label runs on the image disk size,
+  the scheduler reserves that size, and the label dialog warns.
+- **Action:** ask the user. Nothing waits for the answer before the label
+  settings milestone.

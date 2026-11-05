@@ -1,29 +1,34 @@
 # Image budget and XFS sizing
 
-The job disk remains three quarters of the underlying host filesystem.
-Images and XFS overhead use the remaining host quarter.
-The area file contains all three parts on the same reflink filesystem.
-This keeps the documented slots, VM sizes, and 80 GB minimum unchanged.
-The agent leaves the rest of the host quarter for the system.
+The image budget comes out of the underlying host filesystem first.
+The job disk is three quarters of the remaining disk.
+The host keeps the other quarter for the system and XFS overhead.
+The area file holds job disk, image budget, and measured XFS overhead.
+The agent leaves the rest of the host reserve outside the area.
+A new installation needs at least 250 GB of disk.
 
-## Provisional image setting
+## Image budget setting
 
-The default image budget is **4,000,000,000 bytes**, or 4 SI GB.
-This is a provisional storage cap. It is not an image-size measurement.
-Milestone 10 must measure production images and choose the real value.
+The default image budget is **140,000,000,000 bytes**, or 140 SI GB.
+The full `ubuntu-latest` software uses 58.3 GB installed.
+Its compressed download is 18.3 GB.
+Two installed images and one download need about 135 GB during an update.
+The budget also holds kernels, jail support, and image metadata.
+Job disk remains separate from this budget.
 An image that cannot fit at peak is refused before it consumes job space.
 The existing usable base remains available after an oversized update.
 
 Set an explicit byte count on first install:
 
 ```sh
-sudo env CIPROXY_IMAGE_BUDGET_BYTES=4000000000 \
+sudo env CIPROXY_IMAGE_BUDGET_BYTES=160000000000 \
   /usr/local/bin/ciproxy-agent install --token TOKEN
 ```
 
 The value must be an integer greater than 16,777,216 bytes.
-The image budget and measured overhead must leave system space in the
-host quarter. The agent reports an actionable error when they do not fit.
+The image budget is subtracted before the host and job disk split.
+Measured overhead must leave system space in the host reserve.
+The agent reports an actionable error when they do not fit.
 The first durable area record includes the chosen budget.
 Install, runtime recovery, downloads, extraction, and VM support use it.
 The service can read it from the record without inheriting the shell.
@@ -45,17 +50,19 @@ The agent also keeps conservative filesystem support headroom:
 - One thirty-second of the job disk permits later extent/COW metadata.
 - Another 16 MiB covers small filesystem support allocations.
 
-Both additions remain in the host quarter.
+Both additions remain in the host reserve.
 They increase filesystem headroom, not VM disk reservations.
 The agent grows only this unpublished area and measures it again.
 It publishes Ready only after all job bytes, image budget, and metadata
 headroom remain available. Later install preserves that backing length.
 No quota, quota mount option, or quota tool is required.
 
-For an 80 GB host, the job disk is 60 GB.
-The provisional image budget is 4 GB.
-The metadata headroom is about 1.89 GB plus measured empty-XFS costs.
-The remaining host quarter stays outside the area for the system.
+For a 250 GB host, the default image budget is 140 GB.
+The remaining 110 GB splits into 82.5 GB of job disk and 27.5 GB for host.
+The metadata headroom is about 2.59 GB plus measured empty-XFS costs.
+The remaining host reserve stays outside the area for the system.
+With a 160 GB image budget override, that same host has 67.5 GB of job disk.
+That override leaves too little job disk for an 80 GB default runner.
 These are logical capacities. A sparse file does not preallocate the host.
 Unrelated host programs can still consume its physical free space.
 
