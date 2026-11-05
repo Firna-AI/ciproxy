@@ -2,7 +2,7 @@
 
 use ciproxy_protocol::resources::VmSize;
 
-use crate::boat::{BoatAccount, BoatSize, Refusal};
+use crate::boat::{BoatAccount, BoatSize, BoatSizeId, Refusal};
 use crate::capacity::eligible;
 use crate::snapshot::{Label, NothingFits, Snapshot};
 
@@ -16,11 +16,36 @@ pub(crate) struct SizePolicy<'a> {
 }
 
 /// A catalog choice under the label's current resource policy.
-pub(crate) enum BoatChoice<'a> {
+pub enum BoatChoice<'a> {
     /// The size covers every requested resource dimension.
     Fitting(&'a BoatSize),
     /// Neither destination fits and the label permits the largest Boat size.
     Largest(&'a BoatSize),
+}
+
+/// Choose the cheapest fitting size or the label's current largest-size exception.
+/// Supply only eligible sizes after applying current provider size refusals.
+pub fn select_boat_size<'a>(
+    sizes: impl Iterator<Item = &'a BoatSize> + Clone,
+    largest_size: Option<&BoatSizeId>,
+    requested: VmSize,
+    own_fits: bool,
+    nothing_fits: NothingFits,
+) -> Option<BoatChoice<'a>> {
+    let fitting = sizes
+        .clone()
+        .filter(|size| covers(size.size, requested))
+        .min_by_key(|size| size.price);
+    if let Some(size) = fitting {
+        Some(BoatChoice::Fitting(size))
+    } else if !own_fits && nothing_fits == NothingFits::LargestBoatSize {
+        sizes
+            .into_iter()
+            .find(|size| Some(&size.id) == largest_size)
+            .map(BoatChoice::Largest)
+    } else {
+        None
+    }
 }
 
 impl<'a> SizePolicy<'a> {
@@ -29,27 +54,17 @@ impl<'a> SizePolicy<'a> {
             .machines
             .iter()
             .any(|machine| eligible(machine, label));
-        let fitting = snapshot
-            .boat
-            .sizes
-            .iter()
-            .filter(|size| allowed(&snapshot.boat, size) && covers(size.size, label.size))
-            .min_by_key(|size| size.price);
-        let boat = if let Some(size) = fitting {
-            Some(BoatChoice::Fitting(size))
-        } else if !own_fits && label.nothing_fits == NothingFits::LargestBoatSize {
+        let boat = select_boat_size(
             snapshot
                 .boat
                 .sizes
                 .iter()
-                .find(|size| {
-                    Some(&size.id) == snapshot.boat.largest_size.as_ref()
-                        && allowed(&snapshot.boat, size)
-                })
-                .map(BoatChoice::Largest)
-        } else {
-            None
-        };
+                .filter(|size| allowed(&snapshot.boat, size)),
+            snapshot.boat.largest_size.as_ref(),
+            label.size,
+            own_fits,
+            label.nothing_fits,
+        );
         Self {
             own_fits,
             boat,

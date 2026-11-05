@@ -12,7 +12,7 @@ use crate::error::{QueryResultExt, require_record};
 
 #[derive(Queryable, Selectable)]
 #[diesel(table_name = labels)]
-struct LabelRow {
+pub(crate) struct LabelRow {
     id: Uuid,
     name: String,
     vcpus: i32,
@@ -24,7 +24,7 @@ struct LabelRow {
 }
 
 impl LabelRow {
-    fn into_record(self) -> Result<Label> {
+    pub(crate) fn into_record(self) -> Result<Label> {
         Ok(Label {
             id: self.id,
             name: self.name,

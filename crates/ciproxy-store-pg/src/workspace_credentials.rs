@@ -1,6 +1,7 @@
 //! Atomic database mutations for ending workspace execution access.
 
 use chrono::{DateTime, Utc};
+use ciproxy_schema::overflow::overflow_connection_grants;
 use ciproxy_schema::tokens::tokens;
 use diesel::prelude::*;
 use uuid::Uuid;
@@ -13,6 +14,11 @@ pub(crate) fn revoke_workspace_access(
     workspace_id: Uuid,
     at: DateTime<Utc>,
 ) -> QueryResult<()> {
+    diesel::delete(
+        overflow_connection_grants::table
+            .filter(overflow_connection_grants::workspace_id.eq(workspace_id)),
+    )
+    .execute(connection)?;
     diesel::update(
         tokens::table
             .filter(tokens::workspace_id.eq(workspace_id))

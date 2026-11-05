@@ -13,6 +13,7 @@ pub mod labels;
 pub mod machines;
 pub mod metering;
 pub mod organizations;
+pub mod overflow;
 pub mod runners;
 pub mod scale_sets;
 pub mod secrets;

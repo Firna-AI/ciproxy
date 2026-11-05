@@ -13,6 +13,7 @@ mod lifecycle_tests;
 mod lock_tests;
 mod machine_snapshot_tests;
 mod metering;
+mod overflow;
 mod registration_tests;
 mod retention_tests;
 mod support;
