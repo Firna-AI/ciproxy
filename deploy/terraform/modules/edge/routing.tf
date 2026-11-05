@@ -17,10 +17,14 @@ resource "google_compute_url_map" "https" {
     name            = "site"
     default_service = google_compute_backend_bucket.public["site"].id
     path_rule {
-      # Build-owned asset directories and exact public files. Docs and all
-      # HTML aliases keep the uncached default. Google allows only /* globs.
-      paths   = ["/_astro/*", "/pagefind/*", "/favicon.svg", "/sitemap-index.xml", "/sitemap-0.xml"]
+      # Generated hashes only. The more specific Pagefind child prefixes
+      # override its mutable parent. HTML aliases keep the default.
+      paths   = ["/_astro/*", "/pagefind/index/*", "/pagefind/fragment/*"]
       service = google_compute_backend_bucket.assets["site"].id
+    }
+    path_rule {
+      paths   = ["/pagefind/*", "/favicon.svg", "/sitemap-index.xml", "/sitemap-0.xml"]
+      service = google_compute_backend_bucket.mutable["site"].id
     }
     path_rule {
       paths   = ["/"]
@@ -37,8 +41,12 @@ resource "google_compute_url_map" "https" {
     default_service = google_compute_backend_bucket.public["dashboard"].id
     path_rule {
       # Keep Expo's build-owned static namespace, not all /_expo/*.
-      paths   = ["/_expo/static/*", "/_expo/.routes.json", "/assets/*"]
+      paths   = ["/_expo/static/*", "/assets/*"]
       service = google_compute_backend_bucket.assets["dashboard"].id
+    }
+    path_rule {
+      paths   = ["/_expo/.routes.json"]
+      service = google_compute_backend_bucket.mutable["dashboard"].id
     }
     path_rule {
       paths   = ["/"]

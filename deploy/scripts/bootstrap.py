@@ -14,7 +14,7 @@ def run(*arguments):
     subprocess.run(arguments, check=True)
 
 
-def bootstrap(environment, existing_state=False):
+def bootstrap(environment, existing_state=False, runtime_uids=None):
     project = ENVIRONMENTS[environment]
     repository = Path.cwd()
     scratch = repository / ".context/deploy" / project
@@ -55,10 +55,15 @@ def bootstrap(environment, existing_state=False):
         "terraform", f"-chdir={root}", "output", "-json",
     ], text=True))
     previous = outputs.get("production_enabled", {}).get("value", False)
+    uids = outputs.get("runtime_service_account_uids", {}).get("value", {})
+    if runtime_uids:
+        uids.update(json.loads(runtime_uids.read_text())["runtime_service_account_uids"])
+    inputs = scratch / "runtime-uids.tfvars.json"
+    inputs.write_text(json.dumps({"runtime_service_account_uids": uids}, indent=2) + "\n")
     # A preview setup after launch must NEVER enable retired accounts/providers.
     production_enabled = environment == "production" or previous
     run("terraform", f"-chdir={root}", "apply", f"-var=project_id={project}",
-        f"-var=production_enabled={str(production_enabled).lower()}")
+        f"-var=production_enabled={str(production_enabled).lower()}", f"-var-file={inputs}")
     if production_enabled:
         for account in ("ciproxy-shared-plan", "ciproxy-shared-preview-apply", "ciproxy-trust-preview-apply"):
             status = json.loads(subprocess.check_output([
@@ -73,8 +78,8 @@ def bootstrap(environment, existing_state=False):
     if backup.exists():
         print(f"Back up {backup} outside Git.")
     print("Set the printed GitHub identity variables.")
-    print("CI promotes seed/bootstrap on protected main, shared infrastructure, then environment flags.")
-    print("After cluster creation, run namespace_access.py as the operator before Helm.")
+    print("Create the first shared core as operator, then capture namespace ServiceAccount UIDs before CI.")
+    print("Follow deploy/runtime-identity.md. Later protected-main trust and shared promotions stay automatic.")
 
 
 if __name__ == "__main__":
@@ -82,5 +87,7 @@ if __name__ == "__main__":
     parser.add_argument("environment", choices=ENVIRONMENTS)
     parser.add_argument("--existing-state", action="store_true",
                         help="Use existing project state without another local seed apply.")
+    parser.add_argument("--runtime-uids", type=Path,
+                        help="Operator-captured UID map. Merge into protected bootstrap inputs.")
     args = parser.parse_args()
-    bootstrap(args.environment, args.existing_state)
+    bootstrap(args.environment, args.existing_state, args.runtime_uids)

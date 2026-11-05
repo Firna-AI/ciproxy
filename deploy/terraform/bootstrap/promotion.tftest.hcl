@@ -57,6 +57,8 @@ run "prelaunch_accounts_have_no_environment_admin_escape" {
     condition = (alltrue([for member in concat(
       [for g in google_project_iam_member.shared : g.member],
       [for g in google_project_iam_member.shared_api : g.member],
+      [for g in google_project_iam_member.cluster_update : g.member],
+      [google_project_iam_member.cluster_lifecycle.member],
       [for g in google_project_iam_member.shared_secret : g.member],
       [for g in google_project_iam_member.shared_kms : g.member],
       [for g in google_project_iam_member.bucket_metadata : g.member],

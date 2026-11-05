@@ -106,7 +106,9 @@ class SharedPromotionTests(PromotionCase):
                 result = self.cli("namespace_access.py", environment, "--render")
                 self.assertEqual(result.returncode, 0, result.stderr)
                 items = json.loads(result.stdout)["items"]
-                self.assertEqual([item["kind"] for item in items], ["Namespace", "Role", "RoleBinding", "NetworkPolicy"])
+                self.assertEqual([item["kind"] for item in items], ["Namespace", "Role", "RoleBinding", "NetworkPolicy", "ServiceAccount"])
+                self.assertEqual(items[4]["metadata"], {"name": "control-plane", "namespace": "ciproxy-" + environment,
+                                                      "annotations": {"iam.gke.io/gcp-service-account": f"ciproxy-{environment}-control@ciproxy.iam.gserviceaccount.com"}})
                 self.assertEqual(items[0]["metadata"]["name"], "ciproxy-" + environment)
                 self.assertEqual(items[0]["metadata"].get("labels", {}), {
                     "pod-security.kubernetes.io/enforce": "baseline",

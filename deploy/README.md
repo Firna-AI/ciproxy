@@ -48,7 +48,7 @@ production edge IP. See [DNS setup](dns.md).
 | Dashboard `/images` | Private image bucket through signed Cloud CDN URLs. |
 | Download host | The `futex-ai/cli-release` server. |
 
-Each static origin has separate HTML and asset backend wrappers. Private
+Each static origin has separate HTML, mutable, and immutable wrappers. Private
 asset caching requires `FORCE_CACHE_ALL`; object metadata alone does not
 enable it. [Static delivery](static-delivery.md) gives paths and lifetimes.
 
@@ -64,7 +64,9 @@ The NEG zone feature needs 1.36.2-gke.3104000 and is a GKE Preview feature.
 
 ## Ownership and promotion
 
-The operator creates state and initial trust. CI then promotes seed and
+The operator creates state, initial trust, the first shared core, and runtime
+ServiceAccounts. Bootstrap records their real UIDs in protected trust state.
+CI then promotes seed and
 bootstrap from protected `main`. The primary preview branch cannot use the
 central trust account. Only the reusable apply workflow can use apply
 accounts. See the [identity boundary](identities.md).
@@ -101,7 +103,7 @@ writes. The operator drains preview before the launch handoff.
 | --- | --- |
 | `terraform/seed/` | Four state buckets and trust APIs. Operator first, then main-only trust apply. |
 | `terraform/bootstrap/` | Accounts, federation, IAM, launch phase, and edge tags. Operator first, then main-only trust apply. |
-| `terraform/shared/` | One network, NAT, cluster, registry, and phase-selected runtime federation. |
+| `terraform/shared/` | Operator-first network, NAT, cluster, registry, and phase-selected UID runtime federation from protected trust state. |
 | `terraform/data/` | Separate central instances for environment SQL, KMS, secrets, buckets, and zones. |
 | `terraform/edge/` | Separate central edge instances with certificates, CDN, DNS, alert channels, and uptime checks. |
 | `environments/<env>/` | The completed workload snapshot for one environment. |
@@ -143,6 +145,8 @@ terraform -chdir=deploy/terraform/shared test
 terraform -chdir=deploy/terraform/data test
 terraform -chdir=deploy/terraform/edge test
 terraform -chdir=deploy/environments/main-preview test
+npm --prefix ts run site:build
+npm --prefix ts run app:export
 helm lint deploy/helm/ciproxy
 helm lint deploy/helm/cli-release-server --values deploy/helm/release-values.yaml
 helm template cli-release-server deploy/helm/cli-release-server \
@@ -162,7 +166,9 @@ python3 deploy/scripts/namespace_access.py main-preview --render
 ```
 
 The default chart render has no control plane. The enabled render selects
-CDN secret version 1. The namespace command prints manifests only.
+CDN secret version 1 and uses the operator-owned `control-plane` account.
+Build both exports before the inventory routing test. It reads their actual
+paths and the mocked Terraform URL map. The namespace command prints manifests only.
 Static publishing also supports a local smoke check:
 
 ```sh

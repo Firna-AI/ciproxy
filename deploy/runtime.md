@@ -3,6 +3,10 @@
 Run these operator steps after [deployment setup](setup.md). Set
 `PROJECT_ID=ciproxy`, `DEPLOY_ENV`, and `NAMESPACE="ciproxy-$DEPLOY_ENV"`.
 Use the [operator permissions](identities.md#operator-permissions).
+Complete [UID setup](runtime-identity.md) before using the runtime identity.
+Its Google binding trusts the real operator-created ServiceAccount UID,
+not a namespace/name that another cluster can reuse. A recreated account
+needs the documented UID recovery before the runtime can authenticate.
 
 ## Prepare the database
 

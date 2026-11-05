@@ -47,6 +47,16 @@ override_resource {
   values          = { id = "https://www.googleapis.com/compute/v1/projects/ciproxy/global/backendBuckets/dashboard-assets" }
 }
 override_resource {
+  target          = google_compute_backend_bucket.mutable["site"]
+  override_during = plan
+  values          = { id = "https://www.googleapis.com/compute/v1/projects/ciproxy/global/backendBuckets/site-mutable" }
+}
+override_resource {
+  target          = google_compute_backend_bucket.mutable["dashboard"]
+  override_during = plan
+  values          = { id = "https://www.googleapis.com/compute/v1/projects/ciproxy/global/backendBuckets/dashboard-mutable" }
+}
+override_resource {
   target          = google_compute_backend_bucket.images
   override_during = plan
   values          = { id = "https://www.googleapis.com/compute/v1/projects/ciproxy/global/backendBuckets/signed-images" }
@@ -62,7 +72,7 @@ override_resource {
   values          = { id = "https://www.googleapis.com/compute/v1/projects/ciproxy/global/backendServices/release" }
 }
 
-run "private_assets_cache_without_caching_html_or_reserved_routes" {
+run "private_assets_bound_mutable_staleness_without_caching_html_or_reserved_routes" {
   command = plan
   module { source = "../modules/edge" }
   assert {
@@ -75,13 +85,19 @@ run "private_assets_cache_without_caching_html_or_reserved_routes" {
         && !backend.cdn_policy[0].negative_caching
         && backend.cdn_policy[0].serve_while_stale == 0
       ])
+      && alltrue([for backend in google_compute_backend_bucket.mutable :
+        backend.enable_cdn && backend.cdn_policy[0].cache_mode == "FORCE_CACHE_ALL"
+        && backend.cdn_policy[0].default_ttl == 300 && backend.cdn_policy[0].max_ttl == 300
+        && backend.cdn_policy[0].client_ttl == 300 && !backend.cdn_policy[0].negative_caching
+        && backend.cdn_policy[0].serve_while_stale == 0
+      ])
       && alltrue([for backend in google_compute_backend_bucket.public :
         backend.enable_cdn && backend.cdn_policy[0].cache_mode == "USE_ORIGIN_HEADERS"
         && !backend.cdn_policy[0].negative_caching
         && backend.cdn_policy[0].serve_while_stale == 0
       ])
     )
-    error_message = "Private assets require forced one-year CDN caching and a one-day browser cap. HTML/no-store must never be force-cached."
+    error_message = "Only immutable assets get one-year CDN caching. Mutable assets are bounded to five minutes even without invalidation. HTML stays no-store."
   }
   assert {
     condition = (
@@ -106,11 +122,22 @@ run "private_assets_cache_without_caching_html_or_reserved_routes" {
       toset(flatten([for rule in matcher.path_rule : rule.paths
         if rule.service == "https://www.googleapis.com/compute/v1/projects/ciproxy/global/backendBuckets/${matcher.name}-assets"
         ])) == (matcher.name == "site"
-        ? toset(["/_astro/*", "/pagefind/*", "/favicon.svg", "/sitemap-index.xml", "/sitemap-0.xml"])
-        : toset(["/_expo/static/*", "/_expo/.routes.json", "/assets/*"])
+        ? toset(["/_astro/*", "/pagefind/index/*", "/pagefind/fragment/*"])
+        : toset(["/_expo/static/*", "/assets/*"])
       ) if matcher.name != "releases"
     ])
-    error_message = "Only concrete build asset prefixes and root files may select the cached wrappers. Docs, HTML aliases, and other paths use defaults."
+    error_message = "Only generated hashed paths select one-year caching. Stable Pagefind, root files, and Expo metadata must never select it."
+  }
+  assert {
+    condition = alltrue([for matcher in google_compute_url_map.https.path_matcher :
+      toset(flatten([for rule in matcher.path_rule : rule.paths
+        if rule.service == "https://www.googleapis.com/compute/v1/projects/ciproxy/global/backendBuckets/${matcher.name}-mutable"
+        ])) == (matcher.name == "site"
+        ? toset(["/pagefind/*", "/favicon.svg", "/sitemap-index.xml", "/sitemap-0.xml"])
+        : toset(["/_expo/.routes.json"])
+      ) if matcher.name != "releases"
+    ])
+    error_message = "Stable static paths must select short mutable wrappers. HTML and reserved routes retain separate targets."
   }
   assert {
     condition = (

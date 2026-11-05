@@ -12,12 +12,12 @@ edges separate.
 | `ciproxy-<env>-apply` | Write only its own `foundation/` snapshot prefix. Read its record and prelaunch status. No project admin or Kubernetes object permissions. |
 | `ciproxy-<env>-deploy` | Publish public content to its own private static buckets. Read its own release token. Connect to the cluster. Operate only its namespace through Kubernetes RBAC. Invalidate only its tagged URL map. Read global operation completion. |
 | `ciproxy-shared-plan`, `ciproxy-shared-prod-plan` | Central metadata/state reads and exact central lock writes. No state writes or secret values. No Kubernetes object reads. Separate caller trust for preview and production. Preview central plan retires at launch. |
-| `ciproxy-shared-preview-apply` | Core and preview cloud resources before launch. No production state writes. No project IAM, custom-role, or federation administration. Runtime policy writes name preview only. No Kubernetes object verbs. Permanently disabled at launch. |
+| `ciproxy-shared-preview-apply` | Core updates and preview resources before launch. Exact shared-cluster get/update only. No cluster create/delete or node actAs. No production state writes or project IAM administration. Runtime policy writes name preview only. Permanently disabled at launch. |
 | `ciproxy-shared-prod-apply` | Central cloud resources after launch. Production workflow on protected `main` only. Production/preview central state writes. Broader cloud roles than prelaunch shared apply. |
 | `ciproxy-trust-preview-apply` | Seed and bootstrap on protected `main` before launch. Effective owner power through IAM administration. Permanently disabled at launch. |
 | `ciproxy-trust-prod-apply` | Seed and bootstrap from production on protected `main`. Effective owner power through IAM administration. |
 | `ciproxy-shared-gke` | Node logging/monitoring and read access to the single runtime image registry. |
-| `ciproxy-<env>-control` | Cloud SQL connection/login to its own instance. Read its own runtime secrets. Encrypt/decrypt with its own Boat key. Only `ciproxy-<env>/control-plane` can impersonate it. |
+| `ciproxy-<env>-control` | Own SQL connection/login, runtime secrets, and Boat key. Impersonation trusts only the operator-captured Kubernetes ServiceAccount UID from protected bootstrap state. |
 
 The central trust accounts can update project IAM and custom roles. They
 are effectively owners even without the predefined Owner role. This is a
@@ -41,7 +41,15 @@ project grant. The project has one registry. The node identity is shared
 platform infrastructure, not an environment deploy/runtime identity.
 Prelaunch registry lifecycle has create/get/update/delete and no IAM
 setter. It cannot install a persistent registry admin on another account.
-Both phase owners have node `actAs` on one account only.
+Only protected production shared apply has node `actAs`, on that one account.
+The operator creates the first Autopilot core. Prelaunch has no cluster
+create/delete and cannot replace it with another cluster. Both phase owners
+have cluster get/update only under the exact regional cluster condition.
+Production retains project-scoped cluster create/delete for trusted lifecycle
+operations. Shared API operation get/list and server configuration reads
+remain project-scoped. They grant no Kubernetes object access.
+[Cluster update resource](https://docs.cloud.google.com/kubernetes-engine/docs/reference/rest/v1/projects.locations.clusters/update),
+[GKE condition attributes](https://docs.cloud.google.com/iam/docs/conditions-resource-attributes)
 
 ## Private static origins
 
@@ -51,8 +59,8 @@ Site/dashboard buckets enforce PAP. They have no `allUsers` or
 `roles/storage.objectViewer` on these two buckets. Google creates that
 identity only after the first backend bucket. The edge's IAM resources
 iterate the cached asset wrappers, so each grant follows their creation.
-HTML and asset wrappers share one bucket and one reader grant. The split
-adds no bucket, identity, or policy scope. See [static delivery](static-delivery.md).
+HTML, mutable, and immutable wrappers share one bucket and one reader grant.
+The split adds no bucket, identity, or policy scope. See [static delivery](static-delivery.md).
 
 Shared apply policy get/set names preview's two static buckets before
 launch, and both environments' four static buckets after launch. That
@@ -89,6 +97,15 @@ gcloud projects add-iam-policy-binding ciproxy \
 ```
 
 Shared infrastructure installs runtime federation after cluster creation.
+The operator creates `control-plane` and records its real UID. Helm uses
+that account and never creates, adopts, or deletes it. Shared reads UIDs
+only from protected `trust/bootstrap` state. The individual member uses
+`principal://.../kubernetes.serviceaccount.uid/UID`, never namespace/name.
+An absent UID installs no member. A recreated account fails closed until
+the operator captures and promotes its new UID.
+[UID setup and recovery](runtime-identity.md),
+[Google UID member](https://docs.cloud.google.com/kubernetes-engine/docs/concepts/workload-identity#principal-id-examples)
+
 Prelaunch shared apply has policy-write access only on preview's runtime
 account. Production shared apply has that resource-bound access on both.
 Neither has policy-write access on a central trust account.

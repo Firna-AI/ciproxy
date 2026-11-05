@@ -100,7 +100,6 @@ def helm_values(config, image_digest, runtime_enabled, control_image):
         "controlPlane": {
             "enabled": runtime_enabled,
             "image": control_image,
-            "serviceAccount": config["control_plane_account"],
             "sqlConnection": config["sql_connection"],
             "sqlUser": config["sql_user"],
             "kmsKey": config["kms_key"],

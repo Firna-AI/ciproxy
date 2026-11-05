@@ -97,6 +97,15 @@ If verification fails, keep the switch false. Inspect account status,
 permissions, and capture expiry under operator credentials. The probe
 never enables accounts or changes IAM.
 
+## Capture production runtime identity
+
+After the negative revocation proof passes, install production's namespace
+and operator-owned `control-plane` account on the existing shared cluster.
+Capture its UID and record it in protected bootstrap state before enabling
+production. Run [production UID setup](runtime-identity.md#production-identity)
+with the operator credentials. That second bootstrap preserves retirement.
+No production data or workload resource needs to exist for this step.
+
 ## Permit production
 
 1. Create GitHub environment `production`.
@@ -140,8 +149,9 @@ Retirement therefore leaves no registry grant that unreviewed code could
 install on another account.
 
 The first production run creates its own cloud resources. It can stop at a
-missing release token or namespace. Then finish setup steps 3 to 6 for
-production. The registry already exists. Install its namespace boundary:
+missing release token. Then finish setup steps 3 to 6 for production.
+The registry and UID-bound namespace already exist. Reapply the boundary
+when its operator manifest changes:
 
 ```sh
 python3 deploy/scripts/namespace_access.py production

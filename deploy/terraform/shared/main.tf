@@ -38,12 +38,16 @@ output "platform" {
 }
 output "production_enabled" { value = var.production_enabled }
 
-# GKE creates its workload identity pool first. These exact-account policy
-# writes are granted in bootstrap without granting project IAM to shared apply.
+data "terraform_remote_state" "trust" {
+  backend = "gcs"
+  config  = { bucket = "ciproxy-trust-tfstate-ciproxy", prefix = "trust/bootstrap" }
+}
+# Empty trust input installs no grant during the operator's first core apply.
+# Never read runtime UIDs from ready-workload evidence or preview state.
 resource "google_service_account_iam_member" "runtime" {
-  for_each           = local.environments
+  for_each           = { for env, uid in data.terraform_remote_state.trust.outputs.runtime_service_account_uids : env => uid if contains(local.environments, env) }
   service_account_id = "projects/ciproxy/serviceAccounts/ciproxy-${each.key}-control@ciproxy.iam.gserviceaccount.com"
   role               = "roles/iam.workloadIdentityUser"
-  member             = "serviceAccount:ciproxy.svc.id.goog[ciproxy-${each.key}/control-plane]"
+  member             = "principal://iam.googleapis.com/projects/${data.terraform_remote_state.trust.outputs.project_number}/locations/global/workloadIdentityPools/ciproxy.svc.id.goog/kubernetes.serviceaccount.uid/${each.value}"
   depends_on         = [google_container_cluster.main]
 }

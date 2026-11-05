@@ -29,7 +29,9 @@ def variables(environment, root, target=None):
     if root == "seed":
         return {"project_id": ENVIRONMENTS[environment]}
     if root == "bootstrap":
-        return {"project_id": ENVIRONMENTS[environment], "production_enabled": launched()}
+        outputs = json.loads(command(backend(environment, "bootstrap").directory, "output", "-json", capture=True))
+        return {"project_id": ENVIRONMENTS[environment], "production_enabled": launched(),
+                "runtime_service_account_uids": outputs["runtime_service_account_uids"]["value"]}
     if root == "shared":
         return {"production_enabled": launched()}
     if root == "data":

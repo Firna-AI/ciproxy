@@ -7,11 +7,18 @@ has one remote backend. No migration is needed before the first apply.
 
 ## Sequence and identities
 
-The operator creates seed and bootstrap once. Main-preview pushes on the
+The operator creates seed/bootstrap, the first shared core, and the runtime
+ServiceAccounts. Bootstrap can run before the cluster with an empty UID map.
+The operator captures preview's real UID, then updates bootstrap and shared.
+Main-preview pushes on the
 primary branch can then promote shared infrastructure, but cannot change
 trust. On protected `main`, CI plans seed/bootstrap with a central
 read-only account and applies their exact saved plans with the separate
 central trust account. Seed API enablement finishes before bootstrap apply.
+Later bootstrap plans preserve the UID map from protected trust output.
+Shared runtime bindings read that map directly, never rollout evidence or
+environment snapshot state. Production UID capture happens after retirement.
+[Runtime identity procedure](runtime-identity.md) gives first use and recovery.
 
 Every required apply job runs, even when its scope selects no roots.
 Event and checkout validation happen first. The environment's read-only
@@ -192,9 +199,11 @@ exact LB service-agent Object Viewer grants, once per underlying bucket.
 Organization sharing policy stays.
 A refused first real grant stops this path and returns item 76 to the user.
 Private-bucket CDN caching requires `FORCE_CACHE_ALL`; explicit object
-metadata alone is insufficient. Each origin has a cached asset wrapper and
-an HTML/default wrapper. HTML retains `USE_ORIGIN_HEADERS` and publisher
+metadata alone is insufficient. Each origin has an immutable wrapper, a
+short mutable wrapper, and an HTML/default wrapper. HTML retains
+`USE_ORIGIN_HEADERS` and publisher
 `no-store`. Asset CDN/client lifetimes and URL paths are defined in
 [static delivery](static-delivery.md). Real deployments invalidate both
-hosts afterward. Stable asset names refresh at that invalidation. The
+hosts afterward. Mutable entries expire within five minutes even if a run
+fails after upload and never reaches invalidation. The
 publisher still uploads assets before HTML without deleting old files.

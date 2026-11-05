@@ -45,9 +45,12 @@ run "production_edge_manages_only_owned_dns_records" {
       && google_storage_bucket_iam_member.origin_reader["site"].bucket == "ciproxy-production-site-ciproxy"
       && google_storage_bucket_iam_member.origin_reader["dashboard"].bucket == "ciproxy-production-dashboard-ciproxy"
       && toset(keys(google_compute_backend_bucket.assets)) == toset(["site", "dashboard"])
+      && toset(keys(google_compute_backend_bucket.mutable)) == toset(["site", "dashboard"])
       && alltrue([for key, backend in google_compute_backend_bucket.assets :
         backend.bucket_name == google_compute_backend_bucket.public[key].bucket_name
         && backend.name == "ciproxy-production-${key}-assets"
+        && google_compute_backend_bucket.mutable[key].bucket_name == backend.bucket_name
+        && google_compute_backend_bucket.mutable[key].name == "ciproxy-production-${key}-mutable-assets"
       ])
     )
     error_message = "Both wrappers share each private origin. Only one viewer grant per origin names the exact LB service agent."
@@ -109,9 +112,12 @@ run "main_preview_edge_manages_only_owned_dns_records" {
       && google_storage_bucket_iam_member.origin_reader["site"].bucket == "ciproxy-main-preview-site-ciproxy"
       && google_storage_bucket_iam_member.origin_reader["dashboard"].bucket == "ciproxy-main-preview-dashboard-ciproxy"
       && toset(keys(google_compute_backend_bucket.assets)) == toset(["site", "dashboard"])
+      && toset(keys(google_compute_backend_bucket.mutable)) == toset(["site", "dashboard"])
       && alltrue([for key, backend in google_compute_backend_bucket.assets :
         backend.bucket_name == google_compute_backend_bucket.public[key].bucket_name
         && backend.name == "ciproxy-main-preview-${key}-assets"
+        && google_compute_backend_bucket.mutable[key].bucket_name == backend.bucket_name
+        && google_compute_backend_bucket.mutable[key].name == "ciproxy-main-preview-${key}-mutable-assets"
       ])
     )
     error_message = "Both wrappers share each private origin. Only one viewer grant per origin names the exact LB service agent."

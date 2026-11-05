@@ -13,13 +13,7 @@ spec:
     - name: http
       port: 8080
       targetPort: 8080
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: control-plane
-  annotations:
-    iam.gke.io/gcp-service-account: {{ .Values.controlPlane.serviceAccount | quote }}
+# The operator creates control-plane and records its UID. Helm never owns it.
 {{- if .Values.controlPlane.enabled }}
 ---
 apiVersion: v1

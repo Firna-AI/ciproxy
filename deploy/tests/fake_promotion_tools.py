@@ -15,6 +15,12 @@ args = sys.argv[1:]
 record = {"tool": tool, "args": args}
 if "--input" in args:
     record["payload"] = json.loads(Path(args[args.index("--input") + 1]).read_text())
+if tool == "terraform" and len(args) > 1 and args[1] == "apply":
+    variable_file = next((arg.split("=", 1)[1] for arg in args if arg.startswith("-var-file=")), None)
+    if variable_file:
+        record["variables"] = json.loads(Path(variable_file).read_text())
+if tool == "kubectl" and args[:1] == ["apply"]:
+    record["manifest"] = json.loads(sys.stdin.read())
 with open(os.environ["FAKE_COMMAND_LOG"], "a") as log:
     log.write(json.dumps(record) + "\n")
 if tool == "gh":
@@ -41,9 +47,12 @@ elif tool == "terraform":
         (root / "terraform.tfstate").write_text('{"version":4,"serial":1}')
     if action == "apply" and "-var=production_enabled=true" in args:
         Path(os.environ["FAKE_REMOTE_STATES"]).with_name("launched.json").write_text("true")
+    if action == "apply" and "variables" in record and "runtime_service_account_uids" in record["variables"]:
+        Path(os.environ["FAKE_REMOTE_STATES"]).with_name("runtime-uids.json").write_text(json.dumps(record["variables"]["runtime_service_account_uids"]))
     if action == "output" and args[-1] == "-json":
         state = Path(os.environ["FAKE_REMOTE_STATES"]).with_name("launched.json")
-        print(json.dumps({"production_enabled": {"value": state.exists()}}))
+        uids = state.with_name("runtime-uids.json")
+        print(json.dumps({"production_enabled": {"value": state.exists()}, "runtime_service_account_uids": {"value": json.loads(uids.read_text()) if uids.exists() else {}}}))
         sys.exit(0)
     if action == "init":
         bucket = next((arg.split("=", 2)[2] for arg in args
@@ -88,6 +97,8 @@ elif tool == "gcloud" and args[:3] == ["iam", "service-accounts", "describe"]:
     print(json.dumps({"disabled": disabled}))
 elif tool == "gcloud" and args[:3] == ["secrets", "versions", "access"]:
     print("fake-token")
+elif tool == "kubectl" and args[:2] == ["get", "serviceaccount"]:
+    print(os.environ.get("FAKE_KSA_UID", "22222222-2222-4222-8222-222222222222" if "--namespace=ciproxy-production" in args else "11111111-1111-4111-8111-111111111111"))
 elif tool == "kubectl" and args[:2] == ["get", "service"]:
     if os.environ.get("FAKE_NEG_FAIL") == "true":
         sys.exit(1)

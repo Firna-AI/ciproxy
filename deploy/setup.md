@@ -17,7 +17,7 @@ sharing rule stays in force. Site/dashboard origins are private with public
 access prevention enforced. No public grant or organization-policy
 exception is needed. The edge grants its Google-created service agent
 viewer access after cached backend creation. Each static bucket has separate
-HTML and asset wrappers. See [static delivery](static-delivery.md).
+HTML, mutable, and immutable wrappers. See [static delivery](static-delivery.md).
 Read the operator roles in
 [Deployment identities](identities.md#operator-permissions).
 
@@ -66,26 +66,16 @@ SQL, secrets, application buckets, zones, or workloads. Back up
 machine, use `bootstrap.sh main-preview --existing-state` to read existing
 state without another local seed apply.
 
-Set the twelve identity variables from step 6 now. Start a preview push
-run. It can create central infrastructure before it stops at a missing
-release image digest. On the primary branch, it reads seed/bootstrap and
-cannot change trust. Initial operator bootstrap supplies that trust.
-Future trust changes promote automatically on protected `main`.
+Before any preview push, complete [operator runtime identity setup](runtime-identity.md#first-shared-core-and-preview-identity).
+That procedure creates the intended Autopilot core, installs preview's
+namespace and ServiceAccount, captures its real UID, and records it through
+bootstrap. First bootstrap uses an empty UID map and needs no cluster.
+Prelaunch CI cannot create/delete clusters or attach the node account.
+Routine exact-cluster updates and saved-plan promotions remain automatic.
 
-After the cluster exists, install the namespace boundary as the operator.
-First grant the operator GKE setup access as the identity guide explains.
-Then run:
-
-```sh
-python3 deploy/scripts/namespace_access.py main-preview
-```
-
-The shared root installs runtime federation after GKE creates its workload
-identity pool. Prelaunch shared apply can change only the preview runtime
-account's policy. Production shared apply can maintain both runtime
-accounts. Neither receives project IAM administration. No extra operator
-IAM apply is needed after cluster creation.
-[GKE setup order](https://docs.cloud.google.com/kubernetes-engine/docs/how-to/workload-identity)
+Set the twelve identity variables from step 6. Future trust updates promote
+automatically on protected `main`. Each bootstrap plan preserves the UID
+map from trust state. Preview artifacts cannot supply production UIDs.
 
 Both Namespace manifests enforce, audit, and warn at Baseline. Only the
 operator manages these labels. Existing namespaces must be reapplied before
@@ -94,7 +84,7 @@ untrusted deploys resume. Follow the exact [admission procedure](identities.md#b
 The namespace command also creates its namespace-only RoleBinding and
 network policy. It permits same-namespace traffic and blocks other
 workload namespaces. CI cannot install or change RBAC. Shared apply has
-cluster lifecycle permissions and no Kubernetes object verbs.
+exact-cluster update permissions and no Kubernetes object verbs.
 
 ## 3. Push the release image
 

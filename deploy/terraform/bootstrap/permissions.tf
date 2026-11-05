@@ -44,10 +44,9 @@ resource "google_project_iam_member" "shared" {
 }
 resource "google_project_iam_custom_role" "shared_api" {
   role_id = "ciproxySharedApi"
-  title   = "ciproxy central cluster and storage metadata"
+  title   = "ciproxy central operation and storage metadata"
   permissions = [
-    "container.clusters.create", "container.clusters.delete", "container.clusters.get",
-    "container.clusters.update", "container.operations.get", "container.operations.list",
+    "container.operations.get", "container.operations.list",
     "container.getServerConfig", "storage.buckets.create",
     "cloudkms.keyRings.create", "secretmanager.secrets.create",
   ]
@@ -59,7 +58,7 @@ resource "google_project_iam_member" "shared_api" {
   member   = "serviceAccount:${google_service_account.ci[each.key].email}"
 }
 resource "google_service_account_iam_member" "node_user" {
-  for_each           = local.shared_accounts
+  for_each           = toset(["shared_production"])
   service_account_id = google_service_account.nodes.name
   role               = "roles/iam.serviceAccountUser"
   member             = "serviceAccount:${google_service_account.ci[each.key].email}"

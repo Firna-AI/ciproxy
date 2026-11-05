@@ -206,8 +206,9 @@ preview zone before preview prepared its NEG.
   HTML and its route aliases use `no-store`. Assets use
   `public,max-age=86400,must-revalidate`. Metadata alone cannot enable
   private-bucket CDN caching.
-- Separate asset wrappers use `FORCE_CACHE_ALL` with a one-year CDN lifetime
-  and a one-day browser cap. HTML/default wrappers use `USE_ORIGIN_HEADERS`
+- Immutable asset wrappers use `FORCE_CACHE_ALL` with a one-year CDN lifetime
+  and a one-day browser cap. Mutable wrappers force at most five minutes
+  at CDN and browsers, even after a failed deploy. HTML uses `USE_ORIGIN_HEADERS`
   and preserve `no-store`. API and signed-image paths keep their own
   backends. [Static delivery](static-delivery.md) gives the exact routes.
 - The publisher uploads assets before HTML and never deletes old assets.
@@ -229,10 +230,14 @@ separate edge. New tag bindings use permanent numeric map IDs. Tag/IAM
 propagation can delay invalidation rights. Rerun all jobs after propagation
 rather than changing the tag with gcloud or reusing a saved binary.
 
-Namespace policy labels remain operator-owned. After a namespace setup
-change, reapply both manifests with `namespace_access.py` before untrusted
-deploys resume. Baseline enforces/audits/warns on each namespace. It rejects
-host filesystem mounts without widening deployment roles.
+Namespace policy labels remain operator-owned. Reapply both manifests before
+untrusted deploys resume. [Namespace setup](setup.md#2-bootstrap) gives the
+Baseline labels and namespace-only deployment boundary.
+
+The operator also owns the runtime ServiceAccount. Helm never renders it.
+If that account, namespace, or cluster is recreated, its UID changes.
+Impersonation then fails closed. Follow [UID recovery](runtime-identity.md#serviceaccount-recreation)
+to capture the new UID and promote its exact replacement binding.
 
 DNS authority stays split as [DNS setup](dns.md) describes. Cloudflare keeps
 `ciproxy.dev` and Workspace mail. Google owns only production app/get parents

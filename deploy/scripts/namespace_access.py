@@ -3,6 +3,7 @@
 
 import argparse
 import json
+from pathlib import Path
 import subprocess
 
 
@@ -39,6 +40,10 @@ def configuration(environment):
                              {"to": [{"ipBlock": {"cidr": "0.0.0.0/0", "except": ["10.84.0.0/14"]}}]},
                              {"to": [{"namespaceSelector": {"matchLabels": {"kubernetes.io/metadata.name": "kube-system"}}}],
                               "ports": [{"protocol": "UDP", "port": 53}, {"protocol": "TCP", "port": 53}]}]}},
+        {"apiVersion": "v1", "kind": "ServiceAccount",
+         "metadata": {"name": "control-plane", "namespace": namespace, "annotations": {
+             "iam.gke.io/gcp-service-account": f"ciproxy-{environment}-control@ciproxy.iam.gserviceaccount.com",
+         }}},
     ]}
 
 
@@ -46,6 +51,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("environment", choices=["main-preview", "production"])
     parser.add_argument("--render", action="store_true")
+    parser.add_argument("--uid-file", type=Path, help="Save the real operator-created KSA UID for trusted bootstrap.")
     args = parser.parse_args()
     document = json.dumps(configuration(args.environment))
     if args.render:
@@ -55,6 +61,16 @@ def main():
                     "--region=europe-west1", "--project=ciproxy", "--dns-endpoint"], check=True)
     subprocess.run(["kubectl", "apply", "--server-side", "--field-manager=ciproxy-operator", "-f", "-"],
                    check=True, input=document, text=True)
+    if args.uid_file:
+        uid = subprocess.check_output(["kubectl", "get", "serviceaccount", "control-plane",
+                                       f"--namespace=ciproxy-{args.environment}", "-o", "jsonpath={.metadata.uid}"], text=True).strip()
+        if not uid:
+            raise ValueError("The intended cluster returned no ServiceAccount UID. No trust input was written.")
+        inputs = json.loads(args.uid_file.read_text()) if args.uid_file.exists() else {"runtime_service_account_uids": {}}
+        inputs["runtime_service_account_uids"][args.environment] = uid
+        args.uid_file.parent.mkdir(parents=True, exist_ok=True)
+        args.uid_file.write_text(json.dumps(inputs, indent=2) + "\n")
+        print(f"Captured {args.environment} runtime UID in {args.uid_file}. Apply it through trusted bootstrap.")
 
 
 if __name__ == "__main__":

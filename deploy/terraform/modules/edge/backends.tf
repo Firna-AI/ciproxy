@@ -17,12 +17,26 @@ resource "google_compute_backend_bucket" "assets" {
   bucket_name = each.value
   enable_cdn  = true
   cdn_policy {
-    # Private-bucket caching requires FORCE_CACHE_ALL. URL paths select
-    # assets only. Every deploy invalidates stable names as well as hashes.
+    # Only generated content-hashed paths select the one-year wrapper.
     cache_mode        = "FORCE_CACHE_ALL"
     default_ttl       = 31536000
     max_ttl           = 31536000
     client_ttl        = 86400
+    serve_while_stale = 0
+    negative_caching  = false
+  }
+}
+
+resource "google_compute_backend_bucket" "mutable" {
+  for_each    = local.config.buckets
+  name        = "${local.config.prefix}-${each.key}-mutable-assets"
+  bucket_name = each.value
+  enable_cdn  = true
+  cdn_policy {
+    cache_mode        = "FORCE_CACHE_ALL"
+    default_ttl       = 300
+    max_ttl           = 300
+    client_ttl        = 300
     serve_while_stale = 0
     negative_caching  = false
   }
