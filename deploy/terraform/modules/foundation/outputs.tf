@@ -1,17 +1,19 @@
 output "deployment" {
   value = {
     project_id            = var.project_id
+    namespace             = local.prefix
     environment           = var.environment
     region                = local.region
     allowed_zones         = local.allowed_zones
     prefix                = local.prefix
-    cluster_name          = google_container_cluster.main.name
-    runtime_repository    = "${local.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.runtime.repository_id}"
+    cluster_name          = var.shared.cluster_name
+    runtime_repository    = var.shared.runtime_repository
     buckets               = { for key, bucket in google_storage_bucket.public : key => bucket.name }
     images_bucket         = google_storage_bucket.images.name
     hosts                 = local.hosts
     release_secret        = google_secret_manager_secret.release.secret_id
-    control_plane_account = google_service_account.control_plane.email
+    control_plane_account = local.control_account
+    sql_instance          = google_sql_database_instance.main.name
     sql_connection        = google_sql_database_instance.main.connection_name
     sql_user              = google_sql_user.control_plane.name
     kms_key               = google_kms_crypto_key.boat.id
@@ -29,13 +31,11 @@ output "edge" {
     allowed_zones = local.allowed_zones
     hosts         = local.hosts
     dns_zones = {
-      for key, host in local.hosts : key => google_dns_managed_zone.public[
-        var.environment == "production" ? "site" : key
-      ].name
+      for key, zone in google_dns_managed_zone.public : key => zone.name
     }
     buckets               = { for key, bucket in google_storage_bucket.public : key => bucket.name }
     images_bucket         = google_storage_bucket.images.name
-    notification_channels = [for channel in google_monitoring_notification_channel.email : channel.name]
+    notification_channels = []
   }
 }
 

@@ -1,40 +1,20 @@
 terraform {
   required_version = ">= 1.17.1, < 2.0.0"
   backend "gcs" {}
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "7.12.0"
-    }
+}
+# This small root records the ready rollout for central edge promotion. The
+# environment apply account can write only this environment's snapshot state.
+variable "control_plane_enabled" { type = bool }
+variable "enable_uptime_checks" { type = bool }
+variable "notification_emails" { type = set(string) }
+variable "allowed_zones" { type = list(string) }
+variable "source_sha" { type = string }
+output "runtime_flags" {
+  value = {
+    control_plane_enabled = var.control_plane_enabled
+    enable_uptime_checks  = var.enable_uptime_checks
   }
 }
-
-provider "google" {
-  project = "ciproxy"
-  region  = "europe-west1"
-}
-
-variable "notification_emails" {
-  type        = set(string)
-  description = "Operator addresses for uptime alerts."
-}
-
-module "foundation" {
-  source              = "../../terraform/modules/foundation"
-  project_id          = "ciproxy"
-  environment         = "production"
-  domain              = "ciproxy.dev"
-  notification_emails = var.notification_emails
-}
-
-output "deployment" {
-  value = module.foundation.deployment
-}
-
-output "edge" {
-  value = module.foundation.edge
-}
-
-output "dns_name_servers" {
-  value = module.foundation.dns_name_servers
-}
+output "notification_emails" { value = var.notification_emails }
+output "allowed_zones" { value = var.allowed_zones }
+output "source_sha" { value = var.source_sha }

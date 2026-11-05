@@ -10,17 +10,13 @@ variable "domain" {
   type = string
 }
 
-variable "notification_emails" {
-  description = "Operator addresses that receive public uptime alerts."
-  type        = set(string)
-}
-
 locals {
-  region        = "europe-west1"
-  allowed_zones = ["europe-west1-b", "europe-west1-c", "europe-west1-d"]
-  prefix        = "ciproxy-${var.environment}"
-  ci_email      = "ciproxy-${var.environment}-deploy@${var.project_id}.iam.gserviceaccount.com"
-  host_prefix   = var.environment == "main-preview" ? "br-main.preview." : ""
+  region          = "europe-west1"
+  allowed_zones   = var.shared.allowed_zones
+  prefix          = "ciproxy-${var.environment}"
+  control_account = "ciproxy-${var.environment}-control@${var.project_id}.iam.gserviceaccount.com"
+  ci_email        = "ciproxy-${var.environment}-deploy@${var.project_id}.iam.gserviceaccount.com"
+  host_prefix     = var.environment == "main-preview" ? "br-main.preview." : ""
   hosts = {
     site      = "${local.host_prefix}${var.domain}"
     dashboard = "${local.host_prefix}app.${var.domain}"
@@ -30,7 +26,14 @@ locals {
     site      = "preview.${var.domain}"
     dashboard = "preview.app.${var.domain}"
     releases  = "preview.get.${var.domain}"
-  } : { site = var.domain }
+    } : {
+    dashboard = "app.${var.domain}"
+    releases  = "get.${var.domain}"
+  }
+  preview_zones = var.environment == "production" ? {
+    dashboard = "ciproxy-main-preview-dashboard"
+    releases  = "ciproxy-main-preview-releases"
+  } : {}
   control_plane_secrets = toset([
     "github-app-private-key", "github-webhook-secret", "github-oauth-secret",
     "stripe-secret-key", "stripe-webhook-secret", "session-key",
@@ -38,14 +41,6 @@ locals {
   ])
 }
 
-resource "google_project_service" "service" {
-  for_each = toset([
-    "artifactregistry.googleapis.com", "cloudkms.googleapis.com",
-    "compute.googleapis.com", "container.googleapis.com", "dns.googleapis.com",
-    "logging.googleapis.com", "monitoring.googleapis.com",
-    "secretmanager.googleapis.com", "servicenetworking.googleapis.com",
-    "sqladmin.googleapis.com", "storage.googleapis.com",
-  ])
-  service            = each.value
-  disable_on_destroy = false
+variable "shared" {
+  type = object({ network_id = string, cluster_name = string, runtime_repository = string, allowed_zones = list(string) })
 }

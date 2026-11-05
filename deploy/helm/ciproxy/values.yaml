@@ -10,7 +10,6 @@ releaseServer:
 controlPlane:
   enabled: false
   image: ""
-  serviceAccount: ""
   replicas: 1
   sqlConnection: ""
   sqlUser: ""

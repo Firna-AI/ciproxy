@@ -4,13 +4,14 @@ This page gives the work after the [setup](setup.md) of an environment of
 the [deployment](README.md): the job images, the database, the
 control-plane runtime, the rotations, the zones, and later changes. Run
 every command from the repository root, with the shell variables of the
-setup. The operator does each step with local credentials and the roles of
-[Identities and permissions](setup.md#identities-and-permissions).
+setup. Set `NAMESPACE="ciproxy-$DEPLOY_ENV"` before these commands. The operator
+does each step with local credentials and the roles of
+[Identities and permissions](identities.md#operator-permissions).
 
 Most steps here use the cluster. Get its credentials first:
 
 ```sh
-gcloud container clusters get-credentials "ciproxy-$DEPLOY_ENV" \
+gcloud container clusters get-credentials ciproxy-shared \
   --region=europe-west1 --project="$PROJECT_ID" --dns-endpoint
 ```
 
@@ -18,7 +19,9 @@ gcloud container clusters get-credentials "ciproxy-$DEPLOY_ENV" \
 
 No code in this repository builds or publishes the job images yet. Publish
 each image to the private bucket `ciproxy-<env>-images-<project>` after
-steps 8 and 9 of the setup. The deploy identity cannot write this bucket.
+[key registration](setup.md#9-register-the-cdn-signing-key) and
+[HTTPS verification](setup.md#10-enable-uptime-alerts). The deploy identity
+cannot write this bucket.
 Use the operator account, or grant a separate publisher
 `roles/storage.objectCreator`, which can add objects but not replace or
 delete them. Put each file under `images/` with a new name.
@@ -60,95 +63,23 @@ Storage URL must each fail.
 
 ## Prepare the database
 
-Do this after the first deploy and before the runtime turns on. Terraform
-creates the IAM database user `ciproxy-<env>-control@<project>.iam`, with
-no schema rights. No migration exists in this repository yet. Set the
-`postgres` password at a prompt, and start a proxy pod with the runtime
-identity:
-
-```sh
-gcloud sql users set-password postgres --instance="ciproxy-$DEPLOY_ENV" \
-  --project="$PROJECT_ID" --prompt-for-password
-kubectl run ciproxy-sql-admin --namespace=ciproxy \
-  --image=gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.27.0 \
-  --overrides='{"apiVersion":"v1","spec":{"serviceAccountName":"control-plane"}}' \
-  -- --private-ip --port=5432 "$PROJECT_ID:europe-west1:ciproxy-$DEPLOY_ENV"
-kubectl wait --namespace=ciproxy --for=condition=Ready pod/ciproxy-sql-admin --timeout=10m
-kubectl port-forward --namespace=ciproxy pod/ciproxy-sql-admin 15432:5432
-```
-
-In a second terminal, connect with
-`psql -h 127.0.0.1 -p 15432 -U postgres -d ciproxy -W`, and grant the
-rights to the `sql_user` of the deployment output. For the main preview:
-
-```sql
-GRANT CONNECT ON DATABASE ciproxy TO "ciproxy-main-preview-control@internal-498318.iam";
-GRANT USAGE, CREATE ON SCHEMA public TO "ciproxy-main-preview-control@internal-498318.iam";
-```
-
-Stop the port forward, and run
-`kubectl delete pod ciproxy-sql-admin --namespace=ciproxy`. Run the
-migrations as the runtime user, so that it owns its tables.
+Use [database setup](runtime.md#prepare-the-database) after the first deploy.
 
 ## Turn on the runtime
 
-Do this only when a real control-plane image exists. The current binary
-does not meet this interface of the `deploy/helm/ciproxy` chart:
-
-| Part | What the image must do |
-| --- | --- |
-| HTTP | Listen on `HTTP_BIND`, which is `0.0.0.0:8080`. |
-| Health | Answer `GET /api/health/ready` when ready, and `GET /api/health/live` while alive. The load balancer checks the ready path with the dashboard host. |
-| Database | Use `DATABASE_URL`: the Cloud SQL Auth Proxy beside it, on `127.0.0.1:5432`, with IAM login and no password. |
-| Settings | Read `PUBLIC_URL`, `IMAGE_URL_PREFIX`, `BOAT_KMS_KEY`, and `CDN_SIGNING_KEY_NAME`. The chart sets `CDN_SIGNING_KEY_NAME` to `ciproxy-<env>-images-v<N>`. |
-| Secrets | Read the files `github-app-private-key`, `github-webhook-secret`, `github-oauth-secret`, `stripe-secret-key`, `stripe-webhook-secret`, `session-key`, and `cdn-signing-key` in `SECRETS_DIRECTORY`, which is `/var/run/secrets/ciproxy`. The `cdn-signing-key` file holds secret version N, which `CDN_SIGNING_KEY_NAME` names. Each other file holds the latest version when the pod starts. |
-| Process | Run as a non-root user with a read-only root file system, and stop within 300 seconds. |
-
-The GitHub variable `CDN_SIGNING_KEY_NAME` is the one selector of the CDN
-key. From it, the chart sets both the key name and the secret version N of
-each pod. A value that is missing, malformed, or of the other environment
-selects version 0. That version cannot exist, so the pod cannot mount its
-secrets and does not start. Helm then waits ten minutes, and the deploy
-fails. The chart has no earlier check. Old pods keep running, because the
-rollout keeps each old pod until a new pod is ready. While the runtime is
-off, the chart renders no control plane, so the selector has no effect.
-
-Then do these steps:
-
-1. Push the image to the repository `ciproxy-<env>-runtime`. The GKE nodes
-   pull only from there.
-2. Add a version to each of the six other secrets `ciproxy-<env>-<file>` of
-   the table, from a private file. Setup step 8 already gave the CDN key its
-   numbered version. The pod cannot mount a secret without a version. For
-   example:
-
-   ```sh
-   gcloud secrets versions add "ciproxy-$DEPLOY_ENV-session-key" \
-     --project="$PROJECT_ID" --data-file=PRIVATE_FILE
-   ```
-
-3. [Prepare the database](#prepare-the-database), and run the migrations.
-4. Check that `CDN_SIGNING_KEY_NAME` holds the name of setup step 8. Set
-   `CONTROL_PLANE_IMAGE` and `CONTROL_PLANE_RUNTIME_READY=true` in the
-   GitHub environment. Then deploy, and check the rollout with
-   `kubectl rollout status deployment/control-plane --namespace=ciproxy`.
-
-The deploy runs one replica with the proxy beside it, and adds its endpoints
-to the edge. With uptime checks on, it also checks `/api/health/ready`. To
-turn off a running runtime, set `CONTROL_PLANE_RUNTIME_READY` to `false`
-and deploy. While a runtime runs, an unset value stops the deploy with an
-error, so a lost variable cannot remove the runtime.
+Use [runtime setup](runtime.md#turn-on-the-runtime) when a real HTTP image
+exists. It gives the image interface, secrets, and rollout steps.
 
 ## Rotate the release token
 
 1. Add a new token version, as in
-   [step 4 of the setup](setup.md#4-store-the-release-token).
+   [token storage](setup.md#6-store-the-release-token).
 2. Deploy. The deploy copies the new version into the Kubernetes Secret.
 3. Restart the release server, because it reads the token only at start:
 
 ```sh
-kubectl rollout restart deployment/cli-release-server --namespace=ciproxy
-kubectl rollout status deployment/cli-release-server --namespace=ciproxy
+kubectl rollout restart "deployment/ciproxy-$DEPLOY_ENV-release-cli-release-server" --namespace="$NAMESPACE"
+kubectl rollout status "deployment/ciproxy-$DEPLOY_ENV-release-cli-release-server" --namespace="$NAMESPACE"
 ```
 
 Then revoke the old token on GitHub.
@@ -156,7 +87,7 @@ Then revoke the old token on GitHub.
 ## Rotate the CDN signing key
 
 1. Register a new key, as in
-   [step 8 of the setup](setup.md#8-register-the-cdn-signing-key). The
+   [key registration](setup.md#9-register-the-cdn-signing-key). The
    script adds the next secret version N and prints
    `ciproxy-<env>-images-v<N>`. The old key stays valid on the backend
    bucket.
@@ -166,7 +97,7 @@ Then revoke the old token on GitHub.
    and gets its name together. Each old pod keeps the old pair until it
    stops.
 4. When the runtime runs, confirm its rollout with
-   `kubectl rollout status deployment/control-plane --namespace=ciproxy`.
+   `kubectl rollout status deployment/control-plane --namespace="$NAMESPACE"`.
 5. Wait until each URL that the old key signed has expired.
 6. Delete the old key name from the backend bucket:
 
@@ -189,8 +120,8 @@ plane starts new pods. Otherwise, after you add a new version of a runtime
 secret from a private file, restart the control plane:
 
 ```sh
-kubectl rollout restart deployment/control-plane --namespace=ciproxy
-kubectl rollout status deployment/control-plane --namespace=ciproxy
+kubectl rollout restart deployment/control-plane --namespace="$NAMESPACE"
+kubectl rollout status deployment/control-plane --namespace="$NAMESPACE"
 ```
 
 This rule does not apply to the CDN key. Its pods mount the exact version
@@ -216,37 +147,39 @@ control plane, and the deploy keeps 5 Helm revisions. Before you delete an
 object, check that no ReplicaSet and no kept Helm revision names it:
 
 ```sh
-kubectl get secretproviderclasses --namespace=ciproxy
-kubectl get replicasets --namespace=ciproxy -l app.kubernetes.io/name=ciproxy-control-plane \
+kubectl get secretproviderclasses --namespace="$NAMESPACE"
+kubectl get replicasets --namespace="$NAMESPACE" -l app.kubernetes.io/name=ciproxy-control-plane \
   -o jsonpath='{range .items[*]}{.spec.template.spec.volumes[?(@.name=="secrets")].csi.volumeAttributes.secretProviderClass}{"\n"}{end}'
-helm history ciproxy --namespace=ciproxy
-helm get manifest ciproxy --namespace=ciproxy --revision=REVISION | grep secretProviderClass:
+helm history "ciproxy-$DEPLOY_ENV" --namespace="$NAMESPACE"
+helm get manifest "ciproxy-$DEPLOY_ENV" --namespace="$NAMESPACE" --revision=REVISION | grep secretProviderClass:
 ```
 
-## Change the foundation or the bootstrap
+## Change infrastructure or trust
 
-Merge the Terraform change through the protected branch. CI saves and
-checks new plans of seed, bootstrap, and foundation. Its reusable apply
-workflow applies those exact binaries before workloads and the edge.
-Set the GitHub environment variable `ALERT_EMAIL` for notification channels.
+Merge the Terraform change through protected `main`. CI promotes seed and
+bootstrap with the central trust identity. It promotes shared infrastructure
+with the separate shared identity. The primary preview branch cannot change
+trust. After launch, preview reads central infrastructure and production
+promotes it after the successful preview of the same commit.
 
-A delete, replacement, or forget needs an exact committed approval. The
-approval binds the environment, root, actions, and full Terraform digest.
-A stale or edited approval fails. CI always refuses a destructive change
-to its own trust, including seed's trust API resources, even with approval.
-The seed apply finishes API enablement before bootstrap starts. Follow
-[Terraform promotion](promotion.md) for approval generation and recovery.
+Each environment keeps its own `ALERT_EMAIL`, runtime flag, uptime flag,
+and prepared zones in its completed workload artifact. Central edge uses
+that exact run/attempt evidence. Snapshot state remains a record only. Changing
+production's alert address does not replace
+preview's channel. Shared edge waits until workloads and NEGs are ready.
 
-After a failed run, rerun all jobs. A different run attempt rejects an old
-plan. Do not rerun only failed apply jobs. Check the owning operation
-before an operator releases a stale state lock. An operator also recovers
-from a trust update that removes CI access. The promotion guide gives both
-procedures.
+Destructive changes need an exact committed central approval. CI refuses
+destructive trust changes even with approval. The operator handles those
+changes and lock-out recovery. See [promotion](promotion.md).
+
+After failure, rerun all jobs. Check the writer before releasing a stale
+lock. Keep both prelaunch apply accounts disabled after launch.
 
 ## Zones and NEGs
 
-The foundation holds one zone list: `allowed_zones` in
-`deploy/terraform/modules/foundation/variables.tf`. Today it is
+The shared zone module holds desired placement and a retained catalog:
+`allowed_zones` in
+`deploy/terraform/modules/zones/main.tf`. Today it is
 `europe-west1-b`, `europe-west1-c`, and `europe-west1-d`. Four parts use
 this list:
 
@@ -261,13 +194,26 @@ The `zones` field is a GKE Preview feature. Google can change a Preview
 feature, and gives it no SLA. It needs GKE 1.36.2-gke.3104000 or later. The
 cluster sets the minimum version 1.36.4 and stays on the Regular release
 channel. Keep the cluster at a version that supports the feature. To change
-the zones, edit the list and merge the change. CI applies foundation before
-the workloads, the NEG wait, and the edge get the new list.
+the zones, edit the list and merge the change. CI applies shared
+infrastructure first. Each workload saves the zones that its Helm release
+used, only after all corresponding NEGs are ready. Central edge uses that
+environment snapshot. A concurrent production apply cannot attach a new
+preview zone before preview prepared its NEG.
 
 ## Static files and protection
 
-- HTML files have `no-store`, and other files a one-day cache. The
-  publisher never deletes a file, so open tabs can load their old files.
+- Site/dashboard origins enforce PAP and remain private. Their public
+  content is served through the edge by the viewer-only https-lb agent.
+- Every multipart upload stores explicit `cacheControl` object metadata.
+  HTML and its route aliases use `no-store`. Assets use
+  `public,max-age=86400,must-revalidate`. Metadata alone cannot enable
+  private-bucket CDN caching.
+- Immutable asset wrappers use `FORCE_CACHE_ALL` with a one-year CDN lifetime
+  and a one-day browser cap. Mutable wrappers force at most five minutes
+  at CDN and browsers, even after a failed deploy. HTML uses `USE_ORIGIN_HEADERS`
+  and preserve `no-store`. API and signed-image paths keep their own
+  backends. [Static delivery](static-delivery.md) gives the exact routes.
+- The publisher uploads assets before HTML and never deletes old assets.
 - Each deploy invalidates the whole CDN cache after the edge apply.
 - Terraform cannot delete the GKE cluster, the Cloud SQL instance, the state
   bucket, or the Boat KMS key. Their protection must change first.
@@ -275,3 +221,33 @@ the workloads, the NEG wait, and the edge get the new list.
   Terraform provider deletion protection. Secret protection does not stop
   a console deletion or an owner-equivalent IAM change. The planned GCP
   deny policy remains separate work.
+
+Production data and edge have protected prefixes. If a first create finds
+an existing production name, stop before populating data. Follow the
+[operator state procedure](state.md#unexpected-existing-production-name).
+Never import a prelaunch-created object to bypass that failure.
+
+Production finishes its own edge/invalidation before promoting preview's
+separate edge. New tag bindings use permanent numeric map IDs. Tag/IAM
+propagation can delay invalidation rights. Rerun all jobs after propagation
+rather than changing the tag with gcloud or reusing a saved binary.
+
+Namespace policy labels remain operator-owned. Reapply both manifests before
+untrusted deploys resume. [Namespace setup](setup.md#2-bootstrap) gives the
+Baseline labels and namespace-only deployment boundary.
+
+The operator also owns the runtime ServiceAccount. Helm never renders it.
+If that account, namespace, or cluster is recreated, its UID changes.
+Impersonation then fails closed. Follow [UID recovery](runtime-identity.md#serviceaccount-recreation)
+to capture the new UID and promote its exact replacement binding.
+
+DNS authority stays split as [DNS setup](dns.md) describes. Cloudflare keeps
+`ciproxy.dev` and Workspace mail. Google owns only production app/get parents
+and their preview child delegations. The manual DNS-only apex A record
+uses `terraform/edge`'s production backend `public_ip` output.
+
+A central scope with no roots is a successful promotion, not a skipped apply
+job. Its read-only status check needs no apply identity or plan artifact.
+If private-origin IAM is refused at first live setup, stop and follow
+[the item 76 fallback](identities.md#private-static-origins). Keep the
+organization rule unchanged.

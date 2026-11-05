@@ -9,6 +9,8 @@ import sys
 import tempfile
 import unittest
 
+from deploy.scripts.terraform_roots import approval_path
+
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "deploy/tests/fixtures"
@@ -22,9 +24,8 @@ class PromotionCase(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
         shutil.copytree(ROOT / "deploy/scripts", self.root / "deploy/scripts")
-        for name in ("terraform/seed", "terraform/bootstrap", "environments/main-preview",
-                     "environments/main-preview/edge", "environments/production",
-                     "environments/production/edge", "terraform/modules/foundation"):
+        for name in ("terraform/seed", "terraform/bootstrap", "terraform/shared", "terraform/edge", "terraform/data", "environments/main-preview",
+                     "environments/production", "terraform/modules/foundation"):
             location = self.root / "deploy" / name
             location.mkdir(parents=True, exist_ok=True)
             (location / "main.tf").write_text('terraform {\n  backend "gcs" {}\n}\n')
@@ -67,11 +68,21 @@ class PromotionCase(unittest.TestCase):
         result = self.cli("terraform_policy.py", "approval", environment, root,
                           str(self.plan), "--reason", "Remove the retired test resource.")
         self.assertEqual(result.returncode, 0, result.stderr)
-        path = self.root / "deploy/approvals" / environment / f"{root}.json"
+        path = approval_path(self.root, environment, root)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(result.stdout)
         if commit:
             self.commit()
+        return path
+
+    def snapshot(self, environment="main-preview", run="1234", attempt="1", **inputs):
+        path = self.root / ".context/deploy" / environment / "ready-inputs.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        values = {"control_plane_enabled": False, "enable_uptime_checks": False,
+                  "notification_emails": [environment + "@example.invalid"],
+                  "allowed_zones": ["europe-west1-b"], "source_sha": self.source}
+        path.write_text(json.dumps({"environment": environment, "commit": self.source,
+                                    "run": run, "attempt": attempt, "inputs": dict(values, **inputs)}))
         return path
 
     def policy(self, environment="main-preview", root="edge", ci=False):
@@ -83,7 +94,7 @@ class PromotionCase(unittest.TestCase):
         event = {"repository": repository, "after": self.source}
         if environment == "production":
             event["workflow_run"] = {
-                "name": "Deploy main preview", "status": "completed", "conclusion": "success",
+                "id": 5678, "run_attempt": 3, "name": "Deploy main preview", "status": "completed", "conclusion": "success",
                 "event": "push", "head_branch": "main", "head_sha": self.source,
                 "path": ".github/workflows/deploy-main-preview.yml",
                 "repository": repository, "head_repository": repository,
@@ -97,5 +108,6 @@ class PromotionCase(unittest.TestCase):
             "GITHUB_SHA": self.source, "CIPROXY_SOURCE_SHA": self.source,
             "GITHUB_EVENT_NAME": "workflow_run" if environment == "production" else "push",
             "GITHUB_RUN_ID": "1234", "GITHUB_RUN_ATTEMPT": "1",
-            "CIPROXY_REUSABLE_APPLY": "true", "PRODUCTION_DEPLOY_ENABLED": "true",
+            "CIPROXY_REUSABLE_APPLY": "true", "PRODUCTION_DEPLOY_ENABLED": "true" if environment == "production" else "false",
+            "FAKE_PRODUCTION_READY": "true" if environment == "production" else "false",
         })

@@ -1,23 +1,3 @@
-resource "google_service_account" "control_plane" {
-  account_id   = "${local.prefix}-control"
-  display_name = "ciproxy control plane"
-  depends_on   = [google_project_service.service]
-}
-
-resource "google_service_account_iam_member" "control_plane" {
-  service_account_id = google_service_account.control_plane.name
-  role               = "roles/iam.workloadIdentityUser"
-  member             = "serviceAccount:${var.project_id}.svc.id.goog[ciproxy/control-plane]"
-  depends_on         = [google_container_cluster.main]
-}
-
-resource "google_project_iam_member" "sql_client" {
-  for_each = toset(["roles/cloudsql.client", "roles/cloudsql.instanceUser"])
-  project  = var.project_id
-  role     = each.value
-  member   = "serviceAccount:${google_service_account.control_plane.email}"
-}
-
 resource "google_sql_database_instance" "main" {
   name                = local.prefix
   region              = local.region
@@ -33,7 +13,7 @@ resource "google_sql_database_instance" "main" {
     edition                     = "ENTERPRISE"
     ip_configuration {
       ipv4_enabled    = false
-      private_network = google_compute_network.main.id
+      private_network = var.shared.network_id
       ssl_mode        = "ENCRYPTED_ONLY"
     }
     database_flags {
@@ -55,7 +35,6 @@ resource "google_sql_database_instance" "main" {
       update_track = "stable"
     }
   }
-  depends_on = [google_service_networking_connection.sql]
 }
 
 resource "google_sql_database" "main" {
@@ -66,15 +45,14 @@ resource "google_sql_database" "main" {
 # Cloud SQL IAM authentication supplies short-lived passwords through the
 # proxy. No database password is generated or stored by Terraform.
 resource "google_sql_user" "control_plane" {
-  name     = trimsuffix(google_service_account.control_plane.email, ".gserviceaccount.com")
+  name     = trimsuffix(local.control_account, ".gserviceaccount.com")
   instance = google_sql_database_instance.main.name
   type     = "CLOUD_IAM_SERVICE_ACCOUNT"
 }
 
 resource "google_kms_key_ring" "main" {
-  name       = local.prefix
-  location   = local.region
-  depends_on = [google_project_service.service]
+  name     = local.prefix
+  location = local.region
 }
 
 resource "google_kms_crypto_key" "boat" {
@@ -89,5 +67,5 @@ resource "google_kms_crypto_key" "boat" {
 resource "google_kms_crypto_key_iam_member" "control_plane" {
   crypto_key_id = google_kms_crypto_key.boat.id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  member        = "serviceAccount:${google_service_account.control_plane.email}"
+  member        = "serviceAccount:${local.control_account}"
 }

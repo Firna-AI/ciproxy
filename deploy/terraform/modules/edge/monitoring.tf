@@ -78,3 +78,12 @@ output "url_map" {
 output "image_backend" {
   value = google_compute_backend_bucket.images.name
 }
+
+output "readiness" {
+  description = "Actual backend groups and uptime targets for operator inspection."
+  value = {
+    backend_groups = { for name, service in google_compute_backend_service.runtime : name => sort([for backend in service.backend : backend.group]) }
+    uptime_hosts   = sort([for check in google_monitoring_uptime_check_config.public : check.monitored_resource[0].labels.host])
+    channels       = { for name, policy in google_monitoring_alert_policy.public : name => policy.notification_channels }
+  }
+}

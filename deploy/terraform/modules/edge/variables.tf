@@ -41,3 +41,10 @@ locals {
     }
   }
 }
+
+variable "zone_map" {
+  description = "Trusted canonical zone paths. Evidence selects keys, never URL text."
+  type        = map(string)
+}
+variable "project_number" { type = string }
+variable "environment_tag" { type = string }

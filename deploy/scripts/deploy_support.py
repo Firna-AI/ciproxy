@@ -41,7 +41,7 @@ def sync_release_secret(config):
                 f"--project={config['project_id']}", capture=True).strip()
     secret = {
         "apiVersion": "v1", "kind": "Secret",
-        "metadata": {"name": "release-github-token", "namespace": "ciproxy"},
+        "metadata": {"name": "release-github-token", "namespace": config["namespace"]},
         "type": "Opaque",
         "data": {"CLI_RELEASE_GITHUB_TOKEN": base64.b64encode(token.encode()).decode()},
     }
@@ -49,7 +49,7 @@ def sync_release_secret(config):
         input_text=json.dumps(secret))
 
 
-def neg_zones(service, expected_name, expected_zones):
+def neg_zones(service, expected_name, expected_zones, namespace="ciproxy-main-preview"):
     # The controller may take a few minutes to create the NEGs after Helm.
     # Wait for every pre-provisioned zone. A partial status must not allow
     # edge deployment to omit a zone where Autopilot can later place pods.
@@ -57,7 +57,7 @@ def neg_zones(service, expected_name, expected_zones):
     deadline = time.monotonic() + 600
     while time.monotonic() < deadline:
         result = json.loads(run("kubectl", "get", "service", service,
-                                "--namespace=ciproxy", "-o", "json", capture=True))
+                                f"--namespace={namespace}", "-o", "json", capture=True))
         annotation = result.get("metadata", {}).get("annotations", {}).get(
             "cloud.google.com/neg-status"
         )
@@ -95,11 +95,11 @@ def helm_values(config, image_digest, runtime_enabled, control_image):
     }
     ciproxy = {
         "prefix": config["prefix"],
+        "releaseServer": {"instance": config["prefix"] + "-release"},
         "allowedZones": config["allowed_zones"],
         "controlPlane": {
             "enabled": runtime_enabled,
             "image": control_image,
-            "serviceAccount": config["control_plane_account"],
             "sqlConnection": config["sql_connection"],
             "sqlUser": config["sql_user"],
             "kmsKey": config["kms_key"],

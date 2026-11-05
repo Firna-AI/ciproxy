@@ -4,10 +4,51 @@ resource "google_compute_backend_bucket" "public" {
   bucket_name = each.value
   enable_cdn  = true
   cdn_policy {
+    # Keep private origin delivery, but never force-cache HTML/no-store.
     cache_mode        = "USE_ORIGIN_HEADERS"
     serve_while_stale = 0
     negative_caching  = false
   }
+}
+
+resource "google_compute_backend_bucket" "assets" {
+  for_each    = local.config.buckets
+  name        = "${local.config.prefix}-${each.key}-assets"
+  bucket_name = each.value
+  enable_cdn  = true
+  cdn_policy {
+    # Only generated content-hashed paths select the one-year wrapper.
+    cache_mode        = "FORCE_CACHE_ALL"
+    default_ttl       = 31536000
+    max_ttl           = 31536000
+    client_ttl        = 86400
+    serve_while_stale = 0
+    negative_caching  = false
+  }
+}
+
+resource "google_compute_backend_bucket" "mutable" {
+  for_each    = local.config.buckets
+  name        = "${local.config.prefix}-${each.key}-mutable-assets"
+  bucket_name = each.value
+  enable_cdn  = true
+  cdn_policy {
+    cache_mode        = "FORCE_CACHE_ALL"
+    default_ttl       = 300
+    max_ttl           = 300
+    client_ttl        = 300
+    serve_while_stale = 0
+    negative_caching  = false
+  }
+}
+
+# Google creates this service agent only after the first backend bucket.
+# Iterate the cached wrappers to wait for their creation, once per origin.
+resource "google_storage_bucket_iam_member" "origin_reader" {
+  for_each = google_compute_backend_bucket.assets
+  bucket   = each.value.bucket_name
+  role     = "roles/storage.objectViewer"
+  member   = "serviceAccount:service-${var.project_number}@https-lb.iam.gserviceaccount.com"
 }
 
 resource "google_compute_backend_bucket" "images" {
@@ -53,7 +94,7 @@ resource "google_compute_backend_service" "runtime" {
       # GKE pre-provisions this complete zone set before edge deployment.
       # Required pod affinity uses the same set, so later zone changes
       # cannot put a runtime in a zone without an attached backend.
-      group                 = "https://www.googleapis.com/compute/v1/projects/${local.config.project_id}/zones/${backend.value}/networkEndpointGroups/${each.value.neg_name}"
+      group                 = "${var.zone_map[backend.value]}/networkEndpointGroups/${each.value.neg_name}"
       balancing_mode        = "RATE"
       max_rate_per_endpoint = 100
     }

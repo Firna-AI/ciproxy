@@ -1,42 +1,21 @@
 # Deployment setup
 
-This page gives the one-time setup of one environment of the
-[deployment](README.md). Do each step for the main preview first, then for
-production. Run every command from the repository root, with the shell
-variables of the environment:
+Set up main preview first. Use the [launch guide](launch.md) for production.
+Both environments use project `ciproxy`. Run commands from the repository
+root. No deployment uses `internal-498318`.
 
 ```sh
-DEPLOY_ENV=main-preview PROJECT_ID=internal-498318
-# For production: DEPLOY_ENV=production PROJECT_ID=ciproxy
+DEPLOY_ENV=main-preview
+PROJECT_ID=ciproxy
+NAMESPACE="ciproxy-$DEPLOY_ENV"
 ```
-
-## Identities and permissions
-
-Read [Deployment identities](identities.md) for operator roles, CI roles,
-federation claims, and the runtime accounts. The apply account can change
-project IAM. Only the reusable apply workflow can use that account.
 
 ## 1. Prepare the project
 
-Check billing with `gcloud billing projects describe "$PROJECT_ID"`. The
-site and dashboard buckets grant read access to `allUsers`, so an
-organization policy for domain-restricted sharing or public access
-prevention stops the foundation apply. Get the operator roles in the
-identity guide.
-
-A zone on the last free Cloud DNS name-server set needs a TXT ownership check.
-Complete the check before retrying setup. See the
-[DNS limits](https://docs.cloud.google.com/dns/quotas#name_server_limits).
-
-Install the Google Cloud CLI with `kubectl` and `gke-gcloud-auth-plugin`,
-Terraform 1.17.1, Helm 4.3.1, Docker, the GitHub CLI, Python 3, and `psql`.
-The workflows use gcloud 592.0.0. The Helm installer supports Linux and
-macOS on amd64 and arm64. It selects the native archive and checks its
-pinned SHA-256 before extraction. It uses `sha256sum` or `shasum -a 256`.
-The pins come from the
-[Helm 4.3.1 release](https://github.com/helm/helm/releases/tag/v4.3.1).
-The installer puts Helm in `.context/tools/ciproxy-helm/`. It adds that
-directory to `GITHUB_PATH` in CI. For an operator, add it to `PATH`:
+Install Terraform 1.17.1, Google Cloud CLI, kubectl,
+`gke-gcloud-auth-plugin`, Docker, Git, GitHub CLI, Python 3, jq, psql,
+Bash, curl, and tar before using the commands below. CI uses Google Cloud
+CLI 592.0.0. Install Helm 4.3.1 with the pinned checksum installer:
 
 ```sh
 bash deploy/scripts/install-helm.sh
@@ -44,209 +23,168 @@ export PATH="$PWD/.context/tools/ciproxy-helm:$PATH"
 gcloud auth login
 gcloud auth application-default login
 gcloud auth application-default set-quota-project "$PROJECT_ID"
-```
-
-Terraform uses the application default credentials. Set the quota project
-again when you change the environment.
-
-## 2. Bootstrap the environment
-
-```sh
-bash deploy/scripts/bootstrap.sh "$DEPLOY_ENV"
-```
-
-The script enables the three APIs needed before Terraform can run. Its
-temporary local-backend copy of seed creates the state bucket and enables
-the trust APIs. Those API resources stay in seed `main.tf`, so the local
-copy includes them. The seed apply finishes before any bootstrap resource
-starts. CI keeps the same seed-before-bootstrap order.
-
-The script migrates seed state to `<env>/seed` in the same bucket. This
-avoids a dependency on a bucket that does not exist. The tracked seed root
-always uses GCS. The operator then initializes all four remote backends:
-seed, bootstrap, foundation, and edge. Initial backend setup writes empty
-state, which the read-only plan account cannot do. Reconfiguration keeps
-each existing state unchanged. The scripts share the root directories,
-bucket names, and prefixes from `terraform_roots.py`.
-
-Finally, the script applies bootstrap and prints the six GitHub identity
-variables. Both first applies ask for confirmation.
-Terraform also asks before it migrates state. Inspect its source and
-destination. The script never forces a copy over existing remote state.
-
-The script can adopt the former `.context/deploy/<env>/seed.tfstate`.
-After migration, a repeated call uses remote seed state. It initializes
-every remote backend again without replacing existing state. Back up the
-local copy outside Git. Do not restore it over newer remote state.
-
-Set the six identity variables and `ALERT_EMAIL` from step 6 now. Start a
-main preview run. CI applies seed, bootstrap, and foundation before it
-checks the release image digest. The first run can stop at that missing
-digest. This is the setup point for steps 3 to 5. No local foundation apply
-is needed. Production follows this same sequence when its launch switch
-first permits a run. Its first run can stop after foundation creation.
-
-## 3. Push the release server image
-
-The foundation creates the Artifact Registry repository
-`ciproxy-<env>-runtime`. Docker must run locally.
-
-```sh
 gh auth login
-bash deploy/scripts/mirror-release-image.sh "$DEPLOY_ENV"
+gcloud billing projects describe "$PROJECT_ID"
 ```
 
-By default, the script builds the pinned upstream commit from source. Your
-GitHub login needs read access to `futex-ai/cli-release`. The script runs
-`--help` in the image, pushes it, and prints
-`RELEASE_SERVER_IMAGE_DIGEST=sha256:...`. When upstream has published the
-image of that commit, the optional `published` mode mirrors it from
-`ghcr.io` instead. That mode needs `read:packages`.
+Check billing and organization policies with the authenticated operator.
+The futex.ai domain-restricted sharing rule stays. Static origins enforce
+PAP. No public grant or organization-policy exception is needed. The edge
+later grants its Google-created service agent viewer access after cached
+backend creation. See [operator roles](identities.md#operator-permissions)
+and [static delivery](static-delivery.md).
 
-## 4. Store the release token
+## 2. Bootstrap
 
-Create a fine-grained GitHub token for `Firna-AI/ciproxy` only, with the
-Contents permission read-only. An organization owner may need to approve
-it. The hidden prompt keeps it out of the screen, the history, and the
-process list. Each deploy copies the latest version into the Kubernetes
-Secret `ciproxy/release-github-token` through standard input.
-
-```sh
-read -rs RELEASE_TOKEN
-printf '%s' "$RELEASE_TOKEN" | gcloud secrets versions add \
-  "ciproxy-$DEPLOY_ENV-release-github-token" --project="$PROJECT_ID" --data-file=-
-unset RELEASE_TOKEN
-```
-
-## 5. Delegate DNS
-
-The main preview foundation creates three zones in `internal-498318`:
-
-| Managed zone | DNS name |
-| --- | --- |
-| `ciproxy-main-preview` | `preview.ciproxy.dev` |
-| `ciproxy-main-preview-dashboard` | `preview.app.ciproxy.dev` |
-| `ciproxy-main-preview-releases` | `preview.get.ciproxy.dev` |
-
-Terraform leaves the registrar and delegations to the operator. The first
-deploy adds `br-main` A records. Read each zone's four name servers:
-
-```sh
-terraform -chdir=deploy/environments/$DEPLOY_ENV output -json dns_name_servers
-```
-
-The output maps full DNS names with trailing dots to their name servers.
-
-For the main preview, find the active parent zone in project `ciproxy`:
-
-```sh
-gcloud dns managed-zones list --project=ciproxy --filter='dnsName=ciproxy.dev.' \
-  --format='table(name,nameServers)'
-dig +short NS ciproxy.dev
-PARENT_ZONE=ACTIVE_ZONE_ID
-```
-
-Set `PARENT_ZONE` to the `NAME` whose name servers match the `dig` output.
-Use each preview zone's servers for its `SITE_NS`, `APP_NS`, or `GET_NS`.
-
-```sh
-gcloud dns record-sets create preview.ciproxy.dev. --project=ciproxy \
-  --zone="$PARENT_ZONE" --type=NS --ttl=3600 \
-  --rrdatas=SITE_NS1,SITE_NS2,SITE_NS3,SITE_NS4
-gcloud dns record-sets create preview.app.ciproxy.dev. --project=ciproxy \
-  --zone="$PARENT_ZONE" --type=NS --ttl=3600 \
-  --rrdatas=APP_NS1,APP_NS2,APP_NS3,APP_NS4
-gcloud dns record-sets create preview.get.ciproxy.dev. --project=ciproxy \
-  --zone="$PARENT_ZONE" --type=NS --ttl=3600 \
-  --rrdatas=GET_NS1,GET_NS2,GET_NS3,GET_NS4
-```
-
-After production foundation setup, copy the active zone's required records
-to `ciproxy-production` in `ciproxy`. Include MX, TXT, and the three preview
-NS records unchanged. Use `PARENT_ZONE=ciproxy-production` above. The new
-zone has no DNSSEC. Remove any DS record before the registrar switch. Then
-set the registrar to the four name servers in the `ciproxy.dev.` output.
-
-These zones permit later wildcard records without another parent-zone edit.
-
-## 6. Set up the GitHub environment
-
-The workflows read the variables of the GitHub environment `<env>`, and no
-GitHub secrets. Create the environment, read the bootstrap output, and set
-each variable of the table with `gh variable set`:
-
-```sh
-gh api --method PUT "repos/Firna-AI/ciproxy/environments/$DEPLOY_ENV"
-terraform -chdir=deploy/terraform/bootstrap output -json github_environment_variables
-gh variable set GCP_WIF_PROVIDER --repo=Firna-AI/ciproxy --env="$DEPLOY_ENV" --body=VALUE
-```
-
-| Variable | Value | When |
-| --- | --- | --- |
-| `GCP_WIF_PROVIDER` | The bootstrap output | Before the first deploy |
-| `GCP_DEPLOY_SERVICE_ACCOUNT` | The bootstrap output | Before the first deploy |
-| `GCP_PLAN_WIF_PROVIDER` | The bootstrap output | Before foundation creation |
-| `GCP_PLAN_SERVICE_ACCOUNT` | The bootstrap output | Before foundation creation |
-| `GCP_APPLY_WIF_PROVIDER` | The bootstrap output | Before foundation creation |
-| `GCP_APPLY_SERVICE_ACCOUNT` | The bootstrap output | Before foundation creation |
-| `ALERT_EMAIL` | The address for uptime alerts | Before foundation creation |
-| `RELEASE_SERVER_IMAGE_DIGEST` | The `sha256:` digest of step 3 | Before the first deploy |
-| `CDN_SIGNING_KEY_NAME` | The name that step 8 prints, such as `ciproxy-main-preview-images-v1` | After step 8 |
-| `PUBLIC_UPTIME_ENABLED` | `true` | Step 9 |
-| `CONTROL_PLANE_RUNTIME_READY` | Unset or `false`, until a real runtime exists | [Runtime](operations.md#turn-on-the-runtime) |
-| `CONTROL_PLANE_IMAGE` | An image name with `@sha256:` and its digest | [Runtime](operations.md#turn-on-the-runtime) |
-
-The workload stage stops before its cloud calls when the digest is not
-`sha256:` with 64 hex digits, or runtime readiness is invalid. The preceding
-infrastructure stage can still create foundation. Limit environment
-deployment branches to the refs that federation accepts.
-
-Set the launch switch as a **repository variable**, without `--env`:
+Keep the repository production switch false. Create initial seed and trust:
 
 ```sh
 gh variable set PRODUCTION_DEPLOY_ENABLED --repo=Firna-AI/ciproxy --body=false
+bash deploy/scripts/bootstrap.sh main-preview
 ```
 
-The workflow reads this switch before it selects a GitHub environment.
-At launch, set it to `true`. Production also needs the default branch to
-be `main`, with both deploy workflows present there. GitHub runs
-`workflow_run` workflows from the default branch.
+Seed creates four versioned state buckets and enables trust APIs. The
+script uses a temporary local backend until the state bucket exists. It
+then asks Terraform to migrate seed state to `trust/seed`. Review both
+locations. It never forces an old local copy over remote state.
 
-The owner upgrades `Firna-AI` to GitHub Team. Then a repository admin runs:
+Bootstrap prepares all nine remote backends and both environments' CI and
+runtime identities. It creates no SQL, application secrets/buckets, zones,
+or workloads. Back up `.context/deploy/ciproxy/seed.tfstate` outside Git.
+On another operator machine, use `bootstrap.sh main-preview --existing-state`
+to read existing state without another local seed apply.
+
+Before any preview push, complete [operator UID setup](runtime-identity.md#first-shared-core-and-preview-identity).
+It creates the intended Autopilot core, preview namespace, and runtime
+ServiceAccount. It records the real UID through protected bootstrap state
+and installs the preview binding. Prelaunch CI cannot create/delete clusters
+or attach the node account. Routine exact-cluster updates stay automatic.
+
+Both Namespace manifests enforce/audit/warn at Baseline. Only the operator
+owns these labels and namespace RBAC. The network policy permits traffic
+inside each namespace and blocks other workload namespaces. Reapply existing
+namespaces as [the admission procedure](identities.md#baseline-admission)
+describes. Future trust updates on protected `main` preserve the UID map.
+Preview artifacts cannot supply production UIDs.
+
+## 3. Push the release image
+
+The UID procedure created registry `ciproxy-shared-runtime`. Start Docker.
+The script builds pinned upstream source, checks its help command, pushes
+the image, and prints `RELEASE_SERVER_IMAGE_DIGEST`:
+
+```sh
+bash deploy/scripts/mirror-release-image.sh "$DEPLOY_ENV"
+```
+
+The operator GitHub account needs read access to `futex-ai/cli-release`.
+Optional `published` mode uses its published image and needs `read:packages`.
+Both environments can use the same immutable digest.
+
+## 4. Set GitHub variables
+
+Create the selected GitHub environment. Read its twelve identity values
+from the already-applied bootstrap output:
+
+```sh
+gh api --method PUT "repos/Firna-AI/ciproxy/environments/$DEPLOY_ENV"
+terraform -chdir=deploy/terraform/bootstrap output -json github_environment_variables \
+  | jq --arg env "$DEPLOY_ENV" '.[$env]'
+gh variable set GCP_WIF_PROVIDER --repo=Firna-AI/ciproxy \
+  --env="$DEPLOY_ENV" --body=VALUE
+```
+
+Set every printed identity variable in that environment. They cover
+workload, environment plan/apply, central plan/apply, and central trust
+apply. Never copy preview's central apply identities into production.
+
+| Variable | Initial value |
+| --- | --- |
+| `ALERT_EMAIL` | This environment's alert address. |
+| `RELEASE_SERVER_IMAGE_DIGEST` | The mirrored `sha256:` digest from [image setup](#3-push-the-release-image). |
+| `PUBLIC_UPTIME_ENABLED` | `false` until [HTTPS verification](#10-enable-uptime-alerts). |
+| `CONTROL_PLANE_RUNTIME_READY` | `false`. Keep it off until a real runtime exists. |
+| `CONTROL_PLANE_IMAGE` | Unset while runtime is off. Later use an image pinned with `@sha256:`. |
+| `CDN_SIGNING_KEY_NAME` | **Unset** until [registration](#9-register-the-cdn-signing-key) prints the real key name. |
+
+Limit deployment branches to those federation accepts. Keep the launch
+switch at repository scope, without `--env`. Production needs default
+branch `main`. Upgrade `Firna-AI` to GitHub Team before production. A
+repository admin then installs the prepared ruleset:
 
 ```sh
 bash deploy/scripts/github-ruleset.sh Firna-AI/ciproxy
 ```
 
-The idempotent script creates or updates one ruleset on `main`. It requires
-a pull request and the GitHub Actions `Repository gate` check from
-`.github/workflows/ci.yml`. It forbids force pushes and deletion. It adds
-no required review count and no up-to-date-branch requirement.
+It requires pull requests and `Repository gate` on `main`. It blocks force
+pushes and deletion. It adds no required review count.
 
-## 7. Run the first deploy
+## 5. Create preview data through CI
 
-After foundation creation, finish steps 3 to 6. DNS can still be pending.
-Push to `calummoore/ci-proxy-load-balancer`, or rerun **all jobs** of its
-last run. After that branch merges into `main`, stop pushes to it and use
-`main`. The workflow and federation accept both refs, so the merge needs
-no trust change. This change adds no pull request preview environment.
-Production follows only a successful main preview push run on `main`.
-Its checks verify the source repository, workflow, event, branch, and
-commit. Each checkout selects that run's commit, even if `main` moves.
+Only now start a preview push run of the current deployment code. Follow
+[start the first preview run](first-deploy.md#start-the-first-preview-run)
+for exact run selection and all-jobs rerun commands. There is no manual
+preview-data apply or secret/zone creation.
 
-Each environment plans and checks seed, bootstrap, and foundation. The
-reusable workflow applies those exact binaries in that order. The workload
-stage builds the static exports, copies the release token into Kubernetes,
-upgrades both Helm releases, and uploads static files without deletion.
-It waits for every configured NEG zone. Then the read-only identity saves
-and checks the edge plan. The same reusable workflow applies it and
-invalidates CDN. A failed NEG wait stops before the edge plan.
-See [retries and recovery](promotion.md) before restarting a failed run.
+Infrastructure must finish `apply-data` and its aggregate successfully.
+The workload job then validates the digest, reads data outputs, and opens
+the namespace. With no token version, its latest-version read fails before
+Helm. This is the expected first stop. The edge does not exist yet.
 
-## 8. Register the CDN signing key
+Use [confirm the data boundary](first-deploy.md#confirm-the-data-boundary)
+to inspect the run, release-token parent, and all three preview zones.
+Confirm no token version exists. An infrastructure, identity, permission,
+image, or namespace error is not the expected stop. Resolve it first.
 
-The first deploy creates the backend bucket `ciproxy-<env>-images`. Make a
-random 128-bit key in a private directory, register it, and delete the file:
+## 6. Store the release token
+
+Continue only after CI created and you confirmed the parent secret.
+Create a fine-grained GitHub token with read-only access to public
+repositories only. `Firna-AI/ciproxy` and its release assets are public.
+The release server still needs a token for its GitHub API configuration.
+It needs no private repository access. Enter the token at a hidden prompt:
+
+```sh
+read -rs RELEASE_TOKEN
+printf '%s' "$RELEASE_TOKEN" | gcloud secrets versions add \
+  "ciproxy-$DEPLOY_ENV-release-github-token" --project=ciproxy --data-file=-
+unset RELEASE_TOKEN
+```
+
+Deploy later copies it through stdin to
+`ciproxy-<env>/release-github-token`. Terraform never reads its value.
+
+## 7. Delegate preview DNS
+
+The successful data apply created preview's three Google zones. Follow
+[main preview DNS](dns.md#main-preview) to read their name servers and add
+Cloudflare NS sets named `preview`, `preview.app`, and `preview.get`.
+Keep Cloudflare's apex, Workspace mail, registrar NS, and DNSSEC unchanged.
+Keep the preview NS sets after creating them.
+
+Production parent/apex records belong to the [launch procedure](launch.md).
+Do not add `app`, `get`, or an apex A record during preview setup.
+There is no Cloudflare provider or CI credential.
+
+## 8. Complete the first deploy
+
+After token storage and preview delegation, [rerun all jobs](first-deploy.md#retry-all-jobs-and-create-the-edge)
+of the selected push run. It creates fresh plans and artifacts for the new
+attempt. The run can now deploy Helm/static content, wait for NEGs, save
+its ready snapshot, apply the edge, and invalidate CDN. The edge creates
+its A records, certificate, and backends. Certificate readiness comes later.
+
+The first private-origin service-agent grant can fail here. If organization
+policy refuses it, stop that path and return item 76 with its existing
+alternatives. Keep sharing policy unchanged. See [private-origin permissions](identities.md#private-static-origins).
+Other failures follow [promotion recovery](promotion.md). No apply stage
+creates a replacement plan. Empty central scopes remain successful no-ops.
+
+## 9. Register the CDN signing key
+
+Continue only after the edge apply succeeded. Its image backend, data
+signing-key secret, and private image bucket now exist. Register a random
+128-bit key:
 
 ```sh
 KEY_DIR="$(mktemp -d)"
@@ -255,43 +193,44 @@ bash deploy/scripts/register-cdn-key.sh "$DEPLOY_ENV" "$KEY_DIR/key"
 rm -rf "$KEY_DIR"
 ```
 
-The script first adds the key file as a new version of the secret
-`ciproxy-<env>-cdn-signing-key`. It reads only the number N of that
-version, and makes the key name `ciproxy-<env>-images-v<N>`. Then it
-registers the key under that name on the backend bucket, and lets the Cloud
-CDN cache-fill account read the image bucket. Only when each step succeeds,
-it prints the name, such as
-`CDN_SIGNING_KEY_NAME=ciproxy-main-preview-images-v1` for the first main
-preview key. Set the GitHub variable `CDN_SIGNING_KEY_NAME` to that value.
+The script adds secret version N, registers `ciproxy-<env>-images-v<N>`,
+then grants the newly created cache-fill account read access to images.
+Set `CDN_SIGNING_KEY_NAME` to its printed name only after success. A failed
+attempt prints no selector. Retry registration with a new key. Terraform
+stores no key value. Runtime remains off until [runtime setup](runtime.md).
 
-This one name selects both the key name and the secret version of the
-future runtime. When the script stops early, it prints no name, so no deploy
-uses that version. Then run it again with a new key. Only the future runtime
-signs URLs.
+## 10. Enable uptime alerts
 
-## 9. Turn on uptime alerts
-
-After the delegation and the first deploy, check DNS, the certificate, and
-the hosts. The example uses the main preview hosts. The certificate is
-ready when its status and each domain status are `ACTIVE`. Browsers open
-`.dev` hosts over HTTPS only, so no page loads before then.
+Confirm delegated DNS and the created certificate before enabling alerts:
 
 ```sh
-dig +short NS preview.ciproxy.dev
-dig +short NS preview.app.ciproxy.dev
-dig +short NS preview.get.ciproxy.dev
 gcloud compute ssl-certificates describe "ciproxy-$DEPLOY_ENV" --global \
-  --project="$PROJECT_ID" --format="yaml(managed)"
-curl -fsSI https://br-main.preview.ciproxy.dev/ https://br-main.preview.ciproxy.dev/docs/
-curl -fsSI https://br-main.preview.app.ciproxy.dev/
-curl -fsS https://br-main.preview.get.ciproxy.dev/ciproxy-agent | head -n 5
+  --project=ciproxy --format='yaml(managed)'
 ```
 
-Then set `PUBLIC_UPTIME_ENABLED` to `true` and deploy again. The edge adds
-uptime checks for `/` and `/docs/` on the site host, `/` on the dashboard host,
-and `/ciproxy-agent` on the download host. Each check runs each minute from
-Europe, the USA, and Asia Pacific. Its alert policy sends an email to the
-alert address when two or more checker locations fail for five minutes.
+For production, add its [post-edge apex A record](dns.md#apex-site-record)
+first. Select this environment's hosts, then check HTTPS:
 
-The job images, the database, and the control-plane runtime come later.
-See [Operations](operations.md).
+```sh
+case "$DEPLOY_ENV" in
+  main-preview)
+    SITE_HOST=br-main.preview.ciproxy.dev
+    DASHBOARD_HOST=br-main.preview.app.ciproxy.dev
+    RELEASE_HOST=br-main.preview.get.ciproxy.dev ;;
+  production)
+    SITE_HOST=ciproxy.dev
+    DASHBOARD_HOST=app.ciproxy.dev
+    RELEASE_HOST=get.ciproxy.dev ;;
+esac
+curl -fsSI "https://$SITE_HOST/" "https://$SITE_HOST/docs/"
+curl -fsSI "https://$DASHBOARD_HOST/"
+curl -fsS "https://$RELEASE_HOST/ciproxy-agent" | head -n 5
+```
+
+Certificate and domain status must be `ACTIVE`. Set
+`PUBLIC_UPTIME_ENABLED=true` in the selected environment.
+Redeploy with fresh all-jobs plans. Checks run each minute from Europe,
+USA, and Asia Pacific. Alerts need two failing locations for five minutes.
+
+After launch, production's separate preview-edge stage promotes preview's
+flags and addresses after its own completed deployment. See [operations](operations.md).

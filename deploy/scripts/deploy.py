@@ -11,16 +11,20 @@ from deploy_support import (
     sync_release_secret, terraform_init,
 )
 from terraform_roots import ENVIRONMENTS, backend
+from workload_snapshot import save as save_workload_inputs
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("environment", choices=["main-preview", "production"])
     parser.add_argument("--phase", choices=["workloads", "invalidate"], default="workloads")
+    parser.add_argument("--target", choices=ENVIRONMENTS, help="Central production preview invalidation only.")
     args = parser.parse_args()
-    environment = args.environment
+    environment = args.target or args.environment
+    if args.target and (args.environment != "production" or args.phase != "invalidate"):
+        raise ValueError("Only production can invalidate the promoted preview edge.")
     project = ENVIRONMENTS[environment]
-    foundation = backend(environment, "foundation")
+    foundation = backend(environment, "data")
     root = foundation.directory
     scratch = Path(".context/deploy") / environment
     scratch.mkdir(parents=True, exist_ok=True)
@@ -45,13 +49,10 @@ def main():
     run("gcloud", "container", "clusters", "get-credentials", config["cluster_name"],
         f"--region={config['region']}", f"--project={project}", "--dns-endpoint")
     current_runtime = run("kubectl", "get", "deployment", "control-plane",
-                          "--namespace=ciproxy", "--ignore-not-found", "-o", "name", capture=True)
+                          f"--namespace={config['namespace']}", "--ignore-not-found", "-o", "name", capture=True)
     if current_runtime.strip() and not runtime_enabled:
         if os.environ.get("CONTROL_PLANE_RUNTIME_READY") != "false":
             raise ValueError("A running control plane requires true or explicit false readiness.")
-    namespace = {"apiVersion": "v1", "kind": "Namespace", "metadata": {"name": "ciproxy"}}
-    run("kubectl", "apply", "--server-side", "--field-manager=ciproxy-deploy", "-f", "-",
-        input_text=json.dumps(namespace))
     sync_release_secret(config)
 
     release, ciproxy = helm_values(config, digest, runtime_enabled, control_image)
@@ -60,20 +61,21 @@ def main():
     ciproxy_file = scratch / "ciproxy-values.json"
     release_file.write_text(json.dumps(release))
     ciproxy_file.write_text(json.dumps(ciproxy))
-    run("helm", "upgrade", "--install", "cli-release-server", "deploy/helm/cli-release-server",
-        "--namespace=ciproxy", "--values=deploy/helm/release-values.yaml",
+    run("helm", "upgrade", "--install", config["prefix"] + "-release", "deploy/helm/cli-release-server",
+        f"--namespace={config['namespace']}", "--values=deploy/helm/release-values.yaml",
         f"--values={release_file}", "--wait", "--timeout=10m", "--history-max=5")
-    run("helm", "upgrade", "--install", "ciproxy", "deploy/helm/ciproxy",
-        "--namespace=ciproxy", f"--values={ciproxy_file}",
+    run("helm", "upgrade", "--install", config["prefix"], "deploy/helm/ciproxy",
+        f"--namespace={config['namespace']}", f"--values={ciproxy_file}",
         "--wait", "--timeout=10m", "--history-max=5")
 
     for package, directory in [("site", "ts/site/dist"), ("dashboard", "ts/app/dist")]:
         run("python3", "deploy/scripts/publish_static.py", f"--directory={directory}",
             f"--bucket={config['buckets'][package]}")
 
-    neg_zones("release-neg", config["prefix"] + "-release", config["allowed_zones"])
+    neg_zones("release-neg", config["prefix"] + "-release", config["allowed_zones"], config["namespace"])
     if runtime_enabled:
-        neg_zones("control-plane-neg", config["prefix"] + "-control", config["allowed_zones"])
+        neg_zones("control-plane-neg", config["prefix"] + "-control", config["allowed_zones"], config["namespace"])
+    save_workload_inputs(environment, config, runtime_enabled)
     summary = (
         f"Deployed {environment} static exports and the release server.\n"
         f"Control-plane runtime enabled: {str(runtime_enabled).lower()}.\n"

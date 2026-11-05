@@ -13,9 +13,6 @@ variable "project_id" {
   type = string
 }
 
-variable "environment" {
-  type = string
-}
 
 provider "google" {
   project = var.project_id
@@ -36,7 +33,8 @@ resource "google_project_service" "identity" {
 # bootstrap.py first uses a local-backend copy, then migrates that state to
 # this bucket. Subsequent plans and applies use this remote backend in CI.
 resource "google_storage_bucket" "state" {
-  name                        = "ciproxy-${var.environment}-tfstate-${var.project_id}"
+  for_each                    = toset(["trust", "shared", "main-preview", "production"])
+  name                        = "ciproxy-${each.key}-tfstate-${var.project_id}"
   location                    = "europe-west1"
   uniform_bucket_level_access = true
   public_access_prevention    = "enforced"
@@ -50,5 +48,5 @@ resource "google_storage_bucket" "state" {
 }
 
 output "state_bucket" {
-  value = google_storage_bucket.state.name
+  value = { for scope, bucket in google_storage_bucket.state : scope => bucket.name }
 }

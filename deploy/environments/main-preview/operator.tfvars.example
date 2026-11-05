@@ -1,1 +1,6 @@
+# Use only after the corresponding workloads and NEGs are ready.
+control_plane_enabled = false
+enable_uptime_checks = false
 notification_emails = ["operator@example.com"]
+allowed_zones = ["europe-west1-b", "europe-west1-c", "europe-west1-d"]
+source_sha = "REPLACE_WITH_DEPLOYED_COMMIT_SHA"
