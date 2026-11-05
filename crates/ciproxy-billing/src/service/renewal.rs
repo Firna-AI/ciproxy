@@ -9,7 +9,7 @@ use crate::error::{Error, Result, ResultExt};
 use crate::stripe::wire::invoice::{BillingReason, Invoice, InvoiceStatus};
 use crate::stripe::wire::types::Subscription;
 
-use super::collection_stop::current_stop;
+use super::collection_decisions::{CollectionObservation, merge};
 use super::invoice_evidence::InvoiceEvidence;
 use super::runtime::BillingService;
 use super::transition::{confirmed, terminal};
@@ -27,6 +27,7 @@ impl BillingService {
         }
         confirmed(old, current, self.clock.now(), None)?;
         let renewal = if terminal(current) {
+            self.complete_collection(session, &current.id)?;
             None
         } else {
             self.renewal_state(session, old, current, evidence)?
@@ -73,17 +74,8 @@ impl BillingService {
             if invoice.billing_reason != BillingReason::SubscriptionCycle && previous.is_none() {
                 continue;
             }
-            let mut renewal = observed(previous, old, current, &invoice, evidence)?;
-            if renewal
-                .automatic_stop
-                .as_ref()
-                .is_some_and(|stop| !current_stop(current, &invoice, stop))
-            {
-                renewal.automatic_stop = None;
-            }
-            if previous != Some(&renewal) {
-                session.save_renewal(&renewal).internal()?;
-            }
+            let renewal =
+                self.observe_invoice(session, previous, old, current, &invoice, evidence)?;
             renewals.retain(|renewal| renewal.invoice_id != id);
             renewals.push(renewal);
         }
@@ -104,6 +96,50 @@ impl BillingService {
         Ok(failed.cloned())
     }
 
+    pub(super) fn observe_invoice(
+        &self,
+        session: &mut dyn BillingSession,
+        previous: Option<&Renewal>,
+        old: &BillingState,
+        current: &Subscription,
+        invoice: &Invoice,
+        evidence: Option<&InvoiceEvidence>,
+    ) -> Result<Renewal> {
+        let mut renewal = observed(previous, old, current, invoice, evidence);
+        let retry = invoice
+            .next_payment_attempt
+            .map(|seconds| DateTime::from_timestamp(seconds, 0).ok_or(Error::StripeState))
+            .transpose();
+        renewal.next_retry_at = match retry {
+            Ok(retry) => retry,
+            Err(error) => {
+                if previous.map(|renewal| &renewal.collection) != Some(&renewal.collection) {
+                    session.save_renewal(&renewal).internal()?;
+                }
+                return Err(error);
+            }
+        };
+        if previous != Some(&renewal) {
+            session.save_renewal(&renewal).internal()?;
+        }
+        Ok(renewal)
+    }
+
+    fn complete_collection(
+        &self,
+        session: &mut dyn BillingSession,
+        subscription_id: &str,
+    ) -> Result<()> {
+        for mut renewal in session.renewals(subscription_id).internal()? {
+            let old = renewal.collection.clone();
+            merge(&mut renewal.collection, CollectionObservation::ConfirmedEnd);
+            if old != renewal.collection {
+                session.save_renewal(&renewal).internal()?;
+            }
+        }
+        Ok(())
+    }
+
     pub(super) fn owned_invoice(&self, current: &Subscription, id: &str) -> Result<Invoice> {
         let record = self.stripe.invoice(id)?;
         if record.invoice.id != id
@@ -122,7 +158,7 @@ fn observed(
     current: &Subscription,
     invoice: &Invoice,
     evidence: Option<&InvoiceEvidence>,
-) -> Result<Renewal> {
+) -> Renewal {
     let mut renewal = previous.cloned().unwrap_or_else(|| Renewal {
         customer_id: current.customer.clone(),
         subscription_id: current.id.clone(),
@@ -134,8 +170,7 @@ fn observed(
             .then_some(old.failed_at)
             .flatten(),
         next_retry_at: None,
-        automatic_stop: None,
-        collection_changed_at: None,
+        collection: Default::default(),
     });
     renewal.outcome = match invoice.status {
         InvoiceStatus::Draft => RenewalOutcome::Draft,
@@ -146,24 +181,24 @@ fn observed(
     };
     renewal.amount_remaining = invoice.amount_remaining;
     renewal.attempted = invoice.attempted;
-    renewal.next_retry_at = invoice
-        .next_payment_attempt
-        .map(|seconds| DateTime::from_timestamp(seconds, 0).ok_or(Error::StripeState))
-        .transpose()?;
-    if let Some(evidence) = evidence.filter(|evidence| evidence.invoice_id == invoice.id) {
-        if let Some(failed_at) = evidence.failed_at {
-            renewal.failed_at = Some(
-                renewal
-                    .failed_at
-                    .map_or(failed_at, |old| old.max(failed_at)),
-            );
-        }
-        if let Some((at, stop)) = evidence.collection_change(current)
-            && renewal.collection_changed_at.is_none_or(|old| at >= old)
-        {
-            renewal.collection_changed_at = Some(at);
-            renewal.automatic_stop = stop;
-        }
+    if let Some(evidence) = evidence.filter(|evidence| evidence.invoice_id == invoice.id)
+        && let Some(failed_at) = evidence.failed_at
+    {
+        renewal.failed_at = Some(
+            renewal
+                .failed_at
+                .map_or(failed_at, |old| old.max(failed_at)),
+        );
     }
-    Ok(renewal)
+    merge(
+        &mut renewal.collection,
+        CollectionObservation::Fresh {
+            current,
+            invoice,
+            change: evidence
+                .filter(|evidence| evidence.invoice_id == invoice.id)
+                .and_then(|evidence| evidence.collection_change(current)),
+        },
+    );
+    renewal
 }

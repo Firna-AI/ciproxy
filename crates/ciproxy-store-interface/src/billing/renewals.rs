@@ -3,6 +3,8 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use super::collection::CollectionDecisions;
+
 /// A verified invoice outcome retained after payment or subscription end.
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct Renewal {
@@ -22,10 +24,8 @@ pub struct Renewal {
     pub failed_at: Option<DateTime<Utc>>,
     /// The next provider retry for this invoice, when available.
     pub next_retry_at: Option<DateTime<Utc>>,
-    /// Verified automatic collection stop, retained for cancellation retries.
-    pub automatic_stop: Option<AutomaticStop>,
-    /// Latest signed collection change, including manual changes that supersede a stop.
-    pub collection_changed_at: Option<DateTime<Utc>>,
+    /// Per-event cancellation decisions, retained through retries and recovery.
+    pub collection: CollectionDecisions,
 }
 
 /// Invoice outcomes which determine whether payment remains due.
@@ -42,15 +42,4 @@ pub enum RenewalOutcome {
     Void,
     /// Stripe marked the invoice uncollectible.
     Uncollectible,
-}
-
-/// Signed evidence verified against current owned subscription and invoice reads.
-#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
-pub struct AutomaticStop {
-    /// The verified event that stopped automatic collection.
-    pub event_id: String,
-    /// The provider event creation time.
-    pub stopped_at: DateTime<Utc>,
-    /// The attempt that stopped collection, without a fixed retry limit.
-    pub attempt_count: u32,
 }

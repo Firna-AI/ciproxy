@@ -24,6 +24,10 @@ pub(super) fn handle(state: &mut State, request: &Request) -> (u16, String) {
         post(state, request, path)
     };
     let (status, body) = body;
+    if request.method == "DELETE" && state.lose_next_delete && status == 200 {
+        state.lose_next_delete = false;
+        return (503, "{}".into());
+    }
     if request.method == "POST"
         && state.lose_next_post
         && !path.ends_with("/prices")

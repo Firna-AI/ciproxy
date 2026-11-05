@@ -1,7 +1,7 @@
 //! Invoice identity and collection provenance from verified signed events.
 
 use chrono::{DateTime, Utc};
-use ciproxy_store_interface::billing::renewals::AutomaticStop;
+use ciproxy_store_interface::billing::collection::AutomaticStop;
 
 use crate::error::{Error, Result};
 use crate::stripe::wire::invoice::{BillingReason, CollectionMethod, InvoiceStatus};
@@ -11,14 +11,19 @@ use crate::webhook::{Event, Payload};
 pub(super) struct InvoiceEvidence {
     pub(super) invoice_id: String,
     pub(super) failed_at: Option<DateTime<Utc>>,
-    collection_change: Option<CollectionChange>,
+    collection_change: Option<SignedCollectionChange>,
 }
 
-struct CollectionChange {
+struct SignedCollectionChange {
     customer: Option<String>,
     subscription: Option<String>,
     at: DateTime<Utc>,
     automatic_stop: Option<AutomaticStop>,
+}
+
+pub(super) enum CollectionChange {
+    Automatic(AutomaticStop),
+    Other(DateTime<Utc>),
 }
 
 impl InvoiceEvidence {
@@ -57,7 +62,7 @@ impl InvoiceEvidence {
                     invoice_id: invoice.id.clone(),
                     failed_at: None,
                     collection_change: changed.filter(|(before, after)| before != after).map(
-                        |_| CollectionChange {
+                        |_| SignedCollectionChange {
                             customer: invoice.customer.clone(),
                             subscription: invoice
                                 .parent
@@ -83,16 +88,16 @@ impl InvoiceEvidence {
         Ok(Some(evidence))
     }
 
-    pub(super) fn collection_change(
-        &self,
-        current: &Subscription,
-    ) -> Option<(DateTime<Utc>, Option<AutomaticStop>)> {
+    pub(super) fn collection_change(&self, current: &Subscription) -> Option<CollectionChange> {
         let change = self.collection_change.as_ref()?;
         if change.customer.as_deref() != Some(&current.customer)
             || change.subscription.as_deref() != Some(&current.id)
         {
             return None;
         }
-        Some((change.at, change.automatic_stop.clone()))
+        Some(match &change.automatic_stop {
+            Some(stop) => CollectionChange::Automatic(stop.clone()),
+            None => CollectionChange::Other(change.at),
+        })
     }
 }

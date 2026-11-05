@@ -2,6 +2,7 @@
 
 pub mod api;
 mod checkout;
+mod collection_decisions;
 mod collection_stop;
 mod commands;
 mod completion;

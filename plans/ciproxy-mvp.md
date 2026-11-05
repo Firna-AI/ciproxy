@@ -650,6 +650,11 @@ the event both read the session, so the tier changes once.
       Replay the final retry and exclude manual stops and paid invoices.
       Branch: `conductor/ciproxy-mvp-milestone-17-billing-live-fixes`.
       Evidence: `.context/ciproxy-mvp/billing-live-fixes/verification.md`.
+- [x] Apply PR #23 review finding 1, option B. Keep eligible, superseded,
+      and completed cancellation decisions for each signed stop event.
+      Test invalidation before manual events, restart, and a new stop.
+      Branch: `conductor/ciproxy-mvp-milestone-17-billing-live-fixes`.
+      Evidence: `.context/ciproxy-mvp/billing-live-fixes/pr23-fix-round-1/`.
 - [ ] Test each state with recorded events and the Stripe test mode.
       The fixed event fixtures and fake HTTP Stripe tests pass locally.
       Orchestrator: run the

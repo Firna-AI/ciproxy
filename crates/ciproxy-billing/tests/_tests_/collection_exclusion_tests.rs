@@ -1,6 +1,7 @@
 //! Fresh ownership and collection evidence exclude recovery and operator changes.
 
 use ciproxy_billing::service::view::EventOutcome;
+use ciproxy_store_interface::billing::collection::CancellationState;
 use ciproxy_store_interface::billing::state::{SubscriptionState, Tier};
 use serde_json::{Value, json};
 
@@ -76,7 +77,8 @@ fn automatic_stop_requires_the_same_fresh_unpaid_automatic_unpaused_invoice() {
                 .renewals(id)
                 .unwrap()
                 .iter()
-                .filter(|renewal| renewal.automatic_stop.is_some())
+                .flat_map(|renewal| &renewal.collection.decisions)
+                .filter(|decision| decision.state == CancellationState::Eligible)
                 .count(),
             0,
             "{variation}"
@@ -212,8 +214,13 @@ fn a_payment_void_or_pause_between_verification_and_cancellation_prevents_delete
             .unwrap()
             .unwrap();
         assert_eq!(
-            session.renewals(id).unwrap()[0].automatic_stop,
-            None,
+            session.renewals(id).unwrap()[0]
+                .collection
+                .decisions
+                .iter()
+                .map(|decision| decision.state)
+                .collect::<Vec<_>>(),
+            vec![CancellationState::Superseded],
             "{variation}"
         );
     }

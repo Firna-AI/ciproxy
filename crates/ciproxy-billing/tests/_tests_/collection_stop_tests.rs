@@ -2,6 +2,7 @@
 
 use ciproxy_billing::error::Error;
 use ciproxy_billing::service::view::EventOutcome;
+use ciproxy_store_interface::billing::collection::CancellationState;
 use ciproxy_store_interface::billing::renewals::RenewalOutcome;
 use ciproxy_store_interface::billing::state::{SubscriptionState, Tier};
 use serde_json::json;
@@ -51,10 +52,20 @@ fn verified_stop_retries_after_provider_failure_and_restart_without_its_original
         assert_eq!(renewals[0].outcome, RenewalOutcome::Open);
         assert_eq!(
             renewals[0]
-                .automatic_stop
-                .as_ref()
-                .map(|stop| (stop.event_id.as_str(), stop.attempt_count)),
-            Some(("evt_1UYGEFAGa5h8DTS3z2H40Eaa", 9))
+                .collection
+                .decisions
+                .iter()
+                .map(|decision| (
+                    decision.stop.event_id.as_str(),
+                    decision.stop.attempt_count,
+                    decision.state
+                ))
+                .collect::<Vec<_>>(),
+            vec![(
+                "evt_1UYGEFAGa5h8DTS3z2H40Eaa",
+                9,
+                CancellationState::Eligible
+            )]
         );
         assert!(!session.event_applied(stop["id"].as_str().unwrap()).unwrap());
     }
@@ -77,6 +88,22 @@ fn verified_stop_retries_after_provider_failure_and_restart_without_its_original
     assert_eq!(
         state.ended_banner_until,
         Some("2027-01-19T04:12:02Z".parse().unwrap())
+    );
+    let completed = database
+        .store
+        .try_lock_billing(recording.initial_state.workspace_id)
+        .unwrap()
+        .unwrap()
+        .renewals(id)
+        .unwrap();
+    assert_eq!(
+        completed[0]
+            .collection
+            .decisions
+            .iter()
+            .map(|decision| decision.state)
+            .collect::<Vec<_>>(),
+        vec![CancellationState::Completed]
     );
     assert_eq!(deliver(&database, &fake, stop), EventOutcome::Applied);
     assert_eq!(deliver(&database, &fake, stop), EventOutcome::Duplicate);
@@ -146,6 +173,23 @@ fn unconfirmed_or_wrong_owner_cancellation_never_records_free() {
             ),
             "{variation}"
         );
+        let renewals = database
+            .store
+            .try_lock_billing(recording.initial_state.workspace_id)
+            .unwrap()
+            .unwrap()
+            .renewals(id)
+            .unwrap();
+        assert_eq!(
+            renewals[0]
+                .collection
+                .decisions
+                .iter()
+                .map(|decision| decision.state)
+                .collect::<Vec<_>>(),
+            vec![CancellationState::Eligible],
+            "{variation}"
+        );
     }
 }
 
@@ -180,7 +224,15 @@ fn a_newer_manual_change_prevents_replaying_an_older_automatic_stop() {
         .unwrap()
         .renewals(id)
         .unwrap();
-    assert_eq!(renewals[0].automatic_stop, None);
+    assert_eq!(
+        renewals[0]
+            .collection
+            .decisions
+            .iter()
+            .map(|decision| decision.state)
+            .collect::<Vec<_>>(),
+        vec![CancellationState::Superseded]
+    );
     assert_eq!(
         fake.state
             .lock()

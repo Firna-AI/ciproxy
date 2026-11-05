@@ -130,6 +130,8 @@ A failed state write rolls its receipt back.
 Renewal outcomes use separate workspace-scoped invoice records.
 They preserve recovery and verified automatic stops after banner fields clear.
 An exclusive session saves stop evidence before a provider cancellation request.
+The same renewal record retains every stop event's cancellation decision.
+Superseded and completed decisions survive later events and restarts.
 The last organization removal also persists a cancellation request.
 It stays until billing handles it, including unfinished Checkout.
 

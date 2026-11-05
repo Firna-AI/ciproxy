@@ -3,6 +3,7 @@
 mod changes_tests;
 mod checked_stripe;
 mod checkout_tests;
+mod collection_decision_tests;
 mod collection_exclusion_tests;
 mod collection_stop_tests;
 mod database;

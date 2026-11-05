@@ -85,9 +85,15 @@ reads before they can end coverage.
 Manual stops, paused collection, payment, and void invoices cannot request
 an end.
 The verified stop persists before an immediate Stripe cancellation request.
+Each stop event keeps an Eligible, Superseded, or Completed decision.
+A fresh mismatch supersedes that event before further reconciliation.
+Its later deliveries cannot restore cancellation authority.
+A distinct later automatic stop keeps its own decision.
 Retries survive provider failures and a service restart.
 The request creates no invoice or proration.
 Coverage changes to Free only after Stripe confirms the same subscription ended.
+A matching confirmed end completes eligible decisions, including after a
+lost cancellation reply.
 Failed renewal dates come from signed invoice.payment_failed events.
 Reconciliation keeps the failed invoice identity and event date together.
 It applies the date only to that concrete failed renewal.
@@ -261,6 +267,8 @@ Never run this smoke script with a live key.
 - [src/service/renewal.rs](src/service/renewal.rs) refreshes failed renewals.
 - [src/service/collection_stop.rs](src/service/collection_stop.rs) retries
   verified final failures and confirms the Stripe end.
+- [src/service/collection_decisions.rs](src/service/collection_decisions.rs)
+  owns every transition of a stop event's cancellation decision.
 - [src/stripe/api.rs](src/stripe/api.rs) owns the dyn StripeApi boundary.
 - [src/stripe/http/client.rs](src/stripe/http/client.rs) owns the HTTP adapter.
 - [src/webhook.rs](src/webhook.rs) verifies raw signatures and routes events.

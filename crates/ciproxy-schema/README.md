@@ -43,6 +43,8 @@ Each has a distinct negative advisory-lock key.
 Billing events keep committed receipt identifiers.
 Billing renewals retain invoice outcomes and verified automatic collection
 stops.
+One forward migration preserves legacy pending stops as eligible per-event
+decisions and retains the latest collection-change time.
 Their workspace ownership and subscription index keep queries scoped.
 The last organization removal keeps a durable cancellation request.
 Later milestones own members and roles.
