@@ -1144,6 +1144,12 @@ Answers of 5 November 2026:
   PodSecurity level, with labels that only the operator can change, so no
   pod mounts `hostPath`. Rejected: a custom admission policy, and a trusted
   deployment controller.
+- Item 75, A: the cost claim keeps the AX42 with both disks combined into
+  one filesystem of 1,024 GB, for six default jobs. The site and the mockups
+  state this basis, for example RAID0 or one LVM volume. The machine setup
+  docs say that a machine used only for CI can combine its disks, because
+  its jobs, machine cache, and Docker disks are disposable. Rejected: the
+  default mirror of 512 GB, and another machine.
 - Item 70, E: this whole repository becomes public now, in place of a public
   copy of the open parts at launch. The agent builds and releases in public.
   This replaces the code location rule of the foundation plan. The closed
@@ -2045,7 +2051,7 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 74 on 5 November 2026. Item 75 still waits. The
+The user answered items 54 to 75 on 5 November 2026. No item still waits. The
 conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
@@ -2685,6 +2691,8 @@ keep the letters that the user saw.
 
 ### 75. The AX42 cost claim needs a disk basis
 
+**Answer, 5 November 2026:** A.
+
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Implementation, the workspace of item 73.
 - **Category:** Docs or spec.
@@ -2725,5 +2733,4 @@ keep the letters that the user saw.
   claim did not depend on the setup.
 - **Recommendation:** A. It keeps the machine and the story of the fixtures,
   and it tells the customer how to get the claimed result.
-- **Action:** ask the user, because each option changes a public claim or
-  its basis.
+- **Action:** answered A.
