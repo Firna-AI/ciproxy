@@ -2088,7 +2088,7 @@ See the answers above.
 ## Open items of 4 November 2026
 
 The user answered items 54 to 75 on 5 November 2026, and item 76 became a
-design call. No item still waits. The
+design call. Item 77 still waits. The
 conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
@@ -2828,3 +2828,15 @@ buckets must be public.
   backend bucket, so the grant follows the backend buckets. If the
   organization rule refuses the grant, the item returns to the user with A,
   B, and C.
+
+### 77. A label can be smaller than the job image
+
+- **Severity:** Medium. **Effort:** Medium.
+- **Source:** Implementation, pull request #25.
+- **Record:** the follow-up item
+  [labels smaller than the job image](follow-ups/labels-smaller-than-job-image.md)
+  holds the background, the options A to D, and the recommendation.
+- **Recommendation:** A. A job of such a label runs on the image disk size,
+  the scheduler reserves that size, and the label dialog warns.
+- **Action:** ask the user. Nothing waits for the answer before the label
+  settings milestone.
