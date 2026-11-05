@@ -2054,7 +2054,7 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 75 on 5 November 2026. No item still waits. The
+The user answered items 54 to 75 on 5 November 2026. Item 76 still waits. The
 conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
@@ -2737,3 +2737,50 @@ keep the letters that the user saw.
 - **Recommendation:** A. It keeps the machine and the story of the fixtures,
   and it tells the customer how to get the claimed result.
 - **Action:** answered A.
+
+### 76. The organization forbids the public site buckets
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Implementation, the read-only checks before the GCP setup.
+- **Category:** Process.
+- **Location:** the organization policy `iam.allowedPolicyMemberDomains` of
+  the futex.ai organization, and the public buckets of the foundation.
+- **Terms:**
+  - **Domain-restricted sharing:** the organization policy that allows IAM
+    grants only to members of the futex.ai Google Workspace.
+  - **`allUsers`:** the IAM member for everyone on the internet.
+- **Background:**
+  - The site and the dashboard are static files in buckets. The load
+    balancer serves them through Cloud CDN, so these buckets grant read
+    access to `allUsers`.
+  - The futex.ai organization enforces domain-restricted sharing, set on
+    21 April 2026. Every project inherits it, also `ciproxy`.
+  - The user has the Organization Administrator role. That role can grant
+    the Organization Policy Administrator role, which changes the policy.
+- **Problem:** The first apply of the foundation fails when it grants read
+  access to `allUsers`.
+- **Impact if no action:** The site and the dashboard cannot go online.
+- **Root question:** How can the public files be served while the
+  organization keeps its sharing rule?
+- **Options:**
+  - **A.** Allow all members in the project `ciproxy` only, with a project
+    override of the policy. Other projects keep the rule. Any resource in
+    `ciproxy` can then get a public grant, and only Terraform writes grants
+    there. Effort: Small.
+  - **B.** Keep the rule, and allow all members only on resources with a
+    tag, for example `public-access`. Tag only the site and dashboard
+    buckets in Terraform. It needs the Tag Administrator role and a
+    condition in the organization policy. Effort: Medium.
+  - **C.** Serve the static files from a small web server in the cluster, so
+    no bucket needs a public grant. It adds a workload and changes the
+    deploy design. Effort: Medium.
+- **Left out:** Signed URLs for the whole site: browsers cannot fetch a
+  public site with them.
+- **Wider fix:** B. Only the resources with the tag can be public.
+- **Previous examples:** None found. The projects `mokly-508518` and
+  `internal-498318` keep the rule with no exception.
+- **Recommendation:** A. The project exists to serve a public product,
+  Terraform is the only writer of its grants, and it unblocks the setup
+  today. B protects the project best.
+- **Action:** ask the user, because each option changes an organization
+  policy or the deploy design, outside the project.
