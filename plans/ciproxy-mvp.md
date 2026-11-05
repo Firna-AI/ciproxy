@@ -734,10 +734,12 @@ the event both read the session, so the tier changes once.
       the bank confirmation. The rerun on 5 November 2026 at `287f1bc`,
       after the merge of #23, gave 37 passed, 0 failed, and 1 skipped.
       Evidence: `.context/ciproxy-mvp/billing-live/report.md`.
-- [ ] User: check that the Stripe account sends receipt emails for
-      successful payments. In the Dashboard, open the settings, then
-      "Customer emails". The live checklist skipped this row, because only
-      the Dashboard shows it.
+- [ ] User: turn on receipt emails for successful payments in the sandbox
+      now and in the live Stripe account before launch. Open
+      <https://dashboard.stripe.com/settings/emails>, then turn on
+      **Successful payments** under **Payments**. The live checklist skipped
+      this row, because only the Dashboard shows it. Test payments never
+      send these emails.
 
 ## Milestone 18: Dashboard API: jobs, usage, savings, and billing
 
