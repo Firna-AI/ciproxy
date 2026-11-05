@@ -122,7 +122,7 @@ GitHub permissions, keys, isolation, and job data.
 - The ciproxy GitHub App asks for "Self-hosted runners", read and write, to
   start a runner for each job.
 - The app asks for "Metadata", read, to list the repositories.
-- The app asks for "Actions", read, to read the ref, the event, and the head
+- The app asks for "Actions", read, to read the event and the head
   repository of the run of each job from the GitHub API.
 - ciproxy needs these facts for
   [trusted write-back](cache.md#trusted-write-back) and for the
@@ -130,14 +130,18 @@ GitHub permissions, keys, isolation, and job data.
 - The "Actions" permission also lets the app read the logs and the
   artifacts of each run. The control plane never reads them.
 - The app asks for no other permission.
-- **Decision:** the control plane reads the facts of each run from the
-  GitHub API with the "Actions" permission. Rejected for now: the first
-  report of the job-started hook in the job VM, because it depends on the
-  order of the setup steps of each runner version. Rejected: trust in no
-  ref, because the machine cache then serves only what the GitHub cache
-  finds, and no Docker disk keeps its changes. Rejected: an organization
-  webhook, because an owner must add it by hand. Reason: job code cannot
-  change what the GitHub API returns.
+- The machine checks the job's runtime-token signature, issuer, validity,
+  and assignment identity outside the job VM.
+- Its signed write scope supplies the full ref, as
+  [Trusted write-back](cache.md#trusted-write-back) says.
+- A failed check selects the unknown-ref rules of
+  [Cache scopes](cache.md#cache-scopes), without failing the job.
+- **Decision:** the App keeps all three permissions. The API supplies the
+  event and head repository, and the checked token supplies the full ref.
+  Rejected: the API alone, because its branch name can also name a tag.
+  Rejected: a hook or an organization webhook, because the checked token
+  needs no setup-order trust or manual webhook. Rejected: no checked ref,
+  because it prevents trusted shared writes and persistent Docker changes.
 
 ## Repository access
 

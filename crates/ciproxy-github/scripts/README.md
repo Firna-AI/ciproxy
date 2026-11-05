@@ -74,3 +74,46 @@ Run the offline job-metadata regression without GitHub credentials:
 ```sh
 python3 -B crates/ciproxy-github/scripts/test_probe_group_flow.py -v
 ```
+
+## Runtime-token release probe
+
+Run `runtime_token_probe.py` in the private test repository before each
+image release. It needs Python 3 and OpenSSL. It needs the original
+`ACTIONS_RUNTIME_TOKEN` of its current job. It uses no App key, operator
+token, or extra GitHub permission. It checks RS256 against GitHub's public
+JWKS, exact issuer, and validity before it prints anything from the claims.
+
+Ordinary shell steps can lack the original runtime values. Invoke the
+probe as a child of a Node action that already receives them. Make the
+script available at an absolute path in that action. Its entry point can
+use this code:
+
+```javascript
+const { spawnSync } = require('node:child_process');
+const result = spawnSync('python3', ['-B', '/absolute/path/runtime_token_probe.py'], {
+  env: process.env,
+  stdio: 'inherit',
+});
+process.exit(result.status ?? 1);
+```
+
+The trusted runner handoff can instead supply the original environment:
+
+```sh
+python3 -B crates/ciproxy-github/scripts/runtime_token_probe.py
+```
+
+Keep the token in the inherited environment. Never echo it or put it on a
+command argument. The probe prints only claim names, decoded `ac` scope
+and permission pairs, and repository, run, job, and runner identity claims.
+It prints no token, signature, other claim value, or exception body.
+Failure returns a nonzero status and a fixed message with no token details.
+Temporary OpenSSL inputs stay under `.context/` and are deleted on exit.
+
+Check a default-branch push, a branch, a same-name tag, a pull request,
+`pull_request_target`, a read-only cache job, and local and remote reusable
+workflows. Check a ciproxy JIT job as well. Compare its repository and run
+with the API and scale message. Compare its job UUID and runner ID with the
+scale message and JIT registration. A read-only job has no write scope.
+Keep raw scope keys such as `refs/heads/refs/tags/main` in the evidence.
+Save only this safe output under `.context/` for the release review.

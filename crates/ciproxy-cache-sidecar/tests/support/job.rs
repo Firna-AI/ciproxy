@@ -1,5 +1,6 @@
 //! The runner's literal JSON and transfer calls through the public proxy.
 
+use ciproxy_protocol::jobs::JobScope;
 use ciproxy_protocol::secret::Secret;
 use reqwest::Client;
 use serde_json::{Value, json};
@@ -11,6 +12,8 @@ pub struct Job {
     pub origin: String,
     pub client: Client,
     pub token: Secret,
+    pub github_token: Secret,
+    pub scope: JobScope,
     pub task: JoinHandle<()>,
 }
 
