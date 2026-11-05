@@ -24,6 +24,15 @@ impl BillingStore for PgStore {
         rows::read(&mut *self.connection()?, workspace_id)
     }
 
+    fn billing_workspace_for_subscription(&self, subscription_id: &str) -> Result<Option<Uuid>> {
+        billing_accounts::table
+            .filter(billing_accounts::subscription_id.eq(subscription_id))
+            .select(billing_accounts::workspace_id)
+            .first::<Uuid>(&mut *self.connection()?)
+            .optional()
+            .store()
+    }
+
     fn try_lock_billing(&self, workspace_id: Uuid) -> Result<Option<Box<dyn BillingSession>>> {
         let key = billing_accounts::table
             .find(workspace_id)

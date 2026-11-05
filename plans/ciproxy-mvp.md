@@ -190,8 +190,11 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
       each environment to its own resources. Apply the shared parts from
       the main preview until launch, and only from `main` after it.
       Branch: `conductor/ciproxy-mvp-milestone-5-shared-project`.
-- [ ] User: move `Firna-AI` to GitHub Team, as item 57 says. Orchestrator:
+- [x] User: move `Firna-AI` to GitHub Team, as item 57 says. Orchestrator:
       add the ruleset on `main` that needs a pull request and the gate.
+      Done on 5 November 2026: ruleset `main-pull-request-and-gate`, ID
+      `26601138`, active, with deletion, non-fast-forward, pull request, and
+      required status check rules.
       Branch: `codex/m5-terraform-promotion`.
   - [x] Prepare and test the idempotent `deploy/scripts/github-ruleset.sh`.
         Branch: `codex/m5-terraform-promotion`.
@@ -386,24 +389,82 @@ Depends on: 3
 Firecracker VM, as `agent.md` says, which the Firecracker spike confirms. It
 ships through `futex-ai/cli-release`.
 
-- [ ] Add `install --token` and `uninstall`. My call: "Remove a machine" needs
+Orchestrator call, 5 November 2026: Milestone 13 owns the cache handoff and
+the Docker disk attachment of each job. Reason: that work crosses the control
+plane, the agent, the guest, the runner patch, and the sidecar.
+
+Implementation calls, 5 November 2026: a provisional image budget of
+4 SI GB, persisted on first install, leaves system space on minimum hosts.
+Measured XFS costs plus conservative metadata headroom stay in the host
+reserve. The image measurement sets the real budget later.
+
+- [x] Add `install --token` and `uninstall`. My call: "Remove a machine" needs
       `uninstall`.
-- [ ] Report the hardware and the slots every 10 seconds. Reconnect after a
+      Registration now saves the workspace returned by the gateway.
+      Host preparation follows the approved XFS-file approach below.
+      Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
+- [x] Report the hardware and the slots every 10 seconds. Reconnect after a
       growing wait, and apply "Drain and remove".
-- [ ] Run each VM under the jailer in its own systemd unit, on a reflink
+      Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
+- [x] Run each VM under the jailer in its own systemd unit, on a reflink
       copy of the image, with the internet and the machine cache only. My
       call: an agent restart then keeps the VMs.
-- [ ] Pass registrations over vsock only. Give each VM an empty drive for a
+      Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
+- [x] Pass registrations over vsock only. Give each VM an empty drive for a
       Docker disk.
-- [ ] Fetch and check the newest image. Update the agent with `cli-updater`
+      Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
+- [x] Fetch and check the newest image. Update the agent with `cli-updater`
       every hour.
-- [ ] Release with release-plz and `scripts/cli-release.sh package`, as
+      Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
+- [x] Release with release-plz and `scripts/cli-release.sh package`, as
       `x86_64-unknown-linux-gnu` for old glibc versions.
-- [ ] Test with fakes. Smoke-test a Docker job, a warm runner, and a restart
-      during a job.
-- [ ] Prepare the host in `install`, as item 62 says: Firecracker, the
+      Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
+- [x] Keep install tokens and machine credentials out of WebSocket logs at
+      every verbosity. Test real transport traffic with TRACE enabled.
+      Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
+- [x] Test with fakes.
+      Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
+- [x] Prepare the host in `install`, as item 62 says: Firecracker, the
       jailer, the host tools, and a reflink disk area in one XFS file on any
       file system.
+      Orchestrator call, 5 November 2026: always use the XFS file, also on
+      a file system with reflinks. Reason: every machine uses one path.
+      Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
+- [x] Size the area as the job disk, an image budget, and the XFS overhead
+      measured after formatting. Take the budget and the overhead from the
+      host reserve quarter, so that the slots, the job disk, and the
+      hardware minimum stay the same. Enforce the budget on each image
+      fetch and on the kept bases. Drop unused older bases before the
+      images exceed the budget. Never take space from the job disk. Make
+      the budget a setting with a safe provisional default. The image
+      measurement of Milestone 10 sets its real value later. Add a
+      regression test on a disposable file system.
+      Orchestrator call, 5 November 2026: the finding that the area leaves
+      no room for images is fix now, apply A. It is not a user decision,
+      because the three-quarter area was an orchestrator call in the brief
+      of item 62, not the user's answer. A keeps every requirement: "Disk"
+      in `job-routing.md` already keeps the images in the host reserve, and
+      reflinks need the bases in the file system of the VM disks.
+      Left out: C, images in the job disk, weakens the job-disk promise. B,
+      a smaller job disk, changes the job capacity and the minimum machine.
+      E, read-only bases with a snapshot in each guest, replaces the
+      approved reflink roots and needs guest, image, and KVM work.
+      F, an XFS project quota, adds a host requirement that only the user
+      can approve. It waits in the
+      [quota item](follow-ups/agent-xfs-image-project-quota.md), and A does
+      not wait for it.
+      Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
+- [ ] Smoke-test a Docker job, a warm runner, and a restart during a job.
+      Orchestrator: align the image bundle, root/Docker disk allocation,
+      vsock port, and guest state/reconnect/shutdown behavior first.
+      Orchestrator: run `crates/ciproxy-agent/scripts/smoke-docker.sh`,
+      `crates/ciproxy-agent/scripts/smoke-warm.sh`, and
+      `crates/ciproxy-agent/scripts/smoke-restart.sh` on the KVM test host
+      with the staging gateway, image, guest, and GitHub App.
+      Orchestrator: run `crates/ciproxy-agent/scripts/smoke-host.sh` on a
+      fresh disposable KVM host with `/var/lib` on ext4. It checks the first
+      install, a repair, two reflink jobs, and uninstall.
+      Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
 
 ## Milestone 10: Job VM image
 
@@ -546,6 +607,12 @@ test host in `internal-498318`.
 
 - [ ] Wire the control plane and the agent. Add the patch and the sidecar to
       the image.
+- [ ] Register each job with the machine cache, and attach its Docker disk
+      by its checked scope, as items 54, 55, and 66 say. Add the missing
+      guest handoff: the original runtime token, the cache URLs, the
+      effective cache permissions, and a readiness pause. The
+      [integration record](follow-ups/agent-cache-area-integration.md)
+      gives the missing inputs and the component paths.
 - [ ] Stop a warm runner only after GitHub removed it. My call: a runner
       that just took a job keeps it.
 - [ ] Smoke-test warm starts, slots, drain, remove, offline, a cache hit, a
@@ -643,6 +710,24 @@ the event both read the session, so the tier changes once.
 - [x] Require expected requests for each scripted Stripe subscription
       outcome and prove that wrong prices fail the integration tests.
       Branch: `conductor/ciproxy-mvp-milestone-17-billing`.
+- [x] Keep durable renewal outcomes after recovery. Replay the live paid
+      renewal with a void upgrade and later events without a new failure.
+      Branch: `conductor/ciproxy-mvp-milestone-17-billing-live-fixes`.
+- [x] Persist verified automatic collection stops for owned unpaid
+      renewals. Ask Stripe to cancel and record Free after confirmation.
+      Replay the final retry and exclude manual stops and paid invoices.
+      Branch: `conductor/ciproxy-mvp-milestone-17-billing-live-fixes`.
+      Evidence: `.context/ciproxy-mvp/billing-live-fixes/verification.md`.
+- [x] Apply PR #23 review finding 1, option B. Keep eligible, superseded,
+      and completed cancellation decisions for each signed stop event.
+      Test invalidation before manual events, restart, and a new stop.
+      Branch: `conductor/ciproxy-mvp-milestone-17-billing-live-fixes`.
+      Evidence: `.context/ciproxy-mvp/billing-live-fixes/pr23-fix-round-1/`.
+- [x] Complete the PR #23 cancellation read path. Lock known subscription
+      events before Stripe reads and merge every owned observation before
+      later reads. Preserve supersession from expanded renewal invoices.
+      Branch: `conductor/ciproxy-mvp-milestone-17-billing-live-fixes`.
+      Evidence: `.context/ciproxy-mvp/billing-live-fixes/pr23-fix-round-1/`.
 - [ ] Test each state with recorded events and the Stripe test mode.
       The fixed event fixtures and fake HTTP Stripe tests pass locally.
       Orchestrator: run the
@@ -1012,6 +1097,7 @@ Answers of 5 November 2026:
   confirmed spend and the amount still pending. `overflow.md` states the rule.
   Rejected: holding all starts until Boat confirms, Admin reconciliation by
   hand, one combined estimate figure, and recovery through a replacement key.
+  Item 69 replaces the saved quote with the highest published start fee.
 - Item 68, A, with one shared cluster: the user wrote "ciproxy holds prod and
   test infra, we can share. the same k8 cluster". Both the main preview and
   production run in the GCP project `ciproxy`, and they share one GKE Autopilot
@@ -1019,6 +1105,14 @@ Answers of 5 November 2026:
   preview, and the project of item 53. The spike and test machines stay in
   `internal-498318`. Rejected: a new project for the main preview, and the main
   preview in `internal-498318`.
+- Item 69, B: each start counts the highest published Boat start fee, $0.07
+  today, from `overagePrices.startBrackets` of `GET /limits`, and not the
+  saved quote. Boat reports no charged start fee, so this fee stays counted.
+  The user wrote "let's not over engineer this feature, it's a nice to have, if
+  we block a bit early 0.07 early that's really not a problem". So the limit
+  can stop overflow early, by $0.07 for each start that Boat does not charge.
+  `overflow.md` states the rule. Rejected: the saved quote, a second quote
+  after the start, and a charged fee from Boat.
 - Item 66, A: only a job of a trusted event on the default branch keeps
   its changes to a Docker disk, as item 59 says for the machine cache.
   `cache.md` states it. Rejected: any event on the default branch, and
@@ -1912,7 +2006,7 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 68 on 5 November 2026. No item still waits. The
+The user answered items 54 to 69 on 5 November 2026. No item still waits. The
 conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
@@ -2219,5 +2313,78 @@ keep the letters that the user saw.
     Effort: Small.
   - **C.** Keep the main preview in `internal-498318`. Effort: none.
 - **Recommendation:** B. It keeps the main preview away from production.
-- **Action:** answered A, with one shared cluster. The design calls for it
-  keep production apart through scoped identities.
+- **Action:** answered A, with one shared cluster. The design calls keep
+  production apart through scoped identities.
+
+### 69. A start-fee quote does not bound the start fee
+
+**Answer, 5 November 2026:** B.
+
+- **Severity:** Medium. **Likelihood:** Rare. **Effort:** Small.
+- **Source:** Review of pull request #22, Milestone 12, finding 1. The
+  review graded it High. It is Medium here, because one start can hide at
+  most $0.07.
+- **Category:** Product bug.
+- **Location:** `crates/ciproxy-overflow/src/service/start.rs` and
+  `crates/ciproxy-overflow/src/spend.rs` on the branch of #22, and the spend
+  rule in `docs/protocol/overflow.md`.
+- **Terms:**
+  - **Start fee:** the price that Boat charges for one sandbox start. It is
+    $0 inside the free starts of the plan, then $0.03, $0.05, or $0.07.
+  - **Quote:** the field `nextStartDollars` of `GET /limits`. It gives the
+    price of the next start at the moment of the read.
+- **Background:**
+  - Item 67 = B counts a bound for each start whose cost Boat has not
+    confirmed. The bound is the hourly price for the whole lifetime, plus
+    the quote that ciproxy saves before the start.
+  - Boat counts free starts in rolling windows of one minute, one hour, and
+    one day. A start pays the highest bracket of the three windows.
+  - Boat reports no charged start fee. The create response, the usage, and
+    the sandbox object have no such field. So the saved quote stays the
+    counted fee for good.
+  - ciproxy starts one sandbox at a time for each workspace. Other users of
+    the same Boat account can start sandboxes at any time.
+  - A 10-minute job on the default size costs about $0.006 of runtime, at
+    the list price of $0.036 for each hour.
+- **Problem:** The quote is not a reservation. When another Boat user starts
+  a sandbox between the quote and the start, the start can cost one bracket
+  more than its quote. ciproxy then counts the lower quote.
+- **Impact if no action:** The spend can pass the limit by up to $0.07 for
+  each such start. This needs other use of the Boat account near the edge
+  of a bracket.
+- **Root question:** What start fee does ciproxy count, when Boat never
+  reports the fee that it charged?
+- **Options:**
+  - **A.** Keep the saved quote. State in `overflow.md` that the quote
+    stands for the fee, and why. A start that another Boat user pushes into
+    a higher bracket counts too little. Effort: Small.
+  - **B.** Count the highest published bracket for each start. Read it from
+    `overagePrices.startBrackets` of `GET /limits`. It is $0.07 today. This
+    is a true bound. Each free start then also counts $0.07 for good, about
+    12 times the runtime of a 10-minute job. The limit then stops overflow
+    much earlier than the real Boat bill does. Effort: Small.
+  - **C.** Read the quote again directly after Boat accepts the start.
+    Count the higher of the two quotes. When another Boat user starts a
+    sandbox in the gap, the second quote is also higher. So the count
+    catches nearly every such start. It is not a strict bound, because old
+    starts can leave a rolling window between the two reads. It adds one
+    read for each start. Effort: Small.
+  - **D.** Ask Boat to report the charged start fee of each sandbox. Count
+    that fee as confirmed when Boat gives it, and use C until then. It
+    depends on work and a timeline at Boat. Effort: Small in ciproxy.
+- **Left out:**
+  - Separate quoted, bounded, and confirmed states, from the review: Boat
+    never confirms a start fee, so each start stays bounded for good. That
+    is B.
+  - A bound of the highest bracket while the start runs, which later
+    settles to the quote: the month total is then the same as in C.
+  - One lock for all users of the Boat account: ciproxy cannot control
+    other Boat clients.
+- **Wider fix:** D. A confirmed fee from Boat removes the estimate.
+- **Previous examples:** None found. Commit `75bd853` records the quote in
+  the answer to item 67.
+- **Related:** item 67. Its recorded answer names the saved quote.
+- **Recommendation:** C. It catches nearly every such start for one extra
+  read, and it does not count $0.07 for each free start as B does. D best
+  protects the codebase, but it needs Boat.
+- **Action:** answered B.

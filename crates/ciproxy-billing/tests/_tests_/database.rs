@@ -19,6 +19,13 @@ pub(super) struct Database {
 }
 
 impl Database {
+    pub(super) fn reconnect_store(&mut self) {
+        let raw = env::var("DATABASE_URL").expect("DATABASE_URL is required");
+        let mut url = Url::parse(&raw).unwrap();
+        url.set_path(&self.name);
+        self.store = PgStoreFactory.connect(url.as_str()).unwrap();
+    }
+
     pub(super) fn set_created_at(&mut self, at: DateTime<Utc>) {
         diesel::sql_query("UPDATE billing_accounts SET created_at = $1")
             .bind::<diesel::sql_types::Timestamptz, _>(at)

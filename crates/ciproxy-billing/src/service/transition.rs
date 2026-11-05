@@ -1,6 +1,7 @@
 //! Pure conversion of current Stripe state into confirmed local coverage.
 
 use chrono::{DateTime, Months, Utc};
+use ciproxy_store_interface::billing::renewals::Renewal;
 use ciproxy_store_interface::billing::state::{
     AddOns, BillingState, Selection, SubscriptionState, Tier,
 };
@@ -9,7 +10,6 @@ use crate::catalog::PriceCode;
 use crate::error::{Error, Result};
 use crate::stripe::wire::invoice::CancelReason;
 
-use super::renewal::RenewalState;
 use crate::stripe::wire::types::{Status, Subscription};
 
 pub(super) fn selection(subscription: &Subscription) -> Result<Selection> {
@@ -50,7 +50,7 @@ pub(super) fn confirmed(
     old: &BillingState,
     current: &Subscription,
     now: DateTime<Utc>,
-    renewal: &RenewalState,
+    renewal: Option<&Renewal>,
 ) -> Result<BillingState> {
     if current.metadata.workspace_id != Some(old.workspace_id)
         || old
@@ -121,23 +121,13 @@ pub(super) fn confirmed(
         }
     });
     state.ended_banner_until = None;
-    if let RenewalState::Failed(invoice) = renewal {
+    if let Some(renewal) = renewal {
         state.status = SubscriptionState::PaymentFailed;
-        state.failed_at = if old.failed_invoice_id.as_ref() == Some(&invoice.id) {
-            old.failed_at
-        } else {
-            None
-        };
-        state.failed_invoice_id = Some(invoice.id.clone());
-        state.next_retry_at = invoice.next_payment_attempt.map(timestamp).transpose()?;
+        state.failed_at = renewal.failed_at;
+        state.failed_invoice_id = Some(renewal.invoice_id.clone());
+        state.next_retry_at = renewal.next_retry_at;
     } else {
-        state.status = if matches!(renewal, RenewalState::Unknown)
-            && matches!(current.status, Status::PastDue | Status::Unpaid)
-        {
-            SubscriptionState::PaymentFailed
-        } else {
-            SubscriptionState::Active
-        };
+        state.status = SubscriptionState::Active;
         state.failed_at = None;
         state.failed_invoice_id = None;
         state.next_retry_at = None;

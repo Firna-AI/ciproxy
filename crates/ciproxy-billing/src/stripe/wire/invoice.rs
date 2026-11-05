@@ -17,6 +17,26 @@ pub struct Invoice {
     pub next_payment_attempt: Option<i64>,
     /// A Stripe-hosted payment page, including bank confirmation.
     pub hosted_invoice_url: Option<String>,
+    /// Remaining amount in cents, absent in older stored provider projections.
+    pub amount_remaining: Option<i64>,
+    /// Whether Stripe still collects this invoice automatically.
+    pub auto_advance: Option<bool>,
+    /// Whether Stripe attempted payment.
+    pub attempted: Option<bool>,
+    /// The provider attempt sequence, independent of its configured retry limit.
+    pub attempt_count: Option<u32>,
+    /// The collection flow used by this invoice.
+    pub collection_method: Option<CollectionMethod>,
+}
+
+/// Supported Stripe collection flows.
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum CollectionMethod {
+    /// Stripe automatically charges the saved payment method.
+    ChargeAutomatically,
+    /// The customer pays an invoice manually.
+    SendInvoice,
 }
 
 /// Current invoice state.
