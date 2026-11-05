@@ -47,7 +47,7 @@ resource "google_project_iam_custom_role" "shared_api" {
   title   = "ciproxy central operation and storage metadata"
   permissions = [
     "container.operations.get", "container.operations.list",
-    "container.getServerConfig", "storage.buckets.create",
+    "storage.buckets.create",
     "cloudkms.keyRings.create", "secretmanager.secrets.create",
   ]
 }
