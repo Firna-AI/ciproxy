@@ -10,5 +10,7 @@ mod replacement_tests;
 mod scope_tests;
 #[path = "cases/storage_tests.rs"]
 mod storage_tests;
+#[path = "cases/trusted_event_tests.rs"]
+mod trusted_event_tests;
 #[path = "cases/wire_tests.rs"]
 mod wire_tests;

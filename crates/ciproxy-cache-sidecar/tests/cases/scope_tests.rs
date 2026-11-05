@@ -75,6 +75,13 @@ async fn scopes_keep_own_prefix_before_default_exact_and_isolate_prs() {
         "new"
     );
     assert_eq!(branch.contents("cache-prefix-old", "v1", &[]).await, "old");
+    let mut untrusted_facts = facts("refs/heads/feature");
+    untrusted_facts.event = JobEvent("issue_comment".into());
+    let untrusted = fixture.job("scope-untrusted", untrusted_facts).await;
+    assert_eq!(
+        untrusted.contents("cache-prefix-new", "v1", &[]).await,
+        "new"
+    );
     assert_eq!(main.contents("cache-exact", "v1", &[]).await, "main");
     assert_eq!(
         main.lookup("cache-prefix-new", "v1", &[]).await["ok"],
@@ -106,6 +113,9 @@ async fn unsafe_pr_and_fork_writes_never_reach_upstream_even_in_fallback() {
         (1, "pull_request_target", false, true),
         (2, "pull_request", false, false),
         (3, "push", true, false),
+        (4, "issue_comment", false, true),
+        (5, "workflow_run", false, true),
+        (6, "unknown_event", false, true),
     ] {
         let mut job_facts = facts("refs/heads/main");
         job_facts.event = JobEvent(event.into());
@@ -133,7 +143,8 @@ async fn unsafe_pr_and_fork_writes_never_reach_upstream_even_in_fallback() {
                     json!({"key":"poison","version":"v1","sizeBytes":"4"})
                 )
                 .await["ok"],
-                false
+                false,
+                "{event}, foreign head: {fork}, machine down: {down}"
             );
             for prefix in ["/other/../", "/other/%2e%2e/", "//"] {
                 let target =

@@ -13,7 +13,6 @@ use uuid::Uuid;
 use crate::pricing::Plan;
 use crate::report::boat::boat_cost_deltas;
 use crate::report::catalog::PriceList;
-use crate::report::costs::MonthlyDivisor;
 use crate::report::range::{DateRange, retention_start};
 use crate::report::runtime::{accounting_deltas, start_deltas};
 use crate::report::savings::{ReportInput, SavingsReport, savings_report};
@@ -54,7 +53,6 @@ pub trait Metering: Send + Sync {
         range: DateRange,
         at: DateTime<Utc>,
         lists: &[PriceList; 2],
-        divisor: MonthlyDivisor,
     ) -> Result<SavingsReport>;
 }
 
@@ -160,7 +158,6 @@ impl Metering for StoredMetering {
         range: DateRange,
         at: DateTime<Utc>,
         lists: &[PriceList; 2],
-        divisor: MonthlyDivisor,
     ) -> Result<SavingsReport> {
         let snapshot = self
             .store
@@ -172,7 +169,6 @@ impl Metering for StoredMetering {
             machines: &snapshot.machines,
             costs: &snapshot.costs,
             price_lists: lists,
-            monthly_divisor: divisor,
         }))
     }
 }

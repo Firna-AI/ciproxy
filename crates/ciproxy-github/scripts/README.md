@@ -68,3 +68,9 @@ the exact fixture contract and expected job counts.
 
 Run all commands from the repository root.
 See the [crate guide](../README.md) for service boundaries and local tests.
+
+Run the offline job-metadata regression without GitHub credentials:
+
+```sh
+python3 -B crates/ciproxy-github/scripts/test_probe_group_flow.py -v
+```
