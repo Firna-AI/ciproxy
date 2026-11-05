@@ -2023,7 +2023,7 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 70 on 5 November 2026. No item still waits. The
+The user answered items 54 to 71 on 5 November 2026. Item 72 still waits. The
 conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
@@ -2480,3 +2480,65 @@ keep the letters that the user saw.
 - **Before D or E:** scan the whole history for secrets, check each workflow
   for pull requests from forks, and remove what must stay private.
 - **Action:** answered E.
+
+### 71. Leftover Boat test snapshots cost money
+
+**Answer, 5 November 2026:** A.
+
+- **Severity:** Low. **Effort:** Small.
+- **Source:** Implementation, during the live Boat check of #22.
+- **Background:** The Boat wallet "Firna" kept 4 snapshots of one stopped
+  sandbox, `bx_h6amcqtu`, from 00:58 to 01:02 UTC on 5 November 2026.
+- **Options:**
+  - **A.** Delete the stopped sandbox and its snapshots. Effort: Small.
+  - **B.** Keep them. Effort: none.
+- **Recommendation:** A.
+- **Action:** answered A. Boat refused the deletion with
+  `api_key_action_forbidden`, because the test key did not create that
+  sandbox. The user deletes it in the Boat dashboard, or asks the owner of
+  the other key.
+
+### 72. Production DNS expects Cloud DNS, but the domain uses Cloudflare
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Implementation. A public DNS lookup on 5 November 2026.
+- **Category:** Docs or spec.
+- **Location:** `deploy/terraform/modules/foundation/variables.tf`, the
+  `dns_domains` of production, and step 5 of `deploy/setup.md`.
+- **Background:**
+  - `ciproxy.dev` uses the Cloudflare name servers. Cloudflare holds the
+    Google Workspace mail records of the domain: MX, SPF, and a site
+    verification. The alert address `devops-alerts@ciproxy.dev` needs them.
+  - The main preview creates three Cloud DNS zones under `preview`. Three NS
+    records in the parent zone delegate them, and Cloudflare can hold these
+    records too.
+  - Production creates one Cloud DNS zone for the whole domain, and
+    Terraform adds the site, app, and release records there. That zone
+    answers only when the domain uses the Google name servers.
+- **Problem:** The production zone never answers, because the registrar
+  points `ciproxy.dev` at Cloudflare.
+- **Impact if no action:** The production hosts do not resolve after the
+  production deploy. A careless move of the domain breaks its mail.
+- **Root question:** Which DNS service serves `ciproxy.dev` in production?
+- **Options:**
+  - **A.** Move `ciproxy.dev` to Cloud DNS. Terraform copies the mail
+    records into the production zone first. Then the user changes the name
+    servers at the registrar from Cloudflare to Google. Terraform then owns
+    every record. A missed record can stop mail for a while. Effort: Small.
+  - **B.** Keep Cloudflare. Production creates Cloud DNS zones for
+    `app.ciproxy.dev` and `get.ciproxy.dev`, and NS records in Cloudflare
+    delegate them. The site record of `ciproxy.dev` stays a record that the
+    user adds in Cloudflare by hand. Effort: Medium.
+  - **C.** Keep Cloudflare, and Terraform manages the records there with the
+    Cloudflare provider and an API token in CI. It adds a provider and a
+    secret. Effort: Medium.
+- **Left out:** A second domain for production: the site, the docs, and the
+  App already use `ciproxy.dev`.
+- **Wider fix:** A. One DNS service under Terraform.
+- **Previous examples:** None found.
+- **Related:** Under every option, the main preview works now: the user adds
+  three NS records in Cloudflare after the foundation applies.
+- **Recommendation:** A. Terraform then owns every production record, as the
+  user asked for no manual production step, with no new provider or secret.
+- **Action:** ask the user, because it moves the DNS and the mail records of
+  the domain away from Cloudflare, which only the user controls.
