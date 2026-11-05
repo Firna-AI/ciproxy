@@ -154,7 +154,11 @@ def check_jobs(app, allowed, refused, runner_id):
         return False
     run = app_run(app, allowed)
     if run["status"] == "completed":
-        if run["conclusion"] != "success" or allowed_job.get("conclusion") != "success":
+        if run["conclusion"] != "success":
+            raise ProbeError("The allowed repository probe job did not succeed")
+        if allowed_job["status"] != "completed" or allowed_job.get("conclusion") is None:
+            return False
+        if allowed_job["conclusion"] != "success":
             raise ProbeError("The allowed repository probe job did not succeed")
         if not runner_id or allowed_job.get("runner_id") != runner_id:
             raise ProbeError("The allowed job did not run on the probe JIT registration")

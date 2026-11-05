@@ -99,7 +99,10 @@ and repository policy on that same group. After local data is purged, the
 stable name finds the retained GitHub group again.
 GitHub supports self-hosted runner groups on its Free plan, as its
 [Free runner-group announcement][free-groups] confirms.
-The live selected-group probe still checks this on a real installation.
+The live selected-group probe verified the selected-repository policy on
+GitHub Free. GitHub runs the job of a selected repository on a runner of
+the group. It keeps the job of another private repository queued with no
+runner.
 
 The adapter uses `scaleset` 0.2.0. The foundation live spike used 0.1.0.
 The integration tests check the current version with the spike's wire
