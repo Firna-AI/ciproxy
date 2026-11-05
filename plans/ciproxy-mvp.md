@@ -189,8 +189,11 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
       secrets, buckets, DNS zones, and edges. Scope the CI identities of
       each environment to its own resources. Apply the shared parts from
       the main preview until launch, and only from `main` after it.
-- [ ] User: move `Firna-AI` to GitHub Team, as item 57 says. Orchestrator:
+- [x] User: move `Firna-AI` to GitHub Team, as item 57 says. Orchestrator:
       add the ruleset on `main` that needs a pull request and the gate.
+      Done on 5 November 2026: ruleset `main-pull-request-and-gate`, ID
+      `26601138`, active, with deletion, non-fast-forward, pull request, and
+      required status check rules.
       Branch: `codex/m5-terraform-promotion`.
   - [x] Prepare and test the idempotent `deploy/scripts/github-ruleset.sh`.
         Branch: `codex/m5-terraform-promotion`.
