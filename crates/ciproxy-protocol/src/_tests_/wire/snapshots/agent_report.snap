@@ -1,6 +1,5 @@
 ---
 source: crates/ciproxy-protocol/src/_tests_/wire/assertions.rs
-assertion_line: 20
 description: Tagged JSON for agent_report; all credentials are dummy test values.
 expression: message
 ---
@@ -83,6 +82,12 @@ expression: message
       "capacity_bytes": 100000000000,
       "restores_last_7_days": 100,
       "hits_last_7_days": 75,
+      "unknown_jobs": [
+        {
+          "reason": "no_write_scope",
+          "jobs": 1
+        }
+      ],
       "jobs": [
         {
           "job_id": "job-1",

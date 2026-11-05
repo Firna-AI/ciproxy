@@ -22,8 +22,12 @@ deletes or evicts its copy. Lookup searches each allowed ref in order:
 own ref, pull request base ref, default ref. It checks an exact key before
 prefix matches. A prefix match uses the newest entry.
 
-The machine derives scopes from agent-supplied `JobFacts`. It ignores job
-metadata for scope, repository, permission, upstream destination, and
+The machine checks each original runtime token at admin registration.
+It verifies RS256, GitHub's issuer, the validity interval, and the expected
+repository, run, runner, and optional job identity from `JobFacts`.
+Exactly one signed scope with the write bit supplies the full ref.
+The machine keeps raw scope keys, including GitHub's tag scope keys.
+It ignores job metadata for scope, repository, permission, destination, and
 counts. A GitHub fill stays within the reader's own scope because the
 GitHub lookup response does not identify the source ref. The service keeps
 fills separate from accepted saves. A fill cannot prevent a later save in
@@ -33,13 +37,24 @@ scoped key. Existing records without provenance stay readable as fills.
 Only the trusted events in
 [Trusted write-back](../../docs/protocol/cache.md#trusted-write-back) can
 write shared machine-cache entries. Other events keep GitHub fills private
-to the job or its pull request. A pull request writes only within a trusted
-`refs/pull/N/merge` ref. The sidecar rejects saves from `pull_request_target`
-jobs and pull requests with a normal branch ref. These saves return an
-unavailable-cache result. The proxy keeps this rule when the machine is
-unavailable. A foreign head repository also cannot write the default scope.
+to the session or its pull request. A checked pull request writes only in a
+`refs/pull/N/merge` ref. A checked unsafe default ref or pull request with a
+normal branch ref cannot save. These saves return an unavailable-cache
+result. A foreign head repository cannot write the default scope.
 Direct GitHub writes that a workflow enables with `cache-mode: write`
 follow GitHub's permission rules.
+
+A missing, invalid, read-only, or ambiguous token gives `JobScope::Unknown`.
+That session reads only default-branch entries locally. Its other restores
+use GitHub. Permitted saves go to GitHub and a fresh private local scope.
+No session restores that private scope, including its creator. Unknown
+tokens never fail the job. Reports count unknown jobs by reason for seven
+days. A retained job ID keeps its first registration's reason on replay.
+
+The machine refreshes public keys every five minutes. An unknown key ID
+permits one extra refresh per minute across all jobs. Failures consume the
+same cooldown. A failed periodic refresh expires the old key set. A failed
+extra refresh can keep a still-current key set for known keys.
 
 Azure single uploads, staged blocks, committed blocklist order, ranged
 downloads, and legacy ranged PATCH uploads work. Lookup-only and HEAD
@@ -116,9 +131,17 @@ The agent calls the admin listener with `Authorization: Bearer TOKEN`:
 `Registration` contains `job_id`, `facts`, `permissions`, `github_token`,
 `cache_url`, `results_url`, and `proxy_url`. The exact types live in
 [session.rs](src/session.rs). `facts` is the existing protocol `JobFacts`.
-The control plane obtains those facts from GitHub. The agent supplies
+The hosted `JobAssignments` builder combines API facts with the scale
+message and JIT runner identity. `facts` has no full job ref.
+The agent supplies
 original runtime credentials and endpoint URLs from the assigned runner
 before job code runs. A job request cannot register or replace them.
+
+The admin result contains `token` and `scope`. Keep the opaque session token
+for the VM proxy. Use the typed `scope` for the agent's Docker-disk policy.
+Only a checked exact default-branch ref of a trusted event can persist a
+Docker disk, with the same foreign-head defense. Every unknown job gets a
+disposable copy. The VM and job listener cannot issue admin registrations.
 
 `permissions` has independent `read` and `write` booleans. Both default to
 false. The agent must get the effective cache mode from trusted runner
@@ -158,6 +181,12 @@ The agent must revoke the session when the job ends.
 Run the original runner on Boat. Do not use the patch, wrapper, or proxy
 there. This crate adds no Boat, KVM, agent lifecycle, or image wiring.
 
+Production uses the fixed GitHub Actions JWKS endpoint. An isolated smoke
+machine can use `--verification-config PATH`, or the operator environment
+`CIPROXY_CACHE_VERIFICATION_CONFIG`. The JSON file has `jwks_url`.
+The operator owns that file and environment outside all job VMs. No job,
+request, or registration selects the key source. The issuer stays fixed.
+
 ## Development
 
 The tests use real TCP listeners, files, and a Python fake GitHub service.
@@ -180,6 +209,8 @@ executable smoke, SDK conformance, and authenticated GitHub commands.
 - [proxy.rs](src/proxy.rs) owns VM forwarding and cache misses during outages.
 - [storage/](src/storage/mod.rs) owns capture, persistence, and disk budgets.
 - [session.rs](src/session.rs) defines the agent registration contract.
+- [runtime_token/](src/runtime_token/mod.rs) verifies scopes with injected
+  public-key and clock boundaries.
 - [cache_tests.rs](tests/cache_tests.rs) starts the public HTTP tests.
 
 ### Related Docs

@@ -134,7 +134,10 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
   - [x] Define both projects, private SQL, secret containers, KMS, and IAM.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
-  - [ ] User: apply both foundations with `deploy/scripts/bootstrap.sh`.
+  - [ ] Orchestrator: run `deploy/scripts/bootstrap.sh` for each environment,
+        set the GitHub variables, and start the deploy workflow, which
+        creates the foundation, as item 56 says. The steps are in
+        [the setup guide](../deploy/setup.md).
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
 - [ ] Run the control plane and the `futex-ai/cli-release` server on GKE
       Autopilot with Helm, as item 31 says.
@@ -164,15 +167,29 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
   - [ ] User: apply the zones and delegate the domain and staging subzone.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
-- [ ] Deploy the main preview on each push, and production on each merge
+- [x] Deploy the main preview on each push, and production on each merge
       into `main` after the main preview run of the same commit passes, as
       item 58 says. Add uptime alerts.
-- [ ] Plan, check, and promote every root from CI, as item 56 says: a
+      Branch: `codex/m5-terraform-promotion`.
+- [x] Plan, check, and promote every root from CI, as item 56 says: a
       read-only plan identity, a policy that needs an approval file for each
       destructive change, an apply identity for one reusable workflow, and
       deletion protection for the database and the secrets.
+      Foundation creation now runs in CI after one-time seed and bootstrap.
+      Design calls, 5 November 2026: operator bootstrap initializes every
+      remote backend through shared root, directory, bucket, and prefix
+      metadata. Reason: first initialization writes state, which the plan
+      identity cannot do. Seed `main.tf` owns trust API enablement. Reason:
+      both operator and CI finish seed before any bootstrap resource starts.
+      No state move is needed because nothing has been applied in GCP.
+      Branch: `codex/m5-terraform-promotion`.
 - [ ] User: move `Firna-AI` to GitHub Team, as item 57 says. Orchestrator:
       add the ruleset on `main` that needs a pull request and the gate.
+      Branch: `codex/m5-terraform-promotion`.
+  - [x] Prepare and test the idempotent `deploy/scripts/github-ruleset.sh`.
+        Branch: `codex/m5-terraform-promotion`.
+  - [ ] User: upgrade the organization. Orchestrator: apply the ruleset.
+        Branch: `codex/m5-terraform-promotion`.
 - [x] Rename the staging environment to the main preview of item 53, with
       its hosts under `br-main.preview`, before the first apply.
       Branch: `conductor/ciproxy-mvp-milestone-5-main-preview`.
@@ -457,10 +474,12 @@ evicts them. Boat runs the stock runner. The cache spike confirms it.
       `refs/heads/main` read only, and on a ciproxy runner the `run_id`,
       `job_id`, and `runner_id` of the token matched the scale set message
       and the registration. Evidence: `.context/job-ref-research/report.md`.
-- [ ] Check the runtime token of each job in the machine cache, as item 54
+- [x] Check the runtime token of each job in the machine cache, as item 54
       says, and take the full ref from its write scope. Write the rule into
       `cache.md` and `security.md`. A job whose token fails the check fails
       closed, as item 55 = A says. It waits for the live checks.
+      Branch: `conductor/ciproxy-mvp-milestone-11-signed-job-ref`.
+      Evidence: `.context/ciproxy-mvp/signed-job-ref/implementor-report.md`.
 
 ## Milestone 12: Boat backend on the shared sandbox interface
 

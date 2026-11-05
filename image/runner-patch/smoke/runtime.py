@@ -103,4 +103,5 @@ def start_cache(processes, registration, capacity=268435456):
     config.chmod(0o600)
     processes.start("proxy", [str(binary), "proxy", "--listen", proxy.removeprefix("http://"),
                              "--config", str(config)], proxy + "/_smoke/ready")
-    return {"machine": machine, "admin": admin, "proxy": proxy, "directory": str(processes.directory)}
+    return {"machine": machine, "admin": admin, "proxy": proxy, "directory": str(processes.directory),
+            "scope": credential["scope"]}

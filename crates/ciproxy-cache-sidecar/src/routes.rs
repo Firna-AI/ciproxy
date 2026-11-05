@@ -27,18 +27,25 @@ impl MachineCache {
             (Method::POST, "/sessions") => {
                 let bytes = to_bytes(body, 1024 * 1024).await.internal()?;
                 let registration: Registration = serde_json::from_slice(&bytes).internal()?;
-                self.metrics.registered(&registration.job_id).await;
+                let scope = self
+                    .tokens
+                    .check(&registration.github_token, &registration.facts)
+                    .await;
+                self.metrics.registered(&registration.job_id, &scope).await;
                 let token = identifier();
                 self.sessions.lock().await.insert(
                     token.clone(),
                     Arc::new(Session {
                         registration,
+                        scope: scope.clone(),
+                        private_ref: format!("private-session/{}", identifier()),
                         uploads: Mutex::new(HashMap::new()),
                         downloads: Mutex::new(HashMap::new()),
                     }),
                 );
                 Ok(json(&SessionCredential {
                     token: Secret::new(token),
+                    scope,
                 }))
             }
             (Method::DELETE, path) if path.starts_with("/sessions/") => {

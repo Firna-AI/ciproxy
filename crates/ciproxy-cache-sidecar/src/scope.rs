@@ -1,7 +1,6 @@
-//! Repository isolation and GitHub's branch-first lookup order.
+//! Repository isolation using checked scopes and private unknown sessions.
 
-use ciproxy_protocol::identifiers::JobId;
-use ciproxy_protocol::jobs::JobFacts;
+use ciproxy_protocol::jobs::{JobFacts, JobScope};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -11,11 +10,10 @@ pub(crate) struct Scope {
     pub reference: String,
 }
 
-pub(crate) fn write_scope(facts: &JobFacts, job: &JobId) -> Scope {
-    let reference = if can_save(facts, true) {
-        facts.git_ref.0.clone()
-    } else {
-        format!("private-job/{}", job.0)
+pub(crate) fn write_scope(facts: &JobFacts, scope: &JobScope, private_ref: &str) -> Scope {
+    let reference = match scope {
+        JobScope::Checked { git_ref, .. } if can_save(facts, scope, true) => git_ref.0.clone(),
+        _ => private_ref.to_owned(),
     };
     Scope {
         organization: facts.organization_id.0.clone(),
@@ -24,36 +22,45 @@ pub(crate) fn write_scope(facts: &JobFacts, job: &JobId) -> Scope {
     }
 }
 
-pub(crate) fn read_scopes(facts: &JobFacts, job: &JobId) -> Vec<Scope> {
-    let own = write_scope(facts, job);
-    let mut scopes = vec![own.clone()];
-    if !facts.event.0.starts_with("pull_request") {
-        scopes.push(Scope {
-            reference: facts.git_ref.0.clone(),
-            ..own.clone()
-        });
-    }
-    if facts.event.0.starts_with("pull_request")
-        && let Some(base) = &facts.base_ref
-    {
-        scopes.push(Scope {
-            reference: base.0.clone(),
-            ..own.clone()
-        });
+pub(crate) fn read_scopes(facts: &JobFacts, scope: &JobScope, private_ref: &str) -> Vec<Scope> {
+    let own = write_scope(facts, scope, private_ref);
+    let mut scopes = Vec::new();
+    if let JobScope::Checked { git_ref, read_refs } = scope {
+        if own.reference != git_ref.0 {
+            scopes.push(own.clone());
+        }
+        for reference in read_refs
+            .iter()
+            .filter(|reference| *reference == git_ref)
+            .chain(read_refs)
+        {
+            if reference != &facts.default_ref
+                && !scopes.iter().any(|scope| scope.reference == reference.0)
+            {
+                scopes.push(Scope {
+                    reference: reference.0.clone(),
+                    ..own.clone()
+                });
+            }
+        }
     }
     scopes.push(Scope {
         reference: facts.default_ref.0.clone(),
         ..own
     });
-    scopes.dedup();
     scopes
 }
 
-pub(crate) fn can_save(facts: &JobFacts, permissions: bool) -> bool {
-    permissions
-        && (trusted_event(facts)
-            || facts.event.0.starts_with("pull_request") && private_pr_ref(facts))
-        && (facts.git_ref != facts.default_ref
+pub(crate) fn can_save(facts: &JobFacts, scope: &JobScope, permissions: bool) -> bool {
+    if !permissions {
+        return false;
+    }
+    let JobScope::Checked { git_ref, .. } = scope else {
+        return true;
+    };
+    (trusted_event(facts)
+        || facts.event.0.starts_with("pull_request") && private_pr_ref(facts, &git_ref.0))
+        && (git_ref != &facts.default_ref
             || facts
                 .head_repository
                 .as_ref()
@@ -73,11 +80,9 @@ fn trusted_event(facts: &JobFacts) -> bool {
     )
 }
 
-fn private_pr_ref(facts: &JobFacts) -> bool {
+fn private_pr_ref(facts: &JobFacts, reference: &str) -> bool {
     facts.event.0 != "pull_request_target"
-        && facts
-            .git_ref
-            .0
+        && reference
             .strip_prefix("refs/pull/")
             .and_then(|value| value.strip_suffix("/merge"))
             .is_some_and(|number| number.parse::<u64>().is_ok())

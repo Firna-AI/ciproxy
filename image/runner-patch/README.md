@@ -53,6 +53,14 @@ gives the handoff contract. A normal shell hook does not receive original
 cache runtime credentials. Agent and image integration must supply them
 through a trusted assignment handoff before action steps run.
 
+The assignment carries the expected repository, scale-message run and job,
+JIT runner, API event and head repository, and default branch. It carries
+no full job ref. The host checks the original signed runtime token and
+returns a checked scope or an unknown reason. The agent uses that result
+for Docker persistence. Unknown jobs get disposable Docker copies and
+default-branch local cache restores only. Their permitted saves still go
+through GitHub and a local private scope that no job restores.
+
 The wrapper preserves the existing job-start hook. Its chained hook keeps
 that hook's supported shell and exit status. A `.sh` file needs no
 executable bit. The chain appends the three proxy values to `GITHUB_ENV`.
@@ -75,7 +83,7 @@ loopback URL works for host processes only. It cannot serve Docker jobs.
 
 ## Local executable smoke
 
-The fixture uses only Python's standard library. It needs no GitHub,
+The fixture uses Python's standard library and OpenSSL. It needs no GitHub,
 Boat, or KVM credential. Build first:
 
 ```sh
@@ -83,8 +91,12 @@ cargo build --package ciproxy-cache-sidecar
 python3 image/runner-patch/smoke/check.py
 ```
 
-The check starts the real machine and proxy binaries. It uploads a random
-50 MiB archive in reversed block order. It retries a block and commits the
+The check starts the real machine and proxy binaries with a fixture RSA
+token and a loopback JWKS source. The operator-owned verification file
+selects those public keys for this smoke.
+The check asserts the machine's checked default scope before cache calls.
+It uploads a random 50 MiB archive in reversed block order.
+It retries a block and commits the
 intended order. It then deletes the fake GitHub copy and checks the local
 restore, a ranged read, measured counts, results passthrough, and clear.
 Expected result: one `PASS` line and the listener details. Logs and
@@ -140,6 +152,10 @@ python3 image/runner-patch/smoke/live-check.py \
 ```
 
 The script uses the original runtime credentials for that assignment.
+The trusted runner handoff or a parent Node action must supply that
+environment. Do not print the token or put it on a command argument.
+The script checks the host's returned scope against the assigned default
+branch before the SDK writes anything.
 It starts both local executables and runs the official SDK with a unique
 key. It checks save, lookup-only, and a content round trip. Expected
 result: the SDK `PASS` line and an authenticated GitHub `PASS` line.
@@ -149,6 +165,11 @@ GitHub keeps the unique smoke cache entry until its normal eviction.
 This check proves authenticated HTTP compatibility. It does not start a
 Firecracker VM or a Boat sandbox. Agent and image integration own packaging,
 runner startup, VM network isolation, and lifecycle smoke tests.
+
+Run the
+[runtime-token release probe](../../crates/ciproxy-github/scripts/README.md#runtime-token-release-probe)
+before each image release. It checks the current token format without
+printing credentials or signature bytes.
 
 ## Upstream contracts
 
