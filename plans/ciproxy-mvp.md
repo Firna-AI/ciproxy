@@ -2021,7 +2021,8 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 71 on 5 November 2026. Item 72 still waits. The
+The user answered items 54 to 71 on 5 November 2026. Items 72 and 73 still
+wait. The
 conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
@@ -2540,3 +2541,69 @@ keep the letters that the user saw.
   user asked for no manual production step, with no new provider or secret.
 - **Action:** ask the user, because it moves the DNS and the mail records of
   the domain away from Cloudflare, which only the user controls.
+
+### 73. The full image leaves a job no free disk
+
+- **Severity:** High. **Effort:** Medium.
+- **Source:** Implementation, Milestone 10, the full KVM image build of
+  5 November 2026.
+- **Category:** Docs or spec.
+- **Location:** The label table of `docs/protocol/labels.md`, the machine
+  minimum of `docs/protocol/agent.md`, and
+  `crates/ciproxy-agent/image-budget.md`.
+- **Terms:**
+  - **Image budget:** the disk of an own machine that holds the job images,
+    apart from the job disk.
+  - **Root reserve:** the part of an ext4 disk that only root can use. Its
+    default is 5%.
+- **Background:**
+  - `agent.md` requires the software of the GitHub image that
+    `ubuntu-latest` names. The build of that full set passed all 502
+    upstream checks. It uses 58.3 GB, and its download is 18.3 GB.
+  - The largest parts are the Android SDK with 11.8 GB, .NET with 6.2 GB,
+    the tool cache with 5.6 GB, Haskell with 3.9 GB, Swift with 3.7 GB, and
+    the cached Docker images with 2.7 GB.
+  - With the default root reserve, a job disk of 60 GB leaves a job 0 GB,
+    75 GB leaves 11.2 GB, and 80 GB leaves 15.9 GB. With a reserve of 1%,
+    75 GB leaves 14.2 GB, and 80 GB leaves 19.1 GB.
+  - A standard GitHub-hosted Linux runner promises 14 GB of free disk.
+  - The label `ciproxy` has 60 GB of disk. An own machine needs 80 GB of
+    disk, and its image budget is 4 GB.
+  - Boat `small` and `default` have 51 GB, so they cannot hold the full
+    image. The label already needs Boat `large`, with 111 GB, because of
+    its 60 GB.
+- **Problem:** A job on the label `ciproxy` gets no free disk, and an own
+  machine has no room for the image.
+- **Impact if no action:** Every job on an own machine fails for lack of
+  disk.
+- **Root question:** How does a job get the software of `ubuntu-latest` and
+  enough free disk on an own machine?
+- **Options:**
+  - **A.** Keep the full image. Raise the label disk to 80 GB with a root
+    reserve of 1%, so a job keeps about 19 GB free. Size the image budget
+    for two images and one download during an update, about 135 GB, apart
+    from the job disk. The machine minimum rises from 80 GB to 250 GB of
+    disk. Boat stays on `large`. Effort: Medium.
+  - **B.** Slim the image. Leave out the parts that a setup action installs
+    during the job: Android, Haskell, Swift, Julia, and the cached Docker
+    images. This saves about 23 GB. The 60 GB label then keeps about 23 GB
+    free, and the machine minimum is about 150 GB. A workflow that uses a
+    removed tool without a setup step needs one, which breaks the software
+    rule of `agent.md`. Effort: Medium.
+  - **C.** Share one read-only copy of the full image across the job VMs,
+    and give each job its own writable layer of 20 GB. The job disk then
+    counts only the layer. The machine minimum is about 170 GB, and a
+    machine fits more jobs. It changes the disk model of the merged agent.
+    Effort: Large.
+- **Left out:**
+  - Keep 60 GB and the full image: a job gets no free disk.
+  - A full and a slim image under two labels: each machine then stores and
+    updates both.
+- **Wider fix:** C. It counts the image once for all jobs.
+- **Previous examples:** None found.
+- **Related:** The final disk of Milestone 10 waits for this answer.
+- **Recommendation:** A. It keeps the software rule and the agent design,
+  and 250 GB is small for a CI server. C saves the most disk, at a large
+  cost.
+- **Action:** ask the user, because each option changes the label table,
+  the machine minimum, or the software rule.
