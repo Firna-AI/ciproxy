@@ -935,7 +935,16 @@ Answers of 5 November 2026:
   merged as `9658361` on 5 November 2026.
 - Item 54: the user asked whether the webhooks give the facts, what the options
   are, and how other providers solve it. A research step runs before the answer.
-  Item 55 waits for it, and item 61 has no answer yet.
+  Item 55 waits for it.
+- Item 61, A: the user gave the test-mode keys of a Stripe account for
+  ciproxy only, "CI Proxy sandbox" (`acct_1UYEdnAGa5h8DTS3`). The secret key
+  lives in the secrets folder of the orchestrator and never in the
+  repository. Rejected: the account of `futex-ai/accounting`, and no live
+  test.
+- Item 60, result: on GitHub Free, a runner group limited to one
+  repository ran the job of that repository, and the job of the refused
+  repository stayed queued with no runner for 101.8 seconds. The probe
+  needed a fix of a race in its job check, which Milestone 6 adds.
 
 Design calls for the answer D to item 56, my calls, 5 November 2026:
 
@@ -1102,7 +1111,7 @@ Design calls on the questions of the docs work, my calls, 4 November 2026:
   report. The savings report now covers the whole workspace, which pays
   one price.
 
-Items 54, 55, and 61 wait for the user. They are under "Open items of
+Items 54 and 55 wait for the user. They are under "Open items of
 4 November 2026" at the end of this plan, with the answers of
 5 November 2026 to the other items there. The options check of items 50
 and 51 ran, and its report is in
@@ -1777,9 +1786,10 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-These items wait for the user. The conversation gave each in full in the layout
-of the `decisions-and-findings` skill. Each holds one root question, and its
-options keep the letters that the user saw.
+The user answered items 56 to 65 on 5 November 2026. Items 54 and 55 still
+wait. The conversation gave each item in full in the layout of the
+`decisions-and-findings` skill. Each holds one root question, and its options
+keep the letters that the user saw.
 
 ### 54. The GitHub API cannot name the full ref of a job
 
@@ -1932,6 +1942,8 @@ runs before the answer.
 - **Action:** ask the user.
 
 ### 61. No Stripe test-mode key for the live billing test
+
+**Answer, 5 November 2026:** A, the account "CI Proxy sandbox".
 
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Implementation, Milestone 17.
