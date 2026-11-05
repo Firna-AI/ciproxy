@@ -52,6 +52,8 @@ pub(super) fn setup(database: &Database) -> (Uuid, AccountRecord, StartRecord) {
         sandbox_id: None,
         starts_at: at(),
         ends_at: None,
+        billed_until: None,
+        lifetime_ends_by: None,
         start_usd: Some(Decimal::new(3, 2)),
         reported_at: None,
         runtime: Vec::new(),

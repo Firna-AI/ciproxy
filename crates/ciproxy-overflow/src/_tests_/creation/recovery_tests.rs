@@ -79,6 +79,10 @@ async fn ambiguous_create_uses_recovery_after_the_provider_idempotency_window() 
             .len(),
         1
     );
+    let state = harness.state.lock().unwrap();
+    let pending = &state.snapshot.as_ref().unwrap().starts[0];
+    assert_eq!(pending.lifetime_ends_by, None);
+    assert_eq!(pending.ends_at, None);
 }
 
 #[tokio::test]
@@ -174,7 +178,12 @@ async fn uncertain_file_write_destroys_the_sandbox_before_any_replacement() {
     ));
     assert_eq!(
         harness.state.lock().unwrap().phases,
-        [StartPhase::Writing, StartPhase::Deleting, StartPhase::Ended]
+        [
+            StartPhase::Writing,
+            StartPhase::Deleting,
+            StartPhase::Deleting,
+            StartPhase::Ended
+        ]
     );
     assert!(matches!(
         harness.service.resume(id(1), id(11)).await.unwrap(),
@@ -217,6 +226,10 @@ async fn write_crash_recovery_deletes_without_replaying_the_file_transfer() {
     assert!(matches!(outcome, StartOutcome::Ended(_)), "{outcome:?}");
     assert_eq!(
         harness.state.lock().unwrap().phases,
-        [StartPhase::Deleting, StartPhase::Ended]
+        [
+            StartPhase::Deleting,
+            StartPhase::Deleting,
+            StartPhase::Ended
+        ]
     );
 }

@@ -2,6 +2,7 @@
 
 mod accounts;
 mod cleanup;
+mod costs;
 mod execution;
 mod launch;
 mod refresh;

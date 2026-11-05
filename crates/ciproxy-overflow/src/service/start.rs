@@ -163,6 +163,8 @@ impl OverflowService {
             sandbox_id: None,
             starts_at: now,
             ends_at: None,
+            billed_until: None,
+            lifetime_ends_by: None,
             start_usd: facts.next_start_usd,
             reported_at: None,
             runtime: Vec::new(),

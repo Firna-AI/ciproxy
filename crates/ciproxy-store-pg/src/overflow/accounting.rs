@@ -1,6 +1,6 @@
 //! Reject a complete metering projection when required cost facts are missing.
 
-use chrono::NaiveDate;
+use chrono::{NaiveDate, NaiveTime};
 use ciproxy_schema::overflow::overflow_starts;
 use ciproxy_store_interface::error::{Error, Result, ResultExt};
 use ciproxy_store_interface::overflow::record::{StartPhase, StartRecord};
@@ -13,7 +13,7 @@ use crate::error::QueryResultExt;
 pub(crate) fn require_complete(
     connection: &mut PgConnection,
     workspace_id: Uuid,
-    range: Option<(NaiveDate, NaiveDate)>,
+    range: (NaiveDate, NaiveDate),
 ) -> Result<()> {
     let records = overflow_starts::table
         .filter(overflow_starts::workspace_id.eq(workspace_id))
@@ -22,10 +22,11 @@ pub(crate) fn require_complete(
         .store()?;
     for json in records {
         let record: StartRecord = serde_json::from_str(&json).internal()?;
-        let relevant = range.is_none_or(|(from, until)| {
-            record.starts_at.date_naive() < until
-                && record.ends_at.is_none_or(|end| end.date_naive() >= from)
-        });
+        let (from, until) = range;
+        let from_time = from.and_time(NaiveTime::MIN).and_utc();
+        let relevant = record.starts_at.date_naive() < until
+            && (record.ends_at.is_none_or(|end| end > from_time)
+                || record.starts_at.date_naive() >= from);
         if relevant
             && record.phase != StartPhase::Refused
             && (!record.runtime_complete || record.start_usd.is_none())

@@ -4,14 +4,14 @@ use chrono::Duration;
 use ciproxy_store_interface::overflow::record::{RuntimeCharge, StartPhase};
 use rust_decimal::Decimal;
 use sandbox_interface::{
-    BackendManagedSandbox, OperationId, ProviderRef, ResourceKind, SandboxConsumer, SandboxId,
+    BackendManagedSandbox, OperationId, ProviderRef, SandboxConsumer, SandboxId,
     SandboxLifecycleMock, SandboxLifetime, SandboxState,
 };
 use unimock::{MockFn, Unimock, matching};
 
 use crate::api::{Overflow, Retirement, RunnerAuthorityMock};
 use crate::error::Error;
-use crate::provider::BoatAccountApiMock;
+use crate::provider::{BoatAccountApiMock, RuntimeUsage};
 
 use super::super::fixtures::{Harness, at, capabilities, id, record};
 
@@ -77,16 +77,30 @@ async fn cleanup_deletes_only_an_unneeded_owned_runner_and_preserves_running_job
 }
 
 #[tokio::test]
-async fn ttl_absence_completes_the_known_record_even_when_inventory_omits_it() {
+async fn omitted_stopped_sandbox_recovers_its_final_bill_before_lifecycle_end() {
     let backend = capabilities(Unimock::new((
         SandboxLifecycleMock::list_managed_sandboxes
             .some_call(matching!(_))
             .returns(Ok(Vec::new())),
         SandboxLifecycleMock::inspect_sandbox
             .some_call(matching!((sandbox,) if sandbox.as_str() == "bx_23456789"))
-            .returns(Err(sandbox_interface::Error::NotFound {
-                resource: ResourceKind::Sandbox,
+            .returns(Ok(sandbox_interface::BackendSandbox {
+                provider_ref: ProviderRef::new("bx_23456789"),
+                state: SandboxState::Destroyed,
             })),
+        BoatAccountApiMock::usage
+            .some_call(matching!(_, _, _))
+            .answers(&|_, _, since, until| {
+                Ok(Some(RuntimeUsage {
+                    since: since.unwrap_or(at()),
+                    until,
+                    usd: Decimal::new(432, 3),
+                    running: false,
+                }))
+            }),
+        SandboxLifecycleMock::destroy_sandbox
+            .some_call(matching!(_))
+            .returns(Ok(())),
     )));
     let harness = Harness::new(
         backend,
@@ -113,6 +127,11 @@ async fn ttl_absence_completes_the_known_record_even_when_inventory_omits_it() {
     *harness.now.lock().unwrap() = at() + Duration::hours(7);
     harness.service.cleanup(id(1)).await.unwrap();
     let state = harness.state.lock().unwrap();
+    assert_eq!(
+        state.snapshot.as_ref().unwrap().starts[0].billed_until,
+        Some(at() + Duration::hours(6))
+    );
+    assert!(state.snapshot.as_ref().unwrap().starts[0].runtime_complete);
     assert_eq!(
         state.snapshot.as_ref().unwrap().starts[0].phase,
         StartPhase::Ended

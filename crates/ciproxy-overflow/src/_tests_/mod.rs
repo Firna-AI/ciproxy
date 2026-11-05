@@ -2,6 +2,7 @@
 
 mod accounts_tests;
 mod cleanup;
+mod coverage_tests;
 mod creation;
 mod fixtures;
 mod kms_tests;

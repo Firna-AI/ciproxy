@@ -193,11 +193,14 @@ async fn catalog_refreshes_at_five_minutes_and_drives_cheapest_or_largest_choice
 
 #[tokio::test]
 async fn newly_rejected_saved_key_stops_starts_and_keeps_its_rejection_time() {
-    let backend = capabilities(Unimock::new(
+    let backend = capabilities(Unimock::new((
         BoatAccountApiMock::account
             .some_call(matching!())
             .returns(Err(Error::RejectedKey)),
-    ));
+        BoatAccountApiMock::usage
+            .some_call(matching!(_, _, _))
+            .answers(&|_, _, _, _| Err(Error::RejectedKey)),
+    )));
     let harness = Harness::new(
         backend,
         (),
@@ -205,23 +208,50 @@ async fn newly_rejected_saved_key_stops_starts_and_keeps_its_rejection_time() {
             "try_lock_overflow",
             "snapshot",
             "save_account",
+            "save_start",
             "now",
             "backend",
             "open",
         ],
     );
+    harness
+        .state
+        .lock()
+        .unwrap()
+        .snapshot
+        .as_mut()
+        .unwrap()
+        .starts
+        .push(super::coverage_tests::running_observation());
     *harness.now.lock().unwrap() = at() + Duration::minutes(5);
     let view = harness.service.view(id(1)).await.unwrap();
     assert_eq!(
         view.account.unwrap().rejected_at,
         Some(at() + Duration::minutes(5))
     );
+    assert_eq!(view.spend.unmeasured_runtime, [id(11)]);
+    assert!(
+        !harness
+            .state
+            .lock()
+            .unwrap()
+            .snapshot
+            .as_ref()
+            .unwrap()
+            .starts[0]
+            .runtime_complete
+    );
+    let again = harness.service.view(id(1)).await.unwrap();
+    assert_eq!(
+        again.account.unwrap().rejected_at,
+        Some(at() + Duration::minutes(5))
+    );
+
+    let mut next = super::fixtures::request();
+    next.delivery_id = id(21);
+    next.runner_id = id(22);
     assert!(matches!(
-        harness
-            .service
-            .start(id(1), super::fixtures::request())
-            .await
-            .unwrap(),
+        harness.service.start(id(1), next).await.unwrap(),
         StartOutcome::Waiting(crate::api::WaitReason::Disconnected)
     ));
 }

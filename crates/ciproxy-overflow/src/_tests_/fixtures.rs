@@ -232,6 +232,8 @@ pub(super) fn record(phase: StartPhase) -> StartRecord {
         sandbox_id: Some("bx_23456789".to_owned()),
         starts_at: at(),
         ends_at: None,
+        billed_until: None,
+        lifetime_ends_by: None,
         start_usd: Some(Decimal::new(3, 2)),
         reported_at: None,
         runtime: Vec::new(),

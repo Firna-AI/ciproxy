@@ -5,6 +5,7 @@ use ciproxy_store_interface::overflow::store::OverflowSnapshot;
 use sandbox_interface::ProviderRef;
 use uuid::Uuid;
 
+use crate::cost_state;
 use crate::error::Result;
 use crate::provider::Capabilities;
 use crate::session::Session;
@@ -27,9 +28,19 @@ impl OverflowService {
                 .iter()
                 .find(|account| account.account.id == record.key_id)
             else {
+                self.missing_usage(session, record).await?;
                 continue;
             };
-            let backend = self.backend(workspace_id, account).await?;
+            let backend = match self.backend(workspace_id, account).await {
+                Ok(backend) => backend,
+                Err(_) => {
+                    tracing::warn!(
+                        "Boat cost credentials are unavailable; saved metadata remains readable"
+                    );
+                    self.missing_usage(session, record).await?;
+                    continue;
+                }
+            };
             self.measure(session, &backend, record).await?;
         }
         Ok(())
@@ -46,17 +57,19 @@ impl OverflowService {
         };
         let id = ProviderRef::new(id);
         let now = self.dependencies.clock.now();
-        let Some(total) = backend.account.usage(id.clone(), None, now).await? else {
-            return Ok(false);
+        let total = match backend.account.usage(id.clone(), None, now).await {
+            Ok(Some(total)) => total,
+            Ok(None) | Err(_) => return self.missing_usage(session, record).await,
         };
-        record.starts_at = total.since;
+        cost_state::observe_existence(record, total.since);
         let mut month = spend::month_start(total.since)?;
         let mut charges = Vec::new();
         let until = record.ends_at.unwrap_or(now).min(now);
         while month < until {
             let end = spend::next_month(month)?.min(until);
-            let Some(usage) = backend.account.usage(id.clone(), Some(month), end).await? else {
-                return Ok(false);
+            let usage = match backend.account.usage(id.clone(), Some(month), end).await {
+                Ok(Some(usage)) => usage,
+                Ok(None) | Err(_) => return self.missing_usage(session, record).await,
             };
             charges.push(RuntimeCharge {
                 month: month.date_naive(),
@@ -66,12 +79,10 @@ impl OverflowService {
             });
             month = end;
         }
+        record.starts_at = total.since;
         record.runtime = charges;
         record.runtime_complete = !total.running || until == now;
-        let changed = record.clone();
-        session
-            .call(move |session| session.save_start(&changed))
-            .await?;
+        self.save_cost_state(session, record).await?;
         Ok(true)
     }
 }

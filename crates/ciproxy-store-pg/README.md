@@ -149,9 +149,11 @@ Key erasure checks unfinished deliveries as well as live runners.
 No query receives a plaintext key or runner registration.
 Metering price facts publish only after a trusted runtime observation.
 Their upserts correct provider start times and every price field.
-An unknown final interval preserves the last trusted price row.
-Boat accounting and relevant savings reads return `AccountingIncomplete`
-while a required fee or runtime interval remains unknown.
+An unknown final interval publishes only the known measured billing prefix.
+Boat accounting remains available so the metering refresh can reach purge.
+Relevant savings reads return `AccountingIncomplete` while a required fee
+or runtime interval remains unknown.
+The savings range excludes a lifecycle end at its first instant.
 Execution and cleanup do not use those reporting reads.
 
 ## Quick Start

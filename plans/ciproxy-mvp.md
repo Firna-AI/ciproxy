@@ -531,13 +531,15 @@ interface, which needs a user decision.
 - [x] Delete a sandbox at once when its guest reports the end of its
       runner. Accept one report for each token.
       Branch: `conductor/ciproxy-mvp-milestone-12-overflow-to-boat`.
-- [x] Delete idle marked sandboxes. Wait out a refusal with a retry time,
+- [ ] Delete idle marked sandboxes. Wait out a refusal with a retry time,
       drop a size that the plan lacks, and stop Boat starts at a billing
       refusal. Treat `canStart` as a hint, as the spike saw a refusal after
       `canStart: true`. Count the spend as run time and start charges. My
       call: Boat bills these two parts.
       My call, 5 November 2026: expose incomplete cost facts explicitly.
       Reason: missing costs cannot prove room under the spend limit.
+      Pending: choose how unrecoverable cost gaps affect new starts.
+      The current hold needs an owner decision before this TODO completes.
       Branch: `conductor/ciproxy-mvp-milestone-12-overflow-to-boat`.
 - [x] Encrypt the keys with Cloud KMS. Test with the mock of
       `sandbox-interface`.

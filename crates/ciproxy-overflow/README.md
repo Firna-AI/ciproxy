@@ -73,9 +73,15 @@ The store accepts it once for its one live runner.
 There is no independent token timeout before the sandbox ends.
 The service persists deletion before calling Boat.
 Cleanup retries failed deletion and inspects known IDs omitted from inventory.
+An absent or archived sandbox gets one final usage read before lifecycle end.
 It preserves running jobs and needed idle runners.
 It only deletes identities proven by its durable create records.
 Unrecognized inventory entries stay unchanged.
+A known sandbox has a saved latest end from a trusted creation time or a
+later existence observation and its unchanged provider lifetime.
+After that bound, failed credentials cannot keep its retired key forever.
+Cleanup can finish lifecycle retention while the final bill stays unknown.
+An ambiguous create without a known sandbox gets no inferred end.
 
 Spend includes all ciproxy sandboxes across the workspace's organizations
 and retained key versions.
@@ -85,6 +91,9 @@ It reads each sandbox's runtime for explicit UTC calendar-month windows.
 It uses the pinned hourly price for the known running interval between the
 last observation and a confirmed normal deletion.
 It counts a start fee only in its start month.
+Measured dollars and the pinned rate define the continuous billing interval.
+Its end is separate from the later lifecycle reconciliation time.
+An impossible interval clamps to its observation bounds and logs a warning.
 At the monthly limit, new starts wait until the next UTC month or a limit
 increase.
 Running jobs and deletion continue.
@@ -94,12 +103,15 @@ For example, a lost delete response can leave the final interval unknown.
 `scaler_account` and new starts return `Error::AccountingIncomplete` while
 the current month's required cost facts remain incomplete.
 They never convert missing costs to zero.
+Missing or failed usage reads invalidate stale runtime completeness.
+Known costs and saved account metadata remain readable after key rejection,
+including records that still reference an old key.
 Ordinary measured completion permits another start under the limit.
 The store also protects metering from incomplete price intervals.
-It corrects trusted provider start times and preserves the last trusted row
-when a final interval is unknown.
-Boat accounting and relevant savings reads then return a typed incomplete
-error, without changing execution or cleanup.
+It publishes a bounded known billing prefix when a final interval is unknown.
+The metering refresh can then account known costs and purge expired totals.
+Relevant savings reads still return a typed incomplete error.
+Ranges after a confirmed lifecycle end do not include that missing interval.
 
 Cloud KMS encrypts account keys and temporary runner input.
 Authenticated data binds the workspace, secret identity, and purpose.

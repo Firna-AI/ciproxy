@@ -56,7 +56,7 @@ pub trait MeteringStore: Send + Sync {
         starts: &[StartTotal],
     ) -> Result<bool>;
     /// Read Boat source facts and cost cursors in one coherent snapshot.
-    /// Return AccountingIncomplete instead of extrapolating unknown overflow costs.
+    /// Incomplete deliveries contribute only their known bounded billing intervals.
     fn boat_accounting(&self, workspace_id: Uuid) -> Result<BoatAccounting>;
     /// Apply Boat cost corrections and a cursor in one transaction.
     ///

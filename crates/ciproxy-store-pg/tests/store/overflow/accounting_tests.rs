@@ -24,12 +24,13 @@ fn metering_uses_provider_start_time_and_never_confirms_an_unknown_outage_day() 
     record.sandbox_id = Some("bx_23456789".to_owned());
     record.phase = StartPhase::Running;
     session.save_start(&record).unwrap();
-    assert!(matches!(
-        database.store.boat_accounting(workspace_id),
-        Err(Error::AccountingIncomplete)
-    ));
+    assert_eq!(
+        database.store.boat_accounting(workspace_id).unwrap().costs,
+        []
+    );
     record.starts_at = at() + Duration::seconds(30);
     record.runtime_complete = true;
+    record.billed_until = Some(at() + Duration::seconds(120));
     record.runtime = vec![RuntimeCharge {
         month: "2026-11-01".parse().unwrap(),
         usd: Decimal::new(18, 4),
@@ -60,10 +61,8 @@ fn metering_uses_provider_start_time_and_never_confirms_an_unknown_outage_day() 
     record.ends_at = Some(at() + Duration::days(1));
     record.runtime_complete = false;
     session.save_start(&record).unwrap();
-    assert!(matches!(
-        database.store.boat_accounting(workspace_id),
-        Err(Error::AccountingIncomplete)
-    ));
+    let known = database.store.boat_accounting(workspace_id).unwrap();
+    assert_eq!(known.costs[0].ends_at, Some(at() + Duration::seconds(120)));
     assert!(matches!(
         database.store.savings_snapshot(workspace_id, from, until),
         Err(Error::AccountingIncomplete)

@@ -74,10 +74,16 @@ pub struct StartRecord {
     pub phase: StartPhase,
     /// Provider sandbox identity once recovered or accepted.
     pub sandbox_id: Option<String>,
-    /// Time before create dispatch, used for conservative live runtime pricing.
+    /// Dispatch time, replaced by the trusted provider creation time when measured.
     pub starts_at: DateTime<Utc>,
-    /// Confirmed billing end, absent while delivery or cleanup remains live.
+    /// Confirmed lifecycle end, independent of measured billing time.
     pub ends_at: Option<DateTime<Utc>>,
+    /// End of the measured billing prefix, independent of lifecycle reconciliation.
+    #[serde(default)]
+    pub billed_until: Option<DateTime<Utc>>,
+    /// Proven latest lifecycle end from an observed sandbox and its unchanged lifetime.
+    #[serde(default)]
+    pub lifetime_ends_by: Option<DateTime<Utc>>,
     /// Quoted start charge. Absence preserves an unknown provider charge.
     pub start_usd: Option<Decimal>,
     /// First accepted guest end report, absent before token consumption.

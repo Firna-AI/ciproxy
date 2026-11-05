@@ -7,6 +7,7 @@ use tokio::task::spawn_blocking;
 use uuid::Uuid;
 
 use crate::api::Retirement;
+use crate::cost_state;
 use crate::error::{Error, Result, ResultExt};
 use crate::provider::Capabilities;
 use crate::secrets::digest;
@@ -57,27 +58,26 @@ impl OverflowService {
                 false
             }
         };
-        backend
-            .lifecycle
-            .destroy_sandbox(sandbox)
-            .await
-            .internal()?;
+        let destroyed = backend.lifecycle.destroy_sandbox(sandbox).await;
+        if destroyed.is_err() {
+            let still_billing = measured
+                && record
+                    .runtime
+                    .iter()
+                    .max_by_key(|charge| charge.until)
+                    .is_some_and(|charge| charge.running);
+            if !still_billing && let Some(bound) = self.proven_lifetime_end(record) {
+                return self.end_record(session, record, bound).await;
+            }
+            destroyed.internal()?;
+        }
         let now = self.dependencies.clock.now();
         if measured {
             spend::extend(record, now)?;
         } else {
-            record.runtime_complete = record
-                .runtime
-                .iter()
-                .max_by_key(|charge| charge.until)
-                .is_some_and(|charge| !charge.running);
+            cost_state::missing_observation(record);
         }
-        record.phase = StartPhase::Ended;
-        record.ends_at = Some(now);
-        let changed = record.clone();
-        session
-            .call(move |session| session.save_start(&changed))
-            .await
+        self.end_record(session, record, now).await
     }
 
     pub(super) async fn cleanup_workspace(&self, workspace_id: Uuid) -> Result<()> {
@@ -89,7 +89,18 @@ impl OverflowService {
             let backend = match self.backend(workspace_id, account).await {
                 Ok(backend) => backend,
                 Err(_) => {
-                    failed = true;
+                    for mut record in snapshot
+                        .starts
+                        .iter()
+                        .filter(|record| {
+                            record.key_id == account.account.id && record.ends_at.is_none()
+                        })
+                        .cloned()
+                    {
+                        if !self.unavailable_lifecycle(&session, &mut record).await? {
+                            failed = true;
+                        }
+                    }
                     continue;
                 }
             };
@@ -97,7 +108,9 @@ impl OverflowService {
             let inventory = match backend.lifecycle.list_managed_sandboxes(deployment).await {
                 Ok(inventory) => inventory,
                 Err(_) => {
-                    failed = true;
+                    tracing::warn!(
+                        "Boat inventory is unavailable; known lifecycle records will be reconciled"
+                    );
                     Vec::new()
                 }
             };
@@ -149,22 +162,37 @@ impl OverflowService {
                             state: SandboxState::Destroyed,
                             ..
                         }) => {
-                            record.phase = StartPhase::Ended;
-                            record.ends_at = Some(self.dependencies.clock.now());
-                            record.runtime_complete = record
-                                .runtime
-                                .iter()
-                                .max_by_key(|charge| charge.until)
-                                .is_some_and(|charge| !charge.running);
+                            record.phase = StartPhase::Deleting;
                             let changed = record.clone();
                             session
                                 .call(move |session| session.save_start(&changed))
                                 .await?;
+                            if self.delete(&session, &backend, &mut record).await.is_err() {
+                                failed = true;
+                            }
                             continue;
                         }
                         Ok(_) => {}
                         Err(_) => {
-                            failed = true;
+                            if record.lifetime_ends_by.is_none() {
+                                cost_state::observe_existence(
+                                    &mut record,
+                                    self.dependencies.clock.now(),
+                                );
+                                self.save_cost_state(&session, &mut record).await?;
+                            }
+                            if self.proven_lifetime_end(&record).is_some() {
+                                record.phase = StartPhase::Deleting;
+                                let changed = record.clone();
+                                session
+                                    .call(move |session| session.save_start(&changed))
+                                    .await?;
+                                if self.delete(&session, &backend, &mut record).await.is_err() {
+                                    failed = true;
+                                }
+                            } else {
+                                failed = true;
+                            }
                             continue;
                         }
                     }

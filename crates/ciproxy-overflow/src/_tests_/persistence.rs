@@ -141,6 +141,9 @@ pub(super) fn store(state: Arc<Mutex<State>>, calls: &[&str]) -> Arc<dyn Overflo
             Unimock::new((snapshot, save_account, reserve_start, save_refusal))
         }
         ["snapshot", "save_start"] => Unimock::new((snapshot, save_start)),
+        ["snapshot", "save_start", "save_account"] => {
+            Unimock::new((snapshot, save_start, save_account))
+        }
         ["snapshot", "save_start", "collect"] => Unimock::new((snapshot, save_start, collect)),
         ["snapshot", "save_start", "encrypted_launch"] => {
             Unimock::new((snapshot, save_start, encrypted_launch))

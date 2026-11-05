@@ -80,7 +80,7 @@ impl MeteringStore for PgStore {
         until: NaiveDate,
     ) -> Result<SavingsSnapshot> {
         read_snapshot(&mut *self.connection()?, |connection| {
-            accounting::require_complete(connection, workspace_id, Some((from, until)))?;
+            accounting::require_complete(connection, workspace_id, (from, until))?;
             Ok(SavingsSnapshot {
                 machines: facts::registrations(connection, workspace_id).store()?,
                 days: aggregates::load(connection, workspace_id, from, until).store()?,
@@ -134,7 +134,6 @@ impl MeteringStore for PgStore {
 
     fn boat_accounting(&self, workspace_id: Uuid) -> Result<BoatAccounting> {
         read_snapshot(&mut *self.connection()?, |connection| {
-            accounting::require_complete(connection, workspace_id, None)?;
             Ok(BoatAccounting {
                 costs: history::load_boat(connection, workspace_id).store()?,
                 accounted: boat_cursors::load(connection, workspace_id).store()?,

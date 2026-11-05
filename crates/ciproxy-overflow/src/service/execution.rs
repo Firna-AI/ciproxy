@@ -10,6 +10,7 @@ use sandbox_interface::{
 use uuid::Uuid;
 
 use crate::api::{StartOutcome, WaitReason};
+use crate::cost_state;
 use crate::error::{Error, Result, ResultExt};
 use crate::session::Session;
 
@@ -83,6 +84,7 @@ impl OverflowService {
                 }
             };
             record.sandbox_id = Some(sandbox.provider_ref.as_str().to_owned());
+            cost_state::observe_existence(&mut record, self.dependencies.clock.now());
             record.phase = StartPhase::Preparing;
             let changed = record.clone();
             session
@@ -97,12 +99,12 @@ impl OverflowService {
         let sandbox = match backend.lifecycle.inspect_sandbox(provider_ref).await {
             Ok(sandbox) => sandbox,
             Err(sandbox_interface::Error::NotFound { .. }) => {
-                record.phase = StartPhase::Ended;
-                record.ends_at = Some(self.dependencies.clock.now());
+                record.phase = StartPhase::Deleting;
                 let changed = record.clone();
                 session
                     .call(move |session| session.save_start(&changed))
                     .await?;
+                self.delete(session, &backend, &mut record).await?;
                 return Ok(StartOutcome::Ended(record));
             }
             result => result.internal()?,

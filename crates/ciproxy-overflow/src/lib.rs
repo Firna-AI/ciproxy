@@ -6,6 +6,7 @@ pub mod api;
 pub mod boat;
 mod catalog;
 pub mod clock;
+mod cost_state;
 pub mod crypto;
 pub mod error;
 pub mod kms;
