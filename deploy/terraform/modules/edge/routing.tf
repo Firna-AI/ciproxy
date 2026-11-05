@@ -17,6 +17,16 @@ resource "google_compute_url_map" "https" {
     name            = "site"
     default_service = google_compute_backend_bucket.public["site"].id
     path_rule {
+      # Generated hashes only. The more specific Pagefind child prefixes
+      # override its mutable parent. HTML aliases keep the default.
+      paths   = ["/_astro/*", "/pagefind/index/*", "/pagefind/fragment/*"]
+      service = google_compute_backend_bucket.assets["site"].id
+    }
+    path_rule {
+      paths   = ["/pagefind/*", "/favicon.svg", "/sitemap-index.xml", "/sitemap-0.xml"]
+      service = google_compute_backend_bucket.mutable["site"].id
+    }
+    path_rule {
       paths   = ["/"]
       service = google_compute_backend_bucket.public["site"].id
       route_action {
@@ -29,6 +39,15 @@ resource "google_compute_url_map" "https" {
   path_matcher {
     name            = "dashboard"
     default_service = google_compute_backend_bucket.public["dashboard"].id
+    path_rule {
+      # Keep Expo's build-owned static namespace, not all /_expo/*.
+      paths   = ["/_expo/static/*", "/assets/*"]
+      service = google_compute_backend_bucket.assets["dashboard"].id
+    }
+    path_rule {
+      paths   = ["/_expo/.routes.json"]
+      service = google_compute_backend_bucket.mutable["dashboard"].id
+    }
     path_rule {
       paths   = ["/"]
       service = google_compute_backend_bucket.public["dashboard"].id
@@ -108,9 +127,9 @@ resource "google_compute_global_forwarding_rule" "http" {
 }
 
 resource "google_dns_record_set" "public" {
-  for_each     = local.config.hosts
-  name         = "${each.value}."
-  managed_zone = local.config.dns_zones[each.key]
+  for_each     = local.config.dns_zones
+  name         = "${local.config.hosts[each.key]}."
+  managed_zone = each.value
   type         = "A"
   ttl          = 300
   rrdatas      = [google_compute_global_address.public.address]

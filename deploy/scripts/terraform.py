@@ -13,6 +13,8 @@ from promotion_event import check_checkout, validate
 from terraform_approval import load_json
 from terraform_policy import check
 from terraform_roots import ENVIRONMENTS, ROOTS, backend, configuration_digest
+from shared_routing import launched, require_writer
+from workload_snapshot import expected_binding, load as workload_inputs
 
 
 def command(root, *arguments, capture=False):
@@ -22,36 +24,43 @@ def command(root, *arguments, capture=False):
     ).stdout
 
 
-def variables(environment, root):
-    if root in ("seed", "bootstrap"):
-        return {"environment": environment, "project_id": ENVIRONMENTS[environment]}
-    if root == "foundation":
-        email = os.environ.get("ALERT_EMAIL", "")
-        if not email.strip():
-            raise ValueError("Set the GitHub environment variable ALERT_EMAIL.")
-        return {"notification_emails": [email]}
-    return {
-        "control_plane_enabled": os.environ.get("CONTROL_PLANE_RUNTIME_READY") == "true",
-        "enable_uptime_checks": os.environ.get("PUBLIC_UPTIME_ENABLED") == "true",
-    }
+def variables(environment, root, target=None):
+    target = target or environment
+    if root == "seed":
+        return {"project_id": ENVIRONMENTS[environment]}
+    if root == "bootstrap":
+        outputs = json.loads(command(backend(environment, "bootstrap").directory, "output", "-json", capture=True))
+        return {"project_id": ENVIRONMENTS[environment], "production_enabled": launched(),
+                "runtime_service_account_uids": outputs["runtime_service_account_uids"]["value"]}
+    if root == "shared":
+        return {"production_enabled": launched()}
+    if root == "data":
+        return {"environment": target}
+    if root == "edge":
+        return {"environment": target, "workload": workload_inputs(target, environment)}
+    return workload_inputs(target, environment)
 
 
-def metadata(repository, environment, root, binary):
+def metadata(repository, environment, root, binary, target=None):
+    target = target or environment
     return {
-        "environment": environment, "root": root,
+        "environment": environment, "target": target, "root": root,
         "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
         "run": os.environ.get("GITHUB_RUN_ID", ""),
         "attempt": os.environ.get("GITHUB_RUN_ATTEMPT", ""),
         "configurationDigest": configuration_digest(repository),
         "planDigest": "sha256:" + hashlib.sha256(binary.read_bytes()).hexdigest(),
+        "workload": expected_binding(target, environment) if root in ("foundation", "edge") else None,
     }
 
 
-def promote(action, environment, root):
+def promote(action, environment, root, target=None):
+    target = target or environment
     repository = Path.cwd()
-    target = backend(environment, root)
-    location = target.directory
-    scratch = repository / ".context/plans" / environment / root
+    state = backend(target, root)
+    location = state.directory
+    name = root if target == environment else f"{root}-{target}"
+    scratch = repository / ".context/plans" / environment / name
     scratch.mkdir(parents=True, exist_ok=True, mode=0o700)
     binary = scratch / "release.tfplan"
     manifest = scratch / "metadata.json"
@@ -67,15 +76,17 @@ def promote(action, environment, root):
     if action != "plan":
         if not binary.is_file() or not manifest.is_file():
             raise ValueError("Run a new plan before checking or applying.")
-        if load_json(manifest) != metadata(repository, environment, root, binary):
+        if load_json(manifest) != metadata(repository, environment, root, binary, target):
             raise ValueError("Saved plan is stale or changed. Start a new run with all jobs.")
     else:
         manifest.unlink(missing_ok=True)
+    if ci:
+        require_writer(environment, root, os.environ, target)
     command(location, "init", "-input=false", "-reconfigure", "-lockfile=readonly",
-            *target.arguments())
+            *state.arguments())
     if action == "plan":
         inputs = scratch / "inputs.tfvars.json"
-        inputs.write_text(json.dumps(variables(environment, root)))
+        inputs.write_text(json.dumps(variables(environment, root, target)))
         with (scratch / "plan.txt").open("w") as output:
             result = subprocess.run(
                 ["terraform", f"-chdir={location}", "plan", "-input=false", "-no-color",
@@ -85,13 +96,13 @@ def promote(action, environment, root):
         print((scratch / "plan.txt").read_text(), end="")
         if result.returncode not in (0, 2):
             raise ValueError(f"Terraform plan failed with status {result.returncode}. Start a new plan.")
-        manifest.write_text(json.dumps(metadata(repository, environment, root, binary), indent=2) + "\n")
+        manifest.write_text(json.dumps(metadata(repository, environment, root, binary, target), indent=2) + "\n")
     # JSON shipped with an artifact is evidence only. Always derive policy input
     # from the binary that Terraform will apply, including at the apply boundary.
     plan = command(location, "show", "-json", str(binary), capture=True)
     plan_path = scratch / "plan.json"
     plan_path.write_text(plan)
-    check(repository, environment, root, load_json(plan_path), ci=ci)
+    check(repository, target, root, load_json(plan_path), ci=ci)
     if action == "apply":
         command(location, "apply", "-input=false", "-lock-timeout=5m", str(binary))
 
@@ -101,9 +112,10 @@ def main():
     parser.add_argument("action", choices=["plan", "check", "apply"])
     parser.add_argument("environment", choices=ENVIRONMENTS)
     parser.add_argument("root", choices=ROOTS)
+    parser.add_argument("--target", choices=ENVIRONMENTS)
     args = parser.parse_args()
     try:
-        promote(args.action, args.environment, args.root)
+        promote(args.action, args.environment, args.root, args.target)
     except (ValueError, OSError, subprocess.CalledProcessError) as error:
         print(f"Terraform promotion: {error}", file=sys.stderr)
         return 1

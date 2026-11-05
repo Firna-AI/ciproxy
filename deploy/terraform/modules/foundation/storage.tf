@@ -1,9 +1,11 @@
+# Public website content, private GCS origins.
 resource "google_storage_bucket" "public" {
   for_each                    = toset(["site", "dashboard"])
   name                        = "${local.prefix}-${each.key}-${var.project_id}"
   location                    = local.region
   uniform_bucket_level_access = true
   force_destroy               = false
+  public_access_prevention    = "enforced"
   website {
     main_page_suffix = "index.html"
     not_found_page   = "404.html"
@@ -11,13 +13,6 @@ resource "google_storage_bucket" "public" {
   versioning {
     enabled = true
   }
-}
-
-resource "google_storage_bucket_iam_member" "public" {
-  for_each = google_storage_bucket.public
-  bucket   = each.value.name
-  role     = "roles/storage.objectViewer"
-  member   = "allUsers"
 }
 
 resource "google_storage_bucket_iam_member" "publisher" {
@@ -53,14 +48,13 @@ resource "google_secret_manager_secret" "control_plane" {
       }
     }
   }
-  depends_on = [google_project_service.service]
 }
 
 resource "google_secret_manager_secret_iam_member" "control_plane" {
   for_each  = google_secret_manager_secret.control_plane
   secret_id = each.value.id
   role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.control_plane.email}"
+  member    = "serviceAccount:${local.control_account}"
 }
 
 resource "google_secret_manager_secret" "release" {
@@ -73,7 +67,6 @@ resource "google_secret_manager_secret" "release" {
       }
     }
   }
-  depends_on = [google_project_service.service]
 }
 
 resource "google_secret_manager_secret_iam_member" "release_sync" {
@@ -87,15 +80,20 @@ resource "google_dns_managed_zone" "public" {
   name        = each.key == "site" ? local.prefix : "${local.prefix}-${each.key}"
   dns_name    = "${each.value}."
   description = "Delegate this zone before enabling public uptime checks."
-  depends_on  = [google_project_service.service]
 }
 
-resource "google_monitoring_notification_channel" "email" {
-  for_each     = var.notification_emails
-  display_name = "ciproxy ${var.environment}: ${each.value}"
-  type         = "email"
-  labels = {
-    email_address = each.value
-  }
-  depends_on = [google_project_service.service]
+# app/get become authoritative parents after Cloudflare delegates them.
+# Read the named Google zones, never mutable rollout or prelaunch state.
+data "google_dns_managed_zone" "preview" {
+  for_each = local.preview_zones
+  name     = each.value
+}
+
+resource "google_dns_record_set" "preview_delegation" {
+  for_each     = local.preview_zones
+  name         = "preview.${local.dns_domains[each.key]}."
+  managed_zone = google_dns_managed_zone.public[each.key].name
+  type         = "NS"
+  ttl          = 3600
+  rrdatas      = data.google_dns_managed_zone.preview[each.key].name_servers
 }

@@ -1,0 +1,67 @@
+name: Promote infrastructure
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      source:
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+jobs:
+  plan-trust:
+    uses: ./.github/workflows/deploy-plan.yml
+    with:
+      environment: ${{ inputs.environment }}
+      source: ${{ inputs.source }}
+      scope: trust
+  apply-trust:
+    needs: plan-trust
+    uses: ./.github/workflows/deploy-apply.yml
+    with:
+      environment: ${{ inputs.environment }}
+      source: ${{ inputs.source }}
+      scope: trust
+  plan-shared:
+    needs: apply-trust
+    uses: ./.github/workflows/deploy-plan.yml
+    with:
+      environment: ${{ inputs.environment }}
+      source: ${{ inputs.source }}
+      scope: shared
+  apply-shared:
+    needs: plan-shared
+    uses: ./.github/workflows/deploy-apply.yml
+    with:
+      environment: ${{ inputs.environment }}
+      source: ${{ inputs.source }}
+      scope: shared
+  plan-data:
+    needs: apply-shared
+    uses: ./.github/workflows/deploy-plan.yml
+    with:
+      environment: ${{ inputs.environment }}
+      source: ${{ inputs.source }}
+      scope: data
+  apply-data:
+    needs: plan-data
+    uses: ./.github/workflows/deploy-apply.yml
+    with:
+      environment: ${{ inputs.environment }}
+      source: ${{ inputs.source }}
+      scope: data
+
+  required:
+    if: always()
+    needs: [plan-trust, apply-trust, plan-shared, apply-shared, plan-data, apply-data]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require the full promotion
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python3 -c 'import json,os; n=json.loads(os.environ["RESULTS"]); assert all(job["result"] == "success" for job in n.values())'

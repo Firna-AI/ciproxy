@@ -7,21 +7,34 @@ from pathlib import Path
 import sys
 
 from terraform_approval import PolicyError, format_approval, load_json, reason, require_committed
-from terraform_roots import approval_path, configuration_digest, directory, scope, trust_resource
+from terraform_roots import ROOTS, approval_path, configuration_digest, directory, scope, trust_resource
 
 
 KEYS = {"schemaVersion", "environment", "configurationDigest", "reason", "actions"}
 KNOWN = {"no-op", "create", "read", "update", "delete", "forget"}
 
 
+def resources(plan):
+    """Terraform omits resource_changes for canonical empty/output-only plans."""
+    if (not isinstance(plan, dict) or not isinstance(plan.get("format_version"), str)
+            or plan["format_version"].split(".", 1)[0] != "1"):
+        raise PolicyError("Terraform plan JSON must use format 1.")
+    if "resource_changes" not in plan:
+        configuration = plan.get("configuration")
+        if (not isinstance(plan.get("planned_values"), dict)
+                or not isinstance(configuration, dict)
+                or not isinstance(configuration.get("root_module"), dict)):
+            raise PolicyError("An empty resource plan needs planned_values and root configuration.")
+        return []
+    if not isinstance(plan["resource_changes"], list):
+        raise PolicyError("Terraform resource_changes must be an array.")
+    return plan["resource_changes"]
+
+
 def destructive_actions(plan):
     """Keep replacement order and deposed object keys from Terraform JSON."""
-    if (not isinstance(plan, dict) or not isinstance(plan.get("format_version"), str)
-            or plan["format_version"].split(".", 1)[0] != "1"
-            or not isinstance(plan.get("resource_changes"), list)):
-        raise PolicyError("Terraform plan JSON must contain resource_changes in format 1.")
     result, identities = [], set()
-    for resource in plan["resource_changes"]:
+    for resource in resources(plan):
         if not isinstance(resource, dict) or not isinstance(resource.get("change"), dict):
             raise PolicyError("Every resource change needs change details.")
         address, deposed = resource.get("address"), resource.get("deposed")
@@ -46,7 +59,7 @@ def destructive_actions(plan):
 
 def trust_violations(root, plan):
     destructive_actions(plan)
-    return [resource["address"] for resource in plan["resource_changes"]
+    return [resource["address"] for resource in resources(plan)
             if {"delete", "forget"}.intersection(resource["change"]["actions"])
             and trust_resource(root, resource)]
 
@@ -105,7 +118,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=["check", "approval"])
     parser.add_argument("environment", choices=["main-preview", "production"])
-    parser.add_argument("root", choices=["seed", "bootstrap", "foundation", "edge"])
+    parser.add_argument("root", choices=ROOTS)
     parser.add_argument("plan", type=Path)
     parser.add_argument("--reason")
     args = parser.parse_args()

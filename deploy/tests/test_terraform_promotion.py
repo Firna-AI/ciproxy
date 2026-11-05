@@ -17,6 +17,8 @@ class TerraformPromotionTests(PromotionCase):
 
     def prepare(self, root="seed"):
         self.trusted()
+        if root == "edge":
+            self.snapshot()
         result = self.cli("terraform.py", "plan", "main-preview", root)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.log.write_text("")
@@ -26,7 +28,7 @@ class TerraformPromotionTests(PromotionCase):
         scratch = self.prepare()
         result = self.cli("terraform.py", "apply", "main-preview", "seed")
         self.assertEqual(result.returncode, 0, result.stderr)
-        calls = self.commands()
+        calls = [call for call in self.commands() if call["tool"] == "terraform"]
         self.assertEqual([call["args"][1] for call in calls], ["init", "show", "apply"])
         self.assertEqual(calls[-1]["args"], [
             "-chdir=deploy/terraform/seed", "apply", "-input=false", "-lock-timeout=5m",
@@ -38,7 +40,7 @@ class TerraformPromotionTests(PromotionCase):
         scratch = self.prepare()
         original = (scratch / "metadata.json").read_text()
         for field, value in (("commit", "0" * 40), ("run", "9999"), ("attempt", "0"),
-                             ("environment", "production"), ("root", "edge"),
+                             ("environment", "production"), ("target", "production"), ("root", "edge"),
                              ("configurationDigest", "sha256:old"), ("planDigest", "sha256:edited")):
             with self.subTest(field=field):
                 document = json.loads(original)
@@ -67,7 +69,7 @@ class TerraformPromotionTests(PromotionCase):
         result = self.cli("terraform.py", "apply", "main-preview", "edge")
         self.assertEqual(result.returncode, 1)
         self.assertIn("approval is required", result.stderr)
-        self.assertEqual([call["args"][1] for call in self.commands()], ["init", "show"])
+        self.assertEqual([call["args"][1] for call in self.commands() if call["tool"] == "terraform"], ["init", "show"])
         self.assertEqual(json.loads((scratch / "plan.json").read_text())["resource_changes"][0]
                          ["change"]["actions"], ["delete"])
 
@@ -91,52 +93,56 @@ class TerraformPromotionTests(PromotionCase):
         self.assertIn("Run a new plan", result.stderr)
         self.assertEqual(self.commands(), [])
 
-    def test_foundation_plans_before_runtime_inputs_exist(self):
+    def test_environment_snapshot_records_its_own_runtime_and_uptime_flags(self):
         self.trusted()
-        self.env["ALERT_EMAIL"] = "alerts@example.invalid"
+        self.write_plan("output-only")
+        self.env["ALERT_EMAIL"] = "preview@example.invalid"
+        self.env["CONTROL_PLANE_RUNTIME_READY"] = "true"
+        self.env["PUBLIC_UPTIME_ENABLED"] = "false"
+        snapshot = self.root / ".context/deploy/main-preview/ready-inputs.json"
+        snapshot.parent.mkdir(parents=True, exist_ok=True)
+        snapshot.write_text(json.dumps({
+            "environment": "main-preview", "commit": self.source, "run": "1234", "attempt": "1",
+            "inputs": {"notification_emails": ["preview@example.invalid"], "control_plane_enabled": True,
+                       "enable_uptime_checks": False, "allowed_zones": ["us-central1-a"], "source_sha": self.source},
+        }))
         result = self.cli("terraform.py", "plan", "main-preview", "foundation")
         self.assertEqual(result.returncode, 0, result.stderr)
         variables = self.root / ".context/plans/main-preview/foundation/inputs.tfvars.json"
-        self.assertEqual(json.loads(variables.read_text()), {"notification_emails": ["alerts@example.invalid"]})
+        self.assertEqual(json.loads(variables.read_text()), {"notification_emails": ["preview@example.invalid"], "control_plane_enabled": True, "enable_uptime_checks": False, "allowed_zones": ["us-central1-a"], "source_sha": self.source})
 
     def test_seed_creation_migrates_state_before_bootstrap_and_can_resume(self):
         result = self.cli("bootstrap.sh", "main-preview")
         self.assertEqual(result.returncode, 0, result.stderr)
         store = self.root / ".context/remote-states.json"
         self.assertEqual(set(json.loads(store.read_text())), {
-            "gs://ciproxy-main-preview-tfstate-internal-498318/main-preview/seed/default.tfstate",
-            "gs://ciproxy-main-preview-tfstate-internal-498318/main-preview/bootstrap/default.tfstate",
-            "gs://ciproxy-main-preview-tfstate-internal-498318/main-preview/foundation/default.tfstate",
-            "gs://ciproxy-main-preview-tfstate-internal-498318/main-preview/edge/default.tfstate",
+            "gs://ciproxy-trust-tfstate-ciproxy/trust/seed/default.tfstate",
+            "gs://ciproxy-trust-tfstate-ciproxy/trust/bootstrap/default.tfstate",
+            "gs://ciproxy-shared-tfstate-ciproxy/shared/shared/default.tfstate",
+            "gs://ciproxy-main-preview-tfstate-ciproxy/main-preview/data/default.tfstate",
+            "gs://ciproxy-main-preview-tfstate-ciproxy/main-preview/edge/default.tfstate",
+            "gs://ciproxy-production-tfstate-ciproxy/production/data/default.tfstate",
+            "gs://ciproxy-production-tfstate-ciproxy/production/edge/default.tfstate",
+            "gs://ciproxy-main-preview-tfstate-ciproxy/main-preview/foundation/default.tfstate",
+            "gs://ciproxy-production-tfstate-ciproxy/production/foundation/default.tfstate",
         })
         terraform = [call["args"] for call in self.commands() if call["tool"] == "terraform"]
         self.assertEqual([args[1] for args in terraform], [
-            "init", "apply", "init", "init", "init", "init", "init", "apply", "output",
+            "init", "apply", "init", "init", "init", "init", "init", "init", "init", "init", "init", "init", "output", "apply", "output",
         ])
         self.assertIn("-migrate-state", terraform[2])
         self.assertNotIn("-force-copy", terraform[2])
         self.assertNotIn("-input=false", terraform[2])
-        self.assertIn("-backend-config=prefix=main-preview/seed", terraform[2])
-        self.assertEqual([(args[0], args[-2:]) for args in terraform[3:7]], [
-            ("-chdir=deploy/terraform/seed", [
-                "-backend-config=bucket=ciproxy-main-preview-tfstate-internal-498318",
-                "-backend-config=prefix=main-preview/seed",
-            ]),
-            ("-chdir=deploy/terraform/bootstrap", [
-                "-backend-config=bucket=ciproxy-main-preview-tfstate-internal-498318",
-                "-backend-config=prefix=main-preview/bootstrap",
-            ]),
-            ("-chdir=deploy/environments/main-preview", [
-                "-backend-config=bucket=ciproxy-main-preview-tfstate-internal-498318",
-                "-backend-config=prefix=main-preview/foundation",
-            ]),
-            ("-chdir=deploy/environments/main-preview/edge", [
-                "-backend-config=bucket=ciproxy-main-preview-tfstate-internal-498318",
-                "-backend-config=prefix=main-preview/edge",
-            ]),
+        self.assertIn("-backend-config=prefix=trust/seed", terraform[2])
+        self.assertEqual([args[-1] for args in terraform[3:12]], [
+            "-backend-config=prefix=trust/seed", "-backend-config=prefix=trust/bootstrap",
+            "-backend-config=prefix=shared/shared", "-backend-config=prefix=main-preview/data",
+            "-backend-config=prefix=main-preview/foundation", "-backend-config=prefix=main-preview/edge",
+            "-backend-config=prefix=production/data", "-backend-config=prefix=production/foundation",
+            "-backend-config=prefix=production/edge",
         ])
-        self.assertEqual(terraform[7][0], "-chdir=deploy/terraform/bootstrap")
-        backup = self.root / ".context/deploy/main-preview/seed.tfstate"
+        self.assertEqual(terraform[13][0], "-chdir=deploy/terraform/bootstrap")
+        backup = self.root / ".context/deploy/ciproxy/seed.tfstate"
         self.assertEqual(json.loads(backup.read_text()), {"version": 4, "serial": 1})
         existing = {name: f'{{"version":4,"serial":{index + 8},"lineage":"kept"}}'
                     for index, name in enumerate(json.loads(store.read_text()))}
@@ -151,6 +157,7 @@ class TerraformPromotionTests(PromotionCase):
         self.assertNotIn("-force-copy", [arg for call in self.commands() for arg in call["args"]])
 
     def test_workloads_wait_for_negs_without_applying_terraform(self):
+        self.env["ALERT_EMAIL"] = "preview@example.invalid"
         self.env["RELEASE_SERVER_IMAGE_DIGEST"] = "sha256:" + "a" * 64
         result = self.cli("deploy.py", "main-preview")
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -169,5 +176,5 @@ class TerraformPromotionTests(PromotionCase):
         calls = self.commands()
         self.assertEqual(calls[-1], {"tool": "gcloud", "args": [
             "compute", "url-maps", "invalidate-cdn-cache", "ciproxy-main-preview",
-            "--path=/*", "--project=internal-498318",
+            "--path=/*", "--project=ciproxy",
         ]})

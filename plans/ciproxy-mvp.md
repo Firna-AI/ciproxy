@@ -127,8 +127,10 @@ for each area. Reason: parallel branches then do not conflict.
 Depends on: none
 
 Production runs in the GCP project `ciproxy`, and staging and tests in
-`internal-498318`. My calls: `europe-west1`, Terraform under `deploy/`, and
-Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
+`internal-498318`. My calls: Terraform under `deploy/`, and Workload Identity
+Federation. Reason: reviews, and no stored keys. Item 81 = C moves every
+regional resource to `us-central1`. The Terraform state buckets of the seed
+stay in `europe-west1`.
 
 - [ ] Add Cloud SQL, Secret Manager, and Cloud KMS for the Boat keys.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
@@ -147,11 +149,12 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
   - [ ] User: deploy Helm. Enable the control plane after its runtime exists.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
 - [ ] Set the release server to `get.ciproxy.dev`, `ciproxy-agent`, the tag
-      prefix `ciproxy-agent-v`, and a token for this repository only.
+      prefix `ciproxy-agent-v`, and a token with read access to public
+      repositories only, as item 70 says.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
   - [x] Configure release hosts, binary, prefix, and an existing secret.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
-  - [ ] User: prepare the pinned image and store the repository-only token.
+  - [ ] User: prepare the pinned image and store the public-read-only token.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
 - [ ] Serve the site, the dashboard, and signed image URLs from a Cloud
       Storage bucket, through Cloud CDN and one HTTPS load balancer. My call:
@@ -183,12 +186,13 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
       both operator and CI finish seed before any bootstrap resource starts.
       No state move is needed because nothing has been applied in GCP.
       Branch: `codex/m5-terraform-promotion`.
-- [ ] Move both environments into the GCP project `ciproxy`, as item 68
+- [x] Move both environments into the GCP project `ciproxy`, as item 68
       says: one shared network, cluster, and image registry, with a
       namespace for each environment, and separate databases, KMS keys,
       secrets, buckets, DNS zones, and edges. Scope the CI identities of
       each environment to its own resources. Apply the shared parts from
       the main preview until launch, and only from `main` after it.
+      Branch: `conductor/ciproxy-mvp-milestone-5-shared-project`.
 - [x] User: move `Firna-AI` to GitHub Team, as item 57 says. Orchestrator:
       add the ruleset on `main` that needs a pull request and the gate.
       Done on 5 November 2026: ruleset `main-pull-request-and-gate`, ID
@@ -1305,6 +1309,12 @@ Answers of 5 November 2026:
   launch": a catalog of ciproxy images that each label names, and custom VM
   images for Business. The follow-up item `job-image-catalog-after-launch.md`
   holds that work. Rejected for now: toolset layers.
+- Item 81, C: the control plane and the customer data run in `us-central1`.
+  The user wrote "lets go with US then it has better capacity", after
+  Google had no capacity for the new cluster in `europe-west1`. It costs
+  about 10% less for compute, and the data then lives in the US. The
+  Terraform state buckets of the seed stay in `europe-west1`, because a move
+  recreates them. Rejected: a retry of `europe-west1`, and `europe-west4`.
 - Item 70, E: this whole repository becomes public now, in place of a public
   copy of the open parts at launch. The agent builds and releases in public.
   This replaces the code location rule of the foundation plan. The closed
@@ -2206,8 +2216,8 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 78 on 5 November 2026, and item 76 became a
-design call. No item still waits. The
+The user answered items 54 to 78 and 81 on 5 November 2026, and item 76
+became a design call. Items 79 and 80 still wait. The
 conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
@@ -2979,3 +2989,124 @@ buckets must be public.
 - **Action:** answered C. The follow-up item
   [job image catalog after launch](follow-ups/job-image-catalog-after-launch.md)
   holds A and B.
+
+### 79. Removing a machine can cancel a job that a runner just took
+
+- **Severity:** High. **Effort:** Large.
+- **Source:** Implementation, Milestone 13.
+- **Category:** Docs or spec.
+- **Location:** `crates/ciproxy-guest/src/process.rs`,
+  `crates/ciproxy-guest/src/service.rs`, and `crates/ciproxy-agent/src/mode.rs`
+  on the Milestone 13 branch.
+- **Background:**
+  - "Remove" revokes the machine credential at once. The agent then stops
+    its warm runners and lets running jobs finish. `ciproxy-agent
+    uninstall` does the same without the control plane. After the last
+    organization removes the App, each machine of the workspace acts as
+    removed.
+  - Ordinary stops and Drain ask GitHub to delete the runner first, and a
+    busy answer keeps the runner and its job.
+  - The guest learns of a job only when the patched runner worker hands it
+    over, just before the first step. GitHub gives the job earlier.
+- **Problem:** On Remove, uninstall, or the last App removal, the agent
+  stops each runner that it still sees as warm. The runner then cancels a
+  job that it took before the handover.
+- **Impact if no action:** Removal can cancel a real job, which breaks the
+  rule that a removed machine lets its running jobs finish.
+- **Root question:** How does ciproxy stop the idle runners of a leaving
+  machine or organization without stopping a job that GitHub already gave
+  to one of them, also offline and with a revoked credential?
+- **Options:**
+  - **A.** Keep the immediate stop, and record that a job that the guest has
+    not seen can be cancelled. It weakens a protocol rule. Effort: Small.
+  - **B.** Revoke normal access at once, and stop each remaining VM only
+    after GitHub's removal answer, with a narrow retirement path for an
+    offline or revoked agent and for uninstall. It adds a trust boundary at
+    the gateway, and it gets no answer after the App removal. Effort: Large.
+  - **C.** Require a finished Drain before Remove or uninstall. An offline
+    machine cannot finish Remove until it returns. Effort: Medium.
+  - **D.** At Remove, the control plane deletes the GitHub registration of
+    each runner, also while the machine is offline. A deleted idle runner
+    exits by itself, and the agent waits for each VM to end. It does not
+    cover the App removal. Effort: Large.
+  - **E.** Extend the runner patch to the listener: on a stop request, it
+    stops asking for jobs, runs a job that it already holds, and then
+    exits. Every caller is then safe, also the App removal. It needs a live
+    check of how GitHub treats a job at the stop. Effort: Large.
+- **Left out:** a grace timeout or a process probe, because neither proves
+  that GitHub gave no job; a delayed credential revocation; a GitHub
+  removal token on the machine; cutting the network; and re-running a
+  cancelled job.
+- **Wider fix:** E.
+- **Recommendation:** E. The stop itself can then never cancel a taken job.
+- **Action:** ask the user, because E needs a live check at the GitHub
+  boundary, and B adds a retirement boundary.
+
+### 80. Sticky Docker disks have no space rule
+
+- **Severity:** Medium. **Effort:** Large.
+- **Source:** Implementation, Milestone 13.
+- **Category:** Docs or spec.
+- **Location:** "Docker disks" in `docs/protocol/cache.md`, and "Disk" and
+  "Fit" in `docs/protocol/job-routing.md`.
+- **Background:**
+  - A job VM starts only when the free job disk covers its whole root disk:
+    the image, the free disk of its label, and the ext4 allowance.
+  - Docker disks share the free job disk with the machine cache, and unused
+    Docker disks go first when a VM needs space. The first trusted job on
+    the default branch keeps its changes, and each other job works on a
+    copy. A job runs without its Docker disk when the disk cannot attach.
+- **Problem:** No rule says how much space an attached Docker disk holds,
+  or whether that space can keep a job VM from starting. An attached disk
+  cannot go during its job.
+- **Impact if no action:** An unbounded disk can take the space of a VM
+  root, so a job gets write errors.
+- **Root question:** How much space does the sticky Docker data of a
+  running job hold, and from which space, so that every job VM keeps its
+  promised root?
+- **Options:**
+  - **A.** A lease of the disk's data plus the label's free disk, from the
+    free job disk. Count leases in placement, and skip the disk when no
+    lease fits. A Docker disk can then delay a job VM. Effort: Medium.
+  - **B.** Attach the repository disk read-only, keep each job's Docker
+    writes copy-on-write on its own root, and publish the trusted writer's
+    changes after its job. Copies then hold no new space. Effort: Large.
+  - **C.** A machine Docker budget setting and a size for each repository
+    disk, taken out of the job disk. A budget above zero stops the 250 GB
+    minimum from fitting one default job. Effort: Large.
+  - **D.** A's lease, but only from spare disk that no set of job VMs can
+    use. Leases then stop no start, except for a short window after a label
+    or image change. Disk-limited machines get few or no sticky disks.
+    Effort: Large.
+  - **E.** Each VM of a workspace with sticky disks holds a fixed Docker
+    allowance from its start. The 250 GB minimum then fits no default job.
+    Effort: Medium.
+  - **F.** B's read-only disk for copies, and a writable disk under D's
+    lease for the trusted writer only. Effort: Large.
+  - **G.** An add-on to A, D, E, or F: ship the image's cached Docker
+    images as a seed disk with each release, about 6 GB of the 140 GB image
+    budget. Effort: Medium.
+- **Left out:** unbounded disks, no sticky disks, space from the host
+  reserve or the image budget, and a registry pull-through cache.
+- **Wider fix:** one host ledger that owns the job disk for roots, Docker
+  space, and the cache.
+- **Recommendation:** D. It gives the same sticky disks as A on
+  slot-limited machines such as the AX42, and its leases delay a start only
+  shortly after a change. B removes the copy space best, at Large effort.
+- **Action:** ask the user, because A and D change the start rule of
+  `job-routing.md`, and no requirement gives the Docker space of a job.
+
+### 81. Which region hosts ciproxy
+
+**Answer, 5 November 2026:** C.
+
+- **Severity:** Medium. **Effort:** Medium.
+- **Source:** Implementation, the failed cluster creation in `europe-west1`.
+- **Options:**
+  - **A.** Retry `europe-west1`. Effort: Small.
+  - **B.** Switch to `europe-west4`, and keep the data in the EU. Effort:
+    Medium.
+  - **C.** Switch to `us-central1`, about 10% cheaper, with the data in the
+    US. Effort: Medium.
+- **Recommendation:** A, then B.
+- **Action:** answered C.

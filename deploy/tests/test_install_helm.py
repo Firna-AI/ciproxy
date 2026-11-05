@@ -4,6 +4,7 @@ import io
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -27,6 +28,14 @@ class HelmInstallerTests(unittest.TestCase):
         path.write_text(f"#!{sys.executable}\n{source}")
         path.chmod(0o755)
 
+    def pinned_digest(self, system, machine):
+        """Read the digest that the installer pins for a platform, or an unused value."""
+        script = (self.repository / "deploy/scripts/install-helm.sh").read_text()
+        for pattern, digest in re.findall(r"\n  ([^\n)]+)\)\n    platform=[^\n]+\n    checksum=(\w+)", script):
+            if f"{system}/{machine}" in pattern.split("|"):
+                return digest
+        return "0" * 64
+
     def install(self, system, machine, checksum_tool="sha256sum", real_checksum=False):
         self.runs += 1
         directory = self.root / str(self.runs)
@@ -48,7 +57,8 @@ shutil.copyfile(os.environ['FIXTURE_ARCHIVE'], sys.argv[sys.argv.index('--output
         else:
             self.command(commands, checksum_tool, """import os, sys
 with open(os.environ['CHECKSUM_LOG'], 'w') as log:
-    log.write(' '.join(sys.argv[1:]) + '\\n' + sys.stdin.read())
+    log.write(' '.join(sys.argv[1:]) + '\\n')
+print(os.environ.get('FAKE_DIGEST', '0' * 64) + '  ' + sys.argv[-1])
 """)
         fixture = directory / "fixture.tar.gz"
         with tarfile.open(fixture, "w:gz") as archive:
@@ -65,6 +75,7 @@ with open(os.environ['CHECKSUM_LOG'], 'w') as log:
             "FIXTURE_ARCHIVE": str(fixture),
             "DOWNLOAD_LOG": str(directory / "downloads.jsonl"),
             "CHECKSUM_LOG": str(directory / "checksum.log"),
+            "FAKE_DIGEST": self.pinned_digest(system, machine),
             "RUNNER_TEMP": str(directory / "scratch"),
             "GITHUB_PATH": str(directory / "github-path"),
             "LC_ALL": "C",
@@ -97,10 +108,11 @@ with open(os.environ['CHECKSUM_LOG'], 'w') as log:
                     (scratch / "helm").read_text(), f"Inert Helm fixture: {platform}\n",
                 )
                 self.assertEqual((directory / "github-path").read_text(), f"{scratch}\n")
-                checksum = (directory / "checksum.log").read_text()
-                expected_flags = "--check" if checker == "sha256sum" else "-a 256 --check"
-                self.assertEqual(checksum.splitlines()[0], expected_flags)
-                self.assertIn(f"helm-v4.3.1-{platform}.tar.gz", checksum)
+                arguments = (directory / "checksum.log").read_text().splitlines()[0]
+                # The installer hashes the archive and compares the digest itself.
+                archive = str(scratch / f"helm-v4.3.1-{platform}.tar.gz")
+                expected = archive if checker == "sha256sum" else f"-a 256 {archive}"
+                self.assertEqual(arguments, expected)
 
     def test_bad_archive_checksum_stops_before_extraction_or_install(self):
         checker = "sha256sum" if shutil.which("sha256sum") else "shasum"
