@@ -24,6 +24,9 @@ resource "google_container_cluster" "main" {
   }
   private_cluster_config {
     enable_private_nodes = true
+    # GKE reports a private endpoint when the IP endpoints below are off.
+    # Stating it keeps each plan free of a change to the control plane access.
+    enable_private_endpoint = true
   }
   control_plane_endpoints_config {
     dns_endpoint_config {
