@@ -136,11 +136,15 @@ pub fn calculate_costs(
     }
 }
 
-/// Normal price changes form a continuous chain, independent of input order.
-/// Malformed overlapping or disconnected histories remain incomplete.
+/// Empty intervals contain no price; gaps within a date keep its last price.
+/// Overlapping prices remain incomplete, independent of input order.
 fn last_price(mut prices: Vec<(DateTime<Utc>, Option<DateTime<Utc>>, Decimal)>) -> Option<Decimal> {
+    prices.retain(|(starts, ends, _)| *ends != Some(*starts));
     prices.sort_by_key(|(starts, _, _)| *starts);
-    if prices.windows(2).any(|pair| pair[0].1 != Some(pair[1].0)) {
+    if prices
+        .windows(2)
+        .any(|pair| pair[0].1.is_none_or(|end| end > pair[1].0))
+    {
         return None;
     }
     prices.last().map(|(_, _, monthly)| *monthly)
@@ -169,3 +173,7 @@ mod costs_tests;
 #[cfg(test)]
 #[path = "../_tests_/monthly_costs_tests.rs"]
 mod monthly_costs_tests;
+
+#[cfg(test)]
+#[path = "../_tests_/price_history_tests.rs"]
+mod price_history_tests;
