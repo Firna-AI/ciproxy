@@ -14,6 +14,8 @@ pub struct Renewal {
     pub invoice_id: String,
     /// The last outcome from a fresh provider read.
     pub outcome: RenewalOutcome,
+    /// Whether Stripe attempted payment, absent in older provider projections.
+    pub attempted: Option<bool>,
     /// The outstanding amount in cents, when the provider supplied it.
     pub amount_remaining: Option<i64>,
     /// The most recent signed failed-payment time for this invoice.

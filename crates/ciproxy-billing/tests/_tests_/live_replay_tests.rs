@@ -11,13 +11,50 @@ use super::live_replay::{Recording, deliver, install, saved};
 #[test]
 fn recorded_paid_renewal_stays_recovered_after_later_signed_event_and_restart() {
     let recording = Recording::recovery();
-    let database = recording.seed();
+    let mut database = recording.seed();
     let id = recording.initial_state.subscription_id.as_deref().unwrap();
     let renewal_id = recording.events[0]["data"]["object"]["id"]
         .as_str()
         .unwrap();
     let before = recording.snapshot(id, "past_due");
     let fake = Fake::new(serde_json::from_value(before.clone()).unwrap());
+    let mut unattempted = recording.snapshot(renewal_id, "open");
+    unattempted["attempted"] = serde_json::json!(false);
+    unattempted["attempt_count"] = serde_json::json!(0);
+    unattempted["next_payment_attempt"] = serde_json::Value::Null;
+    let mut active = before.clone();
+    active["status"] = serde_json::json!("active");
+    active["latest_invoice"] = unattempted.clone();
+    install(&fake, active, &[unattempted.clone()]);
+    let update = serde_json::json!({
+        "id":"evt_derived_unattempted_renewal",
+        "created":1793844851,
+        "type":"invoice.updated",
+        "request":{"id":"req_derived_finalize"},
+        "data":{"object":unattempted,"previous_attributes":{"status":"draft"}}
+    });
+    assert_eq!(deliver(&database, &fake, &update), EventOutcome::Applied);
+    let awaiting_charge = saved(&database, &recording);
+    assert_eq!(
+        (
+            awaiting_charge.status,
+            awaiting_charge.failed_invoice_id,
+            awaiting_charge.failed_at,
+            awaiting_charge.next_retry_at
+        ),
+        (SubscriptionState::Active, None, None, None),
+        "an owned open renewal must stay active before its first charge attempt"
+    );
+    database.reconnect_store();
+    let renewals = database
+        .store
+        .try_lock_billing(recording.initial_state.workspace_id)
+        .unwrap()
+        .unwrap()
+        .renewals(id)
+        .unwrap();
+    assert_eq!(renewals.len(), 1);
+    assert_eq!(renewals[0].attempted, Some(false));
     install(&fake, before, &[recording.snapshot(renewal_id, "open")]);
     assert_eq!(
         deliver(&database, &fake, &recording.events[0]),

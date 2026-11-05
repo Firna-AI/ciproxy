@@ -91,6 +91,7 @@ impl BillingService {
             .iter()
             .filter(|renewal| {
                 renewal.outcome == RenewalOutcome::Open
+                    && renewal.attempted != Some(false)
                     && renewal.amount_remaining.is_none_or(|amount| amount > 0)
             })
             .max_by_key(|renewal| {
@@ -127,6 +128,7 @@ fn observed(
         subscription_id: current.id.clone(),
         invoice_id: invoice.id.clone(),
         outcome: RenewalOutcome::Draft,
+        attempted: None,
         amount_remaining: None,
         failed_at: (old.failed_invoice_id.as_ref() == Some(&invoice.id))
             .then_some(old.failed_at)
@@ -143,6 +145,7 @@ fn observed(
         InvoiceStatus::Uncollectible => RenewalOutcome::Uncollectible,
     };
     renewal.amount_remaining = invoice.amount_remaining;
+    renewal.attempted = invoice.attempted;
     renewal.next_retry_at = invoice
         .next_payment_attempt
         .map(|seconds| DateTime::from_timestamp(seconds, 0).ok_or(Error::StripeState))

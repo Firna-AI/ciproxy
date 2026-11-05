@@ -75,6 +75,8 @@ A change saves a renewal seen before its Stripe mutation.
 A delayed failed-payment event can also supply the renewal reference.
 The upgrade invoice supplies only its payment page and change progress.
 Only an owned open unpaid renewal supplies the failed-payment state.
+An explicitly unattempted renewal cannot supply that state.
+Renewal records retain Stripe's attempted value across service restarts.
 An unpaid renewal keeps that state even after another renewal or charge
 succeeds.
 A paid renewal, or subscription end, clears its failure.

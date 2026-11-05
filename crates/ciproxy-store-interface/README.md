@@ -92,6 +92,7 @@ BillingStore adds the confirmed tier, add-ons, paid bounds, and Free anchor.
 It exposes retry and ended-banner dates without changing job execution.
 BillingSession owns exclusive command and event reconciliation.
 It retains each owned renewal outcome separately from the billing banner.
+Each renewal retains whether the provider attempted its payment.
 Verified automatic collection stops remain available after a service restart.
 State and event receipts commit atomically.
 App removal stores a durable billing cancellation request.
