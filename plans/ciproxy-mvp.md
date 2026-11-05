@@ -727,17 +727,17 @@ the event both read the session, so the tier changes once.
       later reads. Preserve supersession from expanded renewal invoices.
       Branch: `conductor/ciproxy-mvp-milestone-17-billing-live-fixes`.
       Evidence: `.context/ciproxy-mvp/billing-live-fixes/pr23-fix-round-1/`.
-- [ ] Test each state with recorded events and the Stripe test mode.
-      The fixed event fixtures and fake HTTP Stripe tests pass locally.
-      Orchestrator: run the
+- [x] Test each state with recorded events and the Stripe test mode.
+      The orchestrator ran the
       [Stripe test mode checklist](../crates/ciproxy-billing/README.md#stripe-test-mode)
-      with `crates/ciproxy-billing/scripts/stripe-test-mode.sh`.
-      Start with `provision` and `listen`, then run `checkout`,
-      `reconcile`, `upgrade`, `addons`, `portal`, `cancel`, and `status`.
-      Supply test-mode credentials through environment variables.
-      Capture real signed events and check retries and period end.
-      No Stripe key is available in this workspace.
-      Branch: `conductor/ciproxy-mvp-milestone-17-billing`.
+      in the account of item 61 with real signed events, test clocks, and
+      the bank confirmation. The rerun on 5 November 2026 at `287f1bc`,
+      after the merge of #23, gave 37 passed, 0 failed, and 1 skipped.
+      Evidence: `.context/ciproxy-mvp/billing-live/report.md`.
+- [ ] User: check that the Stripe account sends receipt emails for
+      successful payments. In the Dashboard, open the settings, then
+      "Customer emails". The live checklist skipped this row, because only
+      the Dashboard shows it.
 
 ## Milestone 18: Dashboard API: jobs, usage, savings, and billing
 
