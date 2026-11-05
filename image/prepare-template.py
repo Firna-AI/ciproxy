@@ -25,9 +25,17 @@ def main():
     if azure_cleanup not in recipe:
         raise RuntimeError("Pinned upstream Azure packaging block changed")
     recipe = recipe.replace(azure_cleanup, "")
+    # Upstream "Apt sources resolve through the mirror list" rewrites Azure's URI.
+    # Cloud-init drops the generic archive URI's trailing slash.
+    # Normalize the generic base before that provisioner owns the mirror list.
     bootstrap = '''
   provisioner "shell" {
-    inline = ["sudo cloud-init status --wait", "sudo apt-get update", "sudo apt-get install -y walinuxagent grub2-common"]
+    inline = [
+      "sudo cloud-init status --wait",
+      "sudo apt-get update",
+      "sudo apt-get install -y walinuxagent grub2-common",
+      "sudo sed -i -E 's|http://archive[.]ubuntu[.]com/ubuntu/?$|http://azure.archive.ubuntu.com/ubuntu/|' /etc/apt/sources.list.d/ubuntu.sources"
+    ]
   }
 '''
     marker = '  name = "ubuntu-24_04"'
