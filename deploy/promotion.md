@@ -20,6 +20,12 @@ Shared runtime bindings read that map directly, never rollout evidence or
 environment snapshot state. Production UID capture happens after retirement.
 [Runtime identity procedure](runtime-identity.md) gives first use and recovery.
 
+Fresh setup runs CI data creation after UID setup, the mirrored image, and
+GitHub variables. The first workload stops at the missing token version
+before Helm. The operator confirms the parent and zones, stores the token,
+delegates DNS, and reruns all jobs. That retry creates the edge. See
+[first deploy](first-deploy.md). Other failures do not establish this boundary.
+
 Every required apply job runs, even when its scope selects no roots.
 Event and checkout validation happen first. The environment's read-only
 plan identity reads launch status. Root selection precedes privileged

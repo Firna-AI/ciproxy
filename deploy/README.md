@@ -16,6 +16,8 @@ The current binary is a CLI skeleton. The release server and static exports
 can deploy independently.
 
 - [Setup](setup.md) gives the first operator steps.
+- [First deploy](first-deploy.md) gives CI data creation, the expected token
+  stop, confirmation, and the all-jobs retry that creates the edge.
 - [Launch](launch.md) gives the one-time production trust handoff.
 - [Identities](identities.md) gives the cloud and namespace boundaries.
 - [Promotion](promotion.md) gives saved plans, approvals, and recovery.

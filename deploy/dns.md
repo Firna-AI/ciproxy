@@ -2,16 +2,23 @@
 
 `ciproxy.dev` stays authoritative on Cloudflare. Keep its Google Workspace
 MX, TXT, SPF, and verification records. Keep registrar name servers,
-DNSSEC settings, and existing preview NS records unchanged. Both Google
-Cloud environments use project `ciproxy`.
+DNSSEC settings, and unrelated existing records unchanged. Keep preview NS
+sets after creating them. Both Google Cloud environments use project
+`ciproxy`.
 
 No Cloudflare provider or CI credential is used. The operator adds the
 Cloudflare records below. Google Cloud manages the delegated zones and
 both environments' HTTPS edges.
 
+A zone on the last free Cloud DNS name-server set can need a TXT ownership
+check. Complete that check before retrying the data run. See
+[DNS limits](https://docs.cloud.google.com/dns/quotas#name_server_limits).
+
 ## Main preview
 
-Apply preview data first. Its three zones and host names stay unchanged:
+Wait for the first preview CI infrastructure/data apply to succeed. Confirm
+the expected missing-token stop as [first deploy](first-deploy.md#confirm-the-data-boundary)
+describes before reading zone outputs. Its three zones and hosts are:
 
 | Managed zone | DNS name | Cloudflare NS name |
 | --- | --- | --- |
@@ -41,7 +48,9 @@ Production creates only these two Cloud DNS zones:
 | `ciproxy-production-dashboard` | `app.ciproxy.dev` | `app` |
 | `ciproxy-production-releases` | `get.ciproxy.dev` | `get` |
 
-Apply production data before changing Cloudflare. That apply also creates
+Wait for the first production CI data apply before changing Cloudflare.
+Confirm its result through [production first deploy](first-deploy.md#first-production-data-run).
+That apply also creates
 these required child NS sets in the new Google parents:
 
 | Parent zone | NS record | Name-server source |
@@ -67,8 +76,8 @@ terraform -chdir=deploy/terraform/data state show \
   'module.environment.google_dns_record_set.preview_delegation["releases"]'
 ```
 
-Then add NS sets named `app` and `get` in Cloudflare, with one entry for
-each corresponding parent zone name server. Keep the old preview NS sets.
+After token storage, add NS sets named `app` and `get` in Cloudflare, with
+one entry for each parent zone name server. Keep the old preview NS sets.
 Once the parents are delegated, resolvers use their child NS records for
 `preview.app` and `preview.get`. Cloudflare's old deeper NS sets alone
 cannot preserve those children. `preview.ciproxy.dev` still delegates
@@ -83,8 +92,9 @@ describes the parent/child authority boundary.
 ## Apex site record
 
 The site host `ciproxy.dev` stays on production's Google HTTPS edge, managed
-certificate, and static Cloud CDN backend. After the production edge
-applies, read its existing public IP output from the production backend:
+certificate, and static Cloud CDN backend. The initial token failure leaves
+no edge. Store the token, delegate app/get after inspecting child NS sets,
+then rerun all production jobs. Only after edge apply succeeds, read its IP:
 
 ```sh
 terraform -chdir=deploy/terraform/edge init -reconfigure -lockfile=readonly \

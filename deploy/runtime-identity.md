@@ -71,7 +71,9 @@ untrusted preview runs before this procedure finishes.
    Compare the stored UID with the Kubernetes output. Bootstrap merges
    captured entries into its existing map. Later operator/CI bootstrap
    plans preserve that trusted map. A missing entry installs no member.
-   Keep this capture outside Git. Set GitHub variables and resume setup.
+   Keep this capture outside Git. Resume setup with the [mirrored image](setup.md#3-push-the-release-image),
+   [GitHub variables](setup.md#4-set-github-variables), and first CI data run.
+   This procedure created no preview application secret or DNS zone.
 
 ## Production identity
 

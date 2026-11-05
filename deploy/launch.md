@@ -1,8 +1,10 @@
 # Production launch and trust handoff
 
-Run this once after [main preview setup](setup.md). Use the operator's
-local Google credentials. The operation changes GCP trust before any
-production data resource exists. Later applies stay automatic.
+Run this once after main preview's full [setup](setup.md) and successful
+edge deployment. Use the installed tools and operator login from
+[project preparation](setup.md#1-prepare-the-project). The operation changes
+GCP trust before any production data resource exists. Later applies stay
+automatic.
 
 ## Prepare
 
@@ -108,9 +110,13 @@ No production data or workload resource needs to exist for this step.
 
 ## Permit production
 
-1. Create GitHub environment `production`.
-2. Set its twelve identity variables from the bootstrap output.
-3. Set its own `ALERT_EMAIL`, image digest, runtime, CDN, and uptime values.
+1. Set `DEPLOY_ENV=production`. Create its GitHub environment as
+   [variable setup](setup.md#4-set-github-variables) describes.
+2. Set its twelve identity variables from its selected bootstrap output.
+3. Set its own `ALERT_EMAIL` and mirrored image digest. Reuse the shared
+   image from preview, or mirror the current release first. Keep
+   `CONTROL_PLANE_RUNTIME_READY=false` and `PUBLIC_UPTIME_ENABLED=false`.
+   Leave `CDN_SIGNING_KEY_NAME` unset until production key registration.
 4. Limit its deployment branch to protected `main`.
 5. Enable the repository switch:
 
@@ -148,10 +154,12 @@ Prelaunch registry lifecycle and shared networking have no IAM setters.
 Retirement therefore leaves no registry grant that unreviewed code could
 install on another account.
 
-The first production run creates its own cloud resources. It can stop at a
-missing release token. Then finish setup steps 3 to 6 for production.
-The registry and UID-bound namespace already exist. Reapply the boundary
-when its operator manifest changes:
+The first production run creates its own data, then stops at the missing
+release-token version before Helm. Follow [production first deploy](first-deploy.md#first-production-data-run)
+to select that run and confirm infrastructure/data success, the real secret
+parent, and both zones. An unrelated failure is not this expected stop.
+The image, GitHub variables, and UID-bound namespace already exist.
+Reapply the boundary only when its operator manifest changes:
 
 ```sh
 python3 deploy/scripts/namespace_access.py production
@@ -161,13 +169,18 @@ This operator command also reapplies the Baseline enforce/audit/warn labels
 on an existing production namespace. Reapply preview too when upgrading.
 Environment deploy identities cannot change those labels.
 
-Store the production release token. Follow [production DNS](dns.md): apply
-app/get parents and their preview child NS sets before delegating app/get
-from Cloudflare. Add the DNS-only apex A record from the production edge
-`public_ip`. Keep Workspace mail, registrar NS, DNSSEC, and old preview
-NS sets unchanged. No whole-domain Cloud DNS zone is created. Rerun all
-jobs. Register its CDN key and enable its
-uptime checks only after HTTPS is ready. Production finishes its own edge
+After confirmation, [store the production token](setup.md#6-store-the-release-token).
+Inspect [production DNS parents/child NS sets](dns.md#production-parents-and-preview-children),
+then delegate app/get from Cloudflare. Keep Workspace mail, registrar NS,
+DNSSEC, and preview NS sets unchanged. Rerun **all jobs** of that production
+run. This retry creates its edge. If organization policy refuses its first
+private-origin grant, stop and follow [the existing item 76 rule](identities.md#private-static-origins).
+No policy exception or whole-domain zone is added.
+
+Only after edge apply succeeds, add the [DNS-only apex A record](dns.md#apex-site-record)
+from production's `public_ip`. Then [register its CDN key](setup.md#9-register-the-cdn-signing-key)
+and check production's [HTTPS hosts](setup.md#10-enable-uptime-alerts) before
+enabling uptime. Production finishes its own edge
 and invalidation before a separate preview data/edge promotion starts.
 That later promotion uses the exact successful upstream workload artifact.
 Preview-only NEG failure can fail that stage without undoing production.

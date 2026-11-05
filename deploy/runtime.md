@@ -70,8 +70,9 @@ Then do these steps:
 1. Push the image to the shared repository `ciproxy-shared-runtime`. The GKE nodes
    pull only from there.
 2. Add a version to each of the six other secrets `ciproxy-<env>-<file>` of
-   the table, from a private file. Setup step 8 already gave the CDN key its
-   numbered version. The pod cannot mount a secret without a version. For
+   the table, from a private file. [Key registration](setup.md#9-register-the-cdn-signing-key)
+   already gave the CDN key its numbered version. The pod cannot mount a
+   secret without a version. For
    example:
 
    ```sh
@@ -80,7 +81,7 @@ Then do these steps:
    ```
 
 3. [Prepare the database](#prepare-the-database), and run the migrations.
-4. Check that `CDN_SIGNING_KEY_NAME` holds the name of setup step 8. Set
+4. Check that `CDN_SIGNING_KEY_NAME` holds the name from key registration. Set
    `CONTROL_PLANE_IMAGE` and `CONTROL_PLANE_RUNTIME_READY=true` in the
    GitHub environment. Then deploy, and check the rollout with
    `kubectl rollout status deployment/control-plane --namespace="$NAMESPACE"`.

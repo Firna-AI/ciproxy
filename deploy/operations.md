@@ -19,7 +19,9 @@ gcloud container clusters get-credentials ciproxy-shared \
 
 No code in this repository builds or publishes the job images yet. Publish
 each image to the private bucket `ciproxy-<env>-images-<project>` after
-steps 8 and 9 of the setup. The deploy identity cannot write this bucket.
+[key registration](setup.md#9-register-the-cdn-signing-key) and
+[HTTPS verification](setup.md#10-enable-uptime-alerts). The deploy identity
+cannot write this bucket.
 Use the operator account, or grant a separate publisher
 `roles/storage.objectCreator`, which can add objects but not replace or
 delete them. Put each file under `images/` with a new name.
@@ -71,7 +73,7 @@ exists. It gives the image interface, secrets, and rollout steps.
 ## Rotate the release token
 
 1. Add a new token version, as in
-   [step 4 of the setup](setup.md#4-store-the-release-token).
+   [token storage](setup.md#6-store-the-release-token).
 2. Deploy. The deploy copies the new version into the Kubernetes Secret.
 3. Restart the release server, because it reads the token only at start:
 
@@ -85,7 +87,7 @@ Then revoke the old token on GitHub.
 ## Rotate the CDN signing key
 
 1. Register a new key, as in
-   [step 8 of the setup](setup.md#8-register-the-cdn-signing-key). The
+   [key registration](setup.md#9-register-the-cdn-signing-key). The
    script adds the next secret version N and prints
    `ciproxy-<env>-images-v<N>`. The old key stays valid on the backend
    bucket.
