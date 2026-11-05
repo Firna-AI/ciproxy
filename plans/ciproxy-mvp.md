@@ -2054,7 +2054,8 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 75 on 5 November 2026. Item 76 still waits. The
+The user answered items 54 to 75 on 5 November 2026, and item 76 became a
+design call. No item still waits. The
 conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
@@ -2740,6 +2741,9 @@ keep the letters that the user saw.
 
 ### 76. The organization forbids the public site buckets
 
+**Outcome, 5 November 2026:** D, a design call after the user asked why the
+buckets must be public.
+
 - **Severity:** High. **Effort:** Small.
 - **Source:** Implementation, the read-only checks before the GCP setup.
 - **Category:** Process.
@@ -2774,13 +2778,20 @@ keep the letters that the user saw.
   - **C.** Serve the static files from a small web server in the cluster, so
     no bucket needs a public grant. It adds a workload and changes the
     deploy design. Effort: Medium.
+  - **D.** Use the private bucket access of Cloud CDN. The buckets stay
+    private, and only the load balancer service agent
+    `service-PROJECT_NUMBER@https-lb.iam.gserviceaccount.com` reads them.
+    Visitors still get the files through the load balancer and the CDN.
+    The organization rule stays. Effort: Small.
 - **Left out:** Signed URLs for the whole site: browsers cannot fetch a
   public site with them.
 - **Wider fix:** B. Only the resources with the tag can be public.
 - **Previous examples:** None found. The projects `mokly-508518` and
   `internal-498318` keep the rule with no exception.
-- **Recommendation:** A. The project exists to serve a public product,
-  Terraform is the only writer of its grants, and it unblocks the setup
-  today. B protects the project best.
-- **Action:** ask the user, because each option changes an organization
-  policy or the deploy design, outside the project.
+- **Recommendation:** D. It keeps the organization rule and the deploy
+  design, and no one can read the buckets directly.
+- **Action:** design call D. It changes no requirement and needs no change
+  outside the project. Google creates the service agent after the first
+  backend bucket, so the grant follows the backend buckets. If the
+  organization rule refuses the grant, the item returns to the user with A,
+  B, and C.
