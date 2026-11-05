@@ -1,6 +1,7 @@
 """Root instances and source files used by Terraform promotion."""
 
 import hashlib
+from dataclasses import dataclass
 from pathlib import Path
 
 
@@ -18,6 +19,26 @@ def directory(environment, root):
         return Path("deploy/terraform") / root
     base = Path("deploy/environments") / environment
     return base / "edge" if root == "edge" else base
+
+
+@dataclass(frozen=True)
+class Backend:
+    """One root's shared source directory and remote state location."""
+
+    directory: Path
+    bucket: str
+    prefix: str
+
+    def arguments(self):
+        return (f"-backend-config=bucket={self.bucket}",
+                f"-backend-config=prefix={self.prefix}")
+
+
+def backend(environment, root):
+    """Select the same backend for operator setup, promotion, and workloads."""
+    location = directory(environment, root)
+    return Backend(location, f"ciproxy-{environment}-tfstate-{ENVIRONMENTS[environment]}",
+                   f"{environment}/{root}")
 
 
 def scope(environment, root):
@@ -53,15 +74,16 @@ def configuration_digest(repository):
 def trust_resource(root, resource):
     """CI must never remove its own state bucket, identities, or access grants."""
     if root == "seed":
-        return resource.get("type") == "google_storage_bucket"
-    if root != "bootstrap":
+        types = {"google_storage_bucket", "google_project_service"}
+    elif root == "bootstrap":
+        types = {
+            "google_service_account", "google_service_account_iam_member",
+            "google_iam_workload_identity_pool", "google_iam_workload_identity_pool_provider",
+            "google_project_iam_custom_role", "google_project_iam_member",
+            "google_storage_bucket_iam_member",
+        }
+    else:
         return False
-    types = {
-        "google_service_account", "google_service_account_iam_member",
-        "google_iam_workload_identity_pool", "google_iam_workload_identity_pool_provider",
-        "google_project_iam_custom_role", "google_project_iam_member",
-        "google_storage_bucket_iam_member",
-    }
     return resource.get("type") in types or any(
         isinstance(resource.get(key), str)
         and any(f".{kind}." in "." + resource[key] for kind in types)

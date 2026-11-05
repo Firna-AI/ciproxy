@@ -233,7 +233,8 @@ Set the GitHub environment variable `ALERT_EMAIL` for notification channels.
 A delete, replacement, or forget needs an exact committed approval. The
 approval binds the environment, root, actions, and full Terraform digest.
 A stale or edited approval fails. CI always refuses a destructive change
-to its own trust, even with approval. Follow
+to its own trust, including seed's trust API resources, even with approval.
+The seed apply finishes API enablement before bootstrap starts. Follow
 [Terraform promotion](promotion.md) for approval generation and recovery.
 
 After a failed run, rerun all jobs. A different run attempt rejects an old

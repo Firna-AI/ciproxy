@@ -102,21 +102,53 @@ class TerraformPromotionTests(PromotionCase):
     def test_seed_creation_migrates_state_before_bootstrap_and_can_resume(self):
         result = self.cli("bootstrap.sh", "main-preview")
         self.assertEqual(result.returncode, 0, result.stderr)
+        store = self.root / ".context/remote-states.json"
+        self.assertEqual(set(json.loads(store.read_text())), {
+            "gs://ciproxy-main-preview-tfstate-internal-498318/main-preview/seed/default.tfstate",
+            "gs://ciproxy-main-preview-tfstate-internal-498318/main-preview/bootstrap/default.tfstate",
+            "gs://ciproxy-main-preview-tfstate-internal-498318/main-preview/foundation/default.tfstate",
+            "gs://ciproxy-main-preview-tfstate-internal-498318/main-preview/edge/default.tfstate",
+        })
         terraform = [call["args"] for call in self.commands() if call["tool"] == "terraform"]
-        self.assertEqual([args[1] for args in terraform], ["init", "apply", "init", "init", "apply", "output"])
+        self.assertEqual([args[1] for args in terraform], [
+            "init", "apply", "init", "init", "init", "init", "init", "apply", "output",
+        ])
         self.assertIn("-migrate-state", terraform[2])
         self.assertNotIn("-force-copy", terraform[2])
         self.assertNotIn("-input=false", terraform[2])
         self.assertIn("-backend-config=prefix=main-preview/seed", terraform[2])
-        self.assertEqual(terraform[4][0], "-chdir=deploy/terraform/bootstrap")
+        self.assertEqual([(args[0], args[-2:]) for args in terraform[3:7]], [
+            ("-chdir=deploy/terraform/seed", [
+                "-backend-config=bucket=ciproxy-main-preview-tfstate-internal-498318",
+                "-backend-config=prefix=main-preview/seed",
+            ]),
+            ("-chdir=deploy/terraform/bootstrap", [
+                "-backend-config=bucket=ciproxy-main-preview-tfstate-internal-498318",
+                "-backend-config=prefix=main-preview/bootstrap",
+            ]),
+            ("-chdir=deploy/environments/main-preview", [
+                "-backend-config=bucket=ciproxy-main-preview-tfstate-internal-498318",
+                "-backend-config=prefix=main-preview/foundation",
+            ]),
+            ("-chdir=deploy/environments/main-preview/edge", [
+                "-backend-config=bucket=ciproxy-main-preview-tfstate-internal-498318",
+                "-backend-config=prefix=main-preview/edge",
+            ]),
+        ])
+        self.assertEqual(terraform[7][0], "-chdir=deploy/terraform/bootstrap")
         backup = self.root / ".context/deploy/main-preview/seed.tfstate"
         self.assertEqual(json.loads(backup.read_text()), {"version": 4, "serial": 1})
+        existing = {name: f'{{"version":4,"serial":{index + 8},"lineage":"kept"}}'
+                    for index, name in enumerate(json.loads(store.read_text()))}
+        store.write_text(json.dumps(existing))
         self.log.write_text("")
         result = self.cli("bootstrap.sh", "main-preview")
         self.assertEqual(result.returncode, 0, result.stderr)
         applies = [call for call in self.commands() if call["tool"] == "terraform"
                    and call["args"][1] == "apply"]
         self.assertEqual([call["args"][0] for call in applies], ["-chdir=deploy/terraform/bootstrap"])
+        self.assertEqual(json.loads(store.read_text()), existing)
+        self.assertNotIn("-force-copy", [arg for call in self.commands() for arg in call["args"]])
 
     def test_workloads_wait_for_negs_without_applying_terraform(self):
         self.env["RELEASE_SERVER_IMAGE_DIGEST"] = "sha256:" + "a" * 64

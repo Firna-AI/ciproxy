@@ -55,18 +55,29 @@ again when you change the environment.
 bash deploy/scripts/bootstrap.sh "$DEPLOY_ENV"
 ```
 
-The script enables the three APIs needed before Terraform can run. It
-creates the state bucket from a temporary local-backend copy of the seed.
-Then it migrates that state to `<env>/seed` in the same bucket. This order
+The script enables the three APIs needed before Terraform can run. Its
+temporary local-backend copy of seed creates the state bucket and enables
+the trust APIs. Those API resources stay in seed `main.tf`, so the local
+copy includes them. The seed apply finishes before any bootstrap resource
+starts. CI keeps the same seed-before-bootstrap order.
+
+The script migrates seed state to `<env>/seed` in the same bucket. This
 avoids a dependency on a bucket that does not exist. The tracked seed root
-always uses GCS. Finally, the script applies bootstrap and prints the six
-GitHub identity variables. Both first applies ask for confirmation.
+always uses GCS. The operator then initializes all four remote backends:
+seed, bootstrap, foundation, and edge. Initial backend setup writes empty
+state, which the read-only plan account cannot do. Reconfiguration keeps
+each existing state unchanged. The scripts share the root directories,
+bucket names, and prefixes from `terraform_roots.py`.
+
+Finally, the script applies bootstrap and prints the six GitHub identity
+variables. Both first applies ask for confirmation.
 Terraform also asks before it migrates state. Inspect its source and
 destination. The script never forces a copy over existing remote state.
 
 The script can adopt the former `.context/deploy/<env>/seed.tfstate`.
-After migration, a repeated call uses remote seed state. Back up the local
-copy outside Git. Do not restore it over newer remote state.
+After migration, a repeated call uses remote seed state. It initializes
+every remote backend again without replacing existing state. Back up the
+local copy outside Git. Do not restore it over newer remote state.
 
 Set the six identity variables and `ALERT_EMAIL` from step 6 now. Start a
 main preview run. CI applies seed, bootstrap, and foundation before it

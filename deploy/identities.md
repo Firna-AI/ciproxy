@@ -16,6 +16,8 @@ The [deployment setup](setup.md) uses these identities in each environment.
 | Runtime: `ciproxy-<env>-control` | The future control plane, through the Kubernetes service account `ciproxy/control-plane` | Cloud SQL login, the runtime secrets, and the Boat KMS key |
 
 Each environment has separate plan, apply, and deploy federation providers.
+The operator prepares all four remote states before CI uses these accounts.
+Seed enables trust APIs before bootstrap creates accounts or permissions.
 Mapped access attributes keep their service-account bindings separate.
 Each condition checks the numeric repository and owner IDs, environment,
 event, ref, and exact caller workflow ref:

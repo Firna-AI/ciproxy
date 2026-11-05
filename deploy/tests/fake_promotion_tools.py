@@ -34,10 +34,22 @@ elif tool == "terraform":
         print(Path(os.environ["FAKE_PLAN_JSON"]).read_text())
     if action == "apply" and "seed-local" in str(root):
         (root / "terraform.tfstate").write_text('{"version":4,"serial":1}')
-    if action == "init" and any("prefix=" in arg and arg.endswith("/seed") for arg in args):
-        backend = root / ".terraform/terraform.tfstate"
-        backend.parent.mkdir(exist_ok=True)
-        backend.write_text('{"backend":{"type":"gcs"}}')
+    if action == "init":
+        bucket = next((arg.split("=", 2)[2] for arg in args
+                       if arg.startswith("-backend-config=bucket=")), None)
+        prefix = next((arg.split("=", 2)[2] for arg in args
+                       if arg.startswith("-backend-config=prefix=")), None)
+        if bucket and prefix:
+            store = Path(os.environ["FAKE_REMOTE_STATES"])
+            states = json.loads(store.read_text())
+            initial = ((root / "terraform.tfstate").read_text() if "-migrate-state" in args
+                       else '{"version":4,"serial":0}')
+            states.setdefault(f"gs://{bucket}/{prefix}/default.tfstate", initial)
+            store.write_text(json.dumps(states))
+        if prefix and prefix.endswith("/seed"):
+            backend = root / ".terraform/terraform.tfstate"
+            backend.parent.mkdir(parents=True, exist_ok=True)
+            backend.write_text('{"backend":{"type":"gcs"}}')
     if action == "output":
         if args[-1] == "deployment":
             print(json.dumps({
@@ -77,10 +89,13 @@ def install(case):
     log.write_text("")
     state = case.root / ".context/rulesets.json"
     state.write_text("[]")
+    remote_states = case.root / ".context/remote-states.json"
+    remote_states.write_text("{}")
     case.env.update({
         "PATH": str(tools) + os.pathsep + case.env["PATH"],
         "FAKE_REAL_PYTHON": sys.executable,
         "FAKE_COMMAND_LOG": str(log), "FAKE_PLAN_JSON": str(case.plan),
         "FAKE_RULESETS": str(state),
+        "FAKE_REMOTE_STATES": str(remote_states),
     })
     return log

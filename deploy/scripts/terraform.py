@@ -12,7 +12,7 @@ import sys
 from promotion_event import check_checkout, validate
 from terraform_approval import load_json
 from terraform_policy import check
-from terraform_roots import ENVIRONMENTS, ROOTS, configuration_digest, directory
+from terraform_roots import ENVIRONMENTS, ROOTS, backend, configuration_digest
 
 
 def command(root, *arguments, capture=False):
@@ -49,7 +49,8 @@ def metadata(repository, environment, root, binary):
 
 def promote(action, environment, root):
     repository = Path.cwd()
-    location = directory(environment, root)
+    target = backend(environment, root)
+    location = target.directory
     scratch = repository / ".context/plans" / environment / root
     scratch.mkdir(parents=True, exist_ok=True, mode=0o700)
     binary = scratch / "release.tfplan"
@@ -70,9 +71,8 @@ def promote(action, environment, root):
             raise ValueError("Saved plan is stale or changed. Start a new run with all jobs.")
     else:
         manifest.unlink(missing_ok=True)
-    bucket = f"ciproxy-{environment}-tfstate-{ENVIRONMENTS[environment]}"
     command(location, "init", "-input=false", "-reconfigure", "-lockfile=readonly",
-            f"-backend-config=bucket={bucket}", f"-backend-config=prefix={environment}/{root}")
+            *target.arguments())
     if action == "plan":
         inputs = scratch / "inputs.tfvars.json"
         inputs.write_text(json.dumps(variables(environment, root)))

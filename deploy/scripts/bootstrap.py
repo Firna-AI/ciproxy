@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create the state bucket locally, migrate it, and create CI trust once."""
+"""Create seed and trust, and prepare every remote state backend once."""
 
 import argparse
 import json
@@ -7,7 +7,7 @@ from pathlib import Path
 import shutil
 import subprocess
 
-from terraform_roots import ENVIRONMENTS
+from terraform_roots import ENVIRONMENTS, ROOTS, backend
 
 
 def run(*arguments):
@@ -19,7 +19,7 @@ def bootstrap(environment):
     repository = Path.cwd()
     scratch = repository / ".context/deploy" / environment
     scratch.mkdir(parents=True, exist_ok=True, mode=0o700)
-    bucket = f"ciproxy-{environment}-tfstate-{project}"
+    seed = backend(environment, "seed")
     run("gcloud", "services", "enable", "storage.googleapis.com", "serviceusage.googleapis.com",
         "cloudresourcemanager.googleapis.com", f"--project={project}")
 
@@ -27,13 +27,13 @@ def bootstrap(environment):
     # backend, but the bucket cannot host its own state before it exists.
     local = scratch / "seed-local"
     local.mkdir(exist_ok=True)
-    remote = repository / "deploy/terraform/seed"
+    remote = repository / seed.directory
     source = (remote / "main.tf").read_text()
     (local / "main.tf").write_text(source.replace('  backend "gcs" {}\n', ""))
     shutil.copyfile(remote / ".terraform.lock.hcl", local / ".terraform.lock.hcl")
     backup = scratch / "seed.tfstate"
-    backend = local / ".terraform/terraform.tfstate"
-    migrated = backend.exists() and json.loads(backend.read_text()).get("backend", {}).get("type") == "gcs"
+    local_backend = local / ".terraform/terraform.tfstate"
+    migrated = local_backend.exists() and json.loads(local_backend.read_text()).get("backend", {}).get("type") == "gcs"
     if not migrated:
         # An existing local state from the former bootstrap script is adopted
         # without trying to create the state bucket a second time.
@@ -48,11 +48,16 @@ def bootstrap(environment):
     # Let Terraform show and confirm a migration. Never force-copy an old
     # local backup over a newer destination state on another machine.
     run("terraform", f"-chdir={local}", "init", *migration, "-lockfile=readonly",
-        f"-backend-config=bucket={bucket}", f"-backend-config=prefix={environment}/seed")
+        *seed.arguments())
 
-    root = "deploy/terraform/bootstrap"
-    run("terraform", f"-chdir={root}", "init", "-reconfigure", "-input=false", "-lockfile=readonly",
-        f"-backend-config=bucket={bucket}", f"-backend-config=prefix={environment}/bootstrap")
+    # First init creates an empty state object. Prepare every backend as the
+    # operator so the read-only plan account never needs to write state.
+    # Reconfigure selects the existing remote state without copying local state.
+    for name in ROOTS:
+        target = backend(environment, name)
+        run("terraform", f"-chdir={target.directory}", "init", "-reconfigure",
+            "-input=false", "-lockfile=readonly", *target.arguments())
+    root = backend(environment, "bootstrap").directory
     run("terraform", f"-chdir={root}", "apply",
         f"-var=environment={environment}", f"-var=project_id={project}")
     run("terraform", f"-chdir={root}", "output", "-json", "github_environment_variables")

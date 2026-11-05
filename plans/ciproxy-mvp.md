@@ -173,6 +173,12 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
       destructive change, an apply identity for one reusable workflow, and
       deletion protection for the database and the secrets.
       Foundation creation now runs in CI after one-time seed and bootstrap.
+      Design calls, 5 November 2026: operator bootstrap initializes every
+      remote backend through shared root, directory, bucket, and prefix
+      metadata. Reason: first initialization writes state, which the plan
+      identity cannot do. Seed `main.tf` owns trust API enablement. Reason:
+      both operator and CI finish seed before any bootstrap resource starts.
+      No state move is needed because nothing has been applied in GCP.
       Branch: `codex/m5-terraform-promotion`.
 - [ ] User: move `Firna-AI` to GitHub Team, as item 57 says. Orchestrator:
       add the ruleset on `main` that needs a pull request and the gate.

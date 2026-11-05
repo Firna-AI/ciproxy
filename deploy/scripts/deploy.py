@@ -10,6 +10,7 @@ from deploy_support import (
     helm_values, neg_zones, run, runtime_configuration,
     sync_release_secret, terraform_init,
 )
+from terraform_roots import ENVIRONMENTS, backend
 
 
 def main():
@@ -18,23 +19,23 @@ def main():
     parser.add_argument("--phase", choices=["workloads", "invalidate"], default="workloads")
     args = parser.parse_args()
     environment = args.environment
-    project = "ciproxy" if environment == "production" else "internal-498318"
-    root = Path("deploy/environments") / environment
+    project = ENVIRONMENTS[environment]
+    foundation = backend(environment, "foundation")
+    root = foundation.directory
     scratch = Path(".context/deploy") / environment
     scratch.mkdir(parents=True, exist_ok=True)
-    bucket = f"ciproxy-{environment}-tfstate-{project}"
 
     if args.phase == "invalidate":
-        edge = root / "edge"
-        terraform_init(edge, bucket, f"{environment}/edge")
-        url_map = run("terraform", f"-chdir={edge}", "output", "-raw", "url_map", capture=True).strip()
+        edge = backend(environment, "edge")
+        terraform_init(edge)
+        url_map = run("terraform", f"-chdir={edge.directory}", "output", "-raw", "url_map", capture=True).strip()
         run("gcloud", "compute", "url-maps", "invalidate-cdn-cache", url_map,
             "--path=/*", f"--project={project}")
         return
 
     # Validate runtime inputs only after CI created the first foundation.
     digest, runtime_enabled, control_image = runtime_configuration(os.environ)
-    terraform_init(root, bucket, f"{environment}/foundation")
+    terraform_init(foundation)
     config = json.loads(run("terraform", f"-chdir={root}", "output", "-json",
                             "deployment", capture=True))
     if not runtime_enabled:

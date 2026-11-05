@@ -6,6 +6,13 @@ and state. Its only object writes acquire and release the four exact state
 locks. The workload identity has its existing roles and no state writes.
 Only `deploy-apply.yml` can use the separate owner-equivalent apply account.
 
+Seed enables the trust APIs before bootstrap starts, locally and in CI.
+During one-time setup, the operator initializes every root's GCS backend.
+That step creates missing empty state without applying foundation or edge.
+It leaves existing state unchanged. This keeps state creation outside the
+read-only plan account. Operator setup, promotion, and workload commands
+share the same root directories, bucket names, and prefixes.
+
 Seed, bootstrap, and foundation plans pass policy before their apply job
 starts. The reusable workflow applies them in that order. Workloads then
 deploy Helm and static files, and wait for every configured NEG zone.
@@ -97,11 +104,12 @@ unlocking. Then create new plans. Do not apply the stranded binary.
 
 ## Operator recovery
 
-CI never deletes, replaces, or forgets its state bucket or bootstrap
-trust resources. The trust set contains the federation pool and providers,
-CI accounts, their federation bindings, plan and apply roles and project
-grants, and state-bucket grants. A committed approval cannot bypass this
-rule. Use local operator credentials for such a change.
+CI never deletes, replaces, or forgets its seed or bootstrap trust
+resources. The trust set contains the state bucket, trust API resources,
+federation pool and providers, CI accounts, their federation bindings,
+plan and apply roles and project grants, and state-bucket grants.
+A committed approval cannot bypass this rule. Use local operator
+credentials for such a change.
 
 Routine in-place trust updates remain automatic. An incorrect update can
 still remove CI access. A project IAM admin can restore that access with
@@ -128,6 +136,9 @@ python3 deploy/scripts/terraform.py apply "$DEPLOY_ENV" bootstrap
 After recovery, remove an unused local approval and start CI with new
 plans. Do not restore the first local seed backup over current remote
 state. Its backup is evidence of the initial migration only.
+If a remote state is lost, inspect the bucket's retained versions and
+restore the correct state before restarting CI. Do not use empty-state
+preparation to replace a lost state for resources that already exist.
 
 Cloud SQL has both Terraform provider and API deletion protection.
 Secret Manager IDs have Terraform provider deletion protection. That

@@ -108,6 +108,7 @@ class TerraformPolicyTests(PromotionCase):
             ("bootstrap", "google_project_iam_custom_role", "plan_lock"),
             ("bootstrap", "google_storage_bucket_iam_member", "plan_lock"),
             ("seed", "google_storage_bucket", "state"),
+            ("seed", "google_project_service", 'identity["iam.googleapis.com"]'),
         ]
         for root, resource_type, name in resources:
             with self.subTest(root=root, resource=resource_type):
@@ -131,6 +132,11 @@ class TerraformPolicyTests(PromotionCase):
             "type": "google_iam_workload_identity_pool", "change": {"actions": ["update"]},
         }])
         self.assertEqual(self.policy(root="bootstrap", ci=True).returncode, 0)
+        self.write_plan(resources=[{
+            "address": 'google_project_service.identity["iam.googleapis.com"]',
+            "type": "google_project_service", "change": {"actions": ["update"]},
+        }])
+        self.assertEqual(self.policy(root="seed", ci=True).returncode, 0)
         self.write_plan(resources=[
             {"address": "terraform_data.example", "change": {"actions": ["delete"]}},
             {"address": "terraform_data.example", "deposed": "deadbeef",

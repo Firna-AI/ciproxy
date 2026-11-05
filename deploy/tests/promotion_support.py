@@ -23,7 +23,8 @@ class PromotionCase(unittest.TestCase):
         self.root = Path(temporary.name)
         shutil.copytree(ROOT / "deploy/scripts", self.root / "deploy/scripts")
         for name in ("terraform/seed", "terraform/bootstrap", "environments/main-preview",
-                     "environments/production", "terraform/modules/foundation"):
+                     "environments/main-preview/edge", "environments/production",
+                     "environments/production/edge", "terraform/modules/foundation"):
             location = self.root / "deploy" / name
             location.mkdir(parents=True, exist_ok=True)
             (location / "main.tf").write_text('terraform {\n  backend "gcs" {}\n}\n')

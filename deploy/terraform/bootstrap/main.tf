@@ -49,32 +49,20 @@ locals {
   ]
 }
 
-resource "google_project_service" "identity" {
-  for_each = toset([
-    "cloudresourcemanager.googleapis.com", "iam.googleapis.com",
-    "iamcredentials.googleapis.com", "sts.googleapis.com",
-  ])
-  service            = each.value
-  disable_on_destroy = false
-}
-
 resource "google_service_account" "deploy" {
   account_id   = "ciproxy-${var.environment}-deploy"
   display_name = "ciproxy ${var.environment} workloads"
-  depends_on   = [google_project_service.identity]
 }
 
 resource "google_service_account" "promotion" {
   for_each     = toset(["plan", "apply"])
   account_id   = "ciproxy-${var.environment}-${each.key}"
   display_name = "ciproxy ${var.environment} Terraform ${each.key}"
-  depends_on   = [google_project_service.identity]
 }
 
 resource "google_iam_workload_identity_pool" "github" {
   workload_identity_pool_id = "ciproxy-${var.environment}"
   display_name              = "ciproxy ${var.environment} GitHub"
-  depends_on                = [google_project_service.identity]
 }
 
 # Keep the deployed provider and account addresses. Each account binds a

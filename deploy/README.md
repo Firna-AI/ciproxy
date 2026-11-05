@@ -51,7 +51,9 @@ them. This NEG zone setting is a GKE Preview feature. It needs GKE
 1.36.2-gke.3104000 or later, so the cluster has the minimum version 1.36.4.
 [Zones and NEGs](operations.md#zones-and-negs) gives the operating rules.
 
-The operator creates the state bucket and trust once. The read-only plan
+The operator creates the state bucket and enables trust APIs in seed.
+Bootstrap prepares all four remote states before CI starts. It leaves
+existing states unchanged. The read-only plan
 identity saves binary plans and checks their destructive actions. Only
 `deploy-apply.yml` can use the separate owner-equivalent apply identity.
 The workload identity deploys Helm and static files with its existing
@@ -63,7 +65,7 @@ their boundaries.
 
 | Path | Contents | Applied by |
 | --- | --- | --- |
-| `deploy/terraform/seed/` | The state bucket, migrated to its own remote state | Operator once, then CI |
+| `deploy/terraform/seed/` | State bucket and trust API enablement, migrated to its own remote state | Operator once, then CI |
 | `deploy/terraform/bootstrap/` | Federation providers, CI accounts, roles, and state grants | Operator once, then CI |
 | `deploy/environments/<env>/` | VPC, NAT, GKE, private PostgreSQL 17, KMS, registry, secrets, buckets, DNS zones, and alert channels | CI |
 | `deploy/environments/<env>/edge/` | Load balancer, CDN, certificate, records, uptime checks, and alerts | CI after Helm and the NEG wait |
@@ -71,8 +73,9 @@ their boundaries.
 | `deploy/helm/cli-release-server/` | The unchanged upstream chart | Deploy workflow |
 | `deploy/helm/release-values.yaml` | The ciproxy values of the release server | Deploy workflow |
 | `deploy/helm/ciproxy/` | The NEG Service of the release server, and the disabled control plane | Deploy workflow |
-| `deploy/scripts/bootstrap.sh` | Creates the seed locally, migrates its state, then creates CI trust | Operator once |
+| `deploy/scripts/bootstrap.sh` | Creates seed locally, migrates it, prepares all four remote states, then creates CI trust | Operator once |
 | `deploy/scripts/terraform.py` | Saves, checks, and applies exact binary plans | Plan identity or reusable apply workflow |
+| `deploy/scripts/terraform_roots.py` | Shared root directories, state buckets, prefixes, and trust classification | Bootstrap, promotion, and workload commands |
 | `deploy/scripts/terraform_policy.py` | Checks or generates the exact destructive approval | Plan and apply stages, or operator |
 | `deploy/scripts/promotion_event.py` | Checks caller, repository, branch, event, and source commit | Every credentialed job |
 | `deploy/scripts/github-ruleset.sh` | Creates or updates the `main` pull request and gate ruleset | Repository admin after the GitHub Team upgrade |
@@ -144,7 +147,8 @@ links to its commands and permissions.
    the organization policies, get the operator roles, install the tools, and
    log in with local credentials.
 2. [Bootstrap the environment](setup.md#2-bootstrap-the-environment): create
-   the state bucket and CI trust. Migrate seed state and back it up.
+   the state bucket, trust APIs, and CI trust. Migrate seed state and back
+   it up. Prepare all four remote backends with operator credentials.
    Set the identity variables and `ALERT_EMAIL`, then start CI. The first
    run creates foundation and can stop at missing workload inputs.
 3. [Push the release server image](setup.md#3-push-the-release-server-image):

@@ -22,6 +22,17 @@ provider "google" {
   region  = "europe-west1"
 }
 
+# The complete seed apply finishes before any bootstrap resource starts.
+# Keep this block in main.tf so the initial local copy enables these APIs.
+resource "google_project_service" "identity" {
+  for_each = toset([
+    "cloudresourcemanager.googleapis.com", "iam.googleapis.com",
+    "iamcredentials.googleapis.com", "sts.googleapis.com",
+  ])
+  service            = each.value
+  disable_on_destroy = false
+}
+
 # bootstrap.py first uses a local-backend copy, then migrates that state to
 # this bucket. Subsequent plans and applies use this remote backend in CI.
 resource "google_storage_bucket" "state" {
