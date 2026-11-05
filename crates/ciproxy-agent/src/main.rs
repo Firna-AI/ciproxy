@@ -1,6 +1,10 @@
 //! Composition root of the open-source ciproxy machine agent.
 
 mod application;
+mod area;
+mod area_files;
+mod area_mounts;
+mod area_types;
 mod boundaries;
 mod cache;
 mod capacity;
@@ -11,6 +15,15 @@ mod controller;
 mod error;
 mod gateway;
 mod hardware;
+mod host_composition;
+mod host_file_ops;
+mod host_packages;
+mod host_paths;
+mod host_preparation;
+mod host_release;
+mod host_system;
+mod host_tool_files;
+mod host_tools;
 mod image_artifact;
 mod image_download;
 mod image_extract;
@@ -34,6 +47,7 @@ mod reporting;
 mod runtime;
 mod runtime_reports;
 mod runtime_worker;
+mod sparse_copy;
 mod state;
 mod system_service;
 mod updates;
@@ -105,3 +119,15 @@ mod timed_fakes;
 #[cfg(test)]
 #[path = "_tests_/runtime_fakes.rs"]
 mod runtime_fakes;
+
+#[cfg(test)]
+#[path = "_tests_/host_fixtures.rs"]
+mod host_fixtures;
+
+#[cfg(test)]
+#[path = "_tests_/host_lifecycle_fakes.rs"]
+mod host_lifecycle_fakes;
+
+#[cfg(test)]
+#[path = "_tests_/area_fixtures.rs"]
+mod area_fixtures;

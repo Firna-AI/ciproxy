@@ -22,7 +22,7 @@ prerequisites() {
   jq -e '.identity != null and .mode == "Active"' "$smoke_state" >/dev/null || skip 'the staging machine must be registered and active'
   smoke_workflow="${CIPROXY_SMOKE_WORKFLOW:-ciproxy-agent-smoke.yml}"
   smoke_id="$(date -u +%Y%m%dT%H%M%S)-$RANDOM-$RANDOM"
-  smoke_evidence=".context/ciproxy-mvp/smoke-$smoke_mode-$smoke_id"
+  smoke_evidence="${CIPROXY_SMOKE_EVIDENCE:-.context/ciproxy-mvp/smoke-$smoke_mode-$smoke_id}"
   mkdir -p "$smoke_evidence"
 }
 
@@ -70,7 +70,7 @@ check_result() {
   local attempt
   for attempt in $(seq 1 90); do
     if ! jq -e --arg id "$smoke_local_id" '.runners[] | select(.local_id == $id)' "$smoke_state" >/dev/null; then
-      [ ! -d "/var/lib/ciproxy/jailer/firecracker/$smoke_local_id" ] || fail 'the used job disk still exists'
+      [ ! -d "/var/lib/ciproxy/area/jailer/firecracker/$smoke_local_id" ] || fail 'the used job disk still exists'
       if [ "$smoke_mode" = warm ]; then wait_for_new_warm; fi
       printf 'PASS: %s; GitHub run %s; evidence %s\n' "$smoke_mode" "$smoke_run" "$smoke_evidence"
       return

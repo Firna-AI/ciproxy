@@ -6,7 +6,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use ciproxy_protocol::guest::AgentToGuest;
 use tokio::sync::{Mutex, mpsc, watch};
-use tokio::task::AbortHandle;
+use tokio::task::JoinHandle;
 
 use crate::boundaries::{Cache, GuestEvent};
 use crate::error::{Error, ErrorResultExt, Result};
@@ -26,7 +26,7 @@ pub(crate) trait Guests: Send + Sync {
 struct Channel {
     sender: mpsc::Sender<AgentToGuest>,
     shutdown: watch::Sender<bool>,
-    task: AbortHandle,
+    task: JoinHandle<()>,
 }
 
 pub(crate) struct LinuxGuests {
@@ -78,15 +78,17 @@ impl Guests for LinuxGuests {
             Channel {
                 sender,
                 shutdown,
-                task: task.abort_handle(),
+                task,
             },
         );
         Ok(())
     }
 
     async fn detach(&self, vm: &VmRecord) -> Result<()> {
-        if let Some(channel) = self.channels.lock().await.remove(&vm.local_id) {
+        let channel = { self.channels.lock().await.remove(&vm.local_id) };
+        if let Some(channel) = channel {
             channel.task.abort();
+            let _ = channel.task.await;
         }
         Ok(())
     }

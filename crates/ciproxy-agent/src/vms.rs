@@ -10,6 +10,7 @@ use uuid::Uuid;
 
 use crate::boundaries::Vms;
 use crate::error::{Error, Result};
+use crate::host_tools::Tools;
 use crate::layout::{Layout, jail_uid, unit_name};
 use crate::network::{Network, network_name};
 use crate::process::{Commands, UnitState, arguments};
@@ -19,6 +20,7 @@ use crate::vsock::Guests;
 
 pub(crate) struct LinuxVms {
     pub(crate) layout: Layout,
+    pub(crate) tools: Arc<dyn Tools>,
     pub(crate) commands: Arc<dyn Commands>,
     pub(crate) network: Arc<dyn Network>,
     pub(crate) files: Arc<dyn VmFiles>,
@@ -40,6 +42,7 @@ impl Vms for LinuxVms {
     }
 
     async fn start(&self, vm: &VmRecord, config: AgentToGuest) -> Result<()> {
+        self.tools.prepare().await?;
         {
             let _operation = self.operation.lock().await;
             self.files.prepare(vm).await?;
@@ -91,6 +94,10 @@ impl LinuxVms {
             "--property=KillMode=control-group",
             "--property=StandardOutput=null",
             "--property=StandardError=null",
+            &format!(
+                "--property=RequiresMountsFor={}",
+                self.layout.data.display()
+            ),
             &self.layout.jailer.to_string_lossy(),
             "--id",
             &vm.local_id,

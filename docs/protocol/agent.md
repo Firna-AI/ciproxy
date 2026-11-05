@@ -42,6 +42,17 @@ runs on own machines.
   arguments that the command gives the script.
 - So the agent runs `install` with the install token, and the machine needs
   no second command.
+- Install prepares Firecracker, its jailer, and the required host tools.
+- Install prepares a persistent reflink disk area in one XFS file on any
+  filesystem.
+- The area uses the [job disk](job-routing.md#terms) after the host reserve.
+- Repeated installation repairs missing parts and preserves machine
+  identity, drain state, and job data.
+- Uninstall finishes running jobs before it removes its owned disk area.
+- **Decision:** install prepares the tools and one XFS file with reflinks.
+  Rejected: customer preparation, full copies without reflinks, and
+  deferral until after launch. Reason: one command must prepare the machine
+  without a slow full-copy path.
 - **Decision:** the install script runs the agent with the arguments of the
   script. Rejected: a second command that runs the agent after the
   install. Reason: the install command stays one line.

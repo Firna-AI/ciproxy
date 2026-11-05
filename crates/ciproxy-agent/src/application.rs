@@ -1,6 +1,6 @@
 //! Production composition for the Linux machine agent.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -13,6 +13,9 @@ use tokio::time::interval;
 use tracing_subscriber::fmt::writer::BoxMakeWriter;
 use tracing_subscriber::util::SubscriberInitExt;
 
+use crate::area::AreaFiles;
+use crate::area_files::LinuxAreaFiles;
+use crate::area_types::Phase;
 use crate::boundaries::{Cache, Connection, Host, Images, Service, Store, Vms};
 use crate::cache::UnixCache;
 use crate::cli::{Action, Cli};
@@ -21,6 +24,11 @@ use crate::controller::{Agent, Controller};
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::gateway::ReconnectingGateway;
 use crate::hardware::LinuxHost;
+use crate::host_composition::services;
+use crate::host_file_ops::directory;
+use crate::host_paths::{AREA, CONTROL, tools};
+use crate::host_preparation::{FinalUninstall, Uninstall, stage_error};
+use crate::host_system::LinuxHostSystem;
 use crate::image_download::HttpsImageDownload;
 use crate::image_store::LinuxImageStore;
 use crate::images::ManagedImages;
@@ -51,21 +59,43 @@ pub(crate) async fn main() -> Result<()> {
 async fn execute(action: Action) -> Result<()> {
     let service: Arc<dyn Service> = Arc::new(SystemService);
     let layout = Layout {
-        data: PathBuf::from("/var/lib/ciproxy"),
-        firecracker: PathBuf::from("/usr/local/bin/firecracker"),
-        jailer: PathBuf::from("/usr/local/bin/jailer"),
+        data: PathBuf::from(AREA),
+        firecracker: tools().join("firecracker"),
+        jailer: tools().join("jailer"),
     };
+    let files: Arc<dyn AreaFiles> = Arc::new(LinuxAreaFiles::new());
+    let system = Arc::new(LinuxHostSystem);
     let host: Arc<dyn Host> = Arc::new(LinuxHost {
-        data_directory: layout.data.clone(),
+        system: system.clone(),
+        area: files.clone(),
     });
     host.require_root()?;
+    if let Err(error) = directory(Path::new(CONTROL)) {
+        return Err(stage_error(
+            error,
+            "control directory",
+            "Restore root ownership and write access to /var/lib/ciproxy. Then rerun install.",
+        ));
+    }
+    let services = services(files.clone(), system)?;
+    let preparation = services.preparation;
     if matches!(action, Action::Uninstall) {
         service.stop()?;
     }
     let store: Arc<dyn Store> = Arc::new(FileStore {
-        directory: layout.data.clone(),
+        directory: PathBuf::from(CONTROL),
     });
-    let state = store.load()?;
+    let state = match store.load() {
+        Ok(state) => state,
+        Err(error) => {
+            return Err(stage_error(
+                error,
+                "machine identity state",
+                "Restore /var/lib/ciproxy/state.json from a root-only backup. Keep existing job data.",
+            ));
+        }
+    };
+    let empty = state.runners.is_empty();
     let identity = state.identity.clone();
     let removing = state.mode == Mode::Removed;
     let commands: Arc<dyn Commands> = Arc::new(LinuxCommands);
@@ -91,6 +121,7 @@ async fn execute(action: Action) -> Result<()> {
         guest_tx,
     ));
     let vms: Arc<dyn Vms> = Arc::new(LinuxVms {
+        tools: services.tools,
         layout: layout.clone(),
         commands: commands.clone(),
         network: Arc::new(LinuxNetwork {
@@ -123,11 +154,13 @@ async fn execute(action: Action) -> Result<()> {
                 service,
                 connection,
                 agent,
+                preparation,
             });
             installer.install(token).await?;
             println!("ciproxy agent installed");
         }
         Action::Run => {
+            preparation.verify().await?;
             images.recover()?;
             if removing && agent.finished().await {
                 return Ok(());
@@ -171,6 +204,27 @@ async fn execute(action: Action) -> Result<()> {
             store.save(&state)?;
         }
         Action::Uninstall => {
+            let inventory = match files.inspect() {
+                Ok(inventory) => inventory,
+                Err(error) => {
+                    return Err(stage_error(
+                        error,
+                        "area ownership record",
+                        "Restore area.json and its matching backing file from backup. Then rerun uninstall.",
+                    ));
+                }
+            };
+            let cleanup_only = inventory
+                .record
+                .is_none_or(|record| record.phase == Phase::Removing);
+            if cleanup_only && empty {
+                preparation.remove().await?;
+                service.uninstall()?;
+                store.clear()?;
+                println!("ciproxy agent uninstalled");
+                return Ok(());
+            }
+            preparation.verify().await?;
             images.recover()?;
             agent.restore().await?;
             agent.remove().await?;
@@ -187,9 +241,14 @@ async fn execute(action: Action) -> Result<()> {
                     tracing::warn!(error = %error, "uninstall is waiting for job and VM cleanup");
                 }
             }
-            images.purge()?;
-            store.clear()?;
-            service.uninstall()?;
+            let uninstall: Arc<dyn Uninstall> = Arc::new(FinalUninstall {
+                images,
+                preparation,
+                service,
+                store,
+                agent,
+            });
+            uninstall.finish().await?;
             println!("ciproxy agent uninstalled");
         }
     }

@@ -82,14 +82,14 @@ The agent opens no inbound TCP port.
 Use root on x64 Linux with systemd and cgroup v2.
 The documented minimum is four cores, 16 GB of memory, and 80 GB of disk.
 Enable KVM to run VMs.
-Install a matching, static Firecracker and jailer pair as
-`/usr/local/bin/firecracker` and `/usr/local/bin/jailer`.
-Install `ip`, `nft`, `sysctl`, GNU `cp`, and `mkfs.ext4`.
-Store `/var/lib/ciproxy` on a filesystem with reflink support.
+Install prepares the pinned Firecracker and jailer pair and host packages.
+It creates one persistent sparse XFS file with reflinks on any filesystem.
+Images, VM disks, Docker disks, and the cache directory use this area.
 Allow outbound HTTPS and public IPv4 forwarding.
 Existing host firewall rules must also permit this forwarding.
-Install does not provision these host tools or the reflink filesystem.
-Installation on a host with only the documented hardware remains unfinished.
+The [host preparation guide](host-preparation.md) gives distribution support,
+version and SHA-256 pins, storage ownership, repairs, and smoke commands.
+Missing KVM still permits registration with zero slots.
 
 ### Gateway, image, and cache integration
 
@@ -235,38 +235,8 @@ Packaging produces the `.tar.gz` archive and its `.sha256` companion.
 
 ### KVM and GitHub smoke checks
 
-Use a disposable private repository with the staging GitHub App installed.
-Copy [the workflow fixture](scripts/github-smoke-workflow.yml) into that
-repository as `.github/workflows/ciproxy-agent-smoke.yml`.
-Push it to the branch that the scripts will dispatch.
-The staging gateway must route its `ciproxy` jobs to this machine.
-It must supply a verified image and keep a warm runner for the warm check.
-The image must include the guest program and Docker.
-Authenticate `gh` to dispatch and read the test workflow.
-Run each check as root on the registered KVM machine:
-
-```sh
-export CIPROXY_SMOKE_REPO=owner/private-agent-smoke
-export CIPROXY_SMOKE_REF=main
-crates/ciproxy-agent/scripts/smoke-docker.sh
-crates/ciproxy-agent/scripts/smoke-warm.sh
-crates/ciproxy-agent/scripts/smoke-restart.sh
-```
-
-Optional inputs are `CIPROXY_SMOKE_WORKFLOW` and `CIPROXY_SMOKE_STATE`.
-The restart check restarts the agent during a real Docker job.
-It checks the same VM process and a successful job result.
-It also requires a fresh accepted JobStarted observation from the new agent.
-The script filters structured JSON journal events by service invocation.
-The observation contains only the generated local VM ID.
-The warm check proves that the runner was ready before dispatch.
-It snapshots every VM ID before dispatch, including Starting VMs.
-The replacement warm VM must have an ID absent from that snapshot.
-An active machine that never reaches warm readiness fails the check.
-The smoke host also needs journalctl.
-Each check waits for the used VM and disks to disappear.
-Evidence stays under `.context/ciproxy-mvp/`.
-Missing resources produce `SKIP` and exit 77. Failed checks exit 1.
+The [smoke guide](smoke-checks.md) gives the Docker, warm, and restart checks.
+The [host guide](host-preparation.md#ext4-and-kvm-smoke) gives the ext4 check.
 
 ### Key Code
 
@@ -283,6 +253,8 @@ Missing resources produce `SKIP` and exit 77. Failed checks exit 1.
 - [src/image_files.rs](src/image_files.rs) owns Linux image files and recovery.
 - [src/image_verification.rs](src/image_verification.rs) seals checked values.
 - [src/capacity.rs](src/capacity.rs) selects shared machine resources.
+- [src/host_preparation.rs](src/host_preparation.rs) owns host setup.
+- [src/area.rs](src/area.rs) owns area preparation, repair, and removal.
 - [scripts/](scripts/) contains real KVM and GitHub smoke checks.
 
 ### Related Docs

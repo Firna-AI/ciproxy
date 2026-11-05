@@ -9,7 +9,7 @@ on:
       mode:
         required: true
         type: choice
-        options: [docker, warm, restart]
+        options: [docker, warm, restart, host]
       smoke_id:
         required: true
         type: string
@@ -26,7 +26,11 @@ jobs:
         env:
           MODE: ${{ inputs.mode }}
         run: |
-          if [ "$MODE" = restart ]; then sleep 120; else sleep 45; fi
+          case "$MODE" in
+            host) sleep 180 ;;
+            restart) sleep 120 ;;
+            *) sleep 45 ;;
+          esac
       - name: Build and run a Docker image in the fresh VM
         env:
           SMOKE_ID: ${{ inputs.smoke_id }}

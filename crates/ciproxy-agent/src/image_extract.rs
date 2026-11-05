@@ -1,7 +1,6 @@
 //! Extraction consumes download proof and produces exact bundle proof.
 
 use std::fs::{self, File};
-use std::io;
 use std::os::unix::fs::PermissionsExt;
 
 use flate2::read::GzDecoder;
@@ -10,6 +9,7 @@ use crate::error::{Error, ErrorResultExt, Result};
 use crate::image_store::LinuxImageStore;
 use crate::image_verification::{BundleMembers, CheckedBundle, CheckedDownload};
 use crate::persistence::private_directory;
+use crate::sparse_copy::{ImageCopy, SparseCopy};
 
 impl LinuxImageStore {
     pub(crate) fn unpack(checked: CheckedDownload) -> Result<CheckedBundle> {
@@ -29,7 +29,9 @@ impl LinuxImageStore {
             )?;
             let destination = root.join(member.name());
             let mut file = File::create(&destination).context("create image member")?;
-            let bytes = io::copy(&mut entry, &mut file).context("extract image member")?;
+            let bytes = SparseCopy
+                .copy(&mut entry, &mut file)
+                .context("extract image member")?;
             if bytes != expected {
                 return Err(Error::ImageLayout);
             }

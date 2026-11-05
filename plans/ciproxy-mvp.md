@@ -379,10 +379,10 @@ Depends on: 3
 Firecracker VM, as `agent.md` says, which the Firecracker spike confirms. It
 ships through `futex-ai/cli-release`.
 
-- [ ] Add `install --token` and `uninstall`. My call: "Remove a machine" needs
+- [x] Add `install --token` and `uninstall`. My call: "Remove a machine" needs
       `uninstall`.
       Registration now saves the workspace returned by the gateway.
-      Host setup waits for the user's answer to item 62.
+      Host preparation follows the approved XFS-file approach below.
       Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
 - [x] Report the hardware and the slots every 10 seconds. Reconnect after a
       growing wait, and apply "Drain and remove".
@@ -412,9 +412,12 @@ ships through `futex-ai/cli-release`.
       `crates/ciproxy-agent/scripts/smoke-restart.sh` on the KVM test host
       with the staging gateway, image, guest, and GitHub App.
       Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
-- [ ] Prepare the host in `install`, as item 62 says: Firecracker, the
+- [x] Prepare the host in `install`, as item 62 says: Firecracker, the
       jailer, the host tools, and a reflink disk area in one XFS file on any
       file system.
+      Orchestrator call, 5 November 2026: always use the XFS file, also on
+      a file system with reflinks. Reason: every machine uses one path.
+      Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
 
 ## Milestone 10: Job VM image
 

@@ -9,6 +9,14 @@ pub enum Error {
     /// Run this command as root on x64 Linux.
     #[error("[agent] run this command as root on x64 Linux")]
     HostUnsupported,
+    /// Host preparation needs the named repair before it can continue safely.
+    #[error("[agent/host] {component}: {repair}")]
+    Preparation {
+        /// Missing or unsafe host component.
+        component: &'static str,
+        /// Action that repairs this component.
+        repair: &'static str,
+    },
     /// Install the agent before starting it.
     #[error("[agent] install the agent before starting it")]
     NotInstalled,

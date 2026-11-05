@@ -13,6 +13,7 @@ use tokio::task::spawn_blocking;
 use uuid::Uuid;
 
 use crate::error::{Error, ErrorResultExt, Result};
+use crate::host_paths::CONTROL;
 use crate::image_artifact::PendingImage;
 use crate::image_store::{ImageStore, LinuxImageStore};
 use crate::image_verification::{CheckedBundle, CheckedDownload};
@@ -46,7 +47,7 @@ impl ImageStore for LinuxImageStore {
             .read(true)
             .write(true)
             .mode(0o600)
-            .open(self.layout.data.join("images.lock"))
+            .open(Path::new(CONTROL).join("images.lock"))
             .context("open image ownership lock")?;
         FileExt::try_lock_exclusive(&file).context("claim image cache ownership")?;
         private_directory(&self.layout.data.join("images"))?;

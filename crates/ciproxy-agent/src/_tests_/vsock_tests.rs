@@ -2,19 +2,28 @@
 
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::task::Poll;
 
 use ciproxy_protocol::guest::AgentToGuest;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_protocol::version::ProtocolVersion;
 use futures_util::{pin_mut, poll};
-use tokio::sync::{mpsc, watch};
+use tokio::sync::{mpsc, oneshot, watch};
 use unimock::Unimock;
 
 use crate::fixtures::vm;
 use crate::layout::Layout;
 
 use super::{Channel, Guests, LinuxGuests};
+
+struct OpenGuest(Arc<AtomicBool>);
+
+impl Drop for OpenGuest {
+    fn drop(&mut self) {
+        self.0.store(true, Ordering::SeqCst);
+    }
+}
 
 #[tokio::test]
 async fn an_absent_guest_coalesces_shutdown_without_losing_configuration() {
@@ -33,13 +42,21 @@ async fn an_absent_guest_coalesces_shutdown_without_losing_configuration() {
     let record = vm("runner", false);
     let (sender, mut receiver) = mpsc::channel(16);
     let (shutdown, stop_requested) = watch::channel(false);
-    let absent_guest = tokio::spawn(std::future::pending::<()>());
+    let closed = Arc::new(AtomicBool::new(false));
+    let observed = closed.clone();
+    let (started, ready) = oneshot::channel();
+    let absent_guest = tokio::spawn(async move {
+        let _open = OpenGuest(observed);
+        started.send(()).unwrap();
+        std::future::pending::<()>().await;
+    });
+    ready.await.unwrap();
     guests.channels.lock().await.insert(
         record.local_id.clone(),
         Channel {
             sender,
             shutdown,
-            task: absent_guest.abort_handle(),
+            task: absent_guest,
         },
     );
     for request in 1..=64 {
@@ -62,5 +79,5 @@ async fn an_absent_guest_coalesces_shutdown_without_losing_configuration() {
     assert_eq!(receiver.try_recv().unwrap(), configuration);
     assert_eq!(receiver.try_recv(), Err(mpsc::error::TryRecvError::Empty));
     guests.detach(&record).await.unwrap();
-    let _ = absent_guest.await;
+    assert!(closed.load(Ordering::SeqCst));
 }

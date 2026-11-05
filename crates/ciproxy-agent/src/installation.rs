@@ -10,6 +10,7 @@ use ciproxy_protocol::version::ProtocolVersion;
 use crate::boundaries::{Connection, Host, Service, Store};
 use crate::controller::Agent;
 use crate::error::{Error, Result};
+use crate::host_preparation::Preparation;
 use crate::state::{Identity, Mode};
 
 #[async_trait]
@@ -23,12 +24,14 @@ pub(crate) struct Installer {
     pub(crate) service: Arc<dyn Service>,
     pub(crate) connection: Arc<dyn Connection>,
     pub(crate) agent: Arc<dyn Agent>,
+    pub(crate) preparation: Arc<dyn Preparation>,
 }
 
 #[async_trait]
 impl Install for Installer {
     async fn install(&self, token: Secret) -> Result<()> {
         self.host.require_root()?;
+        self.preparation.prepare().await?;
         let mut state = self.store.load()?;
         if state.mode != Mode::Removed && state.identity.is_some() {
             return self.service.install();
