@@ -439,8 +439,10 @@ evicts them. Boat runs the stock runner. The cache spike confirms it.
       Branch: `conductor/ciproxy-mvp-milestone-11-cache-sidecar`.
       Orchestrator: run `image/runner-patch/smoke/live-check.py` with
       trusted registration and runtime credentials on a GitHub runner.
-- [ ] Let only the 7 trusted events of GitHub write shared entries, and
+- [x] Let only the 7 trusted events of GitHub write shared entries, and
       write item 59 into "Trusted write-back" of `cache.md`.
+      Evidence: `.context/ciproxy-mvp/trusted-cache-events/acceptance.md`.
+      Branch: `conductor/ciproxy-mvp-milestone-11-trusted-cache-events`.
 
 ## Milestone 12: Boat backend on the shared sandbox interface
 

@@ -30,12 +30,16 @@ fills separate from accepted saves. A fill cannot prevent a later save in
 that scope. An accepted save takes precedence over a fill of the same
 scoped key. Existing records without provenance stay readable as fills.
 
-A pull request writes only within a trusted `refs/pull/N/merge` ref.
-`pull_request_target` and pull requests with a normal branch ref cannot
-save safely through GitHub. These saves return an unavailable-cache
-result. They publish no shared entry in either tier. The proxy keeps this
-rule when the machine is unavailable. A foreign head repository also cannot
-write the default scope.
+Only the trusted events in
+[Trusted write-back](../../docs/protocol/cache.md#trusted-write-back) can
+write shared machine-cache entries. Other events keep GitHub fills private
+to the job or its pull request. A pull request writes only within a trusted
+`refs/pull/N/merge` ref. The sidecar rejects saves from `pull_request_target`
+jobs and pull requests with a normal branch ref. These saves return an
+unavailable-cache result. The proxy keeps this rule when the machine is
+unavailable. A foreign head repository also cannot write the default scope.
+Direct GitHub writes that a workflow enables with `cache-mode: write`
+follow GitHub's permission rules.
 
 Azure single uploads, staged blocks, committed blocklist order, ranged
 downloads, and legacy ranged PATCH uploads work. Lookup-only and HEAD
