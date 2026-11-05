@@ -897,6 +897,8 @@ require and the product does.
       limit, and Remove a machine.
 - [ ] Reference: Labels and VM sizes, Agent install options, GitHub App
       permissions, and Plans and starts.
+- [ ] Say on the docs page of the job image that a job can run its steps
+      in any Docker image with the `container:` key, as item 78 = C says.
 - [ ] Security: Job isolation, and The agent connection. Check each page
       against the product on the test host.
 
@@ -1217,6 +1219,12 @@ Answers of 5 November 2026:
   docs say that a machine used only for CI can combine its disks, because
   its jobs, machine cache, and Docker disks are disposable. Rejected: the
   default mirror of 512 GB, and another machine.
+- Item 78, C: until launch, every label starts from the full image, and a
+  job picks other software with a job container, the `container:` key of
+  GitHub Actions. The docs say so. The user wrote "we will do A/B after
+  launch": a catalog of ciproxy images that each label names, and custom VM
+  images for Business. The follow-up item `job-image-catalog-after-launch.md`
+  holds that work. Rejected for now: toolset layers.
 - Item 70, E: this whole repository becomes public now, in place of a public
   copy of the open parts at launch. The agent builds and releases in public.
   This replaces the code location rule of the foundation plan. The closed
@@ -2871,3 +2879,22 @@ buckets must be public.
   the scheduler reserves that size, and the label dialog warns.
 - **Action:** ask the user. Nothing waits for the answer before the label
   settings milestone.
+
+### 78. How a workspace picks the software that its jobs start with
+
+**Answer, 5 November 2026:** C, and A with B after launch.
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Design. The user asked "how would you suggest allowing the
+  user to pick different base images?".
+- **Options:**
+  - **A.** A catalog of ciproxy images, `full` and `slim`, picked per label.
+    Effort: Large.
+  - **B.** A, plus custom VM images on Business. Effort: Large.
+  - **C.** One image, and job containers with `container:` for other
+    software. Effort: Small.
+  - **D.** Toolsets on a common base. Effort: Large.
+- **Recommendation:** A after launch, with C as docs now.
+- **Action:** answered C. The follow-up item
+  [job image catalog after launch](follow-ups/job-image-catalog-after-launch.md)
+  holds A and B.

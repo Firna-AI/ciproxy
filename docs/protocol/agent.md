@@ -168,6 +168,13 @@ runs on own machines.
 - **Decision:** one image definition serves the job VMs and the Boat
   sandboxes. Rejected: a separate image for each, because a job must behave
   the same wherever it runs.
+- A job can run its steps in a Docker image of its own choice, with the
+  `container:` key of GitHub Actions, on every tier.
+- **Decision:** every label starts from the one image until launch, and a
+  job picks other software with a job container. Rejected for now: a
+  catalog of images that each label names, custom VM images, and toolset
+  layers. Reason: the user chose this on 5 November 2026, and plans the
+  catalog and custom images after launch.
 - No workspace can run its jobs on a custom VM image yet.
 - Custom VM images come later, on Business, as
   [Tier features](billing.md#tier-features) says.
