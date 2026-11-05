@@ -454,7 +454,8 @@ evicts them. Boat runs the stock runner. The cache spike confirms it.
       default branch, `pull_request_target`, and a job on a ciproxy runner.
 - [ ] Check the runtime token of each job in the machine cache, as item 54
       says, and take the full ref from its write scope. Write the rule into
-      `cache.md` and `security.md`. It waits for the live checks and item 55.
+      `cache.md` and `security.md`. A job whose token fails the check fails
+      closed, as item 55 = A says. It waits for the live checks.
 
 ## Milestone 12: Boat backend on the shared sandbox interface
 
@@ -960,6 +961,15 @@ Answers of 5 November 2026:
   OIDC token. Before the build, three live checks run: a push to the default
   branch, `pull_request_target`, and a job on a ciproxy runner. If a check
   fails, the fallback B goes back to the user.
+- Item 55, A: a job whose runtime token gives no checked ref fails closed in the
+  machine cache. It restores default-branch entries from the machine cache, and
+  its other entries through the GitHub cache. It saves in a private scope that
+  no other job restores, and through to the GitHub cache. It gets its own copy
+  of the Docker disk, which ciproxy discards. The job facts get one "unknown"
+  state with this one rule. Rejected: the GitHub cache only for such a job,
+  because one change of the token format would take the machine cache from every
+  job, and a later promotion through the cache list, because it is much code for
+  a rare case.
 - Item 66, A: only a job of a trusted event on the default branch keeps
   its changes to a Docker disk, as item 59 says for the machine cache.
   `cache.md` states it. Rejected: any event on the default branch, and
@@ -1139,9 +1149,8 @@ Design calls on the questions of the docs work, my calls, 4 November 2026:
   report. The savings report now covers the whole workspace, which pays
   one price.
 
-Item 55 waits for the user. It is under "Open items of 4 November 2026"
-at the end of this plan, with the answers of 5 November 2026 to the other
-items there. The options check of items 50
+No item waits for the user. The items under "Open items of 4 November
+2026" at the end of this plan hold their answers of 5 November 2026. The options check of items 50
 and 51 ran, and its report is in
 `.context/ciproxy-mvp/options-check-50-51.md`.
 
@@ -1814,8 +1823,7 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 and 56 to 66 on 5 November 2026. Item 55 still
-waits. The conversation gave each item in full in the layout of the
+The user answered items 54 to 66 on 5 November 2026. No item still waits. The conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
 
@@ -1851,6 +1859,8 @@ keep the letters that the user saw.
 
 ### 55. No rule for a job whose ref is unknown
 
+**Answer, 5 November 2026:** A.
+
 - **Severity:** High. **Effort:** Small.
 - **Source:** Implementation, Milestone 6.
 - **Background:** Each option of item 54 leaves some jobs without a full ref,
@@ -1866,7 +1876,7 @@ keep the letters that the user saw.
     default-branch ref. It needs D of item 54. Effort: Large.
 - **Recommendation:** A. It never widens what a job may write, and the job keeps
   its hits on default-branch entries.
-- **Action:** ask the user.
+- **Action:** answered A.
 
 ### 56. Merged Terraform changes still need a person to apply them
 
