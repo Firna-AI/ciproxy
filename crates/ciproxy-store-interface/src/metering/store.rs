@@ -31,6 +31,7 @@ pub trait MeteringStore: Send + Sync {
     /// Store one ciproxy Boat runner's start and runtime price snapshot.
     fn save_boat_cost(&self, workspace_id: Uuid, cost: &BoatCost) -> Result<()>;
     /// Read report registrations, range totals, and monthly costs in one snapshot.
+    /// Return AccountingIncomplete when required overflow cost facts are missing.
     fn savings_snapshot(
         &self,
         workspace_id: Uuid,
@@ -55,6 +56,7 @@ pub trait MeteringStore: Send + Sync {
         starts: &[StartTotal],
     ) -> Result<bool>;
     /// Read Boat source facts and cost cursors in one coherent snapshot.
+    /// Incomplete deliveries contribute only their known bounded billing intervals.
     fn boat_accounting(&self, workspace_id: Uuid) -> Result<BoatAccounting>;
     /// Apply Boat cost corrections and a cursor in one transaction.
     ///

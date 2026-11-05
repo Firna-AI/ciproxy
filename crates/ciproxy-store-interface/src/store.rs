@@ -13,6 +13,7 @@ use crate::labels::LabelStore;
 use crate::machines::MachineStore;
 use crate::metering::store::MeteringStore;
 use crate::organizations::OrganizationStore;
+use crate::overflow::store::OverflowStore;
 use crate::runners::RunnerStore;
 use crate::scale_sets::ScaleSetStore;
 use crate::settings::SettingsStore;
@@ -32,6 +33,7 @@ pub trait Store:
     + JobStore
     + SettingsStore
     + BoatStore
+    + OverflowStore
     + MeteringStore
     + GatewayStore
     + GithubStore

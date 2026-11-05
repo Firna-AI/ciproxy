@@ -11,6 +11,7 @@ pub mod machines;
 pub mod metering;
 pub mod migrations;
 pub mod organizations;
+pub mod overflow;
 pub mod runners;
 pub mod scale_sets;
 pub mod settings;

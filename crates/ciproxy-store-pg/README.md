@@ -28,6 +28,7 @@ Live sandbox-end tokens stay usable after App removal.
 They name one workspace, organization, and runner.
 They stop working after that runner reaches its stopped state.
 These mutations run in one transaction under a workspace row lock.
+The last removal also deletes pending Boat connection grants.
 Install, removal, and purge queries serialize on that workspace lock.
 Retention queries delete finished jobs after 90 days.
 They delete removed organization data after 30 days.
@@ -141,6 +142,52 @@ Async services must call them from blocking workers.
 This crate contains no scheduler, listener, gateway, KMS client, Boat
 client, or runtime composition.
 
+Overflow uses one dedicated advisory-lock connection per workspace.
+Its negative key range is separate from billing and scale-set locks.
+A blocking callback lease waits on that dedicated connection.
+Catalog observations and exact delivery records persist before Boat access.
+Reservation rechecks the active key, workspace settings, organization,
+label, and scale-set ownership under the workspace row lock.
+Pending acceptance saves demand, sealed input, and the saved fee together.
+It saves no fixed provider parameters or provider cost bound.
+Pending connections receive fresh database-generated grant identities.
+Activation consumes a matching live grant under the workspace row lock.
+A later grant cannot restore an older operation, even with the same key ID.
+Suspension and removal with another App present preserve shared grants.
+One current startup query binds the saved delivery to its organization and
+key in that workspace. It requires active App state, enabled overflow, and
+the accepted non-retired key together.
+The same authority SQL checks scale-set ownership, the label's Boat switch,
+and exact original requested dimensions during reservation and later startup.
+An undersized selected size also requires the label's current largest-size
+fallback permission. Fitting requests remain permitted under Wait.
+The dispatch transaction accepts only the saved unsent delivery.
+It rechecks authority and the current saved limit before saving `Creating`.
+It compares the exact pending record, including its identity and saved fee.
+It saves selected size, lifetime, and dispatch time in that same transaction.
+The caller supplies those parameters with their required monthly amounts.
+Current-label queries supply facts for service policy without selecting sizes.
+Cancelled unsent records release sealed input without provider or cost facts.
+Adoption saves the provider identity, immutable runner placement, and price
+facts in one transaction.
+Callback claims save token consumption and deletion intent together.
+Refusal records and account restrictions also commit together.
+Key erasure checks unfinished deliveries as well as live runners.
+No query receives a plaintext key or runner registration.
+Metering price facts require a trusted runtime observation and a counted
+start fee. They select the confirmed fee, or else the saved fee bound.
+That selection never confirms a provider charge.
+Delivery JSON retains the admission bound and actual fee separately.
+Their upserts correct provider start times and every price field.
+Every overflow price row has a finite end from its measured interval.
+Later metering refreshes cannot extend an old reading.
+An unknown final interval publishes only the known measured billing prefix.
+Boat accounting remains available so the metering refresh can reach purge.
+Relevant savings reads return `AccountingIncomplete` while both fee sources
+are missing or a required runtime interval remains unknown.
+The savings range excludes a lifecycle end at its first instant.
+Execution and cleanup do not use those reporting reads.
+
 ## Quick Start
 
 ```rust
@@ -198,6 +245,11 @@ CI starts the database for the existing workspace test phase.
 - [src/error.rs](src/error.rs) maps database failures to interface errors.
 - [src/scale_sets.rs](src/scale_sets.rs) owns advisory lock sessions.
 - [src/boat.rs](src/boat.rs) rotates and erases encrypted keys.
+- [src/overflow](src/overflow) owns durable Boat execution transactions.
+- [src/overflow/authority.rs](src/overflow/authority.rs) reads current
+  startup authority for one saved delivery.
+- [src/overflow/connections.rs](src/overflow/connections.rs) issues pending
+  connection grants under the workspace removal lock.
 - [src/github](src/github) owns atomic installation setup, repository
   snapshots, durable job revisions, and demand retention.
 - [src/machine_removal.rs](src/machine_removal.rs) preserves removal times.

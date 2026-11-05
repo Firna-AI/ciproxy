@@ -87,6 +87,11 @@ Its registrations include removed machines for historical cost dates.
 The savings read excludes jobs, start counts, and accounting cursors.
 Deleting a job or runner deletes its cursor and preserves its aggregates.
 The metering service supplies all calculation rules and retention dates.
+Boat accounting returns known price intervals and bounded measured prefixes.
+It remains available when another overflow cost lacks a fee or final reading.
+The metering refresh can then complete its retention pass.
+Savings snapshots return `AccountingIncomplete` for gaps in their requested
+date range. They never publish a missing cost as zero or as outage time.
 
 BillingStore adds the confirmed tier, add-ons, paid bounds, and Free anchor.
 It exposes retry and ended-banner dates without changing job execution.
@@ -99,6 +104,47 @@ The subscription-ID lookup resolves a billing workspace before provider reads.
 State and event receipts commit atomically.
 App removal stores a durable billing cancellation request.
 Services consume these boundaries through dyn.
+
+OverflowStore adds exclusive workspace sessions for Boat execution.
+Pending connections use fresh store-issued grants before external work.
+Last-App removal revokes these grants, and activation consumes one live grant.
+Reusing a key-version identity cannot reuse an earlier grant.
+Pending acceptance retains immutable demand, sealed input, and its saved fee.
+It fixes no provider parameters and counts no provider cost bound.
+Prepared dispatch carries the selected provider parameters and exact monthly
+amounts together.
+Its transaction locks saved settings and returns a distinct spend-limit refusal.
+Its startup query derives the organization and key from the saved delivery.
+It checks tenant ownership, active App state, enabled overflow, and the
+accepted non-retired key together.
+It also requires the saved scale set and the label's current Boat switch.
+All current label dimensions must match the original requested dimensions.
+Reservation uses the same policy as saved-delivery startup.
+The current-label query supplies resource policy facts without store policy.
+The atomic dispatch operation rechecks authority and budget before `Creating`.
+It preserves all pending fields and fixes size, lifetime, and dispatch time.
+Later recovery uses those exact committed parameters.
+Unsent deliveries can retry preparation without provider recovery.
+Cancelled unsent deliveries retain no sealed input or callback authority.
+Account observations keep typed catalogs, retry times, and refusal state.
+Runner input stays encrypted until launch or cleanup ends its use.
+Callback lookup derives the workspace from a token digest.
+A transactional claim accepts one report for one live runner.
+There is no independent expiry before that runner ends.
+Old keys stay while uncertain creates or live sandboxes reference them.
+Per-month runtime observations keep incomplete costs explicit.
+Each delivery separates its saved start-fee bound from a confirmed fee.
+Spend and savings select the confirmed fee, or else the saved fee bound.
+The selected fee does not become a provider-confirmed charge.
+Runtime bounds never supply measured runtime facts.
+Running observations and total runtime costs survive a failed monthly read.
+The overflow service allocates confirmed monthly costs or conservative bounds.
+The store does not turn a cross-month estimate into a measured price interval.
+Measured billing coverage stays separate from lifecycle end and its proven
+provider lifetime bound.
+Finite measured intervals clamp to their latest provider observation.
+One known-sandbox value contains both identity and lifetime proof.
+The overflow service supplies prices, calculations, KMS, and provider calls.
 
 The gateway queries atomically register a machine and its hashed credential.
 GatewayStore reuses TokenStore authority lookup to derive the workspace from
@@ -164,6 +210,11 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
   transitions and immutable ordered lifecycle delivery.
 - [src/metering](src/metering) defines metering facts and history APIs.
 - [src/gateway.rs](src/gateway.rs) defines atomic registration and reports.
+- [src/overflow](src/overflow) defines durable Boat sessions and deliveries.
+- [src/overflow/admission.rs](src/overflow/admission.rs) defines required
+  monthly amounts, current label facts, prepared dispatch, and its outcomes.
+- [src/overflow/connection.rs](src/overflow/connection.rs) defines pending
+  connection grant identities.
 
 ### Related Docs
 

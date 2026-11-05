@@ -174,6 +174,8 @@ of each tier.
   periods. Reason: the same date then has the same cost in every range.
 - The Boat cost counts the same [sandboxes](overflow.md#terms) as the
   [spend limit](overflow.md#spend-limit), for the days of the range.
+- Boat start fees count at the highest published price, as the spend limit
+  counts them.
 - The savings against an alternative are its cost minus the cost with
   ciproxy.
 - The report leads with the savings against the cheaper alternative.

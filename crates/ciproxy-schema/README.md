@@ -65,6 +65,20 @@ It survives organization/workspace purge until the consumer accepts it.
 It contains no key, token, JIT configuration, job content, or job log.
 Confirmed events are deleted instead of retained indefinitely.
 
+Overflow tables hold credential-free account observations and durable
+sandbox deliveries across every organization of a workspace.
+One pending connection grant per workspace holds a fresh operation identity
+and the intended key-version identity.
+It holds no plaintext key or ciphertext.
+Last-App removal deletes the grant, and successful activation consumes it.
+Each delivery holds a callback digest and temporary encrypted runner input.
+Provider identity, phase, start-price quote, and per-month runtime facts
+survive a control-plane restart.
+Unfinished deliveries keep their Boat key reference during rotation.
+The overflow advisory-key sequence has its own reserved range.
+Delivery metadata has no cascading organization reference, so retention
+cannot discard live cleanup authority when one organization leaves.
+
 ## Quick Start
 
 Use the migration constant through Diesel's migration harness:
@@ -113,6 +127,7 @@ Each migration has an up.sql and a down.sql.
 - [src/github.rs](src/github.rs) defines repository snapshots and durable
   UUID job notifications.
 - [src/metering.rs](src/metering.rs) defines histories and aggregates.
+- [src/overflow.rs](src/overflow.rs) defines durable sandbox execution state.
 
 ### Related Docs
 

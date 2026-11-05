@@ -1,0 +1,39 @@
+[package]
+name = "ciproxy-overflow"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+ciproxy-protocol = { workspace = true }
+ciproxy-scaler = { workspace = true }
+ciproxy-store-interface = { workspace = true }
+sandbox-interface = { workspace = true }
+sandbox-boat = { workspace = true }
+async-trait = "0.1.92"
+chrono = { version = "0.4.45", features = ["serde"] }
+rust_decimal = { version = "1.43.0", features = ["serde-with-arbitrary-precision"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.154", features = ["arbitrary_precision"] }
+sha2 = "0.11.1"
+rand = "0.10.3"
+thiserror = "2.0.21"
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "sync", "time", "net", "io-util", "fs"] }
+unimock = "0.6.8"
+uuid = { version = "1.29.0", features = ["v4", "serde"] }
+base64 = "0.23.1"
+reqwest = { version = "0.13.5", features = ["json"] }
+crc32c = "0.6.9"
+url = "2.5.8"
+zeroize = "1.9.1"
+tracing = "0.1.44"
+
+[dev-dependencies]
+ciproxy-metering = { workspace = true }
+ciproxy-store-pg = { workspace = true }
+clap = { version = "4.6.7", features = ["derive"] }
+diesel = { version = "2.3.14", features = ["postgres", "chrono", "uuid"] }
+rcgen = "0.14.10"
+tempfile = "3.27.0"
+tokio-rustls = "0.26.6"

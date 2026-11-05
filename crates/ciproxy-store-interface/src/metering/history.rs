@@ -50,9 +50,9 @@ pub struct BoatCost {
     pub runner_id: Uuid,
     /// When Boat started billing this sandbox.
     pub starts_at: DateTime<Utc>,
-    /// When billing ended, absent while the sandbox runs.
+    /// End of this price interval. Overflow always supplies a finite measured end.
     pub ends_at: Option<DateTime<Utc>>,
-    /// The sandbox's one-time start charge in USD.
+    /// The counted one-time start fee in USD, including a saved fee bound.
     pub start_usd: Decimal,
     /// The sandbox's runtime cost per elapsed minute in USD.
     pub minute_usd: Decimal,
@@ -72,7 +72,7 @@ pub struct CostHistory {
 /// Coherent source facts and cost cursors from one database snapshot.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct BoatAccounting {
-    /// Ciproxy-created Boat sandboxes, including those that took no job.
+    /// Known ciproxy Boat price intervals, including bounded incomplete deliveries.
     pub costs: Vec<BoatCost>,
     /// Accounting cursors read from the same snapshot as the source costs.
     pub accounted: Vec<AccountedBoat>,
