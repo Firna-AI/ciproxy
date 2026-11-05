@@ -134,7 +134,10 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
   - [x] Define both projects, private SQL, secret containers, KMS, and IAM.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
-  - [ ] User: apply both foundations with `deploy/scripts/bootstrap.sh`.
+  - [ ] Orchestrator: run `deploy/scripts/bootstrap.sh` for each environment,
+        set the GitHub variables, and start the deploy workflow, which
+        creates the foundation, as item 56 says. The steps are in
+        [the setup guide](../deploy/setup.md).
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
 - [ ] Run the control plane and the `futex-ai/cli-release` server on GKE
       Autopilot with Helm, as item 31 says.
