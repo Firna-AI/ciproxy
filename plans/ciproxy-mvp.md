@@ -1978,7 +1978,7 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 68 on 5 November 2026. No item still waits. The
+The user answered items 54 to 68 on 5 November 2026. Item 69 still waits. The
 conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
@@ -2285,5 +2285,77 @@ keep the letters that the user saw.
     Effort: Small.
   - **C.** Keep the main preview in `internal-498318`. Effort: none.
 - **Recommendation:** B. It keeps the main preview away from production.
-- **Action:** answered A, with one shared cluster. The design calls for it
-  keep production apart through scoped identities.
+- **Action:** answered A, with one shared cluster. The design calls keep
+  production apart through scoped identities.
+
+### 69. A start-fee quote does not bound the start fee
+
+- **Severity:** Medium. **Likelihood:** Rare. **Effort:** Small.
+- **Source:** Review of pull request #22, Milestone 12, finding 1. The
+  review graded it High. It is Medium here, because one start can hide at
+  most $0.07.
+- **Category:** Product bug.
+- **Location:** `crates/ciproxy-overflow/src/service/start.rs` and
+  `crates/ciproxy-overflow/src/spend.rs` on the branch of #22, and the spend
+  rule in `docs/protocol/overflow.md`.
+- **Terms:**
+  - **Start fee:** the price that Boat charges for one sandbox start. It is
+    $0 inside the free starts of the plan, then $0.03, $0.05, or $0.07.
+  - **Quote:** the field `nextStartDollars` of `GET /limits`. It gives the
+    price of the next start at the moment of the read.
+- **Background:**
+  - Item 67 = B counts a bound for each start whose cost Boat has not
+    confirmed. The bound is the hourly price for the whole lifetime, plus
+    the quote that ciproxy saves before the start.
+  - Boat counts free starts in rolling windows of one minute, one hour, and
+    one day. A start pays the highest bracket of the three windows.
+  - Boat reports no charged start fee. The create response, the usage, and
+    the sandbox object have no such field. So the saved quote stays the
+    counted fee for good.
+  - ciproxy starts one sandbox at a time for each workspace. Other users of
+    the same Boat account can start sandboxes at any time.
+  - A 10-minute job on the default size costs about $0.006 of runtime, at
+    the list price of $0.036 for each hour.
+- **Problem:** The quote is not a reservation. When another Boat user starts
+  a sandbox between the quote and the start, the start can cost one bracket
+  more than its quote. ciproxy then counts the lower quote.
+- **Impact if no action:** The spend can pass the limit by up to $0.07 for
+  each such start. This needs other use of the Boat account near the edge
+  of a bracket.
+- **Root question:** What start fee does ciproxy count, when Boat never
+  reports the fee that it charged?
+- **Options:**
+  - **A.** Keep the saved quote. State in `overflow.md` that the quote
+    stands for the fee, and why. A start that another Boat user pushes into
+    a higher bracket counts too little. Effort: Small.
+  - **B.** Count the highest published bracket for each start. Read it from
+    `overagePrices.startBrackets` of `GET /limits`. It is $0.07 today. This
+    is a true bound. Each free start then also counts $0.07 for good, about
+    12 times the runtime of a 10-minute job. The limit then stops overflow
+    much earlier than the real Boat bill does. Effort: Small.
+  - **C.** Read the quote again directly after Boat accepts the start.
+    Count the higher of the two quotes. When another Boat user starts a
+    sandbox in the gap, the second quote is also higher. So the count
+    catches nearly every such start. It is not a strict bound, because old
+    starts can leave a rolling window between the two reads. It adds one
+    read for each start. Effort: Small.
+  - **D.** Ask Boat to report the charged start fee of each sandbox. Count
+    that fee as confirmed when Boat gives it, and use C until then. It
+    depends on work and a timeline at Boat. Effort: Small in ciproxy.
+- **Left out:**
+  - Separate quoted, bounded, and confirmed states, from the review: Boat
+    never confirms a start fee, so each start stays bounded for good. That
+    is B.
+  - A bound of the highest bracket while the start runs, which later
+    settles to the quote: the month total is then the same as in C.
+  - One lock for all users of the Boat account: ciproxy cannot control
+    other Boat clients.
+- **Wider fix:** D. A confirmed fee from Boat removes the estimate.
+- **Previous examples:** None found. Commit `75bd853` records the quote in
+  the answer to item 67.
+- **Related:** item 67. Its recorded answer names the saved quote.
+- **Recommendation:** C. It catches nearly every such start for one extra
+  read, and it does not count $0.07 for each free start as B does. D best
+  protects the codebase, but it needs Boat.
+- **Action:** ask the user, because the true bound B overcounts each free
+  start, the close count C is not strict, and no option is clearly best.
