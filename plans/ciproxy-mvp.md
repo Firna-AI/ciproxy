@@ -996,6 +996,15 @@ Answers of 5 November 2026:
   because one change of the token format would take the machine cache from every
   job, and a later promotion through the cache list, because it is much code for
   a rare case.
+- Item 67, B: the spend limit counts the confirmed Boat spend plus the cost
+  bound of each start whose cost Boat has not confirmed. The bound is the
+  published hourly price of the size for the whole sandbox lifetime, 6 hours or
+  2 on a free trial, plus the saved start-fee quote. New starts continue while
+  the limit covers both. When Boat reports the real cost, or the lifetime has
+  passed, the real cost or the bound replaces the estimate. The pages show the
+  confirmed spend and the amount still pending. `overflow.md` states the rule.
+  Rejected: holding all starts until Boat confirms, Admin reconciliation by
+  hand, one combined estimate figure, and recovery through a replacement key.
 - Item 66, A: only a job of a trusted event on the default branch keeps
   its changes to a Docker disk, as item 59 says for the machine cache.
   `cache.md` states it. Rejected: any event on the default branch, and
@@ -1869,7 +1878,7 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 66 on 5 November 2026. No item still waits. The
+The user answered items 54 to 67 on 5 November 2026. No item still waits. The
 conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
@@ -2137,3 +2146,26 @@ keep the letters that the user saw.
 - **Recommendation:** A. One rule then covers the machine cache and the
   Docker disks.
 - **Action:** ask the user.
+
+### 67. The spend limit has no rule for unconfirmed costs
+
+**Answer, 5 November 2026:** B.
+
+- **Severity:** High. **Effort:** Medium.
+- **Source:** Review of draft pull request #22, Milestone 12.
+- **Background:** The Boat API gives the dollars of each sandbox through
+  `GET /sandboxes/{id}/usage`, and the next start fee through `GET /limits`.
+  The hourly prices of the sizes come from the published price list. A cost
+  stays unknown after a start with no clear answer, a failed usage read, or a
+  start fee that differs from its quote.
+- **Options:**
+  - **A.** Hold all new starts until Boat confirms. Effort: Small.
+  - **B.** Count the cost bound of each unconfirmed start until Boat
+    confirms. Effort: Medium.
+  - **C.** An Admin reconciles each unclear cost by hand. Effort: Large.
+  - **D.** As B, with one figure that includes the bound. Effort: Medium.
+  - **E.** An add-on: recovery of old costs through a replacement key.
+    Effort: Medium.
+- **Recommendation:** B. Uncounted costs never pass the limit, and overflow
+  keeps running while the limit has room.
+- **Action:** answered B.
