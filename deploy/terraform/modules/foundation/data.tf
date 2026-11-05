@@ -24,12 +24,13 @@ resource "google_sql_database_instance" "main" {
   database_version    = "POSTGRES_17"
   deletion_protection = true
   settings {
-    tier              = var.environment == "production" ? "db-custom-2-7680" : "db-custom-1-3840"
-    availability_type = var.environment == "production" ? "REGIONAL" : "ZONAL"
-    disk_type         = "PD_SSD"
-    disk_size         = 20
-    disk_autoresize   = true
-    edition           = "ENTERPRISE"
+    deletion_protection_enabled = true
+    tier                        = var.environment == "production" ? "db-custom-2-7680" : "db-custom-1-3840"
+    availability_type           = var.environment == "production" ? "REGIONAL" : "ZONAL"
+    disk_type                   = "PD_SSD"
+    disk_size                   = 20
+    disk_autoresize             = true
+    edition                     = "ENTERPRISE"
     ip_configuration {
       ipv4_enabled    = false
       private_network = google_compute_network.main.id

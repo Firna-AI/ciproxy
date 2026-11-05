@@ -43,8 +43,9 @@ resource "google_storage_bucket" "images" {
 # Image publishing requires a separate operator, not the web deploy identity.
 
 resource "google_secret_manager_secret" "control_plane" {
-  for_each  = local.control_plane_secrets
-  secret_id = "${local.prefix}-${each.value}"
+  for_each            = local.control_plane_secrets
+  secret_id           = "${local.prefix}-${each.value}"
+  deletion_protection = true
   replication {
     user_managed {
       replicas {
@@ -63,7 +64,8 @@ resource "google_secret_manager_secret_iam_member" "control_plane" {
 }
 
 resource "google_secret_manager_secret" "release" {
-  secret_id = "${local.prefix}-release-github-token"
+  secret_id           = "${local.prefix}-release-github-token"
+  deletion_protection = true
   replication {
     user_managed {
       replicas {
