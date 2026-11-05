@@ -2,12 +2,16 @@
 
 use std::sync::Arc;
 
+use crate::billing::store::BillingStore;
 use crate::boat::BoatStore;
 use crate::error::Result;
 use crate::gateway::GatewayStore;
+use crate::github::GithubStore;
+use crate::github_lifecycle::GithubLifecycleStore;
 use crate::jobs::JobStore;
 use crate::labels::LabelStore;
 use crate::machines::MachineStore;
+use crate::metering::store::MeteringStore;
 use crate::organizations::OrganizationStore;
 use crate::runners::RunnerStore;
 use crate::scale_sets::ScaleSetStore;
@@ -18,6 +22,7 @@ use crate::workspaces::WorkspaceStore;
 /// The complete hosted persistence boundary.
 pub trait Store:
     WorkspaceStore
+    + BillingStore
     + OrganizationStore
     + LabelStore
     + ScaleSetStore
@@ -27,7 +32,10 @@ pub trait Store:
     + JobStore
     + SettingsStore
     + BoatStore
+    + MeteringStore
     + GatewayStore
+    + GithubStore
+    + GithubLifecycleStore
 {
 }
 

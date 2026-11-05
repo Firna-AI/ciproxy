@@ -30,8 +30,35 @@ It stores job metadata and references to immutable runner placements.
 Cache measurements and restored content origins remain independent.
 The schema accepts measured GitHub-only fetches and zero-entry restores.
 It has no job-content, job-log, plaintext-token, or plaintext-key field.
-Later milestones own members, roles, billing, and metering.
+Metering tables hold trusted times, costs, and billing-period boundaries.
+Anonymous aggregates hold daily VM-size totals and Boat costs.
+Anonymous timestamp counts preserve exact period starts.
+Job and runner accounting cursors cascade with their source records.
+Anonymous aggregates belong only to the workspace.
+They survive organization deletion until their own retention expires.
+
+Billing accounts keep confirmed typed state and durable command inputs.
+Their creation time supplies the initial Free period anchor.
+Each has a distinct negative advisory-lock key.
+Billing events keep committed receipt identifiers.
+The last organization removal keeps a durable cancellation request.
+Later milestones own members and roles.
 Workspace deletion cascades through its retained records after 30 days.
+
+The GitHub area adds visible repository snapshots and pending initial
+Admin delivery. UUID scale-set demand is separate from numeric Actions
+history. Each demand record keeps a monotonic assignment and phase, its
+trusted raw run facts, and durable notification revisions.
+The assignment order keeps nanoseconds independently of timestamp storage.
+The first trusted completion observation bounds retention when GitHub
+omitted its finish time. It does not replace that absent GitHub field.
+These records hold metadata only. They hold no runner registration secret.
+A forward M6 index supports scoped trusted run-facts lookup.
+Organization advisory leases need no persistent schema key rows.
+The lifecycle outbox stores ordered, immutable organization metadata.
+It survives organization/workspace purge until the consumer accepts it.
+It contains no key, token, JIT configuration, job content, or job log.
+Confirmed events are deleted instead of retained indefinitely.
 
 ## Quick Start
 
@@ -70,12 +97,17 @@ Each migration has an up.sql and a down.sql.
 
 ### Key Code
 
+- [src/billing.rs](src/billing.rs) defines billing accounts and event receipts.
+
 - [build.rs](build.rs) tracks migration directory changes for Cargo.
 - [src/migrations.rs](src/migrations.rs) exports the embedded migrations.
 - [migrations](migrations) holds the forward and reverse schema history.
 - [src/workspaces.rs](src/workspaces.rs) defines the shared customer tenant.
 - [src/organizations.rs](src/organizations.rs) defines GitHub installations.
 - [src/runners.rs](src/runners.rs) defines stored runner placements.
+- [src/github.rs](src/github.rs) defines repository snapshots and durable
+  UUID job notifications.
+- [src/metering.rs](src/metering.rs) defines histories and aggregates.
 
 ### Related Docs
 
@@ -85,3 +117,4 @@ Each migration has an up.sql and a down.sql.
 - [Workspaces](../../docs/protocol/workspaces.md) defines organization joins.
 - [Labels](../../docs/protocol/labels.md) defines labels.
 - [App removal](../../docs/protocol/app-removal.md) defines retention.
+- [Metering](../../docs/protocol/metering.md) defines counts and reports.

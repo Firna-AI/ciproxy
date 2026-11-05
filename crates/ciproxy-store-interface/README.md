@@ -48,6 +48,53 @@ A new registration in another workspace leaves old history in place.
 Removal and retention queries change stored records only.
 They do not stop machines, call GitHub, or delete Boat sandboxes.
 
+The GitHub area stores visible repository metadata and default branches.
+It atomically registers a new workspace with labels and a pending first
+Admin assignment. Its demand records use the UUID from scale-set jobId.
+They keep the existing numeric Actions history identity separate.
+An atomic job update also saves a pending notification revision.
+Replay preserves terminal state and exact nanosecond assignment order.
+Confirmation of an older revision cannot consume a newer update.
+The demand retention query removes completed records after 90 days,
+including pending deliveries. When GitHub omitted its completion time,
+the first caller-supplied completion observation starts that period.
+Replay preserves that observation without fabricating a GitHub time.
+Trusted run facts preserve raw API fields. A branch name is not a full ref.
+GitHub lifecycle transitions save verified identity, App state, prepared
+resources, and immutable notification snapshots together. Only completed
+remote preparation permits activation. Failed delivery stays pending in
+sequence order even after organization rows change or a workspace purges.
+Consumer acceptance permits deletion. A crash before confirmation requires
+idempotent delivery. A pending-organization scan supports restart recovery.
+Verified installation snapshots save login and App state together.
+The scoped write returns the saved record. It cannot change another
+workspace or account, replace a newer installation, or revive removal.
+Known-run facts queries require workspace, organization, and run identity.
+Remote scale-set upserts preserve the internal row and lock key.
+Organization mutation leases wait on dedicated connections. They retain
+all GitHub identity bits in the separate two-key advisory namespace.
+
+MeteringStore reads coherent workspace facts across all organizations.
+It stores trusted creation times, registration times, and cost histories.
+It stores explicit Free and Stripe billing-period boundaries.
+Anonymous daily aggregates keep actual VM sizes and Boat costs.
+Anonymous timestamp counts preserve exact period boundaries.
+Job and runner cursors support atomic signed aggregate corrections.
+BoatAccounting holds source costs and cursors from one coherent snapshot.
+SavingsSnapshot holds registrations, range totals, and monthly costs
+from one coherent snapshot.
+Its registrations include removed machines for historical cost dates.
+The savings read excludes jobs, start counts, and accounting cursors.
+Deleting a job or runner deletes its cursor and preserves its aggregates.
+The metering service supplies all calculation rules and retention dates.
+
+BillingStore adds the confirmed tier, add-ons, paid bounds, and Free anchor.
+It exposes retry and ended-banner dates without changing job execution.
+BillingSession owns exclusive command and event reconciliation.
+State and event receipts commit atomically.
+App removal stores a durable billing cancellation request.
+Services consume these boundaries through dyn.
+
 The gateway queries atomically register a machine and its hashed credential.
 GatewayStore reuses TokenStore authority lookup to derive the workspace from
 the install hash. Registration rechecks the token under its transaction
@@ -95,12 +142,18 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 ### Key Code
 
 - [src/store.rs](src/store.rs) defines Store and its connection factory.
+- [src/billing/store.rs](src/billing/store.rs) owns durable billing sessions.
 - [src/workspaces.rs](src/workspaces.rs) defines shared customer ownership.
 - [src/organizations.rs](src/organizations.rs) defines GitHub App records.
 - [src/error.rs](src/error.rs) owns typed failures and safe diagnostics.
 - [src/secrets.rs](src/secrets.rs) owns opaque hashes and ciphertext.
 - [src/scale_sets.rs](src/scale_sets.rs) defines session lock ownership.
 - [src/jobs.rs](src/jobs.rs) defines metadata-only job records.
+- [src/github.rs](src/github.rs) defines repository snapshots and durable
+  UUID demand and pending role delivery.
+- [src/github_lifecycle.rs](src/github_lifecycle.rs) defines atomic App
+  transitions and immutable ordered lifecycle delivery.
+- [src/metering](src/metering) defines metering facts and history APIs.
 - [src/gateway.rs](src/gateway.rs) defines atomic registration and reports.
 
 ### Related Docs
@@ -112,3 +165,4 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 - [Overflow](../../docs/protocol/overflow.md) defines Boat key rotation.
 - [App removal](../../docs/protocol/app-removal.md) defines retention.
 - [Workspaces](../../docs/protocol/workspaces.md) defines organization joins.
+- [Metering](../ciproxy-metering/README.md) documents trusted producer calls.

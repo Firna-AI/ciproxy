@@ -2,6 +2,7 @@
 
 #![warn(unreachable_pub)]
 
+mod billing;
 mod boat;
 mod connection;
 mod error;
@@ -9,12 +10,15 @@ mod gateway;
 mod gateway_contacts;
 mod gateway_registration;
 mod gateway_transaction;
+mod github;
 mod jobs;
 mod labels;
 mod machine_observation;
 mod machine_reads;
+mod machine_removal;
 mod machine_rows;
 mod machines;
+mod metering;
 mod organization_lifecycle;
 mod organization_rows;
 mod organizations;
