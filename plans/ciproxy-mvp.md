@@ -1285,7 +1285,10 @@ Answers of 5 November 2026:
   last App removal stop the warm runners at once. A job that a warm runner
   took before its handover to the guest then fails. Jobs that the guest
   received still finish. Ordinary stops and Drain still ask GitHub first.
-  Rejected: B, C, D, and E.
+  Rejected: B, C, D, and E. My call, 5 November 2026: the same rule covers
+  an organization that removes the App while other organizations of its
+  workspace stay. Reason: the root question of item 79 includes a leaving
+  organization, and the answer accepts a failed job on any removal.
 - Item 80, D: an attached Docker disk reserves its data plus the free disk
   of its label. The reservation comes only from spare disk that no set of
   job VMs can use, so a Docker disk stops no start, except for a short time
