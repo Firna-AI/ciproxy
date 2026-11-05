@@ -537,6 +537,30 @@ One agent constant holds that default. The control-plane configuration
 can override it. The release manifest will replace that configuration
 source. The configured logical length must match the selected release.
 
+PR 27 review call, 5 November 2026: the user applies finding 1 option A.
+Each release keeps its logical root size with its image identity. The
+agent retains those facts through the image hold, sizes the root from
+that held image, and keeps the original free-disk request for retries.
+The scheduler uses each machine's selected image facts. The configured
+size is only its fallback before a machine reports its image.
+
+The user applies finding 2 option B: the three open image and storage
+follow-ups keep the free-disk meaning and link to the canonical protocol.
+The image README stays with PR 28. The revised measured image size stays
+with that workspace until its export and full-image checks pass.
+
+PR 27 format call, 5 November 2026: the user selects the new report, index,
+and VM record formats without a compatibility layer. No production state
+exists. Keep the existing unreadable-state handling. Reset old smoke-test
+state on the KVM host. This supersedes the earlier compatibility request.
+
+Runner storage call, 5 November 2026: Milestone 13 owns the exact-byte
+actual runner allocation and its forward migration. Label and free-disk
+request store types stay in GB. PR 27 changes no runner-store schema and
+adds no migration. Its protocol report keeps original requested resources
+separate from actual resources. PR 27 merges first, then Milestone 13
+merges the primary branch and uses those types.
+
 Item 77 mockup calls, 5 November 2026: separate label free disk from Boat
 total disk in the fixture types. Count whole VM bytes before displaying GB.
 Display whole GB to match the other disk values. Give the Boat-only sample
@@ -596,6 +620,14 @@ Replaced ways for item 77:
       the site, and the mockups.
       Branch: `conductor/ciproxy-mvp-77d-free-disk`.
       Evidence: `.context/ciproxy-mvp-77d-free-disk/reports/`.
+- [x] Fix PR 27 review findings 1 and 2: keep per-release root facts through
+      image holds, size and reserve each actual root in the agent, keep
+      original requests for retries, and schedule from each machine's
+      selected image. Correct the three open image and storage follow-ups.
+      Test mixed releases, publication between report and start, and retry
+      after publication and restart. Run new async tests ten times.
+      Branch: `conductor/ciproxy-mvp-77d-free-disk`.
+      Evidence: `.context/ciproxy-mvp-77d-free-disk/fix-round-1/`.
 - [ ] Publish it with its SHA-256, and as a shared Boat snapshot. Rebuild
       before GitHub stops accepting the runner.
       Orchestrator: run `image/publish.sh` and the create, prepare, and

@@ -195,7 +195,12 @@ impl RootFailure {
     }
 }
 
-pub(super) fn expected_trace(stage: Stage, image: &Path, copy: &Path) -> Vec<Operation> {
+pub(super) fn expected_trace(
+    stage: Stage,
+    image: &Path,
+    copy: &Path,
+    root_bytes: u64,
+) -> Vec<Operation> {
     let mut trace = vec![
         Operation::Length(image.to_owned()),
         Operation::Command(
@@ -209,13 +214,13 @@ pub(super) fn expected_trace(stage: Stage, image: &Path, copy: &Path) -> Vec<Ope
             ],
             Vec::new(),
         ),
-        Operation::Extend(copy.to_owned(), 100_000_000_000),
+        Operation::Extend(copy.to_owned(), root_bytes),
         Operation::Command(
             "resize2fs".to_owned(),
             vec![copy.to_string_lossy().into_owned()],
             Vec::new(),
         ),
-        Operation::Extend(copy.to_owned(), 100_000_000_000),
+        Operation::Extend(copy.to_owned(), root_bytes),
     ];
     trace.truncate(stage.trace_length());
     trace

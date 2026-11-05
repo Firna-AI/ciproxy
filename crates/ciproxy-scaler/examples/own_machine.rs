@@ -38,6 +38,7 @@ fn main() {
         }],
         machines: vec![Machine {
             id: MachineId("example-machine".into()),
+            selected_image: None,
             connected: true,
             draining: false,
             capacity: Slots(1),

@@ -55,7 +55,8 @@ pub(crate) fn eligible(machine: &Machine, label: &Label, sizing: RootSizing) -> 
     label.destinations.own_machines
         && machine.connected
         && !machine.draining
-        && sizing
+        && machine
+            .root_sizing(sizing)
             .vm_size(label.size)
             .is_some_and(|size| capacity.fits(size))
 }

@@ -16,11 +16,13 @@ With no arguments, logs the shared protocol version with tracing and exits.
 It exposes no HTTP service and has no product behaviour.
 `--image-root-bytes` or `CIPROXY_IMAGE_ROOT_BYTES` supplies the current
 image's logical root length. It defaults to the agent library's value.
-Use the value from the same image release that new runners start.
+Use the value from the same image release that new Boat runners start.
 This is separate from installed software bytes and the 140 GB image budget.
 The composition seam accepts the release manifest's `root_disk_bytes` field.
 An explicit override takes precedence over that metadata.
 Supply the resolved `RootSizing` to scaler snapshots and overflow config.
+Each own machine's reported selected image takes precedence over that fallback.
+The agent sizes starts with its actual held image metadata.
 An incorrect image length can reduce the free disk promised to a job.
 Its subscriber uses the gateway's mandatory frame-log guard.
 The guard permanently excludes unsafe WebSocket dependency targets.

@@ -63,13 +63,15 @@ The [image budget and root sizing guide](image-budget.md) defines its
 formula, image geometry, and deployment metadata contract.
 Docker shares the root's free space and cached Docker images.
 The agent reflinks the verified root with sparse sharing intact.
-It extends only the copy to the scheduled total and runs `resize2fs` there.
+It extends only the copy to the admitted total and runs `resize2fs` there.
 It restores the exact byte length after ext4 rounds to whole blocks.
 The extra tail remains sparse. It never shrinks or changes the base image.
 The existing capacity error applies only when the total cannot hold the image.
 The agent discards the used root after the runner exits.
 VMs use the newest verified local image. Existing VMs keep their image.
-The image owner holds a selected base until VM preparation ends.
+The image owner holds a selected base and its exact metadata through
+preparation. Admission sizes that held release before it reserves disk.
+It reduces cache space from the actual allocation.
 It reclaims obsolete bases after publication and after a hold ends.
 Running VMs keep independent root and kernel copies.
 Runtime recovery reclaims abandoned downloads and interrupted removals.
@@ -144,8 +146,16 @@ The byte count and SHA-256 must match before extraction.
 Only a checked download can enter extraction.
 Only a complete checked bundle can become the newest image.
 The rootfs is ext4. Its logical length must match the release disk metadata.
-`RunnerSpec.size` and `RunnerReport.size` contain the actual total VM size.
-The control plane converts label free bytes before it sends a runner start.
+`ImageDownload.root_disk_bytes` comes from the release manifest.
+The agent verifies it against the extracted root member before publication.
+The persisted image index and each image hold retain that release metadata.
+`RunnerSpec.size` contains the original free-size request.
+`RunnerReport.requested_size` retains that request in local state and reports.
+`RunnerReport.size` contains the admitted total VM allocation.
+Matching retries reuse the original request, image, and total after restart.
+Image reports contain exact metadata in `available`, with `newest` as its ID.
+These are required new wire and state formats.
+No older-format adapter is supplied.
 The guest configures DNS. Docker data stays on its root filesystem.
 The boot configuration attaches only that root drive today.
 Sticky Docker disk ownership will attach a separate drive under the

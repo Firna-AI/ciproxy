@@ -57,6 +57,15 @@ warm runners. It also states what happens when a part fails.
   for ext4 metadata growth and its 1% root reserve.
 - Scheduling uses the logical image root length from the same image release
   that the VM starts. Installed file bytes are not that length.
+- The agent reports the exact root length of each local image release.
+- Scheduling uses each machine's selected local release for new roots.
+- Configured release facts are a fallback until the machine reports its image.
+- The agent selects and holds its newest image before final sizing and
+  admission.
+- It rechecks capacity if publication changed the image after the last report.
+- Each runner report retains its original free-size request and actual total.
+- Retries after publication or restart keep that original allocation.
+- A correctly sized idle older root stays usable after a local image update.
 - A warm runner holds this same complete root and its slots.
 - The machine cache uses the job disk that no job VM holds.
 - The machine cache frees space when a job VM needs it, so the machine

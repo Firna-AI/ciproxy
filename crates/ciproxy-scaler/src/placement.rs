@@ -11,10 +11,13 @@ pub(crate) fn place_own(
     job: &WaitingJob,
     label: &Label,
 ) -> bool {
-    let Some(size) = snapshot.root_sizing.vm_size(label.size) else {
-        return false;
-    };
     for (index, machine) in snapshot.machines.iter().enumerate() {
+        let Some(size) = machine
+            .root_sizing(snapshot.root_sizing)
+            .vm_size(label.size)
+        else {
+            continue;
+        };
         if eligible(machine, label, snapshot.root_sizing)
             && plan.usage[index].fits(machine, size)
             && projected_usage(snapshot, plan, index).fits(machine, size)
@@ -34,10 +37,13 @@ pub(crate) fn place_own(
 }
 
 pub(crate) fn reserve_after_retirement(snapshot: &Snapshot, plan: &mut Plan, label: &Label) {
-    let Some(size) = snapshot.root_sizing.vm_size(label.size) else {
-        return;
-    };
     for (index, machine) in snapshot.machines.iter().enumerate() {
+        let Some(size) = machine
+            .root_sizing(snapshot.root_sizing)
+            .vm_size(label.size)
+        else {
+            continue;
+        };
         if !eligible(machine, label, snapshot.root_sizing) {
             continue;
         }

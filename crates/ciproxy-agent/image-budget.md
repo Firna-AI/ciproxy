@@ -65,14 +65,22 @@ rounded inode table and block bitmaps.
 The guarantee applies to this image geometry and a matching release length.
 The runner gets at least `F` available bytes, as `df` reports at start.
 
-The shared source default holds the current logical image root length.
-The control-plane override takes precedence over its manifest seam.
-A deployment must match that length to its selected image release.
+The release manifest supplies each image's exact logical root length.
+The agent verifies it against the extracted root and persists it in the index.
+An image hold retains that metadata through admission and VM preparation.
+Admission uses the held release, even after publication changes the newest
+image.
+The scaler uses each machine's reported selected-release metadata.
+The shared default and control-plane override supply Boat sizing and the
+fallback before a machine reports its image.
+That configured length must match the selected Boat image release.
 Installed file bytes and allocated host blocks are not logical disk bytes.
-An incorrect configured length can reduce the promised free job space.
+An incorrect Boat image length can reduce the promised free job space.
 The agent keeps the existing capacity error only when the total root cannot
 hold the actual image. It adds no image-version rejection.
-The scaler counts this complete root for starts, warm runners, and retirement.
+The scaler counts complete roots for starts and warm runners.
+Each retained VM keeps its actual allocation and original free-size request.
+A newer local image does not invalidate a correctly sized idle older VM.
 Boat size selection counts it too. The explicit largest-size fallback can
 provide less free disk, but must still hold the image.
 

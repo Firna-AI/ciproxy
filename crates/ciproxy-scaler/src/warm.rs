@@ -13,10 +13,13 @@ pub(crate) fn replenish(snapshot: &Snapshot, plan: &mut Plan, pending: &[&Waitin
     else {
         return;
     };
-    let Some(size) = snapshot.root_sizing.vm_size(label.size) else {
-        return;
-    };
     for (index, machine) in snapshot.machines.iter().enumerate() {
+        let Some(size) = machine
+            .root_sizing(snapshot.root_sizing)
+            .vm_size(label.size)
+        else {
+            continue;
+        };
         if !eligible(machine, label, snapshot.root_sizing) {
             continue;
         }

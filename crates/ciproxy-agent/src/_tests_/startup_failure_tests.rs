@@ -4,6 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use ciproxy_protocol::identifiers::ImageId;
 use ciproxy_protocol::reports::SlotOccupancy;
+use ciproxy_protocol::resources::VmSize;
 use ciproxy_protocol::runners::{RunnerReport, RunnerState};
 use unimock::{MockFn, Unimock, matching};
 
@@ -45,7 +46,11 @@ async fn root_preparation_failures_clean_up_the_new_vm_and_release_its_reservati
             runner_id: runner.runner_id.clone(),
             organization_id: runner.organization_id.clone(),
             label: runner.label.clone(),
-            size: runner.size,
+            requested_size: runner.size,
+            size: VmSize {
+                disk_bytes: 164_110_082_048,
+                ..runner.size
+            },
             image_id: ImageId("image-1".to_owned()),
             state: RunnerState::Starting,
         };
@@ -130,7 +135,7 @@ async fn root_preparation_failures_clean_up_the_new_vm_and_release_its_reservati
         let copy = paths.jail_root(&allocated).join("rootfs.ext4");
         assert_eq!(
             failure.trace(),
-            expected_trace(stage, &image, &copy),
+            expected_trace(stage, &image, &copy, 164_110_082_048),
             "{stage:?}"
         );
         assert_eq!(*agent.state.lock().await, initial, "{stage:?}");
@@ -154,7 +159,7 @@ async fn root_preparation_failures_clean_up_the_new_vm_and_release_its_reservati
             *events.lock().unwrap(),
             vec![
                 Event::Saved(reserved),
-                Event::Budget(97_364_143_616),
+                Event::Budget(33_254_061_568),
                 Event::Started(allocated.clone()),
                 Event::Cleanup(allocated),
                 Event::Saved(initial.clone()),

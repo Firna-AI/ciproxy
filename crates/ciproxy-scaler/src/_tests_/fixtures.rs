@@ -41,6 +41,7 @@ pub(super) fn snapshot() -> Snapshot {
         queue: Vec::new(),
         machines: vec![Machine {
             id: MachineId("machine".into()),
+            selected_image: None,
             connected: true,
             draining: false,
             capacity: Slots(6),

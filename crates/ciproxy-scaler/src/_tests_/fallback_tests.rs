@@ -2,7 +2,8 @@
 
 use std::time::Duration;
 
-use ciproxy_protocol::identifiers::{JobId, RunnerId};
+use ciproxy_protocol::identifiers::{ImageId, JobId, RunnerId};
+use ciproxy_protocol::images::ImageMetadata;
 use ciproxy_protocol::resources::{Slots, VmSize};
 
 use crate::actions::{Action, Destination, StartReason, StartRunner, StopReason};
@@ -11,7 +12,7 @@ use crate::decision::decide;
 use crate::snapshot::{NothingFits, RunnerState, Snapshot};
 
 use super::fixtures::{
-    allocated, boat, boat_size, large, own, queued, runner, sandbox, small, snapshot, warm,
+    allocated, boat, boat_size, large, own, queued, runner, sandbox, snapshot, warm,
 };
 
 fn fallback_snapshot() -> Snapshot {
@@ -143,7 +144,7 @@ fn image_floor_blocks_largest_boat_fallback_and_retires_its_idle_runner() {
 }
 
 #[test]
-fn image_growth_replaces_idle_own_roots_and_keeps_running_allocations() {
+fn image_growth_keeps_correctly_sized_idle_and_running_roots() {
     let mut state = snapshot();
     state.boat.enabled = false;
     state.queue = vec![queued("a", "ciproxy", 0)];
@@ -153,24 +154,9 @@ fn image_growth_replaces_idle_own_roots_and_keeps_running_allocations() {
     running.state = RunnerState::Running(JobId("job".into()));
     state.machines[0].runners = vec![idle, running];
     state.root_sizing.image_root_bytes = 63_000_000_000;
-    assert_eq!(
-        decide(&state),
-        vec![
-            Action::StopRunner {
-                runner_id: RunnerId("idle".into()),
-                reason: StopReason::SizeNoLongerAllowed
-            },
-            Action::StartRunner(StartRunner {
-                organization_id: state.organizations[0].clone(),
-                label: state.labels[0].name.clone(),
-                requested_size: state.labels[0].size,
-                size: VmSize {
-                    disk_bytes: 83_635_855_360,
-                    ..small()
-                },
-                destination: Destination::Machine(state.machines[0].id.clone()),
-                reason: StartReason::OwnMachineCapacity,
-            }),
-        ]
-    );
+    state.machines[0].selected_image = Some(ImageMetadata {
+        image_id: ImageId("newer".into()),
+        root_disk_bytes: 63_000_000_000,
+    });
+    assert_eq!(decide(&state), vec![]);
 }

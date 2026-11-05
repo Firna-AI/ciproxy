@@ -6,6 +6,7 @@ use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_protocol::identifiers::{
     JobId, LabelName, MachineId, OrganizationId, RunnerId, WorkspaceId,
 };
+use ciproxy_protocol::images::ImageMetadata;
 use ciproxy_protocol::resources::{Slots, VmSize};
 
 use crate::boat::{BoatAccount, Sandbox};
@@ -15,7 +16,7 @@ use crate::boat::{BoatAccount, Sandbox};
 pub struct Snapshot {
     /// Workspace that owns every supplied machine and marked sandbox.
     pub workspace_id: WorkspaceId,
-    /// Logical image length for the release used by every new runner.
+    /// Boat image sizing and fallback until an own machine reports its image.
     pub root_sizing: RootSizing,
     /// Current time on the same clock as queue and retry timestamps.
     pub now: Duration,
@@ -84,6 +85,8 @@ pub struct WaitingJob {
 pub struct Machine {
     /// Own-machine identity.
     pub id: MachineId,
+    /// Exact selected local release, absent until reported by the machine.
+    pub selected_image: Option<ImageMetadata>,
     /// Whether the machine is connected to the control plane.
     pub connected: bool,
     /// Whether the machine must accept no new runner.
@@ -105,6 +108,15 @@ pub struct Machine {
     pub warm_allocation: Vec<OrganizationId>,
     /// All VMs whose slots and disk have not yet been released.
     pub runners: Vec<Runner>,
+}
+
+impl Machine {
+    /// Prefer selected local release facts to the deployment fallback.
+    pub fn root_sizing(&self, fallback: RootSizing) -> RootSizing {
+        self.selected_image
+            .as_ref()
+            .map_or(fallback, RootSizing::for_image)
+    }
 }
 
 /// A live or retiring runner whose original size stays fixed.

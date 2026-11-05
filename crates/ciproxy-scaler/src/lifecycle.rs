@@ -51,15 +51,6 @@ fn obsolete(snapshot: &Snapshot, runner: &Runner, own_machine: bool) -> Option<S
     if !own_machine && !SizePolicy::for_label(snapshot, label).allows_boat_runner(runner.size) {
         return Some(StopReason::SizeNoLongerAllowed);
     }
-    if own_machine
-        && snapshot.root_sizing.vm_size(label.size).is_none_or(|size| {
-            runner.size.vcpu != size.vcpu
-                || runner.size.memory_bytes != size.memory_bytes
-                || runner.size.disk_bytes < size.disk_bytes
-        })
-    {
-        return Some(StopReason::SizeNoLongerAllowed);
-    }
     None
 }
 

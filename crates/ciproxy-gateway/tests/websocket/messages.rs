@@ -5,6 +5,7 @@ use ciproxy_protocol::cache::{CacheRestoreCounts, JobCacheReport, JobCacheUsage}
 use ciproxy_protocol::identifiers::{
     ImageId, JobId, LabelName, MachineId, OrganizationId, RunnerId, WorkspaceId,
 };
+use ciproxy_protocol::images::ImageMetadata;
 use ciproxy_protocol::reports::{DiskReport, MachineReport, SlotOccupancy, SlotReport};
 use ciproxy_protocol::resources::{GIGABYTE, Slots, VmSize};
 use ciproxy_protocol::runners::{RunnerReport, RunnerState};
@@ -63,7 +64,10 @@ pub(super) fn report() -> MachineReport {
     }];
     report.docker_disks.repositories = 3;
     report.docker_disks.used_bytes = 8 * GIGABYTE;
-    report.images.available = vec![ImageId("image-4".into())];
+    report.images.available = vec![ImageMetadata {
+        image_id: ImageId("image-4".into()),
+        root_disk_bytes: 61 * GIGABYTE,
+    }];
     report.images.newest = Some(ImageId("image-4".into()));
     report.capacity = Slots(3);
     report.runners = vec![
@@ -71,6 +75,11 @@ pub(super) fn report() -> MachineReport {
             runner_id: RunnerId("busy".into()),
             organization_id: OrganizationId("org-2".into()),
             label: LabelName("ciproxy".into()),
+            requested_size: VmSize {
+                vcpu: 2,
+                memory_bytes: 8 * GIGABYTE,
+                disk_bytes: 20 * GIGABYTE,
+            },
             size: VmSize {
                 vcpu: 2,
                 memory_bytes: 8 * GIGABYTE,
@@ -85,6 +94,11 @@ pub(super) fn report() -> MachineReport {
             runner_id: RunnerId("warm".into()),
             organization_id: OrganizationId("org-1".into()),
             label: LabelName("ciproxy".into()),
+            requested_size: VmSize {
+                vcpu: 2,
+                memory_bytes: 8 * GIGABYTE,
+                disk_bytes: 20 * GIGABYTE,
+            },
             size: VmSize {
                 vcpu: 2,
                 memory_bytes: 8 * GIGABYTE,

@@ -2,10 +2,11 @@
 
 use std::time::Duration;
 
-use ciproxy_protocol::identifiers::{MachineId, OrganizationId, RunnerId};
+use ciproxy_protocol::identifiers::{ImageId, MachineId, OrganizationId, RunnerId};
+use ciproxy_protocol::images::ImageMetadata;
 use ciproxy_protocol::resources::{GIGABYTE, Slots, VmSize};
 
-use crate::actions::{Action, Destination, StartReason, StopReason};
+use crate::actions::{Action, Destination, StartReason, StartRunner, StopReason};
 use crate::decision::decide;
 use crate::snapshot::RunnerState;
 
@@ -143,5 +144,49 @@ fn disk_pressure_keeps_the_wait_when_the_total_job_disk_fits() {
                 waited: Duration::from_secs(30)
             }
         )]
+    );
+}
+
+#[test]
+fn mixed_image_releases_use_each_machines_root_for_starts_and_warm_capacity() {
+    let mut state = snapshot();
+    state.root_sizing.image_root_bytes = 70_000_000_000;
+    state.boat.enabled = false;
+    state.machines[0].disk_budget_bytes = 82_500_000_000;
+    state.machines[0].selected_image = Some(ImageMetadata {
+        image_id: ImageId("newer".into()),
+        root_disk_bytes: 63_000_000_000,
+    });
+    let mut older = state.machines[0].clone();
+    older.id = MachineId("older".into());
+    older.selected_image = Some(ImageMetadata {
+        image_id: ImageId("older".into()),
+        root_disk_bytes: 61_000_000_000,
+    });
+    state.machines.push(older);
+    state.queue = vec![queued("a", "ciproxy", 0); 2];
+    let expected = StartRunner {
+        organization_id: OrganizationId("a".into()),
+        label: state.labels[0].name.clone(),
+        requested_size: small(),
+        size: VmSize {
+            disk_bytes: 81_635_856_384,
+            ..small()
+        },
+        destination: Destination::Machine(MachineId("older".into())),
+        reason: StartReason::OwnMachineCapacity,
+    };
+    assert_eq!(decide(&state), vec![Action::StartRunner(expected.clone())]);
+    state.queue.clear();
+    for machine in &mut state.machines {
+        machine.warm_count = 2;
+        machine.warm_allocation = vec![OrganizationId("a".into()); 2];
+    }
+    assert_eq!(
+        decide(&state),
+        vec![Action::StartRunner(StartRunner {
+            reason: StartReason::WarmPool,
+            ..expected
+        })]
     );
 }

@@ -53,10 +53,13 @@ async fn admission_refuses_slot_only_or_disk_only_exhaustion_and_drain() {
             mode,
             ..MachineState::default()
         };
-        let mut agent = controller(
-            state.clone(),
-            Unimock::new(report_dependencies_for(hardware)),
-        );
+        let dependencies = report_dependencies_for(hardware);
+        let mock = if mode == Mode::Draining {
+            Unimock::new(dependencies)
+        } else {
+            Unimock::new((dependencies, start_image()))
+        };
+        let mut agent = controller(state.clone(), mock);
         agent.image_budget = image_gb * GIGABYTE;
         assert_eq!(
             agent.control(start()).await.unwrap(),

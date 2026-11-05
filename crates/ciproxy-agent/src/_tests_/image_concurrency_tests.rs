@@ -11,6 +11,7 @@ use unimock::{MockFn, Unimock, matching};
 
 use crate::boundaries::Images;
 use crate::error::Result;
+use crate::fixtures::metadata;
 use crate::image_artifact::PendingImage;
 use crate::image_download::{Download, ImageDownloadMock};
 use crate::image_fixtures::{bundle, catalog, digest, image, pending};
@@ -78,7 +79,7 @@ async fn the_current_image_remains_selectable_while_a_download_waits() {
     pin_mut!(fetch);
     assert!(poll!(fetch.as_mut()).is_pending());
     let selected = images.hold_newest().unwrap();
-    assert_eq!(selected.image_id(), ImageId("old".to_owned()));
+    assert_eq!(selected.metadata().image_id, ImageId("old".to_owned()));
     release.send(()).unwrap();
     fetch.await.unwrap();
     assert_eq!(
@@ -93,7 +94,7 @@ fn runtime_recovery_reclaims_unheld_images_and_abandoned_downloads() {
         ImageStoreMock::admit.each_call(matching!(_)).answers(&|_, _| Ok(())),
         ImageStoreMock::activate.some_call(matching!()).returns(Ok(())),
         ImageStoreMock::report.some_call(matching!()).returns(Ok(ImageReport {
-            available: vec![ImageId("old".to_owned()), ImageId("obsolete".to_owned())], newest: Some(ImageId("old".to_owned())),
+            available: vec![metadata("old", 10), metadata("obsolete", 15)], newest: Some(ImageId("old".to_owned())),
         })),
         ImageStoreMock::reclaim.some_call(matching!((keep, pending) if *keep == [ImageId("old".to_owned())] && pending.is_empty())).returns(Ok(())),
     )));

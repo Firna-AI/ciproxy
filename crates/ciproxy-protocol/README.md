@@ -35,6 +35,13 @@ configuration carry the runner's organization. A warm runner knows its
 organization before GitHub assigns its job.
 Job facts then carry that organization and the actual assigned repository.
 GitHub selects the job, so a runner start carries no repository assignment.
+`RunnerSpec.size` is the original free-size request.
+`RunnerReport.requested_size` retains that request across reconnects.
+`RunnerReport.size` is the actual total allocation of the held image.
+Image downloads carry the manifest's required `root_disk_bytes`.
+`ImageReport.available` contains `ImageMetadata` for every available release.
+`ImageReport::selected` resolves the newest release's exact facts.
+These required fields replace the old image list and runner-report format.
 
 Cache reports keep measured counts for every restore that the machine
 cache handled, including contents fetched entirely from GitHub.
@@ -117,6 +124,7 @@ Review snapshot changes before accepting them.
 
 ### Key Code
 
+- [src/images.rs](src/images.rs) carries verified per-release disk metadata.
 - [src/resources.rs](src/resources.rs) calculates slots and job disk.
   `Resources` checks fit, concurrency, and availability for complete sizes.
 - [src/identifiers.rs](src/identifiers.rs) distinguishes workspace,

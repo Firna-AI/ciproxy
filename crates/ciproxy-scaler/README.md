@@ -37,6 +37,9 @@ and start refusals do not retire an existing runner whose size still fits.
 Label disk means free bytes for the job. Each start reserves the image,
 those free bytes, and the ext4 growth allowance as its actual total root.
 Every own-machine start reserves slots and that root during the decision call.
+The agent rechecks sizing and capacity under its actual newest image hold.
+This covers publication between a machine report and a runner start.
+Correctly sized idle roots keep their original image allocation after an update.
 Waiting jobs can request warm runner retirement. Each waiting job gets a
 separate projected reservation. That reservation cannot release actual
 capacity or postpone the overflow threshold.
@@ -50,16 +53,19 @@ jobs retain their VM. Cleanup deletes only marked sandboxes with no job.
 ### Snapshot contract
 
 - Supply a complete, consistent view of one workspace.
-- Supply `root_sizing` from the same image release used for new runners.
-  Its `image_root_bytes` is the logical exported root length.
-  Use the control-plane override until release metadata supplies it.
+- Supply `root_sizing` for the current Boat image and the own-machine
+  fallback before a machine reports its selected image.
+- Supply `Machine.selected_image` from `report.images.selected().cloned()`.
+  Its exact release metadata takes precedence over that fallback.
 - List each machine, runner, and sandbox once.
 - Supply each waiting GitHub job once. Exclude jobs already running.
 - Include every accepted start before the next decision call.
 - Retain starting, retiring, and exited VMs until capacity is released.
 - Supply only organizations that can receive new runners.
 - Use one clock origin for `now`, queue timestamps, and retry timestamps.
-- Preserve both the runner's original requested size and its actual size.
+- Preserve `RunnerReport.requested_size` as `Runner.requested_size`.
+  Preserve `RunnerReport.size` as the actual allocation in `Runner.size`.
+  Do not derive either from current labels or the newest image.
 - Supply each machine's `warm_allocation` under the documented
   [warm allocation policy](../../docs/protocol/job-routing.md#warm-runners).
   Each entry requests one runner. `warm_count` caps the whole list.
@@ -80,7 +86,9 @@ between equivalent choices.
 
 ### Apply the actions
 
-Allocate runner identities and registrations outside this crate. Persist
+Allocate runner identities and registrations outside this crate.
+For own machines, send `StartRunner.requested_size` as `RunnerSpec.size`.
+The returned actual report replaces the predicted complete allocation. Persist
 each accepted start as `Starting` before another tick. Concurrent callers
 must serialize decisions and reservation updates for the workspace.
 

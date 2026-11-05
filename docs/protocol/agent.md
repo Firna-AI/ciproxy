@@ -170,8 +170,14 @@ runs on own machines.
 - The runner in the image is always a version that GitHub still accepts.
 - So ciproxy releases a new image before GitHub stops accepting the runner
   of the current image.
+- Each image release supplies its logical root disk bytes.
+- The agent keeps those facts with the verified image and its preparation hold.
+- It calculates the root allocation from the held release and the free
+  label disk.
 - A job VM starts from the newest image that its machine has, and a
   running job keeps its image.
+- Each runner retains its original free-size request and actual allocation.
+- Publication and restart do not change those facts for an existing runner.
 - **Decision:** one image definition serves the job VMs and the Boat
   sandboxes. Rejected: a separate image for each, because a job must behave
   the same wherever it runs.

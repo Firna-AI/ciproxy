@@ -1,5 +1,6 @@
 //! One root allocation includes the image, free job bytes, and ext4 overhead.
 
+use ciproxy_protocol::images::ImageMetadata;
 use ciproxy_protocol::resources::{GIGABYTE, VmSize};
 
 /// Provisional logical image length until the smallest full-image export is measured.
@@ -30,6 +31,13 @@ impl Default for RootSizing {
 }
 
 impl RootSizing {
+    /// Use the exact release selected by an image hold or machine report.
+    pub fn for_image(image: &ImageMetadata) -> Self {
+        Self {
+            image_root_bytes: image.root_disk_bytes,
+        }
+    }
+
     /// Grow by free bytes plus a 1% root reserve and 2% new ext4 metadata.
     ///
     /// Images use 4096-byte blocks, 256-byte inodes, and at least 16384 bytes

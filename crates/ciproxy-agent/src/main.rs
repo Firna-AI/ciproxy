@@ -72,6 +72,14 @@ mod vm_root_tests;
 mod vm_root_failure_tests;
 
 #[cfg(test)]
+#[path = "_tests_/image_start_tests.rs"]
+mod image_start_tests;
+
+#[cfg(test)]
+#[path = "_tests_/image_retry_tests.rs"]
+mod image_retry_tests;
+
+#[cfg(test)]
 #[path = "_tests_/fixtures.rs"]
 mod fixtures;
 
