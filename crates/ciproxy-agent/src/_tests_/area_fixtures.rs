@@ -74,7 +74,7 @@ pub(crate) fn preparation(events: Arc<Mutex<Vec<Event>>>) -> impl Clause {
             })),
         AreaMountsMock::available
             .each_call(matching!())
-            .answers(&|_| Ok(66_000_003_072)),
+            .answers(&|_| Ok(226_000_003_072)),
         AreaFilesMock::directories
             .each_call(matching!())
             .answers_arc(Arc::new(move |_| {
@@ -88,7 +88,7 @@ pub(crate) fn creating(events: Arc<Mutex<Vec<Event>>>) -> impl Clause {
     AreaFilesMock::create
         .some_call(matching!(_, _, _))
         .answers_arc(Arc::new(move |_, host, bytes, budget| {
-            assert_eq!(budget, 4_000_000_000);
+            assert_eq!(budget, 140_000_000_000);
             events.lock().unwrap().push(Event::Create(host, bytes));
             Ok(AreaRecord {
                 phase: Phase::Creating,

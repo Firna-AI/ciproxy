@@ -38,6 +38,9 @@
   the record. The failed-start path in `launches.rs` also releases the
   record after that success. The command boundary in `process.rs` gives
   these failures the same `HostCommand` error.
+  When `Vms::stop` returns a real error, `Controller::launch` retains the
+  reservation but drops the cleanup error without a log. Include that
+  diagnostic in the cleanup ownership work.
 - **Requirement:** `docs/protocol/agent.md` requires fresh VMs for jobs and
   preserves running jobs during removal. Network cleanup must keep new
   starts available without keeping a completed VM in job or warm reports.
@@ -94,3 +97,5 @@
   cleanup. Reports remain independent of cleanup waits. The crate README
   states ownership of the `cpxN` namespace. The change adds no host tool or
   kernel requirement without separate approval.
+  A failed-start cleanup failure logs its cause through `tracing` while
+  preserving the original start error and the pending ownership.

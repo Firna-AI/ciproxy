@@ -54,9 +54,11 @@ jobs retain their VM. Cleanup deletes only marked sandboxes with no job.
 - Supply each machine's `warm_allocation` under the documented
   [warm allocation policy](../../docs/protocol/job-routing.md#warm-runners).
   Each entry requests one runner. `warm_count` caps the whole list.
-- Supply the machine's total job disk as `disk_budget_bytes`. Include disk
-  held by the listed VMs and space used by the machine cache or Docker
-  disks. The machine cache and unused Docker disks free space for new VMs.
+- Supply the machine's total job disk as `disk_budget_bytes`.
+  Use `Resources::for_machine_with_image_budget` with its persisted image
+  budget, then take `job_disk_bytes`. Subtract images before the 1:3 split.
+  Include disk held by the listed VMs and space used by machine or Docker
+  caches. These caches free space for new VMs.
 - Supply current Boat dimensions, comparable catalog prices, and the
   largest available size. Exclude refused sizes from the largest choice.
 - Supply current UTC calendar month spend for ciproxy sandboxes only.

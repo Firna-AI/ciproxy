@@ -1,11 +1,12 @@
-//! Keep the complete protocol job disk. Images and XFS costs use the host quarter.
+//! Reserve images first. Keep XFS overhead in the remaining host quarter.
 
-use ciproxy_protocol::resources::Resources;
+use ciproxy_protocol::resources::{DEFAULT_IMAGE_BUDGET_BYTES, Resources};
 
 use crate::error::Result;
 use crate::host_system::repair;
 
-pub(crate) const DEFAULT_IMAGE_BYTES: u64 = 4_000_000_000;
+pub(crate) const DEFAULT_IMAGE_BYTES: u64 = DEFAULT_IMAGE_BUDGET_BYTES;
+pub(crate) const MINIMUM_DISK_BYTES: u64 = 250_000_000_000;
 pub(crate) const SUPPORT_BYTES: u64 = 16 * 1024 * 1024;
 pub(crate) const BLOCK: u64 = 4096;
 
@@ -17,7 +18,7 @@ pub(crate) struct AreaSizing {
 
 impl AreaSizing {
     pub(crate) fn job(self) -> u64 {
-        Resources::for_machine(0, 0, self.host, false).job_disk_bytes
+        Resources::for_machine_with_image_budget(0, 0, self.host, self.images, false).job_disk_bytes
     }
 
     pub(crate) fn length(self, overhead: u64) -> Result<u64> {

@@ -59,7 +59,10 @@ The documented resource sizes use decimal GB for slot arithmetic.
 Disk capacity does not enter the CPU and memory slot formula.
 Use `Resources` for a complete fit check that includes job disk.
 Pass the capacity of the disk used for images, VMs, and machine cache.
-The host reserve keeps one quarter of that disk.
+First subtract the 140 GB image budget, then give jobs three quarters.
+The host reserve keeps one quarter of the remaining disk.
+`Resources::for_machine_with_image_budget` accepts a persisted override.
+Use that same override for area sizing, admission, and cache budgets.
 Filesystem free bytes stay a separate health measurement.
 
 Pass each held VM's recorded size to `Resources::available` once.
@@ -82,23 +85,23 @@ For example, calculate capacity and the space left by two warm runners:
 ```rust
 use ciproxy_protocol::resources::{GIGABYTE, Resources, Slots, VmSize};
 
-let capacity = Resources::for_machine(16, 64 * GIGABYTE, 256 * GIGABYTE, true);
+let capacity = Resources::for_machine(16, 64 * GIGABYTE, 512 * GIGABYTE, true);
 let size = VmSize {
     vcpu: 2,
     memory_bytes: 8 * GIGABYTE,
-    disk_bytes: 60 * GIGABYTE,
+    disk_bytes: 80 * GIGABYTE,
 };
 assert_eq!(capacity.slots, Slots(6));
-assert_eq!(capacity.job_disk_bytes, 192 * GIGABYTE);
+assert_eq!(capacity.job_disk_bytes, 279 * GIGABYTE);
 assert!(capacity.fits(size));
 assert_eq!(capacity.concurrent_vms(size), 3);
 
 let free = capacity.available([size, size]);
-assert_eq!(free.job_disk_bytes, 72 * GIGABYTE);
+assert_eq!(free.job_disk_bytes, 119 * GIGABYTE);
 assert!(free.fits(size));
 
 let after_third_vm = free.available([size]);
-assert_eq!(after_third_vm.job_disk_bytes, 12 * GIGABYTE);
+assert_eq!(after_third_vm.job_disk_bytes, 39 * GIGABYTE);
 assert!(!after_third_vm.fits(size));
 ```
 

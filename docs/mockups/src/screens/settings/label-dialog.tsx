@@ -45,6 +45,9 @@ type DialogCopy = {
 
 const steady = machineScenes.steady;
 
+/** The draft of ciproxy-4vcpu before the save: an Admin raises its disk. */
+const largerDiskDraft: Label = { ...labelNamed("ciproxy-4vcpu"), diskGb: 100 };
+
 const dialogs: Record<LabelDialogMode, DialogCopy> = {
   edit: {
     label: labelNamed("ciproxy-8vcpu"),
@@ -65,7 +68,7 @@ const dialogs: Record<LabelDialogMode, DialogCopy> = {
     machines: steady,
   },
   "mixed-machines": {
-    label: labelNamed("ciproxy-4vcpu"),
+    label: largerDiskDraft,
     edits: true,
     list: paths.settings,
     machines: machineScenes.fourMachines,

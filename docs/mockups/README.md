@@ -176,11 +176,13 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   as Edit label, Clear cache, and Move to Free.
 - `src/components/boat-fields.tsx`: the Boat key and the monthly spend limit,
   which every connection of Boat asks for, in setup and in Settings.
-- `src/fixtures/sizes.ts`: the size of a label as text, and the sizes that the
-  Boat account can start, which decide where the jobs of a label run.
+- `src/fixtures/sizes.ts`: the size of a label as text, the size of the
+  default label, and the sizes that the Boat account can start, which decide
+  where the jobs of a label run.
 - `src/fixtures/hardware.ts`: the hardware of each machine, the slot rule,
-  and the disk rule: the host keeps a quarter of the disk, each running job
-  holds the disk of its size, and the machine cache uses the rest.
+  and the disk rule: the VM images keep 140 GB, the host keeps a quarter of
+  the rest, each running job holds the disk of its size, and the machine cache
+  uses the rest.
 - `src/fixtures/org.ts`: the workspace and its two GitHub organizations.
   `github-app.ts` holds the permissions of the GitHub App, and `access.ts` the
   sign-in length and the what-ifs of a suspended or removed App.

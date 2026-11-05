@@ -67,7 +67,7 @@ test("costClaimFor compares the slot minutes of a month with the cheaper runner"
   // to 69%. 345.60 - 105 = 240.60.
   const claim = costClaimFor({
     machine: "Test machine",
-    hardware: { threads: 8, memoryGb: 24 },
+    hardware: { threads: 8, memoryGb: 24, diskGb: 512 },
     machinePrice: 56,
     runners: [
       { name: "B", runners: "B runners", price: perMinute(0.006) },
@@ -103,4 +103,27 @@ test("costClaimFor compares the slot minutes of a month with the cheaper runner"
       saved: 240.6,
     },
   );
+});
+
+test("costClaimFor limits job minutes by disk while keeping hardware slots", () => {
+  for (const { diskGb, expected } of [
+    { diskGb: 250, expected: [6, 1, 43_200, 8_640] },
+    { diskGb: 512, expected: [6, 3, 129_600, 25_920] },
+    { diskGb: 1_024, expected: [6, 6, 259_200, 51_840] },
+    { diskGb: 140, expected: [6, 0, 0, 0] },
+  ]) {
+    const claim = costClaimFor({
+      machine: "Test machine",
+      hardware: { threads: 16, memoryGb: 64, diskGb },
+      machinePrice: 119,
+      runners: [{ name: "A", runners: "A runners", price: perMinute(0.004) }],
+      averageJobMinutes: 5,
+      monthDays: 30,
+    });
+    deepStrictEqual(
+      [claim.slots, claim.concurrentJobs, claim.jobMinutes, claim.starts],
+      expected,
+      `${diskGb} GB filesystem`,
+    );
+  }
 });

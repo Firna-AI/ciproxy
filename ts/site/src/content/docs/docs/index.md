@@ -7,5 +7,5 @@ description: >-
 
 :::note[What you need]
 A GitHub organization with private repositories, and an x64 Linux machine
-with KVM, 4 cores, and 16 GB of memory or more.
+with KVM, 4 cores, 16 GB of memory, and 250 GB of disk or more.
 :::

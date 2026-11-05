@@ -1,13 +1,16 @@
 // The cost claim of the landing page, and its calculation on the pricing
 // page. One new Hetzner AX42 at its list price, not from the server auction,
-// runs jobs in every minute of a 30-day month. ciproxy counts the machine and
-// the cheapest plan that covers the starts. Blacksmith and GitHub-hosted
-// runners count the same job minutes at their list prices per minute, for the
-// same VM size. The prices and their sources are in price-lists.ts.
+// runs jobs in every minute of a 30-day month. Its two disks form one
+// filesystem, as the answer to item 75 says, so its slots and its job disk
+// decide the default jobs at a time. ciproxy counts the machine and the
+// cheapest plan that covers the starts. Blacksmith and GitHub-hosted runners
+// count the same job minutes at their list prices per minute, for the same
+// VM size. The prices and their sources are in price-lists.ts.
 
-import { ax42, machineSlots, slotSize } from "./hardware.ts";
+import { ax42, jobsAtOnce, machineSlots, slotSize } from "./hardware.ts";
 import { cheapestPlan } from "./plan-choice.ts";
 import { listPrices, type ListPrice } from "./price-lists.ts";
+import { defaultLabelSize } from "./sizes.ts";
 
 /** Money to whole cents, so a sum of per-minute prices stays exact. */
 function cents(amount: number): number {
@@ -17,7 +20,8 @@ function cents(amount: number): number {
 const averageJobMinutes = 5;
 const monthDays = 30;
 const slots = machineSlots(ax42);
-const jobMinutes = slots * monthDays * 24 * 60;
+const concurrentJobs = jobsAtOnce(ax42, slots, defaultLabelSize);
+const jobMinutes = concurrentJobs * monthDays * 24 * 60;
 const starts = Math.ceil(jobMinutes / averageJobMinutes);
 const plan = cheapestPlan(starts, 1);
 const withCiproxy = listPrices.machine.amount + plan.price;
@@ -54,10 +58,12 @@ export const costClaim = {
   /** The average job length that the claim assumes, in minutes. */
   averageJobMinutes,
   monthDays,
-  /** The slots of the AX42; each is one job VM of this size. */
+  /** The CPU and memory slots of the AX42, before the disk limit. */
   slots,
   slotSize,
-  /** The job minutes of every slot in every minute of the month. */
+  /** The default jobs that fit both the slots and the job disk at a time. */
+  concurrentJobs,
+  /** The job minutes of every concurrent job in every minute of the month. */
   jobMinutes,
   starts,
   /** The cheapest tier with add-ons that covers the starts. */

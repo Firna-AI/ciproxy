@@ -26,6 +26,7 @@ const {
   machine,
   slots,
   slotSize,
+  concurrentJobs,
   jobMinutes,
   starts,
   plan,
@@ -44,9 +45,15 @@ export function SavingCalculation() {
         One new {machine} at its list price runs jobs in every minute of a{" "}
         {costClaim.monthDays}-day month. After a quarter for the host, its{" "}
         {ax42.threads} threads and {ax42.memoryGb} GB give {slots} slots of{" "}
-        {sizePhrase(slotSize)}, so it runs {minutes} job minutes. At{" "}
-        {unbroken(`${costClaim.averageJobMinutes} minutes`)} a job, that is{" "}
-        {formatCount(starts)} starts, which {planChoiceText(plan)} covers.
+        {sizePhrase(slotSize)}. This calculation combines both{" "}
+        {unbroken("512 GB")} disks into one{" "}
+        {unbroken(`${formatCount(ax42.diskGb)} GB`)} filesystem with RAID0 or
+        one LVM volume. Hetzner's installer mirrors two disks by default, which
+        gives one disk's capacity. After the image budget and host disk reserve,
+        it fits {concurrentJobs} default jobs at a time, so it runs {minutes}{" "}
+        job minutes. At {unbroken(`${costClaim.averageJobMinutes} minutes`)} a
+        job, that is {formatCount(starts)} starts, which {planChoiceText(plan)}{" "}
+        covers.
       </p>
       <dl className="saving-table">
         <div className="saving-row">

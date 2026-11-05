@@ -7,6 +7,9 @@ import { dotJoin, unbroken } from "./format.ts";
 
 export type Size = { vcpu: number; memoryGb: number; diskGb: number };
 
+/** The size of the default label ciproxy: its disk holds the full image. */
+export const defaultLabelSize: Size = { vcpu: 2, memoryGb: 8, diskGb: 80 };
+
 /** "8 vCPU · 32 GB · 120 GB disk", the size of a label. */
 export function sizeText(size: Size): string {
   return dotJoin(

@@ -29,13 +29,13 @@ pub(crate) fn record() -> AreaRecord {
     AreaRecord {
         version: 2,
         uuid: "c7081f45-8824-42d8-bfb3-7c65d56c1bc5".to_owned(),
-        source_capacity: 80_000_000_000,
-        bytes: 66_000_003_072,
+        source_capacity: 250_000_000_000,
+        bytes: 226_000_003_072,
         device: 3,
         inode: 92,
         phase: Phase::Ready,
-        image_budget: 4_000_000_000,
-        overhead: 2_000_003_072,
+        image_budget: 140_000_000_000,
+        overhead: 3_500_003_072,
         growth_from: None,
     }
 }
@@ -46,10 +46,10 @@ pub(crate) fn inventory() -> Inventory {
         backing: Some(Backing {
             device: 3,
             inode: 92,
-            bytes: 66_000_003_072,
+            bytes: 226_000_003_072,
             safe: true,
         }),
-        host_bytes: 80_000_000_000,
+        host_bytes: 250_000_000_000,
         free_bytes: 65_000_000_000,
         area_free: Some(50_000_000_000),
         legacy: false,
