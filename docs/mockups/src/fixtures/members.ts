@@ -1,7 +1,6 @@
 // The people of mokly-ai in ciproxy and their roles. Each role contains the
 // one below it. Cal Moore installed the GitHub App on 1 September, so he is
-// the first Admin. Ana Souza is an Admin whom GitHub does not let manage
-// self-hosted runners, so she cannot add machines. Dana Kim has the Billing
+// the first Admin, and Ana Souza is a second Admin. Dana Kim has the Billing
 // role and is an owner of mokly-ai on GitHub, so she can claim the Admin role
 // from the account menu. Lena Fischer is a member of mokly-ai on GitHub with
 // no role yet: her sign-in asks the Admins for access. Tom Becker is an owner
@@ -53,8 +52,8 @@ export const viewer: Member = {
   since: unbroken("21 September"),
 };
 
-/** Ana Souza, an Admin without the GitHub right to add self-hosted runners. */
-export const adminWithoutRight: Member = {
+/** Ana Souza, a second Admin of the workspace. */
+export const secondAdmin: Member = {
   name: "Ana Souza",
   login: "anasouza",
   initials: "AS",
@@ -83,7 +82,7 @@ export const firstAdmin: Member = {
 
 export const members: readonly Member[] = [
   firstAdmin,
-  adminWithoutRight,
+  secondAdmin,
   billingPerson,
   viewer,
 ];

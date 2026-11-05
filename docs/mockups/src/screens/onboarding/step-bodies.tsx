@@ -1,7 +1,7 @@
 // The open step of setup: the install command, the Boat key with the monthly
-// spend limit, and the first job. Only an Admin whom GitHub lets manage
-// self-hosted runners sees the install command; another Admin sees who can
-// add the machine.
+// spend limit, and the first job. The first Admin adds the machine, also
+// after a member asked for the install, because the Admin role alone adds a
+// machine, as the answer to item 50 says.
 
 import { CircleCheck } from "lucide-react";
 
@@ -12,7 +12,6 @@ import {
   ConnectedMachine,
   InstallCommand,
   NoKvmNotice,
-  NoRunnerRightNotice,
   WaitingLine,
 } from "../../components/install-command.tsx";
 import { paths } from "../../components/paths.ts";
@@ -23,20 +22,7 @@ import { org, workspace } from "../../fixtures/org.ts";
 import { runsOnDiff, workflowFile } from "../../fixtures/workflow.ts";
 import type { OnboardingState } from "./onboarding.tsx";
 
-/** The first Admin asked for the install, so GitHub gives no runner right. */
-function NoRunnerRight() {
-  return (
-    <div className="stack">
-      <NoRunnerRightNotice />
-      <div className="row">
-        <LinkAction to={paths.connectBoat}>Skip for now</LinkAction>
-      </div>
-    </div>
-  );
-}
-
 export function MachineStep({ state }: { state: OnboardingState }) {
-  if (state === "machine-no-right") return <NoRunnerRight />;
   return (
     <div className="stack">
       <p className="small">

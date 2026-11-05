@@ -2,10 +2,9 @@
 // shared by setup and Add machine, and the lines that follow it: the wait for
 // the machine, the machine that connected, a machine without KVM, a machine
 // whose disk holds fewer jobs than its slots, and the command after Revoke
-// token. An Admin whom GitHub does not let manage self-hosted runners sees
-// who can add a machine in place of the command. The command is one line:
-// the install script of get.ciproxy.dev installs the agent, then runs it with
-// the arguments after "--", as design call 30 says.
+// token. The command is one line: the install script of get.ciproxy.dev
+// installs the agent, then runs it with the arguments after "--", as design
+// call 30 says.
 
 import type { ReactNode } from "react";
 import { CircleCheck } from "lucide-react";
@@ -70,20 +69,6 @@ export function RevokedCommand({ next }: { next: CataloguePath }) {
     >
       The install command adds no more machines. The machines that joined with
       it stay connected.
-    </Notice>
-  );
-}
-
-/** For an Admin without the GitHub runner right: who can add a machine. */
-export function NoRunnerRightNotice() {
-  return (
-    <Notice
-      tone="info"
-      title="Ask an owner to add machines"
-      actions={<Action size="sm">Check again</Action>}
-    >
-      An owner of the organization, or an Admin with the GitHub runner right,
-      can add a machine. An owner can also give you that right.
     </Notice>
   );
 }

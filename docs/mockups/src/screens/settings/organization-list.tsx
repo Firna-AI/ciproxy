@@ -1,6 +1,7 @@
 // The GitHub organizations of the workspace: a table on desktop and cards on
 // mobile, each with its repository access, the way to its repositories, and
-// Take out. The only organization of a workspace has no Take out.
+// Take out. The last organization of a workspace has no Take out, on every
+// tier, as the answer D to item 51 says.
 
 import { Avatar } from "@firna/ui/avatar";
 import type { Viewport } from "@mokly/mokly";

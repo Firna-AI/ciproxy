@@ -47,6 +47,9 @@ export const organizations: readonly Organization[] = [org, labsOrg];
 /** The workspace, which the switcher of the top bar shows. */
 export const workspace = { name: org.login, initial: org.initial } as const;
 
+/** The name that an Admin types in the rename dialog of the workspace. */
+export const newWorkspaceName = "Mokly";
+
 /** A workspace in the switcher of the top bar. */
 export type WorkspaceChoice = {
   name: string;

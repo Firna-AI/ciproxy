@@ -1,7 +1,9 @@
-// The banner that every page of the organization shows while a soft limit is
+// The banner that every page of the workspace shows while a soft limit is
 // passed or a payment failed. One state shows one banner on every page, with
 // the same title, text, and actions. At a failed payment, the payment banner
-// takes the place of the soft-limit banner, as design call 42 says. On Plan
+// takes the place of the soft-limit banner, as design call 42 says. On Free,
+// one organization is a soft limit too, so a workspace that keeps more
+// organizations after a move to Free sees the banner and the offer. On Plan
 // and usage itself, the link to that page drops out, and an add-on action
 // saves in place. A person who cannot pay sees the same banner with words in
 // place of its actions.
@@ -10,7 +12,7 @@ import type { ReactNode } from "react";
 import { ExternalLink } from "lucide-react";
 
 import { formatCount, monthly } from "../fixtures/format.ts";
-import { workspace } from "../fixtures/org.ts";
+import { organizationList, organizations, workspace } from "../fixtures/org.ts";
 import {
   addOnPrices,
   ownMachines,
@@ -51,6 +53,29 @@ function AddOnAction({
   );
 }
 
+/** The offer of Team on Free, with the link to Plan and usage elsewhere. */
+function ChooseTeam({
+  page,
+  usage,
+}: {
+  page: BannerPage;
+  /** The Plan and usage screen of the state. */
+  usage: CataloguePath;
+}) {
+  return (
+    <>
+      {page === "billing" ? null : (
+        <LinkAction to={usage} size="sm">
+          Plan and usage
+        </LinkAction>
+      )}
+      <LinkAction to={paths.plans} tone="primary" size="sm">
+        Choose Team
+      </LinkAction>
+    </>
+  );
+}
+
 export function usageBanner(
   scene: UsageScene,
   page: BannerPage,
@@ -65,21 +90,25 @@ export function usageBanner(
         <Notice
           tone="warning"
           title={`${workspace.name} used the ${formatCount(free.starts)} starts of Free`}
-          actions={act(
-            <>
-              {page === "billing" ? null : (
-                <LinkAction to={paths.usageFreeOver} size="sm">
-                  Plan and usage
-                </LinkAction>
-              )}
-              <LinkAction to={paths.plans} tone="primary" size="sm">
-                Choose Team
-              </LinkAction>
-            </>,
-          )}
+          actions={act(<ChooseTeam page={page} usage={paths.usageFreeOver} />)}
         >
           Jobs keep running. Team covers your use for {monthly(team.price)}:{" "}
           {startsText(team.starts)} a month and {ownMachines(team.machines)}.
+        </Notice>
+      );
+    case "free-organizations":
+      return (
+        <Notice
+          tone="warning"
+          title={`${organizations.length} organizations on Free, which includes ${free.organizations ?? 1}`}
+          actions={act(
+            <ChooseTeam page={page} usage={paths.freeOrganizations} />,
+          )}
+        >
+          Jobs keep running in {organizationList("and")}, on all{" "}
+          {usage.machines} machines. Team covers your use for{" "}
+          {monthly(team.price)}: several organizations,{" "}
+          {startsText(team.starts)} a month, and {ownMachines(team.machines)}.
         </Notice>
       );
     case "over-starts":

@@ -10,7 +10,7 @@ export const firstJob = defineScreen({
   title: "Run the first job",
   description:
     "The last step. The page shows the one-line change to runs-on and waits for the first job with the ciproxy label.",
-  relatedDocs: related("jobRouting"),
+  relatedDocs: related("labels", "jobRouting"),
   address: orgAddress("setup"),
   useCasePaths: [paths.flowFirstGreenJob],
   propSchema: stateSchema(["first-job-waiting", "first-job-passed"]),

@@ -1,5 +1,6 @@
 // Members and roles: the people of the workspace in ciproxy and the role of
-// each. An Admin gives each person a role. A member of one of the GitHub
+// each. An Admin gives each person a role, and a dialog names what the Admin
+// role controls before an Admin gives it. A member of one of the GitHub
 // organizations of the workspace with no role asks for access, and the
 // request waits here, with the organization that the person belongs to.
 
@@ -14,6 +15,7 @@ import { paths } from "../../components/paths.ts";
 import { Tag } from "../../components/status.tsx";
 import { dotJoin } from "../../fixtures/format.ts";
 import {
+  billingPerson,
   members,
   openRequests,
   requester,
@@ -23,10 +25,11 @@ import {
   type Role,
 } from "../../fixtures/members.ts";
 import { org, organizationList, user } from "../../fixtures/org.ts";
+import { GrantAdminDialog } from "./grant-admin-dialog.tsx";
 import { SettingsFrame } from "./settings-frame.tsx";
 import "./members.css";
 
-export const membersStates = ["members", "request"] as const;
+export const membersStates = ["members", "request", "grant-admin"] as const;
 export type MembersState = (typeof membersStates)[number];
 
 const roleOptions = roleOrder.map((role) => ({
@@ -106,12 +109,18 @@ function cell(member: Member, key: string) {
   }
 }
 
-function MemberList({ viewport }: { viewport: Viewport }) {
+function MemberList({
+  viewport,
+  rows,
+}: {
+  viewport: Viewport;
+  rows: readonly Member[];
+}) {
   if (viewport === "desktop") {
     return (
       <DataTable
         columns={columns}
-        rows={members}
+        rows={rows}
         rowKey={(member) => member.login}
         cell={cell}
       />
@@ -119,7 +128,7 @@ function MemberList({ viewport }: { viewport: Viewport }) {
   }
   return (
     <ul className="member-cards">
-      {members.map((member) => (
+      {rows.map((member) => (
         <li key={member.login} className="member-card">
           <div className="spread">
             <PersonName person={member} />
@@ -159,6 +168,13 @@ function AccessRequest() {
   );
 }
 
+/** The members, with the role that an Admin just picked for one of them. */
+function withPick(person: Member, role: Role): readonly Member[] {
+  return members.map((member) =>
+    member.login === person.login ? { ...member, role } : member,
+  );
+}
+
 export function MembersScreen({
   viewport,
   state,
@@ -166,34 +182,36 @@ export function MembersScreen({
   viewport: Viewport;
   state: MembersState;
 }) {
+  const granting = state === "grant-admin";
   return (
     <SettingsFrame
       viewport={viewport}
       active={paths.members}
       openRequests={state === "request" ? openRequests.length : 0}
+      overlay={
+        granting ? <GrantAdminDialog person={billingPerson} /> : undefined
+      }
     >
       {state === "request" ? <AccessRequest /> : null}
       <Panel title="Members" flush>
-        <MemberList viewport={viewport} />
+        <MemberList
+          viewport={viewport}
+          rows={granting ? withPick(billingPerson, "admin") : members}
+        />
       </Panel>
       <p className="caption">
         Other members of {organizationList("and")} on GitHub ask for access when
         they sign in.
       </p>
       <Panel title="Roles">
-        <div className="stack">
-          <ul className="role-list">
-            {roleOrder.map((role) => (
-              <li key={role} className="role-row">
-                <span className="strong role-name">{roles[role].name}</span>
-                <span className="small muted">{roles[role].can}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="caption">
-            To add a machine, an Admin also needs the GitHub runner right.
-          </p>
-        </div>
+        <ul className="role-list">
+          {roleOrder.map((role) => (
+            <li key={role} className="role-row">
+              <span className="strong role-name">{roles[role].name}</span>
+              <span className="small muted">{roles[role].can}</span>
+            </li>
+          ))}
+        </ul>
       </Panel>
     </SettingsFrame>
   );
