@@ -477,6 +477,10 @@ reserve. The image measurement sets the real budget later.
       unsaved 100 GB draft of `ciproxy-4vcpu` to retain its job-count range.
       The saved default remains 80 GB.
       Branch: `conductor/ciproxy-mvp-73a-disk-sizes`.
+- [x] Test the five existing root-preparation failures and failed-start
+      cleanup for PR #25 review finding 1, option A. Check returned errors,
+      cleanup requests, and released disk and slots at both boundaries.
+      Branch: `conductor/ciproxy-mvp-73a-disk-sizes`.
 - [ ] Smoke-test a Docker job, a warm runner, and a restart during a job.
       Orchestrator: align the image bundle, root/Docker disk allocation,
       vsock port, and guest state/reconnect/shutdown behavior first.

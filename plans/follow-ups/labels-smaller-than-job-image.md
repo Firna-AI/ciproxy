@@ -31,6 +31,9 @@
     full-image release uses 80 GB.
   - The control plane does not receive that minimum today. Each option
     needs the root size of each image release, or one protocol constant.
+  - The explicit largest-Boat fallback in `size_policy.rs` can select an
+    actual disk below the image floor, even when the label is larger.
+    Include that fallback when applying the chosen image-fit policy.
 - **Problem:** A custom label can request less disk than the image needs.
   The current label rules do not choose between a larger actual VM disk
   and refusal of that label in settings.
@@ -86,5 +89,5 @@
 - **Recommendation:** A, changed from B after the options check. It keeps
   labels usable after image growth, as Boat already uses larger sizes.
   D gives the strongest protection at the cost of a different disk model.
-- **Action:** ask the user, because both options change behavior that the
+- **Action:** ask the user, because the options change behavior that the
   approved disk-sizing decision does not settle.

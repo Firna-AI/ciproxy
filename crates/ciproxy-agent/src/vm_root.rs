@@ -87,3 +87,7 @@ impl RootDisk for ReflinkRoot {
 #[cfg(test)]
 #[path = "_tests_/vm_root_tests.rs"]
 mod vm_root_tests;
+
+#[cfg(test)]
+#[path = "_tests_/vm_root_failure_tests.rs"]
+mod vm_root_failure_tests;

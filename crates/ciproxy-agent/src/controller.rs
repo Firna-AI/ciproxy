@@ -93,3 +93,7 @@ mod controller_tests;
 #[cfg(test)]
 #[path = "_tests_/drain_tests.rs"]
 mod drain_tests;
+
+#[cfg(test)]
+#[path = "_tests_/startup_failure_tests.rs"]
+mod startup_failure_tests;
