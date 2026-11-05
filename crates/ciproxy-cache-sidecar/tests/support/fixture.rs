@@ -5,16 +5,14 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use ciproxy_cache_sidecar::clock::Clock;
 use ciproxy_cache_sidecar::machine::MachineCache;
-use ciproxy_cache_sidecar::proxy::{ProxyConfig, VmProxy};
+use ciproxy_cache_sidecar::runtime_token::TokenVerifier;
+use ciproxy_cache_sidecar::runtime_token::keys::CachedKeys;
+use ciproxy_cache_sidecar::runtime_token::source::{HttpKeys, VerificationConfig};
 use ciproxy_cache_sidecar::service::{Service, admin_router, job_router};
-use ciproxy_cache_sidecar::session::{Permissions, Registration, SessionCredential};
 use ciproxy_cache_sidecar::storage::disk::DiskStorage;
 use ciproxy_cache_sidecar::storage::interface::Storage;
 use ciproxy_cache_sidecar::transport::{HttpTransport, Transport};
 use ciproxy_protocol::cache::MachineCacheReport;
-use ciproxy_protocol::identifiers::{GitRef, JobEvent, JobId, OrganizationId, RepositoryId};
-use ciproxy_protocol::jobs::{JobFacts, Repository};
-use ciproxy_protocol::secret::Secret;
 use reqwest::Client;
 use serde_json::{Value, json};
 use tempfile::TempDir;
@@ -22,7 +20,7 @@ use tokio::net::TcpListener;
 use tokio::task::JoinHandle;
 
 use super::github::Github;
-use super::job::Job;
+use super::tokens::serve_keys;
 
 pub struct Time(pub AtomicU64);
 impl Clock for Time {
@@ -38,13 +36,13 @@ impl Time {
 
 pub struct Fixture {
     pub root: TempDir,
-    github: Github,
+    pub(super) github: Github,
     pub client: Client,
     pub machine: String,
     pub admin: String,
     pub clock: Arc<Time>,
     tasks: Vec<JoinHandle<()>>,
-    network: Arc<dyn Transport>,
+    pub(super) network: Arc<dyn Transport>,
     capacity: AtomicU64,
 }
 
@@ -82,11 +80,20 @@ impl Fixture {
             self.capacity.load(Ordering::SeqCst),
         ));
         let _ = store.recover().await;
+        let (jwks_url, task) = serve_keys().await;
+        self.tasks.push(task);
+        let source = Arc::new(HttpKeys::configured(
+            self.network.clone(),
+            VerificationConfig { jwks_url },
+        ));
+        let keys = Arc::new(CachedKeys::new(source, self.clock.clone()));
+        let tokens = Arc::new(TokenVerifier::new(keys, self.clock.clone()));
         let service: Arc<dyn Service> = Arc::new(MachineCache::new(
             store,
             self.network.clone(),
             self.clock.clone(),
             "admin-secret".into(),
+            tokens,
         ));
         let jobs = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let admin = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -99,80 +106,6 @@ impl Fixture {
         self.tasks.push(tokio::spawn(async move {
             axum::serve(admin, admin_router(service)).await.unwrap();
         }));
-    }
-
-    pub async fn job(&self, id: &str, facts: JobFacts) -> Job {
-        self.job_with(
-            id,
-            facts,
-            Permissions {
-                read: true,
-                write: true,
-            },
-            false,
-        )
-        .await
-    }
-
-    pub async fn job_with(
-        &self,
-        id: &str,
-        facts: JobFacts,
-        permissions: Permissions,
-        machine_down: bool,
-    ) -> Job {
-        let machine = if machine_down {
-            "http://127.0.0.1:1"
-        } else {
-            &self.machine
-        };
-        self.job_via(id, facts, permissions, machine).await
-    }
-
-    pub async fn job_via(
-        &self,
-        id: &str,
-        facts: JobFacts,
-        permissions: Permissions,
-        machine_url: &str,
-    ) -> Job {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let origin = format!("http://{}", listener.local_addr().unwrap());
-        let registration = Registration {
-            job_id: JobId(id.into()),
-            facts,
-            permissions,
-            github_token: Secret::new(format!("github-{id}")),
-            cache_url: Secret::new(format!("{}/legacy-prefix/", self.github.origin)),
-            results_url: Secret::new(&self.github.origin),
-            proxy_url: origin.clone(),
-        };
-        let credential: SessionCredential = self
-            .client
-            .post(format!("{}/sessions", self.admin))
-            .bearer_auth("admin-secret")
-            .json(&registration)
-            .send()
-            .await
-            .unwrap()
-            .json()
-            .await
-            .unwrap();
-        let config = ProxyConfig {
-            machine_url: Secret::new(machine_url),
-            machine_token: credential.token.clone(),
-            registration: registration.clone(),
-        };
-        let proxy: Arc<dyn Service> = Arc::new(VmProxy::new(config, self.network.clone()));
-        let task = tokio::spawn(async move {
-            axum::serve(listener, job_router(proxy)).await.unwrap();
-        });
-        Job {
-            origin,
-            client: self.client.clone(),
-            token: credential.token,
-            task,
-        }
     }
 
     pub async fn report(&self) -> MachineCacheReport {
@@ -271,20 +204,5 @@ impl Drop for Fixture {
         for task in &self.tasks {
             task.abort();
         }
-    }
-}
-
-pub fn facts(reference: &str) -> JobFacts {
-    JobFacts {
-        organization_id: OrganizationId("1".into()),
-        repository: Repository {
-            id: RepositoryId("10".into()),
-            full_name: "org/repo".into(),
-        },
-        git_ref: GitRef(reference.into()),
-        event: JobEvent("push".into()),
-        head_repository: None,
-        default_ref: GitRef("refs/heads/main".into()),
-        base_ref: None,
     }
 }

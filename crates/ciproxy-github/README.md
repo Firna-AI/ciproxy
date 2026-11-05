@@ -203,8 +203,7 @@ Run facts come from the Actions read API for the message's repository and
 run ID. Known runs reuse their durable facts under workspace and
 organization scope. A repository removal, rename, or later API outage does
 not prevent known completion persistence and acknowledgement. A new run
-whose first facts read fails still leaves its batch unacknowledged. The
-broader outcome for unavailable facts remains an open product decision.
+whose first facts read fails still leaves its batch unacknowledged.
 Saved facts preserve `event`, `head_branch`, `head_sha`, and nullable
 `head_repository` from that API. A reusable workflow path stays separate.
 
@@ -213,9 +212,19 @@ not distinguish a same-name branch and tag. Associated pull requests do
 not identify the triggering pull request. A deleted head repository stays
 absent. This crate makes no event-to-ref conversion and grants no cache
 or Docker trust from these fields.
-The Actions API remains the approved source today. A complete ref source
-and an unknown-ref policy still need decisions.
-Full-ref forwarding to the agent therefore remains incomplete.
+`JobAssignments::facts` prepares the expected runtime-token identity for
+the agent. It combines the scale-message run ID and job UUID, the JIT
+runner ID, the API repository identity, event, and head repository, and
+the saved repository default branch. `AssignmentService` consumes the
+existing tenant-scoped repository snapshot through `AssignmentStore`.
+It returns no assignment when that snapshot lacks the repository. The job
+can still use GitHub directly. It never guesses a default branch or job ref.
+
+The agent sends those facts and the original token to the machine cache.
+The machine returns a checked signed scope or a typed unknown reason.
+It checks cache trust, also for reusable workflows. The agent uses the
+checked ref for Docker policy and owns the Docker-disk lifecycle.
+The App keeps all three permissions for API event and head metadata.
 
 ## Quick Start
 
@@ -253,7 +262,7 @@ They belong to the operator workflow under `scripts/`.
 ### Live probes
 
 The [live-probe guide](scripts/README.md) gives credentials, prerequisites,
-commands, fixture contracts, and cleanup for all five probes.
+commands, fixture contracts, and cleanup for the live probes.
 
 ### Key Code
 
@@ -269,6 +278,8 @@ commands, fixture contracts, and cleanup for all five probes.
 - [src/scale_sets](src/scale_sets) adapts the SDK and raw message polling.
 - [src/registrations.rs](src/registrations.rs) creates and removes JIT
   registrations with explicit busy outcomes.
+- [src/assignments.rs](src/assignments.rs) combines saved API metadata,
+  scale-message identity, and JIT identity into the agent assignment.
 - [src/persistence](src/persistence) keeps blocking store calls outside the
   asynchronous services. Its lifecycle seam is the only App state writer.
 - [src/app/delivery.rs](src/app/delivery.rs) replays immutable lifecycle

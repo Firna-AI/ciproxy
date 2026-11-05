@@ -33,8 +33,6 @@ def main():
         raise RuntimeError("this smoke needs a trusted job with cache read and write access")
     if registration["facts"]["event"].startswith("pull_request"):
         raise RuntimeError("run the live write smoke on a trusted default-branch job")
-    if registration["facts"]["git_ref"] != registration["facts"]["default_ref"]:
-        raise RuntimeError("the trusted registration must identify a default-branch job")
     registration["github_token"] = os.environ["ACTIONS_RUNTIME_TOKEN"]
     registration["cache_url"] = original("ACTIONS_CACHE_URL")
     registration["results_url"] = original("ACTIONS_RESULTS_URL")
@@ -44,6 +42,9 @@ def main():
     processes = Processes(directory)
     try:
         environment = start_cache(processes, registration)
+        checked = environment["scope"]
+        if checked["status"] != "checked" or checked["git_ref"] != registration["facts"]["default_ref"]:
+            raise RuntimeError("the machine must check a default-branch runtime-token scope")
         variables = dict(os.environ, CIPROXY_SMOKE_PROXY=environment["proxy"], CIPROXY_SMOKE_DIR=str(directory), CIPROXY_SMOKE_BYTES="16384")
         subprocess.run(["node", str(Path(__file__).with_name("sdk-check.mjs")), str(args.cache_module.resolve())], env=variables, check=True, cwd=ROOT)
         print("PASS: authenticated GitHub v2 round trip through machine service and VM proxy")

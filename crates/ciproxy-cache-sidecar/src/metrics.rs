@@ -5,9 +5,10 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use ciproxy_protocol::cache::{
-    CacheRestoreCounts, JobCacheReport, JobCacheUsage, MachineCacheReport,
+    CacheRestoreCounts, JobCacheReport, JobCacheUsage, MachineCacheReport, UnknownJobCount,
 };
 use ciproxy_protocol::identifiers::JobId;
+use ciproxy_protocol::jobs::{JobScope, UnknownJobScopeReason};
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
@@ -34,11 +35,13 @@ struct Job {
     usage: JobCacheUsage,
     active: bool,
     updated: u64,
+    #[serde(default)]
+    unknown_reason: Option<UnknownJobScopeReason>,
 }
 
 #[async_trait]
 pub(crate) trait Reports: Send + Sync {
-    async fn registered(&self, job: &JobId);
+    async fn registered(&self, job: &JobId, scope: &JobScope);
     async fn closed(&self, job: &JobId);
     async fn restored(&self, job: &JobId, local: bool, bytes: u64);
     async fn fallback(&self, job: &JobId);
@@ -88,7 +91,7 @@ impl Metrics {
 
 #[async_trait]
 impl Reports for Metrics {
-    async fn registered(&self, job: &JobId) {
+    async fn registered(&self, job: &JobId, scope: &JobScope) {
         let mut lock = self.records.lock().await;
         if lock.is_none() {
             *lock = Some(self.load().await);
@@ -102,6 +105,10 @@ impl Reports for Metrics {
                 }),
                 active: true,
                 updated: self.clock.now(),
+                unknown_reason: match scope {
+                    JobScope::Unknown { reason } => Some(*reason),
+                    JobScope::Checked { .. } => None,
+                },
             });
             self.persist(records).await;
         }
@@ -148,12 +155,14 @@ impl Reports for Metrics {
             *lock = Some(self.load().await);
         }
         if let Some(records) = lock.as_mut() {
+            let unknown_reason = records.jobs.get(&job.0).and_then(|job| job.unknown_reason);
             records.jobs.insert(
                 job.0.clone(),
                 Job {
                     usage: JobCacheUsage::Github,
                     active: true,
                     updated: self.clock.now(),
+                    unknown_reason,
                 },
             );
             self.persist(records).await;
@@ -178,6 +187,7 @@ impl Reports for Metrics {
             capacity_bytes,
             restores_last_7_days: events.len() as u64,
             hits_last_7_days: events.iter().filter(|event| event.local).count() as u64,
+            unknown_jobs: unknown_counts(records, cutoff),
             jobs: records
                 .jobs
                 .iter()
@@ -188,4 +198,17 @@ impl Reports for Metrics {
                 .collect(),
         })
     }
+}
+
+fn unknown_counts(records: &Records, cutoff: u64) -> Vec<UnknownJobCount> {
+    let mut counts = BTreeMap::new();
+    for job in records.jobs.values().filter(|job| job.updated >= cutoff) {
+        if let Some(reason) = job.unknown_reason {
+            *counts.entry(reason).or_insert(0) += 1;
+        }
+    }
+    counts
+        .into_iter()
+        .map(|(reason, jobs)| UnknownJobCount { reason, jobs })
+        .collect()
 }

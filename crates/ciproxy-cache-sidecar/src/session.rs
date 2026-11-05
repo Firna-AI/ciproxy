@@ -1,7 +1,7 @@
 //! Agent-supplied identity and permissions for one job VM.
 
 use ciproxy_protocol::identifiers::JobId;
-use ciproxy_protocol::jobs::JobFacts;
+use ciproxy_protocol::jobs::{JobFacts, JobScope};
 use ciproxy_protocol::secret::Secret;
 use serde::{Deserialize, Serialize};
 
@@ -30,6 +30,7 @@ pub struct Registration {
     #[serde(default)]
     pub permissions: Permissions,
     /// Original GitHub runtime token for this assignment.
+    #[serde(default = "missing_token")]
     pub github_token: Secret,
     /// Original ACTIONS_CACHE_URL for the legacy API.
     pub cache_url: Secret,
@@ -44,4 +45,10 @@ pub struct Registration {
 pub struct SessionCredential {
     /// Random credential for this VM only.
     pub token: Secret,
+    /// Machine-checked scope for the agent's Docker-disk policy.
+    pub scope: JobScope,
+}
+
+fn missing_token() -> Secret {
+    Secret::new("")
 }

@@ -6,15 +6,63 @@ import base64
 import hashlib
 import json
 import os
+from contextlib import contextmanager
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import signal
+import subprocess
 import sys
 import tempfile
+import threading
+import time
 from urllib.parse import urlencode
 
 sys.dont_write_bytecode = True
 
 from runtime import ROOT, Processes, port, request, rpc, start_cache
+
+
+@contextmanager
+def signed_assignment(processes, registration):
+    fixtures = ROOT / "crates/ciproxy-cache-sidecar/src/runtime_token/_tests_/fixtures"
+    jwks = (fixtures / "jwks.json").read_bytes()
+
+    class Keys(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(jwks)
+
+        def log_message(self, *_):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Keys)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    config = processes.directory / "verification.json"
+    config.write_text(json.dumps({"jwks_url": f"http://127.0.0.1:{server.server_port}/jwks"}))
+    config.chmod(0o600)
+    encoded = lambda value: base64.urlsafe_b64encode(json.dumps(value).encode()).decode().rstrip("=")
+    facts = registration["facts"]
+    payload = {"iss": "https://token.actions.githubusercontent.com", "nbf": int(time.time()) - 10,
+               "exp": int(time.time()) + 3600, "repository_id": facts["repository"]["id"],
+               **facts["assignment"], "ac": json.dumps([{"Scope": "refs/heads/main", "Permission": 3}])}
+    message = encoded({"alg": "RS256", "kid": "fixture-rsa"}) + "." + encoded(payload)
+    signature = subprocess.run(["openssl", "dgst", "-sha256", "-sign", str(fixtures / "key.pem")],
+                               input=message.encode(), capture_output=True, check=True).stdout
+    registration["github_token"] = message + "." + base64.urlsafe_b64encode(signature).decode().rstrip("=")
+    previous = os.environ.get("CIPROXY_CACHE_VERIFICATION_CONFIG")
+    os.environ["CIPROXY_CACHE_VERIFICATION_CONFIG"] = str(config)
+    try:
+        yield registration
+    finally:
+        if previous is None:
+            os.environ.pop("CIPROXY_CACHE_VERIFICATION_CONFIG", None)
+        else:
+            os.environ["CIPROXY_CACHE_VERIFICATION_CONFIG"] = previous
+        server.shutdown()
+        server.server_close()
+        thread.join()
 
 
 def exercise(environment, github):
@@ -62,10 +110,14 @@ def main():
         github = f"http://127.0.0.1:{port()}"
         processes.start("github", [sys.executable, str(Path(__file__).with_name("fake-github.py")), "--port", github.rsplit(":", 1)[1]], github + "/_fixture/state")
         registration = {"job_id": "manual-smoke", "facts": {"organization_id": "1", "repository": {"id": "10", "full_name": "example/repository"},
-                         "git_ref": "refs/heads/main", "event": "push", "head_repository": None,
-                         "default_ref": "refs/heads/main", "base_ref": None}, "permissions": {"read": True, "write": True},
-                         "github_token": "fake-runtime-token", "cache_url": github + "/legacy-prefix/", "results_url": github}
-        environment = start_cache(processes, registration)
+                         "assignment": {"run_id": "31", "job_id": "manual-smoke", "runner_id": "71"},
+                         "event": "push", "head_repository": None,
+                         "default_ref": "refs/heads/main"}, "permissions": {"read": True, "write": True},
+                         "cache_url": github + "/legacy-prefix/", "results_url": github}
+        with signed_assignment(processes, registration):
+            environment = start_cache(processes, registration)
+        assert environment["scope"] == {"status": "checked", "git_ref": "refs/heads/main",
+                                         "read_refs": ["refs/heads/main"]}
         exercise(environment, github)
         environment["github"] = github
         (directory / "environment.json").write_text(json.dumps(environment, indent=2))

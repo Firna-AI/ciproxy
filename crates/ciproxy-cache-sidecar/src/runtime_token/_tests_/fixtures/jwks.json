@@ -1,0 +1,12 @@
+{
+  "keys": [
+    {
+      "kty": "RSA",
+      "kid": "fixture-rsa",
+      "use": "sig",
+      "alg": "RS256",
+      "n": "sEiKuOqKyCzgVXU77LIiULBkB2OLb1xz7auia_Opr07HYyrTyGMZjBweKkjiRGDZqA5zYTc8K_M0XmHyKsueMLeIoS0jcvqw5LRJNA2Ey-kE9ubjHBlFniBVOw9w1bwiE2zF3qQFZj-3l9oxVpe5W72G65WARmO7z_qHP4oYdlXgxu8YgnZiZzhh-0AYLY9i5TlpEC4kEUjO1sEnNB5u30HV8za4jjj8vy-9DsBq0TrEWlCqAONVzYaf469DL4sh2OxE2CKWrgDlRzytTtvSVCpMPQUOowzzKHq6DzwE5BVjt974jUXaM5jjbdshHTNsFCCyR57y6eHfbwbUxuLq3w",
+      "e": "AQAB"
+    }
+  ]
+}
