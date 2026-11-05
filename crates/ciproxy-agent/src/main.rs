@@ -58,6 +58,7 @@ mod system_service;
 mod updates;
 mod vm_config;
 mod vm_files;
+mod vm_root;
 mod vms;
 mod vsock;
 mod vsock_stream;

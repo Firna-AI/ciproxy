@@ -33,6 +33,7 @@ pub(crate) struct Controller {
     pub(crate) vms: Arc<dyn Vms>,
     pub(crate) images: Arc<dyn Images>,
     pub(crate) cache: Arc<dyn Cache>,
+    pub(crate) image_budget: u64,
 }
 
 #[async_trait]
@@ -45,7 +46,7 @@ impl Agent for Controller {
         }
         let budget = {
             let state = self.state.lock().await;
-            machine_resources(&hardware)
+            machine_resources(&hardware, self.image_budget)
                 .available(state.runners.iter().map(|vm| vm.report.size))
                 .job_disk_bytes
         };

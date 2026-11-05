@@ -50,7 +50,7 @@ export const mixedMachines = defineScreen({
   slug: "mixed-machines",
   title: "Machines that fit different numbers of jobs",
   description:
-    "The dialog of ciproxy-4vcpu after office-mini-1 joined as the fourth machine. Each Hetzner AX42 runs 3 jobs of the size at a time. office-mini-1 has the slots for 3 too, but its disk holds only 2 jobs of 80 GB, so the dialog says 2 to 3 jobs. The banner offers the extra-machine add-on, because Team includes three machines.",
+    "The dialog of ciproxy-4vcpu after office-mini-1 joined as the fourth machine. An Admin raises the disk of the label from 80 to 100 GB, and before the save the dialog says what the new size gives. Each Hetzner AX42 runs 3 jobs of the size at a time. office-mini-1 has the slots for 3 too, but its disk holds only 2 jobs of 100 GB, so the dialog says 2 to 3 jobs. The banner offers the extra-machine add-on, because Team includes three machines.",
   rationale:
     "Design call 41: a size that fits a different number of jobs on different machines shows a range, which keeps the rule of one machine: a job runs on one machine.",
   relatedDocs: relatedMvp("jobRouting"),

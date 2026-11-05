@@ -25,9 +25,9 @@
     and machine cache.
   - **Base:** The kept root disk of an image, from which each fresh VM disk
     is a reflink copy.
-  - **Job disk:** The three quarters of a machine's disk that admission
-    gives to the VMs and the machine cache.
-  - **Image budget:** The space from the host reserve for images and the
+  - **Job disk:** Three quarters of the disk left after the image budget,
+    which admission gives to the VMs and the machine cache.
+  - **Image budget:** The separate space reserved first for images and the
     kernel, configuration, executable, and support files of each VM jail.
   - **Project quota:** An XFS limit on files with one inherited project
     number, except the unlimited default project 0.
@@ -36,21 +36,24 @@
     a reflink copy of a base.
   - Reflinks work only inside one filesystem. So the bases must be in the
     area with the VM disks.
-  - "Disk" in `docs/protocol/job-routing.md` keeps a quarter of the disk,
-    the host reserve, for the system and the images.
+  - "Disk" in `docs/protocol/job-routing.md` subtracts the image budget
+    first. The host keeps a quarter of the remainder for the system and
+    filesystem overhead, and job disk gets three quarters.
   - On 5 November 2026 the orchestrator chose option A as fix now. The area
     holds the job disk, the image budget, and the XFS overhead measured
     after formatting.
-  - The budget and the overhead come from the host reserve. The slots, the
-    job disk, and the hardware minimum stay the same.
+  - Current sizing keeps the image budget apart from job disk. Filesystem
+    overhead uses the remaining host reserve. A 250 GB minimum machine
+    gives jobs 82.5 GB with the default budget. The default job needs 80 GB.
   - Under A, the agent reserves budget before each physical image or VM
     support write. It measures allocation under `images/` and the VM jail
     tree. It excludes the root and Docker payloads already in the job disk.
   - It reclaims unused older bases before admission. The
     `crates/ciproxy-agent/image-budget.md` guide describes the accounting.
     No quota is required.
-  - The image budget is a setting with a safe provisional default. The full
-    image measurement sets its real value later.
+  - The image budget defaults to 140 GB. It holds two full 58.3 GB images
+    and one 18.3 GB download, plus support headroom. Host measurement must
+    still confirm the complete image and support peak at full VM occupancy.
   - A needs no answer. It is adequate for the own-machine agent, and it does
     not wait for this item.
   - This item is an optional design choice. It asks whether the kernel
@@ -110,8 +113,9 @@
     metadata use the job disk. It weakens the job-disk promise of "Disk".
   - **B.** Keep the three-quarter file, and subtract the images and the
     metadata from the job disk of admission and the scaler. It changes the
-    job capacity and the minimum machine. An exact 80 GB machine would no
-    longer fit the default 60 GB job.
+    job capacity and the minimum machine. At the time this option was
+    rejected, an exact 80 GB machine would no longer fit the default 60 GB
+    job. Current sizing reserves the 140 GB image budget before the split.
   - **E.** Keep the bases outside the area as shared read-only drives, with
     a writable device-mapper snapshot in each guest. It replaces the
     approved reflink roots, and it needs guest, image, and KVM work. It

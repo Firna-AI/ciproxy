@@ -83,7 +83,7 @@ fn ineligible_own_machines_do_not_add_an_overflow_wait() {
             "offline" => state.machines[0].connected = false,
             "draining" => state.machines[0].draining = true,
             "slots" => state.machines[0].capacity = Slots(0),
-            "disk" => state.machines[0].disk_budget_bytes = 59 * GIGABYTE,
+            "disk" => state.machines[0].disk_budget_bytes = 79 * GIGABYTE,
             "disallowed" => state.labels[0].destinations.own_machines = false,
             _ => unreachable!(),
         }

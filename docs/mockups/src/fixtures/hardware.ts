@@ -1,9 +1,10 @@
 // The hardware of the own machines of mokly-ai, and the rule of design call
 // 34 as the plan defines it. A slot is 2 vCPU and 8 GB. The host reserve
-// keeps a quarter of the threads, the memory, and the disk. A size fits a
-// machine when the machine has enough free slots and enough free disk for
-// it: each running job holds the disk of its size, and the machine cache
-// uses the rest.
+// keeps a quarter of the threads and the memory. The disk first keeps the
+// image budget for the VM images, as the answer to item 73 says, and the
+// host reserve keeps a quarter of the rest. A size fits a machine when the
+// machine has enough free slots and enough free disk for it: each running
+// job holds the disk of its size, and the machine cache uses the rest.
 
 import { dotJoin, unbroken } from "./format.ts";
 import type { Size } from "./sizes.ts";
@@ -13,6 +14,9 @@ export const slotSize = { vcpu: 2, memoryGb: 8 } as const;
 
 /** Jobs get three quarters of a machine; the host reserve keeps the rest. */
 const jobShare = 3 / 4;
+
+/** The disk for two VM images and one download, apart from the job disk. */
+export const imageBudgetGb = 140;
 
 /** What the agent reports about a machine, and the cost that mokly-ai set. */
 export type Hardware = {
@@ -35,9 +39,10 @@ export function machineSlots(hardware: Hardware): number {
   );
 }
 
-/** The disk that running jobs can hold, after the host reserve. */
+/** The disk that running jobs can hold, after the images and host reserve. */
 export function jobDiskGb(hardware: Hardware): number {
-  return Math.floor(hardware.diskGb * jobShare);
+  const afterImages = Math.max(0, hardware.diskGb - imageBudgetGb);
+  return Math.floor(afterImages * jobShare);
 }
 
 /** The slots that a job VM of this size takes on a machine. */
@@ -79,8 +84,8 @@ export const miniPc: Hardware = {
   cpu: "AMD Ryzen 9 7940HS",
   threads: 16,
   memoryGb: 64,
-  disk: unbroken("256 GB NVMe"),
-  diskGb: 256,
+  disk: unbroken("512 GB NVMe"),
+  diskGb: 512,
   monthlyCost: 25,
 };
 

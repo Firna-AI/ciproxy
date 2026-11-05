@@ -8,7 +8,7 @@ use uuid::Uuid;
 use crate::area_types::{AreaRecord, Filesystem, Inventory, Phase};
 use crate::error::{Error, Result};
 use crate::host_system::repair;
-use crate::storage_sizing::{AreaSizing, DEFAULT_IMAGE_BYTES};
+use crate::storage_sizing::{AreaSizing, DEFAULT_IMAGE_BYTES, MINIMUM_DISK_BYTES};
 
 #[cfg_attr(test, unimock::unimock(api = AreaFilesMock))]
 pub(crate) trait AreaFiles: Send + Sync {
@@ -66,6 +66,12 @@ impl DiskArea for PersistentArea {
             }
             record
         } else {
+            if inventory.host_bytes < MINIMUM_DISK_BYTES {
+                return Err(repair(
+                    "machine disk",
+                    "Use at least 250 GB of disk for /var/lib/ciproxy. Then rerun install.",
+                ));
+            }
             let budget = self.requested_budget.unwrap_or(DEFAULT_IMAGE_BYTES);
             let sizing = AreaSizing {
                 host: inventory.host_bytes,

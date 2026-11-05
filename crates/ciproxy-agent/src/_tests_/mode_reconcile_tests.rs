@@ -52,7 +52,7 @@ async fn removal_during_a_delayed_reconciliation_stays_terminal() {
             .some_call(matching!())
             .returns(Ok(hardware())),
         CacheMock::budget
-            .some_call(matching!(750_000_000_000))
+            .some_call(matching!(645_000_000_000))
             .returns(Ok(())),
         StoreMock::save
             .each_call(matching!(_))

@@ -24,7 +24,7 @@ const vcpu = unbroken(`${slotSize.vcpu} vCPU`);
 const slotPhrase = `${vcpu} and ${unbroken(`${slotSize.memoryGb} GB`)}`;
 const jobLength = unbroken(`${costClaim.averageJobMinutes} minutes`);
 
-const basis = `One new ${machine} at its list price runs jobs in every minute of a ${costClaim.monthDays}-day month. After a quarter for the host, its ${ax42.threads} threads and ${ax42.memoryGb} GB give ${costClaim.slots} slots of ${slotPhrase}, so it runs ${minutes} job minutes. At ${jobLength} a job, that is ${formatCount(costClaim.starts)} starts, which ${planChoiceText(plan)} covers.`;
+const basis = `One new ${machine} at its list price runs jobs in every minute of a ${costClaim.monthDays}-day month. After a quarter for the host, its ${ax42.threads} threads and ${ax42.memoryGb} GB give ${costClaim.slots} slots of ${slotPhrase}. This calculation combines both 512 GB disks into one ${formatCount(ax42.diskGb)} GB filesystem with RAID0 or one LVM volume. Hetzner's installer mirrors two disks by default, which gives one disk's capacity. After the image budget and host disk reserve, it fits ${costClaim.concurrentJobs} default jobs at a time, so it runs ${minutes} job minutes. At ${jobLength} a job, that is ${formatCount(costClaim.starts)} starts, which ${planChoiceText(plan)} covers.`;
 const result = `That is ${costClaim.upToPercent}% less than ${cheaper.runners}, the cheaper of the two.`;
 const sourceDetails = ` on ${unbroken(listPrices.machine.checked)}, without tax. Both hosted runners have ${vcpu}, as one slot does. The ${machine} also costs ${formatMoney(listPrices.machineSetup.amount)} once to set up. Free minutes of the hosted runners are not subtracted.`;
 ---

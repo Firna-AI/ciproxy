@@ -46,7 +46,8 @@ runs on own machines.
 - Install prepares a persistent reflink disk area in one XFS file on any
   filesystem.
 - The area holds the [job disk](job-routing.md#terms).
-- Its image budget and filesystem overhead come from the host reserve.
+- The area holds the separate [image budget](job-routing.md#disk).
+- Its filesystem overhead comes from the host reserve.
 - Repeated installation repairs missing parts and preserves machine
   identity, drain state, and job data.
 - Uninstall finishes running jobs before it removes its owned disk area.
@@ -71,9 +72,10 @@ runs on own machines.
   that always works for its whole hour, because a leaked token must not
   stay usable.
 - An own machine needs x64 Linux with KVM, 4 cores, 16 GB of memory, and
-  80 GB of disk or more.
-- Reason: with the host reserve of a quarter, such a machine fits one job
-  of the label `ciproxy`, which needs 60 GB of disk.
+  250 GB of disk or more.
+- Reason: the 140 GB image budget leaves 110 GB before the host reserve.
+- The host keeps 27.5 GB, so the 82.5 GB job disk fits one 80 GB job
+  of the label `ciproxy`.
 - Next to the command, the dashboard says how long the install token works
   and what the machine needs.
 - Until the machine connects, the dashboard shows that it waits for the
@@ -140,6 +142,12 @@ runs on own machines.
 - The agent never uses the disk of a job VM again.
 - A job VM has the [size](labels.md#terms) of the
   [label](labels.md#terms) of its runner.
+- Each job VM gets one writable root disk of its label's disk size.
+- A larger label gets a larger root filesystem before its VM boots.
+- A label smaller than the image cannot start that image.
+- Docker shares the root disk's free space and its cached Docker images.
+- A separate sticky [Docker disk](cache.md#docker-disks) attaches only under
+  the cache rules.
 - **Decision:** each job runs in a fresh VM. Rejected: a VM that runs
   several jobs, because a job must not read the secrets or the files of
   another job.
@@ -150,6 +158,8 @@ runs on own machines.
 - The image has the software of the GitHub runner image that
   `ubuntu-latest` names, so a workflow keeps its YAML apart from the
   `runs-on` line.
+- Each job root disk reserves 1% for root, so the default size leaves
+  about 19 GB free with the full image.
 - The runner in the image is always a version that GitHub still accepts.
 - So ciproxy releases a new image before GitHub stops accepting the runner
   of the current image.

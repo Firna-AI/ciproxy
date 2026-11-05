@@ -27,7 +27,7 @@ pub(super) fn report() -> MachineReport {
     report.hardware.memory_bytes = 32 * GIGABYTE;
     report.hardware.disks = vec![DiskReport {
         name: "/var/lib/ciproxy".into(),
-        capacity_bytes: 256 * GIGABYTE,
+        capacity_bytes: 512 * GIGABYTE,
         free_bytes: 123 * GIGABYTE,
     }];
     report.slots = vec![
@@ -50,7 +50,7 @@ pub(super) fn report() -> MachineReport {
         },
     ];
     report.cache.used_bytes = 4 * GIGABYTE;
-    report.cache.capacity_bytes = 120 * GIGABYTE;
+    report.cache.capacity_bytes = 119 * GIGABYTE;
     report.cache.restores_last_7_days = 19;
     report.cache.hits_last_7_days = 11;
     report.cache.jobs = vec![JobCacheReport {
@@ -74,7 +74,7 @@ pub(super) fn report() -> MachineReport {
             size: VmSize {
                 vcpu: 2,
                 memory_bytes: 8 * GIGABYTE,
-                disk_bytes: 60 * GIGABYTE,
+                disk_bytes: 80 * GIGABYTE,
             },
             image_id: ImageId("image-3".into()),
             state: RunnerState::Running {
@@ -88,7 +88,7 @@ pub(super) fn report() -> MachineReport {
             size: VmSize {
                 vcpu: 2,
                 memory_bytes: 8 * GIGABYTE,
-                disk_bytes: 60 * GIGABYTE,
+                disk_bytes: 80 * GIGABYTE,
             },
             image_id: ImageId("image-4".into()),
             state: RunnerState::Warm,

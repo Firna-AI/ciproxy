@@ -46,9 +46,9 @@ export const diskLimit = defineScreen({
   slug: "disk-limit",
   title: "Disk limits the jobs",
   description:
-    "office-mini-1, a mini PC in the office, joined as the fourth machine. Its 16 threads and 64 GB give 6 slots. After the host reserve, its 256 GB disk leaves 192 GB for jobs, and a job of ciproxy holds 60 GB, so it runs 3 such jobs at a time. Its two warm runners hold 120 GB, and the machine cache has the other 72 GB. The notice gives the reason and the fix. The banner of every page offers the extra-machine add-on, because Team includes three machines.",
+    "office-mini-1, a mini PC in the office, joined as the fourth machine. Its 16 threads and 64 GB give 6 slots. After 140 GB for the VM images and a quarter of the rest for the host, its 512 GB disk leaves 279 GB for jobs, and a job of ciproxy holds 80 GB, so it runs 3 such jobs at a time. Its two warm runners hold 160 GB, and the machine cache has the other 119 GB. The notice gives the reason and the fix. The banner of every page offers the extra-machine add-on, because Team includes three machines.",
   rationale:
-    "Design call 34, as the plan defines it: a size fits a machine when the machine has enough free slots and enough free disk. The host reserve keeps a quarter of the disk, each running job holds the disk of its size, and the machine cache uses the rest.",
+    "Design call 34, as the plan defines it, with the disk of the answer to item 73: a size fits a machine when the machine has enough free slots and enough free disk. The disk keeps 140 GB for the VM images, the host reserve keeps a quarter of the rest, each running job holds the disk of its size, and the machine cache uses the rest.",
   relatedDocs: relatedMvp("agent", "jobRouting", "cache"),
   address: orgAddress("machines/office-mini-1"),
   render: (_props, context) => (

@@ -6,6 +6,7 @@ import type { Viewport } from "@mokly/mokly";
 
 import { TextLink } from "../../components/actions.tsx";
 import { paths } from "../../components/paths.ts";
+import { unbroken } from "../../fixtures/format.ts";
 import { boat } from "../../fixtures/machines.ts";
 import { freePlanNote } from "../../fixtures/tiers.ts";
 import { DocsShell, type TocItem } from "./docs-shell.tsx";
@@ -87,8 +88,9 @@ export function DocsHomeScreen({
         <ul className="docs-list">
           <li>A GitHub organization with private repositories.</li>
           <li>
-            One or more x64 Linux machines with KVM, 4 cores, and 16 GB of
-            memory or more.
+            One or more x64 Linux machines with KVM, {unbroken("4 cores")},{" "}
+            {unbroken("16 GB")} of memory, and {unbroken("250 GB")} of disk or
+            more.
           </li>
           <li>A Boat account for overflow. You can connect it later.</li>
         </ul>
