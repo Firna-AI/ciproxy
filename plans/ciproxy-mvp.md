@@ -197,8 +197,13 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
       Branch: `codex/m5-terraform-promotion`.
   - [x] Prepare and test the idempotent `deploy/scripts/github-ruleset.sh`.
         Branch: `codex/m5-terraform-promotion`.
-  - [ ] User: upgrade the organization. Orchestrator: apply the ruleset.
+  - [x] User: upgrade the organization. Orchestrator: apply the ruleset.
         Branch: `codex/m5-terraform-promotion`.
+- [ ] Make this repository public, as item 70 says. The orchestrator scans
+      the history, the run logs, and the pull request texts for secrets, and
+      checks the workflows and the runner groups. The user changes the
+      visibility. Then turn on secret scanning with push protection, and
+      require approval of workflow runs from all outside contributors.
 - [x] Rename the staging environment to the main preview of item 53, with
       its hosts under `br-main.preview`, before the first apply.
       Branch: `conductor/ciproxy-mvp-milestone-5-main-preview`.
@@ -751,17 +756,19 @@ the event both read the session, so the tier changes once.
       later reads. Preserve supersession from expanded renewal invoices.
       Branch: `conductor/ciproxy-mvp-milestone-17-billing-live-fixes`.
       Evidence: `.context/ciproxy-mvp/billing-live-fixes/pr23-fix-round-1/`.
-- [ ] Test each state with recorded events and the Stripe test mode.
-      The fixed event fixtures and fake HTTP Stripe tests pass locally.
-      Orchestrator: run the
+- [x] Test each state with recorded events and the Stripe test mode.
+      The orchestrator ran the
       [Stripe test mode checklist](../crates/ciproxy-billing/README.md#stripe-test-mode)
-      with `crates/ciproxy-billing/scripts/stripe-test-mode.sh`.
-      Start with `provision` and `listen`, then run `checkout`,
-      `reconcile`, `upgrade`, `addons`, `portal`, `cancel`, and `status`.
-      Supply test-mode credentials through environment variables.
-      Capture real signed events and check retries and period end.
-      No Stripe key is available in this workspace.
-      Branch: `conductor/ciproxy-mvp-milestone-17-billing`.
+      in the account of item 61 with real signed events, test clocks, and
+      the bank confirmation. The rerun on 5 November 2026 at `287f1bc`,
+      after the merge of #23, gave 37 passed, 0 failed, and 1 skipped.
+      Evidence: `.context/ciproxy-mvp/billing-live/report.md`.
+- [ ] User: turn on receipt emails for successful payments in the sandbox
+      now and in the live Stripe account before launch. Open
+      <https://dashboard.stripe.com/settings/emails>, then turn on
+      **Successful payments** under **Payments**. The live checklist skipped
+      this row, because only the Dashboard shows it. Test payments never
+      send these emails.
 
 ## Milestone 18: Dashboard API: jobs, usage, savings, and billing
 
@@ -888,9 +895,11 @@ Each screen follows its mockup, as Milestone 19 says.
 
 Depends on: every milestone from 1 to 26
 
-The public copy goes live before the site, because the site links to it.
+The repository is public from item 70 = E, and the site links to it.
 
-- [ ] Run the CI of ciproxy on ciproxy, and fix or record each problem.
+- [ ] Run the CI of a private test repository on ciproxy, and fix or record
+      each problem. ciproxy runs private repositories only, and item 70 = E
+      made this repository public.
       Close the follow-up item `expo-56-npm-advisories.md`.
 - [ ] Draft the terms and the privacy policy, which the user writes or
       approves. They state the limits of "Data retention" in `security.md`.
@@ -898,9 +907,8 @@ The public copy goes live before the site, because the site links to it.
       accounts of the user.
 - [ ] Deploy production. Smoke-test a first job, an overflow, and a live
       checkout that the user approves.
-- [ ] Publish the open parts in a public repository that the user creates,
-      and check that it builds alone. Check the licence of the installer
-      of `futex-ai/cli-release`.
+- [ ] Check that the open parts build alone, and check the licence of the
+      installer of `futex-ai/cli-release`.
 - [ ] Ask Boat to confirm in writing that a customer may run ciproxy
       runners on its own Boat account. The user sends the request. My call:
       the terms allow this use by inference only.
@@ -1136,6 +1144,14 @@ Answers of 5 November 2026:
   can stop overflow early, by $0.07 for each start that Boat does not charge.
   `overflow.md` states the rule. Rejected: the saved quote, a second quote
   after the start, and a charged fee from Boat.
+- Item 70, E: this whole repository becomes public now, in place of a public
+  copy of the open parts at launch. The agent builds and releases in public.
+  This replaces the code location rule of the foundation plan. The closed
+  parts keep no open licence, and the README says which directories are
+  Apache-2.0. ciproxy runs private repositories only, so Milestone 27 tests
+  the CI of a private test repository on ciproxy. `futex-ai/cli-release`
+  needs a GitHub token, so the release server keeps one, but it reads public
+  repositories only. Rejected: options A, B, C, and D.
 - Item 66, A: only a job of a trusted event on the default branch keeps
   its changes to a Docker disk, as item 59 says for the machine cache.
   `cache.md` states it. Rejected: any event on the default branch, and
@@ -2029,7 +2045,7 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 69 on 5 November 2026. No item still waits. The
+The user answered items 54 to 70 on 5 November 2026. No item still waits. The
 conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
@@ -2411,3 +2427,78 @@ keep the letters that the user saw.
   read, and it does not count $0.07 for each free start as B does. D best
   protects the codebase, but it needs Boat.
 - **Action:** answered B.
+
+### 70. The agent binaries stay private after launch
+
+**Answer, 5 November 2026:** E.
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Design. The user wrote "probably the cli needs to be open
+  source, if people are going to install it on their machine", and then "i
+  think just make the repo public?". Options D and E come from that message.
+- **Category:** Docs or spec.
+- **Location:** Milestone 27 of this plan, the release workflow of
+  `ciproxy-agent`, and step 4 of `deploy/setup.md`.
+- **Terms:**
+  - **Public copy:** the public repository that gets the open parts at
+    launch. The user creates it in Milestone 27.
+  - **Release server:** the `futex-ai/cli-release` server at
+    `get.ciproxy.dev`. It serves the install script and the agent binaries.
+  - **Build attestation:** a signed GitHub record that names the workflow
+    and the commit that built a file.
+- **Background:**
+  - Item 20 = F made every part on the customer's side Apache-2.0: the
+    agent, its protocol, the image definition, the install script, the
+    cache sidecar, and the runner patch.
+  - This repository stays private. At launch, the open parts go public from
+    a public copy. The foundation plan rejected a public copy from the first
+    push, because early code would go public before launch.
+  - The release workflow builds the agent in this private repository and
+    uploads the binaries to its releases. The release server reads them
+    with the release token.
+  - The plan does not say where the binaries come from after launch.
+- **Problem:** After launch, customers can read the source in the public
+  copy. But the binary that they install still comes from a private build,
+  and they cannot check it against the public source.
+- **Impact if no action:** The claim "Read and audit the code that runs on
+  your machines" holds for the source, but not for the binary. The release
+  server keeps a token for the private repository.
+- **Root question:** After launch, how can a customer trust that the agent
+  binary comes from the public source?
+- **Options:**
+  - **A.** Keep the plan. The binaries stay in the private releases, and
+    the release server keeps the token. A customer can build the agent from
+    the public source. Effort: none.
+  - **B.** At launch, the private release workflow also publishes each
+    release in the public copy, with a build attestation. The release
+    server reads the public releases, so it needs no access to private
+    code. The attestation names a private commit. So it proves where the
+    binary was built, but not that it matches the public source. Effort:
+    Small.
+  - **C.** At launch, the release workflow of the agent moves to the public
+    copy. The public copy builds and publishes each release from its public
+    source. The attestation then names a public commit. This repository
+    only pushes the source of the open parts to the public copy. The
+    release server needs no access to private code. Effort: Medium.
+  - **D.** At launch, make this whole repository public, in place of the
+    public copy. The agent builds and releases in public, so no token and no
+    copy step stay. Everyone can then read the paid control plane, the
+    dashboard, the plans, and the full history. The closed parts keep no
+    open licence. ciproxy runs private repositories only, so its own CI moves
+    to GitHub-hosted runners after launch. This reverses the code location
+    rule of the foundation plan. It cannot be undone. Effort: Small.
+  - **E.** As D, but now. The token and the copy step go away now. Early code
+    goes public before launch, and ciproxy can no longer test its own CI on
+    ciproxy runners before launch. Effort: Small.
+- **Left out:** Reproducible builds, so that anyone can rebuild the same
+  bytes: C and D give the same proof with much less work.
+- **Wider fix:** D.
+- **Previous examples:** None found.
+- **Related:** The main preview needs the release token now under every
+  option, because the public copy exists only from launch.
+- **Recommendation:** D. It gives a public build with no token and no copy
+  step, and the private repository still serves the CI test before launch.
+  C best keeps the paid code private.
+- **Before D or E:** scan the whole history for secrets, check each workflow
+  for pull requests from forks, and remove what must stay private.
+- **Action:** answered E.

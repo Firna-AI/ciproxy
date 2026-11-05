@@ -243,14 +243,20 @@ design tokens that the dashboard uses.
 - Every part that ciproxy ships to the customer's side is open source under
   Apache-2.0: the agent with its connection protocol, the image definition,
   the install script, and the cache sidecar and runner patch in the image.
-- The control plane, the dashboard, and the public site are closed source.
-  The hosted control plane and the dashboard are the paid part.
+- The control plane, the dashboard, and the public site have no open
+  licence. The hosted control plane and the dashboard are the paid part.
+- The whole repository is public. The agent builds and releases from it.
 - **Decision:** open core. Rejected: open source only, because it gives no
   revenue. Rejected: a paid licence, because adoption is slower. Rejected:
   reselling overflow minutes, because the margins are thin.
 - **Decision:** every part on the customer's side is Apache-2.0. Rejected:
   a closed image definition, and a source-available licence. Reason: the
   customer can audit each part, and its machines hold the built image anyway.
+- **Decision:** one public repository for every part, from 5 November 2026.
+  Rejected: a private repository with a public copy of the open parts at
+  launch, because the agent binaries would then come from a private build.
+  Reason: a customer can check that each agent binary comes from the public
+  source.
 
 ## Related docs
 

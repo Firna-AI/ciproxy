@@ -121,9 +121,11 @@ Run each command from the repository root.
   and tables.
 - Never commit `docs/mockups/mokly-generated/` or other build output that
   `.gitignore` lists, such as `target/` and `ts/site/dist/`.
-- `ciproxy-agent` and `ciproxy-protocol` have the Apache-2.0 licence. At
-  launch, a public copy of them must build alone, so they depend on no
-  other workspace crate. The rest of the repository has no open licence.
+- `ciproxy-agent` and `ciproxy-protocol` have the Apache-2.0 licence. They
+  must build alone under that licence, so they depend on no other workspace
+  crate. The rest of the repository has no open licence.
+- This repository is public. No file, commit message, log, or pull request
+  text may hold a secret.
 - `@ciproxy/tokens` is the one source of the colours, fonts, and radii of
   Graphite, the product look. Change a value only there.
 
@@ -142,8 +144,10 @@ Run each command from the repository root.
 ## Review focus
 
 - The open-source boundary: `ciproxy-agent` and `ciproxy-protocol` depend
-  on no other workspace crate. They hold no secret and no hosted code,
-  because they go public at launch.
+  on no other workspace crate. They hold no hosted code, because they carry
+  the Apache-2.0 licence.
+- Secrets: the repository is public, so no change, log line, or pull
+  request text may hold a secret.
 - The token source: each colour, font, and radius of the mockups, the app,
   and the site comes from `@ciproxy/tokens`, not from a literal or a copy.
 - The site look: Starlight stays in light mode with no theme switch. No box
