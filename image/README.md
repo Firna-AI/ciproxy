@@ -70,18 +70,30 @@ To prepare inputs and the recipe without starting a VM:
 bash image/build.sh "$PWD/.context/ciproxy-image-build" prepare-only
 ```
 
-The default output disk has 80,000,000,000 logical bytes, or 80 SI GB.
-Ext4 reserves 1% of its blocks for root.
-Set `ROOTFS_BYTES` to change the artifact's logical allocation for a
-measurement run. This does not change a ciproxy label.
+The output root contains the full userspace, ext4 metadata, a 1% root
+reserve, and a small free margin. It contains no label's job allowance.
+`create-root-disk.py` populates ext4 and uses `resize2fs -M` to compact it.
+It then selects the smallest complete block-group size with at least
+2 GiB available after the root reserve. This margin covers the reserve
+and metadata growth of the default 20 GB and 60 GB job allowances.
+The export never mounts the released disk writable after creation.
+After any writable mount, run `e2fsck -fp` before checksums and publication.
+
+`ROOTFS_BYTES` sets an explicit logical allocation for a measurement run.
+That override skips compaction. It does not change a ciproxy label.
+
 The measured full userspace is 55.22 GB apparent and 58.29 GB allocated.
-The 80 GB disk reports 19.49 GB available to runner UID 1001 in a read-only
-Firecracker boot probe with the release kernel. This is before job writes.
+The measured root is 62,008,590,336 bytes. A copy grown by 20 GB reports
+21,720,936,448 free bytes to runner UID 1001 in the read-only boot probe.
+
 The agent's default image budget is 140 GB for two images and one
 download during an update. This budget is separate from job disk space.
 It counts allocated blocks. The release measurement and download manifest
 record the current artifact sizes.
 Keep the full software set. Do not remove software to meet a disk budget.
+
+The [retained export guide](checks.md#retained-userspace-export) exports a
+complete release tree without software provisioning.
 
 ## Artifacts and measurements
 
@@ -97,6 +109,9 @@ The inner manifest excludes the bundle's own hash to avoid a hash cycle.
 The Boat download remains `rootfs.tar.zst`.
 `package.sh ARTIFACT_DIR` can repeat the bundle and checksum step.
 Each artifact records its logical and allocated bytes.
+The measurement and release manifest expose `root_disk_bytes` at the top
+level. This is the actual logical length of `rootfs.ext4` in SI bytes.
+`write-manifest.py` copies this measured value into the manifest.
 The installed userspace records its apparent and allocated bytes.
 The measurement uses the neutral `rootfs` label instead of a machine path.
 The ext4 record uses the image's actual block geometry for offline free
@@ -106,8 +121,9 @@ Boat filesystem with the release evidence.
 
 Firecracker uses the unpartitioned ext4 disk and the supplied `vmlinux`.
 Its root arguments include `root=/dev/vda rw net.ifnames=0`.
-Each job VM gets one root disk of its label size. Docker data stays on
-that root disk. The agent grows a reflink copy for larger labels.
+Each label states the free disk of its jobs. Each job VM gets a root disk
+of `root_disk_bytes` plus that free disk. The agent grows each job's
+reflink copy and ext4 before boot. Docker data stays on that root disk.
 Set its network and DNS through the agent's VM network setup.
 The image enables DHCP on `eth0`.
 The guest listens on vsock port 5252 by default in its systemd unit.
@@ -116,6 +132,7 @@ The agent must send one JSON object per line over that connection.
 
 The [offline checks](checks.md) exercise the generated bootstrap and the
 exported artifacts without KVM.
+They grow a released-disk copy with plain `resize2fs`, without forcing it.
 
 ## Publish and keep the runner current
 
@@ -275,17 +292,9 @@ callback server's receipt and the provider deletion result as evidence.
 Delete a remaining smoke sandbox with the explicit delete command.
 
 Boat documents 51 GB for files on `small` and `default`.
-Those sizes do not provide the 80 GB disk of the default ciproxy label.
+Those sizes cannot hold the full userspace.
 Keep the full userspace on `large` and measure its actual free job disk.
 
 ## Sources
 
-- [Pinned full Ubuntu recipe](https://github.com/actions/runner-images/tree/add4380b0d6685806e9192c33c37359ee0aa4023)
-- [Runner release](https://github.com/actions/runner/releases/tag/v2.338.2)
-- [GitHub runner updates](https://docs.github.com/en/actions/reference/runners/self-hosted-runners)
-- [Packer QEMU builder](https://developer.hashicorp.com/packer/integrations/hashicorp/qemu/latest/components/builder/qemu)
-- [Boat saved files](https://docs.boat.dev/snapshots/whats-saved)
-- [Boat saved snapshots](https://docs.boat.dev/snapshots/templates)
-- [Boat sizes](https://docs.boat.dev/machines)
-- [Agent image requirements](../docs/protocol/agent.md#the-image)
-- [Overflow requirements](../docs/protocol/overflow.md)
+The [source list](sources.md) links the pinned recipes and provider docs.
