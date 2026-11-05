@@ -510,13 +510,43 @@ One image serves the job VMs and Boat, as "The image" in `agent.md` says.
 The Firecracker spike confirms it for VMs. The Boat spike ran the runner
 from a minimal snapshot, not from the full image.
 
-- [ ] Measure the full image first. If it fits no size, propose a smaller
+Orchestrator design call, 5 November 2026: use the build machine's CPU in
+the QEMU build VM. Reason: the build machine is ours, and no requirement
+fixes that VM's CPU model. The software set needs features such as SSSE3
+and AVX at run time. This matches the host CPU exposure of Firecracker job
+VMs. A fixed model would need more trial builds for no current requirement.
+
+Orchestrator design call, 5 November 2026: use Virtio-SCSI for the QEMU
+build root. Reason: the unchanged upstream read-ahead check needs a real
+SCSI or NVMe disk. This keeps virtio transport and changes only the build
+VM hardware. The exported Firecracker disk stays ext4 on `/dev/vda`.
+
+- [x] Normalize the generic Ubuntu APT sources during QEMU bootstrap for
+      the existing upstream mirror-list check. Keep the pinned base, full
+      software, tests, and software report. Check the generated bootstrap
+      offline and verify the upstream APT checks on KVM.
+      Branch: `conductor/ciproxy-mvp-milestone-10-apt-sources`.
+- [x] Expose the build host CPU to QEMU and repeat the full image build
+      without changing the pinned base, software, or upstream checks.
+      Branch: `conductor/ciproxy-mvp-milestone-10-apt-sources`.
+- [x] Check upstream hardware assumptions and use Virtio-SCSI for the build
+      root. Verify boot before repeating the full KVM build.
+      Branch: `conductor/ciproxy-mvp-milestone-10-apt-sources`.
+- [x] Measure the full image first. If it fits no size, propose a smaller
       image as a decision.
-      Orchestrator: run `bash image/build.sh .context/image-build` on a
-      KVM host. Read `artifacts/measurement.json` in that build directory.
-      The full image size remains unmeasured here.
-      Evidence: `.context/ciproxy-mvp/image/measurement-preflight.json`.
-      Branch: `conductor/ciproxy-mvp-milestone-10-job-vm-image`.
+      Run `bash image/build.sh .context/ciproxy-image-build` on the KVM
+      host. Read `artifacts/measurement.json` in that build directory.
+      The full software uses 55.22 GB apparent and 58.29 GB allocated.
+      Item 73 = A keeps that software, selects an 80 GB label disk with
+      1% root reserve, and gives the agent a 140 GB image budget.
+      The approved 80 GB disk booted under Firecracker and reported
+      19,494,903,808 free bytes to runner UID 1001 with the release kernel.
+      Evidence: `.context/ciproxy-mvp/kvm/apt-sources-status.json`.
+      Branch: `conductor/ciproxy-mvp-milestone-10-apt-sources`.
+- [x] Finish the 80 GB root from the retained full userspace with 1% root
+      reserve. Boot it, record job free bytes, package both release
+      artifacts, and verify their checksums.
+      Branch: `conductor/ciproxy-mvp-milestone-10-apt-sources`.
 - [x] Define it under `image/` from a pinned `actions/runner-images`, with
       Docker, the runner, and a kernel.
       Branch: `conductor/ciproxy-mvp-milestone-10-job-vm-image`.
@@ -533,16 +563,17 @@ from a minimal snapshot, not from the full image.
       to plan the next rebuild before runner support ends.
       Branch: `conductor/ciproxy-mvp-milestone-10-job-vm-image`.
 - [ ] Run a job from the shared snapshot on Boat `large`, and measure the
-      free disk. Item 73 sets the label `ciproxy` to 80 GB, so Boat `large`
-      with 111 GB stays the fitting size. The full image does not fit the
-      51 GB of `small` or `default`.
+      free disk. Item 73 = A selects the full image and an 80 GB default
+      label. Boat `large` provides 111 GB and fits that label. The full
+      image does not fit the 51 GB of `small` or `default`.
       Orchestrator: run the registration and result commands of
       `image/github.py`, and the create, run, status, and delete commands
-      of `image/boat.py`. The
-      [snapshot guide](../image/README.md#boat-shared-snapshot) gives
+      of `image/boat.py` on `large`. The
+      [smoke guide](../image/README.md#boat-smoke) gives
       the arguments. Supply the overflow callback and its scoped token.
       Compare `image/boat.py metadata` before and after snapshot restore.
-      Record the measured free bytes against the approved label disk.
+      Record the measured free bytes against the approved label disk in
+      the release evidence.
       Branch: `conductor/ciproxy-mvp-milestone-10-job-vm-image`.
 
 ## Milestone 11: Cache sidecar and runner patch
