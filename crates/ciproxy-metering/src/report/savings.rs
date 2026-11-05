@@ -7,7 +7,7 @@ use ciproxy_store_interface::metering::totals::{DailyTotal, LocationTotals};
 use rust_decimal::Decimal;
 
 use crate::report::catalog::{Alternative, Comparison, PriceList, compare};
-use crate::report::costs::{Costs, MonthlyDivisor, calculate_costs};
+use crate::report::costs::{Costs, calculate_costs};
 use crate::report::range::DateRange;
 
 /// All explicit inputs to the pure savings calculation.
@@ -24,8 +24,6 @@ pub struct ReportInput<'a> {
     pub costs: &'a CostHistory,
     /// The dated Blacksmith and GitHub price lists.
     pub price_lists: &'a [PriceList; 2],
-    /// The explicit monthly cost allocation denominator.
-    pub monthly_divisor: MonthlyDivisor,
 }
 
 /// The signed savings against one alternative.
@@ -79,14 +77,7 @@ pub fn savings_report(input: ReportInput<'_>) -> SavingsReport {
         boat.minutes += size.boat.minutes;
     }
     let boat_usd = days.iter().map(|day| day.boat_usd).sum();
-    let costs = calculate_costs(
-        input.machines,
-        input.costs,
-        input.range,
-        input.at,
-        input.monthly_divisor,
-        boat_usd,
-    );
+    let costs = calculate_costs(input.machines, input.costs, input.range, input.at, boat_usd);
     let comparisons = input
         .price_lists
         .each_ref()

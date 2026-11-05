@@ -1,7 +1,5 @@
 //! Hand-worked end-to-end savings using retained per-size totals.
 
-use std::num::NonZeroU32;
-
 use chrono::Duration;
 use ciproxy_store_interface::metering::facts::MachineRegistration;
 use ciproxy_store_interface::metering::history::MachineCost;
@@ -9,7 +7,6 @@ use ciproxy_store_interface::metering::totals::{DailyTotal, LocationTotals, Size
 use uuid::Uuid;
 
 use crate::report::catalog::Alternative;
-use crate::report::costs::MonthlyDivisor;
 use crate::report::savings::{ReportInput, savings_report};
 use crate::test_support::{at, catalog, day, free_history, range, size, usd};
 
@@ -54,7 +51,6 @@ fn full_month_fixture_matches_hand_worked_costs_and_savings() {
         machines: &[machine],
         costs: &costs,
         price_lists: &lists,
-        monthly_divisor: MonthlyDivisor::FixedDays(NonZeroU32::new(30).unwrap()),
     });
     assert_eq!(
         (
@@ -108,7 +104,6 @@ fn negative_savings_keep_their_sign_and_unknown_comparison_hides_lead() {
         machines: &[],
         costs: &costs,
         price_lists,
-        monthly_divisor: MonthlyDivisor::CalendarMonthDays,
     };
     let report = savings_report(input(&lists));
     assert_eq!(

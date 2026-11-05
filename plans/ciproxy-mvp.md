@@ -561,12 +561,14 @@ Depends on: 4
       Branch: `conductor/ciproxy-mvp-milestone-16-metering`.
 - [x] Unit-test each rule with hand-worked numbers.
       Branch: `conductor/ciproxy-mvp-milestone-16-metering`.
-- [ ] Write items 63 and 64 into `metering.md`: the last price counts for
+- [x] Write items 63 and 64 into `metering.md`: the last price counts for
       a day with a price change, and a month has the days of its calendar
       month. Build both rules, and fix the 30-day view of the Savings
       mockup. Then run `cargo test --package ciproxy-metering` and `cargo
       xtask check` with `DATABASE_URL` set.
-      Branch: `conductor/ciproxy-mvp-milestone-16-metering`.
+      The report, service, and test callers no longer choose a monthly
+      divisor. Each date uses its calendar month.
+      Branch: `conductor/ciproxy-mvp-milestone-16-cost-rules`.
 
 ## Milestone 17: Billing with Stripe
 

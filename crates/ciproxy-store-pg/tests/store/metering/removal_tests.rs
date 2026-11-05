@@ -1,8 +1,5 @@
 //! First-removal timestamps and registered-day costs under repeated revocation.
 
-use std::num::NonZeroU32;
-
-use ciproxy_metering::report::costs::MonthlyDivisor;
 use ciproxy_metering::report::range::DateRange;
 use ciproxy_metering::service::{Metering, StoredMetering};
 use ciproxy_store_interface::error::Error;
@@ -68,15 +65,8 @@ fn removal_retries_preserve_first_registration_end_and_exclude_later_cost_days()
         until: time("2026-11-06T00:00:00Z").date_naive(),
     };
     let service: &dyn Metering = &StoredMetering::new(database.store.clone());
-    let divisor = MonthlyDivisor::FixedDays(NonZeroU32::new(30).unwrap());
     let report = service
-        .savings(
-            workspace.id,
-            range,
-            time("2026-11-06T12:00:00Z"),
-            &prices(),
-            divisor,
-        )
+        .savings(workspace.id, range, time("2026-11-06T12:00:00Z"), &prices())
         .unwrap();
     assert_eq!(report.costs.known_machines_usd, usd("2"));
     let snapshot = database
@@ -131,13 +121,7 @@ fn removal_retries_preserve_first_registration_end_and_exclude_later_cost_days()
         vec![Some(first), Some(first)]
     );
     let report = service
-        .savings(
-            workspace.id,
-            range,
-            time("2026-11-06T12:00:00Z"),
-            &prices(),
-            divisor,
-        )
+        .savings(workspace.id, range, time("2026-11-06T12:00:00Z"), &prices())
         .unwrap();
     assert_eq!(report.costs.known_machines_usd, usd("4"));
     let later = service
@@ -149,7 +133,6 @@ fn removal_retries_preserve_first_registration_end_and_exclude_later_cost_days()
             },
             time("2026-11-06T12:00:00Z"),
             &prices(),
-            divisor,
         )
         .unwrap();
     assert_eq!(later.costs.known_machines_usd, usd("0"));

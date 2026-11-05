@@ -1,20 +1,52 @@
 // The savings report of mokly-ai for the last 30 days, 19 October to 17
 // November 2026, all on Team with three own machines. Source: the CI of
 // mokly-ai (.context/ciproxy-pricing).
+//
+// A monthly price counts for each UTC day of the range: the price divided by
+// the days of the calendar month of that day, so the range counts 13/31 of
+// the October price and 17/30 of the November price. When a price changes on
+// a day, the last price of that day counts for the whole day. No price
+// changes in this range, and the three machines are registered on every day.
 
-import { dateRange } from "./format.ts";
+import { dateRange, formatDay } from "./format.ts";
 import { ax42 } from "./hardware.ts";
 import { tiers } from "./tiers.ts";
 
-export const savingsPeriod = dateRange("19 October", "17 November");
+/** The first and the last UTC day of the report. */
+const firstDay = new Date(Date.UTC(2026, 9, 19));
+const lastDay = new Date(Date.UTC(2026, 10, 17));
 
-const ownCost = 3 * ax42.monthlyCost;
+export const savingsPeriod = dateRange(formatDay(firstDay), formatDay(lastDay));
+
+const dayMs = 86_400_000;
+
+/** Each UTC day of the report, the first and the last day included. */
+const reportDays: readonly Date[] = Array.from(
+  { length: (lastDay.getTime() - firstDay.getTime()) / dayMs + 1 },
+  (_, index) => new Date(firstDay.getTime() + index * dayMs),
+);
+
+/** The days of the calendar month of a UTC day: 31 for 19 October. */
+function monthDays(day: Date): number {
+  const nextMonth = Date.UTC(day.getUTCFullYear(), day.getUTCMonth() + 1);
+  return new Date(nextMonth - dayMs).getUTCDate();
+}
+
+/** What a monthly price costs over the days of the report. */
+function rangeCost(monthlyPrice: number): number {
+  return reportDays.reduce(
+    (sum, day) => sum + monthlyPrice / monthDays(day),
+    0,
+  );
+}
+
+const ownCost = 3 * rangeCost(ax42.monthlyCost);
 const boatCost = 100;
 
 export const savings = {
   starts: { own: 13_329, boat: 4_443 },
   minutes: { own: 81_250, boat: 34_819 },
-  cost: { own: ownCost, boat: boatCost, plan: tiers.team.price },
+  cost: { own: ownCost, boat: boatCost, plan: rangeCost(tiers.team.price) },
   /** The same jobs at list prices, for the same VM sizes. */
   alternatives: { blacksmith: 698, github: 1_045 },
 } as const;

@@ -1,9 +1,7 @@
 //! A real report snapshot while a machine and its aggregate facts commit.
 
-use std::num::NonZeroU32;
 use std::thread;
 
-use ciproxy_metering::report::costs::MonthlyDivisor;
 use ciproxy_metering::report::range::DateRange;
 use ciproxy_metering::service::{Metering, StoredMetering};
 use ciproxy_store_interface::metering::history::{MachineCost, PlanCost};
@@ -52,14 +50,12 @@ fn savings_snapshot_cannot_omit_a_concurrently_registered_machine_cost() {
         until: time("2026-11-05T00:00:00Z").date_naive(),
     };
     let catalogs = prices();
-    let divisor = MonthlyDivisor::FixedDays(NonZeroU32::new(30).unwrap());
     let read = thread::spawn(move || {
         StoredMetering::new(reader.store).savings(
             workspace_id,
             range,
             time("2026-11-04T12:00:00Z"),
             &catalogs,
-            divisor,
         )
     });
     wait_for_blocker(&mut observer, reader.pid, controller_pid);
@@ -98,13 +94,7 @@ fn savings_snapshot_cannot_omit_a_concurrently_registered_machine_cost() {
     assert_eq!(during_registration.costs.missing, vec![]);
     let service: &dyn Metering = &StoredMetering::new(database.store.clone());
     let after_registration = service
-        .savings(
-            workspace.id,
-            range,
-            time("2026-11-04T12:00:00Z"),
-            &prices(),
-            divisor,
-        )
+        .savings(workspace.id, range, time("2026-11-04T12:00:00Z"), &prices())
         .unwrap();
     assert_eq!(
         (
