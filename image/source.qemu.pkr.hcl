@@ -16,6 +16,7 @@ variable "build_memory_mb" { default = 16384 }
 
 source "qemu" "image" {
   accelerator            = "kvm"
+  cpu_model              = "host"
   disk_image             = true
   iso_url                = "${var.work_dir}/ubuntu.qcow2"
   iso_checksum           = "file:${var.work_dir}/ubuntu.sha256"
@@ -23,7 +24,7 @@ source "qemu" "image" {
   vm_name                = "ciproxy.qcow2"
   format                 = "qcow2"
   disk_size              = "80G"
-  disk_interface         = "virtio"
+  disk_interface         = "virtio-scsi"
   net_device             = "virtio-net"
   cpus                   = var.build_cpus
   memory                 = var.build_memory_mb

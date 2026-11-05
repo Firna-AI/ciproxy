@@ -26,7 +26,7 @@ def main():
     rootfs = args.rootfs.resolve()
     disk = os.statvfs(rootfs)
     result = {
-        "rootfs": str(rootfs),
+        "rootfs": "rootfs",
         "installed_apparent_bytes": du(rootfs, True),
         "installed_allocated_bytes": du(rootfs),
         "backing_filesystem_bytes": disk.f_blocks * disk.f_frsize,

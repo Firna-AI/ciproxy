@@ -22,6 +22,12 @@ time. Review the generated software inventory before publishing.
 Use a disposable x64 Linux build machine with KVM and enough disk for the
 base disk, build disk, Linux source, archive, extraction, and final disk.
 Each copy can exist at the same time.
+The build VM uses the CPU of the build machine.
+The build machine needs the CPU features of the software set, such as
+SSSE3 and AVX.
+The QEMU build root uses Virtio-SCSI. It appears as a real SCSI disk for
+the upstream read-ahead check. The exported Firecracker root stays ext4
+on `/dev/vda`.
 The installed size must be measured after the full build.
 Upstream's 75 GB virtual disk allocation does not measure installed bytes.
 
@@ -30,6 +36,10 @@ Install Packer, QEMU, `xorriso`, `libguestfs-tools`, `zstd`, `e2fsprogs`,
 The libguestfs tools must include the `guestfish` command.
 Kernel builds also need `make`, GCC, `flex`, `bison`, `bc`, `libelf-dev`,
 and `libssl-dev`.
+Kernel builds use `builder@localhost` and a fixed build version.
+The timestamp uses the source commit time through
+`SOURCE_DATE_EPOCH`. Source archives can supply that value explicitly.
+Without source metadata or an explicit value, the timestamp uses the Unix epoch.
 The build user needs KVM access and `sudo` for extraction and ext4 creation.
 Run from the repository root:
 
@@ -39,8 +49,10 @@ bash image/build.sh "$PWD/.context/ciproxy-image-build"
 
 This downloads and checks the inputs, builds the kernel and guest, and
 runs the full upstream provisioners in QEMU.
-It changes only the upstream Azure packaging step.
+QEMU supplies the image packaging.
 It retains the upstream software tests and software report.
+The QEMU bootstrap prepares the generic Ubuntu package sources for the
+upstream mirror-list setup and its existing check.
 `prepare-template.py` replaces the Azure source and deprovision command.
 It adds the ciproxy guest, runner, kernel, and service after provisioning.
 No Azure account is needed.
@@ -58,11 +70,18 @@ To prepare inputs and the recipe without starting a VM:
 bash image/build.sh "$PWD/.context/ciproxy-image-build" prepare-only
 ```
 
-The default output disk has 60,000,000,000 logical bytes.
+The default output disk has 80,000,000,000 logical bytes, or 80 SI GB.
+Ext4 reserves 1% of its blocks for root.
 Set `ROOTFS_BYTES` to change the artifact's logical allocation for a
 measurement run. This does not change a ciproxy label.
-If the full userspace does not fit, keep its measured size and ask for the
-image or label decision. Do not remove software to make it fit.
+The measured full userspace is 55.22 GB apparent and 58.29 GB allocated.
+The 80 GB disk reports 19.49 GB available to runner UID 1001 in a read-only
+Firecracker boot probe with the release kernel. This is before job writes.
+The agent's default image budget is 140 GB for two images and one
+download during an update. This budget is separate from job disk space.
+It counts allocated blocks. The release measurement and download manifest
+record the current artifact sizes.
+Keep the full software set. Do not remove software to meet a disk budget.
 
 ## Artifacts and measurements
 
@@ -79,32 +98,24 @@ The Boat download remains `rootfs.tar.zst`.
 `package.sh ARTIFACT_DIR` can repeat the bundle and checksum step.
 Each artifact records its logical and allocated bytes.
 The installed userspace records its apparent and allocated bytes.
+The measurement uses the neutral `rootfs` label instead of a machine path.
 The ext4 record uses the image's actual block geometry for offline free
 bytes. The extraction's backing filesystem has separate fields.
-Only a running Boat measurement sets `free_job_bytes` from its filesystem.
-Keep actual boot and job free-disk measurements with the release evidence.
+Record actual boot and job free-disk measurements from the running VM or
+Boat filesystem with the release evidence.
 
 Firecracker uses the unpartitioned ext4 disk and the supplied `vmlinux`.
 Its root arguments include `root=/dev/vda rw net.ifnames=0`.
+Each job VM gets one root disk of its label size. Docker data stays on
+that root disk. The agent grows a reflink copy for larger labels.
 Set its network and DNS through the agent's VM network setup.
 The image enables DHCP on `eth0`.
 The guest listens on vsock port 5252 by default in its systemd unit.
 Change `/etc/ciproxy/guest.env` when the agent uses another port.
 The agent must send one JSON object per line over that connection.
 
-Run the mount-order regression without KVM:
-
-```sh
-sudo python3 image/check-export.py \
-  --work-dir .context/ciproxy-mvp/orchestrator-fix-1
-```
-
-It needs `chroot`, `ldd`, Bash, Python, tar, zstd, e2fsprogs, `acl`, and
-`setcap` from the Linux capability tools. It keeps all fixtures as evidence.
-It runs provisioning inside a fixture chroot with stub provisioning tools.
-It runs the real export script with stub libguestfs transport boundaries.
-Real archive, ext4, and package tools check both outputs and their metadata.
-This check cannot prove real guestfish inspection, mounts, or a VM boot.
+The [offline checks](checks.md) exercise the generated bootstrap and the
+exported artifacts without KVM.
 
 ## Publish and keep the runner current
 
@@ -166,15 +177,15 @@ new private file. Copy that code into the control plane's image settings.
 capability, and ACL attributes. Keep this evidence on the host.
 Confirm that `security_capability` has a value before saving the snapshot.
 
-## Boat small and default smoke
+## Boat smoke
 
-Run the following sequence once with `small` and once with `default`.
+Run the following sequence with `large`, as the approved full image requires.
 Use `--trial` with `create` on a free trial to request its two-hour limit.
 The default lifetime is six hours.
 Keep the returned sandbox ID and process ID in the release evidence.
 
 ```sh
-python3 image/boat.py create --size small \
+python3 image/boat.py create --size large \
   --share-file .context/ciproxy-image-share.json
 python3 image/boat.py status SMOKE_SANDBOX_ID
 python3 image/boat.py metadata SMOKE_SANDBOX_ID \
@@ -264,10 +275,8 @@ callback server's receipt and the provider deletion result as evidence.
 Delete a remaining smoke sandbox with the explicit delete command.
 
 Boat documents 51 GB for files on `small` and `default`.
-Measure the shared full image on both before changing label disk values.
-The default ciproxy label still requires 60 GB.
-Neither a smaller software set nor a lower label disk value is selected
-by this image definition.
+Those sizes do not provide the 80 GB disk of the default ciproxy label.
+Keep the full userspace on `large` and measure its actual free job disk.
 
 ## Sources
 
