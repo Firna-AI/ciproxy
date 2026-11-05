@@ -26,7 +26,14 @@ locals {
     site      = "preview.${var.domain}"
     dashboard = "preview.app.${var.domain}"
     releases  = "preview.get.${var.domain}"
-  } : { site = var.domain }
+    } : {
+    dashboard = "app.${var.domain}"
+    releases  = "get.${var.domain}"
+  }
+  preview_zones = var.environment == "production" ? {
+    dashboard = "ciproxy-main-preview-dashboard"
+    releases  = "ciproxy-main-preview-releases"
+  } : {}
   control_plane_secrets = toset([
     "github-app-private-key", "github-webhook-secret", "github-oauth-secret",
     "stripe-secret-key", "stripe-webhook-secret", "session-key",

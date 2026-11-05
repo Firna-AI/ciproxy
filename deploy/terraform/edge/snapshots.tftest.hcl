@@ -47,7 +47,7 @@ run "production_edge_uses_evidence_catalog_and_permanent_tag_id" {
   variables { environment = "production" }
   override_data {
     target = data.terraform_remote_state.infrastructure
-    values = { outputs = { edge = { "project_id" = "ciproxy", "environment" = "production", "prefix" = "ciproxy-production", "allowed_zones" = ["europe-west1-d"], "hosts" = { "site" = "ciproxy-production.invalid", "dashboard" = "ciproxy-production-app.invalid", "releases" = "ciproxy-production-get.invalid" }, "dns_zones" = { "site" = "ciproxy-production", "dashboard" = "ciproxy-production", "releases" = "ciproxy-production" }, "buckets" = { "site" = "ciproxy-production-site-ciproxy", "dashboard" = "ciproxy-production-dashboard-ciproxy" }, "images_bucket" = "ciproxy-production-images-ciproxy", "notification_channels" = [] } } }
+    values = { outputs = { edge = { "project_id" = "ciproxy", "environment" = "production", "prefix" = "ciproxy-production", "allowed_zones" = ["europe-west1-d"], "hosts" = { "site" = "ciproxy-production.invalid", "dashboard" = "ciproxy-production-app.invalid", "releases" = "ciproxy-production-get.invalid" }, "dns_zones" = { "dashboard" = "ciproxy-production-dashboard", "releases" = "ciproxy-production-releases" }, "buckets" = { "site" = "ciproxy-production-site-ciproxy", "dashboard" = "ciproxy-production-dashboard-ciproxy" }, "images_bucket" = "ciproxy-production-images-ciproxy", "notification_channels" = [] } } }
   }
   override_resource {
     target          = module.edge.google_compute_url_map.https

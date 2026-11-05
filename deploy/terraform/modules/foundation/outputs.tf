@@ -31,9 +31,7 @@ output "edge" {
     allowed_zones = local.allowed_zones
     hosts         = local.hosts
     dns_zones = {
-      for key, host in local.hosts : key => google_dns_managed_zone.public[
-        var.environment == "production" ? "site" : key
-      ].name
+      for key, zone in google_dns_managed_zone.public : key => zone.name
     }
     buckets               = { for key, bucket in google_storage_bucket.public : key => bucket.name }
     images_bucket         = google_storage_bucket.images.name

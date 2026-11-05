@@ -1,4 +1,6 @@
-mock_provider "google" {}
+mock_provider "google" {
+  mock_data "google_dns_managed_zone" { defaults = { name_servers = ["ns1.example.invalid."] } }
+}
 override_data {
   target = data.terraform_remote_state.shared
   values = { outputs = { platform = {

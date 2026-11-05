@@ -219,3 +219,13 @@ Production finishes its own edge/invalidation before promoting preview's
 separate edge. New tag bindings use permanent numeric map IDs. Tag/IAM
 propagation can delay invalidation rights. Rerun all jobs after propagation
 rather than changing the tag with gcloud or reusing a saved binary.
+
+Namespace policy labels remain operator-owned. After a namespace setup
+change, reapply both manifests with `namespace_access.py` before untrusted
+deploys resume. Baseline enforces/audits/warns on each namespace. It rejects
+host filesystem mounts without widening deployment roles.
+
+DNS authority stays split as [DNS setup](dns.md) describes. Cloudflare keeps
+`ciproxy.dev` and Workspace mail. Google owns only production app/get parents
+and their preview child delegations. The manual DNS-only apex A record
+uses `terraform/edge`'s production backend `public_ip` output.

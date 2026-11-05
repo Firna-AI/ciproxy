@@ -94,7 +94,7 @@ run "prelaunch_accounts_have_no_environment_admin_escape" {
   assert {
     condition = (alltrue([for grant in google_project_iam_member.cluster_access : grant.role == google_project_iam_custom_role.cluster_access.name]) && toset(google_project_iam_custom_role.cluster_access.permissions) == toset(["container.clusters.get", "container.clusters.connect"])
     )
-    error_message = "Environment deploy can connect, but Kubernetes object writes require namespace RBAC."
+    error_message = "Environment deploy must not update namespace labels through IAM. Object writes require namespace RBAC."
   }
   assert {
     condition = (alltrue([for grant in google_project_iam_member.shared : !can(regex("iam\\.|IamAdmin|owner|editor$", grant.role)) || grant.role == "roles/monitoring.editor"])

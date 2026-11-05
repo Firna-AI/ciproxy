@@ -86,3 +86,19 @@ resource "google_dns_managed_zone" "public" {
   dns_name    = "${each.value}."
   description = "Delegate this zone before enabling public uptime checks."
 }
+
+# app/get become authoritative parents after Cloudflare delegates them.
+# Read the named Google zones, never mutable rollout or prelaunch state.
+data "google_dns_managed_zone" "preview" {
+  for_each = local.preview_zones
+  name     = each.value
+}
+
+resource "google_dns_record_set" "preview_delegation" {
+  for_each     = local.preview_zones
+  name         = "preview.${local.dns_domains[each.key]}."
+  managed_zone = google_dns_managed_zone.public[each.key].name
+  type         = "NS"
+  ttl          = 3600
+  rrdatas      = data.google_dns_managed_zone.preview[each.key].name_servers
+}

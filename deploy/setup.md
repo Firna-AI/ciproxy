@@ -83,7 +83,11 @@ accounts. Neither receives project IAM administration. No extra operator
 IAM apply is needed after cluster creation.
 [GKE setup order](https://docs.cloud.google.com/kubernetes-engine/docs/how-to/workload-identity)
 
-The namespace command creates its namespace-only deployment RoleBinding and
+Both Namespace manifests enforce, audit, and warn at Baseline. Only the
+operator manages these labels. Existing namespaces must be reapplied before
+untrusted deploys resume. Follow the exact [admission procedure](identities.md#baseline-admission).
+
+The namespace command also creates its namespace-only RoleBinding and
 network policy. It permits same-namespace traffic and blocks other
 workload namespaces. CI cannot install or change RBAC. Shared apply has
 cluster lifecycle permissions and no Kubernetes object verbs.
@@ -123,32 +127,21 @@ Deploy copies it through standard input to
 
 ## 5. Delegate DNS
 
-The parent `ciproxy.dev` zone is in Cloudflare. Its name servers are
-`desi.ns.cloudflare.com` and `art.ns.cloudflare.com`. Keep its Google
-Workspace mail records unchanged.
+Keep `ciproxy.dev`, Workspace mail, registrar NS, DNSSEC settings, and
+existing preview NS sets on Cloudflare. Preview retains its three zones.
+Production creates only app/get zones. Apply their preview child NS records
+in Google before delegating the parents from Cloudflare.
 
-Read the preview name servers after CI creates its data resources:
-
-```sh
-terraform -chdir=deploy/terraform/data init -reconfigure \
-  -backend-config=bucket=ciproxy-main-preview-tfstate-ciproxy \
-  -backend-config=prefix=main-preview/data
-terraform -chdir=deploy/terraform/data output -json dns_name_servers
-```
-
-In the Cloudflare dashboard, open `ciproxy.dev`, then **DNS > Records**.
-Add an NS record set for each preview zone. Use each zone's four name
-servers from the output:
-
-| Type | Name in Cloudflare | Delegated zone |
+| Type in Cloudflare | Name | Value |
 | --- | --- | --- |
-| NS | `preview` | `preview.ciproxy.dev` |
-| NS | `preview.app` | `preview.app.ciproxy.dev` |
-| NS | `preview.get` | `preview.get.ciproxy.dev` |
+| NS | `app` | Four name servers of `ciproxy-production-dashboard` |
+| NS | `get` | Four name servers of `ciproxy-production-releases` |
+| A, **DNS only** | `@` | The production edge `public_ip` output |
 
-Create one NS entry for each name server in each set. Do not change the
-domain's registrar name servers for preview setup. [DNS setup](dns.md)
-gives the existing production delegation procedure.
+Add the apex A record once after production edge applies. Google continues
+to serve its certificate/CDN. [DNS setup](dns.md) gives the exact backend
+init/output commands, required child delegations, and operator order.
+There is no Cloudflare Terraform provider or CI credential.
 
 ## 6. Set GitHub variables
 

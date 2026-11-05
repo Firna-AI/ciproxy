@@ -74,16 +74,26 @@ class SharedPromotionTests(PromotionCase):
         self.assertIn("deploy/approvals/main-preview/edge.json", result.stderr)
 
     def test_operator_manifest_keeps_rbac_and_pod_traffic_in_one_namespace(self):
-        result = self.cli("namespace_access.py", "production", "--render")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        items = json.loads(result.stdout)["items"]
-        self.assertEqual([item["kind"] for item in items], ["Namespace", "Role", "RoleBinding", "NetworkPolicy"])
-        self.assertEqual(items[2]["subjects"], [{"kind": "User", "name": "ciproxy-production-deploy@ciproxy.iam.gserviceaccount.com"}])
-        self.assertEqual({item["metadata"].get("namespace") for item in items[1:]}, {"ciproxy-production"})
-        self.assertEqual(items[2]["roleRef"]["kind"], "Role")
-        egress = items[3]["spec"]["egress"]
-        self.assertEqual(egress[0], {"to": [{"podSelector": {}}]})
-        self.assertEqual(egress[1]["to"][0]["ipBlock"]["except"], ["10.84.0.0/14"])
+        for environment in ("main-preview", "production"):
+            with self.subTest(environment=environment):
+                result = self.cli("namespace_access.py", environment, "--render")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                items = json.loads(result.stdout)["items"]
+                self.assertEqual([item["kind"] for item in items], ["Namespace", "Role", "RoleBinding", "NetworkPolicy"])
+                self.assertEqual(items[0]["metadata"]["name"], "ciproxy-" + environment)
+                self.assertEqual(items[0]["metadata"].get("labels", {}), {
+                    "pod-security.kubernetes.io/enforce": "baseline",
+                    "pod-security.kubernetes.io/audit": "baseline",
+                    "pod-security.kubernetes.io/warn": "baseline",
+                })
+                self.assertEqual(items[2]["subjects"], [{"kind": "User", "name": f"ciproxy-{environment}-deploy@ciproxy.iam.gserviceaccount.com"}])
+                self.assertEqual({item["metadata"].get("namespace") for item in items[1:]}, {"ciproxy-" + environment})
+                self.assertEqual(items[2]["roleRef"]["kind"], "Role")
+                resources = {resource for rule in items[1]["rules"] for resource in rule["resources"]}
+                self.assertEqual(resources.intersection({"*", "namespaces", "roles", "rolebindings", "clusterroles", "clusterrolebindings"}), set())
+                egress = items[3]["spec"]["egress"]
+                self.assertEqual(egress[0], {"to": [{"podSelector": {}}]})
+                self.assertEqual(egress[1]["to"][0]["ipBlock"]["except"], ["10.84.0.0/14"])
 
     def test_failed_neg_wait_does_not_publish_ready_inputs(self):
         self.env.update(RELEASE_SERVER_IMAGE_DIGEST="sha256:" + "a" * 64,

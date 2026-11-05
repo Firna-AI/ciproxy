@@ -147,8 +147,16 @@ production. The registry already exists. Install its namespace boundary:
 python3 deploy/scripts/namespace_access.py production
 ```
 
-Store the production release token. Delegate production DNS while retaining
-preview's NS records. Rerun all jobs. Register its CDN key and enable its
+This operator command also reapplies the Baseline enforce/audit/warn labels
+on an existing production namespace. Reapply preview too when upgrading.
+Environment deploy identities cannot change those labels.
+
+Store the production release token. Follow [production DNS](dns.md): apply
+app/get parents and their preview child NS sets before delegating app/get
+from Cloudflare. Add the DNS-only apex A record from the production edge
+`public_ip`. Keep Workspace mail, registrar NS, DNSSEC, and old preview
+NS sets unchanged. No whole-domain Cloud DNS zone is created. Rerun all
+jobs. Register its CDN key and enable its
 uptime checks only after HTTPS is ready. Production finishes its own edge
 and invalidation before a separate preview data/edge promotion starts.
 That later promotion uses the exact successful upstream workload artifact.

@@ -6,7 +6,9 @@ Registry repository. Spike machines stay in `internal-498318`.
 
 Each environment has separate Cloud SQL instances, databases, IAM users,
 Boat KMS keys, secrets, buckets, DNS zones, and HTTPS edges. Each environment
-has its own Kubernetes namespace and two Helm releases. Central Terraform
+has its own Kubernetes namespace and two Helm releases. Both namespaces
+enforce, audit, and warn at the Baseline PodSecurity level. Only the
+operator Namespace manifest manages these labels. Central Terraform
 ownership does not combine their data or routing.
 
 The control-plane runtime stays disabled until a real HTTP image exists.
@@ -28,6 +30,10 @@ can deploy independently.
 
 All regional resources use `europe-west1`. Each environment has one global
 HTTPS load balancer and certificate. HTTP redirects to HTTPS.
+`ciproxy.dev` and Workspace mail stay on Cloudflare. Production Cloud DNS
+owns only `app.ciproxy.dev` and `get.ciproxy.dev`, including their preview
+child delegations. The operator adds a DNS-only apex A record to the
+production edge IP. See [DNS setup](dns.md).
 
 | Host and path | Backend |
 | --- | --- |

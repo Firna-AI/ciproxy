@@ -66,16 +66,46 @@ Prelaunch shared apply has policy-write access only on preview's runtime
 account. Production shared apply has that resource-bound access on both.
 Neither has policy-write access on a central trust account.
 
+The operator sets enforce, audit, and warn to Baseline on both namespaces.
+The labels reject `hostPath` pods. Environment deploy IAM has only cluster
+get/connect, not namespace update. Its namespace Role grants no namespace
+or RBAC changes. It cannot remove the operator's labels. Reapply existing
+namespaces as [setup](setup.md#2-bootstrap) describes.
+
 The namespace command creates a `Role` and `RoleBinding` in exactly one
 namespace. It grants no ClusterRoleBinding. CI cannot change those grants.
 The network policy permits traffic inside the same namespace, GFE probes,
 external services, and cluster DNS. It blocks traffic to other workload
 pods in the shared pod range. See [namespace setup](setup.md#2-bootstrap).
 
-The registrar or active parent-zone owner delegates DNS. A repository admin
+The Cloudflare zone operator delegates app/get and adds the apex A record.
+Registrar name servers and Workspace mail stay unchanged. A repository admin
 creates GitHub environments and variables. A separate image publisher can
 receive `roles/storage.objectCreator` on one job-image bucket. The static
 deploy account cannot publish job images.
+
+## Baseline admission
+
+The operator Namespace manifest sets enforce, audit, and warn to Baseline.
+Baseline rejects `hostPath` volumes, including read-only `/var/log` mounts.
+Deploy roles have no namespace-label update permission in RBAC or GCP IAM.
+The operator owns these labels.
+
+Reapply the manifest for each existing namespace before resuming untrusted
+deploys. Use the same operator credentials and command:
+
+```sh
+python3 deploy/scripts/namespace_access.py main-preview
+python3 deploy/scripts/namespace_access.py production
+kubectl get namespace ciproxy-main-preview ciproxy-production \
+  -L pod-security.kubernetes.io/enforce,pod-security.kubernetes.io/audit,pod-security.kubernetes.io/warn
+```
+
+Label changes do not evict existing pods. Inspect existing workloads and
+remove any noncompliant pod under operator control. Subsequent pod
+admission enforces Baseline. Both charts' current pod templates have an
+offline upstream Baseline evaluation in the implementation evidence.
+[Namespace policy labels](https://kubernetes.io/docs/tasks/configure-pod-container/enforce-standards-namespace-labels/)
 
 ## Federation
 

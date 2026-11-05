@@ -10,7 +10,11 @@ def configuration(environment):
     namespace = f"ciproxy-{environment}"
     metadata = {"name": "ciproxy-deploy", "namespace": namespace}
     return {"apiVersion": "v1", "kind": "List", "items": [
-        {"apiVersion": "v1", "kind": "Namespace", "metadata": {"name": namespace}},
+        {"apiVersion": "v1", "kind": "Namespace", "metadata": {"name": namespace, "labels": {
+            "pod-security.kubernetes.io/enforce": "baseline",
+            "pod-security.kubernetes.io/audit": "baseline",
+            "pod-security.kubernetes.io/warn": "baseline",
+        }}},
         {"apiVersion": "rbac.authorization.k8s.io/v1", "kind": "Role", "metadata": metadata,
          "rules": [
              {"apiGroups": [""], "resources": ["secrets", "services", "serviceaccounts", "configmaps"],
