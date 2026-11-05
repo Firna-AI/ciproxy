@@ -1,0 +1,140 @@
+name: Agent release
+
+on:
+  push:
+    branches: [main]
+    tags: ["ciproxy-agent-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: Release repository gate
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: ciproxy
+          POSTGRES_PASSWORD: ciproxy
+          POSTGRES_DB: ciproxy_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ciproxy -d ciproxy_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://ciproxy:ciproxy@127.0.0.1:5432/ciproxy_test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Set up Rust
+        run: |
+          set -euo pipefail
+          rustup toolchain install
+          rustup default "$(rustup show active-toolchain | cut -d ' ' -f 1)"
+      - name: Cache Cargo builds
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+      - name: Set up Node
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ts/package-lock.json
+      - name: Install TypeScript packages
+        run: npm --prefix ts ci
+      - name: Run the complete gate
+        run: cargo xtask check --keep-going
+
+  version:
+    if: github.ref == 'refs/heads/main'
+    needs: gate
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
+        with:
+          toolchain: 1.99.1
+      - name: Release the agent and open its version pull request
+        uses: release-plz/action@66b324fd6c72d05d2a08568492ecdd62bfb8a62b # v0.5
+        with:
+          version: "0.4.3"
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
+
+  package:
+    if: startsWith(github.ref, 'refs/tags/ciproxy-agent-v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
+        with:
+          toolchain: 1.99.1
+          targets: x86_64-unknown-linux-gnu
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.13.18"
+      - name: Install the old-glibc linker
+        run: python -m pip install cargo-zigbuild==0.24.1 ziglang==0.17.0
+      - name: Resolve the release version
+        id: release
+        run: scripts/cli-release.sh resolve-agent-tag "$GITHUB_REF" Cargo.toml >> "$GITHUB_OUTPUT"
+      - name: Build for glibc 2.17
+        run: cargo zigbuild --locked --release --package ciproxy-agent --target x86_64-unknown-linux-gnu.2.17
+      - name: Check the binary and package the release
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          binary=target/x86_64-unknown-linux-gnu/release/ciproxy-agent
+          "$binary" --version
+          scripts/cli-release.sh verify-glibc "$binary" 2.17
+          scripts/cli-release.sh package ciproxy-agent "$VERSION" x86_64-unknown-linux-gnu "$binary" .context/agent-release
+      - name: Keep the verified release assets
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: agent-release
+          path: |
+            .context/agent-release/*.tar.gz
+            .context/agent-release/*.sha256
+          include-hidden-files: true
+          if-no-files-found: error
+
+  publish:
+    needs: package
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download the verified release assets
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: agent-release
+          path: .context/agent-release
+      - name: Publish the archive and its checksum
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh release upload "$GITHUB_REF_NAME" .context/agent-release/*.tar.gz .context/agent-release/*.sha256 --clobber
+          gh release edit "$GITHUB_REF_NAME" --draft=false
