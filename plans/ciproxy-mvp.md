@@ -2045,7 +2045,7 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 74 on 5 November 2026. No item still waits. The
+The user answered items 54 to 74 on 5 November 2026. Item 75 still waits. The
 conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
@@ -2682,3 +2682,48 @@ keep the letters that the user saw.
 - **Recommendation:** A. It closes the hole with a maintained Kubernetes
   level and no new code.
 - **Action:** answered A.
+
+### 75. The AX42 cost claim needs a disk basis
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation, the workspace of item 73.
+- **Category:** Docs or spec.
+- **Location:** the hardware fixtures of the site and the mockups, and the
+  pricing calculation text of the site.
+- **Terms:**
+  - **RAID1:** two mirrored disks that give the space of one disk.
+  - **RAID0 or one LVM volume:** two disks combined into the space of both,
+    with no mirror.
+- **Background:**
+  - The cost claim of the site counts a Hetzner AX42, with 16 threads,
+    64 GB, and two disks of 512 GB, that runs six default jobs at a time.
+  - Item 73 = A gives each default job 80 GB and the machine an image
+    budget of 140 GB. Six jobs then need one filesystem of 780 GB.
+  - The Hetzner installer mirrors two disks by default, with RAID1. That
+    gives about 512 GB, which runs three default jobs.
+- **Problem:** The six-job claim now needs both disks in one filesystem,
+  which is not the default setup, and no setup text says so.
+- **Impact if no action:** A customer with the default mirror runs three
+  jobs, and saves 65% in this calculation instead of the claimed 80%.
+- **Root question:** Which disk setup of the AX42 do the claim and the
+  fixtures count?
+- **Options:**
+  - **A.** Keep 1,024 GB and six jobs. The site and the mockups state that
+    the example combines both disks, for example with RAID0 or one LVM
+    volume. The machine setup docs say that a machine used only for CI can
+    combine its disks, because jobs, the machine cache, and Docker disks
+    are disposable. Effort: Small.
+  - **B.** Count the default mirror of 512 GB: three jobs and a saving of
+    65%. Update every AX42 scene to show the disk limit. Effort: Medium.
+  - **C.** Count another machine with one disk of at least 1 TB. Check its
+    price, and update the claim and the fixtures. Effort: Medium.
+- **Left out:** Leave the setup unstated: it hides why a default install
+  runs half the jobs. Combine the disks in the agent: it is outside item 73.
+- **Wider fix:** One stated basis for the claim, used by the site and the
+  mockups.
+- **Previous examples:** With 60 GB jobs, six jobs fit in 512 GB, so the old
+  claim did not depend on the setup.
+- **Recommendation:** A. It keeps the machine and the story of the fixtures,
+  and it tells the customer how to get the claimed result.
+- **Action:** ask the user, because each option changes a public claim or
+  its basis.
