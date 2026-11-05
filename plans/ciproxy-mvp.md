@@ -463,9 +463,36 @@ reserve. The image measurement sets the real budget later.
       [quota item](follow-ups/agent-xfs-image-project-quota.md), and A does
       not wait for it.
       Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
+- [x] Apply item 73 = A to the label disks, image budget, machine minimum,
+      storage split, protocol docs, READMEs, and site calculations. Keep the
+      image budget apart from the job disk, and test the 250 GB minimum.
+      Apply item 75 = A to the AX42 calculation and setup docs. Keep the
+      site and mockup wording and six-job count aligned.
+      Orchestrator call, 5 November 2026: use one resource calculation with
+      an explicit image budget. Pass the recorded budget to agent
+      admission and cache sizing. Keep raw hardware capacity and the wire
+      schema. The scaler still receives its job-disk budget from its
+      caller. Reason: the override then uses the same disk split without
+      adding a report field or new scheduler integration.
+      Mockup calls, 5 November 2026: give the mini PC 512 GB so that it
+      still shows the disk limit. The mixed-machine dialog edits an
+      unsaved 100 GB draft of `ciproxy-4vcpu` to retain its job-count range.
+      The saved default remains 80 GB.
+      Branch: `conductor/ciproxy-mvp-73a-disk-sizes`.
+- [x] Test the five existing root-preparation failures and failed-start
+      cleanup for PR #25 review finding 1, option A. Check returned errors,
+      cleanup requests, and released disk and slots at both boundaries.
+      Branch: `conductor/ciproxy-mvp-73a-disk-sizes`.
 - [ ] Smoke-test a Docker job, a warm runner, and a restart during a job.
       Orchestrator: align the image bundle, root/Docker disk allocation,
       vsock port, and guest state/reconnect/shutdown behavior first.
+      Item 73 integration: each VM gets one root disk of its label size.
+      Reflink the image, extend a larger copy, and grow ext4 before boot.
+      Docker shares that disk. Remove the unused empty Docker drive.
+      Sticky Docker disks remain the separate cache integration below.
+      Keep the capacity error for a label smaller than the image. The
+      [smaller-label policy](follow-ups/labels-smaller-than-job-image.md)
+      waits for a user decision.
       Orchestrator: run `crates/ciproxy-agent/scripts/smoke-docker.sh`,
       `crates/ciproxy-agent/scripts/smoke-warm.sh`, and
       `crates/ciproxy-agent/scripts/smoke-restart.sh` on the KVM test host
@@ -505,17 +532,17 @@ from a minimal snapshot, not from the full image.
       Use `image/check-runner.sh` and `image/github.py runner-support`
       to plan the next rebuild before runner support ends.
       Branch: `conductor/ciproxy-mvp-milestone-10-job-vm-image`.
-- [ ] Run a job from the shared snapshot on Boat `small` and `default`, and
-      measure the free disk. The label `ciproxy` asks for 60 GB, and Boat
-      gives 51 GB for files. Propose the disk of the default labels as a
-      decision.
+- [ ] Run a job from the shared snapshot on Boat `large`, and measure the
+      free disk. Item 73 sets the label `ciproxy` to 80 GB, so Boat `large`
+      with 111 GB stays the fitting size. The full image does not fit the
+      51 GB of `small` or `default`.
       Orchestrator: run the registration and result commands of
       `image/github.py`, and the create, run, status, and delete commands
-      of `image/boat.py`, for each size. The
-      [smoke guide](../image/README.md#boat-small-and-default-smoke) gives
+      of `image/boat.py`. The
+      [snapshot guide](../image/README.md#boat-shared-snapshot) gives
       the arguments. Supply the overflow callback and its scoped token.
       Compare `image/boat.py metadata` before and after snapshot restore.
-      Bring the measured free bytes to the label disk decision.
+      Record the measured free bytes against the approved label disk.
       Branch: `conductor/ciproxy-mvp-milestone-10-job-vm-image`.
 
 ## Milestone 11: Cache sidecar and runner patch
@@ -1133,6 +1160,12 @@ Answers of 5 November 2026:
   stays a quarter of the disk that the image budget leaves. An own machine
   needs 250 GB of disk. Boat stays on `large`. Rejected: a slim image, and a
   shared read-only image with a writable layer for each job.
+  User calls in the item 73 implementation brief, 5 November 2026: set the
+  default image budget to 140 GB for two 58.3 GB images and one 18.3 GB
+  download, with about 2 GB for image growth. Subtract that budget first,
+  then reserve a quarter of the remaining disk for the host. The other
+  three quarters hold jobs. A 250 GB machine leaves 27.5 GB for the host
+  and 82.5 GB for jobs. The existing budget override stays available.
   My call, 5 November 2026: each job VM gets one root disk of its label
   size, so Docker data shares the free space as on GitHub, and the cached
   Docker images of the image stay visible. The agent grows the reflink copy
@@ -2057,7 +2090,7 @@ See the answers above.
 ## Open items of 4 November 2026
 
 The user answered items 54 to 75 on 5 November 2026, and item 76 became a
-design call. No item still waits. The
+design call. Item 77 still waits. The
 conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
@@ -2797,3 +2830,15 @@ buckets must be public.
   backend bucket, so the grant follows the backend buckets. If the
   organization rule refuses the grant, the item returns to the user with A,
   B, and C.
+
+### 77. A label can be smaller than the job image
+
+- **Severity:** Medium. **Effort:** Medium.
+- **Source:** Implementation, pull request #25.
+- **Record:** the follow-up item
+  [labels smaller than the job image](follow-ups/labels-smaller-than-job-image.md)
+  holds the background, the options A to D, and the recommendation.
+- **Recommendation:** A. A job of such a label runs on the image disk size,
+  the scheduler reserves that size, and the label dialog warns.
+- **Action:** ask the user. Nothing waits for the answer before the label
+  settings milestone.

@@ -11,7 +11,7 @@ import {
 } from "./hardware.ts";
 import { machineScenes, type Machine } from "./machines.ts";
 import { labsOrg, org, type Organization } from "./org.ts";
-import { fitsBoat, type Size } from "./sizes.ts";
+import { defaultLabelSize, fitsBoat, type Size } from "./sizes.ts";
 
 /** The label setting "When nothing fits". */
 export type WhenNothingFits = "wait" | "largest-boat-size";
@@ -26,9 +26,7 @@ export type Label = Size & {
 export const labels: readonly Label[] = [
   {
     name: "ciproxy",
-    vcpu: 2,
-    memoryGb: 8,
-    diskGb: 60,
+    ...defaultLabelSize,
     jobs: 14_371,
     whenNothingFits: "wait",
   },

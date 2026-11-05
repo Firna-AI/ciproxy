@@ -22,14 +22,14 @@ fn reserves_disk_for_all_starts_in_the_same_tick() {
         (
             "ciproxy",
             small(),
-            119,
+            159,
             2,
             vec![own("a", "ciproxy", small())],
         ),
         (
             "ciproxy",
             small(),
-            192,
+            279,
             4,
             vec![
                 own("a", "ciproxy", small()),
@@ -40,9 +40,10 @@ fn reserves_disk_for_all_starts_in_the_same_tick() {
         (
             "ciproxy-4vcpu",
             large(),
-            192,
-            3,
+            279,
+            4,
             vec![
+                own("a", "ciproxy-4vcpu", large()),
                 own("a", "ciproxy-4vcpu", large()),
                 own("a", "ciproxy-4vcpu", large()),
             ],
@@ -50,7 +51,7 @@ fn reserves_disk_for_all_starts_in_the_same_tick() {
         (
             "ciproxy-8vcpu",
             largest,
-            192,
+            279,
             2,
             vec![own("a", "ciproxy-8vcpu", largest)],
         ),
@@ -68,7 +69,10 @@ fn reserves_disk_for_all_starts_in_the_same_tick() {
 #[test]
 fn warm_preemption_frees_job_disk_even_when_slots_are_available() {
     let mut state = snapshot();
-    state.machines[0].disk_budget_bytes = 192 * GIGABYTE;
+    let mut size = large();
+    size.disk_bytes = 120 * GIGABYTE;
+    state.labels[1].size = size;
+    state.machines[0].disk_budget_bytes = 279 * GIGABYTE;
     state.machines[0].warm_count = 2;
     state.machines[0].warm_allocation =
         vec![OrganizationId("a".into()), OrganizationId("b".into())];
@@ -84,13 +88,13 @@ fn warm_preemption_frees_job_disk_even_when_slots_are_available() {
     state.machines[0].runners[0].state = RunnerState::Retiring;
     assert_eq!(decide(&state), vec![]);
     state.machines[0].runners.remove(0);
-    assert_eq!(decide(&state), vec![own("a", "large", large())]);
+    assert_eq!(decide(&state), vec![own("a", "large", size)]);
 }
 
 #[test]
 fn warm_replenishment_reserves_the_job_disk_held_by_running_vms() {
     let mut state = snapshot();
-    state.machines[0].disk_budget_bytes = 192 * GIGABYTE;
+    state.machines[0].disk_budget_bytes = 279 * GIGABYTE;
     state.machines[0].warm_count = 2;
     state.machines[0].warm_allocation =
         vec![OrganizationId("a".into()), OrganizationId("b".into())];
@@ -110,9 +114,9 @@ fn warm_replenishment_reserves_the_job_disk_held_by_running_vms() {
 #[test]
 fn a_label_edit_keeps_the_running_vms_original_job_disk() {
     let mut state = snapshot();
-    state.machines[0].disk_budget_bytes = 192 * GIGABYTE;
+    state.machines[0].disk_budget_bytes = 279 * GIGABYTE;
     let mut old = running("old-size");
-    old.size.disk_bytes = 100 * GIGABYTE;
+    old.size.disk_bytes = 120 * GIGABYTE;
     old.requested_size = old.size;
     state.machines[0].runners = vec![old];
     state.queue = vec![queued("a", "ciproxy", 0), queued("a", "ciproxy", 0)];
@@ -123,7 +127,7 @@ fn a_label_edit_keeps_the_running_vms_original_job_disk() {
 #[test]
 fn disk_pressure_keeps_the_wait_when_the_total_job_disk_fits() {
     let mut state = snapshot();
-    state.machines[0].disk_budget_bytes = 192 * GIGABYTE;
+    state.machines[0].disk_budget_bytes = 279 * GIGABYTE;
     state.machines[0].runners = vec![running("one"), running("two"), running("three")];
     state.queue = vec![queued("a", "ciproxy", 29)];
     assert_eq!(decide(&state), vec![]);

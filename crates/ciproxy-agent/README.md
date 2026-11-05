@@ -55,10 +55,16 @@ Each VM has a generated local ID and a separate systemd unit.
 The agent service does not own those units.
 Stopping the service also stops its preparation helpers.
 
-Each VM gets a reflink root disk and a new, formatted Docker disk.
-The two disks together use the disk size of the runner label.
-The Docker disk gets the label size minus the root image size.
-The agent discards both disks after the runner exits.
+Each VM gets one writable root disk of its label size.
+Docker shares its free space and sees the image's cached Docker images.
+The agent reflinks the verified root with sparse sharing intact.
+An equal-sized label uses that copy without growing it.
+For a larger label, the agent extends only the copy and runs `resize2fs`
+there before boot. It restores the exact label byte length after ext4
+rounds to whole blocks. The extra tail remains sparse.
+It never shrinks or changes the base image.
+A label smaller than the image gets the existing capacity error.
+The agent discards the used root after the runner exits.
 VMs use the newest verified local image. Existing VMs keep their image.
 The image owner holds a selected base until VM preparation ends.
 It reclaims obsolete bases after publication and after a hold ends.
@@ -68,9 +74,10 @@ The store renames cache entries before it deletes their contents.
 An exclusive runtime lock protects this image folder.
 The install CLI only reads the index and never runs destructive recovery.
 Each VM reserves its full label disk, including a warm VM.
-The host and images keep one quarter of disk capacity.
+The default image budget reserves 140 GB before the remaining disk splits.
+The host keeps one quarter of that remainder, and jobs get three quarters.
 The [image budget](image-budget.md) limits physical image/support allocation.
-The XFS area also includes measured overhead from that host quarter.
+The XFS area also includes measured overhead from the host reserve.
 Admission and cache budgets use the shared protocol Resources API.
 Filesystem free bytes are a health measurement.
 
@@ -82,7 +89,9 @@ The agent opens no inbound TCP port.
 ### Host requirements
 
 Use root on x64 Linux with systemd and cgroup v2.
-The documented minimum is four cores, 16 GB of memory, and 80 GB of disk.
+The documented minimum is four cores, 16 GB of memory, and 250 GB of disk.
+The default budget leaves 82.5 GB for jobs and 27.5 GB for the host.
+A default `ciproxy` VM reserves 80 GB, apart from the image budget.
 Enable KVM to run VMs.
 Install prepares the pinned Firecracker and jailer pair and host packages.
 It creates one persistent sparse XFS file with reflinks on any filesystem.
@@ -96,7 +105,9 @@ Missing KVM still permits registration with zero slots.
 ### Gateway, image, and cache integration
 
 The current image and guest need alignment before live smoke checks.
-The image producer uses a zstd bundle with metadata and a 60 GB root disk.
+The full-image contract requires an 80 GB ext4 root with a 1% root reserve.
+The image producer owns that artifact and its software measurements.
+Its bundle format still needs the integration described below.
 Its guest uses vsock port 5252, accepts one connection, and does not emit
 `JobStarted`. It stops the runner on `Shutdown`.
 These behaviors do not yet meet the agent contract below.
@@ -127,8 +138,12 @@ The HTTPS `.tar.gz` bundle contains exactly two regular files:
 The byte count and SHA-256 must match before extraction.
 Only a checked download can enter extraction.
 Only a complete checked bundle can become the newest image.
-The rootfs is an ext4 disk smaller than the requested label disk.
-The guest configures DNS and mounts `/dev/vdb` for Docker data.
+The rootfs is an ext4 disk no larger than the requested label disk.
+The guest configures DNS. Docker data stays on its root filesystem.
+The boot configuration attaches only that root drive today.
+Sticky Docker disk ownership will attach a separate drive under the
+[cache policy](../../docs/protocol/cache.md#docker-disks).
+Root preparation and the boot drive list stay separate for that integration.
 The guest listens on vsock port 52 with newline-delimited protocol JSON.
 It sends Hello with its image ID before runner configuration.
 On reconnect, it repeats Hello and its current runner state.
@@ -251,6 +266,8 @@ The [host guide](host-preparation.md#ext4-and-kvm-smoke) gives the ext4 check.
 - [src/runtime_reports.rs](src/runtime_reports.rs) schedules independent reports.
 - [src/mode.rs](src/mode.rs) owns terminal runtime mode transitions.
 - [src/vms.rs](src/vms.rs) owns separate jailed VM units.
+- [src/vm_root.rs](src/vm_root.rs) reflinks and grows the disposable job root.
+- [src/vm_config.rs](src/vm_config.rs) owns the drive list for later sticky disks.
 - [src/vsock_stream.rs](src/vsock_stream.rs) delivers registrations in memory.
 - [src/images.rs](src/images.rs) coordinates checked image fetches.
 - [src/image_registry.rs](src/image_registry.rs) owns holds and reclamation.

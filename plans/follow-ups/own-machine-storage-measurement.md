@@ -22,7 +22,7 @@
   The agent now preserves zero runs as sparse holes during extraction.
   Image replacement keeps the old base until publication and can also
   hold a base during VM preparation. Host storage sizing needs these
-  allocations as well as the guest's root size. A nominal 80 GB device
+  allocations as well as the guest's root size. A nominal 250 GB device
   can report less usable filesystem capacity than the protocol example.
 - **Task:** Extend the existing image and host measurement to record
   logical root size, allocated sparse bytes, archive size, update peak,
@@ -31,9 +31,9 @@
   length, and mounted usable capacity separately. Compare the results
   with the image budget of the area and the default VM's full reservation.
   Measure support use with all intended VM slots occupied, including warm
-  VMs. Set the real image-budget value for each supported machine capacity
-  from the combined image and support peak. Until then, the setting uses
-  a safe provisional default.
+  VMs. Validate the 140 GB image-budget default for each supported machine
+  capacity against the combined image and support peak. The default holds
+  two full 58.3 GB images and one 18.3 GB download, plus support headroom.
 - **Impact if no action:** An image can fit the label's nominal disk yet
   fail host preparation or updates. The advertised minimum machine can
   fit no default job when its host filesystem reports less than its
@@ -41,8 +41,10 @@
 - **Needs:** A KVM image-build host, the current image tooling, and the
   area sizing that the orchestrator chose on 5 November 2026. The area
   holds the job disk, an image budget, and the XFS overhead measured after
-  formatting. The budget and the overhead come from the host reserve, so
-  the job disk stays three quarters of the disk. If the user chooses the
+  formatting. Subtract the image budget before the disk split. The host
+  gets a quarter of the remainder, including XFS overhead. Job disk gets
+  the other three quarters. The minimum machine has 250 GB of disk, and
+  its default job reserves 80 GB. If the user chooses the
   [project quota](agent-xfs-image-project-quota.md), the measured budget
   also sets its limit. Start with:
 

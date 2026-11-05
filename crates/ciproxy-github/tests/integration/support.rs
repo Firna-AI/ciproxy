@@ -106,7 +106,7 @@ pub(super) fn setup(store: &dyn Store) -> ListenerTarget {
         size: VmSize {
             vcpus: 2,
             memory_gb: 8,
-            disk_gb: 60,
+            disk_gb: 80,
         },
         allow_machines: true,
         allow_boat: true,

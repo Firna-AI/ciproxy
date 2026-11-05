@@ -39,8 +39,8 @@ export function InstallCommand({
       <div className="install-note">
         <p className="caption">
           The token adds any number of machines for one hour. A machine needs
-          x64 Linux with KVM, {unbroken("4 cores")}, and {unbroken("16 GB")} of
-          memory or more.
+          x64 Linux with KVM, {unbroken("4 cores")}, {unbroken("16 GB")} of
+          memory, and {unbroken("250 GB")} of disk or more.
         </p>
         {revokeTo ? (
           <LinkAction to={revokeTo} size="sm" tone="ghost">
@@ -132,7 +132,8 @@ export function ConnectedMachine({
 
 /**
  * A machine whose disk holds fewer jobs of the label ciproxy than its slots:
- * each running job holds the disk of its size, after the host reserve.
+ * each running job holds the disk of its size, after the VM images and the
+ * host reserve.
  */
 export function DiskLimitNotice({
   name,
@@ -149,8 +150,8 @@ export function DiskLimitNotice({
       title={`Disk limits ${name} to ${atOnce} jobs of ciproxy at a time`}
     >
       A job of ciproxy holds {unbroken(`${label.diskGb} GB`)} of disk, and the
-      machine has {unbroken(`${jobDiskGb(hardware)} GB`)} for jobs after the
-      host reserve. Add disk to run more jobs at once.
+      machine has {unbroken(`${jobDiskGb(hardware)} GB`)} for jobs after the VM
+      images and the host reserve. Add disk to run more jobs at once.
     </Notice>
   );
 }

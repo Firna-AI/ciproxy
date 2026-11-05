@@ -40,10 +40,11 @@ fn start() -> ControlMessage {
 
 #[tokio::test]
 async fn admission_refuses_slot_only_or_disk_only_exhaustion_and_drain() {
-    for (disk_gb, count, mode) in [
-        (1000, 6, Mode::Active),
-        (256, 3, Mode::Active),
-        (1000, 0, Mode::Draining),
+    for (disk_gb, image_gb, count, mode) in [
+        (1000, 140, 6, Mode::Active),
+        (512, 140, 3, Mode::Active),
+        (250, 160, 0, Mode::Active),
+        (1000, 140, 0, Mode::Draining),
     ] {
         let mut hardware = hardware();
         hardware.disks[0].capacity_bytes = disk_gb * GIGABYTE;
@@ -52,10 +53,11 @@ async fn admission_refuses_slot_only_or_disk_only_exhaustion_and_drain() {
             mode,
             ..MachineState::default()
         };
-        let agent = controller(
+        let mut agent = controller(
             state.clone(),
             Unimock::new(report_dependencies_for(hardware)),
         );
+        agent.image_budget = image_gb * GIGABYTE;
         assert_eq!(
             agent.control(start()).await.unwrap(),
             Some(AgentMessage::CommandResult {
@@ -72,9 +74,12 @@ async fn admission_refuses_slot_only_or_disk_only_exhaustion_and_drain() {
 
 #[tokio::test]
 async fn a_fitting_vm_reclaims_cache_before_preparation_at_each_resource_boundary() {
-    for (disk_gb, count, expected_count, expected_budget) in
-        [(256, 2, 3, 12_000_000_000), (1000, 5, 6, 390_000_000_000)]
-    {
+    for (disk_gb, image_gb, count, expected_count, expected_budget) in [
+        (250, 140, 0, 1, 2_500_000_000),
+        (512, 140, 2, 3, 39_000_000_000),
+        (1000, 140, 5, 6, 165_000_000_000),
+        (250, 130, 0, 1, 10_000_000_000),
+    ] {
         let mut hardware = hardware();
         hardware.disks[0].capacity_bytes = disk_gb * GIGABYTE;
         hardware.disks[0].free_bytes = 0;
@@ -99,13 +104,14 @@ async fn a_fitting_vm_reclaims_cache_before_preparation_at_each_resource_boundar
                 })),
             VmsMock::start.next_call(matching!(_, _)).returns(Ok(())),
         ));
-        let agent = controller(
+        let mut agent = controller(
             MachineState {
                 runners: held(count),
                 ..MachineState::default()
             },
             mock,
         );
+        agent.image_budget = image_gb * GIGABYTE;
         assert_eq!(agent.control(start()).await.unwrap(), applied());
         assert_eq!(agent.state.lock().await.runners.len(), expected_count);
     }
@@ -114,7 +120,7 @@ async fn a_fitting_vm_reclaims_cache_before_preparation_at_each_resource_boundar
 #[tokio::test]
 async fn reconciliation_uses_the_same_held_disk_budget() {
     let mut hardware = hardware();
-    hardware.disks[0].capacity_bytes = 256 * GIGABYTE;
+    hardware.disks[0].capacity_bytes = 250 * GIGABYTE;
     let mock = Unimock::new((
         HostMock::hardware
             .some_call(matching!())
@@ -123,19 +129,20 @@ async fn reconciliation_uses_the_same_held_disk_budget() {
             .each_call(matching!(_))
             .answers(&|_, _| Ok(())),
         CacheMock::budget
-            .some_call(matching!(12_000_000_000))
+            .some_call(matching!(10_000_000_000))
             .returns(Ok(())),
     ));
-    let mut runners = held(3);
+    let mut runners = held(1);
     for record in &mut runners {
         record.report.state = RunnerState::Warm;
     }
-    let agent = controller(
+    let mut agent = controller(
         MachineState {
             runners,
             ..MachineState::default()
         },
         mock,
     );
+    agent.image_budget = 130 * GIGABYTE;
     agent.reconcile().await.unwrap();
 }

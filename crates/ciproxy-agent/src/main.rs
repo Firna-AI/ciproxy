@@ -58,6 +58,7 @@ mod system_service;
 mod updates;
 mod vm_config;
 mod vm_files;
+mod vm_root;
 mod vms;
 mod vsock;
 mod vsock_stream;
@@ -140,3 +141,7 @@ mod host_lifecycle_fakes;
 #[cfg(test)]
 #[path = "_tests_/area_fixtures.rs"]
 mod area_fixtures;
+
+#[cfg(test)]
+#[path = "_tests_/root_failure_fixtures.rs"]
+mod root_failure_fixtures;

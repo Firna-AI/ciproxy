@@ -45,7 +45,7 @@ fn vm_slots_cover_both_resources_and_round_up() {
         let size = VmSize {
             vcpu,
             memory_bytes,
-            disk_bytes: 60 * GIGABYTE,
+            disk_bytes: 80 * GIGABYTE,
         };
         assert_eq!(Slots::for_vm(size), Slots(expected), "{name}");
     }
@@ -56,7 +56,7 @@ fn size_fits_one_machine_only_when_its_slots_cover_the_request() {
     let small = Slots::for_vm(VmSize {
         vcpu: 2,
         memory_bytes: 8 * GIGABYTE,
-        disk_bytes: 60 * GIGABYTE,
+        disk_bytes: 80 * GIGABYTE,
     });
     let large = Slots::for_vm(VmSize {
         vcpu: 8,

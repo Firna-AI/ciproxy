@@ -1,8 +1,9 @@
 // The reference page of labels and VM sizes,
 // ciproxy.dev/docs/reference/labels: the default labels with their sizes and
 // slots, how slots work, custom labels, and where a job with a label runs. A
-// running job also holds the disk of its size, as design call 34 says, and a
-// label keeps its name, as design call 33 says.
+// running job also holds the disk of its size, as design call 34 says, after
+// the VM images and the host reserve, as the answer to item 73 says. A label
+// keeps its name, as design call 33 says.
 
 import type { Viewport } from "@mokly/mokly";
 
@@ -13,6 +14,7 @@ import { Tag } from "../../components/status.tsx";
 import { unbroken } from "../../fixtures/format.ts";
 import {
   ax42,
+  imageBudgetGb,
   machineSlots,
   slotSize,
   slotsFor,
@@ -111,8 +113,9 @@ export function LabelsReferenceScreen({ viewport }: { viewport: Viewport }) {
           {slotsFor(large)} slots.
         </p>
         <p>
-          A running job also holds the disk of its size. The host keeps a
-          quarter of the disk, and the machine cache uses the rest.
+          A running job also holds the disk of its size. Each machine keeps{" "}
+          {unbroken(`${imageBudgetGb} GB`)} for VM images and a quarter of the
+          rest for the host. The machine cache uses the disk that jobs leave.
         </p>
         <p>
           The agent reports the slots of a machine when it connects. A Hetzner

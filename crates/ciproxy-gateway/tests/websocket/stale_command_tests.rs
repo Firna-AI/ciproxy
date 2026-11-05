@@ -72,7 +72,7 @@ async fn closes_stale_socket_before_a_queued_runner_start_can_reach_it() {
             size: VmSize {
                 vcpu: 2,
                 memory_bytes: 8 * GIGABYTE,
-                disk_bytes: 60 * GIGABYTE,
+                disk_bytes: 80 * GIGABYTE,
             },
             registration: Secret::new("dummy-stale-registration"),
         },

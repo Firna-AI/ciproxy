@@ -9,6 +9,7 @@ import { Notice } from "../../components/feedback.tsx";
 import { CodeBlock } from "../../components/figures.tsx";
 import { installCommand } from "../../components/install-command.tsx";
 import { paths } from "../../components/paths.ts";
+import { unbroken } from "../../fixtures/format.ts";
 import { defaultWarmRunners } from "../../fixtures/machines.ts";
 import { jobSteps, runsOnDiff, workflowFile } from "../../fixtures/workflow.ts";
 import { DocsShell, type TocItem } from "./docs-shell.tsx";
@@ -43,7 +44,8 @@ export function QuickstartScreen({ viewport }: { viewport: Viewport }) {
         <DocsH2 id="before-you-start">Before you start</DocsH2>
         <Notice tone="info" title="You need">
           A GitHub organization with private repositories, and an x64 Linux
-          machine with KVM, 4 cores, and 16 GB of memory or more.
+          machine with KVM, {unbroken("4 cores")}, {unbroken("16 GB")} of
+          memory, and {unbroken("250 GB")} of disk or more.
         </Notice>
         <DocsH2 id="set-up">Set up ciproxy</DocsH2>
         <Steps>

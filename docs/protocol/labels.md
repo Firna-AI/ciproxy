@@ -32,7 +32,7 @@ machine and where each job runs.
 
 | Label | vCPU | Memory | Disk | Slots |
 | --- | --- | --- | --- | --- |
-| `ciproxy` | 2 | 8 GB | 60 GB | 1 |
+| `ciproxy` | 2 | 8 GB | 80 GB | 1 |
 | `ciproxy-4vcpu` | 4 | 16 GB | 80 GB | 2 |
 | `ciproxy-8vcpu` | 8 | 32 GB | 120 GB | 4 |
 

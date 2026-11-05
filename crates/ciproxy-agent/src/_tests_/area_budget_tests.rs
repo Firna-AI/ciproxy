@@ -54,9 +54,9 @@ async fn recorded_unpublished_growth_resumes_before_ready_without_reformatting()
     let mut current = inventory();
     let mut growing = record();
     growing.phase = Phase::Creating;
-    growing.growth_from = Some(64_000_000_000);
+    growing.growth_from = Some(222_500_003_840);
     current.record = Some(growing.clone());
-    current.backing.as_mut().unwrap().bytes = 64_000_000_000;
+    current.backing.as_mut().unwrap().bytes = 222_500_003_840;
     let events = Arc::new(Mutex::new(Vec::new()));
     let files = events.clone();
     let grown = growing.clone();
@@ -65,7 +65,7 @@ async fn recorded_unpublished_growth_resumes_before_ready_without_reformatting()
         AreaFilesMock::inspect.some_call(matching!()).returns(Ok(current)),
         AreaMountsMock::filesystem.each_call(matching!()).answers(&|_| Ok(filesystem())),
         AreaMountsMock::mounted.some_call(matching!()).returns(Ok(true)),
-        AreaFilesMock::grow.some_call(matching!((record, bytes) if record.growth_from == Some(64_000_000_000) && *bytes == 66_000_003_072))
+        AreaFilesMock::grow.some_call(matching!((record, bytes) if record.growth_from == Some(222_500_003_840) && *bytes == 226_000_003_072))
             .answers_arc(Arc::new(move |_, _, _| { files.lock().unwrap().push(Event::Grow); Ok(grown.clone()) })),
         AreaMountsMock::grow.some_call(matching!()).returns(Ok(())),
     )));
@@ -93,7 +93,7 @@ async fn fresh_growth_measures_actual_overhead_before_publishing_ready() {
     let mut current = inventory();
     let mut starting = record();
     starting.phase = Phase::Creating;
-    starting.bytes = 64_000_000_000;
+    starting.bytes = 222_500_003_840;
     starting.overhead = 0;
     current.record = Some(starting.clone());
     current.backing.as_mut().unwrap().bytes = starting.bytes;
@@ -122,10 +122,10 @@ async fn fresh_growth_measures_actual_overhead_before_publishing_ready() {
             .returns(Ok(())),
         AreaMountsMock::available.stub(|each| {
             each.call(matching!())
-                .answers(&|_| Ok(63_900_000_000))
+                .answers(&|_| Ok(222_400_003_840))
                 .once()
                 .then()
-                .answers(&|_| Ok(65_891_782_144));
+                .answers(&|_| Ok(225_094_905_600));
         }),
         AreaFilesMock::grow
             .some_call(matching!(_, _))
@@ -147,10 +147,10 @@ async fn fresh_growth_measures_actual_overhead_before_publishing_ready() {
     )));
     let result = area(mock.clone()).prepare().await;
     assert!(result.is_ok());
-    assert_eq!(*grown.lock().unwrap(), vec![65_991_778_304]);
+    assert_eq!(*grown.lock().unwrap(), vec![225_194_905_600]);
     let saved = captured.lock().unwrap();
     assert_eq!(saved.last().unwrap().phase, Phase::Ready);
-    assert_eq!(saved.last().unwrap().image_budget, 4_000_000_000);
-    assert_eq!(saved.last().unwrap().overhead, 1_991_778_304);
+    assert_eq!(saved.last().unwrap().image_budget, 140_000_000_000);
+    assert_eq!(saved.last().unwrap().overhead, 2_694_905_600);
     assert_eq!(saved.last().unwrap().growth_from, None);
 }

@@ -47,6 +47,7 @@ use crate::storage_sizing::{DEFAULT_IMAGE_BYTES, setting};
 use crate::system_service::SystemService;
 use crate::updates::AgentUpdates;
 use crate::vm_files::LinuxVmFiles;
+use crate::vm_root::{LinuxRootFiles, ReflinkRoot};
 use crate::vms::LinuxVms;
 use crate::vsock::LinuxGuests;
 
@@ -155,7 +156,10 @@ async fn execute(action: Action) -> Result<()> {
         }),
         files: Arc::new(LinuxVmFiles {
             layout,
-            commands: commands.clone(),
+            root: Arc::new(ReflinkRoot {
+                files: Arc::new(LinuxRootFiles),
+                commands: commands.clone(),
+            }),
             space,
         }),
         guests,
@@ -168,6 +172,7 @@ async fn execute(action: Action) -> Result<()> {
         vms,
         images: images.clone(),
         cache,
+        image_budget,
     });
     let connection: Arc<dyn Connection> = Arc::new(WebSocketConnection::new(
         std::env::var("CIPROXY_AGENT_URL")
