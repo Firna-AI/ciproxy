@@ -57,6 +57,10 @@ Relative and absolute retry times use the later supplied time.
 No supplied retry time means no invented retry delay.
 Plan refusals exclude that size until a successful catalog refresh.
 Billing refusals remain until an account check confirms recovery.
+Fresh requests and unsent dispatch share these provider restriction checks.
+A provider wait keeps the unsent identity, input, callback, and budget bound.
+Retry expiry, catalog refresh, or confirmed billing recovery permits dispatch.
+That retry keeps its original size price and saved start-fee bound.
 `canStart` does not decide whether create will succeed.
 
 Every sandbox restores the shared snapshot with ciproxy marks.
@@ -190,6 +194,8 @@ One current store query checks all three facts from the saved delivery.
 The same policy also requires the saved scale set and current label authority.
 The label must allow Boat and match all original requested dimensions.
 The selected provider size can differ under the explicit largest-size fallback.
+An undersized delivery requires that fallback permission at each startup stage.
+Changing only that permission to Wait withdraws pending startup authority.
 Reservation and dispatch use this shared policy too.
 The service repeats that query after key decryption at each operation.
 A suspension or removal withdraws startup while other organizations keep
@@ -276,6 +282,8 @@ These commands contact Boat or Cloud KMS and can incur charges.
   startup authority for each saved delivery.
 - [src/service/preparation.rs](src/service/preparation.rs) retries unsent
   preparation and commits the one dispatch boundary.
+- [src/service/provider_preparation.rs](src/service/provider_preparation.rs)
+  shares provider restrictions across fresh admission and unsent dispatch.
 - [src/service/inventory.rs](src/service/inventory.rs) reconciles inventory
   after current startup authority changes.
 - [src/service/accounts.rs](src/service/accounts.rs) completes only live

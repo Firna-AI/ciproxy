@@ -29,7 +29,13 @@ const ACCOUNT: &str = "
         AND l.allow_boat
         AND l.vcpus = (d.record_json::jsonb ->> 'requested_vcpus')::bigint
         AND l.memory_gb = (d.record_json::jsonb ->> 'requested_memory_gb')::bigint
-        AND l.disk_gb = (d.record_json::jsonb ->> 'requested_disk_gb')::bigint";
+        AND l.disk_gb = (d.record_json::jsonb ->> 'requested_disk_gb')::bigint
+        AND (l.when_nothing_fits = 'largest_boat' OR (
+            (d.record_json::jsonb -> 'size' ->> 'vcpus')::bigint >= l.vcpus
+            AND (d.record_json::jsonb -> 'size' ->> 'memory_bytes')::numeric
+                >= l.memory_gb::numeric * 1000000000
+            AND (d.record_json::jsonb -> 'size' ->> 'disk_bytes')::numeric
+                >= l.disk_gb::numeric * 1000000000))";
 
 pub(super) fn startup_account(
     connection: &mut PgConnection,

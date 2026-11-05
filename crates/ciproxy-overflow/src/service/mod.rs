@@ -9,6 +9,7 @@ mod execution;
 mod inventory;
 mod launch;
 mod preparation;
+mod provider_preparation;
 mod refresh;
 mod retired;
 mod start;

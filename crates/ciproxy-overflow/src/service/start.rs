@@ -16,6 +16,7 @@ use crate::spend;
 
 use super::OverflowService;
 use super::preparation::required_budget;
+use super::provider_preparation::preparation_wait;
 
 impl OverflowService {
     pub(super) async fn start_request(
@@ -83,30 +84,26 @@ impl OverflowService {
                 resumes_at: spend::next_month(now)?,
             }));
         }
-        if let Some(at) = account.state.retry_at.filter(|at| *at > now) {
-            return Ok(StartOutcome::Waiting(WaitReason::RetryAt(at)));
+        if let Some(wait @ WaitReason::RetryAt(_)) =
+            preparation_wait(&account.state, &size_id.0, &request.action.size, now)
+        {
+            return Ok(StartOutcome::Waiting(wait));
         }
-        let facts = match backend.account.account().await {
+        let facts = match self
+            .refresh_start_account(&session, &mut account, &backend)
+            .await
+        {
             Ok(facts) => facts,
-            Err(Error::RejectedKey) => {
-                account.account.rejected_at = Some(now);
-                session
-                    .call(move |session| session.save_account(&account))
-                    .await?;
-                return Ok(StartOutcome::Waiting(WaitReason::Disconnected));
-            }
+            Err(Error::RejectedKey) => return Ok(StartOutcome::Waiting(WaitReason::Disconnected)),
             Err(error) => return Err(error),
         };
-        account.state.trial = facts.trial;
-        if facts.billing_ready {
-            account.state.billing_required = false;
-        }
-        let saved = account.clone();
-        session
-            .call(move |session| session.save_account(&saved))
-            .await?;
-        if account.state.billing_required {
-            return Ok(StartOutcome::Waiting(WaitReason::BillingRequired));
+        if let Some(wait) = preparation_wait(
+            &account.state,
+            &size_id.0,
+            &request.action.size,
+            self.dependencies.clock.now(),
+        ) {
+            return Ok(StartOutcome::Waiting(wait));
         }
         let Some(size) = account
             .state

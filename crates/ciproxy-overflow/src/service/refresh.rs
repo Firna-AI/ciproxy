@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::catalog;
 use crate::error::{Error, Result, ResultExt};
-use crate::provider::Capabilities;
+use crate::provider::{AccountFacts, Capabilities};
 use crate::session::Session;
 use crate::spend;
 use crate::view::OverflowView;
@@ -15,6 +15,35 @@ use crate::view::OverflowView;
 use super::OverflowService;
 
 impl OverflowService {
+    pub(super) async fn refresh_start_account(
+        &self,
+        session: &Session,
+        account: &mut AccountRecord,
+        backend: &Capabilities,
+    ) -> Result<AccountFacts> {
+        let facts = match backend.account.account().await {
+            Ok(facts) => facts,
+            Err(Error::RejectedKey) => {
+                account.account.rejected_at = Some(self.dependencies.clock.now());
+                let saved = account.clone();
+                session
+                    .call(move |session| session.save_account(&saved))
+                    .await?;
+                return Err(Error::RejectedKey);
+            }
+            Err(error) => return Err(error),
+        };
+        account.state.trial = facts.trial;
+        if facts.billing_ready {
+            account.state.billing_required = false;
+        }
+        let saved = account.clone();
+        session
+            .call(move |session| session.save_account(&saved))
+            .await?;
+        Ok(facts)
+    }
+
     pub(super) async fn refresh_catalog(
         &self,
         session: &Session,

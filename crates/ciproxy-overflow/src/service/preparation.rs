@@ -2,6 +2,7 @@
 
 use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
 use ciproxy_store_interface::overflow::record::{StartPhase, StartRecord};
+use ciproxy_store_interface::overflow::store::AccountRecord;
 use sandbox_interface::BackendSandbox;
 use uuid::Uuid;
 
@@ -49,6 +50,7 @@ impl OverflowService {
         session: &Session,
         workspace_id: Uuid,
         record: &mut StartRecord,
+        account: &mut AccountRecord,
     ) -> Result<DispatchOutcome> {
         let Some(authority) = self
             .launch_authority(session, workspace_id, record.delivery_id)
@@ -59,6 +61,24 @@ impl OverflowService {
             )));
         };
         let snapshot = session.call(|session| session.snapshot()).await?;
+        if let Some(wait) = self
+            .resume_preparation(session, workspace_id, account, record)
+            .await?
+        {
+            let delivery = record.delivery_id;
+            if session
+                .call(move |session| session.startup_account(delivery))
+                .await?
+                .is_none()
+            {
+                return Ok(DispatchOutcome::Stopped(Box::new(
+                    self.cancel_unsent(session, record).await?,
+                )));
+            }
+            return Ok(DispatchOutcome::Stopped(Box::new(StartOutcome::Waiting(
+                wait,
+            ))));
+        }
         let mut dispatch = record.clone();
         dispatch.starts_at = self.dependencies.clock.now();
         dispatch.phase = StartPhase::Creating;

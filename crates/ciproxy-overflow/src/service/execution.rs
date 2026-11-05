@@ -91,7 +91,7 @@ impl OverflowService {
         if matches!(record.phase, StartPhase::Unsent | StartPhase::Creating) {
             let result = if record.phase == StartPhase::Unsent {
                 match self
-                    .dispatch_unsent(session, workspace_id, &mut record)
+                    .dispatch_unsent(session, workspace_id, &mut record, &mut account)
                     .await?
                 {
                     DispatchOutcome::Submitted(result) => result,

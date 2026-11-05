@@ -159,6 +159,8 @@ key in that workspace. It requires active App state, enabled overflow, and
 the accepted non-retired key together.
 The same authority SQL checks scale-set ownership, the label's Boat switch,
 and exact original requested dimensions during reservation and later startup.
+An undersized selected size also requires the label's current largest-size
+fallback permission. Fitting requests remain permitted under Wait.
 The dispatch transaction accepts only the saved unsent delivery.
 It rechecks authority and the current saved limit before saving `Creating`.
 It saves the prepared dispatch time in that same transaction.
