@@ -450,6 +450,11 @@ evicts them. Boat runs the stock runner. The cache spike confirms it.
       write item 59 into "Trusted write-back" of `cache.md`.
       Evidence: `.context/ciproxy-mvp/trusted-cache-events/acceptance.md`.
       Branch: `conductor/ciproxy-mvp-milestone-11-trusted-cache-events`.
+- [ ] Orchestrator: run the three live checks of item 54 = E: a push to the
+      default branch, `pull_request_target`, and a job on a ciproxy runner.
+- [ ] Check the runtime token of each job in the machine cache, as item 54
+      says, and take the full ref from its write scope. Write the rule into
+      `cache.md` and `security.md`. It waits for the live checks and item 55.
 
 ## Milestone 12: Boat backend on the shared sandbox interface
 
@@ -942,9 +947,19 @@ Answers of 5 November 2026:
   periods.
 - Item 65, B: the orchestrator merges `futex-ai/sandbox` #11 this one time. It
   merged as `9658361` on 5 November 2026.
-- Item 54: the user asked whether the webhooks give the facts, what the options
-  are, and how other providers solve it. A research step runs before the answer.
-  Item 55 waits for it.
+- Item 54, E: the machine cache checks the runtime token of each job outside the
+  job VM. It checks the signature against the public keys of GitHub, the issuer
+  and the expiry, and that the run and the runner of the token match the job
+  that ciproxy started. The scope of the token with write access gives the full
+  ref. A shared write needs that scope to be the default branch and the event to
+  be trusted, as item 59 says. Every other job saves only in its own scope. The
+  App keeps its three permissions. This reverses the line of item 32 that left
+  out the token scopes, because a signature check now verifies the token.
+  Rejected: the API only, `jobWorkflowRef` for direct jobs, the hook report, a
+  test cache entry, the push webhook with the "Contents" permission, and the
+  OIDC token. Before the build, three live checks run: a push to the default
+  branch, `pull_request_target`, and a job on a ciproxy runner. If a check
+  fails, the fallback B goes back to the user.
 - Item 66, A: only a job of a trusted event on the default branch keeps
   its changes to a Docker disk, as item 59 says for the machine cache.
   `cache.md` states it. Rejected: any event on the default branch, and
@@ -1124,9 +1139,9 @@ Design calls on the questions of the docs work, my calls, 4 November 2026:
   report. The savings report now covers the whole workspace, which pays
   one price.
 
-Items 54 and 55 wait for the user. They are under "Open items of
-4 November 2026" at the end of this plan, with the answers of
-5 November 2026 to the other items there. The options check of items 50
+Item 55 waits for the user. It is under "Open items of 4 November 2026"
+at the end of this plan, with the answers of 5 November 2026 to the other
+items there. The options check of items 50
 and 51 ran, and its report is in
 `.context/ciproxy-mvp/options-check-50-51.md`.
 
@@ -1799,15 +1814,14 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 56 to 66 on 5 November 2026. Items 54 and 55 still
-wait. The conversation gave each item in full in the layout of the
+The user answered items 54 and 56 to 66 on 5 November 2026. Item 55 still
+waits. The conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
 
 ### 54. The GitHub API cannot name the full ref of a job
 
-**Status, 5 November 2026:** research of the webhooks and of other providers
-runs before the answer.
+**Answer, 5 November 2026:** E.
 
 - **Severity:** High. **Effort:** Medium.
 - **Source:** Implementation, Milestone 6, pull request #16.
@@ -1828,9 +1842,12 @@ runs before the answer.
     the API. Each runner version needs a repeat test. Effort: Medium.
   - **D.** A, and a test cache entry with the job's token, whose ref GitHub
     reports. Effort: Large.
-- **Recommendation:** B. It gave the right full ref in all five live cases for
-  direct jobs, and it keeps every fact outside the job VM.
-- **Action:** ask the user.
+  - **E.** A, and a check of the runtime token of the job outside the VM: its
+    signature, its issuer and expiry, and its run and runner. The scope with
+    write access gives the full ref, also in reusable workflows. Effort: Medium.
+- **Recommendation:** E, after three live checks. It covers every job with a
+  fact that GitHub signs, and it needs no new permission. B is the fallback.
+- **Action:** answered E.
 
 ### 55. No rule for a job whose ref is unknown
 
