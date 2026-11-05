@@ -457,10 +457,12 @@ evicts them. Boat runs the stock runner. The cache spike confirms it.
       `refs/heads/main` read only, and on a ciproxy runner the `run_id`,
       `job_id`, and `runner_id` of the token matched the scale set message
       and the registration. Evidence: `.context/job-ref-research/report.md`.
-- [ ] Check the runtime token of each job in the machine cache, as item 54
+- [x] Check the runtime token of each job in the machine cache, as item 54
       says, and take the full ref from its write scope. Write the rule into
       `cache.md` and `security.md`. A job whose token fails the check fails
       closed, as item 55 = A says. It waits for the live checks.
+      Branch: `conductor/ciproxy-mvp-milestone-11-signed-job-ref`.
+      Evidence: `.context/ciproxy-mvp/signed-job-ref/implementor-report.md`.
 
 ## Milestone 12: Boat backend on the shared sandbox interface
 

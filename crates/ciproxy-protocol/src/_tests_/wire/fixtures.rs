@@ -2,14 +2,14 @@
 
 use crate::cache::{
     CacheConnection, CacheRestoreCounts, DockerDiskReport, JobCacheReport, JobCacheUsage,
-    MachineCacheReport,
+    MachineCacheReport, UnknownJobCount,
 };
 use crate::identifiers::{
     CommandId, GitRef, ImageId, JobEvent, JobId, LabelName, MachineId, OrganizationId,
     RepositoryId, RunnerId, WorkspaceId,
 };
 use crate::images::{ImageDownload, ImageReport};
-use crate::jobs::{JobFacts, Repository};
+use crate::jobs::{JobAssignment, JobFacts, Repository, UnknownJobScopeReason};
 use crate::reports::{
     DiskReport, DrainState, HardwareReport, MachineReport, SlotOccupancy, SlotReport,
 };
@@ -87,14 +87,17 @@ pub(crate) fn facts() -> JobFacts {
             id: RepositoryId("repository-1".into()),
             full_name: "example/project".into(),
         },
-        git_ref: GitRef("refs/pull/7/merge".into()),
+        assignment: JobAssignment {
+            run_id: "123".into(),
+            job_id: Some(job_id()),
+            runner_id: "456".into(),
+        },
         event: JobEvent("pull_request".into()),
         head_repository: Some(Repository {
             id: RepositoryId("repository-2".into()),
             full_name: "contributor/project".into(),
         }),
         default_ref: GitRef("refs/heads/main".into()),
-        base_ref: Some(GitRef("refs/heads/release".into())),
     }
 }
 
@@ -157,6 +160,10 @@ pub(crate) fn report() -> MachineReport {
             capacity_bytes: 100 * GIGABYTE,
             restores_last_7_days: 100,
             hits_last_7_days: 75,
+            unknown_jobs: vec![UnknownJobCount {
+                reason: UnknownJobScopeReason::NoWriteScope,
+                jobs: 1,
+            }],
             jobs: vec![
                 JobCacheReport {
                     job_id: job_id(),

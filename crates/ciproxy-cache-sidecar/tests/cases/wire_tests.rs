@@ -230,7 +230,10 @@ async fn v1_streams_ranged_patches_and_keeps_retained_entries() {
         reservation_call["path"],
         "/legacy-prefix/_apis/artifactcache/caches"
     );
-    assert_eq!(reservation_call["authorization"], "Bearer github-wire-v1");
+    assert_eq!(
+        reservation_call["authorization"],
+        format!("Bearer {}", job.github_token.expose_secret())
+    );
     assert_eq!(
         fixture
             .report()

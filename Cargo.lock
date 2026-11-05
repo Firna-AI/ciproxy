@@ -378,6 +378,7 @@ dependencies = [
  "ciproxy-protocol",
  "clap",
  "futures-util",
+ "jsonwebtoken",
  "quick-xml",
  "reqwest",
  "serde",
@@ -388,6 +389,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "unimock",
  "url",
  "uuid",
 ]
@@ -438,6 +440,7 @@ dependencies = [
  "async-trait",
  "axum",
  "chrono",
+ "ciproxy-protocol",
  "ciproxy-store-interface",
  "ciproxy-store-pg",
  "diesel",

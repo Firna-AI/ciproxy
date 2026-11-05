@@ -39,6 +39,7 @@ pub(super) fn registration(workspace_id: Uuid, install_hash: TokenHash) -> Regis
                     capacity_bytes: 0,
                     restores_last_7_days: 0,
                     hits_last_7_days: 0,
+                    unknown_jobs: vec![],
                     jobs: vec![],
                 },
                 docker_disks: DockerDiskReport {

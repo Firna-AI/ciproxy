@@ -32,8 +32,21 @@ This doc states the cache rules for jobs on
 - A job restores entries by the same keys, versions, and cache scopes as
   in the GitHub cache.
 - A job never restores an entry of another repository.
-- A job restores the entries of its own branch and of the default branch.
-- A job of a pull request also restores the entries of its base branch.
+- A job with a checked ref restores its signed readable scopes and the
+  default branch, with its own scope first and the default branch last.
+- Signed readable scopes include the base branch of a pull request.
+- The machine keeps GitHub's scope keys unchanged, also for tags.
+- A job without a checked ref restores only default-branch entries locally.
+- Its other restores go through to the GitHub cache.
+- Its saves and GitHub fills use a fresh private scope for each session.
+- No job restores that private scope, including the job that created it.
+- Its permitted saves also go through to the GitHub cache.
+- A missing or invalid token never fails the job.
+- The machine report counts jobs without a checked ref by reason.
+- **Decision:** an unknown ref keeps default-branch local restores and
+  private saves. Rejected: GitHub-only use, because a token format change
+  would remove every local hit, and later promotion, because it adds work
+  for a rare case.
 - The machine cache keeps these rules for every job on its machine.
 - The machine cache keeps an entry after the GitHub cache evicts it.
 - Later jobs on the machine can still restore such an entry.
@@ -67,9 +80,26 @@ This doc states the cache rules for jobs on
 - A job with a foreign head repository cannot write the default scope.
 - The cache scope of a save comes from GitHub, not from the job, so the
   code of a job cannot choose it.
-- The control plane reads the ref, the event, and the head repository of
-  the run of each job from the GitHub API, as
+- The machine checks the runtime token outside the job VM at registration.
+- It accepts only RS256 with a key ID present in GitHub's public key set.
+- It checks the exact GitHub Actions issuer and the active validity interval.
+- It checks the assigned repository, run, runner, and supplied job identity.
+- Exactly one signed access-control scope with the write bit gives the ref.
+- Missing, invalid, absent-write, and multiple-write results are unknown.
+- A shared write requires the checked ref to equal
+  `refs/heads/<default branch>` exactly.
+- A tag scope such as `refs/heads/refs/tags/main` cannot match that branch.
+- The control plane reads the event, head repository, and default branch
+  from the GitHub API, as
   [GitHub App permissions](security.md#github-app-permissions) says.
+- The machine refreshes GitHub's public keys every five minutes.
+- It also permits one rate-limited refresh for an unknown key ID.
+- Failed fetches have the same refresh limits.
+- **Decision:** a checked runtime-token scope supplies the full ref.
+  Rejected: the run API alone and reusable workflow refs, because they
+  cannot identify every full job ref. Rejected: a hook, a test cache entry,
+  a push webhook, and OIDC, because signed scopes need none of their extra
+  trust, requests, permissions, or workflow changes.
 - Direct GitHub writes enabled with `cache-mode: write` follow GitHub's
   permission rules, as on GitHub-hosted runners.
 - **Decision:** the machine cache follows
@@ -144,8 +174,10 @@ This doc states the cache rules for jobs on
   job that does not run on the default branch, and each job of another
   event.
 - ciproxy discards a copy when its job ends.
-- The branch of a job comes from GitHub, so the code of a job cannot choose
-  it.
+- The Docker disk uses the same machine-checked ref and trusted-event rule
+  as the machine cache.
+- A job without a checked ref gets a disposable copy of the Docker disk.
+- ciproxy discards that copy when the job ends.
 - The Docker disk of one repository never attaches to a job of another
   repository.
 - A job on Boat gets no Docker disk.
@@ -160,6 +192,9 @@ This doc states the cache rules for jobs on
   event on the default branch, because a person outside the repository
   can start some of them, and `push` jobs only, because the disk would
   then update less often.
+- **Decision:** Docker persistence uses the checked token scope. Rejected:
+  an API branch name or a job-supplied ref, because neither proves the full
+  ref that may keep disk changes.
 
 ## Related docs
 

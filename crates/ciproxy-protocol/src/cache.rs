@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::identifiers::JobId;
+use crate::jobs::UnknownJobScopeReason;
 use crate::secret::Secret;
 
 /// Machine cache space and the counts used to calculate seven-day hits.
@@ -16,8 +17,20 @@ pub struct MachineCacheReport {
     pub restores_last_7_days: u64,
     /// Those restores whose contents the machine cache served locally.
     pub hits_last_7_days: u64,
+    /// Jobs without a checked ref, counted by reason over the last seven days.
+    #[serde(default)]
+    pub unknown_jobs: Vec<UnknownJobCount>,
     /// Per-job cache metadata observed by the agent.
     pub jobs: Vec<JobCacheReport>,
+}
+
+/// Jobs whose runtime tokens could not supply a checked scope.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct UnknownJobCount {
+    /// The checked-token failure or absent write scope.
+    pub reason: UnknownJobScopeReason,
+    /// Number of distinct jobs with this reason.
+    pub jobs: u64,
 }
 
 /// The cache metadata for one job.
