@@ -123,10 +123,32 @@ Deploy copies it through standard input to
 
 ## 5. Delegate DNS
 
-Follow [DNS setup](dns.md). Preview has three independent delegated zones.
-At production launch, retain all preview NS records in the new production
-parent zone. The central environment data output gives each zone's name
-servers before its edge is deployed.
+The parent `ciproxy.dev` zone is in Cloudflare. Its name servers are
+`desi.ns.cloudflare.com` and `art.ns.cloudflare.com`. Keep its Google
+Workspace mail records unchanged.
+
+Read the preview name servers after CI creates its data resources:
+
+```sh
+terraform -chdir=deploy/terraform/data init -reconfigure \
+  -backend-config=bucket=ciproxy-main-preview-tfstate-ciproxy \
+  -backend-config=prefix=main-preview/data
+terraform -chdir=deploy/terraform/data output -json dns_name_servers
+```
+
+In the Cloudflare dashboard, open `ciproxy.dev`, then **DNS > Records**.
+Add an NS record set for each preview zone. Use each zone's four name
+servers from the output:
+
+| Type | Name in Cloudflare | Delegated zone |
+| --- | --- | --- |
+| NS | `preview` | `preview.ciproxy.dev` |
+| NS | `preview.app` | `preview.app.ciproxy.dev` |
+| NS | `preview.get` | `preview.get.ciproxy.dev` |
+
+Create one NS entry for each name server in each set. Do not change the
+domain's registrar name servers for preview setup. [DNS setup](dns.md)
+gives the existing production delegation procedure.
 
 ## 6. Set GitHub variables
 

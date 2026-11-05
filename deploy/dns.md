@@ -14,33 +14,32 @@ The preview zones are in project `ciproxy`:
 | `ciproxy-main-preview-dashboard` | `preview.app.ciproxy.dev` |
 | `ciproxy-main-preview-releases` | `preview.get.ciproxy.dev` |
 
-Read their name servers from the central root after CI created them:
+The active parent zone is in Cloudflare. A lookup on 5 November 2026 gave
+`desi.ns.cloudflare.com` and `art.ns.cloudflare.com`. Cloudflare also holds
+the domain's Google Workspace mail records.
+
+Read the preview name servers from the central root after CI created them:
 
 ```sh
 terraform -chdir=deploy/terraform/data init -reconfigure \
   -backend-config=bucket=ciproxy-main-preview-tfstate-ciproxy \
   -backend-config=prefix=main-preview/data
 terraform -chdir=deploy/terraform/data output -json dns_name_servers
-gcloud dns managed-zones list --project=ciproxy --filter='dnsName=ciproxy.dev.' \
-  --format='table(name,nameServers)'
-dig +short NS ciproxy.dev
-PARENT_ZONE=ACTIVE_ZONE_ID
 ```
 
-Choose the active parent whose name servers match `dig`. Use each preview
-zone's four servers in the matching command:
+In the Cloudflare dashboard, select `ciproxy.dev`, then **DNS > Records**.
+Add these three NS record sets. Each set has four entries, one for each
+name server in that zone's Terraform output:
 
-```sh
-gcloud dns record-sets create preview.ciproxy.dev. --project=ciproxy \
-  --zone="$PARENT_ZONE" --type=NS --ttl=3600 \
-  --rrdatas=SITE_NS1,SITE_NS2,SITE_NS3,SITE_NS4
-gcloud dns record-sets create preview.app.ciproxy.dev. --project=ciproxy \
-  --zone="$PARENT_ZONE" --type=NS --ttl=3600 \
-  --rrdatas=APP_NS1,APP_NS2,APP_NS3,APP_NS4
-gcloud dns record-sets create preview.get.ciproxy.dev. --project=ciproxy \
-  --zone="$PARENT_ZONE" --type=NS --ttl=3600 \
-  --rrdatas=GET_NS1,GET_NS2,GET_NS3,GET_NS4
-```
+| Type | Name | Name-server values |
+| --- | --- | --- |
+| NS | `preview` | Servers for `preview.ciproxy.dev.` |
+| NS | `preview.app` | Servers for `preview.app.ciproxy.dev.` |
+| NS | `preview.get` | Servers for `preview.get.ciproxy.dev.` |
+
+Keep the existing mail records and registrar name servers unchanged.
+[Cloudflare delegation](https://developers.cloudflare.com/dns/manage-dns-records/how-to/subdomains-outside-cloudflare/)
+describes delegating a subdomain to another provider.
 
 At production setup, copy all required MX, TXT, and preview NS records
 into `ciproxy-production`. Keep preview delegation unchanged. The new zone
