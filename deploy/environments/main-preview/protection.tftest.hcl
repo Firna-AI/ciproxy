@@ -1,0 +1,23 @@
+mock_provider "google" {}
+
+run "database_and_secret_protection" {
+  command = plan
+  module {
+    source = "../../terraform/modules/foundation"
+  }
+  variables {
+    project_id          = "internal-498318"
+    environment         = "main-preview"
+    domain              = "ciproxy.dev"
+    notification_emails = []
+  }
+  assert {
+    condition = (
+      google_sql_database_instance.main.deletion_protection
+      && google_sql_database_instance.main.settings[0].deletion_protection_enabled
+      && google_secret_manager_secret.release.deletion_protection
+      && alltrue([for secret in google_secret_manager_secret.control_plane : secret.deletion_protection])
+    )
+    error_message = "Cloud SQL needs API and provider protection. Each secret needs provider protection."
+  }
+}
