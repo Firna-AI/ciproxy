@@ -37,6 +37,8 @@ pub trait StripeApi: Send + Sync {
     ) -> Result<Subscription>;
     /// Schedule period-end cancellation without refunds or period changes.
     fn cancel(&self, subscription_id: &str, command_id: Uuid) -> Result<Subscription>;
+    /// End a subscription after verified final renewal failure, without a new charge.
+    fn cancel_now(&self, subscription_id: &str, invoice_id: &str) -> Result<Subscription>;
     /// Open an explicitly restricted portal configuration for this customer.
     fn portal(&self, customer_id: &str, return_url: &str) -> Result<String>;
 }

@@ -24,6 +24,10 @@ pub(super) fn handle(state: &mut State, request: &Request) -> (u16, String) {
         post(state, request, path)
     };
     let (status, body) = body;
+    if request.method == "DELETE" && state.lose_next_delete && status == 200 {
+        state.lose_next_delete = false;
+        return (503, "{}".into());
+    }
     if request.method == "POST"
         && state.lose_next_post
         && !path.ends_with("/prices")
@@ -39,6 +43,16 @@ pub(super) fn handle(state: &mut State, request: &Request) -> (u16, String) {
 }
 
 fn get(state: &mut State, request: &Request, path: &str) -> (u16, String) {
+    if let Some(body) = state
+        .raw_read_sequences
+        .get_mut(path)
+        .and_then(|reads| reads.pop_front())
+    {
+        return (200, body.to_string());
+    }
+    if let Some(body) = state.raw_reads.get(path) {
+        return (200, body.to_string());
+    }
     match path {
         "/v1/prices" => {
             let query = request.path.split('?').nth(1).unwrap_or("");
@@ -62,7 +76,9 @@ fn get(state: &mut State, request: &Request, path: &str) -> (u16, String) {
             json!({"data":state.checkout.iter().collect::<Vec<_>>(),"has_more":false}).to_string(),
         ),
         "/v1/checkout/sessions/cs_recorded" => encode(state, state.checkout.clone()),
-        "/v1/subscriptions/sub_recorded" => encode(state, state.subscription.clone()),
+        path if path == format!("/v1/subscriptions/{}", state.subscription.id) => {
+            encode(state, state.subscription.clone())
+        }
         path if path.starts_with("/v1/invoices/") => {
             let id = path.strip_prefix("/v1/invoices/").unwrap_or("");
             let invoice = state
@@ -140,14 +156,22 @@ fn post(state: &mut State, request: &Request, path: &str) -> (u16, String) {
             state.checkout = Some(checkout.clone());
             encode(state, checkout)
         }
-        "/v1/subscriptions/sub_recorded" => match state.subscription_post(request) {
-            Some(SubscriptionOutcome::Respond(subscription)) => {
-                state.subscription = *subscription;
-                encode(state, state.subscription.clone())
+        path if path == format!("/v1/subscriptions/{}", state.subscription.id) => {
+            match state.subscription_post(request) {
+                Some(SubscriptionOutcome::Respond(subscription)) => {
+                    state.subscription = *subscription;
+                    if state.raw_reads.contains_key(path) {
+                        state.raw_reads.insert(
+                            path.into(),
+                            serde_json::to_value(&state.subscription).unwrap(),
+                        );
+                    }
+                    encode(state, state.subscription.clone())
+                }
+                Some(SubscriptionOutcome::Reject(status)) => (status, "{}".into()),
+                None => (500, "{}".into()),
             }
-            Some(SubscriptionOutcome::Reject(status)) => (status, "{}".into()),
-            None => (500, "{}".into()),
-        },
+        }
         _ => {
             state.failure(format!(
                 "unexpected fake HTTP request: {} {}",

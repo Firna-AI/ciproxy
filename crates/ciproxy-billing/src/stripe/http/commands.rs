@@ -98,6 +98,18 @@ impl StripeApi for HttpStripe {
         self.subscription(subscription_id)
     }
 
+    fn cancel_now(&self, subscription_id: &str, invoice_id: &str) -> Result<Subscription> {
+        self.delete(
+            &format!("/v1/subscriptions/{subscription_id}"),
+            &[
+                ("invoice_now".into(), "false".into()),
+                ("prorate".into(), "false".into()),
+            ],
+            &format!("ciproxy:renewal-stop:{invoice_id}"),
+        )?;
+        self.subscription(subscription_id)
+    }
+
     fn portal(&self, customer_id: &str, return_url: &str) -> Result<String> {
         let configuration = self.portal_configuration()?;
         Ok(self

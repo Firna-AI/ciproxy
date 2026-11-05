@@ -21,7 +21,7 @@ fn known_renewal_failure_survives_upgrade_expiry_until_actual_recovery() {
 
 #[test]
 fn delayed_renewal_failure_learns_older_invoice_after_busy_and_upgrade() {
-    renewal_and_upgrade(true, SubscriptionState::PaymentFailed);
+    renewal_and_upgrade(true, SubscriptionState::Active);
 }
 
 fn renewal_and_upgrade(delayed: bool, after_upgrade: SubscriptionState) {

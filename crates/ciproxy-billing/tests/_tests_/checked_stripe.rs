@@ -70,6 +70,12 @@ impl StripeApi for CheckedStripe {
         result
     }
 
+    fn cancel_now(&self, subscription_id: &str, invoice_id: &str) -> Result<Subscription> {
+        let result = self.provider.cancel_now(subscription_id, invoice_id);
+        self.probe.check();
+        result
+    }
+
     fn portal(&self, customer_id: &str, return_url: &str) -> Result<String> {
         let result = self.provider.portal(customer_id, return_url);
         self.probe.check();
