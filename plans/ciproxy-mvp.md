@@ -1096,6 +1096,7 @@ Answers of 5 November 2026:
   confirmed spend and the amount still pending. `overflow.md` states the rule.
   Rejected: holding all starts until Boat confirms, Admin reconciliation by
   hand, one combined estimate figure, and recovery through a replacement key.
+  Item 69 replaces the saved quote with the highest published start fee.
 - Item 68, A, with one shared cluster: the user wrote "ciproxy holds prod and
   test infra, we can share. the same k8 cluster". Both the main preview and
   production run in the GCP project `ciproxy`, and they share one GKE Autopilot
@@ -1103,6 +1104,14 @@ Answers of 5 November 2026:
   preview, and the project of item 53. The spike and test machines stay in
   `internal-498318`. Rejected: a new project for the main preview, and the main
   preview in `internal-498318`.
+- Item 69, B: each start counts the highest published Boat start fee, $0.07
+  today, from `overagePrices.startBrackets` of `GET /limits`, and not the
+  saved quote. Boat reports no charged start fee, so this fee stays counted.
+  The user wrote "let's not over engineer this feature, it's a nice to have, if
+  we block a bit early 0.07 early that's really not a problem". So the limit
+  can stop overflow early, by $0.07 for each start that Boat does not charge.
+  `overflow.md` states the rule. Rejected: the saved quote, a second quote
+  after the start, and a charged fee from Boat.
 - Item 66, A: only a job of a trusted event on the default branch keeps
   its changes to a Docker disk, as item 59 says for the machine cache.
   `cache.md` states it. Rejected: any event on the default branch, and
@@ -1996,7 +2005,7 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 68 on 5 November 2026. Item 69 still waits. The
+The user answered items 54 to 69 on 5 November 2026. No item still waits. The
 conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
@@ -2308,6 +2317,8 @@ keep the letters that the user saw.
 
 ### 69. A start-fee quote does not bound the start fee
 
+**Answer, 5 November 2026:** B.
+
 - **Severity:** Medium. **Likelihood:** Rare. **Effort:** Small.
 - **Source:** Review of pull request #22, Milestone 12, finding 1. The
   review graded it High. It is Medium here, because one start can hide at
@@ -2375,5 +2386,4 @@ keep the letters that the user saw.
 - **Recommendation:** C. It catches nearly every such start for one extra
   read, and it does not count $0.07 for each free start as B does. D best
   protects the codebase, but it needs Boat.
-- **Action:** ask the user, because the true bound B overcounts each free
-  start, the close count C is not strict, and no option is clearly best.
+- **Action:** answered B.
