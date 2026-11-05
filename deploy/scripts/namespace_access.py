@@ -58,7 +58,7 @@ def main():
         print(document)
         return
     subprocess.run(["gcloud", "container", "clusters", "get-credentials", "ciproxy-shared",
-                    "--region=europe-west1", "--project=ciproxy", "--dns-endpoint"], check=True)
+                    "--region=us-central1", "--project=ciproxy", "--dns-endpoint"], check=True)
     subprocess.run(["kubectl", "apply", "--server-side", "--field-manager=ciproxy-operator", "-f", "-"],
                    check=True, input=document, text=True)
     if args.uid_file:

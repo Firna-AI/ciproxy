@@ -32,11 +32,11 @@ untrusted preview runs before this procedure finishes.
    python3 deploy/scripts/terraform.py plan main-preview shared
    cat .context/plans/main-preview/shared/plan.txt
    python3 deploy/scripts/terraform.py apply main-preview shared
-   gcloud container clusters describe ciproxy-shared --region=europe-west1 \
+   gcloud container clusters describe ciproxy-shared --region=us-central1 \
      --project=ciproxy --format='yaml(name,location,autopilot.enabled,workloadIdentityConfig)'
    ```
 
-   Confirm `ciproxy-shared`, `europe-west1`, Autopilot enabled, and pool
+   Confirm `ciproxy-shared`, `us-central1`, Autopilot enabled, and pool
    `ciproxy.svc.id.goog`. Prelaunch CI has no cluster create/delete or node
    attachment rights. It cannot substitute a Standard cluster at this name.
 

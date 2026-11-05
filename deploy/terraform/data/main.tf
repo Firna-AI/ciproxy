@@ -7,7 +7,7 @@ terraform {
 }
 provider "google" {
   project = "ciproxy"
-  region  = "europe-west1"
+  region  = "us-central1"
 }
 
 variable "environment" { type = string }

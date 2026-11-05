@@ -12,13 +12,13 @@ class NegReadinessTests(unittest.TestCase):
         partial = {
             "metadata": {"annotations": {"cloud.google.com/neg-status": json.dumps({
                 "network_endpoint_groups": {"8080": "ciproxy-main-preview-release"},
-                "zones": ["europe-west1-b"],
+                "zones": ["us-central1-a"],
             })}},
         }
         complete = {
             "metadata": {"annotations": {"cloud.google.com/neg-status": json.dumps({
                 "network_endpoint_groups": {"8080": "ciproxy-main-preview-release"},
-                "zones": ["europe-west1-d", "europe-west1-b", "europe-west1-c"],
+                "zones": ["us-central1-c", "us-central1-a", "us-central1-b"],
             })}},
         }
         with (
@@ -30,9 +30,9 @@ class NegReadinessTests(unittest.TestCase):
         ):
             zones = deploy_support.neg_zones(
                 "release-neg", "ciproxy-main-preview-release",
-                ["europe-west1-b", "europe-west1-c", "europe-west1-d"],
+                ["us-central1-a", "us-central1-b", "us-central1-c"],
             )
-        self.assertEqual(zones, ["europe-west1-b", "europe-west1-c", "europe-west1-d"])
+        self.assertEqual(zones, ["us-central1-a", "us-central1-b", "us-central1-c"])
         self.assertEqual(query.call_count, 2)
 
 

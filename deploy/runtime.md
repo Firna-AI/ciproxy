@@ -24,7 +24,7 @@ gcloud sql users set-password postgres --instance="ciproxy-$DEPLOY_ENV" \
 kubectl run ciproxy-sql-admin --namespace="$NAMESPACE" \
   --image=gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.27.0 \
   --overrides='{"apiVersion":"v1","spec":{"serviceAccountName":"control-plane"}}' \
-  -- --private-ip --port=5432 "$PROJECT_ID:europe-west1:ciproxy-$DEPLOY_ENV"
+  -- --private-ip --port=5432 "$PROJECT_ID:us-central1:ciproxy-$DEPLOY_ENV"
 kubectl wait --namespace="$NAMESPACE" --for=condition=Ready pod/ciproxy-sql-admin --timeout=10m
 kubectl port-forward --namespace="$NAMESPACE" pod/ciproxy-sql-admin 15432:5432
 ```

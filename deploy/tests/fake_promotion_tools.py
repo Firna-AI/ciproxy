@@ -75,10 +75,10 @@ elif tool == "terraform":
     if action == "output":
         if args[-1] == "deployment":
             print(json.dumps({
-                "project_id": "ciproxy", "region": "europe-west1",
+                "project_id": "ciproxy", "region": "us-central1",
                 "cluster_name": "ciproxy-shared", "prefix": "ciproxy-main-preview",
                 "namespace": "ciproxy-main-preview",
-                "allowed_zones": ["europe-west1-b", "europe-west1-c", "europe-west1-d"],
+                "allowed_zones": ["us-central1-a", "us-central1-b", "us-central1-c"],
                 "release_secret": "fake-release-token", "runtime_repository": "example.invalid/runtime",
                 "hosts": {"releases": "downloads.invalid", "dashboard": "app.invalid"},
                 "buckets": {"site": "site-bucket", "dashboard": "app-bucket"},
@@ -104,7 +104,7 @@ elif tool == "kubectl" and args[:2] == ["get", "service"]:
         sys.exit(1)
     print(json.dumps({"metadata": {"annotations": {"cloud.google.com/neg-status": json.dumps({
         "network_endpoint_groups": {"8080": "ciproxy-main-preview-release"},
-        "zones": ["europe-west1-b", "europe-west1-c", "europe-west1-d"],
+        "zones": ["us-central1-a", "us-central1-b", "us-central1-c"],
     })}}}))
 elif tool == "python3" and args[:1] != ["deploy/scripts/publish_static.py"]:
     os.execv(os.environ["FAKE_REAL_PYTHON"], [os.environ["FAKE_REAL_PYTHON"], *args])

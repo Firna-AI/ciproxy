@@ -2,13 +2,13 @@ mock_provider "google" {}
 variables {
   project_number        = "123456789"
   environment_tag       = "tagValues/1"
-  zone_map              = { europe-west1-b = "https://www.googleapis.com/compute/v1/projects/ciproxy/zones/europe-west1-b" }
+  zone_map              = { us-central1-a = "https://www.googleapis.com/compute/v1/projects/ciproxy/zones/us-central1-a" }
   control_plane_enabled = true
   configuration = {
     project_id    = "ciproxy"
     environment   = "production"
     prefix        = "ciproxy-production"
-    allowed_zones = ["europe-west1-b"]
+    allowed_zones = ["us-central1-a"]
     hosts = {
       site      = "ciproxy.dev"
       dashboard = "app.ciproxy.dev"

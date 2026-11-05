@@ -11,9 +11,9 @@ run "database_and_secret_protection" {
     domain      = "ciproxy.dev"
     shared = {
       network_id         = "projects/ciproxy/global/networks/ciproxy-shared"
-      allowed_zones      = ["europe-west1-b", "europe-west1-c", "europe-west1-d"]
+      allowed_zones      = ["us-central1-a", "us-central1-b", "us-central1-c"]
       cluster_name       = "ciproxy-shared"
-      runtime_repository = "europe-west1-docker.pkg.dev/ciproxy/ciproxy-shared-runtime"
+      runtime_repository = "us-central1-cocker.pkg.dev/ciproxy/ciproxy-shared-runtime"
     }
   }
   assert {

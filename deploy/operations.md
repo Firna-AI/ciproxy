@@ -12,7 +12,7 @@ Most steps here use the cluster. Get its credentials first:
 
 ```sh
 gcloud container clusters get-credentials ciproxy-shared \
-  --region=europe-west1 --project="$PROJECT_ID" --dns-endpoint
+  --region=us-central1 --project="$PROJECT_ID" --dns-endpoint
 ```
 
 ## Publish job images
@@ -180,7 +180,7 @@ lock. Keep both prelaunch apply accounts disabled after launch.
 The shared zone module holds desired placement and a retained catalog:
 `allowed_zones` in
 `deploy/terraform/modules/zones/main.tf`. Today it is
-`europe-west1-b`, `europe-west1-c`, and `europe-west1-d`. Four parts use
+`us-central1-a`, `us-central1-b`, and `us-central1-c`. Four parts use
 this list:
 
 - The release server and the control plane have a required node affinity

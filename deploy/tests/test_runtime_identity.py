@@ -23,8 +23,8 @@ class RuntimeIdentityTests(PromotionCase):
             self.assertEqual(json.loads(path.read_text()), {"runtime_service_account_uids": expected})
         calls = [json.loads(line) for line in self.log.read_text().splitlines()]
         self.assertEqual([call["args"] for call in calls if call["tool"] == "gcloud"], [
-            ["container", "clusters", "get-credentials", "ciproxy-shared", "--region=europe-west1", "--project=ciproxy", "--dns-endpoint"],
-            ["container", "clusters", "get-credentials", "ciproxy-shared", "--region=europe-west1", "--project=ciproxy", "--dns-endpoint"],
+            ["container", "clusters", "get-credentials", "ciproxy-shared", "--region=us-central1", "--project=ciproxy", "--dns-endpoint"],
+            ["container", "clusters", "get-credentials", "ciproxy-shared", "--region=us-central1", "--project=ciproxy", "--dns-endpoint"],
         ])
         manifests = [call["manifest"] for call in calls if "manifest" in call]
         self.assertEqual([doc["items"][-1]["metadata"]["name"] for doc in manifests], ["control-plane", "control-plane"])

@@ -80,7 +80,7 @@ class PromotionCase(unittest.TestCase):
         path.parent.mkdir(parents=True, exist_ok=True)
         values = {"control_plane_enabled": False, "enable_uptime_checks": False,
                   "notification_emails": [environment + "@example.invalid"],
-                  "allowed_zones": ["europe-west1-b"], "source_sha": self.source}
+                  "allowed_zones": ["us-central1-a"], "source_sha": self.source}
         path.write_text(json.dumps({"environment": environment, "commit": self.source,
                                     "run": run, "attempt": attempt, "inputs": dict(values, **inputs)}))
         return path

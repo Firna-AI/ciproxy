@@ -138,7 +138,7 @@ class SharedPromotionTests(PromotionCase):
         original = {"environment": "main-preview", "commit": self.source, "run": "1234", "attempt": "1",
                     "inputs": {"control_plane_enabled": False, "enable_uptime_checks": False,
                                "notification_emails": ["preview@example.invalid"],
-                               "allowed_zones": ["europe-west1-b"], "source_sha": self.source}}
+                               "allowed_zones": ["us-central1-a"], "source_sha": self.source}}
         for field, value in (("environment", "production"), ("commit", "0" * 40), ("run", "other"), ("attempt", "2")):
             with self.subTest(field=field):
                 path.write_text(json.dumps(dict(original, **{field: value})))
@@ -171,7 +171,7 @@ class SharedPromotionTests(PromotionCase):
                          ("production", "main-preview", "1234", "1"))
         self.assertEqual(metadata["workload"], {"environment": "main-preview", "commit": self.source, "run": "5678", "attempt": "3"})
         inputs = json.loads((folder / "inputs.tfvars.json").read_text())
-        self.assertEqual(inputs["workload"]["allowed_zones"], ["europe-west1-b"])
+        self.assertEqual(inputs["workload"]["allowed_zones"], ["us-central1-a"])
         self.assertTrue(inputs["workload"]["control_plane_enabled"])
         original = json.loads(path.read_text())
         for field, wrong in (("run", "9999"), ("attempt", "4"), ("commit", "f" * 40), ("environment", "production")):

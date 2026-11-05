@@ -35,7 +35,8 @@ is public through the edge, but its GCS origins enforce PAP and have no
 anonymous grants. Only the exact load balancer service agent gets origin
 Object Viewer access after backend creation. No policy exception is needed.
 
-All regional resources use `europe-west1`. Each environment has one global
+All regional resources use `us-central1`, except the Terraform state buckets
+of the seed, which stay in `europe-west1`. Each environment has one global
 HTTPS load balancer and certificate. HTTP redirects to HTTPS.
 `ciproxy.dev` and Workspace mail stay on Cloudflare. Production Cloud DNS
 owns only `app.ciproxy.dev` and `get.ciproxy.dev`, including their preview
@@ -57,10 +58,10 @@ enable it. [Static delivery](static-delivery.md) gives paths and lifetimes.
 The release server uses upstream commit
 `30513bd1a6e15d8e9c1b18f2ed92d1d4dfa11786`. Its vendored chart has
 [provenance](helm/cli-release-server/PROVENANCE.json). Both environments
-pull from `europe-west1-docker.pkg.dev/ciproxy/ciproxy-shared-runtime`.
+pull from `us-central1-cocker.pkg.dev/ciproxy/ciproxy-shared-runtime`.
 
-The release server and control plane use `europe-west1-b`,
-`europe-west1-c`, and `europe-west1-d`. GKE prepares their NEGs in these
+The release server and control plane use `us-central1-a`,
+`us-central1-b`, and `us-central1-c`. GKE prepares their NEGs in these
 zones. The cluster uses the Regular channel and minimum version 1.36.4.
 The NEG zone feature needs 1.36.2-gke.3104000 and is a GKE Preview feature.
 
@@ -156,7 +157,7 @@ helm template cli-release-server deploy/helm/cli-release-server \
 helm template ciproxy deploy/helm/ciproxy
 helm template ciproxy deploy/helm/ciproxy --set controlPlane.enabled=true \
   --set controlPlane.image=example.invalid/control-plane:render-check \
-  --set 'allowedZones={europe-west1-b,europe-west1-c,europe-west1-d}' \
+  --set 'allowedZones={us-central1-a,us-central1-b,us-central1-c}' \
   --set controlPlane.cdnSigningKeyName=ciproxy-main-preview-images-v1 \
   --set controlPlane.secrets.cdn-signing-key=projects/ciproxy/secrets/ciproxy-main-preview-cdn-signing-key
 actionlint .github/workflows/deploy-*.yml

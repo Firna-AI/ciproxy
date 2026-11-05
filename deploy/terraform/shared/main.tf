@@ -7,12 +7,12 @@ terraform {
 }
 provider "google" {
   project = "ciproxy"
-  region  = "europe-west1"
+  region  = "us-central1"
 }
 
 variable "production_enabled" { type = bool }
 locals {
-  region       = "europe-west1"
+  region       = "us-central1"
   prefix       = "ciproxy-shared"
   node_account = "ciproxy-shared-gke@ciproxy.iam.gserviceaccount.com"
   environments = var.production_enabled ? toset(["main-preview", "production"]) : toset(["main-preview"])
@@ -32,7 +32,7 @@ output "platform" {
   value = {
     network_id         = google_compute_network.main.id
     cluster_name       = google_container_cluster.main.name
-    runtime_repository = "europe-west1-docker.pkg.dev/ciproxy/${google_artifact_registry_repository.runtime.repository_id}"
+    runtime_repository = "us-central1-cocker.pkg.dev/ciproxy/${google_artifact_registry_repository.runtime.repository_id}"
     allowed_zones      = module.zones.allowed_zones
   }
 }

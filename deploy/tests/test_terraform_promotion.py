@@ -104,12 +104,12 @@ class TerraformPromotionTests(PromotionCase):
         snapshot.write_text(json.dumps({
             "environment": "main-preview", "commit": self.source, "run": "1234", "attempt": "1",
             "inputs": {"notification_emails": ["preview@example.invalid"], "control_plane_enabled": True,
-                       "enable_uptime_checks": False, "allowed_zones": ["europe-west1-b"], "source_sha": self.source},
+                       "enable_uptime_checks": False, "allowed_zones": ["us-central1-a"], "source_sha": self.source},
         }))
         result = self.cli("terraform.py", "plan", "main-preview", "foundation")
         self.assertEqual(result.returncode, 0, result.stderr)
         variables = self.root / ".context/plans/main-preview/foundation/inputs.tfvars.json"
-        self.assertEqual(json.loads(variables.read_text()), {"notification_emails": ["preview@example.invalid"], "control_plane_enabled": True, "enable_uptime_checks": False, "allowed_zones": ["europe-west1-b"], "source_sha": self.source})
+        self.assertEqual(json.loads(variables.read_text()), {"notification_emails": ["preview@example.invalid"], "control_plane_enabled": True, "enable_uptime_checks": False, "allowed_zones": ["us-central1-a"], "source_sha": self.source})
 
     def test_seed_creation_migrates_state_before_bootstrap_and_can_resume(self):
         result = self.cli("bootstrap.sh", "main-preview")

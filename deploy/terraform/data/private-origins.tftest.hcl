@@ -8,8 +8,8 @@ variables {
   shared = {
     network_id         = "projects/ciproxy/global/networks/ciproxy-shared"
     cluster_name       = "ciproxy-shared"
-    runtime_repository = "europe-west1-docker.pkg.dev/ciproxy/ciproxy-shared-runtime"
-    allowed_zones      = ["europe-west1-b", "europe-west1-c", "europe-west1-d"]
+    runtime_repository = "us-central1-cocker.pkg.dev/ciproxy/ciproxy-shared-runtime"
+    allowed_zones      = ["us-central1-a", "us-central1-b", "us-central1-c"]
   }
 }
 run "static_origins_enforce_pap_without_anonymous_publishers" {

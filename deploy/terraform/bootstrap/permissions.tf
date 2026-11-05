@@ -84,7 +84,7 @@ resource "google_project_iam_member" "shared_kms" {
   condition {
     title = "environment-key-rings"
     expression = join(" || ", [for env in local.account_environments[each.key] :
-      "resource.name == 'projects/${var.project_id}/locations/europe-west1/keyRings/ciproxy-${env}' || resource.name.startsWith('projects/${var.project_id}/locations/europe-west1/keyRings/ciproxy-${env}/')"
+      "resource.name == 'projects/${var.project_id}/locations/us-central1/keyRings/ciproxy-${env}' || resource.name.startsWith('projects/${var.project_id}/locations/us-central1/keyRings/ciproxy-${env}/')"
     ])
   }
 }

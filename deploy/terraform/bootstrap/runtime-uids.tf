@@ -18,7 +18,7 @@ resource "google_project_iam_member" "cluster_update" {
   member   = "serviceAccount:${google_service_account.ci[each.key].email}"
   condition {
     title      = "intended-shared-cluster"
-    expression = "resource.type == 'container.googleapis.com/Cluster' && resource.name == 'projects/${var.project_id}/locations/europe-west1/clusters/ciproxy-shared'"
+    expression = "resource.type == 'container.googleapis.com/Cluster' && resource.name == 'projects/${var.project_id}/locations/us-central1/clusters/ciproxy-shared'"
   }
 }
 # Production is protected main. Prelaunch cannot create or replace a cluster.

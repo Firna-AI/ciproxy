@@ -2,7 +2,7 @@ mock_provider "google" {}
 variables {
   project_number  = "123456789"
   environment_tag = "tagValues/1"
-  zone_map        = { europe-west1-b = "https://www.googleapis.com/compute/v1/projects/ciproxy/zones/europe-west1-b" }
+  zone_map        = { us-central1-a = "https://www.googleapis.com/compute/v1/projects/ciproxy/zones/us-central1-a" }
 }
 override_resource {
   target          = google_compute_global_address.public
@@ -17,7 +17,7 @@ run "production_edge_manages_only_owned_dns_records" {
       project_id    = "ciproxy"
       environment   = "production"
       prefix        = "ciproxy-production"
-      allowed_zones = ["europe-west1-b"]
+      allowed_zones = ["us-central1-a"]
       hosts = {
         site      = "ciproxy.dev"
         dashboard = "app.ciproxy.dev"
@@ -83,7 +83,7 @@ run "main_preview_edge_manages_only_owned_dns_records" {
       project_id    = "ciproxy"
       environment   = "main-preview"
       prefix        = "ciproxy-main-preview"
-      allowed_zones = ["europe-west1-b"]
+      allowed_zones = ["us-central1-a"]
       hosts = {
         site      = "br-main.preview.ciproxy.dev"
         dashboard = "br-main.preview.app.ciproxy.dev"

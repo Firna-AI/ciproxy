@@ -11,7 +11,7 @@ variable "domain" {
 }
 
 locals {
-  region          = "europe-west1"
+  region          = "us-central1"
   allowed_zones   = var.shared.allowed_zones
   prefix          = "ciproxy-${var.environment}"
   control_account = "ciproxy-${var.environment}-control@${var.project_id}.iam.gserviceaccount.com"

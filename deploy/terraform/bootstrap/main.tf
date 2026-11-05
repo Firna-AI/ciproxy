@@ -7,7 +7,7 @@ terraform {
 }
 provider "google" {
   project = var.project_id
-  region  = "europe-west1"
+  region  = "us-central1"
 }
 variable "project_id" { type = string }
 variable "production_enabled" { type = bool }

@@ -127,8 +127,10 @@ for each area. Reason: parallel branches then do not conflict.
 Depends on: none
 
 Production runs in the GCP project `ciproxy`, and staging and tests in
-`internal-498318`. My calls: `europe-west1`, Terraform under `deploy/`, and
-Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
+`internal-498318`. My calls: Terraform under `deploy/`, and Workload Identity
+Federation. Reason: reviews, and no stored keys. Item 81 = C moves every
+regional resource to `us-central1`. The Terraform state buckets of the seed
+stay in `europe-west1`.
 
 - [ ] Add Cloud SQL, Secret Manager, and Cloud KMS for the Boat keys.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
@@ -1270,6 +1272,12 @@ Answers of 5 November 2026:
   launch": a catalog of ciproxy images that each label names, and custom VM
   images for Business. The follow-up item `job-image-catalog-after-launch.md`
   holds that work. Rejected for now: toolset layers.
+- Item 81, C: the control plane and the customer data run in `us-central1`.
+  The user wrote "lets go with US then it has better capacity", after
+  Google had no capacity for the new cluster in `europe-west1`. It costs
+  about 10% less for compute, and the data then lives in the US. The
+  Terraform state buckets of the seed stay in `europe-west1`, because a move
+  recreates them. Rejected: a retry of `europe-west1`, and `europe-west4`.
 - Item 70, E: this whole repository becomes public now, in place of a public
   copy of the open parts at launch. The agent builds and releases in public.
   This replaces the code location rule of the foundation plan. The closed
@@ -2171,8 +2179,8 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 78 on 5 November 2026, and item 76 became a
-design call. Items 79 and 80 still wait. The
+The user answered items 54 to 78 and 81 on 5 November 2026, and item 76
+became a design call. Items 79 and 80 still wait. The
 conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
@@ -3050,3 +3058,18 @@ buckets must be public.
   shortly after a change. B removes the copy space best, at Large effort.
 - **Action:** ask the user, because A and D change the start rule of
   `job-routing.md`, and no requirement gives the Docker space of a job.
+
+### 81. Which region hosts ciproxy
+
+**Answer, 5 November 2026:** C.
+
+- **Severity:** Medium. **Effort:** Medium.
+- **Source:** Implementation, the failed cluster creation in `europe-west1`.
+- **Options:**
+  - **A.** Retry `europe-west1`. Effort: Small.
+  - **B.** Switch to `europe-west4`, and keep the data in the EU. Effort:
+    Medium.
+  - **C.** Switch to `us-central1`, about 10% cheaper, with the data in the
+    US. Effort: Medium.
+- **Recommendation:** A, then B.
+- **Action:** answered C.
