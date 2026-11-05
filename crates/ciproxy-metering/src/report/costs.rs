@@ -1,7 +1,6 @@
 //! Registered-day monthly costs and elapsed Boat sandbox costs.
 
 use std::collections::BTreeMap;
-use std::num::NonZeroU32;
 
 use chrono::{DateTime, Datelike, NaiveDate, Utc};
 use ciproxy_store_interface::metering::facts::MachineRegistration;
@@ -11,17 +10,6 @@ use uuid::Uuid;
 
 use crate::report::range::{DateRange, midnight};
 
-/// Explicit denominator for a monthly cost's registered-day allocation.
-///
-/// The protocol supplies no default. The composition root must select it.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum MonthlyDivisor {
-    /// Divide each day's monthly rate by that UTC calendar month's length.
-    CalendarMonthDays,
-    /// Divide each day's monthly rate by an explicitly supplied day count.
-    FixedDays(NonZeroU32),
-}
-
 /// Missing facts that prevent an accurate ciproxy total.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum CostGap {
@@ -29,14 +17,14 @@ pub enum CostGap {
     UnknownWorkspaceStart,
     /// A legacy machine has no trusted registration time.
     UnknownRegistration(Uuid),
-    /// A registered day has no single known monthly machine price.
+    /// A registered day has no known final monthly machine price.
     MachinePrice {
         /// The own machine that needs a cost.
         machine_id: Uuid,
-        /// The UTC registration date without a unique price.
+        /// The UTC registration date without a known final price.
         day: NaiveDate,
     },
-    /// A report date has no single confirmed monthly tier and add-on price.
+    /// A report date has no known final monthly tier and add-on price.
     PlanPrice(NaiveDate),
 }
 
@@ -58,14 +46,13 @@ pub struct Costs {
 /// Allocate monthly costs to registration days and sum ciproxy Boat costs.
 ///
 /// Each registration day counts once, including partial registration days.
-/// A monthly price must uniquely cover each counted day. Overlapping prices
-/// stay incomplete rather than choosing an unapproved same-day change rule.
+/// The last monthly price on a UTC date applies to that whole date.
+/// Each date uses the day count of its calendar month for both price kinds.
 pub fn calculate_costs(
     machines: &[MachineRegistration],
     history: &CostHistory,
     range: DateRange,
     at: DateTime<Utc>,
-    divisor: MonthlyDivisor,
     boat_usd: Decimal,
 ) -> Costs {
     let mut machine_rates: BTreeMap<(Decimal, u32), u32> = BTreeMap::new();
@@ -110,10 +97,11 @@ pub fn calculate_costs(
                         && price.starts_at < until
                         && price.ends_at.is_none_or(|end| end > from)
                 })
+                .map(|price| (price.starts_at, price.ends_at, price.monthly_usd))
                 .collect();
-            if let [price] = prices.as_slice() {
+            if let Some(monthly) = last_price(prices) {
                 *machine_rates
-                    .entry((price.monthly_usd, day_divisor(divisor, day)))
+                    .entry((monthly, days_in_month(day)))
                     .or_default() += 1;
             } else {
                 missing.push(CostGap::MachinePrice {
@@ -126,11 +114,10 @@ pub fn calculate_costs(
             .plans
             .iter()
             .filter(|price| price.starts_at < until && price.ends_at.is_none_or(|end| end > from))
+            .map(|price| (price.starts_at, price.ends_at, price.monthly_usd))
             .collect();
-        if let [price] = prices.as_slice() {
-            *plan_rates
-                .entry((price.monthly_usd, day_divisor(divisor, day)))
-                .or_default() += 1;
+        if let Some(monthly) = last_price(prices) {
+            *plan_rates.entry((monthly, days_in_month(day))).or_default() += 1;
         } else {
             missing.push(CostGap::PlanPrice(day));
         }
@@ -149,15 +136,26 @@ pub fn calculate_costs(
     }
 }
 
-fn day_divisor(divisor: MonthlyDivisor, day: NaiveDate) -> u32 {
-    match divisor {
-        MonthlyDivisor::FixedDays(days) => days.get(),
-        MonthlyDivisor::CalendarMonthDays => match day.month() {
-            4 | 6 | 9 | 11 => 30,
-            2 if NaiveDate::from_ymd_opt(day.year(), 2, 29).is_some() => 29,
-            2 => 28,
-            _ => 31,
-        },
+/// Empty intervals contain no price; gaps within a date keep its last price.
+/// Overlapping prices remain incomplete, independent of input order.
+fn last_price(mut prices: Vec<(DateTime<Utc>, Option<DateTime<Utc>>, Decimal)>) -> Option<Decimal> {
+    prices.retain(|(starts, ends, _)| *ends != Some(*starts));
+    prices.sort_by_key(|(starts, _, _)| *starts);
+    if prices
+        .windows(2)
+        .any(|pair| pair[0].1.is_none_or(|end| end > pair[1].0))
+    {
+        return None;
+    }
+    prices.last().map(|(_, _, monthly)| *monthly)
+}
+
+fn days_in_month(day: NaiveDate) -> u32 {
+    match day.month() {
+        4 | 6 | 9 | 11 => 30,
+        2 if NaiveDate::from_ymd_opt(day.year(), 2, 29).is_some() => 29,
+        2 => 28,
+        _ => 31,
     }
 }
 
@@ -171,3 +169,11 @@ fn monthly_total(rates: BTreeMap<(Decimal, u32), u32>) -> Decimal {
 #[cfg(test)]
 #[path = "../_tests_/costs_tests.rs"]
 mod costs_tests;
+
+#[cfg(test)]
+#[path = "../_tests_/monthly_costs_tests.rs"]
+mod monthly_costs_tests;
+
+#[cfg(test)]
+#[path = "../_tests_/price_history_tests.rs"]
+mod price_history_tests;

@@ -46,7 +46,7 @@ export const peakOverflowToBoat = defineUseCase({
     {
       screenPath: paths.savings,
       title: "What the overflow cost",
-      description: `Boat took ${boatShare}% of the starts. With the own machines and Team, the report shows ${formatMoney(yourCost)} for the month, ${formatMoney(savedOnBlacksmith)} less than the same jobs on Blacksmith.`,
+      description: `Boat took ${boatShare}% of the starts. With the own machines and Team, the report shows ${formatMoney(yourCost)} for the last 30 days, ${formatMoney(savedOnBlacksmith)} less than the same jobs on Blacksmith.`,
     },
     {
       screenPath: paths.overflow,

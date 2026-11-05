@@ -32,6 +32,8 @@ Elapsed fractional minutes follow each UTC day's runtime overlap.
 Running jobs stop at the supplied observation time.
 Each partial own-machine registration date counts as one cost date.
 Stored monthly prices supply machine and tier costs.
+The last monthly price on each UTC date applies to the full date.
+Each date uses the day count of its calendar month for both monthly costs.
 Stored Boat rates supply start charges and elapsed sandbox costs.
 A Boat sandbox can cost money without taking a job.
 Each savings report reads registrations, range totals, and monthly costs
@@ -47,12 +49,10 @@ Signed savings remain negative when ciproxy costs more.
 Missing machine costs or registration times suppress savings.
 Known costs and alternative comparisons remain visible.
 
-The monthly divisor is an explicit calculation input, with no default.
 This crate supplies no provider price catalog or currency conversion.
 It applies no invoice, minute, or display rounding.
-Multiple monthly prices on one UTC date produce a CostGap.
-The protocol does not select a same-day price-change rule.
-This preserves other known costs without choosing that rule.
+Missing monthly price history produces a CostGap.
+Other known costs remain visible when a gap prevents a savings figure.
 
 Anonymous daily totals retain actual VM sizes and Boat costs.
 Anonymous timestamp counts preserve exact billing-period boundaries.
@@ -99,7 +99,7 @@ Trusted fact producers must supply these inputs:
    A competing refresh or deletion can change a cursor.
 8. Call usage with the current confirmed period and saved plan.
    Call savings after refresh for current daily totals.
-   Supply the chosen monthly divisor and both dated USD price lists.
+   Supply both dated USD price lists.
 
 Unknown legacy registration and creation times remain unknown.
 Runtime wiring, Stripe, machine forms, and catalog configuration belong to
