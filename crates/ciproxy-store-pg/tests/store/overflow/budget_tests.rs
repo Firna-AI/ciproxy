@@ -1,4 +1,4 @@
-//! Fee bounds and settled budget estimates never become measured savings costs.
+//! Savings use saved fee bounds without inventing provider-confirmed charges.
 
 use chrono::Duration;
 use ciproxy_store_interface::error::Error;
@@ -12,7 +12,7 @@ use super::super::support::{Database, at};
 use super::support::setup;
 
 #[test]
-fn bounded_start_fee_round_trips_without_becoming_a_measured_metering_cost() {
+fn bounded_start_fee_supplies_savings_without_becoming_a_confirmed_charge() {
     let database = Database::new();
     let (workspace_id, _, mut record) = setup(&database);
     let mut session = database.store.lock_overflow(workspace_id).unwrap();
@@ -55,17 +55,18 @@ fn bounded_start_fee_round_trips_without_becoming_a_measured_metering_cost() {
         Some(Decimal::new(3, 2))
     );
     assert_eq!(saved.starts[0].start_usd, None);
-    assert_eq!(
-        database.store.boat_accounting(workspace_id).unwrap().costs,
-        []
-    );
+    let bounded = database.store.boat_accounting(workspace_id).unwrap();
+    assert_eq!(bounded.costs.len(), 1);
+    assert_eq!(bounded.costs[0].start_usd, Decimal::new(3, 2));
     let from = at().date_naive();
-    assert!(matches!(
+    assert_eq!(
         database
             .store
-            .savings_snapshot(workspace_id, from, from.succ_opt().unwrap()),
-        Err(Error::AccountingIncomplete)
-    ));
+            .savings_snapshot(workspace_id, from, from.succ_opt().unwrap())
+            .unwrap()
+            .days,
+        []
+    );
     record.start_usd = Some(Decimal::new(7, 2));
     session.save_start(&record).unwrap();
     let measured = database.store.boat_accounting(workspace_id).unwrap();
@@ -78,4 +79,13 @@ fn bounded_start_fee_round_trips_without_becoming_a_measured_metering_cost() {
         session.snapshot().unwrap().starts[0].start_fee_bound_usd,
         Some(Decimal::new(3, 2))
     );
+    record.start_usd = None;
+    record.start_fee_bound_usd = None;
+    session.save_start(&record).unwrap();
+    assert!(matches!(
+        database
+            .store
+            .savings_snapshot(workspace_id, from, from.succ_opt().unwrap()),
+        Err(Error::AccountingIncomplete)
+    ));
 }

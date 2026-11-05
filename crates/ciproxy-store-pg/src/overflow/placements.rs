@@ -47,7 +47,7 @@ pub(super) fn save(
     .bind::<Text, _>(sandbox.id())
     .bind::<Text, _>(&record.size.name)
     .execute(connection).store()?;
-    if let (Some(start_usd), Some(interval)) = (record.start_usd, record.billing) {
+    if let (Some(start_usd), Some(interval)) = (record.counted_start_fee_usd(), record.billing) {
         diesel::sql_query(
             "INSERT INTO metering_boat_costs
                 (runner_id, workspace_id, starts_at, ends_at, start_usd, minute_usd)

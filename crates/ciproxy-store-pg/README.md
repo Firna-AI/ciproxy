@@ -147,22 +147,26 @@ A blocking callback lease waits on that dedicated connection.
 Catalog observations and exact delivery records persist before Boat access.
 Reservation rechecks the active key, workspace settings, organization,
 label, and scale-set ownership under the workspace row lock.
+One current startup query binds the saved delivery to its organization and
+key in that workspace. It requires active App state, enabled overflow, and
+the accepted non-retired key together.
 Adoption saves the provider identity, immutable runner placement, and price
 facts in one transaction.
 Callback claims save token consumption and deletion intent together.
 Refusal records and account restrictions also commit together.
 Key erasure checks unfinished deliveries as well as live runners.
 No query receives a plaintext key or runner registration.
-Metering price facts require a trusted runtime observation and confirmed
-actual start fee. A saved start-fee bound never supplies that fee.
+Metering price facts require a trusted runtime observation and a counted
+start fee. They select the confirmed fee, or else the saved fee bound.
+That selection never confirms a provider charge.
 Delivery JSON retains the admission bound and actual fee separately.
 Their upserts correct provider start times and every price field.
 Every overflow price row has a finite end from its measured interval.
 Later metering refreshes cannot extend an old reading.
 An unknown final interval publishes only the known measured billing prefix.
 Boat accounting remains available so the metering refresh can reach purge.
-Relevant savings reads return `AccountingIncomplete` while a required fee
-or runtime interval remains unknown.
+Relevant savings reads return `AccountingIncomplete` while both fee sources
+are missing or a required runtime interval remains unknown.
 The savings range excludes a lifecycle end at its first instant.
 Execution and cleanup do not use those reporting reads.
 
@@ -224,6 +228,8 @@ CI starts the database for the existing workspace test phase.
 - [src/scale_sets.rs](src/scale_sets.rs) owns advisory lock sessions.
 - [src/boat.rs](src/boat.rs) rotates and erases encrypted keys.
 - [src/overflow](src/overflow) owns durable Boat execution transactions.
+- [src/overflow/authority.rs](src/overflow/authority.rs) reads current
+  startup authority for one saved delivery.
 - [src/github](src/github) owns atomic installation setup, repository
   snapshots, durable job revisions, and demand retention.
 - [src/machine_removal.rs](src/machine_removal.rs) preserves removal times.

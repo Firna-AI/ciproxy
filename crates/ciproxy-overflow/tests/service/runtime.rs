@@ -8,10 +8,12 @@ use ciproxy_overflow::clock::ClockMock;
 use ciproxy_overflow::crypto::{KeyCipherMock, SecretPurpose};
 use ciproxy_overflow::secrets::{SecretBytes, TokenSourceMock};
 use ciproxy_protocol::secret::Secret;
+use ciproxy_store_interface::organizations::AppState;
 use unimock::{MockFn, Unimock, matching};
 
 use super::authority_support::disable;
 use super::harness::Runtime;
+use super::organization_hooks::withdraw;
 use super::recording::Capture;
 
 pub(super) fn build(
@@ -52,7 +54,7 @@ pub(super) fn build(
         .some_call(matching!(_, _))
         .answers_arc(Arc::new(move |_, context, _| {
             if context.purpose == SecretPurpose::BoatKey {
-                let withdraw = {
+                let disabled = {
                     let mut capture = state.lock().unwrap();
                     capture.key_opens += 1;
                     if capture
@@ -65,8 +67,23 @@ pub(super) fn build(
                         None
                     }
                 };
-                if let Some(store) = withdraw {
+                if let Some(store) = disabled {
                     disable(&store);
+                }
+                let suspended = {
+                    let mut capture = state.lock().unwrap();
+                    if capture
+                        .suspend_on_key_open
+                        .as_ref()
+                        .is_some_and(|(at, _)| *at == capture.key_opens)
+                    {
+                        capture.suspend_on_key_open.take().map(|(_, store)| store)
+                    } else {
+                        None
+                    }
+                };
+                if let Some(store) = suspended {
+                    withdraw(&store, AppState::Suspended);
                 }
                 return Ok(SecretBytes::new(b"account-key".to_vec()));
             }

@@ -14,7 +14,6 @@ use crate::error::{Error, Result, ResultExt};
 use crate::session::Session;
 
 use super::OverflowService;
-use super::authority::active;
 
 pub(super) fn create_request(
     workspace_id: Uuid,
@@ -55,7 +54,12 @@ impl OverflowService {
             .ok_or(Error::OwnershipUnknown)?
             .clone();
         let backend = self.maintenance_backend(workspace_id, &account).await?;
-        if !active(&snapshot, record.key_id) {
+        let delivery = record.delivery_id;
+        if session
+            .call(move |session| session.startup_account(delivery))
+            .await?
+            .is_none()
+        {
             return self
                 .reconcile_retired(session, workspace_id, &backend, record)
                 .await;
@@ -73,7 +77,7 @@ impl OverflowService {
             let request = create_request(workspace_id, &record);
             let result = if dispatch {
                 let Some(authority) = self
-                    .launch_authority(session, workspace_id, record.key_id)
+                    .launch_authority(session, workspace_id, record.delivery_id)
                     .await?
                 else {
                     return self

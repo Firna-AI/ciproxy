@@ -107,6 +107,9 @@ Services consume these boundaries through dyn.
 
 OverflowStore adds exclusive workspace sessions for Boat execution.
 It retains immutable delivery identity before provider access.
+Its startup query derives the organization and key from the saved delivery.
+It checks tenant ownership, active App state, enabled overflow, and the
+accepted non-retired key together.
 Account observations keep typed catalogs, retry times, and refusal state.
 Runner input stays encrypted until launch or cleanup ends its use.
 Callback lookup derives the workspace from a token digest.
@@ -115,7 +118,9 @@ There is no independent expiry before that runner ends.
 Old keys stay while uncertain creates or live sandboxes reference them.
 Per-month runtime observations keep incomplete costs explicit.
 Each delivery separates its saved start-fee bound from a confirmed fee.
-Budget estimates never supply measured cost facts.
+Spend and savings select the confirmed fee, or else the saved fee bound.
+The selected fee does not become a provider-confirmed charge.
+Runtime bounds never supply measured runtime facts.
 Running observations and total runtime costs survive a failed monthly read.
 The overflow service allocates confirmed monthly costs or conservative bounds.
 The store does not turn a cross-month estimate into a measured price interval.

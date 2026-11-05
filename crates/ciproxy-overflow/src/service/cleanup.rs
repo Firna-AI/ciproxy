@@ -15,7 +15,6 @@ use crate::session::Session;
 use crate::spend;
 
 use super::OverflowService;
-use super::authority::active;
 use super::execution::create_request;
 
 impl OverflowService {
@@ -136,8 +135,12 @@ impl OverflowService {
                 .filter(|record| record.key_id == account.account.id && record.ends_at.is_none())
                 .cloned()
             {
-                if !active(&snapshot, record.key_id)
-                    && !matches!(record.phase, StartPhase::Running | StartPhase::Deleting)
+                let delivery = record.delivery_id;
+                if !matches!(record.phase, StartPhase::Running | StartPhase::Deleting)
+                    && session
+                        .call(move |session| session.startup_account(delivery))
+                        .await?
+                        .is_none()
                 {
                     match self
                         .reconcile_retired(&session, workspace_id, &backend, record)

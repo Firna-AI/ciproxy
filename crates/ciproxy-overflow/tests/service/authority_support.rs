@@ -12,6 +12,7 @@ use sandbox_interface::{
 use unimock::{MockFn, Unimock, matching};
 
 use super::fixtures::{capabilities, facts, id};
+use super::organization_hooks::{OrganizationHook, Stage};
 
 #[derive(Default, Debug)]
 pub(super) struct Counts {
@@ -37,6 +38,8 @@ pub(super) struct Provider {
     pub(super) store: Arc<Mutex<Option<Arc<dyn Store>>>>,
     pub(super) launched: Arc<Mutex<Option<LaunchState>>>,
     pub(super) recovered: Arc<Mutex<bool>>,
+    pub(super) inspect_state: Arc<Mutex<SandboxState>>,
+    pub(super) organization: OrganizationHook,
 }
 
 impl Provider {
@@ -54,6 +57,12 @@ impl Provider {
         let inspection = launched.clone();
         let recovered = Arc::new(Mutex::new(true));
         let recovering = recovered.clone();
+        let inspect_state = Arc::new(Mutex::new(SandboxState::Ready));
+        let inspecting = inspect_state.clone();
+        let organization = OrganizationHook::default();
+        let created_org = organization.clone();
+        let prepared_org = organization.clone();
+        let written_org = organization.clone();
         let backend = capabilities(
             Unimock::new((
                 GuestInspectionMock::inspect_launch
@@ -74,6 +83,7 @@ impl Provider {
                     .some_call(matching!(_))
                     .answers_arc(Arc::new(move |_, request| {
                         creating.lock().unwrap().creates += 1;
+                        created_org.apply(Stage::Created);
                         Ok(BackendSandbox {
                             provider_ref: ProviderRef::new(
                                 if request.sandbox_id.as_uuid() == id(12) {
@@ -92,12 +102,12 @@ impl Provider {
                     })),
                 SandboxLifecycleMock::inspect_sandbox
                     .some_call(matching!(_))
-                    .answers(&|_, provider_ref| {
+                    .answers_arc(Arc::new(move |_, provider_ref| {
                         Ok(BackendSandbox {
                             provider_ref,
-                            state: SandboxState::Ready,
+                            state: *inspecting.lock().unwrap(),
                         })
-                    }),
+                    })),
                 SandboxLifecycleMock::list_managed_sandboxes
                     .some_call(matching!(_))
                     .answers(&|_, _| {
@@ -115,6 +125,7 @@ impl Provider {
                     .answers_arc(Arc::new(move |_, request| {
                         if !request.bytes.is_empty() {
                             writing.lock().unwrap().inputs += 1;
+                            written_org.apply(Stage::InputWritten);
                             if disable_at == DisableAt::InputWritten {
                                 disable(written.lock().unwrap().as_ref().unwrap());
                             }
@@ -127,6 +138,7 @@ impl Provider {
                     .some_call(matching!(_, _))
                     .answers_arc(Arc::new(move |_, _, _| {
                         preparing.lock().unwrap().prepares += 1;
+                        prepared_org.apply(Stage::Prepared);
                         if disable_at == DisableAt::Prepared {
                             disable(prepared.lock().unwrap().as_ref().unwrap());
                         }
@@ -156,6 +168,8 @@ impl Provider {
             store,
             launched,
             recovered,
+            inspect_state,
+            organization,
         }
     }
 }

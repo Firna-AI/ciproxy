@@ -20,6 +20,7 @@ pub(super) struct Capture {
     pub(super) active_backends: usize,
     pub(super) key_opens: usize,
     pub(super) disable_on_key_open: Option<(usize, Arc<dyn Store>)>,
+    pub(super) suspend_on_key_open: Option<(usize, Arc<dyn Store>)>,
     pub(super) launches: BTreeMap<Uuid, EncryptedLaunch>,
     pub(super) hashes: BTreeMap<Uuid, TokenHash>,
     pub(super) sealed: BTreeMap<(Uuid, u8), SecretBytes>,
@@ -75,6 +76,10 @@ impl RecordingSession {
 impl OverflowSession for RecordingSession {
     fn snapshot(&mut self) -> Result<OverflowSnapshot> {
         self.inner.snapshot()
+    }
+
+    fn startup_account(&mut self, delivery_id: Uuid) -> Result<Option<AccountRecord>> {
+        self.inner.startup_account(delivery_id)
     }
 
     fn connect(&mut self, account: &AccountRecord, limit: i64) -> Result<()> {

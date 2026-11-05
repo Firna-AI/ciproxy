@@ -50,6 +50,9 @@ pub trait OverflowStore: Send + Sync {
 pub trait OverflowSession: Send {
     /// Read account, settings, and durable start facts from one snapshot.
     fn snapshot(&mut self) -> Result<OverflowSnapshot>;
+    /// Read current startup authority for this workspace's saved delivery in one query.
+    /// Require its active organization, enabled overflow, and accepted non-retired key.
+    fn startup_account(&mut self, delivery_id: Uuid) -> Result<Option<AccountRecord>>;
     /// Atomically replace the active key, its catalog, and the monthly limit.
     fn connect(&mut self, account: &AccountRecord, spend_limit_usd_micros: i64) -> Result<()>;
     /// Retire active keys and preserve keys referenced by unfinished deliveries.

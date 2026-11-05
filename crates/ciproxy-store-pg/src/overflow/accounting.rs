@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use crate::error::QueryResultExt;
 
-/// A linear BoatCost cannot encode an unknown fee or an unmeasured interval.
+/// A linear BoatCost needs a counted fee and a fully measured runtime interval.
 pub(crate) fn require_complete(
     connection: &mut PgConnection,
     workspace_id: Uuid,
@@ -29,7 +29,7 @@ pub(crate) fn require_complete(
                 || record.starts_at.date_naive() >= from);
         if relevant
             && record.phase != StartPhase::Refused
-            && (!record.runtime_complete || record.start_usd.is_none())
+            && (!record.runtime_complete || record.counted_start_fee_usd().is_none())
         {
             return Err(Error::AccountingIncomplete);
         }

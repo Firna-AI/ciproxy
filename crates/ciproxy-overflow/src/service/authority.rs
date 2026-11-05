@@ -1,10 +1,9 @@
-//! Startup capabilities minted from the workspace's current durable authority.
+//! Startup capabilities minted from the saved delivery's current durable authority.
 
-use ciproxy_store_interface::overflow::store::OverflowSnapshot;
 use sandbox_interface::{BackendCreateSandboxRequest, BackendSandbox, SandboxFiles};
 use uuid::Uuid;
 
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::provider::{Capabilities, GuestLauncher};
 use crate::session::Session;
 
@@ -32,34 +31,25 @@ impl LaunchAuthority {
     }
 }
 
-pub(super) fn active(snapshot: &OverflowSnapshot, key_id: Uuid) -> bool {
-    snapshot.enabled
-        && snapshot.accounts.iter().any(|account| {
-            account.account.id == key_id
-                && account.account.retired_at.is_none()
-                && account.account.rejected_at.is_none()
-        })
-}
-
 impl OverflowService {
     pub(super) async fn launch_authority(
         &self,
         session: &Session,
         workspace_id: Uuid,
-        key_id: Uuid,
+        delivery_id: Uuid,
     ) -> Result<Option<LaunchAuthority>> {
-        let snapshot = session.call(|session| session.snapshot()).await?;
-        if !active(&snapshot, key_id) {
+        let Some(account) = session
+            .call(move |session| session.startup_account(delivery_id))
+            .await?
+        else {
             return Ok(None);
-        }
-        let account = snapshot
-            .accounts
-            .iter()
-            .find(|account| account.account.id == key_id)
-            .ok_or(Error::OwnershipUnknown)?;
-        let backend = self.backend(workspace_id, account).await?;
-        let current = session.call(|session| session.snapshot()).await?;
-        if !active(&current, key_id) {
+        };
+        let backend = self.backend(workspace_id, &account).await?;
+        if session
+            .call(move |session| session.startup_account(delivery_id))
+            .await?
+            .is_none()
+        {
             return Ok(None);
         }
         Ok(Some(LaunchAuthority { backend }))

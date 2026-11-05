@@ -98,6 +98,13 @@ pub struct StartRecord {
     pub runtime_complete: bool,
 }
 
+impl StartRecord {
+    /// Select the start fee counted by spend and savings without confirming a charge.
+    pub fn counted_start_fee_usd(&self) -> Option<Decimal> {
+        self.start_usd.or(self.start_fee_bound_usd)
+    }
+}
+
 /// Provider-measured runtime cost for one UTC calendar month.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct RuntimeCharge {

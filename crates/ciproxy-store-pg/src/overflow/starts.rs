@@ -12,11 +12,15 @@ use uuid::Uuid;
 use crate::error::QueryResultExt;
 use crate::gateway_transaction::transaction;
 
-use super::{Session, accounts, completion, deliveries, rows};
+use super::{Session, accounts, authority, completion, deliveries, rows};
 
 impl OverflowSession for Session {
     fn snapshot(&mut self) -> Result<OverflowSnapshot> {
         rows::snapshot(&mut self.connection, self.workspace_id)
+    }
+
+    fn startup_account(&mut self, delivery_id: Uuid) -> Result<Option<AccountRecord>> {
+        authority::startup_account(&mut self.connection, self.workspace_id, delivery_id)
     }
 
     fn connect(&mut self, account: &AccountRecord, limit: i64) -> Result<()> {

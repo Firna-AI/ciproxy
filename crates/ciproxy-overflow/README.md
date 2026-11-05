@@ -118,7 +118,8 @@ The saved fee stays counted in its UTC start month after runtime completion
 and lifetime expiry, including a free start with zero measured runtime.
 Boat reports no actual start fee.
 The saved bound never becomes a provider-confirmed start charge.
-The existing measured-cost path still requires independent confirmed facts.
+Savings count the confirmed start fee when present, or the saved fee bound.
+Runtime still needs measured cost facts.
 
 A lifetime expires for budget purposes from the saved dispatch time until a
 trusted creation reading supplies the real start time.
@@ -165,7 +166,11 @@ unfinished, including uncertain creates.
 Retained keys expose only inspection, recovery reads, usage reads, and deletion.
 Registration delivery and guest launch require the active accepted key.
 They also require overflow to remain enabled in the workspace.
-The service checks these facts after key decryption at each operation.
+A delivery also needs its own organization to have an active GitHub App.
+One current store query checks all three facts from the saved delivery.
+The service repeats that query after key decryption at each operation.
+A suspension or removal withdraws startup while other organizations keep
+their use of the shared key.
 A retired delivery uses a read-only launch-marker check before cleanup.
 A confirmed launch keeps its runner, including after a lost launch response.
 An unavailable check keeps the delivery and its recovery key for another pass.
@@ -244,6 +249,8 @@ These commands contact Boat or Cloud KMS and can incur charges.
 
 - [src/api.rs](src/api.rs) defines `Overflow` and its caller contracts.
 - [src/service](src/service) owns durable execution and cleanup.
+- [src/service/authority.rs](src/service/authority.rs) obtains current
+  startup authority for each saved delivery.
 - [src/maintenance.rs](src/maintenance.rs) restricts retained-key capabilities.
 - [src/view.rs](src/view.rs) supplies safe scaler and cost facts.
 - [src/boat](src/boat) composes the pinned adapter and fixed image launcher.

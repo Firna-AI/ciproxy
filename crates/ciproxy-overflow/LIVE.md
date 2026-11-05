@@ -6,6 +6,11 @@ Create those files outside Git with mode 0600.
 The scripts read paths from environment variables and never print contents.
 `--help` runs without credentials or network access.
 
+Put `--wallet` before the command name.
+The flag defaults to the personal wallet.
+For an organization wallet, pass its organization ID with `--wallet`.
+`GET /orgs` lists the organizations and their IDs for the account.
+
 ```sh
 export BOAT_API_KEY_FILE=/private/boat-key
 export GCP_ACCESS_TOKEN_FILE=/private/gcp-oauth-token

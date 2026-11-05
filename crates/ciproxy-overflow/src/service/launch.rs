@@ -57,7 +57,7 @@ impl OverflowService {
             ProviderRef::new(record.sandbox.as_ref().ok_or(Error::OwnershipUnknown)?.id());
         if record.phase == StartPhase::Preparing {
             let Some(authority) = self
-                .launch_authority(session, workspace_id, record.key_id)
+                .launch_authority(session, workspace_id, record.delivery_id)
                 .await?
             else {
                 return self
@@ -102,7 +102,7 @@ impl OverflowService {
                 .prepare(sandbox.clone(), delivery)
                 .await?;
             let Some(authority) = self
-                .launch_authority(session, workspace_id, record.key_id)
+                .launch_authority(session, workspace_id, record.delivery_id)
                 .await?
             else {
                 return self
@@ -127,7 +127,7 @@ impl OverflowService {
         }
         if record.phase == StartPhase::Launching {
             let Some(authority) = self
-                .launch_authority(session, workspace_id, record.key_id)
+                .launch_authority(session, workspace_id, record.delivery_id)
                 .await?
             else {
                 return self

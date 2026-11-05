@@ -61,7 +61,7 @@ pub(crate) fn current(starts: &[StartRecord], now: DateTime<Utc>) -> Result<Spen
         }
         let fee = if fee_in_month && start.start_usd.is_none() {
             spend.unknown_start_charges.push(start.delivery_id);
-            match start.start_fee_bound_usd {
+            match start.counted_start_fee_usd() {
                 Some(bound) => bound,
                 None => {
                     spend.unbounded_starts.push(start.delivery_id);

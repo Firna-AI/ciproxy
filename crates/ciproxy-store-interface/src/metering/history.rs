@@ -52,7 +52,7 @@ pub struct BoatCost {
     pub starts_at: DateTime<Utc>,
     /// End of this price interval. Overflow always supplies a finite measured end.
     pub ends_at: Option<DateTime<Utc>>,
-    /// The sandbox's one-time start charge in USD.
+    /// The counted one-time start fee in USD, including a saved fee bound.
     pub start_usd: Decimal,
     /// The sandbox's runtime cost per elapsed minute in USD.
     pub minute_usd: Decimal,

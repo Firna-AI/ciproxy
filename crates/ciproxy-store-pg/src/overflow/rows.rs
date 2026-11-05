@@ -16,7 +16,8 @@ use crate::error::QueryResultExt;
 use crate::gateway_transaction::read_snapshot;
 
 #[derive(QueryableByName)]
-struct AccountRow {
+/// Private stored fields shared by account snapshots and startup authority reads.
+pub(super) struct AccountRow {
     #[diesel(sql_type = diesel::sql_types::Uuid)]
     id: Uuid,
     #[diesel(sql_type = Text)]
@@ -31,6 +32,28 @@ struct AccountRow {
     rejected_at: Option<DateTime<Utc>>,
     #[diesel(sql_type = Nullable<Text>)]
     state_json: Option<String>,
+}
+
+impl AccountRow {
+    pub(super) fn into_record(self) -> Result<AccountRecord> {
+        Ok(AccountRecord {
+            account: BoatAccount {
+                id: self.id,
+                account_name: self.account_name,
+                connected_at: self.connected_at,
+                retired_at: self.retired_at,
+                rejected_at: self.rejected_at,
+            },
+            key: EncryptedBoatKey::new(self.key_ciphertext),
+            state: match self.state_json {
+                Some(json) => serde_json::from_str(&json).internal()?,
+                None => AccountState {
+                    wallet: "personal".to_owned(),
+                    ..AccountState::default()
+                },
+            },
+        })
+    }
 }
 
 pub(super) fn snapshot(
@@ -56,25 +79,7 @@ pub(super) fn snapshot(
         .load::<AccountRow>(connection)
         .store()?
         .into_iter()
-        .map(|row| {
-            Ok(AccountRecord {
-                account: BoatAccount {
-                    id: row.id,
-                    account_name: row.account_name,
-                    connected_at: row.connected_at,
-                    retired_at: row.retired_at,
-                    rejected_at: row.rejected_at,
-                },
-                key: EncryptedBoatKey::new(row.key_ciphertext),
-                state: match row.state_json {
-                    Some(json) => serde_json::from_str(&json).internal()?,
-                    None => AccountState {
-                        wallet: "personal".to_owned(),
-                        ..AccountState::default()
-                    },
-                },
-            })
-        })
+        .map(AccountRow::into_record)
         .collect::<Result<Vec<_>>>()?;
         let starts = overflow_starts::table
             .filter(overflow_starts::workspace_id.eq(workspace_id))
