@@ -1278,6 +1278,19 @@ Answers of 5 November 2026:
   about 10% less for compute, and the data then lives in the US. The
   Terraform state buckets of the seed stay in `europe-west1`, because a move
   recreates them. Rejected: a retry of `europe-west1`, and `europe-west4`.
+- Item 79, A, in the user's words: "lets not over engineer this, if they
+  remove the runner, then something should probably fail, like we can fail
+  the action in that case". So Remove, `ciproxy-agent uninstall`, and the
+  last App removal stop the warm runners at once. A job that a warm runner
+  took before its handover to the guest then fails. Jobs that the guest
+  received still finish. Ordinary stops and Drain still ask GitHub first.
+  Rejected: B, C, D, and E.
+- Item 80, D: an attached Docker disk reserves its data plus the free disk
+  of its label. The reservation comes only from spare disk that no set of
+  job VMs can use, so a Docker disk stops no start, except for a short time
+  after a label or image change. When no reservation fits, the job runs
+  without its Docker disk. Machines with little disk get few or no sticky
+  disks. Rejected: A, B, C, E, and F. The add-ons G and H were not chosen.
 - Item 70, E: this whole repository becomes public now, in place of a public
   copy of the open parts at launch. The agent builds and releases in public.
   This replaces the code location rule of the foundation plan. The closed
@@ -2179,9 +2192,8 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 78 and 81 on 5 November 2026, and item 76
-became a design call. Items 79 and 80 still wait. The
-conversation gave each item in full in the layout of the
+The user answered items 54 to 81 on 5 November 2026, and item 76 became a
+design call. The conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
 
@@ -2955,6 +2967,8 @@ buckets must be public.
 
 ### 79. Removing a machine can cancel a job that a runner just took
 
+**Answer, 5 November 2026:** A, in the user's words. See the answers above.
+
 - **Severity:** High. **Effort:** Large.
 - **Source:** Implementation, Milestone 13.
 - **Category:** Docs or spec.
@@ -3007,6 +3021,8 @@ buckets must be public.
 
 ### 80. Sticky Docker disks have no space rule
 
+**Answer, 5 November 2026:** D.
+
 - **Severity:** Medium. **Effort:** Large.
 - **Source:** Implementation, Milestone 13.
 - **Category:** Docs or spec.
@@ -3049,6 +3065,10 @@ buckets must be public.
   - **G.** An add-on to A, D, E, or F: ship the image's cached Docker
     images as a seed disk with each release, about 6 GB of the 140 GB image
     budget. Effort: Medium.
+  - **H.** An add-on to A, D, E, or F: one host ledger owns the whole free
+    job disk, for VM disks, Docker disks, and the machine cache. Each start
+    and each attach takes its space from that ledger. Effort: Large. The
+    re-print of 5 November 2026 gave the wider fix this letter.
 - **Left out:** unbounded disks, no sticky disks, space from the host
   reserve or the image budget, and a registry pull-through cache.
 - **Wider fix:** one host ledger that owns the job disk for roots, Docker
