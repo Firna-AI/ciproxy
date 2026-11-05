@@ -67,14 +67,25 @@ BillingApi::reconcile_removal for every result.
 Retry Busy and provider failures.
 The request stays durable during unfinished Checkout and failed HTTP calls.
 The paid tier and add-ons stay until Stripe actually ends the subscription.
-Billing tracks the failed renewal invoice independently of the upgrade invoice.
-It refreshes the renewal retry date through its own invoice read.
+Billing retains each renewal outcome independently of the upgrade and banner.
+It refreshes open renewals through their own invoice reads.
+Paid and void outcomes stay durable after their banner clears.
+Later subscription events cannot restore a recovered renewal failure.
 A change saves a renewal seen before its Stripe mutation.
 A delayed failed-payment event can also supply the renewal reference.
 The upgrade invoice supplies only its payment page and change progress.
-Past-due subscriptions keep the failed-payment state while details arrive.
-An unpaid renewal keeps that state even after another charge succeeds.
+Only an owned open unpaid renewal supplies the failed-payment state.
+An unpaid renewal keeps that state even after another renewal or charge
+succeeds.
 A paid renewal, or subscription end, clears its failure.
+Signed automatic collection stops need fresh matching invoice and subscription
+reads before they can end coverage.
+Manual stops, paused collection, payment, and void invoices cannot request
+an end.
+The verified stop persists before an immediate Stripe cancellation request.
+Retries survive provider failures and a service restart.
+The request creates no invoice or proration.
+Coverage changes to Free only after Stripe confirms the same subscription ended.
 Failed renewal dates come from signed invoice.payment_failed events.
 Reconciliation keeps the failed invoice identity and event date together.
 It applies the date only to that concrete failed renewal.
@@ -139,10 +150,15 @@ Complete form comparison catches missing, extra, and duplicate fields.
 The checked provider reports mismatches on the calling test thread.
 The fake also fails on unused required request pairs.
 GET snapshot edits need no mutation pair.
-Fixtures retain Stripe's event shape with public documentation example values.
-They contain no account credential or card data.
-They are synthetic recorded-shape samples, not a claimed live Stripe capture.
-Real signed test-mode recordings come from the optional listener below.
+The existing example fixtures are synthetic recorded-shape samples.
+The fixtures under tests/_tests_/fixtures/live are minimal real test-mode
+recordings from origin/tmp/billing-live-fixtures at 30dfcf4.
+Their snapshot keys identify the recorded response source.
+They retain actual event identifiers and provider fields.
+Tests sign projected events with a throwaway test signing key.
+Derived cases change only the fields needed for their stated scenario.
+The fixtures contain no account credential, signing secret, or card data.
+The optional listener below captures additional real signed test-mode events.
 The complete repository gate remains the final verification step.
 
 ### Stripe test mode
@@ -241,6 +257,8 @@ Never run this smoke script with a live key.
 - [src/service/completion.rs](src/service/completion.rs) owns the rules for
   command completion.
 - [src/service/renewal.rs](src/service/renewal.rs) refreshes failed renewals.
+- [src/service/collection_stop.rs](src/service/collection_stop.rs) retries
+  verified final failures and confirms the Stripe end.
 - [src/stripe/api.rs](src/stripe/api.rs) owns the dyn StripeApi boundary.
 - [src/stripe/http/client.rs](src/stripe/http/client.rs) owns the HTTP adapter.
 - [src/webhook.rs](src/webhook.rs) verifies raw signatures and routes events.

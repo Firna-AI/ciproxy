@@ -1,11 +1,12 @@
 //! A real HTTP Stripe double with mandatory subscription exchanges.
 
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 
 use ciproxy_billing::stripe::wire::invoice::Invoice;
 use ciproxy_billing::stripe::wire::types::{CheckoutSession, Subscription};
+use serde_json::Value;
 use tiny_http::{Response, Server};
 use url::form_urlencoded;
 
@@ -17,6 +18,8 @@ pub(super) struct State {
     pub(super) checkout: Option<CheckoutSession>,
     pub(super) subscription: Subscription,
     pub(super) invoices: Vec<Invoice>,
+    pub(super) raw_reads: BTreeMap<String, Value>,
+    pub(super) raw_read_sequences: BTreeMap<String, VecDeque<Value>>,
     pub(super) requests: Vec<Request>,
     pub(super) lose_next_post: bool,
     pub(super) reject_next_checkout: Option<u16>,
@@ -95,6 +98,8 @@ impl Fake {
             checkout: None,
             subscription,
             invoices: Vec::new(),
+            raw_reads: BTreeMap::new(),
+            raw_read_sequences: BTreeMap::new(),
             requests: Vec::new(),
             lose_next_post: false,
             reject_next_checkout: None,

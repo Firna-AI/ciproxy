@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::invoice::{CancellationDetails, Invoice};
+use super::invoice::{CancellationDetails, CollectionMethod, Invoice};
 use crate::catalog::PriceCode;
 
 /// Server-owned metadata attached to Stripe sessions and subscriptions.
@@ -117,6 +117,29 @@ pub struct Subscription {
     pub ended_at: Option<i64>,
     /// Why Stripe ended the subscription.
     pub cancellation_details: Option<CancellationDetails>,
+    /// The subscription's current collection flow.
+    pub collection_method: Option<CollectionMethod>,
+    /// Present while the customer or operator has paused collection.
+    pub pause_collection: Option<PauseCollection>,
+}
+
+/// A provider collection pause, independent of subscription status.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct PauseCollection {
+    /// How Stripe handles invoices while collection is paused.
+    pub behavior: PauseBehavior,
+}
+
+/// Stripe's invoice handling during a collection pause.
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PauseBehavior {
+    /// Keep invoices in draft.
+    KeepAsDraft,
+    /// Mark invoices uncollectible.
+    MarkUncollectible,
+    /// Void the invoices.
+    Void,
 }
 
 /// Stripe subscription states relevant to paid coverage.

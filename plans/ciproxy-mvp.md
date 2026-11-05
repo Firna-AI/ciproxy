@@ -617,6 +617,14 @@ the event both read the session, so the tier changes once.
 - [x] Require expected requests for each scripted Stripe subscription
       outcome and prove that wrong prices fail the integration tests.
       Branch: `conductor/ciproxy-mvp-milestone-17-billing`.
+- [x] Keep durable renewal outcomes after recovery. Replay the live paid
+      renewal with a void upgrade and later events without a new failure.
+      Branch: `conductor/ciproxy-mvp-milestone-17-billing-live-fixes`.
+- [x] Persist verified automatic collection stops for owned unpaid
+      renewals. Ask Stripe to cancel and record Free after confirmation.
+      Replay the final retry and exclude manual stops and paid invoices.
+      Branch: `conductor/ciproxy-mvp-milestone-17-billing-live-fixes`.
+      Evidence: `.context/ciproxy-mvp/billing-live-fixes/verification.md`.
 - [ ] Test each state with recorded events and the Stripe test mode.
       The fixed event fixtures and fake HTTP Stripe tests pass locally.
       Orchestrator: run the

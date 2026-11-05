@@ -1,92 +1,109 @@
-//! Current failed-renewal reads separate from upgrade payment information.
+//! Durable invoice outcomes separate from upgrade and banner information.
 
-use ciproxy_store_interface::billing::state::BillingState;
+use chrono::DateTime;
+use ciproxy_store_interface::billing::renewals::{Renewal, RenewalOutcome};
+use ciproxy_store_interface::billing::state::{BillingState, Tier};
+use ciproxy_store_interface::billing::store::BillingSession;
 
-use crate::error::{Error, Result};
+use crate::error::{Error, Result, ResultExt};
 use crate::stripe::wire::invoice::{BillingReason, Invoice, InvoiceStatus};
-use crate::stripe::wire::types::{Status, Subscription};
+use crate::stripe::wire::types::Subscription;
 
-use super::events::FailedPaymentEvidence;
+use super::collection_stop::current_stop;
+use super::invoice_evidence::InvoiceEvidence;
 use super::runtime::BillingService;
 use super::transition::{confirmed, terminal};
-
-pub(super) enum RenewalState {
-    Unknown,
-    Failed(Invoice),
-    Recovered,
-}
-
-fn unresolved(invoice: &Invoice) -> bool {
-    invoice.billing_reason == BillingReason::SubscriptionCycle
-        && invoice.status != InvoiceStatus::Paid
-}
 
 impl BillingService {
     pub(super) fn confirmed_state(
         &self,
+        session: &mut dyn BillingSession,
         old: &BillingState,
         current: &Subscription,
-        failure_evidence: Option<&FailedPaymentEvidence>,
+        evidence: Option<&InvoiceEvidence>,
     ) -> Result<BillingState> {
-        let renewal = if terminal(current) {
-            RenewalState::Unknown
-        } else {
-            self.failed_renewal(old, current, failure_evidence)?
-        };
-        let mut state = confirmed(old, current, self.clock.now(), &renewal)?;
-        if let (Some(evidence), RenewalState::Failed(invoice)) = (failure_evidence, &renewal)
-            && evidence.invoice_id() == invoice.id
-        {
-            let failed_at = evidence.failed_at();
-            state.failed_at = Some(state.failed_at.map_or(failed_at, |old| old.max(failed_at)));
+        if old.tier != Tier::Free && old.subscription_id.as_ref() != Some(&current.id) {
+            return Err(Error::Ownership);
         }
-        Ok(state)
+        confirmed(old, current, self.clock.now(), None)?;
+        let renewal = if terminal(current) {
+            None
+        } else {
+            self.renewal_state(session, old, current, evidence)?
+        };
+        confirmed(old, current, self.clock.now(), renewal.as_ref())
     }
 
-    fn failed_renewal(
+    fn renewal_state(
         &self,
+        session: &mut dyn BillingSession,
         old: &BillingState,
         current: &Subscription,
-        failure_evidence: Option<&FailedPaymentEvidence>,
-    ) -> Result<RenewalState> {
-        let mut recovered = false;
-        let known_id = if old.subscription_id.as_ref() == Some(&current.id) {
-            old.failed_invoice_id.as_deref()
-        } else {
-            None
-        };
-        if let Some(id) = known_id {
-            let invoice = self.owned_invoice(current, id)?;
-            if unresolved(&invoice) {
-                return Ok(RenewalState::Failed(invoice));
-            }
-            recovered |= invoice.billing_reason == BillingReason::SubscriptionCycle;
+        evidence: Option<&InvoiceEvidence>,
+    ) -> Result<Option<Renewal>> {
+        let mut renewals = session.renewals(&current.id).internal()?;
+        let mut ids = renewals
+            .iter()
+            .map(|renewal| renewal.invoice_id.clone())
+            .collect::<Vec<_>>();
+        if old.subscription_id.as_ref() == Some(&current.id)
+            && let Some(id) = &old.failed_invoice_id
+        {
+            ids.push(id.clone());
         }
-        if let Some(evidence) = failure_evidence {
-            let invoice = self.owned_invoice(current, evidence.invoice_id())?;
-            if unresolved(&invoice) {
-                return Ok(RenewalState::Failed(invoice));
-            }
-            recovered |= invoice.billing_reason == BillingReason::SubscriptionCycle;
+        if let Some(evidence) = evidence {
+            ids.push(evidence.invoice_id.clone());
         }
-        if matches!(current.status, Status::PastDue | Status::Unpaid)
-            && let Some(latest) = current.latest_invoice.as_ref()
+        if let Some(latest) = &current.latest_invoice
             && latest.billing_reason == BillingReason::SubscriptionCycle
         {
-            let invoice = self.owned_invoice(current, &latest.id)?;
-            if unresolved(&invoice) {
-                return Ok(RenewalState::Failed(invoice));
-            }
-            recovered = true;
+            ids.push(latest.id.clone());
         }
-        Ok(if recovered {
-            RenewalState::Recovered
-        } else {
-            RenewalState::Unknown
-        })
+        ids.sort();
+        ids.dedup();
+        for id in ids {
+            if renewals.iter().any(|renewal| {
+                renewal.invoice_id == id
+                    && matches!(renewal.outcome, RenewalOutcome::Paid | RenewalOutcome::Void)
+            }) {
+                continue;
+            }
+            let invoice = self.owned_invoice(current, &id)?;
+            let previous = renewals.iter().find(|renewal| renewal.invoice_id == id);
+            if invoice.billing_reason != BillingReason::SubscriptionCycle && previous.is_none() {
+                continue;
+            }
+            let mut renewal = observed(previous, old, current, &invoice, evidence)?;
+            if renewal
+                .automatic_stop
+                .as_ref()
+                .is_some_and(|stop| !current_stop(current, &invoice, stop))
+            {
+                renewal.automatic_stop = None;
+            }
+            if previous != Some(&renewal) {
+                session.save_renewal(&renewal).internal()?;
+            }
+            renewals.retain(|renewal| renewal.invoice_id != id);
+            renewals.push(renewal);
+        }
+        let failed = renewals
+            .iter()
+            .filter(|renewal| {
+                renewal.outcome == RenewalOutcome::Open
+                    && renewal.amount_remaining.is_none_or(|amount| amount > 0)
+            })
+            .max_by_key(|renewal| {
+                (
+                    old.failed_invoice_id.as_ref() == Some(&renewal.invoice_id),
+                    renewal.failed_at,
+                    &renewal.invoice_id,
+                )
+            });
+        Ok(failed.cloned())
     }
 
-    fn owned_invoice(&self, current: &Subscription, id: &str) -> Result<Invoice> {
+    pub(super) fn owned_invoice(&self, current: &Subscription, id: &str) -> Result<Invoice> {
         let record = self.stripe.invoice(id)?;
         if record.invoice.id != id
             || record.customer != current.customer
@@ -96,4 +113,54 @@ impl BillingService {
         }
         Ok(record.invoice)
     }
+}
+
+fn observed(
+    previous: Option<&Renewal>,
+    old: &BillingState,
+    current: &Subscription,
+    invoice: &Invoice,
+    evidence: Option<&InvoiceEvidence>,
+) -> Result<Renewal> {
+    let mut renewal = previous.cloned().unwrap_or_else(|| Renewal {
+        customer_id: current.customer.clone(),
+        subscription_id: current.id.clone(),
+        invoice_id: invoice.id.clone(),
+        outcome: RenewalOutcome::Draft,
+        amount_remaining: None,
+        failed_at: (old.failed_invoice_id.as_ref() == Some(&invoice.id))
+            .then_some(old.failed_at)
+            .flatten(),
+        next_retry_at: None,
+        automatic_stop: None,
+        collection_changed_at: None,
+    });
+    renewal.outcome = match invoice.status {
+        InvoiceStatus::Draft => RenewalOutcome::Draft,
+        InvoiceStatus::Open => RenewalOutcome::Open,
+        InvoiceStatus::Paid => RenewalOutcome::Paid,
+        InvoiceStatus::Void => RenewalOutcome::Void,
+        InvoiceStatus::Uncollectible => RenewalOutcome::Uncollectible,
+    };
+    renewal.amount_remaining = invoice.amount_remaining;
+    renewal.next_retry_at = invoice
+        .next_payment_attempt
+        .map(|seconds| DateTime::from_timestamp(seconds, 0).ok_or(Error::StripeState))
+        .transpose()?;
+    if let Some(evidence) = evidence.filter(|evidence| evidence.invoice_id == invoice.id) {
+        if let Some(failed_at) = evidence.failed_at {
+            renewal.failed_at = Some(
+                renewal
+                    .failed_at
+                    .map_or(failed_at, |old| old.max(failed_at)),
+            );
+        }
+        if let Some((at, stop)) = evidence.collection_change(current)
+            && renewal.collection_changed_at.is_none_or(|old| at >= old)
+        {
+            renewal.collection_changed_at = Some(at);
+            renewal.automatic_stop = stop;
+        }
+    }
+    Ok(renewal)
 }

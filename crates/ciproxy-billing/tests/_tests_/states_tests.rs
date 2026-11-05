@@ -161,6 +161,6 @@ fn unrelated_subscription_event_keeps_unknown_failed_payment_date_absent() {
     let result = state(&database);
     assert_eq!(
         (result.status, result.failed_invoice_id, result.failed_at),
-        (SubscriptionState::PaymentFailed, None, None)
+        (SubscriptionState::Active, None, None)
     );
 }

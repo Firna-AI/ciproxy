@@ -1,11 +1,12 @@
 //! Signed events refresh current Stripe objects under the workspace lock.
 
-use chrono::{DateTime, Utc};
+use uuid::Uuid;
 
 use crate::error::{Error, Result, ResultExt};
 use crate::webhook::{Payload, parse};
 
 use super::completion::classify;
+use super::invoice_evidence::InvoiceEvidence;
 use super::runtime::BillingService;
 use super::view::EventOutcome;
 
@@ -14,13 +15,7 @@ impl BillingService {
         self.signing_secret
             .verify(signature, raw, self.clock.now().timestamp())?;
         let event = parse(raw)?;
-        let failure_evidence = match &event.payload {
-            Payload::InvoiceFailed(object) => Some(FailedPaymentEvidence {
-                invoice_id: object.object.id.clone(),
-                failed_at: DateTime::from_timestamp(event.created, 0).ok_or(Error::StripeState)?,
-            }),
-            _ => None,
-        };
+        let evidence = InvoiceEvidence::from_event(&event)?;
         let (workspace, target, checkout) = match event.payload {
             Payload::Checkout(object) => {
                 let current = self.stripe.checkout_session(&object.object.id)?;
@@ -39,16 +34,16 @@ impl BillingService {
                 )
             }
             Payload::Invoice(object) | Payload::InvoiceFailed(object) => {
-                let invoice = self.stripe.invoice(&object.object.id)?;
-                let Some(id) = invoice.subscription_id() else {
+                let Some(target) = self.invoice_target(&object.object.id)? else {
                     return Ok(EventOutcome::Ignored);
                 };
-                let current = self.stripe.subscription(id)?;
-                (
-                    current.metadata.workspace_id.ok_or(Error::Ownership)?,
-                    id.to_owned(),
-                    false,
-                )
+                target
+            }
+            Payload::InvoiceUpdated(update) => {
+                let Some(target) = self.invoice_target(&update.object.id)? else {
+                    return Ok(EventOutcome::Ignored);
+                };
+                target
             }
             Payload::Ignore => return Ok(EventOutcome::Ignored),
         };
@@ -77,7 +72,8 @@ impl BillingService {
                 .internal()?;
             return Ok(EventOutcome::Ignored);
         }
-        let state = self.confirmed_state(&record.state, &current, failure_evidence.as_ref())?;
+        let (current, state) =
+            self.reconcile_subscription(&mut *session, &record.state, current, evidence.as_ref())?;
         if let Some(command) = record.command.as_mut() {
             self.capture_pending_expiry(&mut *session, &state, command, &current)?;
         }
@@ -99,20 +95,17 @@ impl BillingService {
         }
         Ok(EventOutcome::Applied)
     }
-}
 
-/// Failure identity and time built only from the verified failed-payment branch.
-pub(super) struct FailedPaymentEvidence {
-    invoice_id: String,
-    failed_at: DateTime<Utc>,
-}
-
-impl FailedPaymentEvidence {
-    pub(super) fn invoice_id(&self) -> &str {
-        &self.invoice_id
-    }
-
-    pub(super) fn failed_at(&self) -> DateTime<Utc> {
-        self.failed_at
+    fn invoice_target(&self, invoice_id: &str) -> Result<Option<(Uuid, String, bool)>> {
+        let invoice = self.stripe.invoice(invoice_id)?;
+        let Some(id) = invoice.subscription_id() else {
+            return Ok(None);
+        };
+        let current = self.stripe.subscription(id)?;
+        Ok(Some((
+            current.metadata.workspace_id.ok_or(Error::Ownership)?,
+            id.to_owned(),
+            false,
+        )))
     }
 }

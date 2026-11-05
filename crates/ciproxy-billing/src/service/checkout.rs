@@ -125,7 +125,8 @@ impl BillingService {
         if subscription.id != id || current.customer.as_ref() != Some(&subscription.customer) {
             return Err(Error::Ownership);
         }
-        let state = self.confirmed_state(&record.state, &subscription, None)?;
+        let (subscription, state) =
+            self.reconcile_subscription(session, &record.state, subscription, None)?;
         if let Some(mut command) = record.command.clone() {
             self.capture_pending_expiry(session, &state, &mut command, &subscription)?;
         }

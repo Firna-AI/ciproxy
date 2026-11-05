@@ -91,6 +91,8 @@ The metering service supplies all calculation rules and retention dates.
 BillingStore adds the confirmed tier, add-ons, paid bounds, and Free anchor.
 It exposes retry and ended-banner dates without changing job execution.
 BillingSession owns exclusive command and event reconciliation.
+It retains each owned renewal outcome separately from the billing banner.
+Verified automatic collection stops remain available after a service restart.
 State and event receipts commit atomically.
 App removal stores a durable billing cancellation request.
 Services consume these boundaries through dyn.
@@ -143,6 +145,8 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 
 - [src/store.rs](src/store.rs) defines Store and its connection factory.
 - [src/billing/store.rs](src/billing/store.rs) owns durable billing sessions.
+- [src/billing/renewals.rs](src/billing/renewals.rs) defines durable renewal
+  outcomes and verified automatic collection stops.
 - [src/workspaces.rs](src/workspaces.rs) defines shared customer ownership.
 - [src/organizations.rs](src/organizations.rs) defines GitHub App records.
 - [src/error.rs](src/error.rs) owns typed failures and safe diagnostics.

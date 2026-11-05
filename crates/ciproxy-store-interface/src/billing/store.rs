@@ -5,6 +5,7 @@ use unimock::unimock;
 use uuid::Uuid;
 
 use crate::billing::commands::{BillingCommand, CheckoutProgress};
+use crate::billing::renewals::Renewal;
 use crate::billing::state::BillingState;
 use crate::error::Result;
 
@@ -40,6 +41,10 @@ pub trait BillingStore: Send + Sync {
 pub trait BillingSession: Send {
     /// Read the workspace's latest billing state.
     fn record(&mut self) -> Result<BillingRecord>;
+    /// Read every retained renewal outcome for one subscription.
+    fn renewals(&mut self, subscription_id: &str) -> Result<Vec<Renewal>>;
+    /// Persist a verified invoice outcome before any resulting provider mutation.
+    fn save_renewal(&mut self, renewal: &Renewal) -> Result<()>;
     /// Persist a mutation before sending it to Stripe.
     fn save_command(&mut self, command: &BillingCommand) -> Result<()>;
     /// Persist the exact Checkout returned by an idempotent mutation.
