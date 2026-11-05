@@ -30,7 +30,8 @@ const ACCOUNT: &str = "
         AND l.vcpus = (d.record_json::jsonb ->> 'requested_vcpus')::bigint
         AND l.memory_gb = (d.record_json::jsonb ->> 'requested_memory_gb')::bigint
         AND l.disk_gb = (d.record_json::jsonb ->> 'requested_disk_gb')::bigint
-        AND (l.when_nothing_fits = 'largest_boat' OR (
+        AND (d.record_json::jsonb ->> 'phase' = 'unsent'
+            OR l.when_nothing_fits = 'largest_boat' OR (
             (d.record_json::jsonb -> 'size' ->> 'vcpus')::bigint >= l.vcpus
             AND (d.record_json::jsonb -> 'size' ->> 'memory_bytes')::numeric
                 >= l.memory_gb::numeric * 1000000000

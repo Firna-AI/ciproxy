@@ -18,7 +18,7 @@ pub(super) fn check(
     workspace_id: Uuid,
     record: &StartRecord,
     json: &str,
-    budget: &ReservationBudget,
+    budget: Option<&ReservationBudget>,
 ) -> Result<ReservationOutcome> {
     workspaces::table
         .find(workspace_id)
@@ -38,13 +38,15 @@ pub(super) fn check(
     if !enabled || !authority::permits_request(connection, workspace_id, record.key_id, json)? {
         return Ok(ReservationOutcome::NotPermitted);
     }
-    if limit.is_none_or(|limit| {
-        let limit = Decimal::new(limit, 6);
-        limit <= Decimal::ZERO
-            || budget.current_month_usd > limit
-            || budget
-                .next_month_usd
-                .is_some_and(|required| required > limit)
+    if budget.is_some_and(|budget| {
+        limit.is_none_or(|limit| {
+            let limit = Decimal::new(limit, 6);
+            limit <= Decimal::ZERO
+                || budget.current_month_usd > limit
+                || budget
+                    .next_month_usd
+                    .is_some_and(|required| required > limit)
+        })
     }) {
         return Ok(ReservationOutcome::SpendLimit);
     }

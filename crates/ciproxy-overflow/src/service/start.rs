@@ -1,10 +1,8 @@
 //! Durable acceptance of a scaler Boat action before provider dispatch.
 
-use ciproxy_scaler::actions::Destination;
-use ciproxy_store_interface::overflow::admission::ReservationOutcome;
+use ciproxy_scaler::actions::{Destination, StartReason};
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase, StartRecord};
 use ciproxy_store_interface::overflow::store::AccountRecord;
-use rust_decimal::Decimal;
 use uuid::Uuid;
 
 use crate::api::{StartOutcome, StartRequest, WaitReason};
@@ -15,7 +13,6 @@ use crate::session::Session;
 use crate::spend;
 
 use super::OverflowService;
-use super::preparation::required_budget;
 use super::provider_preparation::preparation_wait;
 
 impl OverflowService {
@@ -24,7 +21,7 @@ impl OverflowService {
         workspace_id: Uuid,
         request: StartRequest,
     ) -> Result<StartOutcome> {
-        let Destination::Boat(size_id) = &request.action.destination else {
+        let Destination::Boat(_) = &request.action.destination else {
             return Err(Error::NotBoatAction);
         };
         let session =
@@ -39,7 +36,6 @@ impl OverflowService {
                 || record.organization_id != request.organization_id
                 || record.label_id != request.label_id
                 || record.scale_set_id != request.scale_set_id
-                || record.size.name != size_id.0
                 || record.requested_vcpus != request.action.requested_size.vcpu
                 || u64::from(record.requested_memory_gb) * 1_000_000_000
                     != request.action.requested_size.memory_bytes
@@ -74,19 +70,8 @@ impl OverflowService {
         self.refresh_costs(&session, workspace_id, &mut snapshot)
             .await?;
         let now = self.dependencies.clock.now();
-        let spend = spend::current(&snapshot.starts, now)?;
-        let counted = spend.counted_usd()?;
-        let limit = snapshot
-            .spend_limit_usd_micros
-            .map(|limit| Decimal::new(limit, 6));
-        if limit.is_none_or(|limit| counted >= limit) {
-            return Ok(StartOutcome::Waiting(WaitReason::SpendLimit {
-                resumes_at: spend::next_month(now)?,
-            }));
-        }
-        if let Some(wait @ WaitReason::RetryAt(_)) =
-            preparation_wait(&account.state, &size_id.0, &request.action.size, now)
-        {
+        spend::current(&snapshot.starts, now)?.counted_usd()?;
+        if let Some(wait @ WaitReason::RetryAt(_)) = preparation_wait(&account.state, now) {
             return Ok(StartOutcome::Waiting(wait));
         }
         let facts = match self
@@ -97,29 +82,12 @@ impl OverflowService {
             Err(Error::RejectedKey) => return Ok(StartOutcome::Waiting(WaitReason::Disconnected)),
             Err(error) => return Err(error),
         };
-        if let Some(wait) = preparation_wait(
-            &account.state,
-            &size_id.0,
-            &request.action.size,
-            self.dependencies.clock.now(),
-        ) {
+        if let Some(wait) = preparation_wait(&account.state, self.dependencies.clock.now()) {
             return Ok(StartOutcome::Waiting(wait));
         }
-        let Some(size) = account
-            .state
-            .sizes
-            .iter()
-            .find(|size| {
-                size.name == size_id.0
-                    && !account.state.refused_sizes.contains(&size.name)
-                    && size.vcpus == request.action.size.vcpu
-                    && size.memory_bytes == request.action.size.memory_bytes
-                    && size.disk_bytes == request.action.size.disk_bytes
-            })
-            .cloned()
-        else {
-            return Ok(StartOutcome::Waiting(WaitReason::SizeUnavailable));
-        };
+        if facts.start_fee_bound_usd.is_none() {
+            return Err(Error::AccountingIncomplete);
+        }
         let token = self.dependencies.tokens.token();
         let input = self.launch_input(&request, token.clone())?;
         let ciphertext = self
@@ -149,11 +117,14 @@ impl OverflowService {
                 request.action.requested_size.disk_bytes / 1_000_000_000,
             )
             .internal()?,
-            size,
+            own_machine_fits: matches!(
+                request.action.reason,
+                StartReason::OverflowWaitElapsed { .. }
+            ),
+            dispatch: None,
             key_id: account.account.id,
             deployment: format!("{}/{}", self.config.deployment, workspace_id),
             snapshot: self.config.shared_snapshot.clone(),
-            lifetime_seconds: if account.state.trial { 7200 } else { 21600 },
             phase: StartPhase::Unsent,
             sandbox: None,
             starts_at: now,
@@ -168,24 +139,15 @@ impl OverflowService {
             runtime_complete: false,
         };
         record.starts_at = self.dependencies.clock.now();
-        let budget = required_budget(&snapshot.starts, &record)?;
         let pending = record.clone();
         let hash = digest(&token);
-        let reserved = session
+        let accepted = session
             .call(move |session| {
-                session.reserve_start(&pending, &EncryptedLaunch(ciphertext), &hash, &budget)
+                session.save_pending(&pending, &EncryptedLaunch(ciphertext), &hash)
             })
             .await?;
-        match reserved {
-            ReservationOutcome::NotPermitted => {
-                return Ok(StartOutcome::Waiting(WaitReason::Disconnected));
-            }
-            ReservationOutcome::SpendLimit => {
-                return Ok(StartOutcome::Waiting(WaitReason::SpendLimit {
-                    resumes_at: spend::next_month(record.starts_at)?,
-                }));
-            }
-            ReservationOutcome::Reserved => (),
+        if !accepted {
+            return Ok(StartOutcome::Waiting(WaitReason::Disconnected));
         }
         self.execute(&session, workspace_id, record).await
     }
@@ -207,8 +169,12 @@ impl OverflowService {
                 account.state.retry_at = relative.into_iter().chain(retry.next_start_at).max();
             }
             sandbox_interface::SandboxStartRefusal::PlanSize { .. } => {
-                if !account.state.refused_sizes.contains(&record.size.name) {
-                    account.state.refused_sizes.push(record.size.name.clone());
+                let parameters = record.dispatch.as_ref().ok_or(Error::OwnershipUnknown)?;
+                if !account.state.refused_sizes.contains(&parameters.size.name) {
+                    account
+                        .state
+                        .refused_sizes
+                        .push(parameters.size.name.clone());
                 }
             }
             sandbox_interface::SandboxStartRefusal::Billing { .. } => {

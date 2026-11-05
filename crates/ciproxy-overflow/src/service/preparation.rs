@@ -1,7 +1,9 @@
 //! Retryable unsent preparation and one durable dispatch boundary.
 
-use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
-use ciproxy_store_interface::overflow::record::{StartPhase, StartRecord};
+use ciproxy_store_interface::overflow::admission::{
+    PreparedDispatch, ReservationBudget, ReservationOutcome,
+};
+use ciproxy_store_interface::overflow::record::{ProviderParameters, StartPhase, StartRecord};
 use ciproxy_store_interface::overflow::store::AccountRecord;
 use sandbox_interface::BackendSandbox;
 use uuid::Uuid;
@@ -14,13 +16,14 @@ use crate::spend;
 
 use super::OverflowService;
 use super::execution::create_request;
+use super::provider_preparation::selected_size;
 
 pub(super) enum DispatchOutcome {
     Submitted(sandbox_interface::Result<Option<BackendSandbox>>),
     Stopped(Box<StartOutcome>),
 }
 
-/// Calculate the prospective dispatch once, excluding its earlier unsent reservation.
+/// Count the selected dispatch once alongside every accepted provider bound.
 pub(super) fn required_budget(
     starts: &[StartRecord],
     record: &StartRecord,
@@ -60,9 +63,8 @@ impl OverflowService {
                 self.cancel_unsent(session, record).await?,
             )));
         };
-        let snapshot = session.call(|session| session.snapshot()).await?;
         if let Some(wait) = self
-            .resume_preparation(session, workspace_id, account, record)
+            .resume_preparation(session, account, authority.backend())
             .await?
         {
             let delivery = record.delivery_id;
@@ -79,17 +81,52 @@ impl OverflowService {
                 wait,
             ))));
         }
-        let mut dispatch = record.clone();
-        dispatch.starts_at = self.dependencies.clock.now();
-        dispatch.phase = StartPhase::Creating;
-        let budget = required_budget(&snapshot.starts, &dispatch)?;
-        let request = create_request(workspace_id, &dispatch);
+        let delivery = record.delivery_id;
+        let Some(facts) = session
+            .call(move |session| session.dispatch_facts(delivery))
+            .await?
+        else {
+            return Ok(DispatchOutcome::Stopped(Box::new(
+                self.cancel_unsent(session, record).await?,
+            )));
+        };
+        let Some(size) = selected_size(&account.state, record, &facts)? else {
+            return Ok(DispatchOutcome::Stopped(Box::new(StartOutcome::Waiting(
+                WaitReason::SizeUnavailable,
+            ))));
+        };
+        let parameters = ProviderParameters {
+            size,
+            lifetime_seconds: if account.state.trial { 7200 } else { 21600 },
+        };
+        let mut candidate = record.clone();
+        candidate.dispatch = Some(parameters.clone());
+        candidate.starts_at = self.dependencies.clock.now();
+        candidate.phase = StartPhase::Creating;
+        let snapshot = session.call(|session| session.snapshot()).await?;
+        let dispatch = PreparedDispatch {
+            parameters,
+            starts_at: candidate.starts_at,
+            budget: required_budget(&snapshot.starts, &candidate)?,
+        };
+        let request = create_request(workspace_id, &candidate)?;
+        let pending = record.clone();
         let saved = dispatch.clone();
         match session
-            .call(move |session| session.begin_dispatch(&saved, &budget))
+            .call(move |session| session.begin_dispatch(&pending, &saved))
             .await?
         {
             ReservationOutcome::NotPermitted => {
+                let delivery = record.delivery_id;
+                if session
+                    .call(move |session| session.startup_account(delivery))
+                    .await?
+                    .is_some()
+                {
+                    return Ok(DispatchOutcome::Stopped(Box::new(StartOutcome::Waiting(
+                        WaitReason::SizeUnavailable,
+                    ))));
+                }
                 return Ok(DispatchOutcome::Stopped(Box::new(
                     self.cancel_unsent(session, record).await?,
                 )));
@@ -104,7 +141,7 @@ impl OverflowService {
             ReservationOutcome::Reserved => {}
         }
         let result = authority.create(request).await.map(Some);
-        *record = dispatch;
+        *record = candidate;
         Ok(DispatchOutcome::Submitted(result))
     }
 

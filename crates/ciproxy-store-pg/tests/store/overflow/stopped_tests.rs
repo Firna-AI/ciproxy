@@ -11,7 +11,7 @@ use ciproxy_store_interface::secrets::TokenHash;
 use rust_decimal::Decimal;
 
 use super::super::support::Database;
-use super::support::setup;
+use super::support::{reserve, setup};
 
 #[test]
 fn metering_prices_six_billed_hours_before_the_seven_hour_recovery() {
@@ -21,23 +21,23 @@ fn metering_prices_six_billed_hours_before_the_seven_hour_recovery() {
     let mut session = database.store.lock_overflow(workspace_id).unwrap();
     record.starts_at = start;
     assert_eq!(
-        session
-            .reserve_start(
-                &record,
-                &EncryptedLaunch(vec![1]),
-                &TokenHash::new(vec![3]),
-                &ReservationBudget {
-                    current_month_usd: Decimal::new(462, 3),
-                    next_month_usd: None,
-                },
-            )
-            .unwrap(),
+        reserve(
+            &mut *session,
+            &record,
+            &EncryptedLaunch(vec![1]),
+            &TokenHash::new(vec![3]),
+            &ReservationBudget {
+                current_month_usd: Decimal::new(462, 3),
+                next_month_usd: None,
+            },
+        )
+        .unwrap(),
         ReservationOutcome::Reserved
     );
     record.sandbox = Some(KnownSandbox::observed(
         "bx_23456789".to_owned(),
         record.starts_at,
-        record.lifetime_seconds,
+        record.dispatch.as_ref().unwrap().lifetime_seconds,
     ));
     record.phase = StartPhase::Running;
     record.runtime_complete = true;

@@ -13,7 +13,7 @@ use ciproxy_scaler::boat::BoatSizeId;
 use ciproxy_store_interface::boat::BoatAccount;
 use ciproxy_store_interface::overflow::account::{AccountState, SizeOffer};
 use ciproxy_store_interface::overflow::known::KnownSandbox;
-use ciproxy_store_interface::overflow::record::{StartPhase, StartRecord};
+use ciproxy_store_interface::overflow::record::{ProviderParameters, StartPhase, StartRecord};
 use ciproxy_store_interface::overflow::store::{AccountRecord, OverflowSnapshot};
 use ciproxy_store_interface::secrets::{EncryptedBoatKey, TokenHash};
 use rust_decimal::Decimal;
@@ -109,11 +109,14 @@ pub(super) fn record(phase: StartPhase) -> StartRecord {
         requested_vcpus: 2,
         requested_memory_gb: 8,
         requested_disk_gb: 60,
-        size: offer(),
+        own_machine_fits: false,
+        dispatch: (phase != StartPhase::Unsent).then(|| ProviderParameters {
+            size: offer(),
+            lifetime_seconds: 21600,
+        }),
         key_id: id(2),
         deployment: format!("ciproxy-main/{}", id(1)),
         snapshot: "shared-image-v7".to_owned(),
-        lifetime_seconds: 21600,
         phase,
         sandbox: Some(KnownSandbox::observed(
             "bx_23456789".to_owned(),

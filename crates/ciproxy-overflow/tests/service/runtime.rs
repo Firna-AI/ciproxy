@@ -103,6 +103,21 @@ pub(super) fn build(
                 if let Some(store) = suspended {
                     withdraw(&store, AppState::Suspended);
                 }
+                let effect = {
+                    let mut capture = state.lock().unwrap();
+                    if capture
+                        .key_open_effect
+                        .as_ref()
+                        .is_some_and(|(at, _)| *at == capture.key_opens)
+                    {
+                        capture.key_open_effect.take().map(|(_, effect)| effect)
+                    } else {
+                        None
+                    }
+                };
+                if let Some(effect) = effect {
+                    effect();
+                }
                 return Ok(SecretBytes::new(b"account-key".to_vec()));
             }
             Ok(state

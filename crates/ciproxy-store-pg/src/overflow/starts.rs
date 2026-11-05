@@ -3,7 +3,9 @@
 use chrono::{DateTime, Utc};
 use ciproxy_schema::overflow::overflow_starts;
 use ciproxy_store_interface::error::Result;
-use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
+use ciproxy_store_interface::overflow::admission::{
+    DispatchFacts, PreparedDispatch, ReservationOutcome,
+};
 use ciproxy_store_interface::overflow::connection::ConnectionGrant;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartRecord};
 use ciproxy_store_interface::overflow::store::{AccountRecord, OverflowSession, OverflowSnapshot};
@@ -14,7 +16,9 @@ use uuid::Uuid;
 use crate::error::QueryResultExt;
 use crate::gateway_transaction::transaction;
 
-use super::{Session, accounts, authority, completion, connections, deliveries, dispatch, rows};
+use super::{
+    Session, accounts, authority, completion, connections, deliveries, dispatch, preparation, rows,
+};
 
 impl OverflowSession for Session {
     fn snapshot(&mut self) -> Result<OverflowSnapshot> {
@@ -23,6 +27,10 @@ impl OverflowSession for Session {
 
     fn startup_account(&mut self, delivery_id: Uuid) -> Result<Option<AccountRecord>> {
         authority::startup_account(&mut self.connection, self.workspace_id, delivery_id)
+    }
+
+    fn dispatch_facts(&mut self, delivery_id: Uuid) -> Result<Option<DispatchFacts>> {
+        preparation::facts(&mut self.connection, self.workspace_id, delivery_id)
     }
 
     fn begin_connection(&mut self, key_id: Uuid) -> Result<Option<ConnectionGrant>> {
@@ -59,20 +67,18 @@ impl OverflowSession for Session {
         })
     }
 
-    fn reserve_start(
+    fn save_pending(
         &mut self,
         record: &StartRecord,
         launch: &EncryptedLaunch,
         token_hash: &TokenHash,
-        budget: &ReservationBudget,
-    ) -> Result<ReservationOutcome> {
+    ) -> Result<bool> {
         deliveries::reserve(
             &mut self.connection,
             self.workspace_id,
             record,
             launch,
             token_hash,
-            budget,
         )
     }
 
@@ -90,10 +96,10 @@ impl OverflowSession for Session {
 
     fn begin_dispatch(
         &mut self,
-        record: &StartRecord,
-        budget: &ReservationBudget,
+        pending: &StartRecord,
+        dispatch: &PreparedDispatch,
     ) -> Result<ReservationOutcome> {
-        dispatch::begin(&mut self.connection, self.workspace_id, record, budget)
+        dispatch::begin(&mut self.connection, self.workspace_id, pending, dispatch)
     }
 
     fn save_start(&mut self, record: &StartRecord) -> Result<()> {

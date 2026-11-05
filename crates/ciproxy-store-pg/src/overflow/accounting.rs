@@ -28,7 +28,10 @@ pub(crate) fn require_complete(
             && (record.ends_at.is_none_or(|end| end > from_time)
                 || record.starts_at.date_naive() >= from);
         if relevant
-            && record.phase != StartPhase::Refused
+            && !matches!(
+                record.phase,
+                StartPhase::Unsent | StartPhase::CancelledUnsent | StartPhase::Refused
+            )
             && (!record.runtime_complete || record.counted_start_fee_usd().is_none())
         {
             return Err(Error::AccountingIncomplete);

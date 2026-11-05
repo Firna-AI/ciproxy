@@ -98,7 +98,7 @@ async fn unsent_deliveries_wait_for_saved_refusals_and_dispatch_once_after_recov
                 .spend
                 .counted_usd()
                 .unwrap(),
-            Decimal::new(462, 3)
+            Decimal::ZERO
         );
 
         if wait == WaitReason::SizeUnavailable {
@@ -122,7 +122,10 @@ async fn unsent_deliveries_wait_for_saved_refusals_and_dispatch_once_after_recov
         let dispatched = harness.start(id(21));
         assert_eq!(dispatched.delivery_id, pending.delivery_id);
         assert_eq!(dispatched.runner_id, pending.runner_id);
-        assert_eq!(dispatched.size, pending.size);
+        assert_eq!(
+            dispatched.dispatch.as_ref().unwrap().size,
+            super::fixtures::offer()
+        );
         assert_eq!(dispatched.start_fee_bound_usd, Some(Decimal::new(3, 2)));
         assert_eq!(dispatched.starts_at, *harness.now.lock().unwrap());
         assert_eq!(provider.counts.lock().unwrap().creates, 2);
@@ -133,8 +136,9 @@ async fn unsent_deliveries_wait_for_saved_refusals_and_dispatch_once_after_recov
             [id(11), id(21)]
         );
         let expected_reads = match wait {
-            WaitReason::RetryAt(_) => 2,
-            WaitReason::BillingRequired | WaitReason::SizeUnavailable => 4,
+            WaitReason::RetryAt(_) => 4,
+            WaitReason::BillingRequired => 5,
+            WaitReason::SizeUnavailable => 6,
             _ => unreachable!(),
         };
         assert_eq!(

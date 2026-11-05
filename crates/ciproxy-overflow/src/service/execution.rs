@@ -19,21 +19,24 @@ use super::preparation::DispatchOutcome;
 pub(super) fn create_request(
     workspace_id: Uuid,
     record: &StartRecord,
-) -> BackendCreateSandboxRequest {
-    BackendCreateSandboxRequest {
+) -> Result<BackendCreateSandboxRequest> {
+    let parameters = record.dispatch.as_ref().ok_or(Error::OwnershipUnknown)?;
+    Ok(BackendCreateSandboxRequest {
         sandbox_id: SandboxId::from_uuid(record.runner_id),
         operation_id: OperationId::from_uuid(record.delivery_id),
         owner: ResourceOwner::platform(workspace_id),
         consumer: SandboxConsumer::Runtime,
         lifetime: SandboxLifetime::OneShot {
-            max_lifetime: Duration::from_secs(u64::from(record.lifetime_seconds)),
+            max_lifetime: Duration::from_secs(u64::from(parameters.lifetime_seconds)),
         },
-        size: Some(SandboxSizeSelection::ProviderSize(record.size.name.clone())),
+        size: Some(SandboxSizeSelection::ProviderSize(
+            parameters.size.name.clone(),
+        )),
         deployment_id: record.deployment.clone(),
         profile: "ciproxy".to_owned(),
         network: SandboxNetworkPolicy::Open,
         snapshot_provider_ref: Some(ProviderRef::new(&record.snapshot)),
-    }
+    })
 }
 
 impl OverflowService {
@@ -99,7 +102,7 @@ impl OverflowService {
                 }
             } else {
                 backend
-                    .recover_sandbox_create(create_request(workspace_id, &record))
+                    .recover_sandbox_create(create_request(workspace_id, &record)?)
                     .await
             };
             let sandbox = match result {

@@ -7,7 +7,6 @@ use ciproxy_overflow::api::{Overflow, StartOutcome};
 use ciproxy_overflow::error::Error;
 use ciproxy_overflow::provider::{BoatAccountApiMock, GuestLauncherMock, RuntimeUsage};
 use ciproxy_protocol::secret::Secret;
-use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase};
 use rust_decimal::Decimal;
 use sandbox_interface::{
@@ -94,19 +93,14 @@ async fn callback_claims_one_runner_once_then_deletes_and_allows_the_next_start(
         other.label_id = id(84);
         other.scale_set_id = id(85);
         let other_token = digest(&Secret::new("another-workspace-token"));
-        assert_eq!(
+        let mut pending = other.clone();
+        pending.phase = StartPhase::Unsent;
+        pending.dispatch = None;
+        pending.sandbox = None;
+        assert!(
             other_session
-                .reserve_start(
-                    &other,
-                    &EncryptedLaunch(vec![19]),
-                    &other_token,
-                    &ReservationBudget {
-                        current_month_usd: Decimal::new(462, 3),
-                        next_month_usd: None,
-                    },
-                )
-                .unwrap(),
-            ReservationOutcome::Reserved
+                .save_pending(&pending, &EncryptedLaunch(vec![19]), &other_token)
+                .unwrap()
         );
         other_session.save_start(&other).unwrap();
     }

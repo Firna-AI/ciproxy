@@ -13,7 +13,7 @@ use super::fixtures::{at, capabilities, id, record};
 fn ambiguous() -> StartRecord {
     let mut start = record(StartPhase::Creating);
     start.sandbox = None;
-    start.size.hourly_usd = Decimal::ONE;
+    start.dispatch.as_mut().unwrap().size.hourly_usd = Decimal::ONE;
     start.start_fee_bound_usd = Some(Decimal::ZERO);
     start.start_usd = None;
     start
@@ -115,7 +115,7 @@ async fn partial_costs_leave_only_the_remaining_bound_and_expiry_keeps_the_spend
 #[tokio::test]
 async fn trial_bound_uses_two_hours_and_actual_cost_above_the_bound_still_counts() {
     let mut trial = ambiguous();
-    trial.lifetime_seconds = 7200;
+    trial.dispatch.as_mut().unwrap().lifetime_seconds = 7200;
     trial.start_fee_bound_usd = Some(Decimal::new(7, 2));
     let harness = harness(vec![trial]);
     let view = harness.service.view(id(1)).await.unwrap();

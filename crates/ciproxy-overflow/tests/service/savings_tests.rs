@@ -27,6 +27,8 @@ async fn measured_production_start_uses_saved_fee_in_the_public_savings_report()
     let server = Server::new(vec![
         step("GET", "/api/v1/me", 200, identity()),
         step("GET", "/api/v1/limits", 200, limits(true)),
+        step("GET", "/api/v1/me", 200, identity()),
+        step("GET", "/api/v1/limits", 200, limits(true)),
         step(
             "GET",
             "/api/v1/sandboxes/bx_23456789/usage?",

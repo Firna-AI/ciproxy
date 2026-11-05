@@ -26,7 +26,7 @@ impl OverflowService {
         }
         if record.phase == StartPhase::Creating {
             let recovered = backend
-                .recover_sandbox_create(create_request(workspace_id, &record))
+                .recover_sandbox_create(create_request(workspace_id, &record)?)
                 .await;
             match recovered {
                 Ok(Some(sandbox)) => {

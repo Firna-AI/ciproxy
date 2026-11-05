@@ -1,6 +1,6 @@
 //! Immutable runner placements and compatible metering cost snapshots.
 
-use ciproxy_store_interface::error::{Result, ResultExt};
+use ciproxy_store_interface::error::{Error, Result, ResultExt};
 use ciproxy_store_interface::overflow::record::{StartPhase, StartRecord};
 use diesel::prelude::*;
 use diesel::sql_types::{Integer, Text, Timestamptz};
@@ -17,6 +17,10 @@ pub(super) fn save(
     let Some(sandbox) = &record.sandbox else {
         return Ok(());
     };
+    let parameters = record
+        .dispatch
+        .as_ref()
+        .ok_or(Error::AccountingIncomplete)?;
     let state = match record.phase {
         StartPhase::Ended => "stopped",
         StartPhase::Deleting => "stopping",
@@ -40,12 +44,12 @@ pub(super) fn save(
     .bind::<diesel::sql_types::Uuid, _>(record.label_id)
     .bind::<diesel::sql_types::Uuid, _>(record.scale_set_id)
     .bind::<Text, _>(state)
-    .bind::<Integer, _>(i32::try_from(record.size.vcpus).internal()?)
-    .bind::<Integer, _>(i32::try_from(record.size.memory_bytes / 1_000_000_000).internal()?)
-    .bind::<Integer, _>(i32::try_from(record.size.disk_bytes / 1_000_000_000).internal()?)
+    .bind::<Integer, _>(i32::try_from(parameters.size.vcpus).internal()?)
+    .bind::<Integer, _>(i32::try_from(parameters.size.memory_bytes / 1_000_000_000).internal()?)
+    .bind::<Integer, _>(i32::try_from(parameters.size.disk_bytes / 1_000_000_000).internal()?)
     .bind::<diesel::sql_types::Uuid, _>(record.key_id)
     .bind::<Text, _>(sandbox.id())
-    .bind::<Text, _>(&record.size.name)
+    .bind::<Text, _>(&parameters.size.name)
     .execute(connection).store()?;
     if let (Some(start_usd), Some(interval)) = (record.counted_start_fee_usd(), record.billing) {
         diesel::sql_query(
@@ -62,7 +66,7 @@ pub(super) fn save(
         .bind::<Timestamptz, _>(interval.starts_at())
         .bind::<Timestamptz, _>(interval.ends_at())
         .bind::<diesel::sql_types::Numeric, _>(start_usd)
-        .bind::<diesel::sql_types::Numeric, _>(record.size.hourly_usd / Decimal::from(60))
+        .bind::<diesel::sql_types::Numeric, _>(parameters.size.hourly_usd / Decimal::from(60))
         .execute(connection)
         .store()?;
     }

@@ -9,7 +9,7 @@ use rust_decimal::Decimal;
 use uuid::Uuid;
 
 use super::super::support::{Database, at};
-use super::support::setup;
+use super::support::{reserve, setup};
 
 #[test]
 fn ambiguous_start_retains_its_old_key_through_rotation_and_disconnect() {
@@ -23,17 +23,17 @@ fn ambiguous_start_retains_its_old_key_through_rotation_and_disconnect() {
             .unwrap()
             .unwrap();
         assert_eq!(
-            session
-                .reserve_start(
-                    &record,
-                    &EncryptedLaunch(vec![91, 92]),
-                    &hash,
-                    &ReservationBudget {
-                        current_month_usd: Decimal::new(462, 3),
-                        next_month_usd: None,
-                    },
-                )
-                .unwrap(),
+            reserve(
+                &mut *session,
+                &record,
+                &EncryptedLaunch(vec![91, 92]),
+                &hash,
+                &ReservationBudget {
+                    current_month_usd: Decimal::new(462, 3),
+                    next_month_usd: None,
+                },
+            )
+            .unwrap(),
             ReservationOutcome::Reserved
         );
         let mut replacement = account.clone();
@@ -98,23 +98,23 @@ fn callback_claim_is_scoped_one_use_and_durable_before_deletion() {
     let hash = TokenHash::new(vec![5, 6, 7]);
     let mut session = database.store.lock_overflow(workspace_id).unwrap();
     assert_eq!(
-        session
-            .reserve_start(
-                &record,
-                &EncryptedLaunch(vec![71]),
-                &hash,
-                &ReservationBudget {
-                    current_month_usd: Decimal::new(462, 3),
-                    next_month_usd: None,
-                },
-            )
-            .unwrap(),
+        reserve(
+            &mut *session,
+            &record,
+            &EncryptedLaunch(vec![71]),
+            &hash,
+            &ReservationBudget {
+                current_month_usd: Decimal::new(462, 3),
+                next_month_usd: None,
+            },
+        )
+        .unwrap(),
         ReservationOutcome::Reserved
     );
     record.sandbox = Some(KnownSandbox::observed(
         "bx_23456789".to_owned(),
         record.starts_at,
-        record.lifetime_seconds,
+        record.dispatch.as_ref().unwrap().lifetime_seconds,
     ));
     record.phase = StartPhase::Running;
     session.save_start(&record).unwrap();
@@ -176,17 +176,17 @@ fn overflow_sessions_exclude_each_other_and_reservation_rechecks_tenant_authorit
         .unwrap();
     let mut other_session = database.store.lock_overflow(other.id).unwrap();
     assert_eq!(
-        other_session
-            .reserve_start(
-                &record,
-                &EncryptedLaunch(vec![1]),
-                &TokenHash::new(vec![2]),
-                &ReservationBudget {
-                    current_month_usd: Decimal::new(462, 3),
-                    next_month_usd: None,
-                },
-            )
-            .unwrap(),
+        reserve(
+            &mut *other_session,
+            &record,
+            &EncryptedLaunch(vec![1]),
+            &TokenHash::new(vec![2]),
+            &ReservationBudget {
+                current_month_usd: Decimal::new(462, 3),
+                next_month_usd: None,
+            },
+        )
+        .unwrap(),
         ReservationOutcome::NotPermitted
     );
     database
@@ -194,17 +194,17 @@ fn overflow_sessions_exclude_each_other_and_reservation_rechecks_tenant_authorit
         .set_app_suspended(workspace_id, record.organization_id, true)
         .unwrap();
     assert_eq!(
-        session
-            .reserve_start(
-                &record,
-                &EncryptedLaunch(vec![1]),
-                &TokenHash::new(vec![2]),
-                &ReservationBudget {
-                    current_month_usd: Decimal::new(462, 3),
-                    next_month_usd: None,
-                },
-            )
-            .unwrap(),
+        reserve(
+            &mut *session,
+            &record,
+            &EncryptedLaunch(vec![1]),
+            &TokenHash::new(vec![2]),
+            &ReservationBudget {
+                current_month_usd: Decimal::new(462, 3),
+                next_month_usd: None,
+            },
+        )
+        .unwrap(),
         ReservationOutcome::NotPermitted
     );
     database
@@ -213,17 +213,17 @@ fn overflow_sessions_exclude_each_other_and_reservation_rechecks_tenant_authorit
         .unwrap();
     session.disconnect(at()).unwrap();
     assert_eq!(
-        session
-            .reserve_start(
-                &record,
-                &EncryptedLaunch(vec![1]),
-                &TokenHash::new(vec![2]),
-                &ReservationBudget {
-                    current_month_usd: Decimal::new(462, 3),
-                    next_month_usd: None,
-                },
-            )
-            .unwrap(),
+        reserve(
+            &mut *session,
+            &record,
+            &EncryptedLaunch(vec![1]),
+            &TokenHash::new(vec![2]),
+            &ReservationBudget {
+                current_month_usd: Decimal::new(462, 3),
+                next_month_usd: None,
+            },
+        )
+        .unwrap(),
         ReservationOutcome::NotPermitted
     );
 }

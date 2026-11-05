@@ -47,7 +47,16 @@ pub enum StartPhase {
     Ended,
 }
 
-/// Credential-free immutable request data and its mutable delivery phase.
+/// Provider parameters fixed only when dispatch commits, including their exact price.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct ProviderParameters {
+    /// Exact selected provider size and runtime price snapshot.
+    pub size: SizeOffer,
+    /// One-shot lifetime, never extended by recovery.
+    pub lifetime_seconds: u32,
+}
+
+/// Immutable pending demand, optional fixed provider parameters, and observed progress.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct StartRecord {
     /// Stable idempotent delivery identifier supplied by the control plane.
@@ -66,21 +75,25 @@ pub struct StartRecord {
     pub requested_memory_gb: u32,
     /// Original requested disk.
     pub requested_disk_gb: u32,
-    /// Exact accepted provider size and runtime price snapshot.
-    pub size: SizeOffer,
+    /// Own-machine fit known by the scaler when it admitted this Boat demand.
+    /// Overflow does not refresh own-machine capacity while replanning the Boat account.
+    #[serde(default)]
+    pub own_machine_fits: bool,
+    /// Absent while unsent. Dispatch fixes these parameters before the first create.
+    #[serde(flatten)]
+    pub dispatch: Option<ProviderParameters>,
     /// Retained key version used for this delivery.
     pub key_id: Uuid,
     /// Provider correlation mark, scoped to deployment and workspace.
     pub deployment: String,
     /// Exact shared saved-snapshot name or share code.
     pub snapshot: String,
-    /// Original one-shot lifetime, never extended by recovery.
-    pub lifetime_seconds: u32,
     /// Durable phase written before each external mutation.
     pub phase: StartPhase,
     /// Proven sandbox identity and lifetime once recovered or accepted.
     pub sandbox: Option<KnownSandbox>,
-    /// Provisional admission time while unsent, then dispatch time.
+    /// Demand admission time while unsent, with no provider cost or lifetime claim.
+    /// Dispatch replaces it with the actual dispatch time.
     /// Trusted provider creation time replaces it when measured.
     pub starts_at: DateTime<Utc>,
     /// Confirmed lifecycle end, independent of measured billing time.

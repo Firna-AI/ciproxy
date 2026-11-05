@@ -10,10 +10,8 @@ use ciproxy_overflow::provider::{BackendFactory, Capabilities};
 use ciproxy_overflow::secrets::SecretBytes;
 use ciproxy_overflow::service::{OverflowDependencies, OverflowService};
 use ciproxy_protocol::secret::Secret;
-use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
-use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartRecord};
+use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase, StartRecord};
 use ciproxy_store_interface::overflow::store::{AccountRecord, OverflowSnapshot};
-use rust_decimal::Decimal;
 use uuid::Uuid;
 
 use super::database::Database;
@@ -123,19 +121,14 @@ impl Harness {
 
     pub(super) fn seed_token(&self, record: StartRecord, token: &Secret) {
         let mut session = self.database.session();
-        assert_eq!(
+        let mut pending = record.clone();
+        pending.phase = StartPhase::Unsent;
+        pending.dispatch = None;
+        pending.sandbox = None;
+        assert!(
             session
-                .reserve_start(
-                    &record,
-                    &EncryptedLaunch(vec![17]),
-                    &digest(token),
-                    &ReservationBudget {
-                        current_month_usd: Decimal::ZERO,
-                        next_month_usd: None,
-                    },
-                )
-                .unwrap(),
-            ReservationOutcome::Reserved
+                .save_pending(&pending, &EncryptedLaunch(vec![17]), &digest(token))
+                .unwrap()
         );
         session.save_start(&record).unwrap();
         self.state

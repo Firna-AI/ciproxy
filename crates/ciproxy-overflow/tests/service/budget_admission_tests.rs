@@ -1,5 +1,10 @@
 //! Admission reserves the prospective delivery and requires a safe fee bound.
 
+use std::sync::{
+    Arc,
+    atomic::{AtomicUsize, Ordering},
+};
+
 use chrono::Duration;
 use ciproxy_overflow::api::{Overflow, StartOutcome, WaitReason};
 use ciproxy_overflow::error::Error;
@@ -15,17 +20,20 @@ use super::fixtures::{at, capabilities, facts, id, record, request};
 
 #[tokio::test]
 async fn start_reserves_its_own_bound_after_156_dollars_and_waits_when_room_runs_out() {
+    let creates = Arc::new(AtomicUsize::new(0));
+    let creating = creates.clone();
     let backend = capabilities(Unimock::new((
         BoatAccountApiMock::account
             .some_call(matching!())
             .answers(&|_| Ok(facts())),
         SandboxLifecycleMock::create_sandbox
             .some_call(matching!(_))
-            .answers(&|_, _| {
+            .answers_arc(Arc::new(move |_, _| {
+                creating.fetch_add(1, Ordering::SeqCst);
                 Err(sandbox_interface::Error::BackendUnavailable {
                     backend_id: "boat".to_owned(),
                 })
-            }),
+            })),
     )));
     let harness = Harness::new(backend, (), Runtime::Start);
     {
@@ -39,7 +47,7 @@ async fn start_reserves_its_own_bound_after_156_dollars_and_waits_when_room_runs
         unclear.delivery_id = id(31);
         unclear.runner_id = id(32);
         unclear.sandbox = None;
-        unclear.size.hourly_usd = Decimal::ONE;
+        unclear.dispatch.as_mut().unwrap().size.hourly_usd = Decimal::ONE;
         unclear.start_fee_bound_usd = Some(Decimal::ZERO);
         unclear.start_usd = None;
         harness.seed(confirmed);
@@ -66,7 +74,21 @@ async fn start_reserves_its_own_bound_after_156_dollars_and_waits_when_room_runs
             resumes_at: "2026-12-01T00:00:00Z".parse().unwrap(),
         })
     );
-    assert_eq!(harness.snapshot().starts.len(), 3);
+    assert_eq!(harness.snapshot().starts.len(), 4);
+    assert_eq!(harness.start(id(41)).phase, StartPhase::Unsent);
+    assert_eq!(harness.start(id(41)).dispatch, None);
+    assert_eq!(creates.load(Ordering::SeqCst), 1);
+    assert_eq!(
+        harness
+            .service
+            .view(id(1))
+            .await
+            .unwrap()
+            .spend
+            .counted_usd()
+            .unwrap(),
+        Decimal::new(156_462, 3)
+    );
 }
 
 #[tokio::test]
@@ -105,17 +127,20 @@ async fn new_start_with_no_fee_bound_never_dispatches_or_saves_an_unbounded_deli
 
 #[tokio::test]
 async fn dispatch_near_midnight_checks_the_next_months_existing_bounds() {
+    let creates = Arc::new(AtomicUsize::new(0));
+    let creating = creates.clone();
     let backend = capabilities(Unimock::new((
         BoatAccountApiMock::account
             .some_call(matching!())
             .answers(&|_| Ok(facts())),
         SandboxLifecycleMock::create_sandbox
             .some_call(matching!(_))
-            .answers(&|_, _| {
+            .answers_arc(Arc::new(move |_, _| {
+                creating.fetch_add(1, Ordering::SeqCst);
                 Err(sandbox_interface::Error::BackendUnavailable {
                     backend_id: "boat".to_owned(),
                 })
-            }),
+            })),
     )));
     let harness = Harness::new(backend, (), Runtime::Start);
     let now = "2026-11-30T23:00:00Z".parse().unwrap();
@@ -126,7 +151,7 @@ async fn dispatch_near_midnight_checks_the_next_months_existing_bounds() {
         let mut unclear = record(StartPhase::Creating);
         unclear.sandbox = None;
         unclear.starts_at = now;
-        unclear.size.hourly_usd = Decimal::ONE;
+        unclear.dispatch.as_mut().unwrap().size.hourly_usd = Decimal::ONE;
         unclear.start_fee_bound_usd = Some(Decimal::ZERO);
         unclear.start_usd = None;
         harness.seed(unclear);
@@ -140,7 +165,21 @@ async fn dispatch_near_midnight_checks_the_next_months_existing_bounds() {
             resumes_at: now + Duration::hours(1),
         })
     );
-    assert_eq!(harness.snapshot().starts.len(), 1);
+    assert_eq!(harness.snapshot().starts.len(), 2);
+    assert_eq!(harness.start(id(41)).phase, StartPhase::Unsent);
+    assert_eq!(harness.start(id(41)).dispatch, None);
+    assert_eq!(creates.load(Ordering::SeqCst), 0);
+    assert_eq!(
+        harness
+            .service
+            .view(id(1))
+            .await
+            .unwrap()
+            .spend
+            .counted_usd()
+            .unwrap(),
+        Decimal::ONE
+    );
     harness.set_limit(6_000_000);
     assert!(matches!(
         harness.service.start(id(1), next).await.unwrap(),

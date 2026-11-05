@@ -26,7 +26,10 @@ Boat at once. It selects the cheapest fitting catalog size or uses the
 label's explicit largest-size choice.
 
 New Boat starts and existing idle Boat runners share one resource size
-policy. An idle undersized fallback retires when its exception no longer
+policy. Overflow dispatch uses its public pure selector too.
+Callers supply eligible sizes after current provider refusals are applied.
+The selector takes own-machine fit and the label's current fallback choice.
+An idle undersized fallback retires when its exception no longer
 applies. `SizeNoLongerAllowed` identifies that retirement. Account spend
 and start refusals do not retire an existing runner whose size still fits.
 
@@ -128,7 +131,8 @@ Tests use the public decision entry point with literal states and actions.
 - [src/actions.rs](src/actions.rs) defines start and retirement intents.
 - [src/boat.rs](src/boat.rs) defines catalog, refusal, and sandbox facts.
 - [src/capacity.rs](src/capacity.rs) delegates complete fit to the protocol.
-- [src/size_policy.rs](src/size_policy.rs) shares Boat resource eligibility.
+- [src/size_policy.rs](src/size_policy.rs) exposes `select_boat_size` for
+  scaler placement and overflow dispatch.
 - [examples/own_machine.rs](examples/own_machine.rs) runs the public API.
 
 ### Related Docs

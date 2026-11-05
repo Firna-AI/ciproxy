@@ -15,6 +15,9 @@ pub(super) struct LaunchAuthority {
 }
 
 impl LaunchAuthority {
+    pub(super) fn backend(&self) -> &Capabilities {
+        &self.backend
+    }
     pub(super) async fn create(
         &self,
         request: BackendCreateSandboxRequest,

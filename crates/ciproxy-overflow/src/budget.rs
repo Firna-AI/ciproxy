@@ -9,7 +9,8 @@ use crate::spend::{month_start, next_month};
 
 /// Budget expiry uses dispatch until a trusted usage read supplies creation time.
 pub(crate) fn expires_at(start: &StartRecord) -> Result<DateTime<Utc>> {
-    let lifetime = Duration::seconds(i64::from(start.lifetime_seconds));
+    let parameters = start.dispatch.as_ref().ok_or(Error::OwnershipUnknown)?;
+    let lifetime = Duration::seconds(i64::from(parameters.lifetime_seconds));
     let original = start
         .starts_at
         .checked_add_signed(lifetime)
@@ -30,15 +31,18 @@ pub(crate) fn expires_at(start: &StartRecord) -> Result<DateTime<Utc>> {
 
 /// A full-lifetime runtime bound is split at UTC calendar-month boundaries.
 pub(crate) fn runtime_bound(start: &StartRecord, month: DateTime<Utc>) -> Result<Decimal> {
+    let parameters = start.dispatch.as_ref().ok_or(Error::OwnershipUnknown)?;
     let until = expires_at(start)?.min(next_month(month)?);
     let since = start.starts_at.max(month_start(month)?);
     let nanos = (until - since)
         .num_nanoseconds()
         .ok_or(Error::InvalidProviderData)?
         .max(0);
-    let lifetime = i64::from(start.lifetime_seconds) * 1_000_000_000;
-    Ok(start.size.hourly_usd * Decimal::from(nanos.min(lifetime))
-        / Decimal::from(3_600_000_000_000i64))
+    let lifetime = i64::from(parameters.lifetime_seconds) * 1_000_000_000;
+    Ok(
+        parameters.size.hourly_usd * Decimal::from(nanos.min(lifetime))
+            / Decimal::from(3_600_000_000_000i64),
+    )
 }
 
 /// Complete observed or normally computed runtime needs no remaining runtime bound.

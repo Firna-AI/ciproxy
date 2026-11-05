@@ -39,17 +39,9 @@ pub(crate) fn current(starts: &[StartRecord], now: DateTime<Utc>) -> Result<Spen
     for start in starts.iter().filter(|start| {
         !matches!(
             start.phase,
-            StartPhase::Refused | StartPhase::CancelledUnsent
+            StartPhase::Unsent | StartPhase::Refused | StartPhase::CancelledUnsent
         )
     }) {
-        let mut unsent;
-        let start = if start.phase == StartPhase::Unsent {
-            unsent = start.clone();
-            unsent.starts_at = now;
-            &unsent
-        } else {
-            start
-        };
         let fee_in_month = month_start(start.starts_at)?.date_naive() == month;
         let (runtime, unallocated) = budget::runtime_evidence(start, month_at)?;
         spend.confirmed_usd += runtime;
@@ -113,8 +105,9 @@ pub(crate) fn extend(record: &mut StartRecord, until: DateTime<Utc>) -> Result<(
         let nanos = (end - from)
             .num_nanoseconds()
             .ok_or(Error::InvalidProviderData)?;
+        let parameters = record.dispatch.as_ref().ok_or(Error::OwnershipUnknown)?;
         let usd =
-            record.size.hourly_usd * Decimal::from(nanos) / Decimal::from(3_600_000_000_000i64);
+            parameters.size.hourly_usd * Decimal::from(nanos) / Decimal::from(3_600_000_000_000i64);
         let month = month_start(from)?.date_naive();
         if let Some(charge) = record
             .runtime

@@ -47,9 +47,9 @@ async fn expired_cross_month_total_retains_unallocated_cost_without_a_measured_i
         start.sandbox = Some(KnownSandbox::observed(
             "bx_23456789".to_owned(),
             since,
-            start.lifetime_seconds,
+            start.dispatch.as_ref().unwrap().lifetime_seconds,
         ));
-        start.size.hourly_usd = Decimal::ONE;
+        start.dispatch.as_mut().unwrap().size.hourly_usd = Decimal::ONE;
         start.start_usd = None;
         start.runtime.push(RuntimeCharge {
             month: "2026-11-01".parse().unwrap(),

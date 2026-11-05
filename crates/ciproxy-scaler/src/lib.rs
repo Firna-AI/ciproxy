@@ -3,13 +3,13 @@
 pub mod actions;
 pub mod boat;
 pub mod decision;
+pub mod size_policy;
 pub mod snapshot;
 
 mod capacity;
 mod lifecycle;
 mod overflow;
 mod placement;
-mod size_policy;
 mod state;
 mod warm;
 

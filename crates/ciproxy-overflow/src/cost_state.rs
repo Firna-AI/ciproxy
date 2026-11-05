@@ -7,6 +7,9 @@ use rust_decimal::{Decimal, prelude::ToPrimitive};
 
 /// Derive the continuous billed prefix, clamped to the last observation.
 pub(crate) fn billing_prefix(record: &StartRecord) -> (Option<MeasuredBillingInterval>, bool) {
+    let Some(parameters) = &record.dispatch else {
+        return (None, false);
+    };
     let Some(last) = record.runtime.iter().max_by_key(|charge| charge.until) else {
         return (
             record.runtime_complete.then(|| {
@@ -25,7 +28,7 @@ pub(crate) fn billing_prefix(record: &StartRecord) -> (Option<MeasuredBillingInt
             return Some(record.starts_at);
         }
         usd.checked_mul(Decimal::from(3_600_000_000_000i64))?
-            .checked_div(record.size.hourly_usd)?
+            .checked_div(parameters.size.hourly_usd)?
             .to_i64()
             .and_then(|nanos| {
                 record

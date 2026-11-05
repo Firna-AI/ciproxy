@@ -7,7 +7,9 @@ use chrono::{DateTime, Utc};
 use ciproxy_overflow::crypto::KeyContext;
 use ciproxy_overflow::secrets::SecretBytes;
 use ciproxy_store_interface::error::Result;
-use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
+use ciproxy_store_interface::overflow::admission::{
+    DispatchFacts, PreparedDispatch, ReservationBudget, ReservationOutcome,
+};
 use ciproxy_store_interface::overflow::connection::ConnectionGrant;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase, StartRecord};
 use ciproxy_store_interface::overflow::store::{
@@ -22,6 +24,8 @@ pub(super) struct Capture {
     pub(super) active_backends: usize,
     pub(super) key_opens: usize,
     pub(super) fail_on_key_open: Option<usize>,
+    pub(super) key_open_effect: Option<(usize, Box<dyn FnOnce() + Send>)>,
+    pub(super) dispatch_effect: Option<Box<dyn FnOnce() + Send>>,
     pub(super) disable_on_key_open: Option<(usize, Arc<dyn Store>)>,
     pub(super) suspend_on_key_open: Option<(usize, Arc<dyn Store>)>,
     pub(super) limit_on_launch_seal: Option<(i64, Arc<dyn Store>)>,
@@ -87,6 +91,10 @@ impl OverflowSession for RecordingSession {
         self.inner.startup_account(delivery_id)
     }
 
+    fn dispatch_facts(&mut self, delivery_id: Uuid) -> Result<Option<DispatchFacts>> {
+        self.inner.dispatch_facts(delivery_id)
+    }
+
     fn begin_connection(&mut self, key_id: Uuid) -> Result<Option<ConnectionGrant>> {
         self.inner.begin_connection(key_id)
     }
@@ -114,22 +122,20 @@ impl OverflowSession for RecordingSession {
         Ok(())
     }
 
-    fn reserve_start(
+    fn save_pending(
         &mut self,
         record: &StartRecord,
         launch: &EncryptedLaunch,
         hash: &TokenHash,
-        budget: &ReservationBudget,
-    ) -> Result<ReservationOutcome> {
-        self.capture.lock().unwrap().budgets.push(budget.clone());
-        let reserved = self.inner.reserve_start(record, launch, hash, budget)?;
-        if reserved == ReservationOutcome::Reserved {
+    ) -> Result<bool> {
+        let accepted = self.inner.save_pending(record, launch, hash)?;
+        if accepted {
             self.record(record);
             let mut capture = self.capture.lock().unwrap();
             capture.launches.insert(record.delivery_id, launch.clone());
             capture.hashes.insert(record.delivery_id, hash.clone());
         }
-        Ok(reserved)
+        Ok(accepted)
     }
 
     fn encrypted_launch(&mut self, delivery_id: Uuid) -> Result<Option<EncryptedLaunch>> {
@@ -138,12 +144,21 @@ impl OverflowSession for RecordingSession {
 
     fn begin_dispatch(
         &mut self,
-        record: &StartRecord,
-        budget: &ReservationBudget,
+        pending: &StartRecord,
+        dispatch: &PreparedDispatch,
     ) -> Result<ReservationOutcome> {
-        let outcome = self.inner.begin_dispatch(record, budget)?;
+        let effect = self.capture.lock().unwrap().dispatch_effect.take();
+        if let Some(effect) = effect {
+            effect();
+        }
+        self.capture
+            .lock()
+            .unwrap()
+            .budgets
+            .push(dispatch.budget.clone());
+        let outcome = self.inner.begin_dispatch(pending, dispatch)?;
         if outcome == ReservationOutcome::Reserved {
-            self.record(record);
+            self.record(&dispatch.apply(pending));
         }
         Ok(outcome)
     }

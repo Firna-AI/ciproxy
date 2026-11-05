@@ -148,8 +148,8 @@ A blocking callback lease waits on that dedicated connection.
 Catalog observations and exact delivery records persist before Boat access.
 Reservation rechecks the active key, workspace settings, organization,
 label, and scale-set ownership under the workspace row lock.
-It then locks the settings row and compares exact caller-supplied monthly
-amounts with the saved limit before inserting a delivery.
+Pending acceptance saves demand, sealed input, and the saved fee together.
+It saves no fixed provider parameters or provider cost bound.
 Pending connections receive fresh database-generated grant identities.
 Activation consumes a matching live grant under the workspace row lock.
 A later grant cannot restore an older operation, even with the same key ID.
@@ -163,7 +163,10 @@ An undersized selected size also requires the label's current largest-size
 fallback permission. Fitting requests remain permitted under Wait.
 The dispatch transaction accepts only the saved unsent delivery.
 It rechecks authority and the current saved limit before saving `Creating`.
-It saves the prepared dispatch time in that same transaction.
+It compares the exact pending record, including its identity and saved fee.
+It saves selected size, lifetime, and dispatch time in that same transaction.
+The caller supplies those parameters with their required monthly amounts.
+Current-label queries supply facts for service policy without selecting sizes.
 Cancelled unsent records release sealed input without provider or cost facts.
 Adoption saves the provider identity, immutable runner placement, and price
 facts in one transaction.

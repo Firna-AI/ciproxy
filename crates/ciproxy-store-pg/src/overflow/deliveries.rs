@@ -2,7 +2,7 @@
 
 use ciproxy_schema::overflow::overflow_starts;
 use ciproxy_store_interface::error::{Result, ResultExt};
-use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
+use ciproxy_store_interface::overflow::admission::ReservationOutcome;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase, StartRecord};
 use ciproxy_store_interface::secrets::TokenHash;
 use diesel::prelude::*;
@@ -20,13 +20,15 @@ pub(super) fn reserve(
     record: &StartRecord,
     launch: &EncryptedLaunch,
     token_hash: &TokenHash,
-    budget: &ReservationBudget,
-) -> Result<ReservationOutcome> {
+) -> Result<bool> {
+    if record.phase != StartPhase::Unsent || record.dispatch.is_some() {
+        return Ok(false);
+    }
     let json = serde_json::to_string(record).internal()?;
     transaction(connection, |connection| {
-        let outcome = admission::check(connection, workspace_id, record, &json, budget)?;
+        let outcome = admission::check(connection, workspace_id, record, &json, None)?;
         if outcome != ReservationOutcome::Reserved {
-            return Ok(outcome);
+            return Ok(false);
         }
         let count = diesel::sql_query(
             "INSERT INTO overflow_starts
@@ -41,11 +43,7 @@ pub(super) fn reserve(
         .bind::<Binary, _>(&launch.0)
         .bind::<Binary, _>(token_hash.as_bytes())
         .execute(connection).store()?;
-        Ok(if count == 1 {
-            ReservationOutcome::Reserved
-        } else {
-            ReservationOutcome::NotPermitted
-        })
+        Ok(count == 1)
     })
 }
 

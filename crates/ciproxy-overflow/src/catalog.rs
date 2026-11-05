@@ -1,10 +1,39 @@
 //! Exact shared-capability catalog mapping without invented dimensions or prices.
 
-use ciproxy_store_interface::overflow::account::SizeOffer;
-use rust_decimal::Decimal;
+use ciproxy_protocol::resources::VmSize;
+use ciproxy_scaler::boat::{BoatSize, BoatSizeId};
+use ciproxy_store_interface::overflow::account::{AccountState, SizeOffer};
+use rust_decimal::{Decimal, prelude::ToPrimitive};
 use sandbox_interface::{ResourceAmount, ResourceUnit, SandboxPriceUnit, SandboxSizeOffer};
 
 use crate::error::{Error, Result};
+
+/// Map eligible catalog facts without reading or requiring any cost facts.
+pub(crate) fn scaler_sizes(state: &AccountState) -> Result<Vec<BoatSize>> {
+    state
+        .sizes
+        .iter()
+        .filter(|size| !state.refused_sizes.contains(&size.name))
+        .map(|size| {
+            Ok(BoatSize {
+                id: BoatSizeId(size.name.clone()),
+                size: VmSize {
+                    vcpu: size.vcpus,
+                    memory_bytes: size.memory_bytes,
+                    disk_bytes: size.disk_bytes,
+                },
+                price: micros(size.hourly_usd)?,
+            })
+        })
+        .collect()
+}
+
+pub(crate) fn micros(value: Decimal) -> Result<u64> {
+    (value * Decimal::from(1_000_000))
+        .ceil()
+        .to_u64()
+        .ok_or(Error::InvalidProviderData)
+}
 
 pub(crate) fn offers(offers: Vec<SandboxSizeOffer>) -> Result<Vec<SizeOffer>> {
     offers

@@ -13,7 +13,7 @@ use ciproxy_store_interface::secrets::TokenHash;
 use rust_decimal::Decimal;
 
 use super::super::support::{Database, at};
-use super::support::setup;
+use super::support::{reserve, setup};
 
 #[test]
 fn unknown_boat_interval_preserves_known_costs_and_does_not_block_ninety_day_purge() {
@@ -21,23 +21,23 @@ fn unknown_boat_interval_preserves_known_costs_and_does_not_block_ninety_day_pur
     let (workspace_id, _, mut record) = setup(&database);
     let mut session = database.store.lock_overflow(workspace_id).unwrap();
     assert_eq!(
-        session
-            .reserve_start(
-                &record,
-                &EncryptedLaunch(vec![1]),
-                &TokenHash::new(vec![4]),
-                &ReservationBudget {
-                    current_month_usd: Decimal::new(462, 3),
-                    next_month_usd: None,
-                },
-            )
-            .unwrap(),
+        reserve(
+            &mut *session,
+            &record,
+            &EncryptedLaunch(vec![1]),
+            &TokenHash::new(vec![4]),
+            &ReservationBudget {
+                current_month_usd: Decimal::new(462, 3),
+                next_month_usd: None,
+            },
+        )
+        .unwrap(),
         ReservationOutcome::Reserved
     );
     record.sandbox = Some(KnownSandbox::observed(
         "bx_23456789".to_owned(),
         record.starts_at,
-        record.lifetime_seconds,
+        record.dispatch.as_ref().unwrap().lifetime_seconds,
     ));
     record.phase = StartPhase::Running;
     record.runtime_complete = true;

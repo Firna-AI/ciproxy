@@ -3,14 +3,14 @@
 use std::time::Duration;
 
 use chrono::{DateTime, Utc};
-use ciproxy_protocol::resources::VmSize;
-use ciproxy_scaler::boat::{BoatAccount, BoatSize, BoatSizeId, MonthlySpend, Refusal};
+use ciproxy_scaler::boat::{BoatAccount, MonthlySpend, Refusal};
 use ciproxy_store_interface::boat;
 use ciproxy_store_interface::overflow::account::AccountState;
 use ciproxy_store_interface::overflow::record::StartRecord;
-use rust_decimal::{Decimal, prelude::ToPrimitive};
+use rust_decimal::Decimal;
 use uuid::Uuid;
 
+use crate::catalog::{micros, scaler_sizes};
 use crate::error::{Error, Result};
 
 /// Current-month spend with missing provider facts kept explicit.
@@ -68,23 +68,7 @@ impl OverflowView {
     /// Pending and settled bounds count without becoming measured costs.
     pub fn scaler_account(&self, clock_origin: DateTime<Utc>) -> Result<BoatAccount> {
         let counted = self.spend.counted_usd()?;
-        let sizes = self
-            .state
-            .sizes
-            .iter()
-            .filter(|size| !self.state.refused_sizes.contains(&size.name))
-            .map(|size| {
-                Ok(BoatSize {
-                    id: BoatSizeId(size.name.clone()),
-                    size: VmSize {
-                        vcpu: size.vcpus,
-                        memory_bytes: size.memory_bytes,
-                        disk_bytes: size.disk_bytes,
-                    },
-                    price: micros(size.hourly_usd)?,
-                })
-            })
-            .collect::<Result<Vec<_>>>()?;
+        let sizes = scaler_sizes(&self.state)?;
         let mut refusals = Vec::new();
         if self
             .account
@@ -115,11 +99,4 @@ impl OverflowView {
             refusals,
         })
     }
-}
-
-fn micros(value: Decimal) -> Result<u64> {
-    (value * Decimal::from(1_000_000))
-        .ceil()
-        .to_u64()
-        .ok_or(Error::InvalidProviderData)
 }

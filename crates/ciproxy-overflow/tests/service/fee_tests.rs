@@ -20,6 +20,8 @@ async fn zero_quote_saves_the_highest_fee_through_zero_runtime_completion_and_ex
     prices["nextStartDollars"] = json!(0);
     let server = Server::new(vec![
         step("GET", "/api/v1/me", 200, identity()),
+        step("GET", "/api/v1/limits", 200, prices.clone()),
+        step("GET", "/api/v1/me", 200, identity()),
         step("GET", "/api/v1/limits", 200, prices),
         step(
             "GET",
@@ -100,7 +102,7 @@ async fn zero_quote_saves_the_highest_fee_through_zero_runtime_completion_and_ex
             .iter()
             .filter(|request| request.path == "/api/v1/limits")
             .count(),
-        1
+        2
     );
     assert_eq!(provider.counts.lock().unwrap().creates, 1);
     assert_eq!(provider.counts.lock().unwrap().deletes, 1);

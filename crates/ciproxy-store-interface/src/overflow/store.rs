@@ -7,7 +7,7 @@ use uuid::Uuid;
 use crate::boat::BoatAccount;
 use crate::error::Result;
 use crate::overflow::account::AccountState;
-use crate::overflow::admission::{ReservationBudget, ReservationOutcome};
+use crate::overflow::admission::{DispatchFacts, PreparedDispatch, ReservationOutcome};
 use crate::overflow::connection::ConnectionGrant;
 use crate::overflow::record::{EncryptedLaunch, StartRecord};
 use crate::secrets::{EncryptedBoatKey, TokenHash};
@@ -55,6 +55,8 @@ pub trait OverflowSession: Send {
     /// Read current startup authority for this workspace's saved delivery in one query.
     /// Require its active organization, enabled overflow, accepted key, and current label size.
     fn startup_account(&mut self, delivery_id: Uuid) -> Result<Option<AccountRecord>>;
+    /// Read the current label for one authorized pending demand.
+    fn dispatch_facts(&mut self, delivery_id: Uuid) -> Result<Option<DispatchFacts>>;
     /// Persist a fresh pending grant while at least one organization has an App.
     /// Supersede any previous pending grant without restoring a revoked identity.
     fn begin_connection(&mut self, key_id: Uuid) -> Result<Option<ConnectionGrant>>;
@@ -72,21 +74,19 @@ pub trait OverflowSession: Send {
     fn save_account(&mut self, account: &AccountRecord) -> Result<()>;
     /// Commit a definitive refusal and its account restriction atomically.
     fn save_refusal(&mut self, account: &AccountRecord, record: &StartRecord) -> Result<()>;
-    /// Reserve a new delivery before dispatch and recheck current tenant authority.
-    /// Lock current settings and compare caller-calculated amounts before insertion.
-    fn reserve_start(
+    /// Save authorized pending demand and sealed input without provider parameters or costs.
+    fn save_pending(
         &mut self,
         record: &StartRecord,
         encrypted_launch: &EncryptedLaunch,
         token_hash: &TokenHash,
-        budget: &ReservationBudget,
-    ) -> Result<ReservationOutcome>;
+    ) -> Result<bool>;
     /// Commit Creating only for an unsent delivery with current authority and budget.
-    /// Replace its provisional start time with the prepared dispatch time atomically.
+    /// Preserve every pending field and fix the selected provider plan atomically.
     fn begin_dispatch(
         &mut self,
-        record: &StartRecord,
-        budget: &ReservationBudget,
+        pending: &StartRecord,
+        dispatch: &PreparedDispatch,
     ) -> Result<ReservationOutcome>;
     /// Read the sealed registration only while startup or cleanup needs it.
     fn encrypted_launch(&mut self, delivery_id: Uuid) -> Result<Option<EncryptedLaunch>>;

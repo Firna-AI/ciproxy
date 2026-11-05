@@ -10,7 +10,7 @@ use ciproxy_store_interface::secrets::TokenHash;
 use rust_decimal::Decimal;
 
 use super::super::support::{Database, at};
-use super::support::setup;
+use super::support::{reserve, setup};
 
 #[test]
 fn late_metering_refresh_prices_only_the_ninety_second_measured_prefix() {
@@ -18,23 +18,23 @@ fn late_metering_refresh_prices_only_the_ninety_second_measured_prefix() {
     let (workspace_id, _, mut record) = setup(&database);
     let mut session = database.store.lock_overflow(workspace_id).unwrap();
     assert_eq!(
-        session
-            .reserve_start(
-                &record,
-                &EncryptedLaunch(vec![1]),
-                &TokenHash::new(vec![17]),
-                &ReservationBudget {
-                    current_month_usd: Decimal::new(462, 3),
-                    next_month_usd: None,
-                },
-            )
-            .unwrap(),
+        reserve(
+            &mut *session,
+            &record,
+            &EncryptedLaunch(vec![1]),
+            &TokenHash::new(vec![17]),
+            &ReservationBudget {
+                current_month_usd: Decimal::new(462, 3),
+                next_month_usd: None,
+            },
+        )
+        .unwrap(),
         ReservationOutcome::Reserved
     );
     record.sandbox = Some(KnownSandbox::observed(
         "bx_23456789".to_owned(),
         record.starts_at,
-        record.lifetime_seconds,
+        record.dispatch.as_ref().unwrap().lifetime_seconds,
     ));
     record.phase = StartPhase::Running;
     record.runtime_complete = true;

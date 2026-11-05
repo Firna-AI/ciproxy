@@ -6,7 +6,7 @@ use sandbox_interface::ProviderRef;
 use uuid::Uuid;
 
 use crate::cost_state;
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::maintenance::MaintenanceCapabilities;
 use crate::session::Session;
 use crate::spend;
@@ -67,7 +67,14 @@ impl OverflowService {
             .is_none_or(|saved| total.until >= saved.until)
         {
             if let Some(sandbox) = &mut record.sandbox {
-                sandbox.observe_creation(total.since, record.lifetime_seconds);
+                sandbox.observe_creation(
+                    total.since,
+                    record
+                        .dispatch
+                        .as_ref()
+                        .ok_or(Error::OwnershipUnknown)?
+                        .lifetime_seconds,
+                );
             }
             record.starts_at = total.since;
             record.runtime_total = Some(RuntimeTotal {

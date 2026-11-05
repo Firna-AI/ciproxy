@@ -7,7 +7,8 @@ It has no open licence.
 
 ## Responsibilities
 
-The scaler decides where a runner is needed and which size it uses.
+The scaler decides where a runner is needed and proposes a Boat size.
+The shared scaler rule selects its current Boat size at dispatch.
 This crate supplies the account catalog and applies accepted Boat actions.
 GitHub still assigns each job to a runner.
 A workspace can have several GitHub organizations.
@@ -29,18 +30,26 @@ Account reads supply the verified name, trial state, and start-fee bound.
 The service refreshes eligible sizes every five minutes.
 The scaler uses their dimensions and exact hourly prices to choose the
 cheapest fitting size or the label's explicit largest-size fallback.
+Dispatch uses that same pure rule with the current label and catalog.
+It retains the scaler's known own-machine fit from admission.
+The scaler owns later changes to own-machine capacity.
 
 Each workspace has one PostgreSQL session lock.
 Synchronous queries run on blocking workers.
 The service saves the delivery, callback digest, and encrypted input before
 the first provider mutation.
-The durable `Unsent` phase permits safe preparation retries with that delivery.
+The durable `Unsent` phase keeps pending demand and permits preparation retries.
+It holds no fixed provider parameters and counts no provider cost bound.
 Both key preparations finish before an atomic `Creating` transition.
-That transition rechecks current authority and monthly amounts.
+Dispatch reads current account trial and billing facts on each attempt.
+This read also runs inside the five-minute catalog refresh window.
+It selects size, lifetime, dispatch time, and required budget together.
+The transition rechecks current authority and monthly amounts.
+It commits the budget reservation and fixed provider parameters together.
 The create call follows it directly.
 An unsent retry uses its actual dispatch time for UTC spend and lifetime.
 Withdrawn unsent authority produces `CancelledUnsent` without provider access.
-That terminal phase releases its bound, sealed input, and callback authority.
+That terminal phase releases sealed input and callback authority.
 Unused retired keys are then erased through the normal collection query.
 Cleanup also cancels unsent reservations after GitHub releases their demand.
 Key replacement cancels unsent deliveries that still name the retired key.
@@ -58,9 +67,10 @@ No supplied retry time means no invented retry delay.
 Plan refusals exclude that size until a successful catalog refresh.
 Billing refusals remain until an account check confirms recovery.
 Fresh requests and unsent dispatch share these provider restriction checks.
-A provider wait keeps the unsent identity, input, callback, and budget bound.
+A provider wait keeps the unsent identity, input, callback, and saved fee.
 Retry expiry, catalog refresh, or confirmed billing recovery permits dispatch.
-That retry keeps its original size price and saved start-fee bound.
+That retry selects the current size and lifetime and keeps its saved fee.
+After `Creating`, recovery keeps the exact committed provider parameters.
 `canStart` does not decide whether create will succeed.
 
 Every sandbox restores the shared snapshot with ciproxy marks.
@@ -111,7 +121,8 @@ The existing admission read selects the maximum
 `overagePrices.startBrackets[].dollars` from `GET /limits`.
 Missing or empty brackets fall back to `nextStartDollars`.
 `start_fee_bound_usd` stores this one selected amount.
-There is no second quote read or later fee reconciliation.
+Later account reads do not replace that saved amount.
+There is no fee reconciliation.
 It reads each sandbox's runtime for explicit UTC calendar-month windows.
 It uses the pinned hourly price for the known running interval between the
 last observation and a confirmed normal deletion.
@@ -154,10 +165,11 @@ A later real cost replaces the estimate, including costs above its bound.
 
 New starts continue while the limit covers existing costs and the proposed
 start's bound in each UTC month its lifetime touches.
-Reservation locks the current saved settings and compares those exact monthly
-amounts before it commits a delivery.
+Dispatch locks the current saved settings and compares those exact monthly
+amounts before it fixes the provider parameters.
 Lowering the limit during provider or encryption work therefore blocks that
-delivery when the new limit cannot cover it.
+dispatch when the new limit cannot cover it.
+The pending demand retains its identity and sealed input while it waits.
 A missing safe fee bound returns `Error::AccountingIncomplete`.
 `Spend::unbounded_starts` identifies the affected deliveries.
 A new start with neither fee source waits before provider dispatch.
@@ -194,9 +206,10 @@ One current store query checks all three facts from the saved delivery.
 The same policy also requires the saved scale set and current label authority.
 The label must allow Boat and match all original requested dimensions.
 The selected provider size can differ under the explicit largest-size fallback.
-An undersized delivery requires that fallback permission at each startup stage.
-Changing only that permission to Wait withdraws pending startup authority.
-Reservation and dispatch use this shared policy too.
+An undersized fixed delivery requires fallback permission at each startup stage.
+Changing that permission to Wait withdraws its fixed startup authority.
+An unsent demand instead selects its current fitting size or waits.
+Pending acceptance and dispatch use the same demand authority.
 The service repeats that query after key decryption at each operation.
 A suspension or removal withdraws startup while other organizations keep
 their use of the shared key.
@@ -283,7 +296,8 @@ These commands contact Boat or Cloud KMS and can incur charges.
 - [src/service/preparation.rs](src/service/preparation.rs) retries unsent
   preparation and commits the one dispatch boundary.
 - [src/service/provider_preparation.rs](src/service/provider_preparation.rs)
-  shares provider restrictions across fresh admission and unsent dispatch.
+  reads current dispatch facts and applies the shared scaler size rule.
+- [src/catalog.rs](src/catalog.rs) maps eligible sizes without requiring costs.
 - [src/service/inventory.rs](src/service/inventory.rs) reconciles inventory
   after current startup authority changes.
 - [src/service/accounts.rs](src/service/accounts.rs) completes only live

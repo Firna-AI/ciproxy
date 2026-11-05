@@ -50,7 +50,7 @@ async fn cleanup_deletes_only_an_unneeded_owned_runner_and_preserves_running_job
     idle.sandbox = Some(KnownSandbox::observed(
         "bx_3456789a".to_owned(),
         idle.starts_at,
-        idle.lifetime_seconds,
+        idle.dispatch.as_ref().unwrap().lifetime_seconds,
     ));
     harness.seed(running.clone());
     harness.seed(idle);

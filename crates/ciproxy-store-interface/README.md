@@ -109,16 +109,21 @@ OverflowStore adds exclusive workspace sessions for Boat execution.
 Pending connections use fresh store-issued grants before external work.
 Last-App removal revokes these grants, and activation consumes one live grant.
 Reusing a key-version identity cannot reuse an earlier grant.
-Reservation receives exact current-month and next-month required amounts.
+Pending acceptance retains immutable demand, sealed input, and its saved fee.
+It fixes no provider parameters and counts no provider cost bound.
+Prepared dispatch carries the selected provider parameters and exact monthly
+amounts together.
 Its transaction locks saved settings and returns a distinct spend-limit refusal.
-It retains immutable delivery identity before provider access.
 Its startup query derives the organization and key from the saved delivery.
 It checks tenant ownership, active App state, enabled overflow, and the
 accepted non-retired key together.
 It also requires the saved scale set and the label's current Boat switch.
 All current label dimensions must match the original requested dimensions.
 Reservation uses the same policy as saved-delivery startup.
+The current-label query supplies resource policy facts without store policy.
 The atomic dispatch operation rechecks authority and budget before `Creating`.
+It preserves all pending fields and fixes size, lifetime, and dispatch time.
+Later recovery uses those exact committed parameters.
 Unsent deliveries can retry preparation without provider recovery.
 Cancelled unsent deliveries retain no sealed input or callback authority.
 Account observations keep typed catalogs, retry times, and refusal state.
@@ -207,7 +212,7 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 - [src/gateway.rs](src/gateway.rs) defines atomic registration and reports.
 - [src/overflow](src/overflow) defines durable Boat sessions and deliveries.
 - [src/overflow/admission.rs](src/overflow/admission.rs) defines required
-  monthly amounts and reservation outcomes.
+  monthly amounts, current label facts, prepared dispatch, and its outcomes.
 - [src/overflow/connection.rs](src/overflow/connection.rs) defines pending
   connection grant identities.
 
