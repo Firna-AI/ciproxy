@@ -159,6 +159,19 @@ of each tier.
   range on which the machine was registered.
 - The report counts the monthly price of the tier and its add-ons for the
   days of the range.
+- When a monthly machine cost or tier and add-on price changes on a UTC
+  date, the last price on that date counts for the whole date.
+- **Decision:** the last monthly price counts for the whole UTC date.
+  Rejected: the first price, a split by hours, and allocation by time used.
+  Reason: one price per date keeps the daily report simple and reflects the
+  latest price.
+- For each date, the report divides the monthly machine cost and the tier
+  and add-on price by the number of days in that date's calendar month.
+- When the report counts a full calendar month at an unchanged monthly
+  price, the cost for that month equals the monthly price exactly.
+- **Decision:** each date uses the day count of its calendar month.
+  Rejected: a fixed 30 days, 365 divided by 12, mixed bases, and billing
+  periods. Reason: the same date then has the same cost in every range.
 - The Boat cost counts the same [sandboxes](overflow.md#terms) as the
   [spend limit](overflow.md#spend-limit), for the days of the range.
 - The savings against an alternative are its cost minus the cost with

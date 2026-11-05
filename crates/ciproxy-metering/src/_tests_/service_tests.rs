@@ -14,7 +14,6 @@ use uuid::Uuid;
 
 use crate::pricing::Tier;
 use crate::report::catalog::Alternative;
-use crate::report::costs::MonthlyDivisor;
 use crate::service::{Metering, Refresh, StoredMetering};
 use crate::test_support::{at, catalog, day, free_history, job, plan, range, size, usd};
 use crate::usage::PaymentNotice;
@@ -186,7 +185,6 @@ fn store_savings_use_retained_totals_after_job_details_disappear() {
             range("2026-10-01", "2026-11-01"),
             at("2026-11-04T00:00:00Z"),
             &lists,
-            MonthlyDivisor::CalendarMonthDays,
         )
         .unwrap();
     assert_eq!(

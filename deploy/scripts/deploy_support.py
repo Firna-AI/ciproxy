@@ -15,9 +15,9 @@ def run(*arguments, capture=False, input_text=None):
     return result.stdout if capture else None
 
 
-def terraform_init(directory, bucket, prefix):
-    run("terraform", f"-chdir={directory}", "init", "-input=false", "-reconfigure",
-        f"-backend-config=bucket={bucket}", f"-backend-config=prefix={prefix}")
+def terraform_init(target):
+    run("terraform", f"-chdir={target.directory}", "init", "-input=false", "-reconfigure",
+        *target.arguments())
 
 
 def runtime_configuration(environment):

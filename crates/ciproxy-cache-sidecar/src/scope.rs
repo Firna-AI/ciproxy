@@ -12,17 +12,11 @@ pub(crate) struct Scope {
 }
 
 pub(crate) fn write_scope(facts: &JobFacts, job: &JobId) -> Scope {
-    let foreign_default = facts.git_ref == facts.default_ref
-        && facts
-            .head_repository
-            .as_ref()
-            .is_some_and(|head| head.id != facts.repository.id);
-    let reference =
-        if facts.event.0.starts_with("pull_request") && !private_pr_ref(facts) || foreign_default {
-            format!("private-job/{}", job.0)
-        } else {
-            facts.git_ref.0.clone()
-        };
+    let reference = if can_save(facts, true) {
+        facts.git_ref.0.clone()
+    } else {
+        format!("private-job/{}", job.0)
+    };
     Scope {
         organization: facts.organization_id.0.clone(),
         repository: facts.repository.id.0.clone(),
@@ -33,6 +27,12 @@ pub(crate) fn write_scope(facts: &JobFacts, job: &JobId) -> Scope {
 pub(crate) fn read_scopes(facts: &JobFacts, job: &JobId) -> Vec<Scope> {
     let own = write_scope(facts, job);
     let mut scopes = vec![own.clone()];
+    if !facts.event.0.starts_with("pull_request") {
+        scopes.push(Scope {
+            reference: facts.git_ref.0.clone(),
+            ..own.clone()
+        });
+    }
     if facts.event.0.starts_with("pull_request")
         && let Some(base) = &facts.base_ref
     {
@@ -51,12 +51,26 @@ pub(crate) fn read_scopes(facts: &JobFacts, job: &JobId) -> Vec<Scope> {
 
 pub(crate) fn can_save(facts: &JobFacts, permissions: bool) -> bool {
     permissions
-        && (!facts.event.0.starts_with("pull_request") || private_pr_ref(facts))
+        && (trusted_event(facts)
+            || facts.event.0.starts_with("pull_request") && private_pr_ref(facts))
         && (facts.git_ref != facts.default_ref
             || facts
                 .head_repository
                 .as_ref()
                 .is_none_or(|head| head.id == facts.repository.id))
+}
+
+fn trusted_event(facts: &JobFacts) -> bool {
+    matches!(
+        facts.event.0.as_str(),
+        "push"
+            | "workflow_dispatch"
+            | "repository_dispatch"
+            | "delete"
+            | "registry_package"
+            | "page_build"
+            | "schedule"
+    )
 }
 
 fn private_pr_ref(facts: &JobFacts) -> bool {

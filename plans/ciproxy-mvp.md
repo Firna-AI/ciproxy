@@ -134,7 +134,10 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
   - [x] Define both projects, private SQL, secret containers, KMS, and IAM.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
-  - [ ] User: apply both foundations with `deploy/scripts/bootstrap.sh`.
+  - [ ] Orchestrator: run `deploy/scripts/bootstrap.sh` for each environment,
+        set the GitHub variables, and start the deploy workflow, which
+        creates the foundation, as item 56 says. The steps are in
+        [the setup guide](../deploy/setup.md).
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
 - [ ] Run the control plane and the `futex-ai/cli-release` server on GKE
       Autopilot with Helm, as item 31 says.
@@ -164,15 +167,29 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
   - [ ] User: apply the zones and delegate the domain and staging subzone.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
-- [ ] Deploy the main preview on each push, and production on each merge
+- [x] Deploy the main preview on each push, and production on each merge
       into `main` after the main preview run of the same commit passes, as
       item 58 says. Add uptime alerts.
-- [ ] Plan, check, and promote every root from CI, as item 56 says: a
+      Branch: `codex/m5-terraform-promotion`.
+- [x] Plan, check, and promote every root from CI, as item 56 says: a
       read-only plan identity, a policy that needs an approval file for each
       destructive change, an apply identity for one reusable workflow, and
       deletion protection for the database and the secrets.
+      Foundation creation now runs in CI after one-time seed and bootstrap.
+      Design calls, 5 November 2026: operator bootstrap initializes every
+      remote backend through shared root, directory, bucket, and prefix
+      metadata. Reason: first initialization writes state, which the plan
+      identity cannot do. Seed `main.tf` owns trust API enablement. Reason:
+      both operator and CI finish seed before any bootstrap resource starts.
+      No state move is needed because nothing has been applied in GCP.
+      Branch: `codex/m5-terraform-promotion`.
 - [ ] User: move `Firna-AI` to GitHub Team, as item 57 says. Orchestrator:
       add the ruleset on `main` that needs a pull request and the gate.
+      Branch: `codex/m5-terraform-promotion`.
+  - [x] Prepare and test the idempotent `deploy/scripts/github-ruleset.sh`.
+        Branch: `codex/m5-terraform-promotion`.
+  - [ ] User: upgrade the organization. Orchestrator: apply the ruleset.
+        Branch: `codex/m5-terraform-promotion`.
 - [x] Rename the staging environment to the main preview of item 53, with
       its hosts under `br-main.preview`, before the first apply.
       Branch: `conductor/ciproxy-mvp-milestone-5-main-preview`.
@@ -223,18 +240,25 @@ each label. The scale set spike confirms it.
       lock of Milestone 4.
       Branch:
       `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
-- [ ] Limit the repositories with one runner group, because GitHub assigns
+- [x] Limit the repositories with one runner group, because GitHub assigns
       jobs with no acquire step. Check that a Free organization can do it,
       or propose the requirement change.
       The selected private group is implemented and tested over HTTP.
-      Creation and removal were verified on GitHub Free at Firna-AI.
-      Orchestrator: run `runner_group_probe.py` from
-      `crates/ciproxy-github/scripts/` on a Free organization, with two
-      App-visible private repositories and a clean runner launcher.
-      The crate README gives the environment and arguments.
-      Enforcement waits for approval of the second private test repository.
-      Branch:
-      `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
+      GitHub Free enforces the repository limit. The requirement does not
+      change. On 5 November 2026, a live probe ran in the Free organization
+      `Firna-AI`. The job of the allowed repository ran on the runner of the
+      probe. The job of the refused repository stayed queued with no runner
+      for 101.8 seconds after the allowed job succeeded. The scale set got
+      messages only for the allowed run: one `JobAssigned`, one
+      `JobStarted`, and one `JobCompleted`. Every cleanup check of the probe
+      passed. The default branches of both repositories stayed the same.
+      The probe now waits until GitHub reports the allowed job as completed,
+      with a conclusion. GitHub can report a successful run before its job
+      has a conclusion. The passing live run used a local copy with this
+      wait. An offline regression covers the race.
+      Evidence:
+      `.context/ciproxy-mvp/milestone-6/runner-group-proof/live-evidence.md`.
+      Branch: `conductor/ciproxy-mvp-milestone-6-runner-group-proof`.
 - [x] Store each message before you delete it, by job ID. Count the wait
       from `scaleSetAssignTime`. My call: `queueTime` is empty, and the
       spike found this time within about a second of the queue time.
@@ -457,8 +481,21 @@ evicts them. Boat runs the stock runner. The cache spike confirms it.
       Branch: `conductor/ciproxy-mvp-milestone-11-cache-sidecar`.
       Orchestrator: run `image/runner-patch/smoke/live-check.py` with
       trusted registration and runtime credentials on a GitHub runner.
-- [ ] Let only the 7 trusted events of GitHub write shared entries, and
+- [x] Let only the 7 trusted events of GitHub write shared entries, and
       write item 59 into "Trusted write-back" of `cache.md`.
+      Evidence: `.context/ciproxy-mvp/trusted-cache-events/acceptance.md`.
+      Branch: `conductor/ciproxy-mvp-milestone-11-trusted-cache-events`.
+- [x] Orchestrator: run the three live checks of item 54 = E: a push to the
+      default branch, `pull_request_target`, and a job on a ciproxy runner.
+      All passed on 5 November 2026. A push and a dispatch on `main` got
+      `refs/heads/main` with write access, `pull_request_target` got
+      `refs/heads/main` read only, and on a ciproxy runner the `run_id`,
+      `job_id`, and `runner_id` of the token matched the scale set message
+      and the registration. Evidence: `.context/job-ref-research/report.md`.
+- [ ] Check the runtime token of each job in the machine cache, as item 54
+      says, and take the full ref from its write scope. Write the rule into
+      `cache.md` and `security.md`. A job whose token fails the check fails
+      closed, as item 55 = A says. It waits for the live checks.
 
 ## Milestone 12: Boat backend on the shared sandbox interface
 
@@ -579,12 +616,14 @@ Depends on: 4
       Branch: `conductor/ciproxy-mvp-milestone-16-metering`.
 - [x] Unit-test each rule with hand-worked numbers.
       Branch: `conductor/ciproxy-mvp-milestone-16-metering`.
-- [ ] Write items 63 and 64 into `metering.md`: the last price counts for
+- [x] Write items 63 and 64 into `metering.md`: the last price counts for
       a day with a price change, and a month has the days of its calendar
       month. Build both rules, and fix the 30-day view of the Savings
       mockup. Then run `cargo test --package ciproxy-metering` and `cargo
       xtask check` with `DATABASE_URL` set.
-      Branch: `conductor/ciproxy-mvp-milestone-16-metering`.
+      The report, service, and test callers no longer choose a monthly
+      divisor. Each date uses its calendar month.
+      Branch: `conductor/ciproxy-mvp-milestone-16-cost-rules`.
 
 ## Milestone 17: Billing with Stripe
 
@@ -729,8 +768,8 @@ disks.
 
 - [ ] Attach the Docker disk in the job-started hook, as "Docker disks" in
       `cache.md` says.
-- [ ] Give the disk to the first default-branch job, and a reflink copy to
-      each other job.
+- [ ] Give the disk to the first default-branch job of a trusted event, as
+      item 66 says, and a reflink copy to each other job.
 - [ ] Use drive IDs of letters, digits, and underscores. Keep each Docker
       image store on the disk.
 - [ ] Discard a disk that fails to mount. My call: a rebuild loses only
@@ -951,9 +990,61 @@ Answers of 5 November 2026:
   periods.
 - Item 65, B: the orchestrator merges `futex-ai/sandbox` #11 this one time. It
   merged as `9658361` on 5 November 2026.
-- Item 54: the user asked whether the webhooks give the facts, what the options
-  are, and how other providers solve it. A research step runs before the answer.
-  Item 55 waits for it, and item 61 has no answer yet.
+- Item 54, E: the machine cache checks the runtime token of each job outside the
+  job VM. It checks the signature against the public keys of GitHub, the issuer
+  and the expiry, and that the run and the runner of the token match the job
+  that ciproxy started. The scope of the token with write access gives the full
+  ref. A shared write needs that scope to be the default branch and the event to
+  be trusted, as item 59 says. Every other job saves only in its own scope. The
+  App keeps its three permissions. This reverses the line of item 32 that left
+  out the token scopes, because a signature check now verifies the token.
+  Rejected: the API only, `jobWorkflowRef` for direct jobs, the hook report, a
+  test cache entry, the push webhook with the "Contents" permission, and the
+  OIDC token. Before the build, three live checks run: a push to the default
+  branch, `pull_request_target`, and a job on a ciproxy runner. If a check
+  fails, the fallback B goes back to the user.
+- Item 55, A: a job whose runtime token gives no checked ref fails closed in the
+  machine cache. It restores default-branch entries from the machine cache, and
+  its other entries through the GitHub cache. It saves in a private scope that
+  no other job restores, and through to the GitHub cache. It gets its own copy
+  of the Docker disk, which ciproxy discards. The job facts get one "unknown"
+  state with this one rule. Rejected: the GitHub cache only for such a job,
+  because one change of the token format would take the machine cache from every
+  job, and a later promotion through the cache list, because it is much code for
+  a rare case.
+- Item 66, A: only a job of a trusted event on the default branch keeps
+  its changes to a Docker disk, as item 59 says for the machine cache.
+  `cache.md` states it. Rejected: any event on the default branch, and
+  `push` jobs only.
+- Item 61, A: the user gave the test-mode keys of a Stripe account for
+  ciproxy only, "CI Proxy sandbox" (`acct_1UYEdnAGa5h8DTS3`). The secret key
+  lives in the secrets folder of the orchestrator and never in the
+  repository. Rejected: the account of `futex-ai/accounting`, and no live
+  test.
+- Item 60, result: on GitHub Free, a runner group limited to one
+  repository ran the job of that repository, and the job of the refused
+  repository stayed queued with no runner for 101.8 seconds. The probe
+  needed a fix of a race in its job check, which Milestone 6 adds.
+
+Design calls for the answers E to item 54 and A to item 55, my calls and those
+of the research, 5 November 2026:
+
+- The token must name the repository, the run, and the runner of the assigned
+  job. Reason: the token of another job then fails the check.
+- Two or more `ac` entries with the write bit make the job unknown. Reason: each
+  probe job had at most one.
+- The event and the head repository still come from the GitHub API, so the App
+  keeps "Actions" read. Reason: the token has no event field.
+- The machine cache keeps the scope strings of GitHub unchanged, such as
+  `refs/heads/refs/tags/<tag>` for a tag, and compares them exactly with
+  `refs/heads/<default branch>`. Reason: a tag can then never match the default
+  branch.
+- The machine refreshes the public keys of GitHub every 5 minutes, and once more
+  for an unknown `kid`, with a limit on refetches. Reason: a false `kid` cannot
+  then flood GitHub.
+- The machine report counts the unknown jobs by reason, and the token probe
+  becomes an operator script that runs before each image release. Reason: a
+  change of the token by GitHub then shows at once.
 
 Design calls for the answer D to item 56, my calls, 5 November 2026:
 
@@ -1120,10 +1211,9 @@ Design calls on the questions of the docs work, my calls, 4 November 2026:
   report. The savings report now covers the whole workspace, which pays
   one price.
 
-Items 54, 55, and 61 wait for the user. They are under "Open items of
-4 November 2026" at the end of this plan, with the answers of
-5 November 2026 to the other items there. The options check of items 50
-and 51 ran, and its report is in
+No item waits for the user. The items under "Open items of 4 November 2026" at
+the end of this plan hold their answers of 5 November 2026. The options check of
+items 50 and 51 ran, and its report is in
 `.context/ciproxy-mvp/options-check-50-51.md`.
 
 The options check of the `plans` skill ran over these items on 4 November
@@ -1795,14 +1885,14 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-These items wait for the user. The conversation gave each in full in the layout
-of the `decisions-and-findings` skill. Each holds one root question, and its
-options keep the letters that the user saw.
+The user answered items 54 to 66 on 5 November 2026. No item still waits. The
+conversation gave each item in full in the layout of the
+`decisions-and-findings` skill. Each holds one root question, and its options
+keep the letters that the user saw.
 
 ### 54. The GitHub API cannot name the full ref of a job
 
-**Status, 5 November 2026:** research of the webhooks and of other providers
-runs before the answer.
+**Answer, 5 November 2026:** E.
 
 - **Severity:** High. **Effort:** Medium.
 - **Source:** Implementation, Milestone 6, pull request #16.
@@ -1823,11 +1913,16 @@ runs before the answer.
     the API. Each runner version needs a repeat test. Effort: Medium.
   - **D.** A, and a test cache entry with the job's token, whose ref GitHub
     reports. Effort: Large.
-- **Recommendation:** B. It gave the right full ref in all five live cases for
-  direct jobs, and it keeps every fact outside the job VM.
-- **Action:** ask the user.
+  - **E.** A, and a check of the runtime token of the job outside the VM: its
+    signature, its issuer and expiry, and its run and runner. The scope with
+    write access gives the full ref, also in reusable workflows. Effort: Medium.
+- **Recommendation:** E, after three live checks. It covers every job with a
+  fact that GitHub signs, and it needs no new permission. B is the fallback.
+- **Action:** answered E.
 
 ### 55. No rule for a job whose ref is unknown
+
+**Answer, 5 November 2026:** A.
 
 - **Severity:** High. **Effort:** Small.
 - **Source:** Implementation, Milestone 6.
@@ -1844,7 +1939,7 @@ runs before the answer.
     default-branch ref. It needs D of item 54. Effort: Large.
 - **Recommendation:** A. It never widens what a job may write, and the job keeps
   its hits on default-branch entries.
-- **Action:** ask the user.
+- **Action:** answered A.
 
 ### 56. Merged Terraform changes still need a person to apply them
 
@@ -1951,6 +2046,8 @@ runs before the answer.
 
 ### 61. No Stripe test-mode key for the live billing test
 
+**Answer, 5 November 2026:** A, the account "CI Proxy sandbox".
+
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Implementation, Milestone 17.
 - **Background:** `crates/ciproxy-billing/scripts/stripe-test-mode.sh` needs a
@@ -2035,4 +2132,24 @@ runs before the answer.
   - **A.** The user merges #11. Effort: Small.
   - **B.** The user allows the orchestrator to merge it once. Effort: Small.
 - **Recommendation:** A. It keeps the merge rule of that repository.
+- **Action:** ask the user.
+
+### 66. Untrusted events can keep Docker disk changes
+
+**Answer, 5 November 2026:** A.
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Review of pull request #17, outside the scope.
+- **Background:** "Docker disks" in `cache.md` lets the first job on the
+  default branch keep its changes to the Docker disk of a repository,
+  whatever its event. Item 59 = C limits shared machine-cache entries to the
+  7 trusted events.
+- **Options:**
+  - **A.** Only a job of a trusted event on the default branch keeps its
+    changes. Effort: Small.
+  - **B.** Keep the current rule. Effort: Small.
+  - **C.** Only a `push` job on the default branch keeps its changes.
+    Effort: Small.
+- **Recommendation:** A. One rule then covers the machine cache and the
+  Docker disks.
 - **Action:** ask the user.
