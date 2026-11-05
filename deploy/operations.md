@@ -204,11 +204,13 @@ preview zone before preview prepared its NEG.
   content is served through the edge by the viewer-only https-lb agent.
 - Every multipart upload stores explicit `cacheControl` object metadata.
   HTML and its route aliases use `no-store`. Assets use
-  `public,max-age=86400,must-revalidate`. GCS response headers come from
-  this stored metadata, not a request Cache-Control header.
-- Static backends keep `USE_ORIGIN_HEADERS`, so HTML no-store remains in
-  force. No force-cache policy or new TTL is added. The publisher never
-  deletes a file, so open tabs can load old assets.
+  `public,max-age=86400,must-revalidate`. Metadata alone cannot enable
+  private-bucket CDN caching.
+- Separate asset wrappers use `FORCE_CACHE_ALL` with a one-year CDN lifetime
+  and a one-day browser cap. HTML/default wrappers use `USE_ORIGIN_HEADERS`
+  and preserve `no-store`. API and signed-image paths keep their own
+  backends. [Static delivery](static-delivery.md) gives the exact routes.
+- The publisher uploads assets before HTML and never deletes old assets.
 - Each deploy invalidates the whole CDN cache after the edge apply.
 - Terraform cannot delete the GKE cluster, the Cloud SQL instance, the state
   bucket, or the Boat KMS key. Their protection must change first.

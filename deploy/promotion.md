@@ -187,10 +187,14 @@ fails the run. Wait for propagation, then rerun all jobs with fresh plans.
 No separate gcloud tag mutation or automatic eight-minute retry is added.
 [Tag propagation](https://docs.cloud.google.com/iam/docs/tags-access-control)
 
-Static origins remain private. Edge backend creation precedes the exact LB
-service-agent Object Viewer grants. Organization sharing policy stays.
+Static origins remain private. Cached asset backend creation precedes the
+exact LB service-agent Object Viewer grants, once per underlying bucket.
+Organization sharing policy stays.
 A refused first real grant stops this path and returns item 76 to the user.
-Stored upload metadata controls caching through `USE_ORIGIN_HEADERS`:
-HTML is `no-store`; assets are `public,max-age=86400,must-revalidate`.
-Real deployments still invalidate afterward. No `FORCE_CACHE_ALL` policy
-or new TTL overrides the HTML contract.
+Private-bucket CDN caching requires `FORCE_CACHE_ALL`; explicit object
+metadata alone is insufficient. Each origin has a cached asset wrapper and
+an HTML/default wrapper. HTML retains `USE_ORIGIN_HEADERS` and publisher
+`no-store`. Asset CDN/client lifetimes and URL paths are defined in
+[static delivery](static-delivery.md). Real deployments invalidate both
+hosts afterward. Stable asset names refresh at that invalidation. The
+publisher still uploads assets before HTML without deleting old files.

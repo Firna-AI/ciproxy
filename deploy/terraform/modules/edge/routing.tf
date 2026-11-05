@@ -17,6 +17,12 @@ resource "google_compute_url_map" "https" {
     name            = "site"
     default_service = google_compute_backend_bucket.public["site"].id
     path_rule {
+      # Build-owned asset directories and exact public files. Docs and all
+      # HTML aliases keep the uncached default. Google allows only /* globs.
+      paths   = ["/_astro/*", "/pagefind/*", "/favicon.svg", "/sitemap-index.xml", "/sitemap-0.xml"]
+      service = google_compute_backend_bucket.assets["site"].id
+    }
+    path_rule {
       paths   = ["/"]
       service = google_compute_backend_bucket.public["site"].id
       route_action {
@@ -29,6 +35,11 @@ resource "google_compute_url_map" "https" {
   path_matcher {
     name            = "dashboard"
     default_service = google_compute_backend_bucket.public["dashboard"].id
+    path_rule {
+      # Keep Expo's build-owned static namespace, not all /_expo/*.
+      paths   = ["/_expo/static/*", "/_expo/.routes.json", "/assets/*"]
+      service = google_compute_backend_bucket.assets["dashboard"].id
+    }
     path_rule {
       paths   = ["/"]
       service = google_compute_backend_bucket.public["dashboard"].id

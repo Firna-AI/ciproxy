@@ -50,7 +50,9 @@ Site/dashboard buckets enforce PAP. They have no `allUsers` or
 `service-PROJECT_NUMBER@https-lb.iam.gserviceaccount.com` receives only
 `roles/storage.objectViewer` on these two buckets. Google creates that
 identity only after the first backend bucket. The edge's IAM resources
-iterate backend resources, so each grant follows creation.
+iterate the cached asset wrappers, so each grant follows their creation.
+HTML and asset wrappers share one bucket and one reader grant. The split
+adds no bucket, identity, or policy scope. See [static delivery](static-delivery.md).
 
 Shared apply policy get/set names preview's two static buckets before
 launch, and both environments' four static buckets after launch. That

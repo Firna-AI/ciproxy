@@ -16,7 +16,9 @@ Check billing and organization policies. The futex.ai domain-restricted
 sharing rule stays in force. Site/dashboard origins are private with public
 access prevention enforced. No public grant or organization-policy
 exception is needed. The edge grants its Google-created service agent
-viewer access after backend creation. Read the operator roles in
+viewer access after cached backend creation. Each static bucket has separate
+HTML and asset wrappers. See [static delivery](static-delivery.md).
+Read the operator roles in
 [Deployment identities](identities.md#operator-permissions).
 
 ```sh

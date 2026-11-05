@@ -44,9 +44,13 @@ run "production_edge_manages_only_owned_dns_records" {
       ])
       && google_storage_bucket_iam_member.origin_reader["site"].bucket == "ciproxy-production-site-ciproxy"
       && google_storage_bucket_iam_member.origin_reader["dashboard"].bucket == "ciproxy-production-dashboard-ciproxy"
-      && alltrue([for backend in google_compute_backend_bucket.public : backend.cdn_policy[0].cache_mode == "USE_ORIGIN_HEADERS"])
+      && toset(keys(google_compute_backend_bucket.assets)) == toset(["site", "dashboard"])
+      && alltrue([for key, backend in google_compute_backend_bucket.assets :
+        backend.bucket_name == google_compute_backend_bucket.public[key].bucket_name
+        && backend.name == "ciproxy-production-${key}-assets"
+      ])
     )
-    error_message = "Only the exact LB service agent gets viewer on static origins. Explicit origin cache metadata remains authoritative."
+    error_message = "Both wrappers share each private origin. Only one viewer grant per origin names the exact LB service agent."
   }
   assert {
     condition = (
@@ -104,9 +108,13 @@ run "main_preview_edge_manages_only_owned_dns_records" {
       ])
       && google_storage_bucket_iam_member.origin_reader["site"].bucket == "ciproxy-main-preview-site-ciproxy"
       && google_storage_bucket_iam_member.origin_reader["dashboard"].bucket == "ciproxy-main-preview-dashboard-ciproxy"
-      && alltrue([for backend in google_compute_backend_bucket.public : backend.cdn_policy[0].cache_mode == "USE_ORIGIN_HEADERS"])
+      && toset(keys(google_compute_backend_bucket.assets)) == toset(["site", "dashboard"])
+      && alltrue([for key, backend in google_compute_backend_bucket.assets :
+        backend.bucket_name == google_compute_backend_bucket.public[key].bucket_name
+        && backend.name == "ciproxy-main-preview-${key}-assets"
+      ])
     )
-    error_message = "Only the exact LB service agent gets viewer on static origins. Explicit origin cache metadata remains authoritative."
+    error_message = "Both wrappers share each private origin. Only one viewer grant per origin names the exact LB service agent."
   }
   assert {
     condition = (

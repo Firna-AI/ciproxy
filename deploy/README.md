@@ -42,11 +42,15 @@ production edge IP. See [DNS setup](dns.md).
 
 | Host and path | Backend |
 | --- | --- |
-| Site host | Private static site origin through the load balancer/Cloud CDN. Docs use `/docs`. |
-| Dashboard host | Private static dashboard origin through the load balancer/Cloud CDN. |
+| Site host | Uncached HTML/docs and cached assets from one private site origin. Docs use `/docs`. |
+| Dashboard host | Uncached HTML and cached assets from one private dashboard origin. |
 | Dashboard `/api`, `/agent`, `/hooks` | Control plane. These paths fail while its runtime is off. |
 | Dashboard `/images` | Private image bucket through signed Cloud CDN URLs. |
 | Download host | The `futex-ai/cli-release` server. |
+
+Each static origin has separate HTML and asset backend wrappers. Private
+asset caching requires `FORCE_CACHE_ALL`; object metadata alone does not
+enable it. [Static delivery](static-delivery.md) gives paths and lifetimes.
 
 The release server uses upstream commit
 `30513bd1a6e15d8e9c1b18f2ed92d1d4dfa11786`. Its vendored chart has
