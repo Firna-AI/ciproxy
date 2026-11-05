@@ -36,10 +36,20 @@ pub(crate) fn current(starts: &[StartRecord], now: DateTime<Utc>) -> Result<Spen
         unknown_start_charges: Vec::new(),
         unmeasured_runtime: Vec::new(),
     };
-    for start in starts
-        .iter()
-        .filter(|start| start.phase != StartPhase::Refused)
-    {
+    for start in starts.iter().filter(|start| {
+        !matches!(
+            start.phase,
+            StartPhase::Refused | StartPhase::CancelledUnsent
+        )
+    }) {
+        let mut unsent;
+        let start = if start.phase == StartPhase::Unsent {
+            unsent = start.clone();
+            unsent.starts_at = now;
+            &unsent
+        } else {
+            start
+        };
         let fee_in_month = month_start(start.starts_at)?.date_naive() == month;
         let (runtime, unallocated) = budget::runtime_evidence(start, month_at)?;
         spend.confirmed_usd += runtime;

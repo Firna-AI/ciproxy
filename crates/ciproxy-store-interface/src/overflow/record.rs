@@ -25,6 +25,8 @@ impl fmt::Debug for EncryptedLaunch {
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum StartPhase {
+    /// No create request has been sent. Preparation may safely retry this delivery.
+    Unsent,
     /// Dispatch may have occurred. Only recover reads may follow a restart.
     Creating,
     /// The sandbox exists and needs its private runner input.
@@ -39,6 +41,8 @@ pub enum StartPhase {
     Deleting,
     /// A definitive refusal proved that no sandbox started.
     Refused,
+    /// Startup authority was withdrawn before any create request was sent.
+    CancelledUnsent,
     /// The sandbox is confirmed absent and billing has ended.
     Ended,
 }
@@ -76,7 +80,8 @@ pub struct StartRecord {
     pub phase: StartPhase,
     /// Proven sandbox identity and lifetime once recovered or accepted.
     pub sandbox: Option<KnownSandbox>,
-    /// Dispatch time, replaced by the trusted provider creation time when measured.
+    /// Provisional admission time while unsent, then dispatch time.
+    /// Trusted provider creation time replaces it when measured.
     pub starts_at: DateTime<Utc>,
     /// Confirmed lifecycle end, independent of measured billing time.
     pub ends_at: Option<DateTime<Utc>>,

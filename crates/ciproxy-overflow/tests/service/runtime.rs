@@ -6,6 +6,7 @@ use std::sync::{Arc, Mutex};
 use chrono::{DateTime, Utc};
 use ciproxy_overflow::clock::ClockMock;
 use ciproxy_overflow::crypto::{KeyCipherMock, SecretPurpose};
+use ciproxy_overflow::error::Error;
 use ciproxy_overflow::secrets::{SecretBytes, TokenSourceMock};
 use ciproxy_protocol::secret::Secret;
 use ciproxy_store_interface::organizations::AppState;
@@ -70,6 +71,10 @@ pub(super) fn build(
                 let disabled = {
                     let mut capture = state.lock().unwrap();
                     capture.key_opens += 1;
+                    if capture.fail_on_key_open == Some(capture.key_opens) {
+                        capture.fail_on_key_open = None;
+                        return Err(Error::KmsHttp { status: 503 });
+                    }
                     if capture
                         .disable_on_key_open
                         .as_ref()
@@ -109,6 +114,7 @@ pub(super) fn build(
                 .clone())
         }));
     Arc::new(match kind {
+        Runtime::Cancellation => Unimock::new((extra, now)),
         Runtime::KeyCheck => Unimock::new(extra),
         Runtime::Connect => Unimock::new((extra, now, seal)),
         Runtime::Recover => Unimock::new((extra, open)),

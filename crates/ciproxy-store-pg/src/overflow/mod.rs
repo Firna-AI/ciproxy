@@ -2,10 +2,12 @@
 
 pub(crate) mod accounting;
 mod accounts;
+mod admission;
 mod authority;
 mod completion;
 mod connections;
 mod deliveries;
+mod dispatch;
 mod placements;
 mod queries;
 mod rows;

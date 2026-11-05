@@ -14,7 +14,7 @@ use uuid::Uuid;
 use crate::error::QueryResultExt;
 use crate::gateway_transaction::transaction;
 
-use super::{Session, accounts, authority, completion, connections, deliveries, rows};
+use super::{Session, accounts, authority, completion, connections, deliveries, dispatch, rows};
 
 impl OverflowSession for Session {
     fn snapshot(&mut self) -> Result<OverflowSnapshot> {
@@ -86,6 +86,14 @@ impl OverflowSession for Session {
             .store()?
             .flatten()
             .map(EncryptedLaunch))
+    }
+
+    fn begin_dispatch(
+        &mut self,
+        record: &StartRecord,
+        budget: &ReservationBudget,
+    ) -> Result<ReservationOutcome> {
+        dispatch::begin(&mut self.connection, self.workspace_id, record, budget)
     }
 
     fn save_start(&mut self, record: &StartRecord) -> Result<()> {

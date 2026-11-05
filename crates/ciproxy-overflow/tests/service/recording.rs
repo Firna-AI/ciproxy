@@ -21,6 +21,7 @@ use uuid::Uuid;
 pub(super) struct Capture {
     pub(super) active_backends: usize,
     pub(super) key_opens: usize,
+    pub(super) fail_on_key_open: Option<usize>,
     pub(super) disable_on_key_open: Option<(usize, Arc<dyn Store>)>,
     pub(super) suspend_on_key_open: Option<(usize, Arc<dyn Store>)>,
     pub(super) limit_on_launch_seal: Option<(i64, Arc<dyn Store>)>,
@@ -133,6 +134,18 @@ impl OverflowSession for RecordingSession {
 
     fn encrypted_launch(&mut self, delivery_id: Uuid) -> Result<Option<EncryptedLaunch>> {
         self.inner.encrypted_launch(delivery_id)
+    }
+
+    fn begin_dispatch(
+        &mut self,
+        record: &StartRecord,
+        budget: &ReservationBudget,
+    ) -> Result<ReservationOutcome> {
+        let outcome = self.inner.begin_dispatch(record, budget)?;
+        if outcome == ReservationOutcome::Reserved {
+            self.record(record);
+        }
+        Ok(outcome)
     }
 
     fn save_start(&mut self, record: &StartRecord) -> Result<()> {

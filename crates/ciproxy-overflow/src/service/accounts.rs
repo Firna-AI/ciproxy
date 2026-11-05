@@ -81,6 +81,7 @@ impl Overflow for OverflowService {
         if !connected {
             return Err(Error::ConnectionNotPermitted);
         }
+        self.cancel_withdrawn_unsent(&session).await?;
         self.collect(&session).await?;
         Ok(metadata)
     }
@@ -90,6 +91,7 @@ impl Overflow for OverflowService {
             Session::acquire(self.dependencies.store.clone(), workspace_id, false).await?;
         let now = self.dependencies.clock.now();
         session.call(move |session| session.disconnect(now)).await?;
+        self.cancel_withdrawn_unsent(&session).await?;
         self.collect(&session).await
     }
 
@@ -110,7 +112,7 @@ impl Overflow for OverflowService {
             .into_iter()
             .find(|record| record.delivery_id == delivery_id)
             .ok_or(Error::DeliveryConflict)?;
-        self.execute(&session, workspace_id, record, false).await
+        self.execute(&session, workspace_id, record).await
     }
 
     async fn report_end(&self, token: Secret, runner_id: Uuid) -> Result<()> {

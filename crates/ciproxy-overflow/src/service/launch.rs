@@ -56,14 +56,6 @@ impl OverflowService {
         let sandbox =
             ProviderRef::new(record.sandbox.as_ref().ok_or(Error::OwnershipUnknown)?.id());
         if record.phase == StartPhase::Preparing {
-            let Some(authority) = self
-                .launch_authority(session, workspace_id, record.delivery_id)
-                .await?
-            else {
-                return self
-                    .reconcile_retired(session, workspace_id, backend, record.clone())
-                    .await;
-            };
             let delivery = record.delivery_id;
             let input = session
                 .call(move |session| session.encrypted_launch(delivery))
@@ -81,6 +73,14 @@ impl OverflowService {
                     input.0,
                 )
                 .await?;
+            let Some(authority) = self
+                .launch_authority(session, workspace_id, record.delivery_id)
+                .await?
+            else {
+                return self
+                    .reconcile_retired(session, workspace_id, backend, record.clone())
+                    .await;
+            };
             record.phase = StartPhase::Writing;
             let changed = record.clone();
             session
@@ -97,6 +97,14 @@ impl OverflowService {
                 .await;
             self.confirm_write(session, backend, record, bootstrap)
                 .await?;
+            let Some(authority) = self
+                .launch_authority(session, workspace_id, record.delivery_id)
+                .await?
+            else {
+                return self
+                    .reconcile_retired(session, workspace_id, backend, record.clone())
+                    .await;
+            };
             authority
                 .launcher()
                 .prepare(sandbox.clone(), delivery)

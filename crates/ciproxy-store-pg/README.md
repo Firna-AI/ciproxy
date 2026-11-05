@@ -157,6 +157,12 @@ Suspension and removal with another App present preserve shared grants.
 One current startup query binds the saved delivery to its organization and
 key in that workspace. It requires active App state, enabled overflow, and
 the accepted non-retired key together.
+The same authority SQL checks scale-set ownership, the label's Boat switch,
+and exact original requested dimensions during reservation and later startup.
+The dispatch transaction accepts only the saved unsent delivery.
+It rechecks authority and the current saved limit before saving `Creating`.
+It saves the prepared dispatch time in that same transaction.
+Cancelled unsent records release sealed input without provider or cost facts.
 Adoption saves the provider identity, immutable runner placement, and price
 facts in one transaction.
 Callback claims save token consumption and deletion intent together.

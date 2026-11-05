@@ -108,7 +108,8 @@ async fn suspended_after_key_decryption_cannot_dispatch_a_reserved_create() {
     assert_eq!(counts.creates, 0);
     assert_eq!(counts.inputs, 0);
     assert_eq!(counts.launches, 0);
-    assert_eq!(counts.deletes, 1);
+    assert_eq!(counts.deletes, 0);
+    assert_eq!(counts.recoveries, 0);
     assert!(matches!(result, StartOutcome::Ended(_)));
-    assert_eq!(harness.start(id(11)).phase, StartPhase::Ended);
+    assert_eq!(harness.start(id(11)).phase, StartPhase::CancelledUnsent);
 }

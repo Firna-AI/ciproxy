@@ -1,14 +1,13 @@
 //! Durable acceptance of a scaler Boat action before provider dispatch.
 
 use ciproxy_scaler::actions::Destination;
-use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
+use ciproxy_store_interface::overflow::admission::ReservationOutcome;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase, StartRecord};
 use ciproxy_store_interface::overflow::store::AccountRecord;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
 use crate::api::{StartOutcome, StartRequest, WaitReason};
-use crate::budget;
 use crate::crypto::{KeyContext, SecretPurpose};
 use crate::error::{Error, Result, ResultExt};
 use crate::secrets::digest;
@@ -16,6 +15,7 @@ use crate::session::Session;
 use crate::spend;
 
 use super::OverflowService;
+use super::preparation::required_budget;
 
 impl OverflowService {
     pub(super) async fn start_request(
@@ -47,9 +47,7 @@ impl OverflowService {
             {
                 return Err(Error::DeliveryConflict);
             }
-            return self
-                .execute(&session, workspace_id, record.clone(), false)
-                .await;
+            return self.execute(&session, workspace_id, record.clone()).await;
         }
         let Some(mut account) = snapshot
             .accounts
@@ -159,7 +157,7 @@ impl OverflowService {
             deployment: format!("{}/{}", self.config.deployment, workspace_id),
             snapshot: self.config.shared_snapshot.clone(),
             lifetime_seconds: if account.state.trial { 7200 } else { 21600 },
-            phase: StartPhase::Creating,
+            phase: StartPhase::Unsent,
             sandbox: None,
             starts_at: now,
             ends_at: None,
@@ -173,16 +171,7 @@ impl OverflowService {
             runtime_complete: false,
         };
         record.starts_at = self.dependencies.clock.now();
-        snapshot.starts.push(record.clone());
-        let next_month = spend::next_month(record.starts_at)?;
-        let budget = ReservationBudget {
-            current_month_usd: spend::current(&snapshot.starts, record.starts_at)?.counted_usd()?,
-            next_month_usd: if next_month < budget::expires_at(&record)? {
-                Some(spend::current(&snapshot.starts, next_month)?.counted_usd()?)
-            } else {
-                None
-            },
-        };
+        let budget = required_budget(&snapshot.starts, &record)?;
         let pending = record.clone();
         let hash = digest(&token);
         let reserved = session
@@ -201,7 +190,7 @@ impl OverflowService {
             }
             ReservationOutcome::Reserved => (),
         }
-        self.execute(&session, workspace_id, record, true).await
+        self.execute(&session, workspace_id, record).await
     }
 
     pub(super) async fn save_refusal(

@@ -115,6 +115,12 @@ It retains immutable delivery identity before provider access.
 Its startup query derives the organization and key from the saved delivery.
 It checks tenant ownership, active App state, enabled overflow, and the
 accepted non-retired key together.
+It also requires the saved scale set and the label's current Boat switch.
+All current label dimensions must match the original requested dimensions.
+Reservation uses the same policy as saved-delivery startup.
+The atomic dispatch operation rechecks authority and budget before `Creating`.
+Unsent deliveries can retry preparation without provider recovery.
+Cancelled unsent deliveries retain no sealed input or callback authority.
 Account observations keep typed catalogs, retry times, and refusal state.
 Runner input stays encrypted until launch or cleanup ends its use.
 Callback lookup derives the workspace from a token digest.

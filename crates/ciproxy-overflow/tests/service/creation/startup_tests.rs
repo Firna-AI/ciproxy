@@ -99,6 +99,7 @@ async fn paid_start_sends_private_input_and_persists_identity_before_launch() {
     assert_eq!(
         state.phases,
         [
+            StartPhase::Unsent,
             StartPhase::Creating,
             StartPhase::Preparing,
             StartPhase::Writing,

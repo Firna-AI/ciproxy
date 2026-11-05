@@ -34,6 +34,16 @@ Each workspace has one PostgreSQL session lock.
 Synchronous queries run on blocking workers.
 The service saves the delivery, callback digest, and encrypted input before
 the first provider mutation.
+The durable `Unsent` phase permits safe preparation retries with that delivery.
+Both key preparations finish before an atomic `Creating` transition.
+That transition rechecks current authority and monthly amounts.
+The create call follows it directly.
+An unsent retry uses its actual dispatch time for UTC spend and lifetime.
+Withdrawn unsent authority produces `CancelledUnsent` without provider access.
+That terminal phase releases its bound, sealed input, and callback authority.
+Unused retired keys are then erased through the normal collection query.
+Cleanup also cancels unsent reservations after GitHub releases their demand.
+Key replacement cancels unsent deliveries that still name the retired key.
 The delivery ID becomes Boat's idempotency key.
 An uncertain create uses recovery reads forever, including after Boat's
 24-hour idempotency window.
@@ -177,6 +187,10 @@ Registration delivery and guest launch require the active accepted key.
 They also require overflow to remain enabled in the workspace.
 A delivery also needs its own organization to have an active GitHub App.
 One current store query checks all three facts from the saved delivery.
+The same policy also requires the saved scale set and current label authority.
+The label must allow Boat and match all original requested dimensions.
+The selected provider size can differ under the explicit largest-size fallback.
+Reservation and dispatch use this shared policy too.
 The service repeats that query after key decryption at each operation.
 A suspension or removal withdraws startup while other organizations keep
 their use of the shared key.
@@ -260,6 +274,10 @@ These commands contact Boat or Cloud KMS and can incur charges.
 - [src/service](src/service) owns durable execution and cleanup.
 - [src/service/authority.rs](src/service/authority.rs) obtains current
   startup authority for each saved delivery.
+- [src/service/preparation.rs](src/service/preparation.rs) retries unsent
+  preparation and commits the one dispatch boundary.
+- [src/service/inventory.rs](src/service/inventory.rs) reconciles inventory
+  after current startup authority changes.
 - [src/service/accounts.rs](src/service/accounts.rs) completes only live
   pending connection grants.
 - [src/maintenance.rs](src/maintenance.rs) restricts retained-key capabilities.

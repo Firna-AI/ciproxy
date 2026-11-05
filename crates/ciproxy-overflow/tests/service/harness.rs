@@ -22,6 +22,7 @@ use super::recording::{Capture, RecordingStore};
 use super::runtime;
 
 pub(super) enum Runtime {
+    Cancellation,
     KeyCheck,
     Connect,
     Recover,

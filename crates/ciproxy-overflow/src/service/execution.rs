@@ -14,6 +14,7 @@ use crate::error::{Error, Result, ResultExt};
 use crate::session::Session;
 
 use super::OverflowService;
+use super::preparation::DispatchOutcome;
 
 pub(super) fn create_request(
     workspace_id: Uuid,
@@ -41,10 +42,21 @@ impl OverflowService {
         session: &Session,
         workspace_id: Uuid,
         mut record: StartRecord,
-        dispatch: bool,
     ) -> Result<StartOutcome> {
-        if matches!(record.phase, StartPhase::Ended | StartPhase::Refused) {
+        if matches!(
+            record.phase,
+            StartPhase::Ended | StartPhase::Refused | StartPhase::CancelledUnsent
+        ) {
             return Ok(StartOutcome::Ended(record));
+        }
+        let delivery = record.delivery_id;
+        if record.phase == StartPhase::Unsent
+            && session
+                .call(move |session| session.startup_account(delivery))
+                .await?
+                .is_none()
+        {
+            return self.cancel_unsent(session, &mut record).await;
         }
         let snapshot = session.call(|session| session.snapshot()).await?;
         let mut account = snapshot
@@ -60,6 +72,9 @@ impl OverflowService {
             .await?
             .is_none()
         {
+            if record.phase == StartPhase::Unsent {
+                return self.cancel_unsent(session, &mut record).await;
+            }
             return self
                 .reconcile_retired(session, workspace_id, &backend, record)
                 .await;
@@ -73,20 +88,19 @@ impl OverflowService {
             self.delete(session, &backend, &mut record).await?;
             return Ok(StartOutcome::Ended(record));
         }
-        if record.phase == StartPhase::Creating {
-            let request = create_request(workspace_id, &record);
-            let result = if dispatch {
-                let Some(authority) = self
-                    .launch_authority(session, workspace_id, record.delivery_id)
+        if matches!(record.phase, StartPhase::Unsent | StartPhase::Creating) {
+            let result = if record.phase == StartPhase::Unsent {
+                match self
+                    .dispatch_unsent(session, workspace_id, &mut record)
                     .await?
-                else {
-                    return self
-                        .reconcile_retired(session, workspace_id, &backend, record)
-                        .await;
-                };
-                authority.create(request).await.map(Some)
+                {
+                    DispatchOutcome::Submitted(result) => result,
+                    DispatchOutcome::Stopped(outcome) => return Ok(*outcome),
+                }
             } else {
-                backend.recover_sandbox_create(request).await
+                backend
+                    .recover_sandbox_create(create_request(workspace_id, &record))
+                    .await
             };
             let sandbox = match result {
                 Ok(Some(sandbox)) => sandbox,

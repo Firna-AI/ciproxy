@@ -53,7 +53,7 @@ pub trait OverflowSession: Send {
     /// Read account, settings, and durable start facts from one snapshot.
     fn snapshot(&mut self) -> Result<OverflowSnapshot>;
     /// Read current startup authority for this workspace's saved delivery in one query.
-    /// Require its active organization, enabled overflow, and accepted non-retired key.
+    /// Require its active organization, enabled overflow, accepted key, and current label size.
     fn startup_account(&mut self, delivery_id: Uuid) -> Result<Option<AccountRecord>>;
     /// Persist a fresh pending grant while at least one organization has an App.
     /// Supersede any previous pending grant without restoring a revoked identity.
@@ -79,6 +79,13 @@ pub trait OverflowSession: Send {
         record: &StartRecord,
         encrypted_launch: &EncryptedLaunch,
         token_hash: &TokenHash,
+        budget: &ReservationBudget,
+    ) -> Result<ReservationOutcome>;
+    /// Commit Creating only for an unsent delivery with current authority and budget.
+    /// Replace its provisional start time with the prepared dispatch time atomically.
+    fn begin_dispatch(
+        &mut self,
+        record: &StartRecord,
         budget: &ReservationBudget,
     ) -> Result<ReservationOutcome>;
     /// Read the sealed registration only while startup or cleanup needs it.
