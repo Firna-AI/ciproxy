@@ -199,11 +199,14 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
         Branch: `codex/m5-terraform-promotion`.
   - [x] User: upgrade the organization. Orchestrator: apply the ruleset.
         Branch: `codex/m5-terraform-promotion`.
-- [ ] Make this repository public, as item 70 says. The orchestrator scans
+- [x] Make this repository public, as item 70 says. The orchestrator scans
       the history, the run logs, and the pull request texts for secrets, and
       checks the workflows and the runner groups. The user changes the
       visibility. Then turn on secret scanning with push protection, and
       require approval of workflow runs from all outside contributors.
+      Done on 5 November 2026: the scans found no secret, the user made the
+      repository public, and an admin read confirmed secret scanning, push
+      protection, and approval for all outside contributors.
 - [x] Rename the staging environment to the main preview of item 53, with
       its hosts under `br-main.preview`, before the first apply.
       Branch: `conductor/ciproxy-mvp-milestone-5-main-preview`.
