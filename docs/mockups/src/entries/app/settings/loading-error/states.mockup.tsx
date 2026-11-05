@@ -9,7 +9,7 @@ export const loading = defineScreen({
   title: "While settings load",
   description:
     "Skeleton rows keep the layout of the labels table. The other tabs load the same way.",
-  relatedDocs: related("jobRouting"),
+  relatedDocs: related("labels"),
   address: orgAddress("settings/labels"),
   render: (_props, context) => (
     <LabelsScreen viewport={context.viewport} state="loading" />
@@ -20,7 +20,7 @@ export const error = defineScreen({
   slug: "error",
   title: "When settings fail to load",
   description: "The shared failed-read state with Try again.",
-  relatedDocs: related("jobRouting"),
+  relatedDocs: related("labels"),
   address: orgAddress("settings/labels"),
   render: (_props, context) => (
     <LabelsScreen viewport={context.viewport} state="error" />

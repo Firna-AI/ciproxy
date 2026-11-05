@@ -10,7 +10,7 @@ export const labelsReference = defineScreen({
     "The reference page of labels: the default labels with their sizes and slots, how slots work, custom labels with the setting When nothing fits, and where a job runs.",
   rationale:
     "The labels and sizes are the ones that Settings shows for mokly-ai, so a reader finds the same values in the dashboard.",
-  relatedDocs: related("jobRouting", "overflow"),
+  relatedDocs: related("labels", "jobRouting", "overflow"),
   address: siteAddress("docs/reference/labels"),
   render: (_props, context) => (
     <LabelsReferenceScreen viewport={context.viewport} />

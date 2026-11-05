@@ -38,14 +38,5 @@ export const addMachine = defineScreen({
         "A leaked command must not stay usable for the rest of its hour, so an Admin can end its token at once.",
       props: { state: "revoked" },
     },
-    {
-      slug: "no-runner-right",
-      title: "An Admin without the runner right",
-      description:
-        "Ana Souza is an Admin, but GitHub does not let her manage the self-hosted runners of mokly-ai. In place of the command, she sees who can add a machine: an owner of the organization, or an Admin with the GitHub runner right. Check again reads her right on GitHub again.",
-      rationale:
-        "A machine gets the job secrets of the repositories, so adding one needs the Admin role and the runner right of the organization.",
-      props: { state: "no-runner-right" },
-    },
   ],
 });

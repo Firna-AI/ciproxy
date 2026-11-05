@@ -65,13 +65,14 @@ This milestone adds the states of the new items, and the legal pages.
 - [x] Add the terms and privacy pages. Run the mockup check, and smoke-test
       the changed pages.
 - [x] Update this plan for each problem that the mockups show.
-- [ ] Add the rename of a workspace, the banner of a Free workspace with
+- [x] Add the rename of a workspace, the banner of a Free workspace with
       more than one organization, the job page with the mixed cache source
       and with no entries restored, a `labels` key in `related-docs.ts`,
       the warning when an Admin gives the Admin role, no state without the
       runner right after item 50, and the take-out of item 51: the dialog
       says that the App is removed, and the last organization has no
       take-out.
+      Branch: `conductor/ciproxy-mvp-milestone-1-last-mockups`.
 
 ## Milestone 2: Documentation and protocol
 

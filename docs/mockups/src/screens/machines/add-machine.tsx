@@ -3,8 +3,7 @@
 // the machine runs jobs at once. The fourth machine, office-mini-1, reports
 // fewer slots than its threads and memory give, because of its disk. After
 // Revoke token, the command adds no machine, and a new command is one click
-// away. An Admin whom GitHub does not let manage self-hosted runners sees who
-// can add a machine instead.
+// away. The Admin role alone adds a machine, as the answer to item 50 says.
 
 import type { Viewport } from "@mokly/mokly";
 
@@ -12,7 +11,6 @@ import { LinkAction } from "../../components/actions.tsx";
 import {
   ConnectedMachine,
   InstallCommand,
-  NoRunnerRightNotice,
   RevokedCommand,
   WaitingLine,
 } from "../../components/install-command.tsx";
@@ -21,20 +19,13 @@ import { paths } from "../../components/paths.ts";
 import { AppShell } from "../../components/shell/app-shell.tsx";
 import { usageBanner } from "../../components/usage-banner.tsx";
 import { officeMini } from "../../fixtures/machines.ts";
-import { adminWithoutRight } from "../../fixtures/members.ts";
 import { workspace } from "../../fixtures/org.ts";
 import "./machines.css";
 
-export const addMachineStates = [
-  "waiting",
-  "connected",
-  "revoked",
-  "no-runner-right",
-] as const;
+export const addMachineStates = ["waiting", "connected", "revoked"] as const;
 export type AddMachineState = (typeof addMachineStates)[number];
 
 function AddMachineBody({ state }: { state: AddMachineState }) {
-  if (state === "no-runner-right") return <NoRunnerRightNotice />;
   if (state === "revoked") return <RevokedCommand next={paths.addMachine} />;
   return (
     <>
@@ -75,7 +66,6 @@ export function AddMachineScreen({
       viewport={viewport}
       tier="team"
       active="machines"
-      person={state === "no-runner-right" ? adminWithoutRight : undefined}
       banner={
         state === "connected"
           ? usageBanner("over-machines", "other")

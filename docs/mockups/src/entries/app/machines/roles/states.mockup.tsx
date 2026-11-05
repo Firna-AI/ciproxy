@@ -37,24 +37,6 @@ export const billing = defineScreen({
   ),
 });
 
-export const noRunnerRight = defineScreen({
-  slug: "no-runner-right",
-  title: "An Admin without the runner right",
-  description:
-    "Ana Souza is an Admin, but GitHub does not let her manage the self-hosted runners of mokly-ai. In place of Add machine, she sees who can add one: an owner of the organization, or an Admin with the GitHub runner right. She can do everything else, and she keeps the link to the overflow settings.",
-  rationale:
-    "Adding a machine needs the Admin role and the runner right, because a machine gets the job secrets of the repositories. An owner always has the right and can claim the Admin role.",
-  relatedDocs: related("security", "agent"),
-  address,
-  render: (_props, context) => (
-    <MachinesScreen
-      viewport={context.viewport}
-      state="steady"
-      runnerRight={false}
-    />
-  ),
-});
-
 export const machineViewer = defineScreen({
   slug: "machine-viewer",
   title: "A machine, seen by a Viewer or a Billing person",

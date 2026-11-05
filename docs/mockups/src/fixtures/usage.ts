@@ -4,6 +4,8 @@
 // September, so a Team period runs from the 4th to the 3rd, and Free again
 // from 18 December, when Stripe ended Team after failed payments. A move
 // between paid tiers keeps the period, and a move to Free waits for its end.
+// After a move to Free in November, Free begins on 4 December, and mokly-ai
+// keeps both of its organizations.
 
 import { dateRange, unbroken } from "./format.ts";
 import type { TierKey } from "./org.ts";
@@ -18,7 +20,8 @@ export type UsageScene =
   | "payment-failed"
   | "payment-failed-over-limit"
   | "moved-to-free"
-  | "free-scheduled";
+  | "free-scheduled"
+  | "free-organizations";
 
 export type Usage = {
   tier: TierKey;
@@ -98,6 +101,15 @@ export const usageScenes: Readonly<Record<UsageScene, Usage>> = {
     machines: 3,
     renews: undefined,
     ends: teamPeriodEnd,
+  },
+  /** The first day of Free after Move to Free, with both organizations. */
+  "free-organizations": {
+    ...free,
+    period: dateRange("4 December", "3 January"),
+    starts: 380,
+    projected: 11_780,
+    passesOn: unbroken("9 December"),
+    machines: 3,
   },
 };
 
