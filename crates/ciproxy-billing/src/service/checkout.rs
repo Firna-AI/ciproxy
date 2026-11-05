@@ -121,7 +121,7 @@ impl BillingService {
             });
         }
         let id = current.subscription.as_deref().ok_or(Error::StripeState)?;
-        let subscription = self.stripe.subscription(id)?;
+        let subscription = self.read_subscription(session, &record.state, id)?;
         if subscription.id != id || current.customer.as_ref() != Some(&subscription.customer) {
             return Err(Error::Ownership);
         }

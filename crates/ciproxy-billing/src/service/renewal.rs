@@ -2,7 +2,7 @@
 
 use chrono::DateTime;
 use ciproxy_store_interface::billing::renewals::{Renewal, RenewalOutcome};
-use ciproxy_store_interface::billing::state::{BillingState, Tier};
+use ciproxy_store_interface::billing::state::BillingState;
 use ciproxy_store_interface::billing::store::BillingSession;
 
 use crate::error::{Error, Result, ResultExt};
@@ -22,12 +22,8 @@ impl BillingService {
         current: &Subscription,
         evidence: Option<&InvoiceEvidence>,
     ) -> Result<BillingState> {
-        if old.tier != Tier::Free && old.subscription_id.as_ref() != Some(&current.id) {
-            return Err(Error::Ownership);
-        }
-        confirmed(old, current, self.clock.now(), None)?;
+        self.observe_subscription(session, old, current)?;
         let renewal = if terminal(current) {
-            self.complete_collection(session, &current.id)?;
             None
         } else {
             self.renewal_state(session, old, current, evidence)?
@@ -69,13 +65,12 @@ impl BillingService {
             }) {
                 continue;
             }
-            let invoice = self.owned_invoice(current, &id)?;
+            let invoice = self.owned_invoice(session, current, &id)?;
             let previous = renewals.iter().find(|renewal| renewal.invoice_id == id);
             if invoice.billing_reason != BillingReason::SubscriptionCycle && previous.is_none() {
                 continue;
             }
-            let renewal =
-                self.observe_invoice(session, previous, old, current, &invoice, evidence)?;
+            let renewal = self.observe_invoice(session, old, current, &invoice, evidence)?;
             renewals.retain(|renewal| renewal.invoice_id != id);
             renewals.push(renewal);
         }
@@ -99,13 +94,17 @@ impl BillingService {
     pub(super) fn observe_invoice(
         &self,
         session: &mut dyn BillingSession,
-        previous: Option<&Renewal>,
         old: &BillingState,
         current: &Subscription,
         invoice: &Invoice,
         evidence: Option<&InvoiceEvidence>,
     ) -> Result<Renewal> {
-        let mut renewal = observed(previous, old, current, invoice, evidence);
+        let previous = session
+            .renewals(&current.id)
+            .internal()?
+            .into_iter()
+            .find(|renewal| renewal.invoice_id == invoice.id);
+        let mut renewal = observed(previous.as_ref(), old, current, invoice, evidence);
         let retry = invoice
             .next_payment_attempt
             .map(|seconds| DateTime::from_timestamp(seconds, 0).ok_or(Error::StripeState))
@@ -113,42 +112,17 @@ impl BillingService {
         renewal.next_retry_at = match retry {
             Ok(retry) => retry,
             Err(error) => {
-                if previous.map(|renewal| &renewal.collection) != Some(&renewal.collection) {
+                if previous.as_ref().map(|renewal| &renewal.collection) != Some(&renewal.collection)
+                {
                     session.save_renewal(&renewal).internal()?;
                 }
                 return Err(error);
             }
         };
-        if previous != Some(&renewal) {
+        if previous.as_ref() != Some(&renewal) {
             session.save_renewal(&renewal).internal()?;
         }
         Ok(renewal)
-    }
-
-    fn complete_collection(
-        &self,
-        session: &mut dyn BillingSession,
-        subscription_id: &str,
-    ) -> Result<()> {
-        for mut renewal in session.renewals(subscription_id).internal()? {
-            let old = renewal.collection.clone();
-            merge(&mut renewal.collection, CollectionObservation::ConfirmedEnd);
-            if old != renewal.collection {
-                session.save_renewal(&renewal).internal()?;
-            }
-        }
-        Ok(())
-    }
-
-    pub(super) fn owned_invoice(&self, current: &Subscription, id: &str) -> Result<Invoice> {
-        let record = self.stripe.invoice(id)?;
-        if record.invoice.id != id
-            || record.customer != current.customer
-            || record.subscription_id() != Some(current.id.as_str())
-        {
-            return Err(Error::Ownership);
-        }
-        Ok(record.invoice)
     }
 }
 

@@ -5,7 +5,7 @@ use ciproxy_store_interface::billing::collection::{
 };
 
 use crate::stripe::wire::invoice::{BillingReason, CollectionMethod, Invoice, InvoiceStatus};
-use crate::stripe::wire::types::Subscription;
+use crate::stripe::wire::types::{Status, Subscription};
 
 use super::invoice_evidence::CollectionChange;
 
@@ -15,7 +15,11 @@ pub(super) enum CollectionObservation<'a> {
         invoice: &'a Invoice,
         change: Option<CollectionChange>,
     },
-    ConfirmedEnd,
+    Subscription {
+        current: &'a Subscription,
+        invoice_id: &'a str,
+    },
+    Invoice(&'a Invoice),
 }
 
 /// Terminal decisions never regain cancellation authority, including on replay.
@@ -37,10 +41,26 @@ pub(super) fn merge(decisions: &mut CollectionDecisions, observation: Collection
                 }
             }
         }
-        CollectionObservation::ConfirmedEnd => {
+        CollectionObservation::Subscription {
+            current,
+            invoice_id,
+        } => {
             for decision in &mut decisions.decisions {
                 if decision.state == CancellationState::Eligible {
-                    decision.state = CancellationState::Completed;
+                    if matches!(current.status, Status::Canceled | Status::IncompleteExpired) {
+                        decision.state = CancellationState::Completed;
+                    } else if !subscription_matches(current, invoice_id, &decision.stop) {
+                        decision.state = CancellationState::Superseded;
+                    }
+                }
+            }
+        }
+        CollectionObservation::Invoice(invoice) => {
+            for decision in &mut decisions.decisions {
+                if decision.state == CancellationState::Eligible
+                    && !invoice_matches(invoice, &decision.stop)
+                {
+                    decision.state = CancellationState::Superseded;
                 }
             }
         }
@@ -93,9 +113,21 @@ fn signed_change(decisions: &mut CollectionDecisions, change: CollectionChange) 
 }
 
 fn current_stop(current: &Subscription, invoice: &Invoice, stop: &AutomaticStop) -> bool {
+    subscription_matches(current, &invoice.id, stop) && invoice_matches(invoice, stop)
+}
+
+fn subscription_matches(current: &Subscription, invoice_id: &str, stop: &AutomaticStop) -> bool {
     current.collection_method == Some(CollectionMethod::ChargeAutomatically)
         && current.pause_collection.is_none()
-        && invoice.billing_reason == BillingReason::SubscriptionCycle
+        && current
+            .latest_invoice
+            .as_ref()
+            .filter(|invoice| invoice.id == invoice_id)
+            .is_none_or(|invoice| invoice_matches(invoice, stop))
+}
+
+fn invoice_matches(invoice: &Invoice, stop: &AutomaticStop) -> bool {
+    invoice.billing_reason == BillingReason::SubscriptionCycle
         && invoice.status == InvoiceStatus::Open
         && invoice.collection_method == Some(CollectionMethod::ChargeAutomatically)
         && invoice.amount_remaining.is_some_and(|amount| amount > 0)

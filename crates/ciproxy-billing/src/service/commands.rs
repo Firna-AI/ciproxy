@@ -25,7 +25,7 @@ impl BillingService {
         if record.state.tier == Tier::Free {
             return Err(Error::SubscriptionRequired);
         }
-        let current = self.current_subscription(&record.state)?;
+        let current = self.current_subscription(&mut *session, &record.state)?;
         let (current, baseline) =
             self.reconcile_subscription(&mut *session, &record.state, current, None)?;
         if let Some(command) = record.command.as_mut() {
@@ -162,7 +162,7 @@ impl BillingService {
 
     fn cancel_subscription(&self, session: &mut dyn BillingSession, removal: bool) -> Result<()> {
         let mut record = session.record().internal()?;
-        let current = self.current_subscription(&record.state)?;
+        let current = self.current_subscription(session, &record.state)?;
         let (current, baseline) =
             self.reconcile_subscription(session, &record.state, current, None)?;
         if let Some(command) = record.command.as_mut() {

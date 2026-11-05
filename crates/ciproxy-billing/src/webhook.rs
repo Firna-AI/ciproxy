@@ -107,6 +107,7 @@ pub(crate) struct Object {
 #[derive(Debug, Deserialize)]
 pub(crate) struct ObjectId {
     pub(crate) id: String,
+    pub(crate) parent: Option<InvoiceParent>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -138,6 +139,23 @@ pub(crate) struct UpdatedInvoice {
     pub(crate) amount_remaining: Option<i64>,
     pub(crate) collection_method: Option<CollectionMethod>,
     pub(crate) next_payment_attempt: Option<i64>,
+}
+
+impl Event {
+    pub(crate) fn subscription_id(&self) -> Option<&str> {
+        let parent = match &self.payload {
+            Payload::Subscription(object) => return Some(&object.object.id),
+            Payload::Invoice(object) | Payload::InvoiceFailed(object) => {
+                object.object.parent.as_ref()
+            }
+            Payload::InvoiceUpdated(update) => update.object.parent.as_ref(),
+            _ => return None,
+        }?;
+        parent
+            .subscription_details
+            .as_ref()
+            .map(|details| details.subscription.as_str())
+    }
 }
 
 pub(crate) fn parse(raw: &[u8]) -> Result<Event> {

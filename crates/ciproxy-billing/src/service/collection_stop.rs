@@ -33,14 +33,13 @@ impl BillingService {
         session
             .commit(Some(&state), None, false, false, self.clock.now())
             .internal()?;
-        let fresh = self.current_subscription(&state)?;
+        let fresh = self.current_subscription(session, &state)?;
         if terminal(&fresh) {
             let ended = self.confirmed_state(session, &state, &fresh, None)?;
             return Ok((fresh, ended));
         }
-        let invoice = self.owned_invoice(&fresh, &renewal.invoice_id)?;
-        let refreshed =
-            self.observe_invoice(session, Some(renewal), &state, &fresh, &invoice, None)?;
+        let invoice = self.owned_invoice(session, &fresh, &renewal.invoice_id)?;
+        let refreshed = self.observe_invoice(session, &state, &fresh, &invoice, None)?;
         if eligible(&refreshed.collection).is_none() {
             let state = self.confirmed_state(session, &state, &fresh, None)?;
             return Ok((fresh, state));

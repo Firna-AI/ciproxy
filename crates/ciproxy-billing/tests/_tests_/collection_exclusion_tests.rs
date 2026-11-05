@@ -182,13 +182,12 @@ fn a_payment_void_or_pause_between_verification_and_cancellation_prevents_delete
         install(&fake, fresh, &[invoice]);
         {
             let mut remote = fake.state.lock().unwrap();
-            remote.raw_read_sequences.insert(
-                format!("/v1/subscriptions/{id}"),
-                [current.clone(), current].into(),
-            );
+            remote
+                .raw_read_sequences
+                .insert(format!("/v1/subscriptions/{id}"), [current].into());
             remote.raw_read_sequences.insert(
                 format!("/v1/invoices/{}", stopped["id"].as_str().unwrap()),
-                [stopped.clone(), stopped].into(),
+                [stopped].into(),
             );
         }
         assert_eq!(

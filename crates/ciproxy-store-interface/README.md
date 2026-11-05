@@ -95,6 +95,7 @@ It retains each owned renewal outcome separately from the billing banner.
 Each renewal retains whether the provider attempted its payment.
 Verified automatic collection stops remain available after a service restart.
 Each stop event retains its eligible, superseded, or completed decision.
+The subscription-ID lookup resolves a billing workspace before provider reads.
 State and event receipts commit atomically.
 App removal stores a durable billing cancellation request.
 Services consume these boundaries through dyn.

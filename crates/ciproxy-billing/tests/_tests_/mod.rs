@@ -17,6 +17,7 @@ mod fixture;
 mod http_tests;
 mod live_replay;
 mod live_replay_tests;
+mod locked_observation_tests;
 mod ownership_tests;
 mod pending_context_tests;
 mod removal_tests;

@@ -52,6 +52,13 @@ It never releases Checkout, Cancel, or a still-pending Stripe update.
 A pending change without matching saved input keeps PaymentConfirming.
 It creates no new command and offers no unrelated payment page.
 Current object reads also prevent delayed events from restoring old state.
+Known subscription events resolve their workspace from stored Stripe IDs.
+Signed invoice parents use the same lookup.
+These events acquire the billing lock and check receipts before Stripe reads.
+Unknown identities retain discovery routing and cannot apply unowned snapshots.
+Every owned subscription and invoice read applies collection observations
+before another read, including expanded invoices and collection pauses.
+Returned mutation snapshots use the same validation and observation path.
 Shared completion rules release paid commands when a subscription ends.
 A late end event preserves a new Checkout command.
 Direct paid commands reconcile an ended subscription before any mutation.
@@ -269,6 +276,10 @@ Never run this smoke script with a live key.
   verified final failures and confirms the Stripe end.
 - [src/service/collection_decisions.rs](src/service/collection_decisions.rs)
   owns every transition of a stop event's cancellation decision.
+- [src/service/observations.rs](src/service/observations.rs) validates owned
+  reads and persists their collection observations before returning.
+- [src/service/event_routing.rs](src/service/event_routing.rs) resolves known
+  subscription owners before provider reads and discovers unknown identities.
 - [src/stripe/api.rs](src/stripe/api.rs) owns the dyn StripeApi boundary.
 - [src/stripe/http/client.rs](src/stripe/http/client.rs) owns the HTTP adapter.
 - [src/webhook.rs](src/webhook.rs) verifies raw signatures and routes events.

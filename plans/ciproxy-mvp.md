@@ -655,6 +655,11 @@ the event both read the session, so the tier changes once.
       Test invalidation before manual events, restart, and a new stop.
       Branch: `conductor/ciproxy-mvp-milestone-17-billing-live-fixes`.
       Evidence: `.context/ciproxy-mvp/billing-live-fixes/pr23-fix-round-1/`.
+- [x] Complete the PR #23 cancellation read path. Lock known subscription
+      events before Stripe reads and merge every owned observation before
+      later reads. Preserve supersession from expanded renewal invoices.
+      Branch: `conductor/ciproxy-mvp-milestone-17-billing-live-fixes`.
+      Evidence: `.context/ciproxy-mvp/billing-live-fixes/pr23-fix-round-1/`.
 - [ ] Test each state with recorded events and the Stripe test mode.
       The fixed event fixtures and fake HTTP Stripe tests pass locally.
       Orchestrator: run the

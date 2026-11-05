@@ -123,6 +123,7 @@ survives row reuse and retention purge. Confirmation deletes an accepted
 event. Pending-organization discovery supports replay after restart.
 
 Billing uses a separate live session lock per workspace.
+Its subscription-ID query uses the retained unique billing-account identity.
 Each command persists before an external Stripe call.
 The shared read model exposes confirmed coverage and UTC period anchors.
 A transaction commits event receipts, state, and command completion together.

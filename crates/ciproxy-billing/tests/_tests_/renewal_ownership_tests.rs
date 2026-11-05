@@ -40,11 +40,6 @@ fn unowned_current_subscription_preserves_coverage_and_renewal_evidence() {
             _ => unreachable!(),
         }
         install(&fake, invalid, &[recording.snapshot(invoice_id, "paid")]);
-        fake.state
-            .lock()
-            .unwrap()
-            .raw_read_sequences
-            .insert(format!("/v1/subscriptions/{id}"), [current].into());
         assert!(
             matches!(
                 send(&database, &fake, &recording.events[1]),
