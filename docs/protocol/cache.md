@@ -134,10 +134,15 @@ This doc states the cache rules for jobs on
   between the jobs of the repository.
 - A Docker disk attaches to the [job VM](agent.md#job-vms) after the job
   starts, because ciproxy learns the repository of a job only then.
-- One job at a time keeps its changes to a Docker disk: the first job on
-  the default branch that uses the disk.
+- One job at a time keeps its changes to a Docker disk: the first job of a
+  trusted event on the default branch that uses the disk.
+- The trusted events are those of
+  [Trusted write-back](#trusted-write-back): `push`, `workflow_dispatch`,
+  `repository_dispatch`, `delete`, `registry_package`, `page_build`, and
+  `schedule`.
 - Each other job of the repository works on a copy of the disk, also each
-  job that does not run on the default branch.
+  job that does not run on the default branch, and each job of another
+  event.
 - ciproxy discards a copy when its job ends.
 - The branch of a job comes from GitHub, so the code of a job cannot choose
   it.
@@ -150,6 +155,11 @@ This doc states the cache rules for jobs on
 - Only Team and Business include Docker disks, as
   [Tier features](billing.md#tier-features) says.
 - A job of a workspace on Free gets no Docker disk.
+- **Decision:** only a job of a trusted event on the default branch keeps
+  its changes to a Docker disk, as for the machine cache. Rejected: any
+  event on the default branch, because a person outside the repository
+  can start some of them, and `push` jobs only, because the disk would
+  then update less often.
 
 ## Related docs
 

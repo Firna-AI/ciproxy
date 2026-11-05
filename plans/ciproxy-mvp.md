@@ -720,8 +720,8 @@ disks.
 
 - [ ] Attach the Docker disk in the job-started hook, as "Docker disks" in
       `cache.md` says.
-- [ ] Give the disk to the first default-branch job, and a reflink copy to
-      each other job.
+- [ ] Give the disk to the first default-branch job of a trusted event, as
+      item 66 says, and a reflink copy to each other job.
 - [ ] Use drive IDs of letters, digits, and underscores. Keep each Docker
       image store on the disk.
 - [ ] Discard a disk that fails to mount. My call: a rebuild loses only
@@ -945,6 +945,10 @@ Answers of 5 November 2026:
 - Item 54: the user asked whether the webhooks give the facts, what the options
   are, and how other providers solve it. A research step runs before the answer.
   Item 55 waits for it.
+- Item 66, A: only a job of a trusted event on the default branch keeps
+  its changes to a Docker disk, as item 59 says for the machine cache.
+  `cache.md` states it. Rejected: any event on the default branch, and
+  `push` jobs only.
 - Item 61, A: the user gave the test-mode keys of a Stripe account for
   ciproxy only, "CI Proxy sandbox" (`acct_1UYEdnAGa5h8DTS3`). The secret key
   lives in the secrets folder of the orchestrator and never in the
@@ -1120,7 +1124,7 @@ Design calls on the questions of the docs work, my calls, 4 November 2026:
   report. The savings report now covers the whole workspace, which pays
   one price.
 
-Items 54, 55, and 66 wait for the user. They are under "Open items of
+Items 54 and 55 wait for the user. They are under "Open items of
 4 November 2026" at the end of this plan, with the answers of
 5 November 2026 to the other items there. The options check of items 50
 and 51 ran, and its report is in
@@ -1795,8 +1799,8 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 56 to 65 on 5 November 2026. Items 54, 55, and 66
-still wait. The conversation gave each item in full in the layout of the
+The user answered items 56 to 66 on 5 November 2026. Items 54 and 55 still
+wait. The conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
 
@@ -2042,9 +2046,10 @@ runs before the answer.
 
 ### 66. Untrusted events can keep Docker disk changes
 
+**Answer, 5 November 2026:** A.
+
 - **Severity:** Medium. **Effort:** Small.
-- **Source:** Review of pull request #17, outside the scope. The follow-up
-  item `docker-disk-trusted-events.md` holds it in full.
+- **Source:** Review of pull request #17, outside the scope.
 - **Background:** "Docker disks" in `cache.md` lets the first job on the
   default branch keep its changes to the Docker disk of a repository,
   whatever its event. Item 59 = C limits shared machine-cache entries to the
