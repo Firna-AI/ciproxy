@@ -35,7 +35,7 @@ pub(crate) fn current(starts: &[StartRecord], now: DateTime<Utc>) -> Result<Spen
         .iter()
         .filter(|start| start.phase != StartPhase::Refused)
     {
-        if month_start(start.starts_at)?.date_naive() == month && start.sandbox_id.is_some() {
+        if month_start(start.starts_at)?.date_naive() == month && start.sandbox.is_some() {
             match start.start_usd {
                 Some(fee) => spend.known_usd += fee,
                 None => spend.unknown_start_charges.push(start.delivery_id),

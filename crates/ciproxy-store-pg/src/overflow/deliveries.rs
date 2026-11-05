@@ -88,7 +88,7 @@ pub(super) fn save(
                 .execute(connection)
                 .store()?;
         }
-        if record.sandbox_id.is_some() {
+        if record.sandbox.is_some() {
             placements::save(connection, workspace_id, record)?;
         }
         Ok(())

@@ -149,6 +149,8 @@ Key erasure checks unfinished deliveries as well as live runners.
 No query receives a plaintext key or runner registration.
 Metering price facts publish only after a trusted runtime observation.
 Their upserts correct provider start times and every price field.
+Every overflow price row has a finite end from its measured interval.
+Later metering refreshes cannot extend an old reading.
 An unknown final interval publishes only the known measured billing prefix.
 Boat accounting remains available so the metering refresh can reach purge.
 Relevant savings reads return `AccountingIncomplete` while a required fee

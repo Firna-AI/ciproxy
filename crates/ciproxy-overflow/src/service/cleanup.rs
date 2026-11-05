@@ -50,7 +50,8 @@ impl OverflowService {
         backend: &Capabilities,
         record: &mut StartRecord,
     ) -> Result<()> {
-        let sandbox = ProviderRef::new(record.sandbox_id.as_ref().ok_or(Error::OwnershipUnknown)?);
+        let sandbox =
+            ProviderRef::new(record.sandbox.as_ref().ok_or(Error::OwnershipUnknown)?.id());
         let measured = match self.measure(session, backend, record).await {
             Ok(measured) => measured,
             Err(_) => {
@@ -78,6 +79,20 @@ impl OverflowService {
             cost_state::missing_observation(record);
         }
         self.end_record(session, record, now).await
+    }
+
+    pub(super) async fn request_delete(
+        &self,
+        session: &Session,
+        backend: &Capabilities,
+        record: &mut StartRecord,
+    ) -> Result<()> {
+        record.phase = StartPhase::Deleting;
+        let changed = record.clone();
+        session
+            .call(move |session| session.save_start(&changed))
+            .await?;
+        self.delete(session, backend, record).await
     }
 
     pub(super) async fn cleanup_workspace(&self, workspace_id: Uuid) -> Result<()> {
@@ -131,6 +146,7 @@ impl OverflowService {
                     }
                     continue;
                 }
+                let mut observed_state = None;
                 if record.phase == StartPhase::Creating {
                     let recovered = backend
                         .lifecycle
@@ -144,17 +160,35 @@ impl OverflowService {
                             continue;
                         }
                     };
-                    record.sandbox_id = Some(sandbox.provider_ref.as_str().to_owned());
-                    record.phase = StartPhase::Preparing;
+                    observed_state = Some(self.adopt(&session, &mut record, sandbox).await?);
                 }
-                if let Some(id) = record.sandbox_id.as_ref().filter(|id| {
+                let listed = record.sandbox.as_ref().and_then(|known| {
+                    inventory
+                        .iter()
+                        .find(|sandbox| sandbox.provider_ref.as_str() == known.id())
+                });
+                let observed_state = observed_state.or_else(|| listed.map(|sandbox| sandbox.state));
+                if matches!(
+                    observed_state,
+                    Some(SandboxState::Destroyed | SandboxState::Failed | SandboxState::Destroying)
+                ) {
+                    if self
+                        .request_delete(&session, &backend, &mut record)
+                        .await
+                        .is_err()
+                    {
+                        failed = true;
+                    }
+                    continue;
+                }
+                if let Some(known) = record.sandbox.as_ref().filter(|known| {
                     !inventory
                         .iter()
-                        .any(|sandbox| sandbox.provider_ref.as_str() == *id)
+                        .any(|sandbox| sandbox.provider_ref.as_str() == known.id())
                 }) {
                     match backend
                         .lifecycle
-                        .inspect_sandbox(ProviderRef::new(id))
+                        .inspect_sandbox(ProviderRef::new(known.id()))
                         .await
                     {
                         Err(sandbox_interface::Error::NotFound { .. })
@@ -174,13 +208,6 @@ impl OverflowService {
                         }
                         Ok(_) => {}
                         Err(_) => {
-                            if record.lifetime_ends_by.is_none() {
-                                cost_state::observe_existence(
-                                    &mut record,
-                                    self.dependencies.clock.now(),
-                                );
-                                self.save_cost_state(&session, &mut record).await?;
-                            }
                             if self.proven_lifetime_end(&record).is_some() {
                                 record.phase = StartPhase::Deleting;
                                 let changed = record.clone();

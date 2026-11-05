@@ -10,7 +10,6 @@ use sandbox_interface::{
 use uuid::Uuid;
 
 use crate::api::{StartOutcome, WaitReason};
-use crate::cost_state;
 use crate::error::{Error, Result, ResultExt};
 use crate::session::Session;
 
@@ -83,19 +82,19 @@ impl OverflowService {
                     return Ok(StartOutcome::Pending(record));
                 }
             };
-            record.sandbox_id = Some(sandbox.provider_ref.as_str().to_owned());
-            cost_state::observe_existence(&mut record, self.dependencies.clock.now());
-            record.phase = StartPhase::Preparing;
-            let changed = record.clone();
-            session
-                .call(move |session| session.save_start(&changed))
-                .await?;
-            if sandbox.state != SandboxState::Ready {
-                return Ok(StartOutcome::Pending(record));
+            let state = self.adopt(session, &mut record, sandbox).await?;
+            match state {
+                SandboxState::Ready => {}
+                SandboxState::Failed | SandboxState::Destroyed | SandboxState::Destroying => {
+                    self.request_delete(session, &backend, &mut record).await?;
+                    return Ok(StartOutcome::Ended(record));
+                }
+                _ => return Ok(StartOutcome::Pending(record)),
             }
         }
+
         let provider_ref =
-            ProviderRef::new(record.sandbox_id.as_ref().ok_or(Error::OwnershipUnknown)?);
+            ProviderRef::new(record.sandbox.as_ref().ok_or(Error::OwnershipUnknown)?.id());
         let sandbox = match backend.lifecycle.inspect_sandbox(provider_ref).await {
             Ok(sandbox) => sandbox,
             Err(sandbox_interface::Error::NotFound { .. }) => {

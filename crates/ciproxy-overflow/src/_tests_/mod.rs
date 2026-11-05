@@ -1,6 +1,7 @@
 //! Public overflow boundary tests with injected capability and persistence mocks.
 
 mod accounts_tests;
+mod adoption_tests;
 mod cleanup;
 mod coverage_tests;
 mod creation;

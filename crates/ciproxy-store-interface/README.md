@@ -111,6 +111,8 @@ Old keys stay while uncertain creates or live sandboxes reference them.
 Per-month runtime observations keep incomplete costs explicit.
 Measured billing coverage stays separate from lifecycle end and its proven
 provider lifetime bound.
+Finite measured intervals clamp to their latest provider observation.
+One known-sandbox value contains both identity and lifetime proof.
 The overflow service supplies prices, calculations, KMS, and provider calls.
 
 The gateway queries atomically register a machine and its hashed credential.

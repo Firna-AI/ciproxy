@@ -1,6 +1,7 @@
 //! Regressions for missing usage and separate lifecycle and billing facts.
 
 use chrono::Duration;
+use ciproxy_store_interface::overflow::billing::MeasuredBillingInterval;
 use ciproxy_store_interface::overflow::record::{RuntimeCharge, StartPhase, StartRecord};
 use rust_decimal::Decimal;
 use sandbox_interface::{ResourceKind, SandboxLifecycleMock};
@@ -20,8 +21,14 @@ pub(super) fn running_observation() -> StartRecord {
         running: true,
     }];
     record.runtime_complete = true;
-    record.billed_until = Some(at() + Duration::seconds(90));
-    record.lifetime_ends_by = Some(at() + Duration::hours(6));
+    record.billing = Some(
+        MeasuredBillingInterval::new(
+            record.starts_at,
+            at() + Duration::seconds(90),
+            at() + Duration::seconds(90),
+        )
+        .0,
+    );
     record
 }
 
@@ -80,7 +87,7 @@ async fn missing_usage(missing_total: bool) {
     assert!(!saved.starts[0].runtime_complete);
     assert_eq!(saved.starts[0].runtime[0].usd, Decimal::new(18, 4));
     assert_eq!(
-        saved.starts[0].billed_until,
+        saved.starts[0].billing.map(|interval| interval.ends_at()),
         Some(at() + Duration::seconds(90))
     );
 }
@@ -136,7 +143,7 @@ async fn absent_resume_recovers_the_final_bill_without_charging_recovery_time() 
         };
         assert_eq!(ended.ends_at, Some(at() + Duration::hours(7)));
         assert_eq!(
-            ended.billed_until,
+            ended.billing.map(|interval| interval.ends_at()),
             Some(at() + Duration::hours(billed_hours))
         );
         assert!(ended.runtime_complete);

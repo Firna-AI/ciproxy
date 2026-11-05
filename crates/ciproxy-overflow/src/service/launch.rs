@@ -52,7 +52,8 @@ impl OverflowService {
         backend: &Capabilities,
         record: &mut StartRecord,
     ) -> Result<()> {
-        let sandbox = ProviderRef::new(record.sandbox_id.as_ref().ok_or(Error::OwnershipUnknown)?);
+        let sandbox =
+            ProviderRef::new(record.sandbox.as_ref().ok_or(Error::OwnershipUnknown)?.id());
         if record.phase == StartPhase::Preparing {
             let delivery = record.delivery_id;
             let input = session

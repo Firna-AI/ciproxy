@@ -5,6 +5,8 @@ use std::sync::Arc;
 use chrono::Duration;
 use ciproxy_metering::service::{Metering, StoredMetering};
 use ciproxy_store_interface::error::Error;
+use ciproxy_store_interface::overflow::billing::MeasuredBillingInterval;
+use ciproxy_store_interface::overflow::known::KnownSandbox;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, RuntimeCharge, StartPhase};
 use ciproxy_store_interface::secrets::TokenHash;
 use rust_decimal::Decimal;
@@ -22,10 +24,21 @@ fn unknown_boat_interval_preserves_known_costs_and_does_not_block_ninety_day_pur
             .reserve_start(&record, &EncryptedLaunch(vec![1]), &TokenHash::new(vec![4]))
             .unwrap()
     );
-    record.sandbox_id = Some("bx_23456789".to_owned());
+    record.sandbox = Some(KnownSandbox::observed(
+        "bx_23456789".to_owned(),
+        record.starts_at,
+        record.lifetime_seconds,
+    ));
     record.phase = StartPhase::Running;
     record.runtime_complete = true;
-    record.billed_until = Some(at() + Duration::seconds(90));
+    record.billing = Some(
+        MeasuredBillingInterval::new(
+            record.starts_at,
+            at() + Duration::seconds(90),
+            at() + Duration::seconds(90),
+        )
+        .0,
+    );
     record.runtime = vec![RuntimeCharge {
         month: "2026-11-01".parse().unwrap(),
         usd: Decimal::new(18, 4),

@@ -16,7 +16,7 @@ impl OverflowService {
         record: &mut StartRecord,
     ) -> Result<()> {
         let (until, clamped) = cost_state::billing_prefix(record);
-        record.billed_until = until;
+        record.billing = until;
         if clamped {
             tracing::warn!(
                 "Measured Boat billing interval exceeded its observation bounds and was clamped"
@@ -50,10 +50,8 @@ impl OverflowService {
     }
 
     pub(super) fn proven_lifetime_end(&self, record: &StartRecord) -> Option<DateTime<Utc>> {
-        record.sandbox_id.as_ref()?;
-        record
-            .lifetime_ends_by
-            .filter(|bound| *bound <= self.dependencies.clock.now())
+        let bound = record.sandbox.as_ref()?.lifetime_ends_by();
+        (bound <= self.dependencies.clock.now()).then_some(bound)
     }
 
     pub(super) async fn unavailable_lifecycle(
@@ -61,7 +59,6 @@ impl OverflowService {
         session: &Session,
         record: &mut StartRecord,
     ) -> Result<bool> {
-        cost_state::observe_existence(record, self.dependencies.clock.now());
         self.missing_usage(session, record).await?;
         if let Some(bound) = self.proven_lifetime_end(record) {
             self.end_record(session, record, bound).await?;

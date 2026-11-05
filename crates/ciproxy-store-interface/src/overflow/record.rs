@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::overflow::account::SizeOffer;
+use crate::overflow::billing::MeasuredBillingInterval;
+use crate::overflow::known::KnownSandbox;
 
 /// Ciphertext for a runner registration and its scoped callback token.
 #[derive(Clone, Eq, PartialEq)]
@@ -72,18 +74,14 @@ pub struct StartRecord {
     pub lifetime_seconds: u32,
     /// Durable phase written before each external mutation.
     pub phase: StartPhase,
-    /// Provider sandbox identity once recovered or accepted.
-    pub sandbox_id: Option<String>,
+    /// Proven sandbox identity and lifetime once recovered or accepted.
+    pub sandbox: Option<KnownSandbox>,
     /// Dispatch time, replaced by the trusted provider creation time when measured.
     pub starts_at: DateTime<Utc>,
     /// Confirmed lifecycle end, independent of measured billing time.
     pub ends_at: Option<DateTime<Utc>>,
-    /// End of the measured billing prefix, independent of lifecycle reconciliation.
-    #[serde(default)]
-    pub billed_until: Option<DateTime<Utc>>,
-    /// Proven latest lifecycle end from an observed sandbox and its unchanged lifetime.
-    #[serde(default)]
-    pub lifetime_ends_by: Option<DateTime<Utc>>,
+    /// Finite measured billing prefix, independent of lifecycle reconciliation.
+    pub billing: Option<MeasuredBillingInterval>,
     /// Quoted start charge. Absence preserves an unknown provider charge.
     pub start_usd: Option<Decimal>,
     /// First accepted guest end report, absent before token consumption.

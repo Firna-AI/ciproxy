@@ -50,7 +50,7 @@ pub struct BoatCost {
     pub runner_id: Uuid,
     /// When Boat started billing this sandbox.
     pub starts_at: DateTime<Utc>,
-    /// End of the represented known billing interval, absent for a known live run.
+    /// End of this price interval. Overflow always supplies a finite measured end.
     pub ends_at: Option<DateTime<Utc>>,
     /// The sandbox's one-time start charge in USD.
     pub start_usd: Decimal,

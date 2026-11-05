@@ -1,6 +1,7 @@
 //! Durable Boat execution under one exclusive workspace session.
 
 mod accounts;
+mod adoption;
 mod cleanup;
 mod costs;
 mod execution;

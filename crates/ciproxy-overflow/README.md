@@ -38,6 +38,9 @@ The delivery ID becomes Boat's idempotency key.
 An uncertain create uses recovery reads forever, including after Boat's
 24-hour idempotency window.
 It never repeats the create mutation for that delivery.
+Create execution and cleanup use one persistent adoption operation.
+It saves the proven sandbox identity, phase, and original lifetime bound
+before a demand check or another provider call.
 A definitive refusal ends that delivery and preserves its account restriction.
 The next scaler attempt needs a new delivery ID.
 Relative and absolute retry times use the later supplied time.
@@ -77,8 +80,11 @@ An absent or archived sandbox gets one final usage read before lifecycle end.
 It preserves running jobs and needed idle runners.
 It only deletes identities proven by its durable create records.
 Unrecognized inventory entries stay unchanged.
+Listed or recovered sandboxes with a proven ended state enter cleanup
+before a stale demand hint can retain them.
 A known sandbox has a saved latest end from a trusted creation time or a
 later existence observation and its unchanged provider lifetime.
+One `KnownSandbox` value contains both the identity and its bound.
 After that bound, failed credentials cannot keep its retired key forever.
 Cleanup can finish lifecycle retention while the final bill stays unknown.
 An ambiguous create without a known sandbox gets no inferred end.
@@ -94,6 +100,9 @@ It counts a start fee only in its start month.
 Measured dollars and the pinned rate define the continuous billing interval.
 Its end is separate from the later lifecycle reconciliation time.
 An impossible interval clamps to its observation bounds and logs a warning.
+Every overflow-to-metering write uses a finite measured interval.
+Its constructor clamps the end to the latest provider observation.
+Later metering refreshes cannot add runtime beyond that prefix.
 At the monthly limit, new starts wait until the next UTC month or a limit
 increase.
 Running jobs and deletion continue.

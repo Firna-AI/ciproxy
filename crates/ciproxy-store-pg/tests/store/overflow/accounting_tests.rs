@@ -4,6 +4,8 @@ use chrono::Duration;
 use ciproxy_metering::report::boat::daily_boat_costs;
 use ciproxy_metering::report::range::DateRange;
 use ciproxy_store_interface::error::Error;
+use ciproxy_store_interface::overflow::billing::MeasuredBillingInterval;
+use ciproxy_store_interface::overflow::known::KnownSandbox;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, RuntimeCharge, StartPhase};
 use ciproxy_store_interface::secrets::TokenHash;
 use rust_decimal::Decimal;
@@ -21,7 +23,11 @@ fn metering_uses_provider_start_time_and_never_confirms_an_unknown_outage_day() 
             .reserve_start(&record, &EncryptedLaunch(vec![1]), &TokenHash::new(vec![2]))
             .unwrap()
     );
-    record.sandbox_id = Some("bx_23456789".to_owned());
+    record.sandbox = Some(KnownSandbox::observed(
+        "bx_23456789".to_owned(),
+        record.starts_at,
+        record.lifetime_seconds,
+    ));
     record.phase = StartPhase::Running;
     session.save_start(&record).unwrap();
     assert_eq!(
@@ -30,7 +36,14 @@ fn metering_uses_provider_start_time_and_never_confirms_an_unknown_outage_day() 
     );
     record.starts_at = at() + Duration::seconds(30);
     record.runtime_complete = true;
-    record.billed_until = Some(at() + Duration::seconds(120));
+    record.billing = Some(
+        MeasuredBillingInterval::new(
+            record.starts_at,
+            at() + Duration::seconds(120),
+            at() + Duration::seconds(120),
+        )
+        .0,
+    );
     record.runtime = vec![RuntimeCharge {
         month: "2026-11-01".parse().unwrap(),
         usd: Decimal::new(18, 4),
@@ -40,7 +53,7 @@ fn metering_uses_provider_start_time_and_never_confirms_an_unknown_outage_day() 
     session.save_start(&record).unwrap();
     let live = database.store.boat_accounting(workspace_id).unwrap();
     assert_eq!(live.costs[0].starts_at, at() + Duration::seconds(30));
-    assert_eq!(live.costs[0].ends_at, None);
+    assert_eq!(live.costs[0].ends_at, Some(at() + Duration::seconds(120)));
     record.phase = StartPhase::Ended;
     record.ends_at = Some(at() + Duration::seconds(120));
     session.save_start(&record).unwrap();

@@ -1,6 +1,7 @@
 //! Scoped callback claims and safe orphan cleanup across control-plane outages.
 
 use chrono::Duration;
+use ciproxy_store_interface::overflow::known::KnownSandbox;
 use ciproxy_store_interface::overflow::record::{RuntimeCharge, StartPhase};
 use rust_decimal::Decimal;
 use sandbox_interface::{
@@ -58,7 +59,11 @@ async fn cleanup_deletes_only_an_unneeded_owned_runner_and_preserves_running_job
     let mut idle = running.clone();
     idle.delivery_id = id(21);
     idle.runner_id = id(22);
-    idle.sandbox_id = Some("bx_3456789a".to_owned());
+    idle.sandbox = Some(KnownSandbox::observed(
+        "bx_3456789a".to_owned(),
+        idle.starts_at,
+        idle.lifetime_seconds,
+    ));
     harness
         .state
         .lock()
@@ -128,7 +133,9 @@ async fn omitted_stopped_sandbox_recovers_its_final_bill_before_lifecycle_end() 
     harness.service.cleanup(id(1)).await.unwrap();
     let state = harness.state.lock().unwrap();
     assert_eq!(
-        state.snapshot.as_ref().unwrap().starts[0].billed_until,
+        state.snapshot.as_ref().unwrap().starts[0]
+            .billing
+            .map(|interval| interval.ends_at()),
         Some(at() + Duration::hours(6))
     );
     assert!(state.snapshot.as_ref().unwrap().starts[0].runtime_complete);

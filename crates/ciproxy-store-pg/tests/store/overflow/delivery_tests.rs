@@ -1,6 +1,7 @@
 //! Callback scope, durable key retention, and concurrent session exclusion.
 
 use chrono::Duration;
+use ciproxy_store_interface::overflow::known::KnownSandbox;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase};
 use ciproxy_store_interface::secrets::TokenHash;
 use uuid::Uuid;
@@ -82,7 +83,11 @@ fn callback_claim_is_scoped_one_use_and_durable_before_deletion() {
             .reserve_start(&record, &EncryptedLaunch(vec![71]), &hash)
             .unwrap()
     );
-    record.sandbox_id = Some("bx_23456789".to_owned());
+    record.sandbox = Some(KnownSandbox::observed(
+        "bx_23456789".to_owned(),
+        record.starts_at,
+        record.lifetime_seconds,
+    ));
     record.phase = StartPhase::Running;
     session.save_start(&record).unwrap();
     assert_eq!(

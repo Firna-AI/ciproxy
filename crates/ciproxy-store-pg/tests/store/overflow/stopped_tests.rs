@@ -3,6 +3,8 @@
 use chrono::{DateTime, Duration, Utc};
 use ciproxy_metering::report::boat::daily_boat_costs;
 use ciproxy_metering::report::range::DateRange;
+use ciproxy_store_interface::overflow::billing::MeasuredBillingInterval;
+use ciproxy_store_interface::overflow::known::KnownSandbox;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, RuntimeCharge, StartPhase};
 use ciproxy_store_interface::secrets::TokenHash;
 use rust_decimal::Decimal;
@@ -22,10 +24,21 @@ fn metering_prices_six_billed_hours_before_the_seven_hour_recovery() {
             .reserve_start(&record, &EncryptedLaunch(vec![1]), &TokenHash::new(vec![3]))
             .unwrap()
     );
-    record.sandbox_id = Some("bx_23456789".to_owned());
+    record.sandbox = Some(KnownSandbox::observed(
+        "bx_23456789".to_owned(),
+        record.starts_at,
+        record.lifetime_seconds,
+    ));
     record.phase = StartPhase::Running;
     record.runtime_complete = true;
-    record.billed_until = Some(start + Duration::hours(6));
+    record.billing = Some(
+        MeasuredBillingInterval::new(
+            record.starts_at,
+            start + Duration::hours(6),
+            start + Duration::hours(6),
+        )
+        .0,
+    );
     record.runtime = vec![RuntimeCharge {
         month: "2026-11-01".parse().unwrap(),
         usd: Decimal::new(432, 3),

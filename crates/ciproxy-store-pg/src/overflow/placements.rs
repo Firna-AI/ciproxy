@@ -3,7 +3,7 @@
 use ciproxy_store_interface::error::{Result, ResultExt};
 use ciproxy_store_interface::overflow::record::{StartPhase, StartRecord};
 use diesel::prelude::*;
-use diesel::sql_types::{Integer, Nullable, Text, Timestamptz};
+use diesel::sql_types::{Integer, Text, Timestamptz};
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -14,6 +14,9 @@ pub(super) fn save(
     workspace_id: Uuid,
     record: &StartRecord,
 ) -> Result<()> {
+    let Some(sandbox) = &record.sandbox else {
+        return Ok(());
+    };
     let state = match record.phase {
         StartPhase::Ended => "stopped",
         StartPhase::Deleting => "stopping",
@@ -41,18 +44,10 @@ pub(super) fn save(
     .bind::<Integer, _>(i32::try_from(record.size.memory_bytes / 1_000_000_000).internal()?)
     .bind::<Integer, _>(i32::try_from(record.size.disk_bytes / 1_000_000_000).internal()?)
     .bind::<diesel::sql_types::Uuid, _>(record.key_id)
-    .bind::<Nullable<Text>, _>(&record.sandbox_id)
+    .bind::<Text, _>(sandbox.id())
     .bind::<Text, _>(&record.size.name)
     .execute(connection).store()?;
-    if let (Some(start_usd), Some(billed_until)) = (record.start_usd, record.billed_until) {
-        let live = record.runtime_complete
-            && record.ends_at.is_none()
-            && record
-                .runtime
-                .iter()
-                .max_by_key(|charge| charge.until)
-                .is_some_and(|charge| charge.running);
-        let end = if live { None } else { Some(billed_until) };
+    if let (Some(start_usd), Some(interval)) = (record.start_usd, record.billing) {
         diesel::sql_query(
             "INSERT INTO metering_boat_costs
                 (runner_id, workspace_id, starts_at, ends_at, start_usd, minute_usd)
@@ -64,8 +59,8 @@ pub(super) fn save(
         )
         .bind::<diesel::sql_types::Uuid, _>(record.runner_id)
         .bind::<diesel::sql_types::Uuid, _>(workspace_id)
-        .bind::<Timestamptz, _>(record.starts_at)
-        .bind::<Nullable<Timestamptz>, _>(end)
+        .bind::<Timestamptz, _>(interval.starts_at())
+        .bind::<Timestamptz, _>(interval.ends_at())
         .bind::<diesel::sql_types::Numeric, _>(start_usd)
         .bind::<diesel::sql_types::Numeric, _>(record.size.hourly_usd / Decimal::from(60))
         .execute(connection)

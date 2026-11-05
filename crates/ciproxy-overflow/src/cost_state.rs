@@ -1,15 +1,21 @@
 //! Pure measured billing coverage and provider lifetime bounds.
 
-use chrono::{DateTime, Duration, Utc};
+use chrono::Duration;
+use ciproxy_store_interface::overflow::billing::MeasuredBillingInterval;
 use ciproxy_store_interface::overflow::record::StartRecord;
 use rust_decimal::{Decimal, prelude::ToPrimitive};
 
 /// Derive the continuous billed prefix, clamped to the last observation.
-pub(crate) fn billing_prefix(record: &StartRecord) -> (Option<DateTime<Utc>>, bool) {
+pub(crate) fn billing_prefix(record: &StartRecord) -> (Option<MeasuredBillingInterval>, bool) {
     let Some(last) = record.runtime.iter().max_by_key(|charge| charge.until) else {
-        return (record.runtime_complete.then_some(record.starts_at), false);
+        return (
+            record.runtime_complete.then(|| {
+                MeasuredBillingInterval::new(record.starts_at, record.starts_at, record.starts_at).0
+            }),
+            false,
+        );
     };
-    let latest = last.until.max(record.starts_at);
+    let latest = last.until;
     let usd = record
         .runtime
         .iter()
@@ -29,10 +35,13 @@ pub(crate) fn billing_prefix(record: &StartRecord) -> (Option<DateTime<Utc>>, bo
     });
     match end {
         Some(end) => {
-            let bounded = end.max(record.starts_at).min(latest);
-            (Some(bounded), bounded != end)
+            let (interval, clamped) = MeasuredBillingInterval::new(record.starts_at, end, latest);
+            (Some(interval), clamped)
         }
-        None => (Some(latest), true),
+        None => {
+            let (interval, _) = MeasuredBillingInterval::new(record.starts_at, latest, latest);
+            (Some(interval), true)
+        }
     }
 }
 
@@ -43,23 +52,4 @@ pub(crate) fn missing_observation(record: &mut StartRecord) {
         .iter()
         .max_by_key(|charge| charge.until)
         .is_some_and(|charge| !charge.running);
-}
-
-/// Keep the earliest proven upper bound for one known sandbox's lifecycle.
-pub(crate) fn observe_existence(record: &mut StartRecord, at: DateTime<Utc>) -> bool {
-    if record.sandbox_id.is_none() {
-        return false;
-    }
-    let Some(bound) = at.checked_add_signed(Duration::seconds(i64::from(record.lifetime_seconds)))
-    else {
-        return false;
-    };
-    if record
-        .lifetime_ends_by
-        .is_none_or(|previous| bound < previous)
-    {
-        record.lifetime_ends_by = Some(bound);
-        return true;
-    }
-    false
 }

@@ -538,7 +538,8 @@ interface, which needs a user decision.
       call: Boat bills these two parts.
       My call, 5 November 2026: expose incomplete cost facts explicitly.
       Reason: missing costs cannot prove room under the spend limit.
-      Pending: choose how unrecoverable cost gaps affect new starts.
+      Pending: choose how unconfirmed costs affect new starts, including
+      changed start quotes and creates with no proven outcome.
       The current hold needs an owner decision before this TODO completes.
       Branch: `conductor/ciproxy-mvp-milestone-12-overflow-to-boat`.
 - [x] Encrypt the keys with Cloud KMS. Test with the mock of

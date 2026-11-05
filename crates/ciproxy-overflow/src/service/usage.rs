@@ -5,7 +5,6 @@ use ciproxy_store_interface::overflow::store::OverflowSnapshot;
 use sandbox_interface::ProviderRef;
 use uuid::Uuid;
 
-use crate::cost_state;
 use crate::error::Result;
 use crate::provider::Capabilities;
 use crate::session::Session;
@@ -21,7 +20,7 @@ impl OverflowService {
         snapshot: &mut OverflowSnapshot,
     ) -> Result<()> {
         for record in snapshot.starts.iter_mut().filter(|record| {
-            record.sandbox_id.is_some() && (record.ends_at.is_none() || !record.runtime_complete)
+            record.sandbox.is_some() && (record.ends_at.is_none() || !record.runtime_complete)
         }) {
             let Some(account) = snapshot
                 .accounts
@@ -52,16 +51,18 @@ impl OverflowService {
         backend: &Capabilities,
         record: &mut StartRecord,
     ) -> Result<bool> {
-        let Some(id) = &record.sandbox_id else {
+        let Some(sandbox) = &record.sandbox else {
             return Ok(false);
         };
-        let id = ProviderRef::new(id);
+        let id = ProviderRef::new(sandbox.id());
         let now = self.dependencies.clock.now();
         let total = match backend.account.usage(id.clone(), None, now).await {
             Ok(Some(total)) => total,
             Ok(None) | Err(_) => return self.missing_usage(session, record).await,
         };
-        cost_state::observe_existence(record, total.since);
+        if let Some(sandbox) = &mut record.sandbox {
+            sandbox.observe_creation(total.since, record.lifetime_seconds);
+        }
         let mut month = spend::month_start(total.since)?;
         let mut charges = Vec::new();
         let until = record.ends_at.unwrap_or(now).min(now);

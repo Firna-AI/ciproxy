@@ -13,6 +13,7 @@ use ciproxy_scaler::actions::{Destination, StartReason, StartRunner};
 use ciproxy_scaler::boat::BoatSizeId;
 use ciproxy_store_interface::boat::BoatAccount;
 use ciproxy_store_interface::overflow::account::{AccountState, SizeOffer};
+use ciproxy_store_interface::overflow::known::KnownSandbox;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase, StartRecord};
 use ciproxy_store_interface::overflow::store::{AccountRecord, OverflowSnapshot};
 use ciproxy_store_interface::secrets::{EncryptedBoatKey, TokenHash};
@@ -229,11 +230,14 @@ pub(super) fn record(phase: StartPhase) -> StartRecord {
         snapshot: "shared-image-v7".to_owned(),
         lifetime_seconds: 21600,
         phase,
-        sandbox_id: Some("bx_23456789".to_owned()),
+        sandbox: Some(KnownSandbox::observed(
+            "bx_23456789".to_owned(),
+            at(),
+            21600,
+        )),
         starts_at: at(),
         ends_at: None,
-        billed_until: None,
-        lifetime_ends_by: None,
+        billing: None,
         start_usd: Some(Decimal::new(3, 2)),
         reported_at: None,
         runtime: Vec::new(),

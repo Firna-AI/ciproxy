@@ -81,7 +81,7 @@ async fn ambiguous_create_uses_recovery_after_the_provider_idempotency_window() 
     );
     let state = harness.state.lock().unwrap();
     let pending = &state.snapshot.as_ref().unwrap().starts[0];
-    assert_eq!(pending.lifetime_ends_by, None);
+    assert_eq!(pending.sandbox, None);
     assert_eq!(pending.ends_at, None);
 }
 
