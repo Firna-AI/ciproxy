@@ -16,8 +16,8 @@ repository="europe-west1-docker.pkg.dev/${project_id}/ciproxy-shared-runtime/cli
 destination="${repository}:upstream-${revision}"
 
 # A local GitHub login needs access to the upstream repository for source,
-# or read:packages for a published image. The runtime's repository-only
-# release token is not a source or registry credential.
+# or read:packages for a published image. The runtime's public-read-only
+# release token is not an upstream source or registry credential.
 gcloud auth configure-docker europe-west1-docker.pkg.dev --quiet
 case "${mode}" in
   source)

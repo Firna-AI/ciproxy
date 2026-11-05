@@ -104,9 +104,12 @@ Optional `published` mode mirrors its published image and needs
 
 ## 4. Store the release token
 
-Create a fine-grained token for `Firna-AI/ciproxy` only. Give it read-only
-Contents access. An organization owner can need to approve it. Enter it at
-a hidden prompt. Each environment has its own Secret Manager secret.
+Create a fine-grained GitHub token with read-only access to public
+repositories only. `Firna-AI/ciproxy` and its release assets are public, as
+item 70 says. The release server requires a token for the GitHub API when
+its repository is configured. It needs no private repository access.
+Enter the token at a hidden prompt. Each environment has its own Secret
+Manager secret.
 
 ```sh
 read -rs RELEASE_TOKEN

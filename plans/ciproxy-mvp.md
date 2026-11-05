@@ -147,11 +147,12 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
   - [ ] User: deploy Helm. Enable the control plane after its runtime exists.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
 - [ ] Set the release server to `get.ciproxy.dev`, `ciproxy-agent`, the tag
-      prefix `ciproxy-agent-v`, and a token for this repository only.
+      prefix `ciproxy-agent-v`, and a token with read access to public
+      repositories only, as item 70 says.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
   - [x] Configure release hosts, binary, prefix, and an existing secret.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
-  - [ ] User: prepare the pinned image and store the repository-only token.
+  - [ ] User: prepare the pinned image and store the public-read-only token.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
 - [ ] Serve the site, the dashboard, and signed image URLs from a Cloud
       Storage bucket, through Cloud CDN and one HTTPS load balancer. My call:
@@ -183,7 +184,7 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
       both operator and CI finish seed before any bootstrap resource starts.
       No state move is needed because nothing has been applied in GCP.
       Branch: `codex/m5-terraform-promotion`.
-- [ ] Move both environments into the GCP project `ciproxy`, as item 68
+- [x] Move both environments into the GCP project `ciproxy`, as item 68
       says: one shared network, cluster, and image registry, with a
       namespace for each environment, and separate databases, KMS keys,
       secrets, buckets, DNS zones, and edges. Scope the CI identities of
