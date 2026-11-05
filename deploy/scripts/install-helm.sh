@@ -42,7 +42,7 @@ curl --fail --silent --show-error --location \
   "https://get.helm.sh/${archive}" --output "${scratch}/${archive}"
 if ! (
   cd "${scratch}"
-  printf '%s  %s\n' "${checksum}" "${archive}" | "${checker[@]}" --check
+  printf '%s  %s\n' "${checksum}" "${archive}" | "${checker[@]}" -c
 ); then
   printf 'SHA-256 verification failed for %s. Helm was not installed.\n' "${archive}" >&2
   exit 1

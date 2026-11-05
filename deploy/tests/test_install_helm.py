@@ -98,7 +98,8 @@ with open(os.environ['CHECKSUM_LOG'], 'w') as log:
                 )
                 self.assertEqual((directory / "github-path").read_text(), f"{scratch}\n")
                 checksum = (directory / "checksum.log").read_text()
-                expected_flags = "--check" if checker == "sha256sum" else "-a 256 --check"
+                # The BSD sha256sum of macOS accepts only the short flag.
+                expected_flags = "-c" if checker == "sha256sum" else "-a 256 -c"
                 self.assertEqual(checksum.splitlines()[0], expected_flags)
                 self.assertIn(f"helm-v4.3.1-{platform}.tar.gz", checksum)
 
