@@ -32,7 +32,7 @@ output "platform" {
   value = {
     network_id         = google_compute_network.main.id
     cluster_name       = google_container_cluster.main.name
-    runtime_repository = "us-central1-cocker.pkg.dev/ciproxy/${google_artifact_registry_repository.runtime.repository_id}"
+    runtime_repository = "us-central1-docker.pkg.dev/ciproxy/${google_artifact_registry_repository.runtime.repository_id}"
     allowed_zones      = module.zones.allowed_zones
   }
 }

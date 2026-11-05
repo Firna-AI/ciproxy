@@ -6,7 +6,7 @@ override_data {
   values = { outputs = { platform = {
     network_id         = "projects/ciproxy/global/networks/ciproxy-shared"
     cluster_name       = "ciproxy-shared"
-    runtime_repository = "us-central1-cocker.pkg.dev/ciproxy/ciproxy-shared-runtime"
+    runtime_repository = "us-central1-docker.pkg.dev/ciproxy/ciproxy-shared-runtime"
     allowed_zones      = ["us-central1-a", "us-central1-b", "us-central1-c"]
   } } }
 }

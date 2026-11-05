@@ -58,7 +58,7 @@ enable it. [Static delivery](static-delivery.md) gives paths and lifetimes.
 The release server uses upstream commit
 `30513bd1a6e15d8e9c1b18f2ed92d1d4dfa11786`. Its vendored chart has
 [provenance](helm/cli-release-server/PROVENANCE.json). Both environments
-pull from `us-central1-cocker.pkg.dev/ciproxy/ciproxy-shared-runtime`.
+pull from `us-central1-docker.pkg.dev/ciproxy/ciproxy-shared-runtime`.
 
 The release server and control plane use `us-central1-a`,
 `us-central1-b`, and `us-central1-c`. GKE prepares their NEGs in these
