@@ -20,3 +20,12 @@ diesel::table! {
         applied_at -> Timestamptz,
     }
 }
+
+diesel::table! {
+    billing_renewals (workspace_id, invoice_id) {
+        workspace_id -> Uuid,
+        subscription_id -> Text,
+        invoice_id -> Text,
+        outcome_json -> Text,
+    }
+}

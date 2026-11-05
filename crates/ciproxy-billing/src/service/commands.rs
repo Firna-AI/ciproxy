@@ -25,8 +25,9 @@ impl BillingService {
         if record.state.tier == Tier::Free {
             return Err(Error::SubscriptionRequired);
         }
-        let current = self.current_subscription(&record.state)?;
-        let baseline = self.confirmed_state(&record.state, &current, None)?;
+        let current = self.current_subscription(&mut *session, &record.state)?;
+        let (current, baseline) =
+            self.reconcile_subscription(&mut *session, &record.state, current, None)?;
         if let Some(command) = record.command.as_mut() {
             self.capture_pending_expiry(&mut *session, &baseline, command, &current)?;
         }
@@ -98,7 +99,8 @@ impl BillingService {
                 }
             }
         };
-        let state = self.confirmed_state(&baseline, &current, None)?;
+        let (current, state) =
+            self.reconcile_subscription(&mut *session, &baseline, current, None)?;
         self.capture_pending_expiry(&mut *session, &state, &mut command, &current)?;
         let progress = classify(&command, &current, self.clock.now());
         session
@@ -160,8 +162,9 @@ impl BillingService {
 
     fn cancel_subscription(&self, session: &mut dyn BillingSession, removal: bool) -> Result<()> {
         let mut record = session.record().internal()?;
-        let current = self.current_subscription(&record.state)?;
-        let baseline = self.confirmed_state(&record.state, &current, None)?;
+        let current = self.current_subscription(session, &record.state)?;
+        let (current, baseline) =
+            self.reconcile_subscription(session, &record.state, current, None)?;
         if let Some(command) = record.command.as_mut() {
             self.capture_pending_expiry(session, &baseline, command, &current)?;
         }
@@ -204,7 +207,7 @@ impl BillingService {
                 return Err(error);
             }
         };
-        let state = self.confirmed_state(&baseline, &current, None)?;
+        let (current, state) = self.reconcile_subscription(session, &baseline, current, None)?;
         self.capture_pending_expiry(session, &state, &mut command, &current)?;
         session
             .commit(

@@ -1,8 +1,28 @@
 //! Public command-line version output.
 
-use clap::{CommandFactory, error::ErrorKind};
+use clap::{CommandFactory, Parser, error::ErrorKind};
 
-use super::Cli;
+use super::{Action, Cli};
+
+#[test]
+fn explicit_commands_select_machine_lifecycle_actions() {
+    let action = Cli::try_parse_from(["ciproxy-agent", "install", "--token", "install-secret"])
+        .unwrap()
+        .action();
+    assert!(matches!(action, Action::Install(token) if token.expose_secret() == "install-secret"));
+    assert!(matches!(
+        Cli::try_parse_from(["ciproxy-agent", "run"])
+            .unwrap()
+            .action(),
+        Action::Run
+    ));
+    assert!(matches!(
+        Cli::try_parse_from(["ciproxy-agent", "uninstall"])
+            .unwrap()
+            .action(),
+        Action::Uninstall
+    ));
+}
 
 #[test]
 fn version_flag_reports_the_package_version() {

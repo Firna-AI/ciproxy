@@ -41,6 +41,11 @@ Billing accounts keep confirmed typed state and durable command inputs.
 Their creation time supplies the initial Free period anchor.
 Each has a distinct negative advisory-lock key.
 Billing events keep committed receipt identifiers.
+Billing renewals retain invoice outcomes and verified automatic collection
+stops.
+One forward migration preserves legacy pending stops as eligible per-event
+decisions and retains the latest collection-change time.
+Their workspace ownership and subscription index keep queries scoped.
 The last organization removal keeps a durable cancellation request.
 Later milestones own members and roles.
 Workspace deletion cascades through its retained records after 30 days.

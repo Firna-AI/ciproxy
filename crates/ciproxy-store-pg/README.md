@@ -123,10 +123,16 @@ survives row reuse and retention purge. Confirmation deletes an accepted
 event. Pending-organization discovery supports replay after restart.
 
 Billing uses a separate live session lock per workspace.
+Its subscription-ID query uses the retained unique billing-account identity.
 Each command persists before an external Stripe call.
 The shared read model exposes confirmed coverage and UTC period anchors.
 A transaction commits event receipts, state, and command completion together.
 A failed state write rolls its receipt back.
+Renewal outcomes use separate workspace-scoped invoice records.
+They preserve recovery and verified automatic stops after banner fields clear.
+An exclusive session saves stop evidence before a provider cancellation request.
+The same renewal record retains every stop event's cancellation decision.
+Superseded and completed decisions survive later events and restarts.
 The last organization removal also persists a cancellation request.
 It stays until billing handles it, including unfinished Checkout.
 
@@ -208,6 +214,8 @@ CI starts the database for the existing workspace test phase.
 ### Key Code
 
 - [src/billing/session.rs](src/billing/session.rs) commits billing state.
+- [src/billing/renewals.rs](src/billing/renewals.rs) stores owned renewal
+  outcomes.
 - [src/factory.rs](src/factory.rs) opens stores and applies migrations.
 - [src/connection.rs](src/connection.rs) owns the private query connection.
 - [src/workspaces.rs](src/workspaces.rs) creates shared customer tenants.

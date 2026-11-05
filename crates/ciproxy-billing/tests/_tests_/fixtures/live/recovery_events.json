@@ -1,0 +1,122 @@
+{
+  "source": "origin/tmp/billing-live-fixtures@30dfcf4 replay-finding-1.json",
+  "initial_state": {
+    "workspace_id": "54de746d-35f7-4518-8a3b-78d81829b218",
+    "tier": "team",
+    "add_ons": {
+      "start_blocks": 0,
+      "machines": 0
+    },
+    "customer_id": "cus_VZOzc4QlFOVLZt",
+    "subscription_id": "sub_1UYGBXAGa5h8DTS3irxSZExY",
+    "status": "active",
+    "free_started_at": "2026-11-05T02:13:54.538820+00:00",
+    "paid_period_start": "2026-11-05T02:13:50Z",
+    "paid_period_end": "2026-12-05T02:13:50Z",
+    "cancel_at": null,
+    "failed_at": null,
+    "failed_invoice_id": null,
+    "next_retry_at": null,
+    "ended_banner_until": null
+  },
+  "events": [
+    {
+      "id": "evt_1UYGBtAGa5h8DTS30MkDjh5P",
+      "created": 1793844852,
+      "type": "invoice.payment_failed",
+      "request": {
+        "id": null
+      },
+      "data": {
+        "object": {
+          "id": "in_1UYGBmAGa5h8DTS3sJ5dL8JC",
+          "created": 1796436830,
+          "status": "open",
+          "billing_reason": "subscription_cycle",
+          "next_payment_attempt": 1796593302,
+          "hosted_invoice_url": "https://stripe.invalid/invoices/in_1UYGBmAGa5h8DTS3sJ5dL8JC",
+          "customer": "cus_VZOzc4QlFOVLZt",
+          "parent": {
+            "subscription_details": {
+              "subscription": "sub_1UYGBXAGa5h8DTS3irxSZExY"
+            }
+          },
+          "attempt_count": 1,
+          "attempted": true,
+          "auto_advance": true,
+          "amount_due": 4900,
+          "amount_paid": 0,
+          "amount_remaining": 4900,
+          "collection_method": "charge_automatically"
+        },
+        "previous_attributes": null
+      }
+    },
+    {
+      "id": "evt_1UYGCGAGa5h8DTS3CKrzqw8a",
+      "created": 1793844876,
+      "type": "invoice.paid",
+      "request": {
+        "id": "req_5rY86MLq85PpOG"
+      },
+      "data": {
+        "object": {
+          "id": "in_1UYGBmAGa5h8DTS3sJ5dL8JC",
+          "created": 1796436830,
+          "status": "paid",
+          "billing_reason": "subscription_cycle",
+          "next_payment_attempt": null,
+          "hosted_invoice_url": "https://stripe.invalid/invoices/in_1UYGBmAGa5h8DTS3sJ5dL8JC",
+          "customer": "cus_VZOzc4QlFOVLZt",
+          "parent": {
+            "subscription_details": {
+              "subscription": "sub_1UYGBXAGa5h8DTS3irxSZExY"
+            }
+          },
+          "attempt_count": 1,
+          "attempted": true,
+          "auto_advance": false,
+          "amount_due": 4900,
+          "amount_paid": 4900,
+          "amount_remaining": 0,
+          "collection_method": "charge_automatically"
+        },
+        "previous_attributes": null
+      }
+    },
+    {
+      "id": "evt_1UYGCGAGa5h8DTS3t18l5dqK",
+      "created": 1793844876,
+      "type": "invoice.updated",
+      "request": {
+        "id": "req_5rY86MLq85PpOG"
+      },
+      "data": {
+        "object": {
+          "id": "in_1UYGBmAGa5h8DTS3sJ5dL8JC",
+          "created": 1796436830,
+          "status": "paid",
+          "billing_reason": "subscription_cycle",
+          "next_payment_attempt": null,
+          "hosted_invoice_url": "https://stripe.invalid/invoices/in_1UYGBmAGa5h8DTS3sJ5dL8JC",
+          "customer": "cus_VZOzc4QlFOVLZt",
+          "parent": {
+            "subscription_details": {
+              "subscription": "sub_1UYGBXAGa5h8DTS3irxSZExY"
+            }
+          },
+          "attempt_count": 1,
+          "attempted": true,
+          "auto_advance": false,
+          "amount_due": 4900,
+          "amount_paid": 4900,
+          "amount_remaining": 0,
+          "collection_method": "charge_automatically"
+        },
+        "previous_attributes": {
+          "auto_advance": true
+        }
+      }
+    }
+  ]
+}

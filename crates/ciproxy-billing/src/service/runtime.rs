@@ -60,22 +60,16 @@ impl BillingService {
             .ok_or(Error::Busy)
     }
 
-    pub(super) fn current_subscription(&self, state: &BillingState) -> Result<Subscription> {
+    pub(super) fn current_subscription(
+        &self,
+        session: &mut dyn BillingSession,
+        state: &BillingState,
+    ) -> Result<Subscription> {
         let id = state
             .subscription_id
             .as_deref()
             .ok_or(Error::SubscriptionRequired)?;
-        let current = self.stripe.subscription(id)?;
-        if current.id != id
-            || current.metadata.workspace_id != Some(state.workspace_id)
-            || state
-                .customer_id
-                .as_ref()
-                .is_some_and(|customer| customer != &current.customer)
-        {
-            return Err(Error::Ownership);
-        }
-        Ok(current)
+        self.read_subscription(session, state, id)
     }
 
     pub(super) fn status(&self, access: BillingAccess) -> Result<BillingRecord> {

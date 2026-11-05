@@ -5,6 +5,7 @@ use unimock::unimock;
 use uuid::Uuid;
 
 use crate::billing::commands::{BillingCommand, CheckoutProgress};
+use crate::billing::renewals::Renewal;
 use crate::billing::state::BillingState;
 use crate::error::Result;
 
@@ -26,6 +27,8 @@ pub struct BillingRecord {
 pub trait BillingStore: Send + Sync {
     /// Read billing without creating a Stripe customer or card.
     fn billing(&self, workspace_id: Uuid) -> Result<BillingRecord>;
+    /// Resolve the workspace owning a currently retained Stripe subscription.
+    fn billing_workspace_for_subscription(&self, subscription_id: &str) -> Result<Option<Uuid>>;
     /// Acquire exclusive billing access on a dedicated live connection.
     ///
     /// Return None when another command or event owns the workspace.
@@ -40,11 +43,15 @@ pub trait BillingStore: Send + Sync {
 pub trait BillingSession: Send {
     /// Read the workspace's latest billing state.
     fn record(&mut self) -> Result<BillingRecord>;
+    /// Read every retained renewal outcome for one subscription.
+    fn renewals(&mut self, subscription_id: &str) -> Result<Vec<Renewal>>;
+    /// Persist a verified invoice outcome before any resulting provider mutation.
+    fn save_renewal(&mut self, renewal: &Renewal) -> Result<()>;
     /// Persist a mutation before sending it to Stripe.
     fn save_command(&mut self, command: &BillingCommand) -> Result<()>;
     /// Persist the exact Checkout returned by an idempotent mutation.
     fn save_checkout(&mut self, checkout: &CheckoutProgress) -> Result<()>;
-    /// Detect an already committed event before any provider calls.
+    /// Detect an already committed event before locked reconciliation reads.
     fn event_applied(&mut self, event_id: &str) -> Result<bool>;
     /// Commit state, optional event receipt, and command completion atomically.
     ///

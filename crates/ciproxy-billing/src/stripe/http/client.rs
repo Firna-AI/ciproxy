@@ -77,6 +77,25 @@ impl HttpStripe {
         }
         response(request.send(), true)
     }
+
+    pub(super) fn delete(
+        &self,
+        path: &str,
+        form: &[(String, String)],
+        key: &str,
+    ) -> Result<Response> {
+        let url = self.base_url.join(path).internal()?;
+        response(
+            self.client
+                .delete(url)
+                .bearer_auth(&self.secret_key)
+                .header("Stripe-Version", API_VERSION)
+                .header("Idempotency-Key", key)
+                .form(form)
+                .send(),
+            true,
+        )
+    }
 }
 
 fn response(

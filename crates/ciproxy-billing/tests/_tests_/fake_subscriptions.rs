@@ -21,6 +21,7 @@ pub(super) enum ChangeMode {
 pub(super) enum SubscriptionRequest {
     Change(ChangeMode, Vec<ItemChange>),
     CancelAtPeriodEnd,
+    CancelImmediately(String),
 }
 
 pub(super) enum SubscriptionOutcome {
@@ -53,10 +54,13 @@ impl SubscriptionExchange {
         let mut actual = request.form.clone();
         expected.sort();
         actual.sort();
-        let errors = if expected == actual
-            && request.method == "POST"
-            && request.path == "/v1/subscriptions/sub_recorded"
-        {
+        let (method, path) = match &self.expected {
+            SubscriptionRequest::CancelImmediately(id) => {
+                ("DELETE", format!("/v1/subscriptions/{id}"))
+            }
+            _ => ("POST", "/v1/subscriptions/sub_recorded".into()),
+        };
+        let errors = if expected == actual && request.method == method && request.path == path {
             Vec::new()
         } else {
             let differences = expected
@@ -92,6 +96,12 @@ impl SubscriptionRequest {
         let (mode, items) = match self {
             Self::Change(mode, items) => (mode, items),
             Self::CancelAtPeriodEnd => return vec![("cancel_at_period_end".into(), "true".into())],
+            Self::CancelImmediately(_) => {
+                return vec![
+                    ("invoice_now".into(), "false".into()),
+                    ("prorate".into(), "false".into()),
+                ];
+            }
         };
         let (proration, payment) = match mode {
             ChangeMode::Upgrade => ("always_invoice", "pending_if_incomplete"),

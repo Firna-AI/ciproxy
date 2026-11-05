@@ -1,0 +1,158 @@
+{
+  "sha256:3d746b977df80f5b7fcf50ac7fa837f4dde2b7e34ca2aca608a1eb998ccddb6e": {
+    "id": "in_1UYGBmAGa5h8DTS3sJ5dL8JC",
+    "created": 1796436830,
+    "status": "open",
+    "billing_reason": "subscription_cycle",
+    "next_payment_attempt": 1796593302,
+    "hosted_invoice_url": "https://stripe.invalid/invoices/in_1UYGBmAGa5h8DTS3sJ5dL8JC",
+    "customer": "cus_VZOzc4QlFOVLZt",
+    "parent": {
+      "subscription_details": {
+        "subscription": "sub_1UYGBXAGa5h8DTS3irxSZExY"
+      }
+    },
+    "attempt_count": 1,
+    "attempted": true,
+    "auto_advance": true,
+    "amount_due": 4900,
+    "amount_paid": 0,
+    "amount_remaining": 4900,
+    "collection_method": "charge_automatically"
+  },
+  "sha256:656325778f864fac331ddbf91f0d2bd824a6ef868b3fff17fe1cf34e0466bd56": {
+    "id": "sub_1UYGBXAGa5h8DTS3irxSZExY",
+    "customer": "cus_VZOzc4QlFOVLZt",
+    "metadata": {
+      "workspace_id": "54de746d-35f7-4518-8a3b-78d81829b218"
+    },
+    "status": "past_due",
+    "items": {
+      "data": [
+        {
+          "id": "si_VZOz8gMbKRrGhS",
+          "quantity": 1,
+          "current_period_start": 1796436830,
+          "current_period_end": 1799115230,
+          "price": {
+            "id": "price_1UYExUAGa5h8DTS3DByNjL2T",
+            "lookup_key": "ciproxy_team_monthly_usd"
+          }
+        }
+      ],
+      "has_more": false
+    },
+    "pending_update": null,
+    "latest_invoice": {
+      "id": "in_1UYGBmAGa5h8DTS3sJ5dL8JC",
+      "created": 1796436830,
+      "status": "open",
+      "billing_reason": "subscription_cycle",
+      "next_payment_attempt": 1796593302,
+      "hosted_invoice_url": "https://stripe.invalid/invoices/in_1UYGBmAGa5h8DTS3sJ5dL8JC",
+      "customer": "cus_VZOzc4QlFOVLZt",
+      "parent": {
+        "subscription_details": {
+          "subscription": "sub_1UYGBXAGa5h8DTS3irxSZExY"
+        }
+      },
+      "attempt_count": 1,
+      "attempted": true,
+      "auto_advance": true,
+      "amount_due": 4900,
+      "amount_paid": 0,
+      "amount_remaining": 4900,
+      "collection_method": "charge_automatically"
+    },
+    "cancel_at_period_end": false,
+    "cancel_at": null,
+    "ended_at": null,
+    "cancellation_details": {
+      "comment": null,
+      "feedback": null,
+      "feedback_option": null,
+      "reason": null
+    },
+    "collection_method": "charge_automatically",
+    "pause_collection": null
+  },
+  "sha256:414f6afdc79cace8d8f2f6cf7ddf65c68cdd2027d3abb1643013d44064b5e1ed": {
+    "id": "in_1UYGBmAGa5h8DTS3sJ5dL8JC",
+    "created": 1796436830,
+    "status": "paid",
+    "billing_reason": "subscription_cycle",
+    "next_payment_attempt": null,
+    "hosted_invoice_url": "https://stripe.invalid/invoices/in_1UYGBmAGa5h8DTS3sJ5dL8JC",
+    "customer": "cus_VZOzc4QlFOVLZt",
+    "parent": {
+      "subscription_details": {
+        "subscription": "sub_1UYGBXAGa5h8DTS3irxSZExY"
+      }
+    },
+    "attempt_count": 1,
+    "attempted": true,
+    "auto_advance": false,
+    "amount_due": 4900,
+    "amount_paid": 4900,
+    "amount_remaining": 0,
+    "collection_method": "charge_automatically"
+  },
+  "sha256:f735af32d28a8bb4d71114e61936c87c50adbeeeba774f0980e0e67f91f15b45": {
+    "id": "sub_1UYGBXAGa5h8DTS3irxSZExY",
+    "customer": "cus_VZOzc4QlFOVLZt",
+    "metadata": {
+      "workspace_id": "54de746d-35f7-4518-8a3b-78d81829b218"
+    },
+    "status": "past_due",
+    "items": {
+      "data": [
+        {
+          "id": "si_VZOz8gMbKRrGhS",
+          "quantity": 1,
+          "current_period_start": 1796436830,
+          "current_period_end": 1799115230,
+          "price": {
+            "id": "price_1UYExUAGa5h8DTS3DByNjL2T",
+            "lookup_key": "ciproxy_team_monthly_usd"
+          }
+        }
+      ],
+      "has_more": false
+    },
+    "pending_update": {
+      "expires_at": 1796523235
+    },
+    "latest_invoice": {
+      "id": "in_1UYGC6AGa5h8DTS3i9I3PWRX",
+      "created": 1796440435,
+      "status": "open",
+      "billing_reason": "subscription_update",
+      "next_payment_attempt": 1796602226,
+      "hosted_invoice_url": "https://stripe.invalid/invoices/in_1UYGC6AGa5h8DTS3i9I3PWRX",
+      "customer": "cus_VZOzc4QlFOVLZt",
+      "parent": {
+        "subscription_details": {
+          "subscription": "sub_1UYGBXAGa5h8DTS3irxSZExY"
+        }
+      },
+      "attempt_count": 1,
+      "attempted": true,
+      "auto_advance": true,
+      "amount_due": 24967,
+      "amount_paid": 0,
+      "amount_remaining": 24967,
+      "collection_method": "charge_automatically"
+    },
+    "cancel_at_period_end": false,
+    "cancel_at": null,
+    "ended_at": null,
+    "cancellation_details": {
+      "comment": null,
+      "feedback": null,
+      "feedback_option": null,
+      "reason": null
+    },
+    "collection_method": "charge_automatically",
+    "pause_collection": null
+  }
+}
