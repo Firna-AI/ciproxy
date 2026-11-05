@@ -989,7 +989,8 @@ Answers of 5 November 2026:
   repository stayed queued with no runner for 101.8 seconds. The probe
   needed a fix of a race in its job check, which Milestone 6 adds.
 
-Design calls for the answers E to item 54 and A to item 55, my calls and those of the research, 5 November 2026:
+Design calls for the answers E to item 54 and A to item 55, my calls and those
+of the research, 5 November 2026:
 
 - The token must name the repository, the run, and the runner of the assigned
   job. Reason: the token of another job then fails the check.
