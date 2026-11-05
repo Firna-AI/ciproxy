@@ -2021,8 +2021,8 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 71 on 5 November 2026. Items 72 and 73 still
-wait. The
+The user answered items 54 to 71 on 5 November 2026. Items 72, 73, and 74
+still wait. The
 conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
@@ -2612,3 +2612,46 @@ keep the letters that the user saw.
   is small for a CI server. C saves the most disk, at a large cost.
 - **Action:** ask the user, because each option changes the label table,
   the machine minimum, or the software rule.
+
+### 74. Preview pods can read production logs
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Review of pull request #24, Milestone 5, finding 1.
+- **Category:** Security.
+- **Location:** `deploy/scripts/namespace_access.py`, the namespaces of the
+  shared cluster.
+- **Terms:**
+  - **PodSecurity:** the Kubernetes check that refuses pods whose settings
+    break a standard security level.
+  - **hostPath:** a pod volume that reads files of the cluster machine.
+- **Background:**
+  - Item 68 put both environments in one GKE Autopilot cluster, each in its
+    own namespace.
+  - A push to the primary branch deploys the main preview, so the preview
+    deploy identity can change the pods of the preview namespace.
+  - Autopilot allows read-only `hostPath` volumes under `/var/log`.
+- **Problem:** Neither namespace enforces a PodSecurity level. A preview pod
+  on a machine that also runs production can mount `/var/log` and read the
+  container logs of production.
+- **Impact if no action:** Unreviewed preview code can read production logs.
+  Network policy and the scoped identities do not stop a local file mount.
+- **Root question:** How does the shared cluster keep production files away
+  from preview pods?
+- **Options:**
+  - **A.** Enforce the Baseline PodSecurity level on both namespaces, with
+    labels that only the operator can change. Baseline refuses `hostPath`
+    volumes. Effort: Small.
+  - **B.** Add a custom admission policy that refuses `hostPath` volumes. It
+    keeps the other Autopilot defaults, but adds policy code to maintain.
+    Effort: Medium.
+  - **C.** Replace the free deployment writes with a trusted controller that
+    accepts only image and configuration changes on fixed pod templates.
+    Effort: Large.
+- **Left out:** Separate clusters: item 68 chose one. Network rules: they
+  cannot stop a local file mount. Rules in the committed Helm charts: a
+  preview push can change the charts.
+- **Wider fix:** A. One standard admission level for every workload.
+- **Previous examples:** None found.
+- **Recommendation:** A. It closes the hole with a maintained Kubernetes
+  level and no new code.
+- **Action:** ask the user, because A adds an admission rejection.
