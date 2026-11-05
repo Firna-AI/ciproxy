@@ -1149,9 +1149,9 @@ Design calls on the questions of the docs work, my calls, 4 November 2026:
   report. The savings report now covers the whole workspace, which pays
   one price.
 
-No item waits for the user. The items under "Open items of 4 November
-2026" at the end of this plan hold their answers of 5 November 2026. The options check of items 50
-and 51 ran, and its report is in
+No item waits for the user. The items under "Open items of 4 November 2026" at
+the end of this plan hold their answers of 5 November 2026. The options check of
+items 50 and 51 ran, and its report is in
 `.context/ciproxy-mvp/options-check-50-51.md`.
 
 The options check of the `plans` skill ran over these items on 4 November
@@ -1823,7 +1823,8 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 66 on 5 November 2026. No item still waits. The conversation gave each item in full in the layout of the
+The user answered items 54 to 66 on 5 November 2026. No item still waits. The
+conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
 
