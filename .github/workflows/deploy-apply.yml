@@ -31,30 +31,45 @@ jobs:
           persist-credentials: false
       - name: Check the trusted source event
         run: python3 deploy/scripts/promotion_event.py "${{ inputs.environment }}" "$CIPROXY_SOURCE_SHA"
+      - name: Authenticate the environment read-only plan identity
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          project_id: ciproxy
+          workload_identity_provider: ${{ vars.GCP_PLAN_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_PLAN_SERVICE_ACCOUNT }}
+      - name: Set up Google Cloud tools
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db
+        with:
+          version: 592.0.0
+      - name: Select roots with read-only status access
+        id: route
+        run: python3 deploy/scripts/ci_roots.py "${{ inputs.environment }}" "${{ inputs.scope }}"
+      - name: Report successful empty promotion
+        if: steps.route.outputs.roots == ''
+        run: |
+          echo 'No roots selected. Promotion succeeded without apply credentials or a plan artifact.'
+          echo 'No roots selected. Promotion succeeded without apply credentials or a plan artifact.' >> "$GITHUB_STEP_SUMMARY"
       - name: Authenticate the selected apply identity
+        if: steps.route.outputs.roots != ''
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
         with:
           project_id: ciproxy
           workload_identity_provider: ${{ inputs.scope == 'trust' && vars.GCP_TRUST_APPLY_WIF_PROVIDER || inputs.scope == 'foundation' && vars.GCP_APPLY_WIF_PROVIDER || vars.GCP_SHARED_APPLY_WIF_PROVIDER }}
           service_account: ${{ inputs.scope == 'trust' && vars.GCP_TRUST_APPLY_SERVICE_ACCOUNT || inputs.scope == 'foundation' && vars.GCP_APPLY_SERVICE_ACCOUNT || vars.GCP_SHARED_APPLY_SERVICE_ACCOUNT }}
-      - name: Set up Google Cloud tools
-        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db
-        with:
-          version: 592.0.0
       - name: Set up Terraform
+        if: steps.route.outputs.roots != ''
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e
         with:
           terraform_version: 1.17.1
           terraform_wrapper: false
       - name: Download this run attempt's saved plans
+        if: steps.route.outputs.roots != ''
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: plan-${{ inputs.environment }}-${{ inputs.scope }}-${{ github.run_attempt }}
           path: .context/plans/${{ inputs.environment }}
-      - name: Recheck the GCP launch latch
-        id: route
-        run: python3 deploy/scripts/ci_roots.py "${{ inputs.environment }}" "${{ inputs.scope }}"
       - name: Recheck and apply exact saved binaries
+        if: steps.route.outputs.roots != ''
         env:
           ROOTS: ${{ steps.route.outputs.roots }}
           TARGET: ${{ steps.route.outputs.target }}
@@ -63,5 +78,5 @@ jobs:
             python3 deploy/scripts/terraform.py apply "${{ inputs.environment }}" "$root" --target "$TARGET"
           done
       - name: Invalidate the separately promoted preview edge
-        if: inputs.scope == 'preview-edge'
+        if: inputs.scope == 'preview-edge' && steps.route.outputs.roots != ''
         run: python3 deploy/scripts/deploy.py production --phase invalidate --target main-preview

@@ -37,6 +37,19 @@ run "production_edge_manages_only_owned_dns_records" {
   }
   assert {
     condition = (
+      toset(keys(google_storage_bucket_iam_member.origin_reader)) == toset(["site", "dashboard"])
+      && alltrue([for grant in google_storage_bucket_iam_member.origin_reader :
+        grant.role == "roles/storage.objectViewer"
+        && grant.member == "serviceAccount:service-123456789@https-lb.iam.gserviceaccount.com"
+      ])
+      && google_storage_bucket_iam_member.origin_reader["site"].bucket == "ciproxy-production-site-ciproxy"
+      && google_storage_bucket_iam_member.origin_reader["dashboard"].bucket == "ciproxy-production-dashboard-ciproxy"
+      && alltrue([for backend in google_compute_backend_bucket.public : backend.cdn_policy[0].cache_mode == "USE_ORIGIN_HEADERS"])
+    )
+    error_message = "Only the exact LB service agent gets viewer on static origins. Explicit origin cache metadata remains authoritative."
+  }
+  assert {
+    condition = (
       toset(keys(google_dns_record_set.public)) == toset(["dashboard", "releases"])
       && google_dns_record_set.public["dashboard"].name == "app.ciproxy.dev."
       && google_dns_record_set.public["dashboard"].managed_zone == "ciproxy-production-dashboard"
@@ -81,6 +94,19 @@ run "main_preview_edge_manages_only_owned_dns_records" {
       images_bucket         = "ciproxy-main-preview-images-ciproxy"
       notification_channels = []
     }
+  }
+  assert {
+    condition = (
+      toset(keys(google_storage_bucket_iam_member.origin_reader)) == toset(["site", "dashboard"])
+      && alltrue([for grant in google_storage_bucket_iam_member.origin_reader :
+        grant.role == "roles/storage.objectViewer"
+        && grant.member == "serviceAccount:service-123456789@https-lb.iam.gserviceaccount.com"
+      ])
+      && google_storage_bucket_iam_member.origin_reader["site"].bucket == "ciproxy-main-preview-site-ciproxy"
+      && google_storage_bucket_iam_member.origin_reader["dashboard"].bucket == "ciproxy-main-preview-dashboard-ciproxy"
+      && alltrue([for backend in google_compute_backend_bucket.public : backend.cdn_policy[0].cache_mode == "USE_ORIGIN_HEADERS"])
+    )
+    error_message = "Only the exact LB service agent gets viewer on static origins. Explicit origin cache metadata remains authoritative."
   }
   assert {
     condition = (

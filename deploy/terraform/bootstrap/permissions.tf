@@ -92,7 +92,7 @@ resource "google_project_iam_member" "shared_kms" {
 resource "google_project_iam_custom_role" "bucket_metadata" {
   role_id     = "ciproxyBucketMetadata"
   title       = "ciproxy environment bucket metadata"
-  permissions = ["storage.buckets.get", "storage.buckets.update", "storage.buckets.delete", "storage.buckets.getIamPolicy", "storage.buckets.setIamPolicy"]
+  permissions = ["storage.buckets.get", "storage.buckets.update", "storage.buckets.delete"]
 }
 resource "google_project_iam_member" "bucket_metadata" {
   for_each = local.shared_accounts

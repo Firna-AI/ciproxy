@@ -12,9 +12,11 @@ NAMESPACE="ciproxy-$DEPLOY_ENV"
 
 ## 1. Prepare the project
 
-Check billing and organization policies. Public site and dashboard buckets
-need `allUsers` read access. Domain-restricted sharing or public-access
-prevention can stop that grant. Read the operator roles in
+Check billing and organization policies. The futex.ai domain-restricted
+sharing rule stays in force. Site/dashboard origins are private with public
+access prevention enforced. No public grant or organization-policy
+exception is needed. The edge grants its Google-created service agent
+viewer access after backend creation. Read the operator roles in
 [Deployment identities](identities.md#operator-permissions).
 
 ```sh
@@ -201,6 +203,11 @@ that branch merges, use protected `main`. A normal run has this order:
    the exact successful preview run and attempt, never latest record state.
    A missing preview NEG cannot block production's completed invalidation.
 
+An empty central promotion is a successful no-op. Its apply job uses only
+the environment plan identity for status reads, then selects no roots.
+It does not assume apply credentials, download a plan, or run Terraform.
+Required apply jobs still succeed so successors can run normally.
+
 The first run can stop until its image, token, or namespace exists.
 Production data/edge state starts empty and prelaunch cannot write it.
 Do not populate production secrets or the database until its data apply
@@ -240,6 +247,11 @@ curl -fsSI https://br-main.preview.ciproxy.dev/ https://br-main.preview.ciproxy.
 curl -fsSI https://br-main.preview.app.ciproxy.dev/
 curl -fsS https://br-main.preview.get.ciproxy.dev/ciproxy-agent | head -n 5
 ```
+
+If the first real private-origin service-agent grant is refused by the
+organization rule, stop that path and return item 76 with alternatives A,
+B, and C. Do not widen organization policy automatically. See
+[private-origin permissions](identities.md#private-static-origins).
 
 Certificate status and each domain status must be `ACTIVE`. Redeploy after
 changing the flag. Checks run each minute from Europe, USA, and Asia

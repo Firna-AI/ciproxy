@@ -10,7 +10,7 @@ edges separate.
 | Operator | Own Google account. Initial seed, trust, namespace RBAC, production handoff, secrets, and recovery. |
 | `ciproxy-<env>-plan` | Read only its snapshot prefix and list workspace object names. Create/delete only its exact `foundation/default.tflock`. Read the two prelaunch account statuses. No state writes or secret values. |
 | `ciproxy-<env>-apply` | Write only its own `foundation/` snapshot prefix. Read its record and prelaunch status. No project admin or Kubernetes object permissions. |
-| `ciproxy-<env>-deploy` | Write its own public static buckets. Read its own release token. Connect to the cluster. Operate only its namespace through Kubernetes RBAC. Invalidate only its tagged URL map. Read global operation completion. |
+| `ciproxy-<env>-deploy` | Publish public content to its own private static buckets. Read its own release token. Connect to the cluster. Operate only its namespace through Kubernetes RBAC. Invalidate only its tagged URL map. Read global operation completion. |
 | `ciproxy-shared-plan`, `ciproxy-shared-prod-plan` | Central metadata/state reads and exact central lock writes. No state writes or secret values. No Kubernetes object reads. Separate caller trust for preview and production. Preview central plan retires at launch. |
 | `ciproxy-shared-preview-apply` | Core and preview cloud resources before launch. No production state writes. No project IAM, custom-role, or federation administration. Runtime policy writes name preview only. No Kubernetes object verbs. Permanently disabled at launch. |
 | `ciproxy-shared-prod-apply` | Central cloud resources after launch. Production workflow on protected `main` only. Production/preview central state writes. Broader cloud roles than prelaunch shared apply. |
@@ -42,6 +42,31 @@ platform infrastructure, not an environment deploy/runtime identity.
 Prelaunch registry lifecycle has create/get/update/delete and no IAM
 setter. It cannot install a persistent registry admin on another account.
 Both phase owners have node `actAs` on one account only.
+
+## Private static origins
+
+Site/dashboard buckets enforce PAP. They have no `allUsers` or
+`allAuthenticatedUsers` grant. The load balancer service agent
+`service-PROJECT_NUMBER@https-lb.iam.gserviceaccount.com` receives only
+`roles/storage.objectViewer` on these two buckets. Google creates that
+identity only after the first backend bucket. The edge's IAM resources
+iterate backend resources, so each grant follows creation.
+
+Shared apply policy get/set names preview's two static buckets before
+launch, and both environments' four static buckets after launch. That
+conditional custom-role grant excludes image, state, and trust buckets.
+Separate metadata lifecycle rights can maintain application buckets but
+cannot read/write their IAM policies. Main-only trusted bootstrap retains
+state-bucket policy maintenance through its own resource-bound grant.
+The image/CDN signing-key grant remains an operator action.
+
+The futex.ai domain-restricted sharing rule stays. No organization-policy
+exception or public GCS grant is required by this design. If the first real
+service-agent grant is refused, stop that path and return item 76 with its
+existing alternatives: A project-only override, B tagged-resource policy,
+or C a cluster web origin. Do not select an alternative or widen policy
+automatically. That outcome needs the user's answer.
+[Private origin access](https://docs.cloud.google.com/cdn/docs/setting-up-cdn-with-bucket#make_your_cloud_storage_bucket_private)
 
 ## Operator permissions
 

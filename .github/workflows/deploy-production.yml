@@ -107,7 +107,6 @@ jobs:
       scope: edge
   apply-edge:
     needs: plan-edge
-    if: needs.plan-edge.outputs.roots != ''
     uses: ./.github/workflows/deploy-apply.yml
     with:
       environment: production
@@ -115,7 +114,6 @@ jobs:
       scope: edge
   invalidate:
     needs: [plan-edge, apply-edge]
-    if: ${{ always() && !cancelled() && needs.plan-edge.result == 'success' && (needs.apply-edge.result == 'success' || needs.apply-edge.result == 'skipped') }}
     runs-on: ubuntu-24.04
     environment: production
     env:

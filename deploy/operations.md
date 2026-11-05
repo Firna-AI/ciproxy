@@ -200,8 +200,15 @@ preview zone before preview prepared its NEG.
 
 ## Static files and protection
 
-- HTML files have `no-store`, and other files a one-day cache. The
-  publisher never deletes a file, so open tabs can load their old files.
+- Site/dashboard origins enforce PAP and remain private. Their public
+  content is served through the edge by the viewer-only https-lb agent.
+- Every multipart upload stores explicit `cacheControl` object metadata.
+  HTML and its route aliases use `no-store`. Assets use
+  `public,max-age=86400,must-revalidate`. GCS response headers come from
+  this stored metadata, not a request Cache-Control header.
+- Static backends keep `USE_ORIGIN_HEADERS`, so HTML no-store remains in
+  force. No force-cache policy or new TTL is added. The publisher never
+  deletes a file, so open tabs can load old assets.
 - Each deploy invalidates the whole CDN cache after the edge apply.
 - Terraform cannot delete the GKE cluster, the Cloud SQL instance, the state
   bucket, or the Boat KMS key. Their protection must change first.
@@ -229,3 +236,9 @@ DNS authority stays split as [DNS setup](dns.md) describes. Cloudflare keeps
 `ciproxy.dev` and Workspace mail. Google owns only production app/get parents
 and their preview child delegations. The manual DNS-only apex A record
 uses `terraform/edge`'s production backend `public_ip` output.
+
+A central scope with no roots is a successful promotion, not a skipped apply
+job. Its read-only status check needs no apply identity or plan artifact.
+If private-origin IAM is refused at first live setup, stop and follow
+[the item 76 fallback](identities.md#private-static-origins). Keep the
+organization rule unchanged.

@@ -13,6 +13,13 @@ trust. On protected `main`, CI plans seed/bootstrap with a central
 read-only account and applies their exact saved plans with the separate
 central trust account. Seed API enablement finishes before bootstrap apply.
 
+Every required apply job runs, even when its scope selects no roots.
+Event and checkout validation happen first. The environment's read-only
+plan identity reads launch status. Root selection precedes privileged
+apply authentication and saved-plan download. An empty result reports a
+successful no-op and calls no Terraform. Nonempty results retain all saved
+binary, policy, caller/target, commit, run, and attempt checks.
+
 The phase owner then promotes central infrastructure. It uses a separate
 shared apply account with no project IAM or Kubernetes object permissions.
 It applies the caller's separate data state after shared core.
@@ -44,6 +51,14 @@ namespace/static deployment and publishes its ready snapshot. Production
 promotes central resources only after a successful preview push of the
 same commit on protected `main`. It uses that run's `head_sha` even if the
 default branch moves. The default branch must be `main`.
+
+Required infrastructure has this chain: trust plan/apply, core plan/apply,
+and data plan/apply, followed by an aggregate that requires success from
+all six jobs. Workloads, snapshot plan/apply, edge plan/apply, and CDN
+invalidation follow. Production then promotes preview data and edge.
+There are no intentional apply-job skips in an active chain. Ordinary
+failure/cancellation stops dependent work. Production-off/source gating
+remains at the entry workflow.
 
 Separate workflow concurrency groups preserve pending preview runs.
 Terraform remote locks serialize central state writes. Drain all
@@ -171,3 +186,11 @@ name. New tag/IAM grants can take time to propagate. A permission denial
 fails the run. Wait for propagation, then rerun all jobs with fresh plans.
 No separate gcloud tag mutation or automatic eight-minute retry is added.
 [Tag propagation](https://docs.cloud.google.com/iam/docs/tags-access-control)
+
+Static origins remain private. Edge backend creation precedes the exact LB
+service-agent Object Viewer grants. Organization sharing policy stays.
+A refused first real grant stops this path and returns item 76 to the user.
+Stored upload metadata controls caching through `USE_ORIGIN_HEADERS`:
+HTML is `no-store`; assets are `public,max-age=86400,must-revalidate`.
+Real deployments still invalidate afterward. No `FORCE_CACHE_ALL` policy
+or new TTL overrides the HTML contract.

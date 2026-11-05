@@ -29,6 +29,33 @@ class SharedPromotionTests(PromotionCase):
                     self.assertEqual(result.returncode, 0, result.stderr)
                     self.assertEqual(result.stdout.strip(), selected)
 
+    def test_empty_scopes_publish_no_apply_inputs_and_need_no_plan_artifact(self):
+        for ready, ref, scope in (
+            ("false", "refs/heads/calummoore/ci-proxy-load-balancer", "trust"),
+            ("true", "refs/heads/main", "trust"),
+            ("true", "refs/heads/main", "shared"),
+            ("true", "refs/heads/main", "data"),
+            ("true", "refs/heads/main", "edge"),
+        ):
+            with self.subTest(ready=ready, scope=scope):
+                self.trusted()
+                self.env.update(FAKE_PRODUCTION_READY=ready, PRODUCTION_DEPLOY_ENABLED="true" if ready == "true" else "false", GITHUB_REF=ref,
+                                GITHUB_WORKFLOW_REF="Firna-AI/ciproxy/.github/workflows/deploy-main-preview.yml@" + ref)
+                self.env.pop("CIPROXY_REUSABLE_APPLY", None)
+                output = self.root / ".context/empty-route-output"
+                output.unlink(missing_ok=True)
+                self.env["GITHUB_OUTPUT"] = str(output)
+                self.log.write_text("")
+                result = self.cli("ci_roots.py", "main-preview", scope)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout.strip(), "")
+                self.assertEqual(dict(line.split("=", 1) for line in output.read_text().splitlines()),
+                                 {"roots": "", "target": "main-preview"})
+                calls = [json.loads(line) for line in self.log.read_text().splitlines()]
+                self.assertEqual([call["tool"] for call in calls], ["gcloud", "gcloud"])
+                self.assertFalse((self.root / ".context/plans").exists())
+                self.assertFalse((self.root / ".context/deploy").exists())
+
     def test_unsafe_switch_and_preview_central_write_stop_before_terraform(self):
         self.trusted()
         self.env.update(PRODUCTION_DEPLOY_ENABLED="true", FAKE_PRODUCTION_READY="false")

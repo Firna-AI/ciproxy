@@ -10,6 +10,15 @@ resource "google_compute_backend_bucket" "public" {
   }
 }
 
+# Google creates this service agent only after the first backend bucket.
+# Iterating the backend resources makes creation precede each policy grant.
+resource "google_storage_bucket_iam_member" "origin_reader" {
+  for_each = google_compute_backend_bucket.public
+  bucket   = each.value.bucket_name
+  role     = "roles/storage.objectViewer"
+  member   = "serviceAccount:service-${var.project_number}@https-lb.iam.gserviceaccount.com"
+}
+
 resource "google_compute_backend_bucket" "images" {
   name        = "${local.config.prefix}-images"
   bucket_name = local.config.images_bucket

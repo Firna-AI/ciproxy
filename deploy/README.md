@@ -28,6 +28,11 @@ can deploy independently.
 | `main-preview` | `ciproxy-main-preview` | `br-main.preview.ciproxy.dev`, `br-main.preview.app.ciproxy.dev`, `br-main.preview.get.ciproxy.dev` | Each push to `calummoore/ci-proxy-load-balancer` or `main` |
 | `production` | `ciproxy-production` | `ciproxy.dev`, `app.ciproxy.dev`, `get.ciproxy.dev` | Successful preview of the same `main` commit, after launch |
 
+The futex.ai domain-restricted sharing rule stays unchanged. The content
+is public through the edge, but its GCS origins enforce PAP and have no
+anonymous grants. Only the exact load balancer service agent gets origin
+Object Viewer access after backend creation. No policy exception is needed.
+
 All regional resources use `europe-west1`. Each environment has one global
 HTTPS load balancer and certificate. HTTP redirects to HTTPS.
 `ciproxy.dev` and Workspace mail stay on Cloudflare. Production Cloud DNS
@@ -37,8 +42,8 @@ production edge IP. See [DNS setup](dns.md).
 
 | Host and path | Backend |
 | --- | --- |
-| Site host | Static site bucket through Cloud CDN. Docs use `/docs`. |
-| Dashboard host | Static dashboard bucket through Cloud CDN. |
+| Site host | Private static site origin through the load balancer/Cloud CDN. Docs use `/docs`. |
+| Dashboard host | Private static dashboard origin through the load balancer/Cloud CDN. |
 | Dashboard `/api`, `/agent`, `/hooks` | Control plane. These paths fail while its runtime is off. |
 | Dashboard `/images` | Private image bucket through signed Cloud CDN URLs. |
 | Download host | The `futex-ai/cli-release` server. |
@@ -64,7 +69,9 @@ Before launch, preview promotes the central infrastructure and edge roots.
 After the operator revokes prelaunch authority, preview reads those roots.
 Production promotes them after a successful preview of the same `main`
 commit. The repository switch starts production. The GCP account status
-controls which pipeline can write central infrastructure.
+controls which pipeline can write central infrastructure. Empty scopes
+finish as successful no-ops. Required apply jobs do not intentionally skip;
+privileged auth, artifact download, and Terraform run only for selected roots.
 
 Each successful workload rollout saves its own flags, alert addresses, and
 actual NEG zones. Its read-only plan account plans the `foundation` root.

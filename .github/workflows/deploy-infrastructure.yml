@@ -21,15 +21,13 @@ jobs:
       scope: trust
   apply-trust:
     needs: plan-trust
-    if: needs.plan-trust.outputs.roots != ''
     uses: ./.github/workflows/deploy-apply.yml
     with:
       environment: ${{ inputs.environment }}
       source: ${{ inputs.source }}
       scope: trust
   plan-shared:
-    needs: [plan-trust, apply-trust]
-    if: ${{ always() && !cancelled() && needs.plan-trust.result == 'success' && (needs.apply-trust.result == 'success' || needs.apply-trust.result == 'skipped') }}
+    needs: apply-trust
     uses: ./.github/workflows/deploy-plan.yml
     with:
       environment: ${{ inputs.environment }}
@@ -37,15 +35,13 @@ jobs:
       scope: shared
   apply-shared:
     needs: plan-shared
-    if: needs.plan-shared.outputs.roots != ''
     uses: ./.github/workflows/deploy-apply.yml
     with:
       environment: ${{ inputs.environment }}
       source: ${{ inputs.source }}
       scope: shared
   plan-data:
-    needs: [plan-shared, apply-shared]
-    if: ${{ always() && !cancelled() && needs.plan-shared.result == 'success' && (needs.apply-shared.result == 'success' || needs.apply-shared.result == 'skipped') }}
+    needs: apply-shared
     uses: ./.github/workflows/deploy-plan.yml
     with:
       environment: ${{ inputs.environment }}
@@ -53,7 +49,6 @@ jobs:
       scope: data
   apply-data:
     needs: plan-data
-    if: needs.plan-data.outputs.roots != ''
     uses: ./.github/workflows/deploy-apply.yml
     with:
       environment: ${{ inputs.environment }}
@@ -69,4 +64,4 @@ jobs:
         env:
           RESULTS: ${{ toJSON(needs) }}
         run: |
-          python3 -c 'import json,os; n=json.loads(os.environ["RESULTS"]); assert all(n[k]["result"] == "success" for k in ("plan-trust","plan-shared","plan-data")); assert all(n[k]["result"] in ("success","skipped") for k in ("apply-trust","apply-shared","apply-data"))'
+          python3 -c 'import json,os; n=json.loads(os.environ["RESULTS"]); assert all(job["result"] == "success" for job in n.values())'

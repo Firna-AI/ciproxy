@@ -1,9 +1,11 @@
+# Public website content, private GCS origins.
 resource "google_storage_bucket" "public" {
   for_each                    = toset(["site", "dashboard"])
   name                        = "${local.prefix}-${each.key}-${var.project_id}"
   location                    = local.region
   uniform_bucket_level_access = true
   force_destroy               = false
+  public_access_prevention    = "enforced"
   website {
     main_page_suffix = "index.html"
     not_found_page   = "404.html"
@@ -11,13 +13,6 @@ resource "google_storage_bucket" "public" {
   versioning {
     enabled = true
   }
-}
-
-resource "google_storage_bucket_iam_member" "public" {
-  for_each = google_storage_bucket.public
-  bucket   = each.value.name
-  role     = "roles/storage.objectViewer"
-  member   = "allUsers"
 }
 
 resource "google_storage_bucket_iam_member" "publisher" {

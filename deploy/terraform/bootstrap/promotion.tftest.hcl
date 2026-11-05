@@ -60,6 +60,7 @@ run "prelaunch_accounts_have_no_environment_admin_escape" {
       [for g in google_project_iam_member.shared_secret : g.member],
       [for g in google_project_iam_member.shared_kms : g.member],
       [for g in google_project_iam_member.bucket_metadata : g.member],
+      [for g in google_project_iam_member.static_bucket_policy : g.member],
       [for g in google_project_iam_member.tag_binding : g.member],
       [for g in google_project_iam_member.registry : g.member],
       [google_project_iam_member.prelaunch.member],
@@ -75,6 +76,10 @@ run "prelaunch_accounts_have_no_environment_admin_escape" {
       google_storage_bucket_iam_member.writer["${env}:${env}-apply"].member == "serviceAccount:ciproxy-${env}-apply@ciproxy.iam.gserviceaccount.com"
       && length([for grant in google_storage_bucket_iam_member.writer : grant if startswith(grant.member, "serviceAccount:ciproxy-${env}-")]) == 1
       ]) && alltrue([for grant in google_storage_bucket_iam_member.trust : contains([
+        "serviceAccount:ciproxy-trust-preview-apply@ciproxy.iam.gserviceaccount.com",
+        "serviceAccount:ciproxy-trust-prod-apply@ciproxy.iam.gserviceaccount.com",
+      ], grant.member)])
+      && alltrue([for grant in google_storage_bucket_iam_member.trust_policy : contains([
         "serviceAccount:ciproxy-trust-preview-apply@ciproxy.iam.gserviceaccount.com",
         "serviceAccount:ciproxy-trust-prod-apply@ciproxy.iam.gserviceaccount.com",
       ], grant.member)])
