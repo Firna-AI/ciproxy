@@ -51,5 +51,10 @@ pub(crate) fn missing_observation(record: &mut StartRecord) {
         .runtime
         .iter()
         .max_by_key(|charge| charge.until)
-        .is_some_and(|charge| !charge.running);
+        .is_some_and(|charge| {
+            !charge.running
+                && record
+                    .running_observed_at
+                    .is_none_or(|at| at <= charge.until)
+        });
 }

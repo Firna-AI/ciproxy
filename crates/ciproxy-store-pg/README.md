@@ -147,7 +147,9 @@ Callback claims save token consumption and deletion intent together.
 Refusal records and account restrictions also commit together.
 Key erasure checks unfinished deliveries as well as live runners.
 No query receives a plaintext key or runner registration.
-Metering price facts publish only after a trusted runtime observation.
+Metering price facts require a trusted runtime observation and confirmed
+actual start fee. A saved start-fee quote never supplies that fee.
+Delivery JSON retains the quote and actual fee separately.
 Their upserts correct provider start times and every price field.
 Every overflow price row has a finite end from its measured interval.
 Later metering refreshes cannot extend an old reading.

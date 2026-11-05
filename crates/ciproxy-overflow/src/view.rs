@@ -16,15 +16,29 @@ use crate::error::{Error, Result};
 /// Current-month spend with missing provider facts kept explicit.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Spend {
-    /// Runtime and quoted start costs that are known for ciproxy sandboxes only.
-    pub known_usd: Decimal,
-    /// Accepted starts for which the provider supplied no start-price quote.
+    /// Measured runtime and provider-confirmed actual start costs.
+    pub confirmed_usd: Decimal,
+    /// Unconfirmed costs covered by the remaining full-lifetime bounds.
+    pub pending_usd: Decimal,
+    /// Expired budget bounds, without a claim of provider confirmation.
+    pub settled_bound_usd: Decimal,
+    /// Deliveries whose required costs have neither facts nor a safe bound.
+    pub unbounded_starts: Vec<Uuid>,
+    /// Starts whose actual fee remains unconfirmed.
     pub unknown_start_charges: Vec<Uuid>,
     /// Sandboxes whose runtime cannot yet be completely measured or computed.
     pub unmeasured_runtime: Vec<Uuid>,
 }
 
 impl Spend {
+    /// Amount counted against the limit, or an explicit missing-bound error.
+    pub fn counted_usd(&self) -> Result<Decimal> {
+        if !self.unbounded_starts.is_empty() {
+            return Err(Error::AccountingIncomplete);
+        }
+        Ok(self.confirmed_usd + self.pending_usd + self.settled_bound_usd)
+    }
+
     /// Whether all starts and runtime intervals of this month have a cost.
     pub fn complete(&self) -> bool {
         self.unknown_start_charges.is_empty() && self.unmeasured_runtime.is_empty()
@@ -51,11 +65,9 @@ pub struct OverflowView {
 impl OverflowView {
     /// Map known facts to the scaler, using the same UTC origin as its snapshot.
     ///
-    /// Inspect `spend.complete()` separately. Missing fees never become known zero.
+    /// Pending and settled bounds count without becoming measured costs.
     pub fn scaler_account(&self, clock_origin: DateTime<Utc>) -> Result<BoatAccount> {
-        if !self.spend.complete() {
-            return Err(Error::AccountingIncomplete);
-        }
+        let counted = self.spend.counted_usd()?;
         let sizes = self
             .state
             .sizes
@@ -95,7 +107,7 @@ impl OverflowView {
                 .as_ref()
                 .is_some_and(|account| account.rejected_at.is_none()),
             spend: MonthlySpend {
-                spent: micros(self.spend.known_usd)?,
+                spent: micros(counted)?,
                 limit: micros(self.limit_usd.unwrap_or(Decimal::ZERO))?,
             },
             largest_size: sizes.last().map(|size| size.id.clone()),
@@ -107,7 +119,7 @@ impl OverflowView {
 
 fn micros(value: Decimal) -> Result<u64> {
     (value * Decimal::from(1_000_000))
-        .floor()
+        .ceil()
         .to_u64()
         .ok_or(Error::InvalidProviderData)
 }

@@ -82,12 +82,18 @@ pub struct StartRecord {
     pub ends_at: Option<DateTime<Utc>>,
     /// Finite measured billing prefix, independent of lifecycle reconciliation.
     pub billing: Option<MeasuredBillingInterval>,
-    /// Quoted start charge. Absence preserves an unknown provider charge.
+    /// Immutable start-fee quote saved before dispatch, used only for budget bounds.
+    pub start_quote_usd: Option<Decimal>,
+    /// Provider-confirmed actual start charge, never inferred from its quote.
     pub start_usd: Option<Decimal>,
     /// First accepted guest end report, absent before token consumption.
     pub reported_at: Option<DateTime<Utc>>,
     /// Exact per-calendar-month runtime observations from the provider.
     pub runtime: Vec<RuntimeCharge>,
+    /// Trusted total runtime evidence, retained even when monthly allocation fails.
+    pub runtime_total: Option<RuntimeTotal>,
+    /// Latest trusted evidence that runtime was still running, including partial reads.
+    pub running_observed_at: Option<DateTime<Utc>>,
     /// A confirmed delete can leave an unmeasured interval after its last read.
     pub runtime_complete: bool,
 }
@@ -102,5 +108,18 @@ pub struct RuntimeCharge {
     /// Provider observation boundary.
     pub until: DateTime<Utc>,
     /// The provider still billed runtime at this observation.
+    pub running: bool,
+}
+
+/// Runtime dollars over the sandbox's complete observed lifetime.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct RuntimeTotal {
+    /// Trusted provider creation time.
+    pub since: DateTime<Utc>,
+    /// Last instant measured by the provider.
+    pub until: DateTime<Utc>,
+    /// Measured runtime dollars, excluding the start fee.
+    pub usd: Decimal,
+    /// Whether runtime still accrued at this observation.
     pub running: bool,
 }

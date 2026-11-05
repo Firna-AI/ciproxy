@@ -51,6 +51,20 @@ impl OverflowService {
 
     pub(super) fn proven_lifetime_end(&self, record: &StartRecord) -> Option<DateTime<Utc>> {
         let bound = record.sandbox.as_ref()?.lifetime_ends_by();
+        let contradicted = record
+            .running_observed_at
+            .into_iter()
+            .chain(
+                record
+                    .runtime
+                    .iter()
+                    .filter(|charge| charge.running)
+                    .map(|charge| charge.until),
+            )
+            .any(|at| at > bound);
+        if contradicted {
+            return None;
+        }
         (bound <= self.dependencies.clock.now()).then_some(bound)
     }
 

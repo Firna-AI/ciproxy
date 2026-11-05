@@ -53,9 +53,12 @@ pub(super) fn setup(database: &Database) -> (Uuid, AccountRecord, StartRecord) {
         starts_at: at(),
         ends_at: None,
         billing: None,
+        start_quote_usd: Some(Decimal::new(3, 2)),
         start_usd: Some(Decimal::new(3, 2)),
         reported_at: None,
         runtime: Vec::new(),
+        runtime_total: None,
+        running_observed_at: None,
         runtime_complete: false,
     };
     (workspace.id, account, record)

@@ -2,6 +2,10 @@
 
 mod accounts_tests;
 mod adoption_tests;
+mod budget_admission_tests;
+mod budget_month_tests;
+mod budget_observation_tests;
+mod budget_tests;
 mod cleanup;
 mod coverage_tests;
 mod creation;

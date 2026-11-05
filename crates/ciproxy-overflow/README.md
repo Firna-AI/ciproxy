@@ -103,15 +103,43 @@ An impossible interval clamps to its observation bounds and logs a warning.
 Every overflow-to-metering write uses a finite measured interval.
 Its constructor clamps the end to the latest provider observation.
 Later metering refreshes cannot add runtime beyond that prefix.
-At the monthly limit, new starts wait until the next UTC month or a limit
-increase.
+`Spend` separates confirmed costs, pending bounds, and expired settled bounds.
+The scaler and start admission count all three against the monthly limit.
+Each bound uses the requested size's pinned hourly price for the complete
+six-hour lifetime, or two hours on a trial, plus the saved start-fee quote.
+Measured runtime reduces the remaining runtime bound without counting twice.
+A final runtime reading removes the remaining runtime bound.
+An actual start fee replaces its quote, including a fee above that quote.
+The current Boat usage endpoint confirms runtime only.
+Create and inspect responses supply no documented actual start fee.
+The quote therefore stays a budget estimate until expiry or a trusted actual
+fee fact becomes available. It never becomes a measured start charge.
+
+A lifetime expires for budget purposes from the saved dispatch time until a
+trusted creation reading supplies the real start time.
+Later running evidence prevents stale budget settlement, including when a
+monthly cost read fails. A total runtime reading survives that failure.
+A total within one UTC month supplies exact confirmed spend for that month.
+An unallocated total across months supplies a conservative budget bound,
+after subtraction of measured costs from other months.
+That bound supplies no monthly measured charge or metering interval.
+Each bound splits runtime at UTC month boundaries
+and counts the fee only in its start month.
+At budget expiry, the remaining bound moves to settled spend.
+That transition changes no provider identity, lifecycle end, or key custody.
+An uncertain create still requires recovery and retains its old key.
+Later running evidence that contradicts a known lifetime prevents cleanup
+from treating that old deadline as proof that the sandbox ended.
+A later real cost replaces the estimate, including costs above its bound.
+
+New starts continue while the limit covers existing costs and the proposed
+start's bound in each UTC month its lifetime touches.
+A missing safe fee bound returns `Error::AccountingIncomplete`.
+`Spend::unbounded_starts` identifies the affected deliveries.
+A new start with no quote waits before provider dispatch.
+At the monthly limit, new starts wait until there is room.
 Running jobs and deletion continue.
 
-`Spend` exposes unknown accepted start fees and unmeasured runtime intervals.
-For example, a lost delete response can leave the final interval unknown.
-`scaler_account` and new starts return `Error::AccountingIncomplete` while
-the current month's required cost facts remain incomplete.
-They never convert missing costs to zero.
 Missing or failed usage reads invalidate stale runtime completeness.
 Known costs and saved account metadata remain readable after key rejection,
 including records that still reference an old key.

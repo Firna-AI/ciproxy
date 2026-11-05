@@ -1,10 +1,11 @@
 //! Sandbox-only per-month provider runtime observations and price completion.
 
-use ciproxy_store_interface::overflow::record::{RuntimeCharge, StartRecord};
+use ciproxy_store_interface::overflow::record::{RuntimeCharge, RuntimeTotal, StartRecord};
 use ciproxy_store_interface::overflow::store::OverflowSnapshot;
 use sandbox_interface::ProviderRef;
 use uuid::Uuid;
 
+use crate::cost_state;
 use crate::error::Result;
 use crate::provider::Capabilities;
 use crate::session::Session;
@@ -60,10 +61,30 @@ impl OverflowService {
             Ok(Some(total)) => total,
             Ok(None) | Err(_) => return self.missing_usage(session, record).await,
         };
-        if let Some(sandbox) = &mut record.sandbox {
-            sandbox.observe_creation(total.since, record.lifetime_seconds);
+        if record
+            .runtime_total
+            .as_ref()
+            .is_none_or(|saved| total.until >= saved.until)
+        {
+            if let Some(sandbox) = &mut record.sandbox {
+                sandbox.observe_creation(total.since, record.lifetime_seconds);
+            }
+            record.starts_at = total.since;
+            record.runtime_total = Some(RuntimeTotal {
+                since: total.since,
+                until: total.until,
+                usd: total.usd,
+                running: total.running,
+            });
         }
-        let mut month = spend::month_start(total.since)?;
+        if total.running {
+            record.running_observed_at = record
+                .running_observed_at
+                .into_iter()
+                .chain(Some(total.until))
+                .max();
+        }
+        let mut month = spend::month_start(record.starts_at)?;
         let mut charges = Vec::new();
         let until = record.ends_at.unwrap_or(now).min(now);
         while month < until {
@@ -80,9 +101,16 @@ impl OverflowService {
             });
             month = end;
         }
-        record.starts_at = total.since;
         record.runtime = charges;
         record.runtime_complete = !total.running || until == now;
+        if record
+            .runtime
+            .iter()
+            .max_by_key(|charge| charge.until)
+            .is_some_and(|charge| !charge.running)
+        {
+            cost_state::missing_observation(record);
+        }
         self.save_cost_state(session, record).await?;
         Ok(true)
     }

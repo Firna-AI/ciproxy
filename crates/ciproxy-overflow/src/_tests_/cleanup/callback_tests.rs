@@ -97,7 +97,7 @@ async fn callback_claims_one_runner_once_then_deletes_and_allows_the_next_start(
             .unwrap()
             .starts
             .push(record(StartPhase::Running));
-        state.snapshot.as_mut().unwrap().spend_limit_usd_micros = Some(50_000);
+        state.snapshot.as_mut().unwrap().spend_limit_usd_micros = Some(500_000);
         state.hashes.insert(id(11), digest(&token));
         let mut accepted = record(StartPhase::Deleting);
         accepted.reported_at = Some(at() + Duration::seconds(90));
@@ -135,7 +135,7 @@ async fn callback_claims_one_runner_once_then_deletes_and_allows_the_next_start(
         view.starts[0].reported_at,
         Some(at() + Duration::seconds(90))
     );
-    assert_eq!(view.spend.known_usd, Decimal::new(318, 4));
+    assert_eq!(view.spend.confirmed_usd, Decimal::new(318, 4));
     assert!(view.spend.complete());
     let mut next = request();
     next.delivery_id = id(21);

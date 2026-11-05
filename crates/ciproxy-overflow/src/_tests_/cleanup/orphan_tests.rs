@@ -11,7 +11,6 @@ use sandbox_interface::{
 use unimock::{MockFn, Unimock, matching};
 
 use crate::api::{Overflow, Retirement, RunnerAuthorityMock};
-use crate::error::Error;
 use crate::provider::{BoatAccountApiMock, RuntimeUsage};
 
 use super::super::fixtures::{Harness, at, capabilities, id, record};
@@ -197,12 +196,11 @@ async fn lost_delete_acknowledgment_never_prices_a_day_of_absent_runtime() {
     snapshot.accounts[0].state.checked_at = Some(at() + Duration::days(1));
     harness.state.lock().unwrap().snapshot = Some(snapshot);
     let view = harness.service.view(id(1)).await.unwrap();
-    assert_eq!(view.spend.known_usd, Decimal::new(318, 4));
+    assert_eq!(view.spend.confirmed_usd, Decimal::new(318, 4));
     assert_eq!(view.spend.unmeasured_runtime, [id(11)]);
-    assert!(matches!(
-        view.scaler_account(at()),
-        Err(Error::AccountingIncomplete)
-    ));
+    assert_eq!(view.spend.pending_usd, Decimal::ZERO);
+    assert_eq!(view.spend.settled_bound_usd, Decimal::new(4302, 4));
+    assert_eq!(view.scaler_account(at()).unwrap().spend.spent, 462_000);
 }
 
 fn managed(runner: u128, delivery: u128, provider: &str) -> BackendManagedSandbox {

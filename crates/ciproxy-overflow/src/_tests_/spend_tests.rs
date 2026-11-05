@@ -64,7 +64,7 @@ async fn runtime_and_start_charge_stop_new_starts_and_a_raised_limit_resumes_the
     }
     *harness.now.lock().unwrap() = at() + Duration::seconds(90);
     let view = harness.service.view(id(1)).await.unwrap();
-    assert_eq!(view.spend.known_usd, Decimal::new(318, 4));
+    assert_eq!(view.spend.confirmed_usd, Decimal::new(318, 4));
     assert!(view.spend.complete());
     let mut next = request();
     next.delivery_id = id(21);
@@ -82,7 +82,7 @@ async fn runtime_and_start_charge_stop_new_starts_and_a_raised_limit_resumes_the
         .snapshot
         .as_mut()
         .unwrap()
-        .spend_limit_usd_micros = Some(50_000);
+        .spend_limit_usd_micros = Some(1_000_000);
     assert!(matches!(
         harness.service.start(id(1), next).await.unwrap(),
         StartOutcome::Waiting(WaitReason::Refused(_))
@@ -140,7 +140,7 @@ async fn new_month_counts_runtime_across_keys_and_organizations_without_repeatin
         snapshot.spend_limit_usd_micros = Some(60_000);
     }
     let view = harness.service.view(id(1)).await.unwrap();
-    assert_eq!(view.spend.known_usd, Decimal::new(524, 4));
+    assert_eq!(view.spend.confirmed_usd, Decimal::new(524, 4));
     assert!(view.spend.complete());
     assert_eq!(view.scaler_account(december).unwrap().spend.spent, 52_400);
 }
@@ -156,6 +156,7 @@ async fn accepted_start_with_no_fee_quote_stays_explicit_in_the_spend_view() {
     let mut ended = record(StartPhase::Ended);
     ended.ends_at = Some(at());
     ended.start_usd = None;
+    ended.start_quote_usd = None;
     ended.runtime_complete = true;
     harness
         .state

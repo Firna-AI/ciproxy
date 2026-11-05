@@ -144,8 +144,28 @@ backend must give ciproxy.
   workspace.
 - The spend does not count other use of the Boat account.
 - The spend limit counts over the calendar month in UTC.
-- Settings under Overflow and the Machines page show the spend of the
-  month against the limit, for example "$61.20 of $200".
+- The limit counts confirmed costs and the pending bound of each start
+  whose cost Boat has not confirmed.
+- The bound uses the published hourly price of the requested Boat size
+  for its whole lifetime, plus its start-fee quote saved before dispatch.
+- The lifetime is 6 hours, or 2 hours on a free trial.
+- A start with no clear outcome gets the bound of the size it requested.
+- Measured partial costs replace the same part of the bound, so no cost
+  counts twice.
+- Real costs replace their bounds, including real costs above the bound.
+- When the lifetime passes without proof of longer running, the remaining
+  bound becomes counted spend. It does not become zero.
+- Budget settlement does not confirm a provider cost or a sandbox end.
+- New starts continue while the limit covers existing costs and bounds
+  together with the prospective start.
+- When a start has no safe bound, new starts wait until that cost resolves.
+- Settings under Overflow and the Machines page show confirmed spend and
+  the pending amount separately against the monthly limit.
+- **Decision:** count full-lifetime bounds for unconfirmed costs. Rejected:
+  holding every new start until Boat confirms, Admin reconciliation by
+  hand, one combined estimate figure, and recovery through a replacement
+  key. Reason: Uncounted costs never pass the limit, and overflow keeps
+  running while the limit has room.
 - At the limit, ciproxy starts no new Boat runner.
 - Jobs then run on own machines only and wait there for free
   [slots](job-routing.md#slots) and free [job disk](job-routing.md#terms).
@@ -155,7 +175,7 @@ backend must give ciproxy.
   limit, with the date when Boat takes jobs again.
 - Boat takes jobs again at the start of the next calendar month in UTC.
 - Boat also takes jobs again at once when the customer raises the limit
-  above the spend.
+  enough to cover the counted spend, pending bounds, and a new start.
 
 ## Refused sandboxes
 

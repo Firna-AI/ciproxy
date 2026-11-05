@@ -4,6 +4,7 @@ use chrono::{DateTime, Datelike, Months, Utc};
 use ciproxy_store_interface::overflow::record::{RuntimeCharge, StartPhase, StartRecord};
 use rust_decimal::Decimal;
 
+use crate::budget;
 use crate::error::{Error, Result};
 use crate::view::Spend;
 
@@ -25,9 +26,13 @@ pub(crate) fn next_month(at: DateTime<Utc>) -> Result<DateTime<Utc>> {
 }
 
 pub(crate) fn current(starts: &[StartRecord], now: DateTime<Utc>) -> Result<Spend> {
-    let month = month_start(now)?.date_naive();
+    let month_at = month_start(now)?;
+    let month = month_at.date_naive();
     let mut spend = Spend {
-        known_usd: Decimal::ZERO,
+        confirmed_usd: Decimal::ZERO,
+        pending_usd: Decimal::ZERO,
+        settled_bound_usd: Decimal::ZERO,
+        unbounded_starts: Vec::new(),
         unknown_start_charges: Vec::new(),
         unmeasured_runtime: Vec::new(),
     };
@@ -35,24 +40,43 @@ pub(crate) fn current(starts: &[StartRecord], now: DateTime<Utc>) -> Result<Spen
         .iter()
         .filter(|start| start.phase != StartPhase::Refused)
     {
-        if month_start(start.starts_at)?.date_naive() == month && start.sandbox.is_some() {
-            match start.start_usd {
-                Some(fee) => spend.known_usd += fee,
-                None => spend.unknown_start_charges.push(start.delivery_id),
-            }
+        let fee_in_month = month_start(start.starts_at)?.date_naive() == month;
+        let (runtime, unallocated) = budget::runtime_evidence(start, month_at)?;
+        spend.confirmed_usd += runtime;
+        if fee_in_month {
+            spend.confirmed_usd += start.start_usd.unwrap_or(Decimal::ZERO);
         }
-        for runtime in start
-            .runtime
-            .iter()
-            .filter(|runtime| runtime.month == month)
-        {
-            spend.known_usd += runtime.usd;
+        let runtime_bound = if budget::runtime_final(start) {
+            Decimal::ZERO
+        } else {
+            budget::runtime_bound(start, month_at)?
         }
-        let relevant = start
-            .ends_at
-            .is_none_or(|end| end >= month_start(now).unwrap_or(now));
-        if relevant && !start.runtime_complete {
+        .max(unallocated);
+        let relevant = fee_in_month || runtime_bound > Decimal::ZERO || runtime > Decimal::ZERO;
+        if !relevant {
+            continue;
+        }
+        if !start.runtime_complete {
             spend.unmeasured_runtime.push(start.delivery_id);
+        }
+        let fee = if fee_in_month && start.start_usd.is_none() {
+            spend.unknown_start_charges.push(start.delivery_id);
+            match start.start_quote_usd {
+                Some(quote) => quote,
+                None => {
+                    spend.unbounded_starts.push(start.delivery_id);
+                    Decimal::ZERO
+                }
+            }
+        } else {
+            Decimal::ZERO
+        };
+        let remaining_runtime = (runtime_bound - runtime).max(Decimal::ZERO);
+        let remaining = fee + remaining_runtime;
+        if budget::expires_at(start)? <= now {
+            spend.settled_bound_usd += remaining;
+        } else {
+            spend.pending_usd += remaining;
         }
     }
     Ok(spend)

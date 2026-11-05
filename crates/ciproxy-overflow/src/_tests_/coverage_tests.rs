@@ -82,7 +82,12 @@ async fn missing_usage(missing_total: bool) {
     }
     let view = harness.service.view(id(1)).await.unwrap();
     assert!(!view.spend.complete(), "missing total: {missing_total}");
-    assert_eq!(view.spend.known_usd, Decimal::new(318, 4));
+    let expected = if missing_total {
+        Decimal::new(318, 4)
+    } else {
+        Decimal::new(462, 3)
+    };
+    assert_eq!(view.spend.confirmed_usd, expected);
     let saved = harness.state.lock().unwrap().snapshot.clone().unwrap();
     assert!(!saved.starts[0].runtime_complete);
     assert_eq!(saved.starts[0].runtime[0].usd, Decimal::new(18, 4));
@@ -244,6 +249,6 @@ async fn failed_retained_key_cost_read_keeps_replacement_metadata_and_saved_cost
     }
     let view = harness.service.view(id(1)).await.unwrap();
     assert_eq!(view.account.unwrap().id, id(44));
-    assert_eq!(view.spend.known_usd, Decimal::new(318, 4));
+    assert_eq!(view.spend.confirmed_usd, Decimal::new(318, 4));
     assert_eq!(view.spend.unmeasured_runtime, [id(11)]);
 }

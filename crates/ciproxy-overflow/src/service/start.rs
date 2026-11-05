@@ -7,6 +7,7 @@ use rust_decimal::Decimal;
 use uuid::Uuid;
 
 use crate::api::{StartOutcome, StartRequest, WaitReason};
+use crate::budget;
 use crate::crypto::{KeyContext, SecretPurpose};
 use crate::error::{Error, Result, ResultExt};
 use crate::secrets::digest;
@@ -74,13 +75,11 @@ impl OverflowService {
             .await?;
         let now = self.dependencies.clock.now();
         let spend = spend::current(&snapshot.starts, now)?;
-        if !spend.complete() {
-            return Err(Error::AccountingIncomplete);
-        }
+        let counted = spend.counted_usd()?;
         let limit = snapshot
             .spend_limit_usd_micros
             .map(|limit| Decimal::new(limit, 6));
-        if limit.is_none_or(|limit| spend.known_usd >= limit) {
+        if limit.is_none_or(|limit| counted >= limit) {
             return Ok(StartOutcome::Waiting(WaitReason::SpendLimit {
                 resumes_at: spend::next_month(now)?,
             }));
@@ -139,7 +138,7 @@ impl OverflowService {
                 input,
             )
             .await?;
-        let record = StartRecord {
+        let mut record = StartRecord {
             delivery_id: request.delivery_id,
             runner_id: request.runner_id,
             organization_id: request.organization_id,
@@ -164,11 +163,27 @@ impl OverflowService {
             starts_at: now,
             ends_at: None,
             billing: None,
-            start_usd: facts.next_start_usd,
+            start_quote_usd: facts.next_start_usd,
+            start_usd: None,
             reported_at: None,
             runtime: Vec::new(),
+            runtime_total: None,
+            running_observed_at: None,
             runtime_complete: false,
         };
+        record.starts_at = self.dependencies.clock.now();
+        snapshot.starts.push(record.clone());
+        let mut month = spend::month_start(record.starts_at)?;
+        while month < budget::expires_at(&record)? {
+            let reserved =
+                spend::current(&snapshot.starts, month.max(record.starts_at))?.counted_usd()?;
+            if limit.is_none_or(|limit| reserved > limit) {
+                return Ok(StartOutcome::Waiting(WaitReason::SpendLimit {
+                    resumes_at: spend::next_month(record.starts_at)?,
+                }));
+            }
+            month = spend::next_month(month)?;
+        }
         let pending = record.clone();
         let hash = digest(&token);
         let reserved = session
