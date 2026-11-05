@@ -1,5 +1,6 @@
 terraform {
   required_version = ">= 1.17.1, < 2.0.0"
+  backend "gcs" {}
   required_providers {
     google = {
       source  = "hashicorp/google"
@@ -21,8 +22,19 @@ provider "google" {
   region  = "europe-west1"
 }
 
-# This first root uses local user credentials and local state. Neither WIF
-# nor a remote state bucket exists until this root has run.
+# The complete seed apply finishes before any bootstrap resource starts.
+# Keep this block in main.tf so the initial local copy enables these APIs.
+resource "google_project_service" "identity" {
+  for_each = toset([
+    "cloudresourcemanager.googleapis.com", "iam.googleapis.com",
+    "iamcredentials.googleapis.com", "sts.googleapis.com",
+  ])
+  service            = each.value
+  disable_on_destroy = false
+}
+
+# bootstrap.py first uses a local-backend copy, then migrates that state to
+# this bucket. Subsequent plans and applies use this remote backend in CI.
 resource "google_storage_bucket" "state" {
   name                        = "ciproxy-${var.environment}-tfstate-${var.project_id}"
   location                    = "europe-west1"

@@ -1,8 +1,10 @@
 name: Deploy production
 
 on:
-  push:
-    tags: [deploy-*]
+  workflow_run:
+    workflows: [Deploy main preview]
+    types: [completed]
+    branches: [main]
 
 permissions:
   contents: read
@@ -13,11 +15,71 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Deploy production
+  plan:
+    if: >-
+      vars.PRODUCTION_DEPLOY_ENABLED == 'true' &&
+      github.repository == 'Firna-AI/ciproxy' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    name: Plan seed, bootstrap, and foundation
     runs-on: ubuntu-24.04
     environment: production
     env:
+      CIPROXY_SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+      PRODUCTION_DEPLOY_ENABLED: ${{ vars.PRODUCTION_DEPLOY_ENABLED }}
+      ALERT_EMAIL: ${{ vars.ALERT_EMAIL }}
+    steps:
+      - name: Checkout the deployment commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+      - name: Check the trusted deployment event
+        run: python3 deploy/scripts/promotion_event.py production "$CIPROXY_SOURCE_SHA"
+      - name: Authenticate the read-only plan identity
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: ciproxy
+          workload_identity_provider: ${{ vars.GCP_PLAN_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_PLAN_SERVICE_ACCOUNT }}
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.17.1
+          terraform_wrapper: false
+      - name: Save and check the infrastructure plans
+        run: |
+          for root in seed bootstrap foundation; do
+            python3 deploy/scripts/terraform.py plan production "$root"
+          done
+      - name: Publish infrastructure plan evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: plan-production-infrastructure-${{ github.run_attempt }}
+          path: .context/plans/production
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+  apply-infrastructure:
+    needs: plan
+    uses: ./.github/workflows/deploy-apply.yml
+    with:
+      environment: production
+      source: ${{ github.event.workflow_run.head_sha }}
+      stage: infrastructure
+
+  workloads:
+    name: Deploy workloads, wait for NEGs, and plan edge
+    needs: apply-infrastructure
+    runs-on: ubuntu-24.04
+    environment: production
+    env:
+      CIPROXY_SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+      PRODUCTION_DEPLOY_ENABLED: ${{ vars.PRODUCTION_DEPLOY_ENABLED }}
       RELEASE_SERVER_IMAGE_DIGEST: ${{ vars.RELEASE_SERVER_IMAGE_DIGEST }}
       CONTROL_PLANE_RUNTIME_READY: ${{ vars.CONTROL_PLANE_RUNTIME_READY }}
       CONTROL_PLANE_IMAGE: ${{ vars.CONTROL_PLANE_IMAGE }}
@@ -25,8 +87,13 @@ jobs:
       PUBLIC_UPTIME_ENABLED: ${{ vars.PUBLIC_UPTIME_ENABLED }}
       CLOUDSDK_CORE_DISABLE_PROMPTS: "1"
     steps:
-      - name: Checkout
+      - name: Checkout the deployment commit
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+      - name: Check the trusted deployment event
+        run: python3 deploy/scripts/promotion_event.py production "$CIPROXY_SOURCE_SHA"
       - name: Set up Node
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
@@ -38,7 +105,7 @@ jobs:
           npm --prefix ts ci
           npm --prefix ts run site:build
           npm --prefix ts run app:export
-      - name: Authenticate through Workload Identity Federation
+      - name: Authenticate the workload identity
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
         with:
           project_id: ciproxy
@@ -56,5 +123,30 @@ jobs:
           terraform_wrapper: false
       - name: Set up Helm
         run: bash deploy/scripts/install-helm.sh
-      - name: Deploy static files, Helm releases, and HTTPS edge
+      - name: Deploy static files and Helm, then wait for NEGs
         run: python3 deploy/scripts/deploy.py production
+      - name: Authenticate the read-only plan identity
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: ciproxy
+          workload_identity_provider: ${{ vars.GCP_PLAN_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_PLAN_SERVICE_ACCOUNT }}
+      - name: Save and check the edge plan
+        run: python3 deploy/scripts/terraform.py plan production edge
+      - name: Publish edge plan evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: plan-production-edge-${{ github.run_attempt }}
+          path: .context/plans/production/edge
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+  apply-edge:
+    needs: workloads
+    uses: ./.github/workflows/deploy-apply.yml
+    with:
+      environment: production
+      source: ${{ github.event.workflow_run.head_sha }}
+      stage: edge
