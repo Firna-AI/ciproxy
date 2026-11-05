@@ -156,3 +156,10 @@ The protocol docs hold the requirements and the decisions in force:
 
 The [mockups README](docs/mockups/README.md) describes the mockup catalogue.
 The mockups are part of the spec.
+
+## Licence
+
+Only the directories with their own `LICENSE` file are open source, under
+Apache-2.0: `crates/ciproxy-agent`, `crates/ciproxy-protocol`,
+`crates/ciproxy-guest`, `crates/ciproxy-cache-sidecar`, `image`, and
+`image/runner-patch`. The rest of this repository has no open licence.
