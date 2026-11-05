@@ -53,7 +53,7 @@ expression: message
         "size": {
           "vcpu": 2,
           "memory_bytes": 8000000000,
-          "disk_bytes": 60000000000
+          "disk_bytes": 80000000000
         },
         "image_id": "ubuntu-image-1",
         "state": {
@@ -67,7 +67,7 @@ expression: message
         "size": {
           "vcpu": 2,
           "memory_bytes": 8000000000,
-          "disk_bytes": 60000000000
+          "disk_bytes": 80000000000
         },
         "image_id": "ubuntu-image-0",
         "state": {

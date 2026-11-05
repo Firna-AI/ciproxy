@@ -40,7 +40,7 @@ pub(super) fn organization() -> Organization {
 
 pub(super) fn labels() -> Vec<Label> {
     [
-        (2, "ciproxy", 2, 8, 60),
+        (2, "ciproxy", 2, 8, 80),
         (3, "ciproxy-4vcpu", 4, 16, 80),
         (4, "ciproxy-8vcpu", 8, 32, 120),
     ]

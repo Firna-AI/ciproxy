@@ -12,10 +12,24 @@ use crate::host_fixtures::{inventory, record};
 
 #[tokio::test]
 async fn repair_preserves_a_ready_or_formatted_area_even_when_host_capacity_changes() {
-    for phase in [Phase::Ready, Phase::Creating] {
+    for (phase, old_minimum) in [
+        (Phase::Ready, false),
+        (Phase::Creating, false),
+        (Phase::Ready, true),
+    ] {
         let mut current = inventory();
-        current.host_bytes = 160_000_000_000;
+        current.host_bytes = 500_000_000_000;
         current.record.as_mut().unwrap().phase = phase;
+        let mut expected = record();
+        if old_minimum {
+            expected.source_capacity = 80_000_000_000;
+            expected.image_budget = 4_000_000_000;
+            expected.bytes = 66_000_003_072;
+            expected.overhead = 2_000_003_072;
+            current.host_bytes = 80_000_000_000;
+            current.backing.as_mut().unwrap().bytes = expected.bytes;
+            current.record = Some(expected.clone());
+        }
         let events = Arc::new(Mutex::new(Vec::new()));
         let mock = Arc::new(Unimock::new((
             claim(),
@@ -38,9 +52,9 @@ async fn repair_preserves_a_ready_or_formatted_area_even_when_host_capacity_chan
                 Event::Start,
                 Event::Reflinks,
                 Event::Directories,
-                Event::Record(record()),
+                Event::Record(expected),
             ],
-            "{phase:?}"
+            "{phase:?}, old_minimum={old_minimum}"
         );
     }
 }

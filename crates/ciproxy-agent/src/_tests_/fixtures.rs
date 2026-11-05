@@ -19,6 +19,7 @@ use crate::controller::{Agent, Controller};
 use crate::image_registry::{ImageLease, ImageLeaseMock};
 use crate::reporting::empty_cache;
 use crate::state::{Identity, MachineState, VmRecord};
+use crate::storage_sizing::DEFAULT_IMAGE_BYTES;
 
 pub(super) fn identity() -> Identity {
     Identity {
@@ -53,7 +54,7 @@ pub(super) fn size() -> VmSize {
     VmSize {
         vcpu: 2,
         memory_bytes: 8 * GIGABYTE,
-        disk_bytes: 60 * GIGABYTE,
+        disk_bytes: 80 * GIGABYTE,
     }
 }
 
@@ -114,6 +115,7 @@ pub(super) fn controller(state: MachineState, mock: Unimock) -> Controller {
         vms: mock.clone(),
         images: mock.clone(),
         cache: mock,
+        image_budget: DEFAULT_IMAGE_BYTES,
     }
 }
 

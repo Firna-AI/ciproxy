@@ -39,7 +39,7 @@ impl Controller {
             {
                 return Err(Error::RunnerMismatch);
             }
-            let available = machine_resources(&report.hardware)
+            let available = machine_resources(&report.hardware, self.image_budget)
                 .available(state.runners.iter().map(|vm| vm.report.size));
             if !available.fits(runner.size) {
                 return Err(Error::Capacity);

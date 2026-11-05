@@ -5,7 +5,14 @@
 // run jobs.
 
 import { unbroken } from "./format.ts";
-import { ax42, machineSlots, miniPc, type Hardware } from "./hardware.ts";
+import {
+  ax42,
+  jobDiskGb,
+  machineSlots,
+  miniPc,
+  type Hardware,
+} from "./hardware.ts";
+import { defaultLabelSize } from "./sizes.ts";
 
 export type SlotState = "busy" | "warm" | "free";
 export type MachineStatus = "healthy" | "draining" | "offline" | "no-slots";
@@ -19,9 +26,13 @@ export type Machine = {
   kvm: boolean;
   warmTarget: number;
   cacheUsedGb: number;
-  /** The disk of the machine cache now: the disk that running jobs leave. */
+  /** The disk of the machine cache now: the job disk that no job VM holds. */
   cacheSizeGb: number;
-  /** The free disk that the agent reported last. */
+  /**
+   * The free disk that the agent reported last: the space that no data uses.
+   * It can be more than the free job disk, because a job VM uses only the
+   * space that it writes.
+   */
   freeDiskGb: number;
   /** The repositories with a Docker disk on the machine, and their space. */
   dockerDisks: { repositories: number; sizeGb: number };
@@ -33,6 +44,15 @@ export const defaultWarmRunners = 2;
 
 /** The agent version of every machine, which is the newest. */
 export const agentVersion = "0.4.2";
+
+/**
+ * The job disk that the job VMs leave to the machine cache, which shares it
+ * with the Docker disks. Each busy or warm slot of a scene holds a job VM of
+ * the label ciproxy.
+ */
+function cacheSpaceGb(hardware: Hardware, jobVms: number): number {
+  return jobDiskGb(hardware) - jobVms * defaultLabelSize.diskGb;
+}
 
 function slots(total: number, busy: number, warm: number): SlotState[] {
   const free = total - busy - warm;
@@ -56,8 +76,8 @@ function machine(
     slots: slots(machineSlots(ax42), busy, warm),
     kvm: true,
     warmTarget: defaultWarmRunners,
-    cacheUsedGb: [182, 167, 154][index - 1] ?? 0,
-    cacheSizeGb: 400,
+    cacheUsedGb: [83, 76, 70][index - 1] ?? 0,
+    cacheSizeGb: cacheSpaceGb(ax42, busy + warm),
     freeDiskGb: 312,
     dockerDisks: {
       repositories: [3, 2, 2][index - 1] ?? 0,
@@ -69,8 +89,8 @@ function machine(
 
 /**
  * office-mini-1 joined on 18 November: two warm runners wait in its slots.
- * They hold 120 GB of the 192 GB that jobs can use, and the cache has the
- * other 72 GB.
+ * They hold 160 GB of the 279 GB that jobs can use, and the cache has the
+ * other 119 GB.
  */
 export const officeMini: Machine = {
   name: "office-mini-1",
@@ -80,8 +100,8 @@ export const officeMini: Machine = {
   kvm: true,
   warmTarget: defaultWarmRunners,
   cacheUsedGb: 6,
-  cacheSizeGb: 72,
-  freeDiskGb: 206,
+  cacheSizeGb: cacheSpaceGb(miniPc, 2),
+  freeDiskGb: 362,
   dockerDisks: { repositories: 0, sizeGb: 0 },
   lastSeen: "3s ago",
 };

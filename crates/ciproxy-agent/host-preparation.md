@@ -77,13 +77,16 @@ Every installation uses the same storage form, including on native XFS:
 | `/var/lib/ciproxy/area.xfs` | One sparse XFS backing file |
 | `/var/lib/ciproxy/area` | Workload mount |
 | `area/images` | Verified bases and image downloads |
-| `area/jailer` | Independent VM jails, root copies, and fresh Docker disks |
+| `area/jailer` | Independent VM jails and disposable root copies |
 | `area/cache` | Prepared directory for machine-cache data |
 | `area/docker` | Reserved directory for later sticky Docker disk integration |
 
 The area contains the complete protocol job disk plus its image reserve.
-Images and measured XFS overhead use only the host quarter.
-The [image budget guide](image-budget.md) explains the provisional setting,
+The installed `e2fsprogs` package supplies `resize2fs`. It grows a larger
+label's private ext4 root before boot, without changing the base image.
+The image budget comes out first, then jobs get three quarters of the rest.
+Measured XFS overhead uses only the remaining host reserve.
+The [image budget guide](image-budget.md) explains the default setting,
 physical write limit, measured sizing, and old-area replacement.
 Hardware reports still use the underlying host capacity.
 They never apply a second reserve to the mounted loop capacity.
@@ -95,6 +98,20 @@ The agent and independent VM units require this mount before they start.
 VM units remain independent of the agent service lifetime.
 The mount uses `loop,rw,nosuid`. It permits devices and execution for jailer.
 It does not use `nodev`, `noexec`, forced unmount, or lazy unmount.
+
+### Combine disks on a machine used only for CI
+
+A machine used only for CI can combine its disks into one filesystem.
+Jobs, the machine cache, and Docker disks are disposable.
+For example, RAID0 or one LVM volume can combine both disks.
+The AX42 calculation uses both 512 GB disks as one 1,024 GB filesystem.
+That capacity fits six default jobs after the image budget and host reserve.
+
+Hetzner's `installimage` mirrors two disks by default.
+A mirror gives one disk's capacity.
+See the [installer's default configuration][installimage-config].
+
+[installimage-config]: https://github.com/hetzneronline/installimage/blob/master/config.sh
 
 ## Repair and ownership
 

@@ -5,6 +5,9 @@ use serde::{Deserialize, Serialize};
 /// The number of bytes in one decimal GB, used for the documented sizes.
 pub const GIGABYTE: u64 = 1_000_000_000;
 
+/// Space for two full images, one download, and image support, apart from jobs.
+pub const DEFAULT_IMAGE_BUDGET_BYTES: u64 = 140 * GIGABYTE;
+
 /// The resources requested by one runner's VM.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct VmSize {
@@ -62,14 +65,35 @@ pub struct Resources {
 }
 
 impl Resources {
-    /// Compute capacity after the CPU, memory, and disk host reserves.
+    /// Compute capacity with the default image budget and host reserves.
     ///
     /// Pass the capacity of the disk used for images, VMs, and machine cache.
     /// Filesystem free bytes are a health measurement, not this capacity.
     pub fn for_machine(threads: u32, memory_bytes: u64, disk_bytes: u64, kvm: bool) -> Self {
+        Self::for_machine_with_image_budget(
+            threads,
+            memory_bytes,
+            disk_bytes,
+            DEFAULT_IMAGE_BUDGET_BYTES,
+            kvm,
+        )
+    }
+
+    /// Subtract images first, then reserve one quarter of the remaining disk.
+    ///
+    /// Pass the persisted image budget used for this machine's area sizing.
+    /// CPU and memory reserves do not depend on the image budget.
+    pub fn for_machine_with_image_budget(
+        threads: u32,
+        memory_bytes: u64,
+        disk_bytes: u64,
+        image_budget_bytes: u64,
+        kvm: bool,
+    ) -> Self {
         Self {
             slots: Slots::for_machine(threads, memory_bytes, kvm),
-            job_disk_bytes: (u128::from(disk_bytes) * 3 / 4) as u64,
+            job_disk_bytes: (u128::from(disk_bytes.saturating_sub(image_budget_bytes)) * 3 / 4)
+                as u64,
         }
     }
 
