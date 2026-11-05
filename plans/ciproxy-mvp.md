@@ -1120,6 +1120,14 @@ Answers of 5 November 2026:
   can stop overflow early, by $0.07 for each start that Boat does not charge.
   `overflow.md` states the rule. Rejected: the saved quote, a second quote
   after the start, and a charged fee from Boat.
+- Item 73, A: the image keeps the full software of `ubuntu-latest`, 58.3 GB.
+  The label `ciproxy` gets 80 GB of disk, and job disks get a root reserve of
+  1%, so a job keeps about 19 GB free. Blacksmith gives the same runner size
+  80 GB. The image budget holds two images and one download during an
+  update, about 135 GB, apart from the job disk. My call: the host reserve
+  stays a quarter of the disk that the image budget leaves. An own machine
+  needs 250 GB of disk. Boat stays on `large`. Rejected: a slim image, and a
+  shared read-only image with a writable layer for each job.
 - Item 70, E: this whole repository becomes public now, in place of a public
   copy of the open parts at launch. The agent builds and releases in public.
   This replaces the code location rule of the foundation plan. The closed
@@ -2021,7 +2029,7 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 71 on 5 November 2026. Items 72, 73, and 74
+The user answered items 54 to 71 and 73 on 5 November 2026. Items 72 and 74
 still wait. The
 conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
@@ -2544,6 +2552,8 @@ keep the letters that the user saw.
 
 ### 73. The full image leaves a job no free disk
 
+**Answer, 5 November 2026:** A.
+
 - **Severity:** High. **Effort:** Medium.
 - **Source:** Implementation, Milestone 10, the full KVM image build of
   5 November 2026.
@@ -2610,8 +2620,7 @@ keep the letters that the user saw.
 - **Recommendation:** A. It keeps the software rule and the agent design,
   it gives the same disk as Blacksmith for the same runner size, and 250 GB
   is small for a CI server. C saves the most disk, at a large cost.
-- **Action:** ask the user, because each option changes the label table,
-  the machine minimum, or the software rule.
+- **Action:** answered A.
 
 ### 74. Preview pods can read production logs
 
