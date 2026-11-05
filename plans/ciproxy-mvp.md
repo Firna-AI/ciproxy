@@ -494,22 +494,38 @@ interface, which needs a user decision.
       server and the conformance harness.
       Merged in `futex-ai/sandbox` #11 as `9658361`, for the four TODOs
       above.
-- [ ] Add `ciproxy-overflow` on `sandbox-interface`, with the Boat adapter
+- [x] Add `ciproxy-overflow` on `sandbox-interface`, with the Boat adapter
       of the reviewed revision. Read the sizes of each account every 5
       minutes. My call: a Boat plan can change at any time.
-- [ ] Pick the cheapest size that fits, or the largest.
-- [ ] Start from the shared snapshot with marks, a private registration
+      My call, 5 November 2026: serialize each workspace with a store
+      session. Reason: deliveries and callbacks need one durable order.
+      Branch: `conductor/ciproxy-mvp-milestone-12-overflow-to-boat`.
+- [x] Pick the cheapest size that fits, or the largest.
+      Branch: `conductor/ciproxy-mvp-milestone-12-overflow-to-boat`.
+- [x] Start from the shared snapshot with marks, a private registration
       file, a token for the end report, a lifetime of 6 hours, or 2 on a
       free trial, and a delivery key for each start.
-- [ ] Delete a sandbox at once when its guest reports the end of its
+      My call, 5 November 2026: use the adapter's trusted controller for
+      the fixed image entrypoint. Reason: the image needs root for Docker
+      and its private namespaces. Persist file delivery before writing.
+      Branch: `conductor/ciproxy-mvp-milestone-12-overflow-to-boat`.
+- [x] Delete a sandbox at once when its guest reports the end of its
       runner. Accept one report for each token.
-- [ ] Delete idle marked sandboxes. Wait out a refusal with a retry time,
+      Branch: `conductor/ciproxy-mvp-milestone-12-overflow-to-boat`.
+- [x] Delete idle marked sandboxes. Wait out a refusal with a retry time,
       drop a size that the plan lacks, and stop Boat starts at a billing
       refusal. Treat `canStart` as a hint, as the spike saw a refusal after
       `canStart: true`. Count the spend as run time and start charges. My
       call: Boat bills these two parts.
-- [ ] Encrypt the keys with Cloud KMS. Test with the mock of
+      My call, 5 November 2026: expose incomplete cost facts explicitly.
+      Reason: missing costs cannot prove room under the spend limit.
+      Branch: `conductor/ciproxy-mvp-milestone-12-overflow-to-boat`.
+- [x] Encrypt the keys with Cloud KMS. Test with the mock of
       `sandbox-interface`.
+      My call, 5 November 2026: bind ciphertext to the workspace, record,
+      and secret kind. Reason: a secret must open only in its own context.
+      Evidence: `.context/ciproxy-mvp/milestone-12/implementor-report.md`.
+      Branch: `conductor/ciproxy-mvp-milestone-12-overflow-to-boat`.
 
 ## Milestone 13: Own machines end to end
 

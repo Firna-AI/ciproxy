@@ -87,6 +87,10 @@ Its registrations include removed machines for historical cost dates.
 The savings read excludes jobs, start counts, and accounting cursors.
 Deleting a job or runner deletes its cursor and preserves its aggregates.
 The metering service supplies all calculation rules and retention dates.
+Boat accounting returns `AccountingIncomplete` when an overflow cost lacks
+a trusted fee or runtime interval.
+Savings snapshots apply that check only to the requested date range.
+They never publish a missing Boat cost as zero or as elapsed outage time.
 
 BillingStore adds the confirmed tier, add-ons, paid bounds, and Free anchor.
 It exposes retry and ended-banner dates without changing job execution.
@@ -94,6 +98,17 @@ BillingSession owns exclusive command and event reconciliation.
 State and event receipts commit atomically.
 App removal stores a durable billing cancellation request.
 Services consume these boundaries through dyn.
+
+OverflowStore adds exclusive workspace sessions for Boat execution.
+It retains immutable delivery identity before provider access.
+Account observations keep typed catalogs, retry times, and refusal state.
+Runner input stays encrypted until launch or cleanup ends its use.
+Callback lookup derives the workspace from a token digest.
+A transactional claim accepts one report for one live runner.
+There is no independent expiry before that runner ends.
+Old keys stay while uncertain creates or live sandboxes reference them.
+Per-month runtime observations keep incomplete costs explicit.
+The overflow service supplies prices, calculations, KMS, and provider calls.
 
 The gateway queries atomically register a machine and its hashed credential.
 GatewayStore reuses TokenStore authority lookup to derive the workspace from
@@ -155,6 +170,7 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
   transitions and immutable ordered lifecycle delivery.
 - [src/metering](src/metering) defines metering facts and history APIs.
 - [src/gateway.rs](src/gateway.rs) defines atomic registration and reports.
+- [src/overflow](src/overflow) defines durable Boat sessions and deliveries.
 
 ### Related Docs
 

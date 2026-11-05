@@ -162,6 +162,10 @@ pub(crate) fn erase_unused_keys(
                  SELECT 1 FROM runners
                  WHERE runners.workspace_id = account.workspace_id
                  AND runners.boat_key_id = account.id AND runners.state <> 'stopped'
+             ) AND NOT EXISTS (
+                 SELECT 1 FROM overflow_starts
+                 WHERE overflow_starts.workspace_id = account.workspace_id
+                 AND overflow_starts.key_id = account.id AND overflow_starts.ends_at IS NULL
              )",
         )
         .bind::<sql_types::Uuid, _>(workspace_id)

@@ -1,0 +1,37 @@
+//! Reject a complete metering projection when required cost facts are missing.
+
+use chrono::NaiveDate;
+use ciproxy_schema::overflow::overflow_starts;
+use ciproxy_store_interface::error::{Error, Result, ResultExt};
+use ciproxy_store_interface::overflow::record::{StartPhase, StartRecord};
+use diesel::prelude::*;
+use uuid::Uuid;
+
+use crate::error::QueryResultExt;
+
+/// A linear BoatCost cannot encode an unknown fee or an unmeasured interval.
+pub(crate) fn require_complete(
+    connection: &mut PgConnection,
+    workspace_id: Uuid,
+    range: Option<(NaiveDate, NaiveDate)>,
+) -> Result<()> {
+    let records = overflow_starts::table
+        .filter(overflow_starts::workspace_id.eq(workspace_id))
+        .select(overflow_starts::record_json)
+        .load::<String>(connection)
+        .store()?;
+    for json in records {
+        let record: StartRecord = serde_json::from_str(&json).internal()?;
+        let relevant = range.is_none_or(|(from, until)| {
+            record.starts_at.date_naive() < until
+                && record.ends_at.is_none_or(|end| end.date_naive() >= from)
+        });
+        if relevant
+            && record.phase != StartPhase::Refused
+            && (!record.runtime_complete || record.start_usd.is_none())
+        {
+            return Err(Error::AccountingIncomplete);
+        }
+    }
+    Ok(())
+}

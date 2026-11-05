@@ -19,6 +19,8 @@ use uuid::Uuid;
 
 use crate::connection::PgStore;
 use crate::error::{QueryResultExt, require_record};
+use crate::gateway_transaction::read_snapshot;
+use crate::overflow::accounting;
 
 use super::{aggregates, boat_cursors, facts, history, job_cursors, snapshot};
 
@@ -77,15 +79,14 @@ impl MeteringStore for PgStore {
         from: NaiveDate,
         until: NaiveDate,
     ) -> Result<SavingsSnapshot> {
-        snapshot::transaction(&mut *self.connection()?)
-            .run(|connection| {
-                Ok(SavingsSnapshot {
-                    machines: facts::registrations(connection, workspace_id)?,
-                    days: aggregates::load(connection, workspace_id, from, until)?,
-                    costs: history::load(connection, workspace_id)?,
-                })
+        read_snapshot(&mut *self.connection()?, |connection| {
+            accounting::require_complete(connection, workspace_id, Some((from, until)))?;
+            Ok(SavingsSnapshot {
+                machines: facts::registrations(connection, workspace_id).store()?,
+                days: aggregates::load(connection, workspace_id, from, until).store()?,
+                costs: history::load(connection, workspace_id).store()?,
             })
-            .store()
+        })
     }
 
     fn save_metering_period(&self, workspace_id: Uuid, period: &Period) -> Result<()> {
@@ -132,14 +133,13 @@ impl MeteringStore for PgStore {
     }
 
     fn boat_accounting(&self, workspace_id: Uuid) -> Result<BoatAccounting> {
-        snapshot::transaction(&mut *self.connection()?)
-            .run(|connection| {
-                Ok(BoatAccounting {
-                    costs: history::load_boat(connection, workspace_id)?,
-                    accounted: boat_cursors::load(connection, workspace_id)?,
-                })
+        read_snapshot(&mut *self.connection()?, |connection| {
+            accounting::require_complete(connection, workspace_id, None)?;
+            Ok(BoatAccounting {
+                costs: history::load_boat(connection, workspace_id).store()?,
+                accounted: boat_cursors::load(connection, workspace_id).store()?,
             })
-            .store()
+        })
     }
 
     fn apply_boat_accounting(

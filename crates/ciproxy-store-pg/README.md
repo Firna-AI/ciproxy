@@ -135,6 +135,25 @@ Async services must call them from blocking workers.
 This crate contains no scheduler, listener, gateway, KMS client, Boat
 client, or runtime composition.
 
+Overflow uses one dedicated advisory-lock connection per workspace.
+Its negative key range is separate from billing and scale-set locks.
+A blocking callback lease waits on that dedicated connection.
+Catalog observations and exact delivery records persist before Boat access.
+Reservation rechecks the active key, workspace settings, organization,
+label, and scale-set ownership under the workspace row lock.
+Adoption saves the provider identity, immutable runner placement, and price
+facts in one transaction.
+Callback claims save token consumption and deletion intent together.
+Refusal records and account restrictions also commit together.
+Key erasure checks unfinished deliveries as well as live runners.
+No query receives a plaintext key or runner registration.
+Metering price facts publish only after a trusted runtime observation.
+Their upserts correct provider start times and every price field.
+An unknown final interval preserves the last trusted price row.
+Boat accounting and relevant savings reads return `AccountingIncomplete`
+while a required fee or runtime interval remains unknown.
+Execution and cleanup do not use those reporting reads.
+
 ## Quick Start
 
 ```rust
@@ -190,6 +209,7 @@ CI starts the database for the existing workspace test phase.
 - [src/error.rs](src/error.rs) maps database failures to interface errors.
 - [src/scale_sets.rs](src/scale_sets.rs) owns advisory lock sessions.
 - [src/boat.rs](src/boat.rs) rotates and erases encrypted keys.
+- [src/overflow](src/overflow) owns durable Boat execution transactions.
 - [src/github](src/github) owns atomic installation setup, repository
   snapshots, durable job revisions, and demand retention.
 - [src/machine_removal.rs](src/machine_removal.rs) preserves removal times.
