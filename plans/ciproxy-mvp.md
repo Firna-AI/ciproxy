@@ -450,8 +450,13 @@ evicts them. Boat runs the stock runner. The cache spike confirms it.
       write item 59 into "Trusted write-back" of `cache.md`.
       Evidence: `.context/ciproxy-mvp/trusted-cache-events/acceptance.md`.
       Branch: `conductor/ciproxy-mvp-milestone-11-trusted-cache-events`.
-- [ ] Orchestrator: run the three live checks of item 54 = E: a push to the
+- [x] Orchestrator: run the three live checks of item 54 = E: a push to the
       default branch, `pull_request_target`, and a job on a ciproxy runner.
+      All passed on 5 November 2026. A push and a dispatch on `main` got
+      `refs/heads/main` with write access, `pull_request_target` got
+      `refs/heads/main` read only, and on a ciproxy runner the `run_id`,
+      `job_id`, and `runner_id` of the token matched the scale set message
+      and the registration. Evidence: `.context/job-ref-research/report.md`.
 - [ ] Check the runtime token of each job in the machine cache, as item 54
       says, and take the full ref from its write scope. Write the rule into
       `cache.md` and `security.md`. A job whose token fails the check fails
@@ -983,6 +988,25 @@ Answers of 5 November 2026:
   repository ran the job of that repository, and the job of the refused
   repository stayed queued with no runner for 101.8 seconds. The probe
   needed a fix of a race in its job check, which Milestone 6 adds.
+
+Design calls for the answers E to item 54 and A to item 55, my calls and those of the research, 5 November 2026:
+
+- The token must name the repository, the run, and the runner of the assigned
+  job. Reason: the token of another job then fails the check.
+- Two or more `ac` entries with the write bit make the job unknown. Reason: each
+  probe job had at most one.
+- The event and the head repository still come from the GitHub API, so the App
+  keeps "Actions" read. Reason: the token has no event field.
+- The machine cache keeps the scope strings of GitHub unchanged, such as
+  `refs/heads/refs/tags/<tag>` for a tag, and compares them exactly with
+  `refs/heads/<default branch>`. Reason: a tag can then never match the default
+  branch.
+- The machine refreshes the public keys of GitHub every 5 minutes, and once more
+  for an unknown `kid`, with a limit on refetches. Reason: a false `kid` cannot
+  then flood GitHub.
+- The machine report counts the unknown jobs by reason, and the token probe
+  becomes an operator script that runs before each image release. Reason: a
+  change of the token by GitHub then shows at once.
 
 Design calls for the answer D to item 56, my calls, 5 November 2026:
 
