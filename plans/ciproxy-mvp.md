@@ -199,11 +199,14 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
         Branch: `codex/m5-terraform-promotion`.
   - [x] User: upgrade the organization. Orchestrator: apply the ruleset.
         Branch: `codex/m5-terraform-promotion`.
-- [ ] Make this repository public, as item 70 says. The orchestrator scans
+- [x] Make this repository public, as item 70 says. The orchestrator scans
       the history, the run logs, and the pull request texts for secrets, and
       checks the workflows and the runner groups. The user changes the
       visibility. Then turn on secret scanning with push protection, and
       require approval of workflow runs from all outside contributors.
+      Done on 5 November 2026: the scans found no secret, the user made the
+      repository public, and an admin read confirmed secret scanning, push
+      protection, and approval for all outside contributors.
 - [x] Rename the staging environment to the main preview of item 53, with
       its hosts under `br-main.preview`, before the first apply.
       Branch: `conductor/ciproxy-mvp-milestone-5-main-preview`.
@@ -1144,6 +1147,36 @@ Answers of 5 November 2026:
   can stop overflow early, by $0.07 for each start that Boat does not charge.
   `overflow.md` states the rule. Rejected: the saved quote, a second quote
   after the start, and a charged fee from Boat.
+- Item 73, A: the image keeps the full software of `ubuntu-latest`, 58.3 GB.
+  The label `ciproxy` gets 80 GB of disk, and job disks get a root reserve of
+  1%, so a job keeps about 19 GB free. Blacksmith gives the same runner size
+  80 GB. The image budget holds two images and one download during an
+  update, about 135 GB, apart from the job disk. My call: the host reserve
+  stays a quarter of the disk that the image budget leaves. An own machine
+  needs 250 GB of disk. Boat stays on `large`. Rejected: a slim image, and a
+  shared read-only image with a writable layer for each job.
+  My call, 5 November 2026: each job VM gets one root disk of its label
+  size, so Docker data shares the free space as on GitHub, and the cached
+  Docker images of the image stay visible. The agent grows the reflink copy
+  of the 80 GB image disk to a bigger label. The empty Docker disk, which
+  the guest never mounts, goes. Milestone 13 attaches a sticky Docker disk
+  where `cache.md` gives one. Reason: the split of the agent left the job
+  two smaller disks and hid the cached images.
+- Item 72, B: `ciproxy.dev` stays on Cloudflare. Production creates Cloud DNS
+  zones for `app.ciproxy.dev` and `get.ciproxy.dev`, and NS records in
+  Cloudflare delegate them. The user adds the site record of `ciproxy.dev`
+  in Cloudflare by hand, once. Rejected: a move to Cloud DNS, and the
+  Cloudflare provider in Terraform.
+- Item 74, A: both namespaces of the shared cluster enforce the Baseline
+  PodSecurity level, with labels that only the operator can change, so no
+  pod mounts `hostPath`. Rejected: a custom admission policy, and a trusted
+  deployment controller.
+- Item 75, A: the cost claim keeps the AX42 with both disks combined into
+  one filesystem of 1,024 GB, for six default jobs. The site and the mockups
+  state this basis, for example RAID0 or one LVM volume. The machine setup
+  docs say that a machine used only for CI can combine its disks, because
+  its jobs, machine cache, and Docker disks are disposable. Rejected: the
+  default mirror of 512 GB, and another machine.
 - Item 70, E: this whole repository becomes public now, in place of a public
   copy of the open parts at launch. The agent builds and releases in public.
   This replaces the code location rule of the foundation plan. The closed
@@ -2045,7 +2078,7 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 71 on 5 November 2026. Item 72 still waits. The
+The user answered items 54 to 75 on 5 November 2026. Item 76 still waits. The
 conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
@@ -2522,6 +2555,8 @@ keep the letters that the user saw.
 
 ### 72. Production DNS expects Cloud DNS, but the domain uses Cloudflare
 
+**Answer, 5 November 2026:** B.
+
 - **Severity:** High. **Effort:** Small.
 - **Source:** Implementation. A public DNS lookup on 5 November 2026.
 - **Category:** Docs or spec.
@@ -2562,5 +2597,214 @@ keep the letters that the user saw.
   three NS records in Cloudflare after the foundation applies.
 - **Recommendation:** A. Terraform then owns every production record, as the
   user asked for no manual production step, with no new provider or secret.
-- **Action:** ask the user, because it moves the DNS and the mail records of
-  the domain away from Cloudflare, which only the user controls.
+- **Action:** answered B.
+
+### 73. The full image leaves a job no free disk
+
+**Answer, 5 November 2026:** A.
+
+- **Severity:** High. **Effort:** Medium.
+- **Source:** Implementation, Milestone 10, the full KVM image build of
+  5 November 2026.
+- **Category:** Docs or spec.
+- **Location:** The label table of `docs/protocol/labels.md`, the machine
+  minimum of `docs/protocol/agent.md`, and
+  `crates/ciproxy-agent/image-budget.md`.
+- **Terms:**
+  - **Image budget:** the disk of an own machine that holds the job images,
+    apart from the job disk.
+  - **Root reserve:** the part of an ext4 disk that only root can use. Its
+    default is 5%.
+- **Background:**
+  - `agent.md` requires the software of the GitHub image that
+    `ubuntu-latest` names. The build of that full set passed all 502
+    upstream checks. It uses 58.3 GB, and its download is 18.3 GB.
+  - The largest parts are the Android SDK with 11.8 GB, .NET with 6.2 GB,
+    the tool cache with 5.6 GB, Haskell with 3.9 GB, Swift with 3.7 GB, and
+    the cached Docker images with 2.7 GB.
+  - With the default root reserve, a job disk of 60 GB leaves a job 0 GB,
+    75 GB leaves 11.2 GB, and 80 GB leaves 15.9 GB. With a reserve of 1%,
+    75 GB leaves 14.2 GB, and 80 GB leaves 19.1 GB.
+  - A standard GitHub-hosted Linux runner promises 14 GB of free disk, on a
+    disk of about 72 GB.
+  - Blacksmith boots the same image as GitHub, in Firecracker microVMs. Its
+    runner with 2 vCPU and 8 GB has 80 GB of disk, and its runner with
+    8 vCPU has 160 GB. Source: the Blacksmith instance types page, read on
+    5 November 2026.
+  - The label `ciproxy` has 60 GB of disk. An own machine needs 80 GB of
+    disk, and its image budget is 4 GB.
+  - Boat `small` and `default` have 51 GB, so they cannot hold the full
+    image. The label already needs Boat `large`, with 111 GB, because of
+    its 60 GB.
+- **Problem:** A job on the label `ciproxy` gets no free disk, and an own
+  machine has no room for the image.
+- **Impact if no action:** Every job on an own machine fails for lack of
+  disk.
+- **Root question:** How does a job get the software of `ubuntu-latest` and
+  enough free disk on an own machine?
+- **Options:**
+  - **A.** Keep the full image. Raise the label disk to 80 GB with a root
+    reserve of 1%, so a job keeps about 19 GB free. Size the image budget
+    for two images and one download during an update, about 135 GB, apart
+    from the job disk. The machine minimum rises from 80 GB to 250 GB of
+    disk. Boat stays on `large`. Effort: Medium.
+  - **B.** Slim the image. Leave out the parts that a setup action installs
+    during the job: Android, Haskell, Swift, Julia, and the cached Docker
+    images. This saves about 23 GB. The 60 GB label then keeps about 23 GB
+    free, and the machine minimum is about 150 GB. A workflow that uses a
+    removed tool without a setup step needs one, which breaks the software
+    rule of `agent.md`. Effort: Medium.
+  - **C.** Share one read-only copy of the full image across the job VMs,
+    and give each job its own writable layer of 20 GB. The job disk then
+    counts only the layer. The machine minimum is about 170 GB, and a
+    machine fits more jobs. It changes the disk model of the merged agent.
+    Effort: Large.
+- **Left out:**
+  - Keep 60 GB and the full image: a job gets no free disk.
+  - A full and a slim image under two labels: each machine then stores and
+    updates both.
+- **Wider fix:** C. It counts the image once for all jobs.
+- **Previous examples:** None found.
+- **Related:** The final disk of Milestone 10 waits for this answer.
+- **Recommendation:** A. It keeps the software rule and the agent design,
+  it gives the same disk as Blacksmith for the same runner size, and 250 GB
+  is small for a CI server. C saves the most disk, at a large cost.
+- **Action:** answered A.
+
+### 74. Preview pods can read production logs
+
+**Answer, 5 November 2026:** A.
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Review of pull request #24, Milestone 5, finding 1.
+- **Category:** Security.
+- **Location:** `deploy/scripts/namespace_access.py`, the namespaces of the
+  shared cluster.
+- **Terms:**
+  - **PodSecurity:** the Kubernetes check that refuses pods whose settings
+    break a standard security level.
+  - **hostPath:** a pod volume that reads files of the cluster machine.
+- **Background:**
+  - Item 68 put both environments in one GKE Autopilot cluster, each in its
+    own namespace.
+  - A push to the primary branch deploys the main preview, so the preview
+    deploy identity can change the pods of the preview namespace.
+  - Autopilot allows read-only `hostPath` volumes under `/var/log`.
+- **Problem:** Neither namespace enforces a PodSecurity level. A preview pod
+  on a machine that also runs production can mount `/var/log` and read the
+  container logs of production.
+- **Impact if no action:** Unreviewed preview code can read production logs.
+  Network policy and the scoped identities do not stop a local file mount.
+- **Root question:** How does the shared cluster keep production files away
+  from preview pods?
+- **Options:**
+  - **A.** Enforce the Baseline PodSecurity level on both namespaces, with
+    labels that only the operator can change. Baseline refuses `hostPath`
+    volumes. Effort: Small.
+  - **B.** Add a custom admission policy that refuses `hostPath` volumes. It
+    keeps the other Autopilot defaults, but adds policy code to maintain.
+    Effort: Medium.
+  - **C.** Replace the free deployment writes with a trusted controller that
+    accepts only image and configuration changes on fixed pod templates.
+    Effort: Large.
+- **Left out:** Separate clusters: item 68 chose one. Network rules: they
+  cannot stop a local file mount. Rules in the committed Helm charts: a
+  preview push can change the charts.
+- **Wider fix:** A. One standard admission level for every workload.
+- **Previous examples:** None found.
+- **Recommendation:** A. It closes the hole with a maintained Kubernetes
+  level and no new code.
+- **Action:** answered A.
+
+### 75. The AX42 cost claim needs a disk basis
+
+**Answer, 5 November 2026:** A.
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation, the workspace of item 73.
+- **Category:** Docs or spec.
+- **Location:** the hardware fixtures of the site and the mockups, and the
+  pricing calculation text of the site.
+- **Terms:**
+  - **RAID1:** two mirrored disks that give the space of one disk.
+  - **RAID0 or one LVM volume:** two disks combined into the space of both,
+    with no mirror.
+- **Background:**
+  - The cost claim of the site counts a Hetzner AX42, with 16 threads,
+    64 GB, and two disks of 512 GB, that runs six default jobs at a time.
+  - Item 73 = A gives each default job 80 GB and the machine an image
+    budget of 140 GB. Six jobs then need one filesystem of 780 GB.
+  - The Hetzner installer mirrors two disks by default, with RAID1. That
+    gives about 512 GB, which runs three default jobs.
+- **Problem:** The six-job claim now needs both disks in one filesystem,
+  which is not the default setup, and no setup text says so.
+- **Impact if no action:** A customer with the default mirror runs three
+  jobs, and saves 65% in this calculation instead of the claimed 80%.
+- **Root question:** Which disk setup of the AX42 do the claim and the
+  fixtures count?
+- **Options:**
+  - **A.** Keep 1,024 GB and six jobs. The site and the mockups state that
+    the example combines both disks, for example with RAID0 or one LVM
+    volume. The machine setup docs say that a machine used only for CI can
+    combine its disks, because jobs, the machine cache, and Docker disks
+    are disposable. Effort: Small.
+  - **B.** Count the default mirror of 512 GB: three jobs and a saving of
+    65%. Update every AX42 scene to show the disk limit. Effort: Medium.
+  - **C.** Count another machine with one disk of at least 1 TB. Check its
+    price, and update the claim and the fixtures. Effort: Medium.
+- **Left out:** Leave the setup unstated: it hides why a default install
+  runs half the jobs. Combine the disks in the agent: it is outside item 73.
+- **Wider fix:** One stated basis for the claim, used by the site and the
+  mockups.
+- **Previous examples:** With 60 GB jobs, six jobs fit in 512 GB, so the old
+  claim did not depend on the setup.
+- **Recommendation:** A. It keeps the machine and the story of the fixtures,
+  and it tells the customer how to get the claimed result.
+- **Action:** answered A.
+
+### 76. The organization forbids the public site buckets
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Implementation, the read-only checks before the GCP setup.
+- **Category:** Process.
+- **Location:** the organization policy `iam.allowedPolicyMemberDomains` of
+  the futex.ai organization, and the public buckets of the foundation.
+- **Terms:**
+  - **Domain-restricted sharing:** the organization policy that allows IAM
+    grants only to members of the futex.ai Google Workspace.
+  - **`allUsers`:** the IAM member for everyone on the internet.
+- **Background:**
+  - The site and the dashboard are static files in buckets. The load
+    balancer serves them through Cloud CDN, so these buckets grant read
+    access to `allUsers`.
+  - The futex.ai organization enforces domain-restricted sharing, set on
+    21 April 2026. Every project inherits it, also `ciproxy`.
+  - The user has the Organization Administrator role. That role can grant
+    the Organization Policy Administrator role, which changes the policy.
+- **Problem:** The first apply of the foundation fails when it grants read
+  access to `allUsers`.
+- **Impact if no action:** The site and the dashboard cannot go online.
+- **Root question:** How can the public files be served while the
+  organization keeps its sharing rule?
+- **Options:**
+  - **A.** Allow all members in the project `ciproxy` only, with a project
+    override of the policy. Other projects keep the rule. Any resource in
+    `ciproxy` can then get a public grant, and only Terraform writes grants
+    there. Effort: Small.
+  - **B.** Keep the rule, and allow all members only on resources with a
+    tag, for example `public-access`. Tag only the site and dashboard
+    buckets in Terraform. It needs the Tag Administrator role and a
+    condition in the organization policy. Effort: Medium.
+  - **C.** Serve the static files from a small web server in the cluster, so
+    no bucket needs a public grant. It adds a workload and changes the
+    deploy design. Effort: Medium.
+- **Left out:** Signed URLs for the whole site: browsers cannot fetch a
+  public site with them.
+- **Wider fix:** B. Only the resources with the tag can be public.
+- **Previous examples:** None found. The projects `mokly-508518` and
+  `internal-498318` keep the rule with no exception.
+- **Recommendation:** A. The project exists to serve a public product,
+  Terraform is the only writer of its grants, and it unblocks the setup
+  today. B protects the project best.
+- **Action:** ask the user, because each option changes an organization
+  policy or the deploy design, outside the project.
