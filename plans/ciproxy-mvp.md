@@ -1120,7 +1120,7 @@ Design calls on the questions of the docs work, my calls, 4 November 2026:
   report. The savings report now covers the whole workspace, which pays
   one price.
 
-Items 54 and 55 wait for the user. They are under "Open items of
+Items 54, 55, and 66 wait for the user. They are under "Open items of
 4 November 2026" at the end of this plan, with the answers of
 5 November 2026 to the other items there. The options check of items 50
 and 51 ran, and its report is in
@@ -1795,8 +1795,8 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 56 to 65 on 5 November 2026. Items 54 and 55 still
-wait. The conversation gave each item in full in the layout of the
+The user answered items 56 to 65 on 5 November 2026. Items 54, 55, and 66
+still wait. The conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
 
@@ -2038,4 +2038,23 @@ runs before the answer.
   - **A.** The user merges #11. Effort: Small.
   - **B.** The user allows the orchestrator to merge it once. Effort: Small.
 - **Recommendation:** A. It keeps the merge rule of that repository.
+- **Action:** ask the user.
+
+### 66. Untrusted events can keep Docker disk changes
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Review of pull request #17, outside the scope. The follow-up
+  item `docker-disk-trusted-events.md` holds it in full.
+- **Background:** "Docker disks" in `cache.md` lets the first job on the
+  default branch keep its changes to the Docker disk of a repository,
+  whatever its event. Item 59 = C limits shared machine-cache entries to the
+  7 trusted events.
+- **Options:**
+  - **A.** Only a job of a trusted event on the default branch keeps its
+    changes. Effort: Small.
+  - **B.** Keep the current rule. Effort: Small.
+  - **C.** Only a `push` job on the default branch keeps its changes.
+    Effort: Small.
+- **Recommendation:** A. One rule then covers the machine cache and the
+  Docker disks.
 - **Action:** ask the user.
