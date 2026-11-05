@@ -21,8 +21,8 @@ printf '/dev/vda / ext4 defaults 0 1\n' | sudo tee "$rootfs/etc/fstab" > /dev/nu
 sudo bash "$definition/rootfs-archive.sh" pack "$rootfs" "$artifacts/rootfs.tar.zst"
 sudo python3 "$definition/measure.py" "$rootfs" > "$work_dir/installed-size.json"
 
-truncate -s "${ROOTFS_BYTES:-60000000000}" "$artifacts/rootfs.ext4"
-sudo mkfs.ext4 -F -d "$rootfs" -L ciproxy-root "$artifacts/rootfs.ext4"
+truncate -s "${ROOTFS_BYTES:-80000000000}" "$artifacts/rootfs.ext4"
+sudo mkfs.ext4 -F -m 1 -d "$rootfs" -L ciproxy-root "$artifacts/rootfs.ext4"
 cp "$work_dir/vmlinux" "$artifacts/vmlinux"
 cp "$work_dir/upstream-software.json" "$artifacts/upstream-software.json"
 cp "$work_dir/runner-images-$RUNNER_IMAGES_COMMIT/images/ubuntu/software-report.json" \

@@ -57,6 +57,10 @@ def check_export(workspace):
     assert (boat / "etc/fstab").read_text() == RELEASE_FSTAB, (
         "Boat archive did not come from the finalized filesystem")
     disk = artifacts / "rootfs.ext4"
+    geometry = run(["dumpe2fs", "-h", str(disk)], root, "ext4-geometry")
+    fields = dict(line.split(":", 1) for line in geometry.splitlines() if ":" in line)
+    assert int(fields["Reserved block count"]) == int(fields["Block count"]) // 100, (
+        "The job disk must reserve one percent of its blocks for root")
     assert disk_file(disk, "/etc/fstab", root, "ext4-fstab").decode() == RELEASE_FSTAB
     expected_acl = [(1, 7, None), (2, 5, 34567), (4, 5, None),
                     (16, 5, None), (32, 5, None)]
