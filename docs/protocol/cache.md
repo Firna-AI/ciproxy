@@ -54,21 +54,33 @@ This doc states the cache rules for jobs on
 
 ## Trusted write-back
 
-- Only a job on the default branch writes entries that every branch can
-  restore.
-- A pull request cannot write an entry that another branch or another pull
-  request restores.
-- A job of a `pull_request_target` event counts as a pull request, also
-  when its ref is the default branch. Reason: its job often runs code from
-  the pull request.
+- Only a job on the default branch writes machine-cache entries that every
+  branch can restore.
+- Only these events can write shared machine-cache entries: `push`,
+  `workflow_dispatch`, `repository_dispatch`, `delete`, `registry_package`,
+  `page_build`, and `schedule`.
+- A job of another event cannot publish a shared machine-cache entry, also
+  when it restores an entry from GitHub.
+- A pull request can write machine-cache entries within its trusted
+  `refs/pull/N/merge` ref only.
+- Another branch or pull request cannot restore those entries.
+- A job with a foreign head repository cannot write the default scope.
 - The cache scope of a save comes from GitHub, not from the job, so the
   code of a job cannot choose it.
 - The control plane reads the ref, the event, and the head repository of
   the run of each job from the GitHub API, as
   [GitHub App permissions](security.md#github-app-permissions) says.
-- **Decision:** only jobs on the default branch write entries for every
-  branch. Rejected: shared writes from every branch, because a pull request
-  could then poison the cache.
+- Direct GitHub writes enabled with `cache-mode: write` follow GitHub's
+  permission rules, as on GitHub-hosted runners.
+- **Decision:** the machine cache follows
+  [GitHub's trusted-event rule][trusted-events] without workflow edits.
+  Rejected: required read-only rights that need workflow edits, and a large
+  runtime-token broker that blocks GitHub's write opt-in.
+- **Decision:** only jobs on the default branch write machine-cache entries
+  for every branch. Rejected: shared writes from every branch, because a
+  pull request could then poison the cache.
+
+[trusted-events]: https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#cache-access-for-low-trust-workflow-triggers
 
 ## Cache tiers
 
