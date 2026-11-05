@@ -1,6 +1,6 @@
 # Deployment DNS setup
 
-Use these operator steps after [shared infrastructure setup](setup.md).
+Use these operator steps after [central data setup](setup.md).
 Both environments use project `ciproxy`. The registrar and current parent
 zone owner supply the required permissions.
 
@@ -17,8 +17,10 @@ The preview zones are in project `ciproxy`:
 Read their name servers from the central root after CI created them:
 
 ```sh
-terraform -chdir=deploy/terraform/shared output -json environments \
-  | jq '.["main-preview"].dns_name_servers'
+terraform -chdir=deploy/terraform/data init -reconfigure \
+  -backend-config=bucket=ciproxy-main-preview-tfstate-ciproxy \
+  -backend-config=prefix=main-preview/data
+terraform -chdir=deploy/terraform/data output -json dns_name_servers
 gcloud dns managed-zones list --project=ciproxy --filter='dnsName=ciproxy.dev.' \
   --format='table(name,nameServers)'
 dig +short NS ciproxy.dev
@@ -43,5 +45,6 @@ gcloud dns record-sets create preview.get.ciproxy.dev. --project=ciproxy \
 At production setup, copy all required MX, TXT, and preview NS records
 into `ciproxy-production`. Keep preview delegation unchanged. The new zone
 has no DNSSEC. Remove any DS record before changing registrar name servers.
-The production name servers come from the same central output's
-`production.dns_name_servers` value.
+For production, reconfigure the same data root to bucket
+`ciproxy-production-tfstate-ciproxy` and prefix `production/data`.
+Its `dns_name_servers` output belongs only to production.

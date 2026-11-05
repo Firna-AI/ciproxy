@@ -71,7 +71,7 @@ class SharedPromotionTests(PromotionCase):
         # One central approval cannot authorize a delete of the separate edge root.
         result = self.policy(root="edge", ci=True)
         self.assertEqual(result.returncode, 1)
-        self.assertIn("deploy/approvals/shared/edge.json", result.stderr)
+        self.assertIn("deploy/approvals/main-preview/edge.json", result.stderr)
 
     def test_operator_manifest_keeps_rbac_and_pod_traffic_in_one_namespace(self):
         result = self.cli("namespace_access.py", "production", "--render")
@@ -109,3 +109,65 @@ class SharedPromotionTests(PromotionCase):
                 self.assertIn("Workload snapshot is stale", result.stderr)
                 calls = [json.loads(line) for line in self.log.read_text().splitlines()]
                 self.assertEqual([call["args"][1] for call in calls if call["tool"] == "terraform"], ["init"])
+
+    def test_production_preview_edge_uses_exact_upstream_artifact_not_latest_state(self):
+        self.trusted("production")
+        path = self.snapshot(run="5678", attempt="3", control_plane_enabled=True)
+        # A later unreviewed snapshot write is not an authoritative input.
+        store = self.root / ".context/remote-states.json"
+        store.write_text(json.dumps({"gs://ciproxy-main-preview-tfstate-ciproxy/main-preview/foundation/default.tfstate":
+                                    '{"source_sha":"forged","allowed_zones":["missing-zone"]}'}))
+        output = self.root / ".context/route-output"
+        self.env["GITHUB_OUTPUT"] = str(output)
+        result = self.cli("ci_roots.py", "production", "preview-edge")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        selected = dict(line.split("=", 1) for line in output.read_text().splitlines())
+        self.assertEqual(selected, {"roots": "edge", "target": "main-preview",
+                                    "evidence_name": "workload-main-preview-3", "evidence_run": "5678"})
+        result = self.cli("terraform.py", "plan", "production", "edge", "--target", "main-preview")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        folder = self.root / ".context/plans/production/edge-main-preview"
+        metadata = json.loads((folder / "metadata.json").read_text())
+        self.assertEqual((metadata["environment"], metadata["target"], metadata["run"], metadata["attempt"]),
+                         ("production", "main-preview", "1234", "1"))
+        self.assertEqual(metadata["workload"], {"environment": "main-preview", "commit": self.source, "run": "5678", "attempt": "3"})
+        inputs = json.loads((folder / "inputs.tfvars.json").read_text())
+        self.assertEqual(inputs["workload"]["allowed_zones"], ["europe-west1-b"])
+        self.assertTrue(inputs["workload"]["control_plane_enabled"])
+        original = json.loads(path.read_text())
+        for field, wrong in (("run", "9999"), ("attempt", "4"), ("commit", "f" * 40), ("environment", "production")):
+            with self.subTest(field=field):
+                path.write_text(json.dumps(dict(original, **{field: wrong})))
+                result = self.cli("terraform.py", "plan", "production", "edge", "--target", "main-preview")
+                self.assertEqual(result.returncode, 1)
+                self.assertIn("Workload snapshot is stale", result.stderr)
+
+    def test_preview_edge_failure_happens_after_independent_production_invalidation(self):
+        self.trusted("production")
+        self.snapshot("production")
+        self.snapshot(run="5678", attempt="3")
+        self.env["FAKE_FAIL_EDGE_PREFIX"] = "main-preview/edge"
+        for action in ("plan", "apply"):
+            result = self.cli("terraform.py", action, "production", "edge")
+            self.assertEqual(result.returncode, 0, result.stderr)
+        result = self.cli("deploy.py", "production", "--phase", "invalidate")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result = self.cli("terraform.py", "plan", "production", "edge", "--target", "main-preview")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result = self.cli("terraform.py", "apply", "production", "edge", "--target", "main-preview")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("preview networkEndpointGroups", result.stdout)
+        calls = [json.loads(line) for line in self.log.read_text().splitlines()]
+        invalidation = next(i for i, call in enumerate(calls) if call["tool"] == "gcloud" and call["args"][:3] == ["compute", "url-maps", "invalidate-cdn-cache"])
+        self.assertEqual(calls[invalidation]["args"][3], "ciproxy-production")
+        applies = [i for i, call in enumerate(calls) if call["tool"] == "terraform" and call["args"][1] == "apply"]
+        self.assertLess(applies[0], invalidation)
+        self.assertGreater(applies[-1], invalidation)
+
+    def test_root_targets_are_bound_and_prelaunch_cannot_select_production(self):
+        self.trusted()
+        result = self.cli("terraform.py", "plan", "main-preview", "data", "--target", "production")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Only production", result.stderr)
+        calls = [json.loads(line) for line in self.log.read_text().splitlines()]
+        self.assertEqual([call for call in calls if call["tool"] == "terraform"], [])

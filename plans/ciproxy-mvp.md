@@ -183,7 +183,7 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
       both operator and CI finish seed before any bootstrap resource starts.
       No state move is needed because nothing has been applied in GCP.
       Branch: `codex/m5-terraform-promotion`.
-- [x] Move both environments into the GCP project `ciproxy`, as item 68
+- [ ] Move both environments into the GCP project `ciproxy`, as item 68
       says: one shared network, cluster, and image registry, with a
       namespace for each environment, and separate databases, KMS keys,
       secrets, buckets, DNS zones, and edges. Scope the CI identities of

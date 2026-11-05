@@ -4,6 +4,7 @@ on:
     branches: [calummoore/ci-proxy-load-balancer, main]
 permissions:
   contents: read
+  actions: read
   id-token: write
 concurrency:
   group: deploy-main-preview

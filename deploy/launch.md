@@ -122,7 +122,24 @@ A switch enabled before the GCP handoff fails before central Terraform
 calls. A switch changed back to false after launch stops production while
 preview remains read-only for central infrastructure.
 
-The first production run creates its cloud resources. It can stop at a
+Production managed state has separate `production/data` and
+`production/edge` prefixes. Neither prelaunch shared nor any environment
+snapshot writer can populate them. Their first plans create resources.
+They never import/adopt objects from shared or preview state.
+
+A prelaunch-created production name must stop its first create. Do not
+store production secrets, publish production job images, grant database
+schema rights, or enable the runtime until the data root applies cleanly.
+Use [unexpected-name recovery](state.md#unexpected-existing-production-name)
+under operator credentials. This adds no inventory gate.
+
+The shared registry is reused. Trusted bootstrap grants only the shared
+node account reader access at project scope in this one-registry project.
+Prelaunch registry lifecycle and shared networking have no IAM setters.
+Retirement therefore leaves no registry grant that unreviewed code could
+install on another account.
+
+The first production run creates its own cloud resources. It can stop at a
 missing release token or namespace. Then finish setup steps 3 to 6 for
 production. The registry already exists. Install its namespace boundary:
 
@@ -132,7 +149,10 @@ python3 deploy/scripts/namespace_access.py production
 
 Store the production release token. Delegate production DNS while retaining
 preview's NS records. Rerun all jobs. Register its CDN key and enable its
-uptime checks only after HTTPS is ready.
+uptime checks only after HTTPS is ready. Production finishes its own edge
+and invalidation before a separate preview data/edge promotion starts.
+That later promotion uses the exact successful upstream workload artifact.
+Preview-only NEG failure can fail that stage without undoing production.
 
 No migration is needed. No previous deployment has applied in either
 project. Spike/test machines stay in `internal-498318`.

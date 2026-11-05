@@ -18,10 +18,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("environment", choices=["main-preview", "production"])
     parser.add_argument("--phase", choices=["workloads", "invalidate"], default="workloads")
+    parser.add_argument("--target", choices=ENVIRONMENTS, help="Central production preview invalidation only.")
     args = parser.parse_args()
-    environment = args.environment
+    environment = args.target or args.environment
+    if args.target and (args.environment != "production" or args.phase != "invalidate"):
+        raise ValueError("Only production can invalidate the promoted preview edge.")
     project = ENVIRONMENTS[environment]
-    foundation = backend(environment, "shared")
+    foundation = backend(environment, "data")
     root = foundation.directory
     scratch = Path(".context/deploy") / environment
     scratch.mkdir(parents=True, exist_ok=True)
@@ -29,9 +32,7 @@ def main():
     if args.phase == "invalidate":
         edge = backend(environment, "edge")
         terraform_init(edge)
-        edges = json.loads(run("terraform", f"-chdir={edge.directory}", "output", "-json",
-                               "environments", capture=True))
-        url_map = edges[environment]["url_map"]
+        url_map = run("terraform", f"-chdir={edge.directory}", "output", "-raw", "url_map", capture=True).strip()
         run("gcloud", "compute", "url-maps", "invalidate-cdn-cache", url_map,
             "--path=/*", f"--project={project}")
         return
@@ -40,7 +41,7 @@ def main():
     digest, runtime_enabled, control_image = runtime_configuration(os.environ)
     terraform_init(foundation)
     config = json.loads(run("terraform", f"-chdir={root}", "output", "-json",
-                            "environments", capture=True))[environment]["deployment"]
+                            "deployment", capture=True))
     if not runtime_enabled:
         print("Control-plane runtime stays disabled. The current binary has no HTTP service.",
               flush=True)

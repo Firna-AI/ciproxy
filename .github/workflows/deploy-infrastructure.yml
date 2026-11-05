@@ -10,6 +10,7 @@ on:
         type: string
 permissions:
   contents: read
+  actions: read
   id-token: write
 jobs:
   plan-trust:
@@ -42,13 +43,30 @@ jobs:
       environment: ${{ inputs.environment }}
       source: ${{ inputs.source }}
       scope: shared
+  plan-data:
+    needs: [plan-shared, apply-shared]
+    if: ${{ always() && !cancelled() && needs.plan-shared.result == 'success' && (needs.apply-shared.result == 'success' || needs.apply-shared.result == 'skipped') }}
+    uses: ./.github/workflows/deploy-plan.yml
+    with:
+      environment: ${{ inputs.environment }}
+      source: ${{ inputs.source }}
+      scope: data
+  apply-data:
+    needs: plan-data
+    if: needs.plan-data.outputs.roots != ''
+    uses: ./.github/workflows/deploy-apply.yml
+    with:
+      environment: ${{ inputs.environment }}
+      source: ${{ inputs.source }}
+      scope: data
+
   required:
     if: always()
-    needs: [plan-trust, apply-trust, plan-shared, apply-shared]
+    needs: [plan-trust, apply-trust, plan-shared, apply-shared, plan-data, apply-data]
     runs-on: ubuntu-24.04
     steps:
       - name: Require the full promotion
         env:
           RESULTS: ${{ toJSON(needs) }}
         run: |
-          python3 -c 'import json,os; n=json.loads(os.environ["RESULTS"]); assert all(n[k]["result"] == "success" for k in ("plan-trust","plan-shared")); assert all(n[k]["result"] in ("success","skipped") for k in ("apply-trust","apply-shared"))'
+          python3 -c 'import json,os; n=json.loads(os.environ["RESULTS"]); assert all(n[k]["result"] == "success" for k in ("plan-trust","plan-shared","plan-data")); assert all(n[k]["result"] in ("success","skipped") for k in ("apply-trust","apply-shared","apply-data"))'

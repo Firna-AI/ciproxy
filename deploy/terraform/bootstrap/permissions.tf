@@ -2,11 +2,15 @@
 # owners. Their providers require protected main and the reusable apply job.
 locals {
   trust_roles = toset([
-    "roles/serviceusage.serviceUsageAdmin", "roles/resourcemanager.projectIamAdmin", "roles/viewer",
+    "roles/serviceusage.serviceUsageAdmin", "roles/resourcemanager.projectIamAdmin",
     "roles/iam.serviceAccountAdmin", "roles/iam.workloadIdentityPoolAdmin",
     "roles/iam.roleAdmin", "roles/resourcemanager.tagAdmin",
   ])
   shared_accounts = toset(["shared_preview", "shared_production"])
+  account_environments = {
+    shared_preview    = ["main-preview"]
+    shared_production = ["main-preview", "production"]
+  }
 }
 resource "google_project_iam_member" "trust" {
   for_each = { for pair in setproduct(["trust_preview", "trust_production"], local.trust_roles) : "${pair[0]}:${pair[1]}" => pair }
@@ -30,12 +34,10 @@ resource "google_project_iam_member" "shared_plan" {
 # Storage is split out below to exclude every trust/state bucket from policy
 # changes. GKE gets no Kubernetes object verbs and no getCredentials permission.
 resource "google_project_iam_member" "shared" {
-  for_each = { for pair in setproduct(local.shared_accounts, [
-    "roles/compute.networkAdmin", "roles/compute.securityAdmin",
-    "roles/compute.loadBalancerAdmin", "roles/servicenetworking.networksAdmin",
-    "roles/cloudsql.admin", "roles/artifactregistry.admin", "roles/dns.admin",
-    "roles/monitoring.editor", "roles/serviceusage.serviceUsageAdmin",
-  ]) : "${pair[0]}:${pair[1]}" => pair }
+  for_each = merge(
+    { for role in ["roles/cloudsql.admin", "roles/servicenetworking.networksAdmin", "roles/serviceusage.serviceUsageAdmin"] : "shared_preview:${role}" => ["shared_preview", role] },
+    { for role in ["roles/compute.networkAdmin", "roles/compute.securityAdmin", "roles/compute.loadBalancerAdmin", "roles/servicenetworking.networksAdmin", "roles/cloudsql.admin", "roles/dns.admin", "roles/monitoring.editor", "roles/serviceusage.serviceUsageAdmin"] : "shared_production:${role}" => ["shared_production", role] },
+  )
   project = var.project_id
   role    = each.value[1]
   member  = "serviceAccount:${google_service_account.ci[each.value[0]].email}"
@@ -68,8 +70,10 @@ resource "google_project_iam_member" "shared_secret" {
   role     = "roles/secretmanager.admin"
   member   = "serviceAccount:${google_service_account.ci[each.key].email}"
   condition {
-    title      = "environment-secret-containers"
-    expression = "resource.name.startsWith('projects/${data.google_project.current.number}/secrets/ciproxy-main-preview-') || resource.name.startsWith('projects/${data.google_project.current.number}/secrets/ciproxy-production-')"
+    title = "environment-secret-containers"
+    expression = join(" || ", [for env in local.account_environments[each.key] :
+      "resource.name.startsWith('projects/${data.google_project.current.number}/secrets/ciproxy-${env}-')"
+    ])
   }
 }
 data "google_project" "current" { project_id = var.project_id }
@@ -79,8 +83,10 @@ resource "google_project_iam_member" "shared_kms" {
   role     = "roles/cloudkms.admin"
   member   = "serviceAccount:${google_service_account.ci[each.key].email}"
   condition {
-    title      = "environment-key-rings"
-    expression = "resource.name.startsWith('projects/${var.project_id}/locations/europe-west1/keyRings/ciproxy-main-preview') || resource.name.startsWith('projects/${var.project_id}/locations/europe-west1/keyRings/ciproxy-production')"
+    title = "environment-key-rings"
+    expression = join(" || ", [for env in local.account_environments[each.key] :
+      "resource.name == 'projects/${var.project_id}/locations/europe-west1/keyRings/ciproxy-${env}' || resource.name.startsWith('projects/${var.project_id}/locations/europe-west1/keyRings/ciproxy-${env}/')"
+    ])
   }
 }
 resource "google_project_iam_custom_role" "bucket_metadata" {
@@ -95,7 +101,7 @@ resource "google_project_iam_member" "bucket_metadata" {
   member   = "serviceAccount:${google_service_account.ci[each.key].email}"
   condition {
     title = "public-and-image-buckets-only"
-    expression = join(" || ", [for pair in setproduct(local.environments, ["site", "dashboard", "images"]) :
+    expression = join(" || ", [for pair in setproduct(local.account_environments[each.key], ["site", "dashboard", "images"]) :
       "resource.name == 'projects/_/buckets/ciproxy-${pair[0]}-${pair[1]}-${var.project_id}'"
     ])
   }

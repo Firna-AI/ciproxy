@@ -5,13 +5,6 @@ resource "google_artifact_registry_repository" "runtime" {
   depends_on    = [google_project_service.service]
 }
 
-resource "google_artifact_registry_repository_iam_member" "nodes" {
-  location   = local.region
-  repository = google_artifact_registry_repository.runtime.name
-  role       = "roles/artifactregistry.reader"
-  member     = "serviceAccount:${local.node_account}"
-}
-
 resource "google_container_cluster" "main" {
   name             = local.prefix
   location         = local.region

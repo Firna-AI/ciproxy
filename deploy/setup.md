@@ -54,7 +54,7 @@ script uses a temporary local backend until the state bucket exists. It
 then asks Terraform to migrate seed state to `trust/seed`. Review both
 locations. It never forces an old local copy over remote state.
 
-Bootstrap prepares all six remote backends with operator credentials.
+Bootstrap prepares all nine remote backends with operator credentials.
 Plan identities cannot create state. It creates both environments' CI and
 runtime identities, plus central identities. It creates no production
 SQL, secrets, application buckets, zones, or workloads. Back up
@@ -122,7 +122,7 @@ Deploy copies it through standard input to
 
 Follow [DNS setup](dns.md). Preview has three independent delegated zones.
 At production launch, retain all preview NS records in the new production
-parent zone. The central infrastructure output gives each zone's name
+parent zone. The central environment data output gives each zone's name
 servers before its edge is deployed.
 
 ## 6. Set GitHub variables
@@ -171,14 +171,24 @@ Push to the primary branch, or rerun all jobs of its last push run. After
 that branch merges, use protected `main`. A normal run has this order:
 
 1. Plan/apply seed and bootstrap when the caller can change trust.
-2. Plan/apply central infrastructure when the caller is its phase owner.
+2. Plan/apply shared core and this environment's central data root when
+   the caller is its phase owner.
 3. Build and deploy this environment's static files and Helm releases.
 4. Wait for all configured NEGs. Save the actual workload inputs.
 5. Plan/apply this environment's ready snapshot with separate identities.
-6. Plan/apply central edge when the caller is its phase owner.
-7. Invalidate only this environment's CDN and wait for completion.
+6. Plan/apply this environment's central edge from its current immutable
+   workload artifact when the caller is its phase owner.
+7. Invalidate this environment's CDN and wait for completion.
+8. Production then promotes preview data and its separate edge. It reads
+   the exact successful preview run and attempt, never latest record state.
+   A missing preview NEG cannot block production's completed invalidation.
 
-The first run can stop until its image, token, or namespace exists. Fix
+The first run can stop until its image, token, or namespace exists.
+Production data/edge state starts empty and prelaunch cannot write it.
+Do not populate production secrets or the database until its data apply
+passes. A preexisting name causes a create failure, not adoption. Follow
+[state recovery](state.md#unexpected-existing-production-name) without
+importing unknown production objects. Fix
 that input and rerun all jobs. No apply stage creates a replacement plan.
 Production follows only a successful preview push of the exact `main`
 commit. See [promotion](promotion.md) for bindings and recovery.
@@ -218,6 +228,7 @@ changing the flag. Checks run each minute from Europe, USA, and Asia
 Pacific. Alerts need two failing locations for five minutes.
 
 After launch, a preview flag or address update reaches central edge on the
-production promotion of the same successful preview commit. It never uses
+separate preview-edge stage after production's own completed deployment. It
+never uses
 production's flag or address for preview. Follow [operations](operations.md)
 for job images, database grants, runtime enablement, and rotation.

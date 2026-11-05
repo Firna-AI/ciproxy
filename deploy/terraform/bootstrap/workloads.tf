@@ -64,7 +64,7 @@ resource "google_project_iam_member" "tag_binding" {
   member   = "serviceAccount:${google_service_account.ci[each.key].email}"
 }
 resource "google_tags_tag_value_iam_member" "tag_user" {
-  for_each  = { for pair in setproduct(local.environments, local.shared_accounts) : "${pair[0]}:${pair[1]}" => pair }
+  for_each  = { for pair in setproduct(local.environments, local.shared_accounts) : "${pair[0]}:${pair[1]}" => pair if pair[1] == "shared_production" || pair[0] == "main-preview" }
   tag_value = google_tags_tag_value.environment[each.value[0]].id
   role      = "roles/resourcemanager.tagUser"
   member    = "serviceAccount:${google_service_account.ci[each.value[1]].email}"

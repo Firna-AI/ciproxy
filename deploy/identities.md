@@ -8,12 +8,12 @@ edges separate.
 | Account | Boundary |
 | --- | --- |
 | Operator | Own Google account. Initial seed, trust, namespace RBAC, production handoff, secrets, and recovery. |
-| `ciproxy-<env>-plan` | Read its state and shared outputs. Create/delete only its exact `foundation/default.tflock`. Read the two prelaunch account statuses. No state writes or secret values. |
-| `ciproxy-<env>-apply` | Write only its own snapshot state bucket. Read shared outputs and prelaunch status. No project admin or Kubernetes object permissions. |
+| `ciproxy-<env>-plan` | Read only its snapshot prefix and list workspace object names. Create/delete only its exact `foundation/default.tflock`. Read the two prelaunch account statuses. No state writes or secret values. |
+| `ciproxy-<env>-apply` | Write only its own `foundation/` snapshot prefix. Read its record and prelaunch status. No project admin or Kubernetes object permissions. |
 | `ciproxy-<env>-deploy` | Write its own public static buckets. Read its own release token. Connect to the cluster. Operate only its namespace through Kubernetes RBAC. Invalidate only its tagged URL map. Read global operation completion. |
 | `ciproxy-shared-plan`, `ciproxy-shared-prod-plan` | Central metadata/state reads and exact central lock writes. No state writes or secret values. No Kubernetes object reads. Separate caller trust for preview and production. Preview central plan retires at launch. |
-| `ciproxy-shared-preview-apply` | Central cloud resources before launch. No project IAM, custom-role, or federation administration. Runtime policy writes name preview only. No Kubernetes object verbs. Permanently disabled at launch. |
-| `ciproxy-shared-prod-apply` | Central cloud resources after launch. Production workflow on protected `main` only. Same resource permissions as prelaunch shared apply. |
+| `ciproxy-shared-preview-apply` | Core and preview cloud resources before launch. No production state writes. No project IAM, custom-role, or federation administration. Runtime policy writes name preview only. No Kubernetes object verbs. Permanently disabled at launch. |
+| `ciproxy-shared-prod-apply` | Central cloud resources after launch. Production workflow on protected `main` only. Production/preview central state writes. Broader cloud roles than prelaunch shared apply. |
 | `ciproxy-trust-preview-apply` | Seed and bootstrap on protected `main` before launch. Effective owner power through IAM administration. Permanently disabled at launch. |
 | `ciproxy-trust-prod-apply` | Seed and bootstrap from production on protected `main`. Effective owner power through IAM administration. |
 | `ciproxy-shared-gke` | Node logging/monitoring and read access to the single runtime image registry. |
@@ -24,12 +24,24 @@ are effectively owners even without the predefined Owner role. This is a
 separate central authority. The environment accounts and the
 preview-accessible shared account do not have that authority.
 
-`permissions.tf`, `state.tf`, and `workloads.tf` under
-`terraform/bootstrap` define these grants. Shared apply gets central
-network, SQL, registry, DNS, monitoring, and service permissions. Its
-storage metadata condition names only the six application buckets. It
-cannot change IAM on the trust or state buckets. Secret and KMS grants
-name the environment resources. Its node `actAs` grant names one account.
+`terraform/bootstrap` defines all grants. [State ownership](state.md) gives
+prefix-level writes and reads. Environment record accounts cannot edit
+managed cloud state, including preview data and edge. GCS workspace
+listing has a separate object-name-only role. Prelaunch planning locks
+name only trust, core, and preview managed lock objects, never production.
+
+Prelaunch compute, DNS, monitoring, and registry lifecycle use explicit
+permissions without shared-object IAM setters. Secret/KMS/bucket policy
+rights name preview only. Cloud SQL database/user APIs remain project-wide
+because GCP cannot scope them. Protected production state prevents
+adoption of objects they could precreate. A name collision fails creation.
+
+Trusted bootstrap owns the shared node's `roles/artifactregistry.reader`
+project grant. The project has one registry. The node identity is shared
+platform infrastructure, not an environment deploy/runtime identity.
+Prelaunch registry lifecycle has create/get/update/delete and no IAM
+setter. It cannot install a persistent registry admin on another account.
+Both phase owners have node `actAs` on one account only.
 
 ## Operator permissions
 

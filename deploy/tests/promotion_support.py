@@ -24,7 +24,7 @@ class PromotionCase(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
         shutil.copytree(ROOT / "deploy/scripts", self.root / "deploy/scripts")
-        for name in ("terraform/seed", "terraform/bootstrap", "terraform/shared", "terraform/shared-edge", "environments/main-preview",
+        for name in ("terraform/seed", "terraform/bootstrap", "terraform/shared", "terraform/edge", "terraform/data", "environments/main-preview",
                      "environments/production", "terraform/modules/foundation"):
             location = self.root / "deploy" / name
             location.mkdir(parents=True, exist_ok=True)
@@ -75,6 +75,16 @@ class PromotionCase(unittest.TestCase):
             self.commit()
         return path
 
+    def snapshot(self, environment="main-preview", run="1234", attempt="1", **inputs):
+        path = self.root / ".context/deploy" / environment / "ready-inputs.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        values = {"control_plane_enabled": False, "enable_uptime_checks": False,
+                  "notification_emails": [environment + "@example.invalid"],
+                  "allowed_zones": ["europe-west1-b"], "source_sha": self.source}
+        path.write_text(json.dumps({"environment": environment, "commit": self.source,
+                                    "run": run, "attempt": attempt, "inputs": dict(values, **inputs)}))
+        return path
+
     def policy(self, environment="main-preview", root="edge", ci=False):
         return self.cli("terraform_policy.py", "check", environment, root, str(self.plan),
                         env=dict(self.env, GITHUB_ACTIONS=str(ci).lower()))
@@ -84,7 +94,7 @@ class PromotionCase(unittest.TestCase):
         event = {"repository": repository, "after": self.source}
         if environment == "production":
             event["workflow_run"] = {
-                "name": "Deploy main preview", "status": "completed", "conclusion": "success",
+                "id": 5678, "run_attempt": 3, "name": "Deploy main preview", "status": "completed", "conclusion": "success",
                 "event": "push", "head_branch": "main", "head_sha": self.source,
                 "path": ".github/workflows/deploy-main-preview.yml",
                 "repository": repository, "head_repository": repository,

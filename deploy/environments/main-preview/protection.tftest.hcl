@@ -11,6 +11,7 @@ run "database_and_secret_protection" {
     domain      = "ciproxy.dev"
     shared = {
       network_id         = "projects/ciproxy/global/networks/ciproxy-shared"
+      allowed_zones      = ["europe-west1-b", "europe-west1-c", "europe-west1-d"]
       cluster_name       = "ciproxy-shared"
       runtime_repository = "europe-west1-docker.pkg.dev/ciproxy/ciproxy-shared-runtime"
     }

@@ -26,6 +26,11 @@ if tool == "gh":
 elif tool == "terraform":
     root = Path(args[0].split("=", 1)[1])
     action = args[1]
+    selected = root / ".terraform/current-prefix"
+    prefix = selected.read_text() if selected.exists() else "main-preview/data"
+    if action == "apply" and prefix == os.environ.get("FAKE_FAIL_EDGE_PREFIX"):
+        print("Error 404: preview networkEndpointGroups/NEG was not found")
+        sys.exit(1)
     if action == "plan":
         Path(next(arg[5:] for arg in args if arg.startswith("-out="))).write_bytes(b"SAVED-BINARY")
         print("Hand-worked saved plan")
@@ -46,6 +51,8 @@ elif tool == "terraform":
         prefix = next((arg.split("=", 2)[2] for arg in args
                        if arg.startswith("-backend-config=prefix=")), None)
         if bucket and prefix:
+            selected.parent.mkdir(parents=True, exist_ok=True)
+            selected.write_text(prefix)
             store = Path(os.environ["FAKE_REMOTE_STATES"])
             states = json.loads(store.read_text())
             initial = ((root / "terraform.tfstate").read_text() if "-migrate-state" in args
@@ -57,8 +64,8 @@ elif tool == "terraform":
             backend.parent.mkdir(parents=True, exist_ok=True)
             backend.write_text('{"backend":{"type":"gcs"}}')
     if action == "output":
-        if args[-1] == "environments":
-            print(json.dumps({"main-preview": {"url_map": "ciproxy-main-preview", "deployment": {
+        if args[-1] == "deployment":
+            print(json.dumps({
                 "project_id": "ciproxy", "region": "europe-west1",
                 "cluster_name": "ciproxy-shared", "prefix": "ciproxy-main-preview",
                 "namespace": "ciproxy-main-preview",
@@ -68,9 +75,9 @@ elif tool == "terraform":
                 "buckets": {"site": "site-bucket", "dashboard": "app-bucket"},
                 "control_plane_account": "runtime@example.invalid", "sql_connection": "test:eu:sql",
                 "sql_user": "runtime", "kms_key": "test-key", "secrets": {},
-            }}}))
+            }))
         elif args[-1] == "url_map":
-            print("ciproxy-main-preview")
+            print("ciproxy-production" if prefix.startswith("production/") else "ciproxy-main-preview")
         else:
             print("{}")
 elif tool == "gcloud" and args[:3] == ["iam", "service-accounts", "describe"]:

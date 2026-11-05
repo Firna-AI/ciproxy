@@ -12,7 +12,7 @@ variable "domain" {
 
 locals {
   region          = "europe-west1"
-  allowed_zones   = ["europe-west1-b", "europe-west1-c", "europe-west1-d"]
+  allowed_zones   = var.shared.allowed_zones
   prefix          = "ciproxy-${var.environment}"
   control_account = "ciproxy-${var.environment}-control@${var.project_id}.iam.gserviceaccount.com"
   ci_email        = "ciproxy-${var.environment}-deploy@${var.project_id}.iam.gserviceaccount.com"
@@ -35,5 +35,5 @@ locals {
 }
 
 variable "shared" {
-  type = object({ network_id = string, cluster_name = string, runtime_repository = string })
+  type = object({ network_id = string, cluster_name = string, runtime_repository = string, allowed_zones = list(string) })
 }

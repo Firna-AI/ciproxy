@@ -6,6 +6,7 @@ on:
     branches: [main]
 permissions:
   contents: read
+  actions: read
   id-token: write
 concurrency:
   group: deploy-production
@@ -143,3 +144,31 @@ jobs:
           terraform_wrapper: false
       - name: Invalidate own CDN cache
         run: python3 deploy/scripts/deploy.py production --phase invalidate
+  plan-preview-data:
+    needs: invalidate
+    uses: ./.github/workflows/deploy-plan.yml
+    with:
+      environment: production
+      source: ${{ github.event.workflow_run.head_sha }}
+      scope: preview-data
+  apply-preview-data:
+    needs: plan-preview-data
+    uses: ./.github/workflows/deploy-apply.yml
+    with:
+      environment: production
+      source: ${{ github.event.workflow_run.head_sha }}
+      scope: preview-data
+  plan-preview-edge:
+    needs: apply-preview-data
+    uses: ./.github/workflows/deploy-plan.yml
+    with:
+      environment: production
+      source: ${{ github.event.workflow_run.head_sha }}
+      scope: preview-edge
+  apply-preview-edge:
+    needs: plan-preview-edge
+    uses: ./.github/workflows/deploy-apply.yml
+    with:
+      environment: production
+      source: ${{ github.event.workflow_run.head_sha }}
+      scope: preview-edge

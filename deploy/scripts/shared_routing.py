@@ -46,10 +46,16 @@ def routing(environment, production_ready, context):
     }
 
 
-def require_writer(environment, root, context):
+def require_writer(environment, root, context, target=None):
+    target = target or environment
+    if target != environment and (environment != "production" or target != "main-preview"
+                                  or root not in ("data", "edge")):
+        raise ValueError("Only production can promote preview data or edge roots.")
     if root == "foundation":
         return
     selection = routing(environment, launched(), context)
+    if target == "production" and root in ("data", "edge") and environment != "production":
+        raise ValueError("Production resources require the production caller.")
     permission = "trust_write" if root in ("seed", "bootstrap") else "shared_write"
     if not selection[permission]:
         raise ValueError(f"{environment} reads central {root} after the launch handoff.")

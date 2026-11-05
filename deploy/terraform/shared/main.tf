@@ -27,25 +27,14 @@ resource "google_project_service" "service" {
   service            = each.value
   disable_on_destroy = false
 }
-module "environment" {
-  for_each    = local.environments
-  source      = "../modules/foundation"
-  project_id  = "ciproxy"
-  environment = each.key
-  domain      = "ciproxy.dev"
-  shared = {
+module "zones" { source = "../modules/zones" }
+output "platform" {
+  value = {
     network_id         = google_compute_network.main.id
     cluster_name       = google_container_cluster.main.name
     runtime_repository = "europe-west1-docker.pkg.dev/ciproxy/${google_artifact_registry_repository.runtime.repository_id}"
+    allowed_zones      = module.zones.allowed_zones
   }
-  depends_on = [google_service_networking_connection.sql, google_project_service.service]
-}
-output "environments" {
-  value = { for env, stack in module.environment : env => {
-    deployment       = stack.deployment
-    edge             = stack.edge
-    dns_name_servers = stack.dns_name_servers
-  } }
 }
 output "production_enabled" { value = var.production_enabled }
 

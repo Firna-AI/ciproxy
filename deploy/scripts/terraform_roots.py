@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 ENVIRONMENTS = {"main-preview": "ciproxy", "production": "ciproxy"}
-ROOTS = ("seed", "bootstrap", "shared", "foundation", "edge")
+ROOTS = ("seed", "bootstrap", "shared", "data", "foundation", "edge")
 REPOSITORY = "Firna-AI/ciproxy"
 PRIMARY = "refs/heads/calummoore/ci-proxy-load-balancer"
 
@@ -15,9 +15,7 @@ def directory(environment, root):
     """Return the source directory of a supported root instance."""
     if environment not in ENVIRONMENTS or root not in ROOTS:
         raise ValueError("Use a supported environment and Terraform root.")
-    if root == "edge":
-        return Path("deploy/terraform/shared-edge")
-    if root in ("seed", "bootstrap", "shared"):
+    if root in ("seed", "bootstrap", "shared", "data", "edge"):
         return Path("deploy/terraform") / root
     base = Path("deploy/environments") / environment
     return base
@@ -40,14 +38,14 @@ def backend(environment, root):
     """Select the same backend for operator setup, promotion, and workloads."""
     location = directory(environment, root)
     owner = "trust" if root in ("seed", "bootstrap") else (
-        "shared" if root in ("shared", "edge") else environment)
+        "shared" if root == "shared" else environment)
     return Backend(location, f"ciproxy-{owner}-tfstate-ciproxy", f"{owner}/{root}")
 
 
 def scope(environment, root):
     directory(environment, root)
     owner = "trust" if root in ("seed", "bootstrap") else (
-        "shared" if root in ("shared", "edge") else environment)
+        "shared" if root == "shared" else environment)
     return f"ciproxy/{owner}/{root}"
 
 

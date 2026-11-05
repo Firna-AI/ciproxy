@@ -57,7 +57,11 @@ jobs:
       - name: Recheck and apply exact saved binaries
         env:
           ROOTS: ${{ steps.route.outputs.roots }}
+          TARGET: ${{ steps.route.outputs.target }}
         run: |
           for root in $ROOTS; do
-            python3 deploy/scripts/terraform.py apply "${{ inputs.environment }}" "$root"
+            python3 deploy/scripts/terraform.py apply "${{ inputs.environment }}" "$root" --target "$TARGET"
           done
+      - name: Invalidate the separately promoted preview edge
+        if: inputs.scope == 'preview-edge'
+        run: python3 deploy/scripts/deploy.py production --phase invalidate --target main-preview

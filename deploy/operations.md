@@ -161,8 +161,9 @@ trust. After launch, preview reads central infrastructure and production
 promotes it after the successful preview of the same commit.
 
 Each environment keeps its own `ALERT_EMAIL`, runtime flag, uptime flag,
-and prepared zones in its completed workload snapshot. Central edge uses
-those snapshots. Changing production's alert address does not replace
+and prepared zones in its completed workload artifact. Central edge uses
+that exact run/attempt evidence. Snapshot state remains a record only. Changing
+production's alert address does not replace
 preview's channel. Shared edge waits until workloads and NEGs are ready.
 
 Destructive changes need an exact committed central approval. CI refuses
@@ -174,8 +175,9 @@ lock. Keep both prelaunch apply accounts disabled after launch.
 
 ## Zones and NEGs
 
-The environment resource module holds one zone list: `allowed_zones` in
-`deploy/terraform/modules/foundation/variables.tf`. Today it is
+The shared zone module holds desired placement and a retained catalog:
+`allowed_zones` in
+`deploy/terraform/modules/zones/main.tf`. Today it is
 `europe-west1-b`, `europe-west1-c`, and `europe-west1-d`. Four parts use
 this list:
 
@@ -207,3 +209,13 @@ preview zone before preview prepared its NEG.
   Terraform provider deletion protection. Secret protection does not stop
   a console deletion or an owner-equivalent IAM change. The planned GCP
   deny policy remains separate work.
+
+Production data and edge have protected prefixes. If a first create finds
+an existing production name, stop before populating data. Follow the
+[operator state procedure](state.md#unexpected-existing-production-name).
+Never import a prelaunch-created object to bypass that failure.
+
+Production finishes its own edge/invalidation before promoting preview's
+separate edge. New tag bindings use permanent numeric map IDs. Tag/IAM
+propagation can delay invalidation rights. Rerun all jobs after propagation
+rather than changing the tag with gcloud or reusing a saved binary.

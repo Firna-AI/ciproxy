@@ -24,6 +24,7 @@ run "prelaunch_accounts_have_no_environment_admin_escape" {
         grant.member == "serviceAccount:ciproxy-${split(":", key)[0]}-control@ciproxy.iam.gserviceaccount.com"
         && strcontains(grant.condition[0].expression, "instances/ciproxy-${split(":", key)[0]}'")
       ]) && google_project_iam_member.nodes.member == "serviceAccount:ciproxy-shared-gke@ciproxy.iam.gserviceaccount.com"
+      && google_project_iam_member.registry_nodes.member == "serviceAccount:ciproxy-shared-gke@ciproxy.iam.gserviceaccount.com"
       && alltrue([for env in local.environments :
         google_project_iam_member.cluster_access[env].member == "serviceAccount:ciproxy-${env}-deploy@ciproxy.iam.gserviceaccount.com"
         && google_project_iam_member.operation_reader[env].member == "serviceAccount:ciproxy-${env}-deploy@ciproxy.iam.gserviceaccount.com"
@@ -60,6 +61,8 @@ run "prelaunch_accounts_have_no_environment_admin_escape" {
       [for g in google_project_iam_member.shared_kms : g.member],
       [for g in google_project_iam_member.bucket_metadata : g.member],
       [for g in google_project_iam_member.tag_binding : g.member],
+      [for g in google_project_iam_member.registry : g.member],
+      [google_project_iam_member.prelaunch.member],
       ) : contains([
         "serviceAccount:ciproxy-shared-preview-apply@ciproxy.iam.gserviceaccount.com",
         "serviceAccount:ciproxy-shared-prod-apply@ciproxy.iam.gserviceaccount.com",

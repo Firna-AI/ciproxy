@@ -36,7 +36,7 @@ class TerraformPolicyTests(PromotionCase):
                 self.plan.write_text(json.dumps(plan))
                 approval = self.approve(commit=True)
                 document = json.loads(approval.read_text())
-                self.assertEqual(document["environment"], "ciproxy/shared/edge")
+                self.assertEqual(document["environment"], "ciproxy/main-preview/edge")
                 self.assertEqual(document["actions"], [{
                     "address": "terraform_data.example", "actions": actions,
                 }])

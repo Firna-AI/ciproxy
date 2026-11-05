@@ -17,6 +17,8 @@ class TerraformPromotionTests(PromotionCase):
 
     def prepare(self, root="seed"):
         self.trusted()
+        if root == "edge":
+            self.snapshot()
         result = self.cli("terraform.py", "plan", "main-preview", root)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.log.write_text("")
@@ -38,7 +40,7 @@ class TerraformPromotionTests(PromotionCase):
         scratch = self.prepare()
         original = (scratch / "metadata.json").read_text()
         for field, value in (("commit", "0" * 40), ("run", "9999"), ("attempt", "0"),
-                             ("environment", "production"), ("root", "edge"),
+                             ("environment", "production"), ("target", "production"), ("root", "edge"),
                              ("configurationDigest", "sha256:old"), ("planDigest", "sha256:edited")):
             with self.subTest(field=field):
                 document = json.loads(original)
@@ -117,24 +119,29 @@ class TerraformPromotionTests(PromotionCase):
             "gs://ciproxy-trust-tfstate-ciproxy/trust/seed/default.tfstate",
             "gs://ciproxy-trust-tfstate-ciproxy/trust/bootstrap/default.tfstate",
             "gs://ciproxy-shared-tfstate-ciproxy/shared/shared/default.tfstate",
-            "gs://ciproxy-shared-tfstate-ciproxy/shared/edge/default.tfstate",
+            "gs://ciproxy-main-preview-tfstate-ciproxy/main-preview/data/default.tfstate",
+            "gs://ciproxy-main-preview-tfstate-ciproxy/main-preview/edge/default.tfstate",
+            "gs://ciproxy-production-tfstate-ciproxy/production/data/default.tfstate",
+            "gs://ciproxy-production-tfstate-ciproxy/production/edge/default.tfstate",
             "gs://ciproxy-main-preview-tfstate-ciproxy/main-preview/foundation/default.tfstate",
             "gs://ciproxy-production-tfstate-ciproxy/production/foundation/default.tfstate",
         })
         terraform = [call["args"] for call in self.commands() if call["tool"] == "terraform"]
         self.assertEqual([args[1] for args in terraform], [
-            "init", "apply", "init", "init", "init", "init", "init", "init", "init", "output", "apply", "output",
+            "init", "apply", "init", "init", "init", "init", "init", "init", "init", "init", "init", "init", "output", "apply", "output",
         ])
         self.assertIn("-migrate-state", terraform[2])
         self.assertNotIn("-force-copy", terraform[2])
         self.assertNotIn("-input=false", terraform[2])
         self.assertIn("-backend-config=prefix=trust/seed", terraform[2])
-        self.assertEqual([args[-1] for args in terraform[3:9]], [
+        self.assertEqual([args[-1] for args in terraform[3:12]], [
             "-backend-config=prefix=trust/seed", "-backend-config=prefix=trust/bootstrap",
-            "-backend-config=prefix=shared/shared", "-backend-config=prefix=main-preview/foundation",
-            "-backend-config=prefix=shared/edge", "-backend-config=prefix=production/foundation",
+            "-backend-config=prefix=shared/shared", "-backend-config=prefix=main-preview/data",
+            "-backend-config=prefix=main-preview/foundation", "-backend-config=prefix=main-preview/edge",
+            "-backend-config=prefix=production/data", "-backend-config=prefix=production/foundation",
+            "-backend-config=prefix=production/edge",
         ])
-        self.assertEqual(terraform[10][0], "-chdir=deploy/terraform/bootstrap")
+        self.assertEqual(terraform[13][0], "-chdir=deploy/terraform/bootstrap")
         backup = self.root / ".context/deploy/ciproxy/seed.tfstate"
         self.assertEqual(json.loads(backup.read_text()), {"version": 4, "serial": 1})
         existing = {name: f'{{"version":4,"serial":{index + 8},"lineage":"kept"}}'

@@ -16,6 +16,7 @@ on:
         value: ${{ jobs.plan.outputs.roots }}
 permissions:
   contents: read
+  actions: read
   id-token: write
 jobs:
   plan:
@@ -60,19 +61,22 @@ jobs:
           project_id: ciproxy
           workload_identity_provider: ${{ vars.GCP_SHARED_PLAN_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_SHARED_PLAN_SERVICE_ACCOUNT }}
-      - name: Download this run's completed workload inputs
-        if: inputs.scope == 'foundation'
+      - name: Download the selected completed workload evidence
+        if: steps.route.outputs.evidence_name != ''
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
-          name: workload-${{ inputs.environment }}-${{ github.run_attempt }}
-          path: .context/deploy/${{ inputs.environment }}
+          name: ${{ steps.route.outputs.evidence_name }}
+          path: .context/deploy/${{ steps.route.outputs.target }}
+          run-id: ${{ steps.route.outputs.evidence_run }}
+          github-token: ${{ github.token }}
       - name: Save and check exact plans
         if: steps.route.outputs.roots != ''
         env:
           ROOTS: ${{ steps.route.outputs.roots }}
+          TARGET: ${{ steps.route.outputs.target }}
         run: |
           for root in $ROOTS; do
-            python3 deploy/scripts/terraform.py plan "${{ inputs.environment }}" "$root"
+            python3 deploy/scripts/terraform.py plan "${{ inputs.environment }}" "$root" --target "$TARGET"
           done
       - name: Publish saved plan evidence
         if: always() && steps.route.outputs.roots != ''

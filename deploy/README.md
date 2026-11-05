@@ -62,13 +62,19 @@ controls which pipeline can write central infrastructure.
 
 Each successful workload rollout saves its own flags, alert addresses, and
 actual NEG zones. Its read-only plan account plans the `foundation` root.
-Its environment apply account writes that snapshot to its own state.
-Central edge promotion reads both environment snapshots. It gets canonical
-resource names and references from central infrastructure state.
+Its environment apply account writes that snapshot to its own `foundation/`
+state prefix.
+Each central edge plan uses immutable workload evidence. Production reads
+its current rollout artifact. Its later preview promotion reads the exact
+successful upstream preview run and attempt. Mutable snapshot state is a
+record only. [Workload evidence](workload-evidence.md) gives the binding.
 
 This small environment root is necessary. It records inputs of a ready
-rollout without giving an environment cloud administration. There are no
-extra environment edge roots or states. Preview and production keep
+rollout without giving an environment cloud administration. Central data and
+edge roots use separate environment state prefixes.
+Prelaunch and environment record writers cannot write production managed
+state. [State ownership](state.md) gives each prefix and collision handling.
+Preview and production keep
 separate workflow concurrency groups. Terraform locks serialize state
 writes. The operator drains preview before the launch handoff.
 
@@ -78,8 +84,9 @@ writes. The operator drains preview before the launch handoff.
 | --- | --- |
 | `terraform/seed/` | Four state buckets and trust APIs. Operator first, then main-only trust apply. |
 | `terraform/bootstrap/` | Accounts, federation, IAM, launch phase, and edge tags. Operator first, then main-only trust apply. |
-| `terraform/shared/` | One network, NAT, cluster, and registry. Separate environment SQL, KMS, secrets, buckets, and zones. |
-| `terraform/shared-edge/` | Separate environment edges, certificates, CDN, DNS records, alert channels, and uptime checks. |
+| `terraform/shared/` | One network, NAT, cluster, registry, and phase-selected runtime federation. |
+| `terraform/data/` | Separate central instances for environment SQL, KMS, secrets, buckets, and zones. |
+| `terraform/edge/` | Separate central edge instances with certificates, CDN, DNS, alert channels, and uptime checks. |
 | `environments/<env>/` | The completed workload snapshot for one environment. |
 | `terraform/modules/` | Environment data resources and edge resources. |
 | `helm/` | The release server and control-plane charts. |
@@ -97,9 +104,9 @@ writes. The operator drains preview before the launch handoff.
 | State bucket | Prefixes |
 | --- | --- |
 | `ciproxy-trust-tfstate-ciproxy` | `trust/seed`, `trust/bootstrap` |
-| `ciproxy-shared-tfstate-ciproxy` | `shared/shared`, `shared/edge` |
-| `ciproxy-main-preview-tfstate-ciproxy` | `main-preview/foundation` |
-| `ciproxy-production-tfstate-ciproxy` | `production/foundation` |
+| `ciproxy-shared-tfstate-ciproxy` | `shared/shared` |
+| `ciproxy-main-preview-tfstate-ciproxy` | `main-preview/data`, `main-preview/edge`, `main-preview/foundation` |
+| `ciproxy-production-tfstate-ciproxy` | `production/data`, `production/edge`, `production/foundation` |
 
 ## Offline checks
 
@@ -109,14 +116,15 @@ only pinned provider binaries.
 
 ```sh
 terraform fmt -check -recursive deploy
-for root in deploy/terraform/{seed,bootstrap,shared,shared-edge} \
+for root in deploy/terraform/{seed,bootstrap,shared,data,edge} \
   deploy/environments/{main-preview,production}; do
   terraform -chdir="$root" init -backend=false -input=false -lockfile=readonly
   terraform -chdir="$root" validate
 done
 terraform -chdir=deploy/terraform/bootstrap test
 terraform -chdir=deploy/terraform/shared test
-terraform -chdir=deploy/terraform/shared-edge test
+terraform -chdir=deploy/terraform/data test
+terraform -chdir=deploy/terraform/edge test
 terraform -chdir=deploy/environments/main-preview test
 helm lint deploy/helm/ciproxy
 helm lint deploy/helm/cli-release-server --values deploy/helm/release-values.yaml

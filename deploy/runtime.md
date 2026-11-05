@@ -6,7 +6,9 @@ Use the [operator permissions](identities.md#operator-permissions).
 
 ## Prepare the database
 
-Do this after the first deploy and before the runtime turns on. Terraform
+Do this only after the environment's protected central data apply passed,
+and before the runtime turns on. Do not prepare a database behind a failed
+production name collision. See [state recovery](state.md). Terraform
 creates the IAM database user `ciproxy-<env>-control@<project>.iam`, with
 no schema rights. No migration exists in this repository yet. Set the
 `postgres` password at a prompt, and start a proxy pod with the runtime

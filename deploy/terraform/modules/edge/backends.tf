@@ -53,7 +53,7 @@ resource "google_compute_backend_service" "runtime" {
       # GKE pre-provisions this complete zone set before edge deployment.
       # Required pod affinity uses the same set, so later zone changes
       # cannot put a runtime in a zone without an attached backend.
-      group                 = "https://www.googleapis.com/compute/v1/projects/${local.config.project_id}/zones/${backend.value}/networkEndpointGroups/${each.value.neg_name}"
+      group                 = "${var.zone_map[backend.value]}/networkEndpointGroups/${each.value.neg_name}"
       balancing_mode        = "RATE"
       max_rate_per_endpoint = 100
     }

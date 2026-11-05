@@ -1,7 +1,8 @@
 # Terraform promotion and recovery
 
 The [deployment](README.md) has central trust, central infrastructure,
-central edge, and one ready-workload snapshot per environment. Each root
+separate central data/edge instances, and one ready-workload record per
+environment. Each root
 has one remote backend. No migration is needed before the first apply.
 
 ## Sequence and identities
@@ -14,6 +15,7 @@ central trust account. Seed API enablement finishes before bootstrap apply.
 
 The phase owner then promotes central infrastructure. It uses a separate
 shared apply account with no project IAM or Kubernetes object permissions.
+It applies the caller's separate data state after shared core.
 Workloads read central outputs and deploy only their own namespace and
 static buckets. They wait for every configured NEG zone.
 
@@ -23,11 +25,18 @@ run, and run attempt. The next read-only plan checks those bindings. The
 environment apply account writes the exact saved snapshot plan only to its
 own state bucket. A failed rollout never publishes a new ready snapshot.
 
-Central edge reads both ready snapshots. It takes canonical resource
-names, projects, buckets, hosts, and zones from central configuration.
-Only the prepared NEG zone selection, boolean flags, and alert addresses
-come from each environment's snapshot. Thus an environment state cannot
-redirect central management to the other environment's named resources.
+Central edge uses the same [provenance-aware reader](workload-evidence.md)
+as record publication. Production's own edge uses its current completed
+rollout artifact. Its later preview edge uses the immutable artifact of
+the exact successful upstream run and attempt. Latest preview state is
+never authority. Canonical names and resource IDs come from that
+environment's managed data state. The trusted zone catalog supplies URL
+paths. Evidence selects catalog keys, never interpolated URL text.
+
+Production edge has separate state and execution. Its own invalidation
+finishes before preview data/edge promotion starts. A later preview NEG
+deletion can break preview's promotion but cannot block production's
+completed edge. The overall run reports that later preview failure.
 
 Before launch, preview owns central promotion. After
 [operator cutover](launch.md), production alone owns it. Preview keeps its
@@ -45,7 +54,8 @@ pipelines never hold working central write credentials at the same time.
 
 Plan artifacts contain `release.tfplan`, `plan.txt`, `plan.json`, inputs,
 and metadata. Metadata binds the binary digest, full Terraform digest,
-checkout commit, environment, root, workflow run, and run attempt.
+checkout commit, caller environment, target environment, root, workflow
+run/attempt, and selected workload evidence binding.
 Every init uses the committed provider locks. Promotion uses
 `-lockfile=readonly`.
 
@@ -67,7 +77,7 @@ replacement orders count as destructive.
 
 The document has only `schemaVersion`, `environment`,
 `configurationDigest`, `reason`, and `actions`. Its scope names the central
-owner and root, such as `ciproxy/shared/edge` or
+owner and root, such as `ciproxy/production/edge` or
 `ciproxy/trust/bootstrap`. A central approval can run under either phase
 owner. Saved binaries remain bound to their original environment and run.
 
@@ -81,17 +91,18 @@ The digest includes paths and bytes of every `.tf`, `.tf.json`, and
 A configuration change needs a new approval. CI requires exact bytes from
 `HEAD`.
 
+First [download bound workload evidence](workload-evidence.md#operator-plan).
 Generate an approval under operator credentials from a real saved plan:
 
 ```sh
 DEPLOY_ENV=production
 python3 deploy/scripts/terraform.py plan "$DEPLOY_ENV" edge
 # A policy refusal retains plan evidence. Inspect plan.txt before approval.
-mkdir -p deploy/approvals/shared
+mkdir -p "deploy/approvals/$DEPLOY_ENV"
 python3 deploy/scripts/terraform_policy.py approval "$DEPLOY_ENV" edge \
   ".context/plans/$DEPLOY_ENV/edge/plan.json" \
   --reason='Remove the retired download record.' \
-  > deploy/approvals/shared/edge.json
+  > "deploy/approvals/$DEPLOY_ENV/edge.json"
 ```
 
 Commit the reviewed document with its change. CI plans again from that
@@ -118,10 +129,10 @@ root directory, bucket, and prefix from [the backend table](README.md).
 For example, an operator can recover the central edge lock:
 
 ```sh
-terraform -chdir=deploy/terraform/shared-edge init -reconfigure \
-  -backend-config=bucket=ciproxy-shared-tfstate-ciproxy \
-  -backend-config=prefix=shared/edge
-terraform -chdir=deploy/terraform/shared-edge force-unlock LOCK_ID
+terraform -chdir=deploy/terraform/edge init -reconfigure \
+  -backend-config=bucket=ciproxy-production-tfstate-ciproxy \
+  -backend-config=prefix=production/edge
+terraform -chdir=deploy/terraform/edge force-unlock LOCK_ID
 ```
 
 Create a new plan after recovery. Do not apply the stranded binary.
@@ -153,3 +164,10 @@ Do not replace lost state with an empty state for existing resources.
 Cloud SQL has provider and API deletion protection. Secrets have provider
 deletion protection. Neither protection replaces the planned production
 IAM deny policy. No cloud or GitHub ruleset operation runs in offline tests.
+
+Tag bindings are inside the edge module's exact saved plan. Their parent
+uses the URL map's permanent numeric `map_id`. Invalidation still uses its
+name. New tag/IAM grants can take time to propagate. A permission denial
+fails the run. Wait for propagation, then rerun all jobs with fresh plans.
+No separate gcloud tag mutation or automatic eight-minute retry is added.
+[Tag propagation](https://docs.cloud.google.com/iam/docs/tags-access-control)
