@@ -201,11 +201,14 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
         Branch: `codex/m5-terraform-promotion`.
   - [x] User: upgrade the organization. Orchestrator: apply the ruleset.
         Branch: `codex/m5-terraform-promotion`.
-- [ ] Make this repository public, as item 70 says. The orchestrator scans
+- [x] Make this repository public, as item 70 says. The orchestrator scans
       the history, the run logs, and the pull request texts for secrets, and
       checks the workflows and the runner groups. The user changes the
       visibility. Then turn on secret scanning with push protection, and
       require approval of workflow runs from all outside contributors.
+      Done on 5 November 2026: the scans found no secret, the user made the
+      repository public, and an admin read confirmed secret scanning, push
+      protection, and approval for all outside contributors.
 - [x] Rename the staging environment to the main preview of item 53, with
       its hosts under `br-main.preview`, before the first apply.
       Branch: `conductor/ciproxy-mvp-milestone-5-main-preview`.
@@ -1146,6 +1149,12 @@ Answers of 5 November 2026:
   PodSecurity level, with labels that only the operator can change, so no
   pod mounts `hostPath`. Rejected: a custom admission policy, and a trusted
   deployment controller.
+- Item 75, A: the cost claim keeps the AX42 with both disks combined into
+  one filesystem of 1,024 GB, for six default jobs. The site and the mockups
+  state this basis, for example RAID0 or one LVM volume. The machine setup
+  docs say that a machine used only for CI can combine its disks, because
+  its jobs, machine cache, and Docker disks are disposable. Rejected: the
+  default mirror of 512 GB, and another machine.
 - Item 70, E: this whole repository becomes public now, in place of a public
   copy of the open parts at launch. The agent builds and releases in public.
   This replaces the code location rule of the foundation plan. The closed
@@ -2047,7 +2056,8 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 74 on 5 November 2026. No item still waits. The
+The user answered items 54 to 75 on 5 November 2026, and item 76 became a
+design call. No item still waits. The
 conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
@@ -2684,3 +2694,106 @@ keep the letters that the user saw.
 - **Recommendation:** A. It closes the hole with a maintained Kubernetes
   level and no new code.
 - **Action:** answered A.
+
+### 75. The AX42 cost claim needs a disk basis
+
+**Answer, 5 November 2026:** A.
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation, the workspace of item 73.
+- **Category:** Docs or spec.
+- **Location:** the hardware fixtures of the site and the mockups, and the
+  pricing calculation text of the site.
+- **Terms:**
+  - **RAID1:** two mirrored disks that give the space of one disk.
+  - **RAID0 or one LVM volume:** two disks combined into the space of both,
+    with no mirror.
+- **Background:**
+  - The cost claim of the site counts a Hetzner AX42, with 16 threads,
+    64 GB, and two disks of 512 GB, that runs six default jobs at a time.
+  - Item 73 = A gives each default job 80 GB and the machine an image
+    budget of 140 GB. Six jobs then need one filesystem of 780 GB.
+  - The Hetzner installer mirrors two disks by default, with RAID1. That
+    gives about 512 GB, which runs three default jobs.
+- **Problem:** The six-job claim now needs both disks in one filesystem,
+  which is not the default setup, and no setup text says so.
+- **Impact if no action:** A customer with the default mirror runs three
+  jobs, and saves 65% in this calculation instead of the claimed 80%.
+- **Root question:** Which disk setup of the AX42 do the claim and the
+  fixtures count?
+- **Options:**
+  - **A.** Keep 1,024 GB and six jobs. The site and the mockups state that
+    the example combines both disks, for example with RAID0 or one LVM
+    volume. The machine setup docs say that a machine used only for CI can
+    combine its disks, because jobs, the machine cache, and Docker disks
+    are disposable. Effort: Small.
+  - **B.** Count the default mirror of 512 GB: three jobs and a saving of
+    65%. Update every AX42 scene to show the disk limit. Effort: Medium.
+  - **C.** Count another machine with one disk of at least 1 TB. Check its
+    price, and update the claim and the fixtures. Effort: Medium.
+- **Left out:** Leave the setup unstated: it hides why a default install
+  runs half the jobs. Combine the disks in the agent: it is outside item 73.
+- **Wider fix:** One stated basis for the claim, used by the site and the
+  mockups.
+- **Previous examples:** With 60 GB jobs, six jobs fit in 512 GB, so the old
+  claim did not depend on the setup.
+- **Recommendation:** A. It keeps the machine and the story of the fixtures,
+  and it tells the customer how to get the claimed result.
+- **Action:** answered A.
+
+### 76. The organization forbids the public site buckets
+
+**Outcome, 5 November 2026:** D, a design call after the user asked why the
+buckets must be public.
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Implementation, the read-only checks before the GCP setup.
+- **Category:** Process.
+- **Location:** the organization policy `iam.allowedPolicyMemberDomains` of
+  the futex.ai organization, and the public buckets of the foundation.
+- **Terms:**
+  - **Domain-restricted sharing:** the organization policy that allows IAM
+    grants only to members of the futex.ai Google Workspace.
+  - **`allUsers`:** the IAM member for everyone on the internet.
+- **Background:**
+  - The site and the dashboard are static files in buckets. The load
+    balancer serves them through Cloud CDN, so these buckets grant read
+    access to `allUsers`.
+  - The futex.ai organization enforces domain-restricted sharing, set on
+    21 April 2026. Every project inherits it, also `ciproxy`.
+  - The user has the Organization Administrator role. That role can grant
+    the Organization Policy Administrator role, which changes the policy.
+- **Problem:** The first apply of the foundation fails when it grants read
+  access to `allUsers`.
+- **Impact if no action:** The site and the dashboard cannot go online.
+- **Root question:** How can the public files be served while the
+  organization keeps its sharing rule?
+- **Options:**
+  - **A.** Allow all members in the project `ciproxy` only, with a project
+    override of the policy. Other projects keep the rule. Any resource in
+    `ciproxy` can then get a public grant, and only Terraform writes grants
+    there. Effort: Small.
+  - **B.** Keep the rule, and allow all members only on resources with a
+    tag, for example `public-access`. Tag only the site and dashboard
+    buckets in Terraform. It needs the Tag Administrator role and a
+    condition in the organization policy. Effort: Medium.
+  - **C.** Serve the static files from a small web server in the cluster, so
+    no bucket needs a public grant. It adds a workload and changes the
+    deploy design. Effort: Medium.
+  - **D.** Use the private bucket access of Cloud CDN. The buckets stay
+    private, and only the load balancer service agent
+    `service-PROJECT_NUMBER@https-lb.iam.gserviceaccount.com` reads them.
+    Visitors still get the files through the load balancer and the CDN.
+    The organization rule stays. Effort: Small.
+- **Left out:** Signed URLs for the whole site: browsers cannot fetch a
+  public site with them.
+- **Wider fix:** B. Only the resources with the tag can be public.
+- **Previous examples:** None found. The projects `mokly-508518` and
+  `internal-498318` keep the rule with no exception.
+- **Recommendation:** D. It keeps the organization rule and the deploy
+  design, and no one can read the buckets directly.
+- **Action:** design call D. It changes no requirement and needs no change
+  outside the project. Google creates the service agent after the first
+  backend bucket, so the grant follows the backend buckets. If the
+  organization rule refuses the grant, the item returns to the user with A,
+  B, and C.
