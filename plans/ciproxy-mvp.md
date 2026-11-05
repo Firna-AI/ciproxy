@@ -552,6 +552,10 @@ VM hardware. The exported Firecracker disk stays ext4 on `/dev/vda`.
       runner, and powers off the VM after the runner exits. On Boat, it
       tells the control plane when the runner exits, as item 47 says.
       Branch: `conductor/ciproxy-mvp-milestone-10-job-vm-image`.
+- [ ] Apply item 77 = D: export the image disk at its smallest size, and
+      size each job VM disk as the image plus the free disk of its label,
+      on machines and on Boat. Update the label table, the protocol docs,
+      the site, and the mockups.
 - [ ] Publish it with its SHA-256, and as a shared Boat snapshot. Rebuild
       before GitHub stops accepting the runner.
       Orchestrator: run `image/publish.sh` and the create, prepare, and
@@ -1243,6 +1247,21 @@ Answers of 5 November 2026:
   docs say that a machine used only for CI can combine its disks, because
   its jobs, machine cache, and Docker disks are disposable. Rejected: the
   default mirror of 512 GB, and another machine.
+- Item 77, D: the disk of a label is the free disk that each of its jobs
+  gets, as GitHub states its runners. The VM disk is the image plus that
+  free disk. The image disk is built at its smallest size, and the agent
+  grows each job's copy by the free disk of its label. The scheduler counts
+  the image plus the free disk on machines and for the Boat size, from the
+  root disk size of each image release. Rejected: the image size as a floor
+  with a warning, a refusal on save, and a floor for placement only.
+  My calls, 5 November 2026:
+  - The default labels get 20, 20, and 60 GB of free disk, so their VM
+    disks stay close to today's 80, 80, and 120 GB. The image budget of
+    140 GB and the machine minimum of 250 GB stay.
+  - "Run on the largest Boat size" can give a job less free disk than its
+    label, as it gives less vCPU and memory, but never a size that cannot
+    hold the image.
+  - A label keeps a free disk of at least 1 GB.
 - Item 78, C: until launch, every label starts from the full image, and a
   job picks other software with a job container, the `container:` key of
   GitHub Actions. The docs say so. The user wrote "we will do A/B after
@@ -2150,8 +2169,8 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 75 on 5 November 2026, and item 76 became a
-design call. Item 77 still waits. The
+The user answered items 54 to 78 on 5 November 2026, and item 76 became a
+design call. No item still waits. The
 conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
@@ -2894,15 +2913,16 @@ buckets must be public.
 
 ### 77. A label can be smaller than the job image
 
-- **Severity:** Medium. **Effort:** Medium.
+**Answer, 5 November 2026:** D.
+
+- **Severity:** Medium. **Effort:** Large, for the answer.
 - **Source:** Implementation, pull request #25.
 - **Record:** the follow-up item
   [labels smaller than the job image](follow-ups/labels-smaller-than-job-image.md)
   holds the background, the options A to D, and the recommendation.
 - **Recommendation:** A. A job of such a label runs on the image disk size,
   the scheduler reserves that size, and the label dialog warns.
-- **Action:** ask the user. Nothing waits for the answer before the label
-  settings milestone.
+- **Action:** answered D: the disk of a label is the free disk of its jobs.
 
 ### 78. How a workspace picks the software that its jobs start with
 
