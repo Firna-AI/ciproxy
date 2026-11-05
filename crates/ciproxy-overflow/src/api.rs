@@ -103,7 +103,8 @@ pub trait RunnerAuthority: Send + Sync {
 /// All impure overflow entry points, consumed through dyn by the control plane.
 #[async_trait]
 pub trait Overflow: Send + Sync {
-    /// Verify and encrypt a new key before atomically replacing the active key.
+    /// Grant a pending connection before verification and encryption.
+    /// Return ConnectionNotPermitted after last-App removal invalidates that grant.
     async fn connect(
         &self,
         workspace_id: Uuid,

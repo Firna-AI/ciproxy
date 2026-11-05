@@ -7,6 +7,7 @@ use ciproxy_overflow::api::{Overflow, StartOutcome};
 use ciproxy_overflow::error::Error;
 use ciproxy_overflow::provider::{BoatAccountApiMock, GuestLauncherMock, RuntimeUsage};
 use ciproxy_protocol::secret::Secret;
+use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase};
 use rust_decimal::Decimal;
 use sandbox_interface::{
@@ -76,7 +77,15 @@ async fn callback_claims_one_runner_once_then_deletes_and_allows_the_next_start(
         let mut other_session = harness.database.store.lock_overflow(id(81)).unwrap();
         let mut account = snapshot().accounts[0].clone();
         account.account.id = id(82);
-        other_session.connect(&account, 200_000_000).unwrap();
+        let grant = other_session
+            .begin_connection(account.account.id)
+            .unwrap()
+            .unwrap();
+        assert!(
+            other_session
+                .complete_connection(grant, &account, 200_000_000)
+                .unwrap()
+        );
         let mut other = record(StartPhase::Running);
         other.delivery_id = id(91);
         other.runner_id = id(92);
@@ -85,10 +94,19 @@ async fn callback_claims_one_runner_once_then_deletes_and_allows_the_next_start(
         other.label_id = id(84);
         other.scale_set_id = id(85);
         let other_token = digest(&Secret::new("another-workspace-token"));
-        assert!(
+        assert_eq!(
             other_session
-                .reserve_start(&other, &EncryptedLaunch(vec![19]), &other_token)
-                .unwrap()
+                .reserve_start(
+                    &other,
+                    &EncryptedLaunch(vec![19]),
+                    &other_token,
+                    &ReservationBudget {
+                        current_month_usd: Decimal::new(462, 3),
+                        next_month_usd: None,
+                    },
+                )
+                .unwrap(),
+            ReservationOutcome::Reserved
         );
         other_session.save_start(&other).unwrap();
     }

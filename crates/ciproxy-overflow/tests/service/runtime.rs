@@ -12,6 +12,7 @@ use ciproxy_store_interface::organizations::AppState;
 use unimock::{MockFn, Unimock, matching};
 
 use super::authority_support::disable;
+use super::fixtures::id;
 use super::harness::Runtime;
 use super::organization_hooks::withdraw;
 use super::recording::Capture;
@@ -45,9 +46,21 @@ pub(super) fn build(
                 SecretPurpose::BoatKey => 1,
                 SecretPurpose::Launch => 2,
             };
-            let mut state = sealing.lock().unwrap();
-            state.contexts.push(context);
-            state.sealed.insert((context.id, purpose), bytes);
+            let limit_change = {
+                let mut state = sealing.lock().unwrap();
+                state.contexts.push(context);
+                state.sealed.insert((context.id, purpose), bytes);
+                if context.purpose == SecretPurpose::Launch {
+                    state.limit_on_launch_seal.take()
+                } else {
+                    None
+                }
+            };
+            if let Some((limit, store)) = limit_change {
+                let mut settings = store.settings(id(1)).unwrap();
+                settings.boat_spend_limit_usd_micros = Some(limit);
+                store.save_settings(id(1), &settings).unwrap();
+            }
             Ok([context.id.as_bytes().as_slice(), &[purpose]].concat())
         }));
     let open = KeyCipherMock::open

@@ -7,6 +7,8 @@ use uuid::Uuid;
 use crate::boat::BoatAccount;
 use crate::error::Result;
 use crate::overflow::account::AccountState;
+use crate::overflow::admission::{ReservationBudget, ReservationOutcome};
+use crate::overflow::connection::ConnectionGrant;
 use crate::overflow::record::{EncryptedLaunch, StartRecord};
 use crate::secrets::{EncryptedBoatKey, TokenHash};
 
@@ -53,8 +55,17 @@ pub trait OverflowSession: Send {
     /// Read current startup authority for this workspace's saved delivery in one query.
     /// Require its active organization, enabled overflow, and accepted non-retired key.
     fn startup_account(&mut self, delivery_id: Uuid) -> Result<Option<AccountRecord>>;
-    /// Atomically replace the active key, its catalog, and the monthly limit.
-    fn connect(&mut self, account: &AccountRecord, spend_limit_usd_micros: i64) -> Result<()>;
+    /// Persist a fresh pending grant while at least one organization has an App.
+    /// Supersede any previous pending grant without restoring a revoked identity.
+    fn begin_connection(&mut self, key_id: Uuid) -> Result<Option<ConnectionGrant>>;
+    /// Consume a live grant and replace the active key, catalog, and monthly limit.
+    /// Return false when last-App removal or a newer operation invalidated the grant.
+    fn complete_connection(
+        &mut self,
+        grant: ConnectionGrant,
+        account: &AccountRecord,
+        spend_limit_usd_micros: i64,
+    ) -> Result<bool>;
     /// Retire active keys and preserve keys referenced by unfinished deliveries.
     fn disconnect(&mut self, at: DateTime<Utc>) -> Result<()>;
     /// Persist refreshed capacity or a refusal for one retained key.
@@ -62,13 +73,14 @@ pub trait OverflowSession: Send {
     /// Commit a definitive refusal and its account restriction atomically.
     fn save_refusal(&mut self, account: &AccountRecord, record: &StartRecord) -> Result<()>;
     /// Reserve a new delivery before dispatch and recheck current tenant authority.
-    /// Return false if settings, key, or organization no longer permits a start.
+    /// Lock current settings and compare caller-calculated amounts before insertion.
     fn reserve_start(
         &mut self,
         record: &StartRecord,
         encrypted_launch: &EncryptedLaunch,
         token_hash: &TokenHash,
-    ) -> Result<bool>;
+        budget: &ReservationBudget,
+    ) -> Result<ReservationOutcome>;
     /// Read the sealed registration only while startup or cleanup needs it.
     fn encrypted_launch(&mut self, delivery_id: Uuid) -> Result<Option<EncryptedLaunch>>;
     /// Save phase and provider identity, and atomically materialize runner/cost facts.

@@ -1,6 +1,7 @@
 //! Durable acceptance of a scaler Boat action before provider dispatch.
 
 use ciproxy_scaler::actions::Destination;
+use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase, StartRecord};
 use ciproxy_store_interface::overflow::store::AccountRecord;
 use rust_decimal::Decimal;
@@ -173,26 +174,32 @@ impl OverflowService {
         };
         record.starts_at = self.dependencies.clock.now();
         snapshot.starts.push(record.clone());
-        let mut month = spend::month_start(record.starts_at)?;
-        while month < budget::expires_at(&record)? {
-            let reserved =
-                spend::current(&snapshot.starts, month.max(record.starts_at))?.counted_usd()?;
-            if limit.is_none_or(|limit| reserved > limit) {
-                return Ok(StartOutcome::Waiting(WaitReason::SpendLimit {
-                    resumes_at: spend::next_month(record.starts_at)?,
-                }));
-            }
-            month = spend::next_month(month)?;
-        }
+        let next_month = spend::next_month(record.starts_at)?;
+        let budget = ReservationBudget {
+            current_month_usd: spend::current(&snapshot.starts, record.starts_at)?.counted_usd()?,
+            next_month_usd: if next_month < budget::expires_at(&record)? {
+                Some(spend::current(&snapshot.starts, next_month)?.counted_usd()?)
+            } else {
+                None
+            },
+        };
         let pending = record.clone();
         let hash = digest(&token);
         let reserved = session
             .call(move |session| {
-                session.reserve_start(&pending, &EncryptedLaunch(ciphertext), &hash)
+                session.reserve_start(&pending, &EncryptedLaunch(ciphertext), &hash, &budget)
             })
             .await?;
-        if !reserved {
-            return Ok(StartOutcome::Waiting(WaitReason::Disconnected));
+        match reserved {
+            ReservationOutcome::NotPermitted => {
+                return Ok(StartOutcome::Waiting(WaitReason::Disconnected));
+            }
+            ReservationOutcome::SpendLimit => {
+                return Ok(StartOutcome::Waiting(WaitReason::SpendLimit {
+                    resumes_at: spend::next_month(record.starts_at)?,
+                }));
+            }
+            ReservationOutcome::Reserved => (),
         }
         self.execute(&session, workspace_id, record, true).await
     }

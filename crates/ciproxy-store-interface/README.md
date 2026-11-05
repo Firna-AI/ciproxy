@@ -106,6 +106,11 @@ App removal stores a durable billing cancellation request.
 Services consume these boundaries through dyn.
 
 OverflowStore adds exclusive workspace sessions for Boat execution.
+Pending connections use fresh store-issued grants before external work.
+Last-App removal revokes these grants, and activation consumes one live grant.
+Reusing a key-version identity cannot reuse an earlier grant.
+Reservation receives exact current-month and next-month required amounts.
+Its transaction locks saved settings and returns a distinct spend-limit refusal.
 It retains immutable delivery identity before provider access.
 Its startup query derives the organization and key from the saved delivery.
 It checks tenant ownership, active App state, enabled overflow, and the
@@ -195,6 +200,10 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 - [src/metering](src/metering) defines metering facts and history APIs.
 - [src/gateway.rs](src/gateway.rs) defines atomic registration and reports.
 - [src/overflow](src/overflow) defines durable Boat sessions and deliveries.
+- [src/overflow/admission.rs](src/overflow/admission.rs) defines required
+  monthly amounts and reservation outcomes.
+- [src/overflow/connection.rs](src/overflow/connection.rs) defines pending
+  connection grant identities.
 
 ### Related Docs
 

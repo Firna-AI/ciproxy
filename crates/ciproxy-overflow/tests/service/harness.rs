@@ -10,8 +10,10 @@ use ciproxy_overflow::provider::{BackendFactory, Capabilities};
 use ciproxy_overflow::secrets::SecretBytes;
 use ciproxy_overflow::service::{OverflowDependencies, OverflowService};
 use ciproxy_protocol::secret::Secret;
+use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartRecord};
 use ciproxy_store_interface::overflow::store::{AccountRecord, OverflowSnapshot};
+use rust_decimal::Decimal;
 use uuid::Uuid;
 
 use super::database::Database;
@@ -56,10 +58,19 @@ pub(super) struct Harness {
 impl Harness {
     pub(super) fn new(backend: Capabilities, extra: impl unimock::Clause, kind: Runtime) -> Self {
         let database = Database::new();
-        database
-            .session()
-            .connect(&snapshot().accounts[0], 200_000_000)
-            .unwrap();
+        {
+            let mut session = database.session();
+            let account = &snapshot().accounts[0];
+            let grant = session
+                .begin_connection(account.account.id)
+                .unwrap()
+                .unwrap();
+            assert!(
+                session
+                    .complete_connection(grant, account, 200_000_000)
+                    .unwrap()
+            );
+        }
         let state = Arc::new(Mutex::new(Capture::default()));
         let now = Arc::new(Mutex::new(at()));
         let runtime = runtime::build(extra, state.clone(), now.clone(), kind);
@@ -111,10 +122,19 @@ impl Harness {
 
     pub(super) fn seed_token(&self, record: StartRecord, token: &Secret) {
         let mut session = self.database.session();
-        assert!(
+        assert_eq!(
             session
-                .reserve_start(&record, &EncryptedLaunch(vec![17]), &digest(token))
-                .unwrap()
+                .reserve_start(
+                    &record,
+                    &EncryptedLaunch(vec![17]),
+                    &digest(token),
+                    &ReservationBudget {
+                        current_month_usd: Decimal::ZERO,
+                        next_month_usd: None,
+                    },
+                )
+                .unwrap(),
+            ReservationOutcome::Reserved
         );
         session.save_start(&record).unwrap();
         self.state
@@ -152,6 +172,11 @@ impl Harness {
 
     pub(super) fn connect_account(&self, account: &AccountRecord) {
         let limit = self.snapshot().spend_limit_usd_micros.unwrap();
-        self.database.session().connect(account, limit).unwrap();
+        let mut session = self.database.session();
+        let grant = session
+            .begin_connection(account.account.id)
+            .unwrap()
+            .unwrap();
+        assert!(session.complete_connection(grant, account, limit).unwrap());
     }
 }

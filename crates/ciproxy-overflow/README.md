@@ -140,6 +140,10 @@ A later real cost replaces the estimate, including costs above its bound.
 
 New starts continue while the limit covers existing costs and the proposed
 start's bound in each UTC month its lifetime touches.
+Reservation locks the current saved settings and compares those exact monthly
+amounts before it commits a delivery.
+Lowering the limit during provider or encryption work therefore blocks that
+delivery when the new limit cannot cover it.
 A missing safe fee bound returns `Error::AccountingIncomplete`.
 `Spend::unbounded_starts` identifies the affected deliveries.
 A new start with neither fee source waits before provider dispatch.
@@ -161,6 +165,11 @@ Authenticated data binds the workspace, secret identity, and purpose.
 The REST cipher verifies CRC32C checksums and the selected key version.
 GKE uses `MetadataAccessTokens` with its runtime identity.
 The store receives ciphertext and token hashes only.
+Connection verification and encryption require a saved pending grant.
+Last-App removal revokes that grant in its credential-revocation transaction.
+Only a live grant can activate the encrypted key.
+Reinstall requires a new connection and cannot revive an old pending grant.
+Both an absent App and a revoked grant return `Error::ConnectionNotPermitted`.
 Key replacement and disconnect retain old ciphertext while a delivery is
 unfinished, including uncertain creates.
 Retained keys expose only inspection, recovery reads, usage reads, and deletion.
@@ -251,6 +260,8 @@ These commands contact Boat or Cloud KMS and can incur charges.
 - [src/service](src/service) owns durable execution and cleanup.
 - [src/service/authority.rs](src/service/authority.rs) obtains current
   startup authority for each saved delivery.
+- [src/service/accounts.rs](src/service/accounts.rs) completes only live
+  pending connection grants.
 - [src/maintenance.rs](src/maintenance.rs) restricts retained-key capabilities.
 - [src/view.rs](src/view.rs) supplies safe scaler and cost facts.
 - [src/boat](src/boat) composes the pinned adapter and fixed image launcher.

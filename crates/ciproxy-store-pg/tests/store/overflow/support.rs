@@ -27,7 +27,15 @@ pub(super) fn setup(database: &Database) -> (Uuid, AccountRecord, StartRecord) {
         .try_lock_overflow(workspace.id)
         .unwrap()
         .unwrap();
-    session.connect(&account, 200_000_000).unwrap();
+    let grant = session
+        .begin_connection(account.account.id)
+        .unwrap()
+        .unwrap();
+    assert!(
+        session
+            .complete_connection(grant, &account, 200_000_000)
+            .unwrap()
+    );
     let record = StartRecord {
         delivery_id: Uuid::new_v4(),
         runner_id: Uuid::new_v4(),

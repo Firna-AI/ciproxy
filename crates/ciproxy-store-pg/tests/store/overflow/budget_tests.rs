@@ -2,6 +2,7 @@
 
 use chrono::Duration;
 use ciproxy_store_interface::error::Error;
+use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
 use ciproxy_store_interface::overflow::billing::MeasuredBillingInterval;
 use ciproxy_store_interface::overflow::known::KnownSandbox;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, RuntimeCharge, StartPhase};
@@ -17,14 +18,19 @@ fn bounded_start_fee_supplies_savings_without_becoming_a_confirmed_charge() {
     let (workspace_id, _, mut record) = setup(&database);
     let mut session = database.store.lock_overflow(workspace_id).unwrap();
     record.start_usd = None;
-    assert!(
+    assert_eq!(
         session
             .reserve_start(
                 &record,
                 &EncryptedLaunch(vec![1]),
-                &TokenHash::new(vec![23])
+                &TokenHash::new(vec![23]),
+                &ReservationBudget {
+                    current_month_usd: Decimal::new(462, 3),
+                    next_month_usd: None,
+                },
             )
-            .unwrap()
+            .unwrap(),
+        ReservationOutcome::Reserved
     );
     record.sandbox = Some(KnownSandbox::observed(
         "bx_23456789".to_owned(),

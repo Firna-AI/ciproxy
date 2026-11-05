@@ -14,6 +14,9 @@ pub enum Error {
     /// The required spend limit is not above zero.
     #[error("[overflow/account] spend limit must be above zero")]
     InvalidSpendLimit,
+    /// No App remains, or removal revoked this pending connection.
+    #[error("[overflow/account] connection is not permitted")]
+    ConnectionNotPermitted,
     /// This executor accepts Boat actions only.
     #[error("[overflow/service] action does not start a Boat runner")]
     NotBoatAction,

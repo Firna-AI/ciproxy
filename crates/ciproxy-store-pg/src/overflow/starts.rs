@@ -3,6 +3,8 @@
 use chrono::{DateTime, Utc};
 use ciproxy_schema::overflow::overflow_starts;
 use ciproxy_store_interface::error::Result;
+use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
+use ciproxy_store_interface::overflow::connection::ConnectionGrant;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartRecord};
 use ciproxy_store_interface::overflow::store::{AccountRecord, OverflowSession, OverflowSnapshot};
 use ciproxy_store_interface::secrets::TokenHash;
@@ -12,7 +14,7 @@ use uuid::Uuid;
 use crate::error::QueryResultExt;
 use crate::gateway_transaction::transaction;
 
-use super::{Session, accounts, authority, completion, deliveries, rows};
+use super::{Session, accounts, authority, completion, connections, deliveries, rows};
 
 impl OverflowSession for Session {
     fn snapshot(&mut self) -> Result<OverflowSnapshot> {
@@ -23,8 +25,23 @@ impl OverflowSession for Session {
         authority::startup_account(&mut self.connection, self.workspace_id, delivery_id)
     }
 
-    fn connect(&mut self, account: &AccountRecord, limit: i64) -> Result<()> {
-        accounts::connect(&mut self.connection, self.workspace_id, account, limit)
+    fn begin_connection(&mut self, key_id: Uuid) -> Result<Option<ConnectionGrant>> {
+        connections::begin(&mut self.connection, self.workspace_id, key_id)
+    }
+
+    fn complete_connection(
+        &mut self,
+        grant: ConnectionGrant,
+        account: &AccountRecord,
+        limit: i64,
+    ) -> Result<bool> {
+        accounts::connect(
+            &mut self.connection,
+            self.workspace_id,
+            grant,
+            account,
+            limit,
+        )
     }
 
     fn disconnect(&mut self, at: DateTime<Utc>) -> Result<()> {
@@ -47,13 +64,15 @@ impl OverflowSession for Session {
         record: &StartRecord,
         launch: &EncryptedLaunch,
         token_hash: &TokenHash,
-    ) -> Result<bool> {
+        budget: &ReservationBudget,
+    ) -> Result<ReservationOutcome> {
         deliveries::reserve(
             &mut self.connection,
             self.workspace_id,
             record,
             launch,
             token_hash,
+            budget,
         )
     }
 

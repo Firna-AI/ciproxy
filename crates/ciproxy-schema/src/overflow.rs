@@ -1,6 +1,14 @@
 //! Overflow account observations, durable deliveries, and isolated session locks.
 
 diesel::table! {
+    overflow_connection_grants (id) {
+        id -> Uuid,
+        workspace_id -> Uuid,
+        key_id -> Uuid,
+    }
+}
+
+diesel::table! {
     overflow_accounts (key_id) {
         key_id -> Uuid,
         state_json -> Text,

@@ -4,6 +4,7 @@ pub(crate) mod accounting;
 mod accounts;
 mod authority;
 mod completion;
+mod connections;
 mod deliveries;
 mod placements;
 mod queries;

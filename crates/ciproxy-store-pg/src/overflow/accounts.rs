@@ -2,10 +2,11 @@
 
 use chrono::{DateTime, Utc};
 use ciproxy_schema::boat::boat_accounts;
-use ciproxy_schema::overflow::overflow_accounts;
+use ciproxy_schema::overflow::{overflow_accounts, overflow_connection_grants};
 use ciproxy_schema::settings::settings;
 use ciproxy_schema::workspaces::workspaces;
 use ciproxy_store_interface::error::{Result, ResultExt};
+use ciproxy_store_interface::overflow::connection::ConnectionGrant;
 use ciproxy_store_interface::overflow::store::AccountRecord;
 use diesel::prelude::*;
 use uuid::Uuid;
@@ -16,17 +17,33 @@ use crate::gateway_transaction::transaction;
 pub(super) fn connect(
     connection: &mut PgConnection,
     workspace_id: Uuid,
+    grant: ConnectionGrant,
     account: &AccountRecord,
     limit: i64,
-) -> Result<()> {
+) -> Result<bool> {
     let json = serde_json::to_string(&account.state).internal()?;
     transaction(connection, |connection| {
-        workspaces::table
+        let workspace = workspaces::table
             .find(workspace_id)
             .select(workspaces::id)
             .for_update()
             .first::<Uuid>(connection)
+            .optional()
             .store()?;
+        if workspace.is_none() {
+            return Ok(false);
+        }
+        let consumed = diesel::delete(
+            overflow_connection_grants::table
+                .find(grant.id)
+                .filter(overflow_connection_grants::workspace_id.eq(workspace_id))
+                .filter(overflow_connection_grants::key_id.eq(account.account.id)),
+        )
+        .execute(connection)
+        .store()?;
+        if consumed != 1 {
+            return Ok(false);
+        }
         crate::boat::retire_keys(connection, workspace_id, account.account.connected_at).store()?;
         diesel::update(settings::table.find(workspace_id))
             .set(settings::boat_spend_limit_usd_micros.eq(limit))
@@ -49,7 +66,7 @@ pub(super) fn connect(
             ))
             .execute(connection)
             .store()?;
-        Ok(())
+        Ok(true)
     })
 }
 

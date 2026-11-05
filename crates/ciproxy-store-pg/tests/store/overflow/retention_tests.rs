@@ -5,6 +5,7 @@ use std::sync::Arc;
 use chrono::Duration;
 use ciproxy_metering::service::{Metering, StoredMetering};
 use ciproxy_store_interface::error::Error;
+use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
 use ciproxy_store_interface::overflow::billing::MeasuredBillingInterval;
 use ciproxy_store_interface::overflow::known::KnownSandbox;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, RuntimeCharge, StartPhase};
@@ -19,10 +20,19 @@ fn unknown_boat_interval_preserves_known_costs_and_does_not_block_ninety_day_pur
     let database = Database::new();
     let (workspace_id, _, mut record) = setup(&database);
     let mut session = database.store.lock_overflow(workspace_id).unwrap();
-    assert!(
+    assert_eq!(
         session
-            .reserve_start(&record, &EncryptedLaunch(vec![1]), &TokenHash::new(vec![4]))
-            .unwrap()
+            .reserve_start(
+                &record,
+                &EncryptedLaunch(vec![1]),
+                &TokenHash::new(vec![4]),
+                &ReservationBudget {
+                    current_month_usd: Decimal::new(462, 3),
+                    next_month_usd: None,
+                },
+            )
+            .unwrap(),
+        ReservationOutcome::Reserved
     );
     record.sandbox = Some(KnownSandbox::observed(
         "bx_23456789".to_owned(),

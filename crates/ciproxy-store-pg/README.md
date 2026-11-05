@@ -28,6 +28,7 @@ Live sandbox-end tokens stay usable after App removal.
 They name one workspace, organization, and runner.
 They stop working after that runner reaches its stopped state.
 These mutations run in one transaction under a workspace row lock.
+The last removal also deletes pending Boat connection grants.
 Install, removal, and purge queries serialize on that workspace lock.
 Retention queries delete finished jobs after 90 days.
 They delete removed organization data after 30 days.
@@ -147,6 +148,12 @@ A blocking callback lease waits on that dedicated connection.
 Catalog observations and exact delivery records persist before Boat access.
 Reservation rechecks the active key, workspace settings, organization,
 label, and scale-set ownership under the workspace row lock.
+It then locks the settings row and compares exact caller-supplied monthly
+amounts with the saved limit before inserting a delivery.
+Pending connections receive fresh database-generated grant identities.
+Activation consumes a matching live grant under the workspace row lock.
+A later grant cannot restore an older operation, even with the same key ID.
+Suspension and removal with another App present preserve shared grants.
 One current startup query binds the saved delivery to its organization and
 key in that workspace. It requires active App state, enabled overflow, and
 the accepted non-retired key together.
@@ -230,6 +237,8 @@ CI starts the database for the existing workspace test phase.
 - [src/overflow](src/overflow) owns durable Boat execution transactions.
 - [src/overflow/authority.rs](src/overflow/authority.rs) reads current
   startup authority for one saved delivery.
+- [src/overflow/connections.rs](src/overflow/connections.rs) issues pending
+  connection grants under the workspace removal lock.
 - [src/github](src/github) owns atomic installation setup, repository
   snapshots, durable job revisions, and demand retention.
 - [src/machine_removal.rs](src/machine_removal.rs) preserves removal times.

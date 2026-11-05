@@ -35,6 +35,10 @@ impl Overflow for OverflowService {
         }
         let session =
             Session::acquire(self.dependencies.store.clone(), workspace_id, false).await?;
+        let grant = session
+            .call(move |session| session.begin_connection(key_id))
+            .await?
+            .ok_or(Error::ConnectionNotPermitted)?;
         let backend = self.dependencies.factory.backend(&key, &wallet)?;
         let facts = backend.account.account().await?;
         let sizes = catalog::offers(backend.capacity.account_capacity().await.internal()?)?;
@@ -71,9 +75,12 @@ impl Overflow for OverflowService {
                 refused_sizes: Vec::new(),
             },
         };
-        session
-            .call(move |session| session.connect(&account, limit))
+        let connected = session
+            .call(move |session| session.complete_connection(grant, &account, limit))
             .await?;
+        if !connected {
+            return Err(Error::ConnectionNotPermitted);
+        }
         self.collect(&session).await?;
         Ok(metadata)
     }

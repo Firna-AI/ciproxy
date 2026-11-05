@@ -3,6 +3,7 @@
 use chrono::{DateTime, Duration, Utc};
 use ciproxy_metering::report::boat::daily_boat_costs;
 use ciproxy_metering::report::range::DateRange;
+use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
 use ciproxy_store_interface::overflow::billing::MeasuredBillingInterval;
 use ciproxy_store_interface::overflow::known::KnownSandbox;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, RuntimeCharge, StartPhase};
@@ -19,10 +20,19 @@ fn metering_prices_six_billed_hours_before_the_seven_hour_recovery() {
     let start: DateTime<Utc> = "2026-11-05T00:00:00Z".parse().unwrap();
     let mut session = database.store.lock_overflow(workspace_id).unwrap();
     record.starts_at = start;
-    assert!(
+    assert_eq!(
         session
-            .reserve_start(&record, &EncryptedLaunch(vec![1]), &TokenHash::new(vec![3]))
-            .unwrap()
+            .reserve_start(
+                &record,
+                &EncryptedLaunch(vec![1]),
+                &TokenHash::new(vec![3]),
+                &ReservationBudget {
+                    current_month_usd: Decimal::new(462, 3),
+                    next_month_usd: None,
+                },
+            )
+            .unwrap(),
+        ReservationOutcome::Reserved
     );
     record.sandbox = Some(KnownSandbox::observed(
         "bx_23456789".to_owned(),

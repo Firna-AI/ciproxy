@@ -67,6 +67,10 @@ Confirmed events are deleted instead of retained indefinitely.
 
 Overflow tables hold credential-free account observations and durable
 sandbox deliveries across every organization of a workspace.
+One pending connection grant per workspace holds a fresh operation identity
+and the intended key-version identity.
+It holds no plaintext key or ciphertext.
+Last-App removal deletes the grant, and successful activation consumes it.
 Each delivery holds a callback digest and temporary encrypted runner input.
 Provider identity, phase, start-price quote, and per-month runtime facts
 survive a control-plane restart.

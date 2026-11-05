@@ -4,6 +4,7 @@ use chrono::Duration;
 use ciproxy_metering::report::boat::daily_boat_costs;
 use ciproxy_metering::report::range::DateRange;
 use ciproxy_store_interface::error::Error;
+use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
 use ciproxy_store_interface::overflow::billing::MeasuredBillingInterval;
 use ciproxy_store_interface::overflow::known::KnownSandbox;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, RuntimeCharge, StartPhase};
@@ -18,10 +19,19 @@ fn metering_uses_provider_start_time_and_never_confirms_an_unknown_outage_day() 
     let database = Database::new();
     let (workspace_id, _, mut record) = setup(&database);
     let mut session = database.store.lock_overflow(workspace_id).unwrap();
-    assert!(
+    assert_eq!(
         session
-            .reserve_start(&record, &EncryptedLaunch(vec![1]), &TokenHash::new(vec![2]))
-            .unwrap()
+            .reserve_start(
+                &record,
+                &EncryptedLaunch(vec![1]),
+                &TokenHash::new(vec![2]),
+                &ReservationBudget {
+                    current_month_usd: Decimal::new(462, 3),
+                    next_month_usd: None,
+                },
+            )
+            .unwrap(),
+        ReservationOutcome::Reserved
     );
     record.sandbox = Some(KnownSandbox::observed(
         "bx_23456789".to_owned(),

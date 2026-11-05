@@ -7,6 +7,8 @@ use chrono::{DateTime, Utc};
 use ciproxy_overflow::crypto::KeyContext;
 use ciproxy_overflow::secrets::SecretBytes;
 use ciproxy_store_interface::error::Result;
+use ciproxy_store_interface::overflow::admission::{ReservationBudget, ReservationOutcome};
+use ciproxy_store_interface::overflow::connection::ConnectionGrant;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase, StartRecord};
 use ciproxy_store_interface::overflow::store::{
     AccountRecord, OverflowSession, OverflowSnapshot, OverflowStore,
@@ -21,12 +23,14 @@ pub(super) struct Capture {
     pub(super) key_opens: usize,
     pub(super) disable_on_key_open: Option<(usize, Arc<dyn Store>)>,
     pub(super) suspend_on_key_open: Option<(usize, Arc<dyn Store>)>,
+    pub(super) limit_on_launch_seal: Option<(i64, Arc<dyn Store>)>,
     pub(super) launches: BTreeMap<Uuid, EncryptedLaunch>,
     pub(super) hashes: BTreeMap<Uuid, TokenHash>,
     pub(super) sealed: BTreeMap<(Uuid, u8), SecretBytes>,
     pub(super) contexts: Vec<KeyContext>,
     pub(super) phases: Vec<StartPhase>,
     pub(super) saved: Vec<StartRecord>,
+    pub(super) budgets: Vec<ReservationBudget>,
 }
 
 pub(super) struct RecordingStore {
@@ -82,8 +86,17 @@ impl OverflowSession for RecordingSession {
         self.inner.startup_account(delivery_id)
     }
 
-    fn connect(&mut self, account: &AccountRecord, limit: i64) -> Result<()> {
-        self.inner.connect(account, limit)
+    fn begin_connection(&mut self, key_id: Uuid) -> Result<Option<ConnectionGrant>> {
+        self.inner.begin_connection(key_id)
+    }
+
+    fn complete_connection(
+        &mut self,
+        grant: ConnectionGrant,
+        account: &AccountRecord,
+        limit: i64,
+    ) -> Result<bool> {
+        self.inner.complete_connection(grant, account, limit)
     }
 
     fn disconnect(&mut self, at: DateTime<Utc>) -> Result<()> {
@@ -105,9 +118,11 @@ impl OverflowSession for RecordingSession {
         record: &StartRecord,
         launch: &EncryptedLaunch,
         hash: &TokenHash,
-    ) -> Result<bool> {
-        let reserved = self.inner.reserve_start(record, launch, hash)?;
-        if reserved {
+        budget: &ReservationBudget,
+    ) -> Result<ReservationOutcome> {
+        self.capture.lock().unwrap().budgets.push(budget.clone());
+        let reserved = self.inner.reserve_start(record, launch, hash, budget)?;
+        if reserved == ReservationOutcome::Reserved {
             self.record(record);
             let mut capture = self.capture.lock().unwrap();
             capture.launches.insert(record.delivery_id, launch.clone());
