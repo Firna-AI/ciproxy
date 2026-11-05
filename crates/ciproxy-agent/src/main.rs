@@ -12,6 +12,8 @@ mod capacity;
 mod cli;
 mod commands;
 mod connection;
+mod connection_socket;
+mod connection_types;
 mod controller;
 mod error;
 mod gateway;
@@ -63,6 +65,10 @@ mod vsock_stream;
 #[cfg(test)]
 #[path = "_tests_/fixtures.rs"]
 mod fixtures;
+
+#[cfg(test)]
+#[path = "_tests_/connection_fixtures.rs"]
+mod connection_fixtures;
 
 #[cfg(test)]
 #[path = "_tests_/job_facts_tests.rs"]

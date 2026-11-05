@@ -10,6 +10,7 @@ use ciproxy_protocol::reports::MachineReport;
 use tokio::sync::{Mutex, mpsc, oneshot};
 
 use crate::boundaries::Connection;
+use crate::connection_types::{ConnectionResult, ControlEvent};
 use crate::controller::Agent;
 use crate::error::Result;
 
@@ -57,17 +58,17 @@ pub(crate) struct IncomingConnection {
 
 #[async_trait]
 impl Connection for IncomingConnection {
-    async fn connect(&self) -> Result<()> {
+    async fn connect(&self) -> ConnectionResult<()> {
         self.delegate.connect().await
     }
-    async fn send(&self, message: &AgentMessage) -> Result<()> {
+    async fn send(&self, message: &AgentMessage) -> ConnectionResult<()> {
         self.delegate.send(message).await
     }
-    async fn receive(&self) -> Result<ControlMessage> {
+    async fn receive(&self) -> ConnectionResult<ControlEvent> {
         self.permit.lock().await.recv().await.unwrap();
         self.delegate.receive().await
     }
-    async fn receive_handshake(&self) -> Result<ControlMessage> {
+    async fn receive_handshake(&self) -> ConnectionResult<ControlEvent> {
         self.delegate.receive_handshake().await
     }
 }

@@ -1,33 +1,45 @@
 //! Outbound TLS WebSocket with independent read and write locks.
 
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use async_trait::async_trait;
-use ciproxy_protocol::agent::{AgentMessage, ControlMessage};
-use futures_util::stream::{SplitSink, SplitStream};
+use ciproxy_protocol::agent::AgentMessage;
 use futures_util::{SinkExt, StreamExt};
-use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 use tokio::time::timeout;
+use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
-use tokio_tungstenite::tungstenite::{self, Message};
-use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async};
 
 use crate::boundaries::Connection;
-use crate::error::{Error, ErrorResultExt, Result};
+use crate::connection_socket::{SocketReader, SocketWriter, WebSocketDialer};
+use crate::connection_types::{
+    ConnectionError, ConnectionErrorResultExt, ConnectionResult, ControlEvent,
+};
 
-type Socket = WebSocketStream<MaybeTlsStream<TcpStream>>;
+struct Writer {
+    socket: SocketWriter,
+    hello_sent: Arc<AtomicBool>,
+}
+
+struct Reader {
+    socket: SocketReader,
+    hello_sent: Arc<AtomicBool>,
+}
 
 pub(crate) struct WebSocketConnection {
-    pub(crate) url: String,
-    writer: Mutex<Option<SplitSink<Socket, Message>>>,
-    reader: Mutex<Option<SplitStream<Socket>>>,
+    url: String,
+    dialer: Arc<dyn WebSocketDialer>,
+    writer: Mutex<Option<Writer>>,
+    reader: Mutex<Option<Reader>>,
 }
 
 impl WebSocketConnection {
-    pub(crate) fn new(url: String) -> Self {
+    pub(crate) fn new(url: String, dialer: Arc<dyn WebSocketDialer>) -> Self {
         Self {
             url,
+            dialer,
             writer: Mutex::new(None),
             reader: Mutex::new(None),
         }
@@ -36,78 +48,85 @@ impl WebSocketConnection {
 
 #[async_trait]
 impl Connection for WebSocketConnection {
-    async fn receive_handshake(&self) -> Result<ControlMessage> {
+    async fn receive_handshake(&self) -> ConnectionResult<ControlEvent> {
         timeout(Duration::from_secs(20), self.receive())
             .await
             .context("control handshake timeout")?
     }
 
-    async fn connect(&self) -> Result<()> {
+    async fn connect(&self) -> ConnectionResult<()> {
+        *self.writer.lock().await = None;
+        *self.reader.lock().await = None;
         if !self.url.starts_with("wss://") {
-            return Err(Error::HttpsRequired);
+            return Err(ConnectionError::HttpsRequired);
         }
-        let result = timeout(Duration::from_secs(20), connect_async(&self.url))
+        let socket = timeout(Duration::from_secs(20), self.dialer.dial(&self.url))
             .await
-            .context("connect control plane timeout")?;
-        let (socket, _) = match result {
-            Ok(socket) => socket,
-            Err(tungstenite::Error::Http(response))
-                if matches!(response.status().as_u16(), 401 | 403) =>
-            {
-                return Err(Error::Revoked);
-            }
-            Err(error) => return Err(error).context("connect control plane"),
-        };
-        let (writer, reader) = socket.split();
-        *self.writer.lock().await = Some(writer);
-        *self.reader.lock().await = Some(reader);
+            .context("connect control plane timeout")?
+            .context("connect control plane")?;
+        let hello_sent = Arc::new(AtomicBool::new(false));
+        *self.writer.lock().await = Some(Writer {
+            socket: socket.writer,
+            hello_sent: hello_sent.clone(),
+        });
+        *self.reader.lock().await = Some(Reader {
+            socket: socket.reader,
+            hello_sent,
+        });
         Ok(())
     }
 
-    async fn send(&self, message: &AgentMessage) -> Result<()> {
+    async fn send(&self, message: &AgentMessage) -> ConnectionResult<()> {
         let bytes = serde_json::to_string(message).context("encode agent message")?;
         let mut writer = self.writer.lock().await;
-        let writer = writer.as_mut().ok_or(Error::Disconnected)?;
+        let writer = writer.as_mut().ok_or(ConnectionError::Disconnected)?;
         timeout(
             Duration::from_secs(10),
-            writer.send(Message::Text(bytes.into())),
+            writer.socket.send(Message::Text(bytes.into())),
         )
         .await
         .context("send control plane timeout")?
         .context("send control plane message")?;
+        if matches!(message, AgentMessage::Hello { .. }) {
+            writer.hello_sent.store(true, Ordering::Release);
+        }
         Ok(())
     }
 
-    async fn receive(&self) -> Result<ControlMessage> {
+    async fn receive(&self) -> ConnectionResult<ControlEvent> {
         let mut reader = self.reader.lock().await;
-        let reader = reader.as_mut().ok_or(Error::Disconnected)?;
+        let reader = reader.as_mut().ok_or(ConnectionError::Disconnected)?;
         loop {
-            match reader.next().await {
+            match reader.socket.next().await {
                 Some(Ok(frame)) => {
-                    if let Some(message) = decode_frame(frame)? {
-                        return Ok(message);
+                    if let Some(event) = decode_frame(frame)? {
+                        if matches!(event, ControlEvent::CredentialRejected)
+                            && !reader.hello_sent.load(Ordering::Acquire)
+                        {
+                            return Err(ConnectionError::Disconnected);
+                        }
+                        return Ok(event);
                     }
                 }
-                None => return Err(Error::Disconnected),
+                None => return Err(ConnectionError::Disconnected),
                 Some(Err(error)) => return Err(error).context("read control message"),
             }
         }
     }
 }
 
-/// Decode control messages and permanent credential rejection from wire frames.
-pub(crate) fn decode_frame(frame: Message) -> Result<Option<ControlMessage>> {
+fn decode_frame(frame: Message) -> ConnectionResult<Option<ControlEvent>> {
     match frame {
-        Message::Text(text) => Ok(Some(
+        Message::Text(text) => Ok(Some(ControlEvent::Message(Box::new(
             serde_json::from_str(&text).context("decode control message")?,
-        )),
+        )))),
         Message::Close(Some(close))
             if close.code == CloseCode::Policy
                 && close.reason.as_str() == "[gateway] authentication failed" =>
         {
-            Err(Error::Revoked)
+            Ok(Some(ControlEvent::CredentialRejected))
         }
-        Message::Close(_) => Err(Error::Disconnected),
+        Message::Close(_) => Err(ConnectionError::Disconnected),
         _ => Ok(None),
     }
 }

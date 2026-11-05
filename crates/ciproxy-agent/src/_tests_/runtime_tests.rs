@@ -12,8 +12,8 @@ use tokio::task::unconstrained;
 use unimock::{MockFn, Unimock, matching};
 
 use crate::boundaries::{ConnectionMock, DelayMock};
+use crate::connection_types::ControlEvent;
 use crate::controller::AgentMock;
-use crate::error::Error;
 use crate::fixtures::{identity, report, spec};
 use crate::gateway::GatewayMock;
 use crate::maintenance::MaintenanceMock;
@@ -68,10 +68,12 @@ async fn daemon_reports_every_wait_beyond_queue_capacity_while_control_stays_pen
         DelayMock::wait.each_call(matching!(10)).returns(()),
         ConnectionMock::receive
             .some_call(matching!())
-            .returns(Ok(ControlMessage::StartRunner {
-                command_id: CommandId("blocked".to_owned()),
-                runner: spec(),
-            })),
+            .returns(Ok(ControlEvent::Message(Box::new(
+                ControlMessage::StartRunner {
+                    command_id: CommandId("blocked".to_owned()),
+                    runner: spec(),
+                },
+            )))),
         ConnectionMock::send
             .each_call(matching!((message) if matches!(message, AgentMessage::Report { .. })))
             .answers_arc(Arc::new(move |_, _| {
@@ -174,7 +176,7 @@ async fn daemon_removes_a_rejected_connected_machine_without_another_handshake()
         DelayMock::wait.each_call(matching!(10)).returns(()),
         ConnectionMock::receive
             .some_call(matching!())
-            .returns(Err(Error::Revoked)),
+            .returns(Ok(ControlEvent::CredentialRejected)),
     )));
     let (permit, receive) = mpsc::unbounded_channel();
     permit.send(()).unwrap();

@@ -9,6 +9,7 @@ use tokio::sync::{Notify, mpsc, watch};
 use tokio::task::JoinSet;
 
 use crate::boundaries::{Connection, Delay, GuestEvent};
+use crate::connection_types::ControlEvent;
 use crate::controller::Agent;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::gateway::Gateway;
@@ -131,11 +132,11 @@ impl AgentDaemon {
                 }
                 message = self.connection.receive(), if connected && pending_work.is_none() => {
                     match message {
-                        Ok(message) => {
-                            if let ControlMessage::Remove { command_id } = &message { pending_remove = Some(command_id.clone()); }
-                            pending_work = Some(Work::Control(Box::new(message)));
+                        Ok(ControlEvent::Message(message)) => {
+                            if let ControlMessage::Remove { command_id } = &*message { pending_remove = Some(command_id.clone()); }
+                            pending_work = Some(Work::Control(message));
                         }
-                        Err(Error::Revoked) => {
+                        Ok(ControlEvent::CredentialRejected) => {
                             self.agent.remove().await?;
                             removing = true;
                             channels.connected.send_replace(false);

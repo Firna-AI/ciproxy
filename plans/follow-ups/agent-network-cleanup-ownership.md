@@ -12,8 +12,8 @@
   `crates/ciproxy-agent/src/observations.rs`,
   `crates/ciproxy-agent/src/launches.rs`, and
   `crates/ciproxy-agent/src/controller.rs`.
-- **Reason:** This Rare defect needs a host cleanup failure, and a later
-  start retries cleanup after a transient failure.
+- **Reason:** This Rare Medium defect has manual recovery. The ownership
+  correction costs the same after merge.
 
 - **Terms:**
   - **Network index:** A number that selects a VM's namespace, virtual
@@ -48,17 +48,17 @@
     resource remains or verification fails. Keep ownership for retry.
     Finished VMs then keep their report and slots until cleanup succeeds.
     Effort: Small.
-  - **B.** Give deletion typed outcomes for removed, already absent, and
-    failed resources. Use them during retirement and recovery. This still
-    needs host inspection to classify absence. Effort: Medium.
-  - **C.** Persist pending cleanup separately from completed VMs. Reserve
+  - **B.** Persist pending cleanup separately from completed VMs. Reserve
     its indices until cleanup succeeds. This changes durable state and
     still needs reliable host inspection. Effort: Medium.
-  - **D.** Give network resources one owner. Before allocation, inspect
-    host resources and skip every occupied index. During reconciliation,
-    retry cleanup of resources that no VM owns. Include failed-start
-    leftovers. This adds host-list commands and output parsing.
-    Effort: Medium.
+  - **C.** Give allocation and cleanup one owner. Preserve pending
+    ownership when deletion fails. Inspect host resources and avoid
+    occupied indices. Retry owned leftovers during reconciliation,
+    including failed-start resources. This adds host-list commands and
+    output parsing. Effort: Medium.
+  - **D.** Give deletion typed outcomes for removed, already absent, and
+    failed resources. Use them during retirement and recovery. This still
+    needs host inspection to classify absence. Effort: Medium.
   - **E.** Tie network lifetime to each VM's systemd unit. Let the kernel
     remove its namespace and link pair. Keep host rules in one agent
     table. This replaces network setup and needs real KVM validation.
@@ -68,7 +68,7 @@
   Matching error text depends on host locale and violates the Rust error
   contract. Rotating allocation only delays collisions. Unique VM names
   alone leave the index-derived host addresses in conflict.
-- **Wider fix:** D. The common allocator never selects an index whose
+- **Wider fix:** C. The common allocator never selects an index whose
   network resources still exist.
 - **Previous examples:** The image owner in
   `crates/ciproxy-agent/src/image_registry.rs` reclaims unowned files and
@@ -76,10 +76,14 @@
 - **Related:** Runtime removal is already terminal in
   `crates/ciproxy-agent/src/mode.rs`. The new owner must preserve that
   behavior when reconciliation or cleanup waits.
-- **Recommendation:** D. Host resource ownership protects both allocation
+- **Recommendation:** C. Host resource ownership protects both allocation
   and eventual cleanup without keeping completed jobs in reports.
-- **Action:** fix after merge, apply D, because a host cleanup failure is
-  Rare and the change adds no durable format that gets harder to replace.
+- **Action:** fix after merge, apply C, because this Rare Medium cleanup
+  failure has manual recovery. The ownership correction costs the same
+  after merge.
+- **Review outcome, 5 November 2026:** The orchestrator selected C in the
+  first review of pull request 12. It is the common-owner approach formerly
+  labelled D in this record. Preserve pending ownership explicitly.
 - **Done when:** Failed deletion leaves its index unavailable to a new
   VM. Reconciliation removes leftovers after host recovery. Remove and
   uninstall finish only when no agent-owned resource remains. After the VM

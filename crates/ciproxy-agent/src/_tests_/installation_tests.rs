@@ -9,6 +9,7 @@ use ciproxy_protocol::version::ProtocolVersion;
 use unimock::{MockFn, Unimock, matching};
 
 use crate::boundaries::{ConnectionMock, HostMock, ServiceMock, StoreMock};
+use crate::connection_types::ControlEvent;
 use crate::controller::AgentMock;
 use crate::error::Error;
 use crate::fixtures::{identity, report, vm};
@@ -100,11 +101,13 @@ async fn registration_saves_the_workspace_and_credential_returned_by_gateway() {
             })),
         ConnectionMock::receive_handshake
             .some_call(matching!())
-            .returns(Ok(ControlMessage::Registered {
-                workspace_id: WorkspaceId("gateway-workspace-7b3".to_owned()),
-                machine_id: MachineId("gateway-machine-c8".to_owned()),
-                credential: Secret::new("gateway-machine-secret"),
-            })),
+            .returns(Ok(ControlEvent::Message(Box::new(
+                ControlMessage::Registered {
+                    workspace_id: WorkspaceId("gateway-workspace-7b3".to_owned()),
+                    machine_id: MachineId("gateway-machine-c8".to_owned()),
+                    credential: Secret::new("gateway-machine-secret"),
+                },
+            )))),
         ServiceMock::install.some_call(matching!()).returns(Ok(())),
     ));
     installer(mock)
@@ -163,9 +166,11 @@ async fn registration_rejects_a_wrong_handshake_without_saving_identity() {
         ConnectionMock::send.some_call(matching!(_)).returns(Ok(())),
         ConnectionMock::receive_handshake
             .some_call(matching!())
-            .returns(Ok(ControlMessage::Welcome {
-                protocol_version: ProtocolVersion::CURRENT,
-            })),
+            .returns(Ok(ControlEvent::Message(Box::new(
+                ControlMessage::Welcome {
+                    protocol_version: ProtocolVersion::CURRENT,
+                },
+            )))),
     ));
     assert!(matches!(
         installer(mock).install(Secret::new("install-secret")).await,

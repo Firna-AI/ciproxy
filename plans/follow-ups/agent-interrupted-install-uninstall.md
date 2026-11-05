@@ -7,11 +7,11 @@
   `conductor/ciproxy-mvp-milestone-9-agent`, review finding 13.
 - **Source:** Review.
 - **Category:** Product bug.
-- **Location:** `crates/ciproxy-agent/src/application.rs:217`,
-  `crates/ciproxy-agent/src/area.rs:81`, and
+- **Location:** `crates/ciproxy-agent/src/application.rs`,
+  `crates/ciproxy-agent/src/area.rs`, and
   `crates/ciproxy-agent/src/host_preparation.rs:94`.
-- **Reason:** This Rare Medium defect changes no stored format. Its safe
-  lifecycle correction costs the same after merge.
+- **Reason:** This Rare Medium defect has manual recovery and changes no
+  stored format. Its correction costs the same after merge.
 
 - **Terms:**
   - **Area:** The owned XFS filesystem that holds images and job data.
@@ -19,9 +19,10 @@
   - **Ready:** The recorded phase after the filesystem identity check.
   - **Removing:** The recorded phase after removal starts.
 - **Background:** Installation prepares the area before registration.
-  It records Creating before formatting. It records Ready before starting
-  the mount. An interrupted installation can leave either phase with no
-  recorded VM. VM startup saves ownership before starting its systemd unit.
+  It records Creating before formatting. It records Ready after mounting
+  and measured growth. An interrupted installation can leave Creating with
+  no recorded VM. A completed area's mount can also stop. VM startup saves
+  ownership before starting its systemd unit.
 - **Problem:** The uninstall CLI permits direct cleanup only when the
   area record is absent or Removing. Creating and unmounted Ready instead
   enter runtime verification. Verification rejects them before guarded
@@ -37,24 +38,21 @@
   - **A.** Route an empty machine directly through existing guarded
     removal in the CLI. Test the lower area boundary. Those tests cannot
     protect the CLI routing that caused this defect. Effort: Small.
-  - **C.** Move the routing and preparation steps into the existing
+  - **B.** Move the routing and preparation steps into the existing
     `Uninstall` service. Keep the drain loop in the CLI. Route a machine
     with no recorded VM directly to guarded removal. Route a recorded VM
     through verification, image recovery, restoration, and drain.
     Test both routes through that service. Effort: Small.
-  - **B.** Move routing and the drain loop into one lifecycle controller.
-    This adds controlled-clock and guest-channel tests without removing
-    another case of this defect. Effort: Medium.
 - **Left out:** Reinstallation cannot fix a persistent formatting or
   mount fault. Relaxing runtime verification lets image recovery write
   under an unmounted mountpoint. A separate cleanup command duplicates
   removal and adds an unnecessary CLI surface. Install rollback misses
   power loss and deletes data that repair should preserve. Manual removal
   instructions leave uninstall broken. A new forwarding controller adds
-  a layer that C does not need.
-- **Wider fix:** C, changed from B after the independent check. The
-  default sends an empty machine to guarded removal without runtime
-  checks. Later preparation checks cannot block that route.
+  a layer that B does not need. Moving the full event loop adds work
+  without removing another cause of this defect.
+- **Wider fix:** B. The default sends an empty machine to guarded removal.
+  It requires no runtime checks. Later preparation checks cannot block it.
 - **Previous examples:** None found in the targeted lifecycle history
   and repository search.
 - **Related:**
@@ -64,11 +62,13 @@
     handles before unmount. Both routes still use guarded area removal.
   - [Network ownership](agent-network-cleanup-ownership.md) preserves
     cleanup ownership. A machine with a recorded VM keeps its drain route.
-- **Recommendation:** C, changed from B after the independent check.
-  It puts the safe default and its regression test in the existing service.
-- **Action:** fix after merge, apply C, because the defect is Rare and
-  Medium, leaves owned files that manual removal clears, and costs the
-  same to fix later.
+- **Recommendation:** B. It puts the safe default and its regression test
+  in the existing service.
+- **Action:** fix after merge, apply B, because the defect is Rare and
+  Medium, has manual recovery, and changes no stored format.
+- **Review outcome, 5 November 2026:** The orchestrator selected B in the
+  first review of pull request 12. It is the existing-service routing
+  formerly labelled C in this record. Only the letter changed.
 
 ## Implementation requirements
 

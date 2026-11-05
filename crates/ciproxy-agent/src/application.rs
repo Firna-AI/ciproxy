@@ -20,6 +20,7 @@ use crate::boundaries::{Cache, Connection, Host, Images, Service, Store, Vms};
 use crate::cache::UnixCache;
 use crate::cli::{Action, Cli};
 use crate::connection::WebSocketConnection;
+use crate::connection_socket::TlsWebSocketDialer;
 use crate::controller::{Agent, Controller};
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::gateway::ReconnectingGateway;
@@ -171,6 +172,7 @@ async fn execute(action: Action) -> Result<()> {
     let connection: Arc<dyn Connection> = Arc::new(WebSocketConnection::new(
         std::env::var("CIPROXY_AGENT_URL")
             .unwrap_or_else(|_| "wss://app.ciproxy.dev/agent/".to_owned()),
+        Arc::new(TlsWebSocketDialer),
     ));
     match action {
         Action::Install(token) => {

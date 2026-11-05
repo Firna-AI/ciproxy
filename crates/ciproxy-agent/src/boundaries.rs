@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use ciproxy_protocol::agent::{AgentMessage, ControlMessage};
+use ciproxy_protocol::agent::AgentMessage;
 use ciproxy_protocol::cache::{CacheConnection, MachineCacheReport};
 use ciproxy_protocol::guest::{AgentToGuest, GuestToAgent};
 use ciproxy_protocol::identifiers::RunnerId;
@@ -12,6 +12,7 @@ use ciproxy_protocol::jobs::JobFacts;
 use ciproxy_protocol::reports::HardwareReport;
 use ciproxy_protocol::runners::RunnerReport;
 
+use crate::connection_types::{ConnectionResult, ControlEvent};
 use crate::error::Result;
 use crate::image_registry::ImageLease;
 use crate::state::{MachineState, VmRecord};
@@ -40,10 +41,10 @@ pub(crate) trait Service: Send + Sync {
 #[cfg_attr(test, unimock::unimock(api = ConnectionMock))]
 #[async_trait]
 pub(crate) trait Connection: Send + Sync {
-    async fn connect(&self) -> Result<()>;
-    async fn send(&self, message: &AgentMessage) -> Result<()>;
-    async fn receive(&self) -> Result<ControlMessage>;
-    async fn receive_handshake(&self) -> Result<ControlMessage>;
+    async fn connect(&self) -> ConnectionResult<()>;
+    async fn send(&self, message: &AgentMessage) -> ConnectionResult<()>;
+    async fn receive(&self) -> ConnectionResult<ControlEvent>;
+    async fn receive_handshake(&self) -> ConnectionResult<ControlEvent>;
 }
 
 #[cfg_attr(test, unimock::unimock(api = ImagesMock))]

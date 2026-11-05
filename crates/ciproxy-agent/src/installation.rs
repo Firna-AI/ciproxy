@@ -8,8 +8,9 @@ use ciproxy_protocol::secret::Secret;
 use ciproxy_protocol::version::ProtocolVersion;
 
 use crate::boundaries::{Connection, Host, Service, Store};
+use crate::connection_types::ControlEvent;
 use crate::controller::Agent;
-use crate::error::{Error, Result};
+use crate::error::{Error, ErrorResultExt, Result};
 use crate::host_preparation::Preparation;
 use crate::state::{Identity, Mode};
 
@@ -41,19 +42,31 @@ impl Install for Installer {
         }
         self.store.save(&state)?;
         let report = self.agent.report().await?;
-        self.connection.connect().await?;
+        self.connection
+            .connect()
+            .await
+            .context("connect registration")?;
         self.connection
             .send(&AgentMessage::Register {
                 protocol_version: ProtocolVersion::CURRENT,
                 install_token: token,
                 report,
             })
-            .await?;
+            .await
+            .context("send registration")?;
+        let ControlEvent::Message(message) = self
+            .connection
+            .receive_handshake()
+            .await
+            .context("receive registration")?
+        else {
+            return Err(Error::IdentityMismatch);
+        };
         let ControlMessage::Registered {
             workspace_id,
             machine_id,
             credential,
-        } = self.connection.receive_handshake().await?
+        } = *message
         else {
             return Err(Error::IdentityMismatch);
         };

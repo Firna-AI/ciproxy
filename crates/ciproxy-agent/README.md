@@ -107,10 +107,11 @@ The default route is `wss://app.ciproxy.dev/agent/`.
 `CIPROXY_AGENT_URL` can select a staging WSS route.
 The agent requires a valid TLS certificate.
 The gateway authenticates Hello before sending Welcome.
-WebSocket policy close 1008 with reason
+After Hello, WebSocket policy close 1008 with reason
 `[gateway] authentication failed` also removes the machine.
 Other policy closes preserve the identity and reconnect.
-An HTTP 401 or 403 during the upgrade also removes the machine.
+An HTTP 401 or 403 during the upgrade preserves the identity and reconnects.
+A rejection before this socket sends Hello is a connection failure.
 The gateway binds every runner organization to the machine workspace.
 It withdraws idle GitHub registrations before StopRunner, Drain, or Remove.
 It preserves runners to which GitHub has already assigned a job.
@@ -245,6 +246,8 @@ The [host guide](host-preparation.md#ext4-and-kvm-smoke) gives the ext4 check.
 - [src/application.rs](src/application.rs) composes the Linux adapters.
 - [src/controller.rs](src/controller.rs) defines durable machine control.
 - [src/runtime.rs](src/runtime.rs) owns daemon inputs and task lifetimes.
+- [src/connection.rs](src/connection.rs) separates connection failures from
+  credential rejection after Hello on the current socket.
 - [src/runtime_reports.rs](src/runtime_reports.rs) schedules independent reports.
 - [src/mode.rs](src/mode.rs) owns terminal runtime mode transitions.
 - [src/vms.rs](src/vms.rs) owns separate jailed VM units.
