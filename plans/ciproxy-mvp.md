@@ -197,8 +197,13 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
       Branch: `codex/m5-terraform-promotion`.
   - [x] Prepare and test the idempotent `deploy/scripts/github-ruleset.sh`.
         Branch: `codex/m5-terraform-promotion`.
-  - [ ] User: upgrade the organization. Orchestrator: apply the ruleset.
+  - [x] User: upgrade the organization. Orchestrator: apply the ruleset.
         Branch: `codex/m5-terraform-promotion`.
+- [ ] Make this repository public, as item 70 says. The orchestrator scans
+      the history, the run logs, and the pull request texts for secrets, and
+      checks the workflows and the runner groups. The user changes the
+      visibility. Then turn on secret scanning with push protection, and
+      require approval of workflow runs from all outside contributors.
 - [x] Rename the staging environment to the main preview of item 53, with
       its hosts under `br-main.preview`, before the first apply.
       Branch: `conductor/ciproxy-mvp-milestone-5-main-preview`.
@@ -866,9 +871,11 @@ Each screen follows its mockup, as Milestone 19 says.
 
 Depends on: every milestone from 1 to 26
 
-The public copy goes live before the site, because the site links to it.
+The repository is public from item 70 = E, and the site links to it.
 
-- [ ] Run the CI of ciproxy on ciproxy, and fix or record each problem.
+- [ ] Run the CI of a private test repository on ciproxy, and fix or record
+      each problem. ciproxy runs private repositories only, and item 70 = E
+      made this repository public.
       Close the follow-up item `expo-56-npm-advisories.md`.
 - [ ] Draft the terms and the privacy policy, which the user writes or
       approves. They state the limits of "Data retention" in `security.md`.
@@ -876,9 +883,8 @@ The public copy goes live before the site, because the site links to it.
       accounts of the user.
 - [ ] Deploy production. Smoke-test a first job, an overflow, and a live
       checkout that the user approves.
-- [ ] Publish the open parts in a public repository that the user creates,
-      and check that it builds alone. Check the licence of the installer
-      of `futex-ai/cli-release`.
+- [ ] Check that the open parts build alone, and check the licence of the
+      installer of `futex-ai/cli-release`.
 - [ ] Ask Boat to confirm in writing that a customer may run ciproxy
       runners on its own Boat account. The user sends the request. My call:
       the terms allow this use by inference only.
@@ -1114,6 +1120,14 @@ Answers of 5 November 2026:
   can stop overflow early, by $0.07 for each start that Boat does not charge.
   `overflow.md` states the rule. Rejected: the saved quote, a second quote
   after the start, and a charged fee from Boat.
+- Item 70, E: this whole repository becomes public now, in place of a public
+  copy of the open parts at launch. The agent builds and releases in public.
+  This replaces the code location rule of the foundation plan. The closed
+  parts keep no open licence, and the README says which directories are
+  Apache-2.0. ciproxy runs private repositories only, so Milestone 27 tests
+  the CI of a private test repository on ciproxy. `futex-ai/cli-release`
+  needs a GitHub token, so the release server keeps one, but it reads public
+  repositories only. Rejected: options A, B, C, and D.
 - Item 66, A: only a job of a trusted event on the default branch keeps
   its changes to a Docker disk, as item 59 says for the machine cache.
   `cache.md` states it. Rejected: any event on the default branch, and
@@ -2007,7 +2021,7 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 69 on 5 November 2026. Item 70 still waits. The
+The user answered items 54 to 70 on 5 November 2026. No item still waits. The
 conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
@@ -2392,6 +2406,8 @@ keep the letters that the user saw.
 
 ### 70. The agent binaries stay private after launch
 
+**Answer, 5 November 2026:** E.
+
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Design. The user wrote "probably the cli needs to be open
   source, if people are going to install it on their machine", and then "i
@@ -2461,5 +2477,4 @@ keep the letters that the user saw.
   C best keeps the paid code private.
 - **Before D or E:** scan the whole history for secrets, check each workflow
   for pull requests from forks, and remove what must stay private.
-- **Action:** ask the user, because D and E reverse a recorded decision and
-  cannot be undone, and C keeps the paid code private.
+- **Action:** answered E.
