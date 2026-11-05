@@ -6,6 +6,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use axum::body::{Body, to_bytes};
 use axum::http::{HeaderMap, Method, Request, Response, StatusCode};
+use ciproxy_protocol::jobs::JobScope;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
@@ -13,6 +14,7 @@ use crate::clock::Clock;
 use crate::download::Download;
 use crate::error::{CacheError, Result, ResultExt};
 use crate::metrics::{Metrics, Reports};
+use crate::runtime_token::RuntimeTokens;
 use crate::scope::can_save;
 use crate::service::Service;
 use crate::session::Registration;
@@ -24,6 +26,8 @@ use crate::wire::{V2, cache_path, miss, save_path, status};
 
 pub(crate) struct Session {
     pub registration: Registration,
+    pub scope: JobScope,
+    pub private_ref: String,
     pub uploads: Mutex<HashMap<String, Arc<Mutex<Upload>>>>,
     pub downloads: Mutex<HashMap<String, Arc<Mutex<Download>>>>,
 }
@@ -36,6 +40,7 @@ pub struct MachineCache {
     pub(crate) metrics: Arc<dyn Reports>,
     pub(crate) sessions: Mutex<HashMap<String, Arc<Session>>>,
     pub(crate) admin_token: String,
+    pub(crate) tokens: Arc<dyn RuntimeTokens>,
 }
 
 impl MachineCache {
@@ -45,6 +50,7 @@ impl MachineCache {
         network: Arc<dyn Transport>,
         clock: Arc<dyn Clock>,
         admin_token: String,
+        tokens: Arc<dyn RuntimeTokens>,
     ) -> Self {
         Self {
             metrics: Arc::new(Metrics::new(store.clone(), clock.clone())),
@@ -53,6 +59,7 @@ impl MachineCache {
             clock,
             sessions: Mutex::new(HashMap::new()),
             admin_token,
+            tokens,
         }
     }
 
@@ -121,6 +128,7 @@ impl MachineCache {
         if save_path(path, &parts.method)
             && !can_save(
                 &session.registration.facts,
+                &session.scope,
                 session.registration.permissions.write,
             )
         {

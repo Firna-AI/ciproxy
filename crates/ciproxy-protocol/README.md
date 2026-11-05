@@ -48,8 +48,13 @@ Its `expose_secret` method gives explicit access to the original value.
 JSON serialization also carries the original value for delivery.
 Do not log serialized messages that contain secrets.
 
-Job facts carry cache-scope inputs without selecting their source or
-granting shared write access. Memory and disk fields use bytes.
+Job facts carry expected repository, run, job, and JIT runner identities,
+with the API event, head repository, and default branch. They carry no
+guessed full job ref. `JobScope` separately carries a machine-checked ref
+and readable scopes, or a typed unknown reason. The admin session result
+returns that scope for Docker-disk policy. Machine cache reports count
+unknown jobs by reason. These values grant no trust by their presence.
+Memory and disk fields use bytes.
 The documented resource sizes use decimal GB for slot arithmetic.
 Disk capacity does not enter the CPU and memory slot formula.
 Use `Resources` for a complete fit check that includes job disk.
@@ -115,7 +120,8 @@ Review snapshot changes before accepting them.
 - [src/reports.rs](src/reports.rs) defines current machine state.
 - [src/cache.rs](src/cache.rs) defines restore handling and
   `CacheRestoreCounts::source`, which derives the measured content source.
-- [src/jobs.rs](src/jobs.rs) carries job identity and cache-scope inputs.
+- [src/jobs.rs](src/jobs.rs) carries expected assignment identities and
+  checked or unknown machine scopes.
 - [src/secret.rs](src/secret.rs) protects secret diagnostic output.
 - [src/version.rs](src/version.rs) preserves the shared version API.
 - [src/_tests_/wire/](src/_tests_/wire/) holds wire tests and snapshots.

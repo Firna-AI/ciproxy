@@ -9,7 +9,6 @@ use ciproxy_protocol::secret::Secret;
 use serde::{Deserialize, Serialize};
 
 use crate::error::{Result, ResultExt};
-use crate::scope::can_save;
 use crate::service::Service;
 use crate::session::Registration;
 use crate::transport::{Outbound, Transport};
@@ -48,8 +47,7 @@ impl VmProxy {
         let registration = &self.config.registration;
         let cache = cache_path(parts.uri.path());
         if cache
-            && (save_path(parts.uri.path(), &parts.method)
-                && !can_save(&registration.facts, registration.permissions.write)
+            && (save_path(parts.uri.path(), &parts.method) && !registration.permissions.write
                 || !save_path(parts.uri.path(), &parts.method) && !registration.permissions.read)
         {
             return Ok(miss(parts.uri.path()));

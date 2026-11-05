@@ -95,7 +95,7 @@ async fn scopes_keep_own_prefix_before_default_exact_and_isolate_prs() {
     assert_eq!(pr.contents("cache-prefix-new", "v1", &[]).await, "new");
     pr.save("private", "v1", "pr7").await;
     assert_eq!(pr.contents("private", "v1", &[]).await, "pr7");
-    pr_facts.git_ref = GitRef("refs/pull/8/merge".into());
+    pr_facts.reference = "refs/pull/8/merge".into();
     let other = fixture.job("scope-pr8", pr_facts).await;
     assert_eq!(other.lookup("private", "v1", &[]).await["ok"], false);
     assert_eq!(main.lookup("private", "v1", &[]).await["ok"], false);

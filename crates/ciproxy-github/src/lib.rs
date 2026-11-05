@@ -3,6 +3,7 @@
 #![warn(unreachable_pub)]
 
 pub mod app;
+pub mod assignments;
 pub mod auth;
 pub mod error;
 pub mod hooks;

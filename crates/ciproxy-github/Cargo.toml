@@ -8,6 +8,7 @@ publish = false
 [dependencies]
 async-trait = "0.1.92"
 chrono = { version = "0.4.45", features = ["serde"] }
+ciproxy-protocol = { workspace = true }
 ciproxy-store-interface = { workspace = true }
 hex = "0.4.3"
 hmac = "0.13.0"

@@ -148,7 +148,11 @@ impl MachineCache {
 
     async fn local(&self, session: &Session, keys: Vec<String>, version: &str) -> Option<Entry> {
         let lookup = Lookup {
-            scopes: read_scopes(&session.registration.facts, &session.registration.job_id),
+            scopes: read_scopes(
+                &session.registration.facts,
+                &session.scope,
+                &session.private_ref,
+            ),
             keys,
             version: version.to_owned(),
         };
@@ -201,7 +205,11 @@ impl MachineCache {
             key,
             version,
             origin,
-            scope: write_scope(&session.registration.facts, &session.registration.job_id),
+            scope: write_scope(
+                &session.registration.facts,
+                &session.scope,
+                &session.private_ref,
+            ),
             size: 0,
             digest: String::new(),
             parts: Vec::new(),

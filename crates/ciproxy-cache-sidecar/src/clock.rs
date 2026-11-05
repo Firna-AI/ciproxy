@@ -3,6 +3,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Time source at the machine boundary.
+#[cfg_attr(test, unimock::unimock(api = ClockMock))]
 pub trait Clock: Send + Sync {
     /// Unix time in seconds.
     fn now(&self) -> u64;
