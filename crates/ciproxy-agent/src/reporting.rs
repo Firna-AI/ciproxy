@@ -70,6 +70,7 @@ pub(crate) fn empty_cache() -> MachineCacheReport {
         capacity_bytes: 0,
         restores_last_7_days: 0,
         hits_last_7_days: 0,
+        unknown_jobs: Vec::new(),
         jobs: Vec::new(),
     }
 }

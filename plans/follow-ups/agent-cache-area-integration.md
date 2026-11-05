@@ -29,12 +29,14 @@
 - **Task:** Wire the machine service to the prepared cache directory and
   persistent area dependency. Align its control interface with the agent.
   Supply trusted job facts, runtime credentials, and permissions through
-  the guest/runtime integration. Verify each job runtime token outside
-  the VM: signature, issuer, expiry, and matching run and runner. Derive
-  the full ref from the token's write scope. Shared writes also require
-  the default branch and a trusted event. Keep administration credentials
-  outside job VMs. Revoke sessions when jobs finish. Coordinate cache
-  shutdown and file-handle closure before area unmount.
+  the guest/runtime integration. Use the machine service's existing token
+  verification outside the VM. It checks signature, issuer, validity,
+  repository, run, runner, and optional job identity. Use its returned
+  checked scope for Docker persistence. Only the first job with the exact
+  default ref, a trusted event, and no foreign head keeps its changes.
+  Other jobs and unknown jobs get disposable copies. Keep administration
+  credentials outside job VMs. Revoke sessions when jobs finish.
+  Coordinate cache shutdown and file-handle closure before area unmount.
 - **Impact if no action:** The agent falls back to direct GitHub caching
   and reports no local cache use. A separately configured cache can store
   data outside the area. If cache reclaim fails after it held space,
@@ -43,11 +45,12 @@
 - **Needs:** An integration owner that can change the agent, sidecar,
   guest, image startup, and public protocol when necessary. Follow
   `docs/protocol/cache.md` and the sidecar README's Agent integration
-  section. Respect the resolved
-  [image-reserve policy](agent-xfs-image-reserve.md).
-  First complete the required live checks for a default-branch push,
-  `pull_request_target`, and a job on a ciproxy runner. The full-ref
-  failure policy still waits for the user. Do not invent that fallback.
+  section. Respect the
+  [image-reserve policy](agent-xfs-image-reserve.md) when the user chooses
+  it. The user chose signed token verification and fail-closed unknown
+  scopes on 5 November 2026. Unknown jobs restore default-branch local
+  entries, use GitHub for other restores, save privately, and receive a
+  disposable Docker copy. This policy is settled.
 - **Done when:** The service uses the area's cache directory. Its budget
   acknowledgement follows actual reclaim. On service failure, an owned
   cleanup path releases occupied space before VM use and preserves the
@@ -55,3 +58,36 @@
   Real jobs prove cache use, scope isolation, fallback, and data placement.
   Failure-and-retry tests cover budget acknowledgement failure. The
   public agent still depends on no workspace crate except protocol.
+
+## Missing own-machine handoff
+
+`crates/ciproxy-protocol/src/guest.rs` sends only runner and job IDs in
+`GuestToAgent::JobStarted`. It carries no original `ACTIONS_RUNTIME_TOKEN`
+or original cache and results URLs. `RunnerSpec` also carries no effective
+cache permissions. The guest emits Ready and Exited only. It has no
+trusted job-start pause, credential handoff, or readiness acknowledgement.
+A shell hook does not receive the original runner runtime credentials.
+Reading job-controlled environment values would break the trust boundary.
+
+The machine service's authenticated `POST /sessions` requires those
+credentials and URLs with trusted assignment facts, effective permissions,
+and the VM's proxy URL. It returns a session token and checked or unknown
+scope. The agent must never invent these inputs or send the runtime token
+to the control plane. It must keep them out of logs and persistent state.
+
+The agent starts Firecracker with `--no-api` and two fixed drives. It has
+no safe job-start drive switch or persistent repository Docker store.
+`AgentToGuest::DockerDisk` names an attachment but supplies no preparation
+or attach acknowledgement. The guest currently ignores that message.
+Choosing a persistent backing file after GitHub assigns a warm runner
+therefore also needs coordinated guest and VMM work before action steps.
+
+Extend or supply the shared handoff through
+`crates/ciproxy-protocol/src/guest.rs`,
+`crates/ciproxy-protocol/src/runners.rs`,
+`crates/ciproxy-guest/src/boundary.rs`,
+`crates/ciproxy-guest/src/service.rs`, and `image/runner-patch` with their
+owners before claiming own-machine cache registration or checked-scope
+Docker persistence. Those sources are outside the agent workspace's
+assigned file scope. No change to those sources was made by the
+host-preparation implementation.

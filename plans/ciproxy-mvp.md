@@ -418,6 +418,15 @@ ships through `futex-ai/cli-release`.
       Orchestrator call, 5 November 2026: always use the XFS file, also on
       a file system with reflinks. Reason: every machine uses one path.
       Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
+- [ ] Register each job with the machine cache using its trusted
+      assignment and original runtime token. Use the returned checked
+      scope for Docker persistence, as items 54, 55, and 66 say.
+      Orchestrator: supply the trusted credential handoff, effective cache
+      permissions, and safe Docker attachment through protocol, guest,
+      and image ownership first. These files exceed the agent scope.
+      The [integration record](follow-ups/agent-cache-area-integration.md)
+      names the missing inputs and component paths.
+      Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
 
 ## Milestone 10: Job VM image
 
