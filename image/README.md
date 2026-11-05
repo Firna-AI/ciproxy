@@ -49,7 +49,7 @@ bash image/build.sh "$PWD/.context/ciproxy-image-build"
 
 This downloads and checks the inputs, builds the kernel and guest, and
 runs the full upstream provisioners in QEMU.
-It changes only the upstream Azure packaging step.
+QEMU supplies the image packaging.
 It retains the upstream software tests and software report.
 The QEMU bootstrap prepares the generic Ubuntu package sources for the
 upstream mirror-list setup and its existing check.
@@ -77,7 +77,7 @@ measurement run. This does not change a ciproxy label.
 The measured full userspace is 55.22 GB apparent and 58.29 GB allocated.
 The 80 GB disk reports 19.49 GB available to runner UID 1001 in a read-only
 Firecracker boot probe with the release kernel. This is before job writes.
-The agent's default image budget becomes 140 GB for two images and one
+The agent's default image budget is 140 GB for two images and one
 download during an update. This budget is separate from job disk space.
 It counts allocated blocks. The release measurement and download manifest
 record the current artifact sizes.
