@@ -183,6 +183,12 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
       both operator and CI finish seed before any bootstrap resource starts.
       No state move is needed because nothing has been applied in GCP.
       Branch: `codex/m5-terraform-promotion`.
+- [ ] Move both environments into the GCP project `ciproxy`, as item 68
+      says: one shared network, cluster, and image registry, with a
+      namespace for each environment, and separate databases, KMS keys,
+      secrets, buckets, DNS zones, and edges. Scope the CI identities of
+      each environment to its own resources. Apply the shared parts from
+      the main preview until launch, and only from `main` after it.
 - [ ] User: move `Firna-AI` to GitHub Team, as item 57 says. Orchestrator:
       add the ruleset on `main` that needs a pull request and the gate.
       Branch: `codex/m5-terraform-promotion`.
@@ -1013,6 +1019,13 @@ Answers of 5 November 2026:
   confirmed spend and the amount still pending. `overflow.md` states the rule.
   Rejected: holding all starts until Boat confirms, Admin reconciliation by
   hand, one combined estimate figure, and recovery through a replacement key.
+- Item 68, A, with one shared cluster: the user wrote "ciproxy holds prod and
+  test infra, we can share. the same k8 cluster". Both the main preview and
+  production run in the GCP project `ciproxy`, and they share one GKE Autopilot
+  cluster. This replaces the project rule of 4 November 2026 for the main
+  preview, and the project of item 53. The spike and test machines stay in
+  `internal-498318`. Rejected: a new project for the main preview, and the main
+  preview in `internal-498318`.
 - Item 66, A: only a job of a trusted event on the default branch keeps
   its changes to a Docker disk, as item 59 says for the machine cache.
   `cache.md` states it. Rejected: any event on the default branch, and
@@ -1046,6 +1059,26 @@ of the research, 5 November 2026:
 - The machine report counts the unknown jobs by reason, and the token probe
   becomes an operator script that runs before each image release. Reason: a
   change of the token by GitHub then shows at once.
+
+Design calls for the answer A to item 68, my calls, 5 November 2026:
+
+- Shared by both environments: the network, the NAT, the GKE Autopilot cluster,
+  and the image registry. Each environment gets its own namespace in the
+  cluster. Reason: the user asked for one cluster.
+- Separate for each environment: the Cloud SQL instance, the KMS key of the Boat
+  keys, the secrets, the buckets, the DNS zones, and the edge with its load
+  balancer and certificate. Reason: customer data and production routing never
+  share a resource with code that deploys before review, and a small preview
+  database costs little.
+- The CI identities of each environment get rights only on the resources and the
+  namespace of that environment, not owner of the project. Reason: item 58 lets
+  only a merge into `main` change production, and an owner of the shared project
+  could change production from any push.
+- The shared parts apply from the main preview pipeline until the launch switch
+  turns on, while production does not exist. After launch, only the production
+  pipeline from `main` applies them, and the main preview only reads them.
+  Reason: the main preview needs the cluster before launch, and production needs
+  the gate of item 58 after it.
 
 Design calls for the answer D to item 56, my calls, 5 November 2026:
 
@@ -1886,7 +1919,7 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 67 on 5 November 2026. No item still waits. The
+The user answered items 54 to 68 on 5 November 2026. No item still waits. The
 conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
@@ -2177,3 +2210,21 @@ keep the letters that the user saw.
 - **Recommendation:** B. Uncounted costs never pass the limit, and overflow
   keeps running while the limit has room.
 - **Action:** answered B.
+
+### 68. Which GCP project holds the main preview
+
+**Answer, 5 November 2026:** A, with one shared GKE cluster.
+
+- **Severity:** High. **Effort:** Large, for the answer.
+- **Source:** The user's message "we should be using ciproxy project for the
+  deployment".
+- **Background:** The plan placed the main preview in `internal-498318` and
+  production in `ciproxy`, each with its own foundation and apply identity.
+- **Options:**
+  - **A.** Both environments in `ciproxy`. Effort: Medium.
+  - **B.** A new project for the main preview, such as `ciproxy-preview`.
+    Effort: Small.
+  - **C.** Keep the main preview in `internal-498318`. Effort: none.
+- **Recommendation:** B. It keeps the main preview away from production.
+- **Action:** answered A, with one shared cluster. The design calls for it
+  keep production apart through scoped identities.
