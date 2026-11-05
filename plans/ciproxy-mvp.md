@@ -164,8 +164,15 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
   - [ ] User: apply the zones and delegate the domain and staging subzone.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
-- [ ] Deploy staging on each push, and production on each `deploy-` tag. Add
-      uptime alerts.
+- [ ] Deploy the main preview on each push, and production on each merge
+      into `main` after the main preview run of the same commit passes, as
+      item 58 says. Add uptime alerts.
+- [ ] Plan, check, and promote every root from CI, as item 56 says: a
+      read-only plan identity, a policy that needs an approval file for each
+      destructive change, an apply identity for one reusable workflow, and
+      deletion protection for the database and the secrets.
+- [ ] User: move `Firna-AI` to GitHub Team, as item 57 says. Orchestrator:
+      add the ruleset on `main` that needs a pull request and the gate.
 - [x] Rename the staging environment to the main preview of item 53, with
       its hosts under `br-main.preview`, before the first apply.
       Branch: `conductor/ciproxy-mvp-milestone-5-main-preview`.
@@ -363,6 +370,9 @@ ships through `futex-ai/cli-release`.
       `x86_64-unknown-linux-gnu` for old glibc versions.
 - [ ] Test with fakes. Smoke-test a Docker job, a warm runner, and a restart
       during a job.
+- [ ] Prepare the host in `install`, as item 62 says: Firecracker, the
+      jailer, the host tools, and a reflink disk area in one XFS file on any
+      file system.
 
 ## Milestone 10: Job VM image
 
@@ -429,6 +439,8 @@ evicts them. Boat runs the stock runner. The cache spike confirms it.
       Branch: `conductor/ciproxy-mvp-milestone-11-cache-sidecar`.
       Orchestrator: run `image/runner-patch/smoke/live-check.py` with
       trusted registration and runtime credentials on a GitHub runner.
+- [ ] Let only the 7 trusted events of GitHub write shared entries, and
+      write item 59 into "Trusted write-back" of `cache.md`.
 
 ## Milestone 12: Boat backend on the shared sandbox interface
 
@@ -443,16 +455,16 @@ report, and the orphan cleanup. The Boat spike confirms the runner in a
 sandbox, the refusals, and the limits. **Fallback:** AWS EC2 behind the same
 interface, which needs a user decision.
 
-- [ ] In `futex-ai/sandbox`, write the plan of the change, as its
+- [x] In `futex-ai/sandbox`, write the plan of the change, as its
       `AGENTS.md` says.
-- [ ] In `futex-ai/sandbox`, split `SandboxBackend` into capability traits:
+- [x] In `futex-ai/sandbox`, split `SandboxBackend` into capability traits:
       the lifecycle, snapshots, image preparation, processes, files,
       terminals, ports, and screens. Move `sandbox-e2b`, the mocks, and the
       conformance harness to them. Record the adoption steps for Juno.
-- [ ] In `futex-ai/sandbox`, add a VM size request, the sizes that an
+- [x] In `futex-ai/sandbox`, add a VM size request, the sizes that an
       account can start with their prices, a start refusal with a retry
       time, and one-shot lifetimes up to the limit of each provider.
-- [ ] In `futex-ai/sandbox`, add `sandbox-boat` with the lifecycle,
+- [x] In `futex-ai/sandbox`, add `sandbox-boat` with the lifecycle,
       snapshots, processes, and files. Use marks, `noEnv`, `ttlSeconds`,
       and an `Idempotency-Key`. Join `machineTypes` of `GET /limits` with
       the published sizes and prices, because the API gives no dimensions.
@@ -460,6 +472,8 @@ interface, which needs a user decision.
       `machine_class_plan_required` to a size that the plan lacks, and 402
       `billing_required` to a billing refusal. Test it against a fake Boat
       server and the conformance harness.
+      Merged in `futex-ai/sandbox` #11 as `9658361`, for the four TODOs
+      above.
 - [ ] Add `ciproxy-overflow` on `sandbox-interface`, with the Boat adapter
       of the reviewed revision. Read the sizes of each account every 5
       minutes. My call: a Boat plan can change at any time.
@@ -547,10 +561,11 @@ Depends on: 4
       Branch: `conductor/ciproxy-mvp-milestone-16-metering`.
 - [x] Unit-test each rule with hand-worked numbers.
       Branch: `conductor/ciproxy-mvp-milestone-16-metering`.
-- [ ] Orchestrator: settle the monthly divisor and same-day price allocation
-      in `metering.md`. Build the approved same-day rule, then run
-      `cargo test --package ciproxy-metering` and `cargo xtask check` with
-      `DATABASE_URL` set. The current report leaves changed-day costs unknown.
+- [ ] Write items 63 and 64 into `metering.md`: the last price counts for
+      a day with a price change, and a month has the days of its calendar
+      month. Build both rules, and fix the 30-day view of the Savings
+      mockup. Then run `cargo test --package ciproxy-metering` and `cargo
+      xtask check` with `DATABASE_URL` set.
       Branch: `conductor/ciproxy-mvp-milestone-16-metering`.
 
 ## Milestone 17: Billing with Stripe
@@ -880,6 +895,67 @@ Answers of 4 November 2026:
   organizations. So a ciproxy workspace holds one or more GitHub
   organizations, close to option G. Rejected: options A to F.
 
+Answers of 5 November 2026:
+
+- Item 56, D: CI plans, checks, and promotes every root after the one-time seed
+  and first bootstrap. A read-only identity saves a plan of each root. A policy
+  refuses each destructive change that has no matching approval file in the
+  merge. A separate apply identity, which only one reusable workflow can use,
+  applies that saved plan. Helm, the NEG wait, and the edge follow. Production
+  runs the same jobs after the main preview. The database and the secrets get
+  deletion protection. Rejected: options A, B, C, and E. The deny policy of B
+  waits in the follow-up item `production-deny-policy.md`.
+- Item 57, B: `Firna-AI` moves to GitHub Team, and a ruleset on `main` needs a
+  pull request and the gate, and blocks force pushes and deletion. The user
+  upgrades the plan. Rejected: GitHub Free with the rule "Agent merges: off"
+  only.
+- Item 58, B: production deploys on each merge into `main`, after the main
+  preview run of the same commit passes. A GitHub variable keeps production off
+  until launch. Rejected: the `deploy-*` tag, and a daily promotion.
+- Item 59, C: only the 7 trusted events of GitHub write shared entries in the
+  machine cache: `push`, `workflow_dispatch`, `repository_dispatch`, `delete`,
+  `registry_package`, `page_build`, and `schedule`. A direct write to the GitHub
+  cache that a workflow opted into with `cache-mode: write` follows the rule of
+  GitHub, as on GitHub-hosted runners. Rejected: required read-only rights, and
+  a runtime token kept outside the job VM.
+- Item 60, A: the orchestrator creates the private test repository
+  `Firna-AI/ciproxy-spike-refused`, runs the runner group probe, and deletes the
+  repository. Rejected: keeping the repository, and no check.
+- Item 62, C: `install` sets up Firecracker, the jailer, and the host tools, and
+  creates a reflink disk area on any file system, in one file formatted as XFS.
+  Rejected: preparation by the customer, full copies where reflinks are missing,
+  and C after launch.
+- Item 63, B: on a day when a monthly price changes, the last price counts for
+  the whole day. Rejected: the first price, a split by the hours of each price,
+  which was the recommendation, and the time used.
+- Item 64, B: a monthly price becomes a daily cost by the days of its calendar
+  month. Rejected: 30 days, 365 divided by 12 days, a mix of bases, and billing
+  periods.
+- Item 65, B: the orchestrator merges `futex-ai/sandbox` #11 this one time. It
+  merged as `9658361` on 5 November 2026.
+- Item 54: the user asked whether the webhooks give the facts, what the options
+  are, and how other providers solve it. A research step runs before the answer.
+  Item 55 waits for it, and item 61 has no answer yet.
+
+Design calls for the answer D to item 56, my calls, 5 November 2026:
+
+- The plan, the check, and the apply run in order in one deploy workflow for
+  each environment. Reason: each environment has its own project.
+- The apply job is a reusable workflow, and the federation condition checks its
+  `job_workflow_ref` claim. Reason: only that file can then use the
+  owner-equivalent identity.
+- The plan identity gets read roles, and object write only for the lock files.
+  Reason: a lock in Cloud Storage needs an object write.
+- An approval file names the exact actions of one destructive change, a reason,
+  and a digest of the Terraform files, as in `mokly-cloud`. Reason: a stale or
+  edited approval then fails.
+- The alert address moves to a GitHub variable. Reason: CI applies the
+  foundation, and an address is no secret.
+- No scheduled drift run. Reason: each merge plans every root, and a new failing
+  check needs the user's consent.
+- A failed run starts again from a new plan. The operator keeps the recovery
+  from a lock-out and the release of a stale lock.
+
 Design calls for the parts that answer B to item 29 leaves open, my calls,
 4 November 2026. The options check named these parts:
 
@@ -1026,8 +1102,9 @@ Design calls on the questions of the docs work, my calls, 4 November 2026:
   report. The savings report now covers the whole workspace, which pays
   one price.
 
-Items 54 to 65 wait for the user. They are under "Open items of
-4 November 2026" at the end of this plan. The options check of items 50
+Items 54, 55, and 61 wait for the user. They are under "Open items of
+4 November 2026" at the end of this plan, with the answers of
+5 November 2026 to the other items there. The options check of items 50
 and 51 ran, and its report is in
 `.context/ciproxy-mvp/options-check-50-51.md`.
 
@@ -1706,6 +1783,9 @@ options keep the letters that the user saw.
 
 ### 54. The GitHub API cannot name the full ref of a job
 
+**Status, 5 November 2026:** research of the webhooks and of other providers
+runs before the answer.
+
 - **Severity:** High. **Effort:** Medium.
 - **Source:** Implementation, Milestone 6, pull request #16.
 - **Background:** The run API gives only `head_branch`, a short name. A live
@@ -1750,6 +1830,8 @@ options keep the letters that the user saw.
 
 ### 56. Merged Terraform changes still need a person to apply them
 
+**Answer, 5 November 2026:** D.
+
 - **Severity:** High. **Effort:** Large.
 - **Source:** Design, the brainstorm of the user's request of 4 November 2026:
   "we should set it up, so that main can deploy terraform changes - I don't want
@@ -1776,6 +1858,8 @@ options keep the letters that the user saw.
 
 ### 57. `main` has no branch protection
 
+**Answer, 5 November 2026:** B.
+
 - **Severity:** High. **Effort:** Small.
 - **Source:** Design, the same brainstorm.
 - **Background:** `Firna-AI` is on GitHub Free, and the repository is private,
@@ -1790,6 +1874,8 @@ options keep the letters that the user saw.
 - **Action:** ask the user.
 
 ### 58. Production waits for a manual tag
+
+**Answer, 5 November 2026:** B.
 
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Design, the same brainstorm.
@@ -1806,6 +1892,8 @@ options keep the letters that the user saw.
 - **Action:** ask the user.
 
 ### 59. A workflow can let pull request code write the shared cache
+
+**Answer, 5 November 2026:** C.
 
 - **Severity:** High. **Effort:** Small.
 - **Source:** Review of pull request #10, finding 1. Follow-up item
@@ -1827,6 +1915,8 @@ options keep the letters that the user saw.
 - **Action:** ask the user.
 
 ### 60. Create a second test repository
+
+**Answer, 5 November 2026:** A.
 
 - **Severity:** Low. **Effort:** Small.
 - **Source:** Implementation, the live probe of Milestone 6.
@@ -1859,6 +1949,8 @@ options keep the letters that the user saw.
 
 ### 62. The install command does not prepare the machine
 
+**Answer, 5 November 2026:** C.
+
 - **Severity:** High. **Effort:** Large.
 - **Source:** Implementation, Milestone 9, draft pull request #12.
 - **Background:** The install sets up no Firecracker, no jailer, no host tools,
@@ -1878,6 +1970,8 @@ options keep the letters that the user saw.
 
 ### 63. No rule for a day on which a price changes
 
+**Answer, 5 November 2026:** B.
+
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Implementation, Milestone 16.
 - **Background:** The savings report counts monthly costs "for the days of the
@@ -1891,6 +1985,8 @@ options keep the letters that the user saw.
 - **Action:** ask the user.
 
 ### 64. No rule for how a monthly price becomes a cost per day
+
+**Answer, 5 November 2026:** B.
 
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Implementation, Milestone 16.
@@ -1910,6 +2006,8 @@ options keep the letters that the user saw.
 - **Action:** ask the user.
 
 ### 65. Merge `futex-ai/sandbox` #11
+
+**Answer, 5 November 2026:** B. Merged as `9658361`.
 
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Implementation, Milestone 12, part 1.
