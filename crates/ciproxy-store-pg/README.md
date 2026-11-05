@@ -161,6 +161,9 @@ The same authority SQL checks scale-set ownership, the label's Boat switch,
 and exact original requested dimensions during reservation and later startup.
 An undersized selected size also requires the label's current largest-size
 fallback permission. Fitting requests remain permitted under Wait.
+Each delivery retains its image root bytes and required total root bytes.
+Authority compares catalog disk with those saved totals.
+Even a largest-size fallback must hold the complete image.
 The dispatch transaction accepts only the saved unsent delivery.
 It rechecks authority and the current saved limit before saving `Creating`.
 It compares the exact pending record, including its identity and saved fee.

@@ -13,11 +13,12 @@ import { CircleCheck } from "lucide-react";
 import { dotJoin, unbroken } from "../fixtures/format.ts";
 import {
   hardwareSize,
-  jobDiskGb,
+  jobDiskBytes,
   machineSlots,
   type Hardware,
 } from "../fixtures/hardware.ts";
 import { defaultLabelJobs, labelNamed } from "../fixtures/settings.ts";
+import { diskText, vmDiskBytes } from "../fixtures/vm-disk.ts";
 import { Action, LinkAction } from "./actions.tsx";
 import { Busy, Notice } from "./feedback.tsx";
 import { CodeBlock } from "./figures.tsx";
@@ -132,8 +133,8 @@ export function ConnectedMachine({
 
 /**
  * A machine whose disk holds fewer jobs of the label ciproxy than its slots:
- * each running job holds the disk of its size, after the VM images and the
- * host reserve.
+ * each running job holds its VM disk, the image with the free disk of its
+ * size, after the VM images and the host reserve.
  */
 export function DiskLimitNotice({
   name,
@@ -149,9 +150,10 @@ export function DiskLimitNotice({
       tone="warning"
       title={`Disk limits ${name} to ${atOnce} jobs of ciproxy at a time`}
     >
-      A job of ciproxy holds {unbroken(`${label.diskGb} GB`)} of disk, and the
-      machine has {unbroken(`${jobDiskGb(hardware)} GB`)} for jobs after the VM
-      images and the host reserve. Add disk to run more jobs at once.
+      With the current image, a job of ciproxy holds{" "}
+      {diskText(vmDiskBytes(label))} of disk. The machine has{" "}
+      {diskText(jobDiskBytes(hardware))} for jobs after the VM images and the
+      host reserve. Add disk to run more jobs at once.
     </Notice>
   );
 }

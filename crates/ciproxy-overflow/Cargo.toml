@@ -6,6 +6,7 @@ rust-version.workspace = true
 publish = false
 
 [dependencies]
+ciproxy-agent = { workspace = true }
 ciproxy-protocol = { workspace = true }
 ciproxy-scaler = { workspace = true }
 ciproxy-store-interface = { workspace = true }

@@ -9,7 +9,8 @@ use crate::decision::decide;
 use crate::snapshot::RunnerState;
 
 use super::fixtures::{
-    boat, boat_with_request, large, own, queued, runner, running, sandbox, small, snapshot, warm,
+    allocated, boat, boat_with_request, large, own, queued, runner, running, sandbox, small,
+    snapshot, warm,
 };
 
 #[test]
@@ -18,7 +19,7 @@ fn oversized_boat_capacity_does_not_hide_a_label_size_change() {
     state.machines.clear();
     state.queue = vec![queued("a", "ciproxy", 0)];
     let mut oversized = runner("oversized", "a", "ciproxy", RunnerState::Ready);
-    oversized.size = large();
+    oversized.size = allocated(large());
     state.sandboxes = vec![sandbox("oversized", Some(oversized))];
     assert_eq!(decide(&state), vec![]);
     state.labels[0].size = VmSize { vcpu: 3, ..small() };

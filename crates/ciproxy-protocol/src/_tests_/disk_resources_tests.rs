@@ -60,12 +60,12 @@ fn vm_fit_requires_slots_and_job_disk_on_one_machine() {
     let four_vcpu = VmSize {
         vcpu: 4,
         memory_bytes: 16 * GIGABYTE,
-        disk_bytes: 80 * GIGABYTE,
+        disk_bytes: 81_635_856_384,
     };
     let eight_vcpu = VmSize {
         vcpu: 8,
         memory_bytes: 32 * GIGABYTE,
-        disk_bytes: 120 * GIGABYTE,
+        disk_bytes: 122_872_967_168,
     };
     let examples = [
         (
@@ -78,7 +78,7 @@ fn vm_fit_requires_slots_and_job_disk_on_one_machine() {
             "disk one byte too small",
             Resources {
                 slots: Slots(6),
-                job_disk_bytes: 80 * GIGABYTE - 1,
+                job_disk_bytes: 81_635_856_384 - 1,
             },
             size,
             false,
@@ -102,7 +102,7 @@ fn vm_fit_requires_slots_and_job_disk_on_one_machine() {
             "ciproxy-4vcpu exact fit",
             Resources {
                 slots: Slots(2),
-                job_disk_bytes: 80 * GIGABYTE,
+                job_disk_bytes: 81_635_856_384,
             },
             four_vcpu,
             true,
@@ -111,7 +111,7 @@ fn vm_fit_requires_slots_and_job_disk_on_one_machine() {
             "ciproxy-4vcpu disk too small",
             Resources {
                 slots: Slots(2),
-                job_disk_bytes: 80 * GIGABYTE - 1,
+                job_disk_bytes: 81_635_856_384 - 1,
             },
             four_vcpu,
             false,
@@ -120,7 +120,7 @@ fn vm_fit_requires_slots_and_job_disk_on_one_machine() {
             "ciproxy-4vcpu slots too small",
             Resources {
                 slots: Slots(1),
-                job_disk_bytes: 80 * GIGABYTE,
+                job_disk_bytes: 81_635_856_384,
             },
             four_vcpu,
             false,
@@ -129,7 +129,7 @@ fn vm_fit_requires_slots_and_job_disk_on_one_machine() {
             "ciproxy-8vcpu exact fit",
             Resources {
                 slots: Slots(4),
-                job_disk_bytes: 120 * GIGABYTE,
+                job_disk_bytes: 122_872_967_168,
             },
             eight_vcpu,
             true,
@@ -138,7 +138,7 @@ fn vm_fit_requires_slots_and_job_disk_on_one_machine() {
             "ciproxy-8vcpu disk too small",
             Resources {
                 slots: Slots(4),
-                job_disk_bytes: 80 * GIGABYTE,
+                job_disk_bytes: 81_635_856_384,
             },
             eight_vcpu,
             false,
@@ -147,7 +147,7 @@ fn vm_fit_requires_slots_and_job_disk_on_one_machine() {
             "ciproxy-8vcpu slots too small",
             Resources {
                 slots: Slots(3),
-                job_disk_bytes: 120 * GIGABYTE,
+                job_disk_bytes: 122_872_967_168,
             },
             eight_vcpu,
             false,
@@ -168,7 +168,7 @@ fn default_sizes_use_the_smaller_slot_or_disk_concurrency() {
             VmSize {
                 vcpu: 4,
                 memory_bytes: 16 * GIGABYTE,
-                disk_bytes: 80 * GIGABYTE,
+                disk_bytes: 81_635_856_384,
             },
             2,
             3,
@@ -180,7 +180,7 @@ fn default_sizes_use_the_smaller_slot_or_disk_concurrency() {
             VmSize {
                 vcpu: 8,
                 memory_bytes: 32 * GIGABYTE,
-                disk_bytes: 120 * GIGABYTE,
+                disk_bytes: 122_872_967_168,
             },
             4,
             1,
@@ -218,12 +218,12 @@ fn warm_and_running_vms_hold_their_full_slots_and_disk() {
         two_warm,
         Resources {
             slots: Slots(4),
-            job_disk_bytes: 119 * GIGABYTE
+            job_disk_bytes: 115_728_287_232
         }
     );
     assert_eq!(
         resources.job_disk_bytes - two_warm.job_disk_bytes,
-        160 * GIGABYTE
+        163_271_712_768
     );
     assert!(two_warm.fits(size));
     assert_eq!(two_warm.concurrent_vms(size), 1);
@@ -233,7 +233,7 @@ fn warm_and_running_vms_hold_their_full_slots_and_disk() {
         third_vm,
         Resources {
             slots: Slots(3),
-            job_disk_bytes: 39 * GIGABYTE
+            job_disk_bytes: 34_092_430_848
         }
     );
     assert!(!third_vm.fits(size));
@@ -243,14 +243,14 @@ fn warm_and_running_vms_hold_their_full_slots_and_disk() {
     let larger_running = VmSize {
         vcpu: 4,
         memory_bytes: 16 * GIGABYTE,
-        disk_bytes: 120 * GIGABYTE,
+        disk_bytes: 122_872_967_168,
     };
     let mixed = resources.available([size, larger_running]);
     assert_eq!(
         mixed,
         Resources {
             slots: Slots(3),
-            job_disk_bytes: 79 * GIGABYTE
+            job_disk_bytes: 74_491_176_448
         }
     );
     assert!(!mixed.fits(size));
@@ -264,6 +264,6 @@ fn ciproxy_size() -> VmSize {
     VmSize {
         vcpu: 2,
         memory_bytes: 8 * GIGABYTE,
-        disk_bytes: 80 * GIGABYTE,
+        disk_bytes: 81_635_856_384,
     }
 }

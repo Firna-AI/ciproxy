@@ -8,6 +8,7 @@ version = "0.1.0"
 rust-version = "1.99"
 
 [workspace.dependencies]
+ciproxy-agent = { path = "crates/ciproxy-agent" }
 ciproxy-billing = { path = "crates/ciproxy-billing" }
 ciproxy-gateway = { path = "crates/ciproxy-gateway" }
 ciproxy-metering = { path = "crates/ciproxy-metering" }

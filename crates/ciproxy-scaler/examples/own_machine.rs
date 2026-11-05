@@ -2,6 +2,7 @@
 
 use std::time::Duration;
 
+use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_protocol::identifiers::{LabelName, MachineId, OrganizationId, WorkspaceId};
 use ciproxy_protocol::resources::{GIGABYTE, Slots, VmSize};
 use ciproxy_scaler::actions::{Action, Destination, StartReason, StartRunner};
@@ -13,9 +14,10 @@ fn main() {
     let size = VmSize {
         vcpu: 2,
         memory_bytes: 8 * GIGABYTE,
-        disk_bytes: 80 * GIGABYTE,
+        disk_bytes: 20 * GIGABYTE,
     };
     let snapshot = Snapshot {
+        root_sizing: RootSizing::default(),
         workspace_id: WorkspaceId("example-workspace".into()),
         now: Duration::from_secs(100),
         control_plane_available: true,
@@ -65,7 +67,10 @@ fn main() {
             organization_id: OrganizationId("example-org".into()),
             label: LabelName("ciproxy".into()),
             requested_size: size,
-            size,
+            size: VmSize {
+                disk_bytes: 81_635_856_384,
+                ..size
+            },
             destination: Destination::Machine(MachineId("example-machine".into())),
             reason: StartReason::OwnMachineCapacity,
         })]

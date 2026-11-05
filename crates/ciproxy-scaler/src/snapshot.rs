@@ -2,6 +2,7 @@
 
 use std::time::Duration;
 
+use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_protocol::identifiers::{
     JobId, LabelName, MachineId, OrganizationId, RunnerId, WorkspaceId,
 };
@@ -14,6 +15,8 @@ use crate::boat::{BoatAccount, Sandbox};
 pub struct Snapshot {
     /// Workspace that owns every supplied machine and marked sandbox.
     pub workspace_id: WorkspaceId,
+    /// Logical image length for the release used by every new runner.
+    pub root_sizing: RootSizing,
     /// Current time on the same clock as queue and retry timestamps.
     pub now: Duration,
     /// Whether the control plane can currently apply routing actions.
@@ -39,7 +42,7 @@ pub struct Snapshot {
 pub struct Label {
     /// GitHub scale set label.
     pub name: LabelName,
-    /// Current dimensions requested by this label.
+    /// Current label dimensions, with disk measured as free job bytes.
     pub size: VmSize,
     /// Destinations enabled by the customer.
     pub destinations: Destinations,
@@ -115,7 +118,7 @@ pub struct Runner {
     pub label: LabelName,
     /// Label dimensions at registration, used to detect later size edits.
     pub requested_size: VmSize,
-    /// Actual VM size retained for its lifetime.
+    /// Actual VM size retained for its lifetime, including the full root disk.
     pub size: VmSize,
     /// Last confirmed lifecycle state.
     pub state: RunnerState,

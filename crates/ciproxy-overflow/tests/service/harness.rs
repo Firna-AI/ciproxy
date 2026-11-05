@@ -3,6 +3,7 @@
 use std::sync::{Arc, Mutex};
 
 use chrono::{DateTime, Utc};
+use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_overflow::api::OverflowConfig;
 use ciproxy_overflow::error::Result;
 use ciproxy_overflow::maintenance::MaintenanceCapabilities;
@@ -77,6 +78,9 @@ impl Harness {
             OverflowConfig {
                 deployment: "ciproxy-main".to_owned(),
                 shared_snapshot: "shared-image-v7".to_owned(),
+                root_sizing: RootSizing {
+                    image_root_bytes: 47_000_000_000,
+                },
                 exit_report_url: Secret::new("https://app.ciproxy.dev/api/overflow/end"),
             },
             OverflowDependencies {

@@ -154,12 +154,12 @@ async fn root_preparation_failures_clean_up_the_new_vm_and_release_its_reservati
             *events.lock().unwrap(),
             vec![
                 Event::Saved(reserved),
-                Event::Budget(99_000_000_000),
+                Event::Budget(97_364_143_616),
                 Event::Started(allocated.clone()),
                 Event::Cleanup(allocated),
                 Event::Saved(initial.clone()),
                 Event::Restored(initial.runners[0].clone()),
-                Event::Budget(199_000_000_000),
+                Event::Budget(197_364_143_616),
             ],
             "{stage:?}"
         );

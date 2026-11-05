@@ -59,15 +59,16 @@ To move a job to ciproxy, change one line. Replace `ubuntu-latest` in its
 The label picks the [size](docs/protocol/labels.md#terms) of the VM that
 runs the job. Every workspace starts with these labels:
 
-| Label | vCPU | Memory | Disk | Slots |
+| Label | vCPU | Memory | Free job disk | Slots |
 | --- | --- | --- | --- | --- |
-| `ciproxy` | 2 | 8 GB | 80 GB | 1 |
-| `ciproxy-4vcpu` | 4 | 16 GB | 80 GB | 2 |
-| `ciproxy-8vcpu` | 8 | 32 GB | 120 GB | 4 |
+| `ciproxy` | 2 | 8 GB | 20 GB | 1 |
+| `ciproxy-4vcpu` | 4 | 16 GB | 20 GB | 2 |
+| `ciproxy-8vcpu` | 8 | 32 GB | 60 GB | 4 |
 
 A [slot](docs/protocol/job-routing.md#slots) is 2 vCPU and 8 GB of an own
 machine. The Slots column gives the slots that one job of the label takes
-there. The job also holds the disk of its label there.
+there. Each VM also holds a complete root disk there.
+That root includes the image, the free job disk, and an ext4 allowance.
 [Labels](docs/protocol/labels.md) gives the rules for labels.
 [Job routing](docs/protocol/job-routing.md) gives the rules for slots, the
 disk of a job, and where a job runs.

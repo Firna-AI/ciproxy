@@ -4,10 +4,12 @@
 // image budget for the VM images, as the answer to item 73 says, and the
 // host reserve keeps a quarter of the rest. A size fits a machine when the
 // machine has enough free slots and enough free disk for it: each running
-// job holds the disk of its size, and the machine cache uses the rest.
+// job holds its VM disk, the image with the free disk of its size, as the
+// answer to item 77 says, and the machine cache uses the rest.
 
 import { dotJoin, unbroken } from "./format.ts";
 import type { Size } from "./sizes.ts";
+import { gigabyte, jobsInDisk } from "./vm-disk.ts";
 
 /** One slot of a machine: the vCPU and memory of the smallest job VM. */
 export const slotSize = { vcpu: 2, memoryGb: 8 } as const;
@@ -40,8 +42,8 @@ export function machineSlots(hardware: Hardware): number {
 }
 
 /** The disk that running jobs can hold, after the images and host reserve. */
-export function jobDiskGb(hardware: Hardware): number {
-  const afterImages = Math.max(0, hardware.diskGb - imageBudgetGb);
+export function jobDiskBytes(hardware: Hardware): number {
+  const afterImages = Math.max(0, hardware.diskGb - imageBudgetGb) * gigabyte;
   return Math.floor(afterImages * jobShare);
 }
 
@@ -61,7 +63,7 @@ export function jobsAtOnce(
 ): number {
   return Math.min(
     Math.floor(slots / slotsFor(size)),
-    Math.floor(jobDiskGb(hardware) / size.diskGb),
+    jobsInDisk(jobDiskBytes(hardware), size),
   );
 }
 

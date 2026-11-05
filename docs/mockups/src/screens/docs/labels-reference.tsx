@@ -1,9 +1,10 @@
 // The reference page of labels and VM sizes,
 // ciproxy.dev/docs/reference/labels: the default labels with their sizes and
-// slots, how slots work, custom labels, and where a job with a label runs. A
-// running job also holds the disk of its size, as design call 34 says, after
-// the VM images and the host reserve, as the answer to item 73 says. A label
-// keeps its name, as design call 33 says.
+// slots, how slots work, custom labels, and where a job with a label runs.
+// The disk of a label is the free disk of each job, and its VM disk adds the
+// image, as the answer to item 77 says. A running job holds its VM disk, as
+// design call 34 says, after the VM images and the host reserve, as the
+// answer to item 73 says. A label keeps its name, as design call 33 says.
 
 import type { Viewport } from "@mokly/mokly";
 
@@ -20,8 +21,9 @@ import {
   slotsFor,
 } from "../../fixtures/hardware.ts";
 import { boat } from "../../fixtures/machines.ts";
-import { labels, waitChoices } from "../../fixtures/settings.ts";
+import { labelNamed, labels, waitChoices } from "../../fixtures/settings.ts";
 import { sizePhrase, sizeText } from "../../fixtures/sizes.ts";
+import { diskText, vmDiskBytes } from "../../fixtures/vm-disk.ts";
 import { DocsShell, type TocItem } from "./docs-shell.tsx";
 import { DocsH2, DocsTitle } from "./docs-parts.tsx";
 
@@ -94,6 +96,12 @@ export function LabelsReferenceScreen({ viewport }: { viewport: Viewport }) {
         <DocsH2 id="default-labels">Default labels</DocsH2>
         <p>Every workspace starts with these labels.</p>
         <LabelTable />
+        <p>
+          Like the disk of a GitHub-hosted runner, the disk of a label is the
+          free disk that each job gets. Its VM also holds the image: with the
+          current image, a job of <span className="inline-code">ciproxy</span>{" "}
+          has a VM disk of {diskText(vmDiskBytes(labelNamed("ciproxy")))}.
+        </p>
         <CodeBlock
           label=".github/workflows/e2e.yml"
           lines={[
@@ -113,7 +121,7 @@ export function LabelsReferenceScreen({ viewport }: { viewport: Viewport }) {
           {slotsFor(large)} slots.
         </p>
         <p>
-          A running job also holds the disk of its size. Each machine keeps{" "}
+          A running job also holds its VM disk. Each machine keeps{" "}
           {unbroken(`${imageBudgetGb} GB`)} for VM images and a quarter of the
           rest for the host. The machine cache uses the disk that jobs leave.
         </p>

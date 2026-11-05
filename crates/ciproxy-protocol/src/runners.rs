@@ -15,7 +15,7 @@ pub struct RunnerSpec {
     pub organization_id: OrganizationId,
     /// Label whose jobs this runner can take.
     pub label: LabelName,
-    /// Resources of the fresh VM.
+    /// Actual VM resources, including the image and ext4 root allowance.
     pub size: VmSize,
     /// Just-in-time registration valid for one runner only.
     pub registration: Secret,
@@ -30,7 +30,7 @@ pub struct RunnerReport {
     pub organization_id: OrganizationId,
     /// Label used when the runner started.
     pub label: LabelName,
-    /// Resources of the running VM, even if its label changes later.
+    /// Actual VM resources retained until removal, even after a label edit.
     pub size: VmSize,
     /// Image retained by this VM for its whole lifetime.
     pub image_id: ImageId,

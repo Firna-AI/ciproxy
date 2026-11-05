@@ -13,8 +13,11 @@ pub(crate) fn replenish(snapshot: &Snapshot, plan: &mut Plan, pending: &[&Waitin
     else {
         return;
     };
+    let Some(size) = snapshot.root_sizing.vm_size(label.size) else {
+        return;
+    };
     for (index, machine) in snapshot.machines.iter().enumerate() {
-        if !eligible(machine, label) {
+        if !eligible(machine, label, snapshot.root_sizing) {
             continue;
         }
         let mut vacancies: Vec<_> = machine
@@ -63,7 +66,7 @@ pub(crate) fn replenish(snapshot: &Snapshot, plan: &mut Plan, pending: &[&Waitin
                 .labels
                 .iter()
                 .find(|candidate| candidate.name == job.label)
-                .is_some_and(|candidate| eligible(machine, candidate))
+                .is_some_and(|candidate| eligible(machine, candidate, snapshot.root_sizing))
         }) {
             continue;
         }
@@ -71,10 +74,10 @@ pub(crate) fn replenish(snapshot: &Snapshot, plan: &mut Plan, pending: &[&Waitin
             .into_iter()
             .take(machine.warm_count.saturating_sub(occupied))
         {
-            if !plan.usage[index].fits(machine, label.size) {
+            if !plan.usage[index].fits(machine, size) {
                 break;
             }
-            plan.usage[index].add(label.size);
+            plan.usage[index].add(size);
             let demand = WaitingJob {
                 organization_id,
                 label: label.name.clone(),
@@ -83,7 +86,7 @@ pub(crate) fn replenish(snapshot: &Snapshot, plan: &mut Plan, pending: &[&Waitin
             plan.start(
                 &demand,
                 label,
-                label.size,
+                size,
                 Destination::Machine(machine.id.clone()),
                 StartReason::WarmPool,
             );

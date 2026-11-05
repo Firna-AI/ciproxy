@@ -58,6 +58,9 @@ Memory and disk fields use bytes.
 The documented resource sizes use decimal GB for slot arithmetic.
 Disk capacity does not enter the CPU and memory slot formula.
 Use `Resources` for a complete fit check that includes job disk.
+Label sizes contain free job bytes. Actual runner sizes contain total roots.
+Use the agent library's `RootSizing` to convert label sizes before resource
+checks. The protocol crate has no dependency on that implementation.
 Pass the capacity of the disk used for images, VMs, and machine cache.
 First subtract the 140 GB image budget, then give jobs three quarters.
 The host reserve keeps one quarter of the remaining disk.
@@ -89,7 +92,7 @@ let capacity = Resources::for_machine(16, 64 * GIGABYTE, 512 * GIGABYTE, true);
 let size = VmSize {
     vcpu: 2,
     memory_bytes: 8 * GIGABYTE,
-    disk_bytes: 80 * GIGABYTE,
+    disk_bytes: 81_635_856_384,
 };
 assert_eq!(capacity.slots, Slots(6));
 assert_eq!(capacity.job_disk_bytes, 279 * GIGABYTE);
@@ -97,11 +100,11 @@ assert!(capacity.fits(size));
 assert_eq!(capacity.concurrent_vms(size), 3);
 
 let free = capacity.available([size, size]);
-assert_eq!(free.job_disk_bytes, 119 * GIGABYTE);
+assert_eq!(free.job_disk_bytes, 115_728_287_232);
 assert!(free.fits(size));
 
 let after_third_vm = free.available([size]);
-assert_eq!(after_third_vm.job_disk_bytes, 39 * GIGABYTE);
+assert_eq!(after_third_vm.job_disk_bytes, 34_092_430_848);
 assert!(!after_third_vm.fits(size));
 ```
 

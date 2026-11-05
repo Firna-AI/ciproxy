@@ -1,5 +1,6 @@
 //! CPU, memory, and job-disk reservations on one own machine.
 
+use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_protocol::resources::{Resources, Slots, VmSize};
 
 use crate::snapshot::{Label, Machine};
@@ -46,7 +47,7 @@ impl Usage {
     }
 }
 
-pub(crate) fn eligible(machine: &Machine, label: &Label) -> bool {
+pub(crate) fn eligible(machine: &Machine, label: &Label, sizing: RootSizing) -> bool {
     let capacity = Resources {
         slots: machine.capacity,
         job_disk_bytes: machine.disk_budget_bytes,
@@ -54,5 +55,7 @@ pub(crate) fn eligible(machine: &Machine, label: &Label) -> bool {
     label.destinations.own_machines
         && machine.connected
         && !machine.draining
-        && capacity.fits(label.size)
+        && sizing
+            .vm_size(label.size)
+            .is_some_and(|size| capacity.fits(size))
 }

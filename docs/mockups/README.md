@@ -69,7 +69,8 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   fourth machine, the mini PC office-mini-1, whose disk holds fewer jobs than
   its slots; Tom Becker suspends or removes the GitHub App; and Jonas Weber
   leaves the organizations on GitHub. `hardware.ts` holds the slot rule and
-  the disk rule, in which each running job holds the disk of its size.
+  the disk rule, in which each running job holds its VM disk: the current
+  image with the free disk of its label, as `vm-disk.ts` gives it.
 - A screen takes the role of the signed-in person. The shell shows the person
   of the role, and Settings only to an Admin. In place of an action that the
   role does not allow, the screen shows the words of
@@ -115,9 +116,14 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   write "team" for it, because Team is a tier.
 - "Machine" is the customer's own hardware, on every screen and in the
   pricing. Never write "node" or "server", and never call a VM a machine.
-- "Size" is what a label gives a job: its vCPU, memory, and disk. Write "VM
-  size" where the word needs a qualifier. Never write "shape" or "machine
+- "Size" is what a label gives a job: its vCPU, memory, and free disk. Write
+  "VM size" where the word needs a qualifier. Never write "shape" or "machine
   size". Code names use the same words, such as `sizeText` and `LabelDialog`.
+- "Free disk" is the disk of a label: the space that each job gets, as GitHub
+  states the disk of its runners. "VM disk" is the whole disk of a job VM: the
+  image with the free disk. A Boat size states its whole disk. Write "free
+  disk" or "VM disk" where a reader could mix them up, and use the same words
+  in code, such as `freeDiskGb` and `vmDiskBytes`.
 
 ## Visual smoke test
 
@@ -177,12 +183,17 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
 - `src/components/boat-fields.tsx`: the Boat key and the monthly spend limit,
   which every connection of Boat asks for, in setup and in Settings.
 - `src/fixtures/sizes.ts`: the size of a label as text, the size of the
-  default label, and the sizes that the Boat account can start, which decide
-  where the jobs of a label run.
+  default label, the least free disk of a label, and the sizes that the Boat
+  account can start, with their whole disks, which decide where the jobs of a
+  label run.
+- `src/fixtures/vm-disk.ts`: the VM disk of a job, which grows the root disk
+  of the current image by the free disk of its label. It mirrors `RootSizing`
+  of `ciproxy-agent`, and it holds the root size of the current image. No
+  other mockup file repeats the rule or that size.
 - `src/fixtures/hardware.ts`: the hardware of each machine, the slot rule,
   and the disk rule: the VM images keep 140 GB, the host keeps a quarter of
-  the rest, each running job holds the disk of its size, and the machine cache
-  uses the rest.
+  the rest, each running job holds its VM disk, and the machine cache uses
+  the rest.
 - `src/fixtures/org.ts`: the workspace and its two GitHub organizations.
   `github-app.ts` holds the permissions of the GitHub App, and `access.ts` the
   sign-in length and the what-ifs of a suspended or removed App.

@@ -40,9 +40,9 @@ pub(super) fn organization() -> Organization {
 
 pub(super) fn labels() -> Vec<Label> {
     [
-        (2, "ciproxy", 2, 8, 80),
-        (3, "ciproxy-4vcpu", 4, 16, 80),
-        (4, "ciproxy-8vcpu", 8, 32, 120),
+        (2, "ciproxy", 2, 8, 20),
+        (3, "ciproxy-4vcpu", 4, 16, 20),
+        (4, "ciproxy-8vcpu", 8, 32, 60),
     ]
     .into_iter()
     .map(|(identity, name, vcpus, memory_gb, disk_gb)| Label {

@@ -9,6 +9,7 @@ Depend on it when a caller needs routing decisions without external IO.
 Choose runner destinations and retire idle capacity. Reuse
 `ciproxy-protocol` IDs, VM sizes, and the complete resource fit rule.
 Keep GitHub, Boat, storage, clocks, and action delivery outside this crate.
+Use the open agent library for the one root allocation rule.
 The open protocol crate does not depend on this hosted library.
 
 ## What This Crate Does
@@ -23,7 +24,7 @@ destinations. It counts persisted starts before it adds capacity.
 It tries free own capacity first. It starts eligible overflow
 after the configured wait. Without an eligible own machine, it can start
 Boat at once. It selects the cheapest fitting catalog size or uses the
-label's explicit largest-size choice.
+label's explicit largest-size choice. Even that fallback must hold the image.
 
 New Boat starts and existing idle Boat runners share one resource size
 policy. Overflow dispatch uses its public pure selector too.
@@ -33,7 +34,9 @@ An idle undersized fallback retires when its exception no longer
 applies. `SizeNoLongerAllowed` identifies that retirement. Account spend
 and start refusals do not retire an existing runner whose size still fits.
 
-Every own-machine start reserves slots and job disk during the decision call.
+Label disk means free bytes for the job. Each start reserves the image,
+those free bytes, and the ext4 growth allowance as its actual total root.
+Every own-machine start reserves slots and that root during the decision call.
 Waiting jobs can request warm runner retirement. Each waiting job gets a
 separate projected reservation. That reservation cannot release actual
 capacity or postpone the overflow threshold.
@@ -47,6 +50,9 @@ jobs retain their VM. Cleanup deletes only marked sandboxes with no job.
 ### Snapshot contract
 
 - Supply a complete, consistent view of one workspace.
+- Supply `root_sizing` from the same image release used for new runners.
+  Its `image_root_bytes` is the logical exported root length.
+  Use the control-plane override until release metadata supplies it.
 - List each machine, runner, and sandbox once.
 - Supply each waiting GitHub job once. Exclude jobs already running.
 - Include every accepted start before the next decision call.
@@ -99,8 +105,9 @@ retry times, billing recovery, key recovery, and monthly spend. It also
 applies sandbox marks, exit reports, lifetime limits, deletion, and key
 retention.
 
+Convert label free bytes with `ciproxy-agent::root_sizing::RootSizing`.
 Total and free capacity checks use `ciproxy-protocol::resources::Resources`
-and its `fits` method. Starts need free slots and free job disk. Each VM
+and its `fits` method. Starts need free slots and available job disk. Each VM
 holds its original disk until removal, including warm and retiring VMs.
 The scaler keeps actual and projected reservations separate. Cache
 reclamation and host disk measurement remain external.
@@ -130,7 +137,10 @@ Tests use the public decision entry point with literal states and actions.
 - [src/snapshot.rs](src/snapshot.rs) defines the caller's workspace facts.
 - [src/actions.rs](src/actions.rs) defines start and retirement intents.
 - [src/boat.rs](src/boat.rs) defines catalog, refusal, and sandbox facts.
-- [src/capacity.rs](src/capacity.rs) delegates complete fit to the protocol.
+- [src/capacity.rs](src/capacity.rs) checks complete allocated roots with the
+  protocol resource API.
+- [Agent root sizing](../ciproxy-agent/src/root_sizing.rs) defines the shared
+  free-to-total disk calculation.
 - [src/size_policy.rs](src/size_policy.rs) exposes `select_boat_size` for
   scaler placement and overflow dispatch.
 - [examples/own_machine.rs](examples/own_machine.rs) runs the public API.

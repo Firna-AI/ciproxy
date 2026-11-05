@@ -69,7 +69,7 @@ async fn catalog_downgrade_preserves_scaler_own_machine_fit_context() {
     let mut label = harness.database.store.labels(id(1)).unwrap().remove(0);
     label.size.vcpus = 16;
     label.size.memory_gb = 32;
-    label.size.disk_gb = 200;
+    label.size.disk_gb = 180;
     label.when_nothing_fits = WhenNothingFits::LargestBoat;
     harness.database.store.update_label(id(1), &label).unwrap();
     let mut account = harness.snapshot().accounts.remove(0);
@@ -84,7 +84,7 @@ async fn catalog_downgrade_preserves_scaler_own_machine_fit_context() {
     let mut action = request();
     action.action.requested_size.vcpu = 16;
     action.action.requested_size.memory_bytes = 32_000_000_000;
-    action.action.requested_size.disk_bytes = 200_000_000_000;
+    action.action.requested_size.disk_bytes = 180_000_000_000;
     action.action.size.vcpu = 16;
     action.action.size.memory_bytes = 32_000_000_000;
     action.action.size.disk_bytes = 251_000_000_000;

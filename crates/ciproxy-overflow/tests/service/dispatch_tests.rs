@@ -21,13 +21,13 @@ async fn resumed_fallback_selects_fitting_size_and_reserves_its_current_price() 
     let mut label = harness.database.store.labels(id(1)).unwrap().remove(0);
     label.size.vcpus = 16;
     label.size.memory_gb = 32;
-    label.size.disk_gb = 200;
+    label.size.disk_gb = 180;
     label.when_nothing_fits = WhenNothingFits::LargestBoat;
     harness.database.store.update_label(id(1), &label).unwrap();
     let mut action = request();
     action.action.requested_size.vcpu = 16;
     action.action.requested_size.memory_bytes = 32_000_000_000;
-    action.action.requested_size.disk_bytes = 200_000_000_000;
+    action.action.requested_size.disk_bytes = 180_000_000_000;
     harness.state.lock().unwrap().fail_on_key_open = Some(2);
     assert!(matches!(
         harness.service.start(id(1), action.clone()).await,

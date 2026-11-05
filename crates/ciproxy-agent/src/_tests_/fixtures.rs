@@ -54,7 +54,7 @@ pub(super) fn size() -> VmSize {
     VmSize {
         vcpu: 2,
         memory_bytes: 8 * GIGABYTE,
-        disk_bytes: 80 * GIGABYTE,
+        disk_bytes: 81_635_856_384,
     }
 }
 

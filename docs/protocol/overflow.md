@@ -79,8 +79,10 @@ backend must give ciproxy.
 ## Overflow runners
 
 - Each sandbox runs one runner, which takes one job.
-- Each sandbox has the cheapest Boat size with at least the vCPU, memory,
-  and disk of the [label](labels.md#terms) of its runner.
+- Each sandbox has the cheapest Boat size that covers the label's vCPU,
+  memory, and complete VM root allocation.
+- That root includes the image, the label's free job disk, and the ext4
+  allowance, as [Disk](job-routing.md#disk) says.
 - When no size of the account fits, the setting "When nothing fits" of the
   label decides, as
   [A size that nothing can run](labels.md#a-size-that-nothing-can-run)
@@ -93,6 +95,9 @@ backend must give ciproxy.
   Boat bills that size.
 - So the job page can show a size that is larger than the size of the
   label. With "Run on the largest Boat size", it can also be smaller.
+- The largest-size fallback can give less free job disk than the label.
+- Its disk must still hold the complete image. Otherwise the job waits.
+- New starts and idle runner reuse use this same image and disk rule.
 - ciproxy stops and deletes each sandbox when its job ends.
 - The ciproxy program in each sandbox tells the control plane when its
   runner exits, with a token that works only for that sandbox.
@@ -180,7 +185,7 @@ backend must give ciproxy.
   running while the limit has room.
 - At the limit, ciproxy starts no new Boat runner.
 - Jobs then run on own machines only and wait there for free
-  [slots](job-routing.md#slots) and free [job disk](job-routing.md#terms).
+  [slots](job-routing.md#slots) and available [job disk](job-routing.md#terms).
 - Boat jobs that run when the spend reaches the limit finish.
 - So the spend can pass the limit by the cost of those jobs.
 - The Jobs page and Settings under Overflow say that the spend reached the
@@ -194,7 +199,7 @@ backend must give ciproxy.
 - When Boat refuses to start a sandbox, for example at a limit of the Boat
   account on new sandboxes, the job keeps waiting.
 - The job starts on an own machine as soon as one has the free slots and
-  the free job disk for it.
+  the available job disk for it.
 - ciproxy tries again to start a sandbox while the job waits.
 - The live queue shows the job as waiting.
 - When the reason is a rejected key, jobs run on own machines only until

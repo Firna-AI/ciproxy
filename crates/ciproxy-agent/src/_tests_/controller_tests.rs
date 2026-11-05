@@ -25,7 +25,7 @@ async fn starts_a_fresh_vm_and_keeps_registration_out_of_durable_state() {
             .answers(&|_, state| {
                 assert!(!serde_json::to_string(state).unwrap().contains("one-use-registration")); Ok(())
             }),
-        CacheMock::budget.some_call(matching!(565_000_000_000)).returns(Ok(())),
+        CacheMock::budget.some_call(matching!(563_364_143_616)).returns(Ok(())),
         VmsMock::start.some_call(matching!((record, config) if record.report.runner_id.0 == "runner-1" && matches!(config,
             ciproxy_protocol::guest::AgentToGuest::ConfigureRunner { registration, .. } if registration.expose_secret() == "one-use-registration")))
             .returns(Ok(())),
@@ -60,7 +60,7 @@ async fn failed_state_save_leaves_no_phantom_runner() {
                 .answers(&|_, _| Ok(()));
         }),
         CacheMock::budget
-            .some_call(matching!(565_000_000_000))
+            .some_call(matching!(563_364_143_616))
             .returns(Ok(())),
         VmsMock::start.some_call(matching!(_, _)).returns(Ok(())),
     ));
