@@ -223,18 +223,25 @@ each label. The scale set spike confirms it.
       lock of Milestone 4.
       Branch:
       `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
-- [ ] Limit the repositories with one runner group, because GitHub assigns
+- [x] Limit the repositories with one runner group, because GitHub assigns
       jobs with no acquire step. Check that a Free organization can do it,
       or propose the requirement change.
       The selected private group is implemented and tested over HTTP.
-      Creation and removal were verified on GitHub Free at Firna-AI.
-      Orchestrator: run `runner_group_probe.py` from
-      `crates/ciproxy-github/scripts/` on a Free organization, with two
-      App-visible private repositories and a clean runner launcher.
-      The crate README gives the environment and arguments.
-      Enforcement waits for approval of the second private test repository.
-      Branch:
-      `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
+      GitHub Free enforces the repository limit. The requirement does not
+      change. On 5 November 2026, a live probe ran in the Free organization
+      `Firna-AI`. The job of the allowed repository ran on the runner of the
+      probe. The job of the refused repository stayed queued with no runner
+      for 101.8 seconds after the allowed job succeeded. The scale set got
+      messages only for the allowed run: one `JobAssigned`, one
+      `JobStarted`, and one `JobCompleted`. Every cleanup check of the probe
+      passed. The default branches of both repositories stayed the same.
+      The probe now waits until GitHub reports the allowed job as completed,
+      with a conclusion. GitHub can report a successful run before its job
+      has a conclusion. The passing live run used a local copy with this
+      wait. An offline regression covers the race.
+      Evidence:
+      `.context/ciproxy-mvp/milestone-6/runner-group-proof/live-evidence.md`.
+      Branch: `conductor/ciproxy-mvp-milestone-6-runner-group-proof`.
 - [x] Store each message before you delete it, by job ID. Count the wait
       from `scaleSetAssignTime`. My call: `queueTime` is empty, and the
       spike found this time within about a second of the queue time.
