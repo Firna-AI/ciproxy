@@ -2007,7 +2007,7 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 69 on 5 November 2026. No item still waits. The
+The user answered items 54 to 69 on 5 November 2026. Item 70 still waits. The
 conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
@@ -2389,3 +2389,66 @@ keep the letters that the user saw.
   read, and it does not count $0.07 for each free start as B does. D best
   protects the codebase, but it needs Boat.
 - **Action:** answered B.
+
+### 70. The agent binaries stay private after launch
+
+- **Severity:** Medium. **Effort:** Medium.
+- **Source:** Design. The user wrote "probably the cli needs to be open
+  source, if people are going to install it on their machine".
+- **Category:** Docs or spec.
+- **Location:** Milestone 27 of this plan, the release workflow of
+  `ciproxy-agent`, and step 4 of `deploy/setup.md`.
+- **Terms:**
+  - **Public copy:** the public repository that gets the open parts at
+    launch. The user creates it in Milestone 27.
+  - **Release server:** the `futex-ai/cli-release` server at
+    `get.ciproxy.dev`. It serves the install script and the agent binaries.
+  - **Build attestation:** a signed GitHub record that names the workflow
+    and the commit that built a file.
+- **Background:**
+  - Item 20 = F made every part on the customer's side Apache-2.0: the
+    agent, its protocol, the image definition, the install script, the
+    cache sidecar, and the runner patch.
+  - This repository stays private. At launch, the open parts go public from
+    a public copy. The foundation plan rejected a public copy from the first
+    push, because early code would go public before launch.
+  - The release workflow builds the agent in this private repository and
+    uploads the binaries to its releases. The release server reads them
+    with the release token.
+  - The plan does not say where the binaries come from after launch.
+- **Problem:** After launch, customers can read the source in the public
+  copy. But the binary that they install still comes from a private build,
+  and they cannot check it against the public source.
+- **Impact if no action:** The claim "Read and audit the code that runs on
+  your machines" holds for the source, but not for the binary. The release
+  server keeps a token for the private repository.
+- **Root question:** After launch, how can a customer trust that the agent
+  binary comes from the public source?
+- **Options:**
+  - **A.** Keep the plan. The binaries stay in the private releases, and
+    the release server keeps the token. A customer can build the agent from
+    the public source. Effort: none.
+  - **B.** At launch, the private release workflow also publishes each
+    release in the public copy, with a build attestation. The release
+    server reads the public releases, so it needs no access to private
+    code. The attestation names a private commit. So it proves where the
+    binary was built, but not that it matches the public source. Effort:
+    Small.
+  - **C.** At launch, the release workflow of the agent moves to the public
+    copy. The public copy builds and publishes each release from its public
+    source. The attestation then names a public commit. This repository
+    only pushes the source of the open parts to the public copy. The
+    release server needs no access to private code. Effort: Medium.
+- **Left out:**
+  - Publish the agent now: the foundation plan rejected early publication.
+  - Reproducible builds, so that anyone can rebuild the same bytes: C gives
+    the same proof with much less work.
+- **Wider fix:** C.
+- **Previous examples:** None found.
+- **Related:** The main preview needs the release token now under every
+  option, because the public copy exists only from launch.
+- **Recommendation:** C. A customer can then check that each binary comes
+  from the public source in a public workflow, and no server holds a token
+  for private code.
+- **Action:** ask the user, because each option adds a public release step
+  that no requirement covers.
