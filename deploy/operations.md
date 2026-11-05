@@ -225,11 +225,22 @@ helm get manifest ciproxy --namespace=ciproxy --revision=REVISION | grep secretP
 
 ## Change the foundation or the bootstrap
 
-The deploy workflows apply only the edge root. Apply a change to the
-bootstrap or foundation roots locally, with the commands of
-[step 2 of the setup](setup.md#2-bootstrap-the-environment).
-Read each plan before you confirm it. Then deploy, so that the edge reads
-the new foundation outputs.
+Merge the Terraform change through the protected branch. CI saves and
+checks new plans of seed, bootstrap, and foundation. Its reusable apply
+workflow applies those exact binaries before workloads and the edge.
+Set the GitHub environment variable `ALERT_EMAIL` for notification channels.
+
+A delete, replacement, or forget needs an exact committed approval. The
+approval binds the environment, root, actions, and full Terraform digest.
+A stale or edited approval fails. CI always refuses a destructive change
+to its own trust, even with approval. Follow
+[Terraform promotion](promotion.md) for approval generation and recovery.
+
+After a failed run, rerun all jobs. A different run attempt rejects an old
+plan. Do not rerun only failed apply jobs. Check the owning operation
+before an operator releases a stale state lock. An operator also recovers
+from a trust update that removes CI access. The promotion guide gives both
+procedures.
 
 ## Zones and NEGs
 
@@ -249,8 +260,8 @@ The `zones` field is a GKE Preview feature. Google can change a Preview
 feature, and gives it no SLA. It needs GKE 1.36.2-gke.3104000 or later. The
 cluster sets the minimum version 1.36.4 and stays on the Regular release
 channel. Keep the cluster at a version that supports the feature. To change
-the zones, edit the list and apply the foundation locally. Then deploy, so
-that the workloads, the NEGs, and the edge get the new list.
+the zones, edit the list and merge the change. CI applies foundation before
+the workloads, the NEG wait, and the edge get the new list.
 
 ## Static files and protection
 
@@ -259,3 +270,7 @@ that the workloads, the NEGs, and the edge get the new list.
 - Each deploy invalidates the whole CDN cache after the edge apply.
 - Terraform cannot delete the GKE cluster, the Cloud SQL instance, the state
   bucket, or the Boat KMS key. Their protection must change first.
+- Cloud SQL also has API deletion protection. Secret Manager IDs have
+  Terraform provider deletion protection. Secret protection does not stop
+  a console deletion or an owner-equivalent IAM change. The planned GCP
+  deny policy remains separate work.

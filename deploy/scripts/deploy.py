@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deploy prepared foundation resources. This command changes live resources."""
+"""Deploy workloads or invalidate CDN after a saved edge plan is applied."""
 
 import argparse
 import json
@@ -15,8 +15,8 @@ from deploy_support import (
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("environment", choices=["main-preview", "production"])
+    parser.add_argument("--phase", choices=["workloads", "invalidate"], default="workloads")
     args = parser.parse_args()
-    digest, runtime_enabled, control_image = runtime_configuration(os.environ)
     environment = args.environment
     project = "ciproxy" if environment == "production" else "internal-498318"
     root = Path("deploy/environments") / environment
@@ -24,8 +24,16 @@ def main():
     scratch.mkdir(parents=True, exist_ok=True)
     bucket = f"ciproxy-{environment}-tfstate-{project}"
 
-    # CI reads the foundation state. Its roles omit SQL, KMS, VPC, and
-    # service-account administration.
+    if args.phase == "invalidate":
+        edge = root / "edge"
+        terraform_init(edge, bucket, f"{environment}/edge")
+        url_map = run("terraform", f"-chdir={edge}", "output", "-raw", "url_map", capture=True).strip()
+        run("gcloud", "compute", "url-maps", "invalidate-cdn-cache", url_map,
+            "--path=/*", f"--project={project}")
+        return
+
+    # Validate runtime inputs only after CI created the first foundation.
+    digest, runtime_enabled, control_image = runtime_configuration(os.environ)
     terraform_init(root, bucket, f"{environment}/foundation")
     config = json.loads(run("terraform", f"-chdir={root}", "output", "-json",
                             "deployment", capture=True))
@@ -65,25 +73,10 @@ def main():
     neg_zones("release-neg", config["prefix"] + "-release", config["allowed_zones"])
     if runtime_enabled:
         neg_zones("control-plane-neg", config["prefix"] + "-control", config["allowed_zones"])
-    edge_variables = scratch / "edge.tfvars.json"
-    edge_variables.write_text(json.dumps({
-        "control_plane_enabled": runtime_enabled,
-        "enable_uptime_checks": os.environ.get("PUBLIC_UPTIME_ENABLED") == "true",
-    }))
-    edge = root / "edge"
-    terraform_init(edge, bucket, f"{environment}/edge")
-    plan = (scratch / "edge.tfplan").resolve()
-    run("terraform", f"-chdir={edge}", "plan", "-input=false", "-lock-timeout=5m",
-        f"-var-file={edge_variables.resolve()}", f"-out={plan}")
-    run("terraform", f"-chdir={edge}", "apply", "-input=false", str(plan))
-    url_map = run("terraform", f"-chdir={edge}", "output", "-raw", "url_map", capture=True)
-    run("gcloud", "compute", "url-maps", "invalidate-cdn-cache", url_map,
-        "--path=/*", f"--project={project}")
-
     summary = (
         f"Deployed {environment} static exports and the release server.\n"
         f"Control-plane runtime enabled: {str(runtime_enabled).lower()}.\n"
-        "DNS delegation and the managed certificate may still be pending.\n"
+        "All configured NEGs are ready. CI can now plan and apply the edge.\n"
     )
     print(summary)
     if os.environ.get("GITHUB_STEP_SUMMARY"):

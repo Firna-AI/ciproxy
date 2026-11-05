@@ -164,15 +164,23 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
   - [ ] User: apply the zones and delegate the domain and staging subzone.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
-- [ ] Deploy the main preview on each push, and production on each merge
+- [x] Deploy the main preview on each push, and production on each merge
       into `main` after the main preview run of the same commit passes, as
       item 58 says. Add uptime alerts.
-- [ ] Plan, check, and promote every root from CI, as item 56 says: a
+      Branch: `codex/m5-terraform-promotion`.
+- [x] Plan, check, and promote every root from CI, as item 56 says: a
       read-only plan identity, a policy that needs an approval file for each
       destructive change, an apply identity for one reusable workflow, and
       deletion protection for the database and the secrets.
+      Foundation creation now runs in CI after one-time seed and bootstrap.
+      Branch: `codex/m5-terraform-promotion`.
 - [ ] User: move `Firna-AI` to GitHub Team, as item 57 says. Orchestrator:
       add the ruleset on `main` that needs a pull request and the gate.
+      Branch: `codex/m5-terraform-promotion`.
+  - [x] Prepare and test the idempotent `deploy/scripts/github-ruleset.sh`.
+        Branch: `codex/m5-terraform-promotion`.
+  - [ ] User: upgrade the organization. Orchestrator: apply the ruleset.
+        Branch: `codex/m5-terraform-promotion`.
 - [x] Rename the staging environment to the main preview of item 53, with
       its hosts under `br-main.preview`, before the first apply.
       Branch: `conductor/ciproxy-mvp-milestone-5-main-preview`.

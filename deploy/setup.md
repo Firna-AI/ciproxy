@@ -12,47 +12,17 @@ DEPLOY_ENV=main-preview PROJECT_ID=internal-498318
 
 ## Identities and permissions
 
-| Identity | Used for | Permissions |
-| --- | --- | --- |
-| Operator: your own Google account | Steps 1 to 5, 8, and 9 here, and the image, database, runtime, rotation, and foundation work of [Operations](operations.md) | The Owner role, or these project roles: `roles/serviceusage.serviceUsageAdmin`, `roles/resourcemanager.projectIamAdmin`, `roles/iam.serviceAccountAdmin`, `roles/iam.serviceAccountUser`, `roles/iam.workloadIdentityPoolAdmin`, `roles/storage.admin`, `roles/compute.networkAdmin`, `roles/compute.securityAdmin`, `roles/compute.loadBalancerAdmin`, `roles/container.admin`, `roles/servicenetworking.networksAdmin`, `roles/cloudsql.admin`, `roles/secretmanager.admin`, `roles/cloudkms.admin`, `roles/artifactregistry.admin`, `roles/dns.admin`, and `roles/monitoring.editor` |
-| Registrar or parent zone owner | Step 5 | Change the name servers of `ciproxy.dev`, or add the three preview NS records to its active parent zone |
-| GitHub repository admin | Step 6 | Create environments and their variables in `Firna-AI/ciproxy` |
-| GitHub writer | Step 7 and each later deploy | Push to `calummoore/ci-proxy-load-balancer`, then `main` after its merge, or push a `deploy-*` tag |
-| Image publisher | [Publish job images](operations.md#publish-job-images) | `roles/storage.objectCreator` on the image bucket, or the operator roles |
-| Deploy identity: `ciproxy-<env>-deploy` | Steps 7 and 9, and each later deploy run, through Workload Identity Federation with no key | `roles/compute.loadBalancerAdmin`, `roles/compute.networkViewer`, `roles/container.developer`, `roles/dns.admin`, `roles/monitoring.editor`, and `roles/serviceusage.serviceUsageConsumer`. It reads each state and writes only the edge state. It writes the site and dashboard buckets, and reads the release token. |
-| GKE nodes: `ciproxy-<env>-gke` | Image pulls | Read the runtime Artifact Registry repository |
-| Runtime: `ciproxy-<env>-control` | The future control plane, through the Kubernetes service account `ciproxy/control-plane` | Cloud SQL login, the runtime secrets, and the Boat KMS key |
-
-The deploy workflows never apply the bootstrap or foundation roots, and the
-deploy identity cannot write their state. Its DNS and monitoring roles also
-reach the zone and the alert channels of the foundation, but the scripts
-change only edge resources. It has no admin role for Cloud SQL, KMS, the
-network, or service accounts.
-
-The federation provider maps the GitHub token claims `repository_id`,
-`repository_owner_id`, `environment`, `event_name`, `workflow_ref`, and
-`ref`. Its condition checks each claim directly:
-
-- The repository and owner IDs are the numeric IDs of `Firna-AI/ciproxy`.
-- The environment is `<env>`, and the event is `push`.
-- The workflow ref starts with
-  `Firna-AI/ciproxy/.github/workflows/deploy-<env>.yml@`.
-- Main preview accepts `refs/heads/calummoore/ci-proxy-load-balancer` and
-  `refs/heads/main`. Its workflow triggers on the same two branches.
-- Production needs a ref that starts with `refs/tags/deploy-`.
-
-The condition does not use the subject claim, so the trust needs no change
-to the OIDC settings of the repository.
-
-Secret values never go into Terraform, GitHub variables, Git, or a command
-line. Give each one at a hidden prompt or in a private file outside Git.
+Read [Deployment identities](identities.md) for operator roles, CI roles,
+federation claims, and the runtime accounts. The apply account can change
+project IAM. Only the reusable apply workflow can use that account.
 
 ## 1. Prepare the project
 
 Check billing with `gcloud billing projects describe "$PROJECT_ID"`. The
 site and dashboard buckets grant read access to `allUsers`, so an
 organization policy for domain-restricted sharing or public access
-prevention stops the foundation apply. Get the operator roles of the table.
+prevention stops the foundation apply. Get the operator roles in the
+identity guide.
 
 A zone on the last free Cloud DNS name-server set needs a TXT ownership check.
 Complete the check before retrying setup. See the
@@ -82,35 +52,28 @@ again when you change the environment.
 ## 2. Bootstrap the environment
 
 ```sh
-bash deploy/scripts/bootstrap.sh "$DEPLOY_ENV" ALERT_EMAIL
+bash deploy/scripts/bootstrap.sh "$DEPLOY_ENV"
 ```
 
-`ALERT_EMAIL` receives the uptime alerts. The script enables the Storage,
-Service Usage, and Resource Manager APIs. Then it applies the seed root with
-local state, the bootstrap root, and the foundation root. Each apply shows
-its plan and asks you to confirm. The script keeps the alert address in
-`.context/deploy/<env>/operator.tfvars.json`. At the end, it prints the
-GitHub variables, the deployment values, and the DNS name servers. Copy
-`.context/deploy/<env>/seed.tfstate` to a secure backup outside Git.
+The script enables the three APIs needed before Terraform can run. It
+creates the state bucket from a temporary local-backend copy of the seed.
+Then it migrates that state to `<env>/seed` in the same bucket. This order
+avoids a dependency on a bucket that does not exist. The tracked seed root
+always uses GCS. Finally, the script applies bootstrap and prints the six
+GitHub identity variables. Both first applies ask for confirmation.
+Terraform also asks before it migrates state. Inspect its source and
+destination. The script never forces a copy over existing remote state.
 
-The deploy workflows never apply the bootstrap or foundation roots. To read
-their outputs or apply a change later, select the remote state of the
-environment first. The bootstrap root serves both environments. On a new
-machine, copy `operator.tfvars.example` to `operator.tfvars` in the same
-directory, and pass `-var-file=operator.tfvars` instead. Git ignores it.
+The script can adopt the former `.context/deploy/<env>/seed.tfstate`.
+After migration, a repeated call uses remote seed state. Back up the local
+copy outside Git. Do not restore it over newer remote state.
 
-```sh
-terraform -chdir=deploy/environments/$DEPLOY_ENV init -reconfigure \
-  -backend-config="bucket=ciproxy-$DEPLOY_ENV-tfstate-$PROJECT_ID" \
-  -backend-config="prefix=$DEPLOY_ENV/foundation"
-terraform -chdir=deploy/environments/$DEPLOY_ENV apply \
-  -var-file="$PWD/.context/deploy/$DEPLOY_ENV/operator.tfvars.json"
-terraform -chdir=deploy/terraform/bootstrap init -reconfigure \
-  -backend-config="bucket=ciproxy-$DEPLOY_ENV-tfstate-$PROJECT_ID" \
-  -backend-config="prefix=$DEPLOY_ENV/bootstrap"
-terraform -chdir=deploy/terraform/bootstrap apply \
-  -var="environment=$DEPLOY_ENV" -var="project_id=$PROJECT_ID"
-```
+Set the six identity variables and `ALERT_EMAIL` from step 6 now. Start a
+main preview run. CI applies seed, bootstrap, and foundation before it
+checks the release image digest. The first run can stop at that missing
+digest. This is the setup point for steps 3 to 5. No local foundation apply
+is needed. Production follows this same sequence when its launch switch
+first permits a run. Its first run can stop after foundation creation.
 
 ## 3. Push the release server image
 
@@ -211,40 +174,63 @@ gh variable set GCP_WIF_PROVIDER --repo=Firna-AI/ciproxy --env="$DEPLOY_ENV" --b
 | --- | --- | --- |
 | `GCP_WIF_PROVIDER` | The bootstrap output | Before the first deploy |
 | `GCP_DEPLOY_SERVICE_ACCOUNT` | The bootstrap output | Before the first deploy |
+| `GCP_PLAN_WIF_PROVIDER` | The bootstrap output | Before foundation creation |
+| `GCP_PLAN_SERVICE_ACCOUNT` | The bootstrap output | Before foundation creation |
+| `GCP_APPLY_WIF_PROVIDER` | The bootstrap output | Before foundation creation |
+| `GCP_APPLY_SERVICE_ACCOUNT` | The bootstrap output | Before foundation creation |
+| `ALERT_EMAIL` | The address for uptime alerts | Before foundation creation |
 | `RELEASE_SERVER_IMAGE_DIGEST` | The `sha256:` digest of step 3 | Before the first deploy |
 | `CDN_SIGNING_KEY_NAME` | The name that step 8 prints, such as `ciproxy-main-preview-images-v1` | After step 8 |
 | `PUBLIC_UPTIME_ENABLED` | `true` | Step 9 |
 | `CONTROL_PLANE_RUNTIME_READY` | Unset or `false`, until a real runtime exists | [Runtime](operations.md#turn-on-the-runtime) |
 | `CONTROL_PLANE_IMAGE` | An image name with `@sha256:` and its digest | [Runtime](operations.md#turn-on-the-runtime) |
 
-The deploy stops before its first cloud call when the digest is not
-`sha256:` with 64 hex digits, or when `CONTROL_PLANE_RUNTIME_READY` is not
-`true`, `false`, or unset. Optionally, limit the deployment branches and
-tags of the environment to the ref that the trust accepts.
+The workload stage stops before its cloud calls when the digest is not
+`sha256:` with 64 hex digits, or runtime readiness is invalid. The preceding
+infrastructure stage can still create foundation. Limit environment
+deployment branches to the refs that federation accepts.
+
+Set the launch switch as a **repository variable**, without `--env`:
+
+```sh
+gh variable set PRODUCTION_DEPLOY_ENABLED --repo=Firna-AI/ciproxy --body=false
+```
+
+The workflow reads this switch before it selects a GitHub environment.
+At launch, set it to `true`. Production also needs the default branch to
+be `main`, with both deploy workflows present there. GitHub runs
+`workflow_run` workflows from the default branch.
+
+The owner upgrades `Firna-AI` to GitHub Team. Then a repository admin runs:
+
+```sh
+bash deploy/scripts/github-ruleset.sh Firna-AI/ciproxy
+```
+
+The idempotent script creates or updates one ruleset on `main`. It requires
+a pull request and the GitHub Actions `Repository gate` check from
+`.github/workflows/ci.yml`. It forbids force pushes and deletion. It adds
+no required review count and no up-to-date-branch requirement.
 
 ## 7. Run the first deploy
 
-Do steps 2 to 6 first. DNS can still be pending. For the main preview, push
-to `calummoore/ci-proxy-load-balancer`, or run the last "Deploy main preview"
-run again. After that branch merges into `main`, stop pushes to it and use
+After foundation creation, finish steps 3 to 6. DNS can still be pending.
+Push to `calummoore/ci-proxy-load-balancer`, or rerun **all jobs** of its
+last run. After that branch merges into `main`, stop pushes to it and use
 `main`. The workflow and federation accept both refs, so the merge needs
 no trust change. This change adds no pull request preview environment.
-For production, push a new tag:
+Production follows only a successful main preview push run on `main`.
+Its checks verify the source repository, workflow, event, branch, and
+commit. Each checkout selects that run's commit, even if `main` moves.
 
-```sh
-git tag deploy-20261104-1 COMMIT
-git push origin deploy-20261104-1
-```
-
-The workflow builds the site and the dashboard, logs in through federation,
-and runs `python3 deploy/scripts/deploy.py <env>`. That command copies the
-release token into Kubernetes. It upgrades the Helm releases
-`cli-release-server` and `ciproxy` in the namespace `ciproxy`, and uploads
-the static files without a delete. It waits until GKE reports the NEGs of
-each Service in all three zones. Then it applies the edge root, which
-attaches the NEGs of all three zones, and invalidates the CDN cache. When a
-zone is still missing after ten minutes, the deploy stops before the edge
-apply. Until steps 2 to 6 are done, each main preview run fails.
+Each environment plans and checks seed, bootstrap, and foundation. The
+reusable workflow applies those exact binaries in that order. The workload
+stage builds the static exports, copies the release token into Kubernetes,
+upgrades both Helm releases, and uploads static files without deletion.
+It waits for every configured NEG zone. Then the read-only identity saves
+and checks the edge plan. The same reusable workflow applies it and
+invalidates CDN. A failed NEG wait stops before the edge plan.
+See [retries and recovery](promotion.md) before restarting a failed run.
 
 ## 8. Register the CDN signing key
 
