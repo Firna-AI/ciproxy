@@ -1128,6 +1128,22 @@ Answers of 5 November 2026:
   stays a quarter of the disk that the image budget leaves. An own machine
   needs 250 GB of disk. Boat stays on `large`. Rejected: a slim image, and a
   shared read-only image with a writable layer for each job.
+  My call, 5 November 2026: each job VM gets one root disk of its label
+  size, so Docker data shares the free space as on GitHub, and the cached
+  Docker images of the image stay visible. The agent grows the reflink copy
+  of the 80 GB image disk to a bigger label. The empty Docker disk, which
+  the guest never mounts, goes. Milestone 13 attaches a sticky Docker disk
+  where `cache.md` gives one. Reason: the split of the agent left the job
+  two smaller disks and hid the cached images.
+- Item 72, B: `ciproxy.dev` stays on Cloudflare. Production creates Cloud DNS
+  zones for `app.ciproxy.dev` and `get.ciproxy.dev`, and NS records in
+  Cloudflare delegate them. The user adds the site record of `ciproxy.dev`
+  in Cloudflare by hand, once. Rejected: a move to Cloud DNS, and the
+  Cloudflare provider in Terraform.
+- Item 74, A: both namespaces of the shared cluster enforce the Baseline
+  PodSecurity level, with labels that only the operator can change, so no
+  pod mounts `hostPath`. Rejected: a custom admission policy, and a trusted
+  deployment controller.
 - Item 70, E: this whole repository becomes public now, in place of a public
   copy of the open parts at launch. The agent builds and releases in public.
   This replaces the code location rule of the foundation plan. The closed
@@ -2029,8 +2045,7 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 71 and 73 on 5 November 2026. Items 72 and 74
-still wait. The
+The user answered items 54 to 74 on 5 November 2026. No item still waits. The
 conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
@@ -2507,6 +2522,8 @@ keep the letters that the user saw.
 
 ### 72. Production DNS expects Cloud DNS, but the domain uses Cloudflare
 
+**Answer, 5 November 2026:** B.
+
 - **Severity:** High. **Effort:** Small.
 - **Source:** Implementation. A public DNS lookup on 5 November 2026.
 - **Category:** Docs or spec.
@@ -2547,8 +2564,7 @@ keep the letters that the user saw.
   three NS records in Cloudflare after the foundation applies.
 - **Recommendation:** A. Terraform then owns every production record, as the
   user asked for no manual production step, with no new provider or secret.
-- **Action:** ask the user, because it moves the DNS and the mail records of
-  the domain away from Cloudflare, which only the user controls.
+- **Action:** answered B.
 
 ### 73. The full image leaves a job no free disk
 
@@ -2624,6 +2640,8 @@ keep the letters that the user saw.
 
 ### 74. Preview pods can read production logs
 
+**Answer, 5 November 2026:** A.
+
 - **Severity:** High. **Effort:** Small.
 - **Source:** Review of pull request #24, Milestone 5, finding 1.
 - **Category:** Security.
@@ -2663,4 +2681,4 @@ keep the letters that the user saw.
 - **Previous examples:** None found.
 - **Recommendation:** A. It closes the hole with a maintained Kubernetes
   level and no new code.
-- **Action:** ask the user, because A adds an admission rejection.
+- **Action:** answered A.
