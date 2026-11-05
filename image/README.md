@@ -36,6 +36,10 @@ Install Packer, QEMU, `xorriso`, `libguestfs-tools`, `zstd`, `e2fsprogs`,
 The libguestfs tools must include the `guestfish` command.
 Kernel builds also need `make`, GCC, `flex`, `bison`, `bc`, `libelf-dev`,
 and `libssl-dev`.
+Kernel builds use `builder@localhost` and a fixed build version.
+The timestamp uses the source commit time through
+`SOURCE_DATE_EPOCH`. Source archives can supply that value explicitly.
+Without source metadata or an explicit value, the timestamp uses the Unix epoch.
 The build user needs KVM access and `sudo` for extraction and ext4 creation.
 Run from the repository root:
 
@@ -75,8 +79,8 @@ The 80 GB disk reports 19.49 GB available to runner UID 1001 in a read-only
 Firecracker boot probe with the release kernel. This is before job writes.
 The agent's default image budget becomes 140 GB for two images and one
 download during an update. This budget is separate from job disk space.
-It counts allocated blocks. The measured ext4 artifact allocates 58.66 GB.
-The Firecracker bundle is 17.99 GB, and the Boat archive is 18.25 GB.
+It counts allocated blocks. The release measurement and download manifest
+record the current artifact sizes.
 Keep the full software set. Do not remove software to meet a disk budget.
 
 ## Artifacts and measurements
@@ -94,6 +98,7 @@ The Boat download remains `rootfs.tar.zst`.
 `package.sh ARTIFACT_DIR` can repeat the bundle and checksum step.
 Each artifact records its logical and allocated bytes.
 The installed userspace records its apparent and allocated bytes.
+The measurement uses the neutral `rootfs` label instead of a machine path.
 The ext4 record uses the image's actual block geometry for offline free
 bytes. The extraction's backing filesystem has separate fields.
 Record actual boot and job free-disk measurements from the running VM or

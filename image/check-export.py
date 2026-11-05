@@ -50,6 +50,11 @@ def check_export(workspace):
                "source-archive-fstab") == SOURCE_FSTAB
 
     artifacts = work / "artifacts"
+    measurement = json.loads((artifacts / "measurement.json").read_text())
+    manifest = json.loads((artifacts / "manifest.json").read_text())
+    assert measurement["rootfs"] == "rootfs", "Release measurement must use a neutral root label"
+    assert manifest["measurements"]["rootfs"] == "rootfs", (
+        "The manifest must not contain the build machine's extraction path")
     boat = root / "boat"
     boat.mkdir()
     run(["bash", str(image / "rootfs-archive.sh"), "extract",
