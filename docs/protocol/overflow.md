@@ -147,12 +147,24 @@ backend must give ciproxy.
 - The limit counts confirmed costs and the pending bound of each start
   whose cost Boat has not confirmed.
 - The bound uses the published hourly price of the requested Boat size
-  for its whole lifetime, plus its start-fee quote saved before dispatch.
+  for its whole lifetime, plus the highest published start fee saved before
+  dispatch.
+- If no published start-fee brackets exist, ciproxy saves the next-start
+  quote instead.
+- If neither source supplies a fee, new starts wait.
+- The saved fee stays counted in its UTC start month after runtime
+  completion and lifetime expiry, including a start that Boat made free.
+- The saved fee is not a provider-confirmed charge.
+- **Decision:** count the highest published start fee. Reason: the owner
+  said, "let's not over engineer this feature, it's a nice to have, if we
+  block a bit early 0.07 early that's really not a problem".
+  Rejected: the saved quote, a second quote after the start, and a charged
+  fee from Boat.
 - The lifetime is 6 hours, or 2 hours on a free trial.
 - A start with no clear outcome gets the bound of the size it requested.
-- Measured partial costs replace the same part of the bound, so no cost
+- Measured runtime costs replace the same part of the bound, so no cost
   counts twice.
-- Real costs replace their bounds, including real costs above the bound.
+- Real runtime costs replace their bounds, including costs above the bound.
 - When the lifetime passes without proof of longer running, the remaining
   bound becomes counted spend. It does not become zero.
 - Budget settlement does not confirm a provider cost or a sandbox end.

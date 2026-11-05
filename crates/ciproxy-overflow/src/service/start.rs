@@ -163,7 +163,7 @@ impl OverflowService {
             starts_at: now,
             ends_at: None,
             billing: None,
-            start_quote_usd: facts.next_start_usd,
+            start_fee_bound_usd: facts.start_fee_bound_usd,
             start_usd: None,
             reported_at: None,
             runtime: Vec::new(),

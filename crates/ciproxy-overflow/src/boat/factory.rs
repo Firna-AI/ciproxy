@@ -11,6 +11,7 @@ use sandbox_boat::transport::settings::BoatHttpSettings;
 use sandbox_boat::{BoatAdapterConfig, BoatProfile, BoatSandboxBackend};
 
 use crate::error::{Result, ResultExt};
+use crate::maintenance::MaintenanceCapabilities;
 use crate::provider::{BackendFactory, Capabilities};
 
 use super::account::AccountApi;
@@ -81,12 +82,18 @@ impl BackendFactory for BoatFactory {
             wallet.to_owned(),
             self.extra_root_pem.as_deref(),
         )?;
+        let launcher = Arc::new(ImageLauncher { runtime });
         Ok(Capabilities {
             lifecycle: backend.clone(),
             capacity: backend.clone(),
             files: backend,
             account: Arc::new(AccountApi { reads }),
-            launcher: Arc::new(ImageLauncher { runtime }),
+            launcher: launcher.clone(),
+            inspection: launcher,
         })
+    }
+
+    fn maintenance(&self, key: &Secret, wallet: &str) -> Result<MaintenanceCapabilities> {
+        Ok(self.backend(key, wallet)?.maintenance())
     }
 }

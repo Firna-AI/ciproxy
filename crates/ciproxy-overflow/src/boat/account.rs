@@ -28,13 +28,18 @@ impl BoatAccountApi for AccountApi {
             .get("/limits", &[])
             .await?
             .ok_or(Error::InvalidProviderData)?;
+        let start_fee_bound_usd = limits
+            .overage_prices
+            .iter()
+            .flat_map(|prices| &prices.start_brackets)
+            .map(|bracket| bracket.dollars)
+            .max()
+            .or(limits.next_start_dollars);
         if !identity.ok
             || identity.kind != "user.info"
             || !limits.ok
             || limits.kind != "limits.info"
-            || limits
-                .next_start_dollars
-                .is_some_and(|fee| fee < Decimal::ZERO)
+            || start_fee_bound_usd.is_some_and(|fee| fee < Decimal::ZERO)
         {
             return Err(Error::InvalidProviderData);
         }
@@ -82,10 +87,10 @@ impl BoatAccountApi for AccountApi {
             wallet: self.reads.wallet.clone(),
             trial,
             billing_ready: limits.billing_status == "active"
-                && limits.next_start_dollars.is_some()
+                && start_fee_bound_usd.is_some()
                 && !billing_block(limits.blocked_reason.as_deref())
                 && !billing_block(limits.start_blocked_reason.as_deref()),
-            next_start_usd: limits.next_start_dollars,
+            start_fee_bound_usd,
         })
     }
 

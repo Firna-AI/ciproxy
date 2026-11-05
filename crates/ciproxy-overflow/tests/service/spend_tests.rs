@@ -1,16 +1,17 @@
 //! Runtime plus start fees, exact UTC month boundaries, and immediate limit changes.
 
 use chrono::Duration;
+use ciproxy_overflow::api::{Overflow, StartOutcome, WaitReason};
+use ciproxy_overflow::error::Error;
+use ciproxy_overflow::provider::{BoatAccountApiMock, RuntimeUsage};
 use ciproxy_store_interface::overflow::record::{RuntimeCharge, StartPhase};
 use rust_decimal::Decimal;
 use sandbox_interface::{PlanSizeRefusalReason, SandboxLifecycleMock, SandboxStartRefusal};
 use unimock::{MockFn, Unimock, matching};
 
-use crate::api::{Overflow, StartOutcome, WaitReason};
-use crate::error::Error;
-use crate::provider::{BoatAccountApiMock, RuntimeUsage};
+use super::harness::{Harness, Runtime};
 
-use super::fixtures::{Harness, at, capabilities, facts, id, record, request};
+use super::fixtures::{at, capabilities, facts, id, record, request};
 
 #[tokio::test]
 async fn runtime_and_start_charge_stop_new_starts_and_a_raised_limit_resumes_them() {
@@ -39,29 +40,9 @@ async fn runtime_and_start_charge_stop_new_starts_and_a_raised_limit_resumes_the
                 })
             }),
     )));
-    let harness = Harness::new(
-        backend,
-        (),
-        &[
-            "try_lock_overflow",
-            "snapshot",
-            "now",
-            "backend",
-            "open",
-            "save_start",
-            "save_account",
-            "reserve_start",
-            "save_refusal",
-            "token",
-            "seal",
-        ],
-    );
-    {
-        let mut state = harness.state.lock().unwrap();
-        let snapshot = state.snapshot.as_mut().unwrap();
-        snapshot.starts.push(record(StartPhase::Running));
-        snapshot.spend_limit_usd_micros = Some(31_800);
-    }
+    let harness = Harness::new(backend, (), Runtime::Start);
+    harness.seed(record(StartPhase::Running));
+    harness.set_limit(31_800);
     *harness.now.lock().unwrap() = at() + Duration::seconds(90);
     let view = harness.service.view(id(1)).await.unwrap();
     assert_eq!(view.spend.confirmed_usd, Decimal::new(318, 4));
@@ -75,14 +56,7 @@ async fn runtime_and_start_charge_stop_new_starts_and_a_raised_limit_resumes_the
             resumes_at: "2026-12-01T00:00:00Z".parse().unwrap()
         })
     );
-    harness
-        .state
-        .lock()
-        .unwrap()
-        .snapshot
-        .as_mut()
-        .unwrap()
-        .spend_limit_usd_micros = Some(1_000_000);
+    harness.set_limit(1_000_000);
     assert!(matches!(
         harness.service.start(id(1), next).await.unwrap(),
         StartOutcome::Waiting(WaitReason::Refused(_))
@@ -92,17 +66,11 @@ async fn runtime_and_start_charge_stop_new_starts_and_a_raised_limit_resumes_the
 #[tokio::test]
 async fn new_month_counts_runtime_across_keys_and_organizations_without_repeating_start_fees() {
     let backend = capabilities(Unimock::new(()));
-    let harness = Harness::new(
-        backend,
-        (),
-        &["try_lock_overflow", "snapshot", "now", "backend", "open"],
-    );
+    let harness = Harness::new(backend, (), Runtime::Read);
     let december: chrono::DateTime<chrono::Utc> = "2026-12-01T00:01:00Z".parse().unwrap();
     *harness.now.lock().unwrap() = december;
     {
-        let mut state = harness.state.lock().unwrap();
-        let snapshot = state.snapshot.as_mut().unwrap();
-        snapshot.accounts[0].state.checked_at = Some(december);
+        harness.set_checked(december);
         let mut previous = record(StartPhase::Ended);
         previous.starts_at = "2026-11-30T23:59:30Z".parse().unwrap();
         previous.ends_at = Some(december);
@@ -126,6 +94,8 @@ async fn new_month_counts_runtime_across_keys_and_organizations_without_repeatin
         other.runner_id = id(32);
         other.organization_id = id(33);
         other.key_id = id(99);
+        other.scale_set_id = id(35);
+        harness.database.organization(33, 35);
         other.starts_at = "2026-12-01T00:00:00Z".parse().unwrap();
         other.ends_at = Some(december);
         other.start_usd = Some(Decimal::new(5, 2));
@@ -136,8 +106,13 @@ async fn new_month_counts_runtime_across_keys_and_organizations_without_repeatin
             until: december,
             running: false,
         }];
-        snapshot.starts = vec![previous, other];
-        snapshot.spend_limit_usd_micros = Some(60_000);
+        harness.seed(previous);
+        let mut replacement = harness.snapshot().accounts[0].clone();
+        replacement.account.id = id(99);
+        replacement.account.connected_at = december;
+        harness.connect_account(&replacement);
+        harness.seed(other);
+        harness.set_limit(60_000);
     }
     let view = harness.service.view(id(1)).await.unwrap();
     assert_eq!(view.spend.confirmed_usd, Decimal::new(524, 4));
@@ -146,27 +121,15 @@ async fn new_month_counts_runtime_across_keys_and_organizations_without_repeatin
 }
 
 #[tokio::test]
-async fn accepted_start_with_no_fee_quote_stays_explicit_in_the_spend_view() {
+async fn accepted_start_with_no_fee_bound_stays_explicit_in_the_spend_view() {
     let backend = capabilities(Unimock::new(()));
-    let harness = Harness::new(
-        backend,
-        (),
-        &["try_lock_overflow", "snapshot", "now", "backend", "open"],
-    );
+    let harness = Harness::new(backend, (), Runtime::Read);
     let mut ended = record(StartPhase::Ended);
     ended.ends_at = Some(at());
     ended.start_usd = None;
-    ended.start_quote_usd = None;
+    ended.start_fee_bound_usd = None;
     ended.runtime_complete = true;
-    harness
-        .state
-        .lock()
-        .unwrap()
-        .snapshot
-        .as_mut()
-        .unwrap()
-        .starts
-        .push(ended);
+    harness.seed(ended);
     let view = harness.service.view(id(1)).await.unwrap();
     assert_eq!(view.spend.unknown_start_charges, [id(11)]);
     assert!(!view.spend.complete());

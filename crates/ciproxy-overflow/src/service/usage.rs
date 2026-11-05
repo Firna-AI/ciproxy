@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::cost_state;
 use crate::error::Result;
-use crate::provider::Capabilities;
+use crate::maintenance::MaintenanceCapabilities;
 use crate::session::Session;
 use crate::spend;
 
@@ -31,7 +31,7 @@ impl OverflowService {
                 self.missing_usage(session, record).await?;
                 continue;
             };
-            let backend = match self.backend(workspace_id, account).await {
+            let backend = match self.maintenance_backend(workspace_id, account).await {
                 Ok(backend) => backend,
                 Err(_) => {
                     tracing::warn!(
@@ -49,7 +49,7 @@ impl OverflowService {
     pub(super) async fn measure(
         &self,
         session: &Session,
-        backend: &Capabilities,
+        backend: &MaintenanceCapabilities,
         record: &mut StartRecord,
     ) -> Result<bool> {
         let Some(sandbox) = &record.sandbox else {
@@ -57,7 +57,7 @@ impl OverflowService {
         };
         let id = ProviderRef::new(sandbox.id());
         let now = self.dependencies.clock.now();
-        let total = match backend.account.usage(id.clone(), None, now).await {
+        let total = match backend.usage(id.clone(), None, now).await {
             Ok(Some(total)) => total,
             Ok(None) | Err(_) => return self.missing_usage(session, record).await,
         };
@@ -89,7 +89,7 @@ impl OverflowService {
         let until = record.ends_at.unwrap_or(now).min(now);
         while month < until {
             let end = spend::next_month(month)?.min(until);
-            let usage = match backend.account.usage(id.clone(), Some(month), end).await {
+            let usage = match backend.usage(id.clone(), Some(month), end).await {
                 Ok(Some(usage)) => usage,
                 Ok(None) | Err(_) => return self.missing_usage(session, record).await,
             };

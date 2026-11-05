@@ -8,6 +8,7 @@ use sandbox_interface::ProviderRef;
 use uuid::Uuid;
 
 use crate::error::{Error, Result, ResultExt};
+use crate::maintenance::{GuestInspection, LaunchState};
 use crate::provider::{GuestLauncher, registration_root};
 
 pub(super) struct ImageLauncher {
@@ -28,6 +29,33 @@ os.fchown(fd, owner.pw_uid, owner.pw_gid)
 os.fchmod(fd, 0o600)
 os.close(fd)
 "#;
+
+const INSPECT: &str = r#"
+import os, stat, sys
+try:
+    mode = os.stat(sys.argv[1], follow_symlinks=False).st_mode
+except FileNotFoundError:
+    sys.exit(10)
+sys.exit(0 if stat.S_ISDIR(mode) else 11)
+"#;
+
+#[async_trait]
+impl GuestInspection for ImageLauncher {
+    async fn inspect_launch(&self, sandbox: ProviderRef, delivery_id: Uuid) -> Result<LaunchState> {
+        let marker = format!("/run/ciproxy-overflow/{}", delivery_id.simple());
+        let command = format!("sudo -n /usr/bin/python3 -I -S -c '{INSPECT}' '{marker}'");
+        let result = self
+            .runtime
+            .helper(sandbox.as_str(), command, Duration::from_secs(30))
+            .await
+            .internal()?;
+        match (result.normal, result.exit_code) {
+            (true, Some(0)) => Ok(LaunchState::Started),
+            (true, Some(10)) => Ok(LaunchState::NotStarted),
+            _ => Err(Error::ProviderUnavailable),
+        }
+    }
+}
 
 #[async_trait]
 impl GuestLauncher for ImageLauncher {

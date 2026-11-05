@@ -1,16 +1,3 @@
-//! Public overflow boundary tests with injected capability and persistence mocks.
+//! Pure cipher boundary tests with mocked KMS transport.
 
-mod accounts_tests;
-mod adoption_tests;
-mod budget_admission_tests;
-mod budget_month_tests;
-mod budget_observation_tests;
-mod budget_tests;
-mod cleanup;
-mod coverage_tests;
-mod creation;
-mod fixtures;
 mod kms_tests;
-mod persistence;
-mod refusals_tests;
-mod spend_tests;

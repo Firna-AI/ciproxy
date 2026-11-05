@@ -3,15 +3,16 @@
 use std::sync::Arc;
 
 use chrono::{DateTime, Duration, Utc};
+use ciproxy_overflow::api::Overflow;
+use ciproxy_overflow::provider::{BoatAccountApiMock, RuntimeUsage};
 use ciproxy_store_interface::overflow::known::KnownSandbox;
 use ciproxy_store_interface::overflow::record::{RuntimeCharge, StartPhase};
 use rust_decimal::Decimal;
 use unimock::{MockFn, Unimock, matching};
 
-use crate::api::Overflow;
-use crate::provider::{BoatAccountApiMock, RuntimeUsage};
+use super::harness::{Harness, Runtime};
 
-use super::fixtures::{Harness, capabilities, id, record};
+use super::fixtures::{capabilities, id, record};
 
 #[tokio::test]
 async fn expired_cross_month_total_retains_unallocated_cost_without_a_measured_interval() {
@@ -37,23 +38,10 @@ async fn expired_cross_month_total_retains_unallocated_cost_without_a_measured_i
                 }))
             })),
     ));
-    let harness = Harness::new(
-        backend,
-        (),
-        &[
-            "try_lock_overflow",
-            "snapshot",
-            "now",
-            "backend",
-            "open",
-            "save_start",
-        ],
-    );
+    let harness = Harness::new(backend, (), Runtime::Read);
     *harness.now.lock().unwrap() = now;
     {
-        let mut state = harness.state.lock().unwrap();
-        let snapshot = state.snapshot.as_mut().unwrap();
-        snapshot.accounts[0].state.checked_at = Some(now);
+        harness.set_checked(now);
         let mut start = record(StartPhase::Running);
         start.starts_at = since;
         start.sandbox = Some(KnownSandbox::observed(
@@ -69,7 +57,7 @@ async fn expired_cross_month_total_retains_unallocated_cost_without_a_measured_i
             until: month,
             running: false,
         });
-        snapshot.starts.push(start);
+        harness.seed(start);
     }
     let view = harness.service.view(id(1)).await.unwrap();
     assert_eq!(view.spend.confirmed_usd, Decimal::ZERO);

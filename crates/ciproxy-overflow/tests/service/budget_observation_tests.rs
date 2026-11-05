@@ -1,17 +1,18 @@
 //! Late running evidence survives a failed monthly observation before settlement.
 
 use chrono::Duration;
+use ciproxy_overflow::api::Overflow;
+use ciproxy_overflow::error::Error;
+use ciproxy_overflow::provider::{BoatAccountApiMock, RuntimeUsage};
 use ciproxy_store_interface::overflow::billing::MeasuredBillingInterval;
 use ciproxy_store_interface::overflow::record::{RuntimeCharge, RuntimeTotal, StartPhase};
 use rust_decimal::Decimal;
 use sandbox_interface::SandboxLifecycleMock;
 use unimock::{MockFn, Unimock, matching};
 
-use crate::api::Overflow;
-use crate::error::Error;
-use crate::provider::{BoatAccountApiMock, RuntimeUsage};
+use super::harness::{Harness, Runtime};
 
-use super::fixtures::{Harness, at, capabilities, id, record};
+use super::fixtures::{at, capabilities, id, record};
 
 #[tokio::test]
 async fn later_running_evidence_keeps_the_bound_pending_then_final_runtime_replaces_it() {
@@ -54,19 +55,7 @@ async fn later_running_evidence_keeps_the_bound_pending_then_final_runtime_repla
                 })
             }),
     )));
-    let harness = Harness::new(
-        backend,
-        (),
-        &[
-            "try_lock_overflow",
-            "snapshot",
-            "now",
-            "backend",
-            "open",
-            "save_start",
-            "collect",
-        ],
-    );
+    let harness = Harness::new(backend, (), Runtime::Read);
     let mut start = record(StartPhase::Running);
     start.start_usd = None;
     start.runtime_complete = true;
@@ -84,28 +73,11 @@ async fn later_running_evidence_keeps_the_bound_pending_then_final_runtime_repla
         until: at() + Duration::seconds(90),
         running: false,
     });
-    harness
-        .state
-        .lock()
-        .unwrap()
-        .snapshot
-        .as_mut()
-        .unwrap()
-        .starts
-        .push(start);
+    harness.seed(start);
     for hours in [7, 8] {
         let now = at() + Duration::hours(hours);
         *harness.now.lock().unwrap() = now;
-        harness
-            .state
-            .lock()
-            .unwrap()
-            .snapshot
-            .as_mut()
-            .unwrap()
-            .accounts[0]
-            .state
-            .checked_at = Some(now);
+        harness.set_checked(now);
         let view = harness.service.view(id(1)).await.unwrap();
         assert_eq!(view.spend.confirmed_usd, Decimal::new(504, 3));
         assert_eq!(view.spend.pending_usd, Decimal::new(3, 2));
@@ -125,43 +97,17 @@ async fn later_running_evidence_keeps_the_bound_pending_then_final_runtime_repla
         );
         assert_eq!(view.spend.unmeasured_runtime, [id(11)]);
     }
-    harness
-        .state
-        .lock()
-        .unwrap()
-        .snapshot
-        .as_mut()
-        .unwrap()
-        .starts[0]
-        .phase = StartPhase::Deleting;
+    let mut deleting = harness.start(id(11));
+    deleting.phase = StartPhase::Deleting;
+    harness.save(&deleting);
     assert!(matches!(
         harness.service.cleanup(id(1)).await,
         Err(Error::ProviderUnavailable)
     ));
-    assert_eq!(
-        harness
-            .state
-            .lock()
-            .unwrap()
-            .snapshot
-            .as_ref()
-            .unwrap()
-            .starts[0]
-            .ends_at,
-        None
-    );
+    assert_eq!(harness.snapshot().starts[0].ends_at, None);
     let now = at() + Duration::hours(14);
     *harness.now.lock().unwrap() = now;
-    harness
-        .state
-        .lock()
-        .unwrap()
-        .snapshot
-        .as_mut()
-        .unwrap()
-        .accounts[0]
-        .state
-        .checked_at = Some(now);
+    harness.set_checked(now);
     let view = harness.service.view(id(1)).await.unwrap();
     assert_eq!(view.spend.confirmed_usd, Decimal::new(504, 3));
     assert_eq!(view.spend.pending_usd, Decimal::ZERO);
@@ -173,25 +119,11 @@ async fn later_running_evidence_keeps_the_bound_pending_then_final_runtime_repla
         at() + Duration::hours(7)
     );
 
-    let retained = Harness::new(
-        capabilities(Unimock::new(())),
-        (),
-        &[
-            "try_lock_overflow",
-            "snapshot",
-            "now",
-            "backend",
-            "open",
-            "save_start",
-        ],
-    );
+    let retained = Harness::new(capabilities(Unimock::new(())), (), Runtime::Read);
     *retained.now.lock().unwrap() = now;
     {
-        let mut state = retained.state.lock().unwrap();
-        let snapshot = state.snapshot.as_mut().unwrap();
-        snapshot.accounts[0].state.checked_at = Some(now);
+        retained.set_checked(now);
         let mut ended = record(StartPhase::Ended);
-        ended.key_id = id(99);
         ended.ends_at = Some(now);
         ended.start_usd = None;
         ended.running_observed_at = Some(at() + Duration::hours(7));
@@ -201,7 +133,20 @@ async fn later_running_evidence_keeps_the_bound_pending_then_final_runtime_repla
             usd: Decimal::new(18, 4),
             running: false,
         });
-        snapshot.starts.push(ended);
+        retained.seed(ended);
+        let mut replacement = retained.snapshot().accounts[0].clone();
+        retained.database.session().disconnect(now).unwrap();
+        assert_eq!(
+            retained
+                .database
+                .store
+                .delete_unused_boat_keys(id(1))
+                .unwrap(),
+            1
+        );
+        replacement.account.id = id(99);
+        replacement.account.connected_at = now;
+        retained.connect_account(&replacement);
     }
     let view = retained.service.view(id(1)).await.unwrap();
     assert_eq!(view.spend.confirmed_usd, Decimal::new(18, 4));

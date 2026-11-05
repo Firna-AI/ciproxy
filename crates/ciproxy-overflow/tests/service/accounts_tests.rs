@@ -1,6 +1,10 @@
 //! Saved credentials, five-minute catalogs, and the real scaler size policy.
 
 use chrono::Duration;
+use ciproxy_overflow::api::{Overflow, StartOutcome};
+use ciproxy_overflow::crypto::SecretPurpose;
+use ciproxy_overflow::error::Error;
+use ciproxy_overflow::provider::BoatAccountApiMock;
 use ciproxy_protocol::identifiers::{LabelName, OrganizationId, WorkspaceId};
 use ciproxy_protocol::resources::VmSize;
 use ciproxy_protocol::secret::Secret;
@@ -11,12 +15,9 @@ use ciproxy_scaler::snapshot::{Destinations, Label, NothingFits, Snapshot, Waiti
 use sandbox_interface::SandboxAccountCapacityMock;
 use unimock::{MockFn, Unimock, matching};
 
-use crate::api::{Overflow, StartOutcome};
-use crate::crypto::SecretPurpose;
-use crate::error::Error;
-use crate::provider::BoatAccountApiMock;
+use super::harness::{Harness, Runtime};
 
-use super::fixtures::{Harness, at, capabilities, facts, id};
+use super::fixtures::{at, capabilities, facts, id};
 
 #[tokio::test]
 async fn rejected_key_is_never_encrypted_or_saved() {
@@ -25,7 +26,7 @@ async fn rejected_key_is_never_encrypted_or_saved() {
             .some_call(matching!())
             .returns(Err(Error::RejectedKey)),
     ));
-    let harness = Harness::new(backend, (), &["try_lock_overflow", "backend"]);
+    let harness = Harness::new(backend, (), Runtime::KeyCheck);
     assert!(matches!(
         harness
             .service
@@ -40,7 +41,7 @@ async fn rejected_key_is_never_encrypted_or_saved() {
         Err(Error::RejectedKey)
     ));
     let state = harness.state.lock().unwrap();
-    assert_eq!(state.snapshot.as_ref().unwrap().accounts.len(), 1);
+    assert_eq!(harness.snapshot().accounts.len(), 1);
     assert_eq!(state.contexts, []);
 }
 
@@ -54,18 +55,7 @@ async fn accepted_key_is_workspace_bound_ciphertext_and_requires_a_positive_limi
             .some_call(matching!())
             .returns(Ok(vec![sandbox_boat::catalogue::offer("large").unwrap()])),
     )));
-    let harness = Harness::new(
-        backend,
-        (),
-        &[
-            "try_lock_overflow",
-            "connect",
-            "collect",
-            "now",
-            "backend",
-            "seal",
-        ],
-    );
+    let harness = Harness::new(backend, (), Runtime::Connect);
     assert!(matches!(
         harness
             .service
@@ -95,14 +85,8 @@ async fn accepted_key_is_workspace_bound_ciphertext_and_requires_a_positive_limi
     assert_eq!(state.contexts[0].workspace_id, id(1));
     assert_eq!(state.contexts[0].id, id(8));
     assert_eq!(state.contexts[0].purpose, SecretPurpose::BoatKey);
-    assert_eq!(
-        state.snapshot.as_ref().unwrap().spend_limit_usd_micros,
-        Some(20_000_000)
-    );
-    assert_ne!(
-        state.snapshot.as_ref().unwrap().accounts[1].key.as_bytes(),
-        b"new-key"
-    );
+    assert_eq!(harness.snapshot().spend_limit_usd_micros, Some(20_000_000));
+    assert_ne!(harness.snapshot().accounts[0].key.as_bytes(), b"new-key");
 }
 
 #[tokio::test]
@@ -119,18 +103,7 @@ async fn catalog_refreshes_at_five_minutes_and_drives_cheapest_or_largest_choice
                 .to_vec()))
             .once(),
     )));
-    let harness = Harness::new(
-        backend,
-        (),
-        &[
-            "try_lock_overflow",
-            "snapshot",
-            "save_account",
-            "now",
-            "backend",
-            "open",
-        ],
-    );
+    let harness = Harness::new(backend, (), Runtime::Read);
     *harness.now.lock().unwrap() = at() + Duration::seconds(299);
     assert_eq!(
         harness.service.view(id(1)).await.unwrap().state.sizes.len(),
@@ -201,28 +174,8 @@ async fn newly_rejected_saved_key_stops_starts_and_keeps_its_rejection_time() {
             .some_call(matching!(_, _, _))
             .answers(&|_, _, _, _| Err(Error::RejectedKey)),
     )));
-    let harness = Harness::new(
-        backend,
-        (),
-        &[
-            "try_lock_overflow",
-            "snapshot",
-            "save_account",
-            "save_start",
-            "now",
-            "backend",
-            "open",
-        ],
-    );
-    harness
-        .state
-        .lock()
-        .unwrap()
-        .snapshot
-        .as_mut()
-        .unwrap()
-        .starts
-        .push(super::coverage_tests::running_observation());
+    let harness = Harness::new(backend, (), Runtime::Read);
+    harness.seed(super::coverage_tests::running_observation());
     *harness.now.lock().unwrap() = at() + Duration::minutes(5);
     let view = harness.service.view(id(1)).await.unwrap();
     assert_eq!(
@@ -230,17 +183,7 @@ async fn newly_rejected_saved_key_stops_starts_and_keeps_its_rejection_time() {
         Some(at() + Duration::minutes(5))
     );
     assert_eq!(view.spend.unmeasured_runtime, [id(11)]);
-    assert!(
-        !harness
-            .state
-            .lock()
-            .unwrap()
-            .snapshot
-            .as_ref()
-            .unwrap()
-            .starts[0]
-            .runtime_complete
-    );
+    assert!(!harness.snapshot().starts[0].runtime_complete);
     let again = harness.service.view(id(1)).await.unwrap();
     assert_eq!(
         again.account.unwrap().rejected_at,
@@ -252,6 +195,6 @@ async fn newly_rejected_saved_key_stops_starts_and_keeps_its_rejection_time() {
     next.runner_id = id(22);
     assert!(matches!(
         harness.service.start(id(1), next).await.unwrap(),
-        StartOutcome::Waiting(crate::api::WaitReason::Disconnected)
+        StartOutcome::Waiting(ciproxy_overflow::api::WaitReason::Disconnected)
     ));
 }

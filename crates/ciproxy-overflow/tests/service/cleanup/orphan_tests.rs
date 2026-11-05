@@ -1,6 +1,8 @@
 //! Scoped callback claims and safe orphan cleanup across control-plane outages.
 
 use chrono::Duration;
+use ciproxy_overflow::api::{Overflow, Retirement, RunnerAuthorityMock};
+use ciproxy_overflow::provider::{BoatAccountApiMock, RuntimeUsage};
 use ciproxy_store_interface::overflow::known::KnownSandbox;
 use ciproxy_store_interface::overflow::record::{RuntimeCharge, StartPhase};
 use rust_decimal::Decimal;
@@ -10,10 +12,9 @@ use sandbox_interface::{
 };
 use unimock::{MockFn, Unimock, matching};
 
-use crate::api::{Overflow, Retirement, RunnerAuthorityMock};
-use crate::provider::{BoatAccountApiMock, RuntimeUsage};
+use super::super::harness::{Harness, Runtime};
 
-use super::super::fixtures::{Harness, at, capabilities, id, record};
+use super::super::fixtures::{at, capabilities, id, record};
 
 #[tokio::test]
 async fn cleanup_deletes_only_an_unneeded_owned_runner_and_preserves_running_jobs() {
@@ -41,19 +42,7 @@ async fn cleanup_deletes_only_an_unneeded_owned_runner_and_preserves_running_job
             .some_call(matching!((_, _, runner) if *runner == id(22)))
             .returns(Ok(Retirement::Removed)),
     );
-    let harness = Harness::new(
-        backend,
-        authority,
-        &[
-            "try_lock_overflow",
-            "snapshot",
-            "backend",
-            "open",
-            "save_start",
-            "now",
-            "collect",
-        ],
-    );
+    let harness = Harness::new(backend, authority, Runtime::Read);
     let running = record(StartPhase::Running);
     let mut idle = running.clone();
     idle.delivery_id = id(21);
@@ -63,21 +52,12 @@ async fn cleanup_deletes_only_an_unneeded_owned_runner_and_preserves_running_job
         idle.starts_at,
         idle.lifetime_seconds,
     ));
-    harness
-        .state
-        .lock()
-        .unwrap()
-        .snapshot
-        .as_mut()
-        .unwrap()
-        .starts = vec![running.clone(), idle];
+    harness.seed(running.clone());
+    harness.seed(idle);
     harness.service.cleanup(id(1)).await.unwrap();
-    let state = harness.state.lock().unwrap();
-    assert_eq!(state.snapshot.as_ref().unwrap().starts[0], running);
-    assert_eq!(
-        state.snapshot.as_ref().unwrap().starts[1].phase,
-        StartPhase::Ended
-    );
+    let state = harness.snapshot();
+    assert_eq!(state.starts[0], running);
+    assert_eq!(state.starts[1].phase, StartPhase::Ended);
 }
 
 #[tokio::test]
@@ -106,46 +86,18 @@ async fn omitted_stopped_sandbox_recovers_its_final_bill_before_lifecycle_end() 
             .some_call(matching!(_))
             .returns(Ok(())),
     )));
-    let harness = Harness::new(
-        backend,
-        (),
-        &[
-            "try_lock_overflow",
-            "snapshot",
-            "backend",
-            "open",
-            "save_start",
-            "now",
-            "collect",
-        ],
-    );
-    harness
-        .state
-        .lock()
-        .unwrap()
-        .snapshot
-        .as_mut()
-        .unwrap()
-        .starts
-        .push(record(StartPhase::Running));
+    let harness = Harness::new(backend, (), Runtime::Read);
+    harness.seed(record(StartPhase::Running));
     *harness.now.lock().unwrap() = at() + Duration::hours(7);
     harness.service.cleanup(id(1)).await.unwrap();
-    let state = harness.state.lock().unwrap();
+    let state = harness.snapshot();
     assert_eq!(
-        state.snapshot.as_ref().unwrap().starts[0]
-            .billing
-            .map(|interval| interval.ends_at()),
+        state.starts[0].billing.map(|interval| interval.ends_at()),
         Some(at() + Duration::hours(6))
     );
-    assert!(state.snapshot.as_ref().unwrap().starts[0].runtime_complete);
-    assert_eq!(
-        state.snapshot.as_ref().unwrap().starts[0].phase,
-        StartPhase::Ended
-    );
-    assert_eq!(
-        state.snapshot.as_ref().unwrap().starts[0].ends_at,
-        Some(at() + Duration::hours(7))
-    );
+    assert!(state.starts[0].runtime_complete);
+    assert_eq!(state.starts[0].phase, StartPhase::Ended);
+    assert_eq!(state.starts[0].ends_at, Some(at() + Duration::hours(7)));
 }
 
 #[tokio::test]
@@ -161,19 +113,7 @@ async fn lost_delete_acknowledgment_never_prices_a_day_of_absent_runtime() {
             .some_call(matching!(_))
             .returns(Ok(())),
     )));
-    let harness = Harness::new(
-        backend,
-        (),
-        &[
-            "try_lock_overflow",
-            "snapshot",
-            "backend",
-            "open",
-            "save_start",
-            "now",
-            "collect",
-        ],
-    );
+    let harness = Harness::new(backend, (), Runtime::Read);
     let mut deleting = record(StartPhase::Deleting);
     deleting.runtime = vec![RuntimeCharge {
         month: "2026-11-01".parse().unwrap(),
@@ -181,20 +121,10 @@ async fn lost_delete_acknowledgment_never_prices_a_day_of_absent_runtime() {
         until: at() + Duration::seconds(90),
         running: true,
     }];
-    harness
-        .state
-        .lock()
-        .unwrap()
-        .snapshot
-        .as_mut()
-        .unwrap()
-        .starts
-        .push(deleting);
+    harness.seed(deleting);
     *harness.now.lock().unwrap() = at() + Duration::days(1);
     harness.service.cleanup(id(1)).await.unwrap();
-    let mut snapshot = harness.state.lock().unwrap().snapshot.clone().unwrap();
-    snapshot.accounts[0].state.checked_at = Some(at() + Duration::days(1));
-    harness.state.lock().unwrap().snapshot = Some(snapshot);
+    harness.set_checked(at() + Duration::days(1));
     let view = harness.service.view(id(1)).await.unwrap();
     assert_eq!(view.spend.confirmed_usd, Decimal::new(318, 4));
     assert_eq!(view.spend.unmeasured_runtime, [id(11)]);

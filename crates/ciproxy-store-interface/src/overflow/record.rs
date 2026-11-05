@@ -82,9 +82,9 @@ pub struct StartRecord {
     pub ends_at: Option<DateTime<Utc>>,
     /// Finite measured billing prefix, independent of lifecycle reconciliation.
     pub billing: Option<MeasuredBillingInterval>,
-    /// Immutable start-fee quote saved before dispatch, used only for budget bounds.
-    pub start_quote_usd: Option<Decimal>,
-    /// Provider-confirmed actual start charge, never inferred from its quote.
+    /// Admission fee bound retained for its UTC start month without provider confirmation.
+    pub start_fee_bound_usd: Option<Decimal>,
+    /// Provider-confirmed actual start charge, never inferred from the saved bound.
     pub start_usd: Option<Decimal>,
     /// First accepted guest end report, absent before token consumption.
     pub reported_at: Option<DateTime<Utc>>,

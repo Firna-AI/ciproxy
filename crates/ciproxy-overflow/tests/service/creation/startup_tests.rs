@@ -3,17 +3,18 @@
 use std::sync::{Arc, Mutex};
 use std::time;
 
+use ciproxy_overflow::api::{Overflow, StartOutcome};
+use ciproxy_overflow::crypto::SecretPurpose;
+use ciproxy_overflow::provider::{BoatAccountApiMock, GuestLauncherMock};
 use ciproxy_store_interface::overflow::record::StartPhase;
 use sandbox_interface::{
     BackendSandbox, SandboxFilesMock, SandboxLifecycleMock, SandboxLifetime, SandboxState,
 };
 use unimock::{MockFn, Unimock, matching};
 
-use crate::api::{Overflow, StartOutcome};
-use crate::crypto::SecretPurpose;
-use crate::provider::{BoatAccountApiMock, GuestLauncherMock};
+use super::super::harness::{Harness, Runtime};
 
-use super::super::fixtures::{Harness, capabilities, facts, id, request};
+use super::super::fixtures::{capabilities, facts, id, request};
 
 #[tokio::test]
 async fn paid_start_sends_private_input_and_persists_identity_before_launch() {
@@ -91,23 +92,7 @@ async fn paid_start_sends_private_input_and_persists_identity_before_launch() {
                 Ok(())
             })),
     )));
-    let harness = Harness::new(
-        backend,
-        (),
-        &[
-            "try_lock_overflow",
-            "snapshot",
-            "now",
-            "backend",
-            "open",
-            "token",
-            "seal",
-            "save_account",
-            "reserve_start",
-            "save_start",
-            "encrypted_launch",
-        ],
-    );
+    let harness = Harness::new(backend, (), Runtime::Start);
     let outcome = harness.service.start(id(1), request()).await.unwrap();
     assert!(matches!(outcome, StartOutcome::Started(_)), "{outcome:?}");
     let state = harness.state.lock().unwrap();

@@ -1,4 +1,4 @@
-//! Quotes and settled budget estimates never become measured savings costs.
+//! Fee bounds and settled budget estimates never become measured savings costs.
 
 use chrono::Duration;
 use ciproxy_store_interface::error::Error;
@@ -12,7 +12,7 @@ use super::super::support::{Database, at};
 use super::support::setup;
 
 #[test]
-fn quoted_start_fee_round_trips_without_becoming_a_measured_metering_cost() {
+fn bounded_start_fee_round_trips_without_becoming_a_measured_metering_cost() {
     let database = Database::new();
     let (workspace_id, _, mut record) = setup(&database);
     let mut session = database.store.lock_overflow(workspace_id).unwrap();
@@ -50,7 +50,10 @@ fn quoted_start_fee_round_trips_without_becoming_a_measured_metering_cost() {
     }];
     session.save_start(&record).unwrap();
     let saved = session.snapshot().unwrap();
-    assert_eq!(saved.starts[0].start_quote_usd, Some(Decimal::new(3, 2)));
+    assert_eq!(
+        saved.starts[0].start_fee_bound_usd,
+        Some(Decimal::new(3, 2))
+    );
     assert_eq!(saved.starts[0].start_usd, None);
     assert_eq!(
         database.store.boat_accounting(workspace_id).unwrap().costs,
@@ -72,7 +75,7 @@ fn quoted_start_fee_round_trips_without_becoming_a_measured_metering_cost() {
         Some(at() + Duration::seconds(90))
     );
     assert_eq!(
-        session.snapshot().unwrap().starts[0].start_quote_usd,
+        session.snapshot().unwrap().starts[0].start_fee_bound_usd,
         Some(Decimal::new(3, 2))
     );
 }

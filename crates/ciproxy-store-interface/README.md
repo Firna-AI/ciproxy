@@ -114,7 +114,7 @@ A transactional claim accepts one report for one live runner.
 There is no independent expiry before that runner ends.
 Old keys stay while uncertain creates or live sandboxes reference them.
 Per-month runtime observations keep incomplete costs explicit.
-Each delivery separates its immutable start-fee quote from a confirmed fee.
+Each delivery separates its saved start-fee bound from a confirmed fee.
 Budget estimates never supply measured cost facts.
 Running observations and total runtime costs survive a failed monthly read.
 The overflow service allocates confirmed monthly costs or conservative bounds.

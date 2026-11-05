@@ -48,6 +48,20 @@ pub(super) struct Limits {
     pub(super) start_blocked_reason: Option<String>,
     #[serde(default, with = "rust_decimal::serde::arbitrary_precision_option")]
     pub(super) next_start_dollars: Option<Decimal>,
+    pub(super) overage_prices: Option<OveragePrices>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct OveragePrices {
+    #[serde(default)]
+    pub(super) start_brackets: Vec<StartBracket>,
+}
+
+#[derive(Deserialize)]
+pub(super) struct StartBracket {
+    #[serde(with = "rust_decimal::serde::arbitrary_precision")]
+    pub(super) dollars: Decimal,
 }
 
 #[derive(Deserialize)]

@@ -6,11 +6,11 @@ use serde_json::Value;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
 #[derive(Clone, Debug)]
-pub(super) struct Request {
-    pub(super) method: String,
-    pub(super) path: String,
-    pub(super) headers: BTreeMap<String, String>,
-    pub(super) body: Value,
+pub(crate) struct Request {
+    pub(crate) method: String,
+    pub(crate) path: String,
+    pub(crate) headers: BTreeMap<String, String>,
+    pub(crate) body: Value,
 }
 
 pub(super) async fn read(stream: &mut (impl AsyncRead + Unpin)) -> Request {

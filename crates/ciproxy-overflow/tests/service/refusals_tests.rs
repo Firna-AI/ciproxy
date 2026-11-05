@@ -1,16 +1,17 @@
 //! Definitive refusals retain their exact retry, plan, billing, and trial effects.
 
 use chrono::Duration;
+use ciproxy_overflow::api::{Overflow, StartOutcome, WaitReason};
+use ciproxy_overflow::provider::BoatAccountApiMock;
 use sandbox_interface::{
     BillingRefusalReason, PlanSizeRefusalReason, SandboxLifecycleMock, SandboxLifetime,
     SandboxStartRefusal, SandboxStartRetry, TemporaryStartRefusalReason,
 };
 use unimock::{MockFn, Unimock, matching};
 
-use crate::api::{Overflow, StartOutcome, WaitReason};
-use crate::provider::BoatAccountApiMock;
+use super::harness::{Harness, Runtime};
 
-use super::fixtures::{Harness, at, capabilities, facts, id, request};
+use super::fixtures::{at, capabilities, facts, id, request};
 
 #[tokio::test]
 async fn refusals_persist_exact_retry_plan_billing_and_trial_state() {
@@ -45,28 +46,12 @@ async fn refusals_persist_exact_retry_plan_billing_and_trial_state() {
                     })
                 })),
         )));
-        let harness = Harness::new(
-            backend,
-            (),
-            &[
-                "try_lock_overflow",
-                "snapshot",
-                "now",
-                "backend",
-                "open",
-                "token",
-                "seal",
-                "save_account",
-                "reserve_start",
-                "save_refusal",
-            ],
-        );
+        let harness = Harness::new(backend, (), Runtime::Start);
         assert_eq!(
             harness.service.start(id(1), request()).await.unwrap(),
             StartOutcome::Waiting(WaitReason::Refused(refusal.clone()))
         );
-        let state = harness.state.lock().unwrap();
-        let snapshot = state.snapshot.as_ref().unwrap();
+        let snapshot = harness.snapshot();
         let account = &snapshot.accounts[0].state;
         let expected_retry = matches!(refusal, SandboxStartRefusal::Temporary { .. })
             .then_some(at() + Duration::seconds(90));
@@ -111,32 +96,10 @@ async fn supplied_retry_blocks_new_creates_only_until_its_boundary() {
                 })
             }),
     )));
-    let harness = Harness::new(
-        backend,
-        (),
-        &[
-            "try_lock_overflow",
-            "snapshot",
-            "now",
-            "backend",
-            "open",
-            "token",
-            "seal",
-            "save_account",
-            "reserve_start",
-            "save_refusal",
-        ],
-    );
-    harness
-        .state
-        .lock()
-        .unwrap()
-        .snapshot
-        .as_mut()
-        .unwrap()
-        .accounts[0]
-        .state
-        .retry_at = Some(at() + Duration::seconds(90));
+    let harness = Harness::new(backend, (), Runtime::Start);
+    let mut account = harness.snapshot().accounts[0].clone();
+    account.state.retry_at = Some(at() + Duration::seconds(90));
+    harness.save_account(&account);
     assert_eq!(
         harness.service.start(id(1), request()).await.unwrap(),
         StartOutcome::Waiting(WaitReason::RetryAt(at() + Duration::seconds(90)))
@@ -183,32 +146,10 @@ async fn trial_uses_two_hours_and_billing_waits_for_confirmed_recovery() {
                 })
             }),
     )));
-    let harness = Harness::new(
-        backend,
-        (),
-        &[
-            "try_lock_overflow",
-            "snapshot",
-            "now",
-            "backend",
-            "open",
-            "token",
-            "seal",
-            "save_account",
-            "reserve_start",
-            "save_refusal",
-        ],
-    );
-    harness
-        .state
-        .lock()
-        .unwrap()
-        .snapshot
-        .as_mut()
-        .unwrap()
-        .accounts[0]
-        .state
-        .billing_required = true;
+    let harness = Harness::new(backend, (), Runtime::Start);
+    let mut account = harness.snapshot().accounts[0].clone();
+    account.state.billing_required = true;
+    harness.save_account(&account);
     assert_eq!(
         harness.service.start(id(1), request()).await.unwrap(),
         StartOutcome::Waiting(WaitReason::BillingRequired)
@@ -218,16 +159,7 @@ async fn trial_uses_two_hours_and_billing_waits_for_confirmed_recovery() {
         StartOutcome::Waiting(WaitReason::Refused(_))
     ));
     assert_eq!(
-        harness
-            .state
-            .lock()
-            .unwrap()
-            .snapshot
-            .as_ref()
-            .unwrap()
-            .accounts[0]
-            .state
-            .refused_sizes,
+        harness.snapshot().accounts[0].state.refused_sizes,
         ["large"]
     );
 }

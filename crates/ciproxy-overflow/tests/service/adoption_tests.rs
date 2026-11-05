@@ -3,17 +3,20 @@
 use std::sync::{Arc, Mutex};
 
 use chrono::Duration;
-use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase};
+use ciproxy_overflow::api::{Overflow, Retirement, RunnerAuthorityMock};
+use ciproxy_overflow::error::Error;
+use ciproxy_overflow::provider::BoatAccountApiMock;
+use ciproxy_store_interface::overflow::record::StartPhase;
 use sandbox_interface::{
     BackendManagedSandbox, BackendSandbox, ProviderRef, SandboxLifecycleMock, SandboxState,
 };
 use unimock::{MockFn, Unimock, matching};
 
-use crate::api::{Overflow, Retirement, RunnerAuthorityMock};
-use crate::error::Error;
-use crate::provider::BoatAccountApiMock;
+use super::recording::Capture;
 
-use super::fixtures::{Harness, State, at, capabilities, id, record};
+use super::harness::{Harness, Runtime};
+
+use super::fixtures::{at, capabilities, id, record};
 
 #[tokio::test]
 async fn cleanup_saves_recovered_identity_and_lifetime_before_waiting_demand_returns() {
@@ -28,14 +31,14 @@ async fn cleanup_saves_recovered_identity_and_lifetime_before_waiting_demand_ret
                 state: SandboxState::Ready,
             }))),
     )));
-    let state = Arc::new(Mutex::new(None::<Arc<Mutex<State>>>));
+    let state = Arc::new(Mutex::new(None::<Arc<Mutex<Capture>>>));
     let observed = state.clone();
     let authority = RunnerAuthorityMock::retire
         .some_call(matching!(_, _, _))
         .answers_arc(Arc::new(move |_, _, _, _| {
             let captured = observed.lock().unwrap().clone().unwrap();
             let captured = captured.lock().unwrap();
-            let pending = &captured.snapshot.as_ref().unwrap().starts[0];
+            let pending = captured.saved.last().unwrap();
             assert_eq!(pending.phase, StartPhase::Preparing);
             assert_eq!(
                 pending.sandbox.as_ref().map(|sandbox| sandbox.id()),
@@ -50,24 +53,12 @@ async fn cleanup_saves_recovered_identity_and_lifetime_before_waiting_demand_ret
             );
             Ok(Retirement::WaitingDemand)
         }));
-    let harness = Harness::new(
-        backend,
-        authority,
-        &[
-            "try_lock_overflow",
-            "snapshot",
-            "save_start",
-            "now",
-            "backend",
-            "open",
-            "collect",
-        ],
-    );
+    let harness = Harness::new(backend, authority, Runtime::Read);
     *state.lock().unwrap() = Some(harness.state.clone());
     seed_creating(&harness);
     harness.service.cleanup(id(1)).await.unwrap();
     let state = harness.state.lock().unwrap();
-    let saved = &state.snapshot.as_ref().unwrap().starts[0];
+    let saved = harness.start(id(11));
     assert_eq!(
         saved.sandbox.as_ref().map(|sandbox| sandbox.id()),
         Some("bx_23456789")
@@ -121,41 +112,27 @@ async fn failed_recovered_cleanup_keeps_the_original_bound_after_old_key_rejecti
     let authority = RunnerAuthorityMock::retire
         .some_call(matching!(_, _, _))
         .returns(Ok(Retirement::Removed));
-    let harness = Harness::new(
-        backend,
-        authority,
-        &[
-            "try_lock_overflow",
-            "snapshot",
-            "save_start",
-            "now",
-            "backend",
-            "open",
-            "collect",
-        ],
-    );
+    let harness = Harness::new(backend, authority, Runtime::Read);
     seed_creating(&harness);
     assert!(matches!(
         harness.service.cleanup(id(1)).await,
         Err(Error::ProviderUnavailable)
     ));
     {
-        let mut state = harness.state.lock().unwrap();
-        let snapshot = state.snapshot.as_mut().unwrap();
-        snapshot.accounts[0].account.retired_at = Some(at() + Duration::hours(1));
-        snapshot.accounts[0].account.rejected_at = Some(at() + Duration::hours(1));
-        let mut replacement = snapshot.accounts[0].clone();
+        let mut old = harness.snapshot().accounts[0].clone();
+        old.account.rejected_at = Some(at() + Duration::hours(1));
+        harness.save_account(&old);
+        let mut replacement = old;
         replacement.account.id = id(44);
         replacement.account.connected_at = at() + Duration::hours(1);
         replacement.account.retired_at = None;
         replacement.account.rejected_at = None;
-        snapshot.accounts.push(replacement);
+        harness.connect_account(&replacement);
     }
     *harness.now.lock().unwrap() = at() + Duration::hours(7);
     let outcome = harness.service.cleanup(id(1)).await;
     assert!(outcome.is_ok(), "{outcome:?}");
-    let state = harness.state.lock().unwrap();
-    let ended = &state.snapshot.as_ref().unwrap().starts[0];
+    let ended = harness.start(id(11));
     assert_eq!(ended.ends_at, Some(at() + Duration::hours(6)));
     assert_eq!(ended.phase, StartPhase::Ended);
     assert!(!ended.runtime_complete);
@@ -196,45 +173,14 @@ async fn end_destroyed(recovering: bool) {
     } else {
         capabilities(Unimock::new(common))
     };
-    let harness = Harness::new(
-        backend,
-        (),
-        &[
-            "try_lock_overflow",
-            "snapshot",
-            "save_start",
-            "now",
-            "backend",
-            "open",
-            "collect",
-        ],
-    );
+    let harness = Harness::new(backend, (), Runtime::Read);
     if recovering {
         seed_creating(&harness);
     } else {
-        harness
-            .state
-            .lock()
-            .unwrap()
-            .snapshot
-            .as_mut()
-            .unwrap()
-            .starts
-            .push(record(StartPhase::Running));
+        harness.seed(record(StartPhase::Running));
     }
     harness.service.cleanup(id(1)).await.unwrap();
-    assert_eq!(
-        harness
-            .state
-            .lock()
-            .unwrap()
-            .snapshot
-            .as_ref()
-            .unwrap()
-            .starts[0]
-            .phase,
-        StartPhase::Ended
-    );
+    assert_eq!(harness.snapshot().starts[0].phase, StartPhase::Ended);
 }
 
 fn listed(state: SandboxState) -> BackendManagedSandbox {
@@ -251,7 +197,5 @@ fn listed(state: SandboxState) -> BackendManagedSandbox {
 fn seed_creating(harness: &Harness) {
     let mut pending = record(StartPhase::Creating);
     pending.sandbox = None;
-    let mut state = harness.state.lock().unwrap();
-    state.snapshot.as_mut().unwrap().starts.push(pending);
-    state.launches.insert(id(11), EncryptedLaunch(vec![17]));
+    harness.seed(pending);
 }

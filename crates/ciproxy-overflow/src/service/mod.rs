@@ -2,11 +2,13 @@
 
 mod accounts;
 mod adoption;
+mod authority;
 mod cleanup;
 mod costs;
 mod execution;
 mod launch;
 mod refresh;
+mod retired;
 mod start;
 mod usage;
 

@@ -12,6 +12,7 @@ use crate::api::{Overflow, StartOutcome, StartRequest};
 use crate::catalog;
 use crate::crypto::{KeyContext, SecretPurpose};
 use crate::error::{Error, Result, ResultExt};
+use crate::maintenance::MaintenanceCapabilities;
 use crate::provider::Capabilities;
 use crate::secrets::SecretBytes;
 use crate::session::Session;
@@ -120,6 +121,27 @@ impl OverflowService {
         workspace_id: Uuid,
         account: &AccountRecord,
     ) -> Result<Capabilities> {
+        if account.account.retired_at.is_some() || account.account.rejected_at.is_some() {
+            return Err(Error::RejectedKey);
+        }
+        let key = self.account_key(workspace_id, account).await?;
+        self.dependencies
+            .factory
+            .backend(&key, &account.state.wallet)
+    }
+
+    pub(super) async fn maintenance_backend(
+        &self,
+        workspace_id: Uuid,
+        account: &AccountRecord,
+    ) -> Result<MaintenanceCapabilities> {
+        let key = self.account_key(workspace_id, account).await?;
+        self.dependencies
+            .factory
+            .maintenance(&key, &account.state.wallet)
+    }
+
+    async fn account_key(&self, workspace_id: Uuid, account: &AccountRecord) -> Result<Secret> {
         let bytes = self
             .dependencies
             .cipher
@@ -132,10 +154,7 @@ impl OverflowService {
                 account.key.as_bytes().to_vec(),
             )
             .await?;
-        let key = Secret::new(std::str::from_utf8(bytes.expose()).internal()?);
-        self.dependencies
-            .factory
-            .backend(&key, &account.state.wallet)
+        Ok(Secret::new(std::str::from_utf8(bytes.expose()).internal()?))
     }
 
     pub(super) async fn collect(&self, session: &Session) -> Result<()> {

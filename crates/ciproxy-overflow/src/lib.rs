@@ -11,6 +11,7 @@ mod cost_state;
 pub mod crypto;
 pub mod error;
 pub mod kms;
+pub mod maintenance;
 pub mod provider;
 pub mod secrets;
 pub mod service;

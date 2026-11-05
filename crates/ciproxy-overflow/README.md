@@ -25,7 +25,7 @@ The dependency revision is
 `965836198ba65947108cbe5e669524d2249d851a` of `futex-ai/sandbox`.
 `BoatFactory` constructs the pinned lifecycle, capacity, and file capabilities.
 All capabilities use the same explicit personal or organization wallet.
-Account reads supply the verified name, trial state, and next start price.
+Account reads supply the verified name, trial state, and start-fee bound.
 The service refreshes eligible sizes every five minutes.
 The scaler uses their dimensions and exact hourly prices to choose the
 cheapest fitting size or the label's explicit largest-size fallback.
@@ -92,7 +92,12 @@ An ambiguous create without a known sandbox gets no inferred end.
 Spend includes all ciproxy sandboxes across the workspace's organizations
 and retained key versions.
 It excludes other use of the Boat account.
-The service saves the documented start-price quote before dispatch.
+The service saves the highest published start fee before dispatch.
+The existing admission read selects the maximum
+`overagePrices.startBrackets[].dollars` from `GET /limits`.
+Missing or empty brackets fall back to `nextStartDollars`.
+`start_fee_bound_usd` stores this one selected amount.
+There is no second quote read or later fee reconciliation.
 It reads each sandbox's runtime for explicit UTC calendar-month windows.
 It uses the pinned hourly price for the known running interval between the
 last observation and a confirmed normal deletion.
@@ -106,14 +111,14 @@ Later metering refreshes cannot add runtime beyond that prefix.
 `Spend` separates confirmed costs, pending bounds, and expired settled bounds.
 The scaler and start admission count all three against the monthly limit.
 Each bound uses the requested size's pinned hourly price for the complete
-six-hour lifetime, or two hours on a trial, plus the saved start-fee quote.
+six-hour lifetime, or two hours on a trial, plus the saved start-fee bound.
 Measured runtime reduces the remaining runtime bound without counting twice.
 A final runtime reading removes the remaining runtime bound.
-An actual start fee replaces its quote, including a fee above that quote.
-The current Boat usage endpoint confirms runtime only.
-Create and inspect responses supply no documented actual start fee.
-The quote therefore stays a budget estimate until expiry or a trusted actual
-fee fact becomes available. It never becomes a measured start charge.
+The saved fee stays counted in its UTC start month after runtime completion
+and lifetime expiry, including a free start with zero measured runtime.
+Boat reports no actual start fee.
+The saved bound never becomes a provider-confirmed start charge.
+The existing measured-cost path still requires independent confirmed facts.
 
 A lifetime expires for budget purposes from the saved dispatch time until a
 trusted creation reading supplies the real start time.
@@ -136,7 +141,7 @@ New starts continue while the limit covers existing costs and the proposed
 start's bound in each UTC month its lifetime touches.
 A missing safe fee bound returns `Error::AccountingIncomplete`.
 `Spend::unbounded_starts` identifies the affected deliveries.
-A new start with no quote waits before provider dispatch.
+A new start with neither fee source waits before provider dispatch.
 At the monthly limit, new starts wait until there is room.
 Running jobs and deletion continue.
 
@@ -157,6 +162,13 @@ GKE uses `MetadataAccessTokens` with its runtime identity.
 The store receives ciphertext and token hashes only.
 Key replacement and disconnect retain old ciphertext while a delivery is
 unfinished, including uncertain creates.
+Retained keys expose only inspection, recovery reads, usage reads, and deletion.
+Registration delivery and guest launch require the active accepted key.
+They also require overflow to remain enabled in the workspace.
+The service checks these facts after key decryption at each operation.
+A retired delivery uses a read-only launch-marker check before cleanup.
+A confirmed launch keeps its runner, including after a lost launch response.
+An unavailable check keeps the delivery and its recovery key for another pass.
 Successful guest launch clears its sealed registration.
 Finished delivery metadata stays for 90 days.
 Diagnostics and live commands omit credentials, registrations, and bodies.
@@ -167,6 +179,7 @@ Run from the repository root:
 
 ```sh
 cargo build --package ciproxy-overflow
+export DATABASE_URL=postgresql://ciproxy:ciproxy@127.0.0.1:5432/ciproxy_test
 cargo test --package ciproxy-overflow
 ```
 
@@ -204,71 +217,39 @@ Keep the same delivery ID until a result is known.
 Targeted checks need no Boat or GCP credential:
 
 ```sh
-cargo test --package ciproxy-overflow
-DATABASE_URL=postgresql://ciproxy:ciproxy@127.0.0.1:5432/ciproxy_test \
-  cargo test --package ciproxy-store-pg --test store_tests overflow::
+export DATABASE_URL=postgresql://ciproxy:ciproxy@127.0.0.1:5432/ciproxy_test
+cargo test --package ciproxy-overflow --test service_tests
+cargo test --package ciproxy-overflow --test boat_tests
+cargo test --package ciproxy-store-pg --test store_tests overflow::
 cargo clippy --package ciproxy-overflow --all-targets -- -D warnings
 ```
 
-Unit tests use `sandbox-interface` mocks.
-Integration tests use the production pinned adapter against a local TLS
-server with certificate and host verification enabled.
-The store tests use isolated PostgreSQL databases.
+Service integration tests require PostgreSQL 15 and `DATABASE_URL`.
+Each test creates and removes its own database through `PgStoreFactory`.
+The database user needs CREATEDB or superuser rights.
+The supplied database serves only as the maintenance connection.
+Provider, clock, and cipher mocks supply external facts.
+A forwarding recorder captures successful store writes without supplying answers.
+Callback tests use real token lookup and one-use claims across two workspaces.
+Boat boundary tests use the production adapter against a local TLS server.
+They keep certificate and host verification enabled.
+The cipher unit tests use a mocked KMS transport.
 
 ### Live commands
 
+The [live-probe guide](LIVE.md) gives credential setup and probe commands.
 These commands contact Boat or Cloud KMS and can incur charges.
-Credential arguments are file paths.
-Create those files outside Git with mode 0600.
-The scripts read paths from environment variables and never print contents.
-`--help` runs without credentials or network access.
-
-```sh
-export BOAT_API_KEY_FILE=/private/boat-key
-export GCP_ACCESS_TOKEN_FILE=/private/gcp-oauth-token
-export KMS_KEY_RESOURCE=projects/P/locations/L/keyRings/R/cryptoKeys/K
-
-crates/ciproxy-overflow/scripts/kms-roundtrip.sh
-crates/ciproxy-overflow/scripts/boat-live.sh account
-
-mkdir -p .context/ciproxy-mvp/milestone-12/live
-crates/ciproxy-overflow/scripts/boat-live.sh create \
-  --state-file .context/ciproxy-mvp/milestone-12/live/boat.json \
-  --snapshot SHARED_SNAPSHOT_OR_SHARE_CODE --size large
-crates/ciproxy-overflow/scripts/boat-live.sh recover \
-  --state-file .context/ciproxy-mvp/milestone-12/live/boat.json
-crates/ciproxy-overflow/scripts/boat-live.sh inspect \
-  --state-file .context/ciproxy-mvp/milestone-12/live/boat.json
-crates/ciproxy-overflow/scripts/boat-live.sh runner \
-  --state-file .context/ciproxy-mvp/milestone-12/live/boat.json \
-  --registration-file /private/boat-registration.json
-crates/ciproxy-overflow/scripts/boat-live.sh usage \
-  --state-file .context/ciproxy-mvp/milestone-12/live/boat.json
-crates/ciproxy-overflow/scripts/boat-live.sh delete \
-  --state-file .context/ciproxy-mvp/milestone-12/live/boat.json
-```
-
-Use `--trial` with `create` on a free trial.
-The private registration file uses the
-[image's Boat format](../../image/README.md#boat-small-and-default-smoke).
-It needs a live JIT registration and an HTTPS callback URL and token.
-The runner probe adjusts the internal runner ID to the recorded delivery.
-The live state file contains identities and phases, without credentials.
-An existing create state always selects recovery reads.
-Run `delete` even when a later probe fails.
-Use a separate state file for each sandbox.
-These probes do not supply the control-plane callback server or a GitHub
-registration issuer.
-The control-plane runtime owns those integrations.
 
 ### Key Code
 
 - [src/api.rs](src/api.rs) defines `Overflow` and its caller contracts.
 - [src/service](src/service) owns durable execution and cleanup.
+- [src/maintenance.rs](src/maintenance.rs) restricts retained-key capabilities.
 - [src/view.rs](src/view.rs) supplies safe scaler and cost facts.
 - [src/boat](src/boat) composes the pinned adapter and fixed image launcher.
 - [src/kms](src/kms) implements real Cloud KMS encryption and runtime OAuth.
 - [tests/boat](tests/boat) tests the production HTTPS boundaries.
+- [tests/service](tests/service) tests public service behavior over real PgStore.
 - [examples/boat_live.rs](examples/boat_live.rs) provides live Boat probes.
 - [examples/kms_roundtrip.rs](examples/kms_roundtrip.rs) checks real KMS access.
 

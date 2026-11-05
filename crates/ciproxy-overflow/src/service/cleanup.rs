@@ -6,15 +6,16 @@ use sandbox_interface::{ProviderRef, SandboxState};
 use tokio::task::spawn_blocking;
 use uuid::Uuid;
 
-use crate::api::Retirement;
+use crate::api::{Retirement, StartOutcome};
 use crate::cost_state;
 use crate::error::{Error, Result, ResultExt};
-use crate::provider::Capabilities;
+use crate::maintenance::MaintenanceCapabilities;
 use crate::secrets::digest;
 use crate::session::Session;
 use crate::spend;
 
 use super::OverflowService;
+use super::authority::active;
 use super::execution::create_request;
 
 impl OverflowService {
@@ -39,7 +40,7 @@ impl OverflowService {
             .iter()
             .find(|account| account.account.id == record.key_id)
             .ok_or(Error::OwnershipUnknown)?;
-        let backend = self.backend(workspace_id, account).await?;
+        let backend = self.maintenance_backend(workspace_id, account).await?;
         self.delete(&session, &backend, &mut record).await?;
         self.collect(&session).await
     }
@@ -47,7 +48,7 @@ impl OverflowService {
     pub(super) async fn delete(
         &self,
         session: &Session,
-        backend: &Capabilities,
+        backend: &MaintenanceCapabilities,
         record: &mut StartRecord,
     ) -> Result<()> {
         let sandbox =
@@ -59,7 +60,7 @@ impl OverflowService {
                 false
             }
         };
-        let destroyed = backend.lifecycle.destroy_sandbox(sandbox).await;
+        let destroyed = backend.destroy_sandbox(sandbox).await;
         if destroyed.is_err() {
             let still_billing = measured
                 && record
@@ -84,7 +85,7 @@ impl OverflowService {
     pub(super) async fn request_delete(
         &self,
         session: &Session,
-        backend: &Capabilities,
+        backend: &MaintenanceCapabilities,
         record: &mut StartRecord,
     ) -> Result<()> {
         record.phase = StartPhase::Deleting;
@@ -101,7 +102,7 @@ impl OverflowService {
         let snapshot = session.call(|session| session.snapshot()).await?;
         let mut failed = false;
         for account in &snapshot.accounts {
-            let backend = match self.backend(workspace_id, account).await {
+            let backend = match self.maintenance_backend(workspace_id, account).await {
                 Ok(backend) => backend,
                 Err(_) => {
                     for mut record in snapshot
@@ -120,7 +121,7 @@ impl OverflowService {
                 }
             };
             let deployment = format!("{}/{}", self.config.deployment, workspace_id);
-            let inventory = match backend.lifecycle.list_managed_sandboxes(deployment).await {
+            let inventory = match backend.list_managed_sandboxes(deployment).await {
                 Ok(inventory) => inventory,
                 Err(_) => {
                     tracing::warn!(
@@ -135,6 +136,21 @@ impl OverflowService {
                 .filter(|record| record.key_id == account.account.id && record.ends_at.is_none())
                 .cloned()
             {
+                if !active(&snapshot, record.key_id)
+                    && !matches!(record.phase, StartPhase::Running | StartPhase::Deleting)
+                {
+                    match self
+                        .reconcile_retired(&session, workspace_id, &backend, record)
+                        .await
+                    {
+                        Ok(StartOutcome::Pending(record)) => {
+                            failed |= record.phase != StartPhase::Creating;
+                        }
+                        Ok(_) => {}
+                        Err(_) => failed = true,
+                    }
+                    continue;
+                }
                 if matches!(record.phase, StartPhase::Deleting | StartPhase::Writing) {
                     record.phase = StartPhase::Deleting;
                     let changed = record.clone();
@@ -149,7 +165,6 @@ impl OverflowService {
                 let mut observed_state = None;
                 if record.phase == StartPhase::Creating {
                     let recovered = backend
-                        .lifecycle
                         .recover_sandbox_create(create_request(workspace_id, &record))
                         .await;
                     let sandbox = match recovered {
@@ -186,11 +201,7 @@ impl OverflowService {
                         .iter()
                         .any(|sandbox| sandbox.provider_ref.as_str() == known.id())
                 }) {
-                    match backend
-                        .lifecycle
-                        .inspect_sandbox(ProviderRef::new(known.id()))
-                        .await
-                    {
+                    match backend.inspect_sandbox(ProviderRef::new(known.id())).await {
                         Err(sandbox_interface::Error::NotFound { .. })
                         | Ok(sandbox_interface::BackendSandbox {
                             state: SandboxState::Destroyed,

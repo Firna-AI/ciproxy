@@ -8,7 +8,10 @@ use sandbox_interface::{SandboxStartRefusal, SandboxStartRetry, TemporaryStartRe
 use serde_json::json;
 use uuid::Uuid;
 
-use super::support::{Server, identity, limits, request, step};
+use crate::tls::facts::{identity, limits};
+use crate::tls::server::{Server, step};
+
+use super::support::request;
 
 #[tokio::test]
 async fn real_adapter_preserves_marks_snapshot_ttl_wallet_and_private_root_launch() {
@@ -24,7 +27,7 @@ async fn real_adapter_preserves_marks_snapshot_ttl_wallet_and_private_root_launc
     ]).await;
     let account = server.backend.account.account().await.unwrap();
     assert_eq!(account.name, "Customer Boat");
-    assert_eq!(account.next_start_usd, Some(Decimal::new(3, 2)));
+    assert_eq!(account.start_fee_bound_usd, Some(Decimal::new(7, 2)));
     let sizes = server.backend.capacity.account_capacity().await.unwrap();
     assert_eq!(sizes[0].resources.disk.amount, 111);
     let sandbox = server

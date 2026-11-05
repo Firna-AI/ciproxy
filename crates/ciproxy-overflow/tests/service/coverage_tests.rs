@@ -1,16 +1,17 @@
 //! Regressions for missing usage and separate lifecycle and billing facts.
 
 use chrono::Duration;
+use ciproxy_overflow::api::{Overflow, StartOutcome};
+use ciproxy_overflow::provider::{BoatAccountApiMock, RuntimeUsage};
 use ciproxy_store_interface::overflow::billing::MeasuredBillingInterval;
 use ciproxy_store_interface::overflow::record::{RuntimeCharge, StartPhase, StartRecord};
 use rust_decimal::Decimal;
 use sandbox_interface::{ResourceKind, SandboxLifecycleMock};
 use unimock::{MockFn, Unimock, matching};
 
-use crate::api::{Overflow, StartOutcome};
-use crate::provider::{BoatAccountApiMock, RuntimeUsage};
+use super::harness::{Harness, Runtime};
 
-use super::fixtures::{Harness, at, capabilities, id, record};
+use super::fixtures::{at, capabilities, id, record};
 
 pub(super) fn running_observation() -> StartRecord {
     let mut record = record(StartPhase::Running);
@@ -60,25 +61,12 @@ async fn missing_usage(missing_total: bool) {
             .answers(&|_, _, _, _| Ok(None))
             .once();
     })));
-    let harness = Harness::new(
-        backend,
-        (),
-        &[
-            "try_lock_overflow",
-            "snapshot",
-            "save_start",
-            "now",
-            "backend",
-            "open",
-        ],
-    );
+    let harness = Harness::new(backend, (), Runtime::Read);
     let now = at() + Duration::hours(7);
     *harness.now.lock().unwrap() = now;
     {
-        let mut state = harness.state.lock().unwrap();
-        let snapshot = state.snapshot.as_mut().unwrap();
-        snapshot.accounts[0].state.checked_at = Some(now);
-        snapshot.starts.push(running_observation());
+        harness.set_checked(now);
+        harness.seed(running_observation());
     }
     let view = harness.service.view(id(1)).await.unwrap();
     assert!(!view.spend.complete(), "missing total: {missing_total}");
@@ -88,7 +76,7 @@ async fn missing_usage(missing_total: bool) {
         Decimal::new(462, 3)
     };
     assert_eq!(view.spend.confirmed_usd, expected);
-    let saved = harness.state.lock().unwrap().snapshot.clone().unwrap();
+    let saved = harness.snapshot();
     assert!(!saved.starts[0].runtime_complete);
     assert_eq!(saved.starts[0].runtime[0].usd, Decimal::new(18, 4));
     assert_eq!(
@@ -120,27 +108,8 @@ async fn absent_resume_recovers_the_final_bill_without_charging_recovery_time() 
                 .some_call(matching!(_))
                 .returns(Ok(())),
         )));
-        let harness = Harness::new(
-            backend,
-            (),
-            &[
-                "try_lock_overflow",
-                "snapshot",
-                "save_start",
-                "now",
-                "backend",
-                "open",
-            ],
-        );
-        harness
-            .state
-            .lock()
-            .unwrap()
-            .snapshot
-            .as_mut()
-            .unwrap()
-            .starts
-            .push(running_observation());
+        let harness = Harness::new(backend, (), Runtime::Read);
+        harness.seed(running_observation());
         *harness.now.lock().unwrap() = at() + Duration::hours(7);
         let outcome = harness.service.resume(id(1), id(11)).await.unwrap();
         let StartOutcome::Ended(ended) = outcome else {
@@ -171,39 +140,18 @@ async fn expired_known_sandbox_ends_after_rejected_reads_without_an_invented_bil
             })),
         BoatAccountApiMock::usage
             .some_call(matching!(_, _, _))
-            .answers(&|_, _, _, _| Err(crate::error::Error::RejectedKey)),
+            .answers(&|_, _, _, _| Err(ciproxy_overflow::error::Error::RejectedKey)),
         SandboxLifecycleMock::destroy_sandbox
             .some_call(matching!(_))
             .returns(Err(sandbox_interface::Error::BackendUnavailable {
                 backend_id: "boat".to_owned(),
             })),
     )));
-    let harness = Harness::new(
-        backend,
-        (),
-        &[
-            "try_lock_overflow",
-            "snapshot",
-            "save_start",
-            "now",
-            "backend",
-            "open",
-            "collect",
-        ],
-    );
-    harness
-        .state
-        .lock()
-        .unwrap()
-        .snapshot
-        .as_mut()
-        .unwrap()
-        .starts
-        .push(running_observation());
+    let harness = Harness::new(backend, (), Runtime::Read);
+    harness.seed(running_observation());
     *harness.now.lock().unwrap() = at() + Duration::hours(7);
     harness.service.cleanup(id(1)).await.unwrap();
-    let state = harness.state.lock().unwrap();
-    let ended = &state.snapshot.as_ref().unwrap().starts[0];
+    let ended = harness.start(id(11));
     assert_eq!(ended.phase, StartPhase::Ended);
     assert_eq!(ended.ends_at, Some(at() + Duration::hours(6)));
     assert!(!ended.runtime_complete);
@@ -215,38 +163,22 @@ async fn failed_retained_key_cost_read_keeps_replacement_metadata_and_saved_cost
     let backend = capabilities(Unimock::new(
         BoatAccountApiMock::usage
             .some_call(matching!(_, _, _))
-            .returns(Err(crate::error::Error::ProviderUnavailable)),
+            .returns(Err(ciproxy_overflow::error::Error::ProviderUnavailable)),
     ));
-    let harness = Harness::new(
-        backend,
-        (),
-        &[
-            "try_lock_overflow",
-            "snapshot",
-            "save_start",
-            "now",
-            "backend",
-            "open",
-        ],
-    );
+    let harness = Harness::new(backend, (), Runtime::Read);
     let now = at() + Duration::minutes(5);
     *harness.now.lock().unwrap() = now;
-    {
-        let mut state = harness.state.lock().unwrap();
-        let snapshot = state.snapshot.as_mut().unwrap();
-        snapshot.accounts[0].account.retired_at = Some(at() + Duration::minutes(3));
-        let mut replacement = snapshot.accounts[0].clone();
-        replacement.account.id = id(44);
-        replacement.account.account_name = "Replacement Boat".to_owned();
-        replacement.account.retired_at = None;
-        replacement.state.checked_at = Some(now);
-        snapshot.accounts.push(replacement);
-        let mut ended = running_observation();
-        ended.phase = StartPhase::Ended;
-        ended.ends_at = Some(at() + Duration::minutes(2));
-        ended.runtime_complete = false;
-        snapshot.starts.push(ended);
-    }
+    let mut ended = running_observation();
+    ended.phase = StartPhase::Ended;
+    ended.ends_at = Some(at() + Duration::minutes(2));
+    ended.runtime_complete = false;
+    harness.seed(ended);
+    let mut replacement = harness.snapshot().accounts[0].clone();
+    replacement.account.id = id(44);
+    replacement.account.account_name = "Replacement Boat".to_owned();
+    replacement.account.connected_at = at() + Duration::minutes(3);
+    replacement.state.checked_at = Some(now);
+    harness.connect_account(&replacement);
     let view = harness.service.view(id(1)).await.unwrap();
     assert_eq!(view.account.unwrap().id, id(44));
     assert_eq!(view.spend.confirmed_usd, Decimal::new(318, 4));

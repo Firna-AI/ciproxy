@@ -3,20 +3,20 @@
 use std::sync::{Arc, Mutex};
 
 use chrono::Duration;
+use ciproxy_overflow::api::{Overflow, StartOutcome};
+use ciproxy_overflow::error::Error;
+use ciproxy_overflow::provider::{BoatAccountApiMock, GuestLauncherMock, RuntimeUsage};
 use ciproxy_protocol::secret::Secret;
-use ciproxy_store_interface::overflow::record::StartPhase;
+use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase};
 use rust_decimal::Decimal;
 use sandbox_interface::{
     BackendSandbox, ProviderRef, SandboxFilesMock, SandboxLifecycleMock, SandboxState,
 };
 use unimock::{MockFn, Unimock, matching};
 
-use crate::api::{Overflow, StartOutcome};
-use crate::error::Error;
-use crate::provider::{BoatAccountApiMock, GuestLauncherMock, RuntimeUsage};
-use crate::secrets::digest;
+use super::super::harness::{Harness, Runtime};
 
-use super::super::fixtures::{Harness, at, capabilities, facts, id, record, request};
+use super::super::fixtures::{at, capabilities, digest, facts, id, record, request, snapshot};
 
 #[tokio::test]
 async fn callback_claims_one_runner_once_then_deletes_and_allows_the_next_start() {
@@ -67,44 +67,30 @@ async fn callback_claims_one_runner_once_then_deletes_and_allows_the_next_start(
             .some_call(matching!(_, _))
             .returns(Ok(())),
     )));
-    let harness = Harness::new(
-        backend,
-        (),
-        &[
-            "lock_overflow",
-            "snapshot",
-            "now",
-            "backend",
-            "open",
-            "overflow_token_workspace",
-            "accept_end",
-            "save_start",
-            "collect",
-            "try_lock_overflow",
-            "token",
-            "seal",
-            "save_account",
-            "reserve_start",
-            "encrypted_launch",
-        ],
-    );
+    let harness = Harness::new(backend, (), Runtime::Start);
     let token = Secret::new("sandbox-only-token");
+    harness.seed_token(record(StartPhase::Running), &token);
+    harness.set_limit(500_000);
+    harness.database.tenant(81);
     {
-        let mut state = harness.state.lock().unwrap();
-        state
-            .snapshot
-            .as_mut()
-            .unwrap()
-            .starts
-            .push(record(StartPhase::Running));
-        state.snapshot.as_mut().unwrap().spend_limit_usd_micros = Some(500_000);
-        state.hashes.insert(id(11), digest(&token));
-        let mut accepted = record(StartPhase::Deleting);
-        accepted.reported_at = Some(at() + Duration::seconds(90));
-        state.end_claims.extend([None, Some(accepted), None]);
-        state
-            .token_lookups
-            .extend([Some(id(1)), None, Some(id(1)), Some(id(1))]);
+        let mut other_session = harness.database.store.lock_overflow(id(81)).unwrap();
+        let mut account = snapshot().accounts[0].clone();
+        account.account.id = id(82);
+        other_session.connect(&account, 200_000_000).unwrap();
+        let mut other = record(StartPhase::Running);
+        other.delivery_id = id(91);
+        other.runner_id = id(92);
+        other.key_id = id(82);
+        other.organization_id = id(83);
+        other.label_id = id(84);
+        other.scale_set_id = id(85);
+        let other_token = digest(&Secret::new("another-workspace-token"));
+        assert!(
+            other_session
+                .reserve_start(&other, &EncryptedLaunch(vec![19]), &other_token)
+                .unwrap()
+        );
+        other_session.save_start(&other).unwrap();
     }
     *harness.now.lock().unwrap() = at() + Duration::seconds(90);
     assert!(matches!(
@@ -119,6 +105,18 @@ async fn callback_claims_one_runner_once_then_deletes_and_allows_the_next_start(
         Err(Error::InvalidToken)
     ));
     assert_eq!(*deletion.lock().unwrap(), 0);
+    assert_eq!(
+        harness
+            .database
+            .store
+            .lock_overflow(id(81))
+            .unwrap()
+            .snapshot()
+            .unwrap()
+            .starts[0]
+            .phase,
+        StartPhase::Running
+    );
     harness
         .service
         .report_end(token.clone(), id(12))

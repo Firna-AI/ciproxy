@@ -11,6 +11,7 @@ use unimock::unimock;
 use uuid::Uuid;
 
 use crate::error::Result;
+use crate::maintenance::{GuestInspection, MaintenanceCapabilities};
 
 /// Account facts that the shared capability intentionally does not model.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -23,8 +24,8 @@ pub struct AccountFacts {
     pub trial: bool,
     /// Billing recovery is confirmed independently of temporary capacity.
     pub billing_ready: bool,
-    /// Current quote for the next start, absent when the provider has no quote.
-    pub next_start_usd: Option<Decimal>,
+    /// Highest published start fee, with the next-start quote as a fallback.
+    pub start_fee_bound_usd: Option<Decimal>,
 }
 
 /// A provider's measured sandbox runtime for one requested interval.
@@ -78,6 +79,19 @@ pub struct Capabilities {
     pub account: Arc<dyn BoatAccountApi>,
     /// Fixed privileged image invocation.
     pub launcher: Arc<dyn GuestLauncher>,
+    /// Read-only evidence for lost launch acknowledgments.
+    pub inspection: Arc<dyn GuestInspection>,
+}
+
+impl Capabilities {
+    /// Expose only reads, recovery, and deletion to retained-key consumers.
+    pub fn maintenance(&self) -> MaintenanceCapabilities {
+        MaintenanceCapabilities::new(
+            self.lifecycle.clone(),
+            self.account.clone(),
+            self.inspection.clone(),
+        )
+    }
 }
 
 /// Composition boundary that keeps the account key outside every workload.
@@ -85,6 +99,8 @@ pub struct Capabilities {
 pub trait BackendFactory: Send + Sync {
     /// Construct all capabilities with the same key, HTTPS origin, and wallet.
     fn backend(&self, key: &Secret, wallet: &str) -> Result<Capabilities>;
+    /// Construct a restricted backend with no create, file, or launch authority.
+    fn maintenance(&self, key: &Secret, wallet: &str) -> Result<MaintenanceCapabilities>;
 }
 
 /// Private input root shared by the file capability and fixed image launcher.

@@ -9,10 +9,11 @@ use sandbox_interface::{BackendWriteFileRequest, ProviderRef};
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::api::StartRequest;
+use crate::api::{StartOutcome, StartRequest};
 use crate::crypto::{KeyContext, SecretPurpose};
 use crate::error::{Error, Result, ResultExt};
-use crate::provider::{Capabilities, registration_root};
+use crate::maintenance::MaintenanceCapabilities;
+use crate::provider::registration_root;
 use crate::secrets::SecretBytes;
 use crate::session::Session;
 
@@ -49,12 +50,20 @@ impl OverflowService {
         &self,
         session: &Session,
         workspace_id: Uuid,
-        backend: &Capabilities,
+        backend: &MaintenanceCapabilities,
         record: &mut StartRecord,
-    ) -> Result<()> {
+    ) -> Result<StartOutcome> {
         let sandbox =
             ProviderRef::new(record.sandbox.as_ref().ok_or(Error::OwnershipUnknown)?.id());
         if record.phase == StartPhase::Preparing {
+            let Some(authority) = self
+                .launch_authority(session, workspace_id, record.key_id)
+                .await?
+            else {
+                return self
+                    .reconcile_retired(session, workspace_id, backend, record.clone())
+                    .await;
+            };
             let delivery = record.delivery_id;
             let input = session
                 .call(move |session| session.encrypted_launch(delivery))
@@ -77,8 +86,8 @@ impl OverflowService {
             session
                 .call(move |session| session.save_start(&changed))
                 .await?;
-            let bootstrap = backend
-                .files
+            let bootstrap = authority
+                .files()
                 .write_file(BackendWriteFileRequest {
                     sandbox_provider_ref: sandbox.clone(),
                     root: "/workspace".to_owned(),
@@ -88,9 +97,20 @@ impl OverflowService {
                 .await;
             self.confirm_write(session, backend, record, bootstrap)
                 .await?;
-            backend.launcher.prepare(sandbox.clone(), delivery).await?;
-            let write = backend
-                .files
+            authority
+                .launcher()
+                .prepare(sandbox.clone(), delivery)
+                .await?;
+            let Some(authority) = self
+                .launch_authority(session, workspace_id, record.key_id)
+                .await?
+            else {
+                return self
+                    .reconcile_retired(session, workspace_id, backend, record.clone())
+                    .await;
+            };
+            let write = authority
+                .files()
                 .write_file(BackendWriteFileRequest {
                     sandbox_provider_ref: sandbox.clone(),
                     root: registration_root(delivery),
@@ -106,20 +126,31 @@ impl OverflowService {
                 .await?;
         }
         if record.phase == StartPhase::Launching {
-            backend.launcher.launch(sandbox, record.delivery_id).await?;
+            let Some(authority) = self
+                .launch_authority(session, workspace_id, record.key_id)
+                .await?
+            else {
+                return self
+                    .reconcile_retired(session, workspace_id, backend, record.clone())
+                    .await;
+            };
+            authority
+                .launcher()
+                .launch(sandbox, record.delivery_id)
+                .await?;
             record.phase = StartPhase::Running;
             let changed = record.clone();
             session
                 .call(move |session| session.save_start(&changed))
                 .await?;
         }
-        Ok(())
+        Ok(StartOutcome::Started(record.clone()))
     }
 
     async fn confirm_write(
         &self,
         session: &Session,
-        backend: &Capabilities,
+        backend: &MaintenanceCapabilities,
         record: &mut StartRecord,
         result: sandbox_interface::Result<()>,
     ) -> Result<()> {

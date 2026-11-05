@@ -11,7 +11,11 @@ use crate::kms::cipher::CloudKmsCipher;
 use crate::kms::transport::{KmsAction, KmsTransportMock};
 use crate::secrets::SecretBytes;
 
-use super::fixtures::id;
+use uuid::Uuid;
+
+fn id(value: u128) -> Uuid {
+    Uuid::from_u128(value)
+}
 
 #[tokio::test]
 async fn kms_encrypt_binds_workspace_identity_and_purpose_and_checks_ciphertext() {
