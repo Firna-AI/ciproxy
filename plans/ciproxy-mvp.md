@@ -2392,9 +2392,10 @@ keep the letters that the user saw.
 
 ### 70. The agent binaries stay private after launch
 
-- **Severity:** Medium. **Effort:** Medium.
+- **Severity:** Medium. **Effort:** Small.
 - **Source:** Design. The user wrote "probably the cli needs to be open
-  source, if people are going to install it on their machine".
+  source, if people are going to install it on their machine", and then "i
+  think just make the repo public?". Options D and E come from that message.
 - **Category:** Docs or spec.
 - **Location:** Milestone 27 of this plan, the release workflow of
   `ciproxy-agent`, and step 4 of `deploy/setup.md`.
@@ -2439,16 +2440,26 @@ keep the letters that the user saw.
     source. The attestation then names a public commit. This repository
     only pushes the source of the open parts to the public copy. The
     release server needs no access to private code. Effort: Medium.
-- **Left out:**
-  - Publish the agent now: the foundation plan rejected early publication.
-  - Reproducible builds, so that anyone can rebuild the same bytes: C gives
-    the same proof with much less work.
-- **Wider fix:** C.
+  - **D.** At launch, make this whole repository public, in place of the
+    public copy. The agent builds and releases in public, so no token and no
+    copy step stay. Everyone can then read the paid control plane, the
+    dashboard, the plans, and the full history. The closed parts keep no
+    open licence. ciproxy runs private repositories only, so its own CI moves
+    to GitHub-hosted runners after launch. This reverses the code location
+    rule of the foundation plan. It cannot be undone. Effort: Small.
+  - **E.** As D, but now. The token and the copy step go away now. Early code
+    goes public before launch, and ciproxy can no longer test its own CI on
+    ciproxy runners before launch. Effort: Small.
+- **Left out:** Reproducible builds, so that anyone can rebuild the same
+  bytes: C and D give the same proof with much less work.
+- **Wider fix:** D.
 - **Previous examples:** None found.
 - **Related:** The main preview needs the release token now under every
   option, because the public copy exists only from launch.
-- **Recommendation:** C. A customer can then check that each binary comes
-  from the public source in a public workflow, and no server holds a token
-  for private code.
-- **Action:** ask the user, because each option adds a public release step
-  that no requirement covers.
+- **Recommendation:** D. It gives a public build with no token and no copy
+  step, and the private repository still serves the CI test before launch.
+  C best keeps the paid code private.
+- **Before D or E:** scan the whole history for secrets, check each workflow
+  for pull requests from forks, and remove what must stay private.
+- **Action:** ask the user, because D and E reverse a recorded decision and
+  cannot be undone, and C keeps the paid code private.
