@@ -30,6 +30,7 @@ use crate::host_paths::{AREA, CONTROL, tools};
 use crate::host_preparation::{FinalUninstall, Uninstall, stage_error};
 use crate::host_system::LinuxHostSystem;
 use crate::image_download::HttpsImageDownload;
+use crate::image_space::{ImageBudget, ImageSpace, LinuxSpaceUsage};
 use crate::image_store::LinuxImageStore;
 use crate::images::ManagedImages;
 use crate::installation::{Install, Installer};
@@ -41,6 +42,7 @@ use crate::persistence::FileStore;
 use crate::process::{Commands, LinuxCommands};
 use crate::runtime::{AgentDaemon, Daemon};
 use crate::state::Mode;
+use crate::storage_sizing::{DEFAULT_IMAGE_BYTES, setting};
 use crate::system_service::SystemService;
 use crate::updates::AgentUpdates;
 use crate::vm_files::LinuxVmFiles;
@@ -77,7 +79,18 @@ async fn execute(action: Action) -> Result<()> {
             "Restore root ownership and write access to /var/lib/ciproxy. Then rerun install.",
         ));
     }
-    let services = services(files.clone(), system)?;
+    let requested = match std::env::var("CIPROXY_IMAGE_BUDGET_BYTES") {
+        Ok(value) => Some(value),
+        Err(std::env::VarError::NotPresent) => None,
+        Err(std::env::VarError::NotUnicode(_)) => {
+            return Err(Error::Preparation {
+                component: "image budget setting",
+                repair: "Set CIPROXY_IMAGE_BUDGET_BYTES to an integer byte count.",
+            });
+        }
+    };
+    let requested_budget = setting(requested.as_deref())?;
+    let services = services(files.clone(), system, requested_budget)?;
     let preparation = services.preparation;
     if matches!(action, Action::Uninstall) {
         service.stop()?;
@@ -95,6 +108,18 @@ async fn execute(action: Action) -> Result<()> {
             ));
         }
     };
+    let image_budget = files
+        .inspect()?
+        .record
+        .map_or(requested_budget.unwrap_or(DEFAULT_IMAGE_BYTES), |record| {
+            record.image_budget
+        });
+    let space: Arc<dyn ImageSpace> = Arc::new(ImageBudget::new(
+        image_budget,
+        Arc::new(LinuxSpaceUsage {
+            area: layout.data.clone(),
+        }),
+    ));
     let empty = state.runners.is_empty();
     let identity = state.identity.clone();
     let removing = state.mode == Mode::Removed;
@@ -103,7 +128,7 @@ async fn execute(action: Action) -> Result<()> {
         socket: PathBuf::from("/run/ciproxy-cache/control.sock"),
     });
     let images: Arc<dyn Images> = Arc::new(ManagedImages::new(
-        Arc::new(LinuxImageStore::new(layout.clone())),
+        Arc::new(LinuxImageStore::new(layout.clone(), space.clone())),
         Arc::new(HttpsImageDownload {
             client: Client::builder()
                 .https_only(true)
@@ -130,6 +155,7 @@ async fn execute(action: Action) -> Result<()> {
         files: Arc::new(LinuxVmFiles {
             layout,
             commands: commands.clone(),
+            space,
         }),
         guests,
         operation: Mutex::new(()),

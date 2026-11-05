@@ -39,6 +39,9 @@ impl Download for WaitingDownload {
 #[tokio::test]
 async fn the_current_image_remains_selectable_while_a_download_waits() {
     let mock = Arc::new(Unimock::new((
+        ImageStoreMock::admit
+            .each_call(matching!(_))
+            .answers(&|_, _| Ok(())),
         ImageStoreMock::activate
             .some_call(matching!())
             .returns(Ok(())),
@@ -87,6 +90,7 @@ async fn the_current_image_remains_selectable_while_a_download_waits() {
 #[test]
 fn runtime_recovery_reclaims_unheld_images_and_abandoned_downloads() {
     let mock = Arc::new(Unimock::new((
+        ImageStoreMock::admit.each_call(matching!(_)).answers(&|_, _| Ok(())),
         ImageStoreMock::activate.some_call(matching!()).returns(Ok(())),
         ImageStoreMock::report.some_call(matching!()).returns(Ok(ImageReport {
             available: vec![ImageId("old".to_owned()), ImageId("obsolete".to_owned())], newest: Some(ImageId("old".to_owned())),

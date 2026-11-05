@@ -6,7 +6,9 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
+use crate::budget_file::BudgetFile;
 use crate::error::{Error, ErrorResultExt, Result};
+use crate::image_space::{ImageSpace, VM_SUPPORT_BYTES};
 use crate::layout::{Layout, jail_uid};
 use crate::persistence::private_directory;
 use crate::process::{Commands, arguments};
@@ -23,12 +25,14 @@ pub(crate) trait VmFiles: Send + Sync {
 pub(crate) struct LinuxVmFiles {
     pub(crate) layout: Layout,
     pub(crate) commands: Arc<dyn Commands>,
+    pub(crate) space: Arc<dyn ImageSpace>,
 }
 
 #[async_trait]
 impl VmFiles for LinuxVmFiles {
     async fn prepare(&self, vm: &VmRecord) -> Result<()> {
         let root = self.layout.jail_root(vm);
+        let _support = self.space.claim(VM_SUPPORT_BYTES + 256 * 1024)?;
         private_directory(&root)?;
         let image = self.layout.image(&vm.report.image_id);
         let root_size = fs::metadata(image.join("rootfs.ext4"))
@@ -56,7 +60,8 @@ impl VmFiles for LinuxVmFiles {
                 &[],
             )
             .await?;
-        fs::copy(image.join("vmlinux"), root.join("vmlinux")).context("copy verified kernel")?;
+        let mut kernel = BudgetFile::create(&root.join("vmlinux"), self.space.clone())?;
+        kernel.copy(&image.join("vmlinux"))?;
         let docker = File::create(root.join("docker.ext4")).context("create empty Docker disk")?;
         docker
             .set_len(docker_size)
@@ -76,7 +81,9 @@ impl VmFiles for LinuxVmFiles {
             .await?;
         let config =
             serde_json::to_vec(&VmConfig::for_vm(vm)).context("serialize VM configuration")?;
-        fs::write(root.join("config.json"), config).context("write VM configuration")?;
+        let mut file = BudgetFile::create(&root.join("config.json"), self.space.clone())?;
+        file.write(&config)?;
+        file.sync()?;
         for file in ["vmlinux", "rootfs.ext4", "docker.ext4", "config.json"] {
             let path = root.join(file);
             fs::set_permissions(&path, fs::Permissions::from_mode(0o600))

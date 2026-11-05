@@ -28,14 +28,23 @@ impl LinuxImageStore {
                 expected,
             )?;
             let destination = root.join(member.name());
-            let mut file = File::create(&destination).context("create image member")?;
-            let bytes = SparseCopy
-                .copy(&mut entry, &mut file)
-                .context("extract image member")?;
+            let mut file = checked.pending().writer(&destination)?;
+            let bytes = match SparseCopy.copy(&mut entry, &mut file) {
+                Ok(bytes) => bytes,
+                Err(error)
+                    if error
+                        .get_ref()
+                        .and_then(|error| error.downcast_ref::<Error>())
+                        .is_some_and(|error| matches!(error, Error::ImageBudget)) =>
+                {
+                    return Err(Error::ImageBudget);
+                }
+                Err(error) => return Err(error).context("extract image member"),
+            };
             if bytes != expected {
                 return Err(Error::ImageLayout);
             }
-            file.sync_all().context("sync image member")?;
+            file.sync()?;
             fs::set_permissions(&destination, fs::Permissions::from_mode(0o400))
                 .context("protect image member")?;
         }

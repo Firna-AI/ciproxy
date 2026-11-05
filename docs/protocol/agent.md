@@ -45,7 +45,8 @@ runs on own machines.
 - Install prepares Firecracker, its jailer, and the required host tools.
 - Install prepares a persistent reflink disk area in one XFS file on any
   filesystem.
-- The area uses the [job disk](job-routing.md#terms) after the host reserve.
+- The area holds the [job disk](job-routing.md#terms).
+- Its image budget and filesystem overhead come from the host reserve.
 - Repeated installation repairs missing parts and preserves machine
   identity, drain state, and job data.
 - Uninstall finishes running jobs before it removes its owned disk area.

@@ -19,6 +19,12 @@ pub struct AreaRecord {
     pub(crate) device: u64,
     pub(crate) inode: u64,
     pub(crate) phase: Phase,
+    #[serde(default)]
+    pub(crate) image_budget: u64,
+    #[serde(default)]
+    pub(crate) overhead: u64,
+    #[serde(default)]
+    pub(crate) growth_from: Option<u64>,
 }
 
 #[derive(Clone, Debug)]

@@ -55,6 +55,8 @@ impl AreaMounts for LinuxAreaMounts {
             "mkfs.xfs",
             &arguments(&[
                 "-q",
+                "-b",
+                "size=4096",
                 "-m",
                 &format!("reflink=1,uuid={}", record.uuid),
                 "-n",
@@ -177,6 +179,29 @@ impl AreaMounts for LinuxAreaMounts {
     async fn reload(&self) -> Result<()> {
         self.checked("systemctl", &arguments(&["daemon-reload"]))
             .await
+    }
+
+    fn available(&self) -> Result<u64> {
+        Ok(fs2::statvfs(AREA)
+            .context("measure mounted XFS overhead")?
+            .available_space())
+    }
+
+    async fn grow(&self) -> Result<()> {
+        let output = self
+            .system
+            .execute(
+                "findmnt",
+                &arguments(&["-n", "-o", "SOURCE", "--mountpoint", AREA]),
+            )
+            .await?;
+        let source = String::from_utf8(output.stdout).context("read owned loop source")?;
+        if !self.mounted()? || output.code != 0 {
+            return Err(mount_repair());
+        }
+        self.checked("losetup", &arguments(&["--set-capacity", source.trim()]))
+            .await?;
+        self.checked("xfs_growfs", &arguments(&[AREA])).await
     }
 }
 

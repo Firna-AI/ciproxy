@@ -69,6 +69,8 @@ An exclusive runtime lock protects this image folder.
 The install CLI only reads the index and never runs destructive recovery.
 Each VM reserves its full label disk, including a warm VM.
 The host and images keep one quarter of disk capacity.
+The [image budget](image-budget.md) limits physical image/support allocation.
+The XFS area also includes measured overhead from that host quarter.
 Admission and cache budgets use the shared protocol Resources API.
 Filesystem free bytes are a health measurement.
 

@@ -65,7 +65,8 @@ impl ImageRegistry {
         self.store.activate()?;
         state.catalog = Some(self.store.report()?);
         state.active = true;
-        self.reclaim(&mut state)
+        self.reclaim(&mut state)?;
+        self.store.admit(0)
     }
 
     pub(crate) fn hold_newest(self: &Arc<Self>) -> Result<Arc<dyn ImageLease>> {
@@ -85,11 +86,13 @@ impl ImageRegistry {
         }))
     }
 
-    pub(crate) fn begin(self: &Arc<Self>) -> Result<PendingDownload> {
+    pub(crate) fn begin(self: &Arc<Self>, archive_bytes: u64) -> Result<PendingDownload> {
         let mut state = self.state();
         if !state.active {
             return Err(Error::ImageOwnership);
         }
+        self.reclaim(&mut state)?;
+        self.store.admit(archive_bytes.saturating_add(128 * 1024))?;
         let image = self.store.begin()?;
         state.pending.push(image.clone());
         Ok(PendingDownload {

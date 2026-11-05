@@ -135,7 +135,7 @@ impl AreaFiles for LinuxAreaFiles {
         })
     }
 
-    fn create(&self, host_bytes: u64, bytes: u64) -> Result<AreaRecord> {
+    fn create(&self, host_bytes: u64, bytes: u64, image_budget: u64) -> Result<AreaRecord> {
         let file = OpenOptions::new()
             .create_new(true)
             .write(true)
@@ -149,13 +149,16 @@ impl AreaFiles for LinuxAreaFiles {
         sync(Path::new(CONTROL))?;
         let metadata = file.metadata().context("identify new backing file")?;
         let record = AreaRecord {
-            version: 1,
+            version: 2,
             uuid: Uuid::new_v4().to_string(),
             source_capacity: host_bytes,
             bytes,
             device: metadata.dev(),
             inode: metadata.ino(),
             phase: Phase::Creating,
+            image_budget,
+            overhead: 0,
+            growth_from: None,
         };
         self.record(&record)?;
         Ok(record)
@@ -167,6 +170,35 @@ impl AreaFiles for LinuxAreaFiles {
             &serde_json::to_vec(record).context("encode area owner")?,
             0o600,
         )
+    }
+
+    fn grow(&self, record: &AreaRecord, bytes: u64) -> Result<AreaRecord> {
+        let inventory = self.inspect()?;
+        let file = inventory.backing.ok_or_else(ownership)?;
+        let mut recorded = inventory.record.ok_or_else(ownership)?;
+        recorded.device = file.device;
+        if recorded != *record
+            || record.phase != Phase::Creating
+            || !file.safe
+            || file.device != record.device
+            || file.inode != record.inode
+            || (file.bytes != record.bytes && record.growth_from != Some(file.bytes))
+            || bytes < file.bytes
+        {
+            return Err(ownership());
+        }
+        let mut grown = record.clone();
+        grown.bytes = bytes;
+        grown.growth_from = Some(file.bytes);
+        self.record(&grown)?;
+        let file = OpenOptions::new()
+            .write(true)
+            .open(BACKING)
+            .context("open unpublished area growth")?;
+        file.set_len(bytes)
+            .context("grow unpublished XFS backing file")?;
+        file.sync_all().context("sync unpublished area growth")?;
+        Ok(grown)
     }
 
     fn unit(&self) -> Result<()> {

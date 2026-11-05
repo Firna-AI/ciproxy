@@ -45,9 +45,13 @@
 - **Needs:** An integration owner that can change the agent, sidecar,
   guest, image startup, and public protocol when necessary. Follow
   `docs/protocol/cache.md` and the sidecar README's Agent integration
-  section. Respect the
-  [image-reserve policy](agent-xfs-image-reserve.md) when the user chooses
-  it. The user chose signed token verification and fail-closed unknown
+  section. The cache uses the job disk that no VM holds, as "Disk" in
+  `docs/protocol/job-routing.md` says. The images use a separate budget in
+  the area, which the orchestrator chose on 5 November 2026. That budget
+  waits for no answer. The
+  [project quota item](agent-xfs-image-project-quota.md) asks only whether
+  the kernel also enforces it. Such a quota does not reclaim cache space.
+  The user chose signed token verification and fail-closed unknown
   scopes on 5 November 2026. Unknown jobs restore default-branch local
   entries, use GitHub for other restores, save privately, and receive a
   disposable Docker copy. This policy is settled.

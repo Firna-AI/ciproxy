@@ -34,11 +34,11 @@ async fn repair_preserves_a_ready_or_formatted_area_even_when_host_capacity_chan
         assert_eq!(
             *events.lock().unwrap(),
             vec![
-                Event::Record(record()),
                 Event::Unit,
                 Event::Start,
                 Event::Reflinks,
                 Event::Directories,
+                Event::Record(record()),
             ],
             "{phase:?}"
         );
@@ -74,7 +74,7 @@ async fn repair_refuses_foreign_missing_legacy_or_resized_backing_without_mutati
         match problem {
             "owner" => invalid.backing.as_mut().unwrap().safe = false,
             "inode" => invalid.backing.as_mut().unwrap().inode = 19,
-            "version" => invalid.record.as_mut().unwrap().version = 2,
+            "version" => invalid.record.as_mut().unwrap().version = 3,
             "size" => invalid.backing.as_mut().unwrap().bytes = 90_000_000_000,
             "missing" => invalid.backing = None,
             "unowned" => invalid.record = None,
@@ -130,11 +130,11 @@ async fn repair_and_verify_accept_host_remount_but_reject_foreign_xfs_identity()
     assert_eq!(
         *events.lock().unwrap(),
         vec![
-            Event::Record(refreshed),
             Event::Unit,
             Event::Start,
             Event::Reflinks,
             Event::Directories,
+            Event::Record(refreshed),
             Event::Reflinks,
         ]
     );

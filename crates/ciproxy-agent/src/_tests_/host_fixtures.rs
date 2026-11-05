@@ -27,13 +27,16 @@ pub(crate) fn archive() -> Vec<u8> {
 
 pub(crate) fn record() -> AreaRecord {
     AreaRecord {
-        version: 1,
+        version: 2,
         uuid: "c7081f45-8824-42d8-bfb3-7c65d56c1bc5".to_owned(),
         source_capacity: 80_000_000_000,
-        bytes: 60_000_000_000,
+        bytes: 66_000_003_072,
         device: 3,
         inode: 92,
         phase: Phase::Ready,
+        image_budget: 4_000_000_000,
+        overhead: 2_000_003_072,
+        growth_from: None,
     }
 }
 
@@ -43,7 +46,7 @@ pub(crate) fn inventory() -> Inventory {
         backing: Some(Backing {
             device: 3,
             inode: 92,
-            bytes: 60_000_000_000,
+            bytes: 66_000_003_072,
             safe: true,
         }),
         host_bytes: 80_000_000_000,

@@ -47,6 +47,11 @@ pub enum Error {
     /// Only the active runtime can mutate the owned image cache.
     #[error("[agent] image cache ownership is unavailable")]
     ImageOwnership,
+    /// The configured image reserve cannot hold this update or VM support file.
+    #[error(
+        "[agent/images] image reserve is full. Keep the current image or increase the configured image budget after draining."
+    )]
+    ImageBudget,
     /// The machine cache service is unavailable.
     #[error("[agent] the machine cache service is unavailable")]
     CacheUnavailable,

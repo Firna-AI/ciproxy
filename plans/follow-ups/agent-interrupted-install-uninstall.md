@@ -58,8 +58,8 @@
 - **Previous examples:** None found in the targeted lifecycle history
   and repository search.
 - **Related:**
-  - [Image reserve](agent-xfs-image-reserve.md) can add preparation checks.
-    This removal fix does not depend on that answer.
+  - [Image project quota](agent-xfs-image-project-quota.md) can add a quota
+    step to preparation. This removal fix does not depend on that answer.
   - [Cache integration](agent-cache-area-integration.md) must close cache
     handles before unmount. Both routes still use guarded area removal.
   - [Network ownership](agent-network-cleanup-ownership.md) preserves

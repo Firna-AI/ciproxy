@@ -17,6 +17,9 @@ async fn fetch_rejects_corrupt_or_truncated_bytes_and_preserves_the_old_newest()
     for bytes in [b"abd".as_slice(), b"ab", b"abcd"] {
         let actual = digest(bytes);
         let mock = Arc::new(Unimock::new((
+            ImageStoreMock::admit
+                .each_call(matching!(_))
+                .answers(&|_, _| Ok(())),
             ImageStoreMock::activate
                 .some_call(matching!())
                 .returns(Ok(())),
@@ -46,6 +49,9 @@ async fn fetch_rejects_corrupt_or_truncated_bytes_and_preserves_the_old_newest()
 #[tokio::test]
 async fn malformed_bundle_never_replaces_the_old_newest() {
     let mock = Arc::new(Unimock::new((
+        ImageStoreMock::admit
+            .each_call(matching!(_))
+            .answers(&|_, _| Ok(())),
         ImageStoreMock::activate
             .some_call(matching!())
             .returns(Ok(())),
@@ -79,6 +85,9 @@ async fn publication_selects_the_newest_and_reclaims_the_old_base_after_its_hold
     let kept = Arc::new(Mutex::new(Vec::new()));
     let observations = kept.clone();
     let mock = Arc::new(Unimock::new((
+        ImageStoreMock::admit
+            .each_call(matching!(_))
+            .answers(&|_, _| Ok(())),
         ImageStoreMock::activate
             .some_call(matching!())
             .returns(Ok(())),

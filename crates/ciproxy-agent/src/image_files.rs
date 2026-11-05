@@ -57,13 +57,20 @@ impl ImageStore for LinuxImageStore {
 
     fn begin(&self) -> Result<PendingImage> {
         self.require_owner()?;
+        let _claim = self.space.claim(64 * 1024)?;
         let directory = self
             .layout
             .data
             .join("images")
             .join(format!("pending-{}", Uuid::new_v4().simple()));
         private_directory(&directory)?;
-        Ok(PendingImage::new(directory))
+        Ok(PendingImage::bounded(directory, self.space.clone()))
+    }
+
+    fn admit(&self, bytes: u64) -> Result<()> {
+        self.require_owner()?;
+        let _claim = self.space.claim(bytes)?;
+        Ok(())
     }
 
     async fn extract(&self, checked: CheckedDownload) -> Result<CheckedBundle> {
@@ -146,10 +153,11 @@ impl LinuxImageStore {
     }
 
     fn write_index(&self, catalog: &ImageReport) -> Result<()> {
-        atomic_private_write(
-            &self.layout.data.join("images/index.json"),
-            &serde_json::to_vec(catalog).context("serialize image index")?,
-        )
+        let bytes = serde_json::to_vec(catalog).context("serialize image index")?;
+        if bytes.len() > 64 * 1024 {
+            return Err(Error::ImageBudget);
+        }
+        atomic_private_write(&self.layout.data.join("images/index.json"), &bytes)
     }
 
     fn sync_directory(path: &Path) -> Result<()> {

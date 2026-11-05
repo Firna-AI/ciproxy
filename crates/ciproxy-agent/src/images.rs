@@ -48,7 +48,7 @@ impl Images for ManagedImages {
 
     async fn fetch(&self, image: &ImageDownload) -> Result<()> {
         let _fetch = self.fetch.lock().await;
-        let pending = self.registry.begin()?;
+        let pending = self.registry.begin(image.size_bytes)?;
         let digest = self.download.download(image, pending.image()).await?;
         let checked = digest.finish(image, pending.image().clone())?;
         let bundle = self.registry.store().extract(checked).await?;
@@ -59,3 +59,7 @@ impl Images for ManagedImages {
 #[cfg(test)]
 #[path = "_tests_/images_tests.rs"]
 mod images_tests;
+
+#[cfg(test)]
+#[path = "_tests_/image_budget_tests.rs"]
+mod image_budget_tests;

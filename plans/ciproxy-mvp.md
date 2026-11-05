@@ -379,6 +379,15 @@ Depends on: 3
 Firecracker VM, as `agent.md` says, which the Firecracker spike confirms. It
 ships through `futex-ai/cli-release`.
 
+Orchestrator call, 5 November 2026: Milestone 13 owns the cache handoff and
+the Docker disk attachment of each job. Reason: that work crosses the control
+plane, the agent, the guest, the runner patch, and the sidecar.
+
+Implementation calls, 5 November 2026: a provisional image budget of
+4 SI GB, persisted on first install, leaves system space on minimum hosts.
+Measured XFS costs plus conservative metadata headroom stay in the host
+reserve. The image measurement sets the real budget later.
+
 - [x] Add `install --token` and `uninstall`. My call: "Remove a machine" needs
       `uninstall`.
       Registration now saves the workspace returned by the gateway.
@@ -403,14 +412,7 @@ ships through `futex-ai/cli-release`.
 - [x] Keep install tokens and machine credentials out of WebSocket logs at
       every verbosity. Test real transport traffic with TRACE enabled.
       Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
-- [ ] Test with fakes. Smoke-test a Docker job, a warm runner, and a restart
-      during a job.
-      Orchestrator: align the image bundle, root/Docker disk allocation,
-      vsock port, and guest state/reconnect/shutdown behavior first.
-      Orchestrator: run `crates/ciproxy-agent/scripts/smoke-docker.sh`,
-      `crates/ciproxy-agent/scripts/smoke-warm.sh`, and
-      `crates/ciproxy-agent/scripts/smoke-restart.sh` on the KVM test host
-      with the staging gateway, image, guest, and GitHub App.
+- [x] Test with fakes.
       Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
 - [x] Prepare the host in `install`, as item 62 says: Firecracker, the
       jailer, the host tools, and a reflink disk area in one XFS file on any
@@ -418,14 +420,40 @@ ships through `futex-ai/cli-release`.
       Orchestrator call, 5 November 2026: always use the XFS file, also on
       a file system with reflinks. Reason: every machine uses one path.
       Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
-- [ ] Register each job with the machine cache using its trusted
-      assignment and original runtime token. Use the returned checked
-      scope for Docker persistence, as items 54, 55, and 66 say.
-      Orchestrator: supply the trusted credential handoff, effective cache
-      permissions, and safe Docker attachment through protocol, guest,
-      and image ownership first. These files exceed the agent scope.
-      The [integration record](follow-ups/agent-cache-area-integration.md)
-      names the missing inputs and component paths.
+- [x] Size the area as the job disk, an image budget, and the XFS overhead
+      measured after formatting. Take the budget and the overhead from the
+      host reserve quarter, so that the slots, the job disk, and the
+      hardware minimum stay the same. Enforce the budget on each image
+      fetch and on the kept bases. Drop unused older bases before the
+      images exceed the budget. Never take space from the job disk. Make
+      the budget a setting with a safe provisional default. The image
+      measurement of Milestone 10 sets its real value later. Add a
+      regression test on a disposable file system.
+      Orchestrator call, 5 November 2026: the finding that the area leaves
+      no room for images is fix now, apply A. It is not a user decision,
+      because the three-quarter area was an orchestrator call in the brief
+      of item 62, not the user's answer. A keeps every requirement: "Disk"
+      in `job-routing.md` already keeps the images in the host reserve, and
+      reflinks need the bases in the file system of the VM disks.
+      Left out: C, images in the job disk, weakens the job-disk promise. B,
+      a smaller job disk, changes the job capacity and the minimum machine.
+      E, read-only bases with a snapshot in each guest, replaces the
+      approved reflink roots and needs guest, image, and KVM work.
+      F, an XFS project quota, adds a host requirement that only the user
+      can approve. It waits in the
+      [quota item](follow-ups/agent-xfs-image-project-quota.md), and A does
+      not wait for it.
+      Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
+- [ ] Smoke-test a Docker job, a warm runner, and a restart during a job.
+      Orchestrator: align the image bundle, root/Docker disk allocation,
+      vsock port, and guest state/reconnect/shutdown behavior first.
+      Orchestrator: run `crates/ciproxy-agent/scripts/smoke-docker.sh`,
+      `crates/ciproxy-agent/scripts/smoke-warm.sh`, and
+      `crates/ciproxy-agent/scripts/smoke-restart.sh` on the KVM test host
+      with the staging gateway, image, guest, and GitHub App.
+      Orchestrator: run `crates/ciproxy-agent/scripts/smoke-host.sh` on a
+      fresh disposable KVM host with `/var/lib` on ext4. It checks the first
+      install, a repair, two reflink jobs, and uninstall.
       Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
 
 ## Milestone 10: Job VM image
@@ -569,6 +597,12 @@ test host in `internal-498318`.
 
 - [ ] Wire the control plane and the agent. Add the patch and the sidecar to
       the image.
+- [ ] Register each job with the machine cache, and attach its Docker disk
+      by its checked scope, as items 54, 55, and 66 say. Add the missing
+      guest handoff: the original runtime token, the cache URLs, the
+      effective cache permissions, and a readiness pause. The
+      [integration record](follow-ups/agent-cache-area-integration.md)
+      gives the missing inputs and the component paths.
 - [ ] Stop a warm runner only after GitHub removed it. My call: a runner
       that just took a job keeps it.
 - [ ] Smoke-test warm starts, slots, drain, remove, offline, a cache hit, a

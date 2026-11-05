@@ -28,11 +28,25 @@ impl ImageCopy for SparseCopy {
             if count == 0 {
                 break;
             }
-            for block in buffer[..count].chunks(4096) {
-                if block.iter().all(|byte| *byte == 0) {
-                    output.hole(block.len() as u32)?;
+            let mut offset = 0;
+            while offset < count {
+                let zero = buffer[offset..(offset + 4096).min(count)]
+                    .iter()
+                    .all(|byte| *byte == 0);
+                let start = offset;
+                offset = (offset + 4096).min(count);
+                while offset < count
+                    && buffer[offset..(offset + 4096).min(count)]
+                        .iter()
+                        .all(|byte| *byte == 0)
+                        == zero
+                {
+                    offset = (offset + 4096).min(count);
+                }
+                if zero {
+                    output.hole((offset - start) as u32)?;
                 } else {
-                    output.data(block)?;
+                    output.data(&buffer[start..offset])?;
                 }
             }
             length += count as u64;

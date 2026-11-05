@@ -29,12 +29,22 @@
   per-VM kernel/runtime support files, and filesystem overhead. Record
   nominal device capacity, selected filesystem capacity, target area
   length, and mounted usable capacity separately. Compare the results
-  with the selected image share and the default VM's full reservation.
+  with the image budget of the area and the default VM's full reservation.
+  Measure support use with all intended VM slots occupied, including warm
+  VMs. Set the real image-budget value for each supported machine capacity
+  from the combined image and support peak. Until then, the setting uses
+  a safe provisional default.
 - **Impact if no action:** An image can fit the label's nominal disk yet
   fail host preparation or updates. The advertised minimum machine can
-  fit no default job once filesystem geometry is included.
+  fit no default job when its host filesystem reports less than its
+  nominal disk.
 - **Needs:** A KVM image-build host, the current image tooling, and the
-  selected [area budget policy](agent-xfs-image-reserve.md). Start with:
+  area sizing that the orchestrator chose on 5 November 2026. The area
+  holds the job disk, an image budget, and the XFS overhead measured after
+  formatting. The budget and the overhead come from the host reserve, so
+  the job disk stays three quarters of the disk. If the user chooses the
+  [project quota](agent-xfs-image-project-quota.md), the measured budget
+  also sets its limit. Start with:
 
   ```sh
   bash image/build.sh .context/image-build
@@ -43,7 +53,9 @@
   Read `artifacts/measurement.json` under that build directory. Use the
   same image and storage layout as the real agent.
 - **Done when:** The report proves that the image and its update peak fit
-  on every advertised minimum machine while VM reservations remain
-  available. It distinguishes usable from nominal capacity. Any smaller
+  in the image budget on every advertised minimum machine and at intended
+  full VM occupancy on larger machines. VM reservations stay available.
+  It distinguishes usable from nominal capacity. The image budget setting
+  uses the measured value. Any smaller
   image, changed label disk, changed minimum hardware, or changed update
   strategy goes to the user before its requirement or code changes.

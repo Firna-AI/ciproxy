@@ -24,6 +24,7 @@ pub(crate) struct HostServices {
 pub(crate) fn services(
     files: Arc<dyn AreaFiles>,
     system: Arc<dyn HostSystem>,
+    requested_budget: Option<u64>,
 ) -> Result<HostServices> {
     let tools: Arc<dyn Tools> = Arc::new(VerifiedTools {
         files: Arc::new(LinuxToolFiles),
@@ -47,6 +48,7 @@ pub(crate) fn services(
         area: Arc::new(PersistentArea {
             files,
             mounts: Arc::new(LinuxAreaMounts { system }),
+            requested_budget,
         }),
     });
     Ok(HostServices { preparation, tools })

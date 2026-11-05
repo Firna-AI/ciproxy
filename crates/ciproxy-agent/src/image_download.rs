@@ -4,8 +4,6 @@ use async_trait::async_trait;
 use ciproxy_protocol::images::ImageDownload;
 use futures_util::StreamExt;
 use reqwest::Client;
-use tokio::fs::File;
-use tokio::io::AsyncWriteExt;
 
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::image_artifact::PendingImage;
@@ -35,9 +33,7 @@ impl Download for HttpsImageDownload {
         if !image.download_url.expose_secret().starts_with("https://") {
             return Err(Error::HttpsRequired);
         }
-        let mut file = File::create(pending.archive())
-            .await
-            .context("create image download")?;
+        let mut file = pending.writer(&pending.archive())?;
         let response = self
             .client
             .get(image.download_url.expose_secret())
@@ -54,9 +50,9 @@ impl Download for HttpsImageDownload {
             if digest.exceeds(image.size_bytes) {
                 return Err(Error::ImageVerification);
             }
-            file.write_all(&chunk).await.context("write image bytes")?;
+            file.write(&chunk)?;
         }
-        file.sync_all().await.context("sync image download")?;
+        file.sync()?;
         Ok(digest)
     }
 }

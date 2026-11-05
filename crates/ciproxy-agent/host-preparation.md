@@ -81,27 +81,14 @@ Every installation uses the same storage form, including on native XFS:
 | `area/cache` | Prepared directory for machine-cache data |
 | `area/docker` | Reserved directory for later sticky Docker disk integration |
 
-The logical file size is the shared `Resources` job disk calculation.
-An 80 GB underlying host filesystem therefore gets a 60 GB XFS file.
-The code never applies another quarter reserve to the loop capacity.
-Hardware capacity reports use the underlying filesystem.
-They stay capped at the source capacity recorded when the area was made.
-Host growth does not resize the file or increase admission capacity.
-Host shrink can reduce reported capacity. It never shrinks the file.
-Free-space health is the minimum of workload free space, underlying
-filesystem available space, and the reported capacity.
-An absent workload mount reports zero usable free bytes.
-Free-space health does not replace the protocol admission calculation.
-
-The file is sparse. Its logical size does not preallocate physical space.
-Other host users can still consume the physical space that it needs.
-XFS metadata, verified bases, and private VM blocks occupy this same file.
-Base extraction skips zero-only blocks and preserves their logical length.
-Unchanged root blocks are shared by reflink copies.
-The fixed 60 GB area cannot guarantee a fully written 60 GB VM plus all
-base-image and filesystem metadata bytes on the minimum host.
-The protocol's host/image reserve and that physical limit need a separate
-capacity decision. This implementation changes no label or admission size.
+The area contains the complete protocol job disk plus its image reserve.
+Images and measured XFS overhead use only the host quarter.
+The [image budget guide](image-budget.md) explains the provisional setting,
+physical write limit, measured sizing, and old-area replacement.
+Hardware reports still use the underlying host capacity.
+They never apply a second reserve to the mounted loop capacity.
+Host growth does not silently increase admission or resize a Ready area.
+Free-space health remains bounded by both XFS and parent free space.
 
 The mount unit is `var-lib-ciproxy-area.mount`.
 The agent and independent VM units require this mount before they start.
@@ -119,6 +106,8 @@ It restores a missing mount unit and enables it for boot.
 It mounts an unmounted owned area and repairs missing executable files.
 It preserves a mounted area and never restarts that mount for repair.
 It does not resize or format a published area.
+Fresh Creating areas finish measured growth before they become Ready.
+A durable old/target length pair permits interrupted growth to resume.
 An interrupted first format can resume only in the unpublished Creating
 phase. A matching XFS UUID completes that phase without a second format.
 

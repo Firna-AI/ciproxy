@@ -20,12 +20,14 @@ pub(crate) enum Event {
     Stop(bool),
     Erase(AreaRecord),
     Reload,
+    Grow,
 }
 
 pub(crate) fn area(mock: Arc<Unimock>) -> PersistentArea {
     PersistentArea {
         files: mock.clone(),
         mounts: mock,
+        requested_budget: None,
     }
 }
 
@@ -70,6 +72,9 @@ pub(crate) fn preparation(events: Arc<Mutex<Vec<Event>>>) -> impl Clause {
                 reflinks.lock().unwrap().push(Event::Reflinks);
                 Ok(())
             })),
+        AreaMountsMock::available
+            .each_call(matching!())
+            .answers(&|_| Ok(66_000_003_072)),
         AreaFilesMock::directories
             .each_call(matching!())
             .answers_arc(Arc::new(move |_| {
@@ -81,8 +86,9 @@ pub(crate) fn preparation(events: Arc<Mutex<Vec<Event>>>) -> impl Clause {
 
 pub(crate) fn creating(events: Arc<Mutex<Vec<Event>>>) -> impl Clause {
     AreaFilesMock::create
-        .some_call(matching!(_, _))
-        .answers_arc(Arc::new(move |_, host, bytes| {
+        .some_call(matching!(_, _, _))
+        .answers_arc(Arc::new(move |_, host, bytes, budget| {
+            assert_eq!(budget, 4_000_000_000);
             events.lock().unwrap().push(Event::Create(host, bytes));
             Ok(AreaRecord {
                 phase: Phase::Creating,

@@ -38,13 +38,13 @@ async fn fresh_area_uses_job_disk_math_and_records_identity_before_mounting() {
     assert_eq!(
         *events.lock().unwrap(),
         vec![
-            Event::Create(80_000_000_000, 60_000_000_000),
+            Event::Create(80_000_000_000, 64_000_000_000),
             Event::Format(record().uuid),
-            Event::Record(record()),
             Event::Unit,
             Event::Start,
             Event::Reflinks,
             Event::Directories,
+            Event::Record(record()),
         ]
     );
 }
@@ -77,11 +77,11 @@ async fn interrupted_creation_formats_only_its_unpublished_empty_area() {
         *events.lock().unwrap(),
         vec![
             Event::Format(record().uuid),
-            Event::Record(record()),
             Event::Unit,
             Event::Start,
             Event::Reflinks,
             Event::Directories,
+            Event::Record(record()),
         ]
     );
 }
