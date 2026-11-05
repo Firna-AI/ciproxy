@@ -1,5 +1,4 @@
 name: Apply saved Terraform plans
-
 on:
   workflow_call:
     inputs:
@@ -9,64 +8,56 @@ on:
       source:
         required: true
         type: string
-      stage:
+      scope:
         required: true
         type: string
-
 permissions:
   contents: read
   id-token: write
-
 jobs:
   apply:
-    name: Apply exact saved plans
     runs-on: ubuntu-24.04
     environment: ${{ inputs.environment }}
     env:
-      CIPROXY_SOURCE_SHA: ${{ inputs.source }}
-      CIPROXY_ENVIRONMENT: ${{ inputs.environment }}
-      CIPROXY_STAGE: ${{ inputs.stage }}
       CIPROXY_REUSABLE_APPLY: "true"
+      CIPROXY_SOURCE_SHA: ${{ inputs.source }}
       PRODUCTION_DEPLOY_ENABLED: ${{ vars.PRODUCTION_DEPLOY_ENABLED }}
       CLOUDSDK_CORE_DISABLE_PROMPTS: "1"
     steps:
-      - name: Checkout the plan commit
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Checkout the deployment commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           ref: ${{ inputs.source }}
           persist-credentials: false
-      - name: Check the trusted deployment event
-        run: python3 deploy/scripts/promotion_event.py "$CIPROXY_ENVIRONMENT" "$CIPROXY_SOURCE_SHA"
-      - name: Download this run attempt's saved plans
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      - name: Check the trusted source event
+        run: python3 deploy/scripts/promotion_event.py "${{ inputs.environment }}" "$CIPROXY_SOURCE_SHA"
+      - name: Authenticate the selected apply identity
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
         with:
-          name: plan-${{ inputs.environment }}-${{ inputs.stage }}-${{ github.run_attempt }}
-          path: .context/plans/${{ inputs.environment }}${{ inputs.stage == 'edge' && '/edge' || '' }}
-      - name: Authenticate the dedicated apply identity
-        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+          project_id: ciproxy
+          workload_identity_provider: ${{ inputs.scope == 'trust' && vars.GCP_TRUST_APPLY_WIF_PROVIDER || inputs.scope == 'foundation' && vars.GCP_APPLY_WIF_PROVIDER || vars.GCP_SHARED_APPLY_WIF_PROVIDER }}
+          service_account: ${{ inputs.scope == 'trust' && vars.GCP_TRUST_APPLY_SERVICE_ACCOUNT || inputs.scope == 'foundation' && vars.GCP_APPLY_SERVICE_ACCOUNT || vars.GCP_SHARED_APPLY_SERVICE_ACCOUNT }}
+      - name: Set up Google Cloud tools
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db
         with:
-          workload_identity_provider: ${{ vars.GCP_APPLY_WIF_PROVIDER }}
-          service_account: ${{ vars.GCP_APPLY_SERVICE_ACCOUNT }}
+          version: 592.0.0
       - name: Set up Terraform
-        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e
         with:
           terraform_version: 1.17.1
           terraform_wrapper: false
-      - name: Recheck the binaries and apply them in root order
-        run: |
-          case "$CIPROXY_STAGE" in
-            infrastructure) roots=(seed bootstrap foundation) ;;
-            edge) roots=(edge) ;;
-            *) echo "Unknown apply stage" >&2; exit 1 ;;
-          esac
-          for root in "${roots[@]}"; do
-            python3 deploy/scripts/terraform.py apply "$CIPROXY_ENVIRONMENT" "$root"
-          done
-      - name: Set up Google Cloud tools
-        if: inputs.stage == 'edge'
-        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+      - name: Download this run attempt's saved plans
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
-          version: 592.0.0
-      - name: Invalidate the CDN after edge apply
-        if: inputs.stage == 'edge'
-        run: python3 deploy/scripts/deploy.py "$CIPROXY_ENVIRONMENT" --phase invalidate
+          name: plan-${{ inputs.environment }}-${{ inputs.scope }}-${{ github.run_attempt }}
+          path: .context/plans/${{ inputs.environment }}
+      - name: Recheck the GCP launch latch
+        id: route
+        run: python3 deploy/scripts/ci_roots.py "${{ inputs.environment }}" "${{ inputs.scope }}"
+      - name: Recheck and apply exact saved binaries
+        env:
+          ROOTS: ${{ steps.route.outputs.roots }}
+        run: |
+          for root in $ROOTS; do
+            python3 deploy/scripts/terraform.py apply "${{ inputs.environment }}" "$root"
+          done

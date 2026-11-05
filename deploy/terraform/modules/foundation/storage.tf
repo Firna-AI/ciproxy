@@ -53,14 +53,13 @@ resource "google_secret_manager_secret" "control_plane" {
       }
     }
   }
-  depends_on = [google_project_service.service]
 }
 
 resource "google_secret_manager_secret_iam_member" "control_plane" {
   for_each  = google_secret_manager_secret.control_plane
   secret_id = each.value.id
   role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.control_plane.email}"
+  member    = "serviceAccount:${local.control_account}"
 }
 
 resource "google_secret_manager_secret" "release" {
@@ -73,7 +72,6 @@ resource "google_secret_manager_secret" "release" {
       }
     }
   }
-  depends_on = [google_project_service.service]
 }
 
 resource "google_secret_manager_secret_iam_member" "release_sync" {
@@ -87,15 +85,4 @@ resource "google_dns_managed_zone" "public" {
   name        = each.key == "site" ? local.prefix : "${local.prefix}-${each.key}"
   dns_name    = "${each.value}."
   description = "Delegate this zone before enabling public uptime checks."
-  depends_on  = [google_project_service.service]
-}
-
-resource "google_monitoring_notification_channel" "email" {
-  for_each     = var.notification_emails
-  display_name = "ciproxy ${var.environment}: ${each.value}"
-  type         = "email"
-  labels = {
-    email_address = each.value
-  }
-  depends_on = [google_project_service.service]
 }

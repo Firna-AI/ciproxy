@@ -53,7 +53,7 @@ resource "google_compute_firewall" "load_balancer" {
   name                    = "${local.prefix}-load-balancer"
   network                 = google_compute_network.main.name
   source_ranges           = ["35.191.0.0/16", "130.211.0.0/22"]
-  target_service_accounts = [google_service_account.nodes.email]
+  target_service_accounts = [local.node_account]
   allow {
     protocol = "tcp"
     ports    = ["8080"]

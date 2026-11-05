@@ -183,12 +183,13 @@ Workload Identity Federation. Reason: EU data, reviews, and no stored keys.
       both operator and CI finish seed before any bootstrap resource starts.
       No state move is needed because nothing has been applied in GCP.
       Branch: `codex/m5-terraform-promotion`.
-- [ ] Move both environments into the GCP project `ciproxy`, as item 68
+- [x] Move both environments into the GCP project `ciproxy`, as item 68
       says: one shared network, cluster, and image registry, with a
       namespace for each environment, and separate databases, KMS keys,
       secrets, buckets, DNS zones, and edges. Scope the CI identities of
       each environment to its own resources. Apply the shared parts from
       the main preview until launch, and only from `main` after it.
+      Branch: `conductor/ciproxy-mvp-milestone-5-shared-project`.
 - [ ] User: move `Firna-AI` to GitHub Team, as item 57 says. Orchestrator:
       add the ruleset on `main` that needs a pull request and the gate.
       Branch: `codex/m5-terraform-promotion`.

@@ -5,14 +5,14 @@ set -euo pipefail
 environment="${1:?Usage: mirror-release-image.sh main-preview|production [source|published]}"
 mode="${2:-source}"
 case "${environment}" in
-  main-preview) project_id=internal-498318 ;;
+  main-preview) project_id=ciproxy ;;
   production) project_id=ciproxy ;;
   *) echo "Unknown environment: ${environment}" >&2; exit 1 ;;
 esac
 revision=30513bd1a6e1
 full_revision=30513bd1a6e15d8e9c1b18f2ed92d1d4dfa11786
 source_image="ghcr.io/futex-ai/cli-release-server:sha-${revision}"
-repository="europe-west1-docker.pkg.dev/${project_id}/ciproxy-${environment}-runtime/cli-release-server"
+repository="europe-west1-docker.pkg.dev/${project_id}/ciproxy-shared-runtime/cli-release-server"
 destination="${repository}:upstream-${revision}"
 
 # A local GitHub login needs access to the upstream repository for source,

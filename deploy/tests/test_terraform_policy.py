@@ -13,6 +13,11 @@ class TerraformPolicyTests(PromotionCase):
                 result = self.policy(ci=True)
                 self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_recorded_output_only_plan_passes_snapshot_policy(self):
+        self.write_plan("output-only")
+        result = self.policy(root="foundation", ci=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_each_destructive_action_needs_an_exact_approval(self):
         plan = self.write_plan("delete")
         for actions in (["delete"], ["delete", "create"], ["create", "delete"], ["forget"]):
@@ -31,7 +36,7 @@ class TerraformPolicyTests(PromotionCase):
                 self.plan.write_text(json.dumps(plan))
                 approval = self.approve(commit=True)
                 document = json.loads(approval.read_text())
-                self.assertEqual(document["environment"], "ciproxy/main-preview/edge")
+                self.assertEqual(document["environment"], "ciproxy/shared/edge")
                 self.assertEqual(document["actions"], [{
                     "address": "terraform_data.example", "actions": actions,
                 }])
@@ -63,7 +68,7 @@ class TerraformPolicyTests(PromotionCase):
     def test_full_configuration_digest_includes_modules_and_locks(self):
         path = self.approve()
         for name in ("deploy/terraform/modules/foundation/main.tf",
-                     "deploy/environments/production/.terraform.lock.hcl"):
+                     "deploy/terraform/shared/.terraform.lock.hcl"):
             with self.subTest(source=name):
                 source = self.root / name
                 original = source.read_text()
@@ -155,7 +160,8 @@ class TerraformPolicyTests(PromotionCase):
 
     def test_unknown_plan_formats_actions_and_duplicate_resources_fail_closed(self):
         original = self.write_plan("delete")
-        cases = [dict(original, format_version="2.0"),
+        cases = [{"format_version": "1.2"}, dict(original, resource_changes=None),
+                 dict(original, resource_changes={}), dict(original, format_version="2.0"),
                  dict(original, resource_changes=[{"address": "test.old",
                                                    "change": {"actions": ["destroy"]}}]),
                  dict(original, resource_changes=original["resource_changes"] * 2)]

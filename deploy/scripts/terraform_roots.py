@@ -5,8 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-ENVIRONMENTS = {"main-preview": "internal-498318", "production": "ciproxy"}
-ROOTS = ("seed", "bootstrap", "foundation", "edge")
+ENVIRONMENTS = {"main-preview": "ciproxy", "production": "ciproxy"}
+ROOTS = ("seed", "bootstrap", "shared", "foundation", "edge")
 REPOSITORY = "Firna-AI/ciproxy"
 PRIMARY = "refs/heads/calummoore/ci-proxy-load-balancer"
 
@@ -14,11 +14,13 @@ PRIMARY = "refs/heads/calummoore/ci-proxy-load-balancer"
 def directory(environment, root):
     """Return the source directory of a supported root instance."""
     if environment not in ENVIRONMENTS or root not in ROOTS:
-        raise ValueError("Use main-preview or production and seed, bootstrap, foundation or edge.")
-    if root in ("seed", "bootstrap"):
+        raise ValueError("Use a supported environment and Terraform root.")
+    if root == "edge":
+        return Path("deploy/terraform/shared-edge")
+    if root in ("seed", "bootstrap", "shared"):
         return Path("deploy/terraform") / root
     base = Path("deploy/environments") / environment
-    return base / "edge" if root == "edge" else base
+    return base
 
 
 @dataclass(frozen=True)
@@ -37,18 +39,22 @@ class Backend:
 def backend(environment, root):
     """Select the same backend for operator setup, promotion, and workloads."""
     location = directory(environment, root)
-    return Backend(location, f"ciproxy-{environment}-tfstate-{ENVIRONMENTS[environment]}",
-                   f"{environment}/{root}")
+    owner = "trust" if root in ("seed", "bootstrap") else (
+        "shared" if root in ("shared", "edge") else environment)
+    return Backend(location, f"ciproxy-{owner}-tfstate-ciproxy", f"{owner}/{root}")
 
 
 def scope(environment, root):
     directory(environment, root)
-    return f"ciproxy/{environment}/{root}"
+    owner = "trust" if root in ("seed", "bootstrap") else (
+        "shared" if root in ("shared", "edge") else environment)
+    return f"ciproxy/{owner}/{root}"
 
 
 def approval_path(repository, environment, root):
     directory(environment, root)
-    return repository / "deploy/approvals" / environment / f"{root}.json"
+    owner = scope(environment, root).split("/")[1]
+    return repository / "deploy/approvals" / owner / f"{root}.json"
 
 
 def configuration_digest(repository):
@@ -80,7 +86,8 @@ def trust_resource(root, resource):
             "google_service_account", "google_service_account_iam_member",
             "google_iam_workload_identity_pool", "google_iam_workload_identity_pool_provider",
             "google_project_iam_custom_role", "google_project_iam_member",
-            "google_storage_bucket_iam_member",
+            "google_storage_bucket_iam_member", "google_tags_tag_key", "google_tags_tag_value",
+            "google_tags_tag_value_iam_member",
         }
     else:
         return False

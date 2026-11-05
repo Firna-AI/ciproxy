@@ -1,15 +1,3 @@
-resource "google_service_account" "nodes" {
-  account_id   = "${local.prefix}-gke"
-  display_name = "ciproxy GKE nodes"
-  depends_on   = [google_project_service.service]
-}
-
-resource "google_project_iam_member" "nodes" {
-  project = var.project_id
-  role    = "roles/container.defaultNodeServiceAccount"
-  member  = "serviceAccount:${google_service_account.nodes.email}"
-}
-
 resource "google_artifact_registry_repository" "runtime" {
   location      = local.region
   repository_id = "${local.prefix}-runtime"
@@ -21,7 +9,7 @@ resource "google_artifact_registry_repository_iam_member" "nodes" {
   location   = local.region
   repository = google_artifact_registry_repository.runtime.name
   role       = "roles/artifactregistry.reader"
-  member     = "serviceAccount:${google_service_account.nodes.email}"
+  member     = "serviceAccount:${local.node_account}"
 }
 
 resource "google_container_cluster" "main" {
@@ -54,17 +42,17 @@ resource "google_container_cluster" "main" {
   }
   cluster_autoscaling {
     auto_provisioning_defaults {
-      service_account = google_service_account.nodes.email
+      service_account = local.node_account
       oauth_scopes    = ["https://www.googleapis.com/auth/cloud-platform"]
     }
   }
   workload_identity_config {
-    workload_pool = "${var.project_id}.svc.id.goog"
+    workload_pool = "ciproxy.svc.id.goog"
   }
   secret_manager_config {
     enabled = true
     # Roll out pods after secret updates. Do not refresh a running pod's
     # signing key while CDN_SIGNING_KEY_NAME remains fixed in its env.
   }
-  depends_on = [google_project_iam_member.nodes]
+  depends_on = [google_project_service.service]
 }

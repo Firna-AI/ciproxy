@@ -11,6 +11,7 @@ from deploy_support import (
     sync_release_secret, terraform_init,
 )
 from terraform_roots import ENVIRONMENTS, backend
+from workload_snapshot import save as save_workload_inputs
 
 
 def main():
@@ -20,7 +21,7 @@ def main():
     args = parser.parse_args()
     environment = args.environment
     project = ENVIRONMENTS[environment]
-    foundation = backend(environment, "foundation")
+    foundation = backend(environment, "shared")
     root = foundation.directory
     scratch = Path(".context/deploy") / environment
     scratch.mkdir(parents=True, exist_ok=True)
@@ -28,7 +29,9 @@ def main():
     if args.phase == "invalidate":
         edge = backend(environment, "edge")
         terraform_init(edge)
-        url_map = run("terraform", f"-chdir={edge.directory}", "output", "-raw", "url_map", capture=True).strip()
+        edges = json.loads(run("terraform", f"-chdir={edge.directory}", "output", "-json",
+                               "environments", capture=True))
+        url_map = edges[environment]["url_map"]
         run("gcloud", "compute", "url-maps", "invalidate-cdn-cache", url_map,
             "--path=/*", f"--project={project}")
         return
@@ -37,7 +40,7 @@ def main():
     digest, runtime_enabled, control_image = runtime_configuration(os.environ)
     terraform_init(foundation)
     config = json.loads(run("terraform", f"-chdir={root}", "output", "-json",
-                            "deployment", capture=True))
+                            "environments", capture=True))[environment]["deployment"]
     if not runtime_enabled:
         print("Control-plane runtime stays disabled. The current binary has no HTTP service.",
               flush=True)
@@ -45,13 +48,10 @@ def main():
     run("gcloud", "container", "clusters", "get-credentials", config["cluster_name"],
         f"--region={config['region']}", f"--project={project}", "--dns-endpoint")
     current_runtime = run("kubectl", "get", "deployment", "control-plane",
-                          "--namespace=ciproxy", "--ignore-not-found", "-o", "name", capture=True)
+                          f"--namespace={config['namespace']}", "--ignore-not-found", "-o", "name", capture=True)
     if current_runtime.strip() and not runtime_enabled:
         if os.environ.get("CONTROL_PLANE_RUNTIME_READY") != "false":
             raise ValueError("A running control plane requires true or explicit false readiness.")
-    namespace = {"apiVersion": "v1", "kind": "Namespace", "metadata": {"name": "ciproxy"}}
-    run("kubectl", "apply", "--server-side", "--field-manager=ciproxy-deploy", "-f", "-",
-        input_text=json.dumps(namespace))
     sync_release_secret(config)
 
     release, ciproxy = helm_values(config, digest, runtime_enabled, control_image)
@@ -60,20 +60,21 @@ def main():
     ciproxy_file = scratch / "ciproxy-values.json"
     release_file.write_text(json.dumps(release))
     ciproxy_file.write_text(json.dumps(ciproxy))
-    run("helm", "upgrade", "--install", "cli-release-server", "deploy/helm/cli-release-server",
-        "--namespace=ciproxy", "--values=deploy/helm/release-values.yaml",
+    run("helm", "upgrade", "--install", config["prefix"] + "-release", "deploy/helm/cli-release-server",
+        f"--namespace={config['namespace']}", "--values=deploy/helm/release-values.yaml",
         f"--values={release_file}", "--wait", "--timeout=10m", "--history-max=5")
-    run("helm", "upgrade", "--install", "ciproxy", "deploy/helm/ciproxy",
-        "--namespace=ciproxy", f"--values={ciproxy_file}",
+    run("helm", "upgrade", "--install", config["prefix"], "deploy/helm/ciproxy",
+        f"--namespace={config['namespace']}", f"--values={ciproxy_file}",
         "--wait", "--timeout=10m", "--history-max=5")
 
     for package, directory in [("site", "ts/site/dist"), ("dashboard", "ts/app/dist")]:
         run("python3", "deploy/scripts/publish_static.py", f"--directory={directory}",
             f"--bucket={config['buckets'][package]}")
 
-    neg_zones("release-neg", config["prefix"] + "-release", config["allowed_zones"])
+    neg_zones("release-neg", config["prefix"] + "-release", config["allowed_zones"], config["namespace"])
     if runtime_enabled:
-        neg_zones("control-plane-neg", config["prefix"] + "-control", config["allowed_zones"])
+        neg_zones("control-plane-neg", config["prefix"] + "-control", config["allowed_zones"], config["namespace"])
+    save_workload_inputs(environment, config, runtime_enabled)
     summary = (
         f"Deployed {environment} static exports and the release server.\n"
         f"Control-plane runtime enabled: {str(runtime_enabled).lower()}.\n"

@@ -6,10 +6,14 @@ run "database_and_secret_protection" {
     source = "../../terraform/modules/foundation"
   }
   variables {
-    project_id          = "internal-498318"
-    environment         = "main-preview"
-    domain              = "ciproxy.dev"
-    notification_emails = []
+    project_id  = "ciproxy"
+    environment = "main-preview"
+    domain      = "ciproxy.dev"
+    shared = {
+      network_id         = "projects/ciproxy/global/networks/ciproxy-shared"
+      cluster_name       = "ciproxy-shared"
+      runtime_repository = "europe-west1-docker.pkg.dev/ciproxy/ciproxy-shared-runtime"
+    }
   }
   assert {
     condition = (

@@ -13,6 +13,8 @@ from promotion_event import check_checkout, validate
 from terraform_approval import load_json
 from terraform_policy import check
 from terraform_roots import ENVIRONMENTS, ROOTS, backend, configuration_digest
+from shared_routing import launched, require_writer
+from workload_snapshot import load as workload_inputs
 
 
 def command(root, *arguments, capture=False):
@@ -23,17 +25,15 @@ def command(root, *arguments, capture=False):
 
 
 def variables(environment, root):
-    if root in ("seed", "bootstrap"):
-        return {"environment": environment, "project_id": ENVIRONMENTS[environment]}
-    if root == "foundation":
-        email = os.environ.get("ALERT_EMAIL", "")
-        if not email.strip():
-            raise ValueError("Set the GitHub environment variable ALERT_EMAIL.")
-        return {"notification_emails": [email]}
-    return {
-        "control_plane_enabled": os.environ.get("CONTROL_PLANE_RUNTIME_READY") == "true",
-        "enable_uptime_checks": os.environ.get("PUBLIC_UPTIME_ENABLED") == "true",
-    }
+    if root == "seed":
+        return {"project_id": ENVIRONMENTS[environment]}
+    if root == "bootstrap":
+        return {"project_id": ENVIRONMENTS[environment], "production_enabled": launched()}
+    if root == "shared":
+        return {"production_enabled": launched()}
+    if root == "edge":
+        return {}
+    return workload_inputs(environment)
 
 
 def metadata(repository, environment, root, binary):
@@ -71,6 +71,8 @@ def promote(action, environment, root):
             raise ValueError("Saved plan is stale or changed. Start a new run with all jobs.")
     else:
         manifest.unlink(missing_ok=True)
+    if ci:
+        require_writer(environment, root, os.environ)
     command(location, "init", "-input=false", "-reconfigure", "-lockfile=readonly",
             *target.arguments())
     if action == "plan":
