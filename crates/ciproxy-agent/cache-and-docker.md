@@ -7,20 +7,38 @@ checked Docker disk. This guide gives that integration boundary. The
 ## Runner handoff
 
 The source-built runner hook reads its original GitHub assignment before
-any action setup. The guest derives the actual Docker bridge proxy URL.
+any action setup. The guest measures the actual Docker bridge proxy URL and
+the preloaded Docker bytes before the runner can take the job.
 It sends the original runtime credentials and permissions over vsock.
 The hosted control plane receives only the runner and job identities.
 Authenticated JobFacts then permit machine-cache registration.
 The machine verifies the runtime token outside the VM.
-The guest acknowledges local proxy readiness before action setup resumes.
 No administration credential enters a VM.
 
-The agent saves the rights and the URL origins of the first handoff that it
-accepts for a VM. An origin is the scheme, host, and port of a URL.
+Action setup waits for the agent's decision, with no time limit in the
+runner. GitHub's job cancellation and time limit stay the backstop.
+The agent saves its decision before it sends it: `MachineCache` with the
+sealed original handoff, or `GitHubOnly` for the whole job.
+The agent seals a first handoff only when it arrives on the connection that
+carried the fresh runner configuration. A boot connection that failed before
+configuration does not use up that chance. A lost configuration connection
+does.
+A first handoff after a reconnect, a configuration retry, or an agent
+restart gets `GitHubOnly`. That job uses only GitHub's cache, so it misses
+the entries that only the machine cache keeps.
+When a received job cannot get its facts after a control-plane loss, a
+drain, a removal, or a stop request, the agent releases it with
+`GitHubOnly`. A stop request does not stop that received job.
+
+The seal keeps the rights and the URL origins of the first handoff, with a
+host-decision marker. An origin is the scheme, host, and port of a URL.
 The token, the URL paths, and the queries stay in memory.
+A seal without that marker fails to decode, so no older seal is trusted.
 A later replay must match both saved origins and cannot add an absent
 endpoint. The saved rights replace the rights of the replay.
-A mismatch, or a running VM without saved origins, uses GitHub's cache.
+A sealed replay can recover its cache session, also from saved facts while
+the control plane is unavailable.
+A mismatch, or a running VM without a seal, uses GitHub's cache.
 
 ## Machine cache service
 

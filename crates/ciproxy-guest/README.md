@@ -19,6 +19,8 @@ Exchange newline-delimited JSON using `AgentToGuest` and `GuestToAgent`.
 Send `Hello`, then wait for `ConfigureRunner` or `Shutdown`.
 `Hello` carries `configuration_received`. It is true after receipt, also in
 the Hello that follows an agent reconnect.
+`Hello` also carries `handoff_protocol_version`. The agent configures a
+runner only for format 2.
 Send `RunnerConfigured` to confirm receipt before the runner process starts.
 Start the listener with the JIT environment value and `--once`.
 Report `RunnerReady` after its `Listening for Jobs` message.
@@ -46,22 +48,30 @@ If the report fails, the Boat lifetime remains the backstop.
 The Boat wrapper ends its private namespace after the guest ends.
 It retains Boat's provider kernel and provider services.
 
+Before the runner can take its one job, the guest measures the proxy URL on
+Docker's actual bridge and the preloaded Docker bytes.
 The pinned runner source hook reads the original assignment before action
 setup. It sends the job UUID, original runtime credentials, and effective
-cache rights over a private Unix socket. A separate task owns that read.
-Cancelling a supervisor wait cannot discard the assignment.
+cache rights over a private Unix socket, in handoff format 2.
+A separate task owns that read, and the inbox keeps receiving when the hook
+connects again. Cancelling a supervisor wait cannot discard the assignment.
+The guest keeps the first original handoff for each retry.
 The guest passes these values over vsock only.
-It derives the proxy URL from Docker's actual bridge.
-The host returns cache-session and checked Docker attachment results.
+The host answers with a `JobDecision`: `GitHubOnly`, or `MachineCache` with
+the cache session and any checked Docker attachment.
 The guest and worker exchange a preparation acknowledgement before local
-setup begins. The worker waits for the final ready or fallback reply.
+setup begins. The worker waits for the host's decision with no time limit.
+A failed local preparation reports the failure to the host, which then
+returns `GitHubOnly`. The guest never decides GitHub-only by itself.
 Proxy configuration goes through stdin and stays in memory.
 The guest replays the original assignment after an agent reconnect.
+It replays the decision and a completed preparation to a hook that
+connects again. Docker preparation runs only once.
 A late readiness message cannot change that state to warm.
 Replays replace a selected proxy's machine credential through its private pipe.
 The proxy acknowledges each replacement before the guest accepts it.
-Failed replacements can retry. Docker preparation runs only once.
-An initial choice of direct GitHub endpoints stays in force for that job.
+Failed replacements can retry.
+A `GitHubOnly` decision stays in force for the whole job.
 
 The entry mode selects the byte-identical stock Worker assembly for Boat.
 Its original cache and results endpoints therefore remain unchanged.
@@ -110,6 +120,12 @@ Live vsock, Docker, GitHub, and Boat checks need external infrastructure.
 - [src/vsock.rs](src/vsock.rs) carries cancellation-safe JSON lines.
 - [src/boat.rs](src/boat.rs) consumes the private file and sends exit reports.
 - [src/assignment.rs](src/assignment.rs) owns the cancellation-safe handoff.
+- [src/guest_setup.rs](src/guest_setup.rs) measures the preloaded Docker
+  facts before the runner can take its job.
+- [src/runner_assignment.rs](src/runner_assignment.rs) replays the host's
+  decision to each reconnected source-hook socket.
+- [src/replay.rs](src/replay.rs) keeps the assignment and a completed
+  preparation across a vsock reconnect.
 - [src/handoff.rs](src/handoff.rs) prepares the in-memory proxy.
 - [src/process.rs](src/process.rs) drains the listener and controls its group.
 - [src/cli.rs](src/cli.rs) composes the selected Linux runtime.

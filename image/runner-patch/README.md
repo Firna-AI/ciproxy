@@ -18,6 +18,11 @@ The trusted entry mode selects the own-machine assembly for vsock mode.
 Boat mode restores the byte-identical official stock assembly before launch.
 Each fresh VM or sandbox has one listener, so this selection has no race.
 The image runs the original listener and other official assemblies.
+`prepare-source.py` also adds the format probe
+`Runner.Worker ciproxy-handoff-protocol-2`. The entry script runs it before
+the listener starts, so the listener never starts with an older Worker.
+The agent accepts only guests of handoff format 2, so own machines need an
+image built from this source.
 
 `CiproxyAssignment.cs` reads `SystemVssConnection` from the original GitHub
 job request before action setup. It reads the runtime token, cache URL,
@@ -27,18 +32,23 @@ The four modes are `read`, `write`, `write-only`, and `none`.
 Missing rights grant neither local read nor local write.
 
 The hook connects to the supervisor's private Unix socket.
+Each message on it carries handoff format 2 and the job ID.
 The guest passes the original values over vsock to its own agent.
 The original runtime token never enters the hosted control plane.
 The machine cache checks the signed token against hosted assignment facts.
 The guest derives its proxy URL from the actual Docker bridge gateway.
 
-The worker waits up to 30 seconds for preparation to begin.
-A missing socket or unavailable preparation leaves the GitHub endpoints.
+The hook holds action setup until the host's matching decision arrives.
+It has no time limit of its own.
+A missing socket, a socket error, an end of stream, or an invalid reply
+makes it connect again after one second. None of them starts the steps.
 Before local setup, the guest sends `preparing` and waits for the worker's
-acknowledgement. The worker then waits for final readiness or fallback.
-This prevents a timeout from starting actions during a Docker mount change.
-When the proxy is ready, the hook replaces the assignment's cache and
+acknowledgement.
+The decision `github_only` keeps the original GitHub endpoints for the
+whole job. The decision `cache_ready` replaces the assignment's cache and
 results URLs with that same container-reachable proxy address.
+GitHub's job cancellation still ends the wait. The Worker then returns
+`Canceled` before any step starts.
 The original runtime token remains unchanged.
 Proxy configuration goes through stdin and stays in memory.
 
@@ -49,6 +59,27 @@ No workflow hook or workflow edit is needed for ordinary cache use.
 The byte-string patch and shell wrapper remain available for the isolated
 M11 compatibility smoke below. Image provisioning uses the source hook.
 They are not a source of trusted credentials or cache permissions.
+
+## Host decision check
+
+This opt-in check runs the actual patched Worker hook against local
+host-decision fixtures. It adds no checked-in .NET project and no CI gate.
+It needs the .NET SDK. Build the Worker first with
+`image/build-runner.sh WORK_DIR`. Then pass that output and the official
+runtime assemblies that the image keeps beside the patched Worker:
+
+```sh
+python3 image/runner-patch/tests/host-decision.py \
+  --worker-output BUILD_DIR/patched-worker \
+  --runner-bin OFFICIAL_RUNNER_DIR/bin \
+  --dotnet dotnet
+```
+
+The cases are `early_eof`, `connect_error`, and `github_cancellation`.
+`--case NAME` runs one case. The cancellation case also runs the actual
+`JobRunner` and checks its `Canceled` result with no started step.
+The check writes its project, build output, and sockets under `.context/`.
+It has no retry or repeat option.
 
 ## Local executable smoke
 

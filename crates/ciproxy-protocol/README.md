@@ -21,6 +21,11 @@ The connection hello carries the same full machine state as later reports.
 Reports include hardware, health, slots, runners, images, cache counts,
 and Docker disk use. The report interval is ten seconds.
 The guest uses separate message types for both directions over vsock.
+The guest Hello requires `handoff_protocol_version`, which is
+`HANDOFF_PROTOCOL_VERSION`, now 2. `PrepareJob` carries the job ID and a
+`JobDecision`: `GitHubOnly`, or `MachineCache` with the checked facts, the
+cache connection, and an optional Docker attachment. Older shapes fail to
+decode.
 
 A ciproxy workspace owns each machine, its install token, and its machine
 credential. Register carries the install token without a workspace ID.

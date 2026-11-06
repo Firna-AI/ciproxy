@@ -15,9 +15,11 @@
   `crates/ciproxy-agent/src/cache.rs`,
   `crates/ciproxy-agent/src/cache_service.rs`,
   `crates/ciproxy-agent/src/cache_unit.rs`,
+  `crates/ciproxy-agent/src/job_decisions.rs`,
   `crates/ciproxy-agent/src/docker.rs`,
   `crates/ciproxy-cache-sidecar/src/cli.rs`,
-  `crates/ciproxy-guest/src/handoff.rs`, and `image/docker-attach.sh`.
+  `crates/ciproxy-guest/src/handoff.rs`,
+  `image/runner-patch/CiproxyAssignment.cs`, and `image/docker-attach.sh`.
 - **Reason:** The live checks need the merged change on the main preview
   control plane, a fresh disposable KVM host, and private credential files.
 
@@ -38,16 +40,21 @@
   device, and its smoke command exited 77 before it read credentials.
   The code does these things:
   - The source-built runner Worker hook,
-    `image/runner-patch/CiproxyAssignment.cs`, pauses before action setup.
+    `image/runner-patch/CiproxyAssignment.cs`, holds action setup until the
+    host decision arrives. It has no time limit of its own.
     It sends the original `ACTIONS_RUNTIME_TOKEN`, cache URL, results URL,
     and effective cache permissions to the guest over
-    `/run/ciproxy/assignment.sock`.
-  - The guest adds the Docker bridge proxy URL and the preloaded Docker
-    bytes. It sends `GuestToAgent::JobStarting` to the agent over vsock.
-    The agent answers with `AgentToGuest::PrepareJob`. The guest answers
-    with `GuestToAgent::JobPrepared` after its proxy binds. Then action
-    setup continues. `crates/ciproxy-protocol/src/guest.rs` defines these
-    messages.
+    `/run/ciproxy/assignment.sock`, in handoff format 2.
+  - The guest measured the Docker bridge proxy URL and the preloaded Docker
+    bytes before the runner took the job. It sends
+    `GuestToAgent::JobStarting` to the agent over vsock. The agent answers
+    with `AgentToGuest::PrepareJob` and its `JobDecision`: `MachineCache` or
+    `GitHubOnly`. The guest answers with `GuestToAgent::JobPrepared` after
+    its proxy binds. Then action setup continues.
+    `crates/ciproxy-protocol/src/guest.rs` defines these messages.
+  - The agent seals a first handoff only on the connection that carried the
+    fresh runner configuration. After a reconnect before the first handoff,
+    the job gets `GitHubOnly` and uses only GitHub's cache.
   - The token and the complete URLs stay in memory. They never enter
     hosted messages, logs, or durable agent state. The agent saves only the
     original cache rights and the scheme, host, and port of both URLs. A
@@ -151,9 +158,16 @@
       open TCP port 7887. Show that a job VM still reaches its cache after
       the reboot. Show from the journal that the rules loaded before the
       listener started.
+  11. Host decision before steps: no script checks it yet. Stop the agent
+      before a job's first handoff, and show that no step starts while the
+      agent is away. Start the agent again. Show that the job then runs with
+      only GitHub's cache, because its first handoff came after a reconnect.
+      Cancel another waiting job on GitHub, and show that it ends with no
+      started step.
 - **Impact if no action:** The tests use mocks and local files. A real host
   can still break the systemd stop order, the guest drive switch and
-  mount, the filesystem growth, the Docker restart, or the proxy readiness.
+  mount, the filesystem growth, the Docker restart, the proxy readiness, or
+  the host decision before the steps.
   The machine cache falls back to GitHub by design. So a broken machine
   cache can look like a normal cache miss, and customers lose the local
   cache without a visible error. An unproved scope boundary can let one
@@ -165,7 +179,8 @@
   - The merged change on the main preview, with the runtime turned on. The
     deploy workflow runs for each push to
     `calummoore/ci-proxy-load-balancer` and `main`. The pinned image
-    release must include the guest program, the runner hook, and Docker.
+    release must include the guest program, the runner hook, and Docker,
+    all built for handoff format 2.
   - Matching verified `ciproxy-agent` and `ciproxy-cache-sidecar` archives
     at `CIPROXY_RELEASE_SERVER_URL`, because install fetches both.
     `crates/ciproxy-agent/scripts/prepare-smoke-release.py` makes a draft
@@ -229,7 +244,7 @@
     `.context/ciproxy-mvp/host-smoke-*`. It holds run IDs, job UUIDs, VM
     IDs, and counts, but no token or cookie.
 - **Done when:**
-  - Each of the ten live requirements has a passing live check on a fresh
+  - Each of the eleven live requirements has a passing live check on a fresh
     disposable KVM host against the main preview.
   - Each requirement that had no script has a repeatable check under
     `crates/ciproxy-agent/scripts/`, described in

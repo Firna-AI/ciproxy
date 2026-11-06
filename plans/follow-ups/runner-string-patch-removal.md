@@ -11,9 +11,9 @@
   `image/runner-patch/run-with-cache.sh`,
   `image/runner-patch/job-started.sh`,
   `crates/ciproxy-cache-sidecar/tests/runner_environment_tests.rs`,
-  `image/runner-patch/README.md` lines 4-5, 49-51, 109-111, and 147-148,
+  `image/runner-patch/README.md` lines 4-5, 59-61, 140-142, and 178-179,
   `image/runner-patch/smoke/live-check.py:17-21`, and
-  `crates/ciproxy-guest/src/assignment.rs:97-132`.
+  `crates/ciproxy-guest/src/assignment.rs:99-179`.
 - **Reason:** On 2026-11-06, the user chose this work for after the merge,
   because production uses the new source hook, and cleanup reaches unchanged
   operator scripts.
@@ -42,15 +42,19 @@
     after `prepare-source.py` adds the call of the source hook.
   - `image/provision.sh:13-14` installs the stock Worker and the
     own-machine Worker side by side.
-  - `image/runner-entry.sh:13-17` selects the own-machine Worker when
-    `CIPROXY_ASSIGNMENT_SOCKET` is set, and the stock Worker otherwise.
-    Boat, the rented overflow provider, runs the stock Worker.
+  - `image/runner-entry.sh:13-18` selects the own-machine Worker when
+    `CIPROXY_ASSIGNMENT_SOCKET` is set, and runs its handoff format probe.
+    Otherwise it selects the stock Worker. Boat, the rented overflow
+    provider, runs the stock Worker.
   - The source hook sends the original runtime token, cache URL, results
     URL, and cache permissions to the guest program, `ciproxy-guest`, over
-    `/run/ciproxy/assignment.sock`.
-  - When the guest replies with a proxy URL, the hook sets both
-    `CacheServerUrl` and `ResultsServiceUrl` to it, at
-    `CiproxyAssignment.cs:59-63`. It never changes the token.
+    `/run/ciproxy/assignment.sock`, in handoff format 2.
+  - The hook waits for the host decision with no time limit of its own. On
+    `cache_ready`, it sets both `CacheServerUrl` and `ResultsServiceUrl` to
+    the proxy URL, at `CiproxyAssignment.cs:75-82`. On `github_only`, it
+    keeps the original URLs. It never changes the token.
+  - The opt-in check `image/runner-patch/tests/host-decision.py` runs the
+    actual hook for the host-decision cases. It is not a gate.
   - The string patch, the shell wrapper, and the chained hook are the
     earlier way. No image script, systemd unit, or smoke runs them.
   - `image/provision.sh:25` copies the whole image definition to
@@ -63,7 +67,7 @@
     restore the entry of the first job from the machine's own cache.
   - On 2026-11-06, the user chose option A for after the merge.
 - **Problem:** The old scripts remain beside the replacement.
-  `image/runner-patch/README.md:49-51` keeps them for a compatibility smoke,
+  `image/runner-patch/README.md:59-61` keeps them for a compatibility smoke,
   but no smoke calls them. The gate still runs the wrapper test, which tests
   only the shell wrapper.
 - **Impact if no action:** The repository maintains two runner
@@ -92,7 +96,7 @@
   require the complete replacement of an old mechanism.
 - **Previous examples:** No earlier leftover case found. Commit `ec5344c`
   added the old scripts on 2026-11-04. Commit `703b9b1` added the source
-  hook and README lines 49-51 on 2026-11-06.
+  hook and the compatibility lines on 2026-11-06.
 - **Related:** The
   [cache and Docker live proof](agent-cache-area-integration.md) item runs
   the live `cache` scenario on a KVM host. This item keeps that scenario as
@@ -103,8 +107,8 @@
 - **Action:** fix after merge, apply A, because production uses the new
   path and cleanup reaches unchanged operator scripts.
 - **Steps for A:**
-  1. Repeat the searches. `git grep` finds no file that names
-     `patch-runner.py`. It finds `job-started.sh` only in
+  1. Repeat the searches, outside this item. `git grep` finds no file that
+     names `patch-runner.py`. It finds `job-started.sh` only in
      `run-with-cache.sh`, and `run-with-cache.sh` only in the wrapper test.
   2. Delete exactly these four files:
      - `image/runner-patch/patch-runner.py`
@@ -117,22 +121,22 @@
   3. Keep these files, because the source hook uses them:
      - The gateway helper. `image/provision.sh:20` installs it as
        `/usr/local/libexec/ciproxy-container-proxy-url`, and
-       `crates/ciproxy-guest/src/handoff.rs:67` runs it to get the proxy
-       URL.
+       `crates/ciproxy-guest/src/guest_setup.rs:22` runs it before the
+       runner can take its job.
      - `CiproxyAssignment.cs`, `prepare-source.py`, `LICENSE`, and the
-       `smoke/` directory in `image/runner-patch/`.
+       `smoke/` and `tests/` directories in `image/runner-patch/`.
   4. Remove the text of the old way from `image/runner-patch/`:
-     - `README.md:49-51` says that the string patch and the shell wrapper
+     - `README.md:59-61` says that the string patch and the shell wrapper
        stay for a compatibility smoke. Remove it.
      - `README.md:4-5` says "It keeps the runner's managed string table and
        PE offsets in place". Say instead that the image installs a Worker
        built from source.
-     - `README.md:109-111` and `smoke/live-check.py:17-21` read `ZCTIONS_*`
+     - `README.md:140-142` and `smoke/live-check.py:17-21` read `ZCTIONS_*`
        names, which only the patched runner wrote. Read `ACTIONS_*` only.
      - In that README text, say that the live smoke runs on a stock runner.
        With the source hook active, steps see the proxy URL, not the
        original URLs.
-     - `README.md:147-148` links the runner `JobHookProvider` contract. Only
+     - `README.md:178-179` links the runner `JobHookProvider` contract. Only
        the `GITHUB_ENV` lines of the chained hook used it. Remove it.
   5. Leave these unchanged:
      - The component name "runner patch" in `README.md:39`,
@@ -154,12 +158,13 @@
      - Add one Rust test in `ciproxy-guest`. Drive the real
        `SocketAssignments` and `SocketReply` over a temporary Unix socket
        with the exact lines of the source hook.
-     - Assert the `{"preparing":true}` line, the acceptance of
-       `{"acknowledged":true}`, and a last line with only `proxy_url`, or
-       `{}` on fallback. A reply without a token gives the hook no token to
-       change.
-     - `handoff::read` also runs the gateway helper and `du`. Both fall back
-       on failure, so assert only the socket lines.
+     - Each line carries `handoff_protocol_version` 2 and the job ID. Assert
+       the `preparing` offer, the acceptance of the matching
+       `acknowledged` reply, and a last line with `decision`. That line has
+       `cache_ready` with `proxy_url`, or `github_only` without one. A reply
+       without a token gives the hook no token to change.
+     - `handoff::read` takes the preloaded Docker measurements from
+       `guest_setup.rs`, so the test can pass fixed values.
      - Take the lines from `CiproxyAssignment.cs` and
        `crates/ciproxy-guest/src/assignment.rs` when you start. The handoff
        can change before then.
@@ -167,8 +172,10 @@
        test 10 times, because it is asynchronous.
      - Keep the live `cache` scenario as the end-to-end proof. Only the
        image build compiles the source hook.
-     - Do not add a .NET project, a CI toolchain, or a gate phase. That is
-       option B, and it needs a separate approval.
+     - The opt-in check `image/runner-patch/tests/host-decision.py` already
+       runs the actual hook against host-decision fixtures. Do not make it a
+       gate. Add no .NET CI toolchain or gate phase. That is option B, and it
+       needs a separate approval.
   7. Record the deletion in the commit or the pull request description. The
      scripts are entry points, so they are functionality. The user's choice
      of A on 2026-11-06 is the approval. Give the searches of the first

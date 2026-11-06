@@ -55,6 +55,7 @@ Each VM record keeps the original cache rights of its job, and the scheme,
 host, and port of its cache and results URLs.
 It keeps no runtime token, URL path, or query.
 State without that record fails to decode. No old-format adapter exists.
+A saved seal without its host-decision marker also fails to decode.
 Each VM has a generated local ID and a separate systemd unit.
 The agent service does not own those units.
 Stopping the service also stops its preparation helpers.
@@ -147,6 +148,7 @@ Image reports list exact metadata and identify the newest local release.
 These are required new formats. No old-format adapter is supplied.
 A dormant drive slot permits a later checked Docker disk switch.
 The guest and agent use vsock port 5252.
+The agent configures a runner only for a guest Hello of handoff format 2.
 The guest repeats Hello and its current assignment after reconnect.
 A late readiness event cannot replace an assigned job.
 Registrations and runtime credentials stay in memory.
@@ -241,6 +243,10 @@ The [host guide](host-preparation.md#ext4-and-kvm-smoke) gives the ext4 check.
   reflink copy operation for VM roots and disposable Docker disks.
 - [src/cache_authority.rs](src/cache_authority.rs) keeps the original cache
   rights and URL origins of each job.
+- [src/job_decisions.rs](src/job_decisions.rs) saves each GitHub-only
+  decision before it releases a waiting Worker.
+- [src/job_preparation.rs](src/job_preparation.rs) prepares checked local
+  cache and Docker resources once the host has the trusted job facts.
 - [src/cache_unit.rs](src/cache_unit.rs) writes the cache service unit and
   its private listener rules.
 - [src/docker.rs](src/docker.rs) owns Docker leases, attachment, and release.

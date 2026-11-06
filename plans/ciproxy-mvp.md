@@ -865,10 +865,12 @@ fix now for findings 1 to 8 and fix after the merge for finding 9.
       5B makes the lease the only Docker record. 6B keeps the App removal
       cause. 7B shares one reflink copy. 8A gives accounting its own worker.
       Branch: `conductor/ciproxy-mvp-milestone-13-e2e`.
-- [ ] Build item 85 = F with item 86 = B. The runner hook waits for the host
+- [x] Build item 85 = F with item 86 = B. The runner hook waits for the host
       decision, with no fallback and no time limit. A reconnect before the
       first handoff means only GitHub's cache for the whole job.
-      Branch: `conductor/ciproxy-mvp-milestone-13-e2e`.
+      Branch: `conductor/ciproxy-mvp-milestone-13-e2e`. Code: `cf622fc`,
+      merged in `fc5b46c`. Its live KVM proof stays open in the
+      [integration record](follow-ups/agent-cache-area-integration.md).
 
 Finding 9 = A waits until after the merge, because production uses the new
 source hook, and cleanup reaches unchanged operator scripts. The
