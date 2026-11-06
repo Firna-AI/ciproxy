@@ -9,6 +9,8 @@
 mod boundaries;
 #[path = "../src/budget_file.rs"]
 mod budget_file;
+#[path = "../src/cache_authority.rs"]
+mod cache_authority;
 #[path = "../src/connection_types.rs"]
 mod connection_types;
 #[path = "../src/docker.rs"]

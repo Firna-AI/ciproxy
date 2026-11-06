@@ -14,6 +14,7 @@ use ciproxy_protocol::runners::{RunnerReport, RunnerState};
 use unimock::{MockFn, Unimock, matching};
 
 use crate::boundaries::CacheMock;
+use crate::cache_authority::CacheAuthority;
 use crate::docker::{DockerDisks, LinuxDockers};
 use crate::docker_files;
 use crate::error::Error;
@@ -88,7 +89,7 @@ pub(super) fn vm(name: &str) -> VmRecord {
     };
     VmRecord {
         preparation: PreparationState::Started,
-        cache_permissions: None,
+        cache_authority: CacheAuthority::Waiting,
         job_facts: None,
         local_id: format!("local-{name}"),
         network_index: 1,
