@@ -103,6 +103,12 @@ A successful stop command still holds capacity until the VM is absent.
 An offline removed machine still loses idle GitHub registrations.
 One failed action does not block independent organizations.
 
+An agent report can mark a `Starting` runner with `configuration_lost`.
+The agent sets it only when the guest confirms no configuration and the
+agent holds no pending JIT. The runtime then retires that runner GitHub-first.
+A busy result preserves it, and its resources stay held until the VM is absent.
+No elapsed-time limit marks a starting runner as lost.
+
 The guest supplies only a runner and job identity to the hosted process.
 The runtime matches that identity to durable GitHub demand.
 The GitHub API supplies repository, event, default branch, and head data.

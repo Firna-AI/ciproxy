@@ -38,6 +38,7 @@ pub(super) fn vm(name: &str, running: bool) -> VmRecord {
         local_id: format!("local-{name}"),
         network_index: 1,
         report: RunnerReport {
+            configuration_lost: false,
             slot_indices: if name == "idle" { vec![1] } else { vec![0] },
             runner_id: RunnerId(name.to_owned()),
             organization_id: OrganizationId("org-1".to_owned()),

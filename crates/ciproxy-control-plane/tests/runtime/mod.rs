@@ -9,4 +9,5 @@ mod metering_tests;
 mod resource_report_tests;
 mod retirement_tests;
 mod slot_assignment_tests;
+mod startup_recovery_tests;
 mod support;

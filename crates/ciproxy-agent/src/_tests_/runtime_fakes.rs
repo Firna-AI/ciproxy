@@ -23,6 +23,9 @@ pub(crate) struct WaitingAgent {
 
 #[async_trait]
 impl Agent for WaitingAgent {
+    async fn configuration_lost(&self, runner: &str) -> Result<()> {
+        self.delegate.configuration_lost(runner).await
+    }
     async fn restore(&self) -> Result<()> {
         self.delegate.restore().await
     }

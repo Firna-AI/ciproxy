@@ -850,6 +850,9 @@ Live KVM and authenticated job checks remain with the orchestrator.
       Orchestrator: use the credential-file scripts on the KVM host with
       the main preview control plane. Keep live evidence separate from
       the code checks.
+      Include an agent restart before the guest receives its registration.
+      The current restart script covers a running job. Add the interrupted
+      startup case before claiming its live proof.
       Branch: `conductor/ciproxy-mvp-milestone-13-e2e`.
 
 ## Milestone 14: Dashboard API: sign-in, setup, machines, and settings

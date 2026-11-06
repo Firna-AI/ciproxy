@@ -145,6 +145,13 @@ The guest and agent use vsock port 5252.
 The guest repeats Hello and its current assignment after reconnect.
 A late readiness event cannot replace an assigned job.
 Registrations and runtime credentials stay in memory.
+The agent keeps each JIT configuration in memory until the guest confirms
+receipt through `RunnerConfigured` or its reconnect Hello. Before that
+confirmation, reconnect sends the configuration again.
+A duplicate delivery starts no second runner.
+The guest Hello carries `configuration_received`. A runner report sets
+`configuration_lost` only when that value is false and this agent process
+holds no pending JIT. An in-flight delivery is therefore not lost.
 
 The source-built runner hook reads its original GitHub assignment before
 any action setup. The guest derives the actual Docker bridge proxy URL.
@@ -159,17 +166,24 @@ Install obtains the checked `ciproxy-cache-sidecar` release and creates
 `ciproxy-cache.service`. The unit requires the XFS area mount.
 Its stop order closes cache handles before unmount.
 The service uses `/var/lib/ciproxy/area/cache`.
+The unit omits `--capacity-bytes`. A restarted service therefore keeps its
+entries and writes no new archive until the agent sets its budget.
 Its administration endpoint is `127.0.0.1:8229`.
 Its private credential is `/var/lib/ciproxy/cache-admin-token`.
 VMs can reach only the job listener on port 7887.
 The host firewall excludes other inbound interfaces from that listener.
 
-Before a VM starts, the cache acknowledges its smaller byte budget.
+Before a VM starts or a Docker disk takes space, the cache acknowledges its
+smaller byte budget.
 The cache waits for active file reads and writes before that acknowledgement.
 If administration fails, the agent stops the service and removes its
 occupied cache files. The job then uses GitHub or sees a cache miss.
 If the host cannot close handles or release files, admission waits for repair.
+A Docker disk is then not attached, and its job uses the root disk.
 A missing service alone does not block admission.
+The periodic budget refresh allocates no space. When it fails, the agent
+starts the service if necessary and tries again later.
+This failure recovery does not run the offline cache clear.
 Job exit revokes sessions by the persisted trusted assignment.
 This also applies after restart.
 The assignment includes organization, repository, run, job, and runner identity.
@@ -257,7 +271,8 @@ The [host guide](host-preparation.md#ext4-and-kvm-smoke) gives the ext4 check.
   allocation rule for the agent, scaler, and hosted image configuration.
 - [src/vm_root.rs](src/vm_root.rs) reflinks and grows the disposable job root.
 - [src/vm_config.rs](src/vm_config.rs) owns the root and dormant Docker drives.
-- [src/vsock_stream.rs](src/vsock_stream.rs) delivers registrations in memory.
+- [src/vsock_stream.rs](src/vsock_stream.rs) keeps each registration in
+  memory until the guest confirms receipt.
 - [src/images.rs](src/images.rs) coordinates checked image fetches.
 - [src/image_registry.rs](src/image_registry.rs) owns holds and reclamation.
 - [src/image_store.rs](src/image_store.rs) defines the mockable cache boundary.

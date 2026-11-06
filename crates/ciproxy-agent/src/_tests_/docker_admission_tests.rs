@@ -92,7 +92,7 @@ async fn periodic_reconciliation_keeps_attached_docker_space_out_of_the_cache_bu
         DockerDisksMock::reclaim
             .some_call(matching!(_))
             .returns(Ok(20_000_000_000)),
-        CacheMock::budget
+        CacheMock::refresh_budget
             .some_call(matching!(_))
             .answers_arc(Arc::new(move |_, bytes| {
                 captured.lock().unwrap().push(bytes);

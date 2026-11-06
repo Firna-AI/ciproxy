@@ -25,6 +25,9 @@ struct PausedVms {
 
 #[async_trait]
 impl Vms for PausedVms {
+    async fn configuration_lost(&self, vm: &VmRecord) -> Result<bool> {
+        self.delegate.configuration_lost(vm).await
+    }
     async fn clear_docker(&self, vm: &VmRecord) -> Result<()> {
         self.delegate.clear_docker(vm).await
     }

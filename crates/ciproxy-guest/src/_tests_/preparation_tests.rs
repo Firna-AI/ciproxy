@@ -112,9 +112,15 @@ async fn preparation_ack_follows_local_readiness_and_late_ready_cannot_replace_a
         guest.run().await.unwrap();
         assert_eq!(*timeline.lock().unwrap(), vec!["prepared", "acknowledged"]);
         let messages = messages.lock().unwrap();
-        assert_eq!(messages.len(), 4);
+        assert_eq!(messages.len(), 5);
         assert_eq!(
             messages[1],
+            GuestToAgent::RunnerConfigured {
+                runner_id: RunnerId("runner-7".to_owned())
+            }
+        );
+        assert_eq!(
+            messages[2],
             GuestToAgent::JobStarting {
                 runner_id: RunnerId("runner-7".to_owned()),
                 job_id: JobId("job-1".to_owned()),
@@ -122,7 +128,7 @@ async fn preparation_ack_follows_local_readiness_and_late_ready_cannot_replace_a
             }
         );
         assert_eq!(
-            messages[2],
+            messages[3],
             GuestToAgent::JobPrepared {
                 outcome: ciproxy_protocol::guest::JobPreparation::default(),
                 runner_id: RunnerId("runner-7".to_owned()),
@@ -130,7 +136,7 @@ async fn preparation_ack_follows_local_readiness_and_late_ready_cannot_replace_a
             }
         );
         assert_eq!(
-            messages[3],
+            messages[4],
             GuestToAgent::RunnerExited {
                 runner_id: RunnerId("runner-7".to_owned()),
                 exit: RunnerExit { code: Some(0) }

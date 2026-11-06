@@ -34,6 +34,7 @@ uuid = { version = "1.29.0", features = ["v4"] }
 zstd = "0.14.3"
 
 [dev-dependencies]
+tokio = { version = "1.54.1", features = ["test-util"] }
 log = "0.4.35"
 unimock = "0.6.8"
 

@@ -44,6 +44,7 @@ async fn root_preparation_failures_clean_up_the_new_vm_and_release_its_reservati
         let mut allocated = vm("new", false);
         allocated.network_index = 2;
         allocated.report = RunnerReport {
+            configuration_lost: false,
             slot_indices: vec![1, 2],
             runner_id: runner.runner_id.clone(),
             organization_id: runner.organization_id.clone(),
@@ -67,6 +68,7 @@ async fn root_preparation_failures_clean_up_the_new_vm_and_release_its_reservati
         let cleanups = events.clone();
         let restores = events.clone();
         let root = failure.clone();
+        let refreshing = events.clone();
         let mock = Unimock::new((
             report_dependencies_for(machine),
             start_image(),
@@ -83,6 +85,13 @@ async fn root_preparation_failures_clean_up_the_new_vm_and_release_its_reservati
                 .each_call(matching!(_))
                 .answers_arc(Arc::new(move |_, state| {
                     saving.lock().unwrap().push(Event::Saved(state.clone()));
+                    Ok(())
+                }))
+                .at_least_times(0),
+            CacheMock::refresh_budget
+                .each_call(matching!(_))
+                .answers_arc(Arc::new(move |_, bytes| {
+                    refreshing.lock().unwrap().push(Event::Budget(bytes));
                     Ok(())
                 }))
                 .at_least_times(0),

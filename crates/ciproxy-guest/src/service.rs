@@ -50,6 +50,7 @@ impl Supervisor {
         self.report(GuestToAgent::Hello {
             protocol_version: ProtocolVersion::CURRENT,
             image_id: self.image_id.clone(),
+            configuration_received: false,
         })
         .await;
         loop {
@@ -59,6 +60,10 @@ impl Supervisor {
                     registration,
                     ..
                 }) => {
+                    self.report(GuestToAgent::RunnerConfigured {
+                        runner_id: runner_id.clone(),
+                    })
+                    .await;
                     if let Err(error) = self.runner.start(registration).await {
                         self.report_exit(&runner_id, RunnerExit { code: None })
                             .await;
@@ -104,8 +109,10 @@ impl Supervisor {
                         connected = false;
                         warn!("agent disconnected; runner continues");
                     }
-                    Ok(Some(AgentToGuest::ConfigureRunner { .. })) => {
-                        warn!("guest already has its one runner");
+                    Ok(Some(AgentToGuest::ConfigureRunner { runner_id: configured, .. })) => {
+                        if configured == *runner_id {
+                            self.report(GuestToAgent::RunnerConfigured { runner_id: runner_id.clone() }).await;
+                        }
                     }
                     Ok(Some(AgentToGuest::PrepareJob { job_id, facts, cache, docker })) if running.as_ref() == Some(&job_id) => {
                         match self.runner.prepare(job_id.clone(), facts, cache, docker).await {

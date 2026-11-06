@@ -15,11 +15,13 @@ use crate::state::MachineState;
 async fn a_matching_starting_retry_delivers_registration_without_recreating_the_vm() {
     let mut record = vm("runner-1", false);
     record.report.state = RunnerState::Starting;
-    let initial = MachineState {
+    record.report.configuration_lost = true;
+    let mut initial = MachineState {
         runners: vec![record],
         ..MachineState::default()
     };
     let mock = Unimock::new((report_dependencies(),
+        StoreMock::save.some_call(matching!((state) if !state.runners[0].report.configuration_lost)).answers(&|_, _| Ok(())),
         VmsMock::send.some_call(matching!((_, message) if matches!(message, AgentToGuest::ConfigureRunner { runner_id, registration, .. }
             if runner_id.0 == "runner-1" && registration.expose_secret() == "one-use-registration"))).returns(Ok(())),
     ));
@@ -34,6 +36,7 @@ async fn a_matching_starting_retry_delivers_registration_without_recreating_the_
             .unwrap(),
         applied()
     );
+    initial.runners[0].report.configuration_lost = false;
     assert_eq!(*agent.state.lock().await, initial);
 }
 

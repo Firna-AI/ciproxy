@@ -62,6 +62,7 @@ pub(crate) trait Images: Send + Sync {
 #[cfg_attr(test, unimock::unimock(api = CacheMock))]
 #[async_trait]
 pub(crate) trait Cache: Send + Sync {
+    async fn refresh_budget(&self, capacity_bytes: u64) -> Result<()>;
     async fn fallback(&self, vm: &VmRecord) -> Result<()>;
     async fn budget(&self, capacity_bytes: u64) -> Result<()>;
     async fn report(&self) -> Result<MachineCacheReport>;
@@ -83,6 +84,7 @@ pub(crate) trait Cache: Send + Sync {
 #[cfg_attr(test, unimock::unimock(api = VmsMock))]
 #[async_trait]
 pub(crate) trait Vms: Send + Sync {
+    async fn configuration_lost(&self, vm: &VmRecord) -> Result<bool>;
     async fn clear_docker(&self, vm: &VmRecord) -> Result<()>;
     fn allocate(&self, report: RunnerReport, used: &[VmRecord]) -> Result<VmRecord>;
     async fn start(&self, vm: &VmRecord, config: AgentToGuest) -> Result<()>;
@@ -95,6 +97,7 @@ pub(crate) trait Vms: Send + Sync {
 
 #[derive(Debug)]
 pub(crate) struct GuestEvent {
+    pub(crate) configuration_lost: bool,
     pub(crate) runner_id: RunnerId,
     pub(crate) message: GuestToAgent,
 }

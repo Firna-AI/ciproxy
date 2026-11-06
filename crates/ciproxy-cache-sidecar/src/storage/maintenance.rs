@@ -76,6 +76,7 @@ impl DiskStorage {
         let mut index = self.index.lock().await;
         let _reading = self.reads.write().await;
         let previous = self.capacity.swap(bytes, Ordering::SeqCst);
+        self.budget_known.store(true, Ordering::SeqCst);
         if bytes < previous {
             self.generation.fetch_add(1, Ordering::SeqCst);
             self.cancel_captures().await?;

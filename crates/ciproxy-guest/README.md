@@ -17,6 +17,9 @@ The only workspace dependency is `ciproxy-protocol`.
 In `vsock` mode, listen on the configured guest port.
 Exchange newline-delimited JSON using `AgentToGuest` and `GuestToAgent`.
 Send `Hello`, then wait for `ConfigureRunner` or `Shutdown`.
+`Hello` carries `configuration_received`. It is true after receipt, also in
+the Hello that follows an agent reconnect.
+Send `RunnerConfigured` to confirm receipt before the runner process starts.
 Start the listener with the JIT environment value and `--once`.
 Report `RunnerReady` after its `Listening for Jobs` message.
 Report `RunnerExited` with its actual process exit code.
@@ -25,7 +28,8 @@ Power off the own-machine VM after normal or failed execution.
 The image's systemd unit also powers off after initialization fails.
 
 Handle `Shutdown` while the runner waits.
-Ignore a second configuration because each guest runs one runner.
+A second configuration starts no second runner, because each guest runs one
+runner. A repeat for the same runner gets `RunnerConfigured` again.
 An agent connection failure leaves an active runner running.
 Failed observations produce a warning and do not stop that runner.
 Runner stdout supplies readiness and is then discarded.

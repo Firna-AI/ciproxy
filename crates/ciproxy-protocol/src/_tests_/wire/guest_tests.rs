@@ -63,6 +63,7 @@ fn guest_hello_reports_the_booted_image_and_protocol() {
         "guest_hello",
         "hello",
         GuestToAgent::Hello {
+            configuration_received: false,
             protocol_version: ProtocolVersion::CURRENT,
             image_id: fixtures::image_id(),
         },

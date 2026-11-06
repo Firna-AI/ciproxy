@@ -52,7 +52,7 @@ enum Command {
         #[arg(long)]
         cache_dir: PathBuf,
         #[arg(long)]
-        capacity_bytes: u64,
+        capacity_bytes: Option<u64>,
         #[arg(long)]
         admin_token_file: PathBuf,
         /// Machine-owned key source file for isolated operator smoke tests.
@@ -96,7 +96,10 @@ pub(crate) async fn run() -> Result<()> {
                 Ok(value) => value,
                 Err(error) => return Err(CliError::Io(error)),
             };
-            let store = Arc::new(DiskStorage::new(cache_dir, capacity_bytes));
+            let store = Arc::new(match capacity_bytes {
+                Some(bytes) => DiskStorage::new(cache_dir, bytes),
+                None => DiskStorage::waiting_for_budget(cache_dir),
+            });
             if store.recover().await.is_err() {
                 tracing::warn!("Local cache disk unavailable; GitHub fallback remains available");
             }

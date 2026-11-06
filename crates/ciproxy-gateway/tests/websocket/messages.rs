@@ -80,6 +80,7 @@ pub(super) fn report() -> MachineReport {
     report.job_disk_bytes = 279 * GIGABYTE;
     report.runners = vec![
         RunnerReport {
+            configuration_lost: false,
             slot_indices: vec![1],
             runner_id: RunnerId("busy".into()),
             organization_id: OrganizationId("org-2".into()),
@@ -100,6 +101,7 @@ pub(super) fn report() -> MachineReport {
             },
         },
         RunnerReport {
+            configuration_lost: false,
             slot_indices: vec![0],
             runner_id: RunnerId("warm".into()),
             organization_id: OrganizationId("org-1".into()),

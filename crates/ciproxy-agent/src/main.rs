@@ -25,6 +25,7 @@ mod docker_files;
 mod docker_prepare;
 mod error;
 mod gateway;
+mod guest_transport;
 mod hardware;
 mod host_composition;
 mod host_file_ops;

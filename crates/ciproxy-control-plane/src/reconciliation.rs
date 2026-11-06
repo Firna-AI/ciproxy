@@ -72,6 +72,10 @@ impl MachineRuntime {
                 .internal()?
                 .internal()?;
             }
+            if observed.configuration_lost && observed.state == runners::RunnerState::Starting {
+                self.stop(input.workspace_id, runner).await?;
+                return Ok(());
+            }
             let state = match observed.state {
                 runners::RunnerState::Starting => RunnerState::Starting,
                 runners::RunnerState::Warm => RunnerState::Ready,

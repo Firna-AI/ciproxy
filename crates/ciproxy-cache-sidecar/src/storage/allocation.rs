@@ -3,7 +3,7 @@
 use std::cmp::Reverse;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 use async_trait::async_trait;
 use tokio::sync::Mutex;
@@ -26,6 +26,7 @@ pub(super) struct DiskAllocation {
     root: PathBuf,
     used: Arc<AtomicU64>,
     capacity: Arc<AtomicU64>,
+    budget_known: Arc<AtomicBool>,
     index: Arc<Mutex<Option<Vec<Entry>>>>,
 }
 
@@ -34,12 +35,14 @@ impl DiskAllocation {
         root: PathBuf,
         used: Arc<AtomicU64>,
         capacity: Arc<AtomicU64>,
+        budget_known: Arc<AtomicBool>,
         index: Arc<Mutex<Option<Vec<Entry>>>>,
     ) -> Self {
         Self {
             root,
             used,
             capacity,
+            budget_known,
             index,
         }
     }
@@ -56,7 +59,10 @@ impl DiskAllocation {
 impl Allocation for DiskAllocation {
     async fn claim(&self, reservation: &Reservation, bytes: u64) -> Result<bool> {
         let mut index = self.index.lock().await;
-        if !reservation.active() || bytes > self.capacity.load(Ordering::SeqCst) {
+        if !self.budget_known.load(Ordering::SeqCst)
+            || !reservation.active()
+            || bytes > self.capacity.load(Ordering::SeqCst)
+        {
             return Ok(false);
         }
         self.reclaim(&mut index, bytes).await?;
@@ -64,7 +70,7 @@ impl Allocation for DiskAllocation {
     }
 
     async fn reclaim(&self, index: &mut Option<Vec<Entry>>, bytes: u64) -> Result<()> {
-        if self.fits(bytes) {
+        if !self.budget_known.load(Ordering::SeqCst) || self.fits(bytes) {
             return Ok(());
         }
         if index.is_none() {

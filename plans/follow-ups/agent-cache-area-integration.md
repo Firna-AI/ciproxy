@@ -14,6 +14,7 @@
   `crates/ciproxy-agent/src/cache.rs`,
   `crates/ciproxy-agent/src/cache_service.rs`,
   `crates/ciproxy-agent/src/docker.rs`,
+  `crates/ciproxy-cache-sidecar/src/cli.rs`,
   `crates/ciproxy-guest/src/handoff.rs`, and `image/docker-attach.sh`.
 - **Reason:** The live checks need the merged change on the main preview
   control plane, a fresh disposable KVM host, and private credential files.
@@ -24,7 +25,8 @@
   - **Machine cache:** `ciproxy-cache.service`, the host service that keeps
     the cache entries of the jobs on one customer machine.
   - **Budget acknowledgement:** The HTTP 204 answer of the machine cache to
-    `PUT /budget`. It confirms the smaller budget before a VM starts.
+    `PUT /budget`. It confirms the smaller budget before a VM starts or a
+    Docker disk takes space.
   - **Docker lease:** The agent's durable record of the bytes that the
     Docker disk or disposable copy of one job reserves.
   - **Live check:** A run on a real KVM host with real GitHub Actions jobs.
@@ -54,15 +56,23 @@
   - Agent install writes `ciproxy-cache.service`. The unit requires
     `var-lib-ciproxy-area.mount` and uses `/var/lib/ciproxy/area/cache`.
     VMs reach only its job listener, on TCP port 7887.
+  - The unit omits `--capacity-bytes`, so the service starts with an
+    unknown budget. It recovers its retained entries, writes no new
+    archive, and evicts nothing until the agent sends `PUT /budget`. An
+    explicit capacity, also zero, still reclaims entries at startup.
   - Each job gets its own session token and checked scope from
     `POST /sessions`. Recovery reuses a live session only for the exact
     registration. Close and fallback match the complete trusted
     assignment: organization, repository, run, job, and runner.
-  - Before a VM starts, the agent sends the smaller cache budget. When
-    administration fails, the agent stops the service, runs
-    `ciproxy-cache-sidecar reclaim` on the cache directory, and starts the
-    service again. When that release fails, the agent retires the new VM.
-    Admission then waits for repair.
+  - Before a VM starts or a Docker disk takes space, the agent sends the
+    smaller cache budget. When administration fails, the agent stops the
+    service, runs `ciproxy-cache-sidecar reclaim` on the cache directory,
+    and starts the service again. When that release fails, the agent
+    retires a new VM, and admission waits for repair. A Docker disk is
+    then not attached, and its job uses the root disk.
+  - The periodic budget refresh allocates no space. When it fails, the
+    agent starts the service if necessary and tries again later. It
+    does not run the offline cache clear for that failure.
   - A failed fallback or revoke call stops the service. This invalidates
     its sessions.
   - The hosted runtime sends each machine its Docker spare disk: the job
@@ -114,13 +124,16 @@
      stops the service, reclaims the files, starts the service again, and
      starts the VM with its promised free disk. Show that the job uses
      GitHub or sees a miss. Show that a failed reclaim retires the start
-     and blocks admission until repair.
+     and blocks admission until repair. Show that a failed periodic
+     refresh does not run the offline cache clear.
   8. Service restart: no script checks it yet. The `restart` scenario
-     restarts the agent, not the machine cache. Restart
-     `ciproxy-cache.service` during a running cache job. Show that the job
-     succeeds and that the next job gets a machine-cache hit again. Show
-     that the report hides the counts of the interrupted job and keeps the
-     seven-day hit counts.
+     restarts the agent, not the machine cache. Save an entry, then restart
+     `ciproxy-cache.service` during a running cache job. Show that the
+     restarted service keeps that entry and writes no new archive before
+     the agent sends its budget. Show that the running job succeeds and
+     that the next job restores the saved entry from the machine cache.
+     Show that the report hides the counts of the interrupted job and
+     keeps the seven-day hit counts.
   9. File closure before unmount: no script checks it yet.
      `smoke-host.sh` proves that uninstall removes the area, its record,
      its mount unit, and the mount. It does not prove the stop order with

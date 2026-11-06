@@ -86,9 +86,6 @@ async fn signed_manifest_and_bundle_metadata_reads_keep_credentials_out_of_trace
     server.abort();
     let _ = server.await;
     let output = String::from_utf8(captured.lock().unwrap().clone()).unwrap();
-    let evidence = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../.context/ciproxy-mvp/signed-image-trace.log");
-    std::fs::write(evidence, &output).unwrap();
     assert!(output.contains("unrelated diagnostic stays visible"));
     for request in urls {
         let signature = request.split("&Signature=").nth(1).unwrap();

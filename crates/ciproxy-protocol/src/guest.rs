@@ -93,6 +93,13 @@ pub enum GuestToAgent {
         protocol_version: ProtocolVersion,
         /// Image from which this VM booted.
         image_id: ImageId,
+        /// This guest has received its one runner configuration.
+        configuration_received: bool,
+    },
+    /// Confirm receipt before starting the configured runner process.
+    RunnerConfigured {
+        /// Runner whose registration this guest now owns.
+        runner_id: RunnerId,
     },
     /// Report that the runner is ready to take a job.
     RunnerReady {

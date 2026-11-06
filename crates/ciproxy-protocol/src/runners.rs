@@ -26,6 +26,8 @@ pub struct RunnerSpec {
 /// A runner that the agent still owns, also after a reconnect.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct RunnerReport {
+    /// The guest confirmed no configuration and this agent holds no pending JIT.
+    pub configuration_lost: bool,
     /// Actual logical slots held for this VM's whole lifetime.
     pub slot_indices: Vec<u64>,
     /// The runner and VM identity.

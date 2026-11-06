@@ -51,6 +51,7 @@ expression: message
     ],
     "runners": [
       {
+        "configuration_lost": false,
         "slot_indices": [
           1
         ],
@@ -73,6 +74,7 @@ expression: message
         }
       },
       {
+        "configuration_lost": false,
         "slot_indices": [
           2
         ],

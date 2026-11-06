@@ -10,6 +10,22 @@ use crate::error::{Error, Result};
 use crate::state::{Mode, VmRecord};
 
 impl Controller {
+    pub(crate) async fn record_configuration(&self, runner_id: &str, lost: bool) -> Result<()> {
+        let mut state = self.state.lock().await;
+        let mut next = state.clone();
+        if let Some(vm) = next
+            .runners
+            .iter_mut()
+            .find(|vm| vm.report.runner_id.0 == runner_id)
+            && vm.report.configuration_lost != lost
+            && (!lost || vm.report.state == RunnerState::Starting)
+        {
+            vm.report.configuration_lost = lost;
+            self.store.save(&next)?;
+            *state = next;
+        }
+        Ok(())
+    }
     pub(crate) async fn observe(
         &self,
         runner_id: &str,
@@ -71,15 +87,28 @@ impl Controller {
             GuestToAgent::Hello {
                 protocol_version,
                 image_id,
+                configuration_received,
             } => {
                 if protocol_version != ProtocolVersion::CURRENT || image_id != vm.report.image_id {
                     return Err(Error::GuestMismatch);
+                }
+                if configuration_received {
+                    self.record_configuration(runner_id, false).await?;
                 }
                 if self.state.lock().await.mode == Mode::Removed
                     || vm.report.state == RunnerState::Stopping
                 {
                     self.request_idle_stop(&vm).await?;
                 }
+                return Ok(None);
+            }
+            GuestToAgent::RunnerConfigured {
+                runner_id: received,
+            } => {
+                if received != vm.report.runner_id {
+                    return Err(Error::GuestMismatch);
+                }
+                self.record_configuration(runner_id, false).await?;
                 return Ok(None);
             }
             GuestToAgent::RunnerReady { runner_id } => {

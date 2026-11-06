@@ -67,6 +67,7 @@ impl Controller {
             )?;
             let mut vm = self.vms.allocate(
                 RunnerReport {
+                    configuration_lost: false,
                     slot_indices: slot_indices.clone(),
                     runner_id: runner.runner_id.clone(),
                     organization_id: runner.organization_id.clone(),
@@ -105,6 +106,8 @@ impl Controller {
         match vm.report.state {
             RunnerState::Starting => {
                 let message = configure(runner);
+                self.record_configuration(&vm.report.runner_id.0, false)
+                    .await?;
                 self.vms.send(&vm, &message).await
             }
             RunnerState::Warm | RunnerState::Running { .. } => Ok(()),

@@ -260,6 +260,9 @@ async fn execute(action: Action) -> Result<()> {
                 let result = tokio::select! {
                     event = guest_rx.recv() => {
                         let event = event.ok_or(Error::Disconnected)?;
+                        if event.configuration_lost {
+                            agent.configuration_lost(&event.runner_id.0).await?;
+                        }
                         agent.guest(&event.runner_id.0, event.message).await.map(|_| ())
                     }
                     _ = timer.tick() => agent.reconcile().await,

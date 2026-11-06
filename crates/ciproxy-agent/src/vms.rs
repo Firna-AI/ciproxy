@@ -30,6 +30,9 @@ pub(crate) struct LinuxVms {
 
 #[async_trait]
 impl Vms for LinuxVms {
+    async fn configuration_lost(&self, vm: &VmRecord) -> Result<bool> {
+        self.guests.configuration_lost(vm).await
+    }
     async fn clear_docker(&self, vm: &VmRecord) -> Result<()> {
         self.switch_docker(vm, "/docker-slot").await
     }

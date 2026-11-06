@@ -82,6 +82,23 @@ impl HttpCache {
 
 #[async_trait]
 impl Cache for HttpCache {
+    async fn refresh_budget(&self, capacity_bytes: u64) -> Result<()> {
+        if let Err(error) = self.admin.budget(capacity_bytes).await {
+            if let Err(restart) = self
+                .commands
+                .run(
+                    "systemctl",
+                    &arguments(&["start", "ciproxy-cache.service"]),
+                    &[],
+                )
+                .await
+            {
+                tracing::warn!(%restart, "cache service recovery will retry without clearing entries");
+            }
+            return Err(error);
+        }
+        Ok(())
+    }
     async fn budget(&self, capacity_bytes: u64) -> Result<()> {
         if self.admin.budget(capacity_bytes).await.is_ok() {
             return Ok(());

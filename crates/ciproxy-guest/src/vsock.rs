@@ -94,6 +94,15 @@ impl Channel for VsockChannel {
                 return Ok(());
             }
             GuestToAgent::Hello { .. } => self.hello = Some(message.clone()),
+            GuestToAgent::RunnerConfigured { .. } => {
+                if let Some(GuestToAgent::Hello {
+                    configuration_received,
+                    ..
+                }) = &mut self.hello
+                {
+                    *configuration_received = true;
+                }
+            }
             GuestToAgent::JobPrepared { .. } => {}
             _ => self.current = Some(message.clone()),
         }

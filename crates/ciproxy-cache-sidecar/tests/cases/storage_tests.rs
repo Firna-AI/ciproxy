@@ -173,7 +173,8 @@ async fn eviction_and_restart_preserve_entries_and_seven_day_measured_hits() {
     assert_eq!(job.lookup("new", "v1", &[]).await["ok"], false);
     assert_eq!(fixture.report().await.capacity_bytes, 4);
     assert_eq!(fixture.report().await.used_bytes, 4);
-    fixture.restart().await;
+    fixture.restart_waiting_for_budget().await;
+    assert_eq!(fixture.report().await.used_bytes, 4);
     let next = fixture.job("after-restart", facts("refs/heads/main")).await;
     assert_eq!(next.contents("old", "v1", &[]).await, "old!");
     let report = fixture.report().await;
@@ -190,6 +191,14 @@ async fn eviction_and_restart_preserve_entries_and_seven_day_measured_hits() {
             .usage,
         JobCacheUsage::Github
     );
+    assert_eq!(empty_upload(&next, "unknown-budget-empty").await, 201);
+    assert_eq!(fixture.report().await.used_bytes, 4);
+    assert_eq!(next.lookup("old", "v1", &[]).await["ok"], true);
+    next.save("unbudgeted", "v1", "later").await;
+    assert_eq!(fixture.report().await.used_bytes, 4);
+    fixture.budget(0).await;
+    assert_eq!(fixture.report().await.used_bytes, 0);
+    assert_eq!(next.lookup("old", "v1", &[]).await["ok"], false);
     fixture.clock.advance(7 * 24 * 60 * 60 + 1);
     let report = fixture.report().await;
     assert_eq!(

@@ -145,6 +145,7 @@ pub(crate) fn report() -> MachineReport {
         ],
         runners: vec![
             RunnerReport {
+                configuration_lost: false,
                 slot_indices: vec![1],
                 runner_id: RunnerId("runner-warm".into()),
                 organization_id: OrganizationId("organization-2".into()),
@@ -159,6 +160,7 @@ pub(crate) fn report() -> MachineReport {
                 state: RunnerState::Warm,
             },
             RunnerReport {
+                configuration_lost: false,
                 slot_indices: vec![2],
                 runner_id: runner_id(),
                 organization_id: organization_id(),

@@ -138,7 +138,7 @@ async fn reconciliation_uses_the_same_held_disk_budget() {
         VmsMock::restore
             .each_call(matching!(_))
             .answers(&|_, _| Ok(())),
-        CacheMock::budget
+        CacheMock::refresh_budget
             .some_call(matching!(9_100_387_328))
             .returns(Ok(())),
     ));

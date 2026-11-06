@@ -116,7 +116,7 @@ impl Fixture {
             "hostname":"runtime-host", "agent_version":"0.1.0",
             "hardware":{"processor":"x64","threads":8,"memory_bytes":32_000_000_000u64,"kvm":true,"disks":[{"name":"/","capacity_bytes":1_000_000_000_000u64,"free_bytes":800_000_000_000u64}]},
             "capacity":3,"job_disk_bytes":645_000_000_000u64,"slots":[],
-            "runners":[{"slot_indices":[0],"runner_id":runner_id,"organization_id":"42","label":"ciproxy","requested_size":{"vcpu":2,"memory_bytes":8_000_000_000u64,"disk_bytes":80_000_000_000u64},"size":{"vcpu":2,"memory_bytes":8_000_000_000u64,"disk_bytes":142_755_282_944u64},"image_id":"fixture","state":{"state":"warm"}}],
+            "runners":[{"slot_indices":[0],"runner_id":runner_id,"organization_id":"42","label":"ciproxy","configuration_lost":false,"requested_size":{"vcpu":2,"memory_bytes":8_000_000_000u64,"disk_bytes":80_000_000_000u64},"size":{"vcpu":2,"memory_bytes":8_000_000_000u64,"disk_bytes":142_755_282_944u64},"image_id":"fixture","state":{"state":"warm"}}],
             "drain":"draining","cache":{"used_bytes":0,"capacity_bytes":0,"restores_last_7_days":0,"hits_last_7_days":0,"jobs":[]},"docker_disks":{"leased_bytes":0,"repositories":0,"used_bytes":0},"images":{"available":[{"image_id":"fixture","root_disk_bytes":60_263_759_872u64}],"newest":"fixture"}
         })).unwrap();
         let contact = Contact {

@@ -6,19 +6,20 @@ use std::time::Duration;
 use ciproxy_protocol::guest::{AgentToGuest, GuestToAgent};
 use ciproxy_protocol::runners::RunnerExit;
 use ciproxy_protocol::version::ProtocolVersion;
-use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
-use tokio::net::UnixStream;
-use tokio::sync::{mpsc, watch};
+use tokio::sync::{Mutex, mpsc, watch};
 use tokio::time::{MissedTickBehavior, interval, sleep, timeout};
 
 use crate::boundaries::GuestEvent;
 use crate::error::{Error, ErrorResultExt, Result};
-use crate::layout::{Layout, unit_name};
+use crate::guest_transport::GuestTransport;
+use crate::layout::unit_name;
 use crate::process::{Commands, UnitState};
 use crate::state::VmRecord;
+use crate::vsock::Configuration;
 
 pub(crate) struct GuestBridge {
-    pub(crate) layout: Layout,
+    pub(crate) configuration: Arc<Mutex<Configuration>>,
+    pub(crate) transport: Arc<dyn GuestTransport>,
     pub(crate) commands: Arc<dyn Commands>,
     pub(crate) events: mpsc::Sender<GuestEvent>,
     pub(crate) vm: VmRecord,
@@ -27,7 +28,6 @@ pub(crate) struct GuestBridge {
 impl GuestBridge {
     pub(crate) async fn run(
         self,
-        mut config: Option<AgentToGuest>,
         mut receiver: mpsc::Receiver<AgentToGuest>,
         mut shutdown: watch::Receiver<bool>,
     ) {
@@ -54,10 +54,7 @@ impl GuestBridge {
                 Ok(UnitState::Active) => {}
                 Err(error) => tracing::warn!(error = %error, "cannot inspect VM; preserve it"),
             }
-            if let Err(error) = self
-                .session(&mut config, &mut receiver, &mut shutdown)
-                .await
-            {
+            if let Err(error) = self.session(&mut receiver, &mut shutdown).await {
                 tracing::debug!(error = %error, "guest channel unavailable; preserve VM and reconnect");
             }
             sleep(Duration::from_secs(1)).await;
@@ -66,88 +63,78 @@ impl GuestBridge {
 
     async fn session(
         &self,
-        config: &mut Option<AgentToGuest>,
         receiver: &mut mpsc::Receiver<AgentToGuest>,
         shutdown: &mut watch::Receiver<bool>,
     ) -> Result<()> {
-        let stream = UnixStream::connect(self.layout.jail_root(&self.vm).join("vsock.sock"))
+        let mut socket = self.transport.connect(&self.vm).await?;
+        let message = timeout(Duration::from_secs(30), socket.receive())
             .await
-            .context("connect VM vsock")?;
-        let (read, mut write) = stream.into_split();
-        let mut read = BufReader::new(read);
-        write
-            .write_all(b"CONNECT 5252\n")
-            .await
-            .context("connect guest port")?;
-        let mut ack = String::new();
-        timeout(
-            Duration::from_secs(10),
-            (&mut read).take(4096).read_line(&mut ack),
-        )
-        .await
-        .context("wait for Firecracker vsock handshake")?
-        .context("read vsock handshake")?;
-        if !ack.starts_with("OK ") {
+            .context("wait for guest hello")??;
+        let GuestToAgent::Hello {
+            protocol_version,
+            image_id,
+            configuration_received,
+        } = &message
+        else {
+            return Err(Error::GuestMismatch);
+        };
+        if *protocol_version != ProtocolVersion::CURRENT || *image_id != self.vm.report.image_id {
             return Err(Error::GuestMismatch);
         }
-        let mut hello = Vec::new();
-        timeout(
-            Duration::from_secs(30),
-            (&mut read).take(1_048_576).read_until(b'\n', &mut hello),
-        )
-        .await
-        .context("wait for guest hello")?
-        .context("read guest hello")?;
-        let message = serde_json::from_slice(&hello).context("decode guest hello")?;
-        if message
-            != (GuestToAgent::Hello {
-                protocol_version: ProtocolVersion::CURRENT,
-                image_id: self.vm.report.image_id.clone(),
+        let configure = {
+            let mut pending = self.configuration.lock().await;
+            pending.received = Some(*configuration_received);
+            if *configuration_received {
+                pending.pending = None;
+            }
+            pending.pending.clone()
+        };
+        let mut configuration_lost = !configuration_received && configure.is_none();
+        let hello = message.clone();
+        self.events
+            .send(GuestEvent {
+                runner_id: self.vm.report.runner_id.clone(),
+                configuration_lost: !configuration_received && configure.is_none(),
+                message,
             })
-        {
-            return Err(Error::GuestMismatch);
-        }
-        self.emit(message).await?;
-        if let Some(configure) = config.clone() {
-            let mut bytes = serde_json::to_vec(&configure).context("encode registration")?;
-            bytes.push(b'\n');
-            write
-                .write_all(&bytes)
-                .await
-                .context("send registration over vsock")?;
-            *config = None;
+            .await
+            .context("deliver guest hello")?;
+        if let Some(configure) = configure.as_ref() {
+            socket.send(configure).await?;
         }
         let stop_requested = *shutdown.borrow_and_update();
         if stop_requested {
-            write
-                .write_all(&frame(&AgentToGuest::Shutdown)?)
-                .await
-                .context("request idle guest shutdown")?;
+            socket.send(&AgentToGuest::Shutdown).await?;
         }
         let mut health = interval(Duration::from_secs(10));
         health.set_missed_tick_behavior(MissedTickBehavior::Skip);
-        let mut bytes = Vec::new();
         loop {
-            let mut bounded = (&mut read).take(1_048_576_u64.saturating_sub(bytes.len() as u64));
             tokio::select! {
-                read = bounded.read_until(b'\n', &mut bytes) => {
-                    if read.context("read guest event")? == 0 { return Err(Error::Disconnected); }
-                    if bytes.last() != Some(&b'\n') { return Err(Error::GuestMismatch); }
-                    let message = serde_json::from_slice(&bytes).context("decode guest event")?;
+                message = socket.receive() => {
+                    let message = message?;
+                    if let GuestToAgent::RunnerConfigured { runner_id } = &message {
+                        if *runner_id != self.vm.report.runner_id { return Err(Error::GuestMismatch); }
+                        { let mut current = self.configuration.lock().await; current.pending = None; current.received = Some(true); }
+                        configuration_lost = false;
+                    }
                     self.emit(message).await?;
-                    bytes.clear();
                 }
                 message = receiver.recv() => {
                     let message = message.ok_or(Error::Disconnected)?;
-                    let mut bytes = serde_json::to_vec(&message).context("encode guest message")?;
-                    bytes.push(b'\n');
-                    write.write_all(&bytes).await.context("send guest message")?;
+                    socket.send(&message).await?;
                 }
                 changed = shutdown.changed() => {
                     changed.context("read pending guest shutdown")?;
-                    write.write_all(&frame(&AgentToGuest::Shutdown)?).await.context("request idle guest shutdown")?;
+                    socket.send(&AgentToGuest::Shutdown).await?;
                 }
                 _ = health.tick() => {
+                    if configuration_lost && self.configuration.lock().await.lost() {
+                        self.events.send(GuestEvent {
+                            runner_id: self.vm.report.runner_id.clone(),
+                            configuration_lost: true,
+                            message: hello.clone(),
+                        }).await.context("replay lost configuration observation")?;
+                    }
                     if self.commands.unit(&unit_name(&self.vm)).await? != UnitState::Active {
                         return Err(Error::Disconnected);
                     }
@@ -160,16 +147,11 @@ impl GuestBridge {
         self.events
             .send(GuestEvent {
                 runner_id: self.vm.report.runner_id.clone(),
+                configuration_lost: false,
                 message,
             })
             .await
             .context("deliver guest event")?;
         Ok(())
     }
-}
-
-fn frame(message: &AgentToGuest) -> Result<Vec<u8>> {
-    let mut bytes = serde_json::to_vec(message).context("encode guest message")?;
-    bytes.push(b'\n');
-    Ok(bytes)
 }

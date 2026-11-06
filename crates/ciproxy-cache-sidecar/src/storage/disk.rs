@@ -1,7 +1,7 @@
 //! Persistent files with atomic publication, one byte budget, and cancellation.
 
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Weak};
 
 use async_trait::async_trait;
@@ -26,6 +26,7 @@ use super::{assembly, read};
 pub struct DiskStorage {
     pub(super) root: PathBuf,
     pub(super) capacity: Arc<AtomicU64>,
+    pub(super) budget_known: Arc<AtomicBool>,
     pub(super) used: Arc<AtomicU64>,
     pub(super) generation: AtomicU64,
     pub(super) captures: Mutex<Vec<Weak<Reservation>>>,
@@ -37,6 +38,17 @@ pub struct DiskStorage {
 impl DiskStorage {
     /// Select a dedicated cache directory and its byte budget.
     pub fn new(root: PathBuf, capacity: u64) -> Self {
+        Self::with_budget(root, Some(capacity))
+    }
+
+    /// Recover retained entries without new capture or eviction until a budget arrives.
+    pub fn waiting_for_budget(root: PathBuf) -> Self {
+        Self::with_budget(root, None)
+    }
+
+    fn with_budget(root: PathBuf, budget: Option<u64>) -> Self {
+        let budget_known = Arc::new(AtomicBool::new(budget.is_some()));
+        let capacity = budget.unwrap_or(0);
         let used = Arc::new(AtomicU64::new(0));
         let capacity = Arc::new(AtomicU64::new(capacity));
         let index = Arc::new(Mutex::new(None));
@@ -44,11 +56,13 @@ impl DiskStorage {
             root.clone(),
             used.clone(),
             capacity.clone(),
+            budget_known.clone(),
             index.clone(),
         ));
         Self {
             root,
             capacity,
+            budget_known,
             used,
             generation: AtomicU64::new(0),
             captures: Mutex::new(Vec::new()),
@@ -143,7 +157,9 @@ impl Storage for DiskStorage {
 
     async fn capture(&self, body: Body, expected: Option<u64>) -> (Body, Option<Arc<Capture>>) {
         let _guard = self.index.lock().await;
-        if fs::create_dir_all(&self.root).await.is_err() {
+        if !self.budget_known.load(Ordering::SeqCst)
+            || fs::create_dir_all(&self.root).await.is_err()
+        {
             return (body, None);
         }
         match NamedTempFile::new_in(&self.root) {
@@ -168,6 +184,9 @@ impl Storage for DiskStorage {
 
     async fn combine(&self, chunks: Vec<Arc<Captured>>) -> Result<Arc<Captured>> {
         let _guard = self.index.lock().await;
+        if !self.budget_known.load(Ordering::SeqCst) {
+            return Err(CacheError::Unavailable);
+        }
         assembly::combine(
             &self.root,
             self,
@@ -181,7 +200,7 @@ impl Storage for DiskStorage {
 
     async fn publish(&self, mut entry: Entry, blob: &Captured) -> Result<Entry> {
         let mut index = self.index.lock().await;
-        if blob.generation != self.generation() {
+        if !self.budget_known.load(Ordering::SeqCst) || blob.generation != self.generation() {
             return Err(CacheError::Unavailable);
         }
         let records = entries(&self.root).await?;

@@ -110,6 +110,12 @@ cargo run --package ciproxy-cache-sidecar -- machine \
 The agent creates the token file before startup. It contains an independent
 random secret. The service has no anonymous administration route.
 
+`--capacity-bytes` is optional. Without it, the budget is unknown. The
+service then recovers its retained entries, writes no new archive, and
+evicts nothing until `PUT /budget` sets a budget. With an explicit
+capacity, also zero, startup reclaims the entries that do not fit it.
+The agent's unit omits the option.
+
 ### Agent integration
 
 The agent owns VM network, image, and lifecycle wiring. Use one

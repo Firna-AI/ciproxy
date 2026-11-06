@@ -7,5 +7,6 @@ expression: message
 {
   "type": "hello",
   "protocol_version": 1,
-  "image_id": "ubuntu-image-1"
+  "image_id": "ubuntu-image-1",
+  "configuration_received": false
 }

@@ -40,8 +40,15 @@ pub(in crate::service) fn configure() -> AgentToGuest {
 
 pub(super) fn hello() -> Observation {
     Observation::Message(GuestToAgent::Hello {
+        configuration_received: false,
         protocol_version: ProtocolVersion::CURRENT,
         image_id: ImageId("image-1".into()),
+    })
+}
+
+pub(super) fn configured() -> Observation {
+    Observation::Message(GuestToAgent::RunnerConfigured {
+        runner_id: RunnerId("runner-7".into()),
     })
 }
 

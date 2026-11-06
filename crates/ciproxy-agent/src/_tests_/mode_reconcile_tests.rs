@@ -44,9 +44,12 @@ impl Cache for WaitingCache {
         self.delegate.prepare(runner, facts).await
     }
     async fn budget(&self, bytes: u64) -> Result<()> {
+        self.delegate.budget(bytes).await
+    }
+    async fn refresh_budget(&self, bytes: u64) -> Result<()> {
         let barrier = self.barrier.lock().await.take().unwrap();
         barrier.await.unwrap();
-        self.delegate.budget(bytes).await
+        self.delegate.refresh_budget(bytes).await
     }
     async fn report(&self) -> Result<MachineCacheReport> {
         self.delegate.report().await
@@ -65,7 +68,7 @@ async fn removal_during_a_delayed_reconciliation_stays_terminal() {
         HostMock::hardware
             .some_call(matching!())
             .returns(Ok(hardware())),
-        CacheMock::budget
+        CacheMock::refresh_budget
             .some_call(matching!(645_000_000_000))
             .returns(Ok(())),
         StoreMock::save

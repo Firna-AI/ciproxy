@@ -142,3 +142,48 @@ async fn replay_reuses_live_credentials_and_registers_again_only_after_sidecar_l
         assert_eq!(data, 7);
     }
 }
+
+#[tokio::test]
+async fn periodic_reconciliation_failure_recovers_service_without_reclaiming_entries() {
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let released = events.clone();
+    let commands = events.clone();
+    let mock = Arc::new(Unimock::new((
+        AdministrationMock::budget
+            .each_call(matching!(_))
+            .answers(&|_, _| Err(Error::CacheUnavailable)),
+        CommandsMock::unit
+            .each_call(matching!(_))
+            .answers(&|_, _| Ok(UnitState::Active)),
+        CacheFilesMock::release_occupied_space
+            .each_call(matching!())
+            .answers_arc(Arc::new(move |_| {
+                released.lock().unwrap().push("reclaim".to_owned());
+                Ok(())
+            })),
+        CommandsMock::run
+            .each_call(matching!(_, _, _))
+            .answers_arc(Arc::new(move |_, _, args, _| {
+                commands.lock().unwrap().push(args[0].clone());
+                Ok(Vec::new())
+            })),
+    )));
+    let cache = Arc::new(HttpCache::with_boundaries(mock.clone(), mock.clone(), mock));
+    let mut agent = crate::fixtures::controller(
+        crate::state::MachineState::default(),
+        Unimock::new(
+            crate::boundaries::HostMock::hardware
+                .some_call(matching!())
+                .returns(Ok(crate::fixtures::hardware())),
+        ),
+    );
+    agent.cache = cache.clone();
+    crate::controller::Agent::reconcile(&agent).await.unwrap();
+    assert_eq!(*events.lock().unwrap(), vec!["start"]);
+    assert_eq!(agent.state.lock().await.runners.len(), 0);
+    cache.budget(80).await.unwrap();
+    assert_eq!(
+        *events.lock().unwrap(),
+        vec!["start", "stop", "reclaim", "start"]
+    );
+}
