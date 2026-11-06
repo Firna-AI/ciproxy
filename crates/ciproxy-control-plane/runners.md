@@ -52,7 +52,8 @@ A runner gets its first confirmation from positive evidence of its VM.
 A current command result saves it with that result. Other evidence comes
 from a full report that lists the runner, from the agent's ready, job start,
 or exit event, or from GitHub.
-The GitHub evidence is a trusted job start or a busy answer for the runner.
+The GitHub evidence is an eligible trusted job start or a busy answer for
+the runner. Ignored stale `Started` facts grant no new evidence.
 Each such observation saves the runner state, the trusted GitHub ID, and the
 first confirmation in one transaction. The store writes that time once.
 A full report confirms at its receipt time. Agent and GitHub observations

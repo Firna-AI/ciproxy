@@ -244,7 +244,7 @@ protocol, HTTP route, setting, or public constructor.
       its two small behaviour differences in the commit.
 - [x] Run each new or changed asynchronous test ten times. Save the counts
       under `.context/runner-observation-confirmation/evidence/`.
-- [ ] After the source freeze, name the final API in the store interface
+- [x] After the source freeze, name the final API in the store interface
       and PostgreSQL store READMEs, and update each changed Key Code entry.
 
 ## Milestone 3: Verification, commit, review, and pull request
