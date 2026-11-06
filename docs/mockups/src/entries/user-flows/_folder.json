@@ -8,6 +8,10 @@
     "member-asks-for-access",
     "admin-gives-admin-role",
     "admin-adds-organization",
-    "free-keeps-organizations"
+    "admin-chooses-workspace",
+    "owner-approves-later",
+    "free-keeps-organizations",
+    "free-adds-organization",
+    "admin-turns-on-organization"
   ]
 }

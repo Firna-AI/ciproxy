@@ -7,7 +7,9 @@ use ciproxy_store_interface::organizations::AppState;
 use unimock::{MockFn, Unimock, matching};
 
 use crate::app::webhook::InstallationAction;
-use crate::app::{GitHubApp, InstallAuthorityMock, InstallationOutcome, LifecycleOutputMock};
+use crate::app::{
+    GitHubApp, InstallAuthorityMock, InstallationDecision, InstallationOutcome, LifecycleOutputMock,
+};
 use crate::persistence::installation::InstallationStoreMock;
 use crate::persistence::lifecycle::LifecycleStoreMock;
 use crate::rest::GitHubRestMock;
@@ -19,7 +21,7 @@ use super::coordination::{coordination, delivery, lease};
 use crate::error::Error;
 use crate::installation_state::InstallationApiMock;
 
-use super::support::{app, at, context, event, labels, organization, repositories};
+use super::support::{app, at, context, event, id, labels, organization, repositories};
 
 #[tokio::test]
 async fn removal_revokes_store_state_before_last_workspace_cleanup_delivery() {
@@ -98,6 +100,9 @@ async fn suspension_stops_idle_organization_capacity_without_revoking_workspace(
         InstallationStoreMock::by_installation
             .some_call(matching!(19))
             .returns(Ok(Some(organization()))),
+        InstallationStoreMock::activation
+            .each_call(matching!(_))
+            .answers(&|_, _| Ok(Default::default())),
         LifecycleStoreMock::update
             .some_call(matching!(_, _))
             .answers(&|_, previous, snapshot| {
@@ -107,9 +112,13 @@ async fn suspension_stops_idle_organization_capacity_without_revoking_workspace(
                 saved.app_state = AppState::Suspended;
                 Ok(saved)
             }),
-        InstallAuthorityMock::intended_workspace
-            .some_call(matching!(41, 17))
-            .returns(Ok(None)),
+        RuntimeMock::uuid.some_call(matching!()).returns(id(99)),
+        InstallationStoreMock::associate
+            .some_call(matching!(_))
+            .answers(&|_, signed| Ok(signed.associate(None, false).unwrap())),
+        InstallAuthorityMock::installation_decision
+            .some_call(matching!((claim) if claim.requester_id == 41 && claim.github_id == 17 && claim.installation_id == 19))
+            .returns(Ok(InstallationDecision::Direct)),
         LifecycleStoreMock::register
             .some_call(matching!(_))
             .answers(&|_, registration| {
@@ -159,6 +168,9 @@ async fn unsuspend_reconciles_access_and_resumes_organization_capacity() {
         InstallationStoreMock::by_installation
             .some_call(matching!(19))
             .returns(Ok(Some(suspended))),
+        InstallationStoreMock::activation
+            .each_call(matching!(_))
+            .answers(&|_, _| Ok(Default::default())),
         LifecycleStoreMock::update
             .some_call(matching!(_, _))
             .answers(&|_, previous, snapshot| {

@@ -189,6 +189,18 @@ impl Fixture {
             .bind::<sql_types::Jsonb,_>(serde_json::to_value(report).unwrap()).bind::<sql_types::Timestamptz,_>(at()).execute(&mut self.connection).unwrap();
         machine.id
     }
+
+    pub(super) fn hold_organization(&mut self) {
+        diesel::sql_query("UPDATE organization_activation SET admitted=FALSE,admin_approval_hold=TRUE WHERE workspace_id=$1 AND organization_id=$2")
+            .bind::<sql_types::Uuid,_>(self.workspace).bind::<sql_types::Uuid,_>(self.organization)
+            .execute(&mut self.connection).unwrap();
+    }
+
+    pub(super) fn admit_organization(&mut self) {
+        diesel::sql_query("UPDATE organization_activation SET admitted=TRUE,admin_approval_hold=FALSE WHERE workspace_id=$1 AND organization_id=$2")
+            .bind::<sql_types::Uuid,_>(self.workspace).bind::<sql_types::Uuid,_>(self.organization)
+            .execute(&mut self.connection).unwrap();
+    }
 }
 
 impl Drop for Fixture {

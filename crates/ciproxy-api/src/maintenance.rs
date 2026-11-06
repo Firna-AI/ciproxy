@@ -24,6 +24,36 @@ pub struct Maintenance {
 impl ApiMaintenance for Maintenance {
     async fn reconcile(&self) -> Result<()> {
         let mut failure = self.state.access.reconcile().await.err();
+        let choices = query(self.state.store.clone(), |store| {
+            store.pending_installation_choices()
+        })
+        .await?;
+        for claim in choices {
+            if let Err(error) = self
+                .state
+                .github
+                .resolve_installation_link(claim)
+                .await
+                .api()
+            {
+                failure = Some(error);
+            }
+        }
+        let activations = query(self.state.store.clone(), |store| {
+            store.pending_organization_activations()
+        })
+        .await?;
+        for workspace in activations {
+            if let Err(error) = self
+                .state
+                .github
+                .reconcile_organization_activation(workspace)
+                .await
+                .api()
+            {
+                failure = Some(error);
+            }
+        }
         let pending = query(self.state.store.clone(), |store| {
             store.pending_organization_takeouts()
         })

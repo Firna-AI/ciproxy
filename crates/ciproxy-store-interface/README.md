@@ -178,6 +178,22 @@ includes active bindings and draining bindings with tracked work or pending
 delivery. Exact context survives cleanup for final acknowledgements and runner
 removal. Confirmed removal applies only to the exact saved binding and remote ID.
 
+InstallationLinkStore owns explicit typed entry evidence, signed requester
+claims, fresh-user proof, exact eligible offers, and immutable workspace choice.
+SignedInstallation joins signed identity with the requester's own Add
+evidence.
+The store saves ownership and flow together. Replay keeps the signed flow.
+Browser proof cannot replace signed ownership or change that flow.
+InstallationClaim derives one typed recovery state from those durable facts.
+Signed Direct events need no Add proof or choice. Provisional Direct callbacks
+still wait for the signed event. Add retains both proof and choice requirements.
+Its records retain no GitHub grant or profile and do not retain dashboard users.
+OrganizationActivation stores separate billing and Admin holds. Missing metadata
+never authorizes execution. Existing organizations have explicit admitted data.
+New linked organizations count even while inactive. Removed ones do not count.
+Retained reinstall preserves holds and admission. Only a confirmed new workspace
+creates first-Admin work. Runnable authority also requires active GitHub App state.
+
 OwnRunnerStore exposes one coherent workspace routing snapshot.
 Its dedicated session lease serializes own-machine decisions.
 Runner intents retain exact slot sets and the original whole-GB label
@@ -233,6 +249,10 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 
 ### Key Code
 
+- [src/installation_links.rs](src/installation_links.rs) owns association and
+  execution admission.
+- [src/installation_association.rs](src/installation_association.rs) owns the
+  typed signed identity and deterministic association rules.
 - [src/dashboard](src/dashboard) owns dashboard identity and access queries.
 - [src/own_runners.rs](src/own_runners.rs) owns exact execution records.
 

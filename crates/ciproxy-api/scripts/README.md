@@ -45,18 +45,18 @@ adapters, shared gateway, trusted image disk size, and maintenance worker as the
 
 ## GitHub installation binding
 
-This live probe checks the facts needed by the open organization-binding
-decision. It does not enable an add-organization route. Run it once as an
-organization owner, then once as a member whose install needs approval.
+This live probe checks the approved state-only organization-binding flow.
+Run it once as an organization owner. Then run it as a member whose install
+needs approval.
 
 The private credential file supplies `github_user_token`, `github_app_jwt`,
 `github_app_slug`, `target_organization_id`, and `installation_proof_file`. Use
 a GitHub App user token for the initiating person. Use a fresh App JWT. Keep the
 proof file outside the repository. The probe writes it with mode 600. It
 contains the generated state and a URL that only the operator opens. The URL
-uses GitHub's documented `suggested_target_id` parameter on the
-`/installations/new/permissions` path. GitHub still decides who can finish the
-installation.
+uses `/installations/new?state=...`. Pick the organization on GitHub.
+The private target ID is an expected observation only. It is never sent in
+that URL. GitHub still decides who can finish the installation.
 
 ```sh
 python3 crates/ciproxy-api/scripts/live_install_binding.py prepare
@@ -76,12 +76,13 @@ python3 crates/ciproxy-api/scripts/live_install_binding.py verify
 
 The probe checks all request and installation pages. It does not trust a
 callback installation ID without the initiating person's user-token proof.
-Repeat with two simultaneous flows into different workspaces. Record whether
-GitHub returns enough information to distinguish those flows. Record only
+Repeat with two simultaneous flows into different workspaces. Verify that
+each original person chooses the exact intended workspace.
+Request or event evidence alone must leave the organization waiting. Record only
 pass/fail facts under `.context`, without URLs or credentials.
 
 GitHub documents the [installation request API][requests] and the
-[suggested-target URL parameter][install-url]. The live check remains blocked
+[installation entry flow][install-url]. The live check remains blocked
 until an operator supplies the test App and organization credentials.
 
 [requests]:

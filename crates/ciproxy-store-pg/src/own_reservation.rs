@@ -1,5 +1,6 @@
 //! Recheck mutable execution authority while reserving a new own-machine runner.
 
+use ciproxy_schema::installation_links::organization_activation;
 use ciproxy_schema::labels::labels;
 use ciproxy_schema::machines::machines;
 use ciproxy_schema::organizations::organizations;
@@ -53,6 +54,18 @@ pub(crate) fn require_authority(
         .optional()
         .store()?;
     if organization.is_none() {
+        return Err(Error::InvalidReference);
+    }
+    let admitted = organization_activation::table
+        .find(intent.runner.organization_id)
+        .filter(organization_activation::workspace_id.eq(workspace_id))
+        .filter(organization_activation::admitted.eq(true))
+        .select(organization_activation::organization_id)
+        .for_update()
+        .first::<Uuid>(connection)
+        .optional()
+        .store()?;
+    if admitted.is_none() {
         return Err(Error::InvalidReference);
     }
     let label = labels::table

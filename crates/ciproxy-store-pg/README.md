@@ -224,6 +224,8 @@ CI starts the database for the existing workspace test phase.
 
 ### Key Code
 
+- [Installation queries](src/installation_links/README.md) retain exact claims
+  and local execution admission.
 - [src/dashboard](src/dashboard) owns dashboard identity and access queries.
 - [src/own_runners.rs](src/own_runners.rs) stores exact execution intents.
 - [src/own_observation.rs](src/own_observation.rs) saves one scoped runner

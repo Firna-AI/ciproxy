@@ -4,11 +4,11 @@
 // every organization, as the answer to item 48 says. An Admin renames the
 // workspace, adds an organization, which installs the GitHub App on it on
 // GitHub, where GitHub decides who may finish the install, and takes one out.
-// Free holds one organization; Team and Business hold several. A workspace
-// that keeps more after a move to Free shows the banner of that soft limit.
-// The last organization has no Take out, on every tier.
+// Free includes one organization, and Team and Business several. On Free, Add
+// an organization stays: the new one joins inactive until Team, as the answer
+// D to item 83 says. A workspace that keeps more after a move to Free shows
+// the banner of that soft limit. The last organization has no Take out.
 
-import type { ReactNode } from "react";
 import { Plus } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
 
@@ -16,50 +16,29 @@ import { Action, LinkAction } from "../../components/actions.tsx";
 import { Notice } from "../../components/feedback.tsx";
 import { Panel } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
-import { usageBanner } from "../../components/usage-banner.tsx";
-import { workspace } from "../../fixtures/org.ts";
-import { organizationAccess } from "../../fixtures/settings.ts";
+import { organizationsText, workspace } from "../../fixtures/org.ts";
 import { tiers } from "../../fixtures/tiers.ts";
-import {
-  RenameWorkspaceDialog,
-  TakeOutDialog,
-} from "./organization-dialogs.tsx";
 import { OrganizationList } from "./organization-list.tsx";
+import {
+  organizationsScene,
+  type OrganizationsState,
+} from "./organization-scenes.tsx";
 import { SettingsFrame } from "./settings-frame.tsx";
-
-export const organizationsStates = [
-  "team",
-  "free",
-  "free-over",
-  "one-on-team",
-  "take-out",
-  "rename",
-] as const;
-export type OrganizationsState = (typeof organizationsStates)[number];
-
-/** The states on Free, and the states with one organization. */
-const onFree: readonly OrganizationsState[] = ["free", "free-over"];
-const single: readonly OrganizationsState[] = ["free", "one-on-team"];
-
-/** "one organization", "3 organizations". */
-function organizationsText(count: number): string {
-  return count === 1 ? "one organization" : `${count} organizations`;
-}
 
 function FreeNotice() {
   const { free, team, business } = tiers;
   return (
     <Notice
       tone="info"
-      title={`Add organizations on ${team.name}`}
+      title={`Run more organizations on ${team.name}`}
       actions={
         <LinkAction to={paths.plans} size="sm">
           Compare plans
         </LinkAction>
       }
     >
-      {free.name} holds {organizationsText(free.organizations ?? 1)}.{" "}
-      {team.name} and {business.name} hold several, on the same machines.
+      {free.name} includes {organizationsText(free.organizations ?? 1)}.{" "}
+      {team.name} and {business.name} run several, on the same machines.
     </Notice>
   );
 }
@@ -84,11 +63,6 @@ function WorkspacePanel() {
   );
 }
 
-function overlay(state: OrganizationsState): ReactNode {
-  if (state === "take-out") return <TakeOutDialog />;
-  return state === "rename" ? <RenameWorkspaceDialog /> : undefined;
-}
-
 export function OrganizationsScreen({
   viewport,
   state,
@@ -96,21 +70,15 @@ export function OrganizationsScreen({
   viewport: Viewport;
   state: OrganizationsState;
 }) {
-  const free = onFree.includes(state);
-  const list = single.includes(state)
-    ? organizationAccess.slice(0, 1)
-    : organizationAccess;
+  const scene = organizationsScene(state);
+  const { free, team } = tiers;
   return (
     <SettingsFrame
       viewport={viewport}
       active={paths.organizations}
-      tier={free ? "free" : "team"}
-      banner={
-        state === "free-over"
-          ? usageBanner("free-organizations", "other")
-          : undefined
-      }
-      overlay={overlay(state)}
+      tier={scene.tier}
+      banner={scene.banner}
+      overlay={scene.overlay}
     >
       <WorkspacePanel />
       {state === "free" ? <FreeNotice /> : null}
@@ -118,21 +86,24 @@ export function OrganizationsScreen({
         title="Organizations"
         flush
         action={
-          free ? undefined : (
-            <Action size="sm" icon={Plus}>
-              Add an organization
-            </Action>
-          )
+          <Action size="sm" icon={Plus}>
+            Add an organization
+          </Action>
         }
       >
-        <OrganizationList viewport={viewport} list={list} />
+        <OrganizationList
+          viewport={viewport}
+          list={scene.list}
+          turnOn={scene.turnOn}
+        />
       </Panel>
-      {free ? null : (
-        <p className="caption">
-          Add an organization opens GitHub, where you pick the organization and
-          its repositories.
-        </p>
-      )}
+      <p className="caption">
+        Add an organization opens GitHub, where you pick the organization and
+        its repositories.
+        {scene.tier === "free"
+          ? ` On ${free.name}, it stays inactive until ${team.name}.`
+          : null}
+      </p>
     </SettingsFrame>
   );
 }

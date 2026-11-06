@@ -33,11 +33,21 @@ The caller supplies an HTTP client that disables redirects.
 
 An authenticated installation event uses `requester` for an approved
 member request. It uses `sender` for a direct install with no requester.
-The setup URL does not choose the workspace.
-The role service implements `InstallAuthority`.
-It resolves the persisted intent of the Admin who started adding an
-organization. It checks the Admin role and the Free organization limit.
-It does not ask for a GitHub runner right.
+The store joins the exact signed requester, account, and installation before
+admission. It decides Direct or Add from that requester's own entry evidence.
+`InstallAuthority::installation_decision` consumes the saved canonical claim.
+It resolves Admin approval and billing for a chosen Add workspace.
+An unambiguous direct install keeps normal first-install and retained-reinstall
+behavior. An unresolved Add saves
+`AwaitingAssignment` before any workspace or runner preparation.
+Signed Direct evidence retries after preparation failure without Add proof.
+Callback-only Direct evidence still waits for its signed creation event.
+Another person's provisional proof cannot select the signed flow or workspace.
+The first signed association fixes the flow for every replay and later proof.
+For Add, the original person must prove installed association and choose a
+workspace.
+App access, missing state, or the newest attempt cannot select that workspace.
+The service asks for no GitHub runner right.
 
 Each organization mutation waits for a PostgreSQL advisory lease before
 reading policy, choosing a local registration, or listing repositories.
@@ -81,6 +91,20 @@ A retained reinstall reuses its workspace for 30 days, unless an Admin
 explicitly chose another workspace. It restores no revoked credential.
 A personal install returns organizations-only setup data and a removal
 link. It creates no workspace or runner resource.
+
+`resolve_installation_link` retries one exact signed Direct claim or verified
+Add choice.
+`reconcile_organization_activation` retries pending admission in a workspace.
+Local billing/Admin holds are separate from GitHub App state. `Inactive`
+lifecycle output blocks new work for only that organization. Original-requester
+Admin authority is checked at link, then preserved until a current Admin clears
+an explicit hold. Already admitted organizations stay admitted on downgrade.
+New workspace registration alone delivers a first-Admin grant.
+
+Consume `Store::organization_runnable` for actual execution authority. Listener
+context exposes that authority, and JIT creation requires it. Completion and
+runner removal retain exact binding context. The maintenance caller handles
+pending choices and activation without a new constructor or startup dependency.
 
 ### Repository access and scale sets
 
@@ -149,41 +173,7 @@ The scaler adds the image and ext4 allowance before runner allocation.
 
 ### Service integration boundaries
 
-The crate consumes the hosted store through `dyn Store` and blocking
-workers. The later control-plane runtime supplies these adapters:
-
-- `InstallAuthority` resolves installation intents and grants the first
-  Admin role. The sign-in service owns memberships and role storage.
-- `LifecycleOutput` stops idle organization runners and their listeners.
-  It preserves running jobs during removal and suspension.
-  Each `Removed` event carries a required `RemovalCause`. `Owner` and
-  `WorkspaceTakeout` select different retirement policies.
-- After the last organization leaves, the store revokes machine and
-  install credentials. The gateway closes each machine connection at its
-  next contact. The output requests idle sandbox cleanup and
-  schedules the subscription end. The overflow service keeps retired Boat
-  keys until running sandbox cleanup finishes.
-- `JobOutput` notifies the snapshot and scaler service of saved demand.
-  That service maps GitHub runner IDs to its runner records.
-  It supplies consistent snapshots and sends accepted actions to agents.
-- The retention worker calls `purge_github_jobs` for completed demand after
-  90 days, including records with pending notifications. Active work stays.
-  When GitHub omits `finishTime`, expiry uses the first trusted completion
-  observation from the store adapter's injected `Runtime`. Replay keeps
-  that observation. The GitHub completion field stays absent.
-
-The control-plane runtime calls `pending_lifecycle_organizations` after
-restart and while retrying failures. It calls `replay_lifecycle(github_id)`
-for each result independently. Replay needs no GitHub read or surviving
-registration. It takes the same organization mutation lease as webhooks.
-The runtime must keep retrying failed deliveries. This crate exposes the
-entry points and does not start a background worker itself.
-
-No adapter in this crate calls Boat.
-An owner removal cannot delete inaccessible GitHub resources.
-Suspension preserves the workspace and its credentials.
-Unsuspend reconciles the repositories and resumes lifecycle delivery.
-The dashboard take-out service owns the intentional-removal distinction.
+See [Service integration boundaries](INTEGRATION.md#service-integration-boundaries).
 
 ### Trusted run metadata
 

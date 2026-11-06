@@ -68,8 +68,9 @@ Register `PUBLIC_URL/hooks/github` as the App webhook URL.
 [The API guide](../ciproxy-api/README.md#quick-start) gives the other App
 registration settings. No route has an alias.
 The API owns sign-in, membership, setup, and workspace management.
-Adding an organization to an existing workspace stays off. The API
-registers no route for it.
+An Admin can add an organization to an existing workspace. The original
+requester proves installation access and chooses an eligible workspace.
+Local billing or Admin holds keep that organization inactive.
 
 SIGTERM or Ctrl-C during startup stops the process with status 0 before it
 serves. After startup, the signal makes readiness return HTTP 503 at once.
@@ -85,9 +86,14 @@ take-out policies.
 ### GitHub workers
 
 Each reconciliation pass also starts a scale-set listener for each label of
-an organization with an active App installation. It stops the listeners of
+an admitted organization with an active App installation. It stops the
+listeners of
 bindings that are gone. A deleted label keeps its listener while it has
 unfinished jobs or a pending delivery. That listener acquires no new jobs.
+An inactive organization gets no new runner or warm capacity. Its idle runners
+use GitHub-first retirement. Received jobs keep their trusted preparation and
+completion listeners through the final acknowledgement. Active sibling
+organizations keep their runners and demand.
 
 GitHub does not automatically retry failed webhooks.
 A separate worker scans all pages of retained App delivery history each

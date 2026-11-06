@@ -22,7 +22,11 @@ use super::{AccessService, LoginAttempt};
 #[serde(tag = "purpose", rename_all = "snake_case")]
 pub(super) enum Purpose {
     SignIn,
-    Setup { installation: SetupTarget },
+    Setup {
+        installation: Option<SetupTarget>,
+        install_state: Option<String>,
+        request_only: bool,
+    },
 }
 
 #[derive(Deserialize, Serialize)]

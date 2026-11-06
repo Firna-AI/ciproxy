@@ -17,6 +17,7 @@ use ciproxy_store_interface::workspaces::Workspace;
 
 use super::app_fixture::{Fixture, at, installed};
 use super::database::Database;
+use super::resource_fixture::seed_target_authority;
 use super::support::{id, setup};
 
 fn credentials(store: &Arc<dyn Store>) -> (TokenHash, TokenHash, TokenHash) {
@@ -122,6 +123,7 @@ async fn replacement_creation_before_old_deletion_revokes_old_access_before_acti
                 delete_after: None,
             };
             database.store.create_workspace(&workspace).unwrap();
+            seed_target_authority(database.store.as_ref(), workspace.id, 41);
             let mut label = database.store.labels(id(1)).unwrap().remove(0);
             label.id = id(91);
             database.store.create_label(workspace.id, &label).unwrap();

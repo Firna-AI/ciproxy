@@ -132,6 +132,7 @@ pub(super) fn target() -> ListenerTarget {
 
 pub(super) fn context() -> ListenerContext {
     ListenerContext {
+        organization_enabled: true,
         state: ScaleSetState::Active,
         has_tracked_jobs: true,
         organization: organization(),

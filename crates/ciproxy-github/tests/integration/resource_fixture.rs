@@ -5,8 +5,96 @@ use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
 use ciproxy_github::error::{Error, Result};
+use ciproxy_github::installation_state::InstalledApp;
 use ciproxy_github::scale_sets::{JitRegistration, MessageQueue, ScaleSetApi, ScaleSetFactory};
+use ciproxy_store_interface::billing::state::Tier;
+use ciproxy_store_interface::dashboard::records::{Membership, User};
+use ciproxy_store_interface::installation_association::SignedInstallation;
+use ciproxy_store_interface::installation_links::InstallationAttempt;
 use ciproxy_store_interface::organizations::Organization;
+use ciproxy_store_interface::organizations::{AppState, RepositoryAccess};
+use ciproxy_store_interface::store::Store;
+use uuid::Uuid;
+
+use super::app_fixture::at;
+
+/// The explicit-target scenarios need actual current membership, Admin, and paid capacity.
+pub(super) fn seed_target_authority(store: &dyn Store, workspace: Uuid, requester: i64) {
+    let organization = Organization {
+        id: Uuid::new_v4(),
+        workspace_id: workspace,
+        github_id: 5000,
+        login: "existing-target-member".to_owned(),
+        installation_id: 5001,
+        app_state: AppState::Active,
+        repositories: RepositoryAccess::AllPrivate,
+        removed_at: None,
+        delete_after: None,
+    };
+    store.install_organization(&organization).unwrap();
+    store
+        .ensure_dashboard_initial_admin(workspace, requester, at())
+        .unwrap();
+    store
+        .save_dashboard_user(
+            &User {
+                id: Uuid::new_v4(),
+                github_id: requester,
+                login: "target-admin".to_owned(),
+                avatar_url: "https://github.example/avatar".to_owned(),
+                credentials: vec![1],
+                checked_at: at(),
+            },
+            &[Membership {
+                github_id: organization.github_id,
+                owner: false,
+            }],
+        )
+        .unwrap();
+    let mut billing = store.try_lock_billing(workspace).unwrap().unwrap();
+    let mut record = billing.record().unwrap().state;
+    record.tier = Tier::Team;
+    billing
+        .commit(Some(&record), None, false, false, at())
+        .unwrap();
+}
+
+/// Prepare actual signed Add proof and choice before App event replay.
+pub(super) fn seed_installation_choice(
+    store: &dyn Store,
+    installation: &InstalledApp,
+    workspace: Uuid,
+    requester: i64,
+) {
+    let attempt = InstallationAttempt {
+        id: Uuid::new_v4(),
+        state_digest: Uuid::new_v4().as_bytes().to_vec(),
+        requester_id: requester,
+        direct: false,
+        installation_id: None,
+    };
+    store.begin_installation_attempt(&attempt).unwrap();
+    let mut claim = store
+        .associate_signed_installation(&SignedInstallation {
+            id: Uuid::new_v4(),
+            installation_id: installation.id,
+            github_id: installation.account.id,
+            login: installation.account.login.clone(),
+            requester_id: requester,
+        })
+        .unwrap();
+    claim.user_verified = true;
+    claim.verified_at = Some(at());
+    let claim = store
+        .save_installation_claim(&claim, Some(attempt.id))
+        .unwrap();
+    store
+        .offer_installation_workspaces(claim.id, requester, &[workspace])
+        .unwrap();
+    store
+        .choose_installation_workspace(claim.id, requester, workspace)
+        .unwrap();
+}
 
 pub(super) struct Resources {
     pub(super) base_id: AtomicI64,

@@ -75,15 +75,6 @@ pub trait DashboardStore: Send + Sync {
         at: DateTime<Utc>,
         claim: AdminClaim,
     ) -> Result<bool>;
-    /// Save the Admin's intended organization and workspace for delayed approval.
-    fn save_install_intent(
-        &self,
-        requester_id: i64,
-        github_id: i64,
-        workspace_id: Uuid,
-    ) -> Result<()>;
-    /// Resolve the exact requester's intended workspace without consuming retry authority.
-    fn install_intent(&self, requester_id: i64, github_id: i64) -> Result<Option<Uuid>>;
     /// Rename a workspace without changing its organization ownership.
     fn rename_workspace(&self, workspace_id: Uuid, name: &str) -> Result<()>;
     /// Stop new starts and save intentional removal plus cleanup delivery atomically.

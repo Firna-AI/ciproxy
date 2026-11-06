@@ -18,20 +18,30 @@ pub(crate) async fn begin(
     headers: HeaderMap,
     Query(parameters): Query<SetupCallback>,
 ) -> Result<Response> {
-    let Some(id) = parameters
-        .installation_id
-        .and_then(|id| id.parse::<i64>().ok())
-    else {
-        return Ok(Redirect::to("/sign-in?reason=github").into_response());
-    };
-    let installation = match state.installations.installation(id).await {
-        Ok(Some(installation)) => installation,
-        _ => return Ok(Redirect::to("/sign-in?reason=github").into_response()),
+    let request_only = parameters.setup_action.as_deref() == Some("request");
+    let installation = if request_only {
+        None
+    } else {
+        let Some(id) = parameters
+            .installation_id
+            .and_then(|id| id.parse::<i64>().ok())
+        else {
+            return Ok(Redirect::to("/sign-in?reason=github").into_response());
+        };
+        Some(match state.installations.installation(id).await {
+            Ok(Some(installation)) => installation,
+            _ => return Ok(Redirect::to("/sign-in?reason=github").into_response()),
+        })
     };
     let previous = cookie(&headers, "__Host-ciproxy");
     let attempt = state
         .access
-        .begin_setup(installation, previous.as_deref())
+        .begin_setup(
+            installation,
+            parameters.state,
+            request_only,
+            previous.as_deref(),
+        )
         .await?;
     let mut response = Redirect::to(&attempt.url).into_response();
     set_cookie(

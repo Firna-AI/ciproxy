@@ -71,6 +71,14 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   leaves the organizations on GitHub. `hardware.ts` holds the slot rule and
   the disk rule, in which each running job holds its VM disk: the current
   image with the free disk of its label, as `vm-disk.ts` gives it.
+- The return of Add an organization and the inactive organizations are
+  what-ifs in `org-links.ts`. In the main story, Cal Moore is an Admin of one
+  workspace, so the return links mokly-labs at once. On 2 November, he is also
+  an Admin of driftwood, a workspace on Free, so the return lists two. On 8
+  December, on Free, a third organization, mokly-studio, joins mokly-ai
+  inactive. In a second what-if, Ana Souza adds it, and her Admin role ends
+  after the return saves its workspace and before ciproxy finishes the link,
+  so it joins with a second hold, which waits for an Admin.
 - A screen takes the role of the signed-in person. The shell shows the person
   of the role, and Settings only to an Admin. In place of an action that the
   role does not allow, the screen shows the words of
@@ -103,6 +111,10 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   `src/components/usage-banner.tsx`, so one state shows one banner on every
   page. On Free, a second organization passes a soft limit too. At a failed
   payment, the payment banner takes the place of the soft-limit banner.
+- In the Organizations tab, an inactive organization gets the banner of
+  `src/components/inactive-banner.tsx`, which says why and offers Team or Turn
+  on. On Free, it takes the place of the soft-limit banner of the
+  organizations, and at a failed payment, the payment banner takes its place.
 - The legal pages show grey lines in place of the text that the user writes
   or approves before the launch. Only the data retention of the privacy policy
   has text, from `legal.ts`.
@@ -197,6 +209,11 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
 - `src/fixtures/org.ts`: the workspace and its two GitHub organizations.
   `github-app.ts` holds the permissions of the GitHub App, and `access.ts` the
   sign-in length and the what-ifs of a suspended or removed App.
+- `src/fixtures/org-links.ts`: the what-ifs of Add an organization: the Admin
+  workspaces that the return lists, the rule that a new organization joins
+  inactive on a full plan, and the holds of mokly-studio.
+- `src/components/inactive-banner.tsx`: the banner of an inactive
+  organization, and the reason of each hold, which its row repeats.
 - `src/components/install-command.tsx`: the one-line install command, and the
   notices of a machine without KVM or with too little disk.
 - `src/fixtures/site.ts`: the host of the public site. `cost-claim.ts` holds

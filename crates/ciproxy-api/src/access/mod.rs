@@ -1,8 +1,12 @@
 //! GitHub sign-in, verified memberships, and reusable workspace authorization.
 
 mod adapters;
-mod authentication;
+pub(crate) mod authentication;
 mod flow;
+mod install_authority;
+mod link_choice;
+mod link_identity;
+mod links;
 mod pending;
 mod setup;
 mod sign_in;
@@ -12,10 +16,13 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use ciproxy_github::app::GitHubApp;
 use ciproxy_github::installation_state::InstalledApp;
 use ciproxy_store_interface::dashboard::records::{Session, User};
+use ciproxy_store_interface::installation_links::InstallationClaim;
 use ciproxy_store_interface::store::Store;
 use secrecy::SecretString;
+use serde::{Deserialize, Serialize};
 use subtle::ConstantTimeEq;
 use uuid::Uuid;
 
@@ -44,8 +51,18 @@ pub struct LoginSuccess {
     pub expires_at: DateTime<Utc>,
 }
 
-/// An authenticated browser. Debug is absent to protect credential material.
+/// Exact install continuation kept only in sealed browser metadata.
+#[derive(Clone, Deserialize, Serialize)]
+pub(crate) enum InstallContext {
+    /// Exact explicit Direct or Add entry belonging to this person.
+    Attempt(Uuid),
+    /// Missing flow evidence cannot become a Direct retry.
+    AmbiguousAdd,
+}
+
+/// An authenticated browser, with credentials excluded from Debug.
 pub struct Principal {
+    pub(crate) install_context: Option<InstallContext>,
     pub(crate) user: User,
     pub(crate) session: Session,
     pub(crate) pending: bool,
@@ -106,7 +123,9 @@ pub trait DashboardAccess: Send + Sync {
     /// Start setup proof for an installation read through the configured App.
     async fn begin_setup(
         &self,
-        installation: InstalledApp,
+        installation: Option<InstalledApp>,
+        install_state: Option<String>,
+        request_only: bool,
         previous: Option<&str>,
     ) -> Result<LoginAttempt>;
     /// Finish only the matching browser's unconsumed OAuth attempt.
@@ -115,7 +134,22 @@ pub trait DashboardAccess: Send + Sync {
         code: SecretString,
         state: &str,
         cookie: &str,
+        github: &dyn GitHubApp,
     ) -> Result<LoginSuccess>;
+    /// Recheck owned installed claims with fresh user proof and return their states.
+    async fn refresh_installation_links(
+        &self,
+        principal: &Principal,
+        github: &dyn GitHubApp,
+    ) -> Result<Vec<InstallationClaim>>;
+    /// Verify only the selected claim, preserving exact prior offer authority.
+    async fn choose_installation_link(
+        &self,
+        principal: &Principal,
+        claim_id: Uuid,
+        workspace_id: Uuid,
+        github: &dyn GitHubApp,
+    ) -> Result<()>;
     /// Authenticate and refresh memberships when their hourly check is due.
     async fn authenticate(&self, cookie: &str) -> Result<Principal>;
     /// End the current browser's durable sign-in.

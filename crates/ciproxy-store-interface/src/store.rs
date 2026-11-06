@@ -9,6 +9,7 @@ use crate::error::Result;
 use crate::gateway::GatewayStore;
 use crate::github::GithubStore;
 use crate::github_lifecycle::GithubLifecycleStore;
+use crate::installation_links::InstallationLinkStore;
 use crate::jobs::JobStore;
 use crate::labels::LabelStore;
 use crate::machines::MachineStore;
@@ -41,6 +42,7 @@ pub trait Store:
     + GithubStore
     + GithubLifecycleStore
     + DashboardStore
+    + InstallationLinkStore
     + OwnRunnerStore
 {
 }

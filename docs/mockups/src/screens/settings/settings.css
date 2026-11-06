@@ -101,3 +101,27 @@
 .mockup-mobile .org-actions {
   justify-content: flex-start;
 }
+
+/* An inactive organization: its status under its name, with the avatar at
+   the top, and the actions that clear its holds above the other actions. */
+.person-top {
+  align-items: flex-start;
+}
+
+.org-status {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.org-actions-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.mockup-mobile .org-actions-stack {
+  align-items: flex-start;
+}

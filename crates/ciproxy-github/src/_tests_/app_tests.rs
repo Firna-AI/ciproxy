@@ -10,7 +10,9 @@ use ciproxy_store_interface::scale_sets::ScaleSet;
 use unimock::{MockFn, Unimock, matching};
 
 use crate::app::webhook::{AccountKind, InstallationAction};
-use crate::app::{GitHubApp, InstallAuthorityMock, InstallationOutcome, LifecycleOutputMock};
+use crate::app::{
+    GitHubApp, InstallAuthorityMock, InstallationDecision, InstallationOutcome, LifecycleOutputMock,
+};
 use crate::persistence::installation::InstallationStoreMock;
 use crate::persistence::lifecycle::LifecycleStoreMock;
 use crate::rest::GitHubRestMock;
@@ -24,7 +26,7 @@ use super::support::{app, event, id, labels, organization, repositories};
 
 #[tokio::test]
 async fn requester_creates_named_workspace_with_atomic_defaults_and_private_group() {
-    let ids = AtomicU64::new(1);
+    let ids = AtomicU64::new(0);
     let created = Arc::new(Mutex::new(Vec::new()));
     let observed = created.clone();
     let api: Arc<dyn ScaleSetApi> = Arc::new(Unimock::new((
@@ -48,9 +50,12 @@ async fn requester_creates_named_workspace_with_atomic_defaults_and_private_grou
                     id(u128::from(ids.fetch_add(1, Ordering::SeqCst)))
                 })),
         ),
-        InstallAuthorityMock::intended_workspace
-            .some_call(matching!(41, 17))
-            .returns(Ok(None)),
+        InstallationStoreMock::associate
+            .some_call(matching!(_))
+            .answers(&|_, signed| Ok(signed.associate(None, false).unwrap())),
+        InstallAuthorityMock::installation_decision
+            .some_call(matching!((claim) if claim.requester_id == 41 && claim.github_id == 17 && claim.installation_id == 19))
+            .returns(Ok(InstallationDecision::Direct)),
         InstallationStoreMock::by_github_id
             .some_call(matching!(17))
             .returns(Ok(vec![])),
@@ -141,9 +146,21 @@ async fn admin_intent_uses_shared_workspace_and_replay_keeps_label_edits() {
     ));
     let service = app(Unimock::new((
         coordination(false),
-        InstallAuthorityMock::intended_workspace
-            .some_call(matching!(41, 17))
-            .returns(Ok(Some(id(1)))),
+        InstallationStoreMock::associate
+            .some_call(matching!(_))
+            .answers(&|_, signed| {
+                let mut claim = signed.associate(None, true).unwrap();
+                claim.user_verified = true;
+                claim.workspace_id = Some(id(1));
+                Ok(claim)
+            }),
+        InstallAuthorityMock::installation_decision
+            .some_call(matching!((claim) if claim.requester_id == 41 && claim.github_id == 17 && claim.installation_id == 19))
+            .returns(Ok(InstallationDecision::Target {
+                workspace_id: id(1),
+                admin_approved: true,
+                billing_hold: false,
+            })),
         InstallationStoreMock::by_github_id
             .some_call(matching!(17))
             .returns(Ok(vec![existing.clone()])),
@@ -184,6 +201,10 @@ async fn admin_intent_uses_shared_workspace_and_replay_keeps_label_edits() {
         ScaleSetFactoryMock::for_organization
             .some_call(matching!(_))
             .returns(Ok(api)),
+        RuntimeMock::uuid.some_call(matching!()).returns(id(99)),
+        InstallationStoreMock::activation
+            .some_call(matching!(_))
+            .returns(Ok(Default::default())),
         InstallationStoreMock::labels
             .some_call(matching!(_))
             .returns(Ok(vec![edited])),

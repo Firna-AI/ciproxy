@@ -20,8 +20,9 @@ enum AccountType {
 
 #[derive(Deserialize, Serialize)]
 pub(super) struct SetupTarget {
-    installation_id: i64,
-    account_id: i64,
+    pub(super) installation_id: i64,
+    pub(super) account_id: i64,
+    pub(super) login: String,
     kind: AccountType,
 }
 
@@ -35,6 +36,7 @@ impl SetupTarget {
         Ok(Self {
             installation_id: installation.id,
             account_id: installation.account.id,
+            login: installation.account.login,
             kind,
         })
     }

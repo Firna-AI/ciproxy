@@ -81,6 +81,11 @@ impl GithubOAuthClient {
             .send()
             .await
             .internal()?;
+        if response.status().is_server_error()
+            || response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS
+        {
+            return Err(Error::Unavailable);
+        }
         if !response.status().is_success() {
             return Err(Error::Unauthorized);
         }

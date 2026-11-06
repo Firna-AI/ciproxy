@@ -4,9 +4,7 @@ use std::sync::Arc;
 
 use axum::extract::{Path, State};
 use axum::{Extension, Json};
-use ciproxy_store_interface::billing::state::Tier;
 use ciproxy_store_interface::github::DemandPhase;
-use ciproxy_store_interface::organizations::AppState;
 use ciproxy_store_interface::runners::RunnerPlace;
 
 use crate::access::Principal;
@@ -30,7 +28,7 @@ pub(crate) async fn setup(
         .require_role(&principal, path.workspace_id, true)
         .await?;
     let organizations = query(state.store.clone(), move |store| {
-        store.organizations(workspace_id)
+        views::organizations(store, workspace_id)
     })
     .await?;
     let machines = query(state.store.clone(), move |store| {
@@ -87,7 +85,7 @@ pub(crate) async fn setup(
     Ok(Json(SetupView {
         current_image_disk_bytes: state.config.image_disk_bytes.to_string(),
         first_job,
-        organizations: organizations.into_iter().map(views::organization).collect(),
+        organizations,
         machines,
         waiting_for_machine: machines == 0,
         labels: labels::read(&state, workspace_id).await?,
@@ -104,30 +102,25 @@ pub(crate) async fn settings(
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
-    let (workspace, organizations, requests, tier) = query(state.store.clone(), move |store| {
+    let (workspace, organizations, requests) = query(state.store.clone(), move |store| {
         Ok((
             store.workspace(workspace_id)?,
-            store.organizations(workspace_id)?,
+            views::organizations(store, workspace_id)?,
             store
                 .dashboard_members(workspace_id)?
                 .iter()
                 .filter(|member| member.role.is_none())
                 .count(),
-            store.billing(workspace_id)?.state.tier,
         ))
     })
     .await?;
     let workspace = workspace.ok_or(Error::NotFound)?;
-    let can_add = tier != Tier::Free
-        || organizations
-            .iter()
-            .all(|organization| organization.app_state == AppState::Removed);
     Ok(Json(SettingsView {
         name: workspace.name,
-        organizations: organizations.into_iter().map(views::organization).collect(),
+        organizations,
         labels: labels::read(&state, workspace_id).await?,
         open_requests: requests.try_into().unwrap_or(u32::MAX),
-        can_add_organization: can_add,
+        can_add_organization: true,
     }))
 }
 

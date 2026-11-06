@@ -1,8 +1,12 @@
 //! Credential-free mappings from store values to dashboard contract values.
 
 use ciproxy_store_interface::dashboard::records::{Member, Role};
+use ciproxy_store_interface::installation_links::OrganizationActivation;
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
+use ciproxy_store_interface::store::Store;
+use uuid::Uuid;
 
+use super::link_views;
 use crate::error::{Error, Result};
 use crate::wire::access::{MemberView, WorkspaceRole};
 use crate::wire::settings::{InstallationState, OrganizationView, RepositorySelection};
@@ -32,8 +36,9 @@ pub(super) fn member(value: Member) -> MemberView {
     }
 }
 
-pub(super) fn organization(value: Organization) -> OrganizationView {
+pub(super) fn organization(value: Organization, local: OrganizationActivation) -> OrganizationView {
     OrganizationView {
+        activation: link_views::activation(local, value.workspace_id, Some(Role::Admin)),
         id: value.id.to_string(),
         github_id: value.github_id.to_string(),
         login: value.login.clone(),
@@ -55,6 +60,20 @@ pub(super) fn organization(value: Organization) -> OrganizationView {
             value.login, value.installation_id
         ),
     }
+}
+
+pub(super) fn organizations(
+    store: &dyn Store,
+    workspace: Uuid,
+) -> ciproxy_store_interface::error::Result<Vec<OrganizationView>> {
+    store
+        .organizations(workspace)?
+        .into_iter()
+        .map(|value| {
+            let local = store.organization_activation(workspace, value.id)?;
+            Ok(organization(value, local))
+        })
+        .collect()
 }
 
 pub(super) fn access(value: RepositorySelection) -> Result<RepositoryAccess> {

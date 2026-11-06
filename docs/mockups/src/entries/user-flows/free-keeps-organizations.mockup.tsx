@@ -31,7 +31,7 @@ export const freeKeepsOrganizations = defineUseCase({
       screenPath: paths.organizationsFreeOver,
       title: "The same banner on Settings",
       description:
-        "Both organizations stay in the workspace. Free cannot add another, and each of the two keeps its Take out.",
+        "Both organizations stay in the workspace, and each of the two keeps its Take out. A new organization would join inactive until Team.",
     },
   ],
 });

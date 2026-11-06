@@ -95,7 +95,7 @@ async fn handle(
     }
     if path == "/user" {
         return Json(
-            json!({"id":7,"login":"person-7","avatar_url":"https://github.example/avatar"}),
+            json!({"id":data.control.person.load(Ordering::SeqCst),"login":format!("person-{}",data.control.person.load(Ordering::SeqCst)),"avatar_url":"https://github.example/avatar"}),
         )
         .into_response();
     }
@@ -114,6 +114,14 @@ async fn handle(
         }
         if !data.control.memberships.load(Ordering::SeqCst) {
             return Json(json!([])).into_response();
+        }
+        if let Some(ids) = &*data.control.membership_ids.lock().unwrap() {
+            return Json(
+                ids.iter()
+                    .map(|id| json!({"state":"active","role":"member","organization":{"id":id}}))
+                    .collect::<Vec<_>>(),
+            )
+            .into_response();
         }
         let batch = if page == "1" {
             (0..100).map(|index|json!({"state":"active","role":if index==0 {"admin"}else{"member"},"organization":{"id":100+index}})).collect::<Vec<_>>()

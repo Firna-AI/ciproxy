@@ -27,6 +27,8 @@ pub enum GithubLifecycleTarget {
     Active(GithubPreparedResources),
     /// Suspension needs no runner preparation.
     Suspended,
+    /// The App is installed but local admission blocks all runner preparation.
+    Inactive,
 }
 
 /// A new or retained organization registration and its prepared lifecycle state.
@@ -77,6 +79,15 @@ pub enum LifecycleEvent {
     Active(Organization),
     /// Stop idle runners while preserving running jobs and workspace resources.
     Suspended(Organization),
+    /// Local admission prevents new execution without changing GitHub App state.
+    Inactive {
+        /// Exact linked registration.
+        organization: Organization,
+        /// Current tier cannot accommodate the linked organization count.
+        billing_hold: bool,
+        /// A current Admin has not approved the link.
+        admin_approval_hold: bool,
+    },
     /// Stop idle capacity and perform removal cleanup for the saved workspace.
     Removed {
         /// The removed installation's exact committed organization snapshot.
@@ -94,7 +105,8 @@ impl LifecycleEvent {
         match self {
             Self::Active(organization)
             | Self::Suspended(organization)
-            | Self::Removed { organization, .. } => organization,
+            | Self::Removed { organization, .. }
+            | Self::Inactive { organization, .. } => organization,
         }
     }
 }

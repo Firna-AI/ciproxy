@@ -14,6 +14,7 @@ use uuid::Uuid;
 use crate::connection::PgStore;
 use crate::error::QueryResultExt;
 use crate::github::registration;
+use crate::installation_links::activation;
 use crate::organization_lifecycle::mark_app_removed;
 
 use super::{queue, rows, state};
@@ -26,6 +27,11 @@ pub(super) fn register(store: &PgStore, request: &GithubRegistration) -> Result<
             organization.app_state = rows::state(&request.target);
             rows::lock_workspace(connection, organization.workspace_id)?;
             let previous = rows::optional(connection, organization.workspace_id, organization.id)?;
+            let previous_activation = if previous.is_some() {
+                Some(activation::snapshot(connection, organization.id)?)
+            } else {
+                None
+            };
             registration::register(
                 connection,
                 request.workspace.as_ref(),
@@ -34,9 +40,24 @@ pub(super) fn register(store: &PgStore, request: &GithubRegistration) -> Result<
                 request.initial_admin,
             )?;
             let saved = rows::load(connection, organization.workspace_id, organization.id)?;
+            let linked = activation::link(
+                connection,
+                saved.workspace_id,
+                saved.id,
+                saved.installation_id,
+            )?;
+            if !linked {
+                if request.workspace.is_none() && previous.is_none() {
+                    return Err(Error::NotFound);
+                }
+                activation::initialize_admitted(connection, saved.workspace_id, saved.id)?;
+            }
             rows::resources(connection, &saved, &request.target)?;
-            if previous.as_ref() != Some(&saved) {
-                queue::insert(connection, &rows::event(saved.clone()))?;
+            let current_activation = activation::snapshot(connection, saved.id)?;
+            if previous.as_ref() != Some(&saved) || previous_activation != Some(current_activation)
+            {
+                let event = rows::event(connection, saved.clone())?;
+                queue::insert(connection, &event)?;
             }
             Ok(saved)
         })
@@ -54,10 +75,15 @@ pub(super) fn update(
         .transaction(|connection| {
             rows::lock_workspace(connection, workspace_id)?;
             let previous = rows::load(connection, workspace_id, organization_id)?;
+            let previous_activation = activation::snapshot(connection, organization_id)?;
             let saved = state::save(connection, workspace_id, organization_id, update)?;
             rows::resources(connection, &saved, &update.target)?;
-            if saved != previous || update.notify {
-                queue::insert(connection, &rows::event(saved.clone()))?;
+            if saved != previous
+                || update.notify
+                || activation::snapshot(connection, organization_id)? != previous_activation
+            {
+                let event = rows::event(connection, saved.clone())?;
+                queue::insert(connection, &event)?;
             }
             Ok(saved)
         })

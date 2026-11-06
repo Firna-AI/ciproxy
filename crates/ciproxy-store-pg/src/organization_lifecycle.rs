@@ -8,6 +8,7 @@ use diesel::dsl::max;
 use diesel::prelude::*;
 use uuid::Uuid;
 
+use crate::installation_links::retention;
 use crate::workspace_credentials::revoke_workspace_access;
 
 /// Preserve removal deadlines and end execution access after the last App.
@@ -78,6 +79,7 @@ pub(crate) fn purge_retained_organizations(
     if workspace.is_none() {
         return Ok(0);
     }
+    retention::purge(connection, workspace_id, Some(at))?;
     diesel::delete(
         organizations::table
             .filter(organizations::workspace_id.eq(workspace_id))

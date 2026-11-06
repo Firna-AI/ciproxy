@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::{Arc, Mutex};
 
+use super::ports_gate::ReadGate;
 use async_trait::async_trait;
 use ciproxy_api::error::Result;
 use ciproxy_api::identity::{Grant, Profile, UserIdentity};
@@ -12,7 +13,6 @@ use ciproxy_github::app::LifecycleOutput;
 use ciproxy_github::app::webhook::{Account, AccountKind};
 use ciproxy_github::installation_state::{InstallationApi, InstalledApp};
 use ciproxy_github::rest::GitHubRest;
-use ciproxy_github::scale_sets::{JitRegistration, MessageQueue, ScaleSetApi, ScaleSetFactory};
 use ciproxy_store_interface::dashboard::records::Membership;
 use ciproxy_store_interface::github::{Repository, RunFacts};
 use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
@@ -69,18 +69,27 @@ impl UserIdentity for Identity {
 }
 
 pub(super) struct Remote {
+    pub(super) read_gate: Mutex<Option<Arc<ReadGate>>>,
+    pub(super) ensure_gate: Mutex<Option<Arc<ReadGate>>>,
     pub(super) store: Arc<dyn Store>,
     pub(super) organizations: Mutex<Vec<Organization>>,
     pub(super) sets: Mutex<HashMap<(String, i64), i64>>,
     pub(super) next_id: AtomicI64,
     pub(super) events: Mutex<Vec<String>>,
+    pub(super) lifecycle_events: Mutex<Vec<LifecycleEvent>>,
     pub(super) fail_uninstall: AtomicBool,
     pub(super) fail_delete: AtomicBool,
+    pub(super) fail_ensure: AtomicBool,
     pub(super) fail_lifecycle: AtomicBool,
 }
 #[async_trait]
 impl InstallationApi for Remote {
     async fn for_organization(&self, login: &str) -> ciproxy_github::error::Result<InstalledApp> {
+        let gate = self.read_gate.lock().unwrap().take();
+        if let Some(gate) = gate {
+            gate.entered.notify_one();
+            gate.release.notified().await;
+        }
         let organization = self
             .organizations
             .lock()
@@ -91,7 +100,8 @@ impl InstallationApi for Remote {
             .unwrap();
         Ok(InstalledApp {
             id: organization.installation_id,
-            suspended: false,
+            suspended: organization.app_state
+                == ciproxy_store_interface::organizations::AppState::Suspended,
             account: Account {
                 id: organization.github_id,
                 login: organization.login,
@@ -154,66 +164,6 @@ impl GitHubRest for Remote {
 }
 pub(super) struct Factory(pub(super) Arc<Remote>);
 #[async_trait]
-impl ScaleSetFactory for Factory {
-    async fn for_organization(
-        &self,
-        _: &Organization,
-    ) -> ciproxy_github::error::Result<Arc<dyn ScaleSetApi>> {
-        Ok(self.0.clone())
-    }
-}
-#[async_trait]
-impl ScaleSetApi for Remote {
-    async fn find_runner(&self, _: &str) -> ciproxy_github::error::Result<Option<i64>> {
-        Ok(None)
-    }
-    async fn ensure(
-        &self,
-        name: &str,
-        group: i64,
-        saved: Option<i64>,
-    ) -> ciproxy_github::error::Result<i64> {
-        if let Some(id) = saved {
-            return Ok(id);
-        }
-        Ok(*self
-            .sets
-            .lock()
-            .unwrap()
-            .entry((name.to_owned(), group))
-            .or_insert_with(|| self.next_id.fetch_add(1, Ordering::SeqCst)))
-    }
-    async fn remove_scale_set(&self, id: i64) -> ciproxy_github::error::Result<()> {
-        if self.fail_delete.swap(false, Ordering::SeqCst) {
-            return Err(ciproxy_github::error::Error::AccessUnavailable(503));
-        }
-        self.events.lock().unwrap().push(format!("delete:{id}"));
-        self.sets.lock().unwrap().retain(|_, value| *value != id);
-        Ok(())
-    }
-    async fn rename_scale_set(&self, id: i64, name: &str) -> ciproxy_github::error::Result<()> {
-        let mut sets = self.sets.lock().unwrap();
-        let previous = sets
-            .iter()
-            .find(|(_, value)| **value == id)
-            .map(|(key, _)| key.clone());
-        if let Some((previous, group)) = previous {
-            sets.remove(&(previous, group));
-            sets.insert((name.to_owned(), group), id);
-        }
-        Ok(())
-    }
-    async fn open(&self, _: i64, _: &str) -> ciproxy_github::error::Result<Box<dyn MessageQueue>> {
-        Err(ciproxy_github::error::Error::InstallationPending)
-    }
-    async fn register(&self, _: i64, _: &str) -> ciproxy_github::error::Result<JitRegistration> {
-        Err(ciproxy_github::error::Error::InstallationPending)
-    }
-    async fn remove_runner(&self, _: i64) -> ciproxy_github::error::Result<()> {
-        Ok(())
-    }
-}
-#[async_trait]
 impl InstallationAdministration for Remote {
     async fn installation(&self, id: i64) -> Result<Option<InstalledApp>> {
         Ok(self
@@ -260,6 +210,7 @@ impl LifecycleOutput for Remote {
         if self.fail_lifecycle.swap(false, Ordering::SeqCst) {
             return Err(ciproxy_github::error::Error::AccessUnavailable(503));
         }
+        self.lifecycle_events.lock().unwrap().push(event.clone());
         self.events.lock().unwrap().push(format!(
             "lifecycle:{}",
             event.organization().installation_id

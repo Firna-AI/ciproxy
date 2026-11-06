@@ -3,6 +3,8 @@
 use ciproxy_store_interface::error::Error;
 use ciproxy_store_interface::own_runners::{OwnRunner, OwnRunnerObservation};
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
+use diesel::prelude::*;
+use diesel::sql_types;
 use uuid::Uuid;
 
 use super::super::support::{Database, at, machine, runner};
@@ -10,7 +12,7 @@ use super::fixtures::demand;
 
 #[test]
 fn retired_label_is_excluded_from_new_routing_and_reservation_without_losing_history() {
-    let database = Database::new();
+    let mut database = Database::new();
     let workspace = database.workspace();
     let organization = database.organization(&workspace);
     let (retired, old_set) = database.label_and_scale_set(&organization);
@@ -37,6 +39,20 @@ fn retired_label_is_excluded_from_new_routing_and_reservation_without_losing_his
     store.create_own_runner(workspace.id, &held).unwrap();
     let job = demand(&retired, &old_set);
     store.save_github_job(workspace.id, &job, at()).unwrap();
+    diesel::sql_query("UPDATE organization_activation SET admitted=FALSE,admin_approval_hold=TRUE WHERE organization_id=$1")
+        .bind::<sql_types::Uuid,_>(organization.id).execute(&mut database.connection).unwrap();
+    let mut inactive = held.clone();
+    inactive.runner.id = Uuid::new_v4();
+    inactive.runner.state = RunnerState::Starting;
+    inactive.command_id = Uuid::new_v4();
+    let outcome = store.create_own_runner(workspace.id, &inactive);
+    assert!(
+        matches!(outcome, Err(Error::InvalidReference)),
+        "inactive reservation: {outcome:?}"
+    );
+    assert_eq!(store.own_runners(workspace.id).unwrap(), vec![held.clone()]);
+    diesel::sql_query("UPDATE organization_activation SET admitted=TRUE,admin_approval_hold=FALSE WHERE organization_id=$1")
+        .bind::<sql_types::Uuid,_>(organization.id).execute(&mut database.connection).unwrap();
     store
         .retire_dashboard_label(workspace.id, retired.id, at())
         .unwrap();

@@ -103,6 +103,34 @@ impl MachineRuntime {
             .internal()
     }
 
+    /// Load current admission while retaining every organization's completion context.
+    pub(crate) async fn runnable_organizations(
+        &self,
+        input: &RoutingSnapshot,
+    ) -> Result<Vec<Uuid>> {
+        let store = self.store.clone();
+        let workspace_id = input.workspace_id;
+        let organizations: Vec<_> = input
+            .organizations
+            .iter()
+            .map(|organization| organization.id)
+            .collect();
+        tokio::task::spawn_blocking(move || {
+            let mut runnable = Vec::new();
+            for organization_id in organizations {
+                if store
+                    .organization_runnable(workspace_id, organization_id)
+                    .internal()?
+                {
+                    runnable.push(organization_id);
+                }
+            }
+            Ok(runnable)
+        })
+        .await
+        .internal()?
+    }
+
     /// Run ordinary best-effort routing under this workspace execution lease.
     pub(crate) async fn reconcile_workspace(&self, workspace_id: Uuid) -> Result<()> {
         let store = self.store.clone();
@@ -133,7 +161,8 @@ impl MachineRuntime {
             .map_or_else(RootSizing::default, |image| RootSizing {
                 image_root_bytes: image.root_disk_bytes,
             });
-        let mut snapshot = build(&input, self.clock.now(), root_sizing);
+        let runnable = self.runnable_organizations(&input).await?;
+        let mut snapshot = build(&input, &runnable, self.clock.now(), root_sizing);
         for machine in &mut snapshot.machines {
             let confirmed = input
                 .machines
@@ -205,17 +234,19 @@ impl OwnMachines for MachineRuntime {
     async fn lifecycle(&self, event: LifecycleEvent) -> Result<()> {
         let workspace_id = event.organization().workspace_id;
         let _operation = self.operation.lock().await;
-        if let LifecycleEvent::Removed {
-            organization,
-            cause,
-            ..
-        } = &event
-        {
-            return match cause {
-                RemovalCause::Owner => self.owner_removed(organization).await,
-                RemovalCause::WorkspaceTakeout => self.takeout(organization).await,
-            };
+        match event {
+            LifecycleEvent::Inactive { organization, .. } => self.inactive(&organization).await,
+            LifecycleEvent::Removed {
+                organization,
+                cause,
+                ..
+            } => match cause {
+                RemovalCause::Owner => self.owner_removed(&organization).await,
+                RemovalCause::WorkspaceTakeout => self.takeout(&organization).await,
+            },
+            LifecycleEvent::Active(_) | LifecycleEvent::Suspended(_) => {
+                self.reconcile_workspace(workspace_id).await
+            }
         }
-        self.reconcile_workspace(workspace_id).await
     }
 }

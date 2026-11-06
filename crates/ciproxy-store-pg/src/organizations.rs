@@ -13,6 +13,7 @@ use uuid::Uuid;
 
 use crate::connection::PgStore;
 use crate::error::{QueryResultExt, require_record};
+use crate::installation_links::activation;
 use crate::organization_lifecycle::{mark_app_removed, purge_retained_organizations};
 use crate::organization_rows::{OrganizationRow, repository_columns};
 
@@ -53,6 +54,7 @@ impl OrganizationStore for PgStore {
                 )
                 .execute(connection)?;
                 if count != 0 {
+                    activation::initialize_admitted(connection, record.workspace_id, record.id)?;
                     diesel::update(workspaces::table.find(record.workspace_id))
                         .set(workspaces::delete_after.eq(None::<DateTime<Utc>>))
                         .execute(connection)?;

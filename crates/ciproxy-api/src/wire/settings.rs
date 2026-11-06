@@ -48,6 +48,8 @@ pub struct WorkspaceName {
 /// One GitHub organization registration and its own repository policy.
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct OrganizationView {
+    /// Local admission, independent of GitHub's App state.
+    pub activation: super::links::ActivationView,
     /// Stable ciproxy registration identity.
     pub id: String,
     /// Stable GitHub organization identity as a string.

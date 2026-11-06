@@ -5,6 +5,8 @@ use ciproxy_store_interface::overflow::admission::{ReservationBudget, Reservatio
 use ciproxy_store_interface::overflow::known::KnownSandbox;
 use ciproxy_store_interface::overflow::record::{EncryptedLaunch, StartPhase};
 use ciproxy_store_interface::secrets::TokenHash;
+use diesel::prelude::*;
+use diesel::sql_types;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -159,8 +161,8 @@ fn callback_claim_is_scoped_one_use_and_durable_before_deletion() {
 
 #[test]
 fn overflow_sessions_exclude_each_other_and_reservation_rechecks_tenant_authority() {
-    let database = Database::new();
-    let (workspace_id, _, record) = setup(&database);
+    let mut database = Database::new();
+    let (workspace_id, account, record) = setup(&database);
     let mut session = database.store.lock_overflow(workspace_id).unwrap();
     assert!(
         database
@@ -211,6 +213,44 @@ fn overflow_sessions_exclude_each_other_and_reservation_rechecks_tenant_authorit
         .store
         .set_app_suspended(workspace_id, record.organization_id, false)
         .unwrap();
+    let mut retained = record.clone();
+    retained.delivery_id = Uuid::new_v4();
+    retained.runner_id = Uuid::new_v4();
+    let budget = ReservationBudget {
+        current_month_usd: Decimal::new(462, 3),
+        next_month_usd: None,
+    };
+    assert_eq!(
+        reserve(
+            &mut *session,
+            &retained,
+            &EncryptedLaunch(vec![1]),
+            &TokenHash::new(vec![4]),
+            &budget
+        )
+        .unwrap(),
+        ReservationOutcome::Reserved
+    );
+    assert_eq!(
+        session.startup_account(retained.delivery_id).unwrap(),
+        Some(account)
+    );
+    diesel::sql_query("UPDATE organization_activation SET admitted=FALSE,billing_hold=TRUE WHERE organization_id=$1")
+        .bind::<sql_types::Uuid,_>(record.organization_id).execute(&mut database.connection).unwrap();
+    assert_eq!(session.startup_account(retained.delivery_id).unwrap(), None);
+    assert_eq!(
+        reserve(
+            &mut *session,
+            &record,
+            &EncryptedLaunch(vec![1]),
+            &TokenHash::new(vec![5]),
+            &budget
+        )
+        .unwrap(),
+        ReservationOutcome::NotPermitted
+    );
+    diesel::sql_query("UPDATE organization_activation SET admitted=TRUE,billing_hold=FALSE WHERE organization_id=$1")
+        .bind::<sql_types::Uuid,_>(record.organization_id).execute(&mut database.connection).unwrap();
     session.disconnect(at()).unwrap();
     assert_eq!(
         reserve(

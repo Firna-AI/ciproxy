@@ -25,6 +25,9 @@ const ACCOUNT: &str = "
     LEFT JOIN overflow_accounts s ON s.key_id = a.id
     WHERE a.id = (d.record_json::jsonb ->> 'key_id')::uuid
         AND o.app_state = 'active' AND w.overflow_enabled
+        AND EXISTS (SELECT 1 FROM organization_activation activation
+            WHERE activation.organization_id=o.id
+            AND activation.workspace_id=o.workspace_id AND activation.admitted)
         AND a.retired_at IS NULL AND a.rejected_at IS NULL
         AND l.allow_boat
         AND l.vcpus = (d.record_json::jsonb ->> 'requested_vcpus')::bigint

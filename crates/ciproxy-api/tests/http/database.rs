@@ -10,6 +10,7 @@ use url::Url;
 use uuid::Uuid;
 
 pub(super) struct Database {
+    pub(super) url: String,
     pub(super) store: Arc<dyn Store>,
     admin: PgConnection,
     name: String,
@@ -27,6 +28,7 @@ impl Database {
         let mut url = Url::parse(&url).unwrap();
         url.set_path(&name);
         Self {
+            url: url.to_string(),
             store: PgStoreFactory.connect(url.as_str()).unwrap(),
             admin,
             name,

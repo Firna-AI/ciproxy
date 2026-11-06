@@ -7,18 +7,21 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use ciproxy_github::app::webhook::{Account, AccountKind};
-use ciproxy_github::app::{AppService, GitHubApp, InstallAuthority, LifecycleOutput};
+use ciproxy_github::app::{
+    AppService, GitHubApp, InstallAuthority, InstallationDecision, LifecycleOutput,
+};
 use ciproxy_github::error::{Error, Result};
 use ciproxy_github::installation_state::{InstallationApi, InstalledApp};
 use ciproxy_github::persistence::StoreAdapter;
 use ciproxy_github::rest::GitHubRest;
 use ciproxy_github::runtime::Runtime;
 use ciproxy_store_interface::github::{Repository, RunFacts};
+use ciproxy_store_interface::installation_links::{InstallationClaim, InstallationRecovery};
 use ciproxy_store_interface::store::Store;
 use tokio::sync::oneshot;
 use uuid::Uuid;
 
-use super::resource_fixture::{ResourceFactory, Resources};
+use super::resource_fixture::{ResourceFactory, Resources, seed_installation_choice};
 
 pub(super) fn at() -> DateTime<Utc> {
     "2026-11-04T12:00:00Z".parse().unwrap()
@@ -138,6 +141,7 @@ impl GitHubRest for Remote {
 }
 
 pub(super) struct Authority {
+    store: Mutex<Option<Arc<dyn Store>>>,
     pub(super) target: Mutex<Option<Uuid>>,
     pub(super) requesters: Mutex<Vec<i64>>,
     pub(super) admins: Mutex<Vec<i64>>,
@@ -145,9 +149,26 @@ pub(super) struct Authority {
 }
 #[async_trait]
 impl InstallAuthority for Authority {
-    async fn intended_workspace(&self, requester: i64, _: i64) -> Result<Option<Uuid>> {
-        self.requesters.lock().unwrap().push(requester);
-        Ok(*self.target.lock().unwrap())
+    async fn installation_decision(
+        &self,
+        claim: &InstallationClaim,
+    ) -> Result<InstallationDecision> {
+        self.requesters.lock().unwrap().push(claim.requester_id);
+        if let InstallationRecovery::Add { workspace_id } = claim.recovery() {
+            let store = self.store.lock().unwrap().clone().unwrap();
+            store.authorize_installation_claim(claim.id, true).unwrap();
+            Ok(InstallationDecision::Target {
+                workspace_id,
+                admin_approved: true,
+                billing_hold: false,
+            })
+        } else {
+            Ok(if claim.recovery() == InstallationRecovery::Direct {
+                InstallationDecision::Direct
+            } else {
+                InstallationDecision::AwaitingAssignment
+            })
+        }
     }
     async fn ensure_initial_admin(&self, _: Uuid, user: i64) -> Result<()> {
         self.admins.lock().unwrap().push(user);
@@ -208,6 +229,7 @@ impl Fixture {
             }),
             resources: Arc::new(Resources::new()),
             authority: Arc::new(Authority {
+                store: Mutex::new(None),
                 target: Mutex::new(None),
                 requesters: Mutex::new(vec![]),
                 admins: Mutex::new(vec![]),
@@ -226,6 +248,11 @@ impl Fixture {
         store: Arc<dyn Store>,
         installations: Arc<dyn InstallationApi>,
     ) -> Arc<dyn GitHubApp> {
+        if let Some(workspace) = *self.authority.target.lock().unwrap() {
+            let current = self.state.current.lock().unwrap().clone().unwrap();
+            seed_installation_choice(store.as_ref(), &current, workspace, 41);
+        }
+        *self.authority.store.lock().unwrap() = Some(store.clone());
         let adapter = Arc::new(StoreAdapter::new(store, self.runtime.clone()));
         Arc::new(AppService {
             leases: adapter.clone(),

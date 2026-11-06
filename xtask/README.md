@@ -23,7 +23,7 @@ The gate has these phases, in execution order:
 | `markdown` | Local Markdown links, then the pinned `markdownlint-cli2` |
 | `rust-clippy` | `cargo clippy --workspace --all-targets -- -D warnings` |
 | `typescript` | `tokens:check`, `app:lint`, `app:typecheck`, `site:lint`, `site:typecheck`, `api:lint`, `api:typecheck` |
-| `api-types` | Regenerate OpenAPI and TypeScript, then fail on a difference |
+| `api-types` | Validate generated OpenAPI with Redocly, regenerate TypeScript, then fail on a difference |
 | `rust-test` | `cargo test --workspace`, including doctests |
 | `mockups` | `npm --prefix ts run mockups:check` |
 | `site-build` | `npm --prefix ts run site:build` |

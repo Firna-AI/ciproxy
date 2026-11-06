@@ -82,6 +82,10 @@ impl JobOutput for Output {
 }
 
 pub(super) fn setup(store: &dyn Store) -> ListenerTarget {
+    setup_with_label(store, "ciproxy")
+}
+
+pub(super) fn setup_with_label(store: &dyn Store, name: &str) -> ListenerTarget {
     let workspace = Workspace {
         id: id(1),
         name: "customer".to_owned(),
@@ -102,7 +106,7 @@ pub(super) fn setup(store: &dyn Store) -> ListenerTarget {
     store.install_organization(&organization).unwrap();
     let label = Label {
         id: id(2),
-        name: "ciproxy".to_owned(),
+        name: name.to_owned(),
         size: VmSize {
             vcpus: 2,
             memory_gb: 8,

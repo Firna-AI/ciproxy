@@ -13,7 +13,7 @@ use crate::error::{Error, Result};
 use crate::state::{ApiState, query};
 use crate::wire::access::{SessionView, SignInState, Success, WorkspacePath, WorkspaceView};
 
-use super::views;
+use super::{link_views, links, views};
 
 #[utoipa::path(operation_id = "sessions_session", get, path = "/session", responses((status = 200, body = SessionView)), security(("session" = [])))]
 pub(crate) async fn session(
@@ -26,6 +26,15 @@ pub(crate) async fn session(
         .await?;
     let id = principal.id();
     let github_id = principal.github_id();
+    let durable = !principal.browser_only();
+    let organization_links = query(state.store.clone(), move |store| {
+        store
+            .installation_claims(github_id)?
+            .into_iter()
+            .map(|claim| link_views::view(store, claim, github_id, durable))
+            .collect()
+    })
+    .await?;
     if !principal.browser_only() {
         let refresh = query(state.store.clone(), move |store| {
             let memberships = store.dashboard_memberships(id)?;
@@ -112,6 +121,7 @@ pub(crate) async fn session(
     })
     .await?;
     Ok(Json(SessionView {
+        organization_links,
         setup: principal.setup().cloned(),
         pending_install_requests,
         removed_organization: principal.removed_organization().cloned(),
@@ -134,7 +144,7 @@ pub(crate) async fn session(
         login: principal.login().to_owned(),
         expires_at: principal.expires_at(),
         workspaces,
-        install_url: state.config.github_install_url,
+        install_url: links::continuation_link(&state, &principal).await?.url,
     }))
 }
 

@@ -28,6 +28,7 @@ pub(super) struct FakeState {
     store: Option<Arc<dyn Store>>,
     next: AtomicUsize,
     pub(super) acknowledgements: Mutex<Vec<DemandPhase>>,
+    pub(super) poll_capacities: Mutex<Vec<u32>>,
     pub(super) requests: Mutex<Vec<(Method, String, Value)>>,
     pub(super) tokens: AtomicUsize,
     pub(super) body_override: Mutex<Option<String>>,
@@ -48,6 +49,7 @@ impl Server {
             store,
             next: AtomicUsize::new(0),
             acknowledgements: Mutex::new(vec![]),
+            poll_capacities: Mutex::new(vec![]),
             requests: Mutex::new(vec![]),
             tokens: AtomicUsize::new(0),
             body_override: Mutex::new(None),
@@ -157,6 +159,15 @@ async fn handle(
             .into_response();
     }
     if path == "/queue" && method == Method::GET {
+        state.poll_capacities.lock().unwrap().push(
+            headers
+                .get("X-ScaleSetMaxCapacity")
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .parse()
+                .unwrap(),
+        );
         let index = state.next.fetch_add(1, Ordering::SeqCst);
         let phase = [
             "JobAssigned",

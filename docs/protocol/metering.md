@@ -85,6 +85,8 @@ of each tier.
 - A workspace passes a soft limit when the starts of the period, the
   machine count, or on Free the number of organizations go above it.
 - A soft limit never stops a job and never keeps a job from starting.
+- This rule does not cover a new organization above the organization limit
+  of the tier. It joins [inactive](workspaces.md#inactive-organizations).
 - Jobs keep running on every own machine, also when the machine count is
   above the included own machines.
 - Passing a soft limit adds no charge.
@@ -96,7 +98,8 @@ of each tier.
 - [Checkout](billing.md#checkout) says what a person who cannot pay sees in
   place of the action of the offer.
 - **Decision:** tier limits are soft. Rejected: a hard limit, because a
-  pricing limit must never stop the CI of a customer.
+  pricing limit must never stop the CI of a customer. A new organization
+  above the tier waits, because none of its jobs ran on ciproxy yet.
 
 ### The use and the offer
 

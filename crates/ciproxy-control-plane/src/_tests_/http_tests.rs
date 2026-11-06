@@ -7,9 +7,11 @@ use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use axum::routing::get;
+use ciproxy_github::app::InstallationOutcome;
 use ciproxy_github::hooks::{WebhookHandlerMock, WebhookOutcome};
 use tower::ServiceExt;
 use unimock::{MockFn, Unimock, matching};
+use uuid::Uuid;
 
 use super::router;
 
@@ -52,8 +54,8 @@ async fn readiness_follows_runtime_state_on_the_shared_api_host() {
 async fn github_hook_passes_the_original_body_and_signature_to_its_verifier() {
     let hooks = Arc::new(Unimock::new(
         WebhookHandlerMock::handle
-            .some_call(matching!((event, signature, body) if *event == "ping" && *signature == "sha256=fixture" && *body == b"original bytes"))
-            .returns(Ok(WebhookOutcome::Ignored)),
+            .some_call(matching!((event, signature, body) if *event == "installation" && *signature == "sha256=fixture" && *body == b"original bytes"))
+            .returns(Ok(WebhookOutcome::Installation(InstallationOutcome::AwaitingAssignment { claim_id: Uuid::from_u128(17) }))),
     ));
     let app = router(
         Router::new(),
@@ -66,7 +68,7 @@ async fn github_hook_passes_the_original_body_and_signature_to_its_verifier() {
             Request::builder()
                 .method("POST")
                 .uri("/hooks/github")
-                .header("x-github-event", "ping")
+                .header("x-github-event", "installation")
                 .header("x-hub-signature-256", "sha256=fixture")
                 .body(Body::from("original bytes"))
                 .unwrap(),

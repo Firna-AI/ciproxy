@@ -1,4 +1,4 @@
-//! Immutable installation removals retain their approved retirement policy.
+//! Organization lifecycle events retain their exact retirement authority.
 
 use ciproxy_store_interface::organizations::{AppState, Organization};
 use ciproxy_store_interface::own_runners::{OwnRunnerLease, RoutingSnapshot};
@@ -9,6 +9,59 @@ use crate::retirement::StopAuthority;
 use crate::runtime::MachineRuntime;
 
 impl MachineRuntime {
+    /// Retire local inactive idle work only while this exact installation stays inactive.
+    pub(crate) async fn inactive(&self, organization: &Organization) -> Result<()> {
+        let workspace_id = organization.workspace_id;
+        let store = self.store.clone();
+        let Some(mut lease) =
+            tokio::task::spawn_blocking(move || store.try_lock_own_runners(workspace_id))
+                .await
+                .internal()?
+                .internal()?
+        else {
+            return Err(Error::StateChanged);
+        };
+        let input = self.load(workspace_id).await?;
+        let current = input.organizations.iter().any(|current| {
+            current.id == organization.id
+                && current.github_id == organization.github_id
+                && current.installation_id == organization.installation_id
+                && current.app_state == AppState::Active
+        });
+        if !current
+            || self
+                .runnable_organizations(&input)
+                .await?
+                .contains(&organization.id)
+        {
+            return Ok(());
+        }
+        for job in input
+            .jobs
+            .iter()
+            .filter(|job| job.organization_id == organization.id)
+        {
+            self.route_job(&input, job).await?;
+        }
+        let input = self.load(workspace_id).await?;
+        let mut failed = false;
+        for runner in input.runners.iter().filter(|runner| {
+            runner.runner.organization_id == organization.id
+                && runner.runner.state != RunnerState::Stopped
+        }) {
+            lease.check_connection().internal()?;
+            if let Err(error) = self.stop(&input, runner).await {
+                failed = true;
+                tracing::warn!(runner=%runner.runner.id,%error,"inactive organization retirement will retry; independent runners continue");
+            }
+        }
+        if failed {
+            Err(Error::StateChanged)
+        } else {
+            Ok(())
+        }
+    }
+
     /// Apply an immutable owner removal, with conservative protection after reinstall.
     pub(crate) async fn owner_removed(&self, organization: &Organization) -> Result<()> {
         let workspace_id = organization.workspace_id;

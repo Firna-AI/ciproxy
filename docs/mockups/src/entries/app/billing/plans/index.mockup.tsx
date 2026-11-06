@@ -15,7 +15,7 @@ export const plans = defineScreen({
   relatedDocs: related("billing", "metering", "security"),
   address: orgAddress("billing/plans"),
   useCasePaths: [paths.flowFreeToTeam],
-  propSchema: stateSchema(["from-free", "on-team"]),
+  propSchema: stateSchema(["from-free", "on-team", "inactive-organization"]),
   props: { state: "from-free" },
   render: (props, context) => (
     <PlansScreen viewport={context.viewport} state={props.state} />
@@ -27,6 +27,19 @@ export const plans = defineScreen({
       description:
         "The same page for an organization on Team, which sees Business as the next tier. Choose Business reviews a move between paid tiers, and Move to Free asks first.",
       props: { state: "on-team" },
+    },
+    {
+      slug: "inactive-organization",
+      title: "Plans, with an inactive organization",
+      description:
+        "mokly-ai on Free in December. It holds mokly-ai, mokly-labs, and mokly-studio, which is inactive, and three own machines, and Free includes one organization. Team carries the Covers your use badge and clears the plan hold. The catalogue has no checkout of December, so Choose Team opens no screen here, and the flows say that the payment happens on Stripe.",
+      rationale:
+        "The answer D to item 83: the move to Team turns on an organization that waits only for the plan. Every linked organization counts, also an inactive one.",
+      props: { state: "inactive-organization" },
+      useCasePaths: [
+        paths.flowFreeAddsOrganization,
+        paths.flowTurnOnOrganization,
+      ],
     },
   ],
 });

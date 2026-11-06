@@ -16,6 +16,7 @@ use uuid::Uuid;
 
 use crate::connection::PgStore;
 use crate::error::QueryResultExt;
+use crate::installation_links::retention;
 use crate::workspace_credentials::revoke_workspace_access;
 
 #[derive(Queryable, Selectable)]
@@ -145,6 +146,7 @@ impl WorkspaceStore for PgStore {
                 if installed != 0 {
                     return Ok(false);
                 }
+                retention::purge(connection, workspace_id, None)?;
                 let count = diesel::delete(
                     workspaces::table
                         .find(workspace_id)
