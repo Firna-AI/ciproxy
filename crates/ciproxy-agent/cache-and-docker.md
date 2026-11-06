@@ -11,7 +11,8 @@ any action setup. The guest measures the actual Docker bridge proxy URL and
 the preloaded Docker bytes before the runner can take the job.
 It sends the original runtime credentials and permissions over vsock.
 The hosted control plane receives only the runner and job identities.
-Authenticated JobFacts then permit machine-cache registration.
+Trusted facts from the hosted `JobPreparation` message then permit
+machine-cache registration.
 The machine verifies the runtime token outside the VM.
 No administration credential enters a VM.
 
@@ -29,6 +30,13 @@ the entries that only the machine cache keeps.
 When a received job cannot get its facts after a control-plane loss, a
 drain, a removal, or a stop request, the agent releases it with
 `GitHubOnly`. A stop request does not stop that received job.
+The hosted side also sends `GitHubOnly` when its App snapshot lacks the
+job's repository. The agent applies it only to the matching running job
+that has no facts and whose preparation still waits. It saves `GitHubOnly`
+before it releases the Worker, and that decision is final. A repeated
+delivery sends the same decision again.
+For a job that already has facts, or whose preparation started or ended,
+that message changes nothing. Later facts cannot restore the machine cache.
 
 The seal keeps the rights and the URL origins of the first handoff, with a
 host-decision marker. An origin is the scheme, host, and port of a URL.

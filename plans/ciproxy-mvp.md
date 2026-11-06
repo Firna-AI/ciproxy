@@ -887,6 +887,19 @@ Owner review of pull request #31, round 2, 6 November 2026:
       Code: `82aba82`, merged in `62de88e`.
       Branch: `conductor/ciproxy-mvp-milestone-13-e2e`.
 
+Owner review of pull request #31, round 3, 6 November 2026: the user
+authorized a third and final fix round as item 87 = A, and approved finding
+13 = B after its fresh check. Later findings become follow-up items, with
+no fourth fix round.
+
+- [x] Repair finding 13 with B. Each accepted assignment gets an explicit
+      hosted preparation result: trusted facts, or GitHub-only when the
+      loaded App snapshot lacks the repository. Snapshot and transport
+      errors retry. The agent saves a GitHub-only decision before it
+      releases a waiting Worker, and that decision is final.
+      Code: `118ddd9`.
+      Branch: `conductor/ciproxy-mvp-milestone-13-e2e`.
+
 ## Milestone 14: Dashboard API: sign-in, setup, machines, and settings
 
 Depends on: 4, 6, 8

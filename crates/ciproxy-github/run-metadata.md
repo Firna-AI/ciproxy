@@ -22,13 +22,16 @@ not distinguish a same-name branch and tag. Associated pull requests do
 not identify the triggering pull request. A deleted head repository stays
 absent. This crate makes no event-to-ref conversion and grants no cache
 or Docker trust from these fields.
-`JobAssignments::facts` prepares the expected runtime-token identity for
+`JobAssignments::facts` returns a `JobPreparationOutcome` for each accepted
+assignment. `TrustedFacts` prepares the expected runtime-token identity for
 the agent. It combines the scale-message run ID and job UUID, the JIT
 runner ID, the API repository identity, event, and head repository, and
 the saved repository default branch. `AssignmentService` consumes the
 existing tenant-scoped repository snapshot through `AssignmentStore`.
-It returns no assignment when that snapshot lacks the repository. The job
-can still use GitHub directly. It never guesses a default branch or job ref.
+When that snapshot loads but lacks the repository, the result is
+`GitHubOnly` with the snapshot's organization ID. The job then uses GitHub
+directly. A snapshot or store error stays an error, so the caller retries.
+It never guesses a default branch or job ref.
 
 The agent sends those facts and the original token to the machine cache.
 The machine returns a checked signed scope or a typed unknown reason.
