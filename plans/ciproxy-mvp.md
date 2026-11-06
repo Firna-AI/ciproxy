@@ -137,11 +137,12 @@ stay in `europe-west1`.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
   - [x] Define both projects, private SQL, secret containers, KMS, and IAM.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
-  - [ ] Orchestrator: run `deploy/scripts/bootstrap.sh` for each environment,
-        set the GitHub variables, and start the deploy workflow, which
-        creates the foundation, as item 56 says. The steps are in
-        [the setup guide](../deploy/setup.md).
-        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [x] Orchestrator: run `deploy/scripts/bootstrap.sh` for the main
+        preview, set the GitHub variables, and start the deploy workflow, as
+        item 56 says. Done 6 November 2026: run 42145526077 passed every job.
+        Branch: `calummoore/ci-proxy-load-balancer`.
+  - [ ] Orchestrator: the same for production, at launch, as
+        [the launch guide](../deploy/launch.md) says.
 - [ ] Run the control plane and the `futex-ai/cli-release` server on GKE
       Autopilot with Helm, as item 31 says.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
@@ -155,16 +156,19 @@ stay in `europe-west1`.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
   - [x] Configure release hosts, binary, prefix, and an existing secret.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
-  - [ ] User: prepare the pinned image and store the public-read-only token.
-        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [x] User: prepare the pinned image and store the public-read-only token
+        for the main preview. Done 6 November 2026.
+        Branch: `calummoore/ci-proxy-load-balancer`.
 - [ ] Serve the site, the dashboard, and signed image URLs from a Cloud
       Storage bucket, through Cloud CDN and one HTTPS load balancer. My call:
       they are static files, so they need no runtime.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
   - [x] Define public buckets, private images, CDN, routes, and publishing.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
-  - [ ] User: deploy the edge and register a CDN signing key outside Terraform.
-        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [x] User: deploy the edge and register a CDN signing key outside Terraform,
+        for the main preview. Done 6 November 2026: key
+        `ciproxy-main-preview-images-v1`, HTTPS checked, uptime checks on.
+        Branch: `calummoore/ci-proxy-load-balancer`.
 - [ ] Create the DNS zone, which the user delegates.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
   - [x] Define production and staging DNS zones and HTTPS records.
