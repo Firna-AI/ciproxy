@@ -42,6 +42,23 @@ Refusal records and account restrictions also commit together.
 Key erasure checks unfinished deliveries as well as live runners.
 No query receives a plaintext key or runner registration.
 
+## Runtime registration identities
+
+The runtime saves each Boat registration identity before its GitHub JIT
+request. The insert holds the workspace row lock. It saves nothing and
+returns `Conflict` unless all of these facts hold:
+
+- The organization has an active App and admitted execution.
+- The workspace has overflow on and an accepted key.
+- The current label allows Boat and matches the requested size.
+- The scale set of that organization and label is active.
+
+A row holds identities, sizes, and the required root bytes. It holds no JIT
+configuration or callback token. The saved GitHub runner ID also goes to
+the runner row of the delivery, when that row exists. The routing snapshot
+reads these rows with the account and delivery rows in one repeatable-read
+transaction. The separate durable snapshot read takes no overflow session.
+
 ## Accounting reads
 
 Metering price facts require a trusted runtime observation and a counted

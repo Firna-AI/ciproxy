@@ -27,16 +27,25 @@ pub(crate) enum UnobservedRunnerUpdate {
 impl MachineRuntime {
     pub(crate) async fn apply(&self, input: &RoutingSnapshot, action: Action) -> Result<()> {
         match action {
-            Action::StartRunner(start) => self.start(input, start).await,
+            Action::StartRunner(start) => {
+                if matches!(start.destination, Destination::Boat(_)) {
+                    self.start_boat(input, start).await
+                } else {
+                    self.start(input, start).await
+                }
+            }
             Action::StopRunner { runner_id, .. } => {
                 let runner = input
                     .runners
                     .iter()
-                    .find(|runner| runner.runner.id.to_string() == runner_id.0)
-                    .ok_or(Error::StateChanged)?;
-                self.stop(input, runner).await
+                    .find(|runner| runner.runner.id.to_string() == runner_id.0);
+                if let Some(runner) = runner {
+                    self.stop(input, runner).await
+                } else {
+                    self.cleanup_boat(input.workspace_id).await
+                }
             }
-            Action::DeleteSandbox { .. } => Ok(()),
+            Action::DeleteSandbox { .. } => self.cleanup_boat(input.workspace_id).await,
         }
     }
 

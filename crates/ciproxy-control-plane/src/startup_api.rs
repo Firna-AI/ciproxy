@@ -61,6 +61,7 @@ pub(crate) fn compose(config: &Config, store: Arc<dyn Store>) -> Result<ApiCompo
         access.clone(),
     )?);
     let state = ApiState {
+        overflow: hosted.overflow.clone(),
         config: ApiConfig {
             public_origin: config.public_url.trim_end_matches('/').to_owned(),
             github_install_url: format!(

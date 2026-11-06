@@ -1088,10 +1088,30 @@ Depends on: 12, 13, 14
 
 This milestone builds "A job on Boat" of `architecture.md`.
 
-- [ ] Wire Boat into the scaler loop with every rule of `overflow.md`.
-- [ ] Serve the Boat step of Setup and Settings under Overflow, with the key
+Implementation calls, 6 November 2026:
+
+- Keep `BOAT_SHARED_SNAPSHOT` optional until the shared image exists.
+  Without it, own-machine service starts and Boat dispatch stays off.
+- Match the approved mockup money format for derived Boat amounts: round
+  each aggregate once to the nearest cent, with half-cents away from zero.
+  Keep spend admission unchanged. Show unconfirmed costs separately from
+  confirmed spend, including bounds that settled after their lifetime.
+
+- [x] Wire Boat into the scaler loop with every rule of `overflow.md`.
+      Branch: `conductor/mvp-m15-overflow`.
+- [x] Serve the Boat step of Setup and Settings under Overflow, with the key
       check and the spend limit at each connection.
-- [ ] Smoke-test an overflow, an idle delete, and the spend limit.
+      Branch: `conductor/mvp-m15-overflow`.
+- [x] Supply scripts for the overflow, idle-delete, and spend-limit smokes.
+      Branch: `conductor/mvp-m15-overflow`.
+- [ ] Orchestrator: Forward `BOAT_SHARED_SNAPSHOT` through
+      `deploy/scripts/deploy.py` and both deployment workflows.
+      Set it to the shared Milestone 10 snapshot.
+      Keep the selected image manifest at the same release.
+      Run the three live scenarios with the private credential file, as
+      `crates/ciproxy-control-plane/overflow.md` describes.
+
+Verification evidence: `.context/ciproxy-mvp-m15/`.
 
 ## Milestone 16: Metering and the savings report
 

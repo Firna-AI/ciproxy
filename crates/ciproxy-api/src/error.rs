@@ -20,6 +20,8 @@ pub struct Problem {
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProblemCode {
+    /// Boat refused the submitted API key.
+    BoatKeyRejected,
     /// GitHub sign-in is absent, expired, or revoked.
     SignInRequired,
     /// Workspace access or browser proof did not authorize this request.
@@ -43,6 +45,9 @@ pub enum ProblemCode {
 /// Failures that dashboard callers can handle without inspecting diagnostics.
 #[derive(Debug, thiserror::Error, ErrorContract)]
 pub enum Error {
+    /// Boat refuses the submitted API key without exposing it.
+    #[error("[api] Boat rejected the key")]
+    BoatKeyRejected,
     /// Authentication is absent, expired, or revoked.
     #[error("[api] sign in with GitHub again")]
     Unauthorized,
@@ -78,6 +83,10 @@ pub type Result<T> = std::result::Result<T, Error>;
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
         let (status, code) = match &self {
+            Self::BoatKeyRejected => (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                ProblemCode::BoatKeyRejected,
+            ),
             Self::Unauthorized => (StatusCode::UNAUTHORIZED, ProblemCode::SignInRequired),
             Self::Forbidden => (StatusCode::FORBIDDEN, ProblemCode::AccessDenied),
             Self::NotFound => (StatusCode::NOT_FOUND, ProblemCode::NotFound),
@@ -91,6 +100,9 @@ impl IntoResponse for Error {
             Self::Internal(_) => (StatusCode::INTERNAL_SERVER_ERROR, ProblemCode::Internal),
         };
         let message = match self {
+            Self::BoatKeyRejected => {
+                "Boat did not accept this key. Copy the whole key from the Boat console.".to_owned()
+            }
             Self::Unauthorized => "Sign in with GitHub again.".to_owned(),
             Self::Forbidden => "This request is not permitted.".to_owned(),
             Self::NotFound => "This resource was not found.".to_owned(),

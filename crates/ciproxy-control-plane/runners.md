@@ -11,6 +11,9 @@ Routing reads one repeatable-read workspace snapshot.
 A dedicated PostgreSQL session lease serializes execution decisions.
 The snapshot gives the pure scaler machine capacity, durable demand,
 current labels, and the last 24 hours of default-label job history.
+It also gives the Boat account, its deliveries, and the saved Boat
+registrations. The [overflow guide](overflow.md) gives the Boat runtime.
+
 Warm shares follow proportional counts and the documented leftover order.
 Docker spare uses a conservative upper bound on feasible root allocations.
 Some mixed-label machines can receive fewer sticky disks.

@@ -192,6 +192,13 @@ Call the public boundary in this order:
 10. Pass authenticated guest exit reports to `report_end`.
 11. Call `cleanup` during regular reconciliation and after an outage.
 
+`OverflowView::from_snapshot` builds the view from durable store facts,
+with no provider call. Use it when `view` fails, so that accepted supply
+stays in the scaler snapshot. `OverflowView::retained_scaler_account` keeps
+the saved size catalog for those runners and permits no new start.
+The [control-plane overflow guide](../ciproxy-control-plane/overflow.md)
+gives the production composition and its configuration.
+
 The callback route must pass the Bearer token and the message's runner ID.
 It must accept only `GuestToAgent::RunnerExited` messages.
 The token grants no other operation.
@@ -242,7 +249,8 @@ These commands contact Boat or Cloud KMS and can incur charges.
 - [src/service/accounts.rs](src/service/accounts.rs) completes only live
   pending connection grants.
 - [src/maintenance.rs](src/maintenance.rs) restricts retained-key capabilities.
-- [src/view.rs](src/view.rs) supplies safe scaler and cost facts.
+- [src/view.rs](src/view.rs) supplies safe scaler and cost facts, also from
+  durable facts alone.
 - [src/boat](src/boat) composes the pinned adapter and fixed image launcher.
 - [src/kms](src/kms) implements real Cloud KMS encryption and runtime OAuth.
 - [tests/boat](tests/boat) tests the production HTTPS boundaries.
@@ -258,5 +266,7 @@ These commands contact Boat or Cloud KMS and can incur charges.
 - [Security](../../docs/protocol/security.md#key-custody) defines key custody.
 - [Architecture](../../docs/architecture.md) defines component boundaries.
 - [Scaler](../ciproxy-scaler/README.md) owns pure routing decisions.
+- [Control plane](../ciproxy-control-plane/overflow.md) composes the service
+  and serves the exit callback.
 - [Store interface](../ciproxy-store-interface/README.md) owns persistence.
 - [PostgreSQL store](../ciproxy-store-pg/README.md) implements queries.

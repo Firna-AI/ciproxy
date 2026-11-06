@@ -145,7 +145,8 @@ This crate contains no scheduler, listener, gateway, KMS client, Boat
 client, or runtime composition.
 
 The [overflow store guide](overflow.md) gives the Boat execution sessions,
-delivery authority, dispatch, callbacks, and Boat accounting reads.
+delivery authority, dispatch, callbacks, runtime registration identities,
+and Boat accounting reads.
 
 The dashboard area stores verified GitHub memberships, workspace roles,
 access requests, opaque session digests, and encrypted OAuth grants.
@@ -165,7 +166,8 @@ discovery without deleting job history.
 
 Own-machine queries save runner and command reservations atomically.
 A repeatable-read routing snapshot keeps reports, demand, and settings
-consistent. A separate negative advisory-key range owns execution leases.
+consistent. It also reads the Boat account, deliveries, and registration
+identities. A separate negative advisory-key range owns execution leases.
 Mutable machine, organization, and label authority is checked again under
 row locks before a new reservation commits.
 The command records retain exact byte dimensions and logical slot sets.
@@ -244,6 +246,8 @@ CI starts the database for the existing workspace test phase.
 - [src/scale_set_tracking.rs](src/scale_set_tracking.rs) owns retired binding
   context, listener discovery, and exact remote cleanup confirmation.
 - [src/boat.rs](src/boat.rs) rotates and erases encrypted keys.
+- [src/boat_runtime.rs](src/boat_runtime.rs) stores Boat registration
+  identities.
 - [src/overflow](src/overflow) owns durable Boat execution transactions.
 - [src/overflow/authority.rs](src/overflow/authority.rs) reads current
   startup authority for one saved delivery.

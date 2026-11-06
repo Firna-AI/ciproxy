@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use crate::billing::store::BillingStore;
 use crate::boat::BoatStore;
+use crate::boat_runtime::BoatRuntimeStore;
 use crate::dashboard::store::DashboardStore;
 use crate::error::Result;
 use crate::gateway::GatewayStore;
@@ -36,6 +37,7 @@ pub trait Store:
     + JobStore
     + SettingsStore
     + BoatStore
+    + BoatRuntimeStore
     + OverflowStore
     + MeteringStore
     + GatewayStore
