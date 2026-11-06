@@ -1104,6 +1104,17 @@ Implementation calls, 6 November 2026:
       Branch: `conductor/mvp-m15-overflow`.
 - [x] Supply scripts for the overflow, idle-delete, and spend-limit smokes.
       Branch: `conductor/mvp-m15-overflow`.
+- [x] Reject startup authority for a retired label before dispatch.
+      Branch: `conductor/mvp-m15-overflow`.
+- [x] Keep fractional queue times when applying the overflow wait.
+      Branch: `conductor/mvp-m15-overflow`.
+- [ ] Orchestrator: Resolve Boat retirement after GitHub App access ends.
+      The guest reports no job handover today. The pre-handover job-failure
+      exception covers own-machine warm runners only. Apply the user's
+      chosen rule in the protocol and guest/image work, then run its live
+      check. The independent review records the options.
+- [ ] Orchestrator: Record the broader immutable scheduler-binding fix.
+      Include the existing own-machine name-matching problem.
 - [ ] Orchestrator: Forward `BOAT_SHARED_SNAPSHOT` through
       `deploy/scripts/deploy.py` and both deployment workflows.
       Set it to the shared Milestone 10 snapshot.

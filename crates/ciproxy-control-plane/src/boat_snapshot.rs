@@ -6,6 +6,7 @@ use ciproxy_scaler::boat::{BoatRunner, Sandbox, SandboxId};
 use ciproxy_scaler::snapshot::{Runner, RunnerState, Snapshot};
 use ciproxy_store_interface::boat_runtime::BoatRunnerIntent;
 use ciproxy_store_interface::github::{DemandPhase, GithubJob};
+use ciproxy_store_interface::labels::Label;
 use ciproxy_store_interface::overflow::record::{StartPhase, StartRecord};
 
 pub(crate) fn append(
@@ -13,6 +14,7 @@ pub(crate) fn append(
     intents: &[BoatRunnerIntent],
     records: &[StartRecord],
     jobs: &[GithubJob],
+    labels: &[Label],
 ) {
     for intent in intents {
         let record = records
@@ -35,6 +37,9 @@ pub(crate) fn append(
                 && job.runner_github_id.is_some()
                 && job.runner_github_id == intent.github_id
         });
+        if running.is_none() && !labels.iter().any(|label| label.id == intent.label_id) {
+            continue;
+        }
         let state = if let Some(job) = running {
             RunnerState::Running(JobId(job.id.to_string()))
         } else if completed {

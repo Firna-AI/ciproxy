@@ -69,6 +69,8 @@ overflow service.
 - Idle retirement keeps a runner that a running job or waiting demand needs.
   Otherwise GitHub removes the registration first. A busy answer keeps the
   sandbox.
+- Old idle supply cannot cover a replacement label with the same name.
+  Retired labels and removed bindings cannot start an undispatched delivery.
 - When Boat or its cost data fails, accepted Boat supply stays reserved and
   new Boat starts wait. Own-machine routing continues.
 
@@ -200,26 +202,34 @@ The script cleans up after each check, also after a failure or Ctrl-C:
 1. It turns off new Boat starts. It keeps the saved wait and limit.
 2. It finds the run of each saved marker. It cancels each unfinished run
    and waits until the run completes.
-3. It deletes each Boat sandbox that the workspace started during the check.
+3. It reads the durable start state again after cancellation completes.
+   It waits until no new registration intent remains and each new delivery
+   has ended. A missing sandbox ID does not prove that no sandbox exists.
+4. It deletes each known Boat sandbox that the check started.
    It waits until Boat confirms each deletion.
-4. It restores the original overflow switch, wait, and limit.
+5. It restores the original overflow switch, wait, and limit.
 
-When a step fails, the script prints `FAIL: <step> needs operator attention.`
-It then leaves new Boat starts off. Do not press Ctrl-C again during the
+One 90-second deadline covers the whole cleanup. An unresolved start keeps
+overflow off and prevents restoration. The script reports unresolved
+delivery and runner IDs without credentials. When a step fails, it prints
+`FAIL: <step> needs operator attention.` If a settings request fails, check
+the current settings before another check. Do not press Ctrl-C again during
 cleanup.
 
 Each check records a new file under `.context/ciproxy-mvp-m15/live/`. It
 saves `original_policy` there before it changes a setting. That policy holds
 only `enabled`, `wait_seconds`, and `spend_limit_cents`. The file also lists
-the `markers` and `runs` of the check, and it holds no credential. The path
-is relative to the current directory. From the repository root, Git ignores
-it.
+the `markers` and `runs` of the check. `delivery_baseline` and
+`intent_baseline` identify records that existed before the check. The file
+holds no credential. Git ignores it when the current directory is the
+repository root.
 
 When the script stopped before its cleanup ended, or printed a cleanup
 `FAIL:` line, recover in this order:
 
 1. Turn overflow off in Settings under Overflow. Keep the wait and the limit.
 2. Open the newest file under `.context/ciproxy-mvp-m15/live/`.
+   Keep its saved baselines. A new baseline can hide an earlier open start.
 3. Find each run of the test repository with an ID from `runs`, or with the
    name `ciproxy-smoke-<marker>`. Cancel each unfinished run. Wait until each
    run completes.

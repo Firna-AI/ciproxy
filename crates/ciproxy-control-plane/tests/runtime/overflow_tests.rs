@@ -20,28 +20,49 @@ use super::support::at;
 
 #[tokio::test]
 async fn wait_deadline_starts_boat_once_and_provider_failure_preserves_pending_supply() {
-    let harness = Harness::new(true, true).await;
-    harness.queued();
-    harness.ports.pending.store(true, Ordering::SeqCst);
-    *harness.ports.now.lock().unwrap() = at() + Duration::seconds(29);
-    harness.runtime.tick().await.unwrap();
-    assert_eq!(harness.ports.creates.lock().unwrap().len(), 0);
-    *harness.ports.now.lock().unwrap() = at() + Duration::seconds(30);
-    harness.runtime.tick().await.unwrap();
-    assert_eq!(harness.ports.creates.lock().unwrap().len(), 1);
-    harness.ports.fail.store(true, Ordering::SeqCst);
-    harness.runtime.tick().await.unwrap();
-    assert_eq!(
-        harness
-            .fixture
-            .store
-            .boat_runner_intents(harness.fixture.workspace)
-            .unwrap()
-            .len(),
-        1
-    );
-    assert_eq!(harness.ports.creates.lock().unwrap().len(), 1);
-    assert_eq!(harness.own_starts.load(Ordering::SeqCst), 0);
+    for (assigned, before, boundary) in [
+        (
+            Duration::zero(),
+            Duration::seconds(29),
+            Duration::seconds(30),
+        ),
+        (
+            Duration::milliseconds(500),
+            Duration::milliseconds(30_499),
+            Duration::milliseconds(30_500),
+        ),
+    ] {
+        let harness = Harness::new(true, true).await;
+        harness.queued_at(at() + assigned);
+        harness.ports.pending.store(true, Ordering::SeqCst);
+        *harness.ports.now.lock().unwrap() = at() + before;
+        harness.runtime.tick().await.unwrap();
+        assert_eq!(
+            harness.ports.creates.lock().unwrap().len(),
+            0,
+            "assigned offset: {assigned}"
+        );
+        *harness.ports.now.lock().unwrap() = at() + boundary;
+        harness.runtime.tick().await.unwrap();
+        assert_eq!(
+            harness.ports.creates.lock().unwrap().len(),
+            1,
+            "assigned offset: {assigned}"
+        );
+        harness.ports.fail.store(true, Ordering::SeqCst);
+        harness.runtime.tick().await.unwrap();
+        assert_eq!(
+            harness
+                .fixture
+                .store
+                .boat_runner_intents(harness.fixture.workspace)
+                .unwrap()
+                .len(),
+            1
+        );
+        assert_eq!(harness.ports.creates.lock().unwrap().len(), 1);
+        assert_eq!(harness.own_starts.load(Ordering::SeqCst), 0);
+    }
 }
 
 #[tokio::test]

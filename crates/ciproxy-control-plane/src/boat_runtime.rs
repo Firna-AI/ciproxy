@@ -113,7 +113,13 @@ impl MachineRuntime {
                 Err(error) => tracing::warn!(%error, "Boat accounting prevents new starts"),
             }
         }
-        boat_snapshot::append(snapshot, &intents, &view.starts, &current.jobs);
+        boat_snapshot::append(
+            snapshot,
+            &intents,
+            &view.starts,
+            &current.jobs,
+            &current.labels,
+        );
     }
 
     pub(crate) async fn cleanup_boat(&self, workspace: Uuid) -> Result<()> {

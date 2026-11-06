@@ -79,7 +79,13 @@ impl RunnerAuthority for BoatRunnerAuthority {
         let mut snapshot =
             crate::snapshot::build(&input, &runnable, self.clock.now(), self.root_sizing);
         snapshot.boat = view.retained_scaler_account()?;
-        crate::boat_snapshot::append(&mut snapshot, intents, &view.starts, &input.jobs);
+        crate::boat_snapshot::append(
+            &mut snapshot,
+            intents,
+            &view.starts,
+            &input.jobs,
+            &input.labels,
+        );
         let sandbox = snapshot.sandboxes.iter().find(|sandbox| {
             sandbox
                 .runner

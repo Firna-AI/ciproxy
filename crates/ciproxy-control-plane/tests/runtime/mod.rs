@@ -15,6 +15,7 @@ mod metering_tests;
 mod observation_tests;
 mod overflow_callback_tests;
 mod overflow_ports;
+mod overflow_replacement_tests;
 mod overflow_retirement_tests;
 mod overflow_support;
 mod overflow_tests;

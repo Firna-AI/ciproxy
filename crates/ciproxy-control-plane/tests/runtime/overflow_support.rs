@@ -3,6 +3,7 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicI64, AtomicUsize, Ordering};
 
+use chrono::{DateTime, Utc};
 use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_control_plane::boat_authority::BoatRunnerAuthority;
 use ciproxy_control_plane::runtime::MachineRuntime;
@@ -182,11 +183,35 @@ impl Harness {
     }
 
     pub(super) fn queued(&self) -> GithubJob {
+        self.queued_for(
+            self.fixture.intent.runner.label_id,
+            self.fixture.intent.runner.scale_set_id,
+        )
+    }
+
+    pub(super) fn queued_for(&self, label_id: Uuid, scale_set_id: Uuid) -> GithubJob {
+        self.queued_for_at(label_id, scale_set_id, at())
+    }
+
+    pub(super) fn queued_at(&self, assigned_at: DateTime<Utc>) -> GithubJob {
+        self.queued_for_at(
+            self.fixture.intent.runner.label_id,
+            self.fixture.intent.runner.scale_set_id,
+            assigned_at,
+        )
+    }
+
+    fn queued_for_at(
+        &self,
+        label_id: Uuid,
+        scale_set_id: Uuid,
+        assigned_at: DateTime<Utc>,
+    ) -> GithubJob {
         let job = GithubJob {
             id: Uuid::new_v4(),
             organization_id: self.fixture.organization,
-            scale_set_id: self.fixture.intent.runner.scale_set_id,
-            label_id: self.fixture.intent.runner.label_id,
+            scale_set_id,
+            label_id,
             actions_job_id: None,
             request_id: 0,
             run_id: 7,
@@ -195,7 +220,7 @@ impl Harness {
             workflow_ref: "ci.yml".to_owned(),
             phase: DemandPhase::Assigned,
             result: None,
-            assigned_at: Some(at()),
+            assigned_at: Some(assigned_at),
             started_at: None,
             completed_at: None,
             runner_github_id: None,
@@ -213,7 +238,7 @@ impl Harness {
         };
         self.fixture
             .store
-            .save_github_job(self.fixture.workspace, &job, at())
+            .save_github_job(self.fixture.workspace, &job, assigned_at)
             .unwrap();
         job
     }

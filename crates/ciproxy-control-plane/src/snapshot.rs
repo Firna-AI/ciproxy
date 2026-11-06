@@ -159,7 +159,9 @@ pub(crate) fn size(size: ciproxy_store_interface::vm_size::VmSize) -> VmSize {
 }
 
 fn instant(at: DateTime<Utc>) -> Duration {
-    Duration::from_secs(at.timestamp().unsigned_abs())
+    at.signed_duration_since(DateTime::UNIX_EPOCH)
+        .to_std()
+        .unwrap_or(Duration::ZERO)
 }
 
 #[cfg(test)]
