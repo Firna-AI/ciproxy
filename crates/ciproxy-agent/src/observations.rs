@@ -44,17 +44,20 @@ impl Controller {
             GuestToAgent::JobStarting {
                 runner_id,
                 job_id,
-                mut runtime,
+                runtime,
             } => {
                 if runner_id != vm.report.runner_id {
                     return Err(Error::GuestMismatch);
                 }
-                let updated = self
-                    .started_record(&vm, &job_id, Some(runtime.permissions))
-                    .await?;
-                runtime.permissions = updated.cache_permissions.unwrap_or_default();
-                if let Err(error) = self.cache.handoff(&updated, &job_id, runtime).await {
-                    tracing::warn!(%error,"cache assignment unavailable; preserve GitHub fallback");
+                let (updated, checked) = self.started_record(&vm, &job_id, Some(runtime)).await?;
+                if let Some(runtime) = checked {
+                    if let Err(error) = self.cache.handoff(&updated, &job_id, runtime).await {
+                        tracing::warn!(%error,"cache assignment unavailable; preserve GitHub fallback");
+                    }
+                } else {
+                    tracing::warn!(
+                        "cache assignment authority unavailable; preserve GitHub fallback"
+                    );
                 }
                 AgentMessage::JobStarted { runner_id, job_id }
             }

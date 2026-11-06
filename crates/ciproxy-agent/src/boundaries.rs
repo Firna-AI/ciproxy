@@ -12,8 +12,8 @@ use ciproxy_protocol::images::{ImageDownload, ImageReport};
 use ciproxy_protocol::jobs::{JobFacts, JobScope};
 use ciproxy_protocol::reports::HardwareReport;
 use ciproxy_protocol::runners::RunnerReport;
-use ciproxy_protocol::runtime::RuntimeCredentials;
 
+use crate::cache_authority::CheckedRuntime;
 use crate::connection_types::{ConnectionResult, ControlEvent};
 use crate::error::Result;
 use crate::image_registry::ImageLease;
@@ -68,12 +68,7 @@ pub(crate) trait Cache: Send + Sync {
     async fn report(&self) -> Result<MachineCacheReport>;
     async fn clear(&self) -> Result<()>;
     async fn release(&self, vm: &VmRecord) -> Result<()>;
-    async fn handoff(
-        &self,
-        vm: &VmRecord,
-        job_id: &JobId,
-        runtime: RuntimeCredentials,
-    ) -> Result<()>;
+    async fn handoff(&self, vm: &VmRecord, job_id: &JobId, runtime: CheckedRuntime) -> Result<()>;
     async fn prepare(
         &self,
         runner: &RunnerId,

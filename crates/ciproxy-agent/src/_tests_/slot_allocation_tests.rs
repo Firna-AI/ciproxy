@@ -8,6 +8,7 @@ use ciproxy_protocol::runners::RunnerExit;
 use unimock::{MockFn, Unimock, matching};
 
 use crate::boundaries::{CacheMock, StoreMock, VmsMock};
+use crate::cache_authority::CacheAuthority;
 use crate::controller::Agent;
 use crate::fixtures::{
     applied, controller, hardware, report_dependencies_for, spec, start_image, vm,
@@ -33,7 +34,7 @@ async fn fragmented_slots_are_shared_with_reports_and_reused_without_moving_surv
             .each_call(matching!(_, _))
             .answers(&|_, report, _| {
                 Ok(VmRecord {
-                    cache_permissions: None,
+                    cache_authority: CacheAuthority::Waiting,
                     job_facts: None,
                     local_id: format!("local-{}", report.runner_id.0),
                     report,

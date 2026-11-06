@@ -17,7 +17,8 @@ pub struct CachePermissions {
 }
 
 /// Original credentials extracted from the runner's server assignment.
-/// These values must never enter hosted messages, logs, or durable agent state.
+/// Tokens and complete URLs stay out of hosted messages, logs, and durable state.
+/// The agent may persist non-secret endpoint origins with the original rights.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct RuntimeCredentials {
     /// Preloaded Docker bytes measured by the trusted guest before action code.

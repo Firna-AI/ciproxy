@@ -2,12 +2,12 @@
 
 use std::sync::Arc;
 
+use crate::cache_authority::CheckedRuntime;
 use async_trait::async_trait;
 use ciproxy_protocol::cache::{CacheConnection, MachineCacheReport};
 use ciproxy_protocol::identifiers::{JobId, RunnerId};
 use ciproxy_protocol::jobs::JobFacts;
 use ciproxy_protocol::jobs::JobScope;
-use ciproxy_protocol::runtime::RuntimeCredentials;
 use futures_util::{pin_mut, poll};
 use tokio::sync::{Mutex, oneshot};
 use unimock::{MockFn, Unimock, matching};
@@ -28,12 +28,7 @@ impl Cache for WaitingCache {
     async fn fallback(&self, vm: &VmRecord) -> Result<()> {
         self.delegate.fallback(vm).await
     }
-    async fn handoff(
-        &self,
-        vm: &VmRecord,
-        job_id: &JobId,
-        runtime: RuntimeCredentials,
-    ) -> Result<()> {
+    async fn handoff(&self, vm: &VmRecord, job_id: &JobId, runtime: CheckedRuntime) -> Result<()> {
         self.delegate.handoff(vm, job_id, runtime).await
     }
     async fn prepare(

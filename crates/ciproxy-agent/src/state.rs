@@ -7,6 +7,8 @@ use ciproxy_protocol::runners::RunnerReport;
 use ciproxy_protocol::secret::Secret;
 use serde::{Deserialize, Serialize};
 
+use crate::cache_authority::CacheAuthority;
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 /// The workspace-bound machine credential saved on this machine.
 pub struct Identity {
@@ -39,8 +41,8 @@ pub(crate) enum PreparationState {
 /// A locally generated jail identity and its protocol report.
 pub struct VmRecord {
     pub(crate) preparation: PreparationState,
-    /// Original non-secret assignment rights sealed before job code starts.
-    pub(crate) cache_permissions: Option<ciproxy_protocol::runtime::CachePermissions>,
+    /// Required original non-secret destination and permission authority.
+    pub(crate) cache_authority: CacheAuthority,
     /// CP-confirmed assignment metadata, without runtime credentials.
     pub(crate) job_facts: Option<ciproxy_protocol::jobs::JobFacts>,
     pub(crate) local_id: String,

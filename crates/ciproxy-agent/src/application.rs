@@ -19,6 +19,7 @@ use crate::boundaries::{Cache, Connection, Host, Service, Store, Vms};
 use crate::cache::HttpCache;
 use crate::cache_network::GuardedCacheStart;
 use crate::cache_service::{CacheService, ReleasedCache};
+use crate::cache_unit::{InstalledCacheUnit, LinuxCacheUnitFiles};
 use crate::cli::{Action, Cli};
 use crate::connection::WebSocketConnection;
 use crate::connection_socket::TlsWebSocketDialer;
@@ -165,6 +166,9 @@ async fn execute(action: Action) -> Result<()> {
         Action::Install(token) => {
             preparation.prepare().await?;
             let cache_service: Arc<dyn CacheService> = Arc::new(ReleasedCache {
+                unit: Arc::new(InstalledCacheUnit {
+                    files: Arc::new(LinuxCacheUnitFiles),
+                }),
                 starter: Arc::new(GuardedCacheStart {
                     commands: commands.clone(),
                 }),

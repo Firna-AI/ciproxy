@@ -5,6 +5,7 @@ use std::path::Path;
 use std::process::Command;
 
 use crate::boundaries::Service;
+use crate::cache_unit::POLICY_PATH;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::persistence::private_directory;
 
@@ -61,6 +62,7 @@ impl Service for SystemService {
         self.remove_cache_policy()?;
         for path in [
             UNIT_PATH,
+            POLICY_PATH,
             BINARY,
             "/usr/local/bin/ciproxy-agent.pending",
             "/usr/local/bin/ciproxy-agent.old",
