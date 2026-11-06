@@ -1,8 +1,19 @@
 //! Trusted clock and cryptographic entropy supplied at the composition root.
 
+use std::sync::Arc;
+
 use chrono::{DateTime, Utc};
+use ciproxy_store_interface::dashboard::records::CurrentCostClock;
 use secrecy::SecretString;
 use uuid::Uuid;
+
+/// Adapt the existing service clock for a locked current-cost write.
+pub(crate) struct CostClock(pub(crate) Arc<dyn Runtime>);
+impl CurrentCostClock for CostClock {
+    fn now(&self) -> DateTime<Utc> {
+        self.0.now()
+    }
+}
 
 use crate::error::{ErrorResultExt, Result};
 

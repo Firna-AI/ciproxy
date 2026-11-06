@@ -3,11 +3,13 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use axum::http::StatusCode;
+use axum::http::{StatusCode, header};
+use chrono::{DateTime, Utc};
 use ciproxy_api::access::AccessService;
 use ciproxy_api::crypto::AeadCredentialCipher;
 use ciproxy_api::identity::http::{GithubOAuthClient, OAuthConfig};
 use ciproxy_api::installations::GithubInstallationAdmin;
+use ciproxy_api::runtime::Runtime;
 use ciproxy_github::auth::AppJwt;
 use ciproxy_github::scale_sets::sdk::SdkScaleSetApi;
 use ciproxy_github::scale_sets::{ScaleSetApi, ScaleSetFactory};
@@ -17,10 +19,29 @@ use reqwest::{Client, redirect::Policy};
 use scaleset::{Credentials, RetryPolicy};
 use secrecy::{ExposeSecret, SecretString};
 use serde_json::json;
+use url::Url;
+use uuid::Uuid;
 
 use super::adapter_server::Server;
 use super::fixture::Fixture;
-use super::fixture_io::json;
+use super::fixture_io::{CallbackOutcome, json};
+use super::ports::Inputs;
+use super::setup_support::{browser, finish};
+
+const VERIFIER: &str = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
+
+struct PkceRuntime(Arc<Inputs>);
+impl Runtime for PkceRuntime {
+    fn now(&self) -> DateTime<Utc> {
+        Runtime::now(&*self.0)
+    }
+    fn identifier(&self) -> Uuid {
+        Uuid::new_v4()
+    }
+    fn secret(&self) -> ciproxy_api::error::Result<SecretString> {
+        Ok(VERIFIER.into())
+    }
+}
 
 struct Signer(SecretString);
 impl AppJwt for Signer {
@@ -76,20 +97,54 @@ async fn production_oauth_and_installation_metadata_verify_identity_and_all_page
             github: server.origin.parse().unwrap(),
             api: server.origin.parse().unwrap(),
         },
-        fixture.runtime.clone(),
+        Arc::new(PkceRuntime(fixture.runtime.clone())),
     ));
     fixture.state.access = Arc::new(AccessService::new(
         fixture.database.store.clone(),
         identity,
         Arc::new(AeadCredentialCipher::new(&[17; 32])),
-        fixture.runtime.clone(),
+        Arc::new(PkceRuntime(fixture.runtime.clone())),
     ));
     fixture.state.installations = Arc::new(GithubInstallationAdmin::new(
         http,
         server.origin.parse().unwrap(),
         Arc::new(Signer(server.token.clone())),
     ));
-    let browser = fixture.login(7, Some(Role::Admin)).await;
+    fixture
+        .database
+        .store
+        .ensure_dashboard_initial_admin(fixture.workspace, 7, fixture.runtime.now())
+        .unwrap();
+    let begin = fixture.request(None, "GET", "/auth/github", None).await;
+    let authorization = Url::parse(
+        begin
+            .headers()
+            .get(header::LOCATION)
+            .unwrap()
+            .to_str()
+            .unwrap(),
+    )
+    .unwrap();
+    let query = authorization
+        .query_pairs()
+        .collect::<std::collections::HashMap<_, _>>();
+    let returned = finish(&fixture, begin, CallbackOutcome::Accepted).await;
+    let browser = browser(&returned);
+    assert_eq!(
+        query
+            .get("code_challenge_method")
+            .map(|value| value.as_ref()),
+        Some("S256")
+    );
+    assert_eq!(
+        query.get("code_challenge").map(|value| value.as_ref()),
+        Some("E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM")
+    );
+    {
+        let verifiers = server.oauth.verifiers.lock().unwrap();
+        assert_eq!(verifiers.len(), 1);
+        assert_eq!(verifiers[0].expose_secret(), VERIFIER);
+    }
     let session = json(
         fixture
             .request(Some(&browser), "GET", "/session", None)

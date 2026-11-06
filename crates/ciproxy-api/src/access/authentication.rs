@@ -46,6 +46,14 @@ impl AccessService {
             .is_some_and(|at| now + Duration::minutes(1) >= at)
         {
             grant = self.identity.refresh(grant).await?;
+            user.credentials = self.cipher.seal(user.id, grant.encode()?).await?;
+            lease.check_connection().internal()?;
+            let id = user.id;
+            let credentials = user.credentials.clone();
+            query(self.store.clone(), move |store| {
+                store.save_dashboard_credentials(id, &credentials)
+            })
+            .await?;
         }
         let memberships = self.identity.memberships(&grant).await?;
         user.credentials = self.cipher.seal(user.id, grant.encode()?).await?;

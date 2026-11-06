@@ -6,10 +6,11 @@ use axum::extract::{Path, State};
 use axum::{Extension, Json};
 use ciproxy_gateway::types::{Delivery, MachineAction};
 use ciproxy_protocol::resources::{GIGABYTE, VmSize};
-use ciproxy_store_interface::metering::history::MachineCost;
+use ciproxy_store_interface::dashboard::records::CurrentMachineCost;
 
 use crate::access::Principal;
 use crate::error::{Error, ErrorResultExt, Result, ServiceResultExt};
+use crate::runtime::CostClock;
 use crate::state::{ApiState, query};
 use crate::wire::access::{Success, WorkspacePath};
 use crate::wire::machines::{
@@ -125,18 +126,17 @@ pub(crate) async fn cost(
     if body.monthly_cost_cents.0 < 0 {
         return Err(Error::InvalidInput);
     }
-    let cost = MachineCost {
+    let cost = CurrentMachineCost {
         id: state.runtime.identifier(),
         machine_id: path.machine_id,
-        starts_at: state.runtime.now(),
-        ends_at: None,
         monthly_usd: match body.monthly_cost_cents.usd() {
             Ok(value) => value,
             Err(_) => return Err(Error::InvalidInput),
         },
     };
+    let clock = CostClock(state.runtime);
     query(state.store, move |store| {
-        store.save_dashboard_machine_cost(workspace_id, &cost)
+        store.save_dashboard_machine_cost(workspace_id, &cost, &clock)
     })
     .await?;
     Ok(Json(Success { ok: true }))

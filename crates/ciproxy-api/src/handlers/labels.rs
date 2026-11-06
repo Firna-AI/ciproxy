@@ -7,7 +7,6 @@ use axum::extract::{Path, State};
 use axum::{Extension, Json};
 use ciproxy_store_interface::labels::Label;
 use ciproxy_store_interface::organizations::AppState;
-use ciproxy_store_interface::scale_sets::ScaleSet;
 use uuid::Uuid;
 
 use crate::access::Principal;
@@ -16,7 +15,7 @@ use crate::state::{ApiState, query};
 use crate::wire::access::{Success, WorkspacePath};
 use crate::wire::settings::{LabelFit, LabelInput, LabelPath, LabelView};
 
-use super::label_views;
+use super::{label_cleanup, label_views};
 
 pub(super) async fn read(state: &ApiState, workspace: Uuid) -> Result<Vec<LabelView>> {
     let labels = query(state.store.clone(), move |store| store.labels(workspace)).await?;
@@ -88,7 +87,7 @@ pub(crate) async fn create(
         .into_iter()
         .filter(|previous| previous.name == label.name)
     {
-        cleanup_label(&state, workspace_id, previous.id).await?;
+        label_cleanup::cleanup(&state, workspace_id, previous.id).await?;
     }
     prepare(&state, workspace_id, &label).await?;
     let saved = label.clone();
@@ -166,7 +165,7 @@ pub(crate) async fn remove(
         store.retire_dashboard_label(workspace_id, path.label_id, at)
     })
     .await?;
-    cleanup_label(&state, workspace_id, path.label_id).await?;
+    label_cleanup::cleanup(&state, workspace_id, path.label_id).await?;
     Ok(Json(Success { ok: true }))
 }
 
@@ -209,37 +208,6 @@ async fn prepare(state: &ApiState, workspace: Uuid, label: &Label) -> Result<()>
     } else {
         Err(Error::Unavailable)
     }
-}
-
-pub(crate) async fn cleanup_label(state: &ApiState, workspace: Uuid, label: Uuid) -> Result<()> {
-    for organization in query(state.store.clone(), move |store| {
-        store.organizations(workspace)
-    })
-    .await?
-    .into_iter()
-    .filter(|organization| organization.app_state == AppState::Active)
-    {
-        let id = organization.github_id;
-        let mut lease = query(state.store.clone(), move |store| {
-            store.lock_github_organization(id)
-        })
-        .await?;
-        let organization_id = organization.id;
-        let sets: Vec<ScaleSet> = query(state.store.clone(), move |store| {
-            store.dashboard_scale_sets(workspace, organization_id)
-        })
-        .await?;
-        let api = state
-            .scale_sets
-            .for_organization(&organization)
-            .await
-            .api()?;
-        for set in sets.into_iter().filter(|set| set.label_id == label) {
-            api.remove_scale_set(set.github_id).await.api()?;
-        }
-        lease.check_connection().internal()?;
-    }
-    Ok(())
 }
 
 fn label_failure(error: &ciproxy_github::error::Error) -> Error {

@@ -10,7 +10,8 @@ mod takeouts;
 
 use chrono::{DateTime, Utc};
 use ciproxy_store_interface::dashboard::records::{
-    AdminClaim, LoginState, Member, Membership, Role, Session, Takeout, User,
+    AdminClaim, CurrentCostClock, CurrentMachineCost, LoginState, Member, Membership, Role,
+    Session, Takeout, User,
 };
 use ciproxy_store_interface::dashboard::store::DashboardStore;
 use ciproxy_store_interface::error::Result;
@@ -37,6 +38,9 @@ impl DashboardStore for PgStore {
     }
     fn save_dashboard_user(&self, user: &User, memberships: &[Membership]) -> Result<()> {
         identity::save(self, user, memberships)
+    }
+    fn save_dashboard_credentials(&self, id: Uuid, credentials: &[u8]) -> Result<()> {
+        identity::credentials(self, id, credentials)
     }
     fn establish_dashboard_session(
         &self,
@@ -123,8 +127,13 @@ impl DashboardStore for PgStore {
     fn set_dashboard_warm_runners(&self, id: Uuid, machine: Uuid, warm: i32) -> Result<()> {
         machines::warm(self, id, machine, warm)
     }
-    fn save_dashboard_machine_cost(&self, id: Uuid, cost: &MachineCost) -> Result<()> {
-        machines::cost(self, id, cost)
+    fn save_dashboard_machine_cost(
+        &self,
+        id: Uuid,
+        cost: &CurrentMachineCost,
+        clock: &dyn CurrentCostClock,
+    ) -> Result<()> {
+        machines::cost(self, id, cost, clock)
     }
     fn dashboard_scale_sets(&self, id: Uuid, organization: Uuid) -> Result<Vec<ScaleSet>> {
         resources::sets(self, id, organization)

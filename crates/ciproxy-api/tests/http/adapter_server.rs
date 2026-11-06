@@ -15,6 +15,7 @@ use tokio::task::JoinHandle;
 use url::Url;
 use uuid::Uuid;
 
+use super::oauth_peer::OAuthPeer;
 use super::setup_peer::{self, Control};
 
 pub(super) struct Server {
@@ -22,6 +23,7 @@ pub(super) struct Server {
     pub(super) token: SecretString,
     pub(super) seen: Arc<Mutex<Vec<String>>>,
     pub(super) control: Arc<Control>,
+    pub(super) oauth: Arc<OAuthPeer>,
     task: JoinHandle<()>,
 }
 struct Data {
@@ -29,6 +31,7 @@ struct Data {
     token: SecretString,
     seen: Arc<Mutex<Vec<String>>>,
     control: Arc<Control>,
+    oauth: Arc<OAuthPeer>,
 }
 impl Server {
     pub(super) async fn new() -> Self {
@@ -37,11 +40,13 @@ impl Server {
         let token: SecretString = Uuid::new_v4().to_string().into();
         let seen = Arc::new(Mutex::new(Vec::new()));
         let control = Arc::new(Control::new());
+        let oauth = Arc::new(OAuthPeer::new(token.clone()));
         let state = Arc::new(Data {
             origin: origin.clone(),
             token: token.clone(),
             seen: seen.clone(),
             control: control.clone(),
+            oauth: oauth.clone(),
         });
         let task = tokio::spawn(async move {
             axum::serve(listener, Router::new().fallback(handle).with_state(state))
@@ -53,6 +58,7 @@ impl Server {
             token,
             seen,
             control,
+            oauth,
             task,
         }
     }
@@ -80,15 +86,12 @@ async fn handle(
         .unwrap();
         let fields = form
             .query_pairs()
+            .map(|(key, value)| (key.into_owned(), value.into_owned()))
             .collect::<std::collections::HashMap<_, _>>();
-        assert!(fields.contains_key("client_secret"));
-        assert!(
-            fields.contains_key("code_verifier")
-                || fields
-                    .get("grant_type")
-                    .is_some_and(|value| value == "refresh_token")
-        );
-        return Json(json!({"access_token":data.token.expose_secret(),"expires_in":28800,"refresh_token":Uuid::new_v4().to_string(),"refresh_token_expires_in":15897600})).into_response();
+        if !fields.contains_key("client_secret") {
+            return StatusCode::BAD_REQUEST.into_response();
+        }
+        return data.oauth.token(&fields);
     }
     if path == "/user" {
         return Json(
@@ -106,15 +109,12 @@ async fn handle(
         return response;
     }
     if path == "/user/memberships/orgs" {
+        if let Some(error) = data.oauth.membership_error(&headers) {
+            return error;
+        }
         if !data.control.memberships.load(Ordering::SeqCst) {
             return Json(json!([])).into_response();
         }
-        assert!(headers.get("Authorization").is_some_and(|value| {
-            value
-                .to_str()
-                .unwrap()
-                .ends_with(data.token.expose_secret())
-        }));
         let batch = if page == "1" {
             (0..100).map(|index|json!({"state":"active","role":if index==0 {"admin"}else{"member"},"organization":{"id":100+index}})).collect::<Vec<_>>()
         } else {

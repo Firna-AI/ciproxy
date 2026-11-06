@@ -886,14 +886,16 @@ UTC RFC 3339, and IDs as strings. Reason: JavaScript loses 64-bit numbers.
 - [ ] Test each route at the HTTP level with a real store.
       Branch: `conductor/ciproxy-mvp-milestone-14-api`.
       Orchestrator: complete the add-route HTTP cases after the owner's
-      decisions. The implemented 28 operations have 21 real-store scenarios.
+      decisions. The implemented 28 operations have 25 real-store scenarios.
   - [x] Test the implemented routes with PostgreSQL, the gateway, and the
         GitHub App service. Verify upstream adapters with a local HTTP peer.
         Branch: `conductor/ciproxy-mvp-milestone-14-api`.
 - [ ] Orchestrator: mount the router at `/api` through Milestone 13. Supply
       the shared gateway, role and install adapters, selected-image sizing,
       and current release metadata. Run API maintenance on startup and at
-      least hourly. Branch: `conductor/ciproxy-mvp-milestone-14-api`.
+      least hourly. Discover listeners with `Store::listener_scale_sets`
+      to keep retired bindings through completion and the final ACK.
+      Branch: `conductor/ciproxy-mvp-milestone-14-api`.
 - [ ] Orchestrator: run the live API, repeated-authorization, and GitHub
       install-binding probes in `crates/ciproxy-api/scripts/README.md`.
       Read credentials through `CIPROXY_API_CREDENTIALS_FILE`. Record no

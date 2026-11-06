@@ -1,15 +1,19 @@
 //! Scale set queries and dedicated advisory lock connections.
 
+use chrono::{DateTime, Utc};
 use ciproxy_schema::labels::labels;
 use ciproxy_schema::scale_sets::scale_sets;
 use ciproxy_store_interface::error::{Result, ResultExt};
-use ciproxy_store_interface::scale_sets::{ScaleSet, ScaleSetSession, ScaleSetStore};
+use ciproxy_store_interface::scale_sets::{
+    ScaleSet, ScaleSetBinding, ScaleSetSession, ScaleSetStore,
+};
 use diesel::prelude::*;
 use diesel::sql_types::{BigInt, Bool};
 use uuid::Uuid;
 
 use crate::connection::PgStore;
 use crate::error::QueryResultExt;
+use crate::scale_set_tracking;
 
 #[derive(Queryable, Selectable)]
 #[diesel(table_name = scale_sets)]
@@ -72,6 +76,7 @@ impl ScaleSetStore for PgStore {
         Ok(scale_sets::table
             .filter(scale_sets::workspace_id.eq(workspace_id))
             .filter(scale_sets::organization_id.eq(organization_id))
+            .filter(scale_sets::remote_removed_at.is_null())
             .filter(
                 scale_sets::label_id.eq_any(
                     labels::table
@@ -86,6 +91,32 @@ impl ScaleSetStore for PgStore {
             .into_iter()
             .map(ScaleSet::from)
             .collect())
+    }
+
+    fn scale_set_binding(
+        &self,
+        workspace: Uuid,
+        organization: Uuid,
+        set: Uuid,
+    ) -> Result<Option<ScaleSetBinding>> {
+        scale_set_tracking::binding(self, workspace, organization, set)
+    }
+
+    fn listener_scale_sets(
+        &self,
+        workspace: Uuid,
+        organization: Uuid,
+    ) -> Result<Vec<ScaleSetBinding>> {
+        scale_set_tracking::listeners(self, workspace, organization)
+    }
+
+    fn complete_scale_set_removal(
+        &self,
+        workspace: Uuid,
+        set: &ScaleSet,
+        at: DateTime<Utc>,
+    ) -> Result<()> {
+        scale_set_tracking::complete(self, workspace, set, at)
     }
 
     fn try_lock_scale_set(

@@ -45,6 +45,8 @@ pub trait ScaleSetApi: Send + Sync {
     async fn remove_runner(&self, runner_id: i64) -> Result<()>;
     /// Delete a scale set while App access still exists, such as a take-out.
     async fn remove_scale_set(&self, scale_set_id: i64) -> Result<()>;
+    /// Release a retired label name while retaining its exact remote binding.
+    async fn rename_scale_set(&self, scale_set_id: i64, name: &str) -> Result<()>;
 }
 
 /// An owned GitHub message session. It never acknowledges messages itself.

@@ -9,5 +9,6 @@ diesel::table! {
         github_id -> Int8,
         runner_group_id -> Int8,
         lock_key -> Int8,
+        remote_removed_at -> Nullable<Timestamptz>,
     }
 }

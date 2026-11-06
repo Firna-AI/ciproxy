@@ -212,6 +212,18 @@ impl ScaleSetApi for Remote {
         self.sets.lock().unwrap().retain(|_, value| *value != id);
         Ok(())
     }
+    async fn rename_scale_set(&self, id: i64, name: &str) -> ciproxy_github::error::Result<()> {
+        let mut sets = self.sets.lock().unwrap();
+        let previous = sets
+            .iter()
+            .find(|(_, value)| **value == id)
+            .map(|(key, _)| key.clone());
+        if let Some((previous, group)) = previous {
+            sets.remove(&(previous, group));
+            sets.insert((name.to_owned(), group), id);
+        }
+        Ok(())
+    }
     async fn open(&self, _: i64, _: &str) -> ciproxy_github::error::Result<Box<dyn MessageQueue>> {
         Err(ciproxy_github::error::Error::InstallationPending)
     }

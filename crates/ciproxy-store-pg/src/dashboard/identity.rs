@@ -11,9 +11,18 @@ use diesel::sql_types::{BigInt, Timestamptz};
 use uuid::Uuid;
 
 use crate::connection::PgStore;
-use crate::error::QueryResultExt;
+use crate::error::{QueryResultExt, require_record};
 
 use super::rows::UserRow;
+
+pub(super) fn credentials(store: &PgStore, id: Uuid, credentials: &[u8]) -> Result<()> {
+    require_record(
+        diesel::update(dashboard_users::table.find(id))
+            .set(dashboard_users::credentials.eq(credentials))
+            .execute(&mut *store.connection()?)
+            .store()?,
+    )
+}
 
 pub(super) fn user(store: &PgStore, id: Uuid) -> Result<Option<User>> {
     Ok(dashboard_users::table

@@ -92,6 +92,13 @@ pub(super) fn retired(store: &PgStore, workspace: Uuid) -> Result<Vec<Label>> {
     labels::table
         .filter(labels::workspace_id.eq(workspace))
         .filter(labels::deleted_at.is_not_null())
+        .filter(
+            labels::id.eq_any(
+                scale_sets::table
+                    .filter(scale_sets::remote_removed_at.is_null())
+                    .select(scale_sets::label_id),
+            ),
+        )
         .select(LabelRow::as_select())
         .load(&mut *store.connection()?)
         .store()?
@@ -104,6 +111,7 @@ pub(super) fn sets(store: &PgStore, workspace: Uuid, organization: Uuid) -> Resu
     Ok(scale_sets::table
         .filter(scale_sets::workspace_id.eq(workspace))
         .filter(scale_sets::organization_id.eq(organization))
+        .filter(scale_sets::remote_removed_at.is_null())
         .select(ScaleSetRow::as_select())
         .load::<ScaleSetRow>(&mut *store.connection()?)
         .store()?
@@ -115,6 +123,13 @@ pub(super) fn sets(store: &PgStore, workspace: Uuid, organization: Uuid) -> Resu
 pub(super) fn retired_workspaces(store: &PgStore) -> Result<Vec<Uuid>> {
     labels::table
         .filter(labels::deleted_at.is_not_null())
+        .filter(
+            labels::id.eq_any(
+                scale_sets::table
+                    .filter(scale_sets::remote_removed_at.is_null())
+                    .select(scale_sets::label_id),
+            ),
+        )
         .select(labels::workspace_id)
         .distinct()
         .load(&mut *store.connection()?)

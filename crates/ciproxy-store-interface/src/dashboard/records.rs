@@ -1,7 +1,24 @@
 //! Credential-safe dashboard persistence values.
 
 use chrono::{DateTime, Utc};
+use rust_decimal::Decimal;
 use uuid::Uuid;
+
+/// One current machine price, without a caller-selected effective time.
+pub struct CurrentMachineCost {
+    /// Identity of the new interval.
+    pub id: Uuid,
+    /// The machine whose current price changes.
+    pub machine_id: Uuid,
+    /// Exact current monthly price in US dollars.
+    pub monthly_usd: Decimal,
+}
+
+/// The caller's trusted clock, read only after current-cost locks are held.
+pub trait CurrentCostClock: Send + Sync {
+    /// Read the effective time of the serialized current-cost write.
+    fn now(&self) -> DateTime<Utc>;
+}
 
 /// A person verified through GitHub user authorization.
 #[derive(Clone)]

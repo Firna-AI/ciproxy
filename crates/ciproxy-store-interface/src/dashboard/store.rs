@@ -4,7 +4,8 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 use crate::dashboard::records::{
-    AdminClaim, LoginState, Member, Membership, Role, Session, Takeout, User,
+    AdminClaim, CurrentCostClock, CurrentMachineCost, LoginState, Member, Membership, Role,
+    Session, Takeout, User,
 };
 use crate::error::Result;
 use crate::labels::Label;
@@ -24,6 +25,8 @@ pub trait DashboardStore: Send + Sync {
     fn dashboard_user(&self, id: Uuid) -> Result<Option<User>>;
     /// Save a grant and complete membership snapshot, removing unsupported roles.
     fn save_dashboard_user(&self, user: &User, memberships: &[Membership]) -> Result<()>;
+    /// Save a rotated encrypted pair without changing membership freshness or roles.
+    fn save_dashboard_credentials(&self, user_id: Uuid, credentials: &[u8]) -> Result<()>;
     /// Commit identity, memberships, access requests, and its session together.
     fn establish_dashboard_session(
         &self,
@@ -103,9 +106,14 @@ pub trait DashboardStore: Send + Sync {
         machine_id: Uuid,
         warm_runners: i32,
     ) -> Result<()>;
-    /// Close the prior cost interval and record the supplied current cost.
+    /// Read the clock under the locks and use that time for both interval boundaries.
     /// This never changes the warm target or supplies earlier unknown prices.
-    fn save_dashboard_machine_cost(&self, workspace_id: Uuid, cost: &MachineCost) -> Result<()>;
+    fn save_dashboard_machine_cost(
+        &self,
+        workspace_id: Uuid,
+        cost: &CurrentMachineCost,
+        clock: &dyn CurrentCostClock,
+    ) -> Result<()>;
     /// Read active and historical bindings for remote deletion only.
     fn dashboard_scale_sets(
         &self,

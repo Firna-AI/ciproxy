@@ -38,4 +38,3 @@ diesel = { version = "2.3.14", features = ["postgres"] }
 http-body-util = "0.1.5"
 tower = { version = "0.5.3", features = ["util"] }
 url = "2.5.8"
-

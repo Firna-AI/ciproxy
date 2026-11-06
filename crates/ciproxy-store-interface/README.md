@@ -165,6 +165,15 @@ organization removal keeps a separate durable marker and no owner-removal
 retention deadline. Retired labels preserve history while active names
 remain unique.
 
+Credential-only rotation writes preserve verified memberships and their check
+time. Current machine cost inputs contain no effective timestamp. Their atomic
+write reads the injected clock after acquiring its locks.
+
+Scale-set bindings distinguish Active, Draining, and Removed. Listener discovery
+includes active bindings and draining bindings with tracked work or pending
+delivery. Exact context survives cleanup for final acknowledgements and runner
+removal. Confirmed removal applies only to the exact saved binding and remote ID.
+
 ## Quick Start
 
 Use the same interface for PostgreSQL and service test doubles:

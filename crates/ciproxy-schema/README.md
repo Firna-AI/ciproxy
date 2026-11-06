@@ -85,6 +85,8 @@ A person record stays only with a role or an open request. Intentional
 organization removal keeps a separate durable marker and no owner-removal
 retention deadline. Retired labels preserve history while active names
 remain unique.
+Scale-set bindings retain a separate remote cleanup confirmation. Label
+retirement and confirmed removal preserve the binding and its job references.
 
 ## Quick Start
 

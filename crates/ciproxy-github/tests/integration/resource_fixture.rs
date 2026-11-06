@@ -51,6 +51,9 @@ impl ScaleSetApi for Resources {
     async fn remove_scale_set(&self, _: i64) -> Result<()> {
         Err(Error::AccessUnavailable(501))
     }
+    async fn rename_scale_set(&self, _: i64, _: &str) -> Result<()> {
+        Err(Error::AccessUnavailable(501))
+    }
 }
 
 pub(super) struct ResourceFactory(pub(super) Arc<Resources>);

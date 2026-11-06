@@ -2,6 +2,7 @@
 
 pub(crate) mod auth;
 pub(crate) mod github_setup;
+pub(crate) mod label_cleanup;
 mod label_views;
 pub(crate) mod labels;
 mod machine_views;

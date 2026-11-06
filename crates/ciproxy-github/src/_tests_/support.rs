@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use ciproxy_store_interface::github::{Repository, RepositoryIdentity, RunFacts};
 use ciproxy_store_interface::labels::{Label, WhenNothingFits};
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
-use ciproxy_store_interface::scale_sets::ScaleSet;
+use ciproxy_store_interface::scale_sets::{ScaleSet, ScaleSetState};
 use ciproxy_store_interface::vm_size::VmSize;
 use unimock::Unimock;
 use uuid::Uuid;
@@ -132,6 +132,8 @@ pub(super) fn target() -> ListenerTarget {
 
 pub(super) fn context() -> ListenerContext {
     ListenerContext {
+        state: ScaleSetState::Active,
+        has_tracked_jobs: true,
         organization: organization(),
         scale_set: ScaleSet {
             id: id(6),

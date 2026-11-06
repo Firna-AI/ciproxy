@@ -25,6 +25,8 @@ promotion. A matching GitHub identity keeps the first sign-in expiry.
 Reauthorization rotates session and CSRF secrets. Membership refresh uses the
 latest stored grant under a database lease. It does not create another access
 request after an Admin declines one.
+Token rotation saves its encrypted replacement pair before membership checks.
+A failed check preserves the previous membership snapshot and freshness time.
 
 Requests that change data require the configured Origin and the session's CSRF
 token. Every response carries `x-ciproxy-build` and `Cache-Control: no-store`.
@@ -97,9 +99,17 @@ Warm runners and cost have independent typed writes:
 - PUT `/workspaces/{workspace_id}/machines/{machine_id}/cost` changes only
   `monthly_cost_cents`. It preserves the warm target. Zero is a known cost.
 
-The old generic machine PUT has no alias. A current cost starts at entry time.
-It supplies no historical price. Earlier unknown registered dates keep the
+The old generic machine PUT has no alias. Current-cost writes read the injected
+clock after acquiring their store locks.
+That time closes the prior interval and starts the replacement interval.
+The API supplies no historical price. Earlier unknown registered dates keep the
 savings figure unavailable. This API adds no effective-date policy.
+
+Label deletion stops new acquisition and runner registration immediately.
+Retired bindings keep their job results and completion sessions. Remote cleanup
+waits for tracked jobs, pending delivery, and the listener's session lease.
+A draining remote binding releases its label name before a same-name re-create.
+Cleanup records completion for the exact old binding and leaves its history.
 
 HTTP path workspace IDs are opaque. Only the access boundary returns a checked
 UUID after the current workspace role check. Owner claim has its own
