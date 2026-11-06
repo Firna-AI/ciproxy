@@ -59,7 +59,7 @@ pub(super) fn job(value: DashboardJob, at: DateTime<Utc>) -> JobView {
         queued_at: value.queued_at,
         started_at: value.started_at,
         completed_at: value.completed_at,
-        counts_as_start: value.started_at.is_some() && value.actual_size.is_some(),
+        counts_as_start: value.runner_taken,
         waited_seconds,
         runtime_seconds,
         label: JobLabel {

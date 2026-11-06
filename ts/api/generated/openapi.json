@@ -12540,7 +12540,7 @@
           },
           "counts_as_start": {
             "type": "boolean",
-            "description": "True for a job taken by an identified ciproxy runner."
+            "description": "True for a job taken by an identified ciproxy runner, even with unknown time."
           },
           "git_ref": {
             "type": [
@@ -12611,7 +12611,7 @@
               "string",
               "null"
             ],
-            "description": "Verbatim GitHub conclusion when supplied."
+            "description": "Verbatim result from its trusted source, without vocabulary normalization.\nREST examples are success, failure, and cancelled.\nScale-set examples are succeeded, failed, and canceled."
           },
           "routing_reason": {
             "type": [
@@ -12654,7 +12654,7 @@
       },
       "JobVisibility": {
         "type": "object",
-        "description": "One organization whose waiting queue is not visible through its App.",
+        "description": "Current suspension or retained owner removal, without changing current membership.",
         "required": [
           "organization",
           "suspended",
@@ -12664,7 +12664,7 @@
         "properties": {
           "github_url": {
             "type": "string",
-            "description": "GitHub installation settings for recovery."
+            "description": "Current installation settings, or the configured App install URL after removal."
           },
           "organization": {
             "type": "string",
@@ -12828,7 +12828,7 @@
             "items": {
               "$ref": "#/components/schemas/JobVisibility"
             },
-            "description": "Organization visibility problems, including suspended or removed Apps."
+            "description": "Current suspensions and retained owner removals, excluding intentional take-outs."
           },
           "waiting": {
             "type": "array",
@@ -12842,7 +12842,7 @@
               "string",
               "null"
             ],
-            "description": "Complete waiting count, absent while App visibility is unavailable."
+            "description": "Complete current-member waiting count, absent during current suspension."
           },
           "waiting_labels": {
             "type": "array",

@@ -145,7 +145,9 @@ pub struct JobView {
     pub head_branch: Option<String>,
     /// Lifecycle state.
     pub status: JobStatus,
-    /// Verbatim GitHub conclusion when supplied.
+    /// Verbatim result from its trusted source, without vocabulary normalization.
+    /// REST examples are success, failure, and cancelled.
+    /// Scale-set examples are succeeded, failed, and canceled.
     pub result: Option<String>,
     /// Queue time supplied by GitHub.
     pub queued_at: Option<DateTime<Utc>>,
@@ -153,7 +155,7 @@ pub struct JobView {
     pub started_at: Option<DateTime<Utc>>,
     /// Actual finish supplied by GitHub, absent for terminal unknown timing.
     pub completed_at: Option<DateTime<Utc>>,
-    /// True for a job taken by an identified ciproxy runner.
+    /// True for a job taken by an identified ciproxy runner, even with unknown time.
     pub counts_as_start: bool,
     /// Wait in exact decimal seconds when both boundaries are known.
     pub waited_seconds: Option<String>,
@@ -184,7 +186,7 @@ pub struct JobsLivePage {
     pub running: Vec<JobView>,
     /// Visible waiting jobs with no machine assigned.
     pub waiting: Vec<JobView>,
-    /// Complete waiting count, absent while App visibility is unavailable.
+    /// Complete current-member waiting count, absent during current suspension.
     pub waiting_count: Option<String>,
     /// Own slots with jobs, absent when report data is unavailable.
     pub own_slots_used: Option<String>,
@@ -196,7 +198,7 @@ pub struct JobsLivePage {
     pub warm_runners: String,
     /// Actual starting runners and their target places.
     pub starting_runners: Vec<StartingRunner>,
-    /// Organization visibility problems, including suspended or removed Apps.
+    /// Current suspensions and retained owner removals, excluding intentional take-outs.
     pub visibility: Vec<JobVisibility>,
     /// Workspace overflow policy that explains queue wait.
     pub overflow_enabled: bool,
@@ -223,7 +225,7 @@ pub struct StartingRunner {
     pub boat: bool,
 }
 
-/// One organization whose waiting queue is not visible through its App.
+/// Current suspension or retained owner removal, without changing current membership.
 #[derive(Serialize, ToSchema)]
 pub struct JobVisibility {
     /// Organization login.
@@ -232,7 +234,7 @@ pub struct JobVisibility {
     pub suspended: bool,
     /// True after the App was removed.
     pub removed: bool,
-    /// GitHub installation settings for recovery.
+    /// Current installation settings, or the configured App install URL after removal.
     pub github_url: String,
 }
 

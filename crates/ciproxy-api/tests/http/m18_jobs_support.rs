@@ -87,6 +87,26 @@ pub(super) fn demand(
     started: Option<&str>,
     completed: Option<&str>,
 ) -> GithubJob {
+    demand_at(
+        pages,
+        runner,
+        actions_job_id,
+        phase,
+        started,
+        completed,
+        "2026-11-06T11:58:00Z",
+    )
+}
+
+pub(super) fn demand_at(
+    pages: &Pages,
+    runner: &Runner,
+    actions_job_id: Option<i64>,
+    phase: DemandPhase,
+    started: Option<&str>,
+    completed: Option<&str>,
+    assigned: &str,
+) -> GithubJob {
     let value = GithubJob {
         id: Uuid::new_v4(),
         organization_id: runner.organization_id,
@@ -99,8 +119,8 @@ pub(super) fn demand(
         name: "scale-job".into(),
         workflow_ref: "customer/private/.github/workflows/ci.yml@refs/heads/main".into(),
         phase,
-        result: (phase == DemandPhase::Completed).then(|| "success".into()),
-        assigned_at: Some(at("2026-11-06T11:58:00Z")),
+        result: (phase == DemandPhase::Completed).then(|| "succeeded".into()),
+        assigned_at: Some(at(assigned)),
         started_at: started.map(at),
         completed_at: completed.map(at),
         runner_github_id: matches!(phase, DemandPhase::Started | DemandPhase::Completed)

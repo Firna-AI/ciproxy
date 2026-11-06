@@ -119,7 +119,7 @@ pub(super) fn load(
     let machines = registrations(connection, workspace_id)?;
     let organizations = organizations::table
         .filter(organizations::workspace_id.eq(workspace_id))
-        .filter(organizations::removed_at.is_null())
+        .filter(organizations::app_state.ne("removed"))
         .count()
         .get_result::<i64>(connection)? as u64;
     let starts = metering_start_totals::table

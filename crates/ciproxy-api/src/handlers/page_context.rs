@@ -1,5 +1,7 @@
 //! Shared current-role, billing-period, usage, and single-banner reads.
 
+use std::collections::BTreeSet;
+
 use chrono::{DateTime, Utc};
 use ciproxy_metering::period::free_period;
 use ciproxy_metering::pricing::{PlanChoice, plan_choice};
@@ -9,6 +11,7 @@ use ciproxy_store_interface::billing::state::SubscriptionState;
 use ciproxy_store_interface::billing::store::BillingRecord;
 use ciproxy_store_interface::dashboard::records::Role;
 use ciproxy_store_interface::metering::history::Period;
+use ciproxy_store_interface::organizations::{AppState, Organization};
 use uuid::Uuid;
 
 use crate::error::{Error, Result};
@@ -24,6 +27,8 @@ pub(super) struct Context {
     pub role: Role,
     pub usage: Usage,
     pub inactive: Vec<InactiveOrganization>,
+    pub organizations: Vec<Organization>,
+    pub current_members: BTreeSet<Uuid>,
     pub at: DateTime<Utc>,
 }
 
@@ -59,15 +64,21 @@ pub(super) async fn read(state: &ApiState, workspace: Uuid, person: i64) -> Resu
             payment,
         );
         let mut inactive = Vec::new();
-        for organization in store.organizations(workspace)? {
-            if organization.removed_at.is_some() {
+        let organizations = store.organizations(workspace)?;
+        let current_members: BTreeSet<_> = organizations
+            .iter()
+            .filter(|organization| organization.app_state != AppState::Removed)
+            .map(|organization| organization.id)
+            .collect();
+        for organization in &organizations {
+            if !current_members.contains(&organization.id) {
                 continue;
             }
             let local = store.organization_activation(workspace, organization.id)?;
             if local.billing_hold || local.admin_approval_hold {
                 inactive.push(InactiveOrganization {
                     id: organization.id.to_string(),
-                    login: organization.login,
+                    login: organization.login.clone(),
                     activation: link_views::activation(local, workspace, Some(role)),
                 });
             }
@@ -78,6 +89,8 @@ pub(super) async fn read(state: &ApiState, workspace: Uuid, person: i64) -> Resu
             role,
             usage,
             inactive,
+            organizations,
+            current_members,
             at,
         })
     })

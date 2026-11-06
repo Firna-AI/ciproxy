@@ -960,7 +960,7 @@ export interface components {
              * @description Actual finish supplied by GitHub, absent for terminal unknown timing.
              */
             completed_at?: string | null;
-            /** @description True for a job taken by an identified ciproxy runner. */
+            /** @description True for a job taken by an identified ciproxy runner, even with unknown time. */
             counts_as_start: boolean;
             /** @description Trusted full ref, when supplied by the source. */
             git_ref?: string | null;
@@ -986,7 +986,11 @@ export interface components {
             queued_at?: string | null;
             /** @description Trusted owner and repository. */
             repository: string;
-            /** @description Verbatim GitHub conclusion when supplied. */
+            /**
+             * @description Verbatim result from its trusted source, without vocabulary normalization.
+             *     REST examples are success, failure, and cancelled.
+             *     Scale-set examples are succeeded, failed, and canceled.
+             */
             result?: string | null;
             /** @description Saved routing explanation when supplied. */
             routing_reason?: string | null;
@@ -1004,9 +1008,9 @@ export interface components {
             /** @description Trusted workflow name or file identity. */
             workflow: string;
         };
-        /** @description One organization whose waiting queue is not visible through its App. */
+        /** @description Current suspension or retained owner removal, without changing current membership. */
         JobVisibility: {
-            /** @description GitHub installation settings for recovery. */
+            /** @description Current installation settings, or the configured App install URL after removal. */
             github_url: string;
             /** @description Organization login. */
             organization: string;
@@ -1061,11 +1065,11 @@ export interface components {
             running: components["schemas"]["JobView"][];
             /** @description Actual starting runners and their target places. */
             starting_runners: components["schemas"]["StartingRunner"][];
-            /** @description Organization visibility problems, including suspended or removed Apps. */
+            /** @description Current suspensions and retained owner removals, excluding intentional take-outs. */
             visibility: components["schemas"]["JobVisibility"][];
             /** @description Visible waiting jobs with no machine assigned. */
             waiting: components["schemas"]["JobView"][];
-            /** @description Complete waiting count, absent while App visibility is unavailable. */
+            /** @description Complete current-member waiting count, absent during current suspension. */
             waiting_count?: string | null;
             /** @description Current resource fit for each exact label with visible waiting jobs. */
             waiting_labels: components["schemas"]["WaitingLabelFit"][];

@@ -1215,6 +1215,12 @@ These routes serve the other pages of the dashboard.
         Branch: `conductor/mvp-m18-api`.
         Evidence: `.context/ciproxy-mvp/m18/requirements.md` and
         `.context/ciproxy-mvp/m18/test-cost.md`.
+  - [x] Apply review findings 3, 4, 5, and 6 within the owned API and store
+        files. Preserve aliased lifecycle facts, known starts without a
+        timestamp, current queue membership, and fit during accounting gaps.
+        Add HTTP regressions and repeat the new or changed tests ten times.
+        Branch: `conductor/mvp-m18-api`.
+        Evidence: `.context/ciproxy-mvp/m18/review-fix-round1/`.
 - [ ] Orchestrator: compose `PageServices` in the control plane. Mount
       `router_with_pages` under `/api` and `stripe_router` at the dashboard
       host root for `/hooks/stripe`. Supply the existing billing, metering,
@@ -1232,6 +1238,17 @@ These routes serve the other pages of the dashboard.
       it ignores. A real `data.object` currently fails with
       `expected unit variant Payload::Ignore`. Keep the HTTP regression
       and rerun the complete gate with `DATABASE_URL` set.
+      Branch: `calummoore/ci-proxy-load-balancer`.
+- [ ] Orchestrator: add the quantity-only billing operation of review
+      finding 2. Resolve the confirmed tier after Stripe reconciliation
+      under the existing billing lock. Switch the add-on route and
+      quantity-only callers. Preserve the paid tier in the stale-store
+      HTTP and provider-form regressions.
+      Branch: `calummoore/ci-proxy-load-balancer`.
+- [ ] Orchestrator: expose the overflow owner's resource-only catalog
+      accessor of review finding 6. Replace the private fit-conversion
+      adapter after this workspace merges. Keep accounting and availability
+      outside physical fit, and preserve the accounting-gap regression.
       Branch: `calummoore/ci-proxy-load-balancer`.
 - [ ] Orchestrator: run the
       [live page checks](../crates/ciproxy-api/scripts/README.md#jobs-savings-and-billing)

@@ -1,6 +1,7 @@
 //! Waiting-label notice states for every role through real PostgreSQL and overflow.
 
 use axum::http::StatusCode;
+use ciproxy_overflow::error::Error;
 use ciproxy_protocol::agent::AgentMessage;
 use ciproxy_protocol::identifiers::{JobId, RunnerId};
 use ciproxy_protocol::reports::{SlotOccupancy, SlotReport};
@@ -13,9 +14,10 @@ use super::capacity_fixture;
 use super::fixture::Browser;
 use super::fixture_io::json;
 use super::m18_fit_support::{attach, catalog, sizing};
+use super::m18_gap_support;
 use super::m18_jobs_support::{demand, runner};
 use super::m18_stripe::Stripe;
-use super::m18_support::Pages;
+use super::m18_support::{Pages, at};
 use super::machine_tests::{register, report};
 
 #[tokio::test]
@@ -59,6 +61,27 @@ async fn m18_waiting_label_fit_distinguishes_missing_capacity_busy_refusal_and_f
         assert_eq!(fit["can_edit"], editable);
         assert_eq!(fit["ask_admin"], ask);
     }
+    let unbounded = m18_gap_support::seed(&pages);
+    let source = pages
+        .services
+        .overflow
+        .as_ref()
+        .unwrap()
+        .view(pages.fixture.workspace)
+        .await
+        .unwrap();
+    assert_eq!(source.spend.unbounded_starts, [unbounded]);
+    assert!(matches!(
+        source.scaler_account(at("2026-11-06T12:00:00Z")),
+        Err(Error::AccountingIncomplete)
+    ));
+    let gap = live(&pages, &viewer).await;
+    assert_eq!(gap["overflow"]["counted_cents"], Value::Null);
+    assert_eq!(gap["overflow"]["limit_cents"], "100");
+    assert_eq!(gap["overflow"]["measured_complete"], false);
+    assert_eq!(gap["waiting_labels"][0]["boat"]["state"], "no_size_fits");
+    assert_eq!(gap["waiting_labels"][0]["nothing_fits"], true);
+    assert_eq!(gap["waiting_labels"][0]["ask_admin"], true);
     catalog(&pages, true, false);
     let body = live(&pages, &viewer).await;
     assert_eq!(body["waiting_labels"][0]["nothing_fits"], false);

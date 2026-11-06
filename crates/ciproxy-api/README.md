@@ -212,14 +212,26 @@ These composition and live operations need the deployment owner's credentials.
 
 Jobs read all organizations of the authorized workspace. Both numeric Actions
 jobs and exact scale-set attempts contribute rows. Mapped aliases keep one row.
+The shared attempt shape fills unknown Actions facts while known Actions facts
+stay authoritative. Result words remain verbatim from their trusted source.
 The current plan limits finished-job visibility to seven, thirty, or ninety
 days without deleting retained metadata. Actual runner resources stay distinct
 from requested free job disk. Missing real finish times remain unknown.
+Trusted taken evidence stays true while a real start time is unknown. Period
+accounting still needs the actual time.
+
+Live waiting rows, waiting-label notices, and inactive banners include current
+workspace members only. Removed organizations keep running jobs and history.
+Only suspension of a current member makes the complete waiting count unknown.
+Owner-removal notices link to the configured App install page. Intentional
+take-outs add no removal notice.
 
 The live response includes the fit of each exact label with waiting jobs.
 Every role sees this data without access to the Admin-only Labels routes.
 Admin receives the edit capability. Other roles receive an ask-Admin notice.
 Busy slots and temporary provider refusals remain separate from physical fit.
+An unknown spend bound keeps its original start hold and unavailable counted
+spend. The private resource-only fit adapter preserves the known catalog.
 The response preserves unknown facts and the permitted largest-size fallback.
 
 Every page includes one shared banner. Existing pages can read the banner route.

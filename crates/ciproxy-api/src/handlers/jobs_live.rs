@@ -28,8 +28,8 @@ pub(super) async fn page(
     mut context: page_context::Context,
     jobs: Vec<DashboardJob>,
 ) -> Result<JobsLivePage> {
+    let organizations = context.organizations.clone();
     let (organizations, settings, runners, labels) = query(state.store.clone(), move |store| {
-        let organizations = store.organizations(workspace)?;
         let mut runners = Vec::new();
         for organization in &organizations {
             runners.extend(store.runners(workspace, organization.id)?);
@@ -42,18 +42,37 @@ pub(super) async fn page(
         ))
     })
     .await?;
+    let complete_waiting = !organizations.iter().any(|organization| {
+        context.current_members.contains(&organization.id)
+            && organization.app_state == AppState::Suspended
+    });
     let visibility: Vec<_> = organizations
         .into_iter()
-        .filter(|org| org.app_state != AppState::Active)
-        .map(|org| JobVisibility {
-            organization: org.login.clone(),
-            suspended: org.app_state == AppState::Suspended,
-            removed: org.app_state == AppState::Removed,
-            github_url: format!(
-                "https://github.com/organizations/{}/settings/installations/{}",
-                org.login, org.installation_id
-            ),
+        .filter(|organization| {
+            organization.app_state == AppState::Suspended
+                || (organization.app_state == AppState::Removed
+                    && organization.removed_at.is_some())
         })
+        .map(|organization| JobVisibility {
+            organization: organization.login.clone(),
+            suspended: organization.app_state == AppState::Suspended,
+            removed: organization.app_state == AppState::Removed,
+            github_url: if organization.app_state == AppState::Removed {
+                state.config.github_install_url.clone()
+            } else {
+                format!(
+                    "https://github.com/organizations/{}/settings/installations/{}",
+                    organization.login, organization.installation_id
+                )
+            },
+        })
+        .collect();
+    let waiting_jobs: Vec<_> = jobs
+        .iter()
+        .filter(|job| {
+            job.state == JobState::Queued && context.current_members.contains(&job.organization_id)
+        })
+        .cloned()
         .collect();
     let gateway = state.gateway.clone();
     let machines = tokio::task::spawn_blocking(move || gateway.machines(workspace))
@@ -110,7 +129,7 @@ pub(super) async fn page(
         None => None,
     };
     let waiting_labels = job_fit::labels(job_fit::FitInput {
-        jobs: &jobs,
+        jobs: &waiting_jobs,
         labels,
         machines: &machines,
         capacity: state.capacity.as_ref(),
@@ -119,10 +138,8 @@ pub(super) async fn page(
         at: context.at,
         admin: context.role == Role::Admin,
     });
-    let waiting: Vec<_> = jobs
-        .iter()
-        .filter(|job| job.state == JobState::Queued)
-        .cloned()
+    let waiting: Vec<_> = waiting_jobs
+        .into_iter()
         .map(|job| job_views::job(job, context.at))
         .collect();
     let running: Vec<_> = jobs
@@ -163,7 +180,7 @@ pub(super) async fn page(
     };
     Ok(JobsLivePage {
         waiting_labels,
-        waiting_count: visibility.is_empty().then(|| waiting.len().to_string()),
+        waiting_count: complete_waiting.then(|| waiting.len().to_string()),
         on_boat: running
             .iter()
             .filter(|job| {

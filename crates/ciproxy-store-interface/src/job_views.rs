@@ -34,11 +34,13 @@ pub struct DashboardJob {
     pub head_branch: Option<String>,
     /// Latest job state.
     pub state: JobState,
-    /// Verbatim GitHub conclusion when available.
+    /// Trusted lifecycle and runner identity prove a start, independent of time.
+    pub runner_taken: bool,
+    /// Verbatim source result. REST and scale-set vocabularies stay unchanged.
     pub result: Option<String>,
     /// Queue assignment time, absent when GitHub supplied none.
     pub queued_at: Option<DateTime<Utc>>,
-    /// Runner-taken time, absent before a trusted start.
+    /// Real runner-taken time, absent before a start or until timing recovery.
     pub started_at: Option<DateTime<Utc>>,
     /// Real GitHub finish, absent for unknown terminal timing.
     pub completed_at: Option<DateTime<Utc>>,

@@ -26,14 +26,7 @@ async fn m18_live_counts_real_slots_attempts_and_marks_unknown_waiting_visibilit
     let (machine, connection) = register(&pages.fixture, &admin).await;
     let own = runner(&pages, Some(machine), 1001);
     let boat = runner(&pages, None, 1002);
-    demand(
-        &pages,
-        &boat,
-        None,
-        DemandPhase::Started,
-        Some("2026-11-06T11:59:00Z"),
-        None,
-    );
+    let mut unknown_time = demand(&pages, &boat, None, DemandPhase::Started, None, None);
     let mut attempt = demand(
         &pages,
         &own,
@@ -100,6 +93,30 @@ async fn m18_live_counts_real_slots_attempts_and_marks_unknown_waiting_visibilit
     assert_eq!(response.status(), StatusCode::OK);
     let live = json(response).await;
     assert_eq!(live["running"].as_array().unwrap().len(), 2);
+    let unknown = live["running"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|job| job["location"]["kind"] == "boat")
+        .unwrap();
+    assert_eq!(unknown["counts_as_start"], true);
+    assert_eq!(unknown["started_at"], Value::Null);
+    assert_eq!(unknown["runtime_seconds"], Value::Null);
+    let detail = json(
+        pages
+            .request(
+                Some(&admin),
+                "GET",
+                &format!("/jobs/{}", unknown["id"].as_str().unwrap()),
+                None,
+            )
+            .await,
+    )
+    .await;
+    assert_eq!(detail["job"]["counts_as_start"], true);
+    assert_eq!(detail["job"]["started_at"], Value::Null);
+    assert_eq!(detail["job"]["runtime_seconds"], Value::Null);
+
     assert_eq!(live["waiting_count"], "1");
     assert_eq!(live["own_slots_used"], "1");
     assert_eq!(live["own_slots_total"], "6");
@@ -116,6 +133,37 @@ async fn m18_live_counts_real_slots_attempts_and_marks_unknown_waiting_visibilit
     )
     .await;
     assert_eq!(history["jobs"].as_array().unwrap().len(), 1);
+    unknown_time.phase = DemandPhase::Completed;
+    unknown_time.completed_at = Some(at("2026-11-06T12:00:00Z"));
+    unknown_time.result = Some("failed".into());
+    pages
+        .fixture
+        .database
+        .store
+        .save_github_job(
+            pages.fixture.workspace,
+            &unknown_time,
+            pages.fixture.runtime.now(),
+        )
+        .unwrap();
+    let completed = json(
+        pages
+            .request(
+                Some(&admin),
+                "GET",
+                &format!("/jobs/{}", unknown["id"].as_str().unwrap()),
+                None,
+            )
+            .await,
+    )
+    .await;
+    assert_eq!(completed["job"]["status"], "completed");
+    assert_eq!(completed["job"]["counts_as_start"], true);
+    assert_eq!(completed["job"]["started_at"], Value::Null);
+    assert_eq!(completed["job"]["runtime_seconds"], Value::Null);
+    let usage = json(pages.request(Some(&admin), "GET", "/billing", None).await).await;
+    assert_eq!(usage["starts"], "2");
+
     pages
         .fixture
         .database
