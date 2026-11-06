@@ -1512,6 +1512,13 @@ Answers of 5 November 2026:
 - Item 84, B: the `api-types` gate phase also runs Redocly, with its
   minimal rule set and its path-parameter check, on the generated API
   contract, and fails on an invalid structure. Rejected: A and C.
+- Item 86, B: to build item 85 = F, the runner hook waits for the host
+  decision before the steps of a job start. The decision is either "the
+  machine cache is ready", with the sealed original handoff, or "use only
+  GitHub's cache". The 30-second fallback and the early fallback on a
+  socket error go. A reconnect before the first handoff still means only
+  GitHub's cache. There is no guessed time limit; GitHub's job time limit is
+  the backstop. Rejected: A and C.
 - Item 80, D: an attached Docker disk reserves its data plus the free disk
   of its label. The reservation comes only from spare disk that no set of
   job VMs can use, so a Docker disk stops no start, except for a short time
@@ -2422,7 +2429,7 @@ See the answers above.
 
 The user answered items 54 to 81 on 5 November 2026, and item 76 became a
 design call. Item 76 came back on 6 November 2026, and the user chose E.
-The user answered items 82 to 85 on 6 November 2026.
+The user answered items 82 to 86 on 6 November 2026.
 The conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question,
 and its options keep the letters that the user saw.
@@ -3460,3 +3467,33 @@ above.
 - **Recommendation:** F.
 - **Action:** ask the user, because each option adds an acceptance rule or a
   network rule.
+
+### 86. The first handoff needs a host decision first
+
+**Answer, 6 November 2026:** B.
+
+- **Severity:** High. **Effort:** Medium.
+- **Source:** Implementation, Milestone 13, for item 85 = F.
+- **Category:** Security.
+- **Location:** `image/runner-patch/CiproxyAssignment.cs:45` and
+  `crates/ciproxy-agent/src/cache_authority.rs:44`, on the #31 branch.
+- **Background:** The runner hook goes on without the machine cache after
+  30 seconds, or at once after a socket error. Job code has root in its VM
+  and can then send a first handoff on the same connection.
+- **Problem:** A connection flag proves where a handoff came from, not that
+  it came before job code, so F cannot tell a real late handoff from a fake.
+- **Impact if no action:** A job could still choose the cache destinations
+  and claim cache rights.
+- **Root question:** Which cost is acceptable to prove that the first
+  handoff came before job code?
+- **Options:**
+  - **A.** Only GitHub's cache and the VM's own Docker disk for new jobs.
+    Effort: Small.
+  - **B.** The hook waits for the host decision before the steps start, with
+    no fallback and no guessed time limit. Effort: Medium.
+  - **C.** Restrict root inside the VM, with a new image and a live proof.
+    Effort: Large.
+- **Wider fix:** B.
+- **Recommendation:** B.
+- **Action:** ask the user, because B removes an automatic fallback, A
+  removes features, and C changes root inside the VM.
