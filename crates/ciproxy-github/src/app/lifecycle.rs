@@ -77,8 +77,11 @@ impl AppService {
         if let Some(access) = &access {
             desired.repositories = access.clone();
         }
+        let local = self.store.activation(&organization).await?;
         let target = if current.suspended {
             GithubLifecycleTarget::Suspended
+        } else if local.billing_hold || local.admin_approval_hold {
+            GithubLifecycleTarget::Inactive
         } else {
             GithubLifecycleTarget::Active(
                 self.prepare(

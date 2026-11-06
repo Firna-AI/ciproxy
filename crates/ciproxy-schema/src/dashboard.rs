@@ -48,14 +48,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    dashboard_install_intents (requester_id, github_organization_id) {
-        requester_id -> Int8,
-        github_organization_id -> Int8,
-        workspace_id -> Uuid,
-    }
-}
-
-diesel::table! {
     dashboard_takeouts (organization_id) {
         organization_id -> Uuid,
         workspace_id -> Uuid,

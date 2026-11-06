@@ -12,6 +12,7 @@ mod gateway_contacts;
 mod gateway_registration;
 mod gateway_transaction;
 mod github;
+mod installation_links;
 mod jobs;
 mod labels;
 mod machine_observation;

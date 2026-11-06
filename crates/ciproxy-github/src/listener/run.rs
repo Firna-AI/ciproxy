@@ -48,7 +48,7 @@ impl DurableListener {
     ) -> Result<ListenerContext> {
         lease.check().await?;
         let context = self.store.context(target).await?;
-        if context.organization.app_state != AppState::Active {
+        if context.organization.app_state != AppState::Active || !context.organization_enabled {
             return Err(Error::OrganizationInactive);
         }
         Ok(context)

@@ -88,6 +88,13 @@ remain unique.
 Scale-set bindings retain a separate remote cleanup confirmation. Label
 retirement and confirmed removal preserve the binding and its job references.
 
+Installation-link tables retain state digests, exact signed requesters, fresh
+user association, and eligible workspace offers without tokens or profiles.
+Independent activation rows preserve admission and billing/Admin holds through
+retained reinstall. Existing organization metadata is explicitly backfilled.
+A claim survives deletion of its chosen workspace without becoming a direct
+install. Old migration files remain unchanged.
+
 ## Quick Start
 
 Use the migration constant through Diesel's migration harness:

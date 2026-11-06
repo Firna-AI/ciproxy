@@ -4,28 +4,36 @@
 // as the answer D to item 51 says: no new job of it starts on ciproxy, its
 // running jobs finish, ciproxy deletes its scale sets and then removes the
 // App, its jobs stay in the job history, and it can join a workspace again
-// with a new install.
+// with a new install. Turn on asks first, because the organization then uses
+// the machines, the labels, the settings, and the Boat account.
 
 import { LinkAction } from "../../components/actions.tsx";
 import { Dialog } from "../../components/dialog.tsx";
 import { TextField } from "../../components/fields.tsx";
-import { paths } from "../../components/paths.ts";
+import { paths, type CataloguePath } from "../../components/paths.ts";
+import { formerAdmin, studioOrg } from "../../fixtures/org-links.ts";
 import { labsOrg, newWorkspaceName } from "../../fixtures/org.ts";
 
-/** Cancel and the action of a dialog, which both lead back to the tab. */
+/** Cancel and the action of a dialog, which lead back to the tab. */
 function Footer({
   action,
   tone,
+  back = paths.organizations,
+  to = paths.organizations,
 }: {
   action: string;
   tone: "primary" | "danger";
+  /** The screen that Cancel opens. */
+  back?: CataloguePath;
+  /** The screen that the action opens. */
+  to?: CataloguePath;
 }) {
   return (
     <>
-      <LinkAction to={paths.organizations} tone="ghost">
+      <LinkAction to={back} tone="ghost">
         Cancel
       </LinkAction>
-      <LinkAction to={paths.organizations} tone={tone}>
+      <LinkAction to={to} tone={tone}>
         {action}
       </LinkAction>
     </>
@@ -61,6 +69,33 @@ export function TakeOutDialog() {
       <p className="small">
         Its jobs stay in the job history, and {login} can join a workspace again
         later with a new install.
+      </p>
+    </Dialog>
+  );
+}
+
+/** A current Admin turns on an organization that a former Admin added. */
+export function TurnOnDialog() {
+  const login = <span className="nowrap">{studioOrg.login}</span>;
+  return (
+    <Dialog
+      title={`Turn on ${studioOrg.login}?`}
+      footer={
+        <Footer
+          action="Turn on"
+          tone="primary"
+          back={paths.inactiveAdmin}
+          to={paths.inactiveAfterTeam}
+        />
+      }
+    >
+      <p className="small">
+        The jobs of {login} then run on the machines of this workspace, with its
+        labels, settings, and Boat account.
+      </p>
+      <p className="small">
+        {formerAdmin.name} added {login} on {studioOrg.joined} and is no longer
+        an Admin.
       </p>
     </Dialog>
   );

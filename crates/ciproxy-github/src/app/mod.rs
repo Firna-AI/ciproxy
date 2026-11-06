@@ -4,6 +4,7 @@ mod coordination;
 mod delivery;
 mod installation;
 mod lifecycle;
+mod linking;
 mod reconcile;
 pub mod webhook;
 
@@ -25,6 +26,21 @@ use crate::scale_sets::ScaleSetFactory;
 
 use self::webhook::InstallationEvent;
 
+/// Exact association decision before allocating a workspace or runner resources.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum InstallationDecision {
+    /// An unambiguous normal install uses existing first-install/retention rules.
+    Direct,
+    /// Fresh installed proof and a trusted choice name this exact workspace.
+    Target {
+        workspace_id: Uuid,
+        admin_approved: bool,
+        billing_hold: bool,
+    },
+    /// The original requester must complete proof and choice.
+    AwaitingAssignment,
+}
+
 /// The role service's persisted installation-intent and first-Admin boundary.
 #[cfg_attr(test, unimock::unimock(api = InstallAuthorityMock))]
 #[async_trait]
@@ -33,11 +49,12 @@ pub trait InstallAuthority: Send + Sync {
     ///
     /// The implementation persists intent by requester. It checks the Admin
     /// role and the Free organization limit before it returns a workspace.
-    async fn intended_workspace(
+    async fn installation_decision(
         &self,
         requester_id: i64,
         github_organization_id: i64,
-    ) -> Result<Option<Uuid>>;
+        installation_id: i64,
+    ) -> Result<InstallationDecision>;
     /// Idempotently grant the first installer the Admin role in a new workspace.
     async fn ensure_initial_admin(&self, workspace_id: Uuid, github_user_id: i64) -> Result<()>;
 }
@@ -64,11 +81,20 @@ pub enum InstallationOutcome {
     },
     /// The event belongs to a registration ciproxy no longer retains.
     Ignored,
+    /// The installation is durable but has no verified workspace choice yet.
+    AwaitingAssignment {
+        /// Requester-owned recovery identity.
+        claim_id: Uuid,
+    },
 }
 
 /// The complete App integration entry point used by the hosted control plane.
 #[async_trait]
 pub trait GitHubApp: Send + Sync {
+    /// Resolve one saved exact requester claim without inferring a target.
+    async fn resolve_installation_link(&self, claim_id: Uuid) -> Result<InstallationOutcome>;
+    /// Retry billing-eligible activation while preserving explicit Admin holds.
+    async fn reconcile_organization_activation(&self, workspace_id: Uuid) -> Result<()>;
     /// Discover organizations that need lifecycle replay after a process restart.
     async fn pending_lifecycle_organizations(&self) -> Result<Vec<i64>>;
     /// Replay one organization's immutable events under its mutation lease.
@@ -109,6 +135,12 @@ pub struct AppService {
 
 #[async_trait]
 impl GitHubApp for AppService {
+    async fn resolve_installation_link(&self, id: Uuid) -> Result<InstallationOutcome> {
+        self.resolve_link(id).await
+    }
+    async fn reconcile_organization_activation(&self, workspace: Uuid) -> Result<()> {
+        self.activate_workspace(workspace).await
+    }
     async fn pending_lifecycle_organizations(&self) -> Result<Vec<i64>> {
         self.outbox.organizations().await
     }

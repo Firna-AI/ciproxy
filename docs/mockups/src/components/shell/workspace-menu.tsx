@@ -6,14 +6,13 @@ import { Check, Plus } from "lucide-react";
 import { Avatar } from "@firna/ui/avatar";
 
 import { dotJoin } from "../../fixtures/format.ts";
-import { workspace, workspaceChoices } from "../../fixtures/org.ts";
+import {
+  organizationsText,
+  workspace,
+  workspaceChoices,
+} from "../../fixtures/org.ts";
 import { tiers } from "../../fixtures/tiers.ts";
 import "./workspace-menu.css";
-
-/** "1 organization", "2 organizations". */
-function organizationsText(count: number): string {
-  return `${count} ${count === 1 ? "organization" : "organizations"}`;
-}
 
 export function WorkspaceMenu() {
   return (

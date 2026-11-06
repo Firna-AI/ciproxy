@@ -8,6 +8,7 @@ use ciproxy_store_interface::settings::OverflowWait;
 use ciproxy_store_interface::tokens::{Token, TokenSubject};
 use uuid::Uuid;
 
+use super::support::installation_claim;
 use super::support::{Database, account, at, hash, job, machine, runner};
 
 #[test]
@@ -16,6 +17,7 @@ fn workspace_retention_restores_reinstalls_and_purges_only_the_expired_tenant() 
     let store = &database.store;
     let mut workspace = database.workspace();
     let mut organization = database.organization(&workspace);
+    let (claim_id, attempt_digest) = installation_claim::linked(store.as_ref(), &organization);
     let (label, scale_set) = database.label_and_scale_set(&organization);
     let machine = machine();
     store.create_machine(workspace.id, &machine).unwrap();
@@ -129,12 +131,43 @@ fn workspace_retention_restores_reinstalls_and_purges_only_the_expired_tenant() 
             .purge_expired_workspace(workspace.id, at() + Duration::days(69))
             .unwrap()
     );
+    assert_eq!(
+        store
+            .installation_claim(claim_id)
+            .unwrap()
+            .map(|claim| claim.organization_id),
+        Some(Some(organization.id))
+    );
+    assert!(
+        store
+            .installation_attempt(&attempt_digest)
+            .unwrap()
+            .is_some()
+    );
     assert!(
         store
             .purge_expired_workspace(workspace.id, at() + Duration::days(70))
             .unwrap()
     );
     assert_eq!(store.workspace(workspace.id).unwrap(), None);
+    assert_eq!(
+        store
+            .installation_claim(claim_id)
+            .unwrap()
+            .map(|claim| claim.id),
+        None
+    );
+    assert_eq!(
+        store
+            .installation_attempt(&attempt_digest)
+            .unwrap()
+            .map(|attempt| attempt.id),
+        None
+    );
+    assert_eq!(
+        store.installation_workspace_offers(claim_id, 7).unwrap(),
+        Vec::<Uuid>::new()
+    );
     assert_eq!(
         store.organization(workspace.id, organization.id).unwrap(),
         None

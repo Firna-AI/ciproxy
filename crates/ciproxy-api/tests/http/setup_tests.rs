@@ -1,4 +1,4 @@
-//! Verified setup returns never select a workspace or trust forwarded IDs.
+//! Setup rejects spoofed identity and preserves explicit install continuation.
 
 use std::sync::atomic::Ordering;
 
@@ -105,59 +105,6 @@ async fn setup_proves_organization_and_preserves_start_bound_expiry() {
             StatusCode::NOT_FOUND
         );
     }
-}
-
-#[tokio::test]
-async fn fresh_personal_setup_records_only_verified_token_free_metadata() {
-    let server = Server::new().await;
-    let mut fixture = Fixture::new();
-    configure(&mut fixture, &server);
-    server.control.memberships.store(false, Ordering::SeqCst);
-    let response = finish(
-        &fixture,
-        fixture
-            .request(None, "GET", "/github/setup?installation_id=700", None)
-            .await,
-        CallbackOutcome::Accepted,
-    )
-    .await;
-    let signed = browser(&response);
-    let session = json(
-        fixture
-            .request(Some(&signed), "GET", "/session", None)
-            .await,
-    )
-    .await;
-    assert_eq!(session["setup"]["kind"], "organizations_only");
-    assert_eq!(session["setup"]["installation_id"], "700");
-    assert_eq!(
-        session["setup"]["remove_url"],
-        "https://github.com/settings/installations/700"
-    );
-    assert_eq!(session["workspaces"].as_array().unwrap().len(), 0);
-    assert!(
-        fixture
-            .database
-            .store
-            .dashboard_user_by_github(7)
-            .unwrap()
-            .is_none()
-    );
-    assert!(
-        fixture
-            .database
-            .store
-            .organizations_by_github_id(7)
-            .unwrap()
-            .is_empty()
-    );
-    assert_eq!(
-        session["pending_install_requests"]
-            .as_array()
-            .unwrap()
-            .len(),
-        1
-    );
 }
 
 #[tokio::test]

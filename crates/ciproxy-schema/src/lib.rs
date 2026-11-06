@@ -6,6 +6,7 @@ pub mod billing;
 pub mod boat;
 pub mod dashboard;
 pub mod github;
+pub mod installation_links;
 pub mod jobs;
 pub mod labels;
 pub mod machines;

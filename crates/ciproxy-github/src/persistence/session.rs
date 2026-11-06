@@ -35,6 +35,8 @@ pub struct ListenerContext {
     pub state: ScaleSetState,
     /// Unfinished work or an unconfirmed delivery still needs this listener.
     pub has_tracked_jobs: bool,
+    /// The organization has completed local admission for new execution.
+    pub organization_enabled: bool,
 }
 
 /// A live database session lock held for a whole GitHub message session.
@@ -113,6 +115,8 @@ impl SessionStore for StoreAdapter {
                 )?
                 .ok_or(error::Error::NotFound)?;
             Ok(ListenerContext {
+                organization_enabled: store
+                    .organization_runnable(target.workspace_id, target.organization_id)?,
                 organization,
                 scale_set: binding.scale_set,
                 state: binding.state,

@@ -55,13 +55,13 @@ def main() -> int:
         profile = get("user", user_token)
         if arguments.mode == "prepare":
             state = secrets.token_urlsafe(32)
-            query = urlencode({"suggested_target_id": target, "state": state})
+            query = urlencode({"state": state})
             private_write(proof_path, {
                 "state": state,
                 "requester_id": profile["id"],
                 "target_id": target,
                 "install_url": "https://github.com/apps/" + config["github_app_slug"]
-                    + "/installations/new/permissions?" + query,
+                    + "/installations/new?" + query,
             })
             print("Prepared the install URL and expected state in the private proof file.")
             print("Open that URL in the initiating member or owner's GitHub browser.")
@@ -105,8 +105,14 @@ def main() -> int:
             if not any(str(item["id"]) == installation_ids[0] for item in allowed):
                 print("FAIL: the callback installation is not verified for the initiating person")
                 return 1
+            installed = get("app/installations/" + installation_ids[0], app_jwt)
+            if (str(installed["id"]) != installation_ids[0]
+                    or installed["account"]["id"] != target
+                    or installed["account"]["type"] != "Organization"):
+                print("FAIL: configured App and own-user installation identity differ")
+                return 1
             proven = True
-            print("PASS: the user token verifies the approved callback installation")
+            print("PASS: configured App and own-user token verify the callback installation")
         if "webhook_body_file" in config:
             raw = Path(config["webhook_body_file"]).read_bytes()
             expected = "sha256=" + hmac.new(config["webhook_secret"].encode(), raw, hashlib.sha256).hexdigest()
@@ -126,6 +132,8 @@ def main() -> int:
                 return 1
             proven = True
             print("PASS: signed approval retains the initiating requester and organization")
+        if proven and not installation_ids:
+            print("WAITING: request/event facts alone cannot authorize a workspace link")
         if not proven:
             print("FAIL: no verified request, installation, or signed approval proves the target")
             return 1

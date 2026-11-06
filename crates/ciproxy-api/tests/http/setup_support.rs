@@ -10,7 +10,9 @@ use ciproxy_api::crypto::AeadCredentialCipher;
 use ciproxy_api::identity::http::{GithubOAuthClient, OAuthConfig};
 use ciproxy_api::installations::GithubInstallationAdmin;
 use ciproxy_api::router::router;
+use ciproxy_github::app::AppService;
 use ciproxy_github::auth::AppJwt;
+use ciproxy_github::persistence::StoreAdapter;
 use reqwest::{Client, redirect::Policy};
 use secrecy::SecretString;
 use tower::ServiceExt;
@@ -18,6 +20,7 @@ use tower::ServiceExt;
 use super::adapter_server::Server;
 use super::fixture::{Browser, Fixture};
 use super::fixture_io::{CallbackOutcome, assert_callback, callback, cookie, oauth_state};
+use super::ports::Factory;
 
 struct Signer(SecretString);
 impl AppJwt for Signer {
@@ -39,12 +42,30 @@ pub(super) fn configure(fixture: &mut Fixture, server: &Server) {
         },
         fixture.runtime.clone(),
     ));
-    fixture.state.access = Arc::new(AccessService::new(
+    let access = Arc::new(AccessService::new(
         fixture.database.store.clone(),
         identity,
         Arc::new(AeadCredentialCipher::new(&[17; 32])),
         fixture.runtime.clone(),
     ));
+    fixture.state.access = access.clone();
+    let persistence = Arc::new(StoreAdapter::new(
+        fixture.database.store.clone(),
+        fixture.runtime.clone(),
+    ));
+    let app = Arc::new(AppService {
+        leases: persistence.clone(),
+        installations: fixture.remote.clone(),
+        store: persistence.clone(),
+        outbox: persistence,
+        rest: fixture.remote.clone(),
+        scale_sets: Arc::new(Factory(fixture.remote.clone())),
+        authority: access,
+        lifecycle: fixture.remote.clone(),
+        runtime: fixture.runtime.clone(),
+    });
+    fixture.app = app.clone();
+    fixture.state.github = app;
     fixture.state.installations = Arc::new(GithubInstallationAdmin::new(
         http,
         server.origin.parse().unwrap(),

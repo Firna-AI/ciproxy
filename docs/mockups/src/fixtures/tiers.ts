@@ -2,8 +2,9 @@
 // Every screen that shows a price, a limit, or a tier feature reads it from
 // here. A feature starts at one tier and stays in every tier above it. A
 // feature that does not ship at launch shows "Coming later" on every page
-// that lists it. A workspace on Free holds one GitHub organization; Team and
-// Business hold several, as the answer to item 48 says.
+// that lists it. Free includes one GitHub organization, and Team and Business
+// several, as the answer to item 48 says. On Free, a new organization joins
+// inactive until the plan includes it, as the answer D to item 83 says.
 
 import { formatCount, unbroken } from "./format.ts";
 import type { TierKey } from "./org.ts";
@@ -17,7 +18,7 @@ export type Tier = {
   machines: number;
   history: string;
   addOns: boolean;
-  /** The GitHub organizations that a workspace holds, when the tier limits it. */
+  /** The GitHub organizations that the tier includes, when it limits them. */
   organizations?: number;
 };
 

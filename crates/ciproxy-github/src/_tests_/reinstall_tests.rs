@@ -7,7 +7,9 @@ use ciproxy_store_interface::organizations::AppState;
 use unimock::{MockFn, Unimock, matching};
 
 use crate::app::webhook::InstallationAction;
-use crate::app::{GitHubApp, InstallAuthorityMock, InstallationOutcome, LifecycleOutputMock};
+use crate::app::{
+    GitHubApp, InstallAuthorityMock, InstallationDecision, InstallationOutcome, LifecycleOutputMock,
+};
 use crate::persistence::installation::InstallationStoreMock;
 use crate::persistence::lifecycle::LifecycleStoreMock;
 use crate::rest::GitHubRestMock;
@@ -33,9 +35,13 @@ async fn retained_reinstall_reuses_workspace_and_preserves_shared_label_configur
     ));
     let service = app(Unimock::new((
         coordination(false),
-        InstallAuthorityMock::intended_workspace
-            .some_call(matching!(41, 17))
-            .returns(Ok(None)),
+        RuntimeMock::uuid.some_call(matching!()).returns(id(99)),
+        InstallationStoreMock::stage
+            .some_call(matching!(_))
+            .answers(&|_, claim| Ok(claim)),
+        InstallAuthorityMock::installation_decision
+            .some_call(matching!(41, 17, 19))
+            .returns(Ok(InstallationDecision::Direct)),
         InstallationStoreMock::by_github_id
             .some_call(matching!(17))
             .returns(Ok(vec![retained])),
@@ -63,6 +69,9 @@ async fn retained_reinstall_reuses_workspace_and_preserves_shared_label_configur
         ScaleSetFactoryMock::for_organization
             .some_call(matching!(_))
             .returns(Ok(api)),
+        InstallationStoreMock::activation
+            .some_call(matching!(_))
+            .returns(Ok(Default::default())),
         InstallationStoreMock::labels
             .some_call(matching!(_))
             .returns(Ok(vec![labels().remove(0)])),
@@ -95,14 +104,21 @@ async fn expired_retained_organization_joins_admin_workspace_as_new_registration
     ));
     let service = app(Unimock::new((
         coordination(false),
-        InstallAuthorityMock::intended_workspace
-            .some_call(matching!(41, 17))
-            .returns(Ok(Some(id(1)))),
+        InstallationStoreMock::stage
+            .some_call(matching!(_))
+            .answers(&|_, claim| Ok(claim)),
+        InstallAuthorityMock::installation_decision
+            .some_call(matching!(41, 17, 19))
+            .returns(Ok(InstallationDecision::Target {
+                workspace_id: id(1),
+                admin_approved: true,
+                billing_hold: false,
+            })),
         InstallationStoreMock::by_github_id
             .some_call(matching!(17))
             .returns(Ok(vec![expired])),
         RuntimeMock::now.some_call(matching!()).returns(at()),
-        RuntimeMock::uuid.some_call(matching!()).returns(id(5)),
+        RuntimeMock::uuid.each_call(matching!()).returns(id(5)),
         LifecycleStoreMock::register
             .some_call(matching!(_))
             .answers(&|_, registration| {

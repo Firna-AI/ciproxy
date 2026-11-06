@@ -6,7 +6,8 @@ use std::sync::Arc;
 use axum::extract::{Path, State};
 use axum::{Extension, Json};
 use ciproxy_store_interface::labels::Label;
-use ciproxy_store_interface::organizations::AppState;
+use ciproxy_store_interface::organizations::{AppState, Organization};
+use ciproxy_store_interface::store::Store;
 use uuid::Uuid;
 
 use crate::access::Principal;
@@ -16,6 +17,19 @@ use crate::wire::access::{Success, WorkspacePath};
 use crate::wire::settings::{LabelFit, LabelInput, LabelPath, LabelView};
 
 use super::{label_cleanup, label_views};
+
+fn runnable_organizations(
+    store: &dyn Store,
+    workspace: Uuid,
+) -> ciproxy_store_interface::error::Result<Vec<Organization>> {
+    let mut runnable = Vec::new();
+    for organization in store.organizations(workspace)? {
+        if store.organization_runnable(workspace, organization.id)? {
+            runnable.push(organization);
+        }
+    }
+    Ok(runnable)
+}
 
 pub(super) async fn read(state: &ApiState, workspace: Uuid) -> Result<Vec<LabelView>> {
     let labels = query(state.store.clone(), move |store| store.labels(workspace)).await?;
@@ -96,7 +110,7 @@ pub(crate) async fn create(
     })
     .await?;
     for organization in query(state.store.clone(), move |store| {
-        store.organizations(workspace_id)
+        runnable_organizations(store, workspace_id)
     })
     .await?
     .into_iter()
@@ -171,7 +185,7 @@ pub(crate) async fn remove(
 
 async fn prepare(state: &ApiState, workspace: Uuid, label: &Label) -> Result<()> {
     let organizations = query(state.store.clone(), move |store| {
-        store.organizations(workspace)
+        runnable_organizations(store, workspace)
     })
     .await?;
     let mut checked = false;

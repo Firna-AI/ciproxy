@@ -85,8 +85,9 @@ configured-App installation and starts fresh user authorization. Its sealed
 one-use binding captures purpose and prior token-free metadata at the start. The
 callback requires the same installation/account through the fresh user token and
 requires organization membership or exact personal ownership. Only then can
-sign-in persistence run. Setup never assigns a workspace. GET `/session` returns
-a typed verified setup outcome without frontend installation-ID forwarding.
+sign-in persistence run. Verified Add claims can then choose their workspace.
+GET `/session` returns typed setup and installation-link outcomes without
+frontend installation-ID forwarding.
 Failed proof preserves business records and the existing sign-in. A matching
 identity keeps its original expiry.
 
@@ -125,6 +126,38 @@ size. Run `Maintenance::reconcile` on startup and at least hourly. It refreshes
 memberships, prunes expired authentication data, and retries unfinished
 intentional removals and retired-label cleanup. Use the same API collaborators.
 
+## Organization linking
+
+POST `/workspaces/{workspace_id}/organizations/add` returns the configured
+`/installations/new?state=...` URL. GitHub still chooses the organization.
+The registered setup return starts the same browser-bound OAuth proof.
+`setup_action=request` stays waiting and chooses no workspace.
+
+GET `/installation-links` refreshes the original person's installed claims.
+An exact signed requester and fresh own-user installation proof are both
+required. One current Admin workspace links automatically. Several require
+PUT `/installation-links/{claim_id}/workspace` with an offered workspace ID.
+No eligible workspace leaves the claim waiting. Exact offers survive the
+choice-to-link role-loss window. Missing state never proves a Direct flow.
+
+A linked organization has local activation separate from GitHub App state.
+Billing and Admin reasons can coexist. Every linked inactive organization
+counts against the tier, excluding Removed. Existing admitted organizations
+stay admitted on downgrade. A current Admin can approve with POST
+`/workspaces/{workspace_id}/organizations/{organization_id}/enable`.
+Only a new workspace receives a first-Admin grant. An inactive link grants
+no role. Retained reinstall preserves holds and completed history.
+
+The API returns exact-workspace upgrade actions only to Billing and Admin.
+Other people get the reason and an ask-Admin capability. No held organization
+can acquire work, register a JIT runner, or reserve/start overflow.
+Run the existing maintenance method to reconcile billing eligibility and
+retry saved choices. It discovers durable pending work after restart.
+
+Pass the existing GitHub service to `DashboardAccess::finish_login` for this
+operation. Constructors and ApiState remain unchanged. Fresh proof resolves
+before the identity lease. No browser-only grant is retained.
+
 ## Development
 
 Run commands from the repository root. Set up PostgreSQL as
@@ -154,6 +187,7 @@ It never prints a cookie, token, install command, or response body.
 - [src/identity/http.rs](src/identity/http.rs) implements GitHub user OAuth.
 - [src/installations.rs](src/installations.rs) implements App-JWT metadata reads
   and intentional uninstall.
+- [src/handlers/links.rs](src/handlers/links.rs) owns requester choice and enable.
 - [src/maintenance.rs](src/maintenance.rs) owns restart and hourly work.
 - [src/wire](src/wire) owns the Rust dashboard boundary types.
 - [src/openapi.rs](src/openapi.rs) builds the generated reference.

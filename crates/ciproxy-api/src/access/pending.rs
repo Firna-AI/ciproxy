@@ -12,10 +12,12 @@ use crate::error::{Error, ErrorResultExt, Result};
 use crate::wire::access::{RemovedOrganization, SetupOutcome};
 
 use super::authentication::digest;
-use super::{AccessService, Principal};
+use super::{AccessService, InstallContext, Principal};
 
 #[derive(Clone, Deserialize, Serialize)]
 pub(super) struct BrowserState {
+    #[serde(default)]
+    pub(super) install_context: Option<InstallContext>,
     pub(super) user_id: Uuid,
     pub(super) session_id: Uuid,
     pub(super) github_id: i64,
@@ -86,6 +88,7 @@ impl BrowserState {
             expires_at: self.expires_at,
         };
         Principal {
+            install_context: self.install_context,
             user: user.unwrap_or(User {
                 id: self.user_id,
                 github_id: self.github_id,

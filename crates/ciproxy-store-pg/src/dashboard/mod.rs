@@ -103,12 +103,6 @@ impl DashboardStore for PgStore {
     ) -> Result<bool> {
         roles::claim(self, id, user, at, claim)
     }
-    fn save_install_intent(&self, requester: i64, github: i64, id: Uuid) -> Result<()> {
-        resources::save_intent(self, requester, github, id)
-    }
-    fn install_intent(&self, requester: i64, github: i64) -> Result<Option<Uuid>> {
-        resources::intent(self, requester, github)
-    }
     fn rename_workspace(&self, id: Uuid, name: &str) -> Result<()> {
         resources::rename(self, id, name)
     }

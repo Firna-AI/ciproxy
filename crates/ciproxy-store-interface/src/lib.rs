@@ -9,6 +9,7 @@ pub mod error;
 pub mod gateway;
 pub mod github;
 pub mod github_lifecycle;
+pub mod installation_links;
 pub mod jobs;
 pub mod labels;
 pub mod machines;

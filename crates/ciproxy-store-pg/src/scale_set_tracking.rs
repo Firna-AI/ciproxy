@@ -85,7 +85,7 @@ pub(super) fn listeners(
     workspace: Uuid,
     organization: Uuid,
 ) -> Result<Vec<ScaleSetBinding>> {
-    Ok(diesel::sql_query(format!("WITH bindings AS ({BINDINGS}) SELECT * FROM bindings WHERE NOT removed AND (NOT retired OR has_tracked_jobs) ORDER BY github_id"))
+    Ok(diesel::sql_query(format!("WITH bindings AS ({BINDINGS}) SELECT * FROM bindings WHERE NOT removed AND (NOT retired OR has_tracked_jobs) AND EXISTS (SELECT 1 FROM organization_activation a WHERE a.organization_id=bindings.organization_id AND a.admitted) ORDER BY github_id"))
         .bind::<diesel::sql_types::Uuid, _>(workspace)
         .bind::<diesel::sql_types::Uuid, _>(organization)
         .load::<BindingRow>(&mut *store.connection()?).store()?

@@ -54,13 +54,16 @@ function AddOnAction({
 }
 
 /** The offer of Team on Free, with the link to Plan and usage elsewhere. */
-function ChooseTeam({
+export function ChooseTeam({
   page,
   usage,
+  plans = paths.plans,
 }: {
   page: BannerPage;
   /** The Plan and usage screen of the state. */
   usage: CataloguePath;
+  /** The Plans screen of the state. */
+  plans?: CataloguePath;
 }) {
   return (
     <>
@@ -69,7 +72,7 @@ function ChooseTeam({
           Plan and usage
         </LinkAction>
       )}
-      <LinkAction to={paths.plans} tone="primary" size="sm">
+      <LinkAction to={plans} tone="primary" size="sm">
         Choose Team
       </LinkAction>
     </>

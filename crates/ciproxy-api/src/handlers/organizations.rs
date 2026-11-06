@@ -28,11 +28,10 @@ pub(crate) async fn list(
         .require_role(&principal, path.workspace_id, true)
         .await?;
     Ok(Json(
-        query(state.store, move |store| store.organizations(workspace_id))
-            .await?
-            .into_iter()
-            .map(views::organization)
-            .collect(),
+        query(state.store, move |store| {
+            views::organizations(store, workspace_id)
+        })
+        .await?,
     ))
 }
 

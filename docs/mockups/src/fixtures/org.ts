@@ -64,6 +64,11 @@ export const workspaceChoices: readonly WorkspaceChoice[] = [
   { name: "tidepool", initial: "T", tier: "free", organizations: 1 },
 ];
 
+/** "1 organization", "2 organizations". */
+export function organizationsText(count: number): string {
+  return `${count} ${count === 1 ? "organization" : "organizations"}`;
+}
+
 /** "mokly-ai or mokly-labs", the organizations of the workspace in a line. */
 export function organizationList(word: "and" | "or"): string {
   const logins = organizations.map((organization) => organization.login);

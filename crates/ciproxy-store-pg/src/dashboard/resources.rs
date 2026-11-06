@@ -2,7 +2,6 @@
 
 use crate::scale_sets::ScaleSetRow;
 use chrono::{DateTime, Utc};
-use ciproxy_schema::dashboard::dashboard_install_intents;
 use ciproxy_schema::labels::labels;
 use ciproxy_schema::scale_sets::scale_sets;
 use ciproxy_schema::workspaces::workspaces;
@@ -15,38 +14,6 @@ use uuid::Uuid;
 use crate::connection::PgStore;
 use crate::error::{QueryResultExt, require_record};
 use crate::labels::LabelRow;
-
-pub(super) fn save_intent(
-    store: &PgStore,
-    requester: i64,
-    organization: i64,
-    workspace: Uuid,
-) -> Result<()> {
-    diesel::insert_into(dashboard_install_intents::table)
-        .values((
-            dashboard_install_intents::requester_id.eq(requester),
-            dashboard_install_intents::github_organization_id.eq(organization),
-            dashboard_install_intents::workspace_id.eq(workspace),
-        ))
-        .on_conflict((
-            dashboard_install_intents::requester_id,
-            dashboard_install_intents::github_organization_id,
-        ))
-        .do_update()
-        .set(dashboard_install_intents::workspace_id.eq(workspace))
-        .execute(&mut *store.connection()?)
-        .store()?;
-    Ok(())
-}
-
-pub(super) fn intent(store: &PgStore, requester: i64, organization: i64) -> Result<Option<Uuid>> {
-    dashboard_install_intents::table
-        .find((requester, organization))
-        .select(dashboard_install_intents::workspace_id)
-        .first(&mut *store.connection()?)
-        .optional()
-        .store()
-}
 
 pub(super) fn rename(store: &PgStore, workspace: Uuid, name: &str) -> Result<()> {
     require_record(

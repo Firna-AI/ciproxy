@@ -830,9 +830,70 @@ test host in `internal-498318`.
 - [ ] Smoke-test warm starts, slots, drain, remove, offline, a cache hit, a
       restart, and a disallowed repository.
 
+## Milestone 29: Mockups: organization linking
+
+Tags: mockup
+
+Depends on: none
+
+Items 82 and 83 change how an organization joins a workspace after "Add an
+organization". These screens come before the requirements and the backend
+work of Milestone 14. The merged mockup catalogue and its screens are the
+base of this milestone.
+
+- [x] Show the return from GitHub: the link at once for one Admin
+      workspace, the picker for several, a failed install check, and the
+      page for no Admin workspace.
+      Branch: `conductor/ciproxy-add-organization`.
+- [x] Show a request that waits for an owner, and the choice of the person
+      who asked at the next sign-in after a late approval.
+      Branch: `conductor/ciproxy-add-organization`.
+- [x] Show an inactive organization with the plan reason, with both
+      reasons, and with the Admin reason only. Show the Turn on dialog, the
+      organizations after Team, and the Plans page of that December.
+      Branch: `conductor/ciproxy-add-organization`.
+- [x] Show "Add an organization" on Free, and keep the soft-limit banner of
+      a Free workspace that kept its organizations.
+      Branch: `conductor/ciproxy-add-organization`.
+- [x] Connect the screens through the updated add flow and four new flows:
+      a workspace choice, a late approval, an add on Free, and a Turn on.
+      Branch: `conductor/ciproxy-add-organization`.
+- [x] Run `npm --prefix ts run mockups:check`. Smoke-test the changed pages
+      at 1440, 720, and 390 px, and the changed flows.
+      Branch: `conductor/ciproxy-add-organization`.
+      Evidence: `.context/ciproxy-add-organization/mockups/`.
+- [x] Update the design and the TODOs of this plan for each problem that
+      the mockups show.
+      Branch: `conductor/ciproxy-add-organization`.
+
+## Milestone 30: Documentation: organization linking
+
+Depends on: 29
+
+This milestone writes the answers to items 82 and 83 into the protocol
+docs, with their decisions and rejected options.
+
+Orchestrator calls, 6 November 2026: a request return chooses no
+workspace, and the person chooses only after the check. A lost Admin role
+makes only a chosen workspace inactive. Every linked organization counts
+against the tier, except a removed one, and an active organization stays
+active. A link gives no person a role. Reason: these calls apply items 82
+and 83 with no new rule.
+
+- [x] Write "Choose the workspace", "A request that an owner approves
+      later", and "Inactive organizations" into
+      `docs/protocol/workspaces.md`. Keep the organization count of the
+      tiers.
+      Branch: `conductor/ciproxy-add-organization`.
+- [x] Align the 30-day reinstall in `app-removal.md`, with the kept hold,
+      and the soft limits in `metering.md` with these rules.
+      Branch: `conductor/ciproxy-add-organization`.
+- [x] Run `cargo xtask check --include markdown`.
+      Branch: `conductor/ciproxy-add-organization`.
+
 ## Milestone 14: Dashboard API: sign-in, setup, machines, and settings
 
-Depends on: 4, 6, 8
+Depends on: 4, 6, 8, 30
 
 `ciproxy-api` serves the dashboard with axum, and `utoipa` with
 `openapi-typescript` generates its types. My call: money in cents, times in
@@ -864,14 +925,47 @@ UTC RFC 3339, and IDs as strings. Reason: JavaScript loses 64-bit numbers.
       repository access of each one. A take-out deletes the scale sets and
       removes the install through the GitHub API, as item 51 says. ciproxy
       tells its own removal apart from a removal by an owner.
-      Branch: `conductor/ciproxy-mvp-milestone-14-api`.
-      Orchestrator: get the owner's choices on organization selection and
-      late approval. Then enable the add route and its HTTP cases.
+      Branch: `conductor/ciproxy-add-organization`.
+      Items 82 and 83 chose the add rules. Milestones 29 and 30 come first.
   - [x] Serve per-organization repository access through the GitHub App.
         Branch: `conductor/ciproxy-mvp-milestone-14-api`.
   - [x] Take out an organization with durable, installation-specific
         cleanup. Keep its history and distinguish owner removal.
         Branch: `conductor/ciproxy-mvp-milestone-14-api`.
+  - [x] Link an organization after "Add an organization", as
+        `workspaces.md` says. The install link carries a `state` for the
+        add. The return `/api/github/setup` checks the installation with
+        `GET /user/installations` and the person's own token, at that
+        moment. Then one current Admin workspace links at once, several
+        open the picker, and none keeps `waiting_for_admin`. This replaces
+        "Setup never chooses the workspace" for an add. A first install and
+        a reinstall within 30 days keep their behaviour.
+        Branch: `conductor/ciproxy-add-organization`. Waits for Milestone 30.
+  - [x] Keep a request return as `waiting_approval`, with only its exact
+        request from `setup_action=request` and no workspace. After the
+        approval, link only after the check and the choice of the person who
+        asked. Never infer a workspace from the start page, the newest add,
+        the person, or the time of an event.
+        Branch: `conductor/ciproxy-add-organization`. Waits for Milestone 30.
+  - [ ] Keep an inactive organization out of every runner path. Keep the
+        plan reason and the Admin reason apart from a GitHub suspension or
+        removal, and let both hold. Count every linked organization except
+        removed ones. End the plan reason when the organizations fit the
+        tier, and the Admin reason when a current Admin turns it on. Apply
+        the Admin reason only when the person lost the role before the link
+        completed. After Milestone 13 merges into the primary branch, handle
+        its inactive lifecycle and pending installation outcomes. Exclude an
+        organization from runtime snapshots unless `organization_runnable`
+        allows it. The Add branch owns these control-plane changes.
+        Implementation call, 6 November 2026: a removal and a new install
+        within 30 days keep a hold and its reasons, because neither is an
+        approval or a change of the plan. Keep the held registration, its
+        history, and its intent until the normal deletion of retained
+        records. A new install never resets a hold.
+        Branch: `conductor/ciproxy-add-organization`. Waits for Milestone 30.
+  - [x] Serve the picker, the waiting states, the reasons, and "Turn on",
+        with the actions that each role may take. Regenerate the API types.
+        Branch: `conductor/ciproxy-add-organization`. Waits for Milestone 30.
 - [x] Give the build of the API with each response, for the reload of an
       old dashboard tab in Milestone 19.
       Branch: `conductor/ciproxy-mvp-milestone-14-api`.
@@ -883,13 +977,26 @@ UTC RFC 3339, and IDs as strings. Reason: JavaScript loses 64-bit numbers.
       Implementation call, 5 November 2026: Setup reads durable UUID GitHub
       demand. Inject machine capacity and shared root sizing from the
       runtime, so the API needs no new agent report fields.
-- [ ] Test each route at the HTTP level with a real store.
-      Branch: `conductor/ciproxy-mvp-milestone-14-api`.
-      Orchestrator: complete the add-route HTTP cases after the owner's
-      decisions. The implemented 28 operations have 27 real-store scenarios.
+- [x] Test each route at the HTTP level with a real store.
+      Branch: `conductor/ciproxy-add-organization`.
+      Items 82 and 83 chose the add rules.
   - [x] Test the implemented routes with PostgreSQL, the gateway, and the
         GitHub App service. Verify upstream adapters with a local HTTP peer.
         Branch: `conductor/ciproxy-mvp-milestone-14-api`.
+  - [x] Test the add routes with a real store. Cover one, several, and no
+        Admin workspace, an event before the return, two adds at once, and
+        a failed installation check. Cover a waiting request, a late
+        approval, a lost return, a lost Admin role, a full Free workspace,
+        several inactive organizations on Free after a take-out, room after
+        a take-out, an upgrade, "Turn on", a removal and a new install that
+        keep a hold, an active retained reinstall, and the organizations
+        that keep running.
+        Branch: `conductor/ciproxy-add-organization`. Waits for Milestone 30.
+- [x] Run Redocly in the `api-types` gate phase, with its minimal rule set
+      and its path-parameter check, on the generated API contract, as item
+      84 says. Pin the Redocly version. Update `ts/api/README.md` and
+      `xtask/README.md`.
+      Branch: `conductor/ciproxy-add-organization`.
 - [ ] Orchestrator: mount the router at `/api` through Milestone 13. Supply
       the shared gateway, role and install adapters, selected-image sizing,
       and current release metadata. Run API maintenance on startup and at

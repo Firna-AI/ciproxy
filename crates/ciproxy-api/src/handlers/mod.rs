@@ -5,6 +5,8 @@ pub(crate) mod github_setup;
 pub(crate) mod label_cleanup;
 mod label_views;
 pub(crate) mod labels;
+mod link_views;
+pub(crate) mod links;
 mod machine_views;
 pub(crate) mod machines;
 pub(crate) mod members;

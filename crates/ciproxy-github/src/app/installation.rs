@@ -1,6 +1,7 @@
 //! First installation, retained reinstall, and requester-owned workspace choice.
 
 use ciproxy_store_interface::github_lifecycle::{GithubLifecycleTarget, GithubRegistration};
+use ciproxy_store_interface::installation_links::InstallationClaim;
 use ciproxy_store_interface::labels::{Label, WhenNothingFits};
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
 use ciproxy_store_interface::vm_size::VmSize;
@@ -11,7 +12,7 @@ use crate::installation_state::InstalledApp;
 use crate::persistence::mutation::MutationLease;
 
 use super::webhook::{AccountKind, InstallationAction, InstallationEvent};
-use super::{AppService, InstallationOutcome};
+use super::{AppService, InstallationDecision, InstallationOutcome};
 
 impl AppService {
     pub(super) async fn handle_installation(
@@ -81,10 +82,33 @@ impl AppService {
             self.retire_installation(&mut previous, lease).await?;
             registrations = self.store.by_github_id(github_id).await?;
         }
-        let target = self
+        let decision = self
             .authority
-            .intended_workspace(requester, github_id)
+            .installation_decision(requester, github_id, event.installation.id)
             .await?;
+        let claim = self
+            .store
+            .stage(InstallationClaim {
+                id: self.runtime.uuid(),
+                installation_id: current_state.id,
+                github_id,
+                login: current_state.account.login.clone(),
+                requester_id: requester,
+                event_seen: true,
+                user_verified: false,
+                direct: decision == InstallationDecision::Direct,
+                workspace_id: None,
+                organization_id: None,
+                verified_at: None,
+            })
+            .await?;
+        if decision == InstallationDecision::AwaitingAssignment {
+            return Ok(InstallationOutcome::AwaitingAssignment { claim_id: claim.id });
+        }
+        let target = match decision {
+            InstallationDecision::Target { workspace_id, .. } => Some(workspace_id),
+            _ => None,
+        };
         let current = registrations
             .iter()
             .find(|organization| organization.app_state != AppState::Removed);
@@ -141,7 +165,26 @@ impl AppService {
             removed_at: None,
             delete_after: None,
         };
-        let target = if organization.app_state == AppState::Active {
+        let local = if previous.is_some() {
+            self.store.activation(&organization).await?
+        } else {
+            Default::default()
+        };
+        let held = local.billing_hold
+            || local.admin_approval_hold
+            || matches!(
+                decision,
+                InstallationDecision::Target {
+                    admin_approved: false,
+                    ..
+                } | InstallationDecision::Target {
+                    billing_hold: true,
+                    ..
+                }
+            );
+        let target = if organization.app_state == AppState::Active && held {
+            GithubLifecycleTarget::Inactive
+        } else if organization.app_state == AppState::Active {
             let labels = if workspace.is_some() {
                 defaults.clone()
             } else {

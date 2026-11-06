@@ -1,1 +1,1 @@
-{ "order": ["states", "rename", "repositories"] }
+{ "order": ["states", "add", "inactive", "rename", "repositories"] }

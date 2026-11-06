@@ -7,6 +7,7 @@ use ciproxy_store_interface::secrets::EncryptedBoatKey;
 use ciproxy_store_interface::tokens::{Token, TokenSubject};
 use uuid::Uuid;
 
+use super::support::installation_claim;
 use super::support::{Database, account, at, hash, job, machine, runner};
 
 #[test]
@@ -15,6 +16,7 @@ fn organization_removal_preserves_shared_access_and_its_retained_history() {
     let store = &database.store;
     let workspace = database.workspace();
     let mut first = database.organization(&workspace);
+    let (claim_id, attempt_digest) = installation_claim::linked(store.as_ref(), &first);
     let mut second = database.organization(&workspace);
     store
         .set_app_suspended(workspace.id, second.id, true)
@@ -214,6 +216,24 @@ fn organization_removal_preserves_shared_access_and_its_retained_history() {
         1
     );
     assert_eq!(store.organization(workspace.id, first.id).unwrap(), None);
+    assert_eq!(
+        store
+            .installation_claim(claim_id)
+            .unwrap()
+            .map(|claim| claim.id),
+        None
+    );
+    assert_eq!(
+        store
+            .installation_attempt(&attempt_digest)
+            .unwrap()
+            .map(|attempt| attempt.id),
+        None
+    );
+    assert_eq!(
+        store.installation_workspace_offers(claim_id, 7).unwrap(),
+        Vec::<Uuid>::new()
+    );
     assert_eq!(store.jobs(workspace.id, first.id).unwrap(), vec![]);
     assert_eq!(store.scale_sets(workspace.id, first.id).unwrap(), vec![]);
     assert_eq!(store.runners(workspace.id, first.id).unwrap(), vec![]);

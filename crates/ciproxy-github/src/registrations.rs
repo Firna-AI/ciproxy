@@ -43,6 +43,7 @@ impl RunnerRegistrations for RegistrationService {
     async fn create(&self, target: ListenerTarget, runner_name: &str) -> Result<JitRegistration> {
         let context = self.store.context(target).await?;
         if context.organization.app_state != AppState::Active
+            || !context.organization_enabled
             || context.state != ScaleSetState::Active
         {
             return Err(Error::OrganizationInactive);

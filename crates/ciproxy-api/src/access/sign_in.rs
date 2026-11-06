@@ -1,18 +1,19 @@
 //! PKCE state consumption and fixed-duration session issuance.
 
 use chrono::Duration;
+use ciproxy_github::app::GitHubApp;
 use ciproxy_store_interface::dashboard::records::{Session, User};
 use secrecy::{ExposeSecret, SecretString};
 
 use crate::error::{Error, Result};
 use crate::state::query;
-use crate::wire::access::RemovedOrganization;
+use crate::wire::access::{RemovedOrganization, SetupOutcome};
 use ciproxy_store_interface::organizations::AppState;
 
 use super::authentication::digest;
 use super::flow::Purpose;
 use super::pending::BrowserState;
-use super::{AccessService, LoginSuccess};
+use super::{AccessService, InstallContext, LoginSuccess};
 
 impl AccessService {
     pub(super) async fn finish(
@@ -20,6 +21,7 @@ impl AccessService {
         code: SecretString,
         state: &str,
         cookie: &str,
+        github: &dyn GitHubApp,
     ) -> Result<LoginSuccess> {
         let binding = self.consume_binding(state, cookie).await?;
         let hash = digest(state);
@@ -35,14 +37,84 @@ impl AccessService {
         let verifier = self.cipher.open(state.id, state.verifier).await?;
         let grant = self.identity.exchange(code, verifier).await?;
         let profile = self.identity.profile(&grant).await?;
+        let attempt = match &binding.purpose {
+            Purpose::Setup {
+                install_state: Some(state),
+                ..
+            } => self.lookup_attempt(state).await?,
+            _ => None,
+        };
+        if attempt
+            .as_ref()
+            .is_some_and(|attempt| attempt.requester_id != profile.id)
+        {
+            return Err(Error::Forbidden);
+        }
         let memberships = self.identity.memberships(&grant).await?;
         let setup = match &binding.purpose {
             Purpose::SignIn => None,
-            Purpose::Setup { installation } => Some(
+            Purpose::Setup {
+                installation: Some(installation),
+                ..
+            } => Some(
                 self.prove_setup(installation, &grant, &profile, &memberships)
                     .await?,
             ),
+            Purpose::Setup {
+                installation: None,
+                request_only: true,
+                ..
+            } => {
+                if attempt
+                    .as_ref()
+                    .is_none_or(|attempt| attempt.requester_id != profile.id)
+                {
+                    return Err(Error::Forbidden);
+                }
+                Some(SetupOutcome::WaitingApproval)
+            }
+            _ => return Err(Error::Forbidden),
         };
+        let install_context = if let Some(attempt) = &attempt {
+            if matches!(setup.as_ref(), Some(SetupOutcome::OrganizationsOnly { .. }))
+                && let Purpose::Setup {
+                    installation: Some(personal),
+                    ..
+                } = &binding.purpose
+            {
+                let id = attempt.id;
+                let person = profile.id;
+                let installation = personal.installation_id;
+                query(self.store.clone(), move |store| {
+                    store.complete_personal_installation_attempt(id, person, installation)
+                })
+                .await?;
+            }
+            Some(InstallContext::Attempt(attempt.id))
+        } else if matches!(binding.purpose, Purpose::Setup { .. }) {
+            let person = profile.id;
+            query(self.store.clone(), move |store| {
+                store.has_pending_add(person)
+            })
+            .await?
+            .then_some(InstallContext::AmbiguousAdd)
+        } else {
+            None
+        };
+        self.observe_existing(&profile, &grant, &memberships)
+            .await?;
+        let target = match &binding.purpose {
+            Purpose::Setup {
+                installation: Some(installation),
+                install_state,
+                ..
+            } if matches!(setup.as_ref(), Some(SetupOutcome::Organization { .. })) => {
+                Some((installation, install_state.as_deref()))
+            }
+            _ => None,
+        };
+        self.prove_links(&profile, &grant, &memberships, target, github)
+            .await?;
         let github_id = profile.id;
         let organization_ids = memberships
             .iter()
@@ -80,6 +152,11 @@ impl AccessService {
         let prior = binding
             .previous
             .filter(|browser| browser.github_id == github_id && now < browser.expires_at);
+        let install_context = install_context.or_else(|| {
+            prior
+                .as_ref()
+                .and_then(|browser| browser.install_context.clone())
+        });
         let setup = setup.or_else(|| prior.as_ref().and_then(|browser| browser.setup.clone()));
         let id = previous.map_or_else(
             || {
@@ -117,6 +194,7 @@ impl AccessService {
         })
         .await?;
         let browser = BrowserState {
+            install_context,
             user_id: id,
             session_id,
             github_id,

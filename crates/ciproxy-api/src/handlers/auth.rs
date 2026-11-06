@@ -65,7 +65,7 @@ pub(crate) async fn callback(
     };
     let result = match state
         .access
-        .finish_login(code.into(), &nonce, &binding)
+        .finish_login(code.into(), &nonce, &binding, state.github.as_ref())
         .await
     {
         Ok(result) => result,

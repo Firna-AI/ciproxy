@@ -27,8 +27,13 @@ person installs the App.
 - 30 days after the removal, ciproxy deletes the data of the organization.
 - A new install within these 30 days joins the organization to the
   workspace that it left, with its job history.
-- This holds unless an Admin of another workspace starts the install with
-  "Add an organization".
+- An install through "Add an organization" does the same when its person
+  chooses that workspace. Another choice joins the organization to the
+  chosen workspace, as
+  [Choose the workspace](workspaces.md#choose-the-workspace) says.
+- An organization that was
+  [inactive](workspaces.md#inactive-organizations) comes back inactive,
+  with the same reasons. A new install ends no reason.
 - **Decision:** a removal takes only that organization out of its
   workspace. Reason: the other organizations of the workspace still use its
   machines, its Boat account, and its subscription.

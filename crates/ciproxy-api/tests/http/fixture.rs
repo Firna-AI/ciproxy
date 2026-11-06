@@ -86,11 +86,14 @@ impl Fixture {
             Arc::new(Events),
         ));
         let remote = Arc::new(Remote {
+            read_gate: Mutex::new(None),
+            ensure_gate: Mutex::new(None),
             store: database.store.clone(),
             organizations: Mutex::new(Vec::new()),
             sets: Mutex::new(HashMap::new()),
             next_id: AtomicI64::new(1000),
             events: Mutex::new(Vec::new()),
+            lifecycle_events: Mutex::new(Vec::new()),
             fail_uninstall: AtomicBool::new(false),
             fail_delete: AtomicBool::new(false),
             fail_lifecycle: AtomicBool::new(false),

@@ -20,6 +20,8 @@ pub enum WorkspaceRole {
 /// The fixed-duration dashboard sign-in and accessible workspaces.
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct SessionView {
+    /// Current requester-owned installation recovery and workspace choices.
+    pub organization_links: Vec<super::links::OrganizationLinkView>,
     /// Signed-in access state for install, access, and left pages.
     pub state: SignInState,
     /// CSRF token for requests that change data.
@@ -153,12 +155,16 @@ pub struct SetupCallback {
     pub installation_id: Option<String>,
     /// Untrusted install-flow state. It never selects identity or workspace.
     pub state: Option<String>,
+    /// GitHub can return a request that has not become an installation yet.
+    pub setup_action: Option<String>,
 }
 
 /// Token-free setup outcome proved by configured-App and fresh user APIs.
 #[derive(Clone, Deserialize, Serialize, ToSchema)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum SetupOutcome {
+    /// The original person's request still waits for owner approval.
+    WaitingApproval,
     /// An organization installation visible to its current organization member.
     Organization {
         /// Exact configured App installation identity.

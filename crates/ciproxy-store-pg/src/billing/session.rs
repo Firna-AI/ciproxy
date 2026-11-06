@@ -2,6 +2,7 @@
 
 use chrono::{DateTime, Utc};
 use ciproxy_schema::billing::{billing_accounts, billing_events};
+use ciproxy_schema::workspaces::workspaces;
 use ciproxy_store_interface::billing::commands::{BillingCommand, CheckoutProgress};
 use ciproxy_store_interface::billing::renewals::Renewal;
 use ciproxy_store_interface::billing::state::BillingState;
@@ -74,6 +75,11 @@ impl BillingSession for Session {
         let json = state.map(serde_json::to_string).transpose().internal()?;
         self.connection
             .transaction::<_, diesel::result::Error, _>(|connection| {
+                workspaces::table
+                    .find(self.workspace_id)
+                    .select(workspaces::id)
+                    .for_update()
+                    .first::<Uuid>(connection)?;
                 if let Some(event_id) = event_id {
                     let inserted = diesel::insert_into(billing_events::table)
                         .values((

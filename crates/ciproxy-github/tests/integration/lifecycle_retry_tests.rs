@@ -11,6 +11,7 @@ use ciproxy_store_interface::workspaces::Workspace;
 
 use super::app_fixture::{Fixture, installed};
 use super::database::Database;
+use super::resource_fixture::seed_target_authority;
 use super::support::{id, setup};
 
 fn created(installation_id: i64) -> InstallationEvent {
@@ -38,6 +39,7 @@ async fn failed_replacement_cleanup_is_replayed_before_activation_in_either_work
                 delete_after: None,
             };
             database.store.create_workspace(&workspace).unwrap();
+            seed_target_authority(database.store.as_ref(), workspace.id, 41);
             let mut label = database.store.labels(old.workspace_id).unwrap().remove(0);
             label.id = id(91);
             database.store.create_label(workspace.id, &label).unwrap();

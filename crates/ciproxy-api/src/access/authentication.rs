@@ -2,8 +2,10 @@
 
 use async_trait::async_trait;
 use chrono::Duration;
+use ciproxy_github::app::GitHubApp;
 use ciproxy_github::installation_state::InstalledApp;
 use ciproxy_store_interface::dashboard::records::{Role, User};
+use ciproxy_store_interface::installation_links::InstallationClaim;
 use secrecy::SecretString;
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
@@ -78,12 +80,16 @@ impl DashboardAccess for AccessService {
     }
     async fn begin_setup(
         &self,
-        installation: InstalledApp,
+        installation: Option<InstalledApp>,
+        install_state: Option<String>,
+        request_only: bool,
         previous: Option<&str>,
     ) -> Result<LoginAttempt> {
         self.start(
             Purpose::Setup {
-                installation: SetupTarget::configured(installation)?,
+                installation: installation.map(SetupTarget::configured).transpose()?,
+                install_state,
+                request_only,
             },
             previous,
         )
@@ -94,8 +100,25 @@ impl DashboardAccess for AccessService {
         code: SecretString,
         state: &str,
         cookie: &str,
+        github: &dyn GitHubApp,
     ) -> Result<LoginSuccess> {
-        self.finish(code, state, cookie).await
+        self.finish(code, state, cookie, github).await
+    }
+    async fn refresh_installation_links(
+        &self,
+        principal: &Principal,
+        github: &dyn GitHubApp,
+    ) -> Result<Vec<InstallationClaim>> {
+        self.refresh_links(principal, github).await
+    }
+    async fn choose_installation_link(
+        &self,
+        principal: &Principal,
+        claim: Uuid,
+        workspace: Uuid,
+        github: &dyn GitHubApp,
+    ) -> Result<()> {
+        self.choose_link(principal, claim, workspace, github).await
     }
     async fn authenticate(&self, cookie: &str) -> Result<Principal> {
         let browser = self.open_browser(cookie).await?;

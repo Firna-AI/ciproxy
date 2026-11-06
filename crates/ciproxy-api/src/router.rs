@@ -12,7 +12,7 @@ use utoipa_axum::routes;
 
 use crate::error::{Error, Problem, ProblemCode};
 use crate::handlers::{
-    auth, github_setup, labels, machines, members, organizations, sessions, setup,
+    auth, github_setup, labels, links, machines, members, organizations, sessions, setup,
 };
 use crate::state::ApiState;
 
@@ -46,6 +46,11 @@ pub(crate) fn routes() -> OpenApiRouter<ApiState> {
         .routes(routes!(labels::create))
         .routes(routes!(labels::update))
         .routes(routes!(labels::remove))
+        .routes(routes!(links::begin))
+        .routes(routes!(links::list))
+        .routes(routes!(links::detail))
+        .routes(routes!(links::choose))
+        .routes(routes!(links::enable))
 }
 
 /// Build the complete dashboard router. Mount it under /api at the host root.
