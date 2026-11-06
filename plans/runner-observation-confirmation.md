@@ -253,21 +253,27 @@ Depends on: 1, 2
 
 - [x] Run the targeted tests of `ciproxy-store-pg` and
       `ciproxy-control-plane`.
-- [ ] Run the complete gate `cargo xtask check` with `DATABASE_URL` set.
-- [ ] Run the host HTTP smoke: the built executable with an isolated
+- [x] Run the complete gate `cargo xtask check` with `DATABASE_URL` set.
+- [x] Run the host HTTP smoke: the built executable with an isolated
       database, a local signed release, and a proxy that refuses outside
       calls. Expect readiness, liveness, the routes, and a clean SIGTERM
       exit.
-- [ ] Run the actual container smoke,
+- [x] Run the actual container smoke,
       `crates/ciproxy-control-plane/scripts/container-smoke.sh`, with the
       same private inputs. Expect ready, live, exit 0, and no OOM kill.
-- [ ] Commit with Conventional Commits and push the branch.
-- [ ] Review the complete local diff against
+- [x] Commit with Conventional Commits and push the branch.
+- [x] Review the complete local diff against
       `origin/calummoore/ci-proxy-load-balancer` with the
       `implementation-review` skill after the push. Report the findings,
       then apply the fix rule: fix the `fix now` findings, record follow-up
       items under `plans/follow-ups/` for the rest, re-review once, and
       report.
+
+Evidence: `.context/runner-observation-confirmation/evidence/`. The review
+of `fdc52ca` found no finding in scope. It found one older problem outside
+the scope, a stale snapshot after `RunnerExited`. Its
+[follow-up item](follow-ups/runner-exit-routing-snapshot.md) defers it.
+
 - [ ] Delete this plan when the `plans` skill says, under "Deleting the
       plan".
 - [ ] Open the pull request into `calummoore/ci-proxy-load-balancer`. Its
