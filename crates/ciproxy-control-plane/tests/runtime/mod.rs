@@ -12,6 +12,7 @@ mod inventory_tests;
 mod job_delivery_tests;
 mod management_tests;
 mod metering_tests;
+mod observation_tests;
 mod preparation_delivery_tests;
 mod recovery_support;
 mod reinstall_removal_tests;

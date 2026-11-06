@@ -12,7 +12,7 @@ use ciproxy_store_interface::runners::RunnerState;
 use unimock::{MockFn, Unimock, matching};
 
 use super::clock::clock;
-use super::support::Fixture;
+use super::support::{Fixture, at};
 
 #[tokio::test]
 async fn a_restored_runner_report_corrects_request_and_exact_allocated_bytes() {
@@ -60,4 +60,5 @@ async fn a_restored_runner_report_corrects_request_and_exact_allocated_bytes() {
     assert_eq!(runner.requested_size.disk_gb, 40);
     assert_eq!(runner.runner.size.disk_bytes, 154_000_004_096);
     assert_eq!(runner.runner.state, RunnerState::Busy);
+    assert_eq!(runner.confirmed_at, Some(at()));
 }

@@ -196,8 +196,13 @@ Runner intents retain exact slot sets and the original whole-GB label
 request. The shared Runner record is the byte-precise actual allocation.
 Metering facts, cursors, and totals use that same actual resource type.
 No JIT or original runtime-token credential enters these records.
-`OwnRunner.confirmed_at` keeps the first agent evidence of a runner.
-`confirm_own_runner` saves it from a full report and never replaces it.
+`OwnRunner.confirmed_at` keeps the time of the first execution evidence of a
+runner, from a command result or a trusted agent or GitHub observation.
+`observe_own_runner` takes a required `OwnRunnerObservation`: the state, the
+GitHub ID, and the observation time. In one transaction, it saves the state
+and the ID, and it sets `confirmed_at` only when it is empty.
+It filters by workspace, organization, and runner only. Without the runner
+or its command record, it returns `NotFound` and saves nothing.
 `record_own_command_result` saves the result of the current command. It
 also saves that first evidence, and only an applied result ends delivery.
 `retire_own_runner` saves the trusted GitHub ID, `Stopping`, and the stop

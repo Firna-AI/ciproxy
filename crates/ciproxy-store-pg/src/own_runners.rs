@@ -6,13 +6,14 @@ use ciproxy_schema::runners::runners;
 use ciproxy_schema::workspaces::workspaces;
 use ciproxy_store_interface::error::Result;
 use ciproxy_store_interface::error::ResultExt;
-use ciproxy_store_interface::own_runners::{OwnRunner, OwnRunnerStore};
+use ciproxy_store_interface::own_runners::{OwnRunner, OwnRunnerObservation, OwnRunnerStore};
 use diesel::prelude::*;
 use uuid::Uuid;
 
 use crate::connection::PgStore;
 use crate::error::{QueryResultExt, require_record};
 use crate::gateway_transaction::transaction;
+use crate::own_observation;
 use crate::runners::RunnerRow;
 
 #[derive(Queryable, Selectable, Insertable)]
@@ -183,22 +184,20 @@ impl OwnRunnerStore for PgStore {
         })
     }
 
-    fn confirm_own_runner(
+    fn observe_own_runner(
         &self,
         workspace_id: Uuid,
+        organization_id: Uuid,
         runner_id: Uuid,
-        at: DateTime<Utc>,
+        observation: OwnRunnerObservation,
     ) -> Result<()> {
-        diesel::update(
-            own_runner_commands::table
-                .find(runner_id)
-                .filter(own_runner_commands::workspace_id.eq(workspace_id))
-                .filter(own_runner_commands::confirmed_at.is_null()),
+        own_observation::save(
+            &mut *self.connection()?,
+            workspace_id,
+            organization_id,
+            runner_id,
+            observation,
         )
-        .set(own_runner_commands::confirmed_at.eq(at))
-        .execute(&mut *self.connection()?)
-        .store()?;
-        Ok(())
     }
 
     fn record_own_command_result(

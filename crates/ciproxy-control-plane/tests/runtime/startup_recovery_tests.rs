@@ -14,7 +14,7 @@ use ciproxy_store_interface::runners::RunnerState;
 use unimock::{MockFn, Unimock, matching};
 
 use super::clock::clock;
-use super::support::Fixture;
+use super::support::{Fixture, at};
 
 #[tokio::test]
 async fn confirmed_configuration_loss_retires_github_first_with_exact_resources_and_preserves_busy()
@@ -100,6 +100,7 @@ async fn confirmed_configuration_loss_retires_github_first_with_exact_resources_
         assert_eq!(held.runner.size.disk_bytes, 154_000_004_096);
         assert_eq!(held.requested_size.disk_gb, 40);
         assert_eq!(held.slot_indices, vec![2]);
+        assert_eq!(held.confirmed_at, Some(at()));
         assert_eq!(
             held.runner.state,
             if busy {
