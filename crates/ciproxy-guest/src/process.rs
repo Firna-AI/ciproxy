@@ -4,8 +4,7 @@ use std::path::PathBuf;
 use std::process::Stdio;
 
 use async_trait::async_trait;
-use ciproxy_protocol::cache::{CacheConnection, DockerDiskAttachment};
-use ciproxy_protocol::guest::JobPreparation;
+use ciproxy_protocol::guest::{JobDecision, JobPreparation};
 use ciproxy_protocol::identifiers::JobId;
 use ciproxy_protocol::runners::RunnerExit;
 use ciproxy_protocol::secret::Secret;
@@ -14,14 +13,15 @@ use rustix::process::{Pid, Signal, kill_process_group};
 use tokio::io::{AsyncBufReadExt, BufReader, Lines};
 use tokio::process::{Child, ChildStdout, Command};
 
-use crate::assignment::{Assignments, Inbox, SocketAssignments, WorkerReply};
-use crate::handoff::{Handoff, PreparedProxy, prepare};
-use crate::preparation::{Prepared, PreparedJob};
+use crate::assignment::{Assignments, Inbox, SocketAssignments};
+use crate::guest_setup::{GuestSetup, PreloadedDocker};
+use crate::runner_assignment::{AssignedJob, WaitingJob};
 
 use crate::boundary::{EventFuture, Power, Runner, RunnerEvent};
 use crate::error::{Error, ErrorOptionExt, ErrorResultExt, Result};
 
 pub(crate) struct LinuxRunner {
+    pub(crate) setup: Box<dyn GuestSetup>,
     pub(crate) entry: PathBuf,
     process: Option<Running>,
     pub(crate) handoff: bool,
@@ -33,14 +33,13 @@ struct Running {
     output_open: bool,
     ready: bool,
     assignments: Option<Box<dyn Assignments>>,
-    assignment: Option<(Handoff, Box<dyn WorkerReply>)>,
-    active_handoff: Option<Handoff>,
-    prepared: Option<Box<dyn PreparedJob>>,
+    assignment: Option<Box<dyn AssignedJob>>,
 }
 
 impl LinuxRunner {
-    pub(crate) fn new(entry: PathBuf, handoff: bool) -> Self {
+    pub(crate) fn new(entry: PathBuf, handoff: bool, setup: Box<dyn GuestSetup>) -> Self {
         Self {
+            setup,
             entry,
             process: None,
             handoff,
@@ -51,6 +50,11 @@ impl LinuxRunner {
 #[async_trait]
 impl Runner for LinuxRunner {
     async fn start(&mut self, registration: Secret) -> Result<()> {
+        let preloaded = if self.handoff {
+            self.setup.inspect().await
+        } else {
+            PreloadedDocker::default()
+        };
         let listener = if self.handoff {
             Some(crate::handoff::listen().await?)
         } else {
@@ -87,12 +91,12 @@ impl Runner for LinuxRunner {
             output_open: true,
             ready: false,
             assignments: listener.map(|listener| {
-                Box::new(Inbox::new(Box::new(SocketAssignments { listener })))
-                    as Box<dyn Assignments>
+                Box::new(Inbox::new(Box::new(SocketAssignments {
+                    listener,
+                    preloaded,
+                }))) as Box<dyn Assignments>
             }),
             assignment: None,
-            active_handoff: None,
-            prepared: None,
         });
         Ok(())
     }
@@ -103,14 +107,18 @@ impl Runner for LinuxRunner {
             loop {
                 tokio::select! {
                     incoming = async { match &mut running.assignments { Some(assignments) => assignments.receive().await, None => std::future::pending().await } }, if running.assignments.is_some() => {
-                        running.assignments=None;
                         match incoming {
                             Ok(assignment) => {
-                                let handoff=assignment.handoff;
-                                let event=RunnerEvent::Starting { job_id:handoff.job_id.clone(),runtime:handoff.runtime.clone() };
-                                running.active_handoff=Some(handoff.clone());
-                                running.assignment=Some((handoff,assignment.reply));
-                                return Ok(event);
+                                match &mut running.assignment {
+                                    Some(current) => {
+                                        if !current.reconnect(assignment) { continue; }
+                                    }
+                                    None => running.assignment = Some(Box::new(WaitingJob::new(assignment))),
+                                }
+                                if let Some(current) = &running.assignment {
+                                    let handoff = current.handoff();
+                                    return Ok(RunnerEvent::Starting { job_id: handoff.job_id.clone(), runtime: handoff.runtime.clone() });
+                                }
                             }
                             Err(error) => { tracing::warn!(%error,"trusted cache handoff unavailable; runner keeps GitHub fallback"); }
                         }
@@ -150,61 +158,16 @@ impl Runner for LinuxRunner {
         })
     }
 
-    async fn prepare(
-        &mut self,
-        job_id: JobId,
-        facts: ciproxy_protocol::jobs::JobFacts,
-        cache: Option<CacheConnection>,
-        docker: Option<DockerDiskAttachment>,
-    ) -> Result<JobPreparation> {
+    async fn prepare(&mut self, job_id: JobId, decision: JobDecision) -> Result<JobPreparation> {
         let running = self.process.as_mut().ok_or_internal("runner not started")?;
-        if running
-            .active_handoff
-            .as_ref()
-            .is_some_and(|handoff| handoff.job_id != job_id)
-        {
+        let assigned = running
+            .assignment
+            .as_mut()
+            .ok_or_internal("job assignment unavailable")?;
+        if assigned.handoff().job_id != job_id {
             return Err(Error::PoweroffFailed);
         }
-        if let Some(prepared) = &mut running.prepared {
-            return Ok(prepared.replay(cache).await);
-        }
-        let connection = cache.clone();
-        let handoff = running
-            .assignment
-            .take()
-            .map(|(handoff, stream)| (handoff, Some(stream)))
-            .or_else(|| {
-                running
-                    .active_handoff
-                    .clone()
-                    .map(|handoff| (handoff, None))
-            });
-        if let Some((handoff, stream)) = handoff {
-            if handoff.job_id != job_id {
-                return Err(Error::PoweroffFailed);
-            }
-            match prepare(handoff, stream, facts, cache, docker).await {
-                Ok(prepared) => {
-                    let outcome = prepared.outcome;
-                    running.prepared = Some(Box::new(Prepared {
-                        initial: prepared,
-                        connection,
-                    }));
-                    return Ok(outcome);
-                }
-                Err(error) => {
-                    running.prepared = Some(Box::new(Prepared {
-                        initial: PreparedProxy {
-                            proxy: None,
-                            outcome: JobPreparation::default(),
-                        },
-                        connection: None,
-                    }));
-                    return Err(error);
-                }
-            }
-        }
-        Ok(JobPreparation::default())
+        assigned.decide(decision).await
     }
 }
 

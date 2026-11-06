@@ -6,14 +6,18 @@ use ciproxy_protocol::identifiers::{CommandId, JobId, RunnerId};
 use ciproxy_protocol::runners::{RunnerExit, RunnerState};
 use unimock::{MockFn, Unimock, matching};
 
+use crate::boundaries::GuestProvenance;
 use crate::boundaries::{CacheMock, StoreMock, VmsMock};
+use crate::cache_authority::CacheAuthority;
 use crate::controller::Agent;
+use crate::fixtures::github_decision_sent;
 use crate::fixtures::{applied, controller, vm};
 use crate::state::{MachineState, Mode};
 
 #[tokio::test]
 async fn drain_waits_for_confirmed_stop_and_keeps_jobs_until_resume() {
     let mock = Unimock::new((
+        github_decision_sent(),
         StoreMock::save
             .each_call(matching!(_))
             .answers(&|_, _| Ok(())),
@@ -37,9 +41,11 @@ async fn drain_waits_for_confirmed_stop_and_keeps_jobs_until_resume() {
             .unwrap(),
         applied()
     );
+    let mut github_job = vm("job", true);
+    github_job.cache_authority = CacheAuthority::GitHubOnly;
     assert_eq!(
         agent.state.lock().await.runners,
-        vec![vm("idle", false), vm("job", true)]
+        vec![vm("idle", false), github_job.clone()]
     );
     assert_eq!(
         agent
@@ -55,10 +61,7 @@ async fn drain_waits_for_confirmed_stop_and_keeps_jobs_until_resume() {
     let mut stopping = vm("idle", false);
     stopping.report.state = RunnerState::Stopping;
     assert_eq!(agent.state.lock().await.mode, Mode::Draining);
-    assert_eq!(
-        agent.state.lock().await.runners,
-        vec![stopping, vm("job", true)]
-    );
+    assert_eq!(agent.state.lock().await.runners, vec![stopping, github_job]);
     assert_eq!(
         agent
             .control(ControlMessage::Resume {
@@ -122,6 +125,7 @@ async fn a_late_job_started_survives_pending_removal_until_runner_exit() {
     assert_eq!(
         agent
             .guest(
+                GuestProvenance::InitialConfiguration,
                 "runner",
                 GuestToAgent::JobStarted {
                     runner_id: RunnerId("runner".to_owned()),
@@ -145,6 +149,7 @@ async fn a_late_job_started_survives_pending_removal_until_runner_exit() {
     assert!(!agent.finished().await);
     agent
         .guest(
+            GuestProvenance::InitialConfiguration,
             "runner",
             GuestToAgent::RunnerExited {
                 runner_id: RunnerId("runner".to_owned()),

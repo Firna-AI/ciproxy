@@ -4,8 +4,7 @@ use std::future::Future;
 use std::pin::Pin;
 
 use async_trait::async_trait;
-use ciproxy_protocol::cache::{CacheConnection, DockerDiskAttachment};
-use ciproxy_protocol::guest::{AgentToGuest, GuestToAgent, JobPreparation};
+use ciproxy_protocol::guest::{AgentToGuest, GuestToAgent, JobDecision, JobPreparation};
 use ciproxy_protocol::identifiers::JobId;
 use ciproxy_protocol::runners::RunnerExit;
 use ciproxy_protocol::runtime::RuntimeCredentials;
@@ -57,13 +56,7 @@ pub trait Runner: Send {
     /// Stop the runner when the agent explicitly sends `Shutdown`.
     async fn stop(&mut self) -> Result<RunnerExit>;
     /// Finish local cache and Docker setup, then acknowledge the waiting worker.
-    async fn prepare(
-        &mut self,
-        job_id: JobId,
-        facts: ciproxy_protocol::jobs::JobFacts,
-        cache: Option<CacheConnection>,
-        docker: Option<DockerDiskAttachment>,
-    ) -> Result<JobPreparation>;
+    async fn prepare(&mut self, job_id: JobId, decision: JobDecision) -> Result<JobPreparation>;
 }
 
 /// Power off an own-machine VM, or finish a Boat guest namespace.

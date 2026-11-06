@@ -15,9 +15,15 @@ pub(crate) enum CacheAuthority {
 /// Original origins and rights, fixed before the first running-state save.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub(crate) struct CacheSeal {
+    source_gate: SourceGate,
     permissions: CachePermissions,
     cache_origin: EndpointOrigin,
     results_origin: EndpointOrigin,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+enum SourceGate {
+    HostDecision,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -46,11 +52,12 @@ impl CacheAuthority {
     pub(crate) fn handoff(
         &mut self,
         first: bool,
+        initial_authority: bool,
         mut runtime: RuntimeCredentials,
     ) -> Option<CheckedRuntime> {
         if matches!(self, Self::Waiting) {
-            *self = match (first, CacheSeal::from_runtime(&runtime)) {
-                (true, Some(seal)) => Self::Sealed(seal),
+            *self = match (first, initial_authority, CacheSeal::from_runtime(&runtime)) {
+                (true, true, Some(seal)) => Self::Sealed(seal),
                 _ => Self::GitHubOnly,
             };
         }
@@ -70,6 +77,7 @@ impl CacheAuthority {
 impl CacheSeal {
     fn from_runtime(runtime: &RuntimeCredentials) -> Option<Self> {
         Some(Self {
+            source_gate: SourceGate::HostDecision,
             permissions: runtime.permissions,
             cache_origin: EndpointOrigin::parse(runtime.cache_url.expose_secret())?,
             results_origin: EndpointOrigin::parse(runtime.results_url.expose_secret())?,

@@ -3,7 +3,7 @@
 use std::os::unix::fs::PermissionsExt;
 
 use ciproxy_protocol::cache::{CacheConnection, DockerDiskAttachment};
-use ciproxy_protocol::guest::JobPreparation;
+use ciproxy_protocol::guest::{HANDOFF_PROTOCOL_VERSION, JobPreparation};
 use ciproxy_protocol::identifiers::JobId;
 use ciproxy_protocol::jobs::JobFacts;
 use ciproxy_protocol::runtime::{CacheProxyConfig, CacheRegistration, RuntimeCredentials};
@@ -14,10 +14,12 @@ use tokio::process::Command;
 
 use crate::assignment::WorkerReply;
 use crate::error::{Error, ErrorResultExt, Result};
+use crate::guest_setup::PreloadedDocker;
 use crate::proxy::{self, ProxySession};
 
 #[derive(Clone, Deserialize)]
 pub(crate) struct Handoff {
+    pub(crate) handoff_protocol_version: u16,
     pub(crate) job_id: JobId,
     pub(crate) runtime: RuntimeCredentials,
 }
@@ -55,7 +57,10 @@ pub(crate) async fn listen() -> Result<UnixListener> {
     Ok(listener)
 }
 
-pub(crate) async fn read(stream: UnixStream) -> Result<(Handoff, UnixStream)> {
+pub(crate) async fn read(
+    stream: UnixStream,
+    preloaded: PreloadedDocker,
+) -> Result<(Handoff, UnixStream)> {
     let mut reader = BufReader::new(stream);
     let mut bytes = Vec::new();
     reader
@@ -64,29 +69,11 @@ pub(crate) async fn read(stream: UnixStream) -> Result<(Handoff, UnixStream)> {
         .context("read trusted assignment")?;
     let mut handoff: Handoff =
         serde_json::from_slice(&bytes).context("decode trusted assignment")?;
-    let gateway = Command::new("/usr/local/libexec/ciproxy-container-proxy-url")
-        .output()
-        .await;
-    handoff.runtime.proxy_url = match gateway {
-        Ok(output) if output.status.success() => String::from_utf8(output.stdout)
-            .context("decode trusted Docker gateway")?
-            .trim()
-            .to_owned(),
-        _ => String::new(),
-    };
-    let data = Command::new("du")
-        .args(["--summarize", "--block-size=1", "/var/lib/docker"])
-        .output()
-        .await;
-    handoff.runtime.docker_data_bytes = match data {
-        Ok(output) if output.status.success() => String::from_utf8(output.stdout)
-            .context("decode preloaded Docker data size")?
-            .split_whitespace()
-            .next()
-            .and_then(|value| value.parse().ok())
-            .unwrap_or(0),
-        _ => 0,
-    };
+    if handoff.handoff_protocol_version != HANDOFF_PROTOCOL_VERSION {
+        return Err(Error::internal_message("unsupported source hook format"));
+    }
+    handoff.runtime.proxy_url = preloaded.proxy_url;
+    handoff.runtime.docker_data_bytes = preloaded.data_bytes;
     Ok((handoff, reader.into_inner()))
 }
 
@@ -99,7 +86,7 @@ pub(crate) async fn prepare(
     handoff: Handoff,
     mut reply: Option<Box<dyn WorkerReply>>,
     facts: JobFacts,
-    cache: Option<CacheConnection>,
+    cache: CacheConnection,
     docker: Option<DockerDiskAttachment>,
 ) -> Result<PreparedProxy> {
     let mut outcome = JobPreparation::default();
@@ -125,15 +112,6 @@ pub(crate) async fn prepare(
         }
         outcome.docker_attached = matches!(Command::new("mountpoint").args(["--quiet","/var/lib/docker"]).status().await,Ok(status)if status.success());
     }
-    let Some(cache) = cache else {
-        if reply.ready(None).await.is_err() {
-            tracing::warn!("runner already continued with direct GitHub caching");
-        }
-        return Ok(PreparedProxy {
-            proxy: None,
-            outcome,
-        });
-    };
     let runtime = handoff.runtime;
     let proxy_url = runtime.proxy_url.clone();
     let config = CacheProxyConfig {
@@ -151,23 +129,17 @@ pub(crate) async fn prepare(
     };
     match proxy::start(config).await {
         Ok(proxy) => {
-            if reply.ready(Some(&proxy_url)).await.is_ok() {
-                outcome.cache_ready = true;
-                Ok(PreparedProxy {
-                    proxy: Some(proxy),
-                    outcome,
-                })
-            } else {
-                tracing::warn!("runner readiness reply failed; preserve GitHub cache accounting");
-                Ok(PreparedProxy {
-                    proxy: None,
-                    outcome,
-                })
+            outcome.cache_ready = true;
+            if reply.ready(Some(&proxy_url)).await.is_err() {
+                tracing::warn!("runner readiness will replay after socket reconnect");
             }
+            Ok(PreparedProxy {
+                proxy: Some(proxy),
+                outcome,
+            })
         }
         Err(error) => {
             tracing::warn!(%error,"VM cache proxy unavailable; preserve GitHub fallback");
-            let _ = reply.ready(None).await;
             Ok(PreparedProxy {
                 proxy: None,
                 outcome,

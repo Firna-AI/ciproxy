@@ -47,7 +47,11 @@ pub(crate) async fn control_worker(
                     Ok(())
                 };
                 match recorded {
-                    Ok(()) => agent.guest(&event.runner_id.0, event.message).await,
+                    Ok(()) => {
+                        agent
+                            .guest(event.provenance, &event.runner_id.0, event.message)
+                            .await
+                    }
                     Err(error) => Err(error),
                 }
             }

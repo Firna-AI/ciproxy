@@ -1,5 +1,6 @@
 //! Repeated hosted facts cannot change a drive after pre-action setup starts.
 
+use ciproxy_protocol::guest::JobDecision;
 use std::sync::{Arc, Mutex};
 
 use ciproxy_protocol::agent::ControlMessage;
@@ -87,15 +88,19 @@ async fn repeated_facts_do_not_repeat_attachment_before_the_guest_acknowledges_s
         vec![
             AgentToGuest::PrepareJob {
                 job_id: JobId("job-1".into()),
-                facts: trusted_facts(),
-                cache: Some(cache.clone()),
-                docker: Some(disk)
+                decision: JobDecision::MachineCache {
+                    facts: Box::new(trusted_facts()),
+                    cache: cache.clone(),
+                    docker: Some(disk)
+                }
             },
             AgentToGuest::PrepareJob {
                 job_id: JobId("job-1".into()),
-                facts: trusted_facts(),
-                cache: Some(cache),
-                docker: None
+                decision: JobDecision::MachineCache {
+                    facts: Box::new(trusted_facts()),
+                    cache,
+                    docker: None
+                }
             },
         ]
     );

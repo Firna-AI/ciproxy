@@ -1,5 +1,6 @@
 //! Only matching authenticated job facts cross into guest or cache configuration.
 
+use ciproxy_protocol::guest::JobDecision;
 use std::sync::Arc;
 
 use ciproxy_protocol::agent::{AgentMessage, CommandFailure, CommandOutcome, ControlMessage};
@@ -10,6 +11,7 @@ use ciproxy_protocol::identifiers::{
 use ciproxy_protocol::jobs::{JobAssignment, JobFacts, Repository};
 use unimock::{MockFn, Unimock, matching};
 
+use crate::boundaries::GuestProvenance;
 use crate::boundaries::{CacheMock, VmsMock};
 use crate::controller::Agent;
 use crate::fixtures::{applied, controller, vm};
@@ -35,10 +37,8 @@ async fn authenticated_facts_must_match_the_runner_organization_and_observed_job
     };
     let cache_facts = facts.clone();
     let guest_message = AgentToGuest::PrepareJob {
-        cache: None,
-        docker: None,
         job_id: JobId("job-1".to_owned()),
-        facts: facts.clone(),
+        decision: JobDecision::GitHubOnly,
     };
     let mock = Unimock::new((
         crate::boundaries::StoreMock::save
@@ -146,6 +146,7 @@ async fn trusted_runtime_credentials_stay_on_the_machine_and_out_of_reports() {
     );
     let response = agent
         .guest(
+            GuestProvenance::InitialConfiguration,
             "job",
             ciproxy_protocol::guest::GuestToAgent::JobStarting {
                 runner_id: RunnerId("job".to_owned()),

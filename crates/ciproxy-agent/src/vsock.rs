@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 use async_trait::async_trait;
 use ciproxy_protocol::guest::AgentToGuest;
@@ -85,8 +86,10 @@ impl Guests for LinuxGuests {
         }
         let (sender, receiver) = mpsc::channel(16);
         let (shutdown, stop_requested) = watch::channel(false);
+        let initial = config.is_some();
         let configuration = Arc::new(Mutex::new(Configuration::new(config)));
         let bridge = GuestBridge {
+            initial: AtomicBool::new(initial),
             configuration: configuration.clone(),
             transport: self.transport.clone(),
             commands: self.commands.clone(),
@@ -152,3 +155,11 @@ mod vsock_tests;
 #[cfg(test)]
 #[path = "_tests_/configuration_delivery_tests.rs"]
 mod configuration_delivery_tests;
+
+#[cfg(test)]
+#[path = "_tests_/first_handoff_tests.rs"]
+mod first_handoff_tests;
+
+#[cfg(test)]
+#[path = "_tests_/initial_handoff_tests.rs"]
+mod initial_handoff_tests;

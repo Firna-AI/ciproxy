@@ -1,6 +1,7 @@
 //! The Firecracker CONNECT handshake precedes newline-delimited protocol JSON.
 
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use ciproxy_protocol::guest::{AgentToGuest, GuestToAgent};
@@ -9,7 +10,7 @@ use ciproxy_protocol::version::ProtocolVersion;
 use tokio::sync::{Mutex, mpsc, watch};
 use tokio::time::{MissedTickBehavior, interval, sleep, timeout};
 
-use crate::boundaries::GuestEvent;
+use crate::boundaries::{GuestEvent, GuestProvenance};
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::guest_transport::GuestTransport;
 use crate::layout::unit_name;
@@ -23,6 +24,7 @@ pub(crate) struct GuestBridge {
     pub(crate) commands: Arc<dyn Commands>,
     pub(crate) events: mpsc::Sender<GuestEvent>,
     pub(crate) vm: VmRecord,
+    pub(crate) initial: AtomicBool,
 }
 
 impl GuestBridge {
@@ -35,19 +37,25 @@ impl GuestBridge {
             match self.commands.unit(&unit_name(&self.vm)).await {
                 Ok(UnitState::Exited(code)) => {
                     let _ = self
-                        .emit(GuestToAgent::RunnerExited {
-                            runner_id: self.vm.report.runner_id.clone(),
-                            exit: RunnerExit { code: Some(code) },
-                        })
+                        .emit(
+                            GuestToAgent::RunnerExited {
+                                runner_id: self.vm.report.runner_id.clone(),
+                                exit: RunnerExit { code: Some(code) },
+                            },
+                            GuestProvenance::Recovery,
+                        )
                         .await;
                     return;
                 }
                 Ok(UnitState::Absent) => {
                     let _ = self
-                        .emit(GuestToAgent::RunnerExited {
-                            runner_id: self.vm.report.runner_id.clone(),
-                            exit: RunnerExit { code: None },
-                        })
+                        .emit(
+                            GuestToAgent::RunnerExited {
+                                runner_id: self.vm.report.runner_id.clone(),
+                                exit: RunnerExit { code: None },
+                            },
+                            GuestProvenance::Recovery,
+                        )
                         .await;
                     return;
                 }
@@ -74,11 +82,15 @@ impl GuestBridge {
             protocol_version,
             image_id,
             configuration_received,
+            handoff_protocol_version,
         } = &message
         else {
             return Err(Error::GuestMismatch);
         };
-        if *protocol_version != ProtocolVersion::CURRENT || *image_id != self.vm.report.image_id {
+        if *protocol_version != ProtocolVersion::CURRENT
+            || *handoff_protocol_version != ciproxy_protocol::guest::HANDOFF_PROTOCOL_VERSION
+            || *image_id != self.vm.report.image_id
+        {
             return Err(Error::GuestMismatch);
         }
         let configure = {
@@ -93,14 +105,19 @@ impl GuestBridge {
         let hello = message.clone();
         self.events
             .send(GuestEvent {
+                provenance: GuestProvenance::Recovery,
                 runner_id: self.vm.report.runner_id.clone(),
                 configuration_lost: !configuration_received && configure.is_none(),
                 message,
             })
             .await
             .context("deliver guest hello")?;
+        let mut configuration_sent = false;
+        let mut initial = false;
         if let Some(configure) = configure.as_ref() {
+            initial = self.initial.swap(false, Ordering::AcqRel);
             socket.send(configure).await?;
+            configuration_sent = true;
         }
         let stop_requested = *shutdown.borrow_and_update();
         if stop_requested {
@@ -117,11 +134,22 @@ impl GuestBridge {
                         { let mut current = self.configuration.lock().await; current.pending = None; current.received = Some(true); }
                         configuration_lost = false;
                     }
-                    self.emit(message).await?;
+                    let provenance = if initial && configuration_sent {
+                        GuestProvenance::InitialConfiguration
+                    } else {
+                        GuestProvenance::Recovery
+                    };
+                    self.emit(message, provenance).await?;
                 }
                 message = receiver.recv() => {
                     let message = message.ok_or(Error::Disconnected)?;
+                    if matches!(message, AgentToGuest::ConfigureRunner { .. }) {
+                        initial |= self.initial.swap(false, Ordering::AcqRel);
+                    }
                     socket.send(&message).await?;
+                    if matches!(message, AgentToGuest::ConfigureRunner { .. }) {
+                        configuration_sent = true;
+                    }
                 }
                 changed = shutdown.changed() => {
                     changed.context("read pending guest shutdown")?;
@@ -130,6 +158,7 @@ impl GuestBridge {
                 _ = health.tick() => {
                     if configuration_lost && self.configuration.lock().await.lost() {
                         self.events.send(GuestEvent {
+                            provenance: GuestProvenance::Recovery,
                             runner_id: self.vm.report.runner_id.clone(),
                             configuration_lost: true,
                             message: hello.clone(),
@@ -143,9 +172,10 @@ impl GuestBridge {
         }
     }
 
-    async fn emit(&self, message: GuestToAgent) -> Result<()> {
+    async fn emit(&self, message: GuestToAgent, provenance: GuestProvenance) -> Result<()> {
         self.events
             .send(GuestEvent {
+                provenance,
                 runner_id: self.vm.report.runner_id.clone(),
                 configuration_lost: false,
                 message,

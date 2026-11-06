@@ -1,5 +1,6 @@
 //! Preparation precedes acknowledgement and protects an assigned job from stop.
 
+use ciproxy_protocol::guest::JobDecision;
 use std::collections::VecDeque;
 use std::future::pending;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -31,14 +32,11 @@ async fn preparation_ack_follows_local_readiness_and_late_ready_cannot_replace_a
                 write: false,
             },
         };
-        let facts=serde_json::from_value(serde_json::json!({"organization_id":"org-1","repository":{"id":"8","full_name":"org/repo"},"assignment":{"run_id":"7","job_id":"job-1","runner_id":"9"},"event":"push","head_repository":null,"default_ref":"refs/heads/main","sticky_docker":false})).unwrap();
         let commands = Arc::new(Mutex::new(VecDeque::from(vec![
             Some(configure()),
             Some(AgentToGuest::PrepareJob {
                 job_id: JobId("job-1".to_owned()),
-                facts,
-                cache: None,
-                docker: None,
+                decision: JobDecision::GitHubOnly,
             }),
             Some(AgentToGuest::Shutdown),
             None,
@@ -97,8 +95,8 @@ async fn preparation_ack_follows_local_readiness_and_late_ready_cannot_replace_a
                     Box::pin(async move { Ok(events.lock().unwrap().pop_front().unwrap()) })
                 })),
             RunnerMock::prepare
-                .some_call(matching!(_, _, _, _))
-                .answers_arc(Arc::new(move |_, _, _, _, _| {
+                .some_call(matching!(_, _))
+                .answers_arc(Arc::new(move |_, _, _| {
                     prepared.lock().unwrap().push("prepared");
                     if fail_preparation {
                         Err(crate::error::Error::PoweroffFailed)

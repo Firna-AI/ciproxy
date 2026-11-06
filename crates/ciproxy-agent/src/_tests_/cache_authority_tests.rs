@@ -1,5 +1,6 @@
 //! Restored cache sessions retain original destination and permission authority.
 
+use ciproxy_protocol::guest::JobDecision;
 use std::sync::{Arc, Mutex};
 
 use ciproxy_protocol::agent::ControlMessage;
@@ -10,6 +11,7 @@ use ciproxy_protocol::runtime::{CachePermissions, RuntimeCredentials};
 use ciproxy_protocol::secret::Secret;
 use unimock::{MockFn, Unimock, matching};
 
+use crate::boundaries::GuestProvenance;
 use crate::boundaries::{CacheMock, StoreMock, VmsMock};
 use crate::cache::HttpCache;
 use crate::cache_admin::{AdministrationMock, Credential};
@@ -54,7 +56,14 @@ pub(super) async fn sealed_state(runtime: RuntimeCredentials) -> MachineState {
                 .returns(Ok(())),
         )),
     );
-    agent.guest("job", starting(runtime)).await.unwrap();
+    agent
+        .guest(
+            GuestProvenance::InitialConfiguration,
+            "job",
+            starting(runtime),
+        )
+        .await
+        .unwrap();
     agent.state.into_inner()
 }
 
@@ -95,6 +104,12 @@ async fn restored_handoff_cannot_replace_origins_or_add_an_absent_endpoint() {
         let prepared = preparations.clone();
         let cache_mock = Arc::new(
             Unimock::new((
+                AdministrationMock::fallback
+                    .each_call(matching!(_))
+                    .answers(&|_, _| Ok(())),
+                AdministrationMock::revoke
+                    .each_call(matching!(_))
+                    .answers(&|_, _| Ok(())),
                 AdministrationMock::recover.stub(|each| {
                     each.call(matching!(_))
                         .answers_arc(Arc::new(move |_, registration| {
@@ -138,25 +153,34 @@ async fn restored_handoff_cannot_replace_origins_or_add_an_absent_endpoint() {
             cache_mock.clone(),
             cache_mock,
         ));
-        restored.guest("job", starting(runtime)).await.unwrap();
+        restored
+            .guest(
+                GuestProvenance::InitialConfiguration,
+                "job",
+                starting(runtime),
+            )
+            .await
+            .unwrap();
         restored.control(facts()).await.unwrap();
         assert_eq!(*recoveries.lock().unwrap(), Vec::new());
         assert_eq!(*registrations.lock().unwrap(), Vec::new());
         assert_eq!(
             *preparations.lock().unwrap(),
-            vec![AgentToGuest::PrepareJob {
-                job_id: JobId("job-1".into()),
-                facts: trusted_facts(),
-                cache: None,
-                docker: None,
-            }]
+            vec![
+                AgentToGuest::PrepareJob {
+                    job_id: JobId("job-1".into()),
+                    decision: JobDecision::GitHubOnly
+                };
+                2
+            ]
         );
     }
 }
 
 #[tokio::test]
 async fn restored_same_origins_can_register_after_sidecar_loss_with_original_rights() {
-    let state = sealed_state(original()).await;
+    let mut state = sealed_state(original()).await;
+    state.runners[0].job_facts = Some(trusted_facts());
     let mut replay = original();
     replay.github_token = Secret::new("replayed-fixture-token");
     replay.cache_url = Secret::new("https://cache.example:443/another/path");
@@ -181,15 +205,18 @@ async fn restored_same_origins_can_register_after_sidecar_loss_with_original_rig
     )));
     let mut restored = controller(state, Unimock::new((
         StoreMock::save.each_call(matching!(_)).answers(&|_, _| Ok(())),
-        VmsMock::send.some_call(matching!((_, message) if matches!(message, AgentToGuest::PrepareJob { cache: Some(_), .. }))).returns(Ok(())),
+        VmsMock::send.some_call(matching!((_, message) if matches!(message, AgentToGuest::PrepareJob { decision: JobDecision::MachineCache { .. }, .. }))).returns(Ok(())),
     )));
     restored.cache = Arc::new(HttpCache::with_boundaries(
         cache.clone(),
         cache.clone(),
         cache,
     ));
-    restored.guest("job", starting(replay)).await.unwrap();
-    restored.control(facts()).await.unwrap();
+    restored.control_connection(false).await.unwrap();
+    restored
+        .guest(GuestProvenance::Recovery, "job", starting(replay))
+        .await
+        .unwrap();
     let registrations = registrations.lock().unwrap();
     assert_eq!(registrations.len(), 1);
     assert_eq!(
@@ -226,6 +253,16 @@ async fn saved_authority_requires_its_key_and_contains_only_non_secret_origins()
         .remove("cache_authority");
     let error = serde_json::from_value::<MachineState>(missing).unwrap_err();
     assert_eq!(error.classify(), serde_json::error::Category::Data);
+    let mut old_seal = serde_json::to_value(&state).unwrap();
+    old_seal["runners"][0]["cache_authority"]["Sealed"]
+        .as_object_mut()
+        .unwrap()
+        .remove("source_gate");
+    let decoded = serde_json::from_value::<MachineState>(old_seal);
+    assert_eq!(
+        decoded.map_err(|error| error.classify()),
+        Err(serde_json::error::Category::Data)
+    );
     assert_eq!(
         serde_json::from_str::<MachineState>(&encoded).unwrap(),
         state

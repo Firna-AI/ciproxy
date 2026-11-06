@@ -4,6 +4,7 @@ use std::collections::VecDeque;
 use std::future::pending;
 use std::sync::{Arc, Mutex};
 
+use ciproxy_protocol::guest::HANDOFF_PROTOCOL_VERSION;
 use ciproxy_protocol::guest::{AgentToGuest, GuestToAgent};
 use ciproxy_protocol::identifiers::{ImageId, OrganizationId, RunnerId};
 use ciproxy_protocol::runners::RunnerExit;
@@ -40,6 +41,7 @@ pub(in crate::service) fn configure() -> AgentToGuest {
 
 pub(super) fn hello() -> Observation {
     Observation::Message(GuestToAgent::Hello {
+        handoff_protocol_version: HANDOFF_PROTOCOL_VERSION,
         configuration_received: false,
         protocol_version: ProtocolVersion::CURRENT,
         image_id: ImageId("image-1".into()),

@@ -3,7 +3,10 @@
 mod assignment;
 pub mod boundary;
 pub mod error;
+mod guest_setup;
 mod handoff;
+mod replay;
+mod runner_assignment;
 pub mod service;
 
 mod boat;

@@ -48,6 +48,8 @@ mod image_store;
 mod image_verification;
 mod images;
 mod installation;
+mod job_decisions;
+mod job_preparation;
 mod launches;
 mod layout;
 mod logging;
@@ -107,6 +109,10 @@ mod job_facts_tests;
 #[cfg(test)]
 #[path = "_tests_/cache_authority_tests.rs"]
 mod cache_authority_tests;
+
+#[cfg(test)]
+#[path = "_tests_/host_decision_tests.rs"]
+mod host_decision_tests;
 
 #[cfg(test)]
 #[path = "_tests_/startup_tests.rs"]

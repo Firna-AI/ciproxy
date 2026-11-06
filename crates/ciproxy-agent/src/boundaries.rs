@@ -92,6 +92,7 @@ pub(crate) trait Vms: Send + Sync {
 
 #[derive(Debug)]
 pub(crate) struct GuestEvent {
+    pub(crate) provenance: GuestProvenance,
     pub(crate) configuration_lost: bool,
     pub(crate) runner_id: RunnerId,
     pub(crate) message: GuestToAgent,
@@ -108,4 +109,13 @@ pub(crate) trait Updates: Send + Sync {
 #[async_trait]
 pub(crate) trait Delay: Send + Sync {
     async fn wait(&self, seconds: u64);
+}
+
+/// Host connection identity that guest JSON cannot grant or restore.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum GuestProvenance {
+    /// The original connection carried the fresh runner configuration.
+    InitialConfiguration,
+    /// Restored and reconnected channels have no first-handoff authority.
+    Recovery,
 }
