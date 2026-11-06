@@ -5,6 +5,8 @@ use std::sync::Arc;
 use chrono::{DateTime, Duration, Utc};
 use ciproxy_control_plane::accounting::{Accounting, AccountingWorker};
 use ciproxy_control_plane::runtime::{MachineRuntime, OwnMachines};
+use ciproxy_gateway::gateway::MachineGatewayMock;
+use ciproxy_gateway::types::Delivery;
 use ciproxy_github::assignments::AssignmentService;
 use ciproxy_github::persistence::StoreAdapter;
 use ciproxy_github::runtime::{Runtime, RuntimeMock};
@@ -21,14 +23,21 @@ use uuid::Uuid;
 use super::support::{Fixture, at};
 
 fn make_runtime(fixture: &Fixture) -> (MachineRuntime, AccountingWorker) {
-    let clock: Arc<dyn Runtime> = Arc::new(Unimock::new(
+    let clock: Arc<dyn Runtime> = Arc::new(Unimock::new((
         RuntimeMock::now
             .each_call(matching!())
             .returns(at() + Duration::minutes(5)),
-    ));
+        RuntimeMock::uuid
+            .each_call(matching!())
+            .returns(Uuid::from_u128(99)),
+    )));
     let runtime = MachineRuntime::new(
         fixture.store.clone(),
-        Arc::new(Unimock::new(())),
+        Arc::new(Unimock::new(
+            MachineGatewayMock::send
+                .each_call(matching!(_, _, _))
+                .answers(&|_, _, _, _| Ok(Delivery::Connected)),
+        )),
         Arc::new(Unimock::new(())),
         Arc::new(AssignmentService {
             store: Arc::new(StoreAdapter::new(fixture.store.clone(), clock.clone())),
