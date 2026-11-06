@@ -1487,6 +1487,23 @@ Answers of 5 November 2026:
   legacy rule is off for `ciproxy` only. The user holds Organization Policy
   Administrator for this. A probe grant to an outside Gmail account was
   still refused. Rejected: A, B, C, and F.
+- Item 82, B, in the user's words: "right we can just show a list of the
+  users workspaces on return and then the user can pick one if there are
+  multiple". So the person still chooses the organization on GitHub. When
+  the person returns to ciproxy, ciproxy lists the workspaces where the
+  person is an Admin. With one, it links at once. With several, the person
+  picks one. A late approval with no browser session waits until the person
+  who asked signs in again and picks the workspace. Rejected: A and C.
+- Item 83, D, in the user's words: "we could link the workspace, but then
+  mark it as inactive until they have the correct billing". So the
+  organization joins the workspace that was meant, but stays inactive until
+  the plan of the workspace allows another organization. An inactive
+  organization gets no runners, and the dashboard says why, with the
+  upgrade offer. It turns active by itself after the upgrade. Rejected: A,
+  B, and C. My call, 6 November 2026: when the person who asked is no
+  longer an Admin, the organization also joins inactive, and an Admin of the
+  workspace can turn it on. Reason: the same rule, link and wait until the
+  blocker clears.
 - Item 80, D: an attached Docker disk reserves its data plus the free disk
   of its label. The reservation comes only from spare disk that no set of
   job VMs can use, so a Docker disk stops no start, except for a short time
@@ -2396,10 +2413,11 @@ See the answers above.
 ## Open items of 4 November 2026
 
 The user answered items 54 to 81 on 5 November 2026, and item 76 became a
-design call. Item 76 came back on 6 November 2026, and the user chose E. The
-conversation gave each item in full in the layout of the
-`decisions-and-findings` skill. Each holds one root question, and its options
-keep the letters that the user saw.
+design call. Item 76 came back on 6 November 2026, and the user chose E.
+The user answered items 82 and 83 on 6 November 2026. Item 84 still waits.
+The conversation gave each item in full in the layout of the
+`decisions-and-findings` skill. Each holds one root question,
+and its options keep the letters that the user saw.
 
 ### 54. The GitHub API cannot name the full ref of a job
 
@@ -3307,3 +3325,95 @@ uninstall` does the same without the control plane. After the last
     US. Effort: Medium.
 - **Recommendation:** A, then B.
 - **Action:** answered C.
+
+### 82. Adding an organization can pick the wrong workspace
+
+**Answer, 6 November 2026:** B, in the user's words. See the answers above.
+
+- **Severity:** High. **Effort:** Medium.
+- **Source:** Design, Milestone 14, pull request #30, its item 1.
+- **Category:** Security.
+- **Location:** "Add an organization" in `docs/protocol/workspaces.md`, and
+  `crates/ciproxy-github/src/app/installation.rs:84`.
+- **Background:**
+  - An Admin starts an add attempt in one workspace. GitHub's install page
+    then lets the person choose the organization.
+  - GitHub can send the installation event before the browser returns.
+  - The event names the person and the organization, not the add attempt.
+- **Problem:** ciproxy cannot always tell which workspace the organization
+  was meant for: after a late owner approval, or with two attempts at once.
+- **Impact if no action:** An organization can join the wrong workspace.
+  "Add an organization" stays off.
+- **Root question:** How does ciproxy know the workspace of each install?
+- **Options:**
+  - **A.** The Admin picks the organization in ciproxy before GitHub opens.
+    ciproxy saves the workspace and the organization, then opens the
+    install page for that organization only. A new attempt for the same
+    organization replaces the old one. The protocol and the mockup change.
+    Effort: Medium.
+  - **B.** Keep the choice on GitHub, match the browser's return to the
+    waiting event, and add a recovery screen. Effort: Large.
+  - **C.** Keep the choice on GitHub, save installs with no workspace, and
+    add screens to assign them. Effort: Large.
+- **Left out:** One waiting workspace per person; the latest attempt; no
+  change.
+- **Wider fix:** A.
+- **Recommendation:** A. It gives the exact link with the least new code.
+- **Action:** ask the user, because A changes where the protocol lets the
+  person choose the organization.
+
+### 83. A late approval has nowhere to go
+
+**Answer, 6 November 2026:** D, which the user proposed. See the answers
+above.
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation, Milestone 14, pull request #30, its item 2.
+- **Category:** Docs or spec.
+- **Location:** `crates/ciproxy-api/src/access/adapters.rs:49`.
+- **Background:** An owner can approve a requested install days later.
+  Meanwhile, the person who asked can lose the Admin role, or the workspace
+  can move to Free, which allows fewer organizations.
+- **Problem:** The install then cannot join its workspace, and no rule says
+  what happens instead.
+- **Impact if no action:** The App stays installed on an organization that
+  no workspace serves. Its jobs stay queued.
+- **Root question:** Where does an approved install go when its workspace
+  cannot take it?
+- **Options:**
+  - **A.** Create a new workspace for the organization, with the person
+    who asked as its first Admin. Effort: Small.
+  - **B.** Remove the App, and show the reason at the next sign-in.
+    Effort: Medium.
+  - **C.** Keep the install waiting until an Admin accepts it. Effort: Large.
+  - **D.** Link the organization to its workspace, but keep it inactive until
+    the workspace can take it. The user proposed this option. Effort: Medium.
+- **Left out:** Joining the old workspace anyway; repeated errors alone.
+- **Wider fix:** None.
+- **Recommendation:** A. It serves the organization without the machines or
+  the keys of another workspace.
+- **Action:** ask the user, because no requirement covers this outcome.
+
+### 84. Generation does not check the API contract's structure
+
+- **Severity:** Low. **Effort:** Small.
+- **Source:** Review, Milestone 14, pull request #30, its item 8.
+- **Category:** Process.
+- **Location:** `ts/api/generate.ts:28`.
+- **Background:** The `api-types` gate phase compares the regenerated files
+  with the saved files. Nothing checks the structure of the contract.
+- **Problem:** The review found two invalid contract shapes that the drift
+  check did not catch.
+- **Impact if no action:** Another invalid shape can pass the gate.
+- **Root question:** Should the gate also reject an invalid contract
+  structure?
+- **Options:**
+  - **A.** Keep only the drift check and the code review. Effort: Small.
+  - **B.** Add Redocly's minimal rules and path-parameter checks to
+    generation, so that the gate rejects an invalid structure. Effort: Small.
+  - **C.** Write down a manual structural check before each publication.
+    Effort: Small.
+- **Left out:** A custom schema checker; a separate CI phase.
+- **Wider fix:** B.
+- **Recommendation:** B. It catches defects that a byte comparison cannot.
+- **Action:** ask the user, because B adds a new gate rejection.
