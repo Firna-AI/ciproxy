@@ -173,6 +173,8 @@ Send it only to the selected runner. Use the runner's environment variable
 `ACTIONS_RUNNER_INPUT_JITCONFIG`, not a command argument.
 Removal accepts an already absent registration. A busy result tells the
 runtime to keep the VM and let its job finish.
+`find` returns no registration after App removal revoked access, so
+retirement can still save its stop.
 
 Default labels request 20, 20, and 60 SI GB of free job disk.
 The scaler adds the image and ext4 allowance before runner allocation.
@@ -186,10 +188,13 @@ workers. The later control-plane runtime supplies these adapters:
   Admin role. The sign-in service owns memberships and role storage.
 - `LifecycleOutput` stops idle organization runners and their listeners.
   It preserves running jobs during removal and suspension.
+  Each `Removed` event carries a required `RemovalCause`. `Owner` and
+  `WorkspaceTakeout` select different retirement policies.
 - After the last organization leaves, the store revokes machine and
-  install credentials. The output closes machine connections, requests
-  idle sandbox cleanup, and schedules the subscription end. The overflow
-  service keeps retired Boat keys until running sandbox cleanup finishes.
+  install credentials. The gateway closes each machine connection at its
+  next contact. The output requests idle sandbox cleanup and
+  schedules the subscription end. The overflow service keeps retired Boat
+  keys until running sandbox cleanup finishes.
 - `JobOutput` notifies the snapshot and scaler service of saved demand.
   That service maps GitHub runner IDs to its runner records.
   It supplies consistent snapshots and sends accepted actions to agents.

@@ -6,13 +6,15 @@
 - **Added:** 2026-11-05, from
   `conductor/ciproxy-mvp-milestone-9-agent`, host storage checks. Updated
   2026-11-06 from `conductor/ciproxy-mvp-milestone-13-e2e`, after its cache
-  and Docker integration code.
+  and Docker integration code, and again after the owner fixes of pull
+  request #31.
 - **Location:** `crates/ciproxy-agent/scripts/smoke-own-machines.py`,
   `crates/ciproxy-agent/scripts/own_cache.py`,
   `crates/ciproxy-agent/scripts/own_docker.py`,
   `crates/ciproxy-agent/scripts/smoke-host.sh`,
   `crates/ciproxy-agent/src/cache.rs`,
   `crates/ciproxy-agent/src/cache_service.rs`,
+  `crates/ciproxy-agent/src/cache_unit.rs`,
   `crates/ciproxy-agent/src/docker.rs`,
   `crates/ciproxy-cache-sidecar/src/cli.rs`,
   `crates/ciproxy-guest/src/handoff.rs`, and `image/docker-attach.sh`.
@@ -27,8 +29,8 @@
   - **Budget acknowledgement:** The HTTP 204 answer of the machine cache to
     `PUT /budget`. It confirms the smaller budget before a VM starts or a
     Docker disk takes space.
-  - **Docker lease:** The agent's durable record of the bytes that the
-    Docker disk or disposable copy of one job reserves.
+  - **Docker lease:** The agent's only durable record of the repository,
+    writer access, and bytes of the Docker disk or disposable copy of a job.
   - **Live check:** A run on a real KVM host with real GitHub Actions jobs.
     A `SKIP` result is not a live check.
 - **Background:** The cache and Docker integration is implemented in code.
@@ -46,9 +48,11 @@
     with `GuestToAgent::JobPrepared` after its proxy binds. Then action
     setup continues. `crates/ciproxy-protocol/src/guest.rs` defines these
     messages.
-  - These credentials stay in memory. They never enter hosted messages,
-    logs, or durable agent state. The control plane gets only the runner
-    and job IDs.
+  - The token and the complete URLs stay in memory. They never enter
+    hosted messages, logs, or durable agent state. The agent saves only the
+    original cache rights and the scheme, host, and port of both URLs. A
+    replay cannot change them. The control plane gets only the runner and
+    job IDs.
   - The agent calls the authenticated HTTP administration of the machine
     cache on `127.0.0.1:8229`. It reads the token file
     `/var/lib/ciproxy/cache-admin-token`. The old newline JSON socket is
@@ -56,6 +60,8 @@
   - Agent install writes `ciproxy-cache.service`. The unit requires
     `var-lib-ciproxy-area.mount` and uses `/var/lib/ciproxy/area/cache`.
     VMs reach only its job listener, on TCP port 7887.
+  - The unit loads its private firewall rules from `/etc/ciproxy-cache.nft`
+    before each listener start, also at boot. A failed load stops the start.
   - The unit omits `--capacity-bytes`, so the service starts with an
     unknown budget. It recovers its retained entries, writes no new
     archive, and evicts nothing until the agent sends `PUT /budget`. An
@@ -140,6 +146,11 @@
      an active machine cache. Run uninstall while the service is active
      and holds entries. Show from the journal that the service stopped
      before the area mount. Show that uninstall then removed the area.
+  10. Listener protection after reboot: no script checks it yet. After
+      install and again after a host reboot, show that another host cannot
+      open TCP port 7887. Show that a job VM still reaches its cache after
+      the reboot. Show from the journal that the rules loaded before the
+      listener started.
 - **Impact if no action:** The tests use mocks and local files. A real host
   can still break the systemd stop order, the guest drive switch and
   mount, the filesystem growth, the Docker restart, or the proxy readiness.
@@ -147,7 +158,9 @@
   cache can look like a normal cache miss, and customers lose the local
   cache without a visible error. An unproved scope boundary can let one
   branch or repository restore a private entry of another. An unproved
-  budget recovery can start a VM without its promised free disk.
+  budget recovery can start a VM without its promised free disk. An
+  unproved listener rule can expose the cache listener to other hosts after
+  a reboot.
 - **Needs:**
   - The merged change on the main preview, with the runtime turned on. The
     deploy workflow runs for each push to
@@ -216,7 +229,7 @@
     `.context/ciproxy-mvp/host-smoke-*`. It holds run IDs, job UUIDs, VM
     IDs, and counts, but no token or cookie.
 - **Done when:**
-  - Each of the nine live requirements has a passing live check on a fresh
+  - Each of the ten live requirements has a passing live check on a fresh
     disposable KVM host against the main preview.
   - Each requirement that had no script has a repeatable check under
     `crates/ciproxy-agent/scripts/`, described in
@@ -231,3 +244,7 @@
   - [Interrupted uninstall](agent-interrupted-install-uninstall.md) fixes
     uninstall of an incomplete installation. Both use guarded area
     removal. The unmount check of this task uses a complete installation.
+  - [The old runner patch remains](runner-string-patch-removal.md) removes
+    the old runner scripts after the merge. It keeps the live `cache`
+    scenario of this task as the end-to-end proof of the source hook.
+    Neither item waits for the other.

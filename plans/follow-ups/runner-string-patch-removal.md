@@ -14,8 +14,9 @@
   `image/runner-patch/README.md` lines 4-5, 49-51, 109-111, and 147-148,
   `image/runner-patch/smoke/live-check.py:17-21`, and
   `crates/ciproxy-guest/src/assignment.rs:97-132`.
-- **Reason:** Production already uses the new source hook, and the cleanup
-  reaches operator scripts that the change did not touch.
+- **Reason:** On 2026-11-06, the user chose this work for after the merge,
+  because production uses the new source hook, and cleanup reaches unchanged
+  operator scripts.
 
 - **Terms:**
   - **Source hook:** The C# file `image/runner-patch/CiproxyAssignment.cs`,

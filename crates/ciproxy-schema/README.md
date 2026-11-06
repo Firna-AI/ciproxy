@@ -24,6 +24,9 @@ One workspace machine can serve all organizations in that workspace.
 The machine area also stores the last report of each disk.
 The gateway report table retains the full latest protocol report as JSONB.
 Its connection identifier fences reports from replaced agent connections.
+Its required `received_at` holds the receipt time of that report.
+The `202611062200_inventory_receipts` migration gives older rows the Unix
+epoch, so an older report can never prove that a VM is gone.
 
 The schema stores token hashes and encrypted Boat keys.
 It stores job metadata and references to immutable runner placements.
@@ -90,6 +93,9 @@ retirement and confirmed removal preserve the binding and its job references.
 
 Own-machine command records retain delivery identity, exact slot indices,
 and byte-precise requested and actual VM dimensions.
+Their optional `confirmed_at` holds the first agent evidence of the runner.
+The same migration sets it to the migration time for acknowledged commands.
+Other older commands keep it empty.
 They contain no JIT configuration or runtime-token secret.
 Workspace execution leases have their own negative advisory-key range.
 

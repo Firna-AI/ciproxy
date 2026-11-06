@@ -12,7 +12,7 @@
   `crates/ciproxy-agent/Cargo.toml:41-53`,
   `crates/ciproxy-agent/tests/root_disk_regression.rs:8-13`,
   `crates/ciproxy-agent/tests/storage_regression.rs:9-20`, and
-  `crates/ciproxy-agent/README.md:228-241`.
+  `crates/ciproxy-agent/README.md:189-209`.
 - **Reason:** The gap predates these fixes, and a later change can update
   the shared developer instructions without changing the gate.
 
@@ -47,8 +47,16 @@
     `crates/ciproxy-agent/scripts/storage-regression.py` exits 77 with
     `SKIP` before it compiles anything when root or a tool is missing.
   - `filesystem-regression` is the only feature in the workspace.
-  - This item did not compile the targets, so their current build state is
-    unknown.
+  - The default target `tests/docker_regression.rs` also uses path includes.
+    The gate builds it, because it needs no feature.
+  - On 2026-11-06, this command passed at commit `1722b62` and compiled both
+    targets. A later change can break them again with no failed check.
+
+    ```sh
+    cargo clippy --locked -p ciproxy-agent --features filesystem-regression \
+      --all-targets -- -D warnings
+    ```
+
 - **Problem:** No gate phase compiles the two opt-in targets. A change to an
   included file can break their build while every check passes. One example
   is code that moves from an included file into a new module. The included

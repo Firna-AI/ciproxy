@@ -855,6 +855,28 @@ Live KVM and authenticated job checks remain with the orchestrator.
       startup case before claiming its live proof.
       Branch: `conductor/ciproxy-mvp-milestone-13-e2e`.
 
+Owner review of pull request #31, round 1, 6 November 2026: the user chose
+fix now for findings 1 to 8 and fix after the merge for finding 9.
+
+- [x] Repair findings 1 to 8 with the user's options. 1A saves the original
+      cache rights and URL origins of each job. 2A loads the listener rules
+      before each cache-service start. 3B releases capacity only on a full
+      report received after the first confirmation. 4B resends saved stops.
+      5B makes the lease the only Docker record. 6B keeps the App removal
+      cause. 7B shares one reflink copy. 8A gives accounting its own worker.
+      Branch: `conductor/ciproxy-mvp-milestone-13-e2e`.
+- [ ] Build item 85 = F with item 86 = B. The runner hook waits for the host
+      decision, with no fallback and no time limit. A reconnect before the
+      first handoff means only GitHub's cache for the whole job.
+      Branch: `conductor/ciproxy-mvp-milestone-13-e2e`.
+
+Finding 9 = A waits until after the merge, because production uses the new
+source hook, and cleanup reaches unchanged operator scripts. The
+[runner patch removal](follow-ups/runner-string-patch-removal.md) holds that
+work. The smoke TODO above and the
+[integration record](follow-ups/agent-cache-area-integration.md) keep the
+live KVM proof of these fixes.
+
 ## Milestone 14: Dashboard API: sign-in, setup, machines, and settings
 
 Depends on: 4, 6, 8
@@ -915,12 +937,15 @@ UTC RFC 3339, and IDs as strings. Reason: JavaScript loses 64-bit numbers.
   - [x] Test the implemented routes with PostgreSQL, the gateway, and the
         GitHub App service. Verify upstream adapters with a local HTTP peer.
         Branch: `conductor/ciproxy-mvp-milestone-14-api`.
-- [ ] Orchestrator: mount the router at `/api` through Milestone 13. Supply
+- [x] Orchestrator: mount the router at `/api` through Milestone 13. Supply
       the shared gateway, role and install adapters, selected-image sizing,
       and current release metadata. Run API maintenance on startup and at
       least hourly. Discover listeners with `Store::listener_scale_sets`
       to keep retired bindings through completion and the final ACK.
-      Branch: `conductor/ciproxy-mvp-milestone-14-api`.
+      Branch: `conductor/ciproxy-mvp-milestone-13-e2e`.
+      Code status, 6 November 2026: the control plane mounts the router and
+      runs API maintenance at startup and every minute. The authenticated
+      live probes of the next TODO have not run.
 - [ ] Orchestrator: run the live API, repeated-authorization, and GitHub
       install-binding probes in `crates/ciproxy-api/scripts/README.md`.
       Read credentials through `CIPROXY_API_CREDENTIALS_FILE`. Record no

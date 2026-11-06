@@ -103,11 +103,31 @@ A successful stop command still holds capacity until the VM is absent.
 An offline removed machine still loses idle GitHub registrations.
 One failed action does not block independent organizations.
 
+Each machine keeps its last full report with the time that report arrived.
+Register, Hello, and Report set that time. Agent events change only the
+contact time.
+A runner gets its first confirmation from a current command result, or from
+a full report that lists it. The store writes that time once.
+A full report that omits a confirmed runner releases it only when the report
+arrived after that confirmation. Absence alone never stops an unconfirmed
+start.
+
+Retirement saves `Stopping` and its stop command before delivery.
+Each pass resends every saved stop with its command ID, after report
+reconciliation and before job routing and new actions. Removed machines
+get no resend.
+A resend makes no GitHub call, and one failed send does not block another.
+An applied result ends delivery. The capacity stays held until a later full
+report omits the VM, or the runner exits.
+`RunnerReady` and stale GitHub `Started` facts cannot replace `Stopping`.
+A guest `JobStarted` event or a running VM in a report keeps the job `Busy`.
+
 An agent report can mark a `Starting` runner with `configuration_lost`.
 The agent sets it only when the guest confirms no configuration and the
 agent holds no pending JIT. The runtime then retires that runner GitHub-first.
 A busy result preserves it, and its resources stay held until the VM is absent.
-No elapsed-time limit marks a starting runner as lost.
+An unconfirmed start is also retired GitHub-first when, more than 60 seconds
+after its issue, a full report received after that issue omits it.
 
 The guest supplies only a runner and job identity to the hosted process.
 The runtime matches that identity to durable GitHub demand.
@@ -130,6 +150,15 @@ The App's durable lifecycle outbox handles failures after local persistence.
 A separate startup and five-minute poll refreshes current installation
 authority and repository snapshots. It needs no optional event subscriptions.
 
+One supervised accounting worker does job timing repair, the metering
+refresh, and the raw job purge, in that order.
+The ten-second tick and listener job delivery only signal it.
+Pending signals merge into one pass, and passes never overlap.
+Readiness, runner operations, and workspace leases never wait for it.
+An error or a panic in one workspace does not stop the next workspace.
+The supervisor restarts the worker when it ends. Shutdown cancels it with
+the other short-grace runtime work.
+
 The runtime installs the mandatory gateway log guard.
 `RUST_LOG` changes other verbosity without exposing serialized frames.
 
@@ -137,6 +166,13 @@ The user selected immediate idle stop for machine removal and App removal.
 A job assigned before the trusted guest handoff can fail in that window.
 The runtime preserves jobs the guest has already observed.
 Ordinary retirement and Drain still require GitHub removal first.
+An owner's App removal saves a stop for every live reservation of that
+installation, also a busy or starting one, with no GitHub call.
+The event counts as accepted only after those stops are saved.
+A lease conflict or a failed save leaves the event pending.
+After a reinstall, older reservations use GitHub-first retirement.
+Reservations issued after the removal stay untouched.
+A workspace take-out keeps ordinary job protection.
 The user selected spare-disk reservations for sticky Docker attachments.
 Active reservations count against root admission until those jobs finish.
 Live KVM and authenticated GitHub checks remain operator work.
@@ -235,7 +271,15 @@ The PostgreSQL role needs CREATEDB rights.
 - [src/listeners.rs](src/listeners.rs) supervises reconciliation, listener
   discovery, and readiness.
 - [src/runtime.rs](src/runtime.rs) owns workspace execution reconciliation.
-- [src/actions.rs](src/actions.rs) reserves starts and confirms retirements.
+- [src/actions.rs](src/actions.rs) reserves starts and saves runner states.
+- [src/reconciliation.rs](src/reconciliation.rs) applies full reports to
+  reservations, with the confirmation and absence rules.
+- [src/retirement.rs](src/retirement.rs) saves stops and delivers them, live
+  and in recovery.
+- [src/lifecycle.rs](src/lifecycle.rs) applies the retirement policy of each
+  App removal cause.
+- [src/accounting.rs](src/accounting.rs) runs coalesced accounting passes
+  outside runner operations.
 - [src/events.rs](src/events.rs) binds authenticated observations to runners.
 - [src/snapshot.rs](src/snapshot.rs) supplies the pure scaler's inputs.
 - [src/warm.rs](src/warm.rs) allocates warm runners from recent jobs.

@@ -89,7 +89,8 @@ Registration inserts the machine, report, and hashed credential together.
 It holds the install-token row until that transaction commits.
 Independent token revocation waits for that registration before it returns.
 Registrations that validate the token after revocation cannot use it.
-The full last report uses JSONB and a connection identifier.
+The full last report uses JSONB, a connection identifier, and the receipt
+time that only a full report writes. Snapshots read both from one row.
 Replaced sessions and removed machines cannot overwrite it.
 Desired drain and warm settings stay separate from observed report fields.
 Machine reads keep machine fields and disks in one committed view.
@@ -117,7 +118,8 @@ The original suspension-only API stays available to its existing callers.
 The GitHub App uses one transactional lifecycle path for registration,
 verified state, removal, and notification insertion. Prepared repository
 snapshots and scale-set bindings commit with activation. Removal captures
-credential revocation and the last-organization result in the same commit.
+credential revocation, the last-organization result, and the required
+removal cause in the same commit.
 Outbox events keep immutable metadata snapshots and sequence order. They
 have no cascading workspace or organization reference. Pending cleanup
 survives row reuse and retention purge. Confirmation deletes an accepted
@@ -214,6 +216,8 @@ Mutable machine, organization, and label authority is checked again under
 row locks before a new reservation commits.
 The command records retain exact byte dimensions and logical slot sets.
 No conversion through integer GB changes the held root allocation.
+The first confirmation of a runner is written once, and retirement keeps it.
+An applied command result stays a separate value.
 
 ## Quick Start
 

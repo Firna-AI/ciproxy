@@ -51,6 +51,10 @@ State lives in `/var/lib/ciproxy/state.json` with mode `0600`.
 Its parent directory has mode `0700`.
 State contains the machine credential and VM ownership.
 It contains no one-use runner registration or install token.
+Each VM record keeps the original cache rights of its job, and the scheme,
+host, and port of its cache and results URLs.
+It keeps no runtime token, URL path, or query.
+State without that record fails to decode. No old-format adapter exists.
 Each VM has a generated local ID and a separate systemd unit.
 The agent service does not own those units.
 Stopping the service also stops its preparation helpers.
@@ -62,7 +66,8 @@ It adds the image and ext4 growth allowance to the free label bytes.
 The [image budget and root sizing guide](image-budget.md) defines its
 formula, image geometry, and deployment metadata contract.
 Docker shares the root's free space and cached Docker images.
-The agent reflinks the verified root with sparse sharing intact.
+VM roots and disposable Docker disks use one reflink copy operation.
+The copy requires block sharing and keeps sparse holes.
 It extends only the copy to the admitted total and runs `resize2fs` there.
 It restores the exact byte length after ext4 rounds to whole blocks.
 The extra tail remains sparse. It never shrinks or changes the base image.
@@ -153,58 +158,14 @@ The guest Hello carries `configuration_received`. A runner report sets
 `configuration_lost` only when that value is false and this agent process
 holds no pending JIT. An in-flight delivery is therefore not lost.
 
-The source-built runner hook reads its original GitHub assignment before
-any action setup. The guest derives the actual Docker bridge proxy URL.
-It sends the original runtime credentials and permissions over vsock.
-The hosted control plane receives only the runner and job identities.
-Authenticated JobFacts then permit machine-cache registration.
-The machine verifies the runtime token outside the VM.
-The guest acknowledges local proxy readiness before action setup resumes.
-No administration credential enters a VM.
-
-Install obtains the checked `ciproxy-cache-sidecar` release and creates
-`ciproxy-cache.service`. The unit requires the XFS area mount.
-Its stop order closes cache handles before unmount.
-The service uses `/var/lib/ciproxy/area/cache`.
-The unit omits `--capacity-bytes`. A restarted service therefore keeps its
-entries and writes no new archive until the agent sets its budget.
-Its administration endpoint is `127.0.0.1:8229`.
-Its private credential is `/var/lib/ciproxy/cache-admin-token`.
-VMs can reach only the job listener on port 7887.
-The host firewall excludes other inbound interfaces from that listener.
-
-Before a VM starts or a Docker disk takes space, the cache acknowledges its
-smaller byte budget.
-The cache waits for active file reads and writes before that acknowledgement.
-If administration fails, the agent stops the service and removes its
-occupied cache files. The job then uses GitHub or sees a cache miss.
-If the host cannot close handles or release files, admission waits for repair.
-A Docker disk is then not attached, and its job uses the root disk.
-A missing service alone does not block admission.
-The periodic budget refresh allocates no space. When it fails, the agent
-starts the service if necessary and tries again later.
-This failure recovery does not run the offline cache clear.
-Job exit revokes sessions by the persisted trusted assignment.
-This also applies after restart.
-The assignment includes organization, repository, run, job, and runner identity.
-Reconnect recovers that assignment's live credential before registering again.
-Runtime credentials remain in memory.
-The persisted setup phase prevents another Docker attachment after setup starts.
-A failed revoke stops the service to invalidate its sessions.
-ClearCache still requires confirmed deletion.
+The [cache and Docker guide](cache-and-docker.md) gives the runner handoff,
+the machine cache service and its listener rules, cache budgets and
+recovery, and Docker leases.
 
 Machine reports carry the actual total job disk from the persisted image
 budget. This value does not depend on a working cache service.
 A machine without a report has no known disk capacity.
 The hosted runtime does not guess an image or job-disk size.
-
-Checked-scope Docker ownership, copies, drive switching, and guest setup
-share a bounded attachment path. Active leases persist on the machine.
-The agent counts their logical bytes before admitting a new VM root.
-Only hosted spare disk can grant a new lease. A no-fit disk uses root Docker.
-Filesystem growth checks actual free blocks before it acknowledges readiness.
-The hosted spare adapter uses each machine's selected image.
-Live KVM proof remains required.
 
 ### Agent updates and releases
 
@@ -239,6 +200,12 @@ They use no host filesystem, subprocess, network, or real timer.
 Real VM and GitHub checks use separate smoke scripts.
 The [real root regression](image-budget.md#disposable-root-growth-regression)
 checks free bytes as runner UID 1001 on two image sizes.
+Docker lease integration tests call the real adapter in temporary folders.
+They mock host commands and cache administration, and need no root access:
+
+```sh
+cargo test --package ciproxy-agent --test docker_regression docker_regressions
+```
 
 Build and package the GNU binary for glibc 2.17 or later:
 
@@ -270,6 +237,13 @@ The [host guide](host-preparation.md#ext4-and-kvm-smoke) gives the ext4 check.
 - [src/root_sizing.rs](src/root_sizing.rs) defines the pure shared root
   allocation rule for the agent, scaler, and hosted image configuration.
 - [src/vm_root.rs](src/vm_root.rs) reflinks and grows the disposable job root.
+- [src/process.rs](src/process.rs) runs host tools and shares the required
+  reflink copy operation for VM roots and disposable Docker disks.
+- [src/cache_authority.rs](src/cache_authority.rs) keeps the original cache
+  rights and URL origins of each job.
+- [src/cache_unit.rs](src/cache_unit.rs) writes the cache service unit and
+  its private listener rules.
+- [src/docker.rs](src/docker.rs) owns Docker leases, attachment, and release.
 - [src/vm_config.rs](src/vm_config.rs) owns the root and dormant Docker drives.
 - [src/vsock_stream.rs](src/vsock_stream.rs) keeps each registration in
   memory until the guest confirms receipt.
