@@ -78,5 +78,14 @@ pub struct Sandbox {
     /// Whether this sandbox carries this workspace's ciproxy mark.
     pub marked: bool,
     /// Current runner, or confirmed absence of both runner and running job.
-    pub runner: Option<Runner>,
+    pub runner: Option<BoatRunner>,
+}
+
+/// A retained Boat runner and the complete requirement saved at its start.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BoatRunner {
+    /// Immutable original request, actual resources, and current lifecycle.
+    pub runner: Runner,
+    /// Saved StartRecord requirement for the runner's original image release.
+    pub required_root_disk_bytes: u64,
 }

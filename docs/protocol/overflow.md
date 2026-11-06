@@ -97,7 +97,11 @@ backend must give ciproxy.
   label. With "Run on the largest Boat size", it can also be smaller.
 - The largest-size fallback can give less free job disk than the label.
 - Its disk must still hold the complete image. Otherwise the job waits.
-- New starts and idle runner reuse use this same image and disk rule.
+- New starts use the current image requirement.
+- Idle reuse checks the runner's original request and saved root requirement.
+- A held largest-size runner keeps its original image. Its exception still
+  uses current own-machine fit, new-start catalog fit, and largest size.
+- A new image's larger disk floor does not invalidate that held runner.
 - ciproxy stops and deletes each sandbox when its job ends.
 - The ciproxy program in each sandbox tells the control plane when its
   runner exits, with a token that works only for that sandbox.

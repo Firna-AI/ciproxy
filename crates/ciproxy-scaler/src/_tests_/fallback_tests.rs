@@ -7,12 +7,12 @@ use ciproxy_protocol::images::ImageMetadata;
 use ciproxy_protocol::resources::{Slots, VmSize};
 
 use crate::actions::{Action, Destination, StartReason, StartRunner, StopReason};
-use crate::boat::{BoatSizeId, Refusal, SandboxId};
+use crate::boat::{BoatRunner, BoatSize, BoatSizeId, Refusal, Sandbox, SandboxId};
 use crate::decision::decide;
 use crate::snapshot::{NothingFits, RunnerState, Snapshot};
 
 use super::fixtures::{
-    allocated, boat, boat_size, large, own, queued, runner, sandbox, snapshot, warm,
+    allocated, boat, boat_size, large, own, queued, runner, sandbox, small, snapshot, warm,
 };
 
 fn fallback_snapshot() -> Snapshot {
@@ -47,6 +47,9 @@ fn retire_fallback() -> Action {
 #[test]
 fn wait_retires_an_idle_undersized_boat_fallback() {
     let mut state = fallback_snapshot();
+    assert_eq!(decide(&state), vec![]);
+    state.root_sizing.image_root_bytes = 90_000_000_000;
+    state.queue.push(queued("a", "large", 0));
     assert_eq!(decide(&state), vec![]);
     state.boat.enabled = false;
     state.boat.connected = false;
@@ -121,7 +124,6 @@ fn image_floor_blocks_largest_boat_fallback_and_retires_its_idle_runner() {
     let mut state = fallback_snapshot();
     let largest = state.boat.sizes.last_mut().unwrap();
     largest.size.disk_bytes = 60_999_999_999;
-    state.sandboxes[0].runner.as_mut().unwrap().size = largest.size;
     assert_eq!(decide(&state), vec![retire_fallback()]);
     state.boat.sizes.last_mut().unwrap().size.disk_bytes = 61_000_000_000;
     let actions = decide(&state);
@@ -140,6 +142,63 @@ fn image_floor_blocks_largest_boat_fallback_and_retires_its_idle_runner() {
             destination: Destination::Boat(BoatSizeId("large".into())),
             reason: StartReason::LargestBoatSize,
         })
+    );
+}
+
+#[test]
+fn an_idle_boat_runner_keeps_its_saved_root_while_new_starts_use_the_current_image() {
+    let mut state = snapshot();
+    state.machines.clear();
+    state.root_sizing.image_root_bytes = 63_000_000_000;
+    let requested = VmSize {
+        disk_bytes: 47_000_000_000,
+        ..small()
+    };
+    state.labels[0].size = requested;
+    state.queue = vec![queued("a", "ciproxy", 0); 2];
+    let actual = VmSize {
+        vcpu: 8,
+        memory_bytes: 16_000_000_000,
+        disk_bytes: 111_000_000_000,
+    };
+    state.boat.sizes = vec![BoatSize {
+        id: BoatSizeId("largest".into()),
+        size: actual,
+        price: 2,
+    }];
+    state.boat.largest_size = Some(BoatSizeId("largest".into()));
+    let mut retained = runner("older", "a", "ciproxy", RunnerState::Ready);
+    retained.requested_size = requested;
+    retained.size = actual;
+    state.sandboxes = vec![Sandbox {
+        id: SandboxId("older".into()),
+        marked: true,
+        runner: Some(BoatRunner {
+            runner: retained,
+            required_root_disk_bytes: 109_470_908_416,
+        }),
+    }];
+    assert_eq!(decide(&state), vec![]);
+    let fitting = VmSize {
+        disk_bytes: 112_000_000_000,
+        ..actual
+    };
+    state.boat.sizes.push(BoatSize {
+        id: BoatSizeId("fitting".into()),
+        size: fitting,
+        price: 3,
+    });
+    state.boat.largest_size = Some(BoatSizeId("fitting".into()));
+    assert_eq!(
+        decide(&state),
+        vec![Action::StartRunner(StartRunner {
+            organization_id: state.organizations[0].clone(),
+            label: state.labels[0].name.clone(),
+            requested_size: requested,
+            size: fitting,
+            destination: Destination::Boat(BoatSizeId("fitting".into())),
+            reason: StartReason::NoEligibleMachine,
+        })]
     );
 }
 

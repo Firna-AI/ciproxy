@@ -185,6 +185,9 @@ Call the public boundary in this order:
 6. Obtain the GitHub registration for the action's organization and scale set.
 7. Call `start` with the action and those identities.
 8. Include accepted pending deliveries in the next scaler snapshot.
+   For a retained runner, supply `BoatRunner { runner,
+   required_root_disk_bytes: record.required_root_disk_bytes }`.
+   Use that delivery's saved `StartRecord`, including after an image update.
 9. Call `resume` after a restart or an uncertain result.
 10. Pass authenticated guest exit reports to `report_end`.
 11. Call `cleanup` during regular reconciliation and after an outage.

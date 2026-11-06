@@ -9,7 +9,9 @@ use ciproxy_protocol::identifiers::{
 use ciproxy_protocol::resources::{GIGABYTE, Slots, VmSize};
 
 use crate::actions::{Action, Destination, StartReason, StartRunner};
-use crate::boat::{BoatAccount, BoatSize, BoatSizeId, MonthlySpend, Sandbox, SandboxId};
+use crate::boat::{
+    BoatAccount, BoatRunner, BoatSize, BoatSizeId, MonthlySpend, Sandbox, SandboxId,
+};
 use crate::snapshot::{
     Destinations, Label, Machine, NothingFits, Runner, RunnerState, Snapshot, WaitingJob,
 };
@@ -117,7 +119,10 @@ pub(super) fn sandbox(id: &str, runner: Option<Runner>) -> Sandbox {
     Sandbox {
         id: SandboxId(id.into()),
         marked: true,
-        runner,
+        runner: runner.map(|runner| BoatRunner {
+            required_root_disk_bytes: allocated(runner.requested_size).disk_bytes,
+            runner,
+        }),
     }
 }
 

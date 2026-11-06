@@ -26,13 +26,17 @@ after the configured wait. Without an eligible own machine, it can start
 Boat at once. It selects the cheapest fitting catalog size or uses the
 label's explicit largest-size choice. Even that fallback must hold the image.
 
-New Boat starts and existing idle Boat runners share one resource size
-policy. Overflow dispatch uses its public pure selector too.
+New Boat starts use the current image requirement. Retained idle runners
+use the required root saved for their own image release.
+Overflow dispatch uses the public pure selector for new starts.
 Callers supply eligible sizes after current provider refusals are applied.
 The selector takes own-machine fit and the label's current fallback choice.
 An idle undersized fallback retires when its exception no longer
 applies. `SizeNoLongerAllowed` identifies that retirement. Account spend
 and start refusals do not retire an existing runner whose size still fits.
+A retained largest-size runner keeps its held image. Its exception checks
+current own-machine fit, current new-start catalog fit, and the largest
+allowed size. The new image's floor does not apply to that held VM.
 
 Label disk means free bytes for the job. Each start reserves the image,
 those free bytes, and the ext4 growth allowance as its actual total root.
@@ -58,6 +62,11 @@ jobs retain their VM. Cleanup deletes only marked sandboxes with no job.
 - Supply `Machine.selected_image` from `report.images.selected().cloned()`.
   Its exact release metadata takes precedence over that fallback.
 - List each machine, runner, and sandbox once.
+- Supply each `Sandbox.runner` as `BoatRunner { runner,
+  required_root_disk_bytes }`. Take the required root directly from that
+  delivery's `StartRecord.required_root_disk_bytes` in `OverflowView.starts`.
+  Keep it required for retained Boat runners. Do not infer it from current
+  image settings or actual catalog disk. Orphans have no runner.
 - Supply each waiting GitHub job once. Exclude jobs already running.
 - Include every accepted start before the next decision call.
 - Retain starting, retiring, and exited VMs until capacity is released.
@@ -145,6 +154,7 @@ Tests use the public decision entry point with literal states and actions.
 - [src/snapshot.rs](src/snapshot.rs) defines the caller's workspace facts.
 - [src/actions.rs](src/actions.rs) defines start and retirement intents.
 - [src/boat.rs](src/boat.rs) defines catalog, refusal, and sandbox facts.
+  `BoatRunner` requires the saved root for each retained Boat runner.
 - [src/capacity.rs](src/capacity.rs) checks complete allocated roots with the
   protocol resource API.
 - [Agent root sizing](../ciproxy-agent/src/root_sizing.rs) defines the shared

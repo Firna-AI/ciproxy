@@ -628,6 +628,12 @@ Replaced ways for item 77:
       after publication and restart. Run new async tests ten times.
       Branch: `conductor/ciproxy-mvp-77d-free-disk`.
       Evidence: `.context/ciproxy-mvp-77d-free-disk/fix-round-1/`.
+- [x] Fix PR 27 re-review finding 3: check retained Boat runners against
+      their saved required root allocation. Keep the current image floor
+      for new starts. Preserve the current Wait and largest-size policies
+      without applying a new image floor to an existing older VM.
+      Branch: `conductor/ciproxy-mvp-77d-free-disk`.
+      Evidence: `.context/ciproxy-mvp-77d-free-disk/fix-round-2/`.
 - [ ] Publish it with its SHA-256, and as a shared Boat snapshot. Rebuild
       before GitHub stops accepting the runner.
       Orchestrator: run `image/publish.sh` and the create, prepare, and

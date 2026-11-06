@@ -43,8 +43,8 @@ impl Plan {
     pub(crate) fn delete(&mut self, sandbox: &Sandbox, reason: StopReason) {
         if !self.deleted.contains(&sandbox.id) {
             self.deleted.push(sandbox.id.clone());
-            if let Some(runner) = &sandbox.runner {
-                self.retiring.insert(runner.id.clone());
+            if let Some(retained) = &sandbox.runner {
+                self.retiring.insert(retained.runner.id.clone());
             }
             self.actions.push(Action::DeleteSandbox {
                 sandbox_id: sandbox.id.clone(),
