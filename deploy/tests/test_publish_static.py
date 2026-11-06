@@ -72,6 +72,9 @@ class StaticPublishingTests(unittest.TestCase):
                     message = BytesParser(policy=policy.default).parsebytes(headers + request.data)
                     parts = list(message.iter_parts())
                     self.assertEqual(json.loads(parts[0].get_payload(decode=True)), expected)
+                    # Cloud Storage refuses a media part whose type differs from the metadata.
+                    media_part = f"Content-Type: {expected['contentType']}\r\n\r\n".encode()
+                    self.assertIn(media_part + b"offline-payload", request.data)
                     self.assertEqual(parts[1].get_payload(decode=True), b"offline-payload")
                     self.assertEqual(request.get_method(), "POST")
                     self.assertEqual(request.full_url, "https://storage.googleapis.com/upload/storage/v1/b/private-static-origin/o?uploadType=multipart")
