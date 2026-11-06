@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
-"""Populate and compact an ext4 root before adding its small free margin."""
+"""Size ext4 from allocated userspace, measured metadata, and a base margin."""
 
 import argparse
 import json
@@ -9,7 +9,7 @@ from pathlib import Path
 import subprocess
 
 BLOCK_BYTES = 4096
-FREE_MARGIN_BYTES = 2 * 1024 ** 3
+FREE_MARGIN_BYTES = 64 * 1024 ** 2
 
 
 def run(*command):
@@ -36,35 +36,29 @@ def create(rootfs, disk):
         ["du", "--summarize", "--one-file-system", "--block-size=1", str(rootfs)],
         text=True).split()[0])
     override = os.environ.get("ROOTFS_BYTES")
-    # Construction room is temporary. resize2fs removes its unused capacity.
-    initial = int(override) if override else round_blocks(
-        max(64 * 1024 ** 2, allocated * 110 // 100 + FREE_MARGIN_BYTES))
-    run("truncate", "-s", initial, disk)
-    run("mkfs.ext4", "-F", "-b", BLOCK_BYTES, "-m", "1", "-d", rootfs,
-        "-L", "ciproxy-root", disk)
-    minimum = None
+    size = int(override) if override else round_blocks(allocated + FREE_MARGIN_BYTES)
+    metadata = None
+    options = ["mkfs.ext4", "-F", "-b", BLOCK_BYTES, "-m", "1", "-L", "ciproxy-root"]
     if not override:
-        run("resize2fs", "-M", disk)
-        values = geometry(disk)
-        minimum = values["Block count"] * values["Block size"]
-        run("truncate", "-s", minimum, disk)
         while True:
+            # Empty layouts measure the actual metadata of this mkfs version.
+            run("truncate", "-s", size, disk)
+            run(*options, disk)
             values = geometry(disk)
             available = (values["Free blocks"] - values["Reserved block count"]) * BLOCK_BYTES
-            if available >= FREE_MARGIN_BYTES:
+            metadata = (values["Block count"] - values["Free blocks"]) * BLOCK_BYTES
+            if available >= allocated + FREE_MARGIN_BYTES:
                 break
-            # Include the extra 1% reserve. Re-read metadata after each growth.
-            needed = (FREE_MARGIN_BYTES - available) * 100 // 99 + BLOCK_BYTES
-            # resize2fs can omit a short final group. Grow complete groups.
+            needed = ((allocated + FREE_MARGIN_BYTES - available) * 100 + 98) // 99
             group_bytes = values["Blocks per group"] * BLOCK_BYTES
             size = values["Block count"] * BLOCK_BYTES + needed
             size = (size + group_bytes - 1) // group_bytes * group_bytes
-            run("truncate", "-s", size, disk)
-            run("resize2fs", disk)
-            run("tune2fs", "-m", "1", disk)
+    run("truncate", "-s", size, disk)
+    run(*options, "-d", rootfs, disk)
     values = geometry(disk)
     return {"root_disk_bytes": disk.stat().st_size,
-            "compacted_minimum_bytes": minimum,
+            "installed_allocated_bytes": allocated,
+            "empty_metadata_bytes": metadata,
             "free_margin_bytes": FREE_MARGIN_BYTES if not override else None,
             "offline_free_bytes": (values["Free blocks"] - values["Reserved block count"]) * BLOCK_BYTES,
             "root_reserve_percent": 1,

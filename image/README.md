@@ -36,10 +36,8 @@ Install Packer, QEMU, `xorriso`, `libguestfs-tools`, `zstd`, `e2fsprogs`,
 The libguestfs tools must include the `guestfish` command.
 Kernel builds also need `make`, GCC, `flex`, `bison`, `bc`, `libelf-dev`,
 and `libssl-dev`.
-Kernel builds use `builder@localhost` and a fixed build version.
-The timestamp uses the source commit time through
-`SOURCE_DATE_EPOCH`. Source archives can supply that value explicitly.
-Without source metadata or an explicit value, the timestamp uses the Unix epoch.
+Kernel builds use [neutral metadata](checks.md#kernel-build-metadata)
+and a source-derived timestamp.
 The build user needs KVM access and `sudo` for extraction and ext4 creation.
 Run from the repository root:
 
@@ -72,19 +70,19 @@ bash image/build.sh "$PWD/.context/ciproxy-image-build" prepare-only
 
 The output root contains the full userspace, ext4 metadata, a 1% root
 reserve, and a small free margin. It contains no label's job allowance.
-`create-root-disk.py` populates ext4 and uses `resize2fs -M` to compact it.
-It then selects the smallest complete block-group size with at least
-2 GiB available after the root reserve. This margin covers the reserve
-and metadata growth of the default 20 GB and 60 GB job allowances.
+`create-root-disk.py` measures empty ext4 layouts before copying the tree.
+It includes the allocated userspace, that metadata, and the root reserve.
+It keeps a 64 MiB base margin and rounds growth to complete block groups.
+That margin leaves 48 MiB beyond the kernel's 16 MiB reserve pool.
+The agent supplies each label's growth headroom through `RootSizing`.
 The export never mounts the released disk writable after creation.
 After any writable mount, run `e2fsck -fp` before checksums and publication.
 
 `ROOTFS_BYTES` sets an explicit logical allocation for a measurement run.
-That override skips compaction. It does not change a ciproxy label.
+That override bypasses automatic sizing. It does not change a ciproxy label.
 
 The measured full userspace is 55.22 GB apparent and 58.29 GB allocated.
-The measured root is 62,008,590,336 bytes. A copy grown by 20 GB reports
-21,720,936,448 free bytes to runner UID 1001 in the read-only boot probe.
+The measured root disk is 60,263,759,872 bytes.
 
 The agent's default image budget is 140 GB for two images and one
 download during an update. This budget is separate from job disk space.
@@ -121,18 +119,20 @@ Boat filesystem with the release evidence.
 
 Firecracker uses the unpartitioned ext4 disk and the supplied `vmlinux`.
 Its root arguments include `root=/dev/vda rw net.ifnames=0`.
-Each label states the free disk of its jobs. Each job VM gets a root disk
-of `root_disk_bytes` plus that free disk. The agent grows each job's
-reflink copy and ext4 before boot. Docker data stays on that root disk.
+Each label states free job disk. `RootSizing` adds it and a filesystem
+allowance for ext4 metadata and reserves to the selected image's
+`root_disk_bytes`. The agent grows each job's reflink copy and ext4 before
+boot. Docker uses the root disk unless a sticky Docker disk for the job's
+checked scope attaches.
 Set its network and DNS through the agent's VM network setup.
 The image enables DHCP on `eth0`.
 The guest listens on vsock port 5252 by default in its systemd unit.
 Change `/etc/ciproxy/guest.env` when the agent uses another port.
 The agent must send one JSON object per line over that connection.
 
-The [offline checks](checks.md) exercise the generated bootstrap and the
-exported artifacts without KVM.
-They grow a released-disk copy with plain `resize2fs`, without forcing it.
+The [checks and growth proofs](checks.md) cover the bootstrap and artifacts.
+Offline checks need no KVM. They grow a release copy with plain `resize2fs`,
+without forcing it.
 
 ## Publish and keep the runner current
 

@@ -567,6 +567,15 @@ VM hardware. The exported Firecracker disk stays ext4 on `/dev/vda`.
         and 60 GB job allowances. Round growth to complete ext4 groups.
         Evidence: `.context/ciproxy-mvp/kvm/item-77/status.json`.
         Branch: `conductor/ciproxy-mvp-milestone-10-root-size`.
+  - [x] Image fix round 1: keep the base root small enough for a default
+        job on the 250 GB minimum with at least 1 GB of job-disk space left.
+        Use the real `RootSizing` helper of PR #27 for 1, 20, 60, and 500 GB
+        allowances. Boot separate grown copies and verify each free value.
+        Implementor call, 5 November 2026: use a 64 MiB base margin with
+        measured empty ext4 metadata. It leaves 48 MiB beyond the kernel
+        reserve pool. The agent helper supplies all job-growth headroom.
+        Evidence: `.context/ciproxy-mvp/kvm/item-77/fix-round-1/status.json`.
+        Branch: `conductor/ciproxy-mvp-milestone-10-root-size`.
 - [ ] Publish it with its SHA-256, and as a shared Boat snapshot. Rebuild
       before GitHub stops accepting the runner.
       Orchestrator: run `image/publish.sh` and the create, prepare, and

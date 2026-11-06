@@ -60,9 +60,9 @@ def check_export(workspace):
         "Measurement must report the actual logical root disk size")
     assert manifest.get("root_disk_bytes") == root_disk_bytes, (
         "Manifest must expose the release root disk size")
-    assert root_disk_bytes < 3 * 1024 ** 3, (
-        "The small fixture root must not retain a label-sized disk")
-    assert measurement["firecracker_ext4"]["offline_free_job_bytes"] >= 2 * 1024 ** 3, (
+    assert root_disk_bytes < 512 * 1024 ** 2, (
+        "The small fixture root must not retain job-growth headroom")
+    assert measurement["firecracker_ext4"]["offline_free_job_bytes"] >= 64 * 1024 ** 2, (
         "The compacted root must keep its free margin after the root reserve")
     boat = root / "boat"
     boat.mkdir()
