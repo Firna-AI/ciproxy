@@ -31,7 +31,7 @@ use url::Url;
 use uuid::Uuid;
 
 use super::database::Database;
-use super::fixture_io::{cookie, oauth_state};
+use super::fixture_io::{CallbackOutcome, callback, cookie, oauth_state};
 use super::ports::{Factory, Identity, Inputs, Remote};
 
 struct Events;
@@ -268,8 +268,12 @@ impl Fixture {
             .header(header::COOKIE, format!("__Host-ciproxy-oauth={binding}"))
             .body(Body::empty())
             .unwrap();
-        let response = router(self.state.clone()).oneshot(request).await.unwrap();
-        assert_eq!(response.status(), StatusCode::SEE_OTHER);
+        let response = callback(
+            router(self.state.clone()),
+            request,
+            CallbackOutcome::Accepted,
+        )
+        .await;
         let browser = Browser {
             cookie: cookie(&response, "__Host-ciproxy"),
             csrf: cookie(&response, "__Host-ciproxy-csrf"),

@@ -94,6 +94,7 @@ pub struct RoleChange {
 
 /// OAuth callback parameters returned by GitHub.
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct OAuthCallback {
     /// One-use authorization code.
     pub code: Option<String>,
@@ -146,6 +147,7 @@ pub enum SignInState {
 
 /// Untrusted parameters returned to the registered App setup URL.
 #[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct SetupCallback {
     /// Candidate installation identity. It grants no authority.
     pub installation_id: Option<String>,

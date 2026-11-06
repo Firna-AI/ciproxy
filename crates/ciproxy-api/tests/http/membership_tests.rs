@@ -7,10 +7,9 @@ use axum::http::{Request, StatusCode, header};
 use chrono::Duration;
 use ciproxy_api::router::router;
 use ciproxy_store_interface::dashboard::records::{Membership, Role};
-use tower::ServiceExt;
 
 use super::fixture::Fixture;
-use super::fixture_io::{cookie, json, oauth_state};
+use super::fixture_io::{CallbackOutcome, callback, cookie, json, oauth_state};
 
 #[tokio::test]
 async fn hourly_membership_loss_removes_role_person_and_existing_sessions() {
@@ -117,11 +116,12 @@ async fn pending_browser_state_retains_no_person_and_promotes_without_extending_
         )
         .body(Body::empty())
         .unwrap();
-    let response = router(fixture.state.clone())
-        .oneshot(request)
-        .await
-        .unwrap();
-    assert_eq!(response.status(), StatusCode::SEE_OTHER);
+    let response = callback(
+        router(fixture.state.clone()),
+        request,
+        CallbackOutcome::Accepted,
+    )
+    .await;
     let browser = super::fixture::Browser {
         cookie: cookie(&response, "__Host-ciproxy"),
         csrf: cookie(&response, "__Host-ciproxy-csrf"),

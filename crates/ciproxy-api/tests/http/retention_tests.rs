@@ -8,13 +8,16 @@ use chrono::Duration;
 use ciproxy_api::router::router;
 use ciproxy_store_interface::dashboard::records::{Membership, Role};
 use ciproxy_store_interface::workspaces::Workspace;
-use tower::ServiceExt;
 use uuid::Uuid;
 
 use super::fixture::{Browser, Fixture};
-use super::fixture_io::{cookie, json, oauth_state};
+use super::fixture_io::{CallbackOutcome, callback, cookie, json, oauth_state};
 
-async fn reauthorize(fixture: &Fixture, browser: &Browser) -> axum::response::Response {
+async fn reauthorize(
+    fixture: &Fixture,
+    browser: &Browser,
+    outcome: CallbackOutcome,
+) -> axum::response::Response {
     let begin = fixture
         .request(Some(browser), "GET", "/auth/github", None)
         .await;
@@ -33,10 +36,7 @@ async fn reauthorize(fixture: &Fixture, browser: &Browser) -> axum::response::Re
         )
         .body(Body::empty())
         .unwrap();
-    router(fixture.state.clone())
-        .oneshot(request)
-        .await
-        .unwrap()
+    callback(router(fixture.state.clone()), request, outcome).await
 }
 
 #[tokio::test]
@@ -141,11 +141,9 @@ async fn reauthorization_handles_two_tabs_and_a_lost_callback_without_extending_
     );
     fixture.identity.id.store(77, Ordering::SeqCst);
     let (first, second) = tokio::join!(
-        reauthorize(&fixture, &pending),
-        reauthorize(&fixture, &pending)
+        reauthorize(&fixture, &pending, CallbackOutcome::Accepted),
+        reauthorize(&fixture, &pending, CallbackOutcome::Accepted)
     );
-    assert_eq!(first.status(), StatusCode::SEE_OTHER);
-    assert_eq!(second.status(), StatusCode::SEE_OTHER);
     let _lost = first;
     let current = Browser {
         cookie: cookie(&second, "__Host-ciproxy"),
@@ -155,8 +153,7 @@ async fn reauthorization_handles_two_tabs_and_a_lost_callback_without_extending_
         .request(Some(&pending), "GET", "/session", None)
         .await;
     assert_eq!(json(response).await["reauthorization_required"], true);
-    let recovered = reauthorize(&fixture, &pending).await;
-    assert_eq!(recovered.status(), StatusCode::SEE_OTHER);
+    let recovered = reauthorize(&fixture, &pending, CallbackOutcome::Accepted).await;
     let recovered = Browser {
         cookie: cookie(&recovered, "__Host-ciproxy"),
         csrf: cookie(&recovered, "__Host-ciproxy-csrf"),
@@ -197,8 +194,7 @@ async fn owner_removal_reauthorization_shows_retention_without_private_workspace
             .status(),
         StatusCode::FORBIDDEN
     );
-    let response = reauthorize(&fixture, &browser).await;
-    assert_eq!(response.status(), StatusCode::SEE_OTHER);
+    let response = reauthorize(&fixture, &browser, CallbackOutcome::Accepted).await;
     let browser = Browser {
         cookie: cookie(&response, "__Host-ciproxy"),
         csrf: cookie(&response, "__Host-ciproxy-csrf"),

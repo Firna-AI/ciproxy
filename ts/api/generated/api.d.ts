@@ -980,16 +980,16 @@ export interface operations {
     };
     auth_callback: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /** @description One-use authorization code. */
-                code: string | null;
+                code?: string;
                 /** @description Browser-bound state. */
-                state: string | null;
+                state?: string;
                 /** @description GitHub cancellation or refusal. */
-                error: string | null;
+                error?: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -1130,6 +1130,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description OK */
             200: {
                 headers: {
                     "x-ciproxy-build"?: string;
@@ -1253,14 +1254,14 @@ export interface operations {
     };
     github_setup_begin: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /** @description Candidate installation identity. It grants no authority. */
-                installation_id: string | null;
+                installation_id?: string;
                 /** @description Untrusted install-flow state. It never selects identity or workspace. */
-                state: string | null;
+                state?: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -1396,6 +1397,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description OK */
             200: {
                 headers: {
                     "x-ciproxy-build"?: string;
@@ -1534,6 +1536,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description OK */
             200: {
                 headers: {
                     "x-ciproxy-build"?: string;
@@ -1672,6 +1675,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description OK */
             200: {
                 headers: {
                     "x-ciproxy-build"?: string;
@@ -1812,6 +1816,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description OK */
             200: {
                 headers: {
                     "x-ciproxy-build"?: string;
@@ -1945,6 +1950,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description OK */
             200: {
                 headers: {
                     "x-ciproxy-build"?: string;
@@ -2087,6 +2093,7 @@ export interface operations {
             };
         };
         responses: {
+            /** @description OK */
             200: {
                 headers: {
                     "x-ciproxy-build"?: string;
@@ -2229,6 +2236,7 @@ export interface operations {
             };
         };
         responses: {
+            /** @description OK */
             200: {
                 headers: {
                     "x-ciproxy-build"?: string;
@@ -2373,6 +2381,7 @@ export interface operations {
             };
         };
         responses: {
+            /** @description OK */
             200: {
                 headers: {
                     "x-ciproxy-build"?: string;
@@ -2513,6 +2522,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description OK */
             200: {
                 headers: {
                     "x-ciproxy-build"?: string;
@@ -2646,6 +2656,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description OK */
             200: {
                 headers: {
                     "x-ciproxy-build"?: string;
@@ -2781,6 +2792,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description OK */
             200: {
                 headers: {
                     "x-ciproxy-build"?: string;
@@ -2923,6 +2935,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description OK */
             200: {
                 headers: {
                     "x-ciproxy-build"?: string;
@@ -3067,6 +3080,7 @@ export interface operations {
             };
         };
         responses: {
+            /** @description OK */
             200: {
                 headers: {
                     "x-ciproxy-build"?: string;
@@ -3211,6 +3225,7 @@ export interface operations {
             };
         };
         responses: {
+            /** @description OK */
             200: {
                 headers: {
                     "x-ciproxy-build"?: string;
@@ -3344,6 +3359,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description OK */
             200: {
                 headers: {
                     "x-ciproxy-build"?: string;
@@ -3488,6 +3504,7 @@ export interface operations {
             };
         };
         responses: {
+            /** @description OK */
             200: {
                 headers: {
                     "x-ciproxy-build"?: string;
@@ -3628,6 +3645,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description OK */
             200: {
                 headers: {
                     "x-ciproxy-build"?: string;
@@ -3761,6 +3779,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description OK */
             200: {
                 headers: {
                     "x-ciproxy-build"?: string;
@@ -3901,6 +3920,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description OK */
             200: {
                 headers: {
                     "x-ciproxy-build"?: string;
@@ -4036,6 +4056,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description OK */
             200: {
                 headers: {
                     "x-ciproxy-build"?: string;
@@ -4180,6 +4201,7 @@ export interface operations {
             };
         };
         responses: {
+            /** @description OK */
             200: {
                 headers: {
                     "x-ciproxy-build"?: string;
@@ -4313,6 +4335,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description OK */
             200: {
                 headers: {
                     "x-ciproxy-build"?: string;
@@ -4455,6 +4478,7 @@ export interface operations {
             };
         };
         responses: {
+            /** @description OK */
             200: {
                 headers: {
                     "x-ciproxy-build"?: string;
@@ -4588,6 +4612,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description OK */
             200: {
                 headers: {
                     "x-ciproxy-build"?: string;

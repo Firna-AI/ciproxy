@@ -28,7 +28,7 @@ subtle = "2.6.1"
 thiserror = "2.0.21"
 tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros"] }
 unimock = "0.6.8"
-utoipa = { version = "6.0.0", features = ["chrono", "uuid"] }
+utoipa = { version = "6.0.0", features = ["axum_extras", "chrono", "uuid"] }
 utoipa-axum = "0.3.0"
 uuid = { version = "1.29.0", features = ["serde", "v4"] }
 

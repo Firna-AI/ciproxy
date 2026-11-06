@@ -9,7 +9,7 @@ use ciproxy_store_interface::dashboard::records::Role;
 use tower::ServiceExt;
 
 use super::fixture::Fixture;
-use super::fixture_io::{cookie, json, oauth_state};
+use super::fixture_io::{CallbackOutcome, assert_callback, callback, cookie, json, oauth_state};
 
 #[tokio::test]
 async fn oauth_is_browser_bound_one_use_and_sessions_end_at_thirty_days() {
@@ -24,22 +24,7 @@ async fn oauth_is_browser_bound_one_use_and_sessions_end_at_thirty_days() {
         .header(header::COOKIE, "__Host-ciproxy-oauth=another-browser")
         .body(Body::empty())
         .unwrap();
-    let response = router(fixture.state.clone()).oneshot(bad).await.unwrap();
-    assert_eq!(response.status(), StatusCode::SEE_OTHER);
-    assert!(
-        response
-            .headers()
-            .get(header::LOCATION)
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .contains("reason=github")
-    );
-    assert!(!response.headers().contains_key(header::SET_COOKIE));
-    assert_eq!(
-        response.headers().get("x-ciproxy-build").unwrap(),
-        "http-test-build"
-    );
+    callback(router(fixture.state.clone()), bad, CallbackOutcome::Refused).await;
     let valid = Request::builder()
         .uri(format!(
             "/auth/github/callback?code=synthetic&state={state}"
@@ -47,29 +32,23 @@ async fn oauth_is_browser_bound_one_use_and_sessions_end_at_thirty_days() {
         .header(header::COOKIE, format!("__Host-ciproxy-oauth={binding}"))
         .body(Body::empty())
         .unwrap();
-    assert_eq!(
-        router(fixture.state.clone())
-            .oneshot(valid)
-            .await
-            .unwrap()
-            .status(),
-        StatusCode::SEE_OTHER
-    );
+    callback(
+        router(fixture.state.clone()),
+        valid,
+        CallbackOutcome::Accepted,
+    )
+    .await;
     let replay = Request::builder()
-        .uri(format!(
-            "/auth/github/callback?code=synthetic&state={state}"
-        ))
+        .uri(format!("/auth/github/callback?code=replayed&state={state}"))
         .header(header::COOKIE, format!("__Host-ciproxy-oauth={binding}"))
         .body(Body::empty())
         .unwrap();
-    assert_eq!(
-        router(fixture.state.clone())
-            .oneshot(replay)
-            .await
-            .unwrap()
-            .status(),
-        StatusCode::SEE_OTHER
-    );
+    callback(
+        router(fixture.state.clone()),
+        replay,
+        CallbackOutcome::Refused,
+    )
+    .await;
     let mounted = Router::new().nest("/api", router(fixture.state.clone()));
     let response = mounted
         .clone()
@@ -94,16 +73,7 @@ async fn oauth_is_browser_bound_one_use_and_sessions_end_at_thirty_days() {
             None,
         )
         .await;
-    assert_eq!(cancelled.status(), StatusCode::SEE_OTHER);
-    assert!(
-        cancelled
-            .headers()
-            .get(header::LOCATION)
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .contains("reason=github")
-    );
+    assert_callback(&cancelled, CallbackOutcome::Refused);
     let browser = fixture.login(7, Some(Role::Admin)).await;
     let response = mounted
         .oneshot(

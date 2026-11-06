@@ -2,13 +2,13 @@
 
 use std::sync::atomic::Ordering;
 
-use axum::http::{StatusCode, header};
+use axum::http::StatusCode;
 use chrono::Duration;
 use ciproxy_store_interface::dashboard::records::Role;
 
 use super::adapter_server::Server;
 use super::fixture::Fixture;
-use super::fixture_io::json;
+use super::fixture_io::{CallbackOutcome, assert_callback, json};
 use super::setup_support::{begin, browser, configure, finish, old_callback_status};
 
 #[tokio::test]
@@ -36,6 +36,7 @@ async fn setup_proves_organization_and_preserves_start_bound_expiry() {
             "?installation_id=101&state=forged&workspace_id=forged",
         )
         .await,
+        CallbackOutcome::Accepted,
     )
     .await;
     let signed = browser(&response);
@@ -81,6 +82,7 @@ async fn setup_proves_organization_and_preserves_start_bound_expiry() {
                 None,
             )
             .await,
+        CallbackOutcome::Accepted,
     )
     .await;
     let next = browser(&response);
@@ -116,6 +118,7 @@ async fn fresh_personal_setup_records_only_verified_token_free_metadata() {
         fixture
             .request(None, "GET", "/github/setup?installation_id=700", None)
             .await,
+        CallbackOutcome::Accepted,
     )
     .await;
     let signed = browser(&response);
@@ -171,7 +174,7 @@ async fn setup_spoofs_and_unavailable_facts_leave_existing_business_state_unchan
         .unwrap();
     fixture.advance(Duration::hours(1));
     for target in [201, 701, 702, 703, 704, 705] {
-        let response = finish(
+        finish(
             &fixture,
             fixture
                 .request(
@@ -181,14 +184,9 @@ async fn setup_spoofs_and_unavailable_facts_leave_existing_business_state_unchan
                     None,
                 )
                 .await,
+            CallbackOutcome::Refused,
         )
         .await;
-        assert_eq!(
-            response.headers().get(header::LOCATION).unwrap(),
-            "/sign-in?reason=github",
-            "target {target}"
-        );
-        assert!(!response.headers().contains_key(header::SET_COOKIE));
         let after = fixture
             .database
             .store
@@ -211,7 +209,7 @@ async fn setup_spoofs_and_unavailable_facts_leave_existing_business_state_unchan
         .control
         .fail_user_installations
         .store(true, Ordering::SeqCst);
-    let response = finish(
+    finish(
         &fixture,
         fixture
             .request(
@@ -221,13 +219,9 @@ async fn setup_spoofs_and_unavailable_facts_leave_existing_business_state_unchan
                 None,
             )
             .await,
+        CallbackOutcome::Refused,
     )
     .await;
-    assert_eq!(
-        response.headers().get(header::LOCATION).unwrap(),
-        "/sign-in?reason=github"
-    );
-    assert!(!response.headers().contains_key(header::SET_COOKIE));
     server
         .control
         .fail_user_installations
@@ -238,11 +232,7 @@ async fn setup_spoofs_and_unavailable_facts_leave_existing_business_state_unchan
         "/github/setup?installation_id=9999",
     ] {
         let response = fixture.request(Some(&signed), "GET", path, None).await;
-        assert_eq!(
-            response.headers().get(header::LOCATION).unwrap(),
-            "/sign-in?reason=github"
-        );
-        assert!(!response.headers().contains_key(header::SET_COOKIE));
+        assert_callback(&response, CallbackOutcome::Refused);
     }
     server
         .control
@@ -256,11 +246,7 @@ async fn setup_spoofs_and_unavailable_facts_leave_existing_business_state_unchan
             None,
         )
         .await;
-    assert_eq!(
-        response.headers().get(header::LOCATION).unwrap(),
-        "/sign-in?reason=github"
-    );
-    assert!(!response.headers().contains_key(header::SET_COOKIE));
+    assert_callback(&response, CallbackOutcome::Refused);
     assert_eq!(
         fixture
             .database

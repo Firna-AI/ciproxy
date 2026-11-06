@@ -231,38 +231,29 @@
         "parameters": [
           {
             "name": "code",
-            "in": "path",
+            "in": "query",
             "description": "One-use authorization code.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "state",
-            "in": "path",
+            "in": "query",
             "description": "Browser-bound state.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "error",
-            "in": "path",
+            "in": "query",
             "description": "GitHub cancellation or refusal.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -502,6 +493,7 @@
         ],
         "responses": {
           "200": {
+            "description": "OK",
             "headers": {
               "x-ciproxy-build": {
                 "schema": {
@@ -719,26 +711,20 @@
         "parameters": [
           {
             "name": "installation_id",
-            "in": "path",
+            "in": "query",
             "description": "Candidate installation identity. It grants no authority.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           },
           {
             "name": "state",
-            "in": "path",
+            "in": "query",
             "description": "Untrusted install-flow state. It never selects identity or workspace.",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             }
           }
         ],
@@ -958,6 +944,7 @@
         "operationId": "sessions_session",
         "responses": {
           "200": {
+            "description": "OK",
             "headers": {
               "x-ciproxy-build": {
                 "schema": {
@@ -1203,6 +1190,7 @@
         ],
         "responses": {
           "200": {
+            "description": "OK",
             "headers": {
               "x-ciproxy-build": {
                 "schema": {
@@ -1449,6 +1437,7 @@
         ],
         "responses": {
           "200": {
+            "description": "OK",
             "headers": {
               "x-ciproxy-build": {
                 "schema": {
@@ -1705,6 +1694,7 @@
         ],
         "responses": {
           "200": {
+            "description": "OK",
             "headers": {
               "x-ciproxy-build": {
                 "schema": {
@@ -1933,6 +1923,7 @@
         ],
         "responses": {
           "200": {
+            "description": "OK",
             "headers": {
               "x-ciproxy-build": {
                 "schema": {
@@ -2189,6 +2180,7 @@
         },
         "responses": {
           "200": {
+            "description": "OK",
             "headers": {
               "x-ciproxy-build": {
                 "schema": {
@@ -2445,6 +2437,7 @@
         },
         "responses": {
           "200": {
+            "description": "OK",
             "headers": {
               "x-ciproxy-build": {
                 "schema": {
@@ -2711,6 +2704,7 @@
         },
         "responses": {
           "200": {
+            "description": "OK",
             "headers": {
               "x-ciproxy-build": {
                 "schema": {
@@ -2965,6 +2959,7 @@
         ],
         "responses": {
           "200": {
+            "description": "OK",
             "headers": {
               "x-ciproxy-build": {
                 "schema": {
@@ -3193,6 +3188,7 @@
         ],
         "responses": {
           "200": {
+            "description": "OK",
             "headers": {
               "x-ciproxy-build": {
                 "schema": {
@@ -3433,6 +3429,7 @@
         ],
         "responses": {
           "200": {
+            "description": "OK",
             "headers": {
               "x-ciproxy-build": {
                 "schema": {
@@ -3704,6 +3701,7 @@
         ],
         "responses": {
           "200": {
+            "description": "OK",
             "headers": {
               "x-ciproxy-build": {
                 "schema": {
@@ -3970,6 +3968,7 @@
         },
         "responses": {
           "200": {
+            "description": "OK",
             "headers": {
               "x-ciproxy-build": {
                 "schema": {
@@ -4236,6 +4235,7 @@
         },
         "responses": {
           "200": {
+            "description": "OK",
             "headers": {
               "x-ciproxy-build": {
                 "schema": {
@@ -4464,6 +4464,7 @@
         ],
         "responses": {
           "200": {
+            "description": "OK",
             "headers": {
               "x-ciproxy-build": {
                 "schema": {
@@ -4728,6 +4729,7 @@
         },
         "responses": {
           "200": {
+            "description": "OK",
             "headers": {
               "x-ciproxy-build": {
                 "schema": {
@@ -4981,6 +4983,7 @@
         ],
         "responses": {
           "200": {
+            "description": "OK",
             "headers": {
               "x-ciproxy-build": {
                 "schema": {
@@ -5209,6 +5212,7 @@
         ],
         "responses": {
           "200": {
+            "description": "OK",
             "headers": {
               "x-ciproxy-build": {
                 "schema": {
@@ -5467,6 +5471,7 @@
         ],
         "responses": {
           "200": {
+            "description": "OK",
             "headers": {
               "x-ciproxy-build": {
                 "schema": {
@@ -5705,6 +5710,7 @@
         ],
         "responses": {
           "200": {
+            "description": "OK",
             "headers": {
               "x-ciproxy-build": {
                 "schema": {
@@ -5971,6 +5977,7 @@
         },
         "responses": {
           "200": {
+            "description": "OK",
             "headers": {
               "x-ciproxy-build": {
                 "schema": {
@@ -6199,6 +6206,7 @@
         ],
         "responses": {
           "200": {
+            "description": "OK",
             "headers": {
               "x-ciproxy-build": {
                 "schema": {
@@ -6452,6 +6460,7 @@
         },
         "responses": {
           "200": {
+            "description": "OK",
             "headers": {
               "x-ciproxy-build": {
                 "schema": {
@@ -6680,6 +6689,7 @@
         ],
         "responses": {
           "200": {
+            "description": "OK",
             "headers": {
               "x-ciproxy-build": {
                 "schema": {

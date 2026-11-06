@@ -1,5 +1,6 @@
 //! Generated HTTP reference from the same registration that builds the router.
 
+use axum::http::StatusCode;
 use utoipa::openapi::header::Header;
 use utoipa::openapi::response::Response;
 use utoipa::openapi::security::{ApiKey, ApiKeyValue, SecurityRequirement, SecurityScheme};
@@ -32,6 +33,9 @@ pub fn document() -> OpenApi {
         "csrf",
         SecurityScheme::ApiKey(ApiKey::Header(ApiKeyValue::new("x-ciproxy-csrf"))),
     );
+    for response in components.responses.values_mut() {
+        normalize_response(response, None);
+    }
     for path in document.paths.paths.values_mut() {
         for (mutating, operation) in [
             (false, &mut path.get),
@@ -77,22 +81,43 @@ pub fn document() -> OpenApi {
                     .responses
                     .insert(status.to_owned(), response.into());
             }
-            for response in operation.responses.responses.values_mut() {
-                if let RefOr::T(response) = response {
-                    response
-                        .headers
-                        .insert("x-ciproxy-build".to_owned(), Header::default().into());
-                    if response.description.contains("redirect") {
-                        response
-                            .headers
-                            .insert("Location".to_owned(), Header::default().into());
-                        response
-                            .headers
-                            .insert("Set-Cookie".to_owned(), Header::default().into());
-                    }
-                }
+            for (status, response) in &mut operation.responses.responses {
+                normalize_response(response, Some(status));
             }
         }
     }
     document
+}
+
+fn normalize_response(response: &mut RefOr<Response>, status: Option<&str>) {
+    let RefOr::T(response) = response else {
+        return;
+    };
+    let status = status.and_then(|status| StatusCode::from_bytes(status.as_bytes()).ok());
+    if response.description.is_empty() {
+        response.description = status
+            .and_then(|status| status.canonical_reason())
+            .unwrap_or("Response")
+            .to_owned();
+    }
+    response
+        .headers
+        .insert("x-ciproxy-build".to_owned(), Header::default().into());
+    if matches!(
+        status,
+        Some(
+            StatusCode::MOVED_PERMANENTLY
+                | StatusCode::FOUND
+                | StatusCode::SEE_OTHER
+                | StatusCode::TEMPORARY_REDIRECT
+                | StatusCode::PERMANENT_REDIRECT
+        )
+    ) {
+        response
+            .headers
+            .insert("Location".to_owned(), Header::default().into());
+        response
+            .headers
+            .insert("Set-Cookie".to_owned(), Header::default().into());
+    }
 }

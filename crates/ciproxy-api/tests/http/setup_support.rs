@@ -17,7 +17,7 @@ use tower::ServiceExt;
 
 use super::adapter_server::Server;
 use super::fixture::{Browser, Fixture};
-use super::fixture_io::{cookie, oauth_state};
+use super::fixture_io::{CallbackOutcome, assert_callback, callback, cookie, oauth_state};
 
 struct Signer(SecretString);
 impl AppJwt for Signer {
@@ -52,7 +52,11 @@ pub(super) fn configure(fixture: &mut Fixture, server: &Server) {
     ));
 }
 
-pub(super) async fn finish(fixture: &Fixture, begin: Response<Body>) -> Response<Body> {
+pub(super) async fn finish(
+    fixture: &Fixture,
+    begin: Response<Body>,
+    outcome: CallbackOutcome,
+) -> Response<Body> {
     assert_eq!(begin.status(), StatusCode::SEE_OTHER);
     let nonce = oauth_state(&begin);
     let binding = cookie(&begin, "__Host-ciproxy-oauth");
@@ -63,27 +67,16 @@ pub(super) async fn finish(fixture: &Fixture, begin: Response<Body>) -> Response
         .header(header::COOKIE, format!("__Host-ciproxy-oauth={binding}"))
         .body(Body::empty())
         .unwrap();
-    let response = Router::new()
-        .nest("/api", router(fixture.state.clone()))
-        .oneshot(request)
-        .await
-        .unwrap();
-    assert_eq!(response.status(), StatusCode::SEE_OTHER);
-    assert_eq!(
-        response.headers().get("x-ciproxy-build").unwrap(),
-        "http-test-build"
-    );
-    response
+    callback(
+        Router::new().nest("/api", router(fixture.state.clone())),
+        request,
+        outcome,
+    )
+    .await
 }
 
 pub(super) fn browser(response: &Response<Body>) -> Browser {
-    assert_eq!(
-        response
-            .headers()
-            .get(header::LOCATION)
-            .and_then(|value| value.to_str().ok()),
-        Some("/")
-    );
+    assert_callback(response, CallbackOutcome::Accepted);
     Browser {
         cookie: cookie(response, "__Host-ciproxy"),
         csrf: cookie(response, "__Host-ciproxy-csrf"),
