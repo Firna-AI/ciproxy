@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{ErrorResultExt, Result};
 use crate::layout::Layout;
-use crate::persistence::{atomic_private_write, private_directory};
+use crate::persistence::{atomic_private_write, private_directory, private_write_temporary};
 use crate::state::VmRecord;
 
 #[derive(Serialize, Deserialize)]
@@ -25,16 +25,20 @@ pub(crate) fn leases(layout: &Layout) -> Result<Vec<(String, Lease)>> {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
         Err(error) => return Err(error).context("read Docker leases"),
     };
-    entries
-        .map(|entry| {
-            let entry = entry.context("read Docker lease identity")?;
-            let bytes = fs::read(entry.path()).context("read Docker lease")?;
-            Ok((
-                entry.file_name().to_string_lossy().into_owned(),
-                serde_json::from_slice(&bytes).context("decode Docker lease")?,
-            ))
-        })
-        .collect()
+    let mut leases = Vec::new();
+    for entry in entries {
+        let entry = entry.context("read Docker lease identity")?;
+        let path = entry.path();
+        if path == private_write_temporary(&path) {
+            continue;
+        }
+        let bytes = fs::read(path).context("read Docker lease")?;
+        leases.push((
+            entry.file_name().to_string_lossy().into_owned(),
+            serde_json::from_slice(&bytes).context("decode Docker lease")?,
+        ));
+    }
+    Ok(leases)
 }
 
 pub(crate) fn save(layout: &Layout, vm: &VmRecord, lease: &Lease) -> Result<()> {

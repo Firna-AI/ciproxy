@@ -1,13 +1,14 @@
 //! Offline Docker filesystem sizing verifies the promised free bytes.
 
+use std::fs::{self, OpenOptions};
+use std::os::unix::fs::chown;
+
 use crate::docker::LinuxDockers;
 use crate::docker_files::{self, Lease};
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::layout::jail_uid;
-use crate::process::arguments;
+use crate::process::{arguments, reflink_copy};
 use crate::state::VmRecord;
-use std::fs::{self, OpenOptions};
-use std::os::unix::fs::chown;
 
 pub(crate) struct Preparation {
     pub(crate) base: std::path::PathBuf,
@@ -47,18 +48,7 @@ impl LinuxDockers {
             if lease.writer {
                 fs::hard_link(base, path).context("bind Docker base into jail")?;
             } else {
-                self.commands
-                    .run(
-                        "cp",
-                        &arguments(&[
-                            "--reflink=always",
-                            "--sparse=always",
-                            &base.to_string_lossy(),
-                            &path.to_string_lossy(),
-                        ]),
-                        &[],
-                    )
-                    .await?;
+                reflink_copy(self.commands.as_ref(), base, path).await?;
             }
         } else {
             let file = OpenOptions::new()
