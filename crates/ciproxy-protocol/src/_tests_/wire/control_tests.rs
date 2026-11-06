@@ -1,6 +1,6 @@
 //! Gateway replies and commands sent to an own machine.
 
-use crate::agent::ControlMessage;
+use crate::agent::{ControlMessage, JobPreparationOutcome};
 use crate::secret::Secret;
 use crate::version::ProtocolVersion;
 
@@ -59,13 +59,31 @@ fn stop_runner_targets_one_idle_runner() {
 #[test]
 fn job_facts_include_fork_default_and_base_ref_inputs() {
     snapshot(
-        "control_job_facts",
-        "job_facts",
-        ControlMessage::JobFacts {
+        "control_job_preparation_facts",
+        "job_preparation",
+        ControlMessage::JobPreparation {
             command_id: fixtures::command_id(),
             runner_id: fixtures::runner_id(),
             job_id: fixtures::job_id(),
-            facts: fixtures::facts(),
+            outcome: JobPreparationOutcome::TrustedFacts {
+                facts: Box::new(fixtures::facts()),
+            },
+        },
+    );
+}
+
+#[test]
+fn github_only_preparation_carries_organization_without_inventing_facts() {
+    snapshot(
+        "control_job_preparation_github_only",
+        "job_preparation",
+        ControlMessage::JobPreparation {
+            command_id: fixtures::command_id(),
+            runner_id: fixtures::runner_id(),
+            job_id: fixtures::job_id(),
+            outcome: JobPreparationOutcome::GitHubOnly {
+                organization_id: fixtures::organization_id(),
+            },
         },
     );
 }

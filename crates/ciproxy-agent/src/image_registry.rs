@@ -57,6 +57,15 @@ impl ImageRegistry {
         }
     }
 
+    pub(crate) fn is_newest(&self, image_id: &ImageId) -> bool {
+        let state = self.state();
+        state.active
+            && state
+                .catalog
+                .as_ref()
+                .is_some_and(|catalog| catalog.newest.as_ref() == Some(image_id))
+    }
+
     pub(crate) fn recover(&self) -> Result<()> {
         let mut state = self.state();
         if state.active {

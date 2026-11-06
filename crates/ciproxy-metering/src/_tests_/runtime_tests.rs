@@ -55,7 +55,8 @@ fn accounting_is_idempotent_and_corrects_late_completion() {
     );
     assert_eq!(accounting_deltas(Some(&before), &before, bounds), vec![]);
     assert_eq!(start_deltas(Some(&before), &after, bounds), vec![]);
-    after.job.completed_at = Some(at("2026-11-04T00:00:45Z"));
+    after.job.completion =
+        ciproxy_store_interface::metering::facts::Completion::Finished(at("2026-11-04T00:00:45Z"));
     let correction = accounting_deltas(Some(&before), &after, bounds);
     assert_eq!(
         (correction[0].machine_starts, correction[0].machine_minutes),

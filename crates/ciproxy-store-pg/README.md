@@ -89,7 +89,8 @@ Registration inserts the machine, report, and hashed credential together.
 It holds the install-token row until that transaction commits.
 Independent token revocation waits for that registration before it returns.
 Registrations that validate the token after revocation cannot use it.
-The full last report uses JSONB and a connection identifier.
+The full last report uses JSONB, a connection identifier, and the receipt
+time that only a full report writes. Snapshots read both from one row.
 Replaced sessions and removed machines cannot overwrite it.
 Desired drain and warm settings stay separate from observed report fields.
 Machine reads keep machine fields and disks in one committed view.
@@ -117,7 +118,8 @@ The original suspension-only API stays available to its existing callers.
 The GitHub App uses one transactional lifecycle path for registration,
 verified state, removal, and notification insertion. Prepared repository
 snapshots and scale-set bindings commit with activation. Removal captures
-credential revocation and the last-organization result in the same commit.
+credential revocation, the last-organization result, and the required
+removal cause in the same commit.
 Outbox events keep immutable metadata snapshots and sequence order. They
 have no cascading workspace or organization reference. Pending cleanup
 survives row reuse and retention purge. Confirmation deletes an accepted
@@ -142,54 +144,8 @@ Async services must call them from blocking workers.
 This crate contains no scheduler, listener, gateway, KMS client, Boat
 client, or runtime composition.
 
-Overflow uses one dedicated advisory-lock connection per workspace.
-Its negative key range is separate from billing and scale-set locks.
-A blocking callback lease waits on that dedicated connection.
-Catalog observations and exact delivery records persist before Boat access.
-Reservation rechecks the active key, workspace settings, organization,
-label, and scale-set ownership under the workspace row lock.
-Pending acceptance saves demand, sealed input, and the saved fee together.
-It saves no fixed provider parameters or provider cost bound.
-Pending connections receive fresh database-generated grant identities.
-Activation consumes a matching live grant under the workspace row lock.
-A later grant cannot restore an older operation, even with the same key ID.
-Suspension and removal with another App present preserve shared grants.
-One current startup query binds the saved delivery to its organization and
-key in that workspace. It requires active App state, enabled overflow, and
-the accepted non-retired key together.
-The same authority SQL checks scale-set ownership, the label's Boat switch,
-and exact original requested dimensions during reservation and later startup.
-An undersized selected size also requires the label's current largest-size
-fallback permission. Fitting requests remain permitted under Wait.
-Each delivery retains its image root bytes and required total root bytes.
-Authority compares catalog disk with those saved totals.
-Even a largest-size fallback must hold the complete image.
-The dispatch transaction accepts only the saved unsent delivery.
-It rechecks authority and the current saved limit before saving `Creating`.
-It compares the exact pending record, including its identity and saved fee.
-It saves selected size, lifetime, and dispatch time in that same transaction.
-The caller supplies those parameters with their required monthly amounts.
-Current-label queries supply facts for service policy without selecting sizes.
-Cancelled unsent records release sealed input without provider or cost facts.
-Adoption saves the provider identity, immutable runner placement, and price
-facts in one transaction.
-Callback claims save token consumption and deletion intent together.
-Refusal records and account restrictions also commit together.
-Key erasure checks unfinished deliveries as well as live runners.
-No query receives a plaintext key or runner registration.
-Metering price facts require a trusted runtime observation and a counted
-start fee. They select the confirmed fee, or else the saved fee bound.
-That selection never confirms a provider charge.
-Delivery JSON retains the admission bound and actual fee separately.
-Their upserts correct provider start times and every price field.
-Every overflow price row has a finite end from its measured interval.
-Later metering refreshes cannot extend an old reading.
-An unknown final interval publishes only the known measured billing prefix.
-Boat accounting remains available so the metering refresh can reach purge.
-Relevant savings reads return `AccountingIncomplete` while both fee sources
-are missing or a required runtime interval remains unknown.
-The savings range excludes a lifecycle end at its first instant.
-Execution and cleanup do not use those reporting reads.
+The [overflow store guide](overflow.md) gives the Boat execution sessions,
+delivery authority, dispatch, callbacks, and Boat accounting reads.
 
 The dashboard area stores verified GitHub memberships, workspace roles,
 access requests, opaque session digests, and encrypted OAuth grants.
@@ -206,6 +162,18 @@ Retired scale-set bindings keep completion context and durable cleanup state.
 Listener discovery includes unfinished work and pending notification revisions.
 Confirmed remote removal excludes the old binding from later cleanup and
 discovery without deleting job history.
+
+Own-machine queries save runner and command reservations atomically.
+A repeatable-read routing snapshot keeps reports, demand, and settings
+consistent. A separate negative advisory-key range owns execution leases.
+Mutable machine, organization, and label authority is checked again under
+row locks before a new reservation commits.
+The command records retain exact byte dimensions and logical slot sets.
+No conversion through integer GB changes the held root allocation.
+The first confirmation of a runner is written once, and retirement keeps it.
+An applied command result stays a separate value.
+A retirement saves the trusted GitHub ID, `Stopping`, and its stop command
+in one transaction.
 
 ## Quick Start
 
@@ -255,6 +223,8 @@ CI starts the database for the existing workspace test phase.
 ### Key Code
 
 - [src/dashboard](src/dashboard) owns dashboard identity and access queries.
+- [src/own_runners.rs](src/own_runners.rs) stores exact execution intents.
+- [src/routing_snapshot.rs](src/routing_snapshot.rs) reads coherent routing.
 
 - [src/billing/session.rs](src/billing/session.rs) commits billing state.
 - [src/billing/renewals.rs](src/billing/renewals.rs) stores owned renewal

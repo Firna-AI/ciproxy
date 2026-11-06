@@ -9,6 +9,7 @@ rust-version = "1.99"
 
 [workspace.dependencies]
 ciproxy-agent = { path = "crates/ciproxy-agent" }
+ciproxy-api = { path = "crates/ciproxy-api" }
 ciproxy-billing = { path = "crates/ciproxy-billing" }
 ciproxy-gateway = { path = "crates/ciproxy-gateway" }
 ciproxy-github = { path = "crates/ciproxy-github" }
@@ -20,6 +21,7 @@ ciproxy-scaler = { path = "crates/ciproxy-scaler" }
 ciproxy-store-interface = { path = "crates/ciproxy-store-interface" }
 ciproxy-store-pg = { path = "crates/ciproxy-store-pg" }
 cli-updater = { git = "https://github.com/futex-ai/cli-release", rev = "30513bd1a6e15d8e9c1b18f2ed92d1d4dfa11786", version = "0.1.0" }
+cli-release-interface = { git = "https://github.com/futex-ai/cli-release", rev = "30513bd1a6e15d8e9c1b18f2ed92d1d4dfa11786", version = "0.1.0" }
 internal-error = { git = "https://github.com/futex-ai/internal-error", rev = "d7b94d766bf2844aa0b4a801fd21c465543e8a58" }
 sandbox-interface = { git = "https://github.com/futex-ai/sandbox", rev = "965836198ba65947108cbe5e669524d2249d851a" }
 sandbox-boat = { git = "https://github.com/futex-ai/sandbox", rev = "965836198ba65947108cbe5e669524d2249d851a" }

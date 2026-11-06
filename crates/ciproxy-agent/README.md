@@ -40,7 +40,7 @@ It reports CPU, threads, memory, KVM, disk space, slots, VMs, and images.
 Missing KVM gives zero slots. It does not reject registration.
 Connection failures keep running jobs and warm runners.
 Reconnect waits grow from one second to sixty seconds.
-Drain requests idle shutdown and preserves running jobs.
+Drain blocks new runners and waits for confirmed idle stops.
 Resume permits new runners. Remove is permanent until a new install.
 The daemon stops after the jobs of a removed machine finish.
 Runtime mode actions use one locked owner. Removal remains terminal.
@@ -51,6 +51,11 @@ State lives in `/var/lib/ciproxy/state.json` with mode `0600`.
 Its parent directory has mode `0700`.
 State contains the machine credential and VM ownership.
 It contains no one-use runner registration or install token.
+Each VM record keeps the original cache rights of its job, and the scheme,
+host, and port of its cache and results URLs.
+It keeps no runtime token, URL path, or query.
+State without that record fails to decode. No old-format adapter exists.
+A saved seal without its host-decision marker also fails to decode.
 Each VM has a generated local ID and a separate systemd unit.
 The agent service does not own those units.
 Stopping the service also stops its preparation helpers.
@@ -62,7 +67,8 @@ It adds the image and ext4 growth allowance to the free label bytes.
 The [image budget and root sizing guide](image-budget.md) defines its
 formula, image geometry, and deployment metadata contract.
 Docker shares the root's free space and cached Docker images.
-The agent reflinks the verified root with sparse sharing intact.
+VM roots and disposable Docker disks use one reflink copy operation.
+The copy requires block sharing and keeps sparse holes.
 It extends only the copy to the admitted total and runs `resize2fs` there.
 It restores the exact byte length after ext4 rounds to whole blocks.
 The extra tail remains sparse. It never shrinks or changes the base image.
@@ -111,103 +117,62 @@ Missing KVM still permits registration with zero slots.
 
 ### Gateway, image, and cache integration
 
-The current image and guest need alignment before live smoke checks.
-The full-image contract requires the smallest usable ext4 image root.
-Job roots preserve its 1% root reserve.
-The image producer owns that artifact and its software measurements.
-Its bundle format still needs the integration described below.
-Its guest uses vsock port 5252, accepts one connection, and does not emit
-`JobStarted`. It stops the runner on `Shutdown`.
-These behaviors do not yet meet the agent contract below.
-The guest must reconnect, report current job state, and preserve a job
-before it acknowledges shutdown. Those components need a separate change.
-
 The default route is `wss://app.ciproxy.dev/agent/`.
-`CIPROXY_AGENT_URL` can select a staging WSS route.
-The agent requires a valid TLS certificate.
-The gateway authenticates Hello before sending Welcome.
-After Hello, WebSocket policy close 1008 with reason
-`[gateway] authentication failed` also removes the machine.
-Other policy closes preserve the identity and reconnect.
-An HTTP 401 or 403 during the upgrade preserves the identity and reconnects.
-A rejection before this socket sends Hello is a connection failure.
-The gateway binds every runner organization to the machine workspace.
-It withdraws idle GitHub registrations before StopRunner, Drain, or Remove.
-It preserves runners to which GitHub has already assigned a job.
-JobFacts come from that authenticated gateway and the GitHub API.
-The agent matches their organization and job ID to its current runner.
-The gateway retains and replays StartRunner until RunnerReady.
-A matching Starting retry delivers ConfigureRunner to the existing VM.
-A retry cannot change the runner organization, label, or size.
+`CIPROXY_AGENT_URL` selects another WSS route with a valid TLS certificate.
+The gateway authenticates Hello before Welcome.
+An authenticated policy close with `[gateway] authentication failed`
+revokes the local machine. Other failures reconnect and preserve its VMs.
 
-The gateway sends FetchImage with the newest image metadata.
-The HTTPS `.tar.gz` bundle contains exactly two regular files:
-`vmlinux` and `rootfs.ext4` at the archive root.
-The byte count and SHA-256 must match before extraction.
-Only a checked download can enter extraction.
-Only a complete checked bundle can become the newest image.
-The rootfs is ext4. Its logical length must match the release disk metadata.
-`ImageDownload.root_disk_bytes` comes from the release manifest.
-The agent verifies it against the extracted root member before publication.
-The persisted image index and each image hold retain that release metadata.
-`RunnerSpec.size` contains the original free-size request.
-`RunnerReport.requested_size` retains that request in local state and reports.
-`RunnerReport.size` contains the admitted total VM allocation.
-Matching retries reuse the original request, image, and total after restart.
-Image reports contain exact metadata in `available`, with `newest` as its ID.
-These are required new wire and state formats.
-No older-format adapter is supplied.
-The guest configures DNS. Docker data stays on its root filesystem.
-The boot configuration attaches only that root drive today.
-Sticky Docker disk ownership will attach a separate drive under the
-[cache policy](../../docs/protocol/cache.md#docker-disks).
-Root preparation and the boot drive list stay separate for that integration.
-The guest listens on vsock port 52 with newline-delimited protocol JSON.
-It sends Hello with its image ID before runner configuration.
-On reconnect, it repeats Hello and its current runner state.
-It preserves a configured runner across that connection change.
-ConfigureRunner is idempotent for that same runner.
-A repeated registration never starts a second runner or replaces its job.
-Shutdown requests are graceful. The guest must preserve an already-taken job.
-The guest exits its runner before it reports RunnerExited.
-The agent retains VM ownership and disk space until that report or unit exit.
-A late JobStarted changes a pending shutdown to Running.
-The agent retries pending shutdown requests after connection recovery.
-Repeated Shutdown requests share one per-VM flag.
-A guest that cannot connect does not fill the normal message queue.
+The hosted runtime stores runner placement, GitHub IDs, and command IDs.
+It removes an idle GitHub registration before StopRunner.
+Drain disables admission while that removal runs.
+A busy removal result preserves the job VM.
+Remove and local uninstall still use immediate idle shutdown.
+A job assigned before the guest's trusted handoff can race that direct path.
+The user selected immediate stop for that unobserved-job window.
+An App removal applies the same exception to that organization only.
 
-The current agent expects an optional machine cache at
-`/run/ciproxy-cache/control.sock`.
-Root owns this socket with mode `0600`.
-Requests and replies are newline-delimited JSON with a `type` field:
+The agent verifies the release byte count and SHA-256 before extraction.
+The released `.tar.zst` bundle contains the root, kernel, and five metadata
+files. Extraction rejects other paths, links, and duplicate members.
+The root remains a fresh label-sized reflink of `rootfs.ext4`.
+The image's Docker data remains available on that root.
+The declared root length comes from the same release manifest.
+The agent checks it against the extracted root member before publication.
+The persisted image index and each hold retain exact release metadata.
+`RunnerSpec.size` carries the original free-size request.
+`RunnerReport.requested_size` retains that request across restart.
+`RunnerReport.size` carries the actual total VM allocation.
+A matching retry keeps its original request, image, and allocation.
+Image reports list exact metadata and identify the newest local release.
+These are required new formats. No old-format adapter is supplied.
+A dormant drive slot permits a later checked Docker disk switch.
+The guest and agent use vsock port 5252.
+The agent configures a runner only for a guest Hello of handoff format 2.
+The guest repeats Hello and its current assignment after reconnect.
+A late readiness event cannot replace an assigned job.
+Registrations and runtime credentials stay in memory.
+The agent keeps each JIT configuration in memory until the guest confirms
+receipt through `RunnerConfigured` or its reconnect Hello. Before that
+confirmation, reconnect sends the configuration again.
+A duplicate delivery starts no second runner.
+The guest Hello carries `configuration_received`. A runner report sets
+`configuration_lost` only when that value is false and this agent process
+holds no pending JIT. An in-flight delivery is therefore not lost.
 
-| Request | Fields | Reply |
-| --- | --- | --- |
-| `report` | None | `report` with `MachineCacheReport` |
-| `budget` | `capacity_bytes` | `applied` after reclaim |
-| `clear` | None | `applied` after deletion |
-| `configure` | `runner_id`, `organization_id`, `address` | `configured` with a runner-scoped `token` |
-| `facts` | `runner_id`, authenticated `facts` | `applied` |
-| `release` | `runner_id` | `applied` |
+The [cache and Docker guide](cache-and-docker.md) gives the runner handoff,
+the machine cache service and its listener rules, cache budgets and
+recovery, and Docker leases.
 
-The cache address uses the VM's host link address and TCP port 7887.
-Before VM disk preparation, the agent reduces the cache budget.
-The cache must reclaim space before it replies to that budget request.
-The budget includes cache and unused Docker disk space.
-The integrated cache component must evict unused Docker disks in LRU order.
-An absent cache gives direct GitHub caching and zero observed cache use.
-An absent cache makes ClearCache fail. It cannot confirm deletion.
-The merged [cache sidecar](../ciproxy-cache-sidecar/README.md#agent-integration)
-instead exposes HTTP administration and runtime-session registration.
-The agent does not yet start or configure that service.
-Own-machine integration must align these control and credential boundaries.
-Cache-sidecar wiring and sticky Docker disk ownership remain integration work.
-Persistent Docker disk reports stay zero until that ownership is implemented.
+Machine reports carry the actual total job disk from the persisted image
+budget. This value does not depend on a working cache service.
+A machine without a report has no known disk capacity.
+The hosted runtime does not guess an image or job-disk size.
 
 ### Agent updates and releases
 
-The [update and release guide](updates-and-releases.md) covers daemon
-updates, release settings, logging, and publication.
+The [updates and releases guide](updates-and-releases.md) gives the
+hourly updater, public package format, and glibc release checks.
 
 ## Quick Start
 
@@ -237,6 +202,12 @@ They use no host filesystem, subprocess, network, or real timer.
 Real VM and GitHub checks use separate smoke scripts.
 The [real root regression](image-budget.md#disposable-root-growth-regression)
 checks free bytes as runner UID 1001 on two image sizes.
+Docker lease integration tests call the real adapter in temporary folders.
+They mock host commands and cache administration, and need no root access:
+
+```sh
+cargo test --package ciproxy-agent --test docker_regression docker_regressions
+```
 
 Build and package the GNU binary for glibc 2.17 or later:
 
@@ -268,8 +239,20 @@ The [host guide](host-preparation.md#ext4-and-kvm-smoke) gives the ext4 check.
 - [src/root_sizing.rs](src/root_sizing.rs) defines the pure shared root
   allocation rule for the agent, scaler, and hosted image configuration.
 - [src/vm_root.rs](src/vm_root.rs) reflinks and grows the disposable job root.
-- [src/vm_config.rs](src/vm_config.rs) owns the drive list for later sticky disks.
-- [src/vsock_stream.rs](src/vsock_stream.rs) delivers registrations in memory.
+- [src/process.rs](src/process.rs) runs host tools and shares the required
+  reflink copy operation for VM roots and disposable Docker disks.
+- [src/cache_authority.rs](src/cache_authority.rs) keeps the original cache
+  rights and URL origins of each job.
+- [src/job_decisions.rs](src/job_decisions.rs) saves each GitHub-only
+  decision before it releases a waiting Worker.
+- [src/job_preparation.rs](src/job_preparation.rs) prepares checked local
+  cache and Docker resources once the host has the trusted job facts.
+- [src/cache_unit.rs](src/cache_unit.rs) writes the cache service unit and
+  its private listener rules.
+- [src/docker.rs](src/docker.rs) owns Docker leases, attachment, and release.
+- [src/vm_config.rs](src/vm_config.rs) owns the root and dormant Docker drives.
+- [src/vsock_stream.rs](src/vsock_stream.rs) keeps each registration in
+  memory until the guest confirms receipt.
 - [src/images.rs](src/images.rs) coordinates checked image fetches.
 - [src/image_registry.rs](src/image_registry.rs) owns holds and reclamation.
 - [src/image_store.rs](src/image_store.rs) defines the mockable cache boundary.

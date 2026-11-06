@@ -14,7 +14,7 @@ use crate::pricing::Plan;
 use crate::report::boat::boat_cost_deltas;
 use crate::report::catalog::PriceList;
 use crate::report::range::{DateRange, retention_start};
-use crate::report::runtime::{accounting_deltas, start_deltas};
+use crate::report::runtime::{accounting_deltas, removal_deltas, start_deltas};
 use crate::report::savings::{ReportInput, SavingsReport, savings_report};
 use crate::usage::{PaymentNotice, Usage, workspace_usage};
 
@@ -94,11 +94,29 @@ impl Metering for StoredMetering {
         let previous: BTreeMap<_, _> = facts
             .accounted_jobs
             .into_iter()
-            .map(|job| (job.job.id, job))
+            .map(|job| (job.job.key(), job))
             .collect();
         let mut outcome = Refresh::default();
+        if let Some(until) = at.date_naive().succ_opt() {
+            for alias in facts.aliases {
+                if let Some(before) = previous.get(&(
+                    ciproxy_store_interface::metering::facts::JobSource::ScaleSet,
+                    alias.organization_id,
+                    alias.id,
+                )) {
+                    let (deltas, starts) = removal_deltas(before, DateRange { from, until });
+                    if !self
+                        .store
+                        .retire_accounting(workspace_id, before, &deltas, &starts)?
+                    {
+                        outcome.stale_jobs += 1;
+                    }
+                }
+            }
+        }
+
         for job in facts.jobs {
-            let before = previous.get(&job.id);
+            let before = previous.get(&job.key());
             let current = AccountedJob {
                 job,
                 observed_at: before.map_or(at, |previous| at.max(previous.observed_at)),

@@ -83,6 +83,7 @@ pub fn facts(reference: &str) -> JobSpec {
             event: JobEvent("push".into()),
             head_repository: None,
             default_ref: GitRef("refs/heads/main".into()),
+            sticky_docker: false,
         },
         reference: reference.into(),
         base_ref: None,

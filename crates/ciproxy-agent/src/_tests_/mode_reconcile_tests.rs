@@ -2,10 +2,12 @@
 
 use std::sync::Arc;
 
+use crate::cache_authority::CheckedRuntime;
 use async_trait::async_trait;
 use ciproxy_protocol::cache::{CacheConnection, MachineCacheReport};
-use ciproxy_protocol::identifiers::RunnerId;
+use ciproxy_protocol::identifiers::{JobId, RunnerId};
 use ciproxy_protocol::jobs::JobFacts;
+use ciproxy_protocol::jobs::JobScope;
 use futures_util::{pin_mut, poll};
 use tokio::sync::{Mutex, oneshot};
 use unimock::{MockFn, Unimock, matching};
@@ -23,10 +25,26 @@ struct WaitingCache {
 
 #[async_trait]
 impl Cache for WaitingCache {
+    async fn fallback(&self, vm: &VmRecord) -> Result<()> {
+        self.delegate.fallback(vm).await
+    }
+    async fn handoff(&self, vm: &VmRecord, job_id: &JobId, runtime: CheckedRuntime) -> Result<()> {
+        self.delegate.handoff(vm, job_id, runtime).await
+    }
+    async fn prepare(
+        &self,
+        runner: &RunnerId,
+        facts: &JobFacts,
+    ) -> Result<Option<(CacheConnection, JobScope, u64)>> {
+        self.delegate.prepare(runner, facts).await
+    }
     async fn budget(&self, bytes: u64) -> Result<()> {
+        self.delegate.budget(bytes).await
+    }
+    async fn refresh_budget(&self, bytes: u64) -> Result<()> {
         let barrier = self.barrier.lock().await.take().unwrap();
         barrier.await.unwrap();
-        self.delegate.budget(bytes).await
+        self.delegate.refresh_budget(bytes).await
     }
     async fn report(&self) -> Result<MachineCacheReport> {
         self.delegate.report().await
@@ -34,14 +52,8 @@ impl Cache for WaitingCache {
     async fn clear(&self) -> Result<()> {
         self.delegate.clear().await
     }
-    async fn configure(&self, vm: &VmRecord) -> Result<Option<CacheConnection>> {
-        self.delegate.configure(vm).await
-    }
-    async fn facts(&self, runner: &RunnerId, facts: &JobFacts) -> Result<()> {
-        self.delegate.facts(runner, facts).await
-    }
-    async fn release(&self, runner: &RunnerId) -> Result<()> {
-        self.delegate.release(runner).await
+    async fn release(&self, vm: &VmRecord) -> Result<()> {
+        self.delegate.release(vm).await
     }
 }
 
@@ -51,7 +63,7 @@ async fn removal_during_a_delayed_reconciliation_stays_terminal() {
         HostMock::hardware
             .some_call(matching!())
             .returns(Ok(hardware())),
-        CacheMock::budget
+        CacheMock::refresh_budget
             .some_call(matching!(645_000_000_000))
             .returns(Ok(())),
         StoreMock::save

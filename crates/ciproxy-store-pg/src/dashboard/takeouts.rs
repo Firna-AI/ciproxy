@@ -6,7 +6,7 @@ use ciproxy_schema::organizations::organizations;
 use ciproxy_schema::workspaces::workspaces;
 use ciproxy_store_interface::dashboard::records::Takeout;
 use ciproxy_store_interface::error::{Error, Result};
-use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
+use ciproxy_store_interface::github_lifecycle::{LifecycleEvent, RemovalCause};
 use ciproxy_store_interface::organizations::AppState;
 use diesel::prelude::*;
 use diesel::result;
@@ -43,7 +43,7 @@ pub(super) fn begin(store: &PgStore, workspace: Uuid, organization: Uuid) -> Res
         )).execute(connection)?;
         diesel::update(organizations::table.find(organization)).set(organizations::app_state.eq("removed")).execute(connection)?;
         record.app_state = AppState::Removed;
-        let event = match serde_json::to_value(LifecycleEvent::Removed { organization: record.clone(), last_organization: false }) {
+        let event = match serde_json::to_value(LifecycleEvent::Removed { organization: record.clone(), last_organization: false, cause: RemovalCause::WorkspaceTakeout }) {
             Ok(event) => event,
             Err(source) => return Err(result::Error::SerializationError(Box::new(source))),
         };

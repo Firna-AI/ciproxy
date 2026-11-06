@@ -67,6 +67,7 @@ pub enum InstallationOutcome {
 }
 
 /// The complete App integration entry point used by the hosted control plane.
+#[unimock::unimock(api=GitHubAppMock)]
 #[async_trait]
 pub trait GitHubApp: Send + Sync {
     /// Discover organizations that need lifecycle replay after a process restart.

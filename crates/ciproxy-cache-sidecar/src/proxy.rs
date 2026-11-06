@@ -5,37 +5,41 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use axum::body::Body;
 use axum::http::{HeaderMap, Method, Request, Response, StatusCode};
-use ciproxy_protocol::secret::Secret;
-use serde::{Deserialize, Serialize};
+use ciproxy_protocol::cache::CacheConnection;
+use ciproxy_protocol::runtime::CacheProxyConfig;
+use tokio::sync::RwLock;
 
 use crate::error::{Result, ResultExt};
 use crate::service::Service;
-use crate::session::Registration;
 use crate::transport::{Outbound, Transport};
 use crate::upstream::{canonicalize, destination};
 use crate::wire::{cache_path, miss, save_path, status};
 
-/// Agent-written configuration for exactly one disposable VM proxy.
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct ProxyConfig {
-    /// Narrow machine-cache listener URL, reachable from this VM.
-    pub machine_url: Secret,
-    /// Credential for this VM's registered session only.
-    pub machine_token: Secret,
-    /// Original assignment facts, permissions, and GitHub endpoints.
-    pub registration: Registration,
-}
-
 /// VM HTTP forwarding boundary. Consume it through `dyn Service`.
 pub struct VmProxy {
-    config: ProxyConfig,
+    config: CacheProxyConfig,
+    connection: RwLock<CacheConnection>,
     network: Arc<dyn Transport>,
+}
+
+/// Private parent-pipe updates never change the original assignment authority.
+#[async_trait]
+pub trait ProxyControl: Service {
+    /// Replace only the machine endpoint and its narrow session credential.
+    async fn replace_connection(&self, connection: CacheConnection);
 }
 
 impl VmProxy {
     /// Compose a proxy from trusted assignment data and injected HTTP IO.
-    pub fn new(config: ProxyConfig, network: Arc<dyn Transport>) -> Self {
-        Self { config, network }
+    pub fn new(config: CacheProxyConfig, network: Arc<dyn Transport>) -> Self {
+        Self {
+            connection: RwLock::new(CacheConnection {
+                url: config.machine_url.clone(),
+                token: config.machine_token.clone(),
+            }),
+            config,
+            network,
+        }
     }
 
     async fn dispatch(&self, request: Request<Body>) -> Result<Response<Body>> {
@@ -57,20 +61,14 @@ impl VmProxy {
         if !cache && !parts.uri.path().starts_with("/ciproxy/blob/") {
             return self.github(parts.method, path, headers, body).await;
         }
+        let connection = self.connection.read().await.clone();
         headers.insert(
             "x-ciproxy-session",
-            self.config
-                .machine_token
-                .expose_secret()
-                .parse()
-                .internal()?,
+            connection.token.expose_secret().parse().internal()?,
         );
         let machine = format!(
             "{}{}",
-            self.config
-                .machine_url
-                .expose_secret()
-                .trim_end_matches('/'),
+            connection.url.expose_secret().trim_end_matches('/'),
             path
         );
         let response = self
@@ -115,6 +113,13 @@ impl VmProxy {
                 body,
             })
             .await
+    }
+}
+
+#[async_trait]
+impl ProxyControl for VmProxy {
+    async fn replace_connection(&self, connection: CacheConnection) {
+        *self.connection.write().await = connection;
     }
 }
 

@@ -17,6 +17,7 @@ fn period() -> Period {
 }
 fn jobs(count: u128) -> WorkspaceUsage {
     WorkspaceUsage {
+        aliases: Vec::new(),
         jobs: (1..=count)
             .map(|id| job(id, "2026-11-04T12:00:00Z", None, JobPlace::Machine))
             .collect(),
@@ -31,6 +32,7 @@ fn exact_period_counts_preserve_removed_organization_starts() {
     let mut taken = job(2, "2026-11-04T12:00:00Z", None, JobPlace::Boat);
     taken.organization_id = Uuid::from_u128(200);
     let facts = WorkspaceUsage {
+        aliases: Vec::new(),
         jobs: vec![
             first,
             taken.clone(),
@@ -172,6 +174,7 @@ fn soft_limits_use_strict_excess_and_payment_banner_precedence() {
             },
         };
         let facts = WorkspaceUsage {
+            aliases: Vec::new(),
             starts: vec![StartTotal {
                 taken_at: now,
                 starts,

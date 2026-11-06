@@ -24,10 +24,11 @@ pub struct InstalledApp {
 }
 
 /// App-JWT lookups that require no additional installation permission.
-#[cfg_attr(test, unimock::unimock(api = InstallationApiMock))]
+#[unimock::unimock(api = InstallationApiMock)]
 #[async_trait]
 pub trait InstallationApi: Send + Sync {
     /// Resolve the account identity before acquiring its organization lease.
+    /// InstallationPending means an exact App-JWT installation endpoint returned 404.
     async fn by_id(&self, installation_id: i64) -> Result<InstalledApp>;
     /// Read the current installation while the organization lease is held.
     async fn for_organization(&self, login: &str) -> Result<InstalledApp>;

@@ -13,6 +13,7 @@ ciproxy-store-interface = { workspace = true }
 diesel = { version = "2.3.14", features = ["postgres", "chrono", "uuid", "serde_json"] }
 diesel_migrations = "2.3.2"
 rust_decimal = { version = "1.43.0", default-features = false, features = ["std", "db-diesel-postgres"] }
+serde = "1.0.229"
 serde_json = "1.0.154"
 thiserror = "2.0.21"
 uuid = "1.29.0"

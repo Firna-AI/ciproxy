@@ -13,6 +13,7 @@ use tokio::sync::{Mutex, oneshot};
 use unimock::{MockFn, Unimock, matching};
 
 use crate::boundaries::{CacheMock, StoreMock, Vms, VmsMock};
+use crate::cache_authority::CacheAuthority;
 use crate::controller::Agent;
 use crate::error::Result;
 use crate::fixtures::{applied, controller, report_dependencies, spec, start_image, vm};
@@ -25,6 +26,15 @@ struct PausedVms {
 
 #[async_trait]
 impl Vms for PausedVms {
+    async fn configuration_lost(&self, vm: &VmRecord) -> Result<bool> {
+        self.delegate.configuration_lost(vm).await
+    }
+    async fn clear_docker(&self, vm: &VmRecord) -> Result<()> {
+        self.delegate.clear_docker(vm).await
+    }
+    async fn swap_docker(&self, vm: &VmRecord) -> Result<()> {
+        self.delegate.swap_docker(vm).await
+    }
     fn allocate(&self, report: RunnerReport, used: &[VmRecord]) -> Result<VmRecord> {
         self.delegate.allocate(report, used)
     }
@@ -57,6 +67,8 @@ async fn hardware_reports_continue_while_vm_startup_is_pending() {
             .some_call(matching!(_, _))
             .answers(&|_, report, _| {
                 Ok(VmRecord {
+                    cache_authority: CacheAuthority::Waiting,
+                    job_facts: None,
                     report,
                     ..vm("runner-1", false)
                 })

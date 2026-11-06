@@ -3,7 +3,7 @@
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::vm_size::VmSize;
+use ciproxy_protocol::resources::VmSize;
 
 /// The stored lifecycle state of a runner.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, strum::EnumString, strum::IntoStaticStr)]
@@ -65,6 +65,14 @@ pub struct Runner {
 
 /// Tenant-scoped runner records used by later lifecycle services.
 pub trait RunnerStore: Send + Sync {
+    /// Reconcile byte-precise actual resources without changing original placement.
+    fn update_runner_size(
+        &self,
+        workspace_id: Uuid,
+        organization_id: Uuid,
+        id: Uuid,
+        size: VmSize,
+    ) -> Result<()>;
     /// Insert one runner without its GitHub registration secret.
     fn create_runner(&self, workspace_id: Uuid, runner: &Runner) -> Result<()>;
     /// Read all retained runners of one organization.

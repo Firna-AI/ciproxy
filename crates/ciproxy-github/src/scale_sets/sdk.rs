@@ -65,6 +65,14 @@ impl SdkScaleSetApi {
 
 #[async_trait]
 impl ScaleSetApi for SdkScaleSetApi {
+    async fn find_runner(&self, name: &str) -> Result<Option<i64>> {
+        Ok(self
+            .client
+            .get_runner_by_name(name)
+            .await
+            .internal()?
+            .map(|runner| runner.id.get()))
+    }
     async fn ensure(
         &self,
         label: &str,

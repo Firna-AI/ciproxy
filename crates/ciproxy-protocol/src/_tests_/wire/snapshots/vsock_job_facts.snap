@@ -1,5 +1,6 @@
 ---
 source: crates/ciproxy-protocol/src/_tests_/wire/assertions.rs
+assertion_line: 20
 description: Tagged JSON for vsock_job_facts; all credentials are dummy test values.
 expression: message
 ---
@@ -22,6 +23,7 @@ expression: message
       "id": "repository-2",
       "full_name": "contributor/project"
     },
-    "default_ref": "refs/heads/main"
+    "default_ref": "refs/heads/main",
+    "sticky_docker": false
   }
 }

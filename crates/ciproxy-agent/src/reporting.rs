@@ -5,14 +5,17 @@ use ciproxy_protocol::reports::{DrainState, MachineReport, SlotOccupancy, SlotRe
 use ciproxy_protocol::resources::Slots;
 use ciproxy_protocol::runners::RunnerState;
 
+use crate::capacity::machine_resources;
 use crate::controller::Controller;
 use crate::error::Result;
+use crate::slot_allocation::allocations;
 use crate::state::Mode;
 
 impl Controller {
     pub(crate) async fn machine_report(&self) -> Result<MachineReport> {
         let hardware = self.host.hardware()?;
         let capacity = Slots::for_machine(hardware.threads, hardware.memory_bytes, hardware.kvm);
+        let job_disk_bytes = machine_resources(&hardware, self.image_budget).job_disk_bytes;
         let cache = self.cache.report().await.unwrap_or_else(|error| {
             tracing::warn!(error = %error, "machine cache reports unavailable");
             empty_cache()
@@ -24,22 +27,28 @@ impl Controller {
             .iter()
             .map(|vm| vm.report.clone())
             .collect::<Vec<_>>();
-        let mut occupants = runners.iter().flat_map(|runner| {
-            let occupancy = match &runner.state {
-                RunnerState::Running { job_id } => SlotOccupancy::Job {
-                    runner_id: runner.runner_id.clone(),
-                    job_id: job_id.clone(),
-                },
-                _ => SlotOccupancy::Warm {
-                    runner_id: runner.runner_id.clone(),
-                },
-            };
-            std::iter::repeat_n(occupancy, Slots::for_vm(runner.size).0 as usize)
-        });
+        let occupied = allocations(&state.runners);
         let slots = (0..capacity.0)
-            .map(|index| SlotReport {
-                index,
-                occupancy: occupants.next().unwrap_or(SlotOccupancy::Free),
+            .map(|index| {
+                let runner = state
+                    .runners
+                    .iter()
+                    .zip(&occupied)
+                    .find(|(_, slots)| slots.contains(&index))
+                    .map(|(vm, _)| &vm.report);
+                let occupancy = match runner {
+                    Some(runner) => match &runner.state {
+                        RunnerState::Running { job_id } => SlotOccupancy::Job {
+                            runner_id: runner.runner_id.clone(),
+                            job_id: job_id.clone(),
+                        },
+                        _ => SlotOccupancy::Warm {
+                            runner_id: runner.runner_id.clone(),
+                        },
+                    },
+                    None => SlotOccupancy::Free,
+                };
+                SlotReport { index, occupancy }
             })
             .collect();
         Ok(MachineReport {
@@ -47,6 +56,7 @@ impl Controller {
             agent_version: env!("CARGO_PKG_VERSION").to_owned(),
             hardware,
             capacity,
+            job_disk_bytes,
             slots,
             runners,
             drain: if state.mode == Mode::Active {
@@ -55,10 +65,15 @@ impl Controller {
                 DrainState::Draining
             },
             cache,
-            docker_disks: DockerDiskReport {
-                repositories: 0,
-                used_bytes: 0,
-            },
+            docker_disks: self
+                .dockers
+                .as_ref()
+                .and_then(|dockers| dockers.report().ok())
+                .unwrap_or(DockerDiskReport {
+                    leased_bytes: 0,
+                    repositories: 0,
+                    used_bytes: 0,
+                }),
             images,
         })
     }

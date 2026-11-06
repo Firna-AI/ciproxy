@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Apache-2.0. Run only on a disposable ext4 KVM host with staging integration.
+set +x
 set -euo pipefail
 source crates/ciproxy-agent/scripts/smoke-common.sh
 
@@ -26,7 +27,8 @@ PY
   [ "$host_fs" = ext4 ] || skip 'use a disposable host with /var/lib on ext4'
   [ ! -e /var/lib/ciproxy/state.json ] && [ ! -e /var/lib/ciproxy/area.xfs ] && [ ! -e /var/lib/ciproxy/area.json ] || skip 'use a fresh disposable host without an existing ciproxy installation'
   [ "${CIPROXY_SMOKE_INTEGRATION_READY:-}" = 1 ] || skip 'confirm aligned staging gateway, image, guest, and GitHub App with CIPROXY_SMOKE_INTEGRATION_READY=1'
-  [ -n "${CIPROXY_SMOKE_INSTALL_TOKEN:-}" ] || skip 'set a staging CIPROXY_SMOKE_INSTALL_TOKEN'
+  credentials
+  jq -e '(.install_token | type) == "string" and (.install_token | length) > 0' "$CIPROXY_SMOKE_CREDENTIALS" >/dev/null || skip 'the credential file needs install_token'
   [ -n "${CIPROXY_SMOKE_REPO:-}" ] && [ -n "${CIPROXY_SMOKE_REF:-}" ] || skip 'set CIPROXY_SMOKE_REPO and CIPROXY_SMOKE_REF'
   case "${CIPROXY_AGENT_URL:-}" in wss://*) ;; *) skip 'set a staging CIPROXY_AGENT_URL with valid TLS' ;; esac
   case "$CIPROXY_AGENT_URL" in *$'\n'*|*$'\r'*|*' '*|*'"'*) fail 'the staging URL contains invalid environment-file characters' ;; esac
@@ -59,7 +61,7 @@ PY
 }
 
 host_install() {
-  "$host_binary" install --token "$CIPROXY_SMOKE_INSTALL_TOKEN"
+  "$host_binary" install --token "$(jq -er .install_token "$CIPROXY_SMOKE_CREDENTIALS")"
   host_binary=/usr/local/bin/ciproxy-agent
 }
 

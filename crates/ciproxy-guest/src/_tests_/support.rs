@@ -4,6 +4,7 @@ use std::collections::VecDeque;
 use std::future::pending;
 use std::sync::{Arc, Mutex};
 
+use ciproxy_protocol::guest::HANDOFF_PROTOCOL_VERSION;
 use ciproxy_protocol::guest::{AgentToGuest, GuestToAgent};
 use ciproxy_protocol::identifiers::{ImageId, OrganizationId, RunnerId};
 use ciproxy_protocol::runners::RunnerExit;
@@ -17,7 +18,7 @@ use crate::error::{Error, Result};
 use crate::service::Supervisor;
 
 #[derive(Debug, Eq, PartialEq)]
-pub(super) enum Observation {
+pub(in crate::service) enum Observation {
     Message(GuestToAgent),
     Start,
     Stop,
@@ -26,9 +27,9 @@ pub(super) enum Observation {
     Poweroff,
 }
 
-pub(super) type Trace = Arc<Mutex<Vec<Observation>>>;
+pub(in crate::service) type Trace = Arc<Mutex<Vec<Observation>>>;
 
-pub(super) fn configure() -> AgentToGuest {
+pub(in crate::service) fn configure() -> AgentToGuest {
     AgentToGuest::ConfigureRunner {
         protocol_version: ProtocolVersion::CURRENT,
         runner_id: RunnerId("runner-7".into()),
@@ -40,8 +41,16 @@ pub(super) fn configure() -> AgentToGuest {
 
 pub(super) fn hello() -> Observation {
     Observation::Message(GuestToAgent::Hello {
+        handoff_protocol_version: HANDOFF_PROTOCOL_VERSION,
+        configuration_received: false,
         protocol_version: ProtocolVersion::CURRENT,
         image_id: ImageId("image-1".into()),
+    })
+}
+
+pub(super) fn configured() -> Observation {
+    Observation::Message(GuestToAgent::RunnerConfigured {
+        runner_id: RunnerId("runner-7".into()),
     })
 }
 
@@ -166,7 +175,11 @@ pub(super) fn shutdown_pair(trace: &Trace) -> (Unimock, Unimock) {
     (channel, runner)
 }
 
-pub(super) fn supervisor(channel: Unimock, runner: Unimock, trace: &Trace) -> Supervisor {
+pub(in crate::service) fn supervisor(
+    channel: Unimock,
+    runner: Unimock,
+    trace: &Trace,
+) -> Supervisor {
     let powered = trace.clone();
     Supervisor {
         image_id: ImageId("image-1".into()),

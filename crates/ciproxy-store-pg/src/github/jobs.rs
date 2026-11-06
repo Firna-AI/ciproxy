@@ -11,8 +11,10 @@ use diesel::sql_types::{BigInt, Bool, Jsonb, Nullable, Timestamptz};
 use serde_json::Value;
 use uuid::Uuid;
 
+use super::attempts;
 use crate::connection::PgStore;
 use crate::error::QueryResultExt;
+use crate::gateway_transaction::transaction;
 
 const MERGED_BODY: &str = concat!(
     "CASE WHEN excluded.assignment_order = github_jobs.assignment_order ",
@@ -41,7 +43,8 @@ pub(super) fn save(
     let condition = format!(
         "github_jobs.workspace_id = excluded.workspace_id AND (excluded.assignment_order > github_jobs.assignment_order OR (excluded.assignment_order = github_jobs.assignment_order AND excluded.phase >= github_jobs.phase)) AND github_jobs.body IS DISTINCT FROM ({MERGED_BODY})"
     );
-    methods::FilterDsl::filter(
+    transaction(&mut *store.connection()?, |connection| {
+        methods::FilterDsl::filter(
         diesel::insert_into(github_jobs::table)
             .values((
                 github_jobs::workspace_id.eq(workspace_id),
@@ -75,9 +78,11 @@ pub(super) fn save(
             )),
         sql::<Bool>(&condition),
     )
-    .execute(&mut *store.connection()?)
+    .execute(connection)
     .store()?;
-    Ok(())
+        attempts::save(connection, workspace_id, job, observed_at)?;
+        Ok(())
+    })
 }
 
 pub(super) fn pending(
@@ -143,7 +148,9 @@ pub(super) fn list(
 }
 
 pub(super) fn purge(store: &PgStore, workspace_id: Uuid, at: DateTime<Utc>) -> Result<usize> {
-    diesel::delete(
+    transaction(&mut *store.connection()?, |connection| {
+        attempts::purge(connection, workspace_id, at)?;
+        diesel::delete(
         github_jobs::table
             .filter(github_jobs::workspace_id.eq(workspace_id))
             .filter(github_jobs::phase.eq(2_i16))
@@ -152,6 +159,7 @@ pub(super) fn purge(store: &PgStore, workspace_id: Uuid, at: DateTime<Utc>) -> R
                     .bind::<Timestamptz, _>(at - Duration::days(90)),
             ),
     )
-    .execute(&mut *store.connection()?)
+    .execute(connection)
     .store()
+    })
 }

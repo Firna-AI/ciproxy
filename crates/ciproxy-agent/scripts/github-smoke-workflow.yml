@@ -9,7 +9,19 @@ on:
       mode:
         required: true
         type: choice
-        options: [docker, warm, restart, host]
+        options: [docker, warm, restart, host, cache, sticky-write, sticky-read, sticky-copy]
+      runner_label:
+        required: false
+        default: ciproxy
+        type: string
+      cache_expectation:
+        required: false
+        default: any
+        type: choice
+        options: [any, hit, miss]
+      cache_key:
+        required: false
+        type: string
       smoke_id:
         required: true
         type: string
@@ -19,7 +31,7 @@ permissions:
 
 jobs:
   smoke:
-    runs-on: ciproxy
+    runs-on: ${{ inputs.runner_label }}
     timeout-minutes: 10
     steps:
       - name: Give the host time to observe or restart this VM
@@ -30,6 +42,52 @@ jobs:
             host) sleep 180 ;;
             restart) sleep 120 ;;
             *) sleep 45 ;;
+          esac
+      - name: Restore the machine-cache smoke entry
+        id: cache
+        if: inputs.mode == 'cache'
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ~/.cache/ciproxy-own-smoke
+          key: ciproxy-own-smoke-${{ inputs.cache_key }}
+      - name: Check the expected cache visibility
+        if: inputs.mode == 'cache'
+        env:
+          EXPECTATION: ${{ inputs.cache_expectation }}
+          HIT: ${{ steps.cache.outputs.cache-hit }}
+        run: |
+          case "$EXPECTATION" in
+            hit) test "$HIT" = true ;;
+            miss) test "$HIT" != true ;;
+          esac
+      - name: Prepare the cache entry
+        if: inputs.mode == 'cache'
+        run: |
+          mkdir -p ~/.cache/ciproxy-own-smoke
+          test -f ~/.cache/ciproxy-own-smoke/archive || \
+            dd if=/dev/urandom of="$HOME/.cache/ciproxy-own-smoke/archive" bs=1M count=1
+      - name: Check sticky Docker data across fresh VMs
+        if: startsWith(inputs.mode, 'sticky-')
+        env:
+          MODE: ${{ inputs.mode }}
+          MARKER: ${{ inputs.cache_key }}
+        run: |
+          set -euo pipefail
+          original="ciproxy-sticky:$MARKER"
+          private="ciproxy-copy:$MARKER"
+          case "$MODE" in
+            sticky-read)
+              docker image inspect "$original" >/dev/null
+              test "$(docker image inspect --format '{{ index .Config.Labels "ciproxy.marker" }}' "$original")" = "$MARKER"
+              if docker image inspect "$private" >/dev/null 2>&1; then exit 1; fi
+              ;;
+            sticky-write|sticky-copy)
+              work="$(mktemp -d)"
+              printf 'FROM busybox:1.37\nLABEL ciproxy.marker="%s"\n' "$MARKER" > "$work/Dockerfile"
+              target="$original"
+              if [ "$MODE" = sticky-copy ]; then target="$private"; fi
+              docker build --tag "$target" "$work"
+              ;;
           esac
       - name: Build and run a Docker image in the fresh VM
         env:

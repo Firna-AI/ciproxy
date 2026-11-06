@@ -1,9 +1,9 @@
 //! Runner insertion, lifecycle updates, and private placement mappings.
 
+use ciproxy_protocol::resources::VmSize;
 use ciproxy_schema::runners::runners;
 use ciproxy_store_interface::error::{Error, Result, ResultExt};
 use ciproxy_store_interface::runners::{Runner, RunnerPlace, RunnerState, RunnerStore};
-use ciproxy_store_interface::vm_size::VmSize;
 use diesel::prelude::*;
 use uuid::Uuid;
 
@@ -12,7 +12,7 @@ use crate::error::{InternalCause, QueryResultExt, require_record};
 
 #[derive(Queryable, Selectable, Insertable)]
 #[diesel(table_name = runners)]
-struct RunnerRow {
+pub(crate) struct RunnerRow {
     id: Uuid,
     workspace_id: Uuid,
     organization_id: Uuid,
@@ -21,8 +21,8 @@ struct RunnerRow {
     github_id: Option<i64>,
     state: String,
     vcpus: i32,
-    memory_gb: i32,
-    disk_gb: i32,
+    memory_bytes: i64,
+    disk_bytes: i64,
     machine_id: Option<Uuid>,
     first_slot: Option<i32>,
     boat_key_id: Option<Uuid>,
@@ -31,7 +31,7 @@ struct RunnerRow {
 }
 
 impl RunnerRow {
-    fn from_record(workspace_id: Uuid, runner: &Runner) -> Self {
+    pub(crate) fn from_record(workspace_id: Uuid, runner: &Runner) -> Result<Self> {
         let (machine_id, first_slot, boat_key_id, sandbox_id, boat_size_name) = match &runner.place
         {
             RunnerPlace::Machine {
@@ -51,7 +51,7 @@ impl RunnerRow {
             ),
         };
         let state: &str = runner.state.into();
-        Self {
+        Ok(Self {
             id: runner.id,
             workspace_id,
             organization_id: runner.organization_id,
@@ -59,18 +59,18 @@ impl RunnerRow {
             scale_set_id: runner.scale_set_id,
             github_id: runner.github_id,
             state: state.to_owned(),
-            vcpus: runner.size.vcpus,
-            memory_gb: runner.size.memory_gb,
-            disk_gb: runner.size.disk_gb,
+            vcpus: i32::try_from(runner.size.vcpu).internal()?,
+            memory_bytes: i64::try_from(runner.size.memory_bytes).internal()?,
+            disk_bytes: i64::try_from(runner.size.disk_bytes).internal()?,
             machine_id,
             first_slot,
             boat_key_id,
             sandbox_id,
             boat_size_name,
-        }
+        })
     }
 
-    fn into_record(self) -> Result<Runner> {
+    pub(crate) fn into_record(self) -> Result<Runner> {
         let place = match (
             self.machine_id,
             self.first_slot,
@@ -96,9 +96,9 @@ impl RunnerRow {
             github_id: self.github_id,
             state: self.state.parse().internal()?,
             size: VmSize {
-                vcpus: self.vcpus,
-                memory_gb: self.memory_gb,
-                disk_gb: self.disk_gb,
+                vcpu: u32::try_from(self.vcpus).internal()?,
+                memory_bytes: u64::try_from(self.memory_bytes).internal()?,
+                disk_bytes: u64::try_from(self.disk_bytes).internal()?,
             },
             place,
         })
@@ -106,9 +106,32 @@ impl RunnerRow {
 }
 
 impl RunnerStore for PgStore {
+    fn update_runner_size(
+        &self,
+        workspace_id: Uuid,
+        organization_id: Uuid,
+        id: Uuid,
+        size: VmSize,
+    ) -> Result<()> {
+        let count = diesel::update(
+            runners::table
+                .filter(runners::workspace_id.eq(workspace_id))
+                .filter(runners::organization_id.eq(organization_id))
+                .find(id),
+        )
+        .set((
+            runners::vcpus.eq(i32::try_from(size.vcpu).internal()?),
+            runners::memory_bytes.eq(i64::try_from(size.memory_bytes).internal()?),
+            runners::disk_bytes.eq(i64::try_from(size.disk_bytes).internal()?),
+        ))
+        .execute(&mut *self.connection()?)
+        .store()?;
+        require_record(count)
+    }
+
     fn create_runner(&self, workspace_id: Uuid, runner: &Runner) -> Result<()> {
         diesel::insert_into(runners::table)
-            .values(RunnerRow::from_record(workspace_id, runner))
+            .values(RunnerRow::from_record(workspace_id, runner)?)
             .execute(&mut *self.connection()?)
             .store()?;
         Ok(())

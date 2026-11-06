@@ -59,6 +59,13 @@ impl Entropy for FixedEntropy {
 
 struct Events;
 impl AgentEvents for Events {
+    fn machine_removed(
+        &self,
+        _workspace_id: uuid::Uuid,
+        _machine_id: uuid::Uuid,
+    ) -> ciproxy_gateway::error::Result<()> {
+        Ok(())
+    }
     fn receive(&self, _session: Session, _message: AgentMessage) -> Result<()> {
         Ok(())
     }

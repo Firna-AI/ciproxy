@@ -28,6 +28,10 @@ jobs:
       CONTROL_PLANE_RUNTIME_READY: ${{ vars.CONTROL_PLANE_RUNTIME_READY }}
       CONTROL_PLANE_IMAGE: ${{ vars.CONTROL_PLANE_IMAGE }}
       CDN_SIGNING_KEY_NAME: ${{ vars.CDN_SIGNING_KEY_NAME }}
+      CIPROXY_APP_ID: ${{ vars.CIPROXY_APP_ID }}
+      CIPROXY_APP_CLIENT_ID: ${{ vars.CIPROXY_APP_CLIENT_ID }}
+      CIPROXY_APP_SLUG: ${{ vars.CIPROXY_APP_SLUG }}
+      JOB_IMAGE_MANIFEST_PATH: ${{ vars.JOB_IMAGE_MANIFEST_PATH }}
       CLOUDSDK_CORE_DISABLE_PROMPTS: "1"
     steps:
       - name: Checkout the deployment commit

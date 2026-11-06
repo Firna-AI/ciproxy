@@ -9,6 +9,7 @@ use ciproxy_protocol::runners::RunnerState;
 use unimock::{MockFn, Unimock, matching};
 
 use crate::boundaries::{CacheMock, HostMock, StoreMock, VmsMock};
+use crate::cache_authority::CacheAuthority;
 use crate::controller::Agent;
 use crate::fixtures::{
     applied, controller, hardware, report_dependencies_for, spec, start_image, vm,
@@ -20,6 +21,7 @@ fn held(count: usize) -> Vec<VmRecord> {
         .map(|index| {
             let mut record = vm(&format!("held-{index}"), false);
             record.network_index = index as u16 + 1;
+            record.report.slot_indices = vec![index as u64];
             record.report.state = match index % 4 {
                 0 => RunnerState::Starting,
                 1 => RunnerState::Warm,
@@ -94,6 +96,8 @@ async fn a_fitting_vm_reclaims_cache_before_preparation_at_each_resource_boundar
                 .answers_arc(Arc::new(move |_, report, used| {
                     assert_eq!(used.len(), count);
                     Ok(VmRecord {
+                        cache_authority: CacheAuthority::Waiting,
+                        job_facts: None,
                         report,
                         ..vm("new-local", false)
                     })
@@ -115,7 +119,11 @@ async fn a_fitting_vm_reclaims_cache_before_preparation_at_each_resource_boundar
             mock,
         );
         agent.image_budget = image_gb * GIGABYTE;
-        assert_eq!(agent.control(start()).await.unwrap(), applied());
+        let mut command = start();
+        if let ControlMessage::StartRunner { runner, .. } = &mut command {
+            runner.slot_indices = vec![count as u64];
+        }
+        assert_eq!(agent.control(command).await.unwrap(), applied());
         assert_eq!(agent.state.lock().await.runners.len(), expected_count);
     }
 }
@@ -131,7 +139,7 @@ async fn reconciliation_uses_the_same_held_disk_budget() {
         VmsMock::restore
             .each_call(matching!(_))
             .answers(&|_, _| Ok(())),
-        CacheMock::budget
+        CacheMock::refresh_budget
             .some_call(matching!(9_100_387_328))
             .returns(Ok(())),
     ));

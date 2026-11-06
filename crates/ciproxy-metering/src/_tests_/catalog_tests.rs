@@ -34,9 +34,9 @@ fn catalog_match_requires_both_cpu_and_memory() {
     assert_eq!(
         match_price(
             &list,
-            ciproxy_store_interface::vm_size::VmSize {
-                vcpus: 3,
-                memory_gb: 12,
+            ciproxy_protocol::resources::VmSize {
+                vcpu: 3,
+                memory_bytes: 12_000_000_000,
                 ..size()
             }
         ),
@@ -49,10 +49,7 @@ fn catalog_match_requires_both_cpu_and_memory() {
     assert_eq!(
         match_price(
             &list,
-            ciproxy_store_interface::vm_size::VmSize {
-                vcpus: 16,
-                ..size()
-            }
+            ciproxy_protocol::resources::VmSize { vcpu: 16, ..size() }
         ),
         PriceMatch::Unavailable
     );
@@ -77,9 +74,9 @@ fn incomparable_fitting_sizes_remain_explicitly_ambiguous() {
     assert_eq!(
         match_price(
             &list,
-            ciproxy_store_interface::vm_size::VmSize {
-                vcpus: 4,
-                memory_gb: 16,
+            ciproxy_protocol::resources::VmSize {
+                vcpu: 4,
+                memory_bytes: 16_000_000_000,
                 ..size()
             }
         ),

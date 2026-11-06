@@ -13,6 +13,14 @@ use crate::metering::totals::{AccountedBoat, AccountedJob, DailyBoatCost, DailyD
 /// Queries and writes used by metering and its trusted fact producers.
 #[unimock(api = MeteringStoreMock)]
 pub trait MeteringStore: Send + Sync {
+    /// Remove an explicitly aliased scale cursor and apply its negative corrections.
+    fn retire_accounting(
+        &self,
+        workspace_id: Uuid,
+        previous: &AccountedJob,
+        deltas: &[DailyDelta],
+        starts: &[StartTotal],
+    ) -> Result<bool>;
     /// Read all retained started jobs and registrations in one workspace.
     fn workspace_usage(&self, workspace_id: Uuid) -> Result<WorkspaceUsage>;
     /// Record the trusted workspace creation time for zero-cost prehistory.

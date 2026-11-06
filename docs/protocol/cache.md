@@ -153,6 +153,34 @@ This doc states the cache rules for jobs on
 - On the Machines page, the cache hits cover the cache restores of all own
   machines.
 
+## The cache handoff
+
+- Before the first step of a job on an own machine, its runner gives the
+  host the original cache URLs, runtime token, and cache rights of the job.
+- The host accepts that first handoff only over the connection that
+  configured the runner.
+- After a reconnect before the first handoff, the job uses only the GitHub
+  cache until it ends.
+- The host saves only the cache rights of the first handoff and the scheme,
+  host, and port of its cache and results URLs. These are the origins.
+- The host keeps the runtime token and the full URLs in memory only.
+- A later handoff of the job cannot change those origins or the original
+  cache rights. It can renew a URL on the same origin.
+- The steps of the job start only after the host decides: the machine cache
+  is ready with the original handoff, or the job uses only the GitHub cache.
+- The runner sets no time limit of its own for that decision, and it does
+  not fail the job.
+- GitHub's job time limit ends a job whose host never decides.
+- **Decision:** the host trusts only a first handoff over the connection
+  that configured the runner. Rejected: rules on the destination alone,
+  because a job could still claim cache rights that it lacks.
+- **Decision:** the steps wait for the host decision, with no time limit.
+  Rejected: a fallback after 30 seconds or after a socket error, because job
+  code could then send the first handoff itself.
+- **Decision:** first runs keep the machine cache, and root in the job VM
+  stays unchanged. Rejected: the GitHub cache only for new jobs, or a
+  restricted root, because they remove a feature or can break jobs.
+
 ## Fallback to the GitHub cache
 
 - A failure of the machine cache never fails a job.
@@ -181,7 +209,20 @@ This doc states the cache rules for jobs on
 - The Docker disk of one repository never attaches to a job of another
   repository.
 - A job on Boat gets no Docker disk.
-- When a Docker disk cannot attach, the job runs without it.
+- An attached Docker disk or copy reserves its data plus the free disk of
+  the label of its job.
+- It takes that reservation only from the spare disk of the machine, as
+  [Disk](job-routing.md#disk) says.
+- It keeps the reservation until its job ends.
+- It never shrinks or detaches during its job.
+- When the spare disk has no room for the reservation, or the disk cannot
+  attach, the job runs without its Docker disk.
+- Docker then keeps its data on the root disk of the job VM.
+- So a machine whose disk limits its jobs gets few or no Docker disks.
+- **Decision:** an attached Docker disk reserves its data plus the free disk
+  of its label. Rejected: a Docker budget, because the 250 GB minimum then
+  fits no default job. Reason: Docker then gets the free disk of the label,
+  as it does on the root disk.
 - The machine page shows how many repositories have a Docker disk on the
   machine, and the space that these disks take.
 - Only Team and Business include Docker disks, as

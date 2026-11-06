@@ -72,13 +72,23 @@ impl Fixture {
     }
 
     pub async fn restart(&mut self) {
+        self.restart_budget(Some(self.capacity.load(Ordering::SeqCst)))
+            .await;
+    }
+
+    pub async fn restart_waiting_for_budget(&mut self) {
+        self.restart_budget(None).await;
+    }
+
+    async fn restart_budget(&mut self, budget: Option<u64>) {
         for task in self.tasks.drain(..) {
             task.abort();
         }
-        let store = Arc::new(DiskStorage::new(
-            self.root.path().join("cache"),
-            self.capacity.load(Ordering::SeqCst),
-        ));
+        let root = self.root.path().join("cache");
+        let store = Arc::new(match budget {
+            Some(bytes) => DiskStorage::new(root, bytes),
+            None => DiskStorage::waiting_for_budget(root),
+        });
         let _ = store.recover().await;
         let (jwks_url, task) = serve_keys().await;
         self.tasks.push(task);

@@ -125,6 +125,13 @@ async fn publication_selects_the_newest_and_reclaims_the_old_base_after_its_hold
         assert_eq!(old.metadata(), metadata("old", 10));
         images.fetch(&image()).await.unwrap();
         assert_eq!(
+            images
+                .fetch(&image())
+                .await
+                .map_err(|_| "repeated image fetch failed"),
+            Ok(())
+        );
+        assert_eq!(
             images.report().unwrap().newest,
             Some(ImageId("new".to_owned()))
         );

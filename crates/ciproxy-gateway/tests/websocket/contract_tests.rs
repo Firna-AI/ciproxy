@@ -7,6 +7,7 @@ use ciproxy_protocol::reports::DrainState;
 use ciproxy_protocol::resources::Slots;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_protocol::version::ProtocolVersion;
+use ciproxy_store_interface::gateway::ReceivedReport;
 use uuid::Uuid;
 
 use super::fixture::{ADMIN, Fixture, OTHER, WORKSPACE, at};
@@ -159,7 +160,13 @@ async fn serves_machine_lifecycle_without_losing_identity_or_latest_health() {
         .into_iter()
         .find(|record| record.machine.id == second_uuid)
         .unwrap();
-    assert_eq!(stored.report, Some(latest.clone()));
+    assert_eq!(
+        stored.report,
+        Some(ReceivedReport {
+            report: latest.clone(),
+            received_at: at() + chrono::Duration::seconds(3610)
+        })
+    );
     assert_eq!(
         stored.machine.last_contact_at,
         Some(at() + chrono::Duration::seconds(3610))

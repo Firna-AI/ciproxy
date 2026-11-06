@@ -1,5 +1,6 @@
 //! Queries for atomic installation setup and durable scale-set demand.
 
+mod attempts;
 mod facts;
 mod jobs;
 mod lease;
@@ -7,6 +8,7 @@ mod lifecycle;
 mod registration;
 mod repositories;
 mod scale_sets;
+mod timing;
 
 use chrono::{DateTime, Utc};
 use ciproxy_store_interface::error::Result;
@@ -19,6 +21,22 @@ use uuid::Uuid;
 use crate::connection::PgStore;
 
 impl GithubStore for PgStore {
+    fn incomplete_github_job_attempts(
+        &self,
+        workspace_id: Uuid,
+    ) -> Result<Vec<ciproxy_store_interface::github_timing::PendingTiming>> {
+        timing::pending(self, workspace_id)
+    }
+    fn save_github_job_times(
+        &self,
+        workspace_id: Uuid,
+        attempt_id: Uuid,
+        times: &ciproxy_store_interface::github_timing::JobTimes,
+        observed_at: DateTime<Utc>,
+    ) -> Result<()> {
+        timing::save(self, workspace_id, attempt_id, times, observed_at)
+    }
+
     fn lock_github_organization(&self, github_id: i64) -> Result<Box<dyn OrganizationLease>> {
         lease::acquire(self, github_id)
     }

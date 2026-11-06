@@ -1,5 +1,6 @@
-//! Host subprocess adapter. Inputs use argv or stdin without a shell.
+//! Host subprocess adapter and shared mandatory reflink copy operation.
 
+use std::path::Path;
 use std::process::Stdio;
 
 use async_trait::async_trait;
@@ -11,6 +12,7 @@ use crate::error::{Error, ErrorResultExt, Result};
 #[cfg_attr(test, unimock::unimock(api = CommandsMock))]
 #[async_trait]
 pub(crate) trait Commands: Send + Sync {
+    async fn check_filesystem(&self, path: &str) -> Result<()>;
     async fn run(&self, program: &str, args: &[String], input: &[u8]) -> Result<Vec<u8>>;
     async fn unit(&self, name: &str) -> Result<UnitState>;
 }
@@ -30,6 +32,22 @@ pub(crate) struct LinuxCommands;
 
 #[async_trait]
 impl Commands for LinuxCommands {
+    async fn check_filesystem(&self, path: &str) -> Result<()> {
+        let status = Command::new("e2fsck")
+            .args(["-p", path])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .await
+            .context("check cached Docker filesystem")?;
+        if matches!(status.code(), Some(0 | 1)) {
+            Ok(())
+        } else {
+            Err(Error::HostCommand {
+                program: "e2fsck".to_owned(),
+            })
+        }
+    }
     async fn unit(&self, name: &str) -> Result<UnitState> {
         let output = Command::new("systemctl")
             .args([
@@ -98,4 +116,26 @@ impl Commands for LinuxCommands {
 
 pub(crate) fn arguments(values: &[&str]) -> Vec<String> {
     values.iter().map(|value| (*value).to_owned()).collect()
+}
+
+/// Copy a VM root or Docker disk with mandatory sparse-preserving block sharing.
+pub(crate) async fn reflink_copy(
+    commands: &dyn Commands,
+    source: &Path,
+    destination: &Path,
+) -> Result<()> {
+    commands
+        .run(
+            "cp",
+            &arguments(&[
+                "--reflink=always",
+                "--sparse=auto",
+                "--",
+                &source.to_string_lossy(),
+                &destination.to_string_lossy(),
+            ]),
+            &[],
+        )
+        .await?;
+    Ok(())
 }

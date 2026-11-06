@@ -9,6 +9,7 @@ use ciproxy_protocol::version::ProtocolVersion;
 use crate::capacity::machine_resources;
 use crate::controller::Controller;
 use crate::error::{Error, Result};
+use crate::slot_allocation::choose;
 use crate::state::{Mode, VmRecord};
 
 impl Controller {
@@ -47,11 +48,27 @@ impl Controller {
                 .ok_or(Error::Capacity)?;
             let available = machine_resources(&report.hardware, self.image_budget)
                 .available(state.runners.iter().map(|vm| vm.report.size));
-            if !available.fits(size) {
+            let leased = self
+                .dockers
+                .as_ref()
+                .map(|dockers| dockers.report().map(|report| report.leased_bytes))
+                .transpose()?
+                .unwrap_or(0);
+            if available.job_disk_bytes.saturating_sub(leased) < size.disk_bytes
+                || !available.fits(size)
+            {
                 return Err(Error::Capacity);
             }
-            let vm = self.vms.allocate(
+            let slot_indices = choose(
+                size,
+                &runner.slot_indices,
+                report.capacity.0,
+                &state.runners,
+            )?;
+            let mut vm = self.vms.allocate(
                 RunnerReport {
+                    configuration_lost: false,
+                    slot_indices: slot_indices.clone(),
                     runner_id: runner.runner_id.clone(),
                     organization_id: runner.organization_id.clone(),
                     label: runner.label.clone(),
@@ -62,14 +79,18 @@ impl Controller {
                 },
                 &state.runners,
             )?;
+            vm.report.slot_indices = slot_indices;
             let mut next = state.clone();
             next.runners.push(vm.clone());
             self.store.save(&next)?;
             *state = next;
             (vm, available.available([size]).job_disk_bytes, image)
         };
+        let cache_budget = self.cache_budget(cache_budget)?;
         if let Err(error) = self.cache.budget(cache_budget).await {
-            tracing::warn!(error = %error, "cache reclaim unavailable; continue with GitHub caching");
+            tracing::warn!(error = %error, "cache space is not released; preserve VM disk admission");
+            self.retire(&vm).await?;
+            return Err(error);
         }
         self.launch(vm, configure(runner)).await
     }
@@ -78,17 +99,15 @@ impl Controller {
         if vm.report.organization_id != runner.organization_id
             || vm.report.label != runner.label
             || vm.report.requested_size != runner.size
+            || runner.slot_indices != vm.report.slot_indices
         {
             return Err(Error::RunnerMismatch);
         }
         match vm.report.state {
             RunnerState::Starting => {
-                let mut message = configure(runner);
-                if let AgentToGuest::ConfigureRunner { cache, .. } = &mut message {
-                    *cache = self.cache.configure(&vm).await.unwrap_or_else(|error| {
-                        tracing::warn!(error = %error, "cache unavailable during registration replay"); None
-                    });
-                }
+                let message = configure(runner);
+                self.record_configuration(&vm.report.runner_id.0, false)
+                    .await?;
                 self.vms.send(&vm, &message).await
             }
             RunnerState::Warm | RunnerState::Running { .. } => Ok(()),

@@ -5,6 +5,7 @@ use std::path::Path;
 use std::process::Command;
 
 use crate::boundaries::Service;
+use crate::cache_unit::POLICY_PATH;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::persistence::private_directory;
 
@@ -50,14 +51,25 @@ impl Service for SystemService {
 
     fn uninstall(&self) -> Result<()> {
         self.stop()?;
+        if fs::exists("/etc/systemd/system/ciproxy-cache.service")
+            .context("inspect owned cache unit")?
+        {
+            systemctl(&["disable", "--now", "ciproxy-cache.service"])?;
+        }
         if fs::exists(UNIT_PATH).context("inspect owned agent unit")? {
             systemctl(&["disable", "ciproxy-agent.service"])?;
         }
+        self.remove_cache_policy()?;
         for path in [
             UNIT_PATH,
+            POLICY_PATH,
             BINARY,
             "/usr/local/bin/ciproxy-agent.pending",
             "/usr/local/bin/ciproxy-agent.old",
+            "/etc/systemd/system/ciproxy-cache.service",
+            "/usr/local/bin/ciproxy-cache-sidecar",
+            "/var/lib/ciproxy/cache-sidecar-version",
+            "/var/lib/ciproxy/cache-admin-token",
         ] {
             match fs::remove_file(path) {
                 Ok(()) => {}
@@ -80,4 +92,33 @@ fn systemctl(args: &[&str]) -> Result<()> {
         });
     }
     Ok(())
+}
+
+impl SystemService {
+    fn remove_cache_policy(&self) -> Result<()> {
+        let tables = Command::new("nft")
+            .args(["list", "tables"])
+            .output()
+            .context("inspect owned cache ingress policy")?;
+        if !tables.status.success() {
+            return Err(Error::HostCommand {
+                program: "nft".to_owned(),
+            });
+        }
+        if String::from_utf8_lossy(&tables.stdout)
+            .lines()
+            .any(|line| line.trim() == "table inet ciproxy_cache")
+        {
+            let status = Command::new("nft")
+                .args(["delete", "table", "inet", "ciproxy_cache"])
+                .status()
+                .context("remove owned cache ingress policy")?;
+            if !status.success() {
+                return Err(Error::HostCommand {
+                    program: "nft".to_owned(),
+                });
+            }
+        }
+        Ok(())
+    }
 }

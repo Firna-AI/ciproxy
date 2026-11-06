@@ -21,6 +21,11 @@ The connection hello carries the same full machine state as later reports.
 Reports include hardware, health, slots, runners, images, cache counts,
 and Docker disk use. The report interval is ten seconds.
 The guest uses separate message types for both directions over vsock.
+The guest Hello requires `handoff_protocol_version`, which is
+`HANDOFF_PROTOCOL_VERSION`, now 2. `PrepareJob` carries the job ID and a
+`JobDecision`: `GitHubOnly`, or `MachineCache` with the checked facts, the
+cache connection, and an optional Docker attachment. Older shapes fail to
+decode.
 
 A ciproxy workspace owns each machine, its install token, and its machine
 credential. Register carries the install token without a workspace ID.
@@ -33,7 +38,13 @@ Its machines can run jobs for each of those organizations.
 Runner starts, current runner reports, idle-runner stops, and guest
 configuration carry the runner's organization. A warm runner knows its
 organization before GitHub assigns its job.
-Job facts then carry that organization and the actual assigned repository.
+`ControlMessage::JobPreparation` then carries a command ID, the runner ID,
+the job ID, and a `JobPreparationOutcome`. `TrustedFacts` holds `JobFacts`
+with that organization and the actual assigned repository. `GitHubOnly`
+holds only the organization ID. The agent matches either outcome to the
+runner, its organization, and its running job. In JSON, the message `type`
+is `job_preparation`, and the outcome `status` is `trusted_facts` or
+`github_only`. The wire version, `ProtocolVersion::CURRENT`, is 1.
 GitHub selects the job, so a runner start carries no repository assignment.
 `RunnerSpec.size` is the original free-size request.
 `RunnerReport.requested_size` retains that request across reconnects.

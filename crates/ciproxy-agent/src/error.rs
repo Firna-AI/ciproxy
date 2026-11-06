@@ -58,8 +58,8 @@ pub enum Error {
     /// The image checksum or byte count does not match.
     #[error("[agent] the image checksum or byte count does not match")]
     ImageVerification,
-    /// The image bundle must contain only vmlinux and rootfs.ext4.
-    #[error("[agent] the image bundle must contain only vmlinux and rootfs.ext4")]
+    /// The image bundle must contain the released regular files only.
+    #[error("[agent] the image bundle has an invalid released file layout")]
     ImageLayout,
     /// A host tool failed: {program}.
     #[error("[agent] a host tool failed: {program}")]

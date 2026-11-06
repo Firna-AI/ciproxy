@@ -207,7 +207,11 @@ pub(super) fn runner(label: &Label, scale_set: &ScaleSet, place: RunnerPlace) ->
         scale_set_id: scale_set.id,
         github_id: Some(84),
         state: RunnerState::Busy,
-        size: label.size,
+        size: ciproxy_protocol::resources::VmSize {
+            vcpu: label.size.vcpus as u32,
+            memory_bytes: label.size.memory_gb as u64 * 1_000_000_000,
+            disk_bytes: label.size.disk_gb as u64 * 1_000_000_000,
+        },
         place,
     }
 }

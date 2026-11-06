@@ -1,9 +1,10 @@
 //! The authenticated machine applies unknown-token policy to real cache calls.
 
-use ciproxy_cache_sidecar::session::{Permissions, SessionCredential};
+use ciproxy_cache_sidecar::session::SessionCredential;
 use ciproxy_protocol::cache::UnknownJobCount;
 use ciproxy_protocol::identifiers::{GitRef, JobEvent};
 use ciproxy_protocol::jobs::{JobScope, UnknownJobScopeReason};
+use ciproxy_protocol::runtime::CachePermissions;
 use ciproxy_protocol::secret::Secret;
 use serde_json::json;
 
@@ -80,7 +81,7 @@ async fn read_only_and_pr_target_tokens_are_unknown_and_keep_upstream_saves() {
             "target",
             "pull_request_target",
             json!([{"Scope":"refs/heads/main","Permission":1}]),
-            Permissions {
+            CachePermissions {
                 read: true,
                 write: true,
             },
@@ -90,7 +91,7 @@ async fn read_only_and_pr_target_tokens_are_unknown_and_keep_upstream_saves() {
             "read",
             "push",
             json!([{"Scope":"refs/heads/feature","Permission":1},{"Scope":"refs/heads/main","Permission":1}]),
-            Permissions {
+            CachePermissions {
                 read: true,
                 write: false,
             },

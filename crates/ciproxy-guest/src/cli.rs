@@ -9,6 +9,7 @@ use clap::{Parser, Subcommand};
 use crate::boat::BoatChannel;
 use crate::boundary::{Channel, Power};
 use crate::error::Result;
+use crate::guest_setup::LinuxGuestSetup;
 use crate::process::{LinuxPower, LinuxRunner, NamespacePower};
 use crate::service::{Guest, Supervisor};
 use crate::vsock::VsockChannel;
@@ -57,6 +58,7 @@ pub struct LinuxApplication;
 #[async_trait]
 impl Application for LinuxApplication {
     async fn run(&self, cli: Cli) -> Result<()> {
+        let own_machine = matches!(cli.mode, Mode::Vsock { .. });
         let (channel, power): (Box<dyn Channel>, Box<dyn Power>) = match cli.mode {
             Mode::Vsock { port } => (
                 Box::new(VsockChannel::accept(port).await?),
@@ -70,7 +72,11 @@ impl Application for LinuxApplication {
         let mut guest: Box<dyn Guest> = Box::new(Supervisor {
             image_id: ImageId(cli.image_id),
             channel,
-            runner: Box::new(LinuxRunner::new(cli.runner_entry)),
+            runner: Box::new(LinuxRunner::new(
+                cli.runner_entry,
+                own_machine,
+                Box::new(LinuxGuestSetup),
+            )),
             power,
         });
         guest.run().await

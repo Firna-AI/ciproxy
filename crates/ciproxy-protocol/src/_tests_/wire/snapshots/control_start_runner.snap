@@ -7,6 +7,9 @@ expression: message
   "type": "start_runner",
   "command_id": "command-1",
   "runner": {
+    "slot_indices": [
+      2
+    ],
     "runner_id": "runner-1",
     "organization_id": "organization-1",
     "label": "ciproxy",

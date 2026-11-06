@@ -4,7 +4,7 @@ use axum::body::Body;
 use axum::http::Request;
 
 use crate::error::{Result, ResultExt};
-use crate::session::Registration;
+use ciproxy_protocol::runtime::CacheRegistration;
 
 pub(crate) fn canonicalize(mut request: Request<Body>) -> Result<Request<Body>> {
     let mut url = url::Url::parse("http://cache.invalid/").internal()?;
@@ -24,7 +24,7 @@ pub(crate) fn canonicalize(mut request: Request<Body>) -> Result<Request<Body>> 
     Ok(request)
 }
 
-pub(crate) fn destination(registration: &Registration, path: &str) -> Result<String> {
+pub(crate) fn destination(registration: &CacheRegistration, path: &str) -> Result<String> {
     if path.starts_with("/_apis/artifactcache/") {
         Ok(format!(
             "{}{}",

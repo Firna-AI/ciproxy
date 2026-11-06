@@ -3,7 +3,7 @@
 use std::fs::{self, File};
 use std::os::unix::fs::PermissionsExt;
 
-use flate2::read::GzDecoder;
+use zstd::stream::read::Decoder;
 
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::image_store::LinuxImageStore;
@@ -17,14 +17,16 @@ impl LinuxImageStore {
         private_directory(&root)?;
         let file =
             File::open(checked.pending().archive()).context("open checked image download")?;
-        let mut archive = tar::Archive::new(GzDecoder::new(file));
+        let mut archive =
+            tar::Archive::new(Decoder::new(file).context("decode released zstd bundle")?);
         let mut members = BundleMembers::default();
         for entry in archive.entries().context("read checked image archive")? {
             let mut entry = entry.context("read image member")?;
             let expected = entry.size();
             let member = members.record(
                 &entry.path().context("read member path")?,
-                entry.header().entry_type().is_file(),
+                entry.header().entry_type().is_file()
+                    || entry.header().entry_type().is_gnu_sparse(),
                 expected,
             )?;
             let destination = root.join(member.name());

@@ -62,7 +62,8 @@ or workloads. Back up `.context/deploy/ciproxy/seed.tfstate` outside Git.
 On another operator machine, use `bootstrap.sh main-preview --existing-state`
 to read existing state without another local seed apply.
 
-Before any preview push, complete [operator UID setup](runtime-identity.md#first-shared-core-and-preview-identity).
+Before any preview push, complete
+[UID setup](runtime-identity.md#first-shared-core-and-preview-identity).
 It creates the intended Autopilot core, preview namespace, and runtime
 ServiceAccount. It records the real UID through protected bootstrap state
 and installs the preview binding. Prelaunch CI cannot create/delete clusters
@@ -106,14 +107,26 @@ Set every printed identity variable in that environment. They cover
 workload, environment plan/apply, central plan/apply, and central trust
 apply. Never copy preview's central apply identities into production.
 
-| Variable | Initial value |
-| --- | --- |
-| `ALERT_EMAIL` | This environment's alert address. |
-| `RELEASE_SERVER_IMAGE_DIGEST` | The mirrored `sha256:` digest from [image setup](#3-push-the-release-image). |
-| `PUBLIC_UPTIME_ENABLED` | `false` until [HTTPS verification](#10-enable-uptime-alerts). |
-| `CONTROL_PLANE_RUNTIME_READY` | `false`. Keep it off until a real runtime exists. |
-| `CONTROL_PLANE_IMAGE` | Unset while runtime is off. Later use an image pinned with `@sha256:`. |
-| `CDN_SIGNING_KEY_NAME` | **Unset** until [registration](#9-register-the-cdn-signing-key) prints the real key name. |
+| Variable                      | Initial value                                                                                                                                                   |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ALERT_EMAIL`                 | This environment's alert address.                                                                                                                               |
+| `RELEASE_SERVER_IMAGE_DIGEST` | The mirrored `sha256:` digest from [image setup](#3-push-the-release-image).                                                                                    |
+| `PUBLIC_UPTIME_ENABLED`       | `false` until [HTTPS verification](#10-enable-uptime-alerts).                                                                                                   |
+| `CONTROL_PLANE_RUNTIME_READY` | `false` until [runtime setup](runtime.md) is complete.                                                                                                          |
+| `CONTROL_PLANE_IMAGE`         | Unset while runtime is off. Later use an image pinned with `@sha256:`.                                                                                          |
+| `CDN_SIGNING_KEY_NAME`        | **Unset** until [registration](#9-register-the-cdn-signing-key) prints the real key name.                                                                       |
+| `CIPROXY_APP_ID`              | This environment's public GitHub App ID. Set it before enabling the runtime.                                                                                    |
+| `CIPROXY_APP_CLIENT_ID`       | This environment's public GitHub App OAuth client ID. Its secret stays in the mounted `github-oauth-secret` file.                                               |
+| `CIPROXY_APP_SLUG`            | This environment's GitHub App URL slug. The runtime uses it to build the installation URL.                                                                      |
+| `JOB_IMAGE_MANIFEST_PATH`     | One immutable release path relative to `IMAGE_URL_PREFIX`, such as `<release>/manifest.json`. The manifest and sibling `downloads.json` supply all image facts. |
+
+These four runtime settings are public variables in each GitHub environment.
+Deploy maps `CIPROXY_APP_ID` to the pod variable `GITHUB_APP_ID`.
+It maps `CIPROXY_APP_CLIENT_ID` to `GITHUB_OAUTH_CLIENT_ID`.
+It maps `CIPROXY_APP_SLUG` to `GITHUB_APP_SLUG`.
+Deploy derives `BUILD_ID` from its trusted `CIPROXY_SOURCE_SHA` commit.
+It derives `DOWNLOAD_URL` from the release host in the deployment output.
+Do not set separate GitHub variables for these derived values.
 
 Limit deployment branches to those federation accepts. Keep the launch
 switch at repository scope, without `--env`. Production needs default
@@ -176,8 +189,9 @@ There is no Cloudflare provider or CI credential.
 
 ## 8. Complete the first deploy
 
-After token storage and preview delegation, [rerun all jobs](first-deploy.md#retry-all-jobs-and-create-the-edge)
-of the selected push run. It creates fresh plans and artifacts for the new
+After token storage and preview delegation,
+[rerun all jobs](first-deploy.md#retry-all-jobs-and-create-the-edge) of the
+selected push run. It creates fresh plans and artifacts for the new
 attempt. The run can now deploy Helm/static content, wait for NEGs, save
 its ready snapshot, apply the edge, and invalidate CDN. The edge creates
 its A records, certificate, and backends. Certificate readiness comes later.
@@ -192,7 +206,7 @@ creates a replacement plan. Empty central scopes remain successful no-ops.
 
 Continue only after the edge apply succeeded. Its image backend, data
 signing-key secret, and private image bucket now exist. Register a random
-128-bit key:
+16-byte key:
 
 ```sh
 KEY_DIR="$(mktemp -d)"
@@ -206,6 +220,8 @@ then grants the newly created cache-fill account read access to images.
 Set `CDN_SIGNING_KEY_NAME` to its printed name only after success. A failed
 attempt prints no selector. Retry registration with a new key. Terraform
 stores no key value. Runtime remains off until [runtime setup](runtime.md).
+Use [session key preparation](runtime.md#prepare-the-session-key) for the
+existing mounted `session-key` file.
 
 ## 10. Enable uptime alerts
 
@@ -241,4 +257,5 @@ Redeploy with fresh all-jobs plans. Checks run each minute from Europe,
 USA, and Asia Pacific. Alerts need two failing locations for five minutes.
 
 After launch, production's separate preview-edge stage promotes preview's
-flags and addresses after its own completed deployment. See [operations](operations.md).
+flags and addresses after its own completed deployment. See
+[operations](operations.md).

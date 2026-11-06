@@ -5,11 +5,9 @@ use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
 use ciproxy_api::error::Result;
 use ciproxy_api::identity::{Grant, Profile, UserIdentity};
 use ciproxy_api::installations::InstallationAdministration;
-use ciproxy_api::runtime::Runtime;
 use ciproxy_github::app::LifecycleOutput;
 use ciproxy_github::app::webhook::{Account, AccountKind};
 use ciproxy_github::installation_state::{InstallationApi, InstalledApp};
@@ -18,41 +16,10 @@ use ciproxy_github::scale_sets::{JitRegistration, MessageQueue, ScaleSetApi, Sca
 use ciproxy_store_interface::dashboard::records::Membership;
 use ciproxy_store_interface::github::{Repository, RunFacts};
 use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
+use ciproxy_store_interface::github_timing::JobTimes;
 use ciproxy_store_interface::organizations::Organization;
 use ciproxy_store_interface::store::Store;
 use secrecy::{ExposeSecret, SecretString};
-use uuid::Uuid;
-
-pub(super) struct Inputs(pub(super) Mutex<DateTime<Utc>>);
-impl Inputs {
-    pub(super) fn advance(&self, by: chrono::Duration) {
-        *self.0.lock().unwrap() += by;
-    }
-}
-impl Runtime for Inputs {
-    fn now(&self) -> DateTime<Utc> {
-        *self.0.lock().unwrap()
-    }
-    fn identifier(&self) -> Uuid {
-        Uuid::new_v4()
-    }
-    fn secret(&self) -> Result<SecretString> {
-        Ok(Uuid::new_v4().simple().to_string().repeat(2).into())
-    }
-}
-impl ciproxy_gateway::boundary::Clock for Inputs {
-    fn now(&self) -> DateTime<Utc> {
-        Runtime::now(self)
-    }
-}
-impl ciproxy_github::runtime::Runtime for Inputs {
-    fn now(&self) -> DateTime<Utc> {
-        Runtime::now(self)
-    }
-    fn uuid(&self) -> Uuid {
-        Uuid::new_v4()
-    }
-}
 
 pub(super) struct Identity {
     pub(super) id: AtomicI64,
@@ -146,6 +113,15 @@ impl InstallationApi for Remote {
 }
 #[async_trait]
 impl GitHubRest for Remote {
+    async fn job_times(
+        &self,
+        _: i64,
+        _: &str,
+        _: i64,
+        _: i64,
+    ) -> ciproxy_github::error::Result<Option<JobTimes>> {
+        Ok(None)
+    }
     async fn repositories(
         &self,
         installation: i64,
@@ -188,6 +164,9 @@ impl ScaleSetFactory for Factory {
 }
 #[async_trait]
 impl ScaleSetApi for Remote {
+    async fn find_runner(&self, _: &str) -> ciproxy_github::error::Result<Option<i64>> {
+        Ok(None)
+    }
     async fn ensure(
         &self,
         name: &str,

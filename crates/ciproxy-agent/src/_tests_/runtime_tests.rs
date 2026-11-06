@@ -35,6 +35,9 @@ async fn daemon_reports_every_wait_beyond_queue_capacity_while_control_stays_pen
     let reconciliations = Arc::new(AtomicUsize::new(0));
     let reconciled_count = reconciliations.clone();
     let mock = Arc::new(Unimock::new((
+        AgentMock::control_connection
+            .each_call(matching!(_))
+            .answers(&|_, _| Ok(())),
         AgentMock::restore.some_call(matching!()).returns(Ok(())),
         AgentMock::finished
             .each_call(matching!())
@@ -150,6 +153,9 @@ async fn daemon_removes_a_rejected_connected_machine_without_another_handshake()
     let (gateway, mut gateway_ready) = mpsc::unbounded_channel();
     let (maintenance, mut maintenance_ready) = mpsc::unbounded_channel();
     let mock = Arc::new(Unimock::new((
+        AgentMock::control_connection
+            .each_call(matching!(_))
+            .answers(&|_, _| Ok(())),
         AgentMock::restore.some_call(matching!()).returns(Ok(())),
         AgentMock::finished
             .each_call(matching!())

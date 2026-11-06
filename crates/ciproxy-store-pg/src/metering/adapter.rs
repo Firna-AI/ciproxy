@@ -25,6 +25,20 @@ use crate::overflow::accounting;
 use super::{aggregates, boat_cursors, facts, history, job_cursors, snapshot};
 
 impl MeteringStore for PgStore {
+    fn retire_accounting(
+        &self,
+        workspace_id: Uuid,
+        previous: &AccountedJob,
+        deltas: &[DailyDelta],
+        starts: &[StartTotal],
+    ) -> Result<bool> {
+        self.connection()?
+            .transaction(|connection| {
+                job_cursors::retire(connection, workspace_id, previous, deltas, starts)
+            })
+            .store()
+    }
+
     fn workspace_usage(&self, workspace_id: Uuid) -> Result<WorkspaceUsage> {
         snapshot::transaction(&mut *self.connection()?)
             .run(|connection| facts::load(connection, workspace_id))

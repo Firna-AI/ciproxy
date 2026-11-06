@@ -6,13 +6,51 @@ use crate::cache::{CacheConnection, DockerDiskAttachment};
 use crate::identifiers::{ImageId, JobId, OrganizationId, RunnerId};
 use crate::jobs::JobFacts;
 use crate::runners::RunnerExit;
+use crate::runtime::RuntimeCredentials;
 use crate::secret::Secret;
 use crate::version::ProtocolVersion;
+
+/// The own-machine source-hook format that waits for a host decision.
+pub const HANDOFF_PROTOCOL_VERSION: u16 = 2;
+
+/// Host authorization before job setup may start.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum JobDecision {
+    /// Keep the original GitHub endpoints for the whole job.
+    #[serde(rename = "github_only")]
+    GitHubOnly,
+    /// The host sealed the original handoff and prepared a machine session.
+    MachineCache {
+        /// Hosted scope facts checked for this job.
+        facts: Box<JobFacts>,
+        /// The host's narrow session for the checked assignment.
+        cache: CacheConnection,
+        /// A checked Docker attachment, when available.
+        docker: Option<DockerDiskAttachment>,
+    },
+}
+
+/// Explicit local preparation result, without credentials or guessed measurements.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct JobPreparation {
+    /// The worker uses a bound cache proxy for this assignment.
+    pub cache_ready: bool,
+    /// The guest mounted the separately reserved Docker filesystem.
+    pub docker_attached: bool,
+}
 
 /// Messages passed from an agent into its own fresh guest VM.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum AgentToGuest {
+    /// Resume action setup after the host prepared this job's local resources.
+    PrepareJob {
+        /// Job held at the trusted pre-action boundary.
+        job_id: JobId,
+        /// The host's decision for this assignment.
+        decision: JobDecision,
+    },
     /// Configure the single runner before it connects to GitHub.
     ConfigureRunner {
         /// Wire version used over this vsock connection.
@@ -48,12 +86,39 @@ pub enum AgentToGuest {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum GuestToAgent {
+    /// Pause before job code and supply the original trusted runtime assignment.
+    JobStarting {
+        /// Runner owned by this VM.
+        runner_id: RunnerId,
+        /// The scale-message job UUID from the runner's assignment.
+        job_id: JobId,
+        /// Original in-memory runtime handoff, never sent to the control plane.
+        runtime: RuntimeCredentials,
+    },
+    /// Confirm local proxy readiness and Docker preparation before action setup.
+    JobPrepared {
+        /// Runner owned by this VM.
+        runner_id: RunnerId,
+        /// Prepared assignment.
+        job_id: JobId,
+        /// Actual preparation status before action setup continues.
+        outcome: JobPreparation,
+    },
     /// Announce a booted image before runner configuration.
     Hello {
+        /// Required guest and source-hook format for the pre-action gate.
+        handoff_protocol_version: u16,
         /// Wire version supported by this guest.
         protocol_version: ProtocolVersion,
         /// Image from which this VM booted.
         image_id: ImageId,
+        /// This guest has received its one runner configuration.
+        configuration_received: bool,
+    },
+    /// Confirm receipt before starting the configured runner process.
+    RunnerConfigured {
+        /// Runner whose registration this guest now owns.
+        runner_id: RunnerId,
     },
     /// Report that the runner is ready to take a job.
     RunnerReady {

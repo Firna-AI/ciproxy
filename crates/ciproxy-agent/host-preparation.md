@@ -9,11 +9,11 @@ It does not require another install token for an existing registration.
 
 Package preparation supports these `/etc/os-release` IDs:
 
-| Distribution | IDs | Package manager |
-| --- | --- | --- |
-| Debian and Ubuntu | `debian`, `ubuntu` | `apt-get` |
-| Fedora and RHEL | `fedora`, `rhel` | `dnf` |
-| Rocky Linux and AlmaLinux | `rocky`, `almalinux` | `dnf` |
+| Distribution              | IDs                  | Package manager |
+| ------------------------- | -------------------- | --------------- |
+| Debian and Ubuntu         | `debian`, `ubuntu`   | `apt-get`       |
+| Fedora and RHEL           | `fedora`, `rhel`     | `dnf`           |
+| Rocky Linux and AlmaLinux | `rocky`, `almalinux` | `dnf`           |
 
 The adapter selects by ID. It does not assert a distribution version.
 The distribution must provide current host tools and the kernel features
@@ -44,11 +44,11 @@ The [official release API](https://api.github.com/repos/firecracker-microvm/fire
 supplies its asset SHA-256. The archive also contains `SHA256SUMS`.
 The executable values below match the files in that checked archive.
 
-| File | SHA-256 |
-| --- | --- |
-| Archive | `06094a1108ae9e82aa4c23a775aa92758f53f1175d422270d9d6162cb9ade558` |
+| File                         | SHA-256                                                            |
+| ---------------------------- | ------------------------------------------------------------------ |
+| Archive                      | `06094a1108ae9e82aa4c23a775aa92758f53f1175d422270d9d6162cb9ade558` |
 | `firecracker-v1.17.0-x86_64` | `99ad0f5cd0514a88aad0e9ae8cfdb3cc3b4ab9d190e1194602406c786b5de7a5` |
-| `jailer-v1.17.0-x86_64` | `65ef226e96f0ceda55ba643f445801ef2cc0ea667ef67cad8ac4f406c9c8434f` |
+| `jailer-v1.17.0-x86_64`      | `65ef226e96f0ceda55ba643f445801ef2cc0ea667ef67cad8ac4f406c9c8434f` |
 
 Download and extraction stay in memory with a 32 MiB limit.
 The agent checks the archive SHA-256 before it parses members.
@@ -72,14 +72,14 @@ The ownership and image locks also stay outside the workload mount.
 
 Every installation uses the same storage form, including on native XFS:
 
-| Path | Purpose |
-| --- | --- |
-| `/var/lib/ciproxy/area.xfs` | One sparse XFS backing file |
-| `/var/lib/ciproxy/area` | Workload mount |
-| `area/images` | Verified bases and image downloads |
-| `area/jailer` | Independent VM jails and disposable root copies |
-| `area/cache` | Prepared directory for machine-cache data |
-| `area/docker` | Reserved directory for later sticky Docker disk integration |
+| Path                        | Purpose                                         |
+| --------------------------- | ----------------------------------------------- |
+| `/var/lib/ciproxy/area.xfs` | One sparse XFS backing file                     |
+| `/var/lib/ciproxy/area`     | Workload mount                                  |
+| `area/images`               | Verified bases and image downloads              |
+| `area/jailer`               | Independent VM jails and disposable root copies |
+| `area/cache`                | Machine-cache data                              |
+| `area/docker`               | Repository Docker bases and disposable copies   |
 
 The area contains the complete protocol job disk plus its image reserve.
 The installed `e2fsprogs` package supplies `resize2fs`. It grows a larger
@@ -165,12 +165,12 @@ Distribution packages remain installed because other programs can use them.
 
 ## Cache integration
 
-`area/cache` is the machine-cache data location for later composition.
-The current agent still uses `/run/ciproxy-cache/control.sock`.
-The merged cache sidecar uses HTTP administration instead.
-Host preparation does not start that service or claim its HTTP integration
-is complete. The sidecar must use this area when that integration is added.
-Sticky Docker disk ownership also remains separate integration work.
+Install starts `ciproxy-cache.service` with `area/cache` as its data path.
+The unit requires the area mount and stops before that mount.
+The agent uses authenticated HTTP administration on `127.0.0.1:8229`.
+Checked-scope Docker attachments reserve only hosted spare disk.
+The [crate guide](README.md#gateway-image-and-cache-integration) gives the
+handoff, cache recovery, and Docker ownership rules.
 
 ## Ext4 and KVM smoke
 
@@ -183,7 +183,7 @@ The two jobs run sequentially, so one slot is sufficient.
 
 The staging gateway, guest, and image must first meet the agent contract
 in [the crate guide](README.md#gateway-image-and-cache-integration).
-The current merged guest/image/cache differences still block live jobs.
+Build and deploy matching versions before you run live jobs.
 Copy [the workflow fixture](scripts/github-smoke-workflow.yml) to the
 private test repository. It includes the `host` mode observation window.
 Authenticate `gh` for workflow dispatch and run reads.
@@ -194,7 +194,7 @@ Run from the repository root in a root shell:
 export CIPROXY_SMOKE_REPO=owner/private-agent-smoke
 export CIPROXY_SMOKE_REF=main
 export CIPROXY_AGENT_URL=wss://staging.example/agent/
-export CIPROXY_SMOKE_INSTALL_TOKEN='<staging install token>'
+export CIPROXY_SMOKE_CREDENTIALS=/private/own-smoke-credentials.json
 export CIPROXY_SMOKE_BINARY=target/debug/ciproxy-agent
 export CIPROXY_SMOKE_INTEGRATION_READY=1
 bash crates/ciproxy-agent/scripts/smoke-host.sh

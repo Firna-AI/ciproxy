@@ -11,8 +11,9 @@ use tokio::sync::Mutex;
 
 use crate::error::{Result, ResultExt};
 use crate::machine::{MachineCache, Session, identifier};
-use crate::session::{Registration, SessionCredential};
+use crate::session::SessionCredential;
 use crate::wire::{json, status};
+use ciproxy_protocol::runtime::CacheRegistration;
 
 #[derive(Deserialize)]
 struct Budget {
@@ -24,14 +25,54 @@ impl MachineCache {
         let (parts, body) = request.into_parts();
         let path = parts.uri.path();
         match (parts.method, path) {
+            (Method::POST, "/sessions/recover") => {
+                let bytes = to_bytes(body, 1024 * 1024).await.internal()?;
+                let registration: CacheRegistration = serde_json::from_slice(&bytes).internal()?;
+                let credential = self
+                    .sessions
+                    .lock()
+                    .await
+                    .iter()
+                    .find(|(_, session)| session.registration == registration)
+                    .map(|(token, session)| SessionCredential {
+                        token: Secret::new(token),
+                        scope: session.scope.clone(),
+                    });
+                Ok(json(&credential))
+            }
+            (Method::POST, path) if path == "/sessions/close" || path == "/sessions/fallback" => {
+                let bytes = to_bytes(body, 1024 * 1024).await.internal()?;
+                let facts: ciproxy_protocol::jobs::JobFacts =
+                    serde_json::from_slice(&bytes).internal()?;
+                let mut sessions = self.sessions.lock().await;
+                let tokens: Vec<_> = sessions
+                    .iter()
+                    .filter(|(_, session)| {
+                        session.registration.facts == facts
+                            && facts.assignment.job_id.as_ref()
+                                == Some(&session.registration.job_id)
+                    })
+                    .map(|(token, _)| token.clone())
+                    .collect();
+                for token in tokens {
+                    if path == "/sessions/fallback" {
+                        if let Some(session) = sessions.get(&token) {
+                            self.metrics.fallback(&session.registration).await;
+                        }
+                    } else if let Some(session) = sessions.remove(&token) {
+                        self.metrics.closed(&session.registration).await;
+                    }
+                }
+                Ok(status(StatusCode::NO_CONTENT))
+            }
             (Method::POST, "/sessions") => {
                 let bytes = to_bytes(body, 1024 * 1024).await.internal()?;
-                let registration: Registration = serde_json::from_slice(&bytes).internal()?;
+                let registration: CacheRegistration = serde_json::from_slice(&bytes).internal()?;
                 let scope = self
                     .tokens
                     .check(&registration.github_token, &registration.facts)
                     .await;
-                self.metrics.registered(&registration.job_id, &scope).await;
+                self.metrics.registered(&registration, &scope).await;
                 let token = identifier();
                 self.sessions.lock().await.insert(
                     token.clone(),
@@ -55,7 +96,7 @@ impl MachineCache {
                     .await
                     .remove(&path["/sessions/".len()..])
                 {
-                    self.metrics.closed(&session.registration.job_id).await;
+                    self.metrics.closed(&session.registration).await;
                 }
                 Ok(status(StatusCode::NO_CONTENT))
             }

@@ -115,3 +115,34 @@ fn bundle_completion_requires_both_non_empty_members_exactly_once() {
         Err(Error::ImageVerification)
     ));
 }
+
+#[test]
+fn released_bundle_metadata_is_accepted_without_allowing_other_members() {
+    let mut members = BundleMembers::default();
+    for name in [
+        "rootfs.ext4",
+        "vmlinux",
+        "manifest.json",
+        "measurement.json",
+        "software-report.json",
+        "upstream-software.json",
+        "firecracker-content.sha256",
+    ] {
+        assert_eq!(
+            members
+                .record(
+                    Path::new(name),
+                    true,
+                    if name == "rootfs.ext4" { 20 } else { 8 }
+                )
+                .map(|member| member.name())
+                .map_err(|_| "invalid layout"),
+            Ok(name)
+        );
+    }
+    let checked = digest(b"abc").finish(&image(), pending()).unwrap();
+    assert_eq!(
+        members.finish(checked).unwrap().metadata().image_id.0,
+        "new"
+    );
+}

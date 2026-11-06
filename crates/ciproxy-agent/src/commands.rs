@@ -1,17 +1,35 @@
 //! Authenticated commands. Guest assertions cannot supply job facts.
 
-use ciproxy_protocol::agent::{AgentMessage, CommandFailure, CommandOutcome, ControlMessage};
-use ciproxy_protocol::guest::AgentToGuest;
+use ciproxy_protocol::agent::{
+    AgentMessage, CommandFailure, CommandOutcome, ControlMessage, JobPreparationOutcome,
+};
 use ciproxy_protocol::runners::RunnerState;
 use ciproxy_protocol::version::ProtocolVersion;
 
 use crate::controller::Controller;
 use crate::error::{Error, Result};
 use crate::mode::ModeAction;
+use crate::state::PreparationState;
 
 impl Controller {
     pub(crate) async fn apply(&self, message: ControlMessage) -> Result<Option<AgentMessage>> {
         let (command_id, result, failure) = match message {
+            ControlMessage::DockerBudget { command_id, budget } => {
+                let mut state = self.state.lock().await;
+                let mut next = state.clone();
+                next.docker_budget = budget;
+                let result = if *state == next {
+                    Ok(())
+                } else {
+                    self.store.save(&next)
+                };
+                if result.is_ok() {
+                    *state = next;
+                } else {
+                    state.docker_budget = None;
+                }
+                (command_id, result, CommandFailure::RunnerStart)
+            }
             ControlMessage::StartRunner { command_id, runner } => (
                 command_id,
                 self.start(runner).await,
@@ -31,20 +49,25 @@ impl Controller {
                     .find(|vm| {
                         vm.report.runner_id == runner_id
                             && vm.report.organization_id == organization_id
-                            && !matches!(vm.report.state, RunnerState::Running { .. })
                     })
                     .cloned();
                 let result = match vm {
+                    Some(vm) if matches!(vm.report.state, RunnerState::Running { .. }) => {
+                        if vm.job_facts.is_none() && vm.preparation == PreparationState::Waiting {
+                            self.release_github(&vm).await?;
+                        }
+                        Err(Error::RunnerMismatch)
+                    }
                     Some(vm) => self.request_idle_stop(&vm).await,
                     None => Err(Error::RunnerMismatch),
                 };
                 (command_id, result, CommandFailure::RunnerStop)
             }
-            ControlMessage::JobFacts {
+            ControlMessage::JobPreparation {
                 command_id,
                 runner_id,
                 job_id,
-                facts,
+                outcome,
             } => {
                 let vm = self
                     .state
@@ -54,7 +77,7 @@ impl Controller {
                     .iter()
                     .find(|vm| {
                         vm.report.runner_id == runner_id
-                            && vm.report.organization_id == facts.organization_id
+                            && &vm.report.organization_id == outcome.organization_id()
                             && vm.report.state
                                 == RunnerState::Running {
                                     job_id: job_id.clone(),
@@ -62,14 +85,18 @@ impl Controller {
                     })
                     .cloned();
                 let result = match vm {
-                    Some(vm) => {
-                        if let Err(error) = self.cache.facts(&runner_id, &facts).await {
-                            tracing::warn!(error = %error, "machine cache unavailable; use GitHub cache");
+                    Some(vm) => match outcome {
+                        JobPreparationOutcome::TrustedFacts { facts } => {
+                            self.prepare_job(&vm, *facts).await
                         }
-                        self.vms
-                            .send(&vm, &AgentToGuest::JobFacts { job_id, facts })
-                            .await
-                    }
+                        JobPreparationOutcome::GitHubOnly { .. }
+                            if vm.job_facts.is_none()
+                                && vm.preparation == PreparationState::Waiting =>
+                        {
+                            self.release_github(&vm).await
+                        }
+                        JobPreparationOutcome::GitHubOnly { .. } => Ok(()),
+                    },
                     None => Err(Error::RunnerMismatch),
                 };
                 (command_id, result, CommandFailure::GuestConnection)

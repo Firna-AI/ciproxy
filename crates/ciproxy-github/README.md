@@ -84,43 +84,9 @@ link. It creates no workspace or runner resource.
 
 ### Repository access and scale sets
 
-Repository refresh reads every installation page and saves the default
-branches. The group's selected repositories intersect the customer's
-choice with visible private repositories. Public access stays false.
-An all-private choice includes new visible private repositories on refresh.
-Subscribe the App to repository metadata events. Dispatch `repository` and
-`installation_repositories` through the authenticated webhook handler.
-The control plane can also call `refresh_repositories` after a reconnect.
-
-Managed group names use the stable GitHub organization ID. Reconcile first
-reads a saved managed group ID, including retained registrations, so an
-owner rename does not create another group. It restores the managed name
-and repository policy on that same group. After local data is purged, the
-stable name finds the retained GitHub group again.
-GitHub supports self-hosted runner groups on its Free plan, as its
-[Free runner-group announcement][free-groups] confirms.
-The live selected-group probe verified the selected-repository policy on
-GitHub Free. GitHub runs the job of a selected repository on a runner of
-the group. It keeps the job of another private repository queued with no
-runner.
-
-The adapter uses `scaleset` 0.2.0. The foundation live spike used 0.1.0.
-The integration tests check the current version with the spike's wire
-format and nanosecond timestamps.
-Scale-set creation uses GitHub's label acceptance and disables runner
-updates. The image release process controls runner versions.
-The API also exposes scale-set deletion for the later label and take-out
-services. Each reconcile upserts current remote IDs while preserving the
-internal UUID, advisory lock key, and retained job/runner references.
-A saved live set that reports a different group returns
-ScaleSetGroupChanged. The adapter makes no unproven remote move and deletes
-no unknown or retained resource. That case needs live move proof before
-automatic repair can be enabled. It does not erase retained job history.
-
-Before resume or retained reinstall prepares active label bindings, it releases
-the names of retired bindings by their exact remote IDs. A missing old remote
-resource counts as released. Authentication and provider failures stay errors.
-This preserves label replacement without changing retained job references.
+The [scale-set guide](scale-sets.md) gives repository refresh, the
+managed runner groups, scale-set creation and reconcile, and label
+replacement.
 
 ### Durable demand and registrations
 
@@ -162,8 +128,8 @@ The runtime restarts it from the current internal row. On ScaleSetMissing,
 The control-plane runtime first calls refresh_repositories to reconcile.
 It then retries with the
 saved binding. It must not repeatedly open the obsolete remote ID.
-Actual Actions-resource lookups accept GitHub's observed 204 absence and
-404. SDK errors from token or organization-auth routes remain errors.
+Actual Actions-resource lookups accept GitHub's observed 204 absence
+and 404. SDK errors from token or organization-auth routes remain errors.
 They cannot claim runner deletion or trigger scale-set replacement.
 The runtime also retries failed webhook deliveries.
 
@@ -172,6 +138,11 @@ Send it only to the selected runner. Use the runner's environment variable
 `ACTIONS_RUNNER_INPUT_JITCONFIG`, not a command argument.
 Removal accepts an already absent registration. A busy result tells the
 runtime to keep the VM and let its job finish.
+`retire` is the one retirement operation. It returns `Removed` with the ID,
+`Absent` after a live lookup finds no runner, or `Busy` with the ID.
+Missing access, token, and provider failures stay errors.
+The local `Removed` App state can mean a pending take-out, so it proves no
+retirement.
 
 Default labels request 20, 20, and 60 SI GB of free job disk.
 The scaler adds the image and ext4 allowance before runner allocation.
@@ -185,10 +156,13 @@ workers. The later control-plane runtime supplies these adapters:
   Admin role. The sign-in service owns memberships and role storage.
 - `LifecycleOutput` stops idle organization runners and their listeners.
   It preserves running jobs during removal and suspension.
+  Each `Removed` event carries a required `RemovalCause`. `Owner` and
+  `WorkspaceTakeout` select different retirement policies.
 - After the last organization leaves, the store revokes machine and
-  install credentials. The output closes machine connections, requests
-  idle sandbox cleanup, and schedules the subscription end. The overflow
-  service keeps retired Boat keys until running sandbox cleanup finishes.
+  install credentials. The gateway closes each machine connection at its
+  next contact. The output requests idle sandbox cleanup and
+  schedules the subscription end. The overflow service keeps retired Boat
+  keys until running sandbox cleanup finishes.
 - `JobOutput` notifies the snapshot and scaler service of saved demand.
   That service maps GitHub runner IDs to its runner records.
   It supplies consistent snapshots and sends accepted actions to agents.
@@ -213,32 +187,8 @@ The dashboard take-out service owns the intentional-removal distinction.
 
 ### Trusted run metadata
 
-Run facts come from the Actions read API for the message's repository and
-run ID. Known runs reuse their durable facts under workspace and
-organization scope. A repository removal, rename, or later API outage does
-not prevent known completion persistence and acknowledgement. A new run
-whose first facts read fails still leaves its batch unacknowledged.
-Saved facts preserve `event`, `head_branch`, `head_sha`, and nullable
-`head_repository` from that API. A reusable workflow path stays separate.
-
-The API does not supply a guaranteed full job ref. Its `head_branch` does
-not distinguish a same-name branch and tag. Associated pull requests do
-not identify the triggering pull request. A deleted head repository stays
-absent. This crate makes no event-to-ref conversion and grants no cache
-or Docker trust from these fields.
-`JobAssignments::facts` prepares the expected runtime-token identity for
-the agent. It combines the scale-message run ID and job UUID, the JIT
-runner ID, the API repository identity, event, and head repository, and
-the saved repository default branch. `AssignmentService` consumes the
-existing tenant-scoped repository snapshot through `AssignmentStore`.
-It returns no assignment when that snapshot lacks the repository. The job
-can still use GitHub directly. It never guesses a default branch or job ref.
-
-The agent sends those facts and the original token to the machine cache.
-The machine returns a checked signed scope or a typed unknown reason.
-It checks cache trust, also for reusable workflows. The agent uses the
-checked ref for Docker policy and owns the Docker-disk lifecycle.
-The App keeps all three permissions for API event and head metadata.
+The [run metadata guide](run-metadata.md) gives the trusted run facts,
+the assignment facts for the agent, and webhook delivery recovery.
 
 ## Quick Start
 
@@ -280,6 +230,8 @@ commands, fixture contracts, and cleanup for the live probes.
 
 ### Key Code
 
+- [src/redelivery.rs](src/redelivery.rs) recovers failed App webhooks.
+
 - [src/app/mod.rs](src/app/mod.rs) owns `GitHubApp` and its role and
   lifecycle callbacks.
 - [src/hooks.rs](src/hooks.rs) verifies and dispatches webhook deliveries.
@@ -308,5 +260,3 @@ commands, fixture contracts, and cleanup for the live probes.
 - [Labels](../../docs/protocol/labels.md) defines defaults and scale sets.
 - [Job routing](../../docs/protocol/job-routing.md) defines queue waits.
 - [App removal](../../docs/protocol/app-removal.md) defines lifecycle work.
-
-[free-groups]: https://github.blog/changelog/2024-10-17-actions-runner-groups-now-available-for-organizations-on-free-plan/
