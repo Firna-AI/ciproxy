@@ -15,6 +15,7 @@ use crate::boundaries::Cache;
 use crate::cache_admin::{
     Administration, CacheFiles, Credential, HttpAdministration, OwnedCacheFiles,
 };
+use crate::cache_authority::CheckedRuntime;
 use crate::error::{Error, Result};
 use crate::network::host_address;
 use crate::process::{Commands, UnitState, arguments};
@@ -127,19 +128,14 @@ impl Cache for HttpCache {
         self.admin.clear().await
     }
 
-    async fn handoff(
-        &self,
-        vm: &VmRecord,
-        job_id: &JobId,
-        runtime: RuntimeCredentials,
-    ) -> Result<()> {
+    async fn handoff(&self, vm: &VmRecord, job_id: &JobId, runtime: CheckedRuntime) -> Result<()> {
         let mut pending = self.pending.lock().await;
         pending
             .entry(vm.report.runner_id.0.clone())
             .or_insert_with(|| Pending {
                 vm: vm.clone(),
                 job_id: job_id.clone(),
-                runtime,
+                runtime: runtime.into_runtime(),
                 session: None,
                 fallback: false,
             });

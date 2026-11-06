@@ -9,6 +9,7 @@ use ciproxy_protocol::runners::RunnerState;
 use unimock::{MockFn, Unimock, matching};
 
 use crate::boundaries::{CacheMock, HostMock, StoreMock, VmsMock};
+use crate::cache_authority::CacheAuthority;
 use crate::controller::Agent;
 use crate::fixtures::{
     applied, controller, hardware, report_dependencies_for, spec, start_image, vm,
@@ -95,7 +96,7 @@ async fn a_fitting_vm_reclaims_cache_before_preparation_at_each_resource_boundar
                 .answers_arc(Arc::new(move |_, report, used| {
                     assert_eq!(used.len(), count);
                     Ok(VmRecord {
-                        cache_permissions: None,
+                        cache_authority: CacheAuthority::Waiting,
                         job_facts: None,
                         report,
                         ..vm("new-local", false)

@@ -13,6 +13,7 @@ use tokio::sync::{Mutex, oneshot};
 use unimock::{MockFn, Unimock, matching};
 
 use crate::boundaries::{CacheMock, StoreMock, Vms, VmsMock};
+use crate::cache_authority::CacheAuthority;
 use crate::controller::Agent;
 use crate::error::Result;
 use crate::fixtures::{applied, controller, report_dependencies, spec, start_image, vm};
@@ -66,7 +67,7 @@ async fn hardware_reports_continue_while_vm_startup_is_pending() {
             .some_call(matching!(_, _))
             .answers(&|_, report, _| {
                 Ok(VmRecord {
-                    cache_permissions: None,
+                    cache_authority: CacheAuthority::Waiting,
                     job_facts: None,
                     report,
                     ..vm("runner-1", false)

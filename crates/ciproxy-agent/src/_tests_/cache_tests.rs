@@ -7,6 +7,7 @@ use unimock::{MockFn, Unimock, matching};
 use crate::boundaries::Cache;
 use crate::cache::HttpCache;
 use crate::cache_admin::{AdministrationMock, CacheFilesMock, Credential};
+use crate::cache_authority::CacheAuthority;
 use crate::error::Error;
 use crate::fixtures::vm;
 use crate::process::{CommandsMock, UnitState};
@@ -128,7 +129,11 @@ async fn replay_reuses_live_credentials_and_registers_again_only_after_sidecar_l
         },
     };
     cache
-        .handoff(&record, &JobId("job-1".into()), runtime)
+        .handoff(
+            &record,
+            &JobId("job-1".into()),
+            CacheAuthority::Waiting.handoff(true, runtime).unwrap(),
+        )
         .await
         .unwrap();
     let facts = crate::fixtures::trusted_facts();

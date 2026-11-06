@@ -11,6 +11,7 @@ use cli_updater::{
 use crate::boundaries::Updates;
 use crate::cache_network::GuardedCacheStart;
 use crate::cache_service::{CacheService, ReleasedCache};
+use crate::cache_unit::{InstalledCacheUnit, LinuxCacheUnitFiles};
 use crate::error::{ErrorResultExt, Result};
 use crate::process::{Commands, arguments};
 use crate::release_client::SecureReleases;
@@ -47,6 +48,9 @@ impl BinaryInstaller for CheckedInstaller {
 impl Updates for AgentUpdates {
     async fn check(&self) -> Result<bool> {
         let cache: Arc<dyn CacheService> = Arc::new(ReleasedCache {
+            unit: Arc::new(InstalledCacheUnit {
+                files: Arc::new(LinuxCacheUnitFiles),
+            }),
             starter: Arc::new(GuardedCacheStart {
                 commands: self.commands.clone(),
             }),

@@ -15,6 +15,7 @@ add rule inet ciproxy_cache input tcp dport 7887 iifname != "lo" iifname != "cpx
 
 #[async_trait]
 pub(crate) trait CacheStart: Send + Sync {
+    async fn repair(&self) -> Result<()>;
     async fn start(&self, restart: bool) -> Result<()>;
 }
 
@@ -24,10 +25,15 @@ pub(crate) struct GuardedCacheStart {
 
 #[async_trait]
 impl CacheStart for GuardedCacheStart {
-    async fn start(&self, restart: bool) -> Result<()> {
+    async fn repair(&self) -> Result<()> {
         self.commands
             .run("nft", &arguments(&["-f", "-"]), RULES.as_bytes())
             .await?;
+        Ok(())
+    }
+
+    async fn start(&self, restart: bool) -> Result<()> {
+        self.repair().await?;
         if restart {
             self.commands
                 .run(

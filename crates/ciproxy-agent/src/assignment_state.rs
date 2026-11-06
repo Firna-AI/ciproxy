@@ -4,8 +4,9 @@ use ciproxy_protocol::guest::JobPreparation;
 use ciproxy_protocol::identifiers::JobId;
 use ciproxy_protocol::jobs::JobFacts;
 use ciproxy_protocol::runners::RunnerState;
-use ciproxy_protocol::runtime::CachePermissions;
+use ciproxy_protocol::runtime::RuntimeCredentials;
 
+use crate::cache_authority::{CacheAuthority, CheckedRuntime};
 use crate::controller::Controller;
 use crate::error::{Error, Result};
 use crate::state::{PreparationState, VmRecord};
@@ -53,8 +54,8 @@ impl Controller {
         &self,
         vm: &VmRecord,
         job_id: &JobId,
-        permissions: Option<CachePermissions>,
-    ) -> Result<VmRecord> {
+        runtime: Option<RuntimeCredentials>,
+    ) -> Result<(VmRecord, Option<CheckedRuntime>)> {
         let mut state = self.state.lock().await;
         let mut next = state.clone();
         let record = next
@@ -67,17 +68,27 @@ impl Controller {
         {
             return Err(Error::GuestMismatch);
         }
+        let first = matches!(
+            record.report.state,
+            RunnerState::Starting | RunnerState::Warm
+        );
+        let checked = match runtime {
+            Some(runtime) => record.cache_authority.handoff(first, runtime),
+            None => {
+                if matches!(record.cache_authority, CacheAuthority::Waiting) {
+                    record.cache_authority = CacheAuthority::GitHubOnly;
+                }
+                None
+            }
+        };
         record.report.state = RunnerState::Running {
             job_id: job_id.clone(),
         };
-        if record.cache_permissions.is_none() {
-            record.cache_permissions = permissions;
-        }
         let updated = record.clone();
         self.store.save(&next)?;
         *state = next;
         tracing::info!(event="job_started_observed",vm_id=%vm.local_id,"accepted guest job state");
-        Ok(updated)
+        Ok((updated, checked))
     }
 
     pub(crate) async fn trusted_facts(&self, vm: &VmRecord, facts: JobFacts) -> Result<JobFacts> {

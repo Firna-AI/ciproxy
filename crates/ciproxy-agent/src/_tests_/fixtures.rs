@@ -16,6 +16,7 @@ use tokio::sync::Mutex;
 use unimock::{Clause, MockFn, Unimock, matching};
 
 use crate::boundaries::{CacheMock, HostMock, ImagesMock};
+use crate::cache_authority::CacheAuthority;
 use crate::controller::{Agent, Controller};
 use crate::image_registry::{ImageLease, ImageLeaseMock};
 use crate::reporting::empty_cache;
@@ -33,7 +34,7 @@ pub(super) fn identity() -> Identity {
 pub(super) fn vm(name: &str, running: bool) -> VmRecord {
     VmRecord {
         preparation: crate::state::PreparationState::Waiting,
-        cache_permissions: None,
+        cache_authority: CacheAuthority::Waiting,
         job_facts: None,
         local_id: format!("local-{name}"),
         network_index: 1,

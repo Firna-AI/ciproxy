@@ -9,6 +9,7 @@ use ciproxy_protocol::identifiers::CommandId;
 use unimock::{MockFn, Unimock, matching};
 
 use crate::boundaries::{CacheMock, StoreMock, VmsMock};
+use crate::cache_authority::CacheAuthority;
 use crate::controller::Agent;
 use crate::docker::DockerDisksMock;
 use crate::fixtures::{
@@ -45,7 +46,7 @@ async fn root_admission_waits_for_held_docker_bytes_then_reuses_the_released_cap
             .some_call(matching!(_, _))
             .answers(&|_, report, _| {
                 Ok(crate::state::VmRecord {
-                    cache_permissions: None,
+                    cache_authority: CacheAuthority::Waiting,
                     job_facts: None,
                     report,
                     ..vm("fresh", false)

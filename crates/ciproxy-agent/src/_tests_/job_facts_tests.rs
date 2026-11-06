@@ -123,7 +123,7 @@ async fn trusted_runtime_credentials_stay_on_the_machine_and_out_of_reports() {
             .answers_arc(Arc::new(move |_, vm, job, runtime| {
                 assert_eq!(vm.report.runner_id, RunnerId("job".to_owned()));
                 assert_eq!(job, &JobId("job-1".to_owned()));
-                assert_eq!(runtime, expected);
+                assert_eq!(runtime.into_runtime(), expected);
                 Ok(())
             })),
         crate::boundaries::StoreMock::save

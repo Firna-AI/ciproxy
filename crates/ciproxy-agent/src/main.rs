@@ -11,8 +11,10 @@ mod boundaries;
 mod budget_file;
 mod cache;
 mod cache_admin;
+mod cache_authority;
 mod cache_network;
 mod cache_service;
+mod cache_unit;
 mod capacity;
 mod cli;
 mod commands;
@@ -101,6 +103,10 @@ mod connection_fixtures;
 #[cfg(test)]
 #[path = "_tests_/job_facts_tests.rs"]
 mod job_facts_tests;
+
+#[cfg(test)]
+#[path = "_tests_/cache_authority_tests.rs"]
+mod cache_authority_tests;
 
 #[cfg(test)]
 #[path = "_tests_/startup_tests.rs"]

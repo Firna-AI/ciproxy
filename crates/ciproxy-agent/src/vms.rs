@@ -9,6 +9,7 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::boundaries::Vms;
+use crate::cache_authority::CacheAuthority;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::host_tools::Tools;
 use crate::layout::{Layout, jail_uid, unit_name};
@@ -45,7 +46,7 @@ impl Vms for LinuxVms {
             .ok_or(Error::Capacity)?;
         Ok(VmRecord {
             preparation: crate::state::PreparationState::Waiting,
-            cache_permissions: None,
+            cache_authority: CacheAuthority::Waiting,
             job_facts: None,
             local_id: Uuid::new_v4().simple().to_string(),
             network_index,

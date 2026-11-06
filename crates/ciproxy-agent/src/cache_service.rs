@@ -8,6 +8,7 @@ use ciproxy_protocol::secret::Secret;
 use cli_updater::{BinaryInstaller, TarGzBinaryInstaller, UpdateCheck, UpdateRequest, Updater};
 
 use crate::cache_network::CacheStart;
+use crate::cache_unit::CacheUnit;
 use crate::error::{ErrorResultExt, Result};
 use crate::persistence::{atomic_private_write, private_directory};
 use crate::process::{Commands, arguments};
@@ -16,7 +17,6 @@ use crate::updates::CheckedInstaller;
 
 const BINARY: &str = "/usr/local/bin/ciproxy-cache-sidecar";
 const VERSION: &str = "/var/lib/ciproxy/cache-sidecar-version";
-const UNIT: &str = "[Unit]\nDescription=ciproxy machine cache\nRequires=var-lib-ciproxy-area.mount\nAfter=var-lib-ciproxy-area.mount network-online.target\nRequiresMountsFor=/var/lib/ciproxy/area/cache\n\n[Service]\nExecStart=/usr/local/bin/ciproxy-cache-sidecar machine --listen 0.0.0.0:7887 --admin-listen 127.0.0.1:8229 --cache-dir /var/lib/ciproxy/area/cache --admin-token-file /var/lib/ciproxy/cache-admin-token\nRestart=on-failure\nRestartSec=5\nKillMode=control-group\nTimeoutStopSec=30\n\n[Install]\nWantedBy=multi-user.target\n";
 
 #[async_trait]
 pub(crate) trait CacheService: Send + Sync {
@@ -27,6 +27,7 @@ pub(crate) struct ReleasedCache {
     pub(crate) commands: Arc<dyn Commands>,
     pub(crate) release_server: String,
     pub(crate) starter: Arc<dyn CacheStart>,
+    pub(crate) unit: Arc<dyn CacheUnit>,
 }
 
 #[async_trait]
@@ -42,8 +43,12 @@ impl CacheService for ReleasedCache {
             atomic_private_write(token_path, token.expose_secret().as_bytes())?;
         }
         let old_version = std::fs::read_to_string(VERSION).unwrap_or_else(|_| "0.0.0".to_owned());
-        let unit_changed = !std::fs::read_to_string("/etc/systemd/system/ciproxy-cache.service")
-            .is_ok_and(|current| current == UNIT);
+        let unit_changed = self.unit.changed();
+        self.unit.install()?;
+        self.commands
+            .run("systemctl", &arguments(&["daemon-reload"]), &[])
+            .await?;
+        self.starter.repair().await?;
         let restart = old_version.trim() != env!("CARGO_PKG_VERSION")
             || !Path::new(BINARY).exists()
             || unit_changed;
@@ -77,12 +82,6 @@ impl CacheService for ReleasedCache {
                 atomic_private_write(Path::new(VERSION), asset.latest.version.as_bytes())?;
             }
         }
-        std::fs::write("/etc/systemd/system/ciproxy-cache.service", UNIT)
-            .context("install mount-bound cache unit")?;
-
-        self.commands
-            .run("systemctl", &arguments(&["daemon-reload"]), &[])
-            .await?;
         self.starter.start(restart).await?;
         Ok(())
     }
