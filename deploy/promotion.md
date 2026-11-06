@@ -202,8 +202,8 @@ No separate gcloud tag mutation or automatic eight-minute retry is added.
 
 Static origins remain private. Cached asset backend creation precedes the
 exact LB service-agent Object Viewer grants, once per underlying bucket.
-Organization sharing policy stays.
-A refused first real grant stops this path and returns item 76 to the user.
+The managed sharing rule of project `ciproxy` allows exactly these grants.
+A refused grant means that the rule changed. Read it before a retry.
 Private-bucket CDN caching requires `FORCE_CACHE_ALL`; explicit object
 metadata alone is insufficient. Each origin has an immutable wrapper, a
 short mutable wrapper, and an HTML/default wrapper. HTML retains

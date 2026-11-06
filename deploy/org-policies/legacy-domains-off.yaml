@@ -1,0 +1,6 @@
+# The managed rule replaces the legacy rule in project ciproxy only. Apply
+# this file after allowed-policy-members.yaml, so one rule always holds.
+name: projects/42118841535/policies/iam.allowedPolicyMemberDomains
+spec:
+  rules:
+    - allowAll: true

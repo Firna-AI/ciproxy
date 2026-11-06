@@ -1316,6 +1316,14 @@ Answers of 5 November 2026:
   no minutes. If no finish ever arrives, the job stays out of the minutes.
   Reason: GitHub's own finish meets the minutes rule of `metering.md`, and
   the rare fallback can understate the savings but never overstate them.
+- Item 76, E, 6 November 2026: the organization rule refused the grant of
+  D to the load balancer agent, with "One or more users named in the policy
+  do not belong to a permitted customer". The project `ciproxy` now enforces
+  the managed rule `iam.managed.allowedPolicyMembers`, with the futex.ai
+  organization and the load balancer and CDN fill agents by name, and the
+  legacy rule is off for `ciproxy` only. The user holds Organization Policy
+  Administrator for this. A probe grant to an outside Gmail account was
+  still refused. Rejected: A, B, C, and F.
 - Item 80, D: an attached Docker disk reserves its data plus the free disk
   of its label. The reservation comes only from spare disk that no set of
   job VMs can use, so a Docker disk stops no start, except for a short time
@@ -2224,7 +2232,8 @@ See the answers above.
 ## Open items of 4 November 2026
 
 The user answered items 54 to 81 on 5 November 2026, and item 76 became a
-design call. The conversation gave each item in full in the layout of the
+design call. Item 76 came back on 6 November 2026, and the user chose E. The
+conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
 
@@ -2912,6 +2921,9 @@ keep the letters that the user saw.
 **Outcome, 5 November 2026:** D, a design call after the user asked why the
 buckets must be public.
 
+**Answer, 6 November 2026:** E. The first edge deploy showed that the rule
+refuses D's grant, so the item came back with A, B, C, and the new E and F.
+
 - **Severity:** High. **Effort:** Small.
 - **Source:** Implementation, the read-only checks before the GCP setup.
 - **Category:** Process.
@@ -2951,6 +2963,13 @@ buckets must be public.
     `service-PROJECT_NUMBER@https-lb.iam.gserviceaccount.com` reads them.
     Visitors still get the files through the load balancer and the CDN.
     The organization rule stays. Effort: Small.
+  - **E.** In the project `ciproxy`, replace the rule with the managed rule
+    `iam.managed.allowedPolicyMembers`. It allows the members of the
+    futex.ai organization and, by name, the load balancer agent and the CDN
+    fill agent of the project. Effort: Small.
+  - **F.** Lift the rule in `ciproxy` for a few minutes, let the deploy make
+    the grants, and restore the rule. Each new grant needs the same step.
+    Effort: Small.
 - **Left out:** Signed URLs for the whole site: browsers cannot fetch a
   public site with them.
 - **Wider fix:** B. Only the resources with the tag can be public.

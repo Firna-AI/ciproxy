@@ -91,8 +91,6 @@ Each GCS bucket receives exactly one Object Viewer grant for
 the cached asset wrappers, which must exist first. HTML and asset wrappers
 share that single reader. The signed-image cache-fill identity is separate.
 
-Static-only bucket policy setters, PAP, and domain-restricted sharing stay
+Static-only bucket policy setters, PAP, and the managed sharing rule stay
 as [deployment identities](identities.md#private-static-origins) describes.
-No new provider or credential is needed. A first real service-agent grant
-that fails organization policy stops this path and returns item 76 to the
-user. Do not widen that policy automatically.
+No new provider or credential is needed.

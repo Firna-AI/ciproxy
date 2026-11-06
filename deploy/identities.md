@@ -70,12 +70,14 @@ cannot read/write their IAM policies. Main-only trusted bootstrap retains
 state-bucket policy maintenance through its own resource-bound grant.
 The image/CDN signing-key grant remains an operator action.
 
-The futex.ai domain-restricted sharing rule stays. No organization-policy
-exception or public GCS grant is required by this design. If the first real
-service-agent grant is refused, stop that path and return item 76 with its
-existing alternatives: A project-only override, B tagged-resource policy,
-or C a cluster web origin. Do not select an alternative or widen policy
-automatically. That outcome needs the user's answer.
+Project `ciproxy` replaces the legacy futex.ai sharing rule with the managed
+rule `iam.managed.allowedPolicyMembers`, as item 76 = E decided. The rule
+allows the futex.ai organization and, by name, the two Google agents that
+private buckets need: the load balancer agent and the CDN fill agent. Every
+other outside member stays refused, and no public GCS grant exists. Change
+the allowed members only with the user's answer. The policy files are
+[allowed-policy-members.yaml](org-policies/allowed-policy-members.yaml) and
+[legacy-domains-off.yaml](org-policies/legacy-domains-off.yaml).
 [Private origin access](https://docs.cloud.google.com/cdn/docs/setting-up-cdn-with-bucket#make_your_cloud_storage_bucket_private)
 
 ## Operator permissions
