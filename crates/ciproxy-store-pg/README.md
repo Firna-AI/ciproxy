@@ -188,6 +188,13 @@ are missing or a required runtime interval remains unknown.
 The savings range excludes a lifecycle end at its first instant.
 Execution and cleanup do not use those reporting reads.
 
+The dashboard area stores verified GitHub memberships, workspace roles,
+access requests, opaque session digests, and encrypted OAuth grants.
+A person record stays only with a role or an open request. Intentional
+organization removal keeps a separate durable marker and no owner-removal
+retention deadline. Retired labels preserve history while active names
+remain unique.
+
 ## Quick Start
 
 ```rust
@@ -234,6 +241,8 @@ lock dependencies. They check production cursor writes and report snapshots.
 CI starts the database for the existing workspace test phase.
 
 ### Key Code
+
+- [src/dashboard](src/dashboard) owns dashboard identity and access queries.
 
 - [src/billing/session.rs](src/billing/session.rs) commits billing state.
 - [src/billing/renewals.rs](src/billing/renewals.rs) stores owned renewal

@@ -63,6 +63,7 @@ impl LabelStore for PgStore {
     fn labels(&self, workspace_id: Uuid) -> Result<Vec<Label>> {
         labels::table
             .filter(labels::workspace_id.eq(workspace_id))
+            .filter(labels::deleted_at.is_null())
             .order(labels::name)
             .select(LabelRow::as_select())
             .load(&mut *self.connection()?)
@@ -77,6 +78,7 @@ impl LabelStore for PgStore {
         let count = diesel::update(
             labels::table
                 .filter(labels::workspace_id.eq(workspace_id))
+                .filter(labels::deleted_at.is_null())
                 .find(label.id),
         )
         .set((

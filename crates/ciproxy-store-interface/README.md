@@ -155,6 +155,13 @@ Report writes preserve desired drain and warm settings.
 They reject replaced sessions and removed registrations.
 Gateway token issuance and registration serialize with workspace removal.
 
+The dashboard area stores verified GitHub memberships, workspace roles,
+access requests, opaque session digests, and encrypted OAuth grants.
+A person record stays only with a role or an open request. Intentional
+organization removal keeps a separate durable marker and no owner-removal
+retention deadline. Retired labels preserve history while active names
+remain unique.
+
 ## Quick Start
 
 Use the same interface for PostgreSQL and service test doubles:
@@ -191,6 +198,8 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 ```
 
 ### Key Code
+
+- [src/dashboard](src/dashboard) owns dashboard identity and access queries.
 
 - [src/store.rs](src/store.rs) defines Store and its connection factory.
 - [src/billing/store.rs](src/billing/store.rs) owns durable billing sessions.

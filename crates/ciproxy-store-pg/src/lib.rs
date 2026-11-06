@@ -5,6 +5,7 @@
 mod billing;
 mod boat;
 mod connection;
+mod dashboard;
 mod error;
 mod gateway;
 mod gateway_contacts;

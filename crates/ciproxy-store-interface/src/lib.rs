@@ -4,6 +4,7 @@
 
 pub mod billing;
 pub mod boat;
+pub mod dashboard;
 pub mod error;
 pub mod gateway;
 pub mod github;

@@ -1,0 +1,150 @@
+//! Setup and Admin-only non-Boat workspace settings.
+
+use std::sync::Arc;
+
+use axum::extract::{Path, State};
+use axum::{Extension, Json};
+use ciproxy_store_interface::billing::state::Tier;
+use ciproxy_store_interface::github::DemandPhase;
+use ciproxy_store_interface::organizations::AppState;
+use ciproxy_store_interface::runners::RunnerPlace;
+
+use crate::access::Principal;
+use crate::error::{Error, Result};
+use crate::state::{ApiState, query};
+use crate::wire::access::{Success, WorkspacePath};
+use crate::wire::settings::{
+    SettingsView, SetupJob, SetupPhase, SetupPlace, SetupView, WorkspaceName,
+};
+
+use super::{labels, views};
+
+#[utoipa::path(operation_id = "setup_setup", get, path = "/workspaces/{workspace_id}/setup", params(WorkspacePath), responses((status = 200, body = SetupView)), security(("session" = [])))]
+pub(crate) async fn setup(
+    State(state): State<ApiState>,
+    Extension(principal): Extension<Arc<Principal>>,
+    Path(path): Path<WorkspacePath>,
+) -> Result<Json<SetupView>> {
+    state
+        .access
+        .require_role(&principal, path.workspace_id, true)
+        .await?;
+    let organizations = query(state.store.clone(), move |store| {
+        store.organizations(path.workspace_id)
+    })
+    .await?;
+    let machines = query(state.store.clone(), move |store| {
+        store.machines(path.workspace_id)
+    })
+    .await?
+    .len()
+    .try_into()
+    .unwrap_or(u32::MAX);
+    let first_job = query(state.store.clone(), move |store| {
+        let mut jobs = Vec::new();
+        for organization in store.organizations(path.workspace_id)? {
+            for job in store.github_jobs(path.workspace_id, organization.id)? {
+                let place = if let Some(github_id) = job.runner_github_id {
+                    store
+                        .runners(path.workspace_id, organization.id)?
+                        .into_iter()
+                        .find(|runner| {
+                            runner.organization_id == organization.id
+                                && runner.scale_set_id == job.scale_set_id
+                                && runner.github_id == Some(github_id)
+                        })
+                        .map(|runner| match runner.place {
+                            RunnerPlace::Machine { .. } => SetupPlace::Machine,
+                            RunnerPlace::Boat { .. } => SetupPlace::Boat,
+                        })
+                } else {
+                    None
+                };
+                let phase = match job.phase {
+                    DemandPhase::Available => SetupPhase::Available,
+                    DemandPhase::Assigned => SetupPhase::Assigned,
+                    DemandPhase::Started => SetupPhase::Started,
+                    DemandPhase::Completed => SetupPhase::Completed,
+                };
+                jobs.push(SetupJob {
+                    id: job.id.to_string(),
+                    name: job.name,
+                    repository: job.repository,
+                    phase,
+                    workflow_ref: job.workflow_ref,
+                    result: job.result,
+                    place,
+                    assigned_at: job.assigned_at,
+                    started_at: job.started_at,
+                    completed_at: job.completed_at,
+                });
+            }
+        }
+        jobs.sort_by_key(|job| (job.assigned_at.is_none(), job.assigned_at, job.id.clone()));
+        Ok(jobs.into_iter().next())
+    })
+    .await?;
+    Ok(Json(SetupView {
+        current_image_disk_bytes: state.config.image_disk_bytes.to_string(),
+        first_job,
+        organizations: organizations.into_iter().map(views::organization).collect(),
+        machines,
+        waiting_for_machine: machines == 0,
+        labels: labels::read(&state, path.workspace_id).await?,
+    }))
+}
+
+#[utoipa::path(operation_id = "setup_settings", get, path = "/workspaces/{workspace_id}/settings", params(WorkspacePath), responses((status = 200, body = SettingsView)), security(("session" = [])))]
+pub(crate) async fn settings(
+    State(state): State<ApiState>,
+    Extension(principal): Extension<Arc<Principal>>,
+    Path(path): Path<WorkspacePath>,
+) -> Result<Json<SettingsView>> {
+    state
+        .access
+        .require_role(&principal, path.workspace_id, true)
+        .await?;
+    let (workspace, organizations, requests, tier) = query(state.store.clone(), move |store| {
+        Ok((
+            store.workspace(path.workspace_id)?,
+            store.organizations(path.workspace_id)?,
+            store
+                .dashboard_members(path.workspace_id)?
+                .iter()
+                .filter(|member| member.role.is_none())
+                .count(),
+            store.billing(path.workspace_id)?.state.tier,
+        ))
+    })
+    .await?;
+    let workspace = workspace.ok_or(Error::NotFound)?;
+    let can_add = tier != Tier::Free
+        || organizations
+            .iter()
+            .all(|organization| organization.app_state == AppState::Removed);
+    Ok(Json(SettingsView {
+        name: workspace.name,
+        organizations: organizations.into_iter().map(views::organization).collect(),
+        labels: labels::read(&state, path.workspace_id).await?,
+        open_requests: requests.try_into().unwrap_or(u32::MAX),
+        can_add_organization: can_add,
+    }))
+}
+
+#[utoipa::path(operation_id = "setup_rename", put, path = "/workspaces/{workspace_id}/settings", params(WorkspacePath), request_body = WorkspaceName, responses((status = 200, body = Success)), security(("session" = [])))]
+pub(crate) async fn rename(
+    State(state): State<ApiState>,
+    Extension(principal): Extension<Arc<Principal>>,
+    Path(path): Path<WorkspacePath>,
+    Json(body): Json<WorkspaceName>,
+) -> Result<Json<Success>> {
+    state
+        .access
+        .require_role(&principal, path.workspace_id, true)
+        .await?;
+    query(state.store, move |store| {
+        store.rename_workspace(path.workspace_id, &body.name)
+    })
+    .await?;
+    Ok(Json(Success { ok: true }))
+}

@@ -1,5 +1,6 @@
 //! Scale set queries and dedicated advisory lock connections.
 
+use ciproxy_schema::labels::labels;
 use ciproxy_schema::scale_sets::scale_sets;
 use ciproxy_store_interface::error::{Result, ResultExt};
 use ciproxy_store_interface::scale_sets::{ScaleSet, ScaleSetSession, ScaleSetStore};
@@ -12,7 +13,7 @@ use crate::error::QueryResultExt;
 
 #[derive(Queryable, Selectable)]
 #[diesel(table_name = scale_sets)]
-struct ScaleSetRow {
+pub(crate) struct ScaleSetRow {
     id: Uuid,
     organization_id: Uuid,
     label_id: Uuid,
@@ -71,6 +72,13 @@ impl ScaleSetStore for PgStore {
         Ok(scale_sets::table
             .filter(scale_sets::workspace_id.eq(workspace_id))
             .filter(scale_sets::organization_id.eq(organization_id))
+            .filter(
+                scale_sets::label_id.eq_any(
+                    labels::table
+                        .filter(labels::deleted_at.is_null())
+                        .select(labels::id),
+                ),
+            )
             .order(scale_sets::github_id)
             .select(ScaleSetRow::as_select())
             .load::<ScaleSetRow>(&mut *self.connection()?)

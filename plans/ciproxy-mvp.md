@@ -723,20 +723,58 @@ Depends on: 4, 6, 8
 `openapi-typescript` generates its types. My call: money in cents, times in
 UTC RFC 3339, and IDs as strings. Reason: JavaScript loses 64-bit numbers.
 
-- [ ] Name the generator and the wire forms in `AGENTS.md`. Add a gate phase
+- [x] Name the generator and the wire forms in `AGENTS.md`. Add a gate phase
       that regenerates the types and fails on a diff, as item 45 says.
-- [ ] Sign in with the GitHub App. Apply "Roles" in `security.md` for each
+      Branch: `conductor/ciproxy-mvp-milestone-14-api`.
+      Implementation call, 5 November 2026: encode integer cents as decimal
+      strings, so JavaScript keeps their precision.
+- [x] Sign in with the GitHub App. Apply "Roles" in `security.md` for each
       workspace, with the access requests.
+      Branch: `conductor/ciproxy-mvp-milestone-14-api`.
+      Implementation call, 5 November 2026: a sealed browser cookie keeps
+      sign-in metadata without a GitHub grant. The store keeps a person and
+      grant only while a role or access request exists.
+      App registration uses `/api/auth/callback` for sign-in and `/` for
+      setup. Keep user authorization separate from installation for PKCE.
 - [ ] Add an organization to a workspace, take one out, and keep the
       repository access of each one. A take-out deletes the scale sets and
       removes the install through the GitHub API, as item 51 says. ciproxy
       tells its own removal apart from a removal by an owner.
-- [ ] Give the build of the API with each response, for the reload of an
+      Branch: `conductor/ciproxy-mvp-milestone-14-api`.
+      Orchestrator: get the owner's choices on organization selection and
+      late approval. Then enable the add route and its HTTP cases.
+  - [x] Serve per-organization repository access through the GitHub App.
+        Branch: `conductor/ciproxy-mvp-milestone-14-api`.
+  - [x] Take out an organization with durable, installation-specific
+        cleanup. Keep its history and distinguish owner removal.
+        Branch: `conductor/ciproxy-mvp-milestone-14-api`.
+- [x] Give the build of the API with each response, for the reload of an
       old dashboard tab in Milestone 19.
-- [ ] Give the install command to an Admin.
-- [ ] Serve Setup, Machines, and Settings, with "Clear cache". Milestone 15
+      Branch: `conductor/ciproxy-mvp-milestone-14-api`.
+- [x] Give the install command to an Admin.
+      Branch: `conductor/ciproxy-mvp-milestone-14-api`.
+- [x] Serve Setup, Machines, and Settings, with "Clear cache". Milestone 15
       adds the Boat parts.
+      Branch: `conductor/ciproxy-mvp-milestone-14-api`.
+      Implementation call, 5 November 2026: Setup reads durable UUID GitHub
+      demand. Inject machine capacity and shared root sizing from the
+      runtime, so the API needs no new agent report fields.
 - [ ] Test each route at the HTTP level with a real store.
+      Branch: `conductor/ciproxy-mvp-milestone-14-api`.
+      Orchestrator: complete the add-route HTTP cases after the owner's
+      decisions. The implemented 26 operations have 18 real-store scenarios.
+  - [x] Test the implemented routes with PostgreSQL, the gateway, and the
+        GitHub App service. Verify upstream adapters with a local HTTP peer.
+        Branch: `conductor/ciproxy-mvp-milestone-14-api`.
+- [ ] Orchestrator: mount the router at `/api` through Milestone 13. Supply
+      the shared gateway, role and install adapters, selected-image sizing,
+      and current release metadata. Run API maintenance on startup and at
+      least hourly. Branch: `conductor/ciproxy-mvp-milestone-14-api`.
+- [ ] Orchestrator: run the live API, repeated-authorization, and GitHub
+      install-binding probes in `crates/ciproxy-api/scripts/README.md`.
+      Read credentials through `CIPROXY_API_CREDENTIALS_FILE`. Record no
+      secret in evidence. Branch: `conductor/ciproxy-mvp-milestone-14-api`.
+      Verification evidence: `.context/ciproxy-mvp-m14/`.
 
 ## Milestone 15: Overflow to Boat end to end
 

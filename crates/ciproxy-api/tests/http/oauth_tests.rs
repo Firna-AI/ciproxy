@@ -1,0 +1,157 @@
+//! HTTP sign-in, role isolation, retention, and owner recovery requirements.
+
+use axum::Router;
+use axum::body::Body;
+use axum::http::{Request, StatusCode, header};
+use chrono::Duration;
+use ciproxy_api::router::router;
+use ciproxy_store_interface::dashboard::records::Role;
+use tower::ServiceExt;
+
+use super::fixture::Fixture;
+use super::fixture_io::{cookie, json};
+
+#[tokio::test]
+async fn oauth_is_browser_bound_one_use_and_sessions_end_at_thirty_days() {
+    let fixture = Fixture::new();
+    let begin = fixture.request(None, "GET", "/auth/github", None).await;
+    let state = cookie(&begin, "__Host-ciproxy-oauth");
+    let bad = Request::builder()
+        .uri(format!("/auth/callback?code=synthetic&state={state}"))
+        .header(header::COOKIE, "__Host-ciproxy-oauth=another-browser")
+        .body(Body::empty())
+        .unwrap();
+    let response = router(fixture.state.clone()).oneshot(bad).await.unwrap();
+    assert_eq!(response.status(), StatusCode::SEE_OTHER);
+    assert!(
+        response
+            .headers()
+            .get(header::LOCATION)
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .contains("reason=github")
+    );
+    assert!(!response.headers().contains_key(header::SET_COOKIE));
+    assert_eq!(
+        response.headers().get("x-ciproxy-build").unwrap(),
+        "http-test-build"
+    );
+    let valid = Request::builder()
+        .uri(format!("/auth/callback?code=synthetic&state={state}"))
+        .header(header::COOKIE, format!("__Host-ciproxy-oauth={state}"))
+        .body(Body::empty())
+        .unwrap();
+    assert_eq!(
+        router(fixture.state.clone())
+            .oneshot(valid)
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::SEE_OTHER
+    );
+    let replay = Request::builder()
+        .uri(format!("/auth/callback?code=synthetic&state={state}"))
+        .header(header::COOKIE, format!("__Host-ciproxy-oauth={state}"))
+        .body(Body::empty())
+        .unwrap();
+    assert_eq!(
+        router(fixture.state.clone())
+            .oneshot(replay)
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::SEE_OTHER
+    );
+    let mounted = Router::new().nest("/api", router(fixture.state.clone()));
+    let response = mounted
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/auth/github")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::SEE_OTHER);
+    assert_eq!(
+        response.headers().get("x-ciproxy-build").unwrap(),
+        "http-test-build"
+    );
+    let cancelled = fixture
+        .request(None, "GET", "/auth/callback?error=access_denied", None)
+        .await;
+    assert_eq!(cancelled.status(), StatusCode::SEE_OTHER);
+    assert!(
+        cancelled
+            .headers()
+            .get(header::LOCATION)
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .contains("reason=github")
+    );
+    let browser = fixture.login(7, Some(Role::Admin)).await;
+    let response = mounted
+        .oneshot(
+            Request::builder()
+                .uri("/api/session")
+                .header(header::COOKIE, format!("__Host-ciproxy={}", browser.cookie))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        response.headers().get("x-ciproxy-build").unwrap(),
+        "http-test-build"
+    );
+    let session = json(
+        fixture
+            .request(Some(&browser), "GET", "/session", None)
+            .await,
+    )
+    .await;
+    assert_eq!(session["expires_at"], "2026-12-06T12:00:00Z");
+    fixture.advance(Duration::days(30) - Duration::seconds(1));
+    assert_eq!(
+        fixture
+            .request(Some(&browser), "GET", "/session", None)
+            .await
+            .status(),
+        StatusCode::OK
+    );
+    fixture.advance(Duration::seconds(1));
+    assert_eq!(
+        fixture
+            .request(Some(&browser), "GET", "/session", None)
+            .await
+            .status(),
+        StatusCode::UNAUTHORIZED
+    );
+    let browser = fixture.login(7, Some(Role::Admin)).await;
+    assert_eq!(
+        fixture
+            .request(Some(&browser), "POST", "/auth/sign-out", None)
+            .await
+            .status(),
+        StatusCode::OK
+    );
+    let signed_out = json(
+        fixture
+            .request(Some(&browser), "GET", "/session", None)
+            .await,
+    )
+    .await;
+    assert_eq!(signed_out["state"], "access_ended");
+    assert_eq!(signed_out["workspaces"].as_array().unwrap().len(), 0);
+    assert_eq!(
+        fixture
+            .request(Some(&browser), "GET", &fixture.path("/machines"), None)
+            .await
+            .status(),
+        StatusCode::FORBIDDEN
+    );
+}
