@@ -172,6 +172,8 @@ The command records retain exact byte dimensions and logical slot sets.
 No conversion through integer GB changes the held root allocation.
 The first confirmation of a runner is written once, and retirement keeps it.
 An applied command result stays a separate value.
+A retirement saves the trusted GitHub ID, `Stopping`, and its stop command
+in one transaction.
 
 ## Quick Start
 

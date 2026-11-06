@@ -138,8 +138,11 @@ Send it only to the selected runner. Use the runner's environment variable
 `ACTIONS_RUNNER_INPUT_JITCONFIG`, not a command argument.
 Removal accepts an already absent registration. A busy result tells the
 runtime to keep the VM and let its job finish.
-`find` returns no registration after App removal revoked access, so
-retirement can still save its stop.
+`retire` is the one retirement operation. It returns `Removed` with the ID,
+`Absent` after a live lookup finds no runner, or `Busy` with the ID.
+Missing access, token, and provider failures stay errors.
+The local `Removed` App state can mean a pending take-out, so it proves no
+retirement.
 
 Default labels request 20, 20, and 60 SI GB of free job disk.
 The scaler adds the image and ext4 allowance before runner allocation.

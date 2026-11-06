@@ -879,6 +879,14 @@ work. The smoke TODO above and the
 [integration record](follow-ups/agent-cache-area-integration.md) keep the
 live KVM proof of these fixes.
 
+Owner review of pull request #31, round 2, 6 November 2026:
+
+- [x] Repair finding 12 with the approved B and the scoped acceptance order
+      of D. Each ordinary stop needs positive GitHub retirement proof. A
+      take-out accepts only that proof, busy answers, or saved stops.
+      Code: `82aba82`, merged in `62de88e`.
+      Branch: `conductor/ciproxy-mvp-milestone-13-e2e`.
+
 ## Milestone 14: Dashboard API: sign-in, setup, machines, and settings
 
 Depends on: 4, 6, 8

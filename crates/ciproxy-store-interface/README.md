@@ -188,6 +188,8 @@ No JIT or original runtime-token credential enters these records.
 `confirm_own_runner` saves it from a full report and never replaces it.
 `record_own_command_result` saves the result of the current command. It
 also saves that first evidence, and only an applied result ends delivery.
+`retire_own_runner` saves the trusted GitHub ID, `Stopping`, and the stop
+command in one transaction.
 
 ## Quick Start
 
