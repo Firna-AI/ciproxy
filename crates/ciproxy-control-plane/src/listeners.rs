@@ -20,6 +20,11 @@ use crate::error::{ErrorResultExt, Result};
 use crate::runtime::OwnMachines;
 use crate::tasks::OwnedTask;
 
+struct DiscoveredTarget {
+    target: ListenerTarget,
+    installation_id: i64,
+}
+
 struct Running {
     stop: watch::Sender<bool>,
     task: OwnedTask<()>,
@@ -123,20 +128,19 @@ impl Hosted {
                             self.ready.store(true, Ordering::Release);
                         }
                     }
-                    let stale: Vec<_> = running.iter().filter(|(id, value)| value.task.0.is_finished() || !targets.iter().any(|target| target.scale_set_id == **id)).map(|(id, _)| *id).collect();
+                    let stale: Vec<_> = running.iter().filter(|(id, value)| value.task.0.is_finished() || !targets.iter().any(|discovered| discovered.target.scale_set_id == **id)).map(|(id, _)| *id).collect();
                     for id in stale {
                         if let Some(mut value) = running.remove(&id) { value.stop.send_replace(true); let _ = (&mut value.task.0).await; }
                     }
-                    for target in targets {
+                    for DiscoveredTarget { target, installation_id } in targets {
                         if running.contains_key(&target.scale_set_id) { continue; }
                         let listener: Arc<dyn ScaleSetListener> = Arc::new(DurableListener { store: self.persistence.clone(), rest: self.rest.clone(), scale_sets: self.scale_sets.clone(), output: Arc::new(Jobs { machines: self.machines.clone(), accounting: self.accounting.clone(), workspace_id: target.workspace_id }) });
                         let app = self.app.clone();
-                        let installation = self.store.organization(target.workspace_id, target.organization_id).internal()?.map(|org| org.installation_id);
                         let (cancel, receiver) = watch::channel(false);
                         let task = tokio::spawn(async move {
                             let result = listener.run(target, ListenerOptions { owner: format!("ciproxy-{}", std::process::id()), capacity: 10_000, max_polls: None }, receiver).await;
                             if let Err(error) = result {
-                                if matches!(error, ciproxy_github::error::Error::ScaleSetMissing { .. }) && let Some(id) = installation { let _ = app.refresh_repositories(id).await; }
+                                if matches!(error, ciproxy_github::error::Error::ScaleSetMissing { .. }) { let _ = app.refresh_repositories(installation_id).await; }
                                 tracing::warn!(%error, "scale-set listener will restart");
                             }
                         });
@@ -155,7 +159,7 @@ impl Hosted {
         Ok(())
     }
 
-    async fn listener_targets(&self) -> Result<Vec<ListenerTarget>> {
+    async fn listener_targets(&self) -> Result<Vec<DiscoveredTarget>> {
         let store = self.store.clone();
         tokio::task::spawn_blocking(move || {
             let mut targets = Vec::new();
@@ -168,10 +172,13 @@ impl Hosted {
                         .listener_scale_sets(workspace_id, organization.id)
                         .internal()?
                     {
-                        targets.push(ListenerTarget {
-                            workspace_id,
-                            organization_id: organization.id,
-                            scale_set_id: binding.scale_set.id,
+                        targets.push(DiscoveredTarget {
+                            target: ListenerTarget {
+                                workspace_id,
+                                organization_id: organization.id,
+                                scale_set_id: binding.scale_set.id,
+                            },
+                            installation_id: organization.installation_id,
                         });
                     }
                 }

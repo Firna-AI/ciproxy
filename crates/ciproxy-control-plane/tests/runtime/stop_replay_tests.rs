@@ -14,7 +14,8 @@ use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
 use unimock::{MockFn, Unimock, matching};
 use uuid::Uuid;
 
-use super::recovery_support::{job, reconnect, runtime, runtime_with_clock, saved};
+use super::clock::clock;
+use super::recovery_support::{gateway, job, reconnect, runtime, runtime_with_clock, saved};
 use super::support::{Fixture, at};
 
 #[tokio::test]
@@ -166,11 +167,16 @@ async fn runner_ready_keeps_retirement_but_guest_job_started_preserves_the_job()
             fixture.intent.runner.github_id,
         )
         .unwrap();
+    let demand = job(&fixture);
+    fixture
+        .store
+        .save_github_job(fixture.workspace, &demand, at())
+        .unwrap();
     let runtime = runtime_with_clock(
         &fixture,
         Arc::new(Unimock::new(())),
-        Arc::new(Unimock::new(())),
-        Arc::new(Unimock::new(())),
+        gateway(Arc::new(Mutex::new(Vec::new()))),
+        clock(true),
     );
     runtime
         .agent(
@@ -189,7 +195,7 @@ async fn runner_ready_keeps_retirement_but_guest_job_started_preserves_the_job()
             fixture.machine,
             AgentMessage::JobStarted {
                 runner_id: RunnerId(fixture.intent.runner.id.to_string()),
-                job_id: JobId("job".to_owned()),
+                job_id: JobId(demand.id.to_string()),
             },
         )
         .await

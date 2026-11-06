@@ -4,7 +4,9 @@ use ciproxy_github::persistence::session::ListenerTarget;
 use ciproxy_github::registrations::RegistrationRetirement;
 use ciproxy_protocol::agent::ControlMessage;
 use ciproxy_protocol::identifiers::{CommandId, OrganizationId, RunnerId};
-use ciproxy_store_interface::own_runners::{OwnRunner, OwnRunnerLease, RoutingSnapshot};
+use ciproxy_store_interface::own_runners::{
+    OwnRunner, OwnRunnerLease, OwnRunnerObservation, RoutingSnapshot,
+};
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
 use uuid::Uuid;
 
@@ -72,8 +74,16 @@ impl MachineRuntime {
             },
             RegistrationRetirement::Absent => StopAuthority::GitHubConfirmed { github_id: None },
             RegistrationRetirement::Busy { id } => {
-                self.save_state(workspace_id, runner, RunnerState::Busy, Some(id))
-                    .await?;
+                self.observe_runner(
+                    workspace_id,
+                    runner,
+                    OwnRunnerObservation {
+                        state: RunnerState::Busy,
+                        github_id: Some(id),
+                        observed_at: self.clock.now(),
+                    },
+                )
+                .await?;
                 return Ok(None);
             }
         };

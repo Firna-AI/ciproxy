@@ -65,7 +65,7 @@ async fn reinstall_retires_only_old_reservations_github_first_and_keeps_busy_ans
         ));
         let messages = Arc::new(Mutex::new(Vec::new()));
         let clock: Arc<dyn Runtime> = if removal == (RegistrationRetirement::Busy { id: 47 }) {
-            Arc::new(Unimock::new(()))
+            clock(false)
         } else {
             clock(true)
         };

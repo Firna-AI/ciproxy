@@ -1,10 +1,11 @@
 //! Reconcile exact resources and slot ownership from authenticated full reports.
 
 use ciproxy_protocol::runners;
-use ciproxy_store_interface::own_runners::{OwnRunner, RoutingSnapshot};
+use ciproxy_store_interface::own_runners::{OwnRunner, OwnRunnerObservation, RoutingSnapshot};
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
 use ciproxy_store_interface::vm_size::VmSize;
 
+use crate::actions::UnobservedRunnerUpdate;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::runtime::MachineRuntime;
 
@@ -42,17 +43,33 @@ impl MachineRuntime {
             .iter()
             .find(|report| report.runner_id.0 == runner.runner.id.to_string())
         {
-            if runner.confirmed_at.is_none() {
-                let store = self.store.clone();
-                let workspace_id = input.workspace_id;
-                let runner_id = runner.runner.id;
-                let at = received.received_at;
-                tokio::task::spawn_blocking(move || {
-                    store.confirm_own_runner(workspace_id, runner_id, at)
-                })
-                .await
-                .internal()?
-                .internal()?;
+            let reported = match observed.state {
+                runners::RunnerState::Starting => RunnerState::Starting,
+                runners::RunnerState::Warm => RunnerState::Ready,
+                runners::RunnerState::Running { .. } => RunnerState::Busy,
+                runners::RunnerState::Stopping => RunnerState::Stopping,
+            };
+            let configuration_lost =
+                observed.configuration_lost && observed.state == runners::RunnerState::Starting;
+            let state = if configuration_lost
+                || runner.runner.state == RunnerState::Busy
+                || (runner.runner.state == RunnerState::Stopping && reported != RunnerState::Busy)
+            {
+                runner.runner.state
+            } else {
+                reported
+            };
+            if runner.confirmed_at.is_none() || runner.runner.state != state {
+                self.observe_runner(
+                    input.workspace_id,
+                    runner,
+                    OwnRunnerObservation {
+                        state,
+                        github_id: runner.runner.github_id,
+                        observed_at: received.received_at,
+                    },
+                )
+                .await?;
             }
             let requested = match VmSize::from_request(observed.requested_size) {
                 Ok(requested) => requested,
@@ -85,31 +102,9 @@ impl MachineRuntime {
                 .internal()?
                 .internal()?;
             }
-            if observed.configuration_lost && observed.state == runners::RunnerState::Starting {
+            if configuration_lost {
                 self.retire_runner(input.workspace_id, runner).await?;
                 return Ok(());
-            }
-            let state = match observed.state {
-                runners::RunnerState::Starting => RunnerState::Starting,
-                runners::RunnerState::Warm => RunnerState::Ready,
-                runners::RunnerState::Running { .. } => RunnerState::Busy,
-                runners::RunnerState::Stopping => RunnerState::Stopping,
-            };
-            if runner.runner.state != RunnerState::Stopping
-                && runner.runner.state != RunnerState::Busy
-                && runner.runner.state != state
-            {
-                self.save_state(input.workspace_id, runner, state, runner.runner.github_id)
-                    .await?;
-            }
-            if runner.runner.state == RunnerState::Stopping && state == RunnerState::Busy {
-                self.save_state(
-                    input.workspace_id,
-                    runner,
-                    RunnerState::Busy,
-                    runner.runner.github_id,
-                )
-                .await?;
             }
         } else if runner
             .confirmed_at
@@ -122,8 +117,9 @@ impl MachineRuntime {
                 self.save_state(
                     input.workspace_id,
                     runner,
-                    RunnerState::Stopped,
-                    runner.runner.github_id,
+                    UnobservedRunnerUpdate::Stopped {
+                        github_id: runner.runner.github_id,
+                    },
                 )
                 .await?;
             } else {
