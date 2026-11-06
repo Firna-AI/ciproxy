@@ -1504,6 +1504,11 @@ Answers of 5 November 2026:
   longer an Admin, the organization also joins inactive, and an Admin of the
   workspace can turn it on. Reason: the same rule, link and wait until the
   blocker clears.
+- Item 85, F: the agent accepts a first handoff only over the host-owned
+  connection that configured the runner before any job code ran. After a
+  reconnect before the first handoff, that job uses GitHub's own cache for
+  its whole run. The user asked for E as a follow-up item:
+  `follow-ups/cache-service-egress-firewall.md`. Rejected: A, B, C, and D.
 - Item 80, D: an attached Docker disk reserves its data plus the free disk
   of its label. The reservation comes only from spare disk that no set of
   job VMs can use, so a Docker disk stops no start, except for a short time
@@ -2414,7 +2419,8 @@ See the answers above.
 
 The user answered items 54 to 81 on 5 November 2026, and item 76 became a
 design call. Item 76 came back on 6 November 2026, and the user chose E.
-The user answered items 82 and 83 on 6 November 2026. Item 84 still waits.
+The user answered items 82, 83, and 85 on 6 November 2026. Item 84 still
+waits.
 The conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question,
 and its options keep the letters that the user saw.
@@ -3417,3 +3423,36 @@ above.
 - **Wider fix:** B.
 - **Recommendation:** B. It catches defects that a byte comparison cannot.
 - **Action:** ask the user, because B adds a new gate rejection.
+
+### 85. A late first handoff can choose the cache destinations
+
+**Answer, 6 November 2026:** F, and E as a follow-up item.
+
+- **Severity:** High. **Effort:** Medium.
+- **Source:** Review, Milestone 13, the check of #31 finding 1.
+- **Category:** Security.
+- **Location:** `crates/ciproxy-agent/src/assignment_state.rs:73` and
+  `image/runner-patch/CiproxyAssignment.cs:45`, on the #31 branch.
+- **Background:** The runner hook sends the handoff with the job's cache URLs
+  and rights to the agent, and waits at most 30 seconds. Job code has root
+  in its VM. The fix of finding 1 seals the first handoff against replays.
+- **Problem:** If the agent is away for those 30 seconds, job code runs
+  first and can send the first handoff itself, with no seal to check.
+- **Impact if no action:** A job can make the host reach private addresses,
+  such as the cloud metadata service, and claim cache rights it lacks.
+- **Root question:** How does the agent trust a first handoff that can
+  arrive after job code starts?
+- **Options:**
+  - **A.** Public destinations only, with DNS checks. Effort: Medium.
+  - **B.** Cut the cache service off from private networks. Effort: Large.
+  - **C.** Move GitHub cache traffic into the VM. Effort: Large.
+  - **D.** Fixed GitHub host names only. Effort: Small.
+  - **E.** A system user for the cache service with a kernel firewall output
+    rule. Effort: Medium.
+  - **F.** Accept a first handoff only over the connection that configured
+    the runner before job code ran. After a reconnect before the first
+    handoff, the job uses GitHub's own cache. Effort: Medium.
+- **Wider fix:** E or A for any job-supplied URL. F closes this path.
+- **Recommendation:** F.
+- **Action:** ask the user, because each option adds an acceptance rule or a
+  network rule.
