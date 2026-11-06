@@ -26,6 +26,7 @@ mod organization_rows;
 mod organizations;
 mod overflow;
 mod own_lease;
+mod own_observation;
 mod own_reservation;
 mod own_runners;
 mod routing_snapshot;

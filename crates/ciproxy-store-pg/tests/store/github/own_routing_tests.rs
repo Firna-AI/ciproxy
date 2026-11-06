@@ -1,7 +1,7 @@
 //! Retired labels keep execution history while new routing uses their replacement.
 
 use ciproxy_store_interface::error::Error;
-use ciproxy_store_interface::own_runners::OwnRunner;
+use ciproxy_store_interface::own_runners::{OwnRunner, OwnRunnerObservation};
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
 use uuid::Uuid;
 
@@ -101,10 +101,15 @@ fn command_results_keep_first_confirmation_separate_from_applied_delivery() {
     assert_eq!(failed.confirmed_at, Some(confirmed));
     assert!(!failed.acknowledged);
     store
-        .confirm_own_runner(
+        .observe_own_runner(
             workspace.id,
+            organization.id,
             held.runner.id,
-            at() + chrono::Duration::seconds(3),
+            OwnRunnerObservation {
+                state: held.runner.state,
+                github_id: held.runner.github_id,
+                observed_at: at() + chrono::Duration::seconds(3),
+            },
         )
         .unwrap();
     let command = Uuid::new_v4();

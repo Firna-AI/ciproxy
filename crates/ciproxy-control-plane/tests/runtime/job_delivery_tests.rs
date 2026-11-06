@@ -88,11 +88,12 @@ async fn removal_between_facts_and_delivery_preserves_job_until_trusted_completi
                 Err(ciproxy_gateway::error::Error::NotFound)
             })),
     ));
-    let clock = Arc::new(Unimock::new(
+    let clock = Arc::new(Unimock::new((
+        RuntimeMock::now.each_call(matching!()).returns(at()),
         RuntimeMock::uuid
             .each_call(matching!())
             .returns(Uuid::from_u128(99)),
-    ));
+    )));
     let runtime = MachineRuntime::new(
         fixture.store.clone(),
         gateway,

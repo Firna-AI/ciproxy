@@ -8,7 +8,7 @@ use crate::gateway::MachineSnapshot;
 use crate::github::GithubJob;
 use crate::labels::Label;
 use crate::organizations::Organization;
-use crate::runners::Runner;
+use crate::runners::{Runner, RunnerState};
 use crate::settings::Settings;
 
 /// One credential-free command paired with its immutable runner placement.
@@ -28,9 +28,20 @@ pub struct OwnRunner {
     pub issued_at: DateTime<Utc>,
     /// Whether the machine accepted this command.
     pub acknowledged: bool,
-    /// First current-command result or full inventory that confirmed this runner.
+    /// First command result or trusted agent/GitHub observation of this runner.
     /// Retirement preserves this evidence for the VM's complete lifetime.
     pub confirmed_at: Option<DateTime<Utc>>,
+}
+
+/// One trusted execution observation, saved together with its first evidence.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct OwnRunnerObservation {
+    /// Effective hosted state after the caller preserves job and stop protections.
+    pub state: RunnerState,
+    /// Saved identity or the trusted GitHub identity supplied by this observation.
+    pub github_id: Option<i64>,
+    /// Full-report receipt time or the hosted clock time of another observation.
+    pub observed_at: DateTime<Utc>,
 }
 
 /// Queries used by the own-machine runtime, without storing JIT secrets.
@@ -64,12 +75,13 @@ pub trait OwnRunnerStore: Send + Sync {
         at: DateTime<Utc>,
         github_id: Option<i64>,
     ) -> Result<()>;
-    /// Keep first inventory evidence without replacing an earlier confirmation.
-    fn confirm_own_runner(
+    /// Atomically save state, identity, and first evidence within the runner scope.
+    fn observe_own_runner(
         &self,
         workspace_id: Uuid,
+        organization_id: Uuid,
         runner_id: Uuid,
-        at: DateTime<Utc>,
+        observation: OwnRunnerObservation,
     ) -> Result<()>;
     /// Record current-command evidence and close delivery only for an applied result.
     fn record_own_command_result(
