@@ -1509,6 +1509,9 @@ Answers of 5 November 2026:
   reconnect before the first handoff, that job uses GitHub's own cache for
   its whole run. The user asked for E as a follow-up item:
   `follow-ups/cache-service-egress-firewall.md`. Rejected: A, B, C, and D.
+- Item 84, B: the `api-types` gate phase also runs Redocly, with its
+  minimal rule set and its path-parameter check, on the generated API
+  contract, and fails on an invalid structure. Rejected: A and C.
 - Item 80, D: an attached Docker disk reserves its data plus the free disk
   of its label. The reservation comes only from spare disk that no set of
   job VMs can use, so a Docker disk stops no start, except for a short time
@@ -2419,8 +2422,7 @@ See the answers above.
 
 The user answered items 54 to 81 on 5 November 2026, and item 76 became a
 design call. Item 76 came back on 6 November 2026, and the user chose E.
-The user answered items 82, 83, and 85 on 6 November 2026. Item 84 still
-waits.
+The user answered items 82 to 85 on 6 November 2026.
 The conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question,
 and its options keep the letters that the user saw.
@@ -3401,6 +3403,8 @@ above.
 - **Action:** ask the user, because no requirement covers this outcome.
 
 ### 84. Generation does not check the API contract's structure
+
+**Answer, 6 November 2026:** B.
 
 - **Severity:** Low. **Effort:** Small.
 - **Source:** Review, Milestone 14, pull request #30, its item 8.
