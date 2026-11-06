@@ -53,3 +53,4 @@ mod setup_personal_tests;
 
 mod direct_recovery_tests;
 mod link_final_tests;
+mod signed_association_tests;

@@ -1,7 +1,7 @@
 //! First installation, retained reinstall, and requester-owned workspace choice.
 
 use ciproxy_store_interface::github_lifecycle::{GithubLifecycleTarget, GithubRegistration};
-use ciproxy_store_interface::installation_links::{InstallationClaim, InstallationRecovery};
+use ciproxy_store_interface::installation_association::SignedInstallation;
 use ciproxy_store_interface::labels::{Label, WhenNothingFits};
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
 use ciproxy_store_interface::vm_size::VmSize;
@@ -82,37 +82,17 @@ impl AppService {
             self.retire_installation(&mut previous, lease).await?;
             registrations = self.store.by_github_id(github_id).await?;
         }
-        let decision = self
-            .authority
-            .installation_decision(requester, github_id, event.installation.id)
-            .await?;
         let claim = self
             .store
-            .stage(InstallationClaim {
+            .associate(SignedInstallation {
                 id: self.runtime.uuid(),
                 installation_id: current_state.id,
                 github_id,
                 login: current_state.account.login.clone(),
                 requester_id: requester,
-                event_seen: true,
-                user_verified: false,
-                direct: decision == InstallationDecision::Direct,
-                workspace_id: None,
-                organization_id: None,
-                verified_at: None,
             })
             .await?;
-        let decision = match (claim.recovery(), decision) {
-            (InstallationRecovery::Direct, _) => InstallationDecision::Direct,
-            (
-                InstallationRecovery::Add { workspace_id },
-                target @ InstallationDecision::Target {
-                    workspace_id: chosen,
-                    ..
-                },
-            ) if workspace_id == chosen => target,
-            _ => InstallationDecision::AwaitingAssignment,
-        };
+        let decision = self.authority.installation_decision(&claim).await?;
         if decision == InstallationDecision::AwaitingAssignment {
             return Ok(InstallationOutcome::AwaitingAssignment { claim_id: claim.id });
         }

@@ -2,6 +2,7 @@
 
 mod demand_tests;
 mod fixtures;
+mod installation_association_tests;
 mod lease_tests;
 mod lifecycle_atomic_tests;
 mod lifecycle_retention_tests;

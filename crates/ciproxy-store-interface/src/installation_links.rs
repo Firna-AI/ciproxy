@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::error::Result;
+use crate::installation_association::SignedInstallation;
 
 /// One explicit browser entry into GitHub installation.
 #[derive(Clone, Debug)]
@@ -109,6 +110,11 @@ pub struct OrganizationActivation {
 
 /// Atomic association and admission queries.
 pub trait InstallationLinkStore: Send + Sync {
+    /// Atomically bind signed ownership and flow from the original requester's facts.
+    fn associate_signed_installation(
+        &self,
+        signed: &SignedInstallation,
+    ) -> Result<InstallationClaim>;
     /// Save entry evidence before exposing the GitHub install URL.
     fn begin_installation_attempt(&self, attempt: &InstallationAttempt) -> Result<()>;
     /// Resolve exact return state without inferring a workspace.
@@ -126,7 +132,7 @@ pub trait InstallationLinkStore: Send + Sync {
     fn has_pending_add(&self, requester_id: i64) -> Result<bool>;
     /// Preserve exact Add provenance even if later claim bookkeeping disappears.
     fn has_add_installation(&self, requester_id: i64, installation_id: i64) -> Result<bool>;
-    /// Save signed event or fresh user proof, preserving existing claim ownership.
+    /// Save fresh user proof without replacing signed ownership or flow.
     fn save_installation_claim(
         &self,
         claim: &InstallationClaim,

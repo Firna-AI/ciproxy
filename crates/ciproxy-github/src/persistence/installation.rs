@@ -1,6 +1,7 @@
 //! Installation and repository persistence used by the App service.
 
 use async_trait::async_trait;
+use ciproxy_store_interface::installation_association::SignedInstallation;
 use ciproxy_store_interface::installation_links::{InstallationClaim, OrganizationActivation};
 use ciproxy_store_interface::labels::Label;
 use ciproxy_store_interface::organizations::{AppState, Organization};
@@ -19,8 +20,8 @@ pub trait InstallationStore: Send + Sync {
     async fn activation(&self, organization: &Organization) -> Result<OrganizationActivation>;
     /// Read an exact requester-owned claim.
     async fn claim(&self, id: Uuid) -> Result<Option<InstallationClaim>>;
-    /// Save authoritative requester association before waiting for browser proof.
-    async fn stage(&self, claim: InstallationClaim) -> Result<InstallationClaim>;
+    /// Join signed ownership and flow before admission or remote preparation.
+    async fn associate(&self, signed: SignedInstallation) -> Result<InstallationClaim>;
     /// Reconcile plan holds and return the workspace's current registrations.
     async fn activation_candidates(&self, workspace_id: Uuid) -> Result<Vec<Organization>>;
     /// Look up the registration named by a verified installation.
@@ -54,9 +55,9 @@ impl InstallationStore for StoreAdapter {
         })
         .await
     }
-    async fn stage(&self, claim: InstallationClaim) -> Result<InstallationClaim> {
+    async fn associate(&self, signed: SignedInstallation) -> Result<InstallationClaim> {
         query(self.store.clone(), move |store| {
-            store.save_installation_claim(&claim, None)
+            store.associate_signed_installation(&signed)
         })
         .await
     }

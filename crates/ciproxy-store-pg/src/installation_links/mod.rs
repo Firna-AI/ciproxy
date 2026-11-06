@@ -1,6 +1,7 @@
 //! Exact installation association and independent local activation queries.
 
 pub(crate) mod activation;
+mod association;
 mod attempts;
 mod claims;
 mod offers;
@@ -8,6 +9,7 @@ pub(crate) mod retention;
 mod transaction;
 
 use ciproxy_store_interface::error::Result;
+use ciproxy_store_interface::installation_association::SignedInstallation;
 use ciproxy_store_interface::installation_links::{
     InstallationAttempt, InstallationClaim, InstallationLinkStore, OrganizationActivation,
 };
@@ -16,6 +18,12 @@ use uuid::Uuid;
 use crate::connection::PgStore;
 
 impl InstallationLinkStore for PgStore {
+    fn associate_signed_installation(
+        &self,
+        signed: &SignedInstallation,
+    ) -> Result<InstallationClaim> {
+        association::signed(self, signed)
+    }
     fn complete_personal_installation_attempt(
         &self,
         id: Uuid,

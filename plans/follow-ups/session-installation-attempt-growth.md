@@ -58,9 +58,12 @@
     entry evidence before exposing the GitHub install URL".
   - `pending` in `attempts.rs` backs `has_pending_add`. It is true while the
     person has an Add attempt with no installation.
-  - While it is true, `installation_decision` in
-    `crates/ciproxy-api/src/access/install_authority.rs` makes the first
-    event of an install with no claim wait for a workspace choice.
+  - Signed association reads the same `add_evidence` query for the original
+    requester, in
+    `crates/ciproxy-store-pg/src/installation_links/association.rs`.
+    An unresolved or exact Add attempt keeps that install in Add recovery.
+    The API authority consumes the canonical claim and resolves its Target
+    approval and billing holds.
   - A continuation keeps the purpose of its first attempt. A retry after a
     personal-account return stays Add, as `setup_personal_tests.rs`
     asserts. After its installation links, an Add continuation offers a

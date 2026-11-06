@@ -12,6 +12,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
+use ciproxy_store_interface::installation_links::InstallationClaim;
 use ciproxy_store_interface::organizations::{Organization, RepositoryAccess};
 use uuid::Uuid;
 
@@ -45,16 +46,14 @@ pub enum InstallationDecision {
 #[cfg_attr(test, unimock::unimock(api = InstallAuthorityMock))]
 #[async_trait]
 pub trait InstallAuthority: Send + Sync {
-    /// Resolve the original requester for this exact organization and installation.
+    /// Project canonical signed flow and resolve only its Target admission.
     ///
-    /// The caller has verified the current signed creation event and App identity.
+    /// The store has joined the signed creation identity and original person's flow.
     /// An unresolved Add waits for the person's own installed proof and workspace choice.
     /// A chosen workspace can retain independent Admin and billing holds.
     async fn installation_decision(
         &self,
-        requester_id: i64,
-        github_organization_id: i64,
-        installation_id: i64,
+        claim: &InstallationClaim,
     ) -> Result<InstallationDecision>;
     /// Idempotently grant the first installer the Admin role in a new workspace.
     async fn ensure_initial_admin(&self, workspace_id: Uuid, github_user_id: i64) -> Result<()>;

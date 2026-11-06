@@ -16,12 +16,12 @@ use ciproxy_github::persistence::StoreAdapter;
 use ciproxy_github::rest::GitHubRest;
 use ciproxy_github::runtime::Runtime;
 use ciproxy_store_interface::github::{Repository, RunFacts};
-use ciproxy_store_interface::installation_links::InstallationClaim;
+use ciproxy_store_interface::installation_links::{InstallationClaim, InstallationRecovery};
 use ciproxy_store_interface::store::Store;
 use tokio::sync::oneshot;
 use uuid::Uuid;
 
-use super::resource_fixture::{ResourceFactory, Resources};
+use super::resource_fixture::{ResourceFactory, Resources, seed_installation_choice};
 
 pub(super) fn at() -> DateTime<Utc> {
     "2026-11-04T12:00:00Z".parse().unwrap()
@@ -151,35 +151,23 @@ pub(super) struct Authority {
 impl InstallAuthority for Authority {
     async fn installation_decision(
         &self,
-        requester: i64,
-        github: i64,
-        installation: i64,
+        claim: &InstallationClaim,
     ) -> Result<InstallationDecision> {
-        self.requesters.lock().unwrap().push(requester);
-        if let Some(workspace) = *self.target.lock().unwrap() {
+        self.requesters.lock().unwrap().push(claim.requester_id);
+        if let InstallationRecovery::Add { workspace_id } = claim.recovery() {
             let store = self.store.lock().unwrap().clone().unwrap();
-            let claim = InstallationClaim {
-                id: Uuid::new_v4(),
-                installation_id: installation,
-                github_id: github,
-                login: "customer".to_owned(),
-                requester_id: requester,
-                event_seen: true,
-                user_verified: true,
-                direct: false,
-                workspace_id: Some(workspace),
-                organization_id: None,
-                verified_at: Some(at()),
-            };
-            let claim = store.save_installation_claim(&claim, None).unwrap();
             store.authorize_installation_claim(claim.id, true).unwrap();
             Ok(InstallationDecision::Target {
-                workspace_id: workspace,
+                workspace_id,
                 admin_approved: true,
                 billing_hold: false,
             })
         } else {
-            Ok(InstallationDecision::Direct)
+            Ok(if claim.recovery() == InstallationRecovery::Direct {
+                InstallationDecision::Direct
+            } else {
+                InstallationDecision::AwaitingAssignment
+            })
         }
     }
     async fn ensure_initial_admin(&self, _: Uuid, user: i64) -> Result<()> {
@@ -260,6 +248,10 @@ impl Fixture {
         store: Arc<dyn Store>,
         installations: Arc<dyn InstallationApi>,
     ) -> Arc<dyn GitHubApp> {
+        if let Some(workspace) = *self.authority.target.lock().unwrap() {
+            let current = self.state.current.lock().unwrap().clone().unwrap();
+            seed_installation_choice(store.as_ref(), &current, workspace, 41);
+        }
         *self.authority.store.lock().unwrap() = Some(store.clone());
         let adapter = Arc::new(StoreAdapter::new(store, self.runtime.clone()));
         Arc::new(AppService {

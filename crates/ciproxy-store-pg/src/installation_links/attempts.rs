@@ -43,13 +43,27 @@ struct Pending {
 }
 
 pub(super) fn pending(store: &PgStore, requester: i64) -> Result<bool> {
-    Ok(diesel::sql_query("SELECT EXISTS (SELECT 1 FROM installation_attempts WHERE requester_id=$1 AND NOT direct AND installation_id IS NULL) AS pending")
-        .bind::<BigInt,_>(requester).get_result::<Pending>(&mut *store.connection()?).store()?.pending)
+    add_evidence(&mut *store.connection()?, requester, None, true)
 }
 
 pub(super) fn bound(store: &PgStore, requester: i64, installation: i64) -> Result<bool> {
-    Ok(diesel::sql_query("SELECT EXISTS (SELECT 1 FROM installation_attempts WHERE requester_id=$1 AND installation_id=$2 AND NOT direct) AS pending")
-        .bind::<BigInt,_>(requester).bind::<BigInt,_>(installation).get_result::<Pending>(&mut *store.connection()?).store()?.pending)
+    add_evidence(
+        &mut *store.connection()?,
+        requester,
+        Some(installation),
+        false,
+    )
+}
+
+pub(super) fn add_evidence(
+    connection: &mut PgConnection,
+    requester: i64,
+    installation: Option<i64>,
+    pending: bool,
+) -> Result<bool> {
+    Ok(diesel::sql_query("SELECT EXISTS (SELECT 1 FROM installation_attempts WHERE requester_id=$1 AND NOT direct AND (installation_id=$2 OR ($3 AND installation_id IS NULL))) AS pending")
+        .bind::<BigInt,_>(requester).bind::<Nullable<BigInt>,_>(installation).bind::<Bool,_>(pending)
+        .get_result::<Pending>(connection).store()?.pending)
 }
 
 pub(super) fn by_id(store: &PgStore, id: uuid::Uuid) -> Result<Option<InstallationAttempt>> {

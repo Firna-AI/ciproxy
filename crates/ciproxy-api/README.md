@@ -138,8 +138,11 @@ The registered setup return starts the same browser-bound OAuth proof.
 
 GET `/installation-links` refreshes the original person's installed claims.
 Add requires the exact signed requester and fresh own-user installation proof.
-Signed Direct claims retry without Add proof, even when the person's installation
-list omits them. A provisional Direct return still waits for the signed event.
+Signed Direct claims retry without Add proof, even when the person's
+installation list omits them. A provisional Direct return still waits for the
+signed event.
+The store joins signed identity before the access service resolves admission.
+Another person's provisional return supplies no flow, proof, or destination.
 One current Admin workspace links Add automatically. Several require
 PUT `/installation-links/{claim_id}/workspace` with an offered workspace ID.
 No eligible workspace leaves the claim waiting. Exact offers survive the

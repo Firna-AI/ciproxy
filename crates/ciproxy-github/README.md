@@ -33,12 +33,17 @@ The caller supplies an HTTP client that disables redirects.
 
 An authenticated installation event uses `requester` for an approved
 member request. It uses `sender` for a direct install with no requester.
-The role service implements `InstallAuthority::installation_decision` for the
-exact requester, account, and installation. An unambiguous direct install keeps
-normal first-install and retained-reinstall behavior. An unresolved Add saves
+The store joins the exact signed requester, account, and installation before
+admission. It decides Direct or Add from that requester's own entry evidence.
+`InstallAuthority::installation_decision` consumes the saved canonical claim.
+It resolves Admin approval and billing for a chosen Add workspace.
+An unambiguous direct install keeps normal first-install and retained-reinstall
+behavior. An unresolved Add saves
 `AwaitingAssignment` before any workspace or runner preparation.
 Signed Direct evidence retries after preparation failure without Add proof.
 Callback-only Direct evidence still waits for its signed creation event.
+Another person's provisional proof cannot select the signed flow or workspace.
+The first signed association fixes the flow for every replay and later proof.
 For Add, the original person must prove installed association and choose a
 workspace.
 App access, missing state, or the newest attempt cannot select that workspace.

@@ -5,9 +5,12 @@ These queries implement the installation association boundary of
 The [store crate](../../README.md) applies their forward migrations.
 
 Attempts retain a state digest, requester identity, and explicit Direct/Add
-evidence. Claims merge fresh-user proof with signed events under an exact
-installation transaction lock. A later signed original requester replaces
-provisional other-user proof and clears that user's offers and target.
+evidence. Signed association joins the original requester and that person's own
+pending or exact Add evidence under the installation transaction lock.
+It replaces provisional other-user proof. It clears that user's offers and
+target.
+The first signed association fixes Direct or Add. Replay and later browser proof
+preserve that flow. Only signed association can replace provisional ownership.
 Offers require both original-person proof and the signed event. Workspace
 choice is immutable. Neither source workspace nor event order selects it.
 
@@ -37,7 +40,8 @@ cargo test --package ciproxy-store-pg --test store_tests
 cargo test --package ciproxy-api --test http_tests link_
 ```
 
-- `claims.rs` joins exact signed events and token-free proof.
+- `claims.rs` saves token-free proof and preserves signed ownership and flow.
+- `association.rs` owns the locked signed identity and flow transaction.
 - `offers.rs` stores authorized destinations and conditional choice.
 - `activation.rs` commits independent admission and exact execution authority.
 - `attempts.rs` preserves entry evidence independently of claim lifetime.

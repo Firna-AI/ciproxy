@@ -36,11 +36,11 @@ async fn retained_reinstall_reuses_workspace_and_preserves_shared_label_configur
     let service = app(Unimock::new((
         coordination(false),
         RuntimeMock::uuid.some_call(matching!()).returns(id(99)),
-        InstallationStoreMock::stage
+        InstallationStoreMock::associate
             .some_call(matching!(_))
-            .answers(&|_, claim| Ok(claim)),
+            .answers(&|_, signed| Ok(signed.associate(None, false).unwrap())),
         InstallAuthorityMock::installation_decision
-            .some_call(matching!(41, 17, 19))
+            .some_call(matching!((claim) if claim.requester_id == 41 && claim.github_id == 17 && claim.installation_id == 19))
             .returns(Ok(InstallationDecision::Direct)),
         InstallationStoreMock::by_github_id
             .some_call(matching!(17))
@@ -104,15 +104,16 @@ async fn expired_retained_organization_joins_admin_workspace_as_new_registration
     ));
     let service = app(Unimock::new((
         coordination(false),
-        InstallationStoreMock::stage
+        InstallationStoreMock::associate
             .some_call(matching!(_))
-            .answers(&|_, mut claim| {
+            .answers(&|_, signed| {
+                let mut claim = signed.associate(None, true).unwrap();
                 claim.user_verified = true;
                 claim.workspace_id = Some(id(1));
                 Ok(claim)
             }),
         InstallAuthorityMock::installation_decision
-            .some_call(matching!(41, 17, 19))
+            .some_call(matching!((claim) if claim.requester_id == 41 && claim.github_id == 17 && claim.installation_id == 19))
             .returns(Ok(InstallationDecision::Target {
                 workspace_id: id(1),
                 admin_approved: true,

@@ -113,11 +113,11 @@ async fn suspension_stops_idle_organization_capacity_without_revoking_workspace(
                 Ok(saved)
             }),
         RuntimeMock::uuid.some_call(matching!()).returns(id(99)),
-        InstallationStoreMock::stage
+        InstallationStoreMock::associate
             .some_call(matching!(_))
-            .answers(&|_, claim| Ok(claim)),
+            .answers(&|_, signed| Ok(signed.associate(None, false).unwrap())),
         InstallAuthorityMock::installation_decision
-            .some_call(matching!(41, 17, 19))
+            .some_call(matching!((claim) if claim.requester_id == 41 && claim.github_id == 17 && claim.installation_id == 19))
             .returns(Ok(InstallationDecision::Direct)),
         LifecycleStoreMock::register
             .some_call(matching!(_))

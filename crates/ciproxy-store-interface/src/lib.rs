@@ -10,6 +10,7 @@ pub mod gateway;
 pub mod github;
 pub mod github_lifecycle;
 pub mod github_timing;
+pub mod installation_association;
 pub mod installation_links;
 pub mod jobs;
 pub mod labels;
