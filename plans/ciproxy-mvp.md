@@ -561,6 +561,26 @@ VM hardware. The exported Firecracker disk stays ext4 on `/dev/vda`.
       size each job VM disk as the image plus the free disk of its label,
       on machines and on Boat. Update the label table, the protocol docs,
       the site, and the mockups.
+  - [x] Image: compact ext4, retain its 1% root reserve and a small free
+        margin, and record `root_disk_bytes` in measurement and manifest.
+        Export the retained userspace and prove at least 20 GB free after
+        growth by 20 GB in a booted runner-user probe.
+        Keep the release free of writable mounts after creation. Check
+        plain `resize2fs` growth with e2fsprogs 1.46.5 without a prior repair.
+        Implementor call, 5 November 2026: keep 2 GiB free after compaction.
+        It covers the reserve and metadata growth of the default 20 GB
+        and 60 GB job allowances. Round growth to complete ext4 groups.
+        Evidence: `.context/ciproxy-mvp/kvm/item-77/status.json`.
+        Branch: `conductor/ciproxy-mvp-milestone-10-root-size`.
+  - [x] Image fix round 1: keep the base root small enough for a default
+        job on the 250 GB minimum with at least 1 GB of job-disk space left.
+        Use the real `RootSizing` helper of PR #27 for 1, 20, 60, and 500 GB
+        allowances. Boot separate grown copies and verify each free value.
+        Implementor call, 5 November 2026: use a 64 MiB base margin with
+        measured empty ext4 metadata. It leaves 48 MiB beyond the kernel
+        reserve pool. The agent helper supplies all job-growth headroom.
+        Evidence: `.context/ciproxy-mvp/kvm/item-77/fix-round-1/status.json`.
+        Branch: `conductor/ciproxy-mvp-milestone-10-root-size`.
 - [ ] Publish it with its SHA-256, and as a shared Boat snapshot. Rebuild
       before GitHub stops accepting the runner.
       Orchestrator: run `image/publish.sh` and the create, prepare, and

@@ -77,11 +77,12 @@ def create(workspace, image):
     tools.mkdir()
     for name in ["virt-customize", "guestfish", "sudo"]:
         (tools / name).symlink_to(image / "_checks_/export_tools.py")
-    environment = {**os.environ, "LC_ALL": "C", "ROOTFS_BYTES": "67108864",
+    environment = {**os.environ, "LC_ALL": "C",
                    "PATH": str(tools) + os.pathsep + os.environ["PATH"],
                    "CIPROXY_TEST_SOURCE": str(source),
                    "CIPROXY_TEST_EVENTS": str(root / "events.jsonl"),
                    "CIPROXY_TEST_FSTAB": SOURCE_FSTAB}
+    environment.pop("ROOTFS_BYTES", None)
     return root, source, work, environment
 
 
