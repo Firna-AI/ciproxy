@@ -3,7 +3,9 @@
 use ciproxy_github::persistence::session::ListenerTarget;
 use ciproxy_github::registrations::RegistrationRetirement;
 use ciproxy_github::scale_sets::JitRegistration;
-use ciproxy_protocol::agent::{AgentMessage, CommandOutcome, ControlMessage};
+use ciproxy_protocol::agent::{
+    AgentMessage, CommandOutcome, ControlMessage, JobPreparationOutcome,
+};
 use ciproxy_protocol::identifiers::{CommandId, JobId, RunnerId};
 use ciproxy_store_interface::github::{DemandPhase, GithubJob};
 use ciproxy_store_interface::organizations::AppState;
@@ -167,17 +169,17 @@ impl MachineRuntime {
             runner_id: github_id,
             configuration: "".into(),
         };
-        let Some(facts) = self.assignments.facts(target, job, &jit).await.internal()? else {
-            return Ok(());
-        };
-        if !self.send_docker_budget(input, machine_id).await? {
+        let outcome = self.assignments.facts(target, job, &jit).await.internal()?;
+        if matches!(outcome, JobPreparationOutcome::TrustedFacts { .. })
+            && !self.send_docker_budget(input, machine_id).await?
+        {
             return Ok(());
         }
-        let message = ControlMessage::JobFacts {
+        let message = ControlMessage::JobPreparation {
             command_id: CommandId(self.clock.uuid().to_string()),
             runner_id: RunnerId(runner.runner.id.to_string()),
             job_id: JobId(job.id.to_string()),
-            facts,
+            outcome,
         };
         let gateway = self.gateway.clone();
         match tokio::task::spawn_blocking(move || gateway.send(workspace_id, machine_id, message))

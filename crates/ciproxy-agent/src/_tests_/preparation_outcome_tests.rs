@@ -3,7 +3,7 @@
 use ciproxy_protocol::guest::JobDecision;
 use std::sync::{Arc, Mutex};
 
-use ciproxy_protocol::agent::ControlMessage;
+use ciproxy_protocol::agent::{ControlMessage, JobPreparationOutcome};
 use ciproxy_protocol::guest::AgentToGuest;
 use ciproxy_protocol::guest::{GuestToAgent, JobPreparation};
 use ciproxy_protocol::identifiers::{CommandId, JobId, RunnerId};
@@ -58,11 +58,13 @@ async fn replay_restored(state: &MachineState, outcome: JobPreparation) {
     agent.restore().await.unwrap();
     assert_eq!(
         agent
-            .control(ControlMessage::JobFacts {
+            .control(ControlMessage::JobPreparation {
                 command_id: CommandId("command-1".into()),
                 runner_id: RunnerId("job".into()),
                 job_id: JobId("job-1".into()),
-                facts: trusted_facts()
+                outcome: JobPreparationOutcome::TrustedFacts {
+                    facts: Box::new(trusted_facts())
+                }
             })
             .await
             .unwrap(),

@@ -3,7 +3,7 @@
 use ciproxy_protocol::guest::JobDecision;
 use std::sync::{Arc, Mutex};
 
-use ciproxy_protocol::agent::ControlMessage;
+use ciproxy_protocol::agent::{ControlMessage, JobPreparationOutcome};
 use ciproxy_protocol::guest::{AgentToGuest, GuestToAgent};
 use ciproxy_protocol::identifiers::{CommandId, JobId, RunnerId};
 use ciproxy_protocol::jobs::{JobScope, UnknownJobScopeReason};
@@ -68,11 +68,13 @@ pub(super) async fn sealed_state(runtime: RuntimeCredentials) -> MachineState {
 }
 
 pub(super) fn facts() -> ControlMessage {
-    ControlMessage::JobFacts {
+    ControlMessage::JobPreparation {
         command_id: CommandId("facts".into()),
         runner_id: RunnerId("job".into()),
         job_id: JobId("job-1".into()),
-        facts: trusted_facts(),
+        outcome: JobPreparationOutcome::TrustedFacts {
+            facts: Box::new(trusted_facts()),
+        },
     }
 }
 

@@ -1,0 +1,15 @@
+---
+source: crates/ciproxy-protocol/src/_tests_/wire/assertions.rs
+description: Tagged JSON for control_job_preparation_github_only; all credentials are dummy test values.
+expression: message
+---
+{
+  "type": "job_preparation",
+  "command_id": "command-1",
+  "runner_id": "runner-1",
+  "job_id": "job-1",
+  "outcome": {
+    "status": "github_only",
+    "organization_id": "organization-1"
+  }
+}

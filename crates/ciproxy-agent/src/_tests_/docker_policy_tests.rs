@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use ciproxy_protocol::agent::ControlMessage;
+use ciproxy_protocol::agent::{ControlMessage, JobPreparationOutcome};
 use ciproxy_protocol::cache::{CacheConnection, DockerBudget};
 use ciproxy_protocol::identifiers::{CommandId, JobId, RunnerId};
 use ciproxy_protocol::images::ImageReport;
@@ -89,11 +89,13 @@ async fn old_image_policy_grants_nothing_after_local_selection_changes() {
             .await
             .unwrap();
         agent
-            .control(ControlMessage::JobFacts {
+            .control(ControlMessage::JobPreparation {
                 command_id: CommandId("facts".into()),
                 runner_id: RunnerId(runner.into()),
                 job_id: JobId("job-1".into()),
-                facts: trusted_facts(),
+                outcome: JobPreparationOutcome::TrustedFacts {
+                    facts: Box::new(trusted_facts()),
+                },
             })
             .await
             .unwrap();

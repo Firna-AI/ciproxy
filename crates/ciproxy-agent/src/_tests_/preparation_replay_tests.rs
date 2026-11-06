@@ -3,7 +3,7 @@
 use ciproxy_protocol::guest::JobDecision;
 use std::sync::{Arc, Mutex};
 
-use ciproxy_protocol::agent::ControlMessage;
+use ciproxy_protocol::agent::{ControlMessage, JobPreparationOutcome};
 use ciproxy_protocol::cache::{CacheConnection, DockerDiskAccess, DockerDiskAttachment};
 use ciproxy_protocol::guest::AgentToGuest;
 use ciproxy_protocol::identifiers::{CommandId, JobId, RunnerId};
@@ -72,11 +72,13 @@ async fn repeated_facts_do_not_repeat_attachment_before_the_guest_acknowledges_s
     for _ in 0..2 {
         assert_eq!(
             agent
-                .control(ControlMessage::JobFacts {
+                .control(ControlMessage::JobPreparation {
                     command_id: CommandId("command-1".into()),
                     runner_id: RunnerId("job".into()),
                     job_id: JobId("job-1".into()),
-                    facts: trusted_facts()
+                    outcome: JobPreparationOutcome::TrustedFacts {
+                        facts: Box::new(trusted_facts())
+                    }
                 })
                 .await
                 .unwrap(),

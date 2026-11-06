@@ -1,6 +1,8 @@
 //! Authenticated commands. Guest assertions cannot supply job facts.
 
-use ciproxy_protocol::agent::{AgentMessage, CommandFailure, CommandOutcome, ControlMessage};
+use ciproxy_protocol::agent::{
+    AgentMessage, CommandFailure, CommandOutcome, ControlMessage, JobPreparationOutcome,
+};
 use ciproxy_protocol::runners::RunnerState;
 use ciproxy_protocol::version::ProtocolVersion;
 
@@ -61,11 +63,11 @@ impl Controller {
                 };
                 (command_id, result, CommandFailure::RunnerStop)
             }
-            ControlMessage::JobFacts {
+            ControlMessage::JobPreparation {
                 command_id,
                 runner_id,
                 job_id,
-                facts,
+                outcome,
             } => {
                 let vm = self
                     .state
@@ -75,7 +77,7 @@ impl Controller {
                     .iter()
                     .find(|vm| {
                         vm.report.runner_id == runner_id
-                            && vm.report.organization_id == facts.organization_id
+                            && &vm.report.organization_id == outcome.organization_id()
                             && vm.report.state
                                 == RunnerState::Running {
                                     job_id: job_id.clone(),
@@ -83,7 +85,18 @@ impl Controller {
                     })
                     .cloned();
                 let result = match vm {
-                    Some(vm) => self.prepare_job(&vm, facts).await,
+                    Some(vm) => match outcome {
+                        JobPreparationOutcome::TrustedFacts { facts } => {
+                            self.prepare_job(&vm, *facts).await
+                        }
+                        JobPreparationOutcome::GitHubOnly { .. }
+                            if vm.job_facts.is_none()
+                                && vm.preparation == PreparationState::Waiting =>
+                        {
+                            self.release_github(&vm).await
+                        }
+                        JobPreparationOutcome::GitHubOnly { .. } => Ok(()),
+                    },
                     None => Err(Error::RunnerMismatch),
                 };
                 (command_id, result, CommandFailure::GuestConnection)

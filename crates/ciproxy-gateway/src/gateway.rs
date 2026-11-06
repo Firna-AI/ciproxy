@@ -199,7 +199,7 @@ impl MachineGateway for Gateway {
             ControlMessage::StartRunner { .. }
             | ControlMessage::DockerBudget { .. }
             | ControlMessage::StopRunner { .. }
-            | ControlMessage::JobFacts { .. }
+            | ControlMessage::JobPreparation { .. }
             | ControlMessage::FetchImage { .. } => (),
             _ => return Err(Error::UnexpectedMessage),
         }
