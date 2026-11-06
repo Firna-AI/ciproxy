@@ -38,9 +38,10 @@ resource "google_tags_tag_value" "environment" {
   short_name = each.key
 }
 resource "google_project_iam_custom_role" "invalidate" {
-  role_id     = "ciproxyInvalidateCdn"
-  title       = "ciproxy own CDN invalidation"
-  permissions = ["compute.urlMaps.invalidateCache"]
+  role_id = "ciproxyInvalidateCdn"
+  title   = "ciproxy own CDN invalidation"
+  # gcloud reads the URL map when the invalidation operation finishes.
+  permissions = ["compute.urlMaps.get", "compute.urlMaps.invalidateCache"]
 }
 resource "google_project_iam_member" "invalidate" {
   for_each = local.environments
