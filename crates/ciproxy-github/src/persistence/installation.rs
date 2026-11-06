@@ -24,7 +24,7 @@ pub trait InstallationStore: Send + Sync {
     async fn confirm_admin(&self, workspace_id: Uuid) -> Result<()>;
     /// Read retained workspace labels, including edits and deletions.
     async fn labels(&self, workspace_id: Uuid) -> Result<Vec<Label>>;
-    /// Read the scale sets that already belong to one organization.
+    /// Read active and retired bindings until their remote cleanup is confirmed.
     async fn scale_sets(&self, organization: &Organization) -> Result<Vec<ScaleSet>>;
     /// Read a retained managed group across this GitHub account's registrations.
     async fn runner_group(&self, github_id: i64) -> Result<Option<i64>>;
@@ -62,7 +62,7 @@ impl InstallationStore for StoreAdapter {
     async fn scale_sets(&self, organization: &Organization) -> Result<Vec<ScaleSet>> {
         let organization = organization.clone();
         query(self.store.clone(), move |store| {
-            store.scale_sets(organization.workspace_id, organization.id)
+            store.dashboard_scale_sets(organization.workspace_id, organization.id)
         })
         .await
     }

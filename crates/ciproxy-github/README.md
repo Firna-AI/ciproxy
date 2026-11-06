@@ -117,6 +117,11 @@ ScaleSetGroupChanged. The adapter makes no unproven remote move and deletes
 no unknown or retained resource. That case needs live move proof before
 automatic repair can be enabled. It does not erase retained job history.
 
+Before resume or retained reinstall prepares active label bindings, it releases
+the names of retired bindings by their exact remote IDs. A missing old remote
+resource counts as released. Authentication and provider failures stay errors.
+This preserves label replacement without changing retained job references.
+
 ### Durable demand and registrations
 
 Scale-set `jobId` is a UUID. It is separate from the numeric Actions job

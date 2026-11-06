@@ -32,6 +32,7 @@ mod setup_support;
 mod setup_tests;
 
 mod idle_retirement_tests;
+mod label_reactivation_tests;
 mod label_retirement_support;
 mod label_retirement_tests;
 mod oauth_peer;

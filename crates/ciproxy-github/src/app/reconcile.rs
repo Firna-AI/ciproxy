@@ -7,6 +7,7 @@ use ciproxy_store_interface::scale_sets::ScaleSet;
 
 use crate::error::{Error, Result};
 use crate::persistence::mutation::MutationLease;
+use crate::scale_sets::ScaleSetApi;
 
 use super::AppService;
 
@@ -75,7 +76,10 @@ impl AppService {
             .map(|repository| repository.id)
             .collect();
         let existing = self.store.scale_sets(organization).await?;
-        let saved_group = if let Some(set) = existing.first() {
+        let saved_group = if let Some(set) = existing
+            .iter()
+            .find(|set| labels.iter().any(|label| label.id == set.label_id))
+        {
             Some(set.runner_group_id)
         } else {
             self.store.runner_group(organization.github_id).await?
@@ -94,6 +98,7 @@ impl AppService {
             .await?;
         lease.check().await?;
         let api = self.scale_sets.for_organization(organization).await?;
+        release_retired(&*api, &existing, &labels, lease).await?;
         let mut scale_sets = Vec::new();
         for label in labels {
             let previous = existing.iter().find(|set| set.label_id == label.id);
@@ -117,4 +122,26 @@ impl AppService {
             scale_sets,
         })
     }
+}
+
+/// Release deleted-label names before a resume or reinstall prepares replacements.
+async fn release_retired(
+    api: &dyn ScaleSetApi,
+    bindings: &[ScaleSet],
+    labels: &[Label],
+    lease: &dyn MutationLease,
+) -> Result<()> {
+    for binding in bindings
+        .iter()
+        .filter(|binding| !labels.iter().any(|label| label.id == binding.label_id))
+    {
+        lease.check().await?;
+        api.rename_scale_set(
+            binding.github_id,
+            &format!("ciproxy-retired-{}", binding.id.simple()),
+        )
+        .await?;
+        lease.check().await?;
+    }
+    Ok(())
 }

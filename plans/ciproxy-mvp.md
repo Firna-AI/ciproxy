@@ -886,7 +886,7 @@ UTC RFC 3339, and IDs as strings. Reason: JavaScript loses 64-bit numbers.
 - [ ] Test each route at the HTTP level with a real store.
       Branch: `conductor/ciproxy-mvp-milestone-14-api`.
       Orchestrator: complete the add-route HTTP cases after the owner's
-      decisions. The implemented 28 operations have 25 real-store scenarios.
+      decisions. The implemented 28 operations have 27 real-store scenarios.
   - [x] Test the implemented routes with PostgreSQL, the gateway, and the
         GitHub App service. Verify upstream adapters with a local HTTP peer.
         Branch: `conductor/ciproxy-mvp-milestone-14-api`.

@@ -187,12 +187,23 @@ async fn roles_gate_settings_and_mutations_and_members_ask_for_access() {
         .unwrap();
     assert_eq!(denied.status(), StatusCode::FORBIDDEN);
     assert_eq!(json(denied).await["code"], "access_denied");
+    let wrong_origin = format!("{}.attacker.example", fixture.state.config.public_origin);
     for (case, origin, csrf) in [
         ("missing-origin", None, Some(admin.csrf.as_str())),
         (
             "missing-csrf",
             Some(fixture.state.config.public_origin.as_str()),
             None,
+        ),
+        (
+            "wrong-origin",
+            Some(wrong_origin.as_str()),
+            Some(admin.csrf.as_str()),
+        ),
+        (
+            "other-sign-in-csrf",
+            Some(fixture.state.config.public_origin.as_str()),
+            Some(pending.csrf.as_str()),
         ),
     ] {
         let mut request = Request::builder()
