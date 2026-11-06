@@ -11,13 +11,18 @@ impl MachineCapacity for ReportedCapacity {
     fn capacity(&self, snapshot: &MachineSnapshot) -> Capacity {
         match &snapshot.report {
             Some(report) => Capacity {
-                slots: report.capacity,
+                slots: report.report.capacity,
                 job_disk_bytes: Some(
                     report
+                        .report
                         .job_disk_bytes
-                        .saturating_sub(report.docker_disks.leased_bytes),
+                        .saturating_sub(report.report.docker_disks.leased_bytes),
                 ),
-                image_disk_bytes: report.images.selected().map(|image| image.root_disk_bytes),
+                image_disk_bytes: report
+                    .report
+                    .images
+                    .selected()
+                    .map(|image| image.root_disk_bytes),
             },
             None => Capacity {
                 slots: Slots(0),
@@ -28,7 +33,8 @@ impl MachineCapacity for ReportedCapacity {
     }
 
     fn required_root_bytes(&self, snapshot: &MachineSnapshot, requested: u64) -> Option<u64> {
-        RootSizing::for_image(snapshot.report.as_ref()?.images.selected()?).root_bytes(requested)
+        RootSizing::for_image(snapshot.report.as_ref()?.report.images.selected()?)
+            .root_bytes(requested)
     }
 }
 

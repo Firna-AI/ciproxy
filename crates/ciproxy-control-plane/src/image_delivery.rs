@@ -16,7 +16,7 @@ impl MachineRuntime {
             let Some(report) = &machine.report else {
                 continue;
             };
-            if report.images.newest.as_ref() == Some(&image.image_id) {
+            if report.report.images.newest.as_ref() == Some(&image.image_id) {
                 self.image_requests
                     .lock()
                     .await

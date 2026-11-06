@@ -2,7 +2,7 @@
 
 use chrono::Duration;
 use ciproxy_store_interface::error::Error;
-use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
+use ciproxy_store_interface::github_lifecycle::{LifecycleEvent, RemovalCause};
 use ciproxy_store_interface::organizations::AppState;
 
 use super::super::support::{Database, at};
@@ -48,11 +48,13 @@ fn pending_lifecycle_snapshots_survive_row_reuse_and_workspace_purge_until_confi
         LifecycleEvent::Removed {
             organization: expected_removed,
             last_organization: true,
+            cause: RemovalCause::Owner,
         },
         LifecycleEvent::Active(next),
         LifecycleEvent::Removed {
             organization: removed_next,
             last_organization: true,
+            cause: RemovalCause::Owner,
         },
     ];
     assert_eq!(
@@ -121,5 +123,47 @@ fn pending_lifecycle_snapshots_survive_row_reuse_and_workspace_purge_until_confi
             .pending_github_lifecycle_organizations()
             .unwrap(),
         Vec::<i64>::new()
+    );
+}
+
+#[test]
+fn removal_outbox_keeps_owner_and_workspace_takeout_causes() {
+    let database = Database::new();
+    let workspace = database.workspace();
+    let taken = database.organization(&workspace);
+    let owner = database.organization(&workspace);
+    database
+        .store
+        .begin_organization_takeout(workspace.id, taken.id)
+        .unwrap();
+    let mut expected_taken = taken.clone();
+    expected_taken.app_state = AppState::Removed;
+    assert_eq!(
+        database
+            .store
+            .pending_github_lifecycle(taken.github_id)
+            .unwrap()[0]
+            .event,
+        LifecycleEvent::Removed {
+            organization: expected_taken,
+            last_organization: false,
+            cause: RemovalCause::WorkspaceTakeout
+        }
+    );
+    let removed = database
+        .store
+        .remove_github_installation(workspace.id, owner.id, owner.installation_id, at())
+        .unwrap();
+    assert_eq!(
+        database
+            .store
+            .pending_github_lifecycle(owner.github_id)
+            .unwrap()[0]
+            .event,
+        LifecycleEvent::Removed {
+            organization: removed,
+            last_organization: true,
+            cause: RemovalCause::Owner
+        }
     );
 }

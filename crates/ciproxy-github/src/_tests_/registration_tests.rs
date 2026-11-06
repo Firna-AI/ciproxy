@@ -49,8 +49,8 @@ async fn removed_installation_keeps_inaccessible_github_registration() {
     removed.organization.app_state = AppState::Removed;
     let mock = Arc::new(Unimock::new(
         SessionStoreMock::context
-            .some_call(matching!(_))
-            .returns(Ok(removed)),
+            .each_call(matching!(_))
+            .answers_arc(Arc::new(move |_, _| Ok(removed.clone()))),
     ));
     let service = RegistrationService {
         store: mock.clone(),
@@ -60,4 +60,5 @@ async fn removed_installation_keeps_inaccessible_github_registration() {
         service.remove(target(), 71).await.unwrap(),
         Removal::AccessGone
     );
+    assert_eq!(service.find(target(), "runner-71").await.unwrap(), None);
 }

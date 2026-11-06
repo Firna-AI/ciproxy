@@ -124,16 +124,17 @@ fn machine_input(
         .report
         .as_ref()
         .map(|report| Resources {
-            slots: report.capacity,
+            slots: report.report.capacity,
             job_disk_bytes: report
+                .report
                 .job_disk_bytes
-                .saturating_sub(report.docker_disks.leased_bytes),
+                .saturating_sub(report.report.docker_disks.leased_bytes),
         })
         .unwrap_or_default();
     let count = usize::try_from(machine.machine.warm_runners).unwrap_or(0);
     Machine {
         id: MachineId(machine.machine.id.to_string()),
-        selected_image: machine.report.as_ref().and_then(|report| report.images.selected().cloned()),
+        selected_image: machine.report.as_ref().and_then(|report| report.report.images.selected().cloned()),
         connected: machine.machine.last_contact_at.is_some_and(|at| now < at + chrono::Duration::seconds(60)),
         draining: machine.machine.draining,
         capacity: resources.slots, disk_budget_bytes: resources.job_disk_bytes,

@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 use chrono::TimeDelta;
 use ciproxy_protocol::reports::DiskReport;
 use ciproxy_schema::machines::{machine_disks, machine_reports, machines};
-use ciproxy_store_interface::gateway::MachineSnapshot;
+use ciproxy_store_interface::gateway::{MachineSnapshot, ReceivedReport};
 use ciproxy_store_interface::store::{Store, StoreFactory};
 use ciproxy_store_pg::factory::PgStoreFactory;
 use diesel::connection::SimpleConnection;
@@ -109,7 +109,10 @@ fn machine_reads_keep_one_generation_when_a_report_commits_between_queries() {
         diesel::update(
             machine_reports::table.filter(machine_reports::machine_id.eq(registration.machine_id)),
         )
-        .set(machine_reports::report.eq(serde_json::to_value(&newer).unwrap()))
+        .set((
+            machine_reports::report.eq(serde_json::to_value(&newer).unwrap()),
+            machine_reports::received_at.eq(at() + TimeDelta::seconds(10)),
+        ))
         .execute(&mut database.connection)
         .unwrap();
         database
@@ -124,7 +127,10 @@ fn machine_reads_keep_one_generation_when_a_report_commits_between_queries() {
         assert_eq!(snapshot.machine.hostname, "builder");
         assert_eq!(snapshot.machine.last_contact_at, Some(at()));
         assert_eq!(snapshot.machine.disks[0].free_bytes, 111);
-        let expected = full.then_some(registration.contact.report);
+        let expected = full.then_some(ReceivedReport {
+            report: registration.contact.report,
+            received_at: at(),
+        });
         assert_eq!(snapshot.report, expected);
         let after = read(&*database.store, workspace_id, full);
         assert_eq!(after.machine.hostname, "builder-new");
@@ -133,6 +139,12 @@ fn machine_reads_keep_one_generation_when_a_report_commits_between_queries() {
             Some(at() + TimeDelta::seconds(10))
         );
         assert_eq!(after.machine.disks[0].free_bytes, 222);
-        assert_eq!(after.report, full.then_some(newer));
+        assert_eq!(
+            after.report,
+            full.then_some(ReceivedReport {
+                report: newer,
+                received_at: at() + TimeDelta::seconds(10)
+            })
+        );
     }
 }

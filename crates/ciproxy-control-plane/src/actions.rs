@@ -2,7 +2,6 @@
 
 use ciproxy_gateway::types::Delivery;
 use ciproxy_github::persistence::session::ListenerTarget;
-use ciproxy_github::registrations::Removal;
 use ciproxy_protocol::agent::ControlMessage;
 use ciproxy_protocol::identifiers::{CommandId, OrganizationId, RunnerId};
 use ciproxy_protocol::runners::RunnerSpec;
@@ -28,7 +27,7 @@ impl MachineRuntime {
                     .iter()
                     .find(|runner| runner.runner.id.to_string() == runner_id.0)
                     .ok_or(Error::StateChanged)?;
-                self.stop(input.workspace_id, runner).await
+                self.stop(input, runner).await
             }
             Action::DeleteSandbox { .. } => Ok(()),
         }
@@ -72,7 +71,7 @@ impl MachineRuntime {
             .iter()
             .find(|machine| machine.machine.id == machine_id)
             .and_then(|machine| machine.report.as_ref())
-            .map_or(0, |report| report.capacity.0);
+            .map_or(0, |report| report.report.capacity.0);
         let slot_indices = allocate_slots(machine_id, start.size, capacity, &reservations)
             .ok_or(Error::StateChanged)?;
         let id = self.clock.uuid();
@@ -103,6 +102,7 @@ impl MachineRuntime {
             command_id,
             issued_at: self.clock.now(),
             acknowledged: false,
+            confirmed_at: None,
         };
         let store = self.store.clone();
         let saved = runner.clone();
@@ -141,90 +141,6 @@ impl MachineRuntime {
                 .internal()?;
         if delivery == Delivery::Offline {
             tracing::info!(%id, "runner delivery interrupted; reconciliation will retire its registration");
-        }
-        Ok(())
-    }
-
-    pub(crate) async fn stop(&self, workspace_id: Uuid, runner: &OwnRunner) -> Result<()> {
-        let RunnerPlace::Machine { machine_id, .. } = runner.runner.place else {
-            return Ok(());
-        };
-        if runner.runner.state == RunnerState::Busy {
-            return Ok(());
-        }
-        let mut command = runner.command_id;
-        if runner.runner.state != RunnerState::Stopping {
-            let target = ListenerTarget {
-                workspace_id,
-                organization_id: runner.runner.organization_id,
-                scale_set_id: runner.runner.scale_set_id,
-            };
-            let github_id = match runner.runner.github_id {
-                Some(id) => Some(id),
-                None => self
-                    .registrations
-                    .find(target, &format!("ciproxy-{}", runner.runner.id))
-                    .await
-                    .internal()?,
-            };
-            if let Some(github_id) = github_id {
-                self.save_state(workspace_id, runner, runner.runner.state, Some(github_id))
-                    .await?;
-                match self
-                    .registrations
-                    .remove(target, github_id)
-                    .await
-                    .internal()?
-                {
-                    Removal::Busy => {
-                        self.save_state(workspace_id, runner, RunnerState::Busy, Some(github_id))
-                            .await?;
-                        return Ok(());
-                    }
-                    Removal::AccessGone => {}
-                    Removal::Removed => {}
-                }
-            }
-            command = self.clock.uuid();
-            let store = self.store.clone();
-            let id = runner.runner.id;
-            let at = self.clock.now();
-            tokio::task::spawn_blocking(move || {
-                store.retire_own_runner(workspace_id, id, command, at)
-            })
-            .await
-            .internal()?
-            .internal()?;
-        }
-        let gateway = self.gateway.clone();
-        let store = self.store.clone();
-        let org_id = runner.runner.organization_id;
-        let organization =
-            tokio::task::spawn_blocking(move || store.organization(workspace_id, org_id))
-                .await
-                .internal()?
-                .internal()?
-                .ok_or(Error::StateChanged)?;
-        let organization_id = OrganizationId(organization.github_id.to_string());
-        let runner_id = RunnerId(runner.runner.id.to_string());
-        let delivery = tokio::task::spawn_blocking(move || {
-            gateway.send(
-                workspace_id,
-                machine_id,
-                ControlMessage::StopRunner {
-                    command_id: CommandId(command.to_string()),
-                    organization_id,
-                    runner_id,
-                },
-            )
-        })
-        .await
-        .internal()?;
-        match delivery {
-            Ok(_)
-            | Err(ciproxy_gateway::error::Error::NotFound)
-            | Err(ciproxy_gateway::error::Error::Unauthorized) => {}
-            Err(error) => return Err(error).internal(),
         }
         Ok(())
     }

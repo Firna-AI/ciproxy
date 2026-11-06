@@ -109,6 +109,7 @@ async fn github_removal_precedes_stop_and_capacity_waits_for_an_absent_vm_report
         .unwrap()
         .remove(0);
     assert_eq!(stopping.runner.state, RunnerState::Stopping);
+    assert_eq!(stopping.confirmed_at, Some(at()));
     assert_eq!(*events.lock().unwrap(), vec!["github_removed", "stop_sent"]);
     runtime
         .agent(

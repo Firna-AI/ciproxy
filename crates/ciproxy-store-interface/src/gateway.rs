@@ -13,10 +13,19 @@ use crate::tokens::TokenStore;
 /// The full last report and the machine's desired settings.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MachineSnapshot {
-    /// Identity, desired settings, and server receipt time.
+    /// Identity, desired settings, and last contact time.
     pub machine: Machine,
     /// Latest full report, absent for registrations made before the gateway.
-    pub report: Option<MachineReport>,
+    pub report: Option<ReceivedReport>,
+}
+
+/// One full inventory report bound to its trusted gateway receipt time.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ReceivedReport {
+    /// Complete inventory from one authenticated message.
+    pub report: MachineReport,
+    /// Receipt time of this inventory, independent of later lifecycle contact.
+    pub received_at: DateTime<Utc>,
 }
 
 /// A fresh machine and its first authenticated connection.

@@ -9,12 +9,10 @@ use ciproxy_gateway::gateway::MachineGateway;
 use ciproxy_github::assignments::JobAssignments;
 use ciproxy_github::registrations::RunnerRegistrations;
 use ciproxy_github::runtime::Runtime;
-use ciproxy_github::timing::JobTiming;
-use ciproxy_metering::service::Metering;
 use ciproxy_protocol::agent::AgentMessage;
 use ciproxy_protocol::images::ImageDownload;
 use ciproxy_store_interface::github::GithubJob;
-use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
+use ciproxy_store_interface::github_lifecycle::{LifecycleEvent, RemovalCause};
 use ciproxy_store_interface::store::Store;
 use tokio::sync::Mutex;
 use uuid::Uuid;
@@ -60,10 +58,6 @@ pub struct MachineRuntime {
     pub image: Option<ImageDownload>,
     /// Production CDN signer, supplied only at the hosted composition root.
     pub image_signing: Option<Arc<dyn ImageSigning>>,
-    /// Existing daily accounting service, isolated from runner execution errors.
-    pub metering: Option<Arc<dyn Metering>>,
-    /// Existing Actions-read lookup for missing real start/finish facts.
-    pub timing: Option<Arc<dyn JobTiming>>,
     pub(crate) operation: Mutex<()>,
     pub(crate) image_requests: Mutex<HashMap<(Uuid, Uuid), ImageRequest>>,
 }
@@ -92,8 +86,6 @@ impl MachineRuntime {
             clock,
             image,
             image_signing: None,
-            metering: None,
-            timing: None,
             operation: Mutex::new(()),
             image_requests: Mutex::new(HashMap::new()),
         }
@@ -104,43 +96,6 @@ impl MachineRuntime {
             .await
             .internal()?
             .internal()
-    }
-
-    async fn refresh_metering(&self, workspace_id: Uuid) {
-        if let Some(timing) = &self.timing
-            && let Err(error) = timing.repair(workspace_id).await
-        {
-            tracing::warn!(%workspace_id,%error,"job timing recovery will retry; runner placement continues");
-        }
-        let Some(metering) = &self.metering else {
-            return;
-        };
-        let metering = metering.clone();
-        let at = self.clock.now();
-        let result = tokio::task::spawn_blocking(move || metering.refresh(workspace_id, at)).await;
-        match result {
-            Ok(Ok(outcome)) => {
-                if outcome.stale_jobs == 0 && outcome.stale_sandboxes == 0 {
-                    let store = self.store.clone();
-                    match tokio::task::spawn_blocking(move || {
-                        store.purge_github_jobs(workspace_id, at)
-                    })
-                    .await
-                    {
-                        Ok(Ok(_)) => {}
-                        result => {
-                            tracing::warn!(%workspace_id,?result,"accounted raw job retention will retry")
-                        }
-                    }
-                }
-            }
-            Ok(Err(error)) => {
-                tracing::warn!(%workspace_id,%error,"metering accounting will retry; runner placement continues")
-            }
-            Err(error) => {
-                tracing::warn!(%workspace_id,%error,"metering worker failed; runner placement continues")
-            }
-        }
     }
 
     async fn reconcile_workspace(&self, workspace_id: Uuid) -> Result<()> {
@@ -156,6 +111,7 @@ impl MachineRuntime {
         let mut input = self.load(workspace_id).await?;
         self.reconcile_reports(&input).await?;
         input = self.load(workspace_id).await?;
+        self.recover_stops(&input, &mut *lease).await?;
         for job in &input.jobs {
             self.route_job(&input, job).await?;
         }
@@ -178,7 +134,7 @@ impl MachineRuntime {
                 .iter()
                 .find(|candidate| candidate.machine.id.to_string() == machine.id.0)
                 .and_then(|candidate| candidate.report.as_ref())
-                .is_some_and(|report| report.images.selected().is_some());
+                .is_some_and(|report| report.report.images.selected().is_some());
             machine.connected &= confirmed;
         }
         for action in ciproxy_scaler::decision::decide(&snapshot) {
@@ -204,7 +160,7 @@ impl OwnMachines for MachineRuntime {
             if matches!(runner.runner.place,ciproxy_store_interface::runners::RunnerPlace::Machine{machine_id:owner,..}if owner==machine_id)
                 && runner.runner.state != ciproxy_store_interface::runners::RunnerState::Stopped
             {
-                self.stop(workspace_id, runner).await?;
+                self.stop(&input, runner).await?;
             }
         }
         Ok(())
@@ -220,7 +176,6 @@ impl OwnMachines for MachineRuntime {
             if let Err(error) = self.reconcile_workspace(workspace_id).await {
                 tracing::warn!(%workspace_id, %error, "own-machine reconciliation will retry");
             }
-            self.refresh_metering(workspace_id).await;
         }
         Ok(())
     }
@@ -228,9 +183,7 @@ impl OwnMachines for MachineRuntime {
     async fn job(&self, workspace_id: Uuid, job: GithubJob) -> Result<()> {
         let _operation = self.operation.lock().await;
         let input = self.load(workspace_id).await?;
-        let result = self.route_job(&input, &job).await;
-        self.refresh_metering(workspace_id).await;
-        result
+        self.route_job(&input, &job).await
     }
 
     async fn agent(
@@ -246,6 +199,14 @@ impl OwnMachines for MachineRuntime {
     async fn lifecycle(&self, event: LifecycleEvent) -> Result<()> {
         let workspace_id = event.organization().workspace_id;
         let _operation = self.operation.lock().await;
+        if let LifecycleEvent::Removed {
+            organization,
+            cause: RemovalCause::Owner,
+            ..
+        } = &event
+        {
+            return self.owner_removed(organization).await;
+        }
         self.reconcile_workspace(workspace_id).await
     }
 }

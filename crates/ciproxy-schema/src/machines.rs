@@ -35,5 +35,6 @@ diesel::table! {
         machine_id -> Uuid,
         session_id -> Uuid,
         report -> Jsonb,
+        received_at -> Timestamptz,
     }
 }

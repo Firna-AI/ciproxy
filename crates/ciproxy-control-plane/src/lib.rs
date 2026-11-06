@@ -2,6 +2,7 @@
 
 #![warn(unreachable_pub)]
 
+pub mod accounting;
 mod actions;
 pub mod application;
 mod capacity;
@@ -15,9 +16,11 @@ pub mod http;
 mod image_delivery;
 pub mod image_release;
 pub mod image_signing;
+mod lifecycle;
 mod listeners;
 mod reconciliation;
 mod repositories;
+mod retirement;
 pub mod runtime;
 mod slots;
 mod snapshot;

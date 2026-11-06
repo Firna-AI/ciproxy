@@ -4,7 +4,7 @@ use ciproxy_api::capacity::MachineCapacity;
 use ciproxy_protocol::identifiers::ImageId;
 use ciproxy_protocol::images::ImageMetadata;
 use ciproxy_protocol::resources::Slots;
-use ciproxy_store_interface::gateway::MachineSnapshot;
+use ciproxy_store_interface::gateway::{MachineSnapshot, ReceivedReport};
 use ciproxy_store_interface::machines::Machine;
 use uuid::Uuid;
 
@@ -54,7 +54,10 @@ fn dashboard_capacity_subtracts_only_active_leases_and_sizes_the_selected_local_
             root_disk_bytes: 59_000_000_000,
         },
     ];
-    snapshot.report = Some(report);
+    snapshot.report = Some(ReceivedReport {
+        report,
+        received_at: chrono::DateTime::UNIX_EPOCH,
+    });
     let adapter: &dyn MachineCapacity = &ReportedCapacity;
     let capacity = adapter.capacity(&snapshot);
     assert_eq!(capacity.slots, Slots(7));
@@ -66,7 +69,7 @@ fn dashboard_capacity_subtracts_only_active_leases_and_sizes_the_selected_local_
     );
     assert_eq!(adapter.required_root_bytes(&snapshot, u64::MAX), None);
 
-    let report = snapshot.report.as_mut().unwrap();
+    let report = &mut snapshot.report.as_mut().unwrap().report;
     report.job_disk_bytes = 0;
     report.images.newest = Some(ImageId("unavailable".to_owned()));
     let capacity = adapter.capacity(&snapshot);

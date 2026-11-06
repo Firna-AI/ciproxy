@@ -1,6 +1,6 @@
 //! A replacement install completes missed removal before it takes ownership.
 
-use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
+use ciproxy_store_interface::github_lifecycle::{LifecycleEvent, RemovalCause};
 use std::sync::Arc;
 
 use chrono::Duration;
@@ -179,7 +179,7 @@ async fn replacement_creation_before_old_deletion_revokes_old_access_before_acti
         );
         let events = fixture.output.accepted.lock().unwrap().clone();
         assert!(
-            matches!(&events[0], LifecycleEvent::Removed { organization, last_organization: true } if organization.installation_id == 19)
+            matches!(&events[0], LifecycleEvent::Removed { organization, last_organization: true, cause: RemovalCause::Owner } if organization.installation_id == 19)
         );
         assert_eq!(events[1], LifecycleEvent::Active(current.clone()));
         let delayed = InstallationEvent {

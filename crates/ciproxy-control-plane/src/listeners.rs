@@ -14,6 +14,7 @@ use tokio::sync::watch;
 use tokio::task::JoinHandle;
 use tokio::time::{MissedTickBehavior, interval};
 
+use crate::accounting::Accounting;
 use crate::composition::Hosted;
 use crate::error::{ErrorResultExt, Result};
 use crate::runtime::OwnMachines;
@@ -46,13 +47,16 @@ impl Drop for RecoveryTask {
 
 struct Jobs {
     machines: Arc<dyn OwnMachines>,
+    accounting: Arc<dyn Accounting>,
     workspace_id: uuid::Uuid,
 }
 
 #[async_trait]
 impl JobOutput for Jobs {
     async fn changed(&self, job: GithubJob) -> ciproxy_github::error::Result<()> {
-        match self.machines.job(self.workspace_id, job).await {
+        let result = self.machines.job(self.workspace_id, job).await;
+        self.accounting.request();
+        match result {
             Ok(()) => Ok(()),
             Err(_) => Err(ciproxy_github::error::Error::OrganizationInactive),
         }
@@ -93,12 +97,21 @@ impl Hosted {
                 }
             }
         }));
+        let worker = self.accounting.clone();
+        let receiver = stop.clone();
+        let mut accounting = OwnedTask(tokio::spawn(async move { worker.run(receiver).await }));
         let mut running: HashMap<uuid::Uuid, Running> = HashMap::new();
         let mut ticks = interval(Duration::from_secs(10));
         ticks.set_missed_tick_behavior(MissedTickBehavior::Skip);
         loop {
             tokio::select! {
                 _ = ticks.tick() => {
+                    if accounting.0.is_finished() {
+                        let worker = self.accounting.clone();
+                        let receiver = stop.clone();
+                        accounting = OwnedTask(tokio::spawn(async move { worker.run(receiver).await }));
+                    }
+                    self.accounting.request();
                     self.machines.tick().await?;
                     for github_id in self.app.pending_lifecycle_organizations().await.internal()? {
                         if let Err(error) = self.app.replay_lifecycle(github_id).await { tracing::warn!(%github_id, %error, "lifecycle replay will retry"); }
@@ -116,7 +129,7 @@ impl Hosted {
                     }
                     for target in targets {
                         if running.contains_key(&target.scale_set_id) { continue; }
-                        let listener: Arc<dyn ScaleSetListener> = Arc::new(DurableListener { store: self.persistence.clone(), rest: self.rest.clone(), scale_sets: self.scale_sets.clone(), output: Arc::new(Jobs { machines: self.machines.clone(), workspace_id: target.workspace_id }) });
+                        let listener: Arc<dyn ScaleSetListener> = Arc::new(DurableListener { store: self.persistence.clone(), rest: self.rest.clone(), scale_sets: self.scale_sets.clone(), output: Arc::new(Jobs { machines: self.machines.clone(), accounting: self.accounting.clone(), workspace_id: target.workspace_id }) });
                         let app = self.app.clone();
                         let installation = self.store.organization(target.workspace_id, target.organization_id).internal()?.map(|org| org.installation_id);
                         let (cancel, receiver) = watch::channel(false);

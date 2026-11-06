@@ -26,6 +26,7 @@ struct CommandRow {
     acknowledged: bool,
     slot_indices: Vec<i64>,
     requested_size: serde_json::Value,
+    confirmed_at: Option<DateTime<Utc>>,
 }
 
 impl OwnRunnerStore for PgStore {
@@ -137,6 +138,7 @@ impl OwnRunnerStore for PgStore {
                         .collect::<std::result::Result<Vec<_>, _>>()
                         .internal()?,
                     requested_size: serde_json::to_value(runner.requested_size).internal()?,
+                    confirmed_at: runner.confirmed_at,
                 })
                 .execute(connection)
                 .store()?;
@@ -177,13 +179,47 @@ impl OwnRunnerStore for PgStore {
         })
     }
 
-    fn acknowledge_own_runner(&self, workspace_id: Uuid, command_id: Uuid) -> Result<()> {
+    fn confirm_own_runner(
+        &self,
+        workspace_id: Uuid,
+        runner_id: Uuid,
+        at: DateTime<Utc>,
+    ) -> Result<()> {
+        diesel::update(
+            own_runner_commands::table
+                .find(runner_id)
+                .filter(own_runner_commands::workspace_id.eq(workspace_id))
+                .filter(own_runner_commands::confirmed_at.is_null()),
+        )
+        .set(own_runner_commands::confirmed_at.eq(at))
+        .execute(&mut *self.connection()?)
+        .store()?;
+        Ok(())
+    }
+
+    fn record_own_command_result(
+        &self,
+        workspace_id: Uuid,
+        command_id: Uuid,
+        applied: bool,
+        at: DateTime<Utc>,
+    ) -> Result<()> {
         diesel::update(
             own_runner_commands::table
                 .filter(own_runner_commands::workspace_id.eq(workspace_id))
                 .filter(own_runner_commands::command_id.eq(command_id)),
         )
-        .set(own_runner_commands::acknowledged.eq(true))
+        .set((
+            own_runner_commands::acknowledged.eq(diesel::dsl::sql::<diesel::sql_types::Bool>(
+                "acknowledged OR ",
+            )
+            .bind::<diesel::sql_types::Bool, _>(applied)),
+            own_runner_commands::confirmed_at.eq(diesel::dsl::sql::<
+                diesel::sql_types::Nullable<diesel::sql_types::Timestamptz>,
+            >("COALESCE(confirmed_at, ")
+            .bind::<diesel::sql_types::Timestamptz, _>(at)
+            .sql(")")),
+        ))
         .execute(&mut *self.connection()?)
         .store()?;
         Ok(())
@@ -217,6 +253,7 @@ pub(crate) fn load(connection: &mut PgConnection, workspace_id: Uuid) -> Result<
                 command_id: command.command_id,
                 issued_at: command.issued_at,
                 acknowledged: command.acknowledged,
+                confirmed_at: command.confirmed_at,
             })
         })
         .collect()

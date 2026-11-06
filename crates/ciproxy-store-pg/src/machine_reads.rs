@@ -2,9 +2,10 @@
 
 use std::collections::BTreeMap;
 
+use chrono::{DateTime, Utc};
 use ciproxy_schema::machines::{machine_disks, machine_reports, machines};
 use ciproxy_store_interface::error::{Result, ResultExt};
-use ciproxy_store_interface::gateway::MachineSnapshot;
+use ciproxy_store_interface::gateway::{MachineSnapshot, ReceivedReport};
 use ciproxy_store_interface::machines::{Machine, MachineDisk};
 use diesel::prelude::*;
 use uuid::Uuid;
@@ -83,21 +84,31 @@ pub(crate) fn load_snapshots(
     workspace_id: Uuid,
 ) -> Result<Vec<MachineSnapshot>> {
     let machines = load_machines(connection, workspace_id)?;
-    let mut reports: BTreeMap<Uuid, serde_json::Value> = machine_reports::table
+    let reports = machine_reports::table
         .filter(machine_reports::workspace_id.eq(workspace_id))
-        .select((machine_reports::machine_id, machine_reports::report))
-        .load::<(Uuid, serde_json::Value)>(connection)
-        .store()?
+        .select((
+            machine_reports::machine_id,
+            machine_reports::report,
+            machine_reports::received_at,
+        ))
+        .load::<(Uuid, serde_json::Value, DateTime<Utc>)>(connection)
+        .store()?;
+    let mut reports: BTreeMap<Uuid, ReceivedReport> = reports
         .into_iter()
-        .collect();
+        .map(|(machine_id, report, received_at)| {
+            Ok((
+                machine_id,
+                ReceivedReport {
+                    report: serde_json::from_value(report).internal()?,
+                    received_at,
+                },
+            ))
+        })
+        .collect::<Result<_>>()?;
     machines
         .into_iter()
         .map(|machine| {
-            let report = reports
-                .remove(&machine.id)
-                .map(serde_json::from_value)
-                .transpose()
-                .internal()?;
+            let report = reports.remove(&machine.id);
             Ok(MachineSnapshot { machine, report })
         })
         .collect()
