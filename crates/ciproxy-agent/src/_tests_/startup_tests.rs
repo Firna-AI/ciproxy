@@ -62,7 +62,7 @@ async fn hardware_reports_continue_while_vm_startup_is_pending() {
                 })
             }),
         CacheMock::budget
-            .some_call(matching!(563_364_143_616))
+            .some_call(matching!(564_100_387_328))
             .returns(Ok(())),
         VmsMock::start.some_call(matching!(_, _)).returns(Ok(())),
     ));

@@ -107,12 +107,16 @@ test("costClaimFor compares the slot minutes of a month with the cheaper runner"
 
 test("costClaimFor limits job minutes by disk while keeping hardware slots", () => {
   // The job disk is three quarters of the disk after the 140 GB image budget.
-  // Each default job holds a VM disk of 81,635,856,384 bytes: the image with
-  // 20 GB of free disk. 250 GB leaves 82.5 GB, room for 1 job. 465 GB leaves
-  // 243.75 GB, room for 2 jobs, where 80 GB or 81 GB a job would give 3.
+  // Each default job holds a VM disk of 80,899,612,672 bytes: the image with
+  // 20 GB of free disk. 250 GB leaves 82.5 GB, room for 1 job. 463 GB leaves
+  // 242.25 GB, room for 2 jobs, because 3 VM disks need 242.70 GB. There, 80 GB
+  // a job, or a VM disk without the allowance, would give 3. 465 GB leaves
+  // 243.75 GB, room for 3 jobs, where the 81.64 GB VM disk of a 61 GB image
+  // would give 2.
   for (const { diskGb, expected } of [
     { diskGb: 250, expected: [6, 1, 43_200, 8_640] },
-    { diskGb: 465, expected: [6, 2, 86_400, 17_280] },
+    { diskGb: 463, expected: [6, 2, 86_400, 17_280] },
+    { diskGb: 465, expected: [6, 3, 129_600, 25_920] },
     { diskGb: 512, expected: [6, 3, 129_600, 25_920] },
     { diskGb: 1_024, expected: [6, 6, 259_200, 51_840] },
     { diskGb: 140, expected: [6, 0, 0, 0] },

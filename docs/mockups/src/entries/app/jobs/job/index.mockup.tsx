@@ -25,7 +25,7 @@ export const job = defineScreen({
       slug: "boat",
       title: "A job that ran on Boat",
       description:
-        "The own machines were full, so the job waited 30 seconds and then ran on Boat. Boat ran it on large, 8 vCPU and 16 GB, because it is the cheapest Boat size that fits the 8 GB of the label ciproxy and its VM disk of 82 GB, the current image with 20 GB of free disk: default has the memory, but only 51 GB of disk. Boat bills that size. The page shows only the cache source, the GitHub cache, because only the machine cache counts the restores of a job.",
+        "The own machines were full, so the job waited 30 seconds and then ran on Boat. Boat ran it on large, 8 vCPU and 16 GB, because it is the cheapest Boat size that fits the 8 GB of the label ciproxy and its VM disk of 81 GB, the current image with 20 GB of free disk: default has the memory, but only 51 GB of disk. Boat bills that size. The page shows only the cache source, the GitHub cache, because only the machine cache counts the restores of a job.",
       address: orgAddress("jobs/48213902"),
       props: { state: "boat" },
       useCasePaths: [paths.flowPeakOverflow],

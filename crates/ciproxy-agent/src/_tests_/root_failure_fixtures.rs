@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
+use ciproxy_agent::root_sizing::DEFAULT_IMAGE_ROOT_BYTES;
 use futures_util::FutureExt;
 use unimock::{MockFn, Unimock, matching};
 
@@ -121,7 +122,7 @@ impl RootFailure {
                     if stage == Stage::ImageLength {
                         Err(stage.error())
                     } else {
-                        Ok(80_000_000_000)
+                        Ok(DEFAULT_IMAGE_ROOT_BYTES)
                     }
                 }))
                 .at_least_times(0),

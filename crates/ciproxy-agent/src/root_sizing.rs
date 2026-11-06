@@ -3,8 +3,8 @@
 use ciproxy_protocol::images::ImageMetadata;
 use ciproxy_protocol::resources::{GIGABYTE, VmSize};
 
-/// Provisional logical image length until the smallest full-image export is measured.
-pub const DEFAULT_IMAGE_ROOT_BYTES: u64 = 61 * GIGABYTE;
+/// Measured logical root length of the current full-image release.
+pub const DEFAULT_IMAGE_ROOT_BYTES: u64 = 60_263_759_872;
 
 /// The smallest free job disk accepted for a label.
 pub const MINIMUM_JOB_DISK_BYTES: u64 = GIGABYTE;

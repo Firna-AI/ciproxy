@@ -11,6 +11,6 @@ expression: message
     "download_url": "https://download.example/image?signature=dummy-image-key",
     "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
     "size_bytes": 12000000000,
-    "root_disk_bytes": 61000000000
+    "root_disk_bytes": 60263759872
   }
 }

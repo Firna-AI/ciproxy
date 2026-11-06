@@ -54,7 +54,7 @@ async fn retries_after_publication_and_restart_keep_the_original_request_and_all
             .each_call(matching!())
             .answers_arc(Arc::new(move |_| {
                 held.lock().unwrap().push("hold");
-                Ok(lease("image-1"))
+                Ok(lease(metadata("image-1", 61_000_000_000)))
             })),
         VmsMock::allocate
             .each_call(matching!(_, _))
@@ -113,6 +113,7 @@ async fn retries_after_publication_and_restart_keep_the_original_request_and_all
     let report = restarted.report().await.unwrap();
     let mut expected = vm("runner-1", false).report;
     expected.state = RunnerState::Starting;
+    expected.size.disk_bytes = 81_635_856_384;
     assert_eq!(report.runners, vec![expected]);
     assert_eq!(report.runners[0].requested_size.disk_bytes, 20_000_000_000);
     assert_eq!(report.runners[0].size.disk_bytes, 81_635_856_384);

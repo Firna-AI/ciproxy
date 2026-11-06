@@ -123,9 +123,9 @@ fn a_fitting_catalog_retires_an_idle_undersized_boat_fallback() {
 fn image_floor_blocks_largest_boat_fallback_and_retires_its_idle_runner() {
     let mut state = fallback_snapshot();
     let largest = state.boat.sizes.last_mut().unwrap();
-    largest.size.disk_bytes = 60_999_999_999;
+    largest.size.disk_bytes = 60_263_759_871;
     assert_eq!(decide(&state), vec![retire_fallback()]);
-    state.boat.sizes.last_mut().unwrap().size.disk_bytes = 61_000_000_000;
+    state.boat.sizes.last_mut().unwrap().size.disk_bytes = 60_263_759_872;
     let actions = decide(&state);
     assert_eq!(actions.len(), 2);
     assert_eq!(actions[0], retire_fallback());
@@ -136,7 +136,7 @@ fn image_floor_blocks_largest_boat_fallback_and_retires_its_idle_runner() {
             label: state.labels[1].name.clone(),
             requested_size: state.labels[1].size,
             size: VmSize {
-                disk_bytes: 61_000_000_000,
+                disk_bytes: 60_263_759_872,
                 ..large()
             },
             destination: Destination::Boat(BoatSizeId("large".into())),

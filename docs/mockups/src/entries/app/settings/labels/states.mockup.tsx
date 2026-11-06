@@ -10,7 +10,7 @@ export const editLabel = defineScreen({
   slug: "edit-label",
   title: "Edit a label",
   description:
-    "The dialog that edits the size of ciproxy-8vcpu, where its jobs may run, and what they do when nothing fits. Its disk is the free disk of each job, 60 GB, with the least value, 1 GB, as the hint of the field. The line under the size gives the VM disk with the current image, 123 GB. It says how many jobs of the size fit on one machine. The name shows with a lock, because a label keeps its name; Delete label leads the footer, for a rename by a new label.",
+    "The dialog that edits the size of ciproxy-8vcpu, where its jobs may run, and what they do when nothing fits. Its disk is the free disk of each job, 60 GB, with the least value, 1 GB, as the hint of the field. The line under the size gives the VM disk with the current image, 122 GB. It says how many jobs of the size fit on one machine. The name shows with a lock, because a label keeps its name; Delete label leads the footer, for a rename by a new label.",
   rationale:
     "Design call 33: label names follow the GitHub label rules, and a label has no rename, because a new label and a delete give a safe rename. The answer to item 77: the disk of a label is the free disk of each job, as GitHub states the disk of its runners, and the VM disk adds the image.",
   relatedDocs: relatedMvp("labels", "jobRouting", "overflow"),
@@ -24,7 +24,7 @@ export const noMachineFits = defineScreen({
   slug: "no-machine-fits",
   title: "A size that fits no machine",
   description:
-    "A new label with 16 vCPU, 32 GB, and 120 GB of free disk. An AX42 offers 12 vCPU to jobs, so no own machine fits it, and the dialog says before the save that its jobs run on Boat. The largest Boat size, xlarge with 16 vCPU and 32 GB, fits, because its 251 GB disk holds the VM disk of 185 GB.",
+    "A new label with 16 vCPU, 32 GB, and 120 GB of free disk. An AX42 offers 12 vCPU to jobs, so no own machine fits it, and the dialog says before the save that its jobs run on Boat. The largest Boat size, xlarge with 16 vCPU and 32 GB, fits, because its 251 GB disk holds the VM disk of 184 GB.",
   relatedDocs: relatedMvp("labels", "jobRouting", "overflow"),
   address,
   render: (_props, context) => (

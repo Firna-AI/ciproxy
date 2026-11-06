@@ -49,6 +49,9 @@ separate projected reservation. That reservation cannot release actual
 capacity or postpone the overflow threshold.
 
 One warm count caps each machine's shared allocation across organizations.
+Existing warm runners follow current targets on connected machines before
+new replenishment checks capacity. A larger image cannot suppress count or
+organization changes. Claimed runners keep queue priority.
 All compatible idle `ciproxy` runners count, including those started for
 queue demand. Waiting jobs have priority over warm starts. The scaler
 retires idle runners after label edits or organization removal. Running
@@ -151,6 +154,8 @@ Tests use the public decision entry point with literal states and actions.
 ### Key Code
 
 - [src/decision.rs](src/decision.rs) owns the public `decide` entry point.
+- [src/warm.rs](src/warm.rs) separates existing target reconciliation from
+  capacity checks and new warm replenishment.
 - [src/snapshot.rs](src/snapshot.rs) defines the caller's workspace facts.
 - [src/actions.rs](src/actions.rs) defines start and retirement intents.
 - [src/boat.rs](src/boat.rs) defines catalog, refusal, and sandbox facts.

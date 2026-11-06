@@ -50,7 +50,7 @@ pub(crate) fn size() -> VmSize {
     VmSize {
         vcpu: 2,
         memory_bytes: 8 * GIGABYTE,
-        disk_bytes: 81_635_856_384,
+        disk_bytes: 80_899_612_672,
     }
 }
 
@@ -73,7 +73,7 @@ pub(crate) fn image() -> ImageDownload {
         download_url: Secret::new(DOWNLOAD_URL),
         sha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".into(),
         size_bytes: 12 * GIGABYTE,
-        root_disk_bytes: 61 * GIGABYTE,
+        root_disk_bytes: 60_263_759_872,
     }
 }
 
@@ -163,7 +163,10 @@ pub(crate) fn report() -> MachineReport {
                     memory_bytes: 8 * GIGABYTE,
                     disk_bytes: 20 * GIGABYTE,
                 },
-                size: size(),
+                size: VmSize {
+                    disk_bytes: 79_635_853_312,
+                    ..size()
+                },
                 image_id: ImageId("ubuntu-image-0".into()),
                 state: RunnerState::Running { job_id: job_id() },
             },
@@ -221,7 +224,7 @@ pub(crate) fn report() -> MachineReport {
                 },
                 ImageMetadata {
                     image_id: image_id(),
-                    root_disk_bytes: 61 * GIGABYTE,
+                    root_disk_bytes: 60_263_759_872,
                 },
             ],
             newest: Some(image_id()),

@@ -91,8 +91,8 @@ function machine(
 
 /**
  * office-mini-1 joined on 18 November: two warm runners wait in its slots.
- * Their VM disks hold 163 GB of the 279 GB that jobs can use, and the cache
- * has the other 116 GB.
+ * Their VM disks hold 162 GB of the 279 GB that jobs can use, and the cache
+ * has the other 117 GB.
  */
 export const officeMini: Machine = {
   name: "office-mini-1",

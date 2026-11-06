@@ -117,8 +117,8 @@ fn a_label_edit_keeps_the_running_vms_original_job_disk() {
     let mut state = snapshot();
     state.machines[0].disk_budget_bytes = 279 * GIGABYTE;
     let mut old = running("old-size");
-    old.size.disk_bytes = 120 * GIGABYTE;
-    old.requested_size = old.size;
+    old.size.disk_bytes = 122_136_727_552;
+    old.requested_size.disk_bytes = 60 * GIGABYTE;
     state.machines[0].runners = vec![old];
     state.queue = vec![queued("a", "ciproxy", 0), queued("a", "ciproxy", 0)];
     state.boat.enabled = false;

@@ -99,7 +99,7 @@ let capacity = Resources::for_machine(16, 64 * GIGABYTE, 512 * GIGABYTE, true);
 let size = VmSize {
     vcpu: 2,
     memory_bytes: 8 * GIGABYTE,
-    disk_bytes: 81_635_856_384,
+    disk_bytes: 80_899_612_672,
 };
 assert_eq!(capacity.slots, Slots(6));
 assert_eq!(capacity.job_disk_bytes, 279 * GIGABYTE);
@@ -107,11 +107,11 @@ assert!(capacity.fits(size));
 assert_eq!(capacity.concurrent_vms(size), 3);
 
 let free = capacity.available([size, size]);
-assert_eq!(free.job_disk_bytes, 115_728_287_232);
+assert_eq!(free.job_disk_bytes, 117_200_774_656);
 assert!(free.fits(size));
 
 let after_third_vm = free.available([size]);
-assert_eq!(after_third_vm.job_disk_bytes, 34_092_430_848);
+assert_eq!(after_third_vm.job_disk_bytes, 36_301_161_984);
 assert!(!after_third_vm.fits(size));
 ```
 

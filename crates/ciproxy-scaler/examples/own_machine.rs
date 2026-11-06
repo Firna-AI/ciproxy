@@ -69,7 +69,7 @@ fn main() {
             label: LabelName("ciproxy".into()),
             requested_size: size,
             size: VmSize {
-                disk_bytes: 81_635_856_384,
+                disk_bytes: 80_899_612_672,
                 ..size
             },
             destination: Destination::Machine(MachineId("example-machine".into())),

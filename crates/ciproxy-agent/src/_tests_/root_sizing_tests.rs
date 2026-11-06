@@ -6,16 +6,17 @@ use crate::root_sizing::RootSizing;
 
 #[test]
 fn free_job_disk_adds_the_image_and_ext4_allowance_before_placement() {
-    let sizing = RootSizing {
-        image_root_bytes: 61_000_000_000,
-    };
+    let sizing = RootSizing::default();
     for (free, expected) in [
-        (1_000_000_000, 62_048_227_328),
-        (20_000_000_000, 81_635_856_384),
-        (60_000_000_000, 122_872_967_168),
+        (1_000_000_000, 61_311_987_712),
+        (20_000_000_000, 80_899_612_672),
+        (60_000_000_000, 122_136_727_552),
     ] {
         assert_eq!(sizing.root_bytes(free), Some(expected), "free={free}");
-        assert!(u128::from(expected - 61_000_000_000) * 97 >= u128::from(free + 16_777_216) * 100);
+        assert!(
+            u128::from(expected - sizing.image_root_bytes) * 97
+                >= u128::from(free + 16_777_216) * 100
+        );
     }
     let size = sizing
         .vm_size(VmSize {
@@ -32,6 +33,11 @@ fn free_job_disk_adds_the_image_and_ext4_allowance_before_placement() {
         Resources::for_machine(4, 16 * GIGABYTE, 250 * GIGABYTE, true).concurrent_vms(size),
         1
     );
+    let available = Resources::for_machine(4, 16 * GIGABYTE, 250 * GIGABYTE, true)
+        .available([size])
+        .job_disk_bytes;
+    assert_eq!(available, 1_600_387_328);
+    assert!(available >= GIGABYTE);
     assert_eq!(sizing.root_bytes(u64::MAX), None);
     assert_eq!(
         RootSizing {

@@ -96,7 +96,8 @@ The agent opens no inbound TCP port.
 Use root on x64 Linux with systemd and cgroup v2.
 The documented minimum is four cores, 16 GB of memory, and 250 GB of disk.
 The default budget leaves 82.5 GB for jobs and 27.5 GB for the host.
-With a 61 GB image root, a default VM reserves 81,635,856,384 bytes.
+The measured image root has 60,263,759,872 bytes.
+A default VM reserves 80,899,612,672 bytes.
 That includes its 20 GB free job disk and fits once on the minimum machine.
 Enable KVM to run VMs.
 Install prepares the pinned Firecracker and jailer pair and host packages.

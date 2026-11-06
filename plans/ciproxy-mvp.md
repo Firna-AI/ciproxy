@@ -538,6 +538,13 @@ One agent constant holds that default. The control-plane configuration
 can override it. The release manifest will replace that configuration
 source. The configured logical length must match the selected release.
 
+Measured image call, 6 November 2026: the user supplies the final logical
+root size, 60,263,759,872 bytes, from PR 28 at `b0c2ba7`. This replaces
+the provisional value in the source default. The root rule stays the same.
+A 20 GB default request reserves 80,899,612,672 bytes and leaves
+1,600,387,328 bytes on the 82.5 GB minimum-machine job budget.
+PR 28 merges before PR 27. Historical image-size decisions stay unchanged.
+
 PR 27 review call, 5 November 2026: the user applies finding 1 option A.
 Each release keeps its logical root size with its image identity. The
 agent retains those facts through the image hold, sizes the root from
@@ -655,6 +662,14 @@ Replaced ways for item 77:
       without applying a new image floor to an existing older VM.
       Branch: `conductor/ciproxy-mvp-77d-free-disk`.
       Evidence: `.context/ciproxy-mvp-77d-free-disk/fix-round-2/`.
+- [x] Apply the final measured image root of 60,263,759,872 bytes to the
+      default, current fixtures, tests, examples, site, and mockups.
+      Fix owner review finding 4 with B: reconcile current warm targets on
+      connected machines before replenishment checks new-image capacity.
+      Test count zero and changed organization allocation after image
+      growth. Run every new or changed scheduler test ten times.
+      Branch: `conductor/ciproxy-mvp-77d-free-disk`.
+      Evidence: `.context/ciproxy-mvp-77d-free-disk/fix-round-3/`.
 - [ ] Publish it with its SHA-256, and as a shared Boat snapshot. Rebuild
       before GitHub stops accepting the runner.
       Orchestrator: run `image/publish.sh` and the create, prepare, and

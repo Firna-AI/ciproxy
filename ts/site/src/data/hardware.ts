@@ -16,7 +16,7 @@ const gigabyte = 1_000_000_000;
  * current image with the 20 GB of free disk of the label. RootSizing in
  * ciproxy-agent gives this value, so change it with the image or that rule.
  */
-const defaultJobDiskBytes = 81_635_856_384;
+const defaultJobDiskBytes = 80_899_612_672;
 
 /** Two full images, a download, and image support have a separate budget. */
 const imageBudgetGb = 140;

@@ -13,8 +13,8 @@ import { formatCount, unbroken } from "./format.ts";
 /** One decimal GB, in bytes. */
 export const gigabyte = 1_000_000_000;
 
-/** The root disk of the current image release, in bytes. */
-export const currentImageRootBytes = 61 * gigabyte;
+/** The measured root disk of the current image release, in bytes. */
+export const currentImageRootBytes = 60_263_759_872;
 
 /** The most that the kernel keeps back on ext4: 4,096 blocks of 4,096 bytes. */
 const kernelReserveBytes = 16 * 1_024 * 1_024;
@@ -52,7 +52,7 @@ export function holdsImage(diskGb: number): boolean {
   return diskGb * gigabyte >= currentImageRootBytes;
 }
 
-/** Bytes as whole GB, to the nearest: 81,635,856,384 bytes are "82 GB". */
+/** Bytes as whole GB, to the nearest: 80,899,612,672 bytes are "81 GB". */
 export function diskText(bytes: number): string {
   return unbroken(`${formatCount(Math.round(bytes / gigabyte))} GB`);
 }

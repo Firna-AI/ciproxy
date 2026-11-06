@@ -108,8 +108,10 @@ The remaining 110 GB splits into 82.5 GB of job disk and 27.5 GB for host.
 The metadata headroom is about 2.59 GB plus measured empty-XFS costs.
 The remaining host reserve stays outside the area for the system.
 With a 160 GB image budget override, that same host has 67.5 GB of job disk.
-A 61 GB image gives a default root of 81,635,856,384 bytes.
+The measured 60,263,759,872-byte image gives an 80,899,612,672-byte default
+root.
 That root fits once in the default 82.5 GB job disk.
+It leaves 1,600,387,328 bytes for the machine cache.
 The override leaves too little job disk for that same root.
 These are logical capacities. A sparse file does not preallocate the host.
 Unrelated host programs can still consume its physical free space.

@@ -51,7 +51,7 @@ pub(super) fn report() -> MachineReport {
         },
     ];
     report.cache.used_bytes = 4 * GIGABYTE;
-    report.cache.capacity_bytes = 119 * GIGABYTE;
+    report.cache.capacity_bytes = 117_200_774_656;
     report.cache.restores_last_7_days = 19;
     report.cache.hits_last_7_days = 11;
     report.cache.jobs = vec![JobCacheReport {
@@ -66,7 +66,7 @@ pub(super) fn report() -> MachineReport {
     report.docker_disks.used_bytes = 8 * GIGABYTE;
     report.images.available = vec![ImageMetadata {
         image_id: ImageId("image-4".into()),
-        root_disk_bytes: 61 * GIGABYTE,
+        root_disk_bytes: 60_263_759_872,
     }];
     report.images.newest = Some(ImageId("image-4".into()));
     report.capacity = Slots(3);
@@ -83,7 +83,7 @@ pub(super) fn report() -> MachineReport {
             size: VmSize {
                 vcpu: 2,
                 memory_bytes: 8 * GIGABYTE,
-                disk_bytes: 80 * GIGABYTE,
+                disk_bytes: 80_899_612_672,
             },
             image_id: ImageId("image-3".into()),
             state: RunnerState::Running {
@@ -102,7 +102,7 @@ pub(super) fn report() -> MachineReport {
             size: VmSize {
                 vcpu: 2,
                 memory_bytes: 8 * GIGABYTE,
-                disk_bytes: 80 * GIGABYTE,
+                disk_bytes: 80_899_612_672,
             },
             image_id: ImageId("image-4".into()),
             state: RunnerState::Warm,

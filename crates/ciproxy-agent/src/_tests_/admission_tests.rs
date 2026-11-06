@@ -78,10 +78,10 @@ async fn admission_refuses_slot_only_or_disk_only_exhaustion_and_drain() {
 #[tokio::test]
 async fn a_fitting_vm_reclaims_cache_before_preparation_at_each_resource_boundary() {
     for (disk_gb, image_gb, count, expected_count, expected_budget) in [
-        (250, 140, 0, 1, 864_143_616),
-        (512, 140, 2, 3, 34_092_430_848),
-        (1000, 140, 5, 6, 155_184_861_696),
-        (250, 130, 0, 1, 8_364_143_616),
+        (250, 140, 0, 1, 1_600_387_328),
+        (512, 140, 2, 3, 36_301_161_984),
+        (1000, 140, 5, 6, 159_602_323_968),
+        (250, 130, 0, 1, 9_100_387_328),
     ] {
         let mut hardware = hardware();
         hardware.disks[0].capacity_bytes = disk_gb * GIGABYTE;
@@ -132,7 +132,7 @@ async fn reconciliation_uses_the_same_held_disk_budget() {
             .each_call(matching!(_))
             .answers(&|_, _| Ok(())),
         CacheMock::budget
-            .some_call(matching!(8_364_143_616))
+            .some_call(matching!(9_100_387_328))
             .returns(Ok(())),
     ));
     let mut runners = held(1);
