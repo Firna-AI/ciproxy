@@ -45,6 +45,9 @@ impl Controller {
             return Ok(());
         }
         record.preparation = PreparationState::Completed(outcome);
+        if !outcome.cache_ready {
+            record.cache_authority = CacheAuthority::GitHubOnly;
+        }
         self.store.save(&next)?;
         *state = next;
         Ok(())
@@ -55,6 +58,7 @@ impl Controller {
         vm: &VmRecord,
         job_id: &JobId,
         runtime: Option<RuntimeCredentials>,
+        initial_authority: bool,
     ) -> Result<(VmRecord, Option<CheckedRuntime>)> {
         let mut state = self.state.lock().await;
         let mut next = state.clone();
@@ -73,7 +77,9 @@ impl Controller {
             RunnerState::Starting | RunnerState::Warm
         );
         let checked = match runtime {
-            Some(runtime) => record.cache_authority.handoff(first, runtime),
+            Some(runtime) => record
+                .cache_authority
+                .handoff(first, initial_authority, runtime),
             None => {
                 if matches!(record.cache_authority, CacheAuthority::Waiting) {
                     record.cache_authority = CacheAuthority::GitHubOnly;

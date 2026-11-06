@@ -10,6 +10,27 @@ use crate::runtime::RuntimeCredentials;
 use crate::secret::Secret;
 use crate::version::ProtocolVersion;
 
+/// The own-machine source-hook format that waits for a host decision.
+pub const HANDOFF_PROTOCOL_VERSION: u16 = 2;
+
+/// Host authorization before job setup may start.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum JobDecision {
+    /// Keep the original GitHub endpoints for the whole job.
+    #[serde(rename = "github_only")]
+    GitHubOnly,
+    /// The host sealed the original handoff and prepared a machine session.
+    MachineCache {
+        /// Hosted scope facts checked for this job.
+        facts: Box<JobFacts>,
+        /// The host's narrow session for the checked assignment.
+        cache: CacheConnection,
+        /// A checked Docker attachment, when available.
+        docker: Option<DockerDiskAttachment>,
+    },
+}
+
 /// Explicit local preparation result, without credentials or guessed measurements.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct JobPreparation {
@@ -27,12 +48,8 @@ pub enum AgentToGuest {
     PrepareJob {
         /// Job held at the trusted pre-action boundary.
         job_id: JobId,
-        /// Trusted hosted assignment facts supplied to the machine cache.
-        facts: JobFacts,
-        /// This job's machine session, absent during GitHub fallback.
-        cache: Option<CacheConnection>,
-        /// Attached Docker drive, absent when unavailable or not included.
-        docker: Option<DockerDiskAttachment>,
+        /// The host's decision for this assignment.
+        decision: JobDecision,
     },
     /// Configure the single runner before it connects to GitHub.
     ConfigureRunner {
@@ -89,6 +106,8 @@ pub enum GuestToAgent {
     },
     /// Announce a booted image before runner configuration.
     Hello {
+        /// Required guest and source-hook format for the pre-action gate.
+        handoff_protocol_version: u16,
         /// Wire version supported by this guest.
         protocol_version: ProtocolVersion,
         /// Image from which this VM booted.

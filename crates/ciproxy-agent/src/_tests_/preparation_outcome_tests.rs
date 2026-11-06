@@ -1,5 +1,6 @@
 //! Failed setup suppresses only its cache assignment and closes dormant storage.
 
+use ciproxy_protocol::guest::JobDecision;
 use std::sync::{Arc, Mutex};
 
 use ciproxy_protocol::agent::ControlMessage;
@@ -8,9 +9,11 @@ use ciproxy_protocol::guest::{GuestToAgent, JobPreparation};
 use ciproxy_protocol::identifiers::{CommandId, JobId, RunnerId};
 use unimock::{MockFn, Unimock, matching};
 
+use crate::boundaries::GuestProvenance;
 use crate::boundaries::{CacheMock, StoreMock, VmsMock};
 use crate::controller::Agent;
 use crate::docker::DockerDisksMock;
+use crate::fixtures::github_decision_sent;
 use crate::fixtures::{applied, controller, trusted_facts, vm};
 use crate::state::{MachineState, PreparationState};
 
@@ -23,9 +26,6 @@ async fn replay_restored(state: &MachineState, outcome: JobPreparation) {
     );
     let mock = Unimock::new((
         VmsMock::restore.some_call(matching!(_)).returns(Ok(())),
-        CacheMock::prepare
-            .some_call(matching!(_, _))
-            .returns(Ok(None)),
         VmsMock::send
             .some_call(matching!(_, _))
             .answers(&|_, _, message| {
@@ -33,15 +33,27 @@ async fn replay_restored(state: &MachineState, outcome: JobPreparation) {
                     message,
                     &AgentToGuest::PrepareJob {
                         job_id: JobId("job-1".into()),
-                        facts: trusted_facts(),
-                        cache: None,
-                        docker: None
+                        decision: JobDecision::GitHubOnly
                     }
                 );
                 Ok(())
             }),
     ));
+    let registered = Arc::new(Mutex::new(0));
+    let observed = registered.clone();
+    let cache = Arc::new(
+        Unimock::new(
+            CacheMock::prepare
+                .each_call(matching!(_, _))
+                .answers_arc(Arc::new(move |_, _, _| {
+                    *observed.lock().unwrap() += 1;
+                    Ok(None)
+                })),
+        )
+        .no_verify_in_drop(),
+    );
     let mut agent = controller(restored, mock.clone());
+    agent.cache = cache;
     agent.dockers = Some(Arc::new(mock));
     agent.restore().await.unwrap();
     assert_eq!(
@@ -56,6 +68,7 @@ async fn replay_restored(state: &MachineState, outcome: JobPreparation) {
             .unwrap(),
         applied()
     );
+    assert_eq!(*registered.lock().unwrap(), 0);
 }
 
 #[tokio::test]
@@ -65,6 +78,7 @@ async fn failed_preparation_suppresses_counts_and_releases_only_after_drive_clos
     let closed = events.clone();
     let released = events.clone();
     let mock = Unimock::new((
+        github_decision_sent(),
         StoreMock::save.some_call(matching!(_)).returns(Ok(())),
         CacheMock::fallback
             .next_call(matching!(_))
@@ -101,6 +115,7 @@ async fn failed_preparation_suppresses_counts_and_releases_only_after_drive_clos
     assert_eq!(
         agent
             .guest(
+                GuestProvenance::InitialConfiguration,
                 "job",
                 GuestToAgent::JobPrepared {
                     runner_id: RunnerId("job".into()),
@@ -123,6 +138,7 @@ async fn failed_preparation_suppresses_counts_and_releases_only_after_drive_clos
 #[tokio::test]
 async fn a_mounted_docker_disk_keeps_its_reservation_when_only_cache_preparation_fails() {
     let mock = Unimock::new((
+        github_decision_sent(),
         CacheMock::fallback.some_call(matching!(_)).returns(Ok(())),
         StoreMock::save.some_call(matching!(_)).returns(Ok(())),
     ));
@@ -139,6 +155,7 @@ async fn a_mounted_docker_disk_keeps_its_reservation_when_only_cache_preparation
     assert_eq!(
         agent
             .guest(
+                GuestProvenance::InitialConfiguration,
                 "job",
                 GuestToAgent::JobPrepared {
                     runner_id: RunnerId("job".into()),

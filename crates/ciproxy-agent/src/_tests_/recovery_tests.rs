@@ -6,6 +6,7 @@ use ciproxy_protocol::identifiers::{CommandId, RunnerId};
 use ciproxy_protocol::runners::RunnerState;
 use unimock::{MockFn, Unimock, matching};
 
+use crate::boundaries::GuestProvenance;
 use crate::boundaries::{StoreMock, VmsMock};
 use crate::controller::Agent;
 use crate::fixtures::{applied, controller, report_dependencies, spec, vm};
@@ -95,6 +96,7 @@ async fn runner_ready_persists_and_forwards_the_warm_transition() {
     assert_eq!(
         agent
             .guest(
+                GuestProvenance::InitialConfiguration,
                 "runner",
                 GuestToAgent::RunnerReady {
                     runner_id: RunnerId("runner".to_owned())

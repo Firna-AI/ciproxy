@@ -1,7 +1,9 @@
 //! Supervise one runner without tying its lifetime to the agent connection.
 
 use async_trait::async_trait;
-use ciproxy_protocol::guest::{AgentToGuest, GuestToAgent};
+use ciproxy_protocol::guest::HANDOFF_PROTOCOL_VERSION;
+use ciproxy_protocol::guest::{AgentToGuest, GuestToAgent, JobDecision};
+use ciproxy_protocol::identifiers::JobId;
 use ciproxy_protocol::identifiers::{ImageId, RunnerId};
 use ciproxy_protocol::runners::RunnerExit;
 use ciproxy_protocol::version::ProtocolVersion;
@@ -48,6 +50,7 @@ impl Supervisor {
 
     async fn run_one(&mut self) -> Result<()> {
         self.report(GuestToAgent::Hello {
+            handoff_protocol_version: HANDOFF_PROTOCOL_VERSION,
             protocol_version: ProtocolVersion::CURRENT,
             image_id: self.image_id.clone(),
             configuration_received: false,
@@ -92,9 +95,26 @@ impl Supervisor {
         .await;
     }
 
+    async fn prepare_job(&mut self, runner_id: &RunnerId, job_id: JobId, decision: JobDecision) {
+        let outcome = match self.runner.prepare(job_id.clone(), decision).await {
+            Ok(outcome) => outcome,
+            Err(error) => {
+                warn!(%error, "local preparation unavailable; wait for a host GitHub-only decision");
+                ciproxy_protocol::guest::JobPreparation::default()
+            }
+        };
+        self.report(GuestToAgent::JobPrepared {
+            runner_id: runner_id.clone(),
+            job_id,
+            outcome,
+        })
+        .await;
+    }
+
     async fn supervise(&mut self, runner_id: &RunnerId) -> Result<()> {
         let mut connected = true;
         let mut running = None;
+        let mut decision = None;
         loop {
             tokio::select! {
                 biased;
@@ -114,18 +134,17 @@ impl Supervisor {
                             self.report(GuestToAgent::RunnerConfigured { runner_id: runner_id.clone() }).await;
                         }
                     }
-                    Ok(Some(AgentToGuest::PrepareJob { job_id, facts, cache, docker })) if running.as_ref() == Some(&job_id) => {
-                        match self.runner.prepare(job_id.clone(), facts, cache, docker).await {
-                            Ok(outcome) => self.report(GuestToAgent::JobPrepared { runner_id: runner_id.clone(), job_id,outcome }).await,
-                            Err(error) => {warn!(%error, "local preparation unavailable; runner keeps its GitHub fallback"); self.report(GuestToAgent::JobPrepared{runner_id:runner_id.clone(),job_id,outcome:ciproxy_protocol::guest::JobPreparation::default()}).await;},
-                        }
+                    Ok(Some(AgentToGuest::PrepareJob { job_id, decision: next })) if running.as_ref() == Some(&job_id) => {
+                        decision = Some(next.clone());
+                        self.prepare_job(runner_id, job_id, next).await;
                     }
                     Ok(Some(_)) => warn!("cache integration is not installed"),
                 },
                 event = self.runner.next_event() => match event? {
                     RunnerEvent::Starting { job_id, runtime } => {
                         running = Some(job_id.clone());
-                        self.report(GuestToAgent::JobStarting { runner_id: runner_id.clone(), job_id, runtime }).await;
+                        self.report(GuestToAgent::JobStarting { runner_id: runner_id.clone(), job_id: job_id.clone(), runtime }).await;
+                        if let Some(decision) = decision.clone() { self.prepare_job(runner_id, job_id.clone(), decision).await; }
                     }
                     RunnerEvent::Ready => { if running.is_none() { self.report(GuestToAgent::RunnerReady {
                         runner_id: runner_id.clone(),

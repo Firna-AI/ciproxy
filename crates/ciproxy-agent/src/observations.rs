@@ -1,10 +1,14 @@
 //! Bind vsock observations to their VM and persist every job transition.
 
+use std::sync::atomic::Ordering;
+
 use ciproxy_protocol::agent::AgentMessage;
 use ciproxy_protocol::guest::GuestToAgent;
 use ciproxy_protocol::runners::RunnerState;
 use ciproxy_protocol::version::ProtocolVersion;
 
+use crate::boundaries::GuestProvenance;
+use crate::cache_authority::CacheAuthority;
 use crate::controller::Controller;
 use crate::error::{Error, Result};
 use crate::state::{Mode, VmRecord};
@@ -28,6 +32,7 @@ impl Controller {
     }
     pub(crate) async fn observe(
         &self,
+        provenance: GuestProvenance,
         runner_id: &str,
         message: GuestToAgent,
     ) -> Result<Option<AgentMessage>> {
@@ -49,15 +54,29 @@ impl Controller {
                 if runner_id != vm.report.runner_id {
                     return Err(Error::GuestMismatch);
                 }
-                let (updated, checked) = self.started_record(&vm, &job_id, Some(runtime)).await?;
+                let (updated, checked) = self
+                    .started_record(
+                        &vm,
+                        &job_id,
+                        Some(runtime),
+                        provenance == GuestProvenance::InitialConfiguration,
+                    )
+                    .await?;
                 if let Some(runtime) = checked {
                     if let Err(error) = self.cache.handoff(&updated, &job_id, runtime).await {
                         tracing::warn!(%error,"cache assignment unavailable; preserve GitHub fallback");
                     }
+                    if let Some(facts) = updated.job_facts.clone() {
+                        self.prepare_job(&updated, facts).await?;
+                    }
                 } else {
-                    tracing::warn!(
-                        "cache assignment authority unavailable; preserve GitHub fallback"
-                    );
+                    tracing::warn!("cache assignment authority unavailable; select GitHub caching");
+                    self.release_github(&updated).await?;
+                }
+                if self.state.lock().await.mode != Mode::Active
+                    || !self.control_connected.load(Ordering::Acquire)
+                {
+                    self.release_pending_jobs().await?;
                 }
                 AgentMessage::JobStarted { runner_id, job_id }
             }
@@ -84,6 +103,9 @@ impl Controller {
                     dockers.release(&vm)?;
                 }
                 self.prepared_record(&vm, outcome).await?;
+                if !outcome.cache_ready && vm.cache_authority != CacheAuthority::GitHubOnly {
+                    self.release_github(&vm).await?;
+                }
                 tracing::info!(event="job_prepared_observed",vm_id=%vm.local_id,"accepted local job readiness");
                 return Ok(None);
             }
@@ -91,6 +113,7 @@ impl Controller {
                 protocol_version,
                 image_id,
                 configuration_received,
+                ..
             } => {
                 if protocol_version != ProtocolVersion::CURRENT || image_id != vm.report.image_id {
                     return Err(Error::GuestMismatch);
@@ -142,7 +165,7 @@ impl Controller {
                 if runner_id != vm.report.runner_id {
                     return Err(Error::GuestMismatch);
                 }
-                self.started_record(&vm, &job_id, None).await?;
+                self.started_record(&vm, &job_id, None, false).await?;
                 AgentMessage::JobStarted { runner_id, job_id }
             }
             GuestToAgent::RunnerExited { runner_id, exit } => {

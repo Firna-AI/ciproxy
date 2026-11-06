@@ -22,10 +22,8 @@ pub struct CachePermissions {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct RuntimeCredentials {
     /// Preloaded Docker bytes measured by the trusted guest before action code.
-    #[serde(default)]
     pub docker_data_bytes: u64,
     /// Proxy URL derived by the trusted guest from Docker's actual bridge.
-    #[serde(default)]
     pub proxy_url: String,
     /// Original ACTIONS_RUNTIME_TOKEN.
     pub github_token: Secret,

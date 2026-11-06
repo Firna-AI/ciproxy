@@ -10,6 +10,7 @@ use ciproxy_protocol::reports::MachineReport;
 use tokio::sync::{Mutex, mpsc, oneshot};
 
 use crate::boundaries::Connection;
+use crate::boundaries::GuestProvenance;
 use crate::connection_types::{ConnectionResult, ControlEvent};
 use crate::controller::Agent;
 use crate::error::Result;
@@ -23,6 +24,9 @@ pub(crate) struct WaitingAgent {
 
 #[async_trait]
 impl Agent for WaitingAgent {
+    async fn control_connection(&self, connected: bool) -> Result<()> {
+        self.delegate.control_connection(connected).await
+    }
     async fn configuration_lost(&self, runner: &str) -> Result<()> {
         self.delegate.configuration_lost(runner).await
     }
@@ -43,8 +47,13 @@ impl Agent for WaitingAgent {
         self.completed.store(true, Ordering::SeqCst);
         result
     }
-    async fn guest(&self, runner: &str, message: GuestToAgent) -> Result<Option<AgentMessage>> {
-        self.delegate.guest(runner, message).await
+    async fn guest(
+        &self,
+        provenance: GuestProvenance,
+        runner: &str,
+        message: GuestToAgent,
+    ) -> Result<Option<AgentMessage>> {
+        self.delegate.guest(provenance, runner, message).await
     }
     async fn remove(&self) -> Result<()> {
         self.delegate.remove().await

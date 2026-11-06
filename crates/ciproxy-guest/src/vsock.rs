@@ -7,6 +7,7 @@ use tokio_vsock::{VMADDR_CID_ANY, VsockAddr, VsockListener, VsockStream};
 
 use crate::boundary::{Channel, CommandFuture};
 use crate::error::{ErrorResultExt, Result};
+use crate::replay::Observations;
 
 struct Connection {
     reader: Lines<BufReader<ReadHalf<VsockStream>>>,
@@ -16,8 +17,7 @@ struct Connection {
 pub(crate) struct VsockChannel {
     listener: VsockListener,
     connection: Option<Connection>,
-    hello: Option<GuestToAgent>,
-    current: Option<GuestToAgent>,
+    observations: Observations,
 }
 
 impl VsockChannel {
@@ -27,8 +27,7 @@ impl VsockChannel {
         Ok(Self {
             listener,
             connection: None,
-            hello: None,
-            current: None,
+            observations: Observations::default(),
         })
     }
 
@@ -42,10 +41,7 @@ impl VsockChannel {
             reader: BufReader::new(reader).lines(),
             writer,
         });
-        for observation in [self.hello.clone(), self.current.clone()]
-            .into_iter()
-            .flatten()
-        {
+        for observation in self.observations.replay() {
             self.write(observation).await?;
         }
         Ok(())
@@ -69,14 +65,20 @@ impl Channel for VsockChannel {
     fn receive(&mut self) -> CommandFuture<'_> {
         Box::pin(async move {
             loop {
-                self.connected().await?;
+                if let Err(error) = self.connected().await {
+                    tracing::warn!(%error, "agent channel will reconnect");
+                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                    continue;
+                }
                 if let Some(connection) = &mut self.connection {
                     match connection.reader.next_line().await {
-                        Ok(Some(line)) => {
-                            return Ok(Some(
-                                serde_json::from_str(&line).context("decode agent command")?,
-                            ));
-                        }
+                        Ok(Some(line)) => match serde_json::from_str(&line) {
+                            Ok(message) => return Ok(Some(message)),
+                            Err(error) => {
+                                tracing::warn!(%error, "agent command unavailable; reconnect without releasing the Worker");
+                                self.connection = None;
+                            }
+                        },
                         Ok(None) | Err(_) => {
                             self.connection = None;
                         }
@@ -87,24 +89,8 @@ impl Channel for VsockChannel {
     }
 
     async fn send(&mut self, message: GuestToAgent) -> Result<()> {
-        match &message {
-            GuestToAgent::RunnerReady { .. }
-                if matches!(self.current, Some(GuestToAgent::JobStarting { .. })) =>
-            {
-                return Ok(());
-            }
-            GuestToAgent::Hello { .. } => self.hello = Some(message.clone()),
-            GuestToAgent::RunnerConfigured { .. } => {
-                if let Some(GuestToAgent::Hello {
-                    configuration_received,
-                    ..
-                }) = &mut self.hello
-                {
-                    *configuration_received = true;
-                }
-            }
-            GuestToAgent::JobPrepared { .. } => {}
-            _ => self.current = Some(message.clone()),
+        if !self.observations.record(&message) {
+            return Ok(());
         }
         self.write(message).await
     }

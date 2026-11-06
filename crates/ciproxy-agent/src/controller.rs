@@ -1,6 +1,7 @@
 //! Durable machine control with short state locks and replaceable host boundaries.
 
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use async_trait::async_trait;
 use ciproxy_protocol::agent::{AgentMessage, ControlMessage};
@@ -8,7 +9,7 @@ use ciproxy_protocol::guest::GuestToAgent;
 use ciproxy_protocol::reports::MachineReport;
 use tokio::sync::Mutex;
 
-use crate::boundaries::{Cache, Host, Images, Store, Vms};
+use crate::boundaries::{Cache, GuestProvenance, Host, Images, Store, Vms};
 use crate::capacity::machine_resources;
 use crate::docker::DockerDisks;
 use crate::error::{Error, Result};
@@ -18,17 +19,24 @@ use crate::state::{MachineState, Mode};
 #[cfg_attr(test, unimock::unimock(api = AgentMock))]
 #[async_trait]
 pub(crate) trait Agent: Send + Sync {
+    async fn control_connection(&self, connected: bool) -> Result<()>;
     async fn configuration_lost(&self, runner_id: &str) -> Result<()>;
     async fn restore(&self) -> Result<()>;
     async fn reconcile(&self) -> Result<()>;
     async fn report(&self) -> Result<MachineReport>;
     async fn control(&self, message: ControlMessage) -> Result<Option<AgentMessage>>;
-    async fn guest(&self, runner_id: &str, message: GuestToAgent) -> Result<Option<AgentMessage>>;
+    async fn guest(
+        &self,
+        provenance: GuestProvenance,
+        runner_id: &str,
+        message: GuestToAgent,
+    ) -> Result<Option<AgentMessage>>;
     async fn remove(&self) -> Result<()>;
     async fn finished(&self) -> bool;
 }
 
 pub(crate) struct Controller {
+    pub(crate) control_connected: AtomicBool,
     pub(crate) state: Mutex<MachineState>,
     pub(crate) store: Arc<dyn Store>,
     pub(crate) host: Arc<dyn Host>,
@@ -41,6 +49,13 @@ pub(crate) struct Controller {
 
 #[async_trait]
 impl Agent for Controller {
+    async fn control_connection(&self, connected: bool) -> Result<()> {
+        self.control_connected.store(connected, Ordering::Release);
+        if !connected {
+            self.release_pending_jobs().await?;
+        }
+        Ok(())
+    }
     async fn configuration_lost(&self, runner_id: &str) -> Result<()> {
         let vm = self
             .state
@@ -88,8 +103,13 @@ impl Agent for Controller {
         self.apply(message).await
     }
 
-    async fn guest(&self, runner_id: &str, message: GuestToAgent) -> Result<Option<AgentMessage>> {
-        self.observe(runner_id, message).await
+    async fn guest(
+        &self,
+        provenance: GuestProvenance,
+        runner_id: &str,
+        message: GuestToAgent,
+    ) -> Result<Option<AgentMessage>> {
+        self.observe(provenance, runner_id, message).await
     }
 
     async fn remove(&self) -> Result<()> {

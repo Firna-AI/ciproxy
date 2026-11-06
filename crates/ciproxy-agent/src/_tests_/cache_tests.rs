@@ -132,7 +132,9 @@ async fn replay_reuses_live_credentials_and_registers_again_only_after_sidecar_l
         .handoff(
             &record,
             &JobId("job-1".into()),
-            CacheAuthority::Waiting.handoff(true, runtime).unwrap(),
+            CacheAuthority::Waiting
+                .handoff(true, true, runtime)
+                .unwrap(),
         )
         .await
         .unwrap();

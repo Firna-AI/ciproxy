@@ -7,6 +7,7 @@ use ciproxy_protocol::reports::SlotOccupancy;
 use ciproxy_protocol::runners::RunnerExit;
 use unimock::{MockFn, Unimock, matching};
 
+use crate::boundaries::GuestProvenance;
 use crate::boundaries::{CacheMock, StoreMock, VmsMock};
 use crate::cache_authority::CacheAuthority;
 use crate::controller::Agent;
@@ -77,6 +78,7 @@ async fn fragmented_slots_are_shared_with_reports_and_reused_without_moving_surv
     );
     agent
         .guest(
+            GuestProvenance::InitialConfiguration,
             "existing-a",
             GuestToAgent::RunnerExited {
                 runner_id: RunnerId("existing-a".to_owned()),

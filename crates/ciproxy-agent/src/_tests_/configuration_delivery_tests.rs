@@ -1,5 +1,6 @@
 //! Guest receipt decides recovery without a startup timer or persisted JIT.
 
+use ciproxy_protocol::guest::HANDOFF_PROTOCOL_VERSION;
 use std::future::pending;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -17,15 +18,16 @@ use crate::process::{CommandsMock, UnitState};
 
 use super::{Guests, LinuxGuests};
 
-fn hello(received: bool) -> GuestToAgent {
+pub(super) fn hello(received: bool) -> GuestToAgent {
     GuestToAgent::Hello {
+        handoff_protocol_version: HANDOFF_PROTOCOL_VERSION,
         protocol_version: ProtocolVersion::CURRENT,
         image_id: vm("runner-1", false).report.image_id,
         configuration_received: received,
     }
 }
 
-fn socket(
+pub(super) fn socket(
     messages: Vec<GuestToAgent>,
     sent: Option<Arc<Mutex<Vec<AgentToGuest>>>>,
 ) -> Box<dyn GuestSocket> {

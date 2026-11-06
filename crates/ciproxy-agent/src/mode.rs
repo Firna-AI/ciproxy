@@ -31,6 +31,9 @@ impl Controller {
                 *state = next;
             }
         }
+        if self.state.lock().await.mode != Mode::Active {
+            self.release_pending_jobs().await?;
+        }
         self.enforce_mode().await
     }
 

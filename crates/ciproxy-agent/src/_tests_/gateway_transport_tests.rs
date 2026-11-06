@@ -12,9 +12,11 @@ use tokio_tungstenite::tungstenite::Message;
 use unimock::{MockFn, Unimock, matching};
 
 use crate::boundaries::{DelayMock, StoreMock, VmsMock};
+use crate::cache_authority::CacheAuthority;
 use crate::connection::WebSocketConnection;
 use crate::connection_fixtures::{URL, dialer, upgrade_error, websocket};
 use crate::error::Error;
+use crate::fixtures::github_decision_sent;
 use crate::fixtures::{controller, identity, report_dependencies, vm};
 use crate::gateway::{Gateway, ReconnectingGateway};
 use crate::state::{MachineState, Mode};
@@ -48,6 +50,7 @@ async fn http_upgrade_denials_retry_without_changing_identity_or_vms() {
     let agent = Arc::new(controller(
         initial.clone(),
         Unimock::new((
+            github_decision_sent(),
             report_dependencies(),
             StoreMock::save
                 .each_call(matching!(_))
@@ -115,6 +118,7 @@ async fn http_upgrade_denials_retry_without_changing_identity_or_vms() {
     assert!(matches!(result.await, Err(Error::Revoked)));
     let mut expected = initial;
     expected.mode = Mode::Removed;
+    expected.runners[0].cache_authority = CacheAuthority::GitHubOnly;
     expected.runners[1].report.state = RunnerState::Stopping;
     assert_eq!(*agent.state.lock().await, expected);
 }

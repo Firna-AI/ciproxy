@@ -2,17 +2,18 @@
 
 use std::future::Future;
 use std::pin::Pin;
-use std::time::Duration;
 
 use async_trait::async_trait;
-use serde::Serialize;
+use ciproxy_protocol::guest::HANDOFF_PROTOCOL_VERSION;
+use ciproxy_protocol::identifiers::JobId;
+use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
-use tokio::time::timeout;
 
 use crate::error::{Error, ErrorResultExt, Result};
+use crate::guest_setup::PreloadedDocker;
 use crate::handoff::{Handoff, read};
 
 /// One original assignment and its private readiness response channel.
@@ -49,8 +50,16 @@ impl Inbox {
     pub(crate) fn new(mut source: Box<dyn AssignmentSource>) -> Self {
         let (sender, receiver) = mpsc::channel(1);
         let reader = tokio::spawn(async move {
-            let assignment = source.receive().await;
-            let _ = sender.send(assignment).await;
+            loop {
+                let assignment = source.receive().await;
+                let failed = assignment.is_err();
+                if sender.send(assignment).await.is_err() {
+                    return;
+                }
+                if failed {
+                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                }
+            }
         });
         Self { receiver, reader }
     }
@@ -75,6 +84,7 @@ impl Drop for Inbox {
 
 pub(crate) struct SocketAssignments {
     pub(crate) listener: UnixListener,
+    pub(crate) preloaded: PreloadedDocker,
 }
 
 impl AssignmentSource for SocketAssignments {
@@ -85,10 +95,11 @@ impl AssignmentSource for SocketAssignments {
                 .accept()
                 .await
                 .context("accept trusted assignment")?;
-            let (handoff, stream) = read(stream).await?;
+            let (handoff, stream) = read(stream, self.preloaded.clone()).await?;
+            let job_id = handoff.job_id.clone();
             Ok(Assignment {
                 handoff,
-                reply: Box::new(SocketReply { stream }),
+                reply: Box::new(SocketReply { stream, job_id }),
             })
         })
     }
@@ -96,33 +107,78 @@ impl AssignmentSource for SocketAssignments {
 
 struct SocketReply {
     stream: UnixStream,
+    job_id: JobId,
 }
 
 #[derive(Serialize)]
 struct Ready<'a> {
+    handoff_protocol_version: u16,
+    job_id: &'a JobId,
+    decision: ReadyDecision,
     #[serde(skip_serializing_if = "Option::is_none")]
     proxy_url: Option<&'a str>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "snake_case")]
+enum ReadyDecision {
+    GithubOnly,
+    CacheReady,
+}
+
+#[derive(Serialize)]
+struct Preparing<'a> {
+    handoff_protocol_version: u16,
+    job_id: &'a JobId,
+    preparing: bool,
+}
+
+#[derive(Deserialize)]
+struct Acknowledged {
+    handoff_protocol_version: u16,
+    job_id: JobId,
+    acknowledged: bool,
 }
 
 #[async_trait]
 impl WorkerReply for SocketReply {
     async fn begin(&mut self) -> Result<bool> {
+        let mut offer = serde_json::to_vec(&Preparing {
+            handoff_protocol_version: HANDOFF_PROTOCOL_VERSION,
+            job_id: &self.job_id,
+            preparing: true,
+        })
+        .context("encode host-authorized preparation")?;
+        offer.push(b'\n');
         self.stream
-            .write_all(b"{\"preparing\":true}\n")
+            .write_all(&offer)
             .await
             .context("offer local job preparation")?;
-        let mut acknowledged = String::new();
-        timeout(
-            Duration::from_secs(10),
-            BufReader::new(&mut self.stream).read_line(&mut acknowledged),
+        let mut line = String::new();
+        BufReader::new(&mut self.stream)
+            .read_line(&mut line)
+            .await
+            .context("read preparation acknowledgement")?;
+        let acknowledged: Acknowledged =
+            serde_json::from_str(&line).context("decode preparation acknowledgement")?;
+        Ok(
+            acknowledged.handoff_protocol_version == HANDOFF_PROTOCOL_VERSION
+                && acknowledged.job_id == self.job_id
+                && acknowledged.acknowledged,
         )
-        .await
-        .context("wait for runner preparation acknowledgement")?
-        .context("read runner preparation acknowledgement")?;
-        Ok(acknowledged.trim() == "{\"acknowledged\":true}")
     }
     async fn ready(&mut self, proxy_url: Option<&str>) -> Result<()> {
-        let mut bytes = serde_json::to_vec(&Ready { proxy_url }).context("encode job readiness")?;
+        let mut bytes = serde_json::to_vec(&Ready {
+            handoff_protocol_version: HANDOFF_PROTOCOL_VERSION,
+            job_id: &self.job_id,
+            decision: if proxy_url.is_some() {
+                ReadyDecision::CacheReady
+            } else {
+                ReadyDecision::GithubOnly
+            },
+            proxy_url,
+        })
+        .context("encode job readiness")?;
         bytes.push(b'\n');
         self.stream
             .write_all(&bytes)

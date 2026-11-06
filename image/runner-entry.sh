@@ -12,6 +12,7 @@ set +a
 cd /opt/actions-runner
 if [[ -n "${CIPROXY_ASSIGNMENT_SOCKET:-}" ]]; then
     cp bin/Runner.Worker.own.dll bin/Runner.Worker.dll
+    ./bin/Runner.Worker ciproxy-handoff-protocol-2
 else
     cp bin/Runner.Worker.stock.dll bin/Runner.Worker.dll
 fi

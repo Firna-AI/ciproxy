@@ -2,6 +2,7 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use std::time::Duration;
 
 use ciproxy_protocol::reports::REPORT_INTERVAL_SECONDS;
@@ -144,6 +145,7 @@ async fn execute(action: Action) -> Result<()> {
         operation: Mutex::new(()),
     });
     let agent: Arc<dyn Agent> = Arc::new(Controller {
+        control_connected: AtomicBool::new(false),
         state: Mutex::new(state),
         store: store.clone(),
         host: host.clone(),
@@ -267,7 +269,7 @@ async fn execute(action: Action) -> Result<()> {
                         if event.configuration_lost {
                             agent.configuration_lost(&event.runner_id.0).await?;
                         }
-                        agent.guest(&event.runner_id.0, event.message).await.map(|_| ())
+                        agent.guest(event.provenance, &event.runner_id.0, event.message).await.map(|_| ())
                     }
                     _ = timer.tick() => agent.reconcile().await,
                 };
