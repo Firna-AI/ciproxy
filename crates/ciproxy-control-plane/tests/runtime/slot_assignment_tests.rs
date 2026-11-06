@@ -207,6 +207,7 @@ async fn two_slot_job_reserves_free_indices_zero_and_two_between_busy_jobs() {
         }),
         clock,
         Some(image),
+        Arc::new(Unimock::new(())),
     );
     runtime.tick().await.unwrap();
     let rows = fixture.store.own_runners(fixture.workspace).unwrap();

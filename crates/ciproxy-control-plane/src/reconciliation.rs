@@ -6,7 +6,6 @@ use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
 use ciproxy_store_interface::vm_size::VmSize;
 
 use crate::error::{Error, ErrorResultExt, Result};
-use crate::retirement::RetirementPolicy;
 use crate::runtime::MachineRuntime;
 
 impl MachineRuntime {
@@ -87,8 +86,7 @@ impl MachineRuntime {
                 .internal()?;
             }
             if observed.configuration_lost && observed.state == runners::RunnerState::Starting {
-                self.retire_runner(input.workspace_id, runner, RetirementPolicy::GithubFirst)
-                    .await?;
+                self.retire_runner(input.workspace_id, runner).await?;
                 return Ok(());
             }
             let state = match observed.state {
@@ -129,16 +127,14 @@ impl MachineRuntime {
                 )
                 .await?;
             } else {
-                self.retire_runner(input.workspace_id, runner, RetirementPolicy::GithubFirst)
-                    .await?;
+                self.retire_runner(input.workspace_id, runner).await?;
             }
         } else if runner.confirmed_at.is_none()
             && runner.runner.state == RunnerState::Starting
             && received.received_at > runner.issued_at
             && runner.issued_at + chrono::Duration::seconds(60) < self.clock.now()
         {
-            self.retire_runner(input.workspace_id, runner, RetirementPolicy::GithubFirst)
-                .await?;
+            self.retire_runner(input.workspace_id, runner).await?;
         }
         Ok(())
     }

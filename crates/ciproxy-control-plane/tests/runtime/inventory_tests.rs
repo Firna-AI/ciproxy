@@ -67,6 +67,7 @@ async fn inventory_after_issue_but_before_agent_confirmation_cannot_retire_the_s
             fixture.intent.runner.id,
             fixture.intent.command_id,
             at() - Duration::seconds(2),
+            fixture.intent.runner.github_id,
         )
         .unwrap();
     fixture
@@ -126,6 +127,7 @@ async fn unconfirmed_stop_waits_for_a_result_then_releases_on_later_inventory() 
             fixture.intent.runner.id,
             fixture.intent.command_id,
             at() - Duration::seconds(2),
+            fixture.intent.runner.github_id,
         )
         .unwrap();
     fixture.contact.report.runners.clear();

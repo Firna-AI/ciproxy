@@ -17,7 +17,7 @@ use ciproxy_github::assignments::AssignmentService;
 use ciproxy_github::auth::jwt::RsaAppJwt;
 use ciproxy_github::auth::tokens::RotatingTokens;
 use ciproxy_github::hooks::{AppWebhooks, WebhookHandler};
-use ciproxy_github::installation_state::AppInstallationClient;
+use ciproxy_github::installation_state::{AppInstallationClient, InstallationApi};
 use ciproxy_github::persistence::StoreAdapter;
 use ciproxy_github::redelivery::{HttpDeliveries, RecoverDeliveries, WebhookRecovery};
 use ciproxy_github::registrations::RegistrationService;
@@ -111,6 +111,11 @@ impl Hosted {
             connections.clone(),
             relay.clone(),
         ));
+        let installations: Arc<dyn InstallationApi> = Arc::new(AppInstallationClient::new(
+            http.clone(),
+            api.clone(),
+            signer.clone(),
+        ));
         let mut machine_runtime = MachineRuntime::new(
             store.clone(),
             gateway.clone(),
@@ -123,6 +128,7 @@ impl Hosted {
             }),
             clock.clone(),
             config.image.clone(),
+            installations.clone(),
         );
         machine_runtime.image_signing = Some(Arc::new(CdnSigning::new(
             config.cdn_signing_key_name.clone(),
@@ -145,11 +151,7 @@ impl Hosted {
             .map_or_else(|_| Err(Error::StateChanged), |_| Ok(()))?;
         let app: Arc<dyn GitHubApp> = Arc::new(AppService {
             leases: persistence.clone(),
-            installations: Arc::new(AppInstallationClient::new(
-                http.clone(),
-                api.clone(),
-                signer.clone(),
-            )),
+            installations,
             store: persistence.clone(),
             outbox: persistence.clone(),
             rest: rest.clone(),

@@ -7,7 +7,7 @@ use ciproxy_gateway::gateway::MachineGatewayMock;
 use ciproxy_gateway::types::Delivery;
 use ciproxy_github::assignments::AssignmentService;
 use ciproxy_github::persistence::StoreAdapter;
-use ciproxy_github::registrations::{Removal, RunnerRegistrationsMock};
+use ciproxy_github::registrations::{RegistrationRetirement, RunnerRegistrationsMock};
 use ciproxy_protocol::agent::{AgentMessage, CommandOutcome, ControlMessage};
 use ciproxy_protocol::identifiers::CommandId;
 use ciproxy_store_interface::runners::RunnerState;
@@ -29,11 +29,11 @@ async fn github_busy_race_preserves_the_vm_across_stale_warm_reports() {
     let removals = Arc::new(AtomicUsize::new(0));
     let counted = removals.clone();
     let registrations = Arc::new(Unimock::new(
-        RunnerRegistrationsMock::remove
-            .each_call(matching!(_, 47))
-            .answers_arc(Arc::new(move |_, _, _| {
+        RunnerRegistrationsMock::retire
+            .each_call(matching!(_, _, Some(47)))
+            .answers_arc(Arc::new(move |_, _, _, _| {
                 counted.fetch_add(1, Ordering::SeqCst);
-                Ok(Removal::Busy)
+                Ok(RegistrationRetirement::Busy { id: 47 })
             })),
     ));
     let runtime = MachineRuntime::new(
@@ -45,6 +45,7 @@ async fn github_busy_race_preserves_the_vm_across_stale_warm_reports() {
         }),
         clock,
         None,
+        Arc::new(Unimock::new(())),
     );
     runtime.tick().await.unwrap();
     assert_eq!(removals.load(Ordering::SeqCst), 1);
@@ -72,11 +73,11 @@ async fn github_removal_precedes_stop_and_capacity_waits_for_an_absent_vm_report
     let removed = events.clone();
     let stopped = events.clone();
     let registrations = Arc::new(Unimock::new(
-        RunnerRegistrationsMock::remove
-            .some_call(matching!(_, 47))
-            .answers_arc(Arc::new(move |_, _, _| {
+        RunnerRegistrationsMock::retire
+            .some_call(matching!(_, _, Some(47)))
+            .answers_arc(Arc::new(move |_, _, _, _| {
                 removed.lock().unwrap().push("github_removed");
-                Ok(Removal::Removed)
+                Ok(RegistrationRetirement::Removed { id: 47 })
             })),
     ));
     let gateway = Arc::new(Unimock::new(
@@ -101,6 +102,7 @@ async fn github_removal_precedes_stop_and_capacity_waits_for_an_absent_vm_report
         }),
         clock,
         None,
+        Arc::new(Unimock::new(())),
     );
     runtime.tick().await.unwrap();
     let stopping = fixture
@@ -151,9 +153,9 @@ async fn removed_offline_machine_still_loses_its_idle_github_registration() {
         .remove_machine(fixture.workspace, fixture.machine, at())
         .unwrap();
     let registrations = Arc::new(Unimock::new(
-        RunnerRegistrationsMock::remove
-            .some_call(matching!(_, 47))
-            .returns(Ok(Removal::Removed)),
+        RunnerRegistrationsMock::retire
+            .some_call(matching!(_, _, Some(47)))
+            .returns(Ok(RegistrationRetirement::Removed { id: 47 })),
     ));
     let gateway = Arc::new(Unimock::new(
         MachineGatewayMock::send
@@ -170,6 +172,7 @@ async fn removed_offline_machine_still_loses_its_idle_github_registration() {
         }),
         clock,
         None,
+        Arc::new(Unimock::new(())),
     );
     runtime.tick().await.unwrap();
     assert_eq!(
@@ -181,7 +184,7 @@ async fn removed_offline_machine_still_loses_its_idle_github_registration() {
 }
 
 #[tokio::test]
-async fn revoked_app_access_stops_only_its_idle_runner_on_a_shared_machine() {
+async fn unavailable_app_access_keeps_its_idle_runner_reserved_on_a_shared_machine() {
     let fixture = Fixture::new();
     let clock = clock(true);
     let events = Arc::new(Mutex::new(Vec::new()));
@@ -199,9 +202,9 @@ async fn revoked_app_access_stops_only_its_idle_runner_on_a_shared_machine() {
             })),
     ));
     let registrations = Arc::new(Unimock::new(
-        RunnerRegistrationsMock::remove
-            .some_call(matching!(_, 47))
-            .returns(Ok(Removal::AccessGone)),
+        RunnerRegistrationsMock::retire
+            .some_call(matching!(_, _, Some(47)))
+            .returns(Err(ciproxy_github::error::Error::AccessUnavailable(403))),
     ));
     let runtime = MachineRuntime::new(
         fixture.store.clone(),
@@ -212,15 +215,14 @@ async fn revoked_app_access_stops_only_its_idle_runner_on_a_shared_machine() {
         }),
         clock,
         None,
+        Arc::new(Unimock::new(())),
     );
     runtime.tick().await.unwrap();
-    assert!(
-        matches!(&events.lock().unwrap()[0],ciproxy_protocol::agent::ControlMessage::StopRunner{organization_id,runner_id,..} if organization_id.0=="42"&&runner_id.0==fixture.intent.runner.id.to_string())
-    );
+    assert_eq!(events.lock().unwrap().len(), 0);
     assert_eq!(
         fixture.store.own_runners(fixture.workspace).unwrap()[0]
             .runner
             .state,
-        RunnerState::Stopping
+        RunnerState::Ready
     );
 }

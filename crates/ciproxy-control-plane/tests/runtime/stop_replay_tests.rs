@@ -7,7 +7,7 @@ use ciproxy_control_plane::runtime::OwnMachines;
 use ciproxy_gateway::gateway::MachineGatewayMock;
 use ciproxy_gateway::types::Delivery;
 use ciproxy_github::assignments::JobAssignmentsMock;
-use ciproxy_github::registrations::{Removal, RunnerRegistrationsMock};
+use ciproxy_github::registrations::{RegistrationRetirement, RunnerRegistrationsMock};
 use ciproxy_protocol::agent::{AgentMessage, CommandFailure, CommandOutcome, ControlMessage};
 use ciproxy_protocol::identifiers::{CommandId, JobId, RunnerId};
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
@@ -39,9 +39,9 @@ async fn offline_stop_replays_same_identity_until_applied_and_preserves_capacity
             })),
     ));
     let registrations = Arc::new(Unimock::new(
-        RunnerRegistrationsMock::remove
-            .some_call(matching!(_, 47))
-            .returns(Ok(Removal::Removed)),
+        RunnerRegistrationsMock::retire
+            .some_call(matching!(_, _, Some(47)))
+            .returns(Ok(RegistrationRetirement::Removed { id: 47 })),
     ));
     let runtime = runtime(&fixture, registrations, gateway);
     runtime.tick().await.unwrap();
@@ -117,9 +117,9 @@ async fn failed_send_replays_before_job_routing_error_and_running_report_closes_
             })),
     ));
     let registrations = Arc::new(Unimock::new(
-        RunnerRegistrationsMock::remove
-            .some_call(matching!(_, 47))
-            .returns(Ok(Removal::Removed)),
+        RunnerRegistrationsMock::retire
+            .some_call(matching!(_, _, Some(47)))
+            .returns(Ok(RegistrationRetirement::Removed { id: 47 })),
     ));
     let mut runtime = runtime(&fixture, registrations, gateway);
     runtime.tick().await.unwrap();
@@ -163,6 +163,7 @@ async fn runner_ready_keeps_retirement_but_guest_job_started_preserves_the_job()
             fixture.intent.runner.id,
             fixture.intent.command_id,
             at(),
+            fixture.intent.runner.github_id,
         )
         .unwrap();
     let runtime = runtime_with_clock(
@@ -215,7 +216,13 @@ async fn recovery_send_error_does_not_block_another_saved_stop() {
     for runner in [&fixture.intent, &second] {
         fixture
             .store
-            .retire_own_runner(fixture.workspace, runner.runner.id, runner.command_id, at())
+            .retire_own_runner(
+                fixture.workspace,
+                runner.runner.id,
+                runner.command_id,
+                at(),
+                runner.runner.github_id,
+            )
             .unwrap();
     }
     let sent = Arc::new(Mutex::new(Vec::new()));

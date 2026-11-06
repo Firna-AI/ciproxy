@@ -152,6 +152,7 @@ impl OwnRunnerStore for PgStore {
         runner_id: Uuid,
         command_id: Uuid,
         at: DateTime<Utc>,
+        github_id: Option<i64>,
     ) -> Result<()> {
         transaction(&mut *self.connection()?, |connection| {
             let count = diesel::update(
@@ -159,7 +160,10 @@ impl OwnRunnerStore for PgStore {
                     .filter(runners::workspace_id.eq(workspace_id))
                     .find(runner_id),
             )
-            .set(runners::state.eq("stopping"))
+            .set((
+                runners::state.eq("stopping"),
+                runners::github_id.eq(github_id),
+            ))
             .execute(connection)
             .store()?;
             require_record(count)?;

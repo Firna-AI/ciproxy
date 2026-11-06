@@ -12,13 +12,19 @@ use crate::scale_sets::{JitRegistration, ScaleSetFactory};
 
 /// The result of a requested GitHub registration removal.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Removal {
+pub enum RegistrationRetirement {
     /// The registration was deleted or was already absent.
-    Removed,
+    Removed {
+        /// The exact runner whose removal or absence GitHub confirmed.
+        id: i64,
+    },
     /// GitHub assigned a job, so the VM and its running work must remain.
-    Busy,
-    /// Removal revoked App access, so the registration must stay on GitHub.
-    AccessGone,
+    Busy {
+        /// The exact runner that GitHub reports busy.
+        id: i64,
+    },
+    /// A successful live unique-name lookup found no registration.
+    Absent,
 }
 
 /// The runtime's JIT configuration boundary for one ephemeral runner.
@@ -27,10 +33,13 @@ pub enum Removal {
 pub trait RunnerRegistrations: Send + Sync {
     /// Register one runner after the orchestrator reserves its destination.
     async fn create(&self, target: ListenerTarget, runner_name: &str) -> Result<JitRegistration>;
-    /// Remove an idle/ended registration before the orchestrator frees its VM.
-    async fn remove(&self, target: ListenerTarget, github_runner_id: i64) -> Result<Removal>;
-    /// Recover a registration whose response preceded a hosted process crash.
-    async fn find(&self, target: ListenerTarget, runner_name: &str) -> Result<Option<i64>>;
+    /// Confirm retirement through live lookup/removal, or preserve a busy runner.
+    async fn retire(
+        &self,
+        target: ListenerTarget,
+        runner_name: &str,
+        saved_id: Option<i64>,
+    ) -> Result<RegistrationRetirement>;
 }
 
 /// The JIT service, consumed through dyn RunnerRegistrations.
@@ -43,17 +52,6 @@ pub struct RegistrationService {
 
 #[async_trait]
 impl RunnerRegistrations for RegistrationService {
-    async fn find(&self, target: ListenerTarget, runner_name: &str) -> Result<Option<i64>> {
-        let context = self.store.context(target).await?;
-        if context.organization.app_state == AppState::Removed {
-            return Ok(None);
-        }
-        let api = self
-            .scale_sets
-            .for_organization(&context.organization)
-            .await?;
-        api.find_runner(runner_name).await
-    }
     async fn create(&self, target: ListenerTarget, runner_name: &str) -> Result<JitRegistration> {
         let context = self.store.context(target).await?;
         if context.organization.app_state != AppState::Active
@@ -68,18 +66,27 @@ impl RunnerRegistrations for RegistrationService {
         api.register(context.scale_set.github_id, runner_name).await
     }
 
-    async fn remove(&self, target: ListenerTarget, github_runner_id: i64) -> Result<Removal> {
+    async fn retire(
+        &self,
+        target: ListenerTarget,
+        runner_name: &str,
+        saved_id: Option<i64>,
+    ) -> Result<RegistrationRetirement> {
         let context = self.store.context(target).await?;
-        if context.organization.app_state == AppState::Removed {
-            return Ok(Removal::AccessGone);
-        }
         let api = self
             .scale_sets
             .for_organization(&context.organization)
             .await?;
-        match api.remove_runner(github_runner_id).await {
-            Ok(()) => Ok(Removal::Removed),
-            Err(Error::RunnerBusy) => Ok(Removal::Busy),
+        let id = match saved_id {
+            Some(id) => Some(id),
+            None => api.find_runner(runner_name).await?,
+        };
+        let Some(id) = id else {
+            return Ok(RegistrationRetirement::Absent);
+        };
+        match api.remove_runner(id).await {
+            Ok(()) => Ok(RegistrationRetirement::Removed { id }),
+            Err(Error::RunnerBusy) => Ok(RegistrationRetirement::Busy { id }),
             Err(error) => Err(error),
         }
     }

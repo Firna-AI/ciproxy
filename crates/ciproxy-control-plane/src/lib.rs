@@ -25,5 +25,6 @@ pub mod runtime;
 mod slots;
 mod snapshot;
 mod startup_api;
+mod takeout;
 mod tasks;
 mod warm;

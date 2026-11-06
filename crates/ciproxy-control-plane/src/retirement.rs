@@ -1,7 +1,7 @@
 //! Durable stop intents share one delivery path across live work and recovery.
 
 use ciproxy_github::persistence::session::ListenerTarget;
-use ciproxy_github::registrations::Removal;
+use ciproxy_github::registrations::RegistrationRetirement;
 use ciproxy_protocol::agent::ControlMessage;
 use ciproxy_protocol::identifiers::{CommandId, OrganizationId, RunnerId};
 use ciproxy_store_interface::own_runners::{OwnRunner, OwnRunnerLease, RoutingSnapshot};
@@ -11,21 +11,18 @@ use uuid::Uuid;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::runtime::MachineRuntime;
 
-/// Authority for retiring a saved own-machine reservation.
-pub(crate) enum RetirementPolicy {
-    /// Remove GitHub registration first and preserve an assigned job.
-    GithubFirst,
-    /// The immutable owner removal authorizes an immediate idle stop at the agent.
+/// Positive evidence required before the durable stop write.
+pub(crate) enum StopAuthority {
+    /// A successful scoped GitHub removal or live absence query.
+    GitHubConfirmed { github_id: Option<i64> },
+    /// The owner lifecycle step validated the exact removed installation.
     OwnerRemoval,
 }
 
 impl MachineRuntime {
     /// Save a GitHub-first retirement and deliver its new stop intent once.
     pub(crate) async fn stop(&self, input: &RoutingSnapshot, runner: &OwnRunner) -> Result<()> {
-        let Some(stopping) = self
-            .retire_runner(input.workspace_id, runner, RetirementPolicy::GithubFirst)
-            .await?
-        else {
+        let Some(stopping) = self.retire_runner(input.workspace_id, runner).await? else {
             return Ok(());
         };
         let organization = input
@@ -42,7 +39,6 @@ impl MachineRuntime {
         &self,
         workspace_id: Uuid,
         runner: &OwnRunner,
-        policy: RetirementPolicy,
     ) -> Result<Option<OwnRunner>> {
         if !matches!(runner.runner.place, RunnerPlace::Machine { .. }) {
             return Ok(None);
@@ -53,44 +49,54 @@ impl MachineRuntime {
         ) {
             return Ok(None);
         }
-        if matches!(policy, RetirementPolicy::GithubFirst) {
-            if runner.runner.state == RunnerState::Busy {
+        if runner.runner.state == RunnerState::Busy {
+            return Ok(None);
+        }
+        let target = ListenerTarget {
+            workspace_id,
+            organization_id: runner.runner.organization_id,
+            scale_set_id: runner.runner.scale_set_id,
+        };
+        let authority = match self
+            .registrations
+            .retire(
+                target,
+                &format!("ciproxy-{}", runner.runner.id),
+                runner.runner.github_id,
+            )
+            .await
+            .internal()?
+        {
+            RegistrationRetirement::Removed { id } => StopAuthority::GitHubConfirmed {
+                github_id: Some(id),
+            },
+            RegistrationRetirement::Absent => StopAuthority::GitHubConfirmed { github_id: None },
+            RegistrationRetirement::Busy { id } => {
+                self.save_state(workspace_id, runner, RunnerState::Busy, Some(id))
+                    .await?;
                 return Ok(None);
             }
-            let target = ListenerTarget {
-                workspace_id,
-                organization_id: runner.runner.organization_id,
-                scale_set_id: runner.runner.scale_set_id,
-            };
-            let github_id = match runner.runner.github_id {
-                Some(id) => Some(id),
-                None => self
-                    .registrations
-                    .find(target, &format!("ciproxy-{}", runner.runner.id))
-                    .await
-                    .internal()?,
-            };
-            if let Some(github_id) = github_id {
-                self.save_state(workspace_id, runner, runner.runner.state, Some(github_id))
-                    .await?;
-                if self
-                    .registrations
-                    .remove(target, github_id)
-                    .await
-                    .internal()?
-                    == Removal::Busy
-                {
-                    self.save_state(workspace_id, runner, RunnerState::Busy, Some(github_id))
-                        .await?;
-                    return Ok(None);
-                }
-            }
-        }
+        };
+        Ok(Some(self.save_stop(workspace_id, runner, authority).await?))
+    }
+
+    /// Persist the GitHub identity and stop command only after positive authority.
+    pub(crate) async fn save_stop(
+        &self,
+        workspace_id: Uuid,
+        runner: &OwnRunner,
+        authority: StopAuthority,
+    ) -> Result<OwnRunner> {
+        let github_id = match authority {
+            StopAuthority::GitHubConfirmed { github_id } => github_id,
+            StopAuthority::OwnerRemoval => runner.runner.github_id,
+        };
         let mut stopping = runner.clone();
         stopping.command_id = self.clock.uuid();
         stopping.issued_at = self.clock.now();
         stopping.acknowledged = false;
         stopping.runner.state = RunnerState::Stopping;
+        stopping.runner.github_id = github_id;
         let store = self.store.clone();
         let saved = stopping.clone();
         tokio::task::spawn_blocking(move || {
@@ -99,12 +105,13 @@ impl MachineRuntime {
                 saved.runner.id,
                 saved.command_id,
                 saved.issued_at,
+                github_id,
             )
         })
         .await
         .internal()?
         .internal()?;
-        Ok(Some(stopping))
+        Ok(stopping)
     }
 
     /// Retry pending stops before routing while checking the workspace lease.

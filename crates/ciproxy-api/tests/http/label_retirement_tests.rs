@@ -10,7 +10,9 @@ use ciproxy_github::error::Error;
 use ciproxy_github::listener::{DurableListener, ListenerOptions, ScaleSetListener};
 use ciproxy_github::persistence::StoreAdapter;
 use ciproxy_github::persistence::session::{ListenerTarget, SessionStore};
-use ciproxy_github::registrations::{RegistrationService, Removal, RunnerRegistrations};
+use ciproxy_github::registrations::{
+    RegistrationRetirement, RegistrationService, RunnerRegistrations,
+};
 use ciproxy_store_interface::dashboard::records::Role;
 use ciproxy_store_interface::github::DemandPhase;
 use ciproxy_store_interface::scale_sets::ScaleSetState;
@@ -129,8 +131,11 @@ async fn keeps_completion(restarted: bool) {
         Err(Error::OrganizationInactive)
     ));
     assert_eq!(
-        registrations.remove(target, 15).await.unwrap(),
-        Removal::Removed
+        registrations
+            .retire(target, "retired-runner", Some(15))
+            .await
+            .unwrap(),
+        RegistrationRetirement::Removed { id: 15 }
     );
     assert!(
         !fixture
