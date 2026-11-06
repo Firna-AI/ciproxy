@@ -171,6 +171,8 @@ row locks before a new reservation commits.
 The command records retain exact byte dimensions and logical slot sets.
 No conversion through integer GB changes the held root allocation.
 The first confirmation of a runner is written once, and retirement keeps it.
+An observation saves the runner state, its GitHub ID, and that first time in
+one transaction. A missing runner or command record rolls back both writes.
 An applied command result stays a separate value.
 A retirement saves the trusted GitHub ID, `Stopping`, and its stop command
 in one transaction.
@@ -224,6 +226,8 @@ CI starts the database for the existing workspace test phase.
 
 - [src/dashboard](src/dashboard) owns dashboard identity and access queries.
 - [src/own_runners.rs](src/own_runners.rs) stores exact execution intents.
+- [src/own_observation.rs](src/own_observation.rs) saves one scoped runner
+  observation and its first confirmation.
 - [src/routing_snapshot.rs](src/routing_snapshot.rs) reads coherent routing.
 
 - [src/billing/session.rs](src/billing/session.rs) commits billing state.

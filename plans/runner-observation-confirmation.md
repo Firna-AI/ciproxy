@@ -227,21 +227,22 @@ repair of unobserved starts, the `Busy` and `Stopping` protections, stop
 authority and replay, take-out, and command results. It changes no schema,
 protocol, HTTP route, setting, or public constructor.
 
-- [ ] Add the PostgreSQL runtime regression first. The start result is lost,
+- [x] Add the PostgreSQL runtime regression first. The start result is lost,
       GitHub reports the runner busy, and the job completes before the agent
       reconnects. A later full report omits the VM. Expect `Stopped` and
       released slots and disk. Show that `5bfb46f` fails on that assertion.
-- [ ] Add two more cases: a report received before the busy observation
-      keeps the runner, and registration alone leaves `confirmed_at` empty.
-- [ ] Add `observe_own_runner` to the store interface and PostgreSQL. Move
+- [x] Cover two more cases in that regression: a report received before
+      the busy observation keeps the runner, and registration alone leaves
+      `confirmed_at` empty.
+- [x] Add `observe_own_runner` to the store interface and PostgreSQL. Move
       each consumer under "Replaced ways" to it.
-- [ ] Narrow the private `save_state`. Delete `confirm_own_runner`, and move
+- [x] Narrow the private `save_state`. Delete `confirm_own_runner`, and move
       its store test to the new operation with every assertion.
-- [ ] Return the private discovered target from listener discovery, and
+- [x] Return the private discovered target from listener discovery, and
       delete the read at listener start. Keep the discovery filter, the
       listener keys, the stop branch, the drain, and the drop guards. Record
       its two small behaviour differences in the commit.
-- [ ] Run each new or changed asynchronous test ten times. Save the counts
+- [x] Run each new or changed asynchronous test ten times. Save the counts
       under `.context/runner-observation-confirmation/evidence/`.
 - [ ] After the source freeze, name the final API in the store interface
       and PostgreSQL store READMEs, and update each changed Key Code entry.
@@ -250,7 +251,7 @@ protocol, HTTP route, setting, or public constructor.
 
 Depends on: 1, 2
 
-- [ ] Run the targeted tests of `ciproxy-store-pg` and
+- [x] Run the targeted tests of `ciproxy-store-pg` and
       `ciproxy-control-plane`.
 - [ ] Run the complete gate `cargo xtask check` with `DATABASE_URL` set.
 - [ ] Run the host HTTP smoke: the built executable with an isolated
