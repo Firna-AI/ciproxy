@@ -10,7 +10,7 @@ use crate::decision::decide;
 use crate::snapshot::NothingFits;
 
 use super::fixtures::{
-    boat, boat_size, boat_with_request, large, own, queued, running, small, snapshot,
+    allocated, boat, boat_size, boat_with_request, large, own, queued, running, small, snapshot,
 };
 
 #[test]
@@ -119,7 +119,7 @@ fn chooses_the_cheapest_boat_size_that_covers_all_dimensions() {
         boat_size(
             "disk-short",
             VmSize {
-                disk_bytes: 79 * GIGABYTE,
+                disk_bytes: 19 * GIGABYTE,
                 ..large()
             },
             1,
@@ -176,7 +176,7 @@ fn never_uses_a_smaller_boat_vm_while_an_eligible_own_machine_fits() {
     state.labels[1].nothing_fits = NothingFits::LargestBoatSize;
     state.machines[0].capacity = Slots(2);
     let mut occupied = running("busy");
-    occupied.size = large();
+    occupied.size = allocated(large());
     state.machines[0].runners = vec![occupied];
     state.queue = vec![queued("a", "large", 100)];
     assert_eq!(decide(&state), vec![]);

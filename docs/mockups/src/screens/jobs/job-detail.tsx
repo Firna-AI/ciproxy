@@ -1,8 +1,9 @@
 // One finished job: where it ran, why it ran there, how long it waited, its
 // label, and the VM size that ran it. A job on Boat names the Boat size,
-// which Boat bills. The cache counts show only when the machine cache handled
-// the restores; a job on Boat, and a job that fell back to the GitHub cache,
-// show only the cache source.
+// which Boat bills, with its whole disk as Boat states it, while a label
+// states the free disk of its jobs. The cache counts show only when the
+// machine cache handled the restores; a job on Boat, and a job that fell back
+// to the GitHub cache, show only the cache source.
 
 import { Cloud, ExternalLink, Server } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -25,7 +26,7 @@ import {
   type JobDetailState,
 } from "../../fixtures/job-details.ts";
 import type { Where } from "../../fixtures/jobs.ts";
-import { sizeText } from "../../fixtures/sizes.ts";
+import { boatSizeText, sizeText } from "../../fixtures/sizes.ts";
 import "./jobs.css";
 import "./job-detail.css";
 
@@ -45,10 +46,11 @@ function VmSize({ job }: { job: JobDetail }) {
   return (
     <span className="detail-stack">
       <span>
-        {dotJoin(`Boat ${job.boatSize.name}`, sizeText(job.boatSize))}
+        {dotJoin(`Boat ${job.boatSize.name}`, boatSizeText(job.boatSize))}
       </span>
       <span className="caption">
-        The cheapest Boat size that fits the label. Boat bills this size.
+        The cheapest Boat size that fits the label and the image. Boat bills
+        this size.
       </span>
     </span>
   );

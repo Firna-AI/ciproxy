@@ -2,8 +2,7 @@
 
 use std::path::Path;
 
-use ciproxy_protocol::identifiers::ImageId;
-use ciproxy_protocol::images::ImageDownload;
+use ciproxy_protocol::images::{ImageDownload, ImageMetadata};
 use sha2::{Digest, Sha256};
 
 use crate::error::{Error, Result};
@@ -13,15 +12,15 @@ use crate::image_artifact::PendingImage;
 #[derive(Debug)]
 pub struct CheckedDownload {
     pending: PendingImage,
-    image_id: ImageId,
+    metadata: ImageMetadata,
 }
 
 impl CheckedDownload {
     pub(crate) fn pending(&self) -> &PendingImage {
         &self.pending
     }
-    pub(crate) fn image_id(&self) -> &ImageId {
-        &self.image_id
+    pub(crate) fn metadata(&self) -> &ImageMetadata {
+        &self.metadata
     }
 }
 
@@ -35,8 +34,8 @@ impl CheckedBundle {
     pub(crate) fn pending(&self) -> &PendingImage {
         self.checked.pending()
     }
-    pub(crate) fn image_id(&self) -> &ImageId {
-        self.checked.image_id()
+    pub(crate) fn metadata(&self) -> &ImageMetadata {
+        self.checked.metadata()
     }
 }
 
@@ -69,7 +68,10 @@ impl DownloadDigest {
         }
         Ok(CheckedDownload {
             pending,
-            image_id: image.image_id.clone(),
+            metadata: ImageMetadata {
+                image_id: image.image_id.clone(),
+                root_disk_bytes: image.root_disk_bytes,
+            },
         })
     }
 }
@@ -78,6 +80,7 @@ impl DownloadDigest {
 pub(crate) struct BundleMembers {
     kernel: bool,
     rootfs: bool,
+    rootfs_bytes: u64,
     invalid: bool,
 }
 
@@ -99,12 +102,18 @@ impl BundleMembers {
             return Err(Error::ImageLayout);
         }
         *seen = true;
+        if member == ImageMember::Rootfs {
+            self.rootfs_bytes = bytes;
+        }
         Ok(member)
     }
 
     pub(crate) fn finish(self, checked: CheckedDownload) -> Result<CheckedBundle> {
         if self.invalid || !self.kernel || !self.rootfs {
             return Err(Error::ImageLayout);
+        }
+        if self.rootfs_bytes != checked.metadata.root_disk_bytes {
+            return Err(Error::ImageVerification);
         }
         Ok(CheckedBundle { checked })
     }

@@ -1,4 +1,4 @@
-//! A private reflink root grows to its label size without changing the base.
+//! A private reflink root grows to the scheduled total without changing the base.
 
 use std::fs::{self, OpenOptions};
 use std::path::Path;
@@ -39,10 +39,10 @@ impl RootFiles for LinuxRootFiles {
 #[async_trait]
 /// Prepare the job root separately from any later sticky Docker attachment.
 pub(crate) trait RootDisk: Send + Sync {
-    /// Reflink the base and grow its copy to the label's exact logical length.
+    /// Reflink the base and grow its copy to the reserved total logical length.
     ///
     /// Restore the file length after ext4 rounds to whole filesystem blocks.
-    async fn prepare(&self, image: &Path, copy: &Path, label_bytes: u64) -> Result<()>;
+    async fn prepare(&self, image: &Path, copy: &Path, root_bytes: u64) -> Result<()>;
 }
 
 /// Mandatory reflink copying followed by offline ext4 growth on the VM copy.
@@ -55,9 +55,9 @@ pub(crate) struct ReflinkRoot {
 
 #[async_trait]
 impl RootDisk for ReflinkRoot {
-    async fn prepare(&self, image: &Path, copy: &Path, label_bytes: u64) -> Result<()> {
+    async fn prepare(&self, image: &Path, copy: &Path, root_bytes: u64) -> Result<()> {
         let image_bytes = self.files.length(image)?;
-        if label_bytes < image_bytes {
+        if root_bytes < image_bytes {
             return Err(Error::Capacity);
         }
         self.commands
@@ -73,21 +73,13 @@ impl RootDisk for ReflinkRoot {
                 &[],
             )
             .await?;
-        if label_bytes > image_bytes {
-            self.files.extend(copy, label_bytes)?;
+        if root_bytes > image_bytes {
+            self.files.extend(copy, root_bytes)?;
             self.commands
                 .run("resize2fs", &arguments(&[&copy.to_string_lossy()]), &[])
                 .await?;
-            self.files.extend(copy, label_bytes)?;
+            self.files.extend(copy, root_bytes)?;
         }
         Ok(())
     }
 }
-
-#[cfg(test)]
-#[path = "_tests_/vm_root_tests.rs"]
-mod vm_root_tests;
-
-#[cfg(test)]
-#[path = "_tests_/vm_root_failure_tests.rs"]
-mod vm_root_failure_tests;

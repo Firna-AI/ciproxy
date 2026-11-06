@@ -82,19 +82,19 @@ impl ImageStore for LinuxImageStore {
 
     fn publish(&self, bundle: CheckedBundle) -> Result<()> {
         self.require_owner()?;
-        let image_id = bundle.image_id().clone();
+        let metadata = bundle.metadata().clone();
         let root = bundle.pending().directory().join("verified");
-        let destination = self.layout.image(&image_id);
+        let destination = self.layout.image(&metadata.image_id);
         if !destination.exists() {
             Self::sync_directory(&root)?;
             fs::rename(&root, &destination).context("publish checked image")?;
             Self::sync_directory(&self.layout.data.join("images"))?;
         }
         let mut catalog = self.report()?;
-        if !catalog.available.contains(&image_id) {
-            catalog.available.push(image_id.clone());
+        if !catalog.available.contains(&metadata) {
+            catalog.available.push(metadata.clone());
         }
-        catalog.newest = Some(image_id);
+        catalog.newest = Some(metadata.image_id);
         self.write_index(&catalog)
     }
 
@@ -102,7 +102,9 @@ impl ImageStore for LinuxImageStore {
         self.require_owner()?;
         let directory = self.layout.data.join("images");
         let mut catalog = self.report()?;
-        catalog.available.retain(|image| keep.contains(image));
+        catalog
+            .available
+            .retain(|image| keep.contains(&image.image_id));
         if catalog
             .newest
             .as_ref()

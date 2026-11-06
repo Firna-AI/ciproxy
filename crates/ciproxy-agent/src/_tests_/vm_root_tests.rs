@@ -16,7 +16,7 @@ enum Event {
 }
 
 #[tokio::test]
-async fn label_sized_image_reflinks_without_resize_or_a_second_disk() {
+async fn image_sized_total_reflinks_without_resize_or_a_second_disk() {
     let calls = Arc::new(Mutex::new(Vec::new()));
     let recorded = calls.clone();
     let mock = Arc::new(Unimock::new((
@@ -44,7 +44,7 @@ async fn label_sized_image_reflinks_without_resize_or_a_second_disk() {
 }
 
 #[tokio::test]
-async fn larger_label_extends_and_grows_only_its_sparse_reflink_copy() {
+async fn larger_reserved_total_extends_and_grows_only_its_sparse_reflink_copy() {
     let calls = Arc::new(Mutex::new(Vec::new()));
     let commands = calls.clone();
     let files = calls.clone();
@@ -93,7 +93,7 @@ async fn larger_label_extends_and_grows_only_its_sparse_reflink_copy() {
 }
 
 #[tokio::test]
-async fn smaller_label_refuses_the_image_without_copying_or_shrinking() {
+async fn total_below_image_refuses_without_copying_or_shrinking() {
     let mock = Arc::new(Unimock::new(
         RootFilesMock::length
             .some_call(matching!((path) if *path == image()))

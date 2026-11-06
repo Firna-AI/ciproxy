@@ -34,17 +34,20 @@
   VMs. Validate the 140 GB image-budget default for each supported machine
   capacity against the combined image and support peak. The default holds
   two full 58.3 GB images and one 18.3 GB download, plus support headroom.
-- **Impact if no action:** An image can fit the label's nominal disk yet
-  fail host preparation or updates. The advertised minimum machine can
+- **Impact if no action:** A release and its complete job root can exceed
+  host capacity during preparation or updates. The advertised minimum
+  machine can
   fit no default job when its host filesystem reports less than its
   nominal disk.
 - **Needs:** A KVM image-build host, the current image tooling, and the
-  area sizing that the orchestrator chose on 5 November 2026. The area
-  holds the job disk, an image budget, and the XFS overhead measured after
-  formatting. Subtract the image budget before the disk split. The host
-  gets a quarter of the remainder, including XFS overhead. Job disk gets
-  the other three quarters. The minimum machine has 250 GB of disk, and
-  its default job reserves 80 GB. If the user chooses the
+  area sizing that the orchestrator chose on 5 November 2026.
+  [Disk](../../docs/protocol/job-routing.md#disk) defines the image budget
+  and host reserve. [Install](../../docs/protocol/agent.md#install) defines
+  the minimum machine. Label disk means free job space. The reservation
+  includes the selected release and filesystem allowance.
+  [Worked examples](../../docs/protocol/job-routing-examples.md) gives the
+  current default fit. Measure the actual release used by each machine.
+  If the user chooses the
   [project quota](agent-xfs-image-project-quota.md), the measured budget
   also sets its limit. Start with:
 

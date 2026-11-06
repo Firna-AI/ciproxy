@@ -162,6 +162,9 @@ Send it only to the selected runner. Use the runner's environment variable
 Removal accepts an already absent registration. A busy result tells the
 runtime to keep the VM and let its job finish.
 
+Default labels request 20, 20, and 60 SI GB of free job disk.
+The scaler adds the image and ext4 allowance before runner allocation.
+
 ### Service integration boundaries
 
 The crate consumes the hosted store through `dyn Store` and blocking

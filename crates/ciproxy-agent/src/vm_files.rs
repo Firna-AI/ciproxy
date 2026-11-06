@@ -1,4 +1,4 @@
-//! One disposable label-sized root holds job files and Docker data in its jail.
+//! One reserved disposable root holds the image, job files, and Docker data.
 
 use std::fs;
 use std::os::unix::fs::{PermissionsExt, chown};

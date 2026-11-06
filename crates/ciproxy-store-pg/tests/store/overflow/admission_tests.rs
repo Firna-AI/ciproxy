@@ -80,7 +80,7 @@ fn reservation_and_dispatch_follow_current_largest_fallback_permission() {
         match dimension {
             "cpu" => parameters.size.vcpus = 1,
             "memory" => parameters.size.memory_bytes = 7_000_000_000,
-            "disk" => parameters.size.disk_bytes = 59_000_000_000,
+            "disk" => parameters.size.disk_bytes = 108_000_000_000,
             _ => unreachable!(),
         }
         let mut label = database.store.labels(workspace_id).unwrap().remove(0);
@@ -128,4 +128,43 @@ fn reservation_and_dispatch_follow_current_largest_fallback_permission() {
         database.store.update_label(workspace_id, &label).unwrap();
         assert_eq!(session.startup_account(pending.delivery_id).unwrap(), None);
     }
+}
+
+#[test]
+fn largest_fallback_cannot_dispatch_a_disk_below_the_saved_image_length() {
+    let database = Database::new();
+    let (workspace_id, _, mut pending) = setup(&database);
+    let mut parameters = pending.dispatch.take().unwrap();
+    parameters.size.disk_bytes = 46_999_999_999;
+    pending.phase = StartPhase::Unsent;
+    let mut label = database.store.labels(workspace_id).unwrap().remove(0);
+    label.when_nothing_fits = WhenNothingFits::LargestBoat;
+    database.store.update_label(workspace_id, &label).unwrap();
+    let mut session = database.store.lock_overflow(workspace_id).unwrap();
+    assert!(
+        session
+            .save_pending(
+                &pending,
+                &EncryptedLaunch(vec![1]),
+                &TokenHash::new(vec![2])
+            )
+            .unwrap()
+    );
+    assert_eq!(
+        session
+            .begin_dispatch(
+                &pending,
+                &PreparedDispatch {
+                    parameters,
+                    starts_at: pending.starts_at,
+                    budget: ReservationBudget {
+                        current_month_usd: Decimal::new(462, 3),
+                        next_month_usd: None
+                    },
+                }
+            )
+            .unwrap(),
+        ReservationOutcome::NotPermitted
+    );
+    assert_eq!(session.snapshot().unwrap().starts, [pending]);
 }

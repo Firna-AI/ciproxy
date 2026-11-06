@@ -7,7 +7,7 @@ use crate::boat::SandboxId;
 use crate::decision::decide;
 use crate::snapshot::RunnerState;
 
-use super::fixtures::{large, queued, runner, sandbox, snapshot};
+use super::fixtures::{allocated, large, queued, runner, sandbox, snapshot};
 
 #[test]
 fn ready_boat_supply_is_kept_before_starting_supply_in_either_order() {
@@ -50,7 +50,7 @@ fn ready_boat_supply_outranks_a_starting_own_runner() {
     state.queue = vec![queued("a", "large", 0)];
     let mut starting = runner("own-starting", "a", "large", RunnerState::Starting);
     starting.requested_size = large();
-    starting.size = large();
+    starting.size = allocated(large());
     let mut ready = starting.clone();
     ready.id = RunnerId("boat-ready".into());
     ready.state = RunnerState::Ready;

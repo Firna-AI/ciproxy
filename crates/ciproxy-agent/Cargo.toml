@@ -42,3 +42,8 @@ name = "storage-regression"
 path = "tests/storage_regression.rs"
 harness = false
 required-features = ["filesystem-regression"]
+
+[[test]]
+name = "root-disk-regression"
+path = "tests/root_disk_regression.rs"
+required-features = ["filesystem-regression"]

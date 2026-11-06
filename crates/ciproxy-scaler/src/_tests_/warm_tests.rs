@@ -2,7 +2,8 @@
 
 use std::time::Duration;
 
-use ciproxy_protocol::identifiers::{MachineId, OrganizationId, RunnerId};
+use ciproxy_protocol::identifiers::{ImageId, MachineId, OrganizationId, RunnerId};
+use ciproxy_protocol::images::ImageMetadata;
 use ciproxy_protocol::resources::Slots;
 
 use crate::actions::{Action, Destination, StartReason, StopReason};
@@ -63,6 +64,36 @@ fn retires_a_changed_allocation_before_replacing_its_warm_runner() {
     );
     state.machines[0].runners.pop();
     assert_eq!(decide(&state), vec![warm_start("b")]);
+    let observed: Vec<_> = [
+        (0, "a", true),
+        (1, "b", true),
+        (1, "a", true),
+        (0, "a", false),
+    ]
+    .into_iter()
+    .map(|(count, organization, connected)| {
+        let mut blocked = snapshot();
+        let machine = &mut blocked.machines[0];
+        machine.connected = connected;
+        machine.disk_budget_bytes = 82_500_000_000;
+        machine.selected_image = Some(ImageMetadata {
+            image_id: ImageId("newer".into()),
+            root_disk_bytes: 63_000_000_000,
+        });
+        machine.warm_count = count;
+        machine.warm_allocation = vec![OrganizationId(organization.into())];
+        machine.runners = vec![warm("older", "a")];
+        decide(&blocked)
+    })
+    .collect();
+    let retire = Action::StopRunner {
+        runner_id: RunnerId("older".into()),
+        reason: StopReason::WarmAllocationChanged,
+    };
+    assert_eq!(
+        observed,
+        vec![vec![retire.clone()], vec![retire], vec![], vec![]]
+    );
 }
 
 #[test]

@@ -25,8 +25,8 @@
     and machine cache.
   - **Base:** The kept root disk of an image, from which each fresh VM disk
     is a reflink copy.
-  - **Job disk:** Three quarters of the disk left after the image budget,
-    which admission gives to the VMs and the machine cache.
+  - **Job disk:** The machine capacity for complete VM roots and caches,
+    as [Disk](../../docs/protocol/job-routing.md#disk) defines.
   - **Image budget:** The separate space reserved first for images and the
     kernel, configuration, executable, and support files of each VM jail.
   - **Project quota:** An XFS limit on files with one inherited project
@@ -36,15 +36,17 @@
     a reflink copy of a base.
   - Reflinks work only inside one filesystem. So the bases must be in the
     area with the VM disks.
-  - "Disk" in `docs/protocol/job-routing.md` subtracts the image budget
-    first. The host keeps a quarter of the remainder for the system and
-    filesystem overhead, and job disk gets three quarters.
+  - [Disk](../../docs/protocol/job-routing.md#disk) defines the image
+    budget and host reserve. Label disk means free job space. Complete
+    reservations also hold the selected release and filesystem allowance.
   - On 5 November 2026 the orchestrator chose option A as fix now. The area
     holds the job disk, the image budget, and the XFS overhead measured
     after formatting.
   - Current sizing keeps the image budget apart from job disk. Filesystem
-    overhead uses the remaining host reserve. A 250 GB minimum machine
-    gives jobs 82.5 GB with the default budget. The default job needs 80 GB.
+    overhead uses the remaining host reserve.
+    [Worked examples](../../docs/protocol/job-routing-examples.md) gives
+    the minimum machine's default fit. The reservation depends on the
+    actual release selected by that machine.
   - Under A, the agent reserves budget before each physical image or VM
     support write. It measures allocation under `images/` and the VM jail
     tree. It excludes the root and Docker payloads already in the job disk.

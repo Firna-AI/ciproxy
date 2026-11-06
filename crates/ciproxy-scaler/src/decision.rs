@@ -6,7 +6,7 @@ use crate::overflow::place_boat;
 use crate::placement::{place_own, reserve_after_retirement};
 use crate::snapshot::Snapshot;
 use crate::state::Plan;
-use crate::warm::replenish;
+use crate::warm::{reconcile, replenish};
 
 /// Return typed intents without mutating the input or performing IO.
 ///
@@ -40,6 +40,7 @@ pub fn decide(snapshot: &Snapshot) -> Vec<Action> {
         }
     }
     retire_unneeded(snapshot, &mut plan);
+    reconcile(snapshot, &mut plan);
     replenish(snapshot, &mut plan, &pending);
     plan.actions
 }

@@ -2,11 +2,12 @@
 
 use std::sync::Arc;
 
+use ciproxy_agent::root_sizing::{DEFAULT_IMAGE_ROOT_BYTES, RootSizing};
 use ciproxy_protocol::agent::{AgentMessage, CommandOutcome};
 use ciproxy_protocol::identifiers::{
     CommandId, ImageId, JobId, LabelName, MachineId, OrganizationId, RunnerId, WorkspaceId,
 };
-use ciproxy_protocol::images::ImageReport;
+use ciproxy_protocol::images::{ImageMetadata, ImageReport};
 use ciproxy_protocol::reports::{DiskReport, HardwareReport, MachineReport};
 use ciproxy_protocol::resources::{GIGABYTE, VmSize};
 use ciproxy_protocol::runners::{RunnerReport, RunnerSpec, RunnerState};
@@ -37,6 +38,7 @@ pub(super) fn vm(name: &str, running: bool) -> VmRecord {
             runner_id: RunnerId(name.to_owned()),
             organization_id: OrganizationId("org-1".to_owned()),
             label: LabelName("ciproxy".to_owned()),
+            requested_size: requested_size(),
             size: size(),
             image_id: ImageId("image-1".to_owned()),
             state: if running {
@@ -51,11 +53,7 @@ pub(super) fn vm(name: &str, running: bool) -> VmRecord {
 }
 
 pub(super) fn size() -> VmSize {
-    VmSize {
-        vcpu: 2,
-        memory_bytes: 8 * GIGABYTE,
-        disk_bytes: 80 * GIGABYTE,
-    }
+    RootSizing::default().vm_size(requested_size()).unwrap()
 }
 
 pub(super) fn spec() -> RunnerSpec {
@@ -63,7 +61,7 @@ pub(super) fn spec() -> RunnerSpec {
         runner_id: RunnerId("runner-1".to_owned()),
         organization_id: OrganizationId("org-1".to_owned()),
         label: LabelName("ciproxy".to_owned()),
-        size: size(),
+        size: requested_size(),
         registration: Secret::new("one-use-registration"),
     }
 }
@@ -99,7 +97,7 @@ pub(super) fn report_dependencies_for(hardware: HardwareReport) -> impl Clause {
             .answers(&|_| Ok(empty_cache())),
         ImagesMock::report.each_call(matching!()).answers(&|_| {
             Ok(ImageReport {
-                available: vec![ImageId("image-1".to_owned())],
+                available: vec![metadata("image-1", DEFAULT_IMAGE_ROOT_BYTES)],
                 newest: Some(ImageId("image-1".to_owned())),
             })
         }),
@@ -136,13 +134,28 @@ pub(super) async fn report() -> MachineReport {
 pub(super) fn start_image() -> impl Clause {
     ImagesMock::hold_newest
         .each_call(matching!())
-        .answers(&|_| Ok(lease("image-1")))
+        .answers(&|_| Ok(lease(metadata("image-1", DEFAULT_IMAGE_ROOT_BYTES))))
 }
 
-pub(super) fn lease(id: &str) -> Arc<dyn ImageLease> {
+pub(super) fn lease(image: ImageMetadata) -> Arc<dyn ImageLease> {
     Arc::new(Unimock::new(
-        ImageLeaseMock::image_id
+        ImageLeaseMock::metadata
             .some_call(matching!())
-            .returns(ImageId(id.to_owned())),
+            .returns(image),
     ))
+}
+
+pub(super) fn requested_size() -> VmSize {
+    VmSize {
+        vcpu: 2,
+        memory_bytes: 8 * GIGABYTE,
+        disk_bytes: 20 * GIGABYTE,
+    }
+}
+
+pub(super) fn metadata(id: &str, root_disk_bytes: u64) -> ImageMetadata {
+    ImageMetadata {
+        image_id: ImageId(id.to_owned()),
+        root_disk_bytes,
+    }
 }

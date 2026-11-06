@@ -24,7 +24,7 @@ async fn root_preparation_stops_at_each_failed_step_and_returns_its_error() {
         );
         assert_eq!(
             failure.trace(),
-            expected_trace(stage, &image, &copy),
+            expected_trace(stage, &image, &copy, 100_000_000_000),
             "{stage:?}"
         );
     }

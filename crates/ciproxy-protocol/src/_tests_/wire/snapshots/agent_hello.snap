@@ -54,10 +54,15 @@ expression: message
         "runner_id": "runner-warm",
         "organization_id": "organization-2",
         "label": "ciproxy",
+        "requested_size": {
+          "vcpu": 2,
+          "memory_bytes": 8000000000,
+          "disk_bytes": 20000000000
+        },
         "size": {
           "vcpu": 2,
           "memory_bytes": 8000000000,
-          "disk_bytes": 80000000000
+          "disk_bytes": 80899612672
         },
         "image_id": "ubuntu-image-1",
         "state": {
@@ -68,10 +73,15 @@ expression: message
         "runner_id": "runner-1",
         "organization_id": "organization-1",
         "label": "ciproxy",
+        "requested_size": {
+          "vcpu": 2,
+          "memory_bytes": 8000000000,
+          "disk_bytes": 20000000000
+        },
         "size": {
           "vcpu": 2,
           "memory_bytes": 8000000000,
-          "disk_bytes": 80000000000
+          "disk_bytes": 79635853312
         },
         "image_id": "ubuntu-image-0",
         "state": {
@@ -134,8 +144,14 @@ expression: message
     },
     "images": {
       "available": [
-        "ubuntu-image-0",
-        "ubuntu-image-1"
+        {
+          "image_id": "ubuntu-image-0",
+          "root_disk_bytes": 59000000000
+        },
+        {
+          "image_id": "ubuntu-image-1",
+          "root_disk_bytes": 60263759872
+        }
       ],
       "newest": "ubuntu-image-1"
     }

@@ -489,13 +489,13 @@ reserve. The image measurement sets the real budget later.
 - [ ] Smoke-test a Docker job, a warm runner, and a restart during a job.
       Orchestrator: align the image bundle, root/Docker disk allocation,
       vsock port, and guest state/reconnect/shutdown behavior first.
-      Item 73 integration: each VM gets one root disk of its label size.
-      Reflink the image, extend a larger copy, and grow ext4 before boot.
+      Item 77 integration: each VM gets the image plus its label's free
+      disk, with filesystem allowance. Reflink the image and grow the copy
+      before boot.
       Docker shares that disk. Remove the unused empty Docker drive.
       Sticky Docker disks remain the separate cache integration below.
-      Keep the capacity error for a label smaller than the image. The
-      [smaller-label policy](follow-ups/labels-smaller-than-job-image.md)
-      waits for a user decision.
+      Keep the capacity error only when the VM disk cannot hold the image.
+      Item 77 = D settles the smaller-label policy.
       Orchestrator: run `crates/ciproxy-agent/scripts/smoke-docker.sh`,
       `crates/ciproxy-agent/scripts/smoke-warm.sh`, and
       `crates/ciproxy-agent/scripts/smoke-restart.sh` on the KVM test host
@@ -523,6 +523,68 @@ Orchestrator design call, 5 November 2026: use Virtio-SCSI for the QEMU
 build root. Reason: the unchanged upstream read-ahead check needs a real
 SCSI or NVMe disk. This keeps virtio transport and changes only the build
 VM hardware. The exported Firecracker disk stays ext4 on `/dev/vda`.
+
+Item 77 sizing call, 5 November 2026: add 16 MiB to the label's free bytes,
+divide by 0.97, and round up. Add the image's logical root bytes and round
+up to a 4096-byte block. This covers the ext4 kernel reserve pool, the 1%
+root reserve, and new metadata. The existing image already includes its
+filesystem costs. This keeps a default job within the 82.5 GB job budget
+of a 250 GB machine. The real growth test found that the kernel pool also
+reduces the free bytes that `df` shows to the runner.
+
+Item 77 image-size call, 5 November 2026: the user supplies
+61,000,000,000 bytes until Milestone 10 reports `root_disk_bytes`.
+One agent constant holds that default. The control-plane configuration
+can override it. The release manifest will replace that configuration
+source. The configured logical length must match the selected release.
+
+Measured image call, 6 November 2026: the user supplies the final logical
+root size, 60,263,759,872 bytes, from PR 28 at `b0c2ba7`. This replaces
+the provisional value in the source default. The root rule stays the same.
+A 20 GB default request reserves 80,899,612,672 bytes and leaves
+1,600,387,328 bytes on the 82.5 GB minimum-machine job budget.
+PR 28 merges before PR 27. Historical image-size decisions stay unchanged.
+
+PR 27 review call, 5 November 2026: the user applies finding 1 option A.
+Each release keeps its logical root size with its image identity. The
+agent retains those facts through the image hold, sizes the root from
+that held image, and keeps the original free-disk request for retries.
+The scheduler uses each machine's selected image facts. The configured
+size is only its fallback before a machine reports its image.
+
+The user applies finding 2 option B: the three open image and storage
+follow-ups keep the free-disk meaning and link to the canonical protocol.
+The image README stays with PR 28. The revised measured image size stays
+with that workspace until its export and full-image checks pass.
+
+PR 27 format call, 5 November 2026: the user selects the new report, index,
+and VM record formats without a compatibility layer. No production state
+exists. Keep the existing unreadable-state handling. Reset old smoke-test
+state on the KVM host. This supersedes the earlier compatibility request.
+
+Runner storage call, 5 November 2026: Milestone 13 owns the exact-byte
+actual runner allocation and its forward migration. Label and free-disk
+request store types stay in GB. PR 27 changes no runner-store schema and
+adds no migration. Its protocol report keeps original requested resources
+separate from actual resources. PR 27 merges first, then Milestone 13
+merges the primary branch and uses those types.
+
+Item 77 mockup calls, 5 November 2026: separate label free disk from Boat
+total disk in the fixture types. Count whole VM bytes before displaying GB.
+Display whole GB to match the other disk values. Give the Boat-only sample
+label 120 GB of free disk, so its VM still fits Boat. Give the mixed-machine
+draft 40 GB of free disk, so its two-to-three-job range stays. Keep one
+mirror of the agent rule in the mockups. The site keeps one computed
+default VM disk value from that rule.
+
+Replaced ways for item 77:
+
+- A label disk means free job bytes instead of total VM bytes. Move the
+  defaults, label text, tables, and dialogs to that meaning.
+- The scheduler counts the full image and growth allocation instead of
+  raw label bytes. Move own placement, held jobs, warm runners, Boat fit,
+  and dispatch checks to the one sizing rule.
+- Remove the resolved smaller-label follow-up after its work passes.
 
 - [x] Normalize the generic Ubuntu APT sources during QEMU bootstrap for
       the existing upstream mirror-list check. Keep the pinned base, full
@@ -557,10 +619,9 @@ VM hardware. The exported Firecracker disk stays ext4 on `/dev/vda`.
       runner, and powers off the VM after the runner exits. On Boat, it
       tells the control plane when the runner exits, as item 47 says.
       Branch: `conductor/ciproxy-mvp-milestone-10-job-vm-image`.
-- [ ] Apply item 77 = D: export the image disk at its smallest size, and
-      size each job VM disk as the image plus the free disk of its label,
-      on machines and on Boat. Update the label table, the protocol docs,
-      the site, and the mockups.
+- [x] Export the image disk at its smallest size for item 77 = D. Measure
+      `root_disk_bytes` for the image release manifest.
+      Branch: `conductor/ciproxy-mvp-milestone-10-root-size`.
   - [x] Image: compact ext4, retain its 1% root reserve and a small free
         margin, and record `root_disk_bytes` in measurement and manifest.
         Export the retained userspace and prove at least 20 GB free after
@@ -581,6 +642,34 @@ VM hardware. The exported Firecracker disk stays ext4 on `/dev/vda`.
         reserve pool. The agent helper supplies all job-growth headroom.
         Evidence: `.context/ciproxy-mvp/kvm/item-77/fix-round-1/status.json`.
         Branch: `conductor/ciproxy-mvp-milestone-10-root-size`.
+- [x] Apply item 77 = D: size each job VM disk as the image plus the free
+      disk of its label, with filesystem allowance,
+      on machines and on Boat. Update the label table, the protocol docs,
+      the site, and the mockups.
+      Branch: `conductor/ciproxy-mvp-77d-free-disk`.
+      Evidence: `.context/ciproxy-mvp-77d-free-disk/reports/`.
+- [x] Fix PR 27 review findings 1 and 2: keep per-release root facts through
+      image holds, size and reserve each actual root in the agent, keep
+      original requests for retries, and schedule from each machine's
+      selected image. Correct the three open image and storage follow-ups.
+      Test mixed releases, publication between report and start, and retry
+      after publication and restart. Run new async tests ten times.
+      Branch: `conductor/ciproxy-mvp-77d-free-disk`.
+      Evidence: `.context/ciproxy-mvp-77d-free-disk/fix-round-1/`.
+- [x] Fix PR 27 re-review finding 3: check retained Boat runners against
+      their saved required root allocation. Keep the current image floor
+      for new starts. Preserve the current Wait and largest-size policies
+      without applying a new image floor to an existing older VM.
+      Branch: `conductor/ciproxy-mvp-77d-free-disk`.
+      Evidence: `.context/ciproxy-mvp-77d-free-disk/fix-round-2/`.
+- [x] Apply the final measured image root of 60,263,759,872 bytes to the
+      default, current fixtures, tests, examples, site, and mockups.
+      Fix owner review finding 4 with B: reconcile current warm targets on
+      connected machines before replenishment checks new-image capacity.
+      Test count zero and changed organization allocation after image
+      growth. Run every new or changed scheduler test ten times.
+      Branch: `conductor/ciproxy-mvp-77d-free-disk`.
+      Evidence: `.context/ciproxy-mvp-77d-free-disk/fix-round-3/`.
 - [ ] Publish it with its SHA-256, and as a shared Boat snapshot. Rebuild
       before GitHub stops accepting the runner.
       Orchestrator: run `image/publish.sh` and the create, prepare, and
@@ -590,8 +679,9 @@ VM hardware. The exported Firecracker disk stays ext4 on `/dev/vda`.
       to plan the next rebuild before runner support ends.
       Branch: `conductor/ciproxy-mvp-milestone-10-job-vm-image`.
 - [ ] Run a job from the shared snapshot on Boat `large`, and measure the
-      free disk. Item 73 = A selects the full image and an 80 GB default
-      label. Boat `large` provides 111 GB and fits that label. The full
+      free disk. Item 77 = D selects 20 GB of free disk for the default
+      label. Boat `large` provides 111 GB and fits the image plus that
+      free disk, with filesystem allowance. The full
       image does not fit the 51 GB of `small` or `default`.
       Orchestrator: run the registration and result commands of
       `image/github.py`, and the create, run, status, and delete commands
@@ -2990,7 +3080,7 @@ refuses D's grant, so the item came back with A, B, C, and the new E and F.
 - **Severity:** Medium. **Effort:** Large, for the answer.
 - **Source:** Implementation, pull request #25.
 - **Record:** the follow-up item
-  [labels smaller than the job image](follow-ups/labels-smaller-than-job-image.md)
+  [labels smaller than the job image](https://github.com/Firna-AI/ciproxy/blob/6b28eb6/plans/follow-ups/labels-smaller-than-job-image.md)
   holds the background, the options A to D, and the recommendation.
 - **Recommendation:** A. A job of such a label runs on the image disk size,
   the scheduler reserves that size, and the label dialog warns.

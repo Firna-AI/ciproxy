@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use ciproxy_protocol::identifiers::ImageId;
-use ciproxy_protocol::images::ImageReport;
+use ciproxy_protocol::images::{ImageMetadata, ImageReport};
 
 use crate::error::{Error, Result};
 use crate::image_artifact::PendingImage;
@@ -14,8 +14,8 @@ use crate::image_verification::CheckedBundle;
 /// A preparation hold keeps its selected image until its last reference ends.
 #[cfg_attr(test, unimock::unimock(api = ImageLeaseMock))]
 pub trait ImageLease: Send + Sync {
-    /// Return the selected image identity.
-    fn image_id(&self) -> ImageId;
+    /// Return the exact selected release and its logical root length.
+    fn metadata(&self) -> ImageMetadata;
 }
 
 #[derive(Default)]
@@ -74,14 +74,14 @@ impl ImageRegistry {
         if !state.active {
             return Err(Error::ImageOwnership);
         }
-        let image_id = state
+        let metadata = state
             .catalog
             .as_ref()
-            .and_then(|report| report.newest.clone())
+            .and_then(|report| report.selected().cloned())
             .ok_or(Error::NoImage)?;
-        *state.held.entry(image_id.clone()).or_default() += 1;
+        *state.held.entry(metadata.image_id.clone()).or_default() += 1;
         Ok(Arc::new(HeldImage {
-            image_id,
+            metadata,
             owner: self.clone(),
         }))
     }
@@ -103,13 +103,13 @@ impl ImageRegistry {
 
     pub(crate) fn publish(&self, bundle: CheckedBundle) -> Result<()> {
         let mut state = self.state();
-        let image_id = bundle.image_id().clone();
+        let metadata = bundle.metadata().clone();
         self.store.publish(bundle)?;
         let catalog = state.catalog.as_mut().ok_or(Error::ImageOwnership)?;
-        if !catalog.available.contains(&image_id) {
-            catalog.available.push(image_id.clone());
+        if !catalog.available.contains(&metadata) {
+            catalog.available.push(metadata.clone());
         }
-        catalog.newest = Some(image_id);
+        catalog.newest = Some(metadata.image_id);
         if let Err(error) = self.reclaim(&mut state) {
             tracing::warn!(error = %error, "image published; reclaim will retry");
         }
@@ -140,30 +140,32 @@ impl ImageRegistry {
         }
         keep.sort_by(|left, right| left.0.cmp(&right.0));
         if let Some(catalog) = &mut state.catalog {
-            catalog.available.retain(|id| keep.contains(id));
+            catalog
+                .available
+                .retain(|image| keep.contains(&image.image_id));
         }
         self.store.reclaim(&keep, &state.pending)
     }
 }
 
 struct HeldImage {
-    image_id: ImageId,
+    metadata: ImageMetadata,
     owner: Arc<ImageRegistry>,
 }
 
 impl ImageLease for HeldImage {
-    fn image_id(&self) -> ImageId {
-        self.image_id.clone()
+    fn metadata(&self) -> ImageMetadata {
+        self.metadata.clone()
     }
 }
 
 impl Drop for HeldImage {
     fn drop(&mut self) {
         let mut state = self.owner.state();
-        if let Some(count) = state.held.get_mut(&self.image_id) {
+        if let Some(count) = state.held.get_mut(&self.metadata.image_id) {
             *count = count.saturating_sub(1);
             if *count == 0 {
-                state.held.remove(&self.image_id);
+                state.held.remove(&self.metadata.image_id);
             }
         }
         if let Err(error) = self.owner.reclaim(&mut state) {

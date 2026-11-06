@@ -21,13 +21,13 @@ async fn resumed_fallback_selects_fitting_size_and_reserves_its_current_price() 
     let mut label = harness.database.store.labels(id(1)).unwrap().remove(0);
     label.size.vcpus = 16;
     label.size.memory_gb = 32;
-    label.size.disk_gb = 200;
+    label.size.disk_gb = 180;
     label.when_nothing_fits = WhenNothingFits::LargestBoat;
     harness.database.store.update_label(id(1), &label).unwrap();
     let mut action = request();
     action.action.requested_size.vcpu = 16;
     action.action.requested_size.memory_bytes = 32_000_000_000;
-    action.action.requested_size.disk_bytes = 200_000_000_000;
+    action.action.requested_size.disk_bytes = 180_000_000_000;
     harness.state.lock().unwrap().fail_on_key_open = Some(2);
     assert!(matches!(
         harness.service.start(id(1), action.clone()).await,
@@ -120,6 +120,40 @@ async fn resumed_fallback_selects_fitting_size_and_reserves_its_current_price() 
     assert_eq!(
         provider.recoveries.lock().unwrap()[0],
         provider.creates.lock().unwrap()[0]
+    );
+
+    let disk_provider = Provider::new(false);
+    *disk_provider.sizes.lock().unwrap() = vec!["large".to_owned(), "xlarge".to_owned()];
+    let disk_harness = Harness::new(disk_provider.backend, (), Runtime::Start);
+    let mut disk_label = disk_harness.database.store.labels(id(1)).unwrap().remove(0);
+    disk_label.size.vcpus = 2;
+    disk_label.size.memory_gb = 8;
+    disk_label.size.disk_gb = 63;
+    disk_label.when_nothing_fits = WhenNothingFits::Wait;
+    disk_harness
+        .database
+        .store
+        .update_label(id(1), &disk_label)
+        .unwrap();
+    *disk_harness.now.lock().unwrap() = at() + Duration::minutes(5);
+    let mut disk_action = request();
+    disk_action.action.requested_size.vcpu = 2;
+    disk_action.action.requested_size.memory_bytes = 8_000_000_000;
+    disk_action.action.requested_size.disk_bytes = 63_000_000_000;
+    assert!(matches!(
+        disk_harness
+            .service
+            .start(id(1), disk_action)
+            .await
+            .unwrap(),
+        StartOutcome::Pending(_)
+    ));
+    let disk_saved = disk_harness.start(id(11));
+    assert_eq!(disk_saved.required_root_disk_bytes, 111_965_753_344);
+    assert_eq!(disk_saved.dispatch.as_ref().unwrap().size.name, "xlarge");
+    assert_eq!(
+        disk_provider.creates.lock().unwrap()[0].size,
+        Some(SandboxSizeSelection::ProviderSize("xlarge".to_owned()))
     );
 }
 

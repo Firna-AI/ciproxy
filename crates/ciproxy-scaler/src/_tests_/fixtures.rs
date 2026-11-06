@@ -2,13 +2,16 @@
 
 use std::time::Duration;
 
+use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_protocol::identifiers::{
     JobId, LabelName, MachineId, OrganizationId, RunnerId, WorkspaceId,
 };
 use ciproxy_protocol::resources::{GIGABYTE, Slots, VmSize};
 
 use crate::actions::{Action, Destination, StartReason, StartRunner};
-use crate::boat::{BoatAccount, BoatSize, BoatSizeId, MonthlySpend, Sandbox, SandboxId};
+use crate::boat::{
+    BoatAccount, BoatRunner, BoatSize, BoatSizeId, MonthlySpend, Sandbox, SandboxId,
+};
 use crate::snapshot::{
     Destinations, Label, Machine, NothingFits, Runner, RunnerState, Snapshot, WaitingJob,
 };
@@ -17,7 +20,7 @@ pub(super) fn small() -> VmSize {
     VmSize {
         vcpu: 2,
         memory_bytes: 8 * GIGABYTE,
-        disk_bytes: 80 * GIGABYTE,
+        disk_bytes: 20 * GIGABYTE,
     }
 }
 
@@ -25,13 +28,14 @@ pub(super) fn large() -> VmSize {
     VmSize {
         vcpu: 4,
         memory_bytes: 16 * GIGABYTE,
-        disk_bytes: 80 * GIGABYTE,
+        disk_bytes: 20 * GIGABYTE,
     }
 }
 
 pub(super) fn snapshot() -> Snapshot {
     Snapshot {
         workspace_id: WorkspaceId("workspace".into()),
+        root_sizing: RootSizing::default(),
         now: Duration::from_secs(100),
         control_plane_available: true,
         organizations: vec![OrganizationId("a".into()), OrganizationId("b".into())],
@@ -39,6 +43,7 @@ pub(super) fn snapshot() -> Snapshot {
         queue: Vec::new(),
         machines: vec![Machine {
             id: MachineId("machine".into()),
+            selected_image: None,
             connected: true,
             draining: false,
             capacity: Slots(6),
@@ -92,7 +97,7 @@ pub(super) fn runner(id: &str, organization: &str, name: &str, state: RunnerStat
         organization_id: OrganizationId(organization.into()),
         label: LabelName(name.into()),
         requested_size: small(),
-        size: small(),
+        size: allocated(small()),
         state,
     }
 }
@@ -114,14 +119,17 @@ pub(super) fn sandbox(id: &str, runner: Option<Runner>) -> Sandbox {
     Sandbox {
         id: SandboxId(id.into()),
         marked: true,
-        runner,
+        runner: runner.map(|runner| BoatRunner {
+            required_root_disk_bytes: allocated(runner.requested_size).disk_bytes,
+            runner,
+        }),
     }
 }
 
 pub(super) fn boat_size(id: &str, size: VmSize, price: u64) -> BoatSize {
     BoatSize {
         id: BoatSizeId(id.into()),
-        size,
+        size: allocated(size),
         price,
     }
 }
@@ -137,7 +145,7 @@ pub(super) fn start(
         organization_id: OrganizationId(organization.into()),
         label: LabelName(name.into()),
         requested_size: size,
-        size,
+        size: allocated(size),
         destination,
         reason,
     })
@@ -181,8 +189,12 @@ pub(super) fn boat_with_request(
         organization_id: OrganizationId(organization.into()),
         label: LabelName(name.into()),
         requested_size,
-        size,
+        size: allocated(size),
         destination: Destination::Boat(BoatSizeId(size_id.into())),
         reason,
     })
+}
+
+pub(super) fn allocated(size: VmSize) -> VmSize {
+    RootSizing::default().vm_size(size).unwrap()
 }

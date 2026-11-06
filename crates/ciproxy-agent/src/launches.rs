@@ -1,5 +1,6 @@
 //! Reserve shared resources and hold the selected image through VM preparation.
 
+use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_protocol::guest::AgentToGuest;
 use ciproxy_protocol::reports::DrainState;
 use ciproxy_protocol::runners::{RunnerReport, RunnerSpec, RunnerState};
@@ -39,19 +40,24 @@ impl Controller {
             {
                 return Err(Error::RunnerMismatch);
             }
+            let image = self.images.hold_newest()?;
+            let metadata = image.metadata();
+            let size = RootSizing::for_image(&metadata)
+                .vm_size(runner.size)
+                .ok_or(Error::Capacity)?;
             let available = machine_resources(&report.hardware, self.image_budget)
                 .available(state.runners.iter().map(|vm| vm.report.size));
-            if !available.fits(runner.size) {
+            if !available.fits(size) {
                 return Err(Error::Capacity);
             }
-            let image = self.images.hold_newest()?;
             let vm = self.vms.allocate(
                 RunnerReport {
                     runner_id: runner.runner_id.clone(),
                     organization_id: runner.organization_id.clone(),
                     label: runner.label.clone(),
-                    size: runner.size,
-                    image_id: image.image_id(),
+                    requested_size: runner.size,
+                    size,
+                    image_id: metadata.image_id,
                     state: RunnerState::Starting,
                 },
                 &state.runners,
@@ -60,7 +66,7 @@ impl Controller {
             next.runners.push(vm.clone());
             self.store.save(&next)?;
             *state = next;
-            (vm, available.available([runner.size]).job_disk_bytes, image)
+            (vm, available.available([size]).job_disk_bytes, image)
         };
         if let Err(error) = self.cache.budget(cache_budget).await {
             tracing::warn!(error = %error, "cache reclaim unavailable; continue with GitHub caching");
@@ -71,7 +77,7 @@ impl Controller {
     async fn retry_start(&self, vm: VmRecord, runner: RunnerSpec) -> Result<()> {
         if vm.report.organization_id != runner.organization_id
             || vm.report.label != runner.label
-            || vm.report.size != runner.size
+            || vm.report.requested_size != runner.size
         {
             return Err(Error::RunnerMismatch);
         }

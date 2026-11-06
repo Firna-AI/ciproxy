@@ -1,7 +1,7 @@
 //! Retire obsolete idle registrations while preserving every running job.
 
 use crate::actions::StopReason;
-use crate::size_policy::SizePolicy;
+use crate::size_policy::allows_boat_runner;
 use crate::snapshot::{Runner, RunnerState, Snapshot, WaitingJob};
 use crate::state::{Plan, idle, label_for, warm_candidate};
 
@@ -18,7 +18,11 @@ pub(crate) fn retire_obsolete(snapshot: &Snapshot, plan: &mut Plan) {
     }
     for sandbox in snapshot.sandboxes.iter().filter(|sandbox| sandbox.marked) {
         let reason = match &sandbox.runner {
-            Some(runner) => obsolete(snapshot, runner, false),
+            Some(retained) => obsolete(snapshot, &retained.runner, false).or_else(|| {
+                let label = label_for(snapshot, &retained.runner)?;
+                (idle(&retained.runner) && !allows_boat_runner(snapshot, label, retained))
+                    .then_some(StopReason::SizeNoLongerAllowed)
+            }),
             None => Some(StopReason::OrphanSandbox),
         };
         if let Some(reason) = reason {
@@ -48,9 +52,6 @@ fn obsolete(snapshot: &Snapshot, runner: &Runner, own_machine: bool) -> Option<S
     {
         return Some(StopReason::DestinationDisabled);
     }
-    if !own_machine && !SizePolicy::for_label(snapshot, label).allows_boat_runner(runner.size) {
-        return Some(StopReason::SizeNoLongerAllowed);
-    }
     None
 }
 
@@ -67,9 +68,9 @@ pub(crate) fn claim_existing(snapshot: &Snapshot, plan: &mut Plan, job: &Waiting
             }
         }
         for sandbox in snapshot.sandboxes.iter().filter(|sandbox| sandbox.marked) {
-            if let Some(runner) = &sandbox.runner
-                && runner.state == phase
-                && claim(plan, runner, job)
+            if let Some(retained) = &sandbox.runner
+                && retained.runner.state == phase
+                && claim(plan, &retained.runner, job)
             {
                 return true;
             }
@@ -95,9 +96,9 @@ pub(crate) fn retire_unneeded(snapshot: &Snapshot, plan: &mut Plan) {
         }
     }
     for sandbox in snapshot.sandboxes.iter().filter(|sandbox| sandbox.marked) {
-        if let Some(runner) = &sandbox.runner
-            && idle(runner)
-            && !plan.claimed.contains(&runner.id)
+        if let Some(retained) = &sandbox.runner
+            && idle(&retained.runner)
+            && !plan.claimed.contains(&retained.runner.id)
         {
             plan.delete(sandbox, StopReason::NoWaitingJob);
         }

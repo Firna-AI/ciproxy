@@ -16,13 +16,34 @@ pub struct ImageDownload {
     pub sha256: String,
     /// Expected size of the download, in bytes.
     pub size_bytes: u64,
+    /// Logical root length from this release's metadata.
+    pub root_disk_bytes: u64,
+}
+
+/// Exact disk facts attached to one verified image release.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct ImageMetadata {
+    /// Image release identity.
+    pub image_id: ImageId,
+    /// Logical length of that release's verified root disk.
+    pub root_disk_bytes: u64,
 }
 
 /// The machine's locally available image releases.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ImageReport {
     /// Images that the agent has downloaded and checked.
-    pub available: Vec<ImageId>,
+    pub available: Vec<ImageMetadata>,
     /// Newest available image, used for new VMs when one exists.
     pub newest: Option<ImageId>,
+}
+
+impl ImageReport {
+    /// Resolve exact selected-release facts without guessing unknown metadata.
+    pub fn selected(&self) -> Option<&ImageMetadata> {
+        let newest = self.newest.as_ref()?;
+        self.available
+            .iter()
+            .find(|image| image.image_id == *newest)
+    }
 }

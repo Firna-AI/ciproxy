@@ -53,10 +53,13 @@ async fn admission_refuses_slot_only_or_disk_only_exhaustion_and_drain() {
             mode,
             ..MachineState::default()
         };
-        let mut agent = controller(
-            state.clone(),
-            Unimock::new(report_dependencies_for(hardware)),
-        );
+        let dependencies = report_dependencies_for(hardware);
+        let mock = if mode == Mode::Draining {
+            Unimock::new(dependencies)
+        } else {
+            Unimock::new((dependencies, start_image()))
+        };
+        let mut agent = controller(state.clone(), mock);
         agent.image_budget = image_gb * GIGABYTE;
         assert_eq!(
             agent.control(start()).await.unwrap(),
@@ -75,10 +78,10 @@ async fn admission_refuses_slot_only_or_disk_only_exhaustion_and_drain() {
 #[tokio::test]
 async fn a_fitting_vm_reclaims_cache_before_preparation_at_each_resource_boundary() {
     for (disk_gb, image_gb, count, expected_count, expected_budget) in [
-        (250, 140, 0, 1, 2_500_000_000),
-        (512, 140, 2, 3, 39_000_000_000),
-        (1000, 140, 5, 6, 165_000_000_000),
-        (250, 130, 0, 1, 10_000_000_000),
+        (250, 140, 0, 1, 1_600_387_328),
+        (512, 140, 2, 3, 36_301_161_984),
+        (1000, 140, 5, 6, 159_602_323_968),
+        (250, 130, 0, 1, 9_100_387_328),
     ] {
         let mut hardware = hardware();
         hardware.disks[0].capacity_bytes = disk_gb * GIGABYTE;
@@ -129,7 +132,7 @@ async fn reconciliation_uses_the_same_held_disk_budget() {
             .each_call(matching!(_))
             .answers(&|_, _| Ok(())),
         CacheMock::budget
-            .some_call(matching!(10_000_000_000))
+            .some_call(matching!(9_100_387_328))
             .returns(Ok(())),
     ));
     let mut runners = held(1);

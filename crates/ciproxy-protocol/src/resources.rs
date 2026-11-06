@@ -15,7 +15,7 @@ pub struct VmSize {
     pub vcpu: u32,
     /// Memory given to the VM, in bytes.
     pub memory_bytes: u64,
-    /// Disk requested by the label, in bytes.
+    /// Free job bytes in label requests, or the total root in actual VM sizes.
     pub disk_bytes: u64,
 }
 

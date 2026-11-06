@@ -81,8 +81,11 @@ The tests under `_tests_` run on the Node test runner. They cover the choice
 of the cheapest plan and the calculation of the cost claim.
 The claim keeps hardware slots separate from concurrent default jobs.
 It subtracts the 140 GB image budget before the host and job disk split.
-Each default job reserves 80 GB. The AX42 calculation combines its two
-512 GB disks into one 1,024 GB filesystem, which fits all six slots.
+Each default job reserves its VM disk: the current image with the 20 GB of
+free disk of the label `ciproxy`. `src/data/hardware.ts` holds that VM disk
+as one value from `RootSizing` of `ciproxy-agent`. Change the value when the
+image or that rule changes. The AX42 calculation combines its two 512 GB
+disks into one 1,024 GB filesystem, which fits all six slots.
 
 The build prints a Starlight warning about one code theme.
 That warning is about dark mode, which the site does not use.
