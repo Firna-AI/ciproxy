@@ -9,12 +9,12 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::error::{Error, ErrorResultExt, Result};
-use crate::wire::access::RemovedOrganization;
+use crate::wire::access::{RemovedOrganization, SetupOutcome};
 
 use super::authentication::digest;
 use super::{AccessService, Principal};
 
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub(super) struct BrowserState {
     pub(super) user_id: Uuid,
     pub(super) session_id: Uuid,
@@ -25,6 +25,7 @@ pub(super) struct BrowserState {
     pub(super) csrf: String,
     pub(super) expires_at: DateTime<Utc>,
     pub(super) had_access: bool,
+    pub(super) setup: Option<SetupOutcome>,
     #[serde(default)]
     pub(super) removed_organization: Option<RemovedOrganization>,
 }
@@ -98,6 +99,7 @@ impl BrowserState {
             had_access: self.had_access,
             removed_organization: self.removed_organization,
             csrf: self.csrf,
+            setup: self.setup,
         }
     }
 }

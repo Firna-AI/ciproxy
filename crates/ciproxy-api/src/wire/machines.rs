@@ -1,6 +1,7 @@
 //! Own-machine views, health, cache facts, and Admin controls.
 
 use super::money::Cents;
+use crate::access::workspace::WorkspaceId;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -102,12 +103,18 @@ pub struct CacheView {
     pub docker_disk_bytes: String,
 }
 
-/// Desired machine settings editable by an Admin.
+/// Independent desired warm-runner target.
 #[derive(Deserialize, Serialize, ToSchema)]
-pub struct MachineSettings {
-    /// Desired warm runner count.
+pub struct WarmRunnerTarget {
+    /// Desired warm runner count. It does not change monthly cost.
     pub warm_runners: i32,
-    /// Customer's monthly machine cost in integer US cents.
+}
+
+/// Current monthly cost entered independently from the warm-runner target.
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct MachineCostInput {
+    /// Integer US cents. Known zero remains distinct from an unknown cost.
+    /// The interval starts at entry time and supplies no earlier historical price.
     pub monthly_cost_cents: Cents,
 }
 
@@ -116,7 +123,8 @@ pub struct MachineSettings {
 #[into_params(parameter_in = Path)]
 pub struct MachinePath {
     /// Stable workspace identity.
-    pub workspace_id: Uuid,
+    #[param(value_type=Uuid)]
+    pub workspace_id: WorkspaceId,
     /// Stable machine identity.
     pub machine_id: Uuid,
 }
@@ -126,7 +134,8 @@ pub struct MachinePath {
 #[into_params(parameter_in = Path)]
 pub struct TokenPath {
     /// Stable workspace identity.
-    pub workspace_id: Uuid,
+    #[param(value_type=Uuid)]
+    pub workspace_id: WorkspaceId,
     /// Opaque token record identity.
     pub token_id: Uuid,
 }
@@ -170,7 +179,8 @@ pub enum MachineCommand {
 #[into_params(parameter_in = Path)]
 pub struct MachineCommandPath {
     /// Stable workspace identity.
-    pub workspace_id: Uuid,
+    #[param(value_type=Uuid)]
+    pub workspace_id: WorkspaceId,
     /// Stable machine identity.
     pub machine_id: Uuid,
     /// Documented gateway action.

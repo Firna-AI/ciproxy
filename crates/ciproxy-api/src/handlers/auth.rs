@@ -33,20 +33,21 @@ pub(crate) fn set_cookie(
 }
 
 #[utoipa::path(operation_id = "auth_begin", get, path = "/auth/github", responses((status = 303, description = "GitHub App authorization redirect")))]
-pub(crate) async fn begin(State(state): State<ApiState>) -> Result<Response> {
-    let attempt = state.access.begin_login().await?;
+pub(crate) async fn begin(State(state): State<ApiState>, headers: HeaderMap) -> Result<Response> {
+    let previous = cookie(&headers, "__Host-ciproxy");
+    let attempt = state.access.begin_login(previous.as_deref()).await?;
     let mut response = Redirect::to(&attempt.url).into_response();
     set_cookie(
         response.headers_mut(),
         "__Host-ciproxy-oauth",
-        attempt.state.expose_secret(),
+        attempt.binding.expose_secret(),
         600,
         true,
     )?;
     Ok(response)
 }
 
-#[utoipa::path(operation_id = "auth_callback", get, path = "/auth/callback", params(OAuthCallback), responses((status = 303, description = "Dashboard or failed sign-in redirect")))]
+#[utoipa::path(operation_id = "auth_callback", get, path = "/auth/github/callback", params(OAuthCallback), responses((status = 303, description = "Dashboard or failed sign-in redirect")))]
 pub(crate) async fn callback(
     State(state): State<ApiState>,
     headers: HeaderMap,
@@ -62,10 +63,9 @@ pub(crate) async fn callback(
     ) else {
         return Ok(Redirect::to("/sign-in?reason=github").into_response());
     };
-    let previous = cookie(&headers, "__Host-ciproxy");
     let result = match state
         .access
-        .finish_login(code.into(), &nonce, &binding, previous.as_deref())
+        .finish_login(code.into(), &nonce, &binding)
         .await
     {
         Ok(result) => result,

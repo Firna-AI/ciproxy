@@ -11,7 +11,9 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::error::{Error, Problem, ProblemCode};
-use crate::handlers::{auth, labels, machines, members, organizations, sessions, setup};
+use crate::handlers::{
+    auth, github_setup, labels, machines, members, organizations, sessions, setup,
+};
 use crate::state::ApiState;
 
 pub(crate) fn routes() -> OpenApiRouter<ApiState> {
@@ -19,6 +21,7 @@ pub(crate) fn routes() -> OpenApiRouter<ApiState> {
         .routes(routes!(auth::begin))
         .routes(routes!(auth::callback))
         .routes(routes!(auth::sign_out))
+        .routes(routes!(github_setup::begin))
         .routes(routes!(sessions::session))
         .routes(routes!(sessions::claim))
         .routes(routes!(members::list))
@@ -26,7 +29,8 @@ pub(crate) fn routes() -> OpenApiRouter<ApiState> {
         .routes(routes!(members::remove))
         .routes(routes!(machines::list))
         .routes(routes!(machines::detail))
-        .routes(routes!(machines::settings))
+        .routes(routes!(machines::warm_runners))
+        .routes(routes!(machines::cost))
         .routes(routes!(machines::command))
         .routes(routes!(machines::issue_token))
         .routes(routes!(machines::revoke_token))
@@ -64,8 +68,10 @@ pub(crate) fn cookie(headers: &HeaderMap, name: &str) -> Option<String> {
 }
 
 async fn protect(State(state): State<ApiState>, mut request: Request, next: Next) -> Response {
-    let public = matches!(request.uri().path(), "/auth/github" | "/auth/callback")
-        || request.extensions().get::<MatchedPath>().is_none();
+    let public = matches!(
+        request.uri().path(),
+        "/auth/github" | "/auth/github/callback" | "/github/setup"
+    ) || request.extensions().get::<MatchedPath>().is_none();
     let result = async {
         if !public {
             let token = cookie(request.headers(), "__Host-ciproxy").ok_or(Error::Unauthorized)?;

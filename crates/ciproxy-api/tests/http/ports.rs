@@ -83,6 +83,9 @@ impl UserIdentity for Identity {
             avatar_url: "https://github.example/avatar".to_owned(),
         })
     }
+    async fn installation(&self, _: &Grant, _: i64) -> Result<Option<InstalledApp>> {
+        Ok(None)
+    }
     async fn memberships(&self, grant: &Grant) -> Result<Vec<Membership>> {
         if self.fail.load(Ordering::SeqCst) {
             return Err(ciproxy_api::error::Error::Unavailable);
@@ -221,12 +224,23 @@ impl ScaleSetApi for Remote {
 }
 #[async_trait]
 impl InstallationAdministration for Remote {
-    async fn personal(
-        &self,
-        _: i64,
-        _: i64,
-    ) -> Result<Option<ciproxy_api::wire::access::PersonalInstallation>> {
-        Ok(None)
+    async fn installation(&self, id: i64) -> Result<Option<InstalledApp>> {
+        Ok(self
+            .organizations
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|organization| organization.installation_id == id)
+            .map(|organization| InstalledApp {
+                id: organization.installation_id,
+                account: Account {
+                    id: organization.github_id,
+                    login: organization.login.clone(),
+                    kind: AccountKind::Organization,
+                },
+                suspended: organization.app_state
+                    == ciproxy_store_interface::organizations::AppState::Suspended,
+            }))
     }
     async fn pending_requests(
         &self,

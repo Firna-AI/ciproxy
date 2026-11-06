@@ -71,7 +71,11 @@ def main() -> int:
         if profile["id"] != proof["requester_id"] or target != proof["target_id"]:
             print("FAIL: the operator changed the initiating identity or target")
             return 1
-        callback = parse_qs(urlparse(proof["observed_callback_url"]).query)
+        setup_url = urlparse(proof["observed_setup_url"])
+        if setup_url.scheme != "https" or setup_url.path != "/api/github/setup":
+            print("FAIL: the observed return is not the registered HTTPS setup route")
+            return 1
+        callback = parse_qs(setup_url.query)
         if callback.get("state") != [proof["state"]]:
             print("FAIL: GitHub did not return the initiating flow state")
             return 1

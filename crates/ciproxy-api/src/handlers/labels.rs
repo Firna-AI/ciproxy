@@ -37,11 +37,11 @@ pub(crate) async fn list(
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<WorkspacePath>,
 ) -> Result<Json<Vec<LabelView>>> {
-    state
+    let workspace_id = state
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
-    Ok(Json(read(&state, path.workspace_id).await?))
+    Ok(Json(read(&state, workspace_id).await?))
 }
 
 #[utoipa::path(operation_id = "labels_preview", post, path = "/workspaces/{workspace_id}/labels/preview", params(WorkspacePath), request_body = LabelInput, responses((status = 200, body = LabelFit)), security(("session" = [])))]
@@ -51,13 +51,13 @@ pub(crate) async fn preview(
     Path(path): Path<WorkspacePath>,
     Json(input): Json<LabelInput>,
 ) -> Result<Json<LabelFit>> {
-    state
+    let workspace_id = state
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
     label_views::stored(state.runtime.identifier(), input.clone())?;
     let gateway = state.gateway;
-    let machines = tokio::task::spawn_blocking(move || gateway.machines(path.workspace_id))
+    let machines = tokio::task::spawn_blocking(move || gateway.machines(workspace_id))
         .await
         .internal()?
         .api()?;
@@ -75,29 +75,29 @@ pub(crate) async fn create(
     Path(path): Path<WorkspacePath>,
     Json(input): Json<LabelInput>,
 ) -> Result<Json<LabelView>> {
-    state
+    let workspace_id = state
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
     let label = label_views::stored(state.runtime.identifier(), input)?;
     let retired = query(state.store.clone(), move |store| {
-        store.retired_dashboard_labels(path.workspace_id)
+        store.retired_dashboard_labels(workspace_id)
     })
     .await?;
     for previous in retired
         .into_iter()
         .filter(|previous| previous.name == label.name)
     {
-        cleanup_label(&state, path.workspace_id, previous.id).await?;
+        cleanup_label(&state, workspace_id, previous.id).await?;
     }
-    prepare(&state, path.workspace_id, &label).await?;
+    prepare(&state, workspace_id, &label).await?;
     let saved = label.clone();
     query(state.store.clone(), move |store| {
-        store.create_label(path.workspace_id, &saved)
+        store.create_label(workspace_id, &saved)
     })
     .await?;
     for organization in query(state.store.clone(), move |store| {
-        store.organizations(path.workspace_id)
+        store.organizations(workspace_id)
     })
     .await?
     .into_iter()
@@ -110,7 +110,7 @@ pub(crate) async fn create(
             .api()?;
     }
     Ok(Json(
-        read(&state, path.workspace_id)
+        read(&state, workspace_id)
             .await?
             .into_iter()
             .find(|saved| saved.id == label.id.to_string())
@@ -125,27 +125,25 @@ pub(crate) async fn update(
     Path(path): Path<LabelPath>,
     Json(input): Json<LabelInput>,
 ) -> Result<Json<LabelView>> {
-    state
+    let workspace_id = state
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
-    let previous = query(state.store.clone(), move |store| {
-        store.labels(path.workspace_id)
-    })
-    .await?
-    .into_iter()
-    .find(|label| label.id == path.label_id)
-    .ok_or(Error::NotFound)?;
+    let previous = query(state.store.clone(), move |store| store.labels(workspace_id))
+        .await?
+        .into_iter()
+        .find(|label| label.id == path.label_id)
+        .ok_or(Error::NotFound)?;
     if previous.name != input.name {
         return Err(Error::Conflict);
     }
     let label = label_views::stored(path.label_id, input)?;
     query(state.store.clone(), move |store| {
-        store.update_label(path.workspace_id, &label)
+        store.update_label(workspace_id, &label)
     })
     .await?;
     Ok(Json(
-        read(&state, path.workspace_id)
+        read(&state, workspace_id)
             .await?
             .into_iter()
             .find(|saved| saved.id == path.label_id.to_string())
@@ -159,16 +157,16 @@ pub(crate) async fn remove(
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<LabelPath>,
 ) -> Result<Json<Success>> {
-    state
+    let workspace_id = state
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
     let at = state.runtime.now();
     query(state.store.clone(), move |store| {
-        store.retire_dashboard_label(path.workspace_id, path.label_id, at)
+        store.retire_dashboard_label(workspace_id, path.label_id, at)
     })
     .await?;
-    cleanup_label(&state, path.workspace_id, path.label_id).await?;
+    cleanup_label(&state, workspace_id, path.label_id).await?;
     Ok(Json(Success { ok: true }))
 }
 

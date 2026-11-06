@@ -63,9 +63,9 @@ python3 crates/ciproxy-api/scripts/live_install_binding.py prepare
 ```
 
 Open `install_url` from the private proof file. Record the actual setup return
-as `observed_callback_url` in that file. Do not paste it into a log. For the
-member run, have an owner approve the request after the initiating browser
-closes. Capture the raw signed installation webhook in a private file. Add
+as `observed_setup_url` in that file. Do not paste it into a log. For the member
+run, have an owner approve the request after the initiating browser closes.
+Capture the raw signed installation webhook in a private file. Add
 `webhook_body_file`, `webhook_secret`, and `webhook_signature` to the private
 credential file. The probe checks its signature before it checks the requester
 and organization.
@@ -88,3 +88,20 @@ until an operator supplies the test App and organization credentials.
   https://docs.github.com/en/rest/apps/apps#list-installation-requests-for-the-authenticated-app
 [install-url]:
   https://docs.github.com/en/apps/creating-github-apps/about-creating-github-apps/migrating-oauth-apps-to-github-apps#prompt-users-to-install-your-github-app
+
+## Exact App registration
+
+Use `PUBLIC_URL/api/auth/github/callback` for sign-in. Use
+`PUBLIC_URL/api/github/setup` for the App setup return. PUBLIC_URL has no
+trailing slash. Keep OAuth during installation OFF, expiring user tokens ON, and
+redirect on update OFF. Select no extra repository subscriptions. M13 owns
+`/hooks/github` and periodic repository refresh. Stripe uses `/hooks/stripe`.
+There is no `/hooks` alias.
+
+The setup server starts its own PKCE flow when fresh user proof is needed. The
+browser finishes on `/`. Read the verified tagged `setup` outcome from
+`/api/session`, without copying an installation ID into a frontend request. The
+incoming App setup `state` and the later OAuth nonce are different. Capture the
+original `/api/github/setup` navigation as `observed_setup_url` in the private
+proof file. Never use the OAuth code callback as that input. A round-tripped
+install state is an observation, not authorization.

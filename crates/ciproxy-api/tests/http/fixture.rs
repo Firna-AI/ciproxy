@@ -31,7 +31,7 @@ use url::Url;
 use uuid::Uuid;
 
 use super::database::Database;
-use super::fixture_io::cookie;
+use super::fixture_io::{cookie, oauth_state};
 use super::ports::{Factory, Identity, Inputs, Remote};
 
 struct Events;
@@ -245,7 +245,8 @@ impl Fixture {
         }
         let begin = self.request(None, "GET", "/auth/github", None).await;
         assert_eq!(begin.status(), StatusCode::SEE_OTHER);
-        let state = cookie(&begin, "__Host-ciproxy-oauth");
+        let binding = cookie(&begin, "__Host-ciproxy-oauth");
+        let state = oauth_state(&begin);
         let location = Url::parse(
             begin
                 .headers()
@@ -261,8 +262,10 @@ impl Fixture {
                 .any(|(key, value)| key == "code_challenge" && value.len() > 40)
         );
         let request = Request::builder()
-            .uri(format!("/auth/callback?code=synthetic&state={state}"))
-            .header(header::COOKIE, format!("__Host-ciproxy-oauth={state}"))
+            .uri(format!(
+                "/auth/github/callback?code=synthetic&state={state}"
+            ))
+            .header(header::COOKIE, format!("__Host-ciproxy-oauth={binding}"))
             .body(Body::empty())
             .unwrap();
         let response = router(self.state.clone()).oneshot(request).await.unwrap();

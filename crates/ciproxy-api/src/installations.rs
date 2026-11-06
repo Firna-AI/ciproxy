@@ -2,11 +2,12 @@
 
 use std::sync::Arc;
 
-use crate::wire::access::{PendingInstallation, PersonalInstallation};
+use crate::wire::access::PendingInstallation;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use ciproxy_github::app::webhook::{Account, AccountKind, Actor};
 use ciproxy_github::auth::AppJwt;
+use ciproxy_github::installation_state::InstalledApp;
 use reqwest::{Client, StatusCode, Url};
 use secrecy::ExposeSecret;
 use serde::Deserialize;
@@ -16,12 +17,9 @@ use crate::error::{Error, ErrorResultExt, Result};
 /// App-wide administrative operation used only after durable take-out.
 #[async_trait]
 pub trait InstallationAdministration: Send + Sync {
-    /// Verify a personal setup return belongs to the signed-in person.
-    async fn personal(
-        &self,
-        installation_id: i64,
-        github_user_id: i64,
-    ) -> Result<Option<PersonalInstallation>>;
+    /// Read the exact current installation authenticated as the configured App.
+    /// This alone grants no association with a dashboard person.
+    async fn installation(&self, installation_id: i64) -> Result<Option<InstalledApp>>;
     /// Read pending requests whose requester is this exact signed-in person.
     async fn pending_requests(&self, github_user_id: i64) -> Result<Vec<PendingInstallation>>;
     /// Check exact App access before retrying cleanup after a lost response.
@@ -46,11 +44,7 @@ impl GithubInstallationAdmin {
 
 #[async_trait]
 impl InstallationAdministration for GithubInstallationAdmin {
-    async fn personal(
-        &self,
-        installation_id: i64,
-        github_user_id: i64,
-    ) -> Result<Option<PersonalInstallation>> {
+    async fn installation(&self, installation_id: i64) -> Result<Option<InstalledApp>> {
         let response = self
             .get(&format!("app/installations/{installation_id}"))
             .await?;
@@ -61,15 +55,13 @@ impl InstallationAdministration for GithubInstallationAdmin {
             return Err(Error::Unavailable);
         }
         let installation: Installation = response.json().await.internal()?;
-        if installation.id != installation_id
-            || installation.account.kind != AccountKind::User
-            || installation.account.id != github_user_id
-        {
-            return Ok(None);
+        if installation.id != installation_id {
+            return Err(Error::Unavailable);
         }
-        Ok(Some(PersonalInstallation {
-            id: installation_id.to_string(),
-            remove_url: format!("https://github.com/settings/installations/{installation_id}"),
+        Ok(Some(InstalledApp {
+            id: installation.id,
+            account: installation.account,
+            suspended: installation.suspended_at.is_some(),
         }))
     }
     async fn pending_requests(&self, github_user_id: i64) -> Result<Vec<PendingInstallation>> {
@@ -149,6 +141,7 @@ impl InstallationAdministration for GithubInstallationAdmin {
 struct Installation {
     id: i64,
     account: Account,
+    suspended_at: Option<DateTime<Utc>>,
 }
 #[derive(Deserialize)]
 struct InstallationRequest {

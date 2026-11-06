@@ -10,7 +10,7 @@ use ciproxy_store_interface::dashboard::records::{Membership, Role};
 use tower::ServiceExt;
 
 use super::fixture::Fixture;
-use super::fixture_io::{cookie, json};
+use super::fixture_io::{cookie, json, oauth_state};
 
 #[tokio::test]
 async fn hourly_membership_loss_removes_role_person_and_existing_sessions() {
@@ -99,14 +99,19 @@ async fn pending_browser_state_retains_no_person_and_promotes_without_extending_
     assert_eq!(payload["reauthorization_required"], true);
     assert_eq!(payload["expires_at"], "2026-12-06T12:00:00Z");
     fixture.identity.id.store(77, Ordering::SeqCst);
-    let begin = fixture.request(None, "GET", "/auth/github", None).await;
-    let state = cookie(&begin, "__Host-ciproxy-oauth");
+    let begin = fixture
+        .request(Some(&pending), "GET", "/auth/github", None)
+        .await;
+    let binding = cookie(&begin, "__Host-ciproxy-oauth");
+    let state = oauth_state(&begin);
     let request = Request::builder()
-        .uri(format!("/auth/callback?code=synthetic&state={state}"))
+        .uri(format!(
+            "/auth/github/callback?code=synthetic&state={state}"
+        ))
         .header(
             header::COOKIE,
             format!(
-                "__Host-ciproxy-oauth={state}; __Host-ciproxy={}",
+                "__Host-ciproxy-oauth={binding}; __Host-ciproxy={}",
                 pending.cookie
             ),
         )

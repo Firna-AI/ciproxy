@@ -26,3 +26,9 @@ mod capacity_fixture;
 mod oauth_tests;
 
 mod maintenance_tests;
+
+mod setup_peer;
+mod setup_support;
+mod setup_tests;
+
+mod token_tests;

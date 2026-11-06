@@ -12,17 +12,22 @@ use tower::ServiceExt;
 use uuid::Uuid;
 
 use super::fixture::{Browser, Fixture};
-use super::fixture_io::{cookie, json};
+use super::fixture_io::{cookie, json, oauth_state};
 
 async fn reauthorize(fixture: &Fixture, browser: &Browser) -> axum::response::Response {
-    let begin = fixture.request(None, "GET", "/auth/github", None).await;
-    let nonce = cookie(&begin, "__Host-ciproxy-oauth");
+    let begin = fixture
+        .request(Some(browser), "GET", "/auth/github", None)
+        .await;
+    let binding = cookie(&begin, "__Host-ciproxy-oauth");
+    let nonce = oauth_state(&begin);
     let request = Request::builder()
-        .uri(format!("/auth/callback?code=synthetic&state={nonce}"))
+        .uri(format!(
+            "/auth/github/callback?code=synthetic&state={nonce}"
+        ))
         .header(
             header::COOKIE,
             format!(
-                "__Host-ciproxy-oauth={nonce}; __Host-ciproxy={}",
+                "__Host-ciproxy-oauth={binding}; __Host-ciproxy={}",
                 browser.cookie
             ),
         )

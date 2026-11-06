@@ -1,5 +1,6 @@
 //! Fake upstream HTTP preserves the production OAuth and SDK error paths.
 
+use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 
 use axum::body::Bytes;
@@ -14,16 +15,20 @@ use tokio::task::JoinHandle;
 use url::Url;
 use uuid::Uuid;
 
+use super::setup_peer::{self, Control};
+
 pub(super) struct Server {
     pub(super) origin: String,
     pub(super) token: SecretString,
     pub(super) seen: Arc<Mutex<Vec<String>>>,
+    pub(super) control: Arc<Control>,
     task: JoinHandle<()>,
 }
 struct Data {
     origin: String,
     token: SecretString,
     seen: Arc<Mutex<Vec<String>>>,
+    control: Arc<Control>,
 }
 impl Server {
     pub(super) async fn new() -> Self {
@@ -31,10 +36,12 @@ impl Server {
         let origin = format!("http://{}/", listener.local_addr().unwrap());
         let token: SecretString = Uuid::new_v4().to_string().into();
         let seen = Arc::new(Mutex::new(Vec::new()));
+        let control = Arc::new(Control::new());
         let state = Arc::new(Data {
             origin: origin.clone(),
             token: token.clone(),
             seen: seen.clone(),
+            control: control.clone(),
         });
         let task = tokio::spawn(async move {
             axum::serve(listener, Router::new().fallback(handle).with_state(state))
@@ -45,6 +52,7 @@ impl Server {
             origin,
             token,
             seen,
+            control,
             task,
         }
     }
@@ -94,7 +102,13 @@ async fn handle(
         .find(|(key, _)| key == "page")
         .map(|(_, value)| value.into_owned())
         .unwrap_or_else(|| "1".to_owned());
+    if let Some(response) = setup_peer::respond(&data.control, path, &page) {
+        return response;
+    }
     if path == "/user/memberships/orgs" {
+        if !data.control.memberships.load(Ordering::SeqCst) {
+            return Json(json!([])).into_response();
+        }
         assert!(headers.get("Authorization").is_some_and(|value| {
             value
                 .to_str()
@@ -120,15 +134,6 @@ async fn handle(
             ]
         };
         return Json(requests).into_response();
-    }
-    if path.starts_with("/app/installations/70") && method == Method::GET {
-        let (id, kind) = match path {
-            "/app/installations/700" => (7, "User"),
-            "/app/installations/701" => (8, "User"),
-            _ => (7, "Organization"),
-        };
-        return Json(json!({"id":path.rsplit('/').next().unwrap().parse::<i64>().unwrap(),"account":{"id":id,"login":"account","type":kind}}))
-            .into_response();
     }
     if path.ends_with("/access_tokens") {
         return (

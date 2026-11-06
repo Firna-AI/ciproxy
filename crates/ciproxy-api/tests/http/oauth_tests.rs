@@ -9,15 +9,18 @@ use ciproxy_store_interface::dashboard::records::Role;
 use tower::ServiceExt;
 
 use super::fixture::Fixture;
-use super::fixture_io::{cookie, json};
+use super::fixture_io::{cookie, json, oauth_state};
 
 #[tokio::test]
 async fn oauth_is_browser_bound_one_use_and_sessions_end_at_thirty_days() {
     let fixture = Fixture::new();
     let begin = fixture.request(None, "GET", "/auth/github", None).await;
-    let state = cookie(&begin, "__Host-ciproxy-oauth");
+    let binding = cookie(&begin, "__Host-ciproxy-oauth");
+    let state = oauth_state(&begin);
     let bad = Request::builder()
-        .uri(format!("/auth/callback?code=synthetic&state={state}"))
+        .uri(format!(
+            "/auth/github/callback?code=synthetic&state={state}"
+        ))
         .header(header::COOKIE, "__Host-ciproxy-oauth=another-browser")
         .body(Body::empty())
         .unwrap();
@@ -38,8 +41,10 @@ async fn oauth_is_browser_bound_one_use_and_sessions_end_at_thirty_days() {
         "http-test-build"
     );
     let valid = Request::builder()
-        .uri(format!("/auth/callback?code=synthetic&state={state}"))
-        .header(header::COOKIE, format!("__Host-ciproxy-oauth={state}"))
+        .uri(format!(
+            "/auth/github/callback?code=synthetic&state={state}"
+        ))
+        .header(header::COOKIE, format!("__Host-ciproxy-oauth={binding}"))
         .body(Body::empty())
         .unwrap();
     assert_eq!(
@@ -51,8 +56,10 @@ async fn oauth_is_browser_bound_one_use_and_sessions_end_at_thirty_days() {
         StatusCode::SEE_OTHER
     );
     let replay = Request::builder()
-        .uri(format!("/auth/callback?code=synthetic&state={state}"))
-        .header(header::COOKIE, format!("__Host-ciproxy-oauth={state}"))
+        .uri(format!(
+            "/auth/github/callback?code=synthetic&state={state}"
+        ))
+        .header(header::COOKIE, format!("__Host-ciproxy-oauth={binding}"))
         .body(Body::empty())
         .unwrap();
     assert_eq!(
@@ -80,7 +87,12 @@ async fn oauth_is_browser_bound_one_use_and_sessions_end_at_thirty_days() {
         "http-test-build"
     );
     let cancelled = fixture
-        .request(None, "GET", "/auth/callback?error=access_denied", None)
+        .request(
+            None,
+            "GET",
+            "/auth/github/callback?error=access_denied",
+            None,
+        )
         .await;
     assert_eq!(cancelled.status(), StatusCode::SEE_OTHER);
     assert!(

@@ -2,6 +2,7 @@
 
 use async_trait::async_trait;
 use chrono::Duration;
+use ciproxy_github::installation_state::InstalledApp;
 use ciproxy_store_interface::dashboard::records::{Role, User};
 use secrecy::SecretString;
 use sha2::{Digest, Sha256};
@@ -11,6 +12,9 @@ use crate::error::{Error, ErrorResultExt, Result};
 use crate::identity::Grant;
 use crate::state::query;
 
+use super::flow::Purpose;
+use super::setup::SetupTarget;
+use super::workspace::WorkspaceId;
 use super::{AccessService, DashboardAccess, LoginAttempt, LoginSuccess, Principal};
 
 pub(crate) fn digest(value: &str) -> Vec<u8> {
@@ -61,17 +65,29 @@ impl AccessService {
 
 #[async_trait]
 impl DashboardAccess for AccessService {
-    async fn begin_login(&self) -> Result<LoginAttempt> {
-        self.start().await
+    async fn begin_login(&self, previous: Option<&str>) -> Result<LoginAttempt> {
+        self.start(Purpose::SignIn, previous).await
+    }
+    async fn begin_setup(
+        &self,
+        installation: InstalledApp,
+        previous: Option<&str>,
+    ) -> Result<LoginAttempt> {
+        self.start(
+            Purpose::Setup {
+                installation: SetupTarget::configured(installation)?,
+            },
+            previous,
+        )
+        .await
     }
     async fn finish_login(
         &self,
         code: SecretString,
         state: &str,
         cookie: &str,
-        previous: Option<&str>,
     ) -> Result<LoginSuccess> {
-        self.finish(code, state, cookie, previous).await
+        self.finish(code, state, cookie).await
     }
     async fn authenticate(&self, cookie: &str) -> Result<Principal> {
         let browser = self.open_browser(cookie).await?;
@@ -156,21 +172,16 @@ impl DashboardAccess for AccessService {
     async fn require_role(
         &self,
         principal: &Principal,
-        workspace_id: Uuid,
+        workspace_id: WorkspaceId,
         admin: bool,
-    ) -> Result<Role> {
-        if principal.pending {
-            return Err(Error::Forbidden);
-        }
-        let github = principal.github_id();
-        let role = query(self.store.clone(), move |store| {
-            store.dashboard_role(workspace_id, github)
-        })
-        .await?
-        .ok_or(Error::Forbidden)?;
-        if admin && role != Role::Admin {
-            return Err(Error::Forbidden);
-        }
-        Ok(role)
+    ) -> Result<Uuid> {
+        self.open_workspace(principal, workspace_id, admin).await
+    }
+    async fn open_claim_workspace(
+        &self,
+        principal: &Principal,
+        workspace_id: WorkspaceId,
+    ) -> Result<Uuid> {
+        self.open_owner_claim(principal, workspace_id).await
     }
 }

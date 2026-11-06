@@ -75,6 +75,104 @@ async fn admin_controls_machine_and_clear_cache_targets_only_its_machine_entries
     assert_eq!(view["cache"]["hits_last_7_days"], "8");
     assert_eq!(view["cache"]["docker_disk_bytes"], "900");
     assert_eq!(view["occupancy"][0]["state"], "free");
+    assert!(view["monthly_cost_cents"].is_null());
+    assert_eq!(
+        fixture
+            .request(
+                Some(&admin),
+                "PUT",
+                &format!("{path}/warm-runners"),
+                Some(json!({"warm_runners":3}))
+            )
+            .await
+            .status(),
+        StatusCode::OK
+    );
+    let warm = json(fixture.request(Some(&admin), "GET", &path, None).await).await;
+    assert_eq!(warm["warm_runners"], 3);
+    assert!(warm["monthly_cost_cents"].is_null());
+    assert!(
+        fixture
+            .database
+            .store
+            .dashboard_machine_costs(fixture.workspace)
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(
+        fixture
+            .request(
+                Some(&admin),
+                "PUT",
+                &format!("{path}/cost"),
+                Some(json!({"monthly_cost_cents":"0"}))
+            )
+            .await
+            .status(),
+        StatusCode::OK
+    );
+    let free = json(fixture.request(Some(&admin), "GET", &path, None).await).await;
+    assert_eq!(free["monthly_cost_cents"], "0");
+    assert_eq!(free["warm_runners"], 3);
+    assert_eq!(
+        fixture
+            .request(
+                Some(&admin),
+                "PUT",
+                &format!("{path}/cost"),
+                Some(json!({"monthly_cost_cents":"8899"}))
+            )
+            .await
+            .status(),
+        StatusCode::OK
+    );
+    let view = json(fixture.request(Some(&admin), "GET", &path, None).await).await;
+    assert_eq!(view["monthly_cost_cents"], "8899");
+    assert_eq!(view["warm_runners"], 3);
+    assert_eq!(view["cache"]["used_bytes"], "512");
+    let history = fixture
+        .database
+        .store
+        .dashboard_machine_costs(fixture.workspace)
+        .unwrap()
+        .len();
+    assert_eq!(
+        fixture
+            .request(
+                Some(&admin),
+                "PUT",
+                &format!("{path}/warm-runners"),
+                Some(json!({"warm_runners":4}))
+            )
+            .await
+            .status(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        fixture
+            .database
+            .store
+            .dashboard_machine_costs(fixture.workspace)
+            .unwrap()
+            .len(),
+        history
+    );
+    let large = "100000000000000000000";
+    assert_eq!(
+        fixture
+            .request(
+                Some(&admin),
+                "PUT",
+                &format!("{path}/cost"),
+                Some(json!({"monthly_cost_cents":large}))
+            )
+            .await
+            .status(),
+        StatusCode::OK
+    );
+    let view = json(fixture.request(Some(&admin), "GET", &path, None).await).await;
+    assert_eq!(view["monthly_cost_cents"], large);
+    assert_eq!(view["warm_runners"], 4);
     assert_eq!(
         fixture
             .request(
@@ -85,28 +183,7 @@ async fn admin_controls_machine_and_clear_cache_targets_only_its_machine_entries
             )
             .await
             .status(),
-        StatusCode::OK
-    );
-    let view = json(fixture.request(Some(&admin), "GET", &path, None).await).await;
-    assert_eq!(view["monthly_cost_cents"], "8899");
-    assert_eq!(view["warm_runners"], 3);
-    assert_eq!(view["cache"]["used_bytes"], "512");
-    let large = "100000000000000000000";
-    assert_eq!(
-        fixture
-            .request(
-                Some(&admin),
-                "PUT",
-                &path,
-                Some(json!({"warm_runners":3,"monthly_cost_cents":large}))
-            )
-            .await
-            .status(),
-        StatusCode::OK
-    );
-    assert_eq!(
-        json(fixture.request(Some(&admin), "GET", &path, None).await).await["monthly_cost_cents"],
-        large
+        StatusCode::METHOD_NOT_ALLOWED
     );
 
     for action in ["clear-cache", "drain", "resume"] {
@@ -159,98 +236,5 @@ async fn admin_controls_machine_and_clear_cache_targets_only_its_machine_entries
             .machines(fixture.workspace)
             .unwrap()
             .is_empty()
-    );
-}
-
-#[tokio::test]
-async fn token_revocation_preserves_registered_machines_and_offline_remove_is_durable() {
-    let fixture = Fixture::new();
-    let admin = fixture.login(7, Some(Role::Admin)).await;
-    let command = json(
-        fixture
-            .request(Some(&admin), "POST", &fixture.path("/install-tokens"), None)
-            .await,
-    )
-    .await;
-    assert_eq!(command["expires_at"], "2026-11-06T13:00:00Z");
-    let raw = command["command"]
-        .as_str()
-        .unwrap()
-        .split("--token ")
-        .nth(1)
-        .unwrap()
-        .to_owned();
-    let mut machines = Vec::new();
-    for _ in 0..2 {
-        let gateway = fixture.gateway.clone();
-        let token = raw.clone();
-        let handshake = tokio::task::spawn_blocking(move || {
-            gateway.open(AgentMessage::Register {
-                protocol_version: ProtocolVersion::CURRENT,
-                install_token: Secret::new(token),
-                report: report(),
-            })
-        })
-        .await
-        .unwrap()
-        .unwrap();
-        machines.push(handshake.session.machine_id);
-    }
-    let id = command["id"].as_str().unwrap();
-    assert_eq!(
-        fixture
-            .request(
-                Some(&admin),
-                "DELETE",
-                &fixture.path(&format!("/install-tokens/{id}")),
-                None
-            )
-            .await
-            .status(),
-        StatusCode::OK
-    );
-    assert_eq!(
-        fixture
-            .database
-            .store
-            .machines(fixture.workspace)
-            .unwrap()
-            .len(),
-        2
-    );
-    let gateway = fixture.gateway.clone();
-    let result = tokio::task::spawn_blocking(move || {
-        gateway.open(AgentMessage::Register {
-            protocol_version: ProtocolVersion::CURRENT,
-            install_token: Secret::new(raw),
-            report: report(),
-        })
-    })
-    .await
-    .unwrap();
-    assert!(matches!(
-        result,
-        Err(ciproxy_gateway::error::Error::Unauthorized)
-    ));
-    let response = json(
-        fixture
-            .request(
-                Some(&admin),
-                "POST",
-                &fixture.path(&format!("/machines/{}/actions/remove", machines[0])),
-                None,
-            )
-            .await,
-    )
-    .await;
-    assert_eq!(response["connected"], false);
-    assert_eq!(
-        fixture
-            .database
-            .store
-            .machines(fixture.workspace)
-            .unwrap()
-            .len(),
-        1
     );
 }

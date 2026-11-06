@@ -13,8 +13,8 @@ use crate::error::{Error, ErrorResultExt, Result, ServiceResultExt};
 use crate::state::{ApiState, query};
 use crate::wire::access::{Success, WorkspacePath};
 use crate::wire::machines::{
-    CommandResult, InstallCommand, MachineCommand, MachineCommandPath, MachinePath,
-    MachineSettings, MachineView, TokenPath,
+    CommandResult, InstallCommand, MachineCommand, MachineCommandPath, MachineCostInput,
+    MachinePath, MachineView, TokenPath, WarmRunnerTarget,
 };
 
 use super::machine_views;
@@ -25,11 +25,11 @@ pub(crate) async fn list(
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<WorkspacePath>,
 ) -> Result<Json<Vec<MachineView>>> {
-    state
+    let workspace_id = state
         .access
         .require_role(&principal, path.workspace_id, false)
         .await?;
-    Ok(Json(read(&state, path.workspace_id).await?))
+    Ok(Json(read(&state, workspace_id).await?))
 }
 
 pub(super) async fn read(state: &ApiState, workspace: uuid::Uuid) -> Result<Vec<MachineView>> {
@@ -76,13 +76,13 @@ pub(crate) async fn detail(
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<MachinePath>,
 ) -> Result<Json<MachineView>> {
-    state
+    let workspace_id = state
         .access
         .require_role(&principal, path.workspace_id, false)
         .await?;
     let id = path.machine_id.to_string();
     Ok(Json(
-        read(&state, path.workspace_id)
+        read(&state, workspace_id)
             .await?
             .into_iter()
             .find(|machine| machine.id == id)
@@ -90,18 +90,39 @@ pub(crate) async fn detail(
     ))
 }
 
-#[utoipa::path(operation_id = "machines_settings", put, path = "/workspaces/{workspace_id}/machines/{machine_id}", params(MachinePath), request_body = MachineSettings, responses((status = 200, body = Success)), security(("session" = [])))]
-pub(crate) async fn settings(
+#[utoipa::path(operation_id="machines_warm_runners",put,path="/workspaces/{workspace_id}/machines/{machine_id}/warm-runners",params(MachinePath),request_body=WarmRunnerTarget,responses((status=200,body=Success)),security(("session"=[])))]
+pub(crate) async fn warm_runners(
     State(state): State<ApiState>,
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<MachinePath>,
-    Json(body): Json<MachineSettings>,
+    Json(body): Json<WarmRunnerTarget>,
 ) -> Result<Json<Success>> {
-    state
+    let workspace_id = state
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
-    if body.warm_runners < 0 || body.monthly_cost_cents.0 < 0 {
+    if body.warm_runners < 0 {
+        return Err(Error::InvalidInput);
+    }
+    query(state.store, move |store| {
+        store.set_dashboard_warm_runners(workspace_id, path.machine_id, body.warm_runners)
+    })
+    .await?;
+    Ok(Json(Success { ok: true }))
+}
+
+#[utoipa::path(operation_id="machines_cost",put,path="/workspaces/{workspace_id}/machines/{machine_id}/cost",params(MachinePath),request_body=MachineCostInput,responses((status=200,body=Success)),security(("session"=[])))]
+pub(crate) async fn cost(
+    State(state): State<ApiState>,
+    Extension(principal): Extension<Arc<Principal>>,
+    Path(path): Path<MachinePath>,
+    Json(body): Json<MachineCostInput>,
+) -> Result<Json<Success>> {
+    let workspace_id = state
+        .access
+        .require_role(&principal, path.workspace_id, true)
+        .await?;
+    if body.monthly_cost_cents.0 < 0 {
         return Err(Error::InvalidInput);
     }
     let cost = MachineCost {
@@ -115,7 +136,7 @@ pub(crate) async fn settings(
         },
     };
     query(state.store, move |store| {
-        store.save_dashboard_machine_settings(path.workspace_id, body.warm_runners, &cost)
+        store.save_dashboard_machine_cost(workspace_id, &cost)
     })
     .await?;
     Ok(Json(Success { ok: true }))
@@ -127,13 +148,13 @@ pub(crate) async fn command(
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<MachineCommandPath>,
 ) -> Result<Json<CommandResult>> {
-    state
+    let workspace_id = state
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
     let exists = query(state.store.clone(), move |store| {
         Ok(store
-            .machines(path.workspace_id)?
+            .machines(workspace_id)?
             .iter()
             .any(|machine| machine.id == path.machine_id))
     })
@@ -150,7 +171,7 @@ pub(crate) async fn command(
     let gateway = state.gateway;
     let id = principal.id();
     let delivered = tokio::task::spawn_blocking(move || {
-        gateway.manage(id, path.workspace_id, path.machine_id, action)
+        gateway.manage(id, workspace_id, path.machine_id, action)
     })
     .await
     .internal()?
@@ -169,13 +190,13 @@ pub(crate) async fn issue_token(
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<WorkspacePath>,
 ) -> Result<Json<InstallCommand>> {
-    state
+    let workspace_id = state
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
     let gateway = state.gateway;
     let id = principal.id();
-    let token = tokio::task::spawn_blocking(move || gateway.issue_token(id, path.workspace_id))
+    let token = tokio::task::spawn_blocking(move || gateway.issue_token(id, workspace_id))
         .await
         .internal()?
         .api()?;
@@ -198,13 +219,13 @@ pub(crate) async fn revoke_token(
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<TokenPath>,
 ) -> Result<Json<Success>> {
-    state
+    let workspace_id = state
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
     let gateway = state.gateway;
     let id = principal.id();
-    tokio::task::spawn_blocking(move || gateway.revoke_token(id, path.workspace_id, path.token_id))
+    tokio::task::spawn_blocking(move || gateway.revoke_token(id, workspace_id, path.token_id))
         .await
         .internal()?
         .api()?;

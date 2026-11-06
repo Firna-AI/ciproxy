@@ -96,13 +96,16 @@ pub trait DashboardStore: Send + Sync {
     fn complete_organization_takeout(&self, takeout: &Takeout) -> Result<()>;
     /// Read machine cost intervals for machine details.
     fn dashboard_machine_costs(&self, workspace_id: Uuid) -> Result<Vec<MachineCost>>;
-    /// Save desired warm count and close the prior cost interval atomically.
-    fn save_dashboard_machine_settings(
+    /// Change only the warm target of an active machine, without cost history.
+    fn set_dashboard_warm_runners(
         &self,
         workspace_id: Uuid,
+        machine_id: Uuid,
         warm_runners: i32,
-        cost: &MachineCost,
     ) -> Result<()>;
+    /// Close the prior cost interval and record the supplied current cost.
+    /// This never changes the warm target or supplies earlier unknown prices.
+    fn save_dashboard_machine_cost(&self, workspace_id: Uuid, cost: &MachineCost) -> Result<()>;
     /// Read active and historical bindings for remote deletion only.
     fn dashboard_scale_sets(
         &self,

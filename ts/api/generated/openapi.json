@@ -11,50 +11,12 @@
     }
   ],
   "paths": {
-    "/auth/callback": {
+    "/auth/github": {
       "get": {
-        "operationId": "auth_callback",
-        "parameters": [
-          {
-            "name": "code",
-            "in": "path",
-            "description": "One-use authorization code.",
-            "required": true,
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            }
-          },
-          {
-            "name": "state",
-            "in": "path",
-            "description": "Browser-bound state.",
-            "required": true,
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            }
-          },
-          {
-            "name": "error",
-            "in": "path",
-            "description": "GitHub cancellation or refusal.",
-            "required": true,
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            }
-          }
-        ],
+        "operationId": "auth_begin",
         "responses": {
           "303": {
-            "description": "Dashboard or failed sign-in redirect",
+            "description": "GitHub App authorization redirect",
             "headers": {
               "Location": {
                 "schema": {
@@ -263,12 +225,50 @@
         }
       }
     },
-    "/auth/github": {
+    "/auth/github/callback": {
       "get": {
-        "operationId": "auth_begin",
+        "operationId": "auth_callback",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "description": "One-use authorization code.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "state",
+            "in": "path",
+            "description": "Browser-bound state.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "error",
+            "in": "path",
+            "description": "GitHub cancellation or refusal.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
         "responses": {
           "303": {
-            "description": "GitHub App authorization redirect",
+            "description": "Dashboard or failed sign-in redirect",
             "headers": {
               "Location": {
                 "schema": {
@@ -713,14 +713,26 @@
         ]
       }
     },
-    "/session": {
+    "/github/setup": {
       "get": {
-        "operationId": "sessions_session",
+        "operationId": "github_setup_begin",
         "parameters": [
           {
             "name": "installation_id",
             "in": "path",
-            "description": "Installation identity supplied by the setup return, verified before use.",
+            "description": "Candidate installation identity. It grants no authority.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "state",
+            "in": "path",
+            "description": "Untrusted install-flow state. It never selects identity or workspace.",
             "required": true,
             "schema": {
               "type": [
@@ -730,6 +742,220 @@
             }
           }
         ],
+        "responses": {
+          "303": {
+            "description": "Fresh GitHub authorization or failed setup redirect",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in absent, expired, or revoked",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Workspace role, origin, or CSRF token refused",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent in this workspace",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting resource state",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body is too large",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported content type",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "GitHub label refusal or malformed body",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal operation failed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary upstream or agent failure",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session": {
+      "get": {
+        "operationId": "sessions_session",
         "responses": {
           "200": {
             "headers": {
@@ -3415,9 +3641,283 @@
             "session": []
           }
         ]
-      },
+      }
+    },
+    "/workspaces/{workspace_id}/machines/{machine_id}/actions/{action}": {
+      "post": {
+        "operationId": "machines_command",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Stable workspace identity.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "machine_id",
+            "in": "path",
+            "description": "Stable machine identity.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "action",
+            "in": "path",
+            "description": "Documented gateway action.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Admin command carried by the machine control route.",
+              "enum": [
+                "drain",
+                "resume",
+                "remove",
+                "clear-cache"
+              ]
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "description": "Exact configured dashboard origin.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-ciproxy-csrf",
+            "in": "header",
+            "description": "The session's CSRF token returned by the session endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in absent, expired, or revoked",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Workspace role, origin, or CSRF token refused",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent in this workspace",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting resource state",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body is too large",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported content type",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "GitHub label refusal or malformed body",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal operation failed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary upstream or agent failure",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "csrf": [],
+            "session": []
+          }
+        ]
+      }
+    },
+    "/workspaces/{workspace_id}/machines/{machine_id}/cost": {
       "put": {
-        "operationId": "machines_settings",
+        "operationId": "machines_cost",
         "parameters": [
           {
             "name": "workspace_id",
@@ -3462,7 +3962,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/MachineSettings"
+                "$ref": "#/components/schemas/MachineCostInput"
               }
             }
           },
@@ -3681,9 +4181,9 @@
         ]
       }
     },
-    "/workspaces/{workspace_id}/machines/{machine_id}/actions/{action}": {
-      "post": {
-        "operationId": "machines_command",
+    "/workspaces/{workspace_id}/machines/{machine_id}/warm-runners": {
+      "put": {
+        "operationId": "machines_warm_runners",
         "parameters": [
           {
             "name": "workspace_id",
@@ -3706,22 +4206,6 @@
             }
           },
           {
-            "name": "action",
-            "in": "path",
-            "description": "Documented gateway action.",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "description": "Admin command carried by the machine control route.",
-              "enum": [
-                "drain",
-                "resume",
-                "remove",
-                "clear-cache"
-              ]
-            }
-          },
-          {
             "name": "Origin",
             "in": "header",
             "description": "Exact configured dashboard origin.",
@@ -3740,6 +4224,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WarmRunnerTarget"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "headers": {
@@ -3752,7 +4246,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CommandResult"
+                  "$ref": "#/components/schemas/Success"
                 }
               }
             }
@@ -6628,22 +7122,16 @@
           }
         }
       },
-      "MachineSettings": {
+      "MachineCostInput": {
         "type": "object",
-        "description": "Desired machine settings editable by an Admin.",
+        "description": "Current monthly cost entered independently from the warm-runner target.",
         "required": [
-          "warm_runners",
           "monthly_cost_cents"
         ],
         "properties": {
           "monthly_cost_cents": {
             "$ref": "#/components/schemas/Cents",
-            "description": "Customer's monthly machine cost in integer US cents."
-          },
-          "warm_runners": {
-            "type": "integer",
-            "format": "int32",
-            "description": "Desired warm runner count."
+            "description": "Integer US cents. Known zero remains distinct from an unknown cost.\nThe interval starts at entry time and supplies no earlier historical price."
           }
         }
       },
@@ -6936,24 +7424,6 @@
           }
         }
       },
-      "PersonalInstallation": {
-        "type": "object",
-        "description": "A personal installation that cannot create a ciproxy workspace.",
-        "required": [
-          "id",
-          "remove_url"
-        ],
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Stable GitHub installation identity as a decimal string."
-          },
-          "remove_url": {
-            "type": "string",
-            "description": "GitHub settings link that removes the personal installation."
-          }
-        }
-      },
       "Problem": {
         "type": "object",
         "description": "Stable error body returned by every dashboard route.",
@@ -7133,17 +7603,6 @@
             },
             "description": "Requests owned by this exact GitHub person, awaiting an organization owner."
           },
-          "personal_installation": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/PersonalInstallation",
-                "description": "Personal-account setup result, after verifying the installation owner."
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
           "reauthorization_required": {
             "type": "boolean",
             "description": "Whether a newly available role/request needs fresh GitHub membership proof."
@@ -7160,6 +7619,17 @@
               {
                 "$ref": "#/components/schemas/RemovedOrganization",
                 "description": "Most recent owner removal among the memberships verified at authorization."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "setup": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SetupOutcome",
+                "description": "Verified setup return, recorded only after fresh user association proof."
               },
               {
                 "type": "null"
@@ -7295,6 +7765,71 @@
           }
         }
       },
+      "SetupOutcome": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "An organization installation visible to its current organization member.",
+            "required": [
+              "installation_id",
+              "github_id",
+              "login",
+              "suspended",
+              "kind"
+            ],
+            "properties": {
+              "github_id": {
+                "type": "string",
+                "description": "GitHub organization identity."
+              },
+              "installation_id": {
+                "type": "string",
+                "description": "Exact configured App installation identity."
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "organization"
+                ]
+              },
+              "login": {
+                "type": "string",
+                "description": "Current GitHub organization login."
+              },
+              "suspended": {
+                "type": "boolean",
+                "description": "Whether GitHub has suspended the installation."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Personal installation requires an organization, without a workspace.",
+            "required": [
+              "installation_id",
+              "remove_url",
+              "kind"
+            ],
+            "properties": {
+              "installation_id": {
+                "type": "string",
+                "description": "Exact personal installation identity."
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "organizations_only"
+                ]
+              },
+              "remove_url": {
+                "type": "string",
+                "description": "GitHub settings link that removes this installation."
+              }
+            }
+          }
+        ],
+        "description": "Token-free setup outcome proved by configured-App and fresh user APIs."
+      },
       "SetupPhase": {
         "type": "string",
         "description": "GitHub scale-set demand phases, without invented queue or Actions identities.",
@@ -7426,6 +7961,20 @@
           "ok": {
             "type": "boolean",
             "description": "The mutation completed successfully."
+          }
+        }
+      },
+      "WarmRunnerTarget": {
+        "type": "object",
+        "description": "Independent desired warm-runner target.",
+        "required": [
+          "warm_runners"
+        ],
+        "properties": {
+          "warm_runners": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Desired warm runner count. It does not change monthly cost."
           }
         }
       },

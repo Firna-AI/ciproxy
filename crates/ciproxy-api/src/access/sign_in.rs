@@ -1,12 +1,8 @@
 //! PKCE state consumption and fixed-duration session issuance.
 
-use base64::Engine;
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use chrono::Duration;
-use ciproxy_store_interface::dashboard::records::{LoginState, Session, User};
+use ciproxy_store_interface::dashboard::records::{Session, User};
 use secrecy::{ExposeSecret, SecretString};
-use sha2::{Digest, Sha256};
-use subtle::ConstantTimeEq;
 
 use crate::error::{Error, Result};
 use crate::state::query;
@@ -14,42 +10,18 @@ use crate::wire::access::RemovedOrganization;
 use ciproxy_store_interface::organizations::AppState;
 
 use super::authentication::digest;
+use super::flow::Purpose;
 use super::pending::BrowserState;
-use super::{AccessService, LoginAttempt, LoginSuccess};
+use super::{AccessService, LoginSuccess};
 
 impl AccessService {
-    pub(super) async fn start(&self) -> Result<LoginAttempt> {
-        let state = self.runtime.secret()?;
-        let verifier = self.runtime.secret()?;
-        let challenge = URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.expose_secret().as_bytes()));
-        let id = self.runtime.identifier();
-        let saved = LoginState {
-            id,
-            digest: digest(state.expose_secret()),
-            verifier: self.cipher.seal(id, verifier).await?,
-            expires_at: self.runtime.now() + Duration::minutes(10),
-        };
-        query(self.store.clone(), move |store| {
-            store.save_login_state(&saved)
-        })
-        .await?;
-        Ok(LoginAttempt {
-            url: self
-                .identity
-                .authorization_url(state.expose_secret(), &challenge),
-            state,
-        })
-    }
     pub(super) async fn finish(
         &self,
         code: SecretString,
         state: &str,
         cookie: &str,
-        previous: Option<&str>,
     ) -> Result<LoginSuccess> {
-        if !bool::from(digest(state).ct_eq(&digest(cookie))) {
-            return Err(Error::Unauthorized);
-        }
+        let binding = self.consume_binding(state, cookie).await?;
         let hash = digest(state);
         let now = self.runtime.now();
         let state = query(self.store.clone(), move |store| {
@@ -57,10 +29,20 @@ impl AccessService {
         })
         .await?
         .ok_or(Error::Unauthorized)?;
+        if state.id != binding.id {
+            return Err(Error::Unauthorized);
+        }
         let verifier = self.cipher.open(state.id, state.verifier).await?;
         let grant = self.identity.exchange(code, verifier).await?;
         let profile = self.identity.profile(&grant).await?;
         let memberships = self.identity.memberships(&grant).await?;
+        let setup = match &binding.purpose {
+            Purpose::SignIn => None,
+            Purpose::Setup { installation } => Some(
+                self.prove_setup(installation, &grant, &profile, &memberships)
+                    .await?,
+            ),
+        };
         let github_id = profile.id;
         let organization_ids = memberships
             .iter()
@@ -91,19 +73,14 @@ impl AccessService {
             store.lock_github_organization(github_id)
         })
         .await?;
-        let previous_browser = previous;
         let previous = query(self.store.clone(), move |store| {
             store.dashboard_user_by_github(github_id)
         })
         .await?;
-        let prior = if let Some(cookie) = previous_browser {
-            self.open_browser(cookie)
-                .await
-                .ok()
-                .filter(|browser| browser.github_id == github_id)
-        } else {
-            None
-        };
+        let prior = binding
+            .previous
+            .filter(|browser| browser.github_id == github_id && now < browser.expires_at);
+        let setup = setup.or_else(|| prior.as_ref().and_then(|browser| browser.setup.clone()));
         let id = previous.map_or_else(
             || {
                 prior
@@ -150,6 +127,7 @@ impl AccessService {
             expires_at,
             had_access: retained || prior.is_some_and(|browser| browser.had_access),
             removed_organization,
+            setup,
         };
         let cookie = self.browser_cookie(&browser).await?;
         Ok(LoginSuccess {

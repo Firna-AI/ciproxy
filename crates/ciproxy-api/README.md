@@ -32,10 +32,10 @@ This includes framework extraction errors and unknown routes.
 
 The API consumes actual prepared job-area capacity through an injected
 `MachineCapacity` adapter. The hosted runtime reads the exact snapshot. A report
-without available capacity produces an explicit unavailable value. Label fit includes
-the trusted image disk size supplied by the caller. Machine byte counts and
-other large counters use decimal strings. IDs are strings. Money uses integer US
-cents as decimal strings. Times use UTC RFC 3339.
+without available capacity produces an explicit unavailable value. Label fit
+includes the trusted image disk size supplied by the caller. Machine byte counts
+and other large counters use decimal strings. IDs are strings. Money uses
+integer US cents as decimal strings. Times use UTC RFC 3339.
 
 Intentional take-out saves its own durable removal marker before remote cleanup.
 It preserves job history and sets no owner-removal retention period. Cleanup
@@ -71,10 +71,40 @@ credential encryption key from the operator's secret store. Keep the key stable
 across restarts and for all replicas that serve the same sign-ins. Keep each
 machine's API callers and WebSocket on the same gateway owner.
 
-Register `/api/auth/callback` as the GitHub sign-in callback on the dashboard
-host. Set the App setup URL to that host's `/` page. Disable "Request user
-authorization during installation". The dashboard forwards the setup
-return's `installation_id` to `/api/session` for verification.
+Register `PUBLIC_URL/api/auth/github/callback` as the sign-in callback. Register
+`PUBLIC_URL/api/github/setup` as the App setup URL. PUBLIC_URL has no trailing
+slash. Keep OAuth during installation OFF, expiring user tokens ON, and redirect
+on update OFF. The separate PKCE flow requests `offline_access`. M13 owns
+`/hooks/github` and periodic repository refresh. Stripe uses `/hooks/stripe`.
+There is no `/hooks` alias.
+
+The public setup route treats incoming ID/state as untrusted. It reads the
+configured-App installation and starts fresh user authorization. Its sealed
+one-use binding captures purpose and prior token-free metadata at the start. The
+callback requires the same installation/account through the fresh user token and
+requires organization membership or exact personal ownership. Only then can
+sign-in persistence run. Setup never assigns a workspace. GET `/session` returns
+a typed verified setup outcome without frontend installation-ID forwarding.
+Failed proof preserves business records and the existing sign-in. A matching
+identity keeps its original expiry.
+
+The superseded `/api/auth/callback` route and session-query bridge are gone.
+
+Warm runners and cost have independent typed writes:
+
+- PUT `/workspaces/{workspace_id}/machines/{machine_id}/warm-runners` changes
+  only `warm_runners`. An unknown cost stays unknown and no history is added.
+- PUT `/workspaces/{workspace_id}/machines/{machine_id}/cost` changes only
+  `monthly_cost_cents`. It preserves the warm target. Zero is a known cost.
+
+The old generic machine PUT has no alias. A current cost starts at entry time.
+It supplies no historical price. Earlier unknown registered dates keep the
+savings figure unavailable. This API adds no effective-date policy.
+
+HTTP path workspace IDs are opaque. Only the access boundary returns a checked
+UUID after the current workspace role check. Owner claim has its own
+membership-authorized opener. Request parsing and rejection order stay
+unchanged.
 
 Supply `ApiState.capacity` with a runtime adapter that returns actual slots and
 optional prepared job-area bytes from each machine snapshot. The API does not

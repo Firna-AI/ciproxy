@@ -1,4 +1,4 @@
-//! HTTP sign-in, role isolation, retention, and owner recovery requirements.
+//! Owner recovery and normalized HTTP failure responses.
 
 use std::sync::atomic::Ordering;
 
@@ -87,6 +87,34 @@ async fn owner_claim_rechecks_idle_admin_before_recovery_and_requires_ownership(
     assert_eq!(
         fixture
             .request(Some(&owner), "POST", &fixture.path("/claim-admin"), None)
+            .await
+            .status(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        fixture
+            .request(Some(&owner), "DELETE", &fixture.path("/members/8"), None)
+            .await
+            .status(),
+        StatusCode::OK
+    );
+    let owner_without_role = fixture.login(8, None).await;
+    assert_eq!(
+        fixture
+            .database
+            .store
+            .dashboard_role(fixture.workspace, 8)
+            .unwrap(),
+        None
+    );
+    assert_eq!(
+        fixture
+            .request(
+                Some(&owner_without_role),
+                "POST",
+                &fixture.path("/claim-admin"),
+                None
+            )
             .await
             .status(),
         StatusCode::OK

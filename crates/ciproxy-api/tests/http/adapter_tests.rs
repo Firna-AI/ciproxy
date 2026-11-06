@@ -72,7 +72,7 @@ async fn production_oauth_and_installation_metadata_verify_identity_and_all_page
         OAuthConfig {
             client_id: "app-client".to_owned(),
             client_secret: server.token.clone(),
-            callback_url: "https://app.ciproxy.example/api/auth/callback".to_owned(),
+            callback_url: "https://app.ciproxy.example/api/auth/github/callback".to_owned(),
             github: server.origin.parse().unwrap(),
             api: server.origin.parse().unwrap(),
         },
@@ -92,17 +92,11 @@ async fn production_oauth_and_installation_metadata_verify_identity_and_all_page
     let browser = fixture.login(7, Some(Role::Admin)).await;
     let session = json(
         fixture
-            .request(Some(&browser), "GET", "/session?installation_id=700", None)
+            .request(Some(&browser), "GET", "/session", None)
             .await,
     )
     .await;
-    assert_eq!(session["personal_installation"]["id"], "700");
-    assert!(
-        session["personal_installation"]["remove_url"]
-            .as_str()
-            .unwrap()
-            .ends_with("/700")
-    );
+    assert!(session["setup"].is_null());
     assert_eq!(
         session["pending_install_requests"]
             .as_array()
@@ -114,20 +108,6 @@ async fn production_oauth_and_installation_metadata_verify_identity_and_all_page
         session["pending_install_requests"][0]["organization"],
         "waiting-org"
     );
-    for id in [701, 702] {
-        let session = json(
-            fixture
-                .request(
-                    Some(&browser),
-                    "GET",
-                    &format!("/session?installation_id={id}"),
-                    None,
-                )
-                .await,
-        )
-        .await;
-        assert!(session["personal_installation"].is_null());
-    }
     let memberships = fixture
         .database
         .store

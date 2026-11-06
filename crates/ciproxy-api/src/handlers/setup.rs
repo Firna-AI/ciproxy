@@ -25,16 +25,16 @@ pub(crate) async fn setup(
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<WorkspacePath>,
 ) -> Result<Json<SetupView>> {
-    state
+    let workspace_id = state
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
     let organizations = query(state.store.clone(), move |store| {
-        store.organizations(path.workspace_id)
+        store.organizations(workspace_id)
     })
     .await?;
     let machines = query(state.store.clone(), move |store| {
-        store.machines(path.workspace_id)
+        store.machines(workspace_id)
     })
     .await?
     .len()
@@ -42,11 +42,11 @@ pub(crate) async fn setup(
     .unwrap_or(u32::MAX);
     let first_job = query(state.store.clone(), move |store| {
         let mut jobs = Vec::new();
-        for organization in store.organizations(path.workspace_id)? {
-            for job in store.github_jobs(path.workspace_id, organization.id)? {
+        for organization in store.organizations(workspace_id)? {
+            for job in store.github_jobs(workspace_id, organization.id)? {
                 let place = if let Some(github_id) = job.runner_github_id {
                     store
-                        .runners(path.workspace_id, organization.id)?
+                        .runners(workspace_id, organization.id)?
                         .into_iter()
                         .find(|runner| {
                             runner.organization_id == organization.id
@@ -90,7 +90,7 @@ pub(crate) async fn setup(
         organizations: organizations.into_iter().map(views::organization).collect(),
         machines,
         waiting_for_machine: machines == 0,
-        labels: labels::read(&state, path.workspace_id).await?,
+        labels: labels::read(&state, workspace_id).await?,
     }))
 }
 
@@ -100,20 +100,20 @@ pub(crate) async fn settings(
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<WorkspacePath>,
 ) -> Result<Json<SettingsView>> {
-    state
+    let workspace_id = state
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
     let (workspace, organizations, requests, tier) = query(state.store.clone(), move |store| {
         Ok((
-            store.workspace(path.workspace_id)?,
-            store.organizations(path.workspace_id)?,
+            store.workspace(workspace_id)?,
+            store.organizations(workspace_id)?,
             store
-                .dashboard_members(path.workspace_id)?
+                .dashboard_members(workspace_id)?
                 .iter()
                 .filter(|member| member.role.is_none())
                 .count(),
-            store.billing(path.workspace_id)?.state.tier,
+            store.billing(workspace_id)?.state.tier,
         ))
     })
     .await?;
@@ -125,7 +125,7 @@ pub(crate) async fn settings(
     Ok(Json(SettingsView {
         name: workspace.name,
         organizations: organizations.into_iter().map(views::organization).collect(),
-        labels: labels::read(&state, path.workspace_id).await?,
+        labels: labels::read(&state, workspace_id).await?,
         open_requests: requests.try_into().unwrap_or(u32::MAX),
         can_add_organization: can_add,
     }))
@@ -138,12 +138,12 @@ pub(crate) async fn rename(
     Path(path): Path<WorkspacePath>,
     Json(body): Json<WorkspaceName>,
 ) -> Result<Json<Success>> {
-    state
+    let workspace_id = state
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
     query(state.store, move |store| {
-        store.rename_workspace(path.workspace_id, &body.name)
+        store.rename_workspace(workspace_id, &body.name)
     })
     .await?;
     Ok(Json(Success { ok: true }))

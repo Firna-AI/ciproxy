@@ -757,6 +757,15 @@ UTC RFC 3339, and IDs as strings. Reason: JavaScript loses 64-bit numbers.
       grant only while a role or access request exists.
       App registration uses `/api/auth/callback` for sign-in and `/` for
       setup. Keep user authorization separate from installation for PKCE.
+- [x] Apply the owner's App registration override of 6 November 2026:
+      `/api/auth/github/callback` for sign-in and `/api/github/setup` for
+      the trusted browser return. Verify installation access on the server,
+      then redirect to the dashboard. Setup never chooses the workspace.
+      Keep no old aliases or dashboard-only forwarding flow. OAuth during
+      installation and redirect on update stay off. Expiring user tokens
+      stay on. Use automatic installation events only. Milestone 13 owns
+      `/hooks/github` and periodic repository refresh. Branch:
+      `conductor/ciproxy-mvp-milestone-14-api`.
 - [ ] Add an organization to a workspace, take one out, and keep the
       repository access of each one. A take-out deletes the scale sets and
       removes the install through the GitHub API, as item 51 says. ciproxy
@@ -783,7 +792,7 @@ UTC RFC 3339, and IDs as strings. Reason: JavaScript loses 64-bit numbers.
 - [ ] Test each route at the HTTP level with a real store.
       Branch: `conductor/ciproxy-mvp-milestone-14-api`.
       Orchestrator: complete the add-route HTTP cases after the owner's
-      decisions. The implemented 26 operations have 18 real-store scenarios.
+      decisions. The implemented 28 operations have 21 real-store scenarios.
   - [x] Test the implemented routes with PostgreSQL, the gateway, and the
         GitHub App service. Verify upstream adapters with a local HTTP peer.
         Branch: `conductor/ciproxy-mvp-milestone-14-api`.

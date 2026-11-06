@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use axum::extract::{Path, Query, State};
+use axum::extract::{Path, State};
 use axum::{Extension, Json};
 use ciproxy_store_interface::billing::state::Tier;
 use ciproxy_store_interface::dashboard::records::{AdminClaim, Role};
@@ -11,30 +11,15 @@ use ciproxy_store_interface::organizations::AppState;
 use crate::access::Principal;
 use crate::error::{Error, Result};
 use crate::state::{ApiState, query};
-use crate::wire::access::{
-    SessionQuery, SessionView, SignInState, Success, WorkspacePath, WorkspaceView,
-};
+use crate::wire::access::{SessionView, SignInState, Success, WorkspacePath, WorkspaceView};
 
 use super::views;
 
-#[utoipa::path(operation_id = "sessions_session", get, path = "/session", params(SessionQuery), responses((status = 200, body = SessionView)), security(("session" = [])))]
+#[utoipa::path(operation_id = "sessions_session", get, path = "/session", responses((status = 200, body = SessionView)), security(("session" = [])))]
 pub(crate) async fn session(
     State(state): State<ApiState>,
     Extension(principal): Extension<Arc<Principal>>,
-    Query(parameters): Query<SessionQuery>,
 ) -> Result<Json<SessionView>> {
-    let personal_installation = if let Some(id) = parameters.installation_id {
-        let id = match id.parse::<i64>() {
-            Ok(value) => value,
-            Err(_) => return Err(Error::InvalidInput),
-        };
-        state
-            .installations
-            .personal(id, principal.github_id())
-            .await?
-    } else {
-        None
-    };
     let pending_install_requests = state
         .installations
         .pending_requests(principal.github_id())
@@ -127,7 +112,7 @@ pub(crate) async fn session(
     })
     .await?;
     Ok(Json(SessionView {
-        personal_installation,
+        setup: principal.setup().cloned(),
         pending_install_requests,
         removed_organization: principal.removed_organization().cloned(),
         state: if principal.browser_only() {
@@ -160,34 +145,22 @@ pub(crate) async fn claim(
     Path(path): Path<WorkspacePath>,
 ) -> Result<Json<Success>> {
     let id = principal.id();
-    if principal.browser_only() {
-        return Err(Error::Forbidden);
-    }
-    let visible = query(state.store.clone(), move |store| {
-        Ok(store
-            .dashboard_workspaces(id)?
-            .iter()
-            .any(|workspace| workspace.id == path.workspace_id))
-    })
-    .await?;
-    if !visible {
-        return Err(Error::Forbidden);
-    }
+    let workspace_id = state
+        .access
+        .open_claim_workspace(&principal, path.workspace_id)
+        .await?;
     let now = state.runtime.now();
     if query(state.store.clone(), move |store| {
-        store.claim_dashboard_admin(path.workspace_id, id, now, AdminClaim::AllOrganizations)
+        store.claim_dashboard_admin(workspace_id, id, now, AdminClaim::AllOrganizations)
     })
     .await?
     {
         return Ok(Json(Success { ok: true }));
     }
-    state
-        .access
-        .refresh_workspace_admins(path.workspace_id)
-        .await?;
+    state.access.refresh_workspace_admins(workspace_id).await?;
     let now = state.runtime.now();
     let claimed = query(state.store, move |store| {
-        store.claim_dashboard_admin(path.workspace_id, id, now, AdminClaim::Recovery)
+        store.claim_dashboard_admin(workspace_id, id, now, AdminClaim::Recovery)
     })
     .await?;
     if !claimed {

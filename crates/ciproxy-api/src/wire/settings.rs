@@ -1,5 +1,6 @@
 //! Non-Boat setup, labels, and per-organization repository policy.
 
+use crate::access::workspace::WorkspaceId;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -165,7 +166,8 @@ pub struct LabelFit {
 #[into_params(parameter_in = Path)]
 pub struct OrganizationPath {
     /// Stable workspace identity.
-    pub workspace_id: Uuid,
+    #[param(value_type=Uuid)]
+    pub workspace_id: WorkspaceId,
     /// Stable organization registration identity.
     pub organization_id: Uuid,
 }
@@ -175,7 +177,8 @@ pub struct OrganizationPath {
 #[into_params(parameter_in = Path)]
 pub struct LabelPath {
     /// Stable workspace identity.
-    pub workspace_id: Uuid,
+    #[param(value_type=Uuid)]
+    pub workspace_id: WorkspaceId,
     /// Stable label identity.
     pub label_id: Uuid,
 }

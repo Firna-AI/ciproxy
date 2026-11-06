@@ -1,9 +1,9 @@
 //! Sign-in, workspace, and member payloads.
 
+use crate::access::workspace::WorkspaceId;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
-use uuid::Uuid;
 
 /// Stable workspace role on the HTTP boundary.
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, ToSchema)]
@@ -34,8 +34,8 @@ pub struct SessionView {
     pub expires_at: DateTime<Utc>,
     /// Workspaces whose organizations contain this person.
     pub workspaces: Vec<WorkspaceView>,
-    /// Personal-account setup result, after verifying the installation owner.
-    pub personal_installation: Option<PersonalInstallation>,
+    /// Verified setup return, recorded only after fresh user association proof.
+    pub setup: Option<SetupOutcome>,
     /// Requests owned by this exact GitHub person, awaiting an organization owner.
     pub pending_install_requests: Vec<PendingInstallation>,
     /// Most recent owner removal among the memberships verified at authorization.
@@ -108,7 +108,8 @@ pub struct OAuthCallback {
 #[into_params(parameter_in = Path)]
 pub struct WorkspacePath {
     /// Stable workspace identity.
-    pub workspace_id: Uuid,
+    #[param(value_type=Uuid)]
+    pub workspace_id: WorkspaceId,
 }
 
 /// A workspace and one of its members.
@@ -116,7 +117,8 @@ pub struct WorkspacePath {
 #[into_params(parameter_in = Path)]
 pub struct MemberPath {
     /// Stable workspace identity.
-    pub workspace_id: Uuid,
+    #[param(value_type=Uuid)]
+    pub workspace_id: WorkspaceId,
     /// Stable GitHub account identity as a string.
     pub member_id: String,
 }
@@ -142,20 +144,37 @@ pub enum SignInState {
     AccessEnded,
 }
 
-/// Optional verified installation returned by GitHub's setup redirect.
+/// Untrusted parameters returned to the registered App setup URL.
 #[derive(Deserialize, IntoParams)]
-pub struct SessionQuery {
-    /// Installation identity supplied by the setup return, verified before use.
+pub struct SetupCallback {
+    /// Candidate installation identity. It grants no authority.
     pub installation_id: Option<String>,
+    /// Untrusted install-flow state. It never selects identity or workspace.
+    pub state: Option<String>,
 }
 
-/// A personal installation that cannot create a ciproxy workspace.
-#[derive(Deserialize, Serialize, ToSchema)]
-pub struct PersonalInstallation {
-    /// Stable GitHub installation identity as a decimal string.
-    pub id: String,
-    /// GitHub settings link that removes the personal installation.
-    pub remove_url: String,
+/// Token-free setup outcome proved by configured-App and fresh user APIs.
+#[derive(Clone, Deserialize, Serialize, ToSchema)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum SetupOutcome {
+    /// An organization installation visible to its current organization member.
+    Organization {
+        /// Exact configured App installation identity.
+        installation_id: String,
+        /// GitHub organization identity.
+        github_id: String,
+        /// Current GitHub organization login.
+        login: String,
+        /// Whether GitHub has suspended the installation.
+        suspended: bool,
+    },
+    /// Personal installation requires an organization, without a workspace.
+    OrganizationsOnly {
+        /// Exact personal installation identity.
+        installation_id: String,
+        /// GitHub settings link that removes this installation.
+        remove_url: String,
+    },
 }
 
 /// An organization installation request that an owner has not approved.

@@ -120,13 +120,11 @@ impl DashboardStore for PgStore {
     fn dashboard_machine_costs(&self, id: Uuid) -> Result<Vec<MachineCost>> {
         machines::costs(self, id)
     }
-    fn save_dashboard_machine_settings(
-        &self,
-        id: Uuid,
-        warm: i32,
-        cost: &MachineCost,
-    ) -> Result<()> {
-        machines::save(self, id, warm, cost)
+    fn set_dashboard_warm_runners(&self, id: Uuid, machine: Uuid, warm: i32) -> Result<()> {
+        machines::warm(self, id, machine, warm)
+    }
+    fn save_dashboard_machine_cost(&self, id: Uuid, cost: &MachineCost) -> Result<()> {
+        machines::cost(self, id, cost)
     }
     fn dashboard_scale_sets(&self, id: Uuid, organization: Uuid) -> Result<Vec<ScaleSet>> {
         resources::sets(self, id, organization)

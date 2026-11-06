@@ -2,31 +2,36 @@
 
 mod adapters;
 mod authentication;
+mod flow;
 mod pending;
+mod setup;
 mod sign_in;
+pub mod workspace;
 
 use std::sync::Arc;
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use ciproxy_store_interface::dashboard::records::{Role, Session, User};
+use ciproxy_github::installation_state::InstalledApp;
+use ciproxy_store_interface::dashboard::records::{Session, User};
 use ciproxy_store_interface::store::Store;
 use secrecy::SecretString;
 use subtle::ConstantTimeEq;
 use uuid::Uuid;
 
+use self::workspace::WorkspaceId;
 use crate::crypto::CredentialCipher;
 use crate::error::Result;
 use crate::identity::UserIdentity;
 use crate::runtime::Runtime;
-use crate::wire::access::RemovedOrganization;
+use crate::wire::access::{RemovedOrganization, SetupOutcome};
 
 /// A protected OAuth attempt to be returned only to its browser.
 pub struct LoginAttempt {
     /// GitHub authorization URL.
     pub url: String,
     /// Opaque browser-binding cookie value.
-    pub state: SecretString,
+    pub binding: SecretString,
 }
 
 /// A successful fixed-duration sign-in and its CSRF token.
@@ -47,6 +52,7 @@ pub struct Principal {
     pub(crate) had_access: bool,
     pub(crate) removed_organization: Option<RemovedOrganization>,
     pub(crate) csrf: String,
+    pub(crate) setup: Option<SetupOutcome>,
 }
 
 impl Principal {
@@ -61,6 +67,10 @@ impl Principal {
     /// Most recent removed organization verified during fresh GitHub authorization.
     pub fn removed_organization(&self) -> Option<&RemovedOrganization> {
         self.removed_organization.as_ref()
+    }
+    /// Verified setup metadata without a frontend installation-ID bridge.
+    pub fn setup(&self) -> Option<&SetupOutcome> {
+        self.setup.as_ref()
     }
     /// CSRF value restored from the sealed browser sign-in.
     pub fn csrf(&self) -> &str {
@@ -92,14 +102,19 @@ impl Principal {
 #[async_trait]
 pub trait DashboardAccess: Send + Sync {
     /// Start a one-use browser-bound GitHub App authorization attempt.
-    async fn begin_login(&self) -> Result<LoginAttempt>;
+    async fn begin_login(&self, previous: Option<&str>) -> Result<LoginAttempt>;
+    /// Start setup proof for an installation read through the configured App.
+    async fn begin_setup(
+        &self,
+        installation: InstalledApp,
+        previous: Option<&str>,
+    ) -> Result<LoginAttempt>;
     /// Finish only the matching browser's unconsumed OAuth attempt.
     async fn finish_login(
         &self,
         code: SecretString,
         state: &str,
         cookie: &str,
-        previous: Option<&str>,
     ) -> Result<LoginSuccess>;
     /// Authenticate and refresh memberships when their hourly check is due.
     async fn authenticate(&self, cookie: &str) -> Result<Principal>;
@@ -113,9 +128,15 @@ pub trait DashboardAccess: Send + Sync {
     async fn require_role(
         &self,
         principal: &Principal,
-        workspace_id: Uuid,
+        workspace_id: WorkspaceId,
         admin: bool,
-    ) -> Result<Role>;
+    ) -> Result<Uuid>;
+    /// Open a workspace for the existing owner-claim authorization path.
+    async fn open_claim_workspace(
+        &self,
+        principal: &Principal,
+        workspace_id: WorkspaceId,
+    ) -> Result<Uuid>;
 }
 
 /// Shared identity service constructed before the gateway and GitHub App.

@@ -4,22 +4,6 @@
  */
 
 export interface paths {
-    "/auth/callback": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["auth_callback"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/auth/github": {
         parameters: {
             query?: never;
@@ -28,6 +12,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["auth_begin"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/github/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["auth_callback"];
         put?: never;
         post?: never;
         delete?: never;
@@ -46,6 +46,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["auth_sign_out"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/github/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["github_setup_begin"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -188,7 +204,7 @@ export interface paths {
             cookie?: never;
         };
         get: operations["machines_detail"];
-        put: operations["machines_settings"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -206,6 +222,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["machines_command"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace_id}/machines/{machine_id}/cost": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["machines_cost"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace_id}/machines/{machine_id}/warm-runners": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["machines_warm_runners"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -435,15 +483,13 @@ export interface components {
             /** @description Current label policy. */
             label: components["schemas"]["LabelInput"];
         };
-        /** @description Desired machine settings editable by an Admin. */
-        MachineSettings: {
-            /** @description Customer's monthly machine cost in integer US cents. */
-            monthly_cost_cents: components["schemas"]["Cents"];
+        /** @description Current monthly cost entered independently from the warm-runner target. */
+        MachineCostInput: {
             /**
-             * Format: int32
-             * @description Desired warm runner count.
+             * @description Integer US cents. Known zero remains distinct from an unknown cost.
+             *     The interval starts at entry time and supplies no earlier historical price.
              */
-            warm_runners: number;
+            monthly_cost_cents: components["schemas"]["Cents"];
         };
         /** @description Hardware and state for one own machine. Byte counts use decimal strings. */
         MachineView: {
@@ -564,13 +610,6 @@ export interface components {
             /** @description Organization name chosen on GitHub. */
             organization: string;
         };
-        /** @description A personal installation that cannot create a ciproxy workspace. */
-        PersonalInstallation: {
-            /** @description Stable GitHub installation identity as a decimal string. */
-            id: string;
-            /** @description GitHub settings link that removes the personal installation. */
-            remove_url: string;
-        };
         /** @description Stable error body returned by every dashboard route. */
         Problem: {
             /** @description Stable machine-readable error identifier. */
@@ -636,12 +675,12 @@ export interface components {
             login: string;
             /** @description Requests owned by this exact GitHub person, awaiting an organization owner. */
             pending_install_requests: components["schemas"]["PendingInstallation"][];
-            personal_installation?: components["schemas"]["PersonalInstallation"] | null;
             /** @description Whether a newly available role/request needs fresh GitHub membership proof. */
             reauthorization_required: boolean;
             /** @description Same-origin top-level navigation for fresh GitHub authorization. */
             reauthorization_url?: string | null;
             removed_organization?: components["schemas"]["RemovedOrganization"] | null;
+            setup?: components["schemas"]["SetupOutcome"] | null;
             /** @description Signed-in access state for install, access, and left pages. */
             state: components["schemas"]["SignInState"];
             /** @description Workspaces whose organizations contain this person. */
@@ -693,6 +732,26 @@ export interface components {
             started_at?: string | null;
             /** @description Workflow file identity, without treating it as a checked job ref. */
             workflow_ref: string;
+        };
+        /** @description Token-free setup outcome proved by configured-App and fresh user APIs. */
+        SetupOutcome: {
+            /** @description GitHub organization identity. */
+            github_id: string;
+            /** @description Exact configured App installation identity. */
+            installation_id: string;
+            /** @enum {string} */
+            kind: "organization";
+            /** @description Current GitHub organization login. */
+            login: string;
+            /** @description Whether GitHub has suspended the installation. */
+            suspended: boolean;
+        } | {
+            /** @description Exact personal installation identity. */
+            installation_id: string;
+            /** @enum {string} */
+            kind: "organizations_only";
+            /** @description GitHub settings link that removes this installation. */
+            remove_url: string;
         };
         /**
          * @description GitHub scale-set demand phases, without invented queue or Actions identities.
@@ -747,6 +806,14 @@ export interface components {
             /** @description The mutation completed successfully. */
             ok: boolean;
         };
+        /** @description Independent desired warm-runner target. */
+        WarmRunnerTarget: {
+            /**
+             * Format: int32
+             * @description Desired warm runner count. It does not change monthly cost.
+             */
+            warm_runners: number;
+        };
         /** @description A workspace rename request. */
         WorkspaceName: {
             /** @description Customer-visible workspace name. */
@@ -780,23 +847,16 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    auth_callback: {
+    auth_begin: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                /** @description One-use authorization code. */
-                code: string | null;
-                /** @description Browser-bound state. */
-                state: string | null;
-                /** @description GitHub cancellation or refusal. */
-                error: string | null;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Dashboard or failed sign-in redirect */
+            /** @description GitHub App authorization redirect */
             303: {
                 headers: {
                     Location?: string;
@@ -918,16 +978,23 @@ export interface operations {
             };
         };
     };
-    auth_begin: {
+    auth_callback: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                /** @description One-use authorization code. */
+                code: string | null;
+                /** @description Browser-bound state. */
+                state: string | null;
+                /** @description GitHub cancellation or refusal. */
+                error: string | null;
+            };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description GitHub App authorization redirect */
+            /** @description Dashboard or failed sign-in redirect */
             303: {
                 headers: {
                     Location?: string;
@@ -1184,14 +1251,147 @@ export interface operations {
             };
         };
     };
-    sessions_session: {
+    github_setup_begin: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                /** @description Installation identity supplied by the setup return, verified before use. */
+                /** @description Candidate installation identity. It grants no authority. */
                 installation_id: string | null;
+                /** @description Untrusted install-flow state. It never selects identity or workspace. */
+                state: string | null;
             };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Fresh GitHub authorization or failed setup redirect */
+            303: {
+                headers: {
+                    Location?: string;
+                    "Set-Cookie"?: string;
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Malformed request */
+            400: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sign-in absent, expired, or revoked */
+            401: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Workspace role, origin, or CSRF token refused */
+            403: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Resource absent in this workspace */
+            404: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method not allowed */
+            405: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflicting resource state */
+            409: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Request body is too large */
+            413: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unsupported content type */
+            415: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description GitHub label refusal or malformed body */
+            422: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal operation failed */
+            500: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Temporary upstream or agent failure */
+            503: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    sessions_session: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -2702,7 +2902,149 @@ export interface operations {
             };
         };
     };
-    machines_settings: {
+    machines_command: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Exact configured dashboard origin. */
+                Origin: string;
+                /** @description The session's CSRF token returned by the session endpoint. */
+                "x-ciproxy-csrf": string;
+            };
+            path: {
+                /** @description Stable workspace identity. */
+                workspace_id: string;
+                /** @description Stable machine identity. */
+                machine_id: string;
+                /** @description Documented gateway action. */
+                action: "drain" | "resume" | "remove" | "clear-cache";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandResult"];
+                };
+            };
+            /** @description Malformed request */
+            400: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sign-in absent, expired, or revoked */
+            401: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Workspace role, origin, or CSRF token refused */
+            403: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Resource absent in this workspace */
+            404: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method not allowed */
+            405: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflicting resource state */
+            409: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Request body is too large */
+            413: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unsupported content type */
+            415: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description GitHub label refusal or malformed body */
+            422: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal operation failed */
+            500: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Temporary upstream or agent failure */
+            503: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    machines_cost: {
         parameters: {
             query?: never;
             header: {
@@ -2721,7 +3063,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["MachineSettings"];
+                "application/json": components["schemas"]["MachineCostInput"];
             };
         };
         responses: {
@@ -2846,7 +3188,7 @@ export interface operations {
             };
         };
     };
-    machines_command: {
+    machines_warm_runners: {
         parameters: {
             query?: never;
             header: {
@@ -2860,12 +3202,14 @@ export interface operations {
                 workspace_id: string;
                 /** @description Stable machine identity. */
                 machine_id: string;
-                /** @description Documented gateway action. */
-                action: "drain" | "resume" | "remove" | "clear-cache";
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarmRunnerTarget"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -2873,7 +3217,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CommandResult"];
+                    "application/json": components["schemas"]["Success"];
                 };
             };
             /** @description Malformed request */

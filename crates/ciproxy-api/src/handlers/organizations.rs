@@ -23,18 +23,16 @@ pub(crate) async fn list(
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<WorkspacePath>,
 ) -> Result<Json<Vec<OrganizationView>>> {
-    state
+    let workspace_id = state
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
     Ok(Json(
-        query(state.store, move |store| {
-            store.organizations(path.workspace_id)
-        })
-        .await?
-        .into_iter()
-        .map(views::organization)
-        .collect(),
+        query(state.store, move |store| store.organizations(workspace_id))
+            .await?
+            .into_iter()
+            .map(views::organization)
+            .collect(),
     ))
 }
 
@@ -44,12 +42,12 @@ pub(crate) async fn repositories(
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<OrganizationPath>,
 ) -> Result<Json<Vec<RepositoryView>>> {
-    state
+    let workspace_id = state
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
     let organization = query(state.store.clone(), move |store| {
-        store.organization(path.workspace_id, path.organization_id)
+        store.organization(workspace_id, path.organization_id)
     })
     .await?
     .ok_or(Error::NotFound)?;
@@ -59,7 +57,7 @@ pub(crate) async fn repositories(
         .await
         .api()?;
     let repositories = query(state.store, move |store| {
-        store.repositories(path.workspace_id, path.organization_id)
+        store.repositories(workspace_id, path.organization_id)
     })
     .await?;
     Ok(Json(
@@ -88,12 +86,12 @@ pub(crate) async fn save_repositories(
     Path(path): Path<OrganizationPath>,
     Json(body): Json<RepositorySelection>,
 ) -> Result<Json<Success>> {
-    state
+    let workspace_id = state
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
     let organization = query(state.store, move |store| {
-        store.organization(path.workspace_id, path.organization_id)
+        store.organization(workspace_id, path.organization_id)
     })
     .await?
     .ok_or(Error::NotFound)?;
@@ -111,12 +109,12 @@ pub(crate) async fn takeout(
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<OrganizationPath>,
 ) -> Result<Json<Success>> {
-    state
+    let workspace_id = state
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
     let organization = query(state.store.clone(), move |store| {
-        store.organization(path.workspace_id, path.organization_id)
+        store.organization(workspace_id, path.organization_id)
     })
     .await?
     .ok_or(Error::NotFound)?;
@@ -127,7 +125,7 @@ pub(crate) async fn takeout(
         })
         .await?;
         let removal = query(state.store.clone(), move |store| {
-            store.begin_organization_takeout(path.workspace_id, path.organization_id)
+            store.begin_organization_takeout(workspace_id, path.organization_id)
         })
         .await?;
         lease.check_connection().internal()?;

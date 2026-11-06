@@ -18,12 +18,12 @@ pub(crate) async fn list(
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<WorkspacePath>,
 ) -> Result<Json<MembersView>> {
-    state
+    let workspace_id = state
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
     let members = query(state.store, move |store| {
-        store.dashboard_members(path.workspace_id)
+        store.dashboard_members(workspace_id)
     })
     .await?;
     Ok(Json(MembersView { open_requests: members.iter().filter(|member| member.role.is_none()).count().try_into().unwrap_or(u32::MAX),
@@ -38,7 +38,7 @@ pub(crate) async fn save(
     Path(path): Path<MemberPath>,
     Json(body): Json<RoleChange>,
 ) -> Result<Json<Success>> {
-    state
+    let workspace_id = state
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
@@ -49,7 +49,7 @@ pub(crate) async fn save(
     let at = state.runtime.now();
     query(state.store, move |store| {
         store.save_dashboard_role(
-            path.workspace_id,
+            workspace_id,
             github_id,
             Some(views::stored_role(body.role)),
             at,
@@ -65,7 +65,7 @@ pub(crate) async fn remove(
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<MemberPath>,
 ) -> Result<Json<Success>> {
-    state
+    let workspace_id = state
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
@@ -75,7 +75,7 @@ pub(crate) async fn remove(
     };
     let at = state.runtime.now();
     query(state.store, move |store| {
-        store.save_dashboard_role(path.workspace_id, github_id, None, at)
+        store.save_dashboard_role(workspace_id, github_id, None, at)
     })
     .await?;
     Ok(Json(Success { ok: true }))

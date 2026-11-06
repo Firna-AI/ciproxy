@@ -5,6 +5,7 @@ mod tokens;
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use ciproxy_github::installation_state::InstalledApp;
 use ciproxy_store_interface::dashboard::records::Membership;
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
@@ -57,6 +58,12 @@ pub trait UserIdentity: Send + Sync {
     async fn refresh(&self, grant: Grant) -> Result<Grant>;
     /// Read the authenticated person's current stable identity.
     async fn profile(&self, grant: &Grant) -> Result<Profile>;
+    /// Read an exact installation visible to this fresh user token and its App.
+    async fn installation(
+        &self,
+        grant: &Grant,
+        installation_id: i64,
+    ) -> Result<Option<InstalledApp>>;
     /// Read all pages of active memberships using that person's user grant.
     async fn memberships(&self, grant: &Grant) -> Result<Vec<Membership>>;
 }

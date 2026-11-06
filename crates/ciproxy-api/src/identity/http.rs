@@ -4,6 +4,9 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use chrono::Duration;
+use chrono::{DateTime, Utc};
+use ciproxy_github::app::webhook::Account;
+use ciproxy_github::installation_state::InstalledApp;
 use ciproxy_store_interface::dashboard::records::Membership;
 use reqwest::{Client, Url};
 use secrecy::{ExposeSecret, SecretString};
@@ -129,7 +132,8 @@ impl UserIdentity for GithubOAuthClient {
             .append_pair("redirect_uri", &self.config.callback_url)
             .append_pair("state", state)
             .append_pair("code_challenge", challenge)
-            .append_pair("code_challenge_method", "S256");
+            .append_pair("code_challenge_method", "S256")
+            .append_pair("scope", "offline_access");
         url.to_string()
     }
     async fn exchange(&self, code: SecretString, verifier: SecretString) -> Result<Grant> {
@@ -163,6 +167,39 @@ impl UserIdentity for GithubOAuthClient {
     async fn profile(&self, grant: &Grant) -> Result<Profile> {
         self.get(grant, "user").await?.json().await.internal()
     }
+    async fn installation(
+        &self,
+        grant: &Grant,
+        installation_id: i64,
+    ) -> Result<Option<InstalledApp>> {
+        for page in 1u64.. {
+            let batch: InstallationPage = self
+                .get(
+                    grant,
+                    &format!("user/installations?per_page=100&page={page}"),
+                )
+                .await?
+                .json()
+                .await
+                .internal()?;
+            let done = batch.installations.len() < 100;
+            if let Some(installation) = batch
+                .installations
+                .into_iter()
+                .find(|installation| installation.id == installation_id)
+            {
+                return Ok(Some(InstalledApp {
+                    id: installation.id,
+                    account: installation.account,
+                    suspended: installation.suspended_at.is_some(),
+                }));
+            }
+            if done {
+                return Ok(None);
+            }
+        }
+        Err(Error::Unavailable)
+    }
     async fn memberships(&self, grant: &Grant) -> Result<Vec<Membership>> {
         let mut result = Vec::new();
         for page in 1u64.. {
@@ -191,4 +228,15 @@ impl UserIdentity for GithubOAuthClient {
         }
         Err(Error::Unavailable)
     }
+}
+
+#[derive(Deserialize)]
+struct InstallationPage {
+    installations: Vec<UserInstallation>,
+}
+#[derive(Deserialize)]
+struct UserInstallation {
+    id: i64,
+    account: Account,
+    suspended_at: Option<DateTime<Utc>>,
 }
