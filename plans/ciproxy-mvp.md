@@ -1467,6 +1467,23 @@ Answers of 5 November 2026:
   legacy rule is off for `ciproxy` only. The user holds Organization Policy
   Administrator for this. A probe grant to an outside Gmail account was
   still refused. Rejected: A, B, C, and F.
+- Item 82, B, in the user's words: "right we can just show a list of the
+  users workspaces on return and then the user can pick one if there are
+  multiple". So the person still chooses the organization on GitHub. When
+  the person returns to ciproxy, ciproxy lists the workspaces where the
+  person is an Admin. With one, it links at once. With several, the person
+  picks one. A late approval with no browser session waits until the person
+  who asked signs in again and picks the workspace. Rejected: A and C.
+- Item 83, D, in the user's words: "we could link the workspace, but then
+  mark it as inactive until they have the correct billing". So the
+  organization joins the workspace that was meant, but stays inactive until
+  the plan of the workspace allows another organization. An inactive
+  organization gets no runners, and the dashboard says why, with the
+  upgrade offer. It turns active by itself after the upgrade. Rejected: A,
+  B, and C. My call, 6 November 2026: when the person who asked is no
+  longer an Admin, the organization also joins inactive, and an Admin of the
+  workspace can turn it on. Reason: the same rule, link and wait until the
+  blocker clears.
 - Item 80, D: an attached Docker disk reserves its data plus the free disk
   of its label. The reservation comes only from spare disk that no set of
   job VMs can use, so a Docker disk stops no start, except for a short time
@@ -2376,8 +2393,9 @@ See the answers above.
 
 The user answered items 54 to 81 on 5 November 2026, and item 76 became a
 design call. Item 76 came back on 6 November 2026, and the user chose E.
-Items 82 to 84 still wait. The conversation gave each item in full in the
-layout of the `decisions-and-findings` skill. Each holds one root question,
+The user answered items 82 and 83 on 6 November 2026. Item 84 still waits.
+The conversation gave each item in full in the layout of the
+`decisions-and-findings` skill. Each holds one root question,
 and its options keep the letters that the user saw.
 
 ### 54. The GitHub API cannot name the full ref of a job
@@ -3289,6 +3307,8 @@ refuses D's grant, so the item came back with A, B, C, and the new E and F.
 
 ### 82. Adding an organization can pick the wrong workspace
 
+**Answer, 6 November 2026:** B, in the user's words. See the answers above.
+
 - **Severity:** High. **Effort:** Medium.
 - **Source:** Design, Milestone 14, pull request #30, its item 1.
 - **Category:** Security.
@@ -3323,6 +3343,9 @@ refuses D's grant, so the item came back with A, B, C, and the new E and F.
 
 ### 83. A late approval has nowhere to go
 
+**Answer, 6 November 2026:** D, which the user proposed. See the answers
+above.
+
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Implementation, Milestone 14, pull request #30, its item 2.
 - **Category:** Docs or spec.
@@ -3342,6 +3365,8 @@ refuses D's grant, so the item came back with A, B, C, and the new E and F.
   - **B.** Remove the App, and show the reason at the next sign-in.
     Effort: Medium.
   - **C.** Keep the install waiting until an Admin accepts it. Effort: Large.
+  - **D.** Link the organization to its workspace, but keep it inactive until
+    the workspace can take it. The user proposed this option. Effort: Medium.
 - **Left out:** Joining the old workspace anyway; repeated errors alone.
 - **Wider fix:** None.
 - **Recommendation:** A. It serves the organization without the machines or
