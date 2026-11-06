@@ -47,6 +47,8 @@ resource "google_project_iam_custom_role" "shared_api" {
   title   = "ciproxy central operation and storage metadata"
   permissions = [
     "container.operations.get", "container.operations.list",
+    # The cluster read after an update resolves the Autopilot node groups.
+    "compute.instanceGroupManagers.get",
     "storage.buckets.create",
     "cloudkms.keyRings.create", "secretmanager.secrets.create",
   ]
@@ -121,6 +123,8 @@ resource "google_project_iam_custom_role" "plan_metadata" {
     "compute.sslCertificates.get", "compute.sslPolicies.get", "compute.targetHttpsProxies.get",
     "compute.targetHttpProxies.get", "compute.globalForwardingRules.get",
     "compute.globalOperations.get", "compute.regionOperations.get", "compute.zoneOperations.get",
+    # The cluster refresh reads the node groups that Autopilot creates.
+    "compute.instanceGroupManagers.get",
     "compute.networkEndpointGroups.get", "compute.urlMaps.listTagBindings", "compute.urlMaps.listEffectiveTags",
     "servicenetworking.services.get",
   ]

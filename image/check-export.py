@@ -55,6 +55,15 @@ def check_export(workspace):
     assert measurement["rootfs"] == "rootfs", "Release measurement must use a neutral root label"
     assert manifest["measurements"]["rootfs"] == "rootfs", (
         "The manifest must not contain the build machine's extraction path")
+    root_disk_bytes = (artifacts / "rootfs.ext4").stat().st_size
+    assert measurement.get("root_disk_bytes") == root_disk_bytes, (
+        "Measurement must report the actual logical root disk size")
+    assert manifest.get("root_disk_bytes") == root_disk_bytes, (
+        "Manifest must expose the release root disk size")
+    assert root_disk_bytes < 512 * 1024 ** 2, (
+        "The small fixture root must not retain job-growth headroom")
+    assert measurement["firecracker_ext4"]["offline_free_job_bytes"] >= 64 * 1024 ** 2, (
+        "The compacted root must keep its free margin after the root reserve")
     boat = root / "boat"
     boat.mkdir()
     run(["bash", str(image / "rootfs-archive.sh"), "extract",
@@ -85,6 +94,14 @@ def check_export(workspace):
     assert re.search(r"Inode: (\d+)", tool_stat).group(1) == re.search(r"Inode: (\d+)", alias_stat).group(1)
     sparse_stat = run(["debugfs", "-R", "stat /sparse-data", str(disk)], root, "ext4-sparse")
     assert int(re.search(r"Blockcount: (\d+)", sparse_stat).group(1)) * 512 < 8388608
+    grown = root / "job-copy.ext4"
+    run(["cp", "--sparse=always", str(disk), str(grown)], root, "copy-for-growth")
+    run(["truncate", "-s", str(root_disk_bytes + 134217728), str(grown)], root, "extend-copy")
+    run(["resize2fs", str(grown)], root, "released-disk-resize")
+    grown_headers = run(["dumpe2fs", "-h", str(grown)], root, "grown-copy-geometry")
+    grown_fields = dict(line.split(":", 1) for line in grown_headers.splitlines() if ":" in line)
+    assert int(grown_fields["Block count"]) * int(grown_fields["Block size"]) > root_disk_bytes, (
+        "The released disk copy must grow without forcing resize2fs or running a repair")
     run(["bash", "-c", 'cd "$1" && sha256sum --check SHA256SUMS', "check", str(artifacts)],
         root, "release-checksums")
     (root / "result.json").write_text(json.dumps({

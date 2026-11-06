@@ -11,14 +11,18 @@ import {
   LoadingRows,
   type Column,
 } from "../../components/data-table.tsx";
-import { paths } from "../../components/paths.ts";
+import { paths, type CataloguePath } from "../../components/paths.ts";
 import {
   JobStateDot,
   JobStateLabel,
   WhereLabel,
 } from "../../components/status.tsx";
 import { dotJoin } from "../../fixtures/format.ts";
-import { jobDetails } from "../../fixtures/job-details.ts";
+import {
+  jobDetails,
+  jobDetailStates,
+  type JobDetailState,
+} from "../../fixtures/job-details.ts";
 import { repositoryName, type Job } from "../../fixtures/jobs.ts";
 
 export type JobListKind = "running" | "waiting" | "finished";
@@ -44,13 +48,26 @@ const columns: Record<JobListKind, readonly Column[]> = {
   ],
 };
 
-/** The job page of a finished job: the Boat job, the fallback, or the own. */
-function detailPath(job: Job) {
-  if (job.where.kind === "boat") return paths.jobBoat;
-  const fallback = jobDetails.fallback;
-  return job.name === fallback.name && job.ref === fallback.ref
-    ? paths.jobFallback
-    : paths.job;
+/** The job page of each state of the job fixture. */
+const detailPaths: Readonly<Record<JobDetailState, CataloguePath>> = {
+  own: paths.job,
+  boat: paths.jobBoat,
+  fallback: paths.jobFallback,
+  "mixed-cache": paths.jobMixedCache,
+  "no-restores": paths.jobNoRestores,
+};
+
+/**
+ * The job page of a finished job: the page of the job with its name and ref,
+ * the Boat job for another job on Boat, and the own job for the rest.
+ */
+function detailPath(job: Job): CataloguePath {
+  const state = jobDetailStates.find(
+    (key) =>
+      jobDetails[key].name === job.name && jobDetails[key].ref === job.ref,
+  );
+  if (state) return detailPaths[state];
+  return job.where.kind === "boat" ? paths.jobBoat : paths.job;
 }
 
 function LabelName({ job }: { job: Job }) {

@@ -43,10 +43,12 @@ def metadata(name, path):
 
 def upload(bucket, name, path, token):
     boundary = "ciproxy-" + uuid.uuid4().hex
+    fields = metadata(name, path)
+    # Cloud Storage refuses a media part whose type differs from the metadata.
     data = (
         f"--{boundary}\r\nContent-Type: application/json; charset=utf-8\r\n\r\n".encode()
-        + json.dumps(metadata(name, path)).encode()
-        + f"\r\n--{boundary}\r\nContent-Type: application/octet-stream\r\n\r\n".encode()
+        + json.dumps(fields).encode()
+        + f"\r\n--{boundary}\r\nContent-Type: {fields['contentType']}\r\n\r\n".encode()
         + path.read_bytes()
         + f"\r\n--{boundary}--\r\n".encode()
     )

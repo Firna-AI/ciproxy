@@ -65,13 +65,14 @@ This milestone adds the states of the new items, and the legal pages.
 - [x] Add the terms and privacy pages. Run the mockup check, and smoke-test
       the changed pages.
 - [x] Update this plan for each problem that the mockups show.
-- [ ] Add the rename of a workspace, the banner of a Free workspace with
+- [x] Add the rename of a workspace, the banner of a Free workspace with
       more than one organization, the job page with the mixed cache source
       and with no entries restored, a `labels` key in `related-docs.ts`,
       the warning when an Admin gives the Admin role, no state without the
       runner right after item 50, and the take-out of item 51: the dialog
       says that the App is removed, and the last organization has no
       take-out.
+      Branch: `conductor/ciproxy-mvp-milestone-1-last-mockups`.
 
 ## Milestone 2: Documentation and protocol
 
@@ -560,6 +561,26 @@ VM hardware. The exported Firecracker disk stays ext4 on `/dev/vda`.
       size each job VM disk as the image plus the free disk of its label,
       on machines and on Boat. Update the label table, the protocol docs,
       the site, and the mockups.
+  - [x] Image: compact ext4, retain its 1% root reserve and a small free
+        margin, and record `root_disk_bytes` in measurement and manifest.
+        Export the retained userspace and prove at least 20 GB free after
+        growth by 20 GB in a booted runner-user probe.
+        Keep the release free of writable mounts after creation. Check
+        plain `resize2fs` growth with e2fsprogs 1.46.5 without a prior repair.
+        Implementor call, 5 November 2026: keep 2 GiB free after compaction.
+        It covers the reserve and metadata growth of the default 20 GB
+        and 60 GB job allowances. Round growth to complete ext4 groups.
+        Evidence: `.context/ciproxy-mvp/kvm/item-77/status.json`.
+        Branch: `conductor/ciproxy-mvp-milestone-10-root-size`.
+  - [x] Image fix round 1: keep the base root small enough for a default
+        job on the 250 GB minimum with at least 1 GB of job-disk space left.
+        Use the real `RootSizing` helper of PR #27 for 1, 20, 60, and 500 GB
+        allowances. Boot separate grown copies and verify each free value.
+        Implementor call, 5 November 2026: use a 64 MiB base margin with
+        measured empty ext4 metadata. It leaves 48 MiB beyond the kernel
+        reserve pool. The agent helper supplies all job-growth headroom.
+        Evidence: `.context/ciproxy-mvp/kvm/item-77/fix-round-1/status.json`.
+        Branch: `conductor/ciproxy-mvp-milestone-10-root-size`.
 - [ ] Publish it with its SHA-256, and as a shared Boat snapshot. Rebuild
       before GitHub stops accepting the runner.
       Orchestrator: run `image/publish.sh` and the create, prepare, and
@@ -1316,6 +1337,29 @@ Answers of 5 November 2026:
   about 10% less for compute, and the data then lives in the US. The
   Terraform state buckets of the seed stay in `europe-west1`, because a move
   recreates them. Rejected: a retry of `europe-west1`, and `europe-west4`.
+- Item 79, A, in the user's words: "lets not over engineer this, if they
+  remove the runner, then something should probably fail, like we can fail
+  the action in that case". So Remove, `ciproxy-agent uninstall`, and the
+  last App removal stop the warm runners at once. A job that a warm runner
+  took before its handover to the guest then fails. Jobs that the guest
+  received still finish. Ordinary stops and Drain still ask GitHub first.
+  Rejected: B, C, D, and E. My call, 5 November 2026: the same rule covers
+  an organization that removes the App while other organizations of its
+  workspace stay. Reason: the root question of item 79 includes a leaving
+  organization, and the answer accepts a failed job on any removal.
+- My call, 6 November 2026, from Milestone 13: when GitHub reports a job as
+  completed with no finish time, metering counts its start at once and
+  reads the finish from the GitHub job with the "Actions" read permission.
+  Until a finish arrives, the job is finished with an unknown time and adds
+  no minutes. If no finish ever arrives, the job stays out of the minutes.
+  Reason: GitHub's own finish meets the minutes rule of `metering.md`, and
+  the rare fallback can understate the savings but never overstate them.
+- Item 80, D: an attached Docker disk reserves its data plus the free disk
+  of its label. The reservation comes only from spare disk that no set of
+  job VMs can use, so a Docker disk stops no start, except for a short time
+  after a label or image change. When no reservation fits, the job runs
+  without its Docker disk. Machines with little disk get few or no sticky
+  disks. Rejected: A, B, C, E, and F. The add-ons G and H were not chosen.
 - Item 70, E: this whole repository becomes public now, in place of a public
   copy of the open parts at launch. The agent builds and releases in public.
   This replaces the code location rule of the foundation plan. The closed
@@ -2217,9 +2261,8 @@ See the answers above.
 
 ## Open items of 4 November 2026
 
-The user answered items 54 to 78 and 81 on 5 November 2026, and item 76
-became a design call. Items 79 and 80 still wait. The
-conversation gave each item in full in the layout of the
+The user answered items 54 to 81 on 5 November 2026, and item 76 became a
+design call. The conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
 
@@ -2993,6 +3036,8 @@ buckets must be public.
 
 ### 79. Removing a machine can cancel a job that a runner just took
 
+**Answer, 5 November 2026:** A, in the user's words. See the answers above.
+
 - **Severity:** High. **Effort:** Large.
 - **Source:** Implementation, Milestone 13.
 - **Category:** Docs or spec.
@@ -3045,6 +3090,8 @@ buckets must be public.
 
 ### 80. Sticky Docker disks have no space rule
 
+**Answer, 5 November 2026:** D.
+
 - **Severity:** Medium. **Effort:** Large.
 - **Source:** Implementation, Milestone 13.
 - **Category:** Docs or spec.
@@ -3087,6 +3134,10 @@ buckets must be public.
   - **G.** An add-on to A, D, E, or F: ship the image's cached Docker
     images as a seed disk with each release, about 6 GB of the 140 GB image
     budget. Effort: Medium.
+  - **H.** An add-on to A, D, E, or F: one host ledger owns the whole free
+    job disk, for VM disks, Docker disks, and the machine cache. Each start
+    and each attach takes its space from that ledger. Effort: Large. The
+    re-print of 5 November 2026 gave the wider fix this letter.
 - **Left out:** unbounded disks, no sticky disks, space from the host
   reserve or the image budget, and a registry pull-through cache.
 - **Wider fix:** one host ledger that owns the job disk for roots, Docker

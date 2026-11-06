@@ -59,12 +59,7 @@ export function InstallAppScreen({
       <div className="auth-actions">
         {pending ? (
           <>
-            <LinkAction
-              to={paths.machineNoRunnerRight}
-              tone="primary"
-              size="lg"
-              block
-            >
+            <LinkAction to={paths.onboarding} tone="primary" size="lg" block>
               Check again
             </LinkAction>
             <Action tone="secondary" size="lg" block>

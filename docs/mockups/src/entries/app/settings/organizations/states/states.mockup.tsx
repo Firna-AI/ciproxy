@@ -1,5 +1,6 @@
 import { defineScreen } from "@mokly/mokly";
 
+import { paths } from "../../../../../components/paths.ts";
 import { relatedMvp } from "../../../../../components/related-docs.ts";
 import { orgAddress } from "../../../../../fixtures/org.ts";
 import { OrganizationsScreen } from "../../../../../screens/settings/organizations.tsx";
@@ -13,10 +14,40 @@ export const free = defineScreen({
     "The workspace mokly-ai on Free, in early September, with its one organization. Free holds one organization, so the page offers Team in place of Add an organization, and the only organization has no Take out.",
   rationale:
     "The answer to item 48: Free allows one organization, and Team and Business allow several. Several GitHub organizations is a Team feature that ships at launch.",
-  relatedDocs: relatedMvp("billing"),
+  relatedDocs: relatedMvp("workspaces", "billing"),
   address,
   render: (_props, context) => (
     <OrganizationsScreen viewport={context.viewport} state="free" />
+  ),
+});
+
+export const freeOver = defineScreen({
+  slug: "free-over",
+  title: "Two organizations on Free",
+  description:
+    "On 4 December, after Move to Free, mokly-ai is on Free and keeps mokly-ai and mokly-labs. Free includes one organization, so the banner of every page says that jobs keep running in both and offers Team. Free cannot add an organization, and each of the two keeps its Take out.",
+  rationale:
+    "A workspace that holds more than one organization when it moves to Free keeps them all, and their jobs keep running. On Free, the number of organizations is a soft limit with the banner and the offer, as for the machine count.",
+  relatedDocs: relatedMvp("workspaces", "metering", "billing"),
+  address,
+  useCasePaths: [paths.flowFreeKeepsOrganizations],
+  render: (_props, context) => (
+    <OrganizationsScreen viewport={context.viewport} state="free-over" />
+  ),
+});
+
+export const oneOrganization = defineScreen({
+  slug: "one-organization",
+  title: "One organization on Team",
+  description:
+    "mokly-ai on Team in October, before mokly-labs joined. Team holds several organizations, so the page offers Add an organization. mokly-ai is the last organization of the workspace, so it has no Take out, as on Free.",
+  rationale:
+    "The answer D to item 51: the last organization of a workspace cannot be taken out, on every tier.",
+  relatedDocs: relatedMvp("workspaces"),
+  address,
+  useCasePaths: [paths.flowAddOrganization],
+  render: (_props, context) => (
+    <OrganizationsScreen viewport={context.viewport} state="one-on-team" />
   ),
 });
 
@@ -24,10 +55,10 @@ export const takeOut = defineScreen({
   slug: "take-out",
   title: "Take an organization out",
   description:
-    "Cal Moore takes mokly-labs out of the workspace. No new job of mokly-labs starts on ciproxy, and its running jobs finish. Its jobs stay in the job history, and the GitHub App stays installed on mokly-labs until an owner removes it on GitHub.",
+    "Cal Moore takes mokly-labs out of the workspace. No new job of mokly-labs starts on ciproxy, and its running jobs finish. ciproxy deletes its runner scale sets on GitHub and then removes the GitHub App from mokly-labs; the dialog names only the removal of the App. Its jobs stay in the job history, and mokly-labs can join any workspace again with a new install.",
   rationale:
-    "A design call of item 48: an Admin can take an organization out; its runners stop, and the App stays installed until an owner removes it on GitHub. Whether an organization that still has the App can join a workspace again is open in the docs.",
-  relatedDocs: relatedMvp("security", "billing"),
+    "The answer D to item 51: a take-out removes the App, so ciproxy keeps no install that no workspace serves, and the organization needs no new way to join. The rules of a removal of the App by an owner do not apply.",
+  relatedDocs: relatedMvp("workspaces", "security"),
   address,
   render: (_props, context) => (
     <OrganizationsScreen viewport={context.viewport} state="take-out" />

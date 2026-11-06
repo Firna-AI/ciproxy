@@ -54,8 +54,22 @@ function VmSize({ job }: { job: JobDetail }) {
   );
 }
 
+/** The caches that gave the entries that the machine cache restored. */
+const machineSources = {
+  machine: "This machine",
+  both: "This machine and the GitHub cache",
+} as const;
+
+/**
+ * The cache counts and the cache source. A job that restored entries from
+ * both caches names both, and a job that restored no entry names no source,
+ * because each text is then true for every job.
+ */
 function CacheRows({ cache, job }: { cache: CacheUse; job: JobDetail }) {
-  if (cache.source === "machine") {
+  if (cache.source === "none") {
+    return <DetailRow label="Cache">No entries restored</DetailRow>;
+  }
+  if (cache.source === "machine" || cache.source === "both") {
     return (
       <>
         <DetailRow label="Cache">
@@ -64,7 +78,9 @@ function CacheRows({ cache, job }: { cache: CacheUse; job: JobDetail }) {
             unbroken(`${cache.sizeGb} GB`),
           )}
         </DetailRow>
-        <DetailRow label="Cache source">This machine</DetailRow>
+        <DetailRow label="Cache source">
+          {machineSources[cache.source]}
+        </DetailRow>
       </>
     );
   }

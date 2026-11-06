@@ -24,7 +24,7 @@ export const personalAccount = defineScreen({
     "Cal Moore installed the ciproxy GitHub App on calummoore, his personal account, so GitHub returns to this page instead of setup. Install on an organization opens the install page of GitHub, and Remove from calummoore opens the GitHub settings of the install.",
   rationale:
     "Design call 36: ciproxy serves organizations only, and a GitHub organization costs nothing, so the page leads to an organization and links to the removal of the App.",
-  relatedDocs: relatedMvp("security"),
+  relatedDocs: relatedMvp("workspaces", "security"),
   address: `${host}/setup`,
   render: (_props, context) => (
     <PersonalAccountScreen viewport={context.viewport} />

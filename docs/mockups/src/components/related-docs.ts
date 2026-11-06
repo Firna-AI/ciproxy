@@ -10,9 +10,11 @@ const docs = {
   billing: "docs/protocol/billing.md",
   cache: "docs/protocol/cache.md",
   jobRouting: "docs/protocol/job-routing.md",
+  labels: "docs/protocol/labels.md",
   metering: "docs/protocol/metering.md",
   overflow: "docs/protocol/overflow.md",
   security: "docs/protocol/security.md",
+  workspaces: "docs/protocol/workspaces.md",
 } as const;
 
 export type DocKey = keyof typeof docs;
