@@ -115,6 +115,10 @@ mod cache_authority_tests;
 mod host_decision_tests;
 
 #[cfg(test)]
+#[path = "_tests_/hosted_preparation_tests.rs"]
+mod hosted_preparation_tests;
+
+#[cfg(test)]
 #[path = "_tests_/startup_tests.rs"]
 mod startup_tests;
 

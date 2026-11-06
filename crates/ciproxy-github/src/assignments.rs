@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use ciproxy_protocol::agent::JobPreparationOutcome;
 use ciproxy_protocol::identifiers::{GitRef, JobEvent, JobId, OrganizationId, RepositoryId};
 use ciproxy_protocol::jobs::{JobAssignment, JobFacts, Repository};
 use ciproxy_store_interface::github::GithubJob;
@@ -12,19 +13,17 @@ use crate::persistence::assignment::AssignmentStore;
 use crate::persistence::session::ListenerTarget;
 use crate::scale_sets::JitRegistration;
 
-/// Assignment facts for the agent, with no inferred or trusted job ref.
+/// An explicit preparation outcome for every accepted assignment.
 #[unimock::unimock(api = JobAssignmentsMock)]
 #[async_trait]
 pub trait JobAssignments: Send + Sync {
-    /// Build facts from a saved scale-message job, repository snapshot, and JIT.
-    ///
-    /// None means metadata is unavailable. The job can use GitHub directly.
+    /// Build trusted facts or a GitHub-only decision from a saved assignment.
     async fn facts(
         &self,
         target: ListenerTarget,
         job: &GithubJob,
         jit: &JitRegistration,
-    ) -> Result<Option<JobFacts>>;
+    ) -> Result<JobPreparationOutcome>;
 }
 
 /// Hosted assembly boundary consumed through dyn JobAssignments.
@@ -40,33 +39,37 @@ impl JobAssignments for AssignmentService {
         target: ListenerTarget,
         job: &GithubJob,
         jit: &JitRegistration,
-    ) -> Result<Option<JobFacts>> {
+    ) -> Result<JobPreparationOutcome> {
         let snapshot = self.store.snapshot(target).await?;
         let Some(repository) = snapshot
             .repositories
             .iter()
             .find(|repo| repo.id == job.facts.repository.id)
         else {
-            return Ok(None);
+            return Ok(JobPreparationOutcome::GitHubOnly {
+                organization_id: OrganizationId(snapshot.organization_id.to_string()),
+            });
         };
-        Ok(Some(JobFacts {
-            organization_id: OrganizationId(snapshot.organization_id.to_string()),
-            repository: Repository {
-                id: RepositoryId(job.facts.repository.id.to_string()),
-                full_name: job.facts.repository.full_name.clone(),
-            },
-            assignment: JobAssignment {
-                run_id: job.run_id.to_string(),
-                job_id: Some(JobId(job.id.to_string())),
-                runner_id: jit.runner_id.to_string(),
-            },
-            event: JobEvent(job.facts.event.clone()),
-            head_repository: job.facts.head_repository.as_ref().map(|head| Repository {
-                id: RepositoryId(head.id.to_string()),
-                full_name: head.full_name.clone(),
+        Ok(JobPreparationOutcome::TrustedFacts {
+            facts: Box::new(JobFacts {
+                organization_id: OrganizationId(snapshot.organization_id.to_string()),
+                repository: Repository {
+                    id: RepositoryId(job.facts.repository.id.to_string()),
+                    full_name: job.facts.repository.full_name.clone(),
+                },
+                assignment: JobAssignment {
+                    run_id: job.run_id.to_string(),
+                    job_id: Some(JobId(job.id.to_string())),
+                    runner_id: jit.runner_id.to_string(),
+                },
+                event: JobEvent(job.facts.event.clone()),
+                head_repository: job.facts.head_repository.as_ref().map(|head| Repository {
+                    id: RepositoryId(head.id.to_string()),
+                    full_name: head.full_name.clone(),
+                }),
+                default_ref: GitRef(format!("refs/heads/{}", repository.default_branch)),
+                sticky_docker: snapshot.sticky_docker,
             }),
-            default_ref: GitRef(format!("refs/heads/{}", repository.default_branch)),
-            sticky_docker: snapshot.sticky_docker,
-        }))
+        })
     }
 }

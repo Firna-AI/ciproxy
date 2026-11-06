@@ -3,7 +3,9 @@
 use ciproxy_protocol::guest::JobDecision;
 use std::sync::Arc;
 
-use ciproxy_protocol::agent::{AgentMessage, CommandFailure, CommandOutcome, ControlMessage};
+use ciproxy_protocol::agent::{
+    AgentMessage, CommandFailure, CommandOutcome, ControlMessage, JobPreparationOutcome,
+};
 use ciproxy_protocol::guest::AgentToGuest;
 use ciproxy_protocol::identifiers::{
     CommandId, GitRef, JobEvent, JobId, OrganizationId, RepositoryId, RunnerId,
@@ -78,11 +80,13 @@ async fn authenticated_facts_must_match_the_runner_organization_and_observed_job
     ] {
         assert_eq!(
             agent
-                .control(ControlMessage::JobFacts {
+                .control(ControlMessage::JobPreparation {
                     command_id: CommandId("command-1".to_owned()),
                     runner_id: RunnerId("job".to_owned()),
                     job_id,
-                    facts
+                    outcome: JobPreparationOutcome::TrustedFacts {
+                        facts: Box::new(facts)
+                    }
                 })
                 .await
                 .unwrap(),
@@ -91,11 +95,13 @@ async fn authenticated_facts_must_match_the_runner_organization_and_observed_job
     }
     assert_eq!(
         agent
-            .control(ControlMessage::JobFacts {
+            .control(ControlMessage::JobPreparation {
                 command_id: CommandId("command-1".to_owned()),
                 runner_id: RunnerId("job".to_owned()),
                 job_id: JobId("job-1".to_owned()),
-                facts
+                outcome: JobPreparationOutcome::TrustedFacts {
+                    facts: Box::new(facts)
+                }
             })
             .await
             .unwrap(),

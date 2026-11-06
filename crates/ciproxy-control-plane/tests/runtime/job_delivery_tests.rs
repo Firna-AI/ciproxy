@@ -82,7 +82,7 @@ async fn removal_between_facts_and_delivery_preserves_job_until_trusted_completi
                     delivered.lock().unwrap().push("budget");
                     return Ok(Delivery::Connected);
                 }
-                assert!(matches!(message, ControlMessage::JobFacts { .. }));
+                assert!(matches!(message, ControlMessage::JobPreparation { .. }));
                 delivered.lock().unwrap().push("facts");
                 store.remove_machine(workspace, machine, at()).unwrap();
                 Err(ciproxy_gateway::error::Error::NotFound)
