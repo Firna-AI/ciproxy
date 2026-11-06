@@ -30,10 +30,11 @@ can deploy independently.
 | `main-preview` | `ciproxy-main-preview` | `br-main.preview.ciproxy.dev`, `br-main.preview.app.ciproxy.dev`, `br-main.preview.get.ciproxy.dev` | Each push to `calummoore/ci-proxy-load-balancer` or `main` |
 | `production` | `ciproxy-production` | `ciproxy.dev`, `app.ciproxy.dev`, `get.ciproxy.dev` | Successful preview of the same `main` commit, after launch |
 
-The futex.ai domain-restricted sharing rule stays unchanged. The content
-is public through the edge, but its GCS origins enforce PAP and have no
-anonymous grants. Only the exact load balancer service agent gets origin
-Object Viewer access after backend creation. No policy exception is needed.
+Project `ciproxy` keeps domain-restricted sharing through the managed rule
+`iam.managed.allowedPolicyMembers`, in place of the legacy rule. It allows the
+futex.ai organization and, by name, the load balancer and CDN fill agents of
+the project. The content is public through the edge, but its GCS origins
+enforce PAP and have no anonymous grants. Only those two agents read them.
 
 All regional resources use `us-central1`, except the Terraform state buckets
 of the seed, which stay in `europe-west1`. Each environment has one global
@@ -120,6 +121,7 @@ writes. The operator drains preview before the launch handoff.
 | `scripts/workload_snapshot.py` | Inputs from a ready rollout, bound to its commit and run attempt. |
 | `scripts/deploy.py` | Own-namespace Helm, static publishing, NEG readiness, and CDN invalidation. |
 | `scripts/github-ruleset.sh` | Idempotent protected `main` ruleset setup. |
+| `org-policies/` | The managed sharing rule of project `ciproxy`, applied once by an operator. |
 | `tests/` | Executable CI tests and recorded plan-policy cases. |
 | `.github/workflows/deploy-*.yml` | Trusted event, plan, reusable apply, and workload ordering. |
 

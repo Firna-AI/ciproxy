@@ -73,8 +73,12 @@ pub struct StartRecord {
     pub requested_vcpus: u32,
     /// Original requested memory.
     pub requested_memory_gb: u32,
-    /// Original requested disk.
+    /// Original requested free job disk.
     pub requested_disk_gb: u32,
+    /// Logical root length of the exact saved image release.
+    pub image_root_bytes: u64,
+    /// Complete root allocation computed by the agent's shared sizing rule.
+    pub required_root_disk_bytes: u64,
     /// Own-machine fit known by the scaler when it admitted this Boat demand.
     /// Overflow does not refresh own-machine capacity while replanning the Boat account.
     #[serde(default)]

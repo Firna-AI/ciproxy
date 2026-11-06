@@ -137,11 +137,12 @@ stay in `europe-west1`.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
   - [x] Define both projects, private SQL, secret containers, KMS, and IAM.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
-  - [ ] Orchestrator: run `deploy/scripts/bootstrap.sh` for each environment,
-        set the GitHub variables, and start the deploy workflow, which
-        creates the foundation, as item 56 says. The steps are in
-        [the setup guide](../deploy/setup.md).
-        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [x] Orchestrator: run `deploy/scripts/bootstrap.sh` for the main
+        preview, set the GitHub variables, and start the deploy workflow, as
+        item 56 says. Done 6 November 2026: run 42145526077 passed every job.
+        Branch: `calummoore/ci-proxy-load-balancer`.
+  - [ ] Orchestrator: the same for production, at launch, as
+        [the launch guide](../deploy/launch.md) says.
 - [ ] Run the control plane and the `futex-ai/cli-release` server on GKE
       Autopilot with Helm, as item 31 says.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
@@ -155,16 +156,19 @@ stay in `europe-west1`.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
   - [x] Configure release hosts, binary, prefix, and an existing secret.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
-  - [ ] User: prepare the pinned image and store the public-read-only token.
-        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [x] User: prepare the pinned image and store the public-read-only token
+        for the main preview. Done 6 November 2026.
+        Branch: `calummoore/ci-proxy-load-balancer`.
 - [ ] Serve the site, the dashboard, and signed image URLs from a Cloud
       Storage bucket, through Cloud CDN and one HTTPS load balancer. My call:
       they are static files, so they need no runtime.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
   - [x] Define public buckets, private images, CDN, routes, and publishing.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
-  - [ ] User: deploy the edge and register a CDN signing key outside Terraform.
-        Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+  - [x] User: deploy the edge and register a CDN signing key outside Terraform,
+        for the main preview. Done 6 November 2026: key
+        `ciproxy-main-preview-images-v1`, HTTPS checked, uptime checks on.
+        Branch: `calummoore/ci-proxy-load-balancer`.
 - [ ] Create the DNS zone, which the user delegates.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
   - [x] Define production and staging DNS zones and HTTPS records.
@@ -489,13 +493,13 @@ reserve. The image measurement sets the real budget later.
 - [ ] Smoke-test a Docker job, a warm runner, and a restart during a job.
       Orchestrator: align the image bundle, root/Docker disk allocation,
       vsock port, and guest state/reconnect/shutdown behavior first.
-      Item 73 integration: each VM gets one root disk of its label size.
-      Reflink the image, extend a larger copy, and grow ext4 before boot.
+      Item 77 integration: each VM gets the image plus its label's free
+      disk, with filesystem allowance. Reflink the image and grow the copy
+      before boot.
       Docker shares that disk. Remove the unused empty Docker drive.
       Sticky Docker disks remain the separate cache integration below.
-      Keep the capacity error for a label smaller than the image. The
-      [smaller-label policy](follow-ups/labels-smaller-than-job-image.md)
-      waits for a user decision.
+      Keep the capacity error only when the VM disk cannot hold the image.
+      Item 77 = D settles the smaller-label policy.
       Orchestrator: run `crates/ciproxy-agent/scripts/smoke-docker.sh`,
       `crates/ciproxy-agent/scripts/smoke-warm.sh`, and
       `crates/ciproxy-agent/scripts/smoke-restart.sh` on the KVM test host
@@ -523,6 +527,68 @@ Orchestrator design call, 5 November 2026: use Virtio-SCSI for the QEMU
 build root. Reason: the unchanged upstream read-ahead check needs a real
 SCSI or NVMe disk. This keeps virtio transport and changes only the build
 VM hardware. The exported Firecracker disk stays ext4 on `/dev/vda`.
+
+Item 77 sizing call, 5 November 2026: add 16 MiB to the label's free bytes,
+divide by 0.97, and round up. Add the image's logical root bytes and round
+up to a 4096-byte block. This covers the ext4 kernel reserve pool, the 1%
+root reserve, and new metadata. The existing image already includes its
+filesystem costs. This keeps a default job within the 82.5 GB job budget
+of a 250 GB machine. The real growth test found that the kernel pool also
+reduces the free bytes that `df` shows to the runner.
+
+Item 77 image-size call, 5 November 2026: the user supplies
+61,000,000,000 bytes until Milestone 10 reports `root_disk_bytes`.
+One agent constant holds that default. The control-plane configuration
+can override it. The release manifest will replace that configuration
+source. The configured logical length must match the selected release.
+
+Measured image call, 6 November 2026: the user supplies the final logical
+root size, 60,263,759,872 bytes, from PR 28 at `b0c2ba7`. This replaces
+the provisional value in the source default. The root rule stays the same.
+A 20 GB default request reserves 80,899,612,672 bytes and leaves
+1,600,387,328 bytes on the 82.5 GB minimum-machine job budget.
+PR 28 merges before PR 27. Historical image-size decisions stay unchanged.
+
+PR 27 review call, 5 November 2026: the user applies finding 1 option A.
+Each release keeps its logical root size with its image identity. The
+agent retains those facts through the image hold, sizes the root from
+that held image, and keeps the original free-disk request for retries.
+The scheduler uses each machine's selected image facts. The configured
+size is only its fallback before a machine reports its image.
+
+The user applies finding 2 option B: the three open image and storage
+follow-ups keep the free-disk meaning and link to the canonical protocol.
+The image README stays with PR 28. The revised measured image size stays
+with that workspace until its export and full-image checks pass.
+
+PR 27 format call, 5 November 2026: the user selects the new report, index,
+and VM record formats without a compatibility layer. No production state
+exists. Keep the existing unreadable-state handling. Reset old smoke-test
+state on the KVM host. This supersedes the earlier compatibility request.
+
+Runner storage call, 5 November 2026: Milestone 13 owns the exact-byte
+actual runner allocation and its forward migration. Label and free-disk
+request store types stay in GB. PR 27 changes no runner-store schema and
+adds no migration. Its protocol report keeps original requested resources
+separate from actual resources. PR 27 merges first, then Milestone 13
+merges the primary branch and uses those types.
+
+Item 77 mockup calls, 5 November 2026: separate label free disk from Boat
+total disk in the fixture types. Count whole VM bytes before displaying GB.
+Display whole GB to match the other disk values. Give the Boat-only sample
+label 120 GB of free disk, so its VM still fits Boat. Give the mixed-machine
+draft 40 GB of free disk, so its two-to-three-job range stays. Keep one
+mirror of the agent rule in the mockups. The site keeps one computed
+default VM disk value from that rule.
+
+Replaced ways for item 77:
+
+- A label disk means free job bytes instead of total VM bytes. Move the
+  defaults, label text, tables, and dialogs to that meaning.
+- The scheduler counts the full image and growth allocation instead of
+  raw label bytes. Move own placement, held jobs, warm runners, Boat fit,
+  and dispatch checks to the one sizing rule.
+- Remove the resolved smaller-label follow-up after its work passes.
 
 - [x] Normalize the generic Ubuntu APT sources during QEMU bootstrap for
       the existing upstream mirror-list check. Keep the pinned base, full
@@ -557,10 +623,9 @@ VM hardware. The exported Firecracker disk stays ext4 on `/dev/vda`.
       runner, and powers off the VM after the runner exits. On Boat, it
       tells the control plane when the runner exits, as item 47 says.
       Branch: `conductor/ciproxy-mvp-milestone-10-job-vm-image`.
-- [ ] Apply item 77 = D: export the image disk at its smallest size, and
-      size each job VM disk as the image plus the free disk of its label,
-      on machines and on Boat. Update the label table, the protocol docs,
-      the site, and the mockups.
+- [x] Export the image disk at its smallest size for item 77 = D. Measure
+      `root_disk_bytes` for the image release manifest.
+      Branch: `conductor/ciproxy-mvp-milestone-10-root-size`.
   - [x] Image: compact ext4, retain its 1% root reserve and a small free
         margin, and record `root_disk_bytes` in measurement and manifest.
         Export the retained userspace and prove at least 20 GB free after
@@ -581,6 +646,34 @@ VM hardware. The exported Firecracker disk stays ext4 on `/dev/vda`.
         reserve pool. The agent helper supplies all job-growth headroom.
         Evidence: `.context/ciproxy-mvp/kvm/item-77/fix-round-1/status.json`.
         Branch: `conductor/ciproxy-mvp-milestone-10-root-size`.
+- [x] Apply item 77 = D: size each job VM disk as the image plus the free
+      disk of its label, with filesystem allowance,
+      on machines and on Boat. Update the label table, the protocol docs,
+      the site, and the mockups.
+      Branch: `conductor/ciproxy-mvp-77d-free-disk`.
+      Evidence: `.context/ciproxy-mvp-77d-free-disk/reports/`.
+- [x] Fix PR 27 review findings 1 and 2: keep per-release root facts through
+      image holds, size and reserve each actual root in the agent, keep
+      original requests for retries, and schedule from each machine's
+      selected image. Correct the three open image and storage follow-ups.
+      Test mixed releases, publication between report and start, and retry
+      after publication and restart. Run new async tests ten times.
+      Branch: `conductor/ciproxy-mvp-77d-free-disk`.
+      Evidence: `.context/ciproxy-mvp-77d-free-disk/fix-round-1/`.
+- [x] Fix PR 27 re-review finding 3: check retained Boat runners against
+      their saved required root allocation. Keep the current image floor
+      for new starts. Preserve the current Wait and largest-size policies
+      without applying a new image floor to an existing older VM.
+      Branch: `conductor/ciproxy-mvp-77d-free-disk`.
+      Evidence: `.context/ciproxy-mvp-77d-free-disk/fix-round-2/`.
+- [x] Apply the final measured image root of 60,263,759,872 bytes to the
+      default, current fixtures, tests, examples, site, and mockups.
+      Fix owner review finding 4 with B: reconcile current warm targets on
+      connected machines before replenishment checks new-image capacity.
+      Test count zero and changed organization allocation after image
+      growth. Run every new or changed scheduler test ten times.
+      Branch: `conductor/ciproxy-mvp-77d-free-disk`.
+      Evidence: `.context/ciproxy-mvp-77d-free-disk/fix-round-3/`.
 - [ ] Publish it with its SHA-256, and as a shared Boat snapshot. Rebuild
       before GitHub stops accepting the runner.
       Orchestrator: run `image/publish.sh` and the create, prepare, and
@@ -590,8 +683,9 @@ VM hardware. The exported Firecracker disk stays ext4 on `/dev/vda`.
       to plan the next rebuild before runner support ends.
       Branch: `conductor/ciproxy-mvp-milestone-10-job-vm-image`.
 - [ ] Run a job from the shared snapshot on Boat `large`, and measure the
-      free disk. Item 73 = A selects the full image and an 80 GB default
-      label. Boat `large` provides 111 GB and fits that label. The full
+      free disk. Item 77 = D selects 20 GB of free disk for the default
+      label. Boat `large` provides 111 GB and fits the image plus that
+      free disk, with filesystem allowance. The full
       image does not fit the 51 GB of `small` or `default`.
       Orchestrator: run the registration and result commands of
       `image/github.py`, and the create, run, status, and delete commands
@@ -1363,6 +1457,14 @@ Answers of 5 November 2026:
   no minutes. If no finish ever arrives, the job stays out of the minutes.
   Reason: GitHub's own finish meets the minutes rule of `metering.md`, and
   the rare fallback can understate the savings but never overstate them.
+- Item 76, E, 6 November 2026: the organization rule refused the grant of
+  D to the load balancer agent, with "One or more users named in the policy
+  do not belong to a permitted customer". The project `ciproxy` now enforces
+  the managed rule `iam.managed.allowedPolicyMembers`, with the futex.ai
+  organization and the load balancer and CDN fill agents by name, and the
+  legacy rule is off for `ciproxy` only. The user holds Organization Policy
+  Administrator for this. A probe grant to an outside Gmail account was
+  still refused. Rejected: A, B, C, and F.
 - Item 80, D: an attached Docker disk reserves its data plus the free disk
   of its label. The reservation comes only from spare disk that no set of
   job VMs can use, so a Docker disk stops no start, except for a short time
@@ -2271,7 +2373,8 @@ See the answers above.
 ## Open items of 4 November 2026
 
 The user answered items 54 to 81 on 5 November 2026, and item 76 became a
-design call. The conversation gave each item in full in the layout of the
+design call. Item 76 came back on 6 November 2026, and the user chose E. The
+conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question, and its options
 keep the letters that the user saw.
 
@@ -2959,6 +3062,9 @@ keep the letters that the user saw.
 **Outcome, 5 November 2026:** D, a design call after the user asked why the
 buckets must be public.
 
+**Answer, 6 November 2026:** E. The first edge deploy showed that the rule
+refuses D's grant, so the item came back with A, B, C, and the new E and F.
+
 - **Severity:** High. **Effort:** Small.
 - **Source:** Implementation, the read-only checks before the GCP setup.
 - **Category:** Process.
@@ -2998,6 +3104,13 @@ buckets must be public.
     `service-PROJECT_NUMBER@https-lb.iam.gserviceaccount.com` reads them.
     Visitors still get the files through the load balancer and the CDN.
     The organization rule stays. Effort: Small.
+  - **E.** In the project `ciproxy`, replace the rule with the managed rule
+    `iam.managed.allowedPolicyMembers`. It allows the members of the
+    futex.ai organization and, by name, the load balancer agent and the CDN
+    fill agent of the project. Effort: Small.
+  - **F.** Lift the rule in `ciproxy` for a few minutes, let the deploy make
+    the grants, and restore the rule. Each new grant needs the same step.
+    Effort: Small.
 - **Left out:** Signed URLs for the whole site: browsers cannot fetch a
   public site with them.
 - **Wider fix:** B. Only the resources with the tag can be public.
@@ -3018,7 +3131,7 @@ buckets must be public.
 - **Severity:** Medium. **Effort:** Large, for the answer.
 - **Source:** Implementation, pull request #25.
 - **Record:** the follow-up item
-  [labels smaller than the job image](follow-ups/labels-smaller-than-job-image.md)
+  [labels smaller than the job image](https://github.com/Firna-AI/ciproxy/blob/6b28eb6/plans/follow-ups/labels-smaller-than-job-image.md)
   holds the background, the options A to D, and the recommendation.
 - **Recommendation:** A. A job of such a label runs on the image disk size,
   the scheduler reserves that size, and the label dialog warns.

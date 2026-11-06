@@ -34,5 +34,5 @@ async fn fetch_reclaims_unused_entries_before_admission_and_keeps_current_on_ref
     let observed = events.lock().unwrap().clone();
     assert_eq!(observed, vec!["reclaim", "admit", "reclaim", "admit"]);
     assert_eq!(images.report().unwrap(), catalog());
-    assert_eq!(held.image_id().0, "old");
+    assert_eq!(held.metadata().image_id.0, "old");
 }

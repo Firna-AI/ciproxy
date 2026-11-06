@@ -89,7 +89,7 @@ run "prelaunch_accounts_have_no_environment_admin_escape" {
     error_message = "Each environment has one state writer on its own bucket. Trust bucket grants bind only trust accounts."
   }
   assert {
-    condition = (toset(google_project_iam_custom_role.invalidate.permissions) == toset(["compute.urlMaps.invalidateCache"])
+    condition = (toset(google_project_iam_custom_role.invalidate.permissions) == toset(["compute.urlMaps.get", "compute.urlMaps.invalidateCache"])
       && toset(google_project_iam_custom_role.operation_reader.permissions) == toset(["compute.globalOperations.get"])
       && alltrue([for env in local.environments :
         google_project_iam_member.invalidate[env].member == "serviceAccount:ciproxy-${env}-deploy@ciproxy.iam.gserviceaccount.com"

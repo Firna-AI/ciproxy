@@ -1,0 +1,13 @@
+# Project ciproxy keeps domain-restricted sharing through the managed rule.
+# It allows the members of the futex.ai organization and, by name, the two
+# Google agents that Cloud CDN needs for private buckets (item 76 = E).
+name: projects/42118841535/policies/iam.managed.allowedPolicyMembers
+spec:
+  rules:
+    - enforce: true
+      parameters:
+        allowedMemberSubjects:
+          - serviceAccount:service-42118841535@https-lb.iam.gserviceaccount.com
+          - serviceAccount:service-42118841535@cloud-cdn-fill.iam.gserviceaccount.com
+        allowedPrincipalSets:
+          - //cloudresourcemanager.googleapis.com/organizations/661475088276

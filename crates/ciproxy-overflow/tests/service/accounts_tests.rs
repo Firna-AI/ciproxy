@@ -1,6 +1,7 @@
 //! Saved credentials, five-minute catalogs, and the real scaler size policy.
 
 use chrono::Duration;
+use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_overflow::api::{Overflow, StartOutcome};
 use ciproxy_overflow::crypto::SecretPurpose;
 use ciproxy_overflow::error::Error;
@@ -115,6 +116,9 @@ async fn catalog_refreshes_at_five_minutes_and_drives_cheapest_or_largest_choice
     let label_name = LabelName("ciproxy".to_owned());
     let mut snapshot = Snapshot {
         workspace_id: WorkspaceId(id(1).to_string()),
+        root_sizing: RootSizing {
+            image_root_bytes: 47_000_000_000,
+        },
         now: std::time::Duration::from_secs(300),
         control_plane_available: true,
         organizations: vec![OrganizationId("github-org-42".to_owned())],

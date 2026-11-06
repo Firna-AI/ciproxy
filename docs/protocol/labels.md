@@ -9,7 +9,7 @@ machine and where each job runs.
 
 - **label:** the value in `runs-on` that sends a job to ciproxy and picks
   the size of its VM.
-- **size:** the vCPU, memory, and disk that a label gives a job. The
+- **size:** the vCPU, memory, and free job disk that a label gives a job. The
   product says "VM size" where the word needs a qualifier.
 - **Decision:** "size" is the one word for it. Rejected: "shape". Rejected:
   "machine size", because "machine" names only the hardware of the customer.
@@ -30,11 +30,11 @@ machine and where each job runs.
 
 - Every [workspace](workspaces.md#terms) starts with these labels:
 
-| Label | vCPU | Memory | Disk | Slots |
+| Label | vCPU | Memory | Free job disk | Slots |
 | --- | --- | --- | --- | --- |
-| `ciproxy` | 2 | 8 GB | 80 GB | 1 |
-| `ciproxy-4vcpu` | 4 | 16 GB | 80 GB | 2 |
-| `ciproxy-8vcpu` | 8 | 32 GB | 120 GB | 4 |
+| `ciproxy` | 2 | 8 GB | 20 GB | 1 |
+| `ciproxy-4vcpu` | 4 | 16 GB | 20 GB | 2 |
+| `ciproxy-8vcpu` | 8 | 32 GB | 60 GB | 4 |
 
 - On an own machine, each job runs in a fresh [job VM](agent.md#job-vms)
   of the size of its label.
@@ -47,7 +47,17 @@ machine and where each job runs.
 
 - The customer adds a label in the
   [dashboard](../architecture.md#components), in Settings under Labels.
-- A new label has a name, vCPU, memory in GB, and disk in GB.
+- A new label has a name, vCPU, memory in GB, and free job disk in GB.
+- Every label has at least 1 GB of free job disk.
+- Disk and memory sizes use SI GB, with 1 GB equal to 1,000,000,000 bytes.
+- The free disk excludes the image, filesystem metadata, and the 1% root
+  reserve. It is available to the runner when the fresh VM starts.
+- **Decision:** label disk means free job bytes, so image growth cannot
+  consume the promised job space. Rejected: an image floor with a warning,
+  refusal on save, and an image floor for placement only.
+- The VM root includes the image, the promised free disk, and the ext4
+  allowance. Scheduling counts that complete root, as
+  [Disk](job-routing.md#disk) says.
 - A label name follows the label rules of GitHub. When the customer saves a
   new label, ciproxy checks its name with GitHub, and the dialog shows the
   refusal of GitHub.
@@ -104,7 +114,7 @@ machine and where each job runs.
 - ciproxy reads the VM sizes that the customer's Boat account can start
   now, through the backend contract in [Overflow](overflow.md).
 - A size fits Boat when one of those sizes has at least its vCPU, memory,
-  and disk.
+  and a root disk that covers the image, free job disk, and ext4 allowance.
 - Each label has the setting "When nothing fits". It applies while the
   size fits no own machine and no size of the Boat account.
 - "Wait" is the default. The jobs of the label stay queued in GitHub until
@@ -112,7 +122,8 @@ machine and where each job runs.
   size that fits.
 - "Run on the largest Boat size" starts each job of the label on the
   largest size that the Boat account can start, also when it is smaller
-  than the label.
+  than the label. Its disk must still hold the complete image.
+- That fallback can give less free disk than the label promises.
 - The dialog, the label list, and the live queue show where the jobs of
   each label run now: own machines, Boat, or wait.
 - **Decision:** the customer chooses between waiting and a smaller Boat VM.

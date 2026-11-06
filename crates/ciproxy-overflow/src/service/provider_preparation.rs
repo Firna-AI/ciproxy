@@ -39,7 +39,7 @@ pub(super) fn selected_size(
     let requested = VmSize {
         vcpu: record.requested_vcpus,
         memory_bytes: u64::from(record.requested_memory_gb) * 1_000_000_000,
-        disk_bytes: u64::from(record.requested_disk_gb) * 1_000_000_000,
+        disk_bytes: record.required_root_disk_bytes,
     };
     let nothing_fits = match facts.label.when_nothing_fits {
         WhenNothingFits::Wait => NothingFits::Wait,
@@ -49,6 +49,7 @@ pub(super) fn selected_size(
         sizes.iter(),
         largest,
         requested,
+        record.image_root_bytes,
         record.own_machine_fits && facts.label.allow_machines,
         nothing_fits,
     );

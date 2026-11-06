@@ -119,6 +119,9 @@ It checks tenant ownership, active App state, enabled overflow, and the
 accepted non-retired key together.
 It also requires the saved scale set and the label's current Boat switch.
 All current label dimensions must match the original requested dimensions.
+Each delivery retains its image root bytes and required total root bytes.
+Authority compares catalog disk with those saved totals.
+Even a largest-size fallback must hold the complete image.
 Reservation uses the same policy as saved-delivery startup.
 The current-label query supplies resource policy facts without store policy.
 The atomic dispatch operation rechecks authority and budget before `Creating`.

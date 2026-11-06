@@ -8,8 +8,10 @@ version = "0.1.0"
 rust-version = "1.99"
 
 [workspace.dependencies]
-ciproxy-github = { path = "crates/ciproxy-github" }
+ciproxy-agent = { path = "crates/ciproxy-agent" }
+ciproxy-billing = { path = "crates/ciproxy-billing" }
 ciproxy-gateway = { path = "crates/ciproxy-gateway" }
+ciproxy-github = { path = "crates/ciproxy-github" }
 ciproxy-metering = { path = "crates/ciproxy-metering" }
 ciproxy-protocol = { path = "crates/ciproxy-protocol" }
 ciproxy-schema = { path = "crates/ciproxy-schema" }

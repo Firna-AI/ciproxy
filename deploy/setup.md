@@ -28,9 +28,17 @@ gcloud billing projects describe "$PROJECT_ID"
 ```
 
 Check billing and organization policies with the authenticated operator.
-The futex.ai domain-restricted sharing rule stays. Static origins enforce
-PAP. No public grant or organization-policy exception is needed. The edge
-later grants its Google-created service agent viewer access after cached
+Static origins enforce PAP and need no public grant. Their two Google
+agents need the managed sharing rule of project `ciproxy`. An Organization
+Policy Administrator applies it once, the managed rule first:
+
+```sh
+gcloud services enable orgpolicy.googleapis.com --project="$PROJECT_ID"
+gcloud org-policies set-policy deploy/org-policies/allowed-policy-members.yaml
+gcloud org-policies set-policy deploy/org-policies/legacy-domains-off.yaml
+```
+
+The edge later grants the load balancer agent viewer access after cached
 backend creation. See [operator roles](identities.md#operator-permissions)
 and [static delivery](static-delivery.md).
 
@@ -174,9 +182,9 @@ attempt. The run can now deploy Helm/static content, wait for NEGs, save
 its ready snapshot, apply the edge, and invalidate CDN. The edge creates
 its A records, certificate, and backends. Certificate readiness comes later.
 
-The first private-origin service-agent grant can fail here. If organization
-policy refuses it, stop that path and return item 76 with its existing
-alternatives. Keep sharing policy unchanged. See [private-origin permissions](identities.md#private-static-origins).
+The first private-origin service-agent grant happens here. It needs the
+managed sharing rule of [project preparation](#1-prepare-the-project). See
+[private-origin permissions](identities.md#private-static-origins).
 Other failures follow [promotion recovery](promotion.md). No apply stage
 creates a replacement plan. Empty central scopes remain successful no-ops.
 

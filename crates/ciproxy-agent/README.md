@@ -55,25 +55,30 @@ Each VM has a generated local ID and a separate systemd unit.
 The agent service does not own those units.
 Stopping the service also stops its preparation helpers.
 
-Each VM gets one writable root disk of its label size.
-Docker shares its free space and sees the image's cached Docker images.
+Each VM gets one writable root disk with the image and free job space.
+The label disk means free bytes available to the runner at job start.
+`root_sizing::RootSizing` defines the allocation for every caller.
+It adds the image and ext4 growth allowance to the free label bytes.
+The [image budget and root sizing guide](image-budget.md) defines its
+formula, image geometry, and deployment metadata contract.
+Docker shares the root's free space and cached Docker images.
 The agent reflinks the verified root with sparse sharing intact.
-An equal-sized label uses that copy without growing it.
-For a larger label, the agent extends only the copy and runs `resize2fs`
-there before boot. It restores the exact label byte length after ext4
-rounds to whole blocks. The extra tail remains sparse.
-It never shrinks or changes the base image.
-A label smaller than the image gets the existing capacity error.
+It extends only the copy to the admitted total and runs `resize2fs` there.
+It restores the exact byte length after ext4 rounds to whole blocks.
+The extra tail remains sparse. It never shrinks or changes the base image.
+The existing capacity error applies only when the total cannot hold the image.
 The agent discards the used root after the runner exits.
 VMs use the newest verified local image. Existing VMs keep their image.
-The image owner holds a selected base until VM preparation ends.
+The image owner holds a selected base and its exact metadata through
+preparation. Admission sizes that held release before it reserves disk.
+It reduces cache space from the actual allocation.
 It reclaims obsolete bases after publication and after a hold ends.
 Running VMs keep independent root and kernel copies.
 Runtime recovery reclaims abandoned downloads and interrupted removals.
 The store renames cache entries before it deletes their contents.
 An exclusive runtime lock protects this image folder.
 The install CLI only reads the index and never runs destructive recovery.
-Each VM reserves its full label disk, including a warm VM.
+Each VM reserves its complete root allocation, including a warm VM.
 The default image budget reserves 140 GB before the remaining disk splits.
 The host keeps one quarter of that remainder, and jobs get three quarters.
 The [image budget](image-budget.md) limits physical image/support allocation.
@@ -91,7 +96,9 @@ The agent opens no inbound TCP port.
 Use root on x64 Linux with systemd and cgroup v2.
 The documented minimum is four cores, 16 GB of memory, and 250 GB of disk.
 The default budget leaves 82.5 GB for jobs and 27.5 GB for the host.
-A default `ciproxy` VM reserves 80 GB, apart from the image budget.
+The measured image root has 60,263,759,872 bytes.
+A default VM reserves 80,899,612,672 bytes.
+That includes its 20 GB free job disk and fits once on the minimum machine.
 Enable KVM to run VMs.
 Install prepares the pinned Firecracker and jailer pair and host packages.
 It creates one persistent sparse XFS file with reflinks on any filesystem.
@@ -105,7 +112,8 @@ Missing KVM still permits registration with zero slots.
 ### Gateway, image, and cache integration
 
 The current image and guest need alignment before live smoke checks.
-The full-image contract requires an 80 GB ext4 root with a 1% root reserve.
+The full-image contract requires the smallest usable ext4 image root.
+Job roots preserve its 1% root reserve.
 The image producer owns that artifact and its software measurements.
 Its bundle format still needs the integration described below.
 Its guest uses vsock port 5252, accepts one connection, and does not emit
@@ -138,7 +146,17 @@ The HTTPS `.tar.gz` bundle contains exactly two regular files:
 The byte count and SHA-256 must match before extraction.
 Only a checked download can enter extraction.
 Only a complete checked bundle can become the newest image.
-The rootfs is an ext4 disk no larger than the requested label disk.
+The rootfs is ext4. Its logical length must match the release disk metadata.
+`ImageDownload.root_disk_bytes` comes from the release manifest.
+The agent verifies it against the extracted root member before publication.
+The persisted image index and each image hold retain that release metadata.
+`RunnerSpec.size` contains the original free-size request.
+`RunnerReport.requested_size` retains that request in local state and reports.
+`RunnerReport.size` contains the admitted total VM allocation.
+Matching retries reuse the original request, image, and total after restart.
+Image reports contain exact metadata in `available`, with `newest` as its ID.
+These are required new wire and state formats.
+No older-format adapter is supplied.
 The guest configures DNS. Docker data stays on its root filesystem.
 The boot configuration attaches only that root drive today.
 Sticky Docker disk ownership will attach a separate drive under the
@@ -188,29 +206,8 @@ Persistent Docker disk reports stay zero until that ownership is implemented.
 
 ### Agent updates and releases
 
-The daemon checks for a new agent version every hour with `cli-updater`.
-The default release server is `https://get.ciproxy.dev`.
-`CIPROXY_RELEASE_SERVER_URL` can select a staging HTTPS release server.
-The update requires a checksum and restarts only the agent unit.
-A failed update cycle keeps the next hourly check.
-The updater source is pinned in the workspace manifest.
-`RUST_LOG` selects logging verbosity. JSON operation events remain available.
-An outer safety filter always excludes `tungstenite` and `tokio_tungstenite`.
-This filter also checks normalized targets from the log-to-tracing bridge.
-User directives cannot enable transport payload diagnostics.
-
-The systemd service reads `/etc/ciproxy-agent/environment` when present.
-Keep this root-only settings file at mode `0600`.
-
-Release-plz tags only the agent, with `ciproxy-agent-vVERSION`.
-The release workflow runs the complete gate in a read-only PostgreSQL job.
-Versioning requires that job to pass.
-Package builds run read-only. A separate job uploads the verified assets.
-Action commits and release tool versions are pinned.
-Set `RELEASE_PLZ_TOKEN` to a repository-scoped token with release and pull
-request write access. Its tags must trigger the archive workflow.
-The release server needs access to the private release assets.
-It uses binary `ciproxy-agent` and tag prefix `ciproxy-agent-v`.
+The [update and release guide](updates-and-releases.md) covers daemon
+updates, release settings, logging, and publication.
 
 ## Quick Start
 
@@ -238,6 +235,8 @@ cargo build --package ciproxy-agent
 Unit tests use Unimock and deterministic barriers.
 They use no host filesystem, subprocess, network, or real timer.
 Real VM and GitHub checks use separate smoke scripts.
+The [real root regression](image-budget.md#disposable-root-growth-regression)
+checks free bytes as runner UID 1001 on two image sizes.
 
 Build and package the GNU binary for glibc 2.17 or later:
 
@@ -266,6 +265,8 @@ The [host guide](host-preparation.md#ext4-and-kvm-smoke) gives the ext4 check.
 - [src/runtime_reports.rs](src/runtime_reports.rs) schedules independent reports.
 - [src/mode.rs](src/mode.rs) owns terminal runtime mode transitions.
 - [src/vms.rs](src/vms.rs) owns separate jailed VM units.
+- [src/root_sizing.rs](src/root_sizing.rs) defines the pure shared root
+  allocation rule for the agent, scaler, and hosted image configuration.
 - [src/vm_root.rs](src/vm_root.rs) reflinks and grows the disposable job root.
 - [src/vm_config.rs](src/vm_config.rs) owns the drive list for later sticky disks.
 - [src/vsock_stream.rs](src/vsock_stream.rs) delivers registrations in memory.

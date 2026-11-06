@@ -1,10 +1,10 @@
 // Labels and their sizes. A workflow picks a label in runs-on; each label
 // starts a VM of its size on an own machine, or on Boat. The dialog states
 // open over the list: edit ciproxy-8vcpu, add a label that fits no machine,
-// edit ciproxy-32vcpu, which nothing fits, raise the disk of ciproxy-4vcpu
-// while the machines fit different numbers of its jobs, and add a label whose
-// name GitHub refuses. The list is the moment of 18 November, when a request
-// for access waits on the Members tab.
+// edit ciproxy-32vcpu, which nothing fits, raise the free disk of
+// ciproxy-4vcpu while the machines fit different numbers of its jobs, and add
+// a label whose name GitHub refuses. The list is the moment of 18 November,
+// when a request for access waits on the Members tab.
 
 import { Plus } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -99,8 +99,8 @@ export function LabelsScreen({
           </Panel>
           <p className="caption">
             A slot on your machines is {sizePhrase(slotSize)}. A larger size
-            takes several slots, and each running job holds the disk of its
-            size.
+            takes several slots. Each running job also holds disk for the image
+            and its free disk.
           </p>
         </>
       )}

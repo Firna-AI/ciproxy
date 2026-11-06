@@ -7,12 +7,13 @@
 import { unbroken } from "./format.ts";
 import {
   ax42,
-  jobDiskGb,
+  jobDiskBytes,
   machineSlots,
   miniPc,
   type Hardware,
 } from "./hardware.ts";
 import { defaultLabelSize } from "./sizes.ts";
+import { gigabyte, vmDiskBytes } from "./vm-disk.ts";
 
 export type SlotState = "busy" | "warm" | "free";
 export type MachineStatus = "healthy" | "draining" | "offline" | "no-slots";
@@ -47,11 +48,12 @@ export const agentVersion = "0.4.2";
 
 /**
  * The job disk that the job VMs leave to the machine cache, which shares it
- * with the Docker disks. Each busy or warm slot of a scene holds a job VM of
- * the label ciproxy.
+ * with the Docker disks, in whole GB. Each busy or warm slot of a scene holds
+ * a job VM of the label ciproxy, with its VM disk.
  */
 function cacheSpaceGb(hardware: Hardware, jobVms: number): number {
-  return jobDiskGb(hardware) - jobVms * defaultLabelSize.diskGb;
+  const vmDisks = jobVms * vmDiskBytes(defaultLabelSize);
+  return Math.round((jobDiskBytes(hardware) - vmDisks) / gigabyte);
 }
 
 function slots(total: number, busy: number, warm: number): SlotState[] {
@@ -89,8 +91,8 @@ function machine(
 
 /**
  * office-mini-1 joined on 18 November: two warm runners wait in its slots.
- * They hold 160 GB of the 279 GB that jobs can use, and the cache has the
- * other 119 GB.
+ * Their VM disks hold 162 GB of the 279 GB that jobs can use, and the cache
+ * has the other 117 GB.
  */
 export const officeMini: Machine = {
   name: "office-mini-1",

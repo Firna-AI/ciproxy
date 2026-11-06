@@ -15,6 +15,10 @@ Its compressed download is 18.3 GB.
 Two installed images and one download need about 135 GB during an update.
 The budget also holds kernels, jail support, and image metadata.
 Job disk remains separate from this budget.
+Every VM reserves its full root allocation from job disk.
+That allocation includes the image, free label bytes, and ext4 allowance.
+The next section defines that shared rule.
+The 58.3 GB installed software count is not the image's logical disk length.
 An image that cannot fit at peak is refused before it consumes job space.
 The existing usable base remains available after an oversized update.
 
@@ -37,6 +41,48 @@ The agent never silently ignores or changes that value.
 
 To change an established budget, use the replacement steps below.
 The current format does not resize an active or published area.
+
+## Root allocation
+
+`ciproxy-agent::root_sizing::RootSizing` is the one allocation rule.
+For logical image root bytes `I` and free label bytes `F`, it computes:
+
+```text
+root_bytes = align_up_4096(I + ceil((F + 16_777_216) * 100 / 97))
+```
+
+The image already includes its own filesystem metadata and root reserve.
+The added space allows 1% for new root-reserved blocks and 2% for metadata.
+It also holds the separate 16 MiB kernel reserve pool.
+The kernel subtracts that pool when `df` reports available bytes.
+The pool contains at most 4096 clusters, as the
+[pinned Linux ext4 source][ext4-reserve] defines.
+Images use 4096-byte blocks, 256-byte inodes, and at least 16384 bytes per
+inode. Bigalloc is off, so each cluster is one block.
+Labels promise at least 1 SI GB of free job space.
+At that minimum, the metadata allowance also covers a new block group's
+rounded inode table and block bitmaps.
+The guarantee applies to this image geometry and a matching release length.
+The runner gets at least `F` available bytes, as `df` reports at start.
+
+The release manifest supplies each image's exact logical root length.
+The agent verifies it against the extracted root and persists it in the index.
+An image hold retains that metadata through admission and VM preparation.
+Admission uses the held release, even after publication changes the newest
+image.
+The scaler uses each machine's reported selected-release metadata.
+The shared default and control-plane override supply Boat sizing and the
+fallback before a machine reports its image.
+That configured length must match the selected Boat image release.
+Installed file bytes and allocated host blocks are not logical disk bytes.
+An incorrect Boat image length can reduce the promised free job space.
+The agent keeps the existing capacity error only when the total root cannot
+hold the actual image. It adds no image-version rejection.
+The scaler counts complete roots for starts and warm runners.
+Each retained VM keeps its actual allocation and original free-size request.
+A newer local image does not invalidate a correctly sized idle older VM.
+Boat size selection counts it too. The explicit largest-size fallback can
+provide less free disk, but must still hold the image.
 
 ## Measured overhead and support space
 
@@ -62,7 +108,11 @@ The remaining 110 GB splits into 82.5 GB of job disk and 27.5 GB for host.
 The metadata headroom is about 2.59 GB plus measured empty-XFS costs.
 The remaining host reserve stays outside the area for the system.
 With a 160 GB image budget override, that same host has 67.5 GB of job disk.
-That override leaves too little job disk for an 80 GB default runner.
+The measured 60,263,759,872-byte image gives an 80,899,612,672-byte default
+root.
+That root fits once in the default 82.5 GB job disk.
+It leaves 1,600,387,328 bytes for the machine cache.
+The override leaves too little job disk for that same root.
 These are logical capacities. A sparse file does not preallocate the host.
 Unrelated host programs can still consume its physical free space.
 
@@ -159,3 +209,23 @@ An oversized image update must fail before any payload block is allocated.
 The wrapper saves evidence under `.context/ciproxy-mvp/`.
 It removes its mounts and files after the run.
 It preserves a busy path and fails if safe cleanup is impossible.
+
+## Disposable root growth regression
+
+The opt-in regression calls production root preparation on two image sizes.
+It checks the base digest and exact allocated byte length after real growth.
+It measures available disk with `df` as runner UID 1001.
+Both images use the production ext4 geometry and a 1% root reserve.
+The fixture runs `e2fsck -fp` after its last writable setup mount.
+This prepares a checked image before its base digest and job copy.
+Offline resize requires a check after the last mount, as the
+[pinned e2fsprogs source][ext4-resize-check] states.
+It needs passwordless sudo, loop mounts, ext4 tools, and XFS reflinks:
+
+```sh
+cargo test --package ciproxy-agent --features filesystem-regression \
+  --test root-disk-regression -- --nocapture
+```
+
+[ext4-reserve]: https://kernel.googlesource.com/pub/scm/linux/kernel/git/torvalds/linux/+/333a396d71ce4083da31ccbf30772bf2da1509b4/fs/ext4/super.c
+[ext4-resize-check]: https://raw.githubusercontent.com/tytso/e2fsprogs/v1.46.5/resize/main.c

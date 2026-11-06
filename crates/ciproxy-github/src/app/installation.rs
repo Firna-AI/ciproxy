@@ -168,9 +168,9 @@ impl AppService {
 
     fn default_labels(&self) -> Vec<Label> {
         [
-            ("ciproxy", 2, 8, 80),
-            ("ciproxy-4vcpu", 4, 16, 80),
-            ("ciproxy-8vcpu", 8, 32, 120),
+            ("ciproxy", 2, 8, 20),
+            ("ciproxy-4vcpu", 4, 16, 20),
+            ("ciproxy-8vcpu", 8, 32, 60),
         ]
         .into_iter()
         .map(|(name, vcpus, memory_gb, disk_gb)| Label {

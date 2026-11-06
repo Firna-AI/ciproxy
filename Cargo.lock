@@ -563,6 +563,7 @@ dependencies = [
 name = "ciproxy-control-plane"
 version = "0.1.0"
 dependencies = [
+ "ciproxy-agent",
  "ciproxy-gateway",
  "ciproxy-protocol",
  "clap",
@@ -665,6 +666,7 @@ dependencies = [
  "async-trait",
  "base64 0.23.1",
  "chrono",
+ "ciproxy-agent",
  "ciproxy-metering",
  "ciproxy-protocol",
  "ciproxy-scaler",
@@ -706,6 +708,7 @@ dependencies = [
 name = "ciproxy-scaler"
 version = "0.1.0"
 dependencies = [
+ "ciproxy-agent",
  "ciproxy-protocol",
 ]
 

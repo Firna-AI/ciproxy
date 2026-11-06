@@ -109,10 +109,10 @@ and workload artifacts must bind to the new attempt. Never copy an older
 binary into it. If evidence has expired, start a new accepted push run of
 the current code. [GitHub rerun options](https://cli.github.com/manual/gh_run_rerun)
 
-The first private-origin reader grant happens during edge apply. If the
-organization sharing rule refuses it, stop that path and return item 76
-with its existing alternatives. Do not widen policy. See
-[private-origin permissions](identities.md#private-static-origins).
+The first private-origin reader grant happens during edge apply. It needs
+the managed sharing rule of [project preparation](setup.md#1-prepare-the-project).
+If the rule refuses the grant, read the effective policy of `ciproxy` before
+any retry. See [private-origin permissions](identities.md#private-static-origins).
 Other failures follow [promotion recovery](promotion.md).
 
 ## First production data run

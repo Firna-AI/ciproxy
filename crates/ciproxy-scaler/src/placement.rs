@@ -12,15 +12,21 @@ pub(crate) fn place_own(
     label: &Label,
 ) -> bool {
     for (index, machine) in snapshot.machines.iter().enumerate() {
-        if eligible(machine, label)
-            && plan.usage[index].fits(machine, label.size)
-            && projected_usage(snapshot, plan, index).fits(machine, label.size)
+        let Some(size) = machine
+            .root_sizing(snapshot.root_sizing)
+            .vm_size(label.size)
+        else {
+            continue;
+        };
+        if eligible(machine, label, snapshot.root_sizing)
+            && plan.usage[index].fits(machine, size)
+            && projected_usage(snapshot, plan, index).fits(machine, size)
         {
-            plan.usage[index].add(label.size);
+            plan.usage[index].add(size);
             plan.start(
                 job,
                 label,
-                label.size,
+                size,
                 Destination::Machine(machine.id.clone()),
                 StartReason::OwnMachineCapacity,
             );
@@ -32,13 +38,19 @@ pub(crate) fn place_own(
 
 pub(crate) fn reserve_after_retirement(snapshot: &Snapshot, plan: &mut Plan, label: &Label) {
     for (index, machine) in snapshot.machines.iter().enumerate() {
-        if !eligible(machine, label) {
+        let Some(size) = machine
+            .root_sizing(snapshot.root_sizing)
+            .vm_size(label.size)
+        else {
+            continue;
+        };
+        if !eligible(machine, label, snapshot.root_sizing) {
             continue;
         }
         let mut future = projected_usage(snapshot, plan, index);
         let mut retire = Vec::new();
         for runner in &machine.runners {
-            if future.fits(machine, label.size) {
+            if future.fits(machine, size) {
                 break;
             }
             if warm_candidate(runner)
@@ -49,11 +61,11 @@ pub(crate) fn reserve_after_retirement(snapshot: &Snapshot, plan: &mut Plan, lab
                 retire.push(runner);
             }
         }
-        if future.fits(machine, label.size) {
+        if future.fits(machine, size) {
             for runner in retire {
                 plan.stop(runner, StopReason::WarmPreemption);
             }
-            plan.reserved[index].add(label.size);
+            plan.reserved[index].add(size);
             return;
         }
     }

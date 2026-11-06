@@ -37,7 +37,7 @@ pub struct StartRunner {
     pub label: LabelName,
     /// Label dimensions at registration, retained separately from Boat size.
     pub requested_size: VmSize,
-    /// Actual VM size, which can differ from the label on Boat.
+    /// Actual VM dimensions, including the image and ext4 root allowance.
     pub size: VmSize,
     /// Machine or catalog size to use.
     pub destination: Destination,

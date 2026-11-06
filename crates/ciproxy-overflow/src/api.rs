@@ -2,6 +2,7 @@
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_scaler::actions::StartRunner;
 use ciproxy_store_interface::boat::BoatAccount;
@@ -20,6 +21,8 @@ pub struct OverflowConfig {
     pub deployment: String,
     /// Shared saved-snapshot name or share code, never an account key.
     pub shared_snapshot: String,
+    /// Root geometry for that same image release, shared with scaler snapshots.
+    pub root_sizing: RootSizing,
     /// HTTPS control-plane route that accepts the guest's sandbox-only token.
     pub exit_report_url: Secret,
 }

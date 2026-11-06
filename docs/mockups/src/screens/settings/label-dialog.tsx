@@ -1,10 +1,12 @@
 // The dialog that edits a label or adds one: its name, its size, where its
-// jobs may run, and what they do when nothing fits. Before the save, it says
-// how many jobs of the size one machine runs, or that no machine fits it, or
-// that no machine and no Boat size fits it. A label name follows the GitHub
-// label rules and never changes, as design call 33 says: the add dialog
-// refuses a name that breaks the rules, and the edit dialog shows the name
-// with a lock, beside Delete label, which a rename uses.
+// jobs may run, and what they do when nothing fits. The disk of the size is
+// the free disk of each job, with its least value as the hint, and the line
+// under it gives the VM disk with the current image, as the answer to item 77
+// says. Before the save, it says how many jobs of the size one machine runs,
+// or that no machine fits it, or that no machine and no Boat size fits it. A
+// label name follows the GitHub label rules and never changes, as design call
+// 33 says: the add dialog refuses a name that breaks the rules, and the edit
+// dialog shows the name with a lock, beside Delete label, which a rename uses.
 
 import { RadioCard, RadioCardGroup } from "@firna/ui/radio";
 import { Switch } from "@firna/ui/switch";
@@ -13,6 +15,7 @@ import { Action, LinkAction, noop } from "../../components/actions.tsx";
 import { Dialog } from "../../components/dialog.tsx";
 import { TextField } from "../../components/fields.tsx";
 import { paths, type CataloguePath } from "../../components/paths.ts";
+import { unbroken } from "../../fixtures/format.ts";
 import { machineScenes, type Machine } from "../../fixtures/machines.ts";
 import {
   boatOnlyLabel,
@@ -21,7 +24,12 @@ import {
   refusedLabel,
   type Label,
 } from "../../fixtures/settings.ts";
-import { largestBoatSize, sizePhrase } from "../../fixtures/sizes.ts";
+import {
+  largestBoatSize,
+  minimumFreeDiskGb,
+  sizePhrase,
+} from "../../fixtures/sizes.ts";
+import { diskText, vmDiskBytes } from "../../fixtures/vm-disk.ts";
 import { FitNote } from "./label-fit.tsx";
 
 export type LabelDialogMode =
@@ -45,8 +53,11 @@ type DialogCopy = {
 
 const steady = machineScenes.steady;
 
-/** The draft of ciproxy-4vcpu before the save: an Admin raises its disk. */
-const largerDiskDraft: Label = { ...labelNamed("ciproxy-4vcpu"), diskGb: 100 };
+/** The draft of ciproxy-4vcpu before the save: an Admin raises its free disk. */
+const largerDiskDraft: Label = {
+  ...labelNamed("ciproxy-4vcpu"),
+  freeDiskGb: 40,
+};
 
 const dialogs: Record<LabelDialogMode, DialogCopy> = {
   edit: {
@@ -145,10 +156,20 @@ export function LabelDialog({ mode }: { mode: LabelDialogMode }) {
           error={copy.nameError}
         />
       )}
-      <div className="field-row">
-        <TextField label="vCPU" value={String(label.vcpu)} />
-        <TextField label="Memory, GB" value={String(label.memoryGb)} />
-        <TextField label="Disk, GB" value={String(label.diskGb)} />
+      <div className="stack-tight">
+        <div className="field-row">
+          <TextField label="vCPU" value={String(label.vcpu)} />
+          <TextField label="Memory, GB" value={String(label.memoryGb)} />
+          <TextField
+            label="Free disk, GB"
+            value={String(label.freeDiskGb)}
+            hint={`At least ${unbroken(`${minimumFreeDiskGb} GB`)}`}
+          />
+        </div>
+        <p className="caption">
+          With the current image, each VM has a disk of{" "}
+          {diskText(vmDiskBytes(label))}.
+        </p>
       </div>
       <FitNote label={label} machines={copy.machines} />
       <Toggle label="Your machines" caption="Jobs start here first" />

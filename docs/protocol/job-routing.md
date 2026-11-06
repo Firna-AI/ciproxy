@@ -51,14 +51,27 @@ warm runners. It also states what happens when a part fails.
 - **Decision:** reserve images first, then split the remaining disk 1:3 for
   host and jobs. Rejected: a slim image and shared read-only job roots.
   Reason: keep all `ubuntu-latest` software and independent writable disks.
-- Each job VM holds the disk of its size in the job disk, from its start
-  until it ends.
-- So a warm runner holds the disk of its size, as it holds its slots.
+- Each job VM holds its complete root allocation in the job disk until
+  the agent removes the VM.
+- That root includes the image, the label's free job disk, and an allowance
+  for ext4 metadata growth and its 1% root reserve.
+- Scheduling uses the logical image root length from the same image release
+  that the VM starts. Installed file bytes are not that length.
+- The agent reports the exact root length of each local image release.
+- Scheduling uses each machine's selected local release for new roots.
+- Configured release facts are a fallback until the machine reports its image.
+- The agent selects and holds its newest image before final sizing and
+  admission.
+- It rechecks capacity if publication changed the image after the last report.
+- Each runner report retains its original free-size request and actual total.
+- Retries after publication or restart keep that original allocation.
+- A correctly sized idle older root stays usable after a local image update.
+- A warm runner holds this same complete root and its slots.
 - The machine cache uses the job disk that no job VM holds.
 - The machine cache frees space when a job VM needs it, so the machine
   cache never keeps a job from starting.
 - The [Docker disks](cache.md#docker-disks) and their copies share the
-  free job disk with the machine cache.
+  available job disk with the machine cache.
 - When a job VM needs space, ciproxy deletes the Docker disk that no job
   uses and that a job used least recently.
 - Reason: a Docker disk is a cache, so its loss costs only time.
@@ -70,15 +83,15 @@ warm runners. It also states what happens when a part fails.
 ### Fit
 
 - A size fits an own machine when the machine has at least as many slots
-  as the size takes, and its job disk is at least the disk of the size.
+  as the size takes, and its job disk covers the complete VM root.
 - A job VM starts on an own machine only when the machine has enough free
-  slots and enough free job disk for its size.
-- The free job disk is the job disk that no job VM holds. It includes the
+  slots and enough available job disk for its complete root.
+- The available job disk is the job disk that no job VM holds. It includes the
   space that the machine cache uses.
 - The jobs of one size that an own machine runs at a time are the smaller
   of these two numbers:
   - its slots, divided by the slots of the size and rounded down
-  - its job disk, divided by the disk of the size and rounded down
+  - its job disk, divided by the complete root allocation and rounded down
 
 ### Worked examples
 
@@ -93,8 +106,8 @@ and a mini PC whose disk limits concurrent jobs.
 - ciproxy decides how many runners start and where, not which job a
   runner takes.
 - So the dashboard shows no machine for a waiting job.
-- A job waits up to the overflow wait for enough free slots and free job
-  disk for its size on one own machine.
+- A job waits up to the overflow wait for enough free slots and available
+  job disk for its complete root on one own machine.
 - ciproxy starts one Boat runner for each job that has waited the overflow
   wait.
 - The overflow wait applies only to a job that an own machine can run.
@@ -128,7 +141,7 @@ and a mini PC whose disk limits concurrent jobs.
   says.
 - Boat is also unavailable at the [spend limit](overflow.md#spend-limit).
 - While Boat cannot take a job, the job runs on own machines only and
-  waits there for free slots and free job disk.
+  waits there for free slots and available job disk.
 - A job that neither an own machine nor Boat can take stays queued in
   GitHub until one of them can.
 
@@ -174,14 +187,14 @@ and a mini PC whose disk limits concurrent jobs.
   for each organization on each machine page, because it adds a control.
   Reason: the warm runners go where the jobs arrive.
 - A job of another label gets a new runner in a fresh job VM, in free
-  slots and free job disk.
-- A warm runner holds the slots and the disk of the size of the label
-  `ciproxy`, which are 1 slot and 80 GB by default.
+  slots and available job disk.
+- A default warm runner holds 1 slot and the root for 20 GB of free job
+  disk, including its image and ext4 allowance.
 - A warm runner never keeps a waiting job from an own machine.
 - ciproxy stops warm runners to free the slots and the job disk that a
   waiting job needs.
 - ciproxy starts warm runners up to the count of a machine, only in free
-  slots and free job disk that no waiting job needs.
+  slots and available job disk that no waiting job needs.
 - When a warm runner takes a job, ciproxy starts a new warm runner in a
   fresh job VM when its slots and its disk are free.
 - A draining machine keeps no warm runners.
@@ -211,7 +224,7 @@ and a mini PC whose disk limits concurrent jobs.
 ### Boat fails
 
 - While Boat refuses or fails to start sandboxes, new jobs run on own
-  machines only and wait there for free slots and free job disk.
+  machines only and wait there for free slots and available job disk.
 - ciproxy keeps trying Boat for the waiting jobs, as
   [Refused sandboxes](overflow.md#refused-sandboxes) says.
 - A job that no own machine can run waits until Boat starts a sandbox for
@@ -229,7 +242,7 @@ and a mini PC whose disk limits concurrent jobs.
 - [Labels](labels.md): which jobs use ciproxy, the labels, and their sizes.
 - [Agent](agent.md): own machines, job VMs, the connection, and drain.
 - [Overflow](overflow.md): Boat, the spend limit, and refused starts.
-- [Cache](cache.md): the machine cache, which uses the free job disk.
+- [Cache](cache.md): the machine cache, which uses the available job disk.
 - [Security](security.md): repository access.
 - [Workspaces](workspaces.md): the organizations whose jobs the labels of a
   workspace serve.

@@ -18,6 +18,7 @@ fn only_the_complete_expected_download_passes_checksum_verification() {
         download_url: Secret::new("https://images.example/image"),
         sha256: "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad".to_owned(),
         size_bytes: 3,
+        root_disk_bytes: 20,
     };
     for bytes in [b"ab".as_slice(), b"abd", b"abcd"] {
         let mut digest = DownloadDigest::default();
@@ -102,5 +103,15 @@ fn bundle_completion_requires_both_non_empty_members_exactly_once() {
     count.record(Path::new("vmlinux"), true, 8).unwrap();
     count.record(Path::new("rootfs.ext4"), true, 20).unwrap();
     let checked = digest(b"abc").finish(&image(), pending()).unwrap();
-    assert_eq!(count.finish(checked).unwrap().image_id().0, "new");
+    assert_eq!(count.finish(checked).unwrap().metadata().image_id.0, "new");
+    let mut wrong = image();
+    wrong.root_disk_bytes = 21;
+    let mut count = BundleMembers::default();
+    count.record(Path::new("vmlinux"), true, 8).unwrap();
+    count.record(Path::new("rootfs.ext4"), true, 20).unwrap();
+    let checked = digest(b"abc").finish(&wrong, pending()).unwrap();
+    assert!(matches!(
+        count.finish(checked),
+        Err(Error::ImageVerification)
+    ));
 }

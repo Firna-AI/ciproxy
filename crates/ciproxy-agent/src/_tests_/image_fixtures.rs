@@ -7,6 +7,7 @@ use ciproxy_protocol::images::{ImageDownload, ImageReport};
 use ciproxy_protocol::secret::Secret;
 
 use crate::error::Result;
+use crate::fixtures::metadata;
 use crate::image_artifact::PendingImage;
 use crate::image_verification::{BundleMembers, CheckedBundle, CheckedDownload, DownloadDigest};
 
@@ -16,6 +17,7 @@ pub(super) fn image() -> ImageDownload {
         download_url: Secret::new("https://images.example/new"),
         sha256: "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad".to_owned(),
         size_bytes: 3,
+        root_disk_bytes: 20,
     }
 }
 
@@ -31,7 +33,7 @@ pub(super) fn digest(bytes: &[u8]) -> DownloadDigest {
 
 pub(super) fn catalog() -> ImageReport {
     ImageReport {
-        available: vec![ImageId("old".to_owned())],
+        available: vec![metadata("old", 10)],
         newest: Some(ImageId("old".to_owned())),
     }
 }

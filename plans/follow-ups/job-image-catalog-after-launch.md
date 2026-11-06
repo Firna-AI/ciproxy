@@ -15,17 +15,25 @@
   - **Job image:** the disk that every job VM starts from, on own machines
     and on Boat.
   - **Label:** the name in a workflow's `runs-on:` line. It sets the VM
-    size: vCPU, memory, and disk.
+    size: vCPU, memory, and free job disk, as
+    [Labels](../../docs/protocol/labels.md#custom-labels) defines.
   - **Boat snapshot:** the saved disk that a Boat sandbox starts from.
 - **Background:**
   - Until launch, every label starts from one image with the software of
-    GitHub's `ubuntu-latest` runner. It uses 58.3 GB on an 80 GB job disk.
+    GitHub's `ubuntu-latest` runner. The installed software measurement was
+    58.3 GB. Its logical root length comes from each release's metadata.
   - Boat `small` and `default` have 51 GB, so this image needs Boat
     `large` at $0.072 an hour. The default label `ciproxy`, with 2 vCPU and
     8 GB, would otherwise fit `default` at $0.036 an hour.
   - Without the largest tools, such as Android, Haskell, Swift, Julia, and
-    the cached Docker images, an image of about 35 GB remains. A label of
-    50 GB then leaves a job about 14 GB free, and it fits Boat `default`.
+    the cached Docker images, the software estimate is about 35 GB.
+    If the built logical root is 35 GB, a label with 15 GB free job disk
+    needs 50,481,217,536 total bytes and fits Boat `default` at 51 GB.
+    A 50 GB free label needs 86,563,688,448 bytes and does not fit it.
+    These worked inputs use the canonical
+    [root allocation rule][root-allocation].
+    [Job routing](../../docs/protocol/job-routing.md#disk) defines the
+    complete root reservation.
   - Until launch, a job picks other software with a job container: the
     `container:` key of GitHub Actions runs the steps in a Docker image.
   - `docs/protocol/billing.md` plans custom VM images for the Business
@@ -52,3 +60,5 @@
 - **Done when:** a label can name `full` or `slim`, its jobs start from that
   image on own machines and on Boat, and a Business workspace can name a
   custom image.
+
+[root-allocation]: ../../crates/ciproxy-agent/image-budget.md#root-allocation

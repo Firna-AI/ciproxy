@@ -3,10 +3,12 @@
 use std::sync::{Arc, Mutex};
 
 use ciproxy_protocol::identifiers::ImageId;
+use ciproxy_protocol::images::ImageReport;
 use unimock::{MockFn, Unimock, matching};
 
 use crate::boundaries::Images;
 use crate::error::Error;
+use crate::fixtures::metadata;
 use crate::image_download::ImageDownloadMock;
 use crate::image_fixtures::{bundle, catalog, digest, image, pending};
 use crate::image_store::ImageStoreMock;
@@ -113,14 +115,14 @@ async fn publication_selects_the_newest_and_reclaims_the_old_base_after_its_hold
             .some_call(matching!(_))
             .answers(&|_, checked| bundle(checked)),
         ImageStoreMock::publish
-            .some_call(matching!((bundle) if bundle.image_id().0 == "new"))
+            .some_call(matching!((bundle) if bundle.metadata().image_id.0 == "new"))
             .returns(Ok(())),
     )));
     let images = ManagedImages::new(mock.clone(), mock.clone());
     images.recover().unwrap();
     {
         let old = images.hold_newest().unwrap();
-        assert_eq!(old.image_id(), ImageId("old".to_owned()));
+        assert_eq!(old.metadata(), metadata("old", 10));
         images.fetch(&image()).await.unwrap();
         assert_eq!(
             images.report().unwrap().newest,
@@ -132,11 +134,15 @@ async fn publication_selects_the_newest_and_reclaims_the_old_base_after_its_hold
             vec![ImageId("new".to_owned()), ImageId("old".to_owned())]
         );
         let new = images.hold_newest().unwrap();
-        assert_eq!(new.image_id(), ImageId("new".to_owned()));
+        assert_eq!(new.metadata(), metadata("new", 20));
+        assert_eq!(old.metadata(), metadata("old", 10));
+        let saved = serde_json::to_vec(&images.report().unwrap()).unwrap();
+        let restored: ImageReport = serde_json::from_slice(&saved).unwrap();
+        assert_eq!(restored.selected(), Some(&metadata("new", 20)));
     }
     assert_eq!(
         images.report().unwrap().available,
-        vec![ImageId("new".to_owned())]
+        vec![metadata("new", 20)]
     );
     assert_eq!(
         kept.lock().unwrap().last().unwrap().0,

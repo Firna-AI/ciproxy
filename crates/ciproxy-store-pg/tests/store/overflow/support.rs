@@ -53,6 +53,8 @@ pub(super) fn setup(database: &Database) -> (Uuid, AccountRecord, StartRecord) {
         requested_vcpus: 2,
         requested_memory_gb: 8,
         requested_disk_gb: 60,
+        image_root_bytes: 47_000_000_000,
+        required_root_disk_bytes: 108_872_970_240,
         own_machine_fits: false,
         dispatch: Some(ProviderParameters {
             size: SizeOffer {

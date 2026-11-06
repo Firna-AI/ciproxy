@@ -8,7 +8,7 @@ use crate::identifiers::{
     CommandId, GitRef, ImageId, JobEvent, JobId, LabelName, MachineId, OrganizationId,
     RepositoryId, RunnerId, WorkspaceId,
 };
-use crate::images::{ImageDownload, ImageReport};
+use crate::images::{ImageDownload, ImageMetadata, ImageReport};
 use crate::jobs::{JobAssignment, JobFacts, Repository, UnknownJobScopeReason};
 use crate::reports::{
     DiskReport, DrainState, HardwareReport, MachineReport, SlotOccupancy, SlotReport,
@@ -50,7 +50,7 @@ pub(crate) fn size() -> VmSize {
     VmSize {
         vcpu: 2,
         memory_bytes: 8 * GIGABYTE,
-        disk_bytes: 80 * GIGABYTE,
+        disk_bytes: 80_899_612_672,
     }
 }
 
@@ -59,7 +59,10 @@ pub(crate) fn runner() -> RunnerSpec {
         runner_id: runner_id(),
         organization_id: organization_id(),
         label: LabelName("ciproxy".into()),
-        size: size(),
+        size: VmSize {
+            disk_bytes: 20 * GIGABYTE,
+            ..size()
+        },
         registration: Secret::new(REGISTRATION),
     }
 }
@@ -70,6 +73,7 @@ pub(crate) fn image() -> ImageDownload {
         download_url: Secret::new(DOWNLOAD_URL),
         sha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".into(),
         size_bytes: 12 * GIGABYTE,
+        root_disk_bytes: 60_263_759_872,
     }
 }
 
@@ -141,6 +145,11 @@ pub(crate) fn report() -> MachineReport {
                 runner_id: RunnerId("runner-warm".into()),
                 organization_id: OrganizationId("organization-2".into()),
                 label: LabelName("ciproxy".into()),
+                requested_size: VmSize {
+                    vcpu: 2,
+                    memory_bytes: 8 * GIGABYTE,
+                    disk_bytes: 20 * GIGABYTE,
+                },
                 size: size(),
                 image_id: image_id(),
                 state: RunnerState::Warm,
@@ -149,7 +158,15 @@ pub(crate) fn report() -> MachineReport {
                 runner_id: runner_id(),
                 organization_id: organization_id(),
                 label: LabelName("ciproxy".into()),
-                size: size(),
+                requested_size: VmSize {
+                    vcpu: 2,
+                    memory_bytes: 8 * GIGABYTE,
+                    disk_bytes: 20 * GIGABYTE,
+                },
+                size: VmSize {
+                    disk_bytes: 79_635_853_312,
+                    ..size()
+                },
                 image_id: ImageId("ubuntu-image-0".into()),
                 state: RunnerState::Running { job_id: job_id() },
             },
@@ -200,7 +217,16 @@ pub(crate) fn report() -> MachineReport {
             used_bytes: 15 * GIGABYTE,
         },
         images: ImageReport {
-            available: vec![ImageId("ubuntu-image-0".into()), image_id()],
+            available: vec![
+                ImageMetadata {
+                    image_id: ImageId("ubuntu-image-0".into()),
+                    root_disk_bytes: 59 * GIGABYTE,
+                },
+                ImageMetadata {
+                    image_id: image_id(),
+                    root_disk_bytes: 60_263_759_872,
+                },
+            ],
             newest: Some(image_id()),
         },
     }

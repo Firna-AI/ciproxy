@@ -59,6 +59,13 @@ impl OverflowService {
         if !snapshot.enabled {
             return Ok(StartOutcome::Waiting(WaitReason::Disconnected));
         }
+        let Some(required_root_disk_bytes) = self
+            .config
+            .root_sizing
+            .root_bytes(request.action.requested_size.disk_bytes)
+        else {
+            return Ok(StartOutcome::Waiting(WaitReason::SizeUnavailable));
+        };
         let backend = match self
             .refresh_catalog(&session, workspace_id, &mut account)
             .await
@@ -117,6 +124,8 @@ impl OverflowService {
                 request.action.requested_size.disk_bytes / 1_000_000_000,
             )
             .internal()?,
+            image_root_bytes: self.config.root_sizing.image_root_bytes,
+            required_root_disk_bytes,
             own_machine_fits: matches!(
                 request.action.reason,
                 StartReason::OverflowWaitElapsed { .. }

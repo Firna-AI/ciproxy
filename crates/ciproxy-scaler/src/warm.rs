@@ -1,9 +1,31 @@
-//! Reconcile the caller's recent-job allocation under one machine warm cap.
+//! Apply existing warm targets before checking capacity for new warm starts.
+
+use ciproxy_protocol::identifiers::OrganizationId;
 
 use crate::actions::{Action, Destination, StartReason, StopReason};
 use crate::capacity::eligible;
-use crate::snapshot::{RunnerState, Snapshot, WaitingJob};
+use crate::snapshot::{Machine, RunnerState, Snapshot, WaitingJob};
 use crate::state::{Plan, warm_candidate};
+
+pub(crate) fn reconcile(snapshot: &Snapshot, plan: &mut Plan) {
+    for machine in snapshot
+        .machines
+        .iter()
+        .filter(|machine| machine.connected && !machine.draining)
+    {
+        let mut vacancies = targets(snapshot, machine);
+        for runner in &machine.runners {
+            if !warm_candidate(runner) || plan.retiring.contains(&runner.id) {
+                continue;
+            }
+            if !take_target(&mut vacancies, &runner.organization_id)
+                && !plan.claimed.contains(&runner.id)
+            {
+                plan.stop(runner, StopReason::WarmAllocationChanged);
+            }
+        }
+    }
+}
 
 pub(crate) fn replenish(snapshot: &Snapshot, plan: &mut Plan, pending: &[&WaitingJob]) {
     let Some(label) = snapshot
@@ -14,16 +36,16 @@ pub(crate) fn replenish(snapshot: &Snapshot, plan: &mut Plan, pending: &[&Waitin
         return;
     };
     for (index, machine) in snapshot.machines.iter().enumerate() {
-        if !eligible(machine, label) {
+        if !eligible(machine, label, snapshot.root_sizing) {
             continue;
         }
-        let mut vacancies: Vec<_> = machine
-            .warm_allocation
-            .iter()
-            .take(machine.warm_count)
-            .filter(|organization| snapshot.organizations.contains(organization))
-            .cloned()
-            .collect();
+        let Some(size) = machine
+            .root_sizing(snapshot.root_sizing)
+            .vm_size(label.size)
+        else {
+            continue;
+        };
+        let mut vacancies = targets(snapshot, machine);
         let mut occupied = 0;
         for runner in &machine.runners {
             if runner.label.0 == "ciproxy"
@@ -34,16 +56,8 @@ pub(crate) fn replenish(snapshot: &Snapshot, plan: &mut Plan, pending: &[&Waitin
             {
                 occupied += 1;
             }
-            if !warm_candidate(runner) || plan.retiring.contains(&runner.id) {
-                continue;
-            }
-            if let Some(position) = vacancies
-                .iter()
-                .position(|id| *id == runner.organization_id)
-            {
-                vacancies.remove(position);
-            } else if !plan.claimed.contains(&runner.id) {
-                plan.stop(runner, StopReason::WarmAllocationChanged);
+            if warm_candidate(runner) && !plan.retiring.contains(&runner.id) {
+                take_target(&mut vacancies, &runner.organization_id);
             }
         }
         for action in &plan.actions {
@@ -52,10 +66,7 @@ pub(crate) fn replenish(snapshot: &Snapshot, plan: &mut Plan, pending: &[&Waitin
                 && start.destination == Destination::Machine(machine.id.clone())
             {
                 occupied += 1;
-                if let Some(position) = vacancies.iter().position(|id| *id == start.organization_id)
-                {
-                    vacancies.remove(position);
-                }
+                take_target(&mut vacancies, &start.organization_id);
             }
         }
         if pending.iter().any(|job| {
@@ -63,7 +74,7 @@ pub(crate) fn replenish(snapshot: &Snapshot, plan: &mut Plan, pending: &[&Waitin
                 .labels
                 .iter()
                 .find(|candidate| candidate.name == job.label)
-                .is_some_and(|candidate| eligible(machine, candidate))
+                .is_some_and(|candidate| eligible(machine, candidate, snapshot.root_sizing))
         }) {
             continue;
         }
@@ -71,10 +82,10 @@ pub(crate) fn replenish(snapshot: &Snapshot, plan: &mut Plan, pending: &[&Waitin
             .into_iter()
             .take(machine.warm_count.saturating_sub(occupied))
         {
-            if !plan.usage[index].fits(machine, label.size) {
+            if !plan.usage[index].fits(machine, size) {
                 break;
             }
-            plan.usage[index].add(label.size);
+            plan.usage[index].add(size);
             let demand = WaitingJob {
                 organization_id,
                 label: label.name.clone(),
@@ -83,10 +94,28 @@ pub(crate) fn replenish(snapshot: &Snapshot, plan: &mut Plan, pending: &[&Waitin
             plan.start(
                 &demand,
                 label,
-                label.size,
+                size,
                 Destination::Machine(machine.id.clone()),
                 StartReason::WarmPool,
             );
         }
     }
+}
+
+fn targets(snapshot: &Snapshot, machine: &Machine) -> Vec<OrganizationId> {
+    machine
+        .warm_allocation
+        .iter()
+        .take(machine.warm_count)
+        .filter(|organization| snapshot.organizations.contains(organization))
+        .cloned()
+        .collect()
+}
+
+fn take_target(vacancies: &mut Vec<OrganizationId>, organization: &OrganizationId) -> bool {
+    let Some(position) = vacancies.iter().position(|id| id == organization) else {
+        return false;
+    };
+    vacancies.remove(position);
+    true
 }

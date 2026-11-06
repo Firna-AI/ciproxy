@@ -74,8 +74,9 @@ runs on own machines.
 - An own machine needs x64 Linux with KVM, 4 cores, 16 GB of memory, and
   250 GB of disk or more.
 - Reason: the 140 GB image budget leaves 110 GB before the host reserve.
-- The host keeps 27.5 GB, so the 82.5 GB job disk fits one 80 GB job
-  of the label `ciproxy`.
+- The host keeps 27.5 GB, so the job disk is 82.5 GB.
+- [Worked examples](job-routing-examples.md) shows the default job fit with
+  the current image root.
 - Next to the command, the dashboard says how long the install token works
   and what the machine needs.
 - Until the machine connects, the dashboard shows that it waits for the
@@ -142,9 +143,13 @@ runs on own machines.
 - The agent never uses the disk of a job VM again.
 - A job VM has the [size](labels.md#terms) of the
   [label](labels.md#terms) of its runner.
-- Each job VM gets one writable root disk of its label's disk size.
-- A larger label gets a larger root filesystem before its VM boots.
-- A label smaller than the image cannot start that image.
+- Each job VM gets one writable root disk.
+- Its root includes the image and at least the free disk of its label.
+- The root also includes the ext4 metadata and 1% root reserve allowance.
+- The agent reflinks the image and grows only the private job copy before
+  boot. It keeps the base image unchanged.
+- The actual total allocation must hold the image. An insufficient total
+  keeps the existing capacity error.
 - Docker shares the root disk's free space and its cached Docker images.
 - A separate sticky [Docker disk](cache.md#docker-disks) attaches only under
   the cache rules.
@@ -158,13 +163,21 @@ runs on own machines.
 - The image has the software of the GitHub runner image that
   `ubuntu-latest` names, so a workflow keeps its YAML apart from the
   `runs-on` line.
-- Each job root disk reserves 1% for root, so the default size leaves
-  about 19 GB free with the full image.
+- The image root is built at the smallest size that holds the full image.
+- Each job root disk reserves 1% of its blocks for root.
+- The free disk of the label remains available to the unprivileged runner,
+  as `df` reports it at job start.
 - The runner in the image is always a version that GitHub still accepts.
 - So ciproxy releases a new image before GitHub stops accepting the runner
   of the current image.
+- Each image release supplies its logical root disk bytes.
+- The agent keeps those facts with the verified image and its preparation hold.
+- It calculates the root allocation from the held release and the free
+  label disk.
 - A job VM starts from the newest image that its machine has, and a
   running job keeps its image.
+- Each runner retains its original free-size request and actual allocation.
+- Publication and restart do not change those facts for an existing runner.
 - **Decision:** one image definition serves the job VMs and the Boat
   sandboxes. Rejected: a separate image for each, because a job must behave
   the same wherever it runs.

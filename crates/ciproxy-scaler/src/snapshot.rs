@@ -2,9 +2,11 @@
 
 use std::time::Duration;
 
+use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_protocol::identifiers::{
     JobId, LabelName, MachineId, OrganizationId, RunnerId, WorkspaceId,
 };
+use ciproxy_protocol::images::ImageMetadata;
 use ciproxy_protocol::resources::{Slots, VmSize};
 
 use crate::boat::{BoatAccount, Sandbox};
@@ -14,6 +16,8 @@ use crate::boat::{BoatAccount, Sandbox};
 pub struct Snapshot {
     /// Workspace that owns every supplied machine and marked sandbox.
     pub workspace_id: WorkspaceId,
+    /// Boat image sizing and fallback until an own machine reports its image.
+    pub root_sizing: RootSizing,
     /// Current time on the same clock as queue and retry timestamps.
     pub now: Duration,
     /// Whether the control plane can currently apply routing actions.
@@ -39,7 +43,7 @@ pub struct Snapshot {
 pub struct Label {
     /// GitHub scale set label.
     pub name: LabelName,
-    /// Current dimensions requested by this label.
+    /// Current label dimensions, with disk measured as free job bytes.
     pub size: VmSize,
     /// Destinations enabled by the customer.
     pub destinations: Destinations,
@@ -81,6 +85,8 @@ pub struct WaitingJob {
 pub struct Machine {
     /// Own-machine identity.
     pub id: MachineId,
+    /// Exact selected local release, absent until reported by the machine.
+    pub selected_image: Option<ImageMetadata>,
     /// Whether the machine is connected to the control plane.
     pub connected: bool,
     /// Whether the machine must accept no new runner.
@@ -104,6 +110,15 @@ pub struct Machine {
     pub runners: Vec<Runner>,
 }
 
+impl Machine {
+    /// Prefer selected local release facts to the deployment fallback.
+    pub fn root_sizing(&self, fallback: RootSizing) -> RootSizing {
+        self.selected_image
+            .as_ref()
+            .map_or(fallback, RootSizing::for_image)
+    }
+}
+
 /// A live or retiring runner whose original size stays fixed.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Runner {
@@ -115,7 +130,7 @@ pub struct Runner {
     pub label: LabelName,
     /// Label dimensions at registration, used to detect later size edits.
     pub requested_size: VmSize,
-    /// Actual VM size retained for its lifetime.
+    /// Actual VM size retained for its lifetime, including the full root disk.
     pub size: VmSize,
     /// Last confirmed lifecycle state.
     pub state: RunnerState,
