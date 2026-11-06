@@ -34,6 +34,9 @@ impl ScaleSetFactory for Queue {
 
 #[async_trait]
 impl ScaleSetApi for Queue {
+    async fn find_runner(&self, _: &str) -> Result<Option<i64>> {
+        Err(Error::AccessUnavailable(501))
+    }
     async fn ensure(&self, _: &str, _: i64, _: Option<i64>) -> Result<i64> {
         Err(Error::AccessUnavailable(501))
     }

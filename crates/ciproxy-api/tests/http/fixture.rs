@@ -12,12 +12,11 @@ use ciproxy_api::crypto::AeadCredentialCipher;
 use ciproxy_api::router::router;
 use ciproxy_api::runtime::Runtime;
 use ciproxy_api::state::{ApiConfig, ApiState};
-use ciproxy_gateway::boundary::{AgentEvents, SystemEntropy};
+use ciproxy_gateway::boundary::SystemEntropy;
 use ciproxy_gateway::connections::LocalConnections;
 use ciproxy_gateway::gateway::{Gateway, MachineGateway};
 use ciproxy_github::app::{AppService, GitHubApp};
 use ciproxy_github::persistence::StoreAdapter;
-use ciproxy_protocol::agent::AgentMessage;
 use ciproxy_store_interface::dashboard::records::{Membership, Role};
 use ciproxy_store_interface::labels::{Label, WhenNothingFits};
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
@@ -32,18 +31,8 @@ use uuid::Uuid;
 
 use super::database::Database;
 use super::fixture_io::{CallbackOutcome, callback, cookie, oauth_state};
-use super::ports::{Factory, Identity, Inputs, Remote};
-
-struct Events;
-impl AgentEvents for Events {
-    fn receive(
-        &self,
-        _: ciproxy_gateway::types::Session,
-        _: AgentMessage,
-    ) -> ciproxy_gateway::error::Result<()> {
-        Ok(())
-    }
-}
+use super::ports::{Factory, Identity, Remote};
+use super::runtime_inputs::{Events, Inputs};
 
 pub(super) struct Browser {
     pub(super) cookie: String,

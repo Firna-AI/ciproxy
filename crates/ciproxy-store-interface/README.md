@@ -66,6 +66,8 @@ remote preparation permits activation. Failed delivery stays pending in
 sequence order even after organization rows change or a workspace purges.
 Consumer acceptance permits deletion. A crash before confirmation requires
 idempotent delivery. A pending-organization scan supports restart recovery.
+Each `Removed` event keeps its required `RemovalCause`, `Owner` or
+`WorkspaceTakeout`, with no default.
 Verified installation snapshots save login and App state together.
 The scoped write returns the saved record. It cannot change another
 workspace or account, replace a newer installation, or revive removal.
@@ -154,6 +156,8 @@ GatewayStore reuses TokenStore authority lookup to derive the workspace from
 the install hash. Registration rechecks the token under its transaction
 locks before it inserts the machine.
 They retain the full typed protocol report with a connection identifier.
+A `MachineSnapshot` returns it as a `ReceivedReport` with its receipt time.
+Later lifecycle contact does not change that time.
 Report writes preserve desired drain and warm settings.
 They reject replaced sessions and removed registrations.
 Gateway token issuance and registration serialize with workspace removal.
@@ -182,6 +186,19 @@ never authorizes execution. Existing organizations have explicit admitted data.
 New linked organizations count even while inactive. Removed ones do not count.
 Retained reinstall preserves holds and admission. Only a confirmed new workspace
 creates first-Admin work. Runnable authority also requires active GitHub App state.
+
+OwnRunnerStore exposes one coherent workspace routing snapshot.
+Its dedicated session lease serializes own-machine decisions.
+Runner intents retain exact slot sets and the original whole-GB label
+request. The shared Runner record is the byte-precise actual allocation.
+Metering facts, cursors, and totals use that same actual resource type.
+No JIT or original runtime-token credential enters these records.
+`OwnRunner.confirmed_at` keeps the first agent evidence of a runner.
+`confirm_own_runner` saves it from a full report and never replaces it.
+`record_own_command_result` saves the result of the current command. It
+also saves that first evidence, and only an applied result ends delivery.
+`retire_own_runner` saves the trusted GitHub ID, `Stopping`, and the stop
+command in one transaction.
 
 ## Quick Start
 
@@ -223,6 +240,7 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 - [src/installation_links.rs](src/installation_links.rs) owns association and
   execution admission.
 - [src/dashboard](src/dashboard) owns dashboard identity and access queries.
+- [src/own_runners.rs](src/own_runners.rs) owns exact execution records.
 
 - [src/store.rs](src/store.rs) defines Store and its connection factory.
 - [src/billing/store.rs](src/billing/store.rs) owns durable billing sessions.

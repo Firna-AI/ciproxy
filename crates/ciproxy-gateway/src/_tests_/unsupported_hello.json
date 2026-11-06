@@ -1,12 +1,39 @@
 {
-  "type": "hello", "protocol_version": 2,
-  "workspace_id": "dummy", "machine_id": "dummy", "credential": "dummy",
+  "type": "hello",
+  "protocol_version": 2,
+  "workspace_id": "dummy",
+  "machine_id": "dummy",
+  "credential": "dummy",
   "report": {
-    "hostname": "builder", "agent_version": "0.1.0",
-    "hardware": {"processor": "x64", "threads": 4, "memory_bytes": 16000000000, "kvm": true, "disks": []},
-    "capacity": 1, "slots": [], "runners": [], "drain": "active",
-    "cache": {"used_bytes": 0, "capacity_bytes": 0, "restores_last_7_days": 0, "hits_last_7_days": 0, "jobs": []},
-    "docker_disks": {"repositories": 0, "used_bytes": 0},
-    "images": {"available": [], "newest": null}
+    "hostname": "builder",
+    "agent_version": "0.1.0",
+    "hardware": {
+      "processor": "x64",
+      "threads": 4,
+      "memory_bytes": 16000000000,
+      "kvm": true,
+      "disks": []
+    },
+    "capacity": 1,
+    "slots": [],
+    "runners": [],
+    "drain": "active",
+    "cache": {
+      "used_bytes": 0,
+      "capacity_bytes": 0,
+      "restores_last_7_days": 0,
+      "hits_last_7_days": 0,
+      "jobs": []
+    },
+    "docker_disks": {
+      "repositories": 0,
+      "used_bytes": 0,
+      "leased_bytes": 0
+    },
+    "images": {
+      "available": [],
+      "newest": null
+    },
+    "job_disk_bytes": 0
   }
 }

@@ -1,7 +1,7 @@
 //! Protect disk and HTTP fallback without accepting guest authority.
 
-use ciproxy_cache_sidecar::session::Permissions;
 use ciproxy_protocol::cache::{CacheRestoreCounts, JobCacheUsage};
+use ciproxy_protocol::runtime::CachePermissions;
 use serde_json::json;
 
 use crate::support::relay::Relay;
@@ -16,7 +16,7 @@ async fn disconnected_lookup_misses_then_reconnection_reports_every_restore() {
         .job_via(
             "reconnect",
             facts("refs/heads/main"),
-            Permissions {
+            CachePermissions {
                 read: true,
                 write: true,
             },
@@ -61,7 +61,7 @@ async fn disk_faults_use_github_and_machine_outage_misses_while_results_continue
         .job_with(
             "machine-down",
             facts("refs/heads/main"),
-            Permissions {
+            CachePermissions {
                 read: true,
                 write: true,
             },
@@ -125,7 +125,7 @@ async fn session_auth_and_trusted_permissions_block_guest_authority() {
         .job_with(
             "no-permissions",
             facts("refs/heads/main"),
-            Permissions::default(),
+            CachePermissions::default(),
             false,
         )
         .await;

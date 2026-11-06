@@ -63,6 +63,15 @@ pub struct GithubLifecycleUpdate {
     pub notify: bool,
 }
 
+/// The committed reason that selects a removed installation's retirement policy.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub enum RemovalCause {
+    /// The owner removed the App and selected immediate idle retirement.
+    Owner,
+    /// A workspace Admin took out the organization with ordinary job protection.
+    WorkspaceTakeout,
+}
+
 /// An immutable lifecycle notification saved with its committed transition.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum LifecycleEvent {
@@ -85,6 +94,8 @@ pub enum LifecycleEvent {
         organization: Organization,
         /// Whether this removal left its workspace without an installed App.
         last_organization: bool,
+        /// The committed removal policy, independent of later organization rows.
+        cause: RemovalCause,
     },
 }
 

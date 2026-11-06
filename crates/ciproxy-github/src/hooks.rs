@@ -1,4 +1,4 @@
-//! Authenticated webhook dispatch for the hosted /hooks route.
+//! Authenticated webhook dispatch for the hosted /hooks/github route.
 
 use std::sync::Arc;
 
@@ -21,6 +21,7 @@ pub enum WebhookOutcome {
 }
 
 /// The hosted route's side-effecting webhook boundary.
+#[unimock::unimock(api = WebhookHandlerMock)]
 #[async_trait]
 pub trait WebhookHandler: Send + Sync {
     /// Verify the raw body before parsing or dispatching its event.

@@ -14,9 +14,15 @@ person installs the App.
 - No new job of the organization then gets a ciproxy
   [runner](job-routing.md#terms).
 - At the removal, the warm runners of the organization stop at once.
+- A warm runner can take a job just before that stop.
+- That job can fail when the runner has not handed it to the
+  [guest](agent.md#drain-and-remove) yet.
 - ciproxy also deletes each [sandbox](overflow.md#overflow-runners) of the
   organization that runs no job.
-- The jobs of the organization that run at that moment finish.
+- The other jobs of the organization that run at that moment finish,
+  including each job that the guest received.
+- **Decision:** the warm runners stop at once, also when a job can then
+  fail, as at "Remove" in [Drain and remove](agent.md#drain-and-remove).
 - The scale sets and the runners of the organization stay on GitHub,
   because ciproxy has no GitHub access left to delete them.
 - After a removal, the [dashboard](../architecture.md#components) says that

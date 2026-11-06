@@ -9,4 +9,5 @@ mod listener_tests;
 mod registration_tests;
 mod reinstall_tests;
 mod support;
+mod timing_tests;
 mod webhook_tests;

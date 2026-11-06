@@ -16,6 +16,7 @@ use crate::machines::MachineStore;
 use crate::metering::store::MeteringStore;
 use crate::organizations::OrganizationStore;
 use crate::overflow::store::OverflowStore;
+use crate::own_runners::OwnRunnerStore;
 use crate::runners::RunnerStore;
 use crate::scale_sets::ScaleSetStore;
 use crate::settings::SettingsStore;
@@ -42,6 +43,7 @@ pub trait Store:
     + GithubLifecycleStore
     + DashboardStore
     + InstallationLinkStore
+    + OwnRunnerStore
 {
 }
 

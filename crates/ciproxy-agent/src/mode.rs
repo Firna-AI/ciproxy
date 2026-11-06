@@ -31,6 +31,9 @@ impl Controller {
                 *state = next;
             }
         }
+        if self.state.lock().await.mode != Mode::Active {
+            self.release_pending_jobs().await?;
+        }
         self.enforce_mode().await
     }
 
@@ -42,7 +45,7 @@ impl Controller {
                 .iter()
                 .filter(|vm| {
                     !matches!(vm.report.state, RunnerState::Running { .. })
-                        && (state.mode != Mode::Active || vm.report.state == RunnerState::Stopping)
+                        && (state.mode == Mode::Removed || vm.report.state == RunnerState::Stopping)
                 })
                 .cloned()
                 .collect::<Vec<_>>()

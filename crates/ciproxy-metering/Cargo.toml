@@ -6,6 +6,7 @@ rust-version.workspace = true
 publish = false
 
 [dependencies]
+ciproxy-protocol = { workspace = true }
 chrono = "0.4.45"
 ciproxy-store-interface = { workspace = true }
 rust_decimal = { version = "1.43.0", default-features = false, features = ["std"] }

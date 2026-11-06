@@ -7,7 +7,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 
 use crate::error::{Error, ErrorResultExt, Result};
-use crate::process::{Commands, arguments};
+use crate::process::{Commands, arguments, reflink_copy};
 
 #[cfg_attr(test, unimock::unimock(api = RootFilesMock))]
 /// File operations used while preparing a disposable VM root.
@@ -60,19 +60,7 @@ impl RootDisk for ReflinkRoot {
         if root_bytes < image_bytes {
             return Err(Error::Capacity);
         }
-        self.commands
-            .run(
-                "cp",
-                &arguments(&[
-                    "--reflink=always",
-                    "--sparse=auto",
-                    "--",
-                    &image.to_string_lossy(),
-                    &copy.to_string_lossy(),
-                ]),
-                &[],
-            )
-            .await?;
+        reflink_copy(self.commands.as_ref(), image, copy).await?;
         if root_bytes > image_bytes {
             self.files.extend(copy, root_bytes)?;
             self.commands

@@ -35,11 +35,14 @@ if [[ ${2:-} == prepare-only ]]; then
 fi
 
 bash "$definition/build-kernel.sh" "$work_dir"
-cargo build --manifest-path "$repository/Cargo.toml" --release --package ciproxy-guest
+cargo build --manifest-path "$repository/Cargo.toml" --release --package ciproxy-guest --package ciproxy-cache-sidecar
+bash "$definition/build-runner.sh" "$work_dir"
 packer init "$work_dir/packer"
 packer build -only 'ubuntu-24_04.qemu.image' \
     -var "work_dir=$work_dir" \
     -var "guest_binary=$repository/target/release/ciproxy-guest" \
+    -var "cache_binary=$repository/target/release/ciproxy-cache-sidecar" \
+    -var "worker_binary=$work_dir/patched-worker/Runner.Worker.dll" \
     -var "image_definition=$definition" \
     -var image_os=ubuntu24 -var image_version=20261101.360.1 \
     "$work_dir/packer"

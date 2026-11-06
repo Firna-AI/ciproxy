@@ -16,6 +16,8 @@ pub struct AssignmentSnapshot {
     pub organization_id: i64,
     /// Repository identities and default branches from the API snapshot.
     pub repositories: Vec<Repository>,
+    /// The confirmed workspace tier includes repository Docker persistence.
+    pub sticky_docker: bool,
 }
 
 /// Existing store reads used by the hosted assignment builder.
@@ -36,6 +38,11 @@ impl AssignmentStore for StoreAdapter {
             Ok(AssignmentSnapshot {
                 organization_id: organization.github_id,
                 repositories: store.repositories(target.workspace_id, target.organization_id)?,
+                sticky_docker: matches!(
+                    store.billing(target.workspace_id)?.state.tier,
+                    ciproxy_store_interface::billing::state::Tier::Team
+                        | ciproxy_store_interface::billing::state::Tier::Business
+                ),
             })
         })
         .await

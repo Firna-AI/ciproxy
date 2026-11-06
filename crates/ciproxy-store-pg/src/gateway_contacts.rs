@@ -76,12 +76,14 @@ pub(crate) fn write_contact(
             machine_reports::machine_id.eq(machine_id),
             machine_reports::session_id.eq(contact.session_id),
             machine_reports::report.eq(&report),
+            machine_reports::received_at.eq(contact.at),
         ))
         .on_conflict((machine_reports::workspace_id, machine_reports::machine_id))
         .do_update()
         .set((
             machine_reports::session_id.eq(contact.session_id),
             machine_reports::report.eq(&report),
+            machine_reports::received_at.eq(contact.at),
         ))
         .execute(connection)
         .store()?;

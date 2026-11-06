@@ -18,9 +18,9 @@ use super::fixture_io::json;
 pub(super) fn report() -> MachineReport {
     serde_json::from_value(json!({
         "hostname":"builder", "agent_version":"0.1.0", "hardware":{"processor":"CPU", "threads":16,"memory_bytes":64000000000u64,"kvm":true,"disks":[{"name":"/data","capacity_bytes":500000000000u64,"free_bytes":300000000000u64}]},
-        "capacity":6,"slots":[{"index":0,"occupancy":{"state":"free"}}],"runners":[],"drain":"active",
+        "capacity":6,"job_disk_bytes":180_000_000_000u64,"slots":[{"index":0,"occupancy":{"state":"free"}}],"runners":[],"drain":"active",
         "cache":{"used_bytes":512,"capacity_bytes":100000,"restores_last_7_days":10,"hits_last_7_days":8,"jobs":[]},
-        "docker_disks":{"repositories":2,"used_bytes":900},"images":{"available":[],"newest":null}
+        "docker_disks":{"repositories":2,"used_bytes":900,"leased_bytes":0},"images":{"available":[],"newest":null}
     })).unwrap()
 }
 

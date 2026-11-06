@@ -9,9 +9,11 @@ use ciproxy_protocol::reports::{DrainState, SlotOccupancy};
 use ciproxy_protocol::runners::{RunnerExit, RunnerState};
 use unimock::{MockFn, Unimock, matching};
 
+use crate::boundaries::GuestProvenance;
 use crate::boundaries::{CacheMock, StoreMock, VmsMock};
 use crate::controller::Agent;
 use crate::error::Error;
+use crate::fixtures::github_decision_sent;
 use crate::fixtures::{applied, controller, report_dependencies, spec, start_image, vm};
 use crate::state::{MachineState, Mode};
 
@@ -90,7 +92,10 @@ async fn stop_runner_cannot_stop_a_job_or_another_organization() {
             runners: vec![vm("job", true), vm("idle", false)],
             ..MachineState::default()
         },
-        Unimock::new(()),
+        Unimock::new((
+            github_decision_sent(),
+            StoreMock::save.some_call(matching!(_)).returns(Ok(())),
+        )),
     );
     for (runner, organization) in [("job", "org-1"), ("idle", "org-2")] {
         assert_eq!(
@@ -117,9 +122,12 @@ async fn stop_runner_cannot_stop_a_job_or_another_organization() {
 async fn reports_current_hardware_and_each_job_or_warm_slot() {
     let mut job = vm("job", true);
     job.report.size.vcpu = 4;
+    job.report.slot_indices = vec![0, 1];
+    let mut idle = vm("idle", false);
+    idle.report.slot_indices = vec![2];
     let agent = controller(
         MachineState {
-            runners: vec![job, vm("idle", false)],
+            runners: vec![job, idle],
             mode: Mode::Draining,
             ..MachineState::default()
         },
@@ -179,6 +187,7 @@ async fn guest_exit_discards_vm_and_removal_finishes_only_after_the_job() {
     assert_eq!(
         agent
             .guest(
+                GuestProvenance::InitialConfiguration,
                 "job",
                 GuestToAgent::RunnerExited {
                     runner_id: RunnerId("job".to_owned()),

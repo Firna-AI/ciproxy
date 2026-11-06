@@ -14,9 +14,8 @@ Do this only after the environment's protected central data apply passed,
 and before the runtime turns on. Do not prepare a database behind a failed
 production name collision. See [state recovery](state.md). Terraform
 creates the IAM database user `ciproxy-<env>-control@<project>.iam`, with
-no schema rights. No migration exists in this repository yet. Set the
-`postgres` password at a prompt, and start a proxy pod with the runtime
-identity:
+no schema rights. Set the `postgres` password at a prompt, and start a
+proxy pod with the runtime identity:
 
 ```sh
 gcloud sql users set-password postgres --instance="ciproxy-$DEPLOY_ENV" \
@@ -39,22 +38,46 @@ GRANT USAGE, CREATE ON SCHEMA public TO "ciproxy-main-preview-control@ciproxy.ia
 ```
 
 Stop the port forward, and run
-`kubectl delete pod ciproxy-sql-admin --namespace="$NAMESPACE"`. Run the
-migrations as the runtime user, so that it owns its tables.
+`kubectl delete pod ciproxy-sql-admin --namespace="$NAMESPACE"`. At startup,
+the control plane applies embedded migrations as the runtime database user.
+The existing schema rights let that user create and own its tables.
+
+## Prepare the session key
+
+The mounted `session-key` file contains base64url text that encodes exactly
+32 raw random bytes. The runtime accepts this text with or without padding.
+Generate it into a file in an existing private directory:
+
+```sh
+umask 077
+openssl rand -base64 32 | tr '+/' '-_' > /private/session-key
+```
+
+Keep the file private. Upload it to the existing session-key secret in the
+runtime steps below. The CDN key keeps its separate 16-byte format.
 
 ## Turn on the runtime
 
-Do this only when a real control-plane image exists. The current binary
-does not meet this interface of the `deploy/helm/ciproxy` chart:
+Build and publish the
+[control-plane image](../crates/ciproxy-control-plane/container.md) before
+enabling it. The `deploy/helm/ciproxy` chart supplies this interface:
 
-| Part | What the image must do |
-| --- | --- |
-| HTTP | Listen on `HTTP_BIND`, which is `0.0.0.0:8080`. |
-| Health | Answer `GET /api/health/ready` when ready, and `GET /api/health/live` while alive. The load balancer checks the ready path with the dashboard host. |
-| Database | Use `DATABASE_URL`: the Cloud SQL Auth Proxy beside it, on `127.0.0.1:5432`, with IAM login and no password. |
-| Settings | Read `PUBLIC_URL`, `IMAGE_URL_PREFIX`, `BOAT_KMS_KEY`, and `CDN_SIGNING_KEY_NAME`. The chart sets `CDN_SIGNING_KEY_NAME` to `ciproxy-<env>-images-v<N>`. |
-| Secrets | Read the files `github-app-private-key`, `github-webhook-secret`, `github-oauth-secret`, `stripe-secret-key`, `stripe-webhook-secret`, `session-key`, and `cdn-signing-key` in `SECRETS_DIRECTORY`, which is `/var/run/secrets/ciproxy`. The `cdn-signing-key` file holds secret version N, which `CDN_SIGNING_KEY_NAME` names. Each other file holds the latest version when the pod starts. |
-| Process | Run as a non-root user with a read-only root file system, and stop within 300 seconds. |
+| Part              | What the image must do                                                                                                                                                                                                                                                                                                                                                                        |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| HTTP              | Listen on `HTTP_BIND`, which is `0.0.0.0:8080`.                                                                                                                                                                                                                                                                                                                                               |
+| Health            | Answer `GET /api/health/ready` when ready, and `GET /api/health/live` while alive. The load balancer checks the ready path with the dashboard host.                                                                                                                                                                                                                                           |
+| Database          | Use `DATABASE_URL`: the Cloud SQL Auth Proxy beside it, on `127.0.0.1:5432`, with IAM login and no password.                                                                                                                                                                                                                                                                                  |
+| Settings          | Read `PUBLIC_URL`, `IMAGE_URL_PREFIX`, `BOAT_KMS_KEY`, and `CDN_SIGNING_KEY_NAME`. The chart sets `CDN_SIGNING_KEY_NAME` to `ciproxy-<env>-images-v<N>`.                                                                                                                                                                                                                                      |
+| GitHub App        | Read the pod variables `GITHUB_APP_ID`, `GITHUB_OAUTH_CLIENT_ID`, and `GITHUB_APP_SLUG`. Deploy maps them from this environment's `CIPROXY_APP_ID`, `CIPROXY_APP_CLIENT_ID`, and `CIPROXY_APP_SLUG` GitHub variables. Build the installation URL from the slug. The OAuth secret stays in `github-oauth-secret`.                                                                              |
+| Job image         | Read `JOB_IMAGE_MANIFEST_PATH` from this environment's GitHub variable. It pins one immutable path relative to `IMAGE_URL_PREFIX`, such as `<release>/manifest.json`.                                                                                                                                                                                                                         |
+| Build and install | Read `BUILD_ID` from the trusted deployment source commit. Read `DOWNLOAD_URL` from the HTTPS origin of this environment's release host. Deploy derives both values.                                                                                                                                                                                                                          |
+| Secrets           | Read the files `github-app-private-key`, `github-webhook-secret`, `github-oauth-secret`, `stripe-secret-key`, `stripe-webhook-secret`, `session-key`, and `cdn-signing-key` in `SECRETS_DIRECTORY`, which is `/var/run/secrets/ciproxy`. The `cdn-signing-key` file holds secret version N, which `CDN_SIGNING_KEY_NAME` names. Each other file holds the latest version when the pod starts. |
+| Process           | Run as a non-root user with a read-only root file system, and stop within 300 seconds.                                                                                                                                                                                                                                                                                                        |
+
+The runtime signs and fetches the manifest and its sibling `downloads.json`
+with the existing CDN key. It reads `root_disk_bytes` and `image_id` only
+from the manifest. It reads artifact names, hashes, and download bytes only
+from `downloads.json`. It signs fresh artifact URLs for each send.
 
 The GitHub variable `CDN_SIGNING_KEY_NAME` is the one selector of the CDN
 key. From it, the chart sets both the key name and the secret version N of
@@ -67,11 +90,12 @@ off, the chart renders no control plane, so the selector has no effect.
 
 Then do these steps:
 
-1. Push the image to the shared repository `ciproxy-shared-runtime`. The GKE nodes
-   pull only from there.
+1. Push the image to the shared repository `ciproxy-shared-runtime`.
+   The GKE nodes pull only from there.
 2. Add a version to each of the six other secrets `ciproxy-<env>-<file>` of
-   the table, from a private file. [Key registration](setup.md#9-register-the-cdn-signing-key)
-   already gave the CDN key its numbered version. The pod cannot mount a
+   the table, from a private file.
+   [Key registration](setup.md#9-register-the-cdn-signing-key) already gave
+   the CDN key its numbered version. The pod cannot mount a
    secret without a version. For
    example:
 
@@ -80,9 +104,10 @@ Then do these steps:
      --project="$PROJECT_ID" --data-file=PRIVATE_FILE
    ```
 
-3. [Prepare the database](#prepare-the-database), and run the migrations.
+3. [Prepare the database](#prepare-the-database) for startup migrations.
 4. Check that `CDN_SIGNING_KEY_NAME` holds the name from key registration. Set
-   `CONTROL_PLANE_IMAGE` and `CONTROL_PLANE_RUNTIME_READY=true` in the
+   the [runtime variables](setup.md#4-set-github-variables), including
+   `CONTROL_PLANE_IMAGE` and `CONTROL_PLANE_RUNTIME_READY=true`, in the
    GitHub environment. Then deploy, and check the rollout with
    `kubectl rollout status deployment/control-plane --namespace="$NAMESPACE"`.
 

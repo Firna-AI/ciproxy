@@ -22,6 +22,8 @@ pub struct MachineReport {
     pub hardware: HardwareReport,
     /// Slot capacity calculated from the documented host reserve.
     pub capacity: Slots,
+    /// Total job disk after this machine's persisted image budget and reserve.
+    pub job_disk_bytes: u64,
     /// Current occupancy of the machine's individual slots.
     pub slots: Vec<SlotReport>,
     /// Every runner still owned by the agent.

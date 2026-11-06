@@ -154,8 +154,8 @@ fn callback_claim_is_scoped_one_use_and_durable_before_deletion() {
             .runners(workspace_id, record.organization_id)
             .unwrap()[0]
             .size
-            .disk_gb,
-        111
+            .disk_bytes,
+        111_000_000_000
     );
 }
 

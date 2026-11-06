@@ -55,6 +55,13 @@ pub(super) fn report() -> MachineReport {
     report.cache.restores_last_7_days = 19;
     report.cache.hits_last_7_days = 11;
     report.cache.jobs = vec![JobCacheReport {
+        organization_id: OrganizationId("org-2".into()),
+        repository_id: ciproxy_protocol::identifiers::RepositoryId("repo-9".into()),
+        assignment: ciproxy_protocol::jobs::JobAssignment {
+            run_id: "run-9".into(),
+            job_id: Some(JobId("job-9".into())),
+            runner_id: "github-runner-9".into(),
+        },
         job_id: JobId("job-9".into()),
         usage: JobCacheUsage::MachineHandled(CacheRestoreCounts {
             local_entries: 2,
@@ -70,8 +77,11 @@ pub(super) fn report() -> MachineReport {
     }];
     report.images.newest = Some(ImageId("image-4".into()));
     report.capacity = Slots(3);
+    report.job_disk_bytes = 279 * GIGABYTE;
     report.runners = vec![
         RunnerReport {
+            configuration_lost: false,
+            slot_indices: vec![1],
             runner_id: RunnerId("busy".into()),
             organization_id: OrganizationId("org-2".into()),
             label: LabelName("ciproxy".into()),
@@ -91,6 +101,8 @@ pub(super) fn report() -> MachineReport {
             },
         },
         RunnerReport {
+            configuration_lost: false,
+            slot_indices: vec![0],
             runner_id: RunnerId("warm".into()),
             organization_id: OrganizationId("org-1".into()),
             label: LabelName("ciproxy".into()),

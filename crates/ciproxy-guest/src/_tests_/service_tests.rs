@@ -12,9 +12,11 @@ use crate::error::Error;
 use crate::service::Guest;
 
 #[path = "support.rs"]
-mod support;
+pub(super) mod support;
 
-use support::{Observation, channel, configure, exited, hello, runner, shutdown_pair, supervisor};
+use support::{
+    Observation, channel, configure, configured, exited, hello, runner, shutdown_pair, supervisor,
+};
 
 #[tokio::test]
 async fn reports_readiness_and_exit_before_poweroff() {
@@ -35,6 +37,7 @@ async fn reports_readiness_and_exit_before_poweroff() {
         *trace.lock().unwrap(),
         vec![
             hello(),
+            configured(),
             Observation::Start,
             Observation::ControlLost,
             Observation::Message(GuestToAgent::RunnerReady {
@@ -66,7 +69,9 @@ async fn ignores_another_registration_in_the_same_guest() {
         *trace.lock().unwrap(),
         vec![
             hello(),
+            configured(),
             Observation::Start,
+            configured(),
             Observation::ControlLost,
             exited(Some(0)),
             Observation::Poweroff
@@ -86,6 +91,7 @@ async fn shutdown_stops_the_running_listener_and_reports_its_exit() {
         *trace.lock().unwrap(),
         vec![
             hello(),
+            configured(),
             Observation::Start,
             Observation::Waiting,
             Observation::Stop,
@@ -118,6 +124,7 @@ async fn agent_connection_failure_keeps_the_runner_until_its_exit() {
         *trace.lock().unwrap(),
         vec![
             hello(),
+            configured(),
             Observation::Start,
             Observation::ControlLost,
             exited(Some(0)),
@@ -142,6 +149,7 @@ async fn failed_exit_report_still_powers_off_the_finished_guest() {
         *trace.lock().unwrap(),
         vec![
             hello(),
+            configured(),
             Observation::Start,
             Observation::ControlLost,
             exited(Some(0)),
@@ -167,6 +175,6 @@ async fn failed_runner_start_reports_absent_exit_code_and_powers_off() {
     assert!(matches!(result, Err(Error::Internal(_))));
     assert_eq!(
         *trace.lock().unwrap(),
-        vec![hello(), exited(None), Observation::Poweroff]
+        vec![hello(), configured(), exited(None), Observation::Poweroff]
     );
 }

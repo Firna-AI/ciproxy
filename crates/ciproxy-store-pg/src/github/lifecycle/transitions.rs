@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use ciproxy_schema::organizations::organizations;
 use ciproxy_store_interface::error::Result;
 use ciproxy_store_interface::github_lifecycle::{
-    GithubLifecycleUpdate, GithubRegistration, LifecycleEvent,
+    GithubLifecycleUpdate, GithubRegistration, LifecycleEvent, RemovalCause,
 };
 use ciproxy_store_interface::organizations::{AppState, Organization};
 use diesel::prelude::*;
@@ -120,6 +120,7 @@ pub(super) fn remove(
                 &LifecycleEvent::Removed {
                     organization: saved.clone(),
                     last_organization: remaining == 0,
+                    cause: RemovalCause::Owner,
                 },
             )?;
             Ok(saved)

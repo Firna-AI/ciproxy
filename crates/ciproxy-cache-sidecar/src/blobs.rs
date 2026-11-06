@@ -52,7 +52,7 @@ impl MachineCache {
             && download.blob.is_none()
             && self.fetch(&session, &mut download).await.is_err()
         {
-            self.metrics.fallback(&session.registration.job_id).await;
+            self.metrics.fallback(&session.registration).await;
             return redirect(&download.remote);
         }
         let (source, size) = if let Some(blob) = &download.blob {
@@ -101,7 +101,7 @@ impl MachineCache {
         }
         let local = download.local;
         let metrics = self.metrics.clone();
-        let job = session.registration.job_id.clone();
+        let job = session.registration.clone();
         let ticket = ticket.clone();
         let store = self.store.clone();
         let stream = async_stream::stream! {

@@ -31,6 +31,7 @@ pub(super) fn registration(workspace_id: Uuid, install_hash: TokenHash) -> Regis
                     disks: vec![],
                 },
                 capacity: Slots(0),
+                job_disk_bytes: 0,
                 slots: vec![],
                 runners: vec![],
                 drain: DrainState::Active,
@@ -43,6 +44,7 @@ pub(super) fn registration(workspace_id: Uuid, install_hash: TokenHash) -> Regis
                     jobs: vec![],
                 },
                 docker_disks: DockerDiskReport {
+                    leased_bytes: 0,
                     repositories: 0,
                     used_bytes: 0,
                 },

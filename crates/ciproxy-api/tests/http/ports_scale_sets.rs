@@ -20,6 +20,9 @@ impl ScaleSetFactory for Factory {
 }
 #[async_trait]
 impl ScaleSetApi for Remote {
+    async fn find_runner(&self, _: &str) -> ciproxy_github::error::Result<Option<i64>> {
+        Ok(None)
+    }
     async fn ensure(
         &self,
         name: &str,

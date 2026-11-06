@@ -1,13 +1,20 @@
 //! Composition root of the open-source ciproxy machine agent.
 
 mod application;
+mod application_images;
 mod area;
 mod area_files;
 mod area_mounts;
 mod area_types;
+mod assignment_state;
 mod boundaries;
 mod budget_file;
 mod cache;
+mod cache_admin;
+mod cache_authority;
+mod cache_network;
+mod cache_service;
+mod cache_unit;
 mod capacity;
 mod cli;
 mod commands;
@@ -15,8 +22,12 @@ mod connection;
 mod connection_socket;
 mod connection_types;
 mod controller;
+mod docker;
+mod docker_files;
+mod docker_prepare;
 mod error;
 mod gateway;
+mod guest_transport;
 mod hardware;
 mod host_composition;
 mod host_file_ops;
@@ -37,6 +48,8 @@ mod image_store;
 mod image_verification;
 mod images;
 mod installation;
+mod job_decisions;
+mod job_preparation;
 mod launches;
 mod layout;
 mod logging;
@@ -47,10 +60,12 @@ mod network_rules;
 mod observations;
 mod persistence;
 mod process;
+mod release_client;
 mod reporting;
 mod runtime;
 mod runtime_reports;
 mod runtime_worker;
+mod slot_allocation;
 mod sparse_copy;
 mod state;
 mod storage_sizing;
@@ -90,6 +105,18 @@ mod connection_fixtures;
 #[cfg(test)]
 #[path = "_tests_/job_facts_tests.rs"]
 mod job_facts_tests;
+
+#[cfg(test)]
+#[path = "_tests_/cache_authority_tests.rs"]
+mod cache_authority_tests;
+
+#[cfg(test)]
+#[path = "_tests_/host_decision_tests.rs"]
+mod host_decision_tests;
+
+#[cfg(test)]
+#[path = "_tests_/hosted_preparation_tests.rs"]
+mod hosted_preparation_tests;
 
 #[cfg(test)]
 #[path = "_tests_/startup_tests.rs"]

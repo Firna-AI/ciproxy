@@ -17,7 +17,7 @@ fn job_messages_deduplicate_and_finished_metadata_expires_after_ninety_days() {
     let (mut label, scale_set) = database.label_and_scale_set(&organization);
     let machine = machine();
     store.create_machine(owner.id, &machine).unwrap();
-    let runner = runner(
+    let mut runner = runner(
         &label,
         &scale_set,
         RunnerPlace::Machine {
@@ -25,7 +25,14 @@ fn job_messages_deduplicate_and_finished_metadata_expires_after_ninety_days() {
             first_slot: 0,
         },
     );
+    runner.size.disk_bytes = 82_644_443_136;
     store.create_runner(owner.id, &runner).unwrap();
+    assert_eq!(
+        store.runners(owner.id, organization.id).unwrap()[0]
+            .size
+            .disk_bytes,
+        82_644_443_136
+    );
     let mut completed = job(&label, &scale_set);
     assert!(store.insert_job(owner.id, &completed).unwrap());
     completed.runner_id = Some(runner.id);

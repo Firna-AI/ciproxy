@@ -2,7 +2,7 @@
 
 use chrono::Duration;
 use ciproxy_store_interface::github_lifecycle::GithubLifecycleTarget;
-use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
+use ciproxy_store_interface::github_lifecycle::{LifecycleEvent, RemovalCause};
 use ciproxy_store_interface::organizations::AppState;
 use unimock::{MockFn, Unimock, matching};
 
@@ -53,6 +53,7 @@ async fn removal_revokes_store_state_before_last_workspace_cleanup_delivery() {
         delivery(LifecycleEvent::Removed {
             organization: removed.clone(),
             last_organization: true,
+            cause: RemovalCause::Owner,
         }),
         LifecycleOutputMock::changed
             .next_call(matching!(_))
@@ -65,7 +66,8 @@ async fn removal_revokes_store_state_before_last_workspace_cleanup_delivery() {
                     event,
                     LifecycleEvent::Removed {
                         organization: expected,
-                        last_organization: true
+                        last_organization: true,
+                        cause: RemovalCause::Owner
                     }
                 );
                 Ok(())

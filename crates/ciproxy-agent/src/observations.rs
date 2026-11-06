@@ -1,17 +1,38 @@
 //! Bind vsock observations to their VM and persist every job transition.
 
+use std::sync::atomic::Ordering;
+
 use ciproxy_protocol::agent::AgentMessage;
 use ciproxy_protocol::guest::GuestToAgent;
 use ciproxy_protocol::runners::RunnerState;
 use ciproxy_protocol::version::ProtocolVersion;
 
+use crate::boundaries::GuestProvenance;
+use crate::cache_authority::CacheAuthority;
 use crate::controller::Controller;
 use crate::error::{Error, Result};
 use crate::state::{Mode, VmRecord};
 
 impl Controller {
+    pub(crate) async fn record_configuration(&self, runner_id: &str, lost: bool) -> Result<()> {
+        let mut state = self.state.lock().await;
+        let mut next = state.clone();
+        if let Some(vm) = next
+            .runners
+            .iter_mut()
+            .find(|vm| vm.report.runner_id.0 == runner_id)
+            && vm.report.configuration_lost != lost
+            && (!lost || vm.report.state == RunnerState::Starting)
+        {
+            vm.report.configuration_lost = lost;
+            self.store.save(&next)?;
+            *state = next;
+        }
+        Ok(())
+    }
     pub(crate) async fn observe(
         &self,
+        provenance: GuestProvenance,
         runner_id: &str,
         message: GuestToAgent,
     ) -> Result<Option<AgentMessage>> {
@@ -25,18 +46,95 @@ impl Controller {
             .cloned()
             .ok_or(Error::GuestMismatch)?;
         let response = match message {
+            GuestToAgent::JobStarting {
+                runner_id,
+                job_id,
+                runtime,
+            } => {
+                if runner_id != vm.report.runner_id {
+                    return Err(Error::GuestMismatch);
+                }
+                let (updated, checked) = self
+                    .started_record(
+                        &vm,
+                        &job_id,
+                        Some(runtime),
+                        provenance == GuestProvenance::InitialConfiguration,
+                    )
+                    .await?;
+                if let Some(runtime) = checked {
+                    if let Err(error) = self.cache.handoff(&updated, &job_id, runtime).await {
+                        tracing::warn!(%error,"cache assignment unavailable; preserve GitHub fallback");
+                    }
+                    if let Some(facts) = updated.job_facts.clone() {
+                        self.prepare_job(&updated, facts).await?;
+                    }
+                } else {
+                    tracing::warn!("cache assignment authority unavailable; select GitHub caching");
+                    self.release_github(&updated).await?;
+                }
+                if self.state.lock().await.mode != Mode::Active
+                    || !self.control_connected.load(Ordering::Acquire)
+                {
+                    self.release_pending_jobs().await?;
+                }
+                AgentMessage::JobStarted { runner_id, job_id }
+            }
+            GuestToAgent::JobPrepared {
+                runner_id,
+                job_id,
+                outcome,
+            } => {
+                if runner_id != vm.report.runner_id
+                    || vm.report.state != (RunnerState::Running { job_id })
+                {
+                    return Err(Error::GuestMismatch);
+                }
+                if !outcome.cache_ready
+                    && let Err(error) = self.cache.fallback(&vm).await
+                {
+                    tracing::warn!(%error,"cache fallback cleanup will retry");
+                }
+                if !outcome.docker_attached
+                    && let Some(dockers) = &self.dockers
+                    && dockers.reserved(&vm)?
+                {
+                    self.vms.clear_docker(&vm).await?;
+                    dockers.release(&vm)?;
+                }
+                self.prepared_record(&vm, outcome).await?;
+                if !outcome.cache_ready && vm.cache_authority != CacheAuthority::GitHubOnly {
+                    self.release_github(&vm).await?;
+                }
+                tracing::info!(event="job_prepared_observed",vm_id=%vm.local_id,"accepted local job readiness");
+                return Ok(None);
+            }
             GuestToAgent::Hello {
                 protocol_version,
                 image_id,
+                configuration_received,
+                ..
             } => {
                 if protocol_version != ProtocolVersion::CURRENT || image_id != vm.report.image_id {
                     return Err(Error::GuestMismatch);
                 }
-                if self.state.lock().await.mode != Mode::Active
+                if configuration_received {
+                    self.record_configuration(runner_id, false).await?;
+                }
+                if self.state.lock().await.mode == Mode::Removed
                     || vm.report.state == RunnerState::Stopping
                 {
                     self.request_idle_stop(&vm).await?;
                 }
+                return Ok(None);
+            }
+            GuestToAgent::RunnerConfigured {
+                runner_id: received,
+            } => {
+                if received != vm.report.runner_id {
+                    return Err(Error::GuestMismatch);
+                }
+                self.record_configuration(runner_id, false).await?;
                 return Ok(None);
             }
             GuestToAgent::RunnerReady { runner_id } => {
@@ -67,24 +165,7 @@ impl Controller {
                 if runner_id != vm.report.runner_id {
                     return Err(Error::GuestMismatch);
                 }
-                let mut state = self.state.lock().await;
-                let mut next = state.clone();
-                let record = next
-                    .runners
-                    .iter_mut()
-                    .find(|r| r.local_id == vm.local_id)
-                    .ok_or(Error::GuestMismatch)?;
-                if let RunnerState::Running { job_id: previous } = &record.report.state
-                    && *previous != job_id
-                {
-                    return Err(Error::GuestMismatch);
-                }
-                record.report.state = RunnerState::Running {
-                    job_id: job_id.clone(),
-                };
-                self.store.save(&next)?;
-                *state = next;
-                tracing::info!(event = "job_started_observed", vm_id = %vm.local_id, "accepted guest job state");
+                self.started_record(&vm, &job_id, None, false).await?;
                 AgentMessage::JobStarted { runner_id, job_id }
             }
             GuestToAgent::RunnerExited { runner_id, exit } => {
@@ -123,9 +204,10 @@ impl Controller {
 
     pub(crate) async fn retire(&self, vm: &VmRecord) -> Result<()> {
         self.vms.stop(vm).await?;
-        if let Err(error) = self.cache.release(&vm.report.runner_id).await {
-            tracing::warn!(error = %error, "machine cache release failed");
+        if let Some(dockers) = &self.dockers {
+            dockers.release(vm)?;
         }
+        self.cache.release(vm).await?;
         let mut state = self.state.lock().await;
         let mut next = state.clone();
         next.runners.retain(|record| record.local_id != vm.local_id);
@@ -134,3 +216,11 @@ impl Controller {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "_tests_/preparation_outcome_tests.rs"]
+mod preparation_outcome_tests;
+
+#[cfg(test)]
+#[path = "_tests_/preparation_replay_tests.rs"]
+mod preparation_replay_tests;

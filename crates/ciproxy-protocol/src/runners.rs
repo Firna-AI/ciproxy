@@ -9,6 +9,8 @@ use crate::secret::Secret;
 /// Everything the agent needs to start one ephemeral runner.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct RunnerSpec {
+    /// Exact logical slots reserved by the hosted runtime.
+    pub slot_indices: Vec<u64>,
     /// The runner and VM identity assigned by the control plane.
     pub runner_id: RunnerId,
     /// GitHub organization whose scale set owns this runner registration.
@@ -24,6 +26,10 @@ pub struct RunnerSpec {
 /// A runner that the agent still owns, also after a reconnect.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct RunnerReport {
+    /// The guest confirmed no configuration and this agent holds no pending JIT.
+    pub configuration_lost: bool,
+    /// Actual logical slots held for this VM's whole lifetime.
+    pub slot_indices: Vec<u64>,
     /// The runner and VM identity.
     pub runner_id: RunnerId,
     /// Organization scope retained by this runner across agent reconnects.

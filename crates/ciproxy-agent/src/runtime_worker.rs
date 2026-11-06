@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use ciproxy_protocol::agent::{AgentMessage, ControlMessage};
+use ciproxy_protocol::guest::GuestToAgent;
 use tokio::sync::{Notify, mpsc};
 
 use crate::boundaries::GuestEvent;
@@ -39,7 +40,21 @@ pub(crate) async fn control_worker(
                 continue;
             }
             Work::Control(message) => agent.control(*message).await,
-            Work::Guest(event) => agent.guest(&event.runner_id.0, event.message).await,
+            Work::Guest(event) => {
+                let recorded = if matches!(event.message, GuestToAgent::Hello { .. }) {
+                    agent.configuration_lost(&event.runner_id.0).await
+                } else {
+                    Ok(())
+                };
+                match recorded {
+                    Ok(()) => {
+                        agent
+                            .guest(event.provenance, &event.runner_id.0, event.message)
+                            .await
+                    }
+                    Err(error) => Err(error),
+                }
+            }
         };
         match result {
             Ok(Some(message)) => {

@@ -7,6 +7,7 @@ mod machine_tests;
 mod ports;
 mod ports_gate;
 mod ports_scale_sets;
+mod runtime_inputs;
 mod settings_tests;
 
 mod fixture_io;

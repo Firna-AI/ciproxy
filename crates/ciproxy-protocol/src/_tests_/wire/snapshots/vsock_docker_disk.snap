@@ -8,6 +8,7 @@ expression: message
   "type": "docker_disk",
   "job_id": "job-1",
   "disk": {
+    "free_bytes": 20000000000,
     "drive_id": "docker_cache",
     "access": "disposable_copy"
   }

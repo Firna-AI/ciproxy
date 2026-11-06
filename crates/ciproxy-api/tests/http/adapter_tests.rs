@@ -25,7 +25,7 @@ use uuid::Uuid;
 use super::adapter_server::Server;
 use super::fixture::Fixture;
 use super::fixture_io::{CallbackOutcome, json};
-use super::ports::Inputs;
+use super::runtime_inputs::Inputs;
 use super::setup_support::{browser, finish};
 
 const VERIFIER: &str = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";

@@ -36,6 +36,7 @@ pub(super) struct FakeState {
     pub(super) resource: ResourceHttp,
     pub(super) fail_later_facts: AtomicBool,
     pub(super) facts_reads: AtomicUsize,
+    pub(super) job_pages: Mutex<Vec<Value>>,
 }
 
 impl Server {
@@ -55,6 +56,7 @@ impl Server {
             resource: ResourceHttp::new(),
             fail_later_facts: AtomicBool::new(false),
             facts_reads: AtomicUsize::new(0),
+            job_pages: Mutex::new(Vec::new()),
         });
         let router = Router::new().fallback(handle).with_state(state.clone());
         let task = tokio::spawn(async move {
@@ -97,6 +99,15 @@ async fn handle(
         .is_some_and(|value| value == "Bearer test-app-jwt");
     if let Some(response) = respond(&state.resource, &method, path, &body, app_jwt) {
         return response;
+    }
+    if path.ends_with("/actions/runs/31/jobs") {
+        let page = url::form_urlencoded::parse(uri.query().unwrap_or_default().as_bytes())
+            .find(|(key, _)| key == "page")
+            .unwrap()
+            .1
+            .parse::<usize>()
+            .unwrap();
+        return Json(state.job_pages.lock().unwrap()[page - 1].clone()).into_response();
     }
     if path.ends_with("/access_tokens") {
         let number = state.tokens.fetch_add(1, Ordering::SeqCst) + 1;

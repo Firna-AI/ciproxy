@@ -89,6 +89,7 @@ pub enum InstallationOutcome {
 }
 
 /// The complete App integration entry point used by the hosted control plane.
+#[unimock::unimock(api=GitHubAppMock)]
 #[async_trait]
 pub trait GitHubApp: Send + Sync {
     /// Resolve one saved exact requester claim without inferring a target.

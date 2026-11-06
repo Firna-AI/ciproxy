@@ -1,8 +1,8 @@
 //! Protect branch precedence, repository separation, and hostile PR writes.
 
-use ciproxy_cache_sidecar::session::Permissions;
 use ciproxy_protocol::identifiers::{GitRef, JobEvent, RepositoryId};
 use ciproxy_protocol::jobs::Repository;
+use ciproxy_protocol::runtime::CachePermissions;
 use serde_json::json;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
@@ -129,7 +129,7 @@ async fn unsafe_pr_and_fork_writes_never_reach_upstream_even_in_fallback() {
             .job_with(
                 &format!("unsafe-{index}"),
                 job_facts,
-                Permissions {
+                CachePermissions {
                     read: true,
                     write: true,
                 },

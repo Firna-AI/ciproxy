@@ -56,6 +56,7 @@ pub(crate) fn size() -> VmSize {
 
 pub(crate) fn runner() -> RunnerSpec {
     RunnerSpec {
+        slot_indices: vec![2],
         runner_id: runner_id(),
         organization_id: organization_id(),
         label: LabelName("ciproxy".into()),
@@ -102,6 +103,7 @@ pub(crate) fn facts() -> JobFacts {
             full_name: "contributor/project".into(),
         }),
         default_ref: GitRef("refs/heads/main".into()),
+        sticky_docker: false,
     }
 }
 
@@ -121,6 +123,7 @@ pub(crate) fn report() -> MachineReport {
             }],
         },
         capacity: Slots(3),
+        job_disk_bytes: 279 * GIGABYTE,
         slots: vec![
             SlotReport {
                 index: 0,
@@ -142,6 +145,8 @@ pub(crate) fn report() -> MachineReport {
         ],
         runners: vec![
             RunnerReport {
+                configuration_lost: false,
+                slot_indices: vec![1],
                 runner_id: RunnerId("runner-warm".into()),
                 organization_id: OrganizationId("organization-2".into()),
                 label: LabelName("ciproxy".into()),
@@ -155,6 +160,8 @@ pub(crate) fn report() -> MachineReport {
                 state: RunnerState::Warm,
             },
             RunnerReport {
+                configuration_lost: false,
+                slot_indices: vec![2],
                 runner_id: runner_id(),
                 organization_id: organization_id(),
                 label: LabelName("ciproxy".into()),
@@ -183,7 +190,10 @@ pub(crate) fn report() -> MachineReport {
             }],
             jobs: vec![
                 JobCacheReport {
+                    organization_id: organization_id(),
+                    repository_id: facts().repository.id,
                     job_id: job_id(),
+                    assignment: cache_assignment(job_id()),
                     usage: JobCacheUsage::MachineHandled(CacheRestoreCounts {
                         local_entries: 3,
                         github_entries: 0,
@@ -191,7 +201,10 @@ pub(crate) fn report() -> MachineReport {
                     }),
                 },
                 JobCacheReport {
+                    organization_id: organization_id(),
+                    repository_id: facts().repository.id,
                     job_id: JobId("job-2".into()),
+                    assignment: cache_assignment(JobId("job-2".into())),
                     usage: JobCacheUsage::MachineHandled(CacheRestoreCounts {
                         local_entries: 1,
                         github_entries: 1,
@@ -199,11 +212,17 @@ pub(crate) fn report() -> MachineReport {
                     }),
                 },
                 JobCacheReport {
+                    organization_id: organization_id(),
+                    repository_id: facts().repository.id,
                     job_id: JobId("job-3".into()),
+                    assignment: cache_assignment(JobId("job-3".into())),
                     usage: JobCacheUsage::Github,
                 },
                 JobCacheReport {
+                    organization_id: organization_id(),
+                    repository_id: facts().repository.id,
                     job_id: JobId("job-4".into()),
+                    assignment: cache_assignment(JobId("job-4".into())),
                     usage: JobCacheUsage::MachineHandled(CacheRestoreCounts {
                         local_entries: 0,
                         github_entries: 2,
@@ -213,6 +232,7 @@ pub(crate) fn report() -> MachineReport {
             ],
         },
         docker_disks: DockerDiskReport {
+            leased_bytes: 0,
             repositories: 2,
             used_bytes: 15 * GIGABYTE,
         },
@@ -229,5 +249,13 @@ pub(crate) fn report() -> MachineReport {
             ],
             newest: Some(image_id()),
         },
+    }
+}
+
+fn cache_assignment(job_id: JobId) -> JobAssignment {
+    JobAssignment {
+        run_id: "run-cache".to_owned(),
+        runner_id: format!("github-{}", job_id.0),
+        job_id: Some(job_id),
     }
 }

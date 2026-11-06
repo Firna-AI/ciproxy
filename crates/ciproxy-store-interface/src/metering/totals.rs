@@ -5,7 +5,7 @@ use rust_decimal::Decimal;
 
 use crate::metering::facts::UsageJob;
 use crate::metering::history::BoatCost;
-use crate::vm_size::VmSize;
+use ciproxy_protocol::resources::VmSize;
 
 /// The starts and elapsed runtime of one execution location.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]

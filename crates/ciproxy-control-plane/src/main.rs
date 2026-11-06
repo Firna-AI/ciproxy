@@ -1,8 +1,7 @@
-//! Composition root of the ciproxy control plane skeleton.
+//! Composition root of the hosted ciproxy HTTP service.
 
 mod cli;
-mod config;
 
-fn main() {
-    cli::main();
+fn main() -> std::process::ExitCode {
+    cli::main()
 }

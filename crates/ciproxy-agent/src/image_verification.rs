@@ -1,5 +1,6 @@
 //! Streaming checksums and exact, regular-file bundle membership.
 
+use std::collections::HashSet;
 use std::path::Path;
 
 use ciproxy_protocol::images::{ImageDownload, ImageMetadata};
@@ -82,6 +83,7 @@ pub(crate) struct BundleMembers {
     rootfs: bool,
     rootfs_bytes: u64,
     invalid: bool,
+    metadata: HashSet<&'static str>,
 }
 
 impl BundleMembers {
@@ -96,6 +98,13 @@ impl BundleMembers {
         let seen = match member {
             ImageMember::Kernel => &mut self.kernel,
             ImageMember::Rootfs => &mut self.rootfs,
+            ImageMember::Metadata(name) => {
+                if bytes == 0 || !self.metadata.insert(name) {
+                    self.invalid = true;
+                    return Err(Error::ImageLayout);
+                }
+                return Ok(member);
+            }
         };
         if *seen || bytes == 0 {
             self.invalid = true;
@@ -123,6 +132,7 @@ impl BundleMembers {
 pub(crate) enum ImageMember {
     Kernel,
     Rootfs,
+    Metadata(&'static str),
 }
 
 impl ImageMember {
@@ -133,6 +143,11 @@ impl ImageMember {
         match path.to_str() {
             Some("vmlinux") => Ok(Self::Kernel),
             Some("rootfs.ext4") => Ok(Self::Rootfs),
+            Some("upstream-software.json") => Ok(Self::Metadata("upstream-software.json")),
+            Some("software-report.json") => Ok(Self::Metadata("software-report.json")),
+            Some("measurement.json") => Ok(Self::Metadata("measurement.json")),
+            Some("manifest.json") => Ok(Self::Metadata("manifest.json")),
+            Some("firecracker-content.sha256") => Ok(Self::Metadata("firecracker-content.sha256")),
             _ => Err(Error::ImageLayout),
         }
     }
@@ -141,6 +156,7 @@ impl ImageMember {
         match self {
             Self::Kernel => "vmlinux",
             Self::Rootfs => "rootfs.ext4",
+            Self::Metadata(name) => name,
         }
     }
 }

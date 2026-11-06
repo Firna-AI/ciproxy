@@ -35,7 +35,6 @@ async fn an_absent_guest_coalesces_shutdown_without_losing_configuration() {
             firecracker: PathBuf::from("/tools/firecracker"),
             jailer: PathBuf::from("/tools/jailer"),
         },
-        mock.clone(),
         mock,
         events,
     );
@@ -55,6 +54,7 @@ async fn an_absent_guest_coalesces_shutdown_without_losing_configuration() {
         record.local_id.clone(),
         Channel {
             sender,
+            configuration: Arc::new(tokio::sync::Mutex::new(super::Configuration::new(None))),
             shutdown,
             task: absent_guest,
         },

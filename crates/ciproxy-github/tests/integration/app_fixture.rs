@@ -102,6 +102,15 @@ impl Remote {
 }
 #[async_trait]
 impl GitHubRest for Remote {
+    async fn job_times(
+        &self,
+        _installation_id: i64,
+        _repository: &str,
+        _run_id: i64,
+        _runner_id: i64,
+    ) -> Result<Option<ciproxy_store_interface::github_timing::JobTimes>> {
+        Ok(None)
+    }
     async fn repositories(&self, _: i64) -> Result<Vec<Repository>> {
         let repositories = self.repositories.lock().unwrap().clone();
         let gate = self.gate.lock().unwrap().take();

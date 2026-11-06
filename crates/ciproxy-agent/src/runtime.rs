@@ -53,6 +53,7 @@ impl Daemon for AgentDaemon {
         removal: mpsc::Receiver<()>,
     ) -> Result<()> {
         self.agent.restore().await?;
+        self.agent.control_connection(false).await?;
         let (outgoing, receive) = mpsc::channel(128);
         let (work, commands) = mpsc::channel(128);
         let reconciliation = Arc::new(Notify::new());
@@ -104,12 +105,17 @@ impl AgentDaemon {
         let mut connecting = false;
         let mut removal_open = true;
         let mut pending_work = None;
+        let mut available = false;
         let mut pending_remove: Option<CommandId> = None;
         let result = loop {
             if pending_remove.is_none() && self.agent.finished().await {
                 break Ok(());
             }
             let connected = *connection_state.borrow_and_update();
+            if connected != available {
+                self.agent.control_connection(connected).await?;
+                available = connected;
+            }
             if !connected && !removing && !connecting {
                 let gateway = self.gateway.clone();
                 let identity = identity.clone();

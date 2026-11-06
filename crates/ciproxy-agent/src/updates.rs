@@ -5,21 +5,24 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use cli_updater::{
-    BinaryInstaller, HttpReleaseClient, TarGzBinaryInstaller, UpdateCheck, UpdateRequest, Updater,
-    UpgradeOutcome,
+    BinaryInstaller, TarGzBinaryInstaller, UpdateCheck, UpdateRequest, Updater, UpgradeOutcome,
 };
 
 use crate::boundaries::Updates;
-use crate::error::{Error, ErrorResultExt, Result};
+use crate::cache_network::GuardedCacheStart;
+use crate::cache_service::{CacheService, ReleasedCache};
+use crate::cache_unit::{InstalledCacheUnit, LinuxCacheUnitFiles};
+use crate::error::{ErrorResultExt, Result};
 use crate::process::{Commands, arguments};
+use crate::release_client::SecureReleases;
 
 pub(crate) struct AgentUpdates {
     pub(crate) commands: Arc<dyn Commands>,
     pub(crate) release_server: String,
 }
 
-struct CheckedInstaller {
-    installer: Arc<dyn BinaryInstaller + Send + Sync>,
+pub(crate) struct CheckedInstaller {
+    pub(crate) installer: Arc<dyn BinaryInstaller + Send + Sync>,
 }
 
 impl BinaryInstaller for CheckedInstaller {
@@ -44,12 +47,22 @@ impl BinaryInstaller for CheckedInstaller {
 #[async_trait]
 impl Updates for AgentUpdates {
     async fn check(&self) -> Result<bool> {
-        if !self.release_server.starts_with("https://") {
-            return Err(Error::HttpsRequired);
+        let cache: Arc<dyn CacheService> = Arc::new(ReleasedCache {
+            unit: Arc::new(InstalledCacheUnit {
+                files: Arc::new(LinuxCacheUnitFiles),
+            }),
+            starter: Arc::new(GuardedCacheStart {
+                commands: self.commands.clone(),
+            }),
+            commands: self.commands.clone(),
+            release_server: self.release_server.clone(),
+        });
+        if let Err(error) = cache.install().await {
+            tracing::warn!(%error, "machine cache update will retry");
         }
         let updater = Updater::new(
             Arc::new(
-                HttpReleaseClient::new(self.release_server.clone())
+                SecureReleases::new(self.release_server.clone())
                     .context("configure CLI updater")?,
             ),
             Arc::new(CheckedInstaller {

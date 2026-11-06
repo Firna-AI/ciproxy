@@ -31,6 +31,8 @@ pub struct JobFacts {
     pub head_repository: Option<Repository>,
     /// Default branch ref used by cache restores.
     pub default_ref: GitRef,
+    /// Whether this workspace's confirmed tier includes sticky Docker disks.
+    pub sticky_docker: bool,
 }
 
 /// GitHub identities expected in the runtime token, never inferred from a ref.

@@ -10,6 +10,8 @@ packer {
 
 variable "work_dir" { type = string }
 variable "guest_binary" { type = string }
+variable "cache_binary" { type = string }
+variable "worker_binary" { type = string }
 variable "image_definition" { type = string }
 variable "build_cpus" { default = 4 }
 variable "build_memory_mb" { default = 16384 }

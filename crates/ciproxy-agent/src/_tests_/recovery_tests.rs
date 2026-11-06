@@ -6,7 +6,8 @@ use ciproxy_protocol::identifiers::{CommandId, RunnerId};
 use ciproxy_protocol::runners::RunnerState;
 use unimock::{MockFn, Unimock, matching};
 
-use crate::boundaries::{CacheMock, StoreMock, VmsMock};
+use crate::boundaries::GuestProvenance;
+use crate::boundaries::{StoreMock, VmsMock};
 use crate::controller::Agent;
 use crate::fixtures::{applied, controller, report_dependencies, spec, vm};
 use crate::state::MachineState;
@@ -15,12 +16,13 @@ use crate::state::MachineState;
 async fn a_matching_starting_retry_delivers_registration_without_recreating_the_vm() {
     let mut record = vm("runner-1", false);
     record.report.state = RunnerState::Starting;
-    let initial = MachineState {
+    record.report.configuration_lost = true;
+    let mut initial = MachineState {
         runners: vec![record],
         ..MachineState::default()
     };
     let mock = Unimock::new((report_dependencies(),
-        CacheMock::configure.some_call(matching!(_)).returns(Ok(None)),
+        StoreMock::save.some_call(matching!((state) if !state.runners[0].report.configuration_lost)).answers(&|_, _| Ok(())),
         VmsMock::send.some_call(matching!((_, message) if matches!(message, AgentToGuest::ConfigureRunner { runner_id, registration, .. }
             if runner_id.0 == "runner-1" && registration.expose_secret() == "one-use-registration"))).returns(Ok(())),
     ));
@@ -35,6 +37,7 @@ async fn a_matching_starting_retry_delivers_registration_without_recreating_the_
             .unwrap(),
         applied()
     );
+    initial.runners[0].report.configuration_lost = false;
     assert_eq!(*agent.state.lock().await, initial);
 }
 
@@ -93,6 +96,7 @@ async fn runner_ready_persists_and_forwards_the_warm_transition() {
     assert_eq!(
         agent
             .guest(
+                GuestProvenance::InitialConfiguration,
                 "runner",
                 GuestToAgent::RunnerReady {
                     runner_id: RunnerId("runner".to_owned())

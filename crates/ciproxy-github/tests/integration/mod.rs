@@ -15,4 +15,5 @@ mod resource_fixture;
 mod resource_http;
 mod supersession_tests;
 mod support;
+mod timing_tests;
 mod unreadable_tests;

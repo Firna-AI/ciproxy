@@ -5,6 +5,7 @@ use std::process::Command;
 #[test]
 fn rust_log_off_suppresses_the_hosted_startup_log() {
     let output = Command::new(env!("CARGO_BIN_EXE_ciproxy-control-plane"))
+        .arg("diagnose")
         .env("RUST_LOG", "off")
         .output()
         .unwrap();

@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::cache::DockerBudget;
 use crate::identifiers::{CommandId, JobId, MachineId, OrganizationId, RunnerId, WorkspaceId};
 use crate::images::ImageDownload;
 use crate::jobs::JobFacts;
@@ -73,6 +74,13 @@ pub enum AgentMessage {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ControlMessage {
+    /// Set spare job disk available for bounded sticky Docker attachments.
+    DockerBudget {
+        /// Correlate the durable machine policy update.
+        command_id: CommandId,
+        /// Image-bound capacity, or no grant until local metadata is known.
+        budget: Option<DockerBudget>,
+    },
     /// Return the identity and credential of a newly registered machine.
     Registered {
         /// Workspace that owns the registered machine and its credential.
@@ -103,16 +111,16 @@ pub enum ControlMessage {
         /// The idle runner to stop, never a running job.
         runner_id: RunnerId,
     },
-    /// Supply scope inputs for the actual job assigned to a runner.
-    JobFacts {
+    /// Supply facts or a final GitHub-only decision for an assigned job.
+    JobPreparation {
         /// Identifier used for the result of this command.
         command_id: CommandId,
         /// Runner that took the job.
         runner_id: RunnerId,
-        /// Job to which the facts belong.
+        /// Job to which the preparation outcome belongs.
         job_id: JobId,
-        /// Values whose presence alone grants no trust or write access.
-        facts: JobFacts,
+        /// Trusted scope inputs or an explicit decision to use GitHub directly.
+        outcome: JobPreparationOutcome,
     },
     /// Finish running jobs, accept no new jobs, and stop warm runners.
     Drain {
@@ -141,6 +149,33 @@ pub enum ControlMessage {
         /// Download and checksum metadata, with a redacted URL.
         image: ImageDownload,
     },
+}
+
+/// Hosted preparation outcomes, each bound to its GitHub organization.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(tag = "status", rename_all = "snake_case")]
+pub enum JobPreparationOutcome {
+    /// Trusted metadata whose presence alone grants no cache write access.
+    TrustedFacts {
+        /// Expected job identity and repository inputs from the hosted store.
+        facts: Box<JobFacts>,
+    },
+    /// Repository metadata is unavailable, so the job uses GitHub directly.
+    #[serde(rename = "github_only")]
+    GitHubOnly {
+        /// GitHub organization from the trusted assignment snapshot.
+        organization_id: OrganizationId,
+    },
+}
+
+impl JobPreparationOutcome {
+    /// GitHub organization to which this preparation outcome belongs.
+    pub fn organization_id(&self) -> &OrganizationId {
+        match self {
+            Self::TrustedFacts { facts } => &facts.organization_id,
+            Self::GitHubOnly { organization_id } => organization_id,
+        }
+    }
 }
 
 /// A command outcome with no free-form error that could contain a secret.

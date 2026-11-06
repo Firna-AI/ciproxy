@@ -5,7 +5,9 @@ use std::sync::atomic::AtomicI64;
 
 use ciproxy_github::error::Error;
 use ciproxy_github::persistence::StoreAdapter;
-use ciproxy_github::registrations::{RegistrationService, Removal, RunnerRegistrations};
+use ciproxy_github::registrations::{
+    RegistrationRetirement, RegistrationService, RunnerRegistrations,
+};
 use ciproxy_github::scale_sets::ScaleSetFactory;
 use reqwest::Method;
 use secrecy::ExposeSecret;
@@ -33,16 +35,16 @@ async fn jit_http_registers_one_runner_and_removal_accepts_missing_but_preserves
     );
     assert!(!format!("{registration:?}").contains("test-one-use-configuration"));
     assert!(matches!(
-        service.remove(target, 71).await,
-        Ok(Removal::Removed)
+        service.retire(target, "runner-71", Some(71)).await,
+        Ok(RegistrationRetirement::Removed { id: 71 })
     ));
     assert!(matches!(
-        service.remove(target, 71).await,
-        Ok(Removal::Removed)
+        service.retire(target, "runner-71", Some(71)).await,
+        Ok(RegistrationRetirement::Removed { id: 71 })
     ));
     assert!(matches!(
-        service.remove(target, 73).await,
-        Ok(Removal::Busy)
+        service.retire(target, "runner-73", Some(73)).await,
+        Ok(RegistrationRetirement::Busy { id: 73 })
     ));
     let requests = server.state.requests.lock().unwrap().clone();
     let jit = requests
@@ -53,8 +55,18 @@ async fn jit_http_registers_one_runner_and_removal_accepts_missing_but_preserves
     for route in ["/access_tokens", "/registration-token"] {
         *server.state.resource.auth_failure.lock().unwrap() = Some(route.to_owned());
         assert!(
-            matches!(service.remove(target, 73).await, Err(Error::Internal(_))),
+            matches!(
+                service.retire(target, "runner-73", Some(73)).await,
+                Err(Error::Internal(_))
+            ),
             "{route}: auth failure must not claim a busy runner was removed"
+        );
+        assert!(
+            matches!(
+                service.retire(target, "unknown-runner", None).await,
+                Err(Error::Internal(_))
+            ),
+            "{route}: auth failure must not claim name lookup found no runner"
         );
         assert!(
             matches!(

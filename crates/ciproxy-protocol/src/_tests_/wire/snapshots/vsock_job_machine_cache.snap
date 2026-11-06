@@ -1,0 +1,37 @@
+---
+source: crates/ciproxy-protocol/src/_tests_/wire/assertions.rs
+assertion_line: 20
+description: Tagged JSON for vsock_job_machine_cache; all credentials are dummy test values.
+expression: message
+---
+{
+  "type": "prepare_job",
+  "job_id": "job-1",
+  "decision": {
+    "type": "machine_cache",
+    "facts": {
+      "organization_id": "organization-1",
+      "repository": {
+        "id": "repository-1",
+        "full_name": "example/project"
+      },
+      "assignment": {
+        "run_id": "123",
+        "job_id": "job-1",
+        "runner_id": "456"
+      },
+      "event": "pull_request",
+      "head_repository": {
+        "id": "repository-2",
+        "full_name": "contributor/project"
+      },
+      "default_ref": "refs/heads/main",
+      "sticky_docker": false
+    },
+    "cache": {
+      "url": "http://cache.example/?access=dummy-url-token",
+      "token": "dummy-cache-token"
+    },
+    "docker": null
+  }
+}

@@ -40,9 +40,12 @@ and other large counters use decimal strings. IDs are strings. Money uses
 integer US cents as decimal strings. Times use UTC RFC 3339.
 
 Intentional take-out saves its own durable removal marker before remote cleanup.
-It preserves job history and sets no owner-removal retention period. Cleanup
-deletes scale sets before it uninstalls the exact App installation. Lifecycle
-replay runs after the mutation lease ends.
+It preserves job history and sets no owner-removal retention period. Lifecycle
+replay runs after the mutation lease ends. The API and maintenance start
+cleanup only after the runtime accepts that replay. The runtime accepts it
+only when each runner of the organization has a saved stop, a stopped
+reservation, or a protected busy job. Cleanup deletes scale sets before it
+uninstalls the exact App installation.
 
 The generated [OpenAPI document](../../ts/api/generated/openapi.json) is the
 route and schema reference. The TypeScript package

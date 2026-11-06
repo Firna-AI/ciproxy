@@ -59,11 +59,11 @@ To move a job to ciproxy, change one line. Replace `ubuntu-latest` in its
 The label picks the [size](docs/protocol/labels.md#terms) of the VM that
 runs the job. Every workspace starts with these labels:
 
-| Label | vCPU | Memory | Free job disk | Slots |
-| --- | --- | --- | --- | --- |
-| `ciproxy` | 2 | 8 GB | 20 GB | 1 |
-| `ciproxy-4vcpu` | 4 | 16 GB | 20 GB | 2 |
-| `ciproxy-8vcpu` | 8 | 32 GB | 60 GB | 4 |
+| Label           | vCPU | Memory | Free job disk | Slots |
+| --------------- | ---- | ------ | ------------- | ----- |
+| `ciproxy`       | 2    | 8 GB   | 20 GB         | 1     |
+| `ciproxy-4vcpu` | 4    | 16 GB  | 20 GB         | 2     |
+| `ciproxy-8vcpu` | 8    | 32 GB  | 60 GB         | 4     |
 
 A [slot](docs/protocol/job-routing.md#slots) is 2 vCPU and 8 GB of an own
 machine. The Slots column gives the slots that one job of the label takes
@@ -100,10 +100,11 @@ to select phases, as the [gate guide](xtask/README.md) describes.
 
 The package guides give their commands and main code entry points:
 
-- [ciproxy-agent](crates/ciproxy-agent/README.md): the agent CLI skeleton.
+- [ciproxy-agent](crates/ciproxy-agent/README.md): the agent that runs jobs in
+  fresh Firecracker VMs on customer machines.
 - [ciproxy-protocol](crates/ciproxy-protocol/README.md): shared wire types.
 - [ciproxy-control-plane](crates/ciproxy-control-plane/README.md): the hosted
-  control plane CLI skeleton.
+  HTTP runtime and its API, agent, and GitHub webhook routes.
 - [xtask](xtask/README.md): the repository gate.
 - [@ciproxy/app](ts/app/README.md): the Expo dashboard skeleton.
 - [@ciproxy/site](ts/site/README.md): the Astro marketing and Starlight docs.

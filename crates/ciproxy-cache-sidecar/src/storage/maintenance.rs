@@ -37,6 +37,7 @@ impl DiskStorage {
     async fn cancel_captures(&self) -> Result<()> {
         let mut captures = self.captures.lock().await;
         for capture in captures.iter().filter_map(Weak::upgrade) {
+            let _writing = capture.writes.lock().await;
             capture.release(false);
             match fs::remove_file(&capture.path).await {
                 Ok(()) => {}
@@ -50,6 +51,7 @@ impl DiskStorage {
 
     pub(super) async fn clear_files(&self) -> Result<()> {
         let mut index = self.index.lock().await;
+        let _reading = self.reads.write().await;
         *index = None;
         self.generation.fetch_add(1, Ordering::SeqCst);
         self.cancel_captures().await?;
@@ -72,7 +74,9 @@ impl DiskStorage {
 
     pub(super) async fn resize_files(&self, bytes: u64) -> Result<()> {
         let mut index = self.index.lock().await;
+        let _reading = self.reads.write().await;
         let previous = self.capacity.swap(bytes, Ordering::SeqCst);
+        self.budget_known.store(true, Ordering::SeqCst);
         if bytes < previous {
             self.generation.fetch_add(1, Ordering::SeqCst);
             self.cancel_captures().await?;

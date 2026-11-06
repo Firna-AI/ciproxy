@@ -4,8 +4,10 @@ use std::future::Future;
 use std::pin::Pin;
 
 use async_trait::async_trait;
-use ciproxy_protocol::guest::{AgentToGuest, GuestToAgent};
+use ciproxy_protocol::guest::{AgentToGuest, GuestToAgent, JobDecision, JobPreparation};
+use ciproxy_protocol::identifiers::JobId;
 use ciproxy_protocol::runners::RunnerExit;
+use ciproxy_protocol::runtime::RuntimeCredentials;
 use ciproxy_protocol::secret::Secret;
 
 use crate::error::Result;
@@ -28,8 +30,15 @@ pub trait Channel: Send {
 }
 
 /// A process event which the stock runner actually exposes.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum RunnerEvent {
+    /// Trusted assignment waiting before action setup.
+    Starting {
+        /// The scale-message job UUID.
+        job_id: JobId,
+        /// Original in-memory runtime values from Runner.Worker.
+        runtime: RuntimeCredentials,
+    },
     /// The listener has connected to GitHub and can take its job.
     Ready,
     /// The runner process has ended.
@@ -46,6 +55,8 @@ pub trait Runner: Send {
     fn next_event(&mut self) -> EventFuture<'_>;
     /// Stop the runner when the agent explicitly sends `Shutdown`.
     async fn stop(&mut self) -> Result<RunnerExit>;
+    /// Finish local cache and Docker setup, then acknowledge the waiting worker.
+    async fn prepare(&mut self, job_id: JobId, decision: JobDecision) -> Result<JobPreparation>;
 }
 
 /// Power off an own-machine VM, or finish a Boat guest namespace.

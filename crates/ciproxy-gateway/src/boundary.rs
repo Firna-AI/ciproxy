@@ -35,6 +35,8 @@ pub trait Entropy: Send + Sync {
 /// Authenticated runner and command outcomes consumed by later services.
 #[unimock(api = AgentEventsMock)]
 pub trait AgentEvents: Send + Sync {
+    /// Retire idle hosted registrations after persisted credential revocation.
+    fn machine_removed(&self, workspace_id: Uuid, machine_id: Uuid) -> Result<()>;
     /// Handle a typed report within its authenticated machine scope.
     fn receive(&self, session: Session, message: AgentMessage) -> Result<()>;
 }

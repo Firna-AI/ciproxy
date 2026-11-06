@@ -23,6 +23,7 @@ pub(crate) struct Reservation {
     charge: Mutex<Charge>,
     used: Arc<AtomicU64>,
     capacity: Arc<AtomicU64>,
+    pub(super) writes: tokio::sync::Mutex<()>,
 }
 
 impl Reservation {
@@ -35,6 +36,7 @@ impl Reservation {
             }),
             used,
             capacity,
+            writes: tokio::sync::Mutex::new(()),
         }
     }
     pub(super) fn active(&self) -> bool {
@@ -122,6 +124,7 @@ pub(super) fn tee(
         }),
         used,
         capacity,
+        writes: tokio::sync::Mutex::new(()),
     });
     let capture = Arc::new(Capture {
         complete: tokio::sync::Mutex::new(None),
@@ -141,9 +144,11 @@ pub(super) fn tee(
                     Err(_) => { tracing::warn!("Local cache allocation unavailable"); false }
                 };
                 let written = if claimed {
+                    let _writing = active.reservation.writes.lock().await;
                     match OpenOptions::new().append(true).open(&active.path).await {
-                        Ok(mut writer) => writer.write_all(&chunk).await.is_ok(),
+                        Ok(mut writer) if active.reservation.active() => writer.write_all(&chunk).await.is_ok() && writer.flush().await.is_ok(),
                         Err(_) => false,
+                        Ok(_) => false,
                     }
                 } else { false };
                 if written { active.size += length; digest.update(&chunk); }

@@ -38,7 +38,9 @@ The transport checks that fence before it sends ordinary commands.
 
 Reports retain all hardware, slot, runner, cache, Docker disk, and image
 state. Reports and lifecycle messages update contact time with the gateway
-clock. At 60 seconds without
+clock. Each full report also keeps its own receipt time. Only `Register`,
+`Hello`, and `Report` set that time, so lifecycle contact never makes an
+old report look new. At 60 seconds without
 contact, machine reads show offline and retain the last report. Closing a
 socket does not clear health or mark the machine offline early.
 

@@ -49,7 +49,7 @@ pub(crate) fn private_directory(path: &Path) -> Result<()> {
 }
 
 pub(crate) fn atomic_private_write(path: &Path, bytes: &[u8]) -> Result<()> {
-    let temporary = path.with_extension("pending");
+    let temporary = private_write_temporary(path);
     let mut file = OpenOptions::new()
         .create(true)
         .truncate(true)
@@ -67,4 +67,9 @@ pub(crate) fn atomic_private_write(path: &Path, bytes: &[u8]) -> Result<()> {
             .context("sync state directory")?;
     }
     Ok(())
+}
+
+/// Derive the unpublished file name used by atomic private writes.
+pub(crate) fn private_write_temporary(path: &Path) -> PathBuf {
+    path.with_extension("pending")
 }

@@ -117,6 +117,19 @@ pub trait OrganizationLease: Send {
 
 /// Queries needed only by the hosted GitHub integration.
 pub trait GithubStore: Send + Sync {
+    /// Read attempts missing actual start or terminal finish timestamps.
+    fn incomplete_github_job_attempts(
+        &self,
+        workspace_id: Uuid,
+    ) -> Result<Vec<crate::github_timing::PendingTiming>>;
+    /// Persist only real Actions API timing for the exact retained attempt.
+    fn save_github_job_times(
+        &self,
+        workspace_id: Uuid,
+        attempt_id: Uuid,
+        times: &crate::github_timing::JobTimes,
+        observed_at: DateTime<Utc>,
+    ) -> Result<()>;
     /// Wait for exclusive mutation authority over a full GitHub organization ID.
     ///
     /// This uses the two-key advisory namespace, separate from scale-set locks.
