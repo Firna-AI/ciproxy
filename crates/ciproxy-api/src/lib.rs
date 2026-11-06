@@ -11,6 +11,7 @@ pub mod identity;
 pub mod installations;
 pub mod maintenance;
 pub mod openapi;
+pub mod pages;
 pub mod router;
 pub mod runtime;
 pub mod state;

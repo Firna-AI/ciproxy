@@ -241,6 +241,8 @@ CI starts the database for the existing workspace test phase.
 - [src/organizations.rs](src/organizations.rs) updates App installation state.
 - [src/error.rs](src/error.rs) maps database failures to interface errors.
 - [src/scale_sets.rs](src/scale_sets.rs) owns advisory lock sessions.
+- [src/job_views.rs](src/job_views.rs) reads tier-visible dashboard jobs,
+  preserves trusted alias metadata, and keeps actual runner dimensions.
 - [src/scale_set_tracking.rs](src/scale_set_tracking.rs) owns retired binding
   context, listener discovery, and exact remote cleanup confirmation.
 - [src/boat.rs](src/boat.rs) rotates and erases encrypted keys.

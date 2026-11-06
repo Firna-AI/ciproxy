@@ -176,7 +176,8 @@ write reads the injected clock after acquiring its locks.
 Scale-set bindings distinguish Active, Draining, and Removed. Listener discovery
 includes active bindings and draining bindings with tracked work or pending
 delivery. Exact context survives cleanup for final acknowledgements and runner
-removal. Confirmed removal applies only to the exact saved binding and remote ID.
+removal. Confirmed removal applies only to the exact saved binding and remote
+ID.
 
 InstallationLinkStore owns explicit typed entry evidence, signed requester
 claims, fresh-user proof, exact eligible offers, and immutable workspace choice.
@@ -192,7 +193,8 @@ OrganizationActivation stores separate billing and Admin holds. Missing metadata
 never authorizes execution. Existing organizations have explicit admitted data.
 New linked organizations count even while inactive. Removed ones do not count.
 Retained reinstall preserves holds and admission. Only a confirmed new workspace
-creates first-Admin work. Runnable authority also requires active GitHub App state.
+creates first-Admin work. Runnable authority also requires active GitHub App
+state.
 
 OwnRunnerStore exposes one coherent workspace routing snapshot.
 Its dedicated session lease serializes own-machine decisions.
@@ -268,6 +270,8 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 - [src/secrets.rs](src/secrets.rs) owns opaque hashes and ciphertext.
 - [src/scale_sets.rs](src/scale_sets.rs) defines session lock ownership.
 - [src/jobs.rs](src/jobs.rs) defines metadata-only job records.
+- [src/job_views.rs](src/job_views.rs) defines trusted dashboard projections
+  across Actions jobs and exact scale-set attempts.
 - [src/github.rs](src/github.rs) defines repository snapshots and durable
   UUID demand and pending role delivery.
 - [src/github_lifecycle.rs](src/github_lifecycle.rs) defines atomic App

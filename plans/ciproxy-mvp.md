@@ -1189,9 +1189,57 @@ Depends on: 14, 16, 17
 
 These routes serve the other pages of the dashboard.
 
-- [ ] Serve Jobs, Savings, Plan and usage, Plans, Checkout, and one banner
-      for each page.
-- [ ] Test each route at the HTTP level.
+- [ ] Orchestrator: finish serving Jobs, Savings, Plan and usage, Plans,
+      Checkout, and one banner for each page. Complete the composition and
+      paid-review steps below.
+      Branch: `calummoore/ci-proxy-load-balancer`.
+  - [x] Add the API routes, Rust wire forms, and store projection. Preserve
+        opaque workspace access, tier windows, trusted job facts, and the
+        single-banner priority. Generate the TypeScript contract.
+        Branch: `conductor/mvp-m18-api`.
+        Implementation call, 6 November 2026: round only displayed savings
+        amounts to integer cents, with half cents away from zero. Reason:
+        this matches the existing mockup formatter and keeps metering exact.
+  - [x] Add label-specific fit data for the Jobs waiting notice. Reuse the
+        existing machine fit, Boat size selection, and image root sizing.
+        Keep unknown fit distinct from no fit. Test role-aware actions over
+        HTTP.
+        Branch: `conductor/mvp-m18-api`.
+        Evidence: `.context/ciproxy-mvp/m18/nothing-fits-handoff.md`.
+- [ ] Orchestrator: finish HTTP verification after the ignored-event
+      parser repair below. Keep its failing regression in the suite.
+      Branch: `calummoore/ci-proxy-load-balancer`.
+  - [x] Add real-PgStore HTTP tests for every route and a supported signed
+        Checkout smoke through a bound dashboard server. Verify the twelve
+        independent tests in ten exact-name runs each.
+        Branch: `conductor/mvp-m18-api`.
+        Evidence: `.context/ciproxy-mvp/m18/requirements.md` and
+        `.context/ciproxy-mvp/m18/test-cost.md`.
+- [ ] Orchestrator: compose `PageServices` in the control plane. Mount
+      `router_with_pages` under `/api` and `stripe_router` at the dashboard
+      host root for `/hooks/stripe`. Supply the existing billing, metering,
+      and overflow services and dated USD comparison price lists. Supply
+      the exact Boat `RootSizing` already used by the overflow runtime.
+      Poll `billing_cancellations` and call `reconcile_removal` on blocking
+      workers so durable last-organization cancellations complete.
+      Branch: `calummoore/ci-proxy-load-balancer`.
+- [ ] Orchestrator: implement and inject `PaidReview` with an authoritative
+      Stripe invoice preview for a move between paid plans. The existing
+      billing review gives the full monthly price as today's charge. The
+      API keeps paid review unavailable until the preview exists.
+      Branch: `calummoore/ci-proxy-load-balancer`.
+- [ ] Orchestrator: fix the billing parser for signed Stripe events that
+      it ignores. A real `data.object` currently fails with
+      `expected unit variant Payload::Ignore`. Keep the HTTP regression
+      and rerun the complete gate with `DATABASE_URL` set.
+      Branch: `calummoore/ci-proxy-load-balancer`.
+- [ ] Orchestrator: run the
+      [live page checks](../crates/ciproxy-api/scripts/README.md#jobs-savings-and-billing)
+      after the runtime and Stripe test workspace are ready. Set
+      `CIPROXY_API_CREDENTIALS_FILE` to a private file outside the repository.
+      Run `live_pages.py` for reads, review, Checkout and return, paid
+      changes, add-ons, the portal, Move to Free, and signed webhook replay.
+      Branch: `calummoore/ci-proxy-load-balancer`.
 
 ## Milestone 19: Dashboard UI: shell, sign-in, and setup
 
