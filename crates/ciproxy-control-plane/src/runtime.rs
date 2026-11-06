@@ -7,6 +7,7 @@ use async_trait::async_trait;
 use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_gateway::gateway::MachineGateway;
 use ciproxy_github::assignments::JobAssignments;
+use ciproxy_github::installation_state::InstallationApi;
 use ciproxy_github::registrations::RunnerRegistrations;
 use ciproxy_github::runtime::Runtime;
 use ciproxy_protocol::agent::AgentMessage;
@@ -54,6 +55,8 @@ pub struct MachineRuntime {
     pub assignments: Arc<dyn JobAssignments>,
     /// Injected clock and identities.
     pub clock: Arc<dyn Runtime>,
+    /// Exact App-JWT installation lookup for pending take-out authority.
+    pub installations: Arc<dyn InstallationApi>,
     /// Authenticated release download, refreshed by release composition.
     pub image: Option<ImageDownload>,
     /// Production CDN signer, supplied only at the hosted composition root.
@@ -77,6 +80,7 @@ impl MachineRuntime {
         assignments: Arc<dyn JobAssignments>,
         clock: Arc<dyn Runtime>,
         image: Option<ImageDownload>,
+        installations: Arc<dyn InstallationApi>,
     ) -> Self {
         Self {
             store,
@@ -85,6 +89,7 @@ impl MachineRuntime {
             assignments,
             clock,
             image,
+            installations,
             image_signing: None,
             operation: Mutex::new(()),
             image_requests: Mutex::new(HashMap::new()),
@@ -98,7 +103,8 @@ impl MachineRuntime {
             .internal()
     }
 
-    async fn reconcile_workspace(&self, workspace_id: Uuid) -> Result<()> {
+    /// Run ordinary best-effort routing under this workspace execution lease.
+    pub(crate) async fn reconcile_workspace(&self, workspace_id: Uuid) -> Result<()> {
         let store = self.store.clone();
         let Some(mut lease) =
             tokio::task::spawn_blocking(move || store.try_lock_own_runners(workspace_id))
@@ -201,11 +207,14 @@ impl OwnMachines for MachineRuntime {
         let _operation = self.operation.lock().await;
         if let LifecycleEvent::Removed {
             organization,
-            cause: RemovalCause::Owner,
+            cause,
             ..
         } = &event
         {
-            return self.owner_removed(organization).await;
+            return match cause {
+                RemovalCause::Owner => self.owner_removed(organization).await,
+                RemovalCause::WorkspaceTakeout => self.takeout(organization).await,
+            };
         }
         self.reconcile_workspace(workspace_id).await
     }

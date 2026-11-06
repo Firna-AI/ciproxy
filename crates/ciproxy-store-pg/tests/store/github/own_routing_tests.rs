@@ -114,6 +114,7 @@ fn command_results_keep_first_confirmation_separate_from_applied_delivery() {
             held.runner.id,
             command,
             at() + chrono::Duration::seconds(4),
+            held.runner.github_id,
         )
         .unwrap();
     store

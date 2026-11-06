@@ -7,7 +7,7 @@ use ciproxy_gateway::gateway::MachineGatewayMock;
 use ciproxy_gateway::types::Delivery;
 use ciproxy_github::assignments::AssignmentService;
 use ciproxy_github::persistence::StoreAdapter;
-use ciproxy_github::registrations::{Removal, RunnerRegistrationsMock};
+use ciproxy_github::registrations::{RegistrationRetirement, RunnerRegistrationsMock};
 use ciproxy_protocol::agent::ControlMessage;
 use ciproxy_protocol::runners;
 use ciproxy_store_interface::runners::RunnerState;
@@ -73,14 +73,14 @@ async fn confirmed_configuration_loss_retires_github_first_with_exact_resources_
                     })),
             )),
             Arc::new(Unimock::new(
-                RunnerRegistrationsMock::remove
-                    .some_call(matching!(_, 47))
-                    .answers_arc(Arc::new(move |_, _, _| {
+                RunnerRegistrationsMock::retire
+                    .some_call(matching!(_, _, Some(47)))
+                    .answers_arc(Arc::new(move |_, _, _, _| {
                         removed.lock().unwrap().push("github");
                         Ok(if busy {
-                            Removal::Busy
+                            RegistrationRetirement::Busy { id: 47 }
                         } else {
-                            Removal::Removed
+                            RegistrationRetirement::Removed { id: 47 }
                         })
                     })),
             )),
@@ -89,6 +89,7 @@ async fn confirmed_configuration_loss_retires_github_first_with_exact_resources_
             }),
             clock,
             None,
+            Arc::new(Unimock::new(())),
         );
         runtime.tick().await.unwrap();
         let held = fixture

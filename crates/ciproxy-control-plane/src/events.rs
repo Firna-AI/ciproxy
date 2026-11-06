@@ -1,7 +1,7 @@
 //! Reconcile authenticated agent observations with durable GitHub identities.
 
 use ciproxy_github::persistence::session::ListenerTarget;
-use ciproxy_github::registrations::Removal;
+use ciproxy_github::registrations::RegistrationRetirement;
 use ciproxy_github::scale_sets::JitRegistration;
 use ciproxy_protocol::agent::{AgentMessage, CommandOutcome, ControlMessage};
 use ciproxy_protocol::identifiers::{CommandId, JobId, RunnerId};
@@ -128,15 +128,28 @@ impl MachineRuntime {
                     organization_id: job.organization_id,
                     scale_set_id: job.scale_set_id,
                 };
-                if self
+                match self
                     .registrations
-                    .remove(target, github_id)
+                    .retire(
+                        target,
+                        &format!("ciproxy-{}", runner.runner.id),
+                        Some(github_id),
+                    )
                     .await
                     .internal()?
-                    == Removal::Removed
                 {
-                    self.save_state(workspace_id, runner, RunnerState::Stopped, Some(github_id))
-                        .await?;
+                    RegistrationRetirement::Removed { id } => {
+                        self.save_state(workspace_id, runner, RunnerState::Stopped, Some(id))
+                            .await?
+                    }
+                    RegistrationRetirement::Absent => {
+                        self.save_state(workspace_id, runner, RunnerState::Stopped, Some(github_id))
+                            .await?
+                    }
+                    RegistrationRetirement::Busy { id } => {
+                        self.save_state(workspace_id, runner, RunnerState::Busy, Some(id))
+                            .await?
+                    }
                 }
             }
             return Ok(());

@@ -62,6 +62,7 @@ pub trait OwnRunnerStore: Send + Sync {
         runner_id: Uuid,
         command_id: Uuid,
         at: DateTime<Utc>,
+        github_id: Option<i64>,
     ) -> Result<()>;
     /// Keep first inventory evidence without replacing an earlier confirmation.
     fn confirm_own_runner(

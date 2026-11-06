@@ -7,7 +7,7 @@ use ciproxy_gateway::gateway::MachineGatewayMock;
 use ciproxy_gateway::types::Delivery;
 use ciproxy_github::assignments::AssignmentService;
 use ciproxy_github::persistence::StoreAdapter;
-use ciproxy_github::registrations::{Removal, RunnerRegistrationsMock};
+use ciproxy_github::registrations::{RegistrationRetirement, RunnerRegistrationsMock};
 use ciproxy_github::runtime::RuntimeMock;
 use ciproxy_protocol::agent::ControlMessage;
 use ciproxy_store_interface::github::{
@@ -97,15 +97,16 @@ async fn removal_between_facts_and_delivery_preserves_job_until_trusted_completi
         fixture.store.clone(),
         gateway,
         Arc::new(Unimock::new(
-            RunnerRegistrationsMock::remove
-                .some_call(matching!(_, 47))
-                .returns(Ok(Removal::Removed)),
+            RunnerRegistrationsMock::retire
+                .some_call(matching!(_, _, Some(47)))
+                .returns(Ok(RegistrationRetirement::Removed { id: 47 })),
         )),
         Arc::new(AssignmentService {
             store: Arc::new(StoreAdapter::new(fixture.store.clone(), clock.clone())),
         }),
         clock,
         None,
+        Arc::new(Unimock::new(())),
     );
     assert_eq!(
         runtime

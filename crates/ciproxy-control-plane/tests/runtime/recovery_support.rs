@@ -44,6 +44,7 @@ pub(super) fn runtime_with_clock(
         }),
         clock,
         None,
+        Arc::new(Unimock::new(())),
     )
 }
 

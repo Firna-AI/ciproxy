@@ -49,6 +49,7 @@ async fn a_restored_runner_report_corrects_request_and_exact_allocated_bytes() {
         }),
         clock,
         None,
+        Arc::new(Unimock::new(())),
     );
     runtime.tick().await.unwrap();
     let runner = fixture

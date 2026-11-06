@@ -9,7 +9,7 @@ use ciproxy_gateway::gateway::{Gateway, MachineGateway};
 use ciproxy_gateway::types::{Delivery, MachineAction};
 use ciproxy_github::assignments::AssignmentService;
 use ciproxy_github::persistence::StoreAdapter;
-use ciproxy_github::registrations::{Removal, RunnerRegistrationsMock};
+use ciproxy_github::registrations::{RegistrationRetirement, RunnerRegistrationsMock};
 use ciproxy_store_interface::runners::RunnerState;
 use tokio::runtime::Handle;
 use unimock::{MockFn, Unimock, matching};
@@ -64,15 +64,16 @@ async fn offline_remove_waits_for_registration_retirement_after_revocation_witho
         fixture.store.clone(),
         gateway.clone(),
         Arc::new(Unimock::new(
-            RunnerRegistrationsMock::remove
-                .some_call(matching!(_, 47))
-                .returns(Ok(Removal::Removed)),
+            RunnerRegistrationsMock::retire
+                .some_call(matching!(_, _, Some(47)))
+                .returns(Ok(RegistrationRetirement::Removed { id: 47 })),
         )),
         Arc::new(AssignmentService {
             store: Arc::new(StoreAdapter::new(fixture.store.clone(), clock.clone())),
         }),
         clock,
         None,
+        Arc::new(Unimock::new(())),
     ));
     assert!(runtime_slot.set(runtime).is_ok());
     let result = tokio::task::spawn_blocking(move || {

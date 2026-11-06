@@ -35,6 +35,7 @@ fn make_runtime(fixture: &Fixture) -> (MachineRuntime, AccountingWorker) {
         }),
         clock.clone(),
         None,
+        Arc::new(Unimock::new(())),
     );
     let accounting = AccountingWorker::new(
         fixture.store.clone(),

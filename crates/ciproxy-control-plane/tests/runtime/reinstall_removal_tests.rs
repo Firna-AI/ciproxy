@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use chrono::Duration;
 use ciproxy_control_plane::runtime::OwnMachines;
 use ciproxy_gateway::gateway::MachineGateway;
-use ciproxy_github::registrations::{Removal, RunnerRegistrationsMock};
+use ciproxy_github::registrations::{RegistrationRetirement, RunnerRegistrationsMock};
 use ciproxy_github::runtime::Runtime;
 use ciproxy_protocol::agent::ControlMessage;
 use ciproxy_store_interface::organizations::AppState;
@@ -19,7 +19,10 @@ use super::support::{Fixture, at};
 
 #[tokio::test]
 async fn reinstall_retires_only_old_reservations_github_first_and_keeps_busy_answers() {
-    for removal in [Removal::Removed, Removal::Busy] {
+    for removal in [
+        RegistrationRetirement::Removed { id: 47 },
+        RegistrationRetirement::Busy { id: 47 },
+    ] {
         let fixture = Fixture::new();
         other_organization(&fixture);
         let mut organization = fixture
@@ -55,22 +58,23 @@ async fn reinstall_retires_only_old_reservations_github_first_and_keeps_busy_ans
             .update_machine(fixture.workspace, &machine)
             .unwrap();
         let registrations = Arc::new(Unimock::new(
-            RunnerRegistrationsMock::remove
-                .some_call(matching!(_, 47))
-                .answers_arc(Arc::new(move |_, _, _| Ok(removal)))
+            RunnerRegistrationsMock::retire
+                .some_call(matching!(_, _, Some(47)))
+                .answers_arc(Arc::new(move |_, _, _, _| Ok(removal)))
                 .at_least_times(0),
         ));
         let messages = Arc::new(Mutex::new(Vec::new()));
-        let clock: Arc<dyn Runtime> = if removal == Removal::Busy {
+        let clock: Arc<dyn Runtime> = if removal == (RegistrationRetirement::Busy { id: 47 }) {
             Arc::new(Unimock::new(()))
         } else {
             clock(true)
         };
-        let delivery: Arc<dyn MachineGateway> = if removal == Removal::Busy {
-            Arc::new(Unimock::new(()))
-        } else {
-            gateway(messages.clone())
-        };
+        let delivery: Arc<dyn MachineGateway> =
+            if removal == (RegistrationRetirement::Busy { id: 47 }) {
+                Arc::new(Unimock::new(()))
+            } else {
+                gateway(messages.clone())
+            };
         let runtime = runtime_with_clock(&fixture, registrations, delivery, clock);
         runtime.lifecycle(event).await.unwrap();
         let runners = fixture.store.own_runners(fixture.workspace).unwrap();
@@ -80,7 +84,7 @@ async fn reinstall_retires_only_old_reservations_github_first_and_keeps_busy_ans
             .unwrap();
         assert_eq!(
             old.runner.state,
-            if removal == Removal::Busy {
+            if removal == (RegistrationRetirement::Busy { id: 47 }) {
                 RunnerState::Busy
             } else {
                 RunnerState::Stopping
@@ -103,7 +107,7 @@ async fn reinstall_retires_only_old_reservations_github_first_and_keeps_busy_ans
             .collect();
         assert_eq!(
             stops,
-            if removal == Removal::Busy {
+            if removal == (RegistrationRetirement::Busy { id: 47 }) {
                 vec![]
             } else {
                 vec![fixture.intent.runner.id.to_string()]

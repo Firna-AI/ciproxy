@@ -77,6 +77,7 @@ async fn bootstrap_fetches_once_per_connection_before_registering_without_a_sele
         }),
         clock,
         Some(image.clone()),
+        Arc::new(Unimock::new(())),
     );
     runtime.tick().await.unwrap();
     runtime.tick().await.unwrap();

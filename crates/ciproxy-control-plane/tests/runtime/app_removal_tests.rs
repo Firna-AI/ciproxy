@@ -14,6 +14,8 @@ use super::recovery_support::{
     gateway, job, other_organization, runtime, runtime_with_clock, saved,
 };
 use super::support::{Fixture, at};
+use super::takeout_gateway::Capture;
+use super::takeout_installations::Probe;
 
 fn remove(fixture: &Fixture) -> LifecycleEvent {
     fixture
@@ -177,16 +179,19 @@ async fn workspace_takeout_keeps_a_busy_runner_and_records_the_distinct_cause() 
             ..
         }
     ));
-    let messages = Arc::new(Mutex::new(Vec::new()));
-    let runtime = runtime(
+    let messages = Capture::new(false);
+    let mut runtime = runtime_with_clock(
         &fixture,
         Arc::new(Unimock::new(())),
-        gateway(messages.clone()),
+        messages.clone(),
+        Arc::new(Unimock::new(())),
     );
+    runtime.installations = Probe::present();
     runtime.lifecycle(event).await.unwrap();
     assert_eq!(saved(&fixture).runner.state, RunnerState::Busy);
     assert_eq!(
         messages
+            .messages
             .lock()
             .unwrap()
             .iter()

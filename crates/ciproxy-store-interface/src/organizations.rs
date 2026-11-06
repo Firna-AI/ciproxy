@@ -24,7 +24,7 @@ pub enum AppState {
     Active,
     /// GitHub temporarily suspended App access.
     Suspended,
-    /// GitHub removed the App.
+    /// Routing is disabled by owner removal or an intentional workspace take-out.
     Removed,
 }
 

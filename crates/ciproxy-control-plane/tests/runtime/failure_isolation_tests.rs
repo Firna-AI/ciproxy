@@ -50,8 +50,8 @@ async fn failed_retirement_does_not_block_an_active_organizations_start() {
         .unwrap();
     let new_machine = fixture.add_machine();
     let registrations = Arc::new(Unimock::new((
-        RunnerRegistrationsMock::remove
-            .some_call(matching!(_, 47))
+        RunnerRegistrationsMock::retire
+            .some_call(matching!(_, _, Some(47)))
             .returns(Err(ciproxy_github::error::Error::AccessUnavailable(403))),
         RunnerRegistrationsMock::create
             .some_call(matching!(_, _))
@@ -94,6 +94,7 @@ async fn failed_retirement_does_not_block_an_active_organizations_start() {
         }),
         clock,
         Some(image),
+        Arc::new(Unimock::new(())),
     );
     runtime.tick().await.unwrap();
     let rows = fixture.store.own_runners(fixture.workspace).unwrap();
