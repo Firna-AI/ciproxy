@@ -117,6 +117,11 @@ ScaleSetGroupChanged. The adapter makes no unproven remote move and deletes
 no unknown or retained resource. That case needs live move proof before
 automatic repair can be enabled. It does not erase retained job history.
 
+Before resume or retained reinstall prepares active label bindings, it releases
+the names of retired bindings by their exact remote IDs. A missing old remote
+resource counts as released. Authentication and provider failures stay errors.
+This preserves label replacement without changing retained job references.
+
 ### Durable demand and registrations
 
 Scale-set `jobId` is a UUID. It is separate from the numeric Actions job
@@ -145,7 +150,13 @@ accepted revision before acknowledging its batch. The output must be
 idempotent by organization and job UUID.
 The listener checks its database lease before and after each poll.
 Cancellation and errors close the GitHub session before releasing the lock.
-The runtime starts one listener for each active organization-label pair.
+The runtime discovers listeners with `Store::listener_scale_sets` for each
+active organization. The query includes retired bindings with unfinished jobs
+or pending notifications. It excludes bindings with confirmed remote cleanup.
+Exact binding lookup remains available through the last delivery and ACK.
+A retired listener advertises zero capacity and acquires no new work.
+New runner registration requires an active binding. Runner removal can still
+use its retired binding. The API cleanup waits for the listener's session lease.
 A saved remote-ID or login change ends a session with ScaleSetRestart.
 The runtime restarts it from the current internal row. On ScaleSetMissing,
 The control-plane runtime first calls refresh_repositories to reconcile.

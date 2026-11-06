@@ -171,4 +171,19 @@ impl ScaleSetApi for SdkScaleSetApi {
             Err(error) => Err(error).internal(),
         }
     }
+
+    async fn rename_scale_set(&self, scale_set_id: i64, name: &str) -> Result<()> {
+        match self
+            .client
+            .update_runner_scale_set(
+                ScaleSetId(scale_set_id),
+                &RunnerScaleSetSpec::new(name).labels([name]),
+            )
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(error) if missing(&error, Operation::ScaleSet(scale_set_id)) => Ok(()),
+            Err(error) => Err(error).internal(),
+        }
+    }
 }

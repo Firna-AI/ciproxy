@@ -55,6 +55,12 @@ Run each command from the repository root.
   version, with rustfmt and clippy. Use Node from [.nvmrc](.nvmrc).
   The [mockups guide](docs/mockups/README.md#commands) gives the Node limits
   of Mokly.
+- API types: Rust `utoipa` generates OpenAPI, then `openapi-typescript`
+  generates `ts/api/generated/`. Run `npm --prefix ts run api:generate`.
+  The `api-types` gate phase regenerates them and fails on a difference.
+  Wire values use decimal-string integer US cents, UTC RFC 3339 times,
+  and string IDs.
+  Byte counts and other large integers use decimal strings.
 - Build: `cargo build --workspace`
 - Targeted tests: `cargo test --package <crate> <test name filter>` for
   Rust. TypeScript tests live in a `_tests_` folder beside the code and run

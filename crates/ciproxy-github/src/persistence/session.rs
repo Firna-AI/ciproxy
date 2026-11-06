@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use ciproxy_store_interface::error;
 use ciproxy_store_interface::github::{GithubJob, JobDelivery, RunFacts};
 use ciproxy_store_interface::organizations::Organization;
-use ciproxy_store_interface::scale_sets::{ScaleSet, ScaleSetSession};
+use ciproxy_store_interface::scale_sets::{ScaleSet, ScaleSetSession, ScaleSetState};
 use uuid::Uuid;
 
 use crate::error::{Error, Result, ResultExt};
@@ -31,6 +31,10 @@ pub struct ListenerContext {
     pub organization: Organization,
     /// The registered organization-label pair.
     pub scale_set: ScaleSet,
+    /// Routing and confirmed remote cleanup state of this exact binding.
+    pub state: ScaleSetState,
+    /// Unfinished work or an unconfirmed delivery still needs this listener.
+    pub has_tracked_jobs: bool,
 }
 
 /// A live database session lock held for a whole GitHub message session.
@@ -101,14 +105,18 @@ impl SessionStore for StoreAdapter {
             let organization = store
                 .organization(target.workspace_id, target.organization_id)?
                 .ok_or(error::Error::NotFound)?;
-            let scale_set = store
-                .scale_sets(target.workspace_id, target.organization_id)?
-                .into_iter()
-                .find(|set| set.id == target.scale_set_id)
+            let binding = store
+                .scale_set_binding(
+                    target.workspace_id,
+                    target.organization_id,
+                    target.scale_set_id,
+                )?
                 .ok_or(error::Error::NotFound)?;
             Ok(ListenerContext {
                 organization,
-                scale_set,
+                scale_set: binding.scale_set,
+                state: binding.state,
+                has_tracked_jobs: binding.has_tracked_jobs,
             })
         })
         .await

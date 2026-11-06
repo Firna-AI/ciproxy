@@ -191,6 +191,22 @@ are missing or a required runtime interval remains unknown.
 The savings range excludes a lifecycle end at its first instant.
 Execution and cleanup do not use those reporting reads.
 
+The dashboard area stores verified GitHub memberships, workspace roles,
+access requests, opaque session digests, and encrypted OAuth grants.
+A person record stays only with a role or an open request. Intentional
+organization removal keeps a separate durable marker and no owner-removal
+retention deadline. Retired labels preserve history while active names
+remain unique.
+
+Credential-only rotation writes preserve membership freshness. Current-cost
+writes read the supplied clock after locking the workspace and machine rows.
+They use that time for both price interval boundaries.
+
+Retired scale-set bindings keep completion context and durable cleanup state.
+Listener discovery includes unfinished work and pending notification revisions.
+Confirmed remote removal excludes the old binding from later cleanup and
+discovery without deleting job history.
+
 ## Quick Start
 
 ```rust
@@ -238,6 +254,8 @@ CI starts the database for the existing workspace test phase.
 
 ### Key Code
 
+- [src/dashboard](src/dashboard) owns dashboard identity and access queries.
+
 - [src/billing/session.rs](src/billing/session.rs) commits billing state.
 - [src/billing/renewals.rs](src/billing/renewals.rs) stores owned renewal
   outcomes.
@@ -247,6 +265,8 @@ CI starts the database for the existing workspace test phase.
 - [src/organizations.rs](src/organizations.rs) updates App installation state.
 - [src/error.rs](src/error.rs) maps database failures to interface errors.
 - [src/scale_sets.rs](src/scale_sets.rs) owns advisory lock sessions.
+- [src/scale_set_tracking.rs](src/scale_set_tracking.rs) owns retired binding
+  context, listener discovery, and exact remote cleanup confirmation.
 - [src/boat.rs](src/boat.rs) rotates and erases encrypted keys.
 - [src/overflow](src/overflow) owns durable Boat execution transactions.
 - [src/overflow/authority.rs](src/overflow/authority.rs) reads current

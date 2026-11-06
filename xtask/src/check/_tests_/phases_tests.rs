@@ -20,6 +20,7 @@ fn selected_phases_keep_fast_first_order_and_exclusion_wins() {
             Phase::Markdown,
             Phase::RustClippy,
             Phase::Typescript,
+            Phase::ApiTypes,
             Phase::RustTest,
             Phase::Mockups,
             Phase::SiteBuild,

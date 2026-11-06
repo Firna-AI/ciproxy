@@ -6,7 +6,8 @@
     "mockups",
     "tokens",
     "app",
-    "site"
+    "site",
+    "api"
   ],
   "overrides": {
     "react-native": "0.85.3",
@@ -29,8 +30,12 @@
     "site:typecheck": "npm --workspace @ciproxy/site run typecheck",
     "site:build": "npm --workspace @ciproxy/site run build",
     "site:dev": "npm --workspace @ciproxy/site run dev --",
-    "format": "npm --workspace @ciproxy/tokens run format && npm --workspace @ciproxy/app run format && npm --workspace @ciproxy/site run format",
-    "format:check": "npm --workspace @ciproxy/tokens run format:check && npm --workspace @ciproxy/app run format:check && npm --workspace @ciproxy/site run format:check"
+    "format": "npm --workspace @ciproxy/tokens run format && npm --workspace @ciproxy/app run format && npm --workspace @ciproxy/site run format && npm --workspace @ciproxy/api run format",
+    "format:check": "npm --workspace @ciproxy/tokens run format:check && npm --workspace @ciproxy/app run format:check && npm --workspace @ciproxy/site run format:check && npm --workspace @ciproxy/api run format:check",
+    "api:generate": "npm --workspace @ciproxy/api run generate",
+    "api:generate:check": "npm --workspace @ciproxy/api run generate:check",
+    "api:typecheck": "npm --workspace @ciproxy/api run typecheck",
+    "api:lint": "npm --workspace @ciproxy/api run lint"
   },
   "devDependencies": {
     "markdownlint-cli2": "0.24.0"

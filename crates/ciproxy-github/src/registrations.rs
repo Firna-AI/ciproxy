@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use ciproxy_store_interface::organizations::AppState;
+use ciproxy_store_interface::scale_sets::ScaleSetState;
 
 use crate::error::{Error, Result};
 use crate::persistence::session::{ListenerTarget, SessionStore};
@@ -41,7 +42,9 @@ pub struct RegistrationService {
 impl RunnerRegistrations for RegistrationService {
     async fn create(&self, target: ListenerTarget, runner_name: &str) -> Result<JitRegistration> {
         let context = self.store.context(target).await?;
-        if context.organization.app_state != AppState::Active {
+        if context.organization.app_state != AppState::Active
+            || context.state != ScaleSetState::Active
+        {
             return Err(Error::OrganizationInactive);
         }
         let api = self

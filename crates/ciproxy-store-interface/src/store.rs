@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use crate::billing::store::BillingStore;
 use crate::boat::BoatStore;
+use crate::dashboard::store::DashboardStore;
 use crate::error::Result;
 use crate::gateway::GatewayStore;
 use crate::github::GithubStore;
@@ -38,6 +39,7 @@ pub trait Store:
     + GatewayStore
     + GithubStore
     + GithubLifecycleStore
+    + DashboardStore
 {
 }
 

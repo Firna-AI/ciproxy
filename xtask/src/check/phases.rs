@@ -18,6 +18,8 @@ pub(crate) enum Phase {
     RustClippy,
     /// ESLint and typecheck of tokens, app, and site, plus token unit tests.
     Typescript,
+    /// Regenerate Rust-owned OpenAPI and TypeScript, then fail on drift.
+    ApiTypes,
     /// Rust tests and doctests: cargo test --workspace.
     RustTest,
     /// Existing mockup build, typecheck, lint, format, and policy check.
@@ -36,6 +38,7 @@ pub(crate) fn selected_phases(include: &[Phase], exclude: &[Phase]) -> Vec<Phase
         Phase::Markdown,
         Phase::RustClippy,
         Phase::Typescript,
+        Phase::ApiTypes,
         Phase::RustTest,
         Phase::Mockups,
         Phase::SiteBuild,
@@ -71,7 +74,10 @@ pub(super) fn commands(phase: Phase) -> Vec<CommandSpec> {
             npm_script("app:typecheck"),
             npm_script("site:lint"),
             npm_script("site:typecheck"),
+            npm_script("api:lint"),
+            npm_script("api:typecheck"),
         ],
+        Phase::ApiTypes => vec![npm_script("api:generate:check")],
         Phase::RustTest => vec![CommandSpec::new("cargo", &["test", "--workspace"])],
         Phase::Mockups => vec![npm_script("mockups:check")],
         Phase::SiteBuild => vec![npm_script("site:build")],

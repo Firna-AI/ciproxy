@@ -1,6 +1,7 @@
 //! Session ownership, restart delivery, cancellation, and ACK ordering.
 
 use ciproxy_store_interface::organizations::AppState;
+use ciproxy_store_interface::scale_sets::ScaleSetState;
 use scaleset::MessageId;
 use tokio::sync::watch;
 
@@ -21,6 +22,10 @@ impl DurableListener {
             return Err(Error::SessionOwned);
         };
         let context = self.check(target, &*lease).await?;
+        if context.state != ScaleSetState::Active && !context.has_tracked_jobs {
+            self.deliver(target).await?;
+            return Ok(());
+        }
         let api = self
             .scale_sets
             .for_organization(&context.organization)
@@ -85,11 +90,24 @@ impl DurableListener {
             }
             let context = self.bound_context(target, lease, opened).await?;
             self.deliver(target).await?;
+            let context = if context.state != ScaleSetState::Active {
+                self.bound_context(target, lease, opened).await?
+            } else {
+                context
+            };
+            if context.state != ScaleSetState::Active && !context.has_tracked_jobs {
+                return Ok(());
+            }
+            let capacity = if context.state == ScaleSetState::Active {
+                options.capacity
+            } else {
+                0
+            };
             let polled = tokio::select! {
                 _ = stop.changed() => return Ok(()),
-                result = queue.poll(last_message, options.capacity) => result,
+                result = queue.poll(last_message, capacity) => result,
             };
-            self.bound_context(target, lease, opened).await?;
+            let context = self.bound_context(target, lease, opened).await?;
             let message = polled?;
             polls += 1;
             let Some(message) = message else {
@@ -101,13 +119,17 @@ impl DurableListener {
                 .map(|job| job.job.runner_request_id)
                 .filter(|id| id.get() > 0)
                 .collect();
-            if !requests.is_empty() {
+            let current = self.bound_context(target, lease, opened).await?;
+            if current.state == ScaleSetState::Active && !requests.is_empty() {
                 queue.acquire(&requests).await?;
             }
             self.deliver(target).await?;
-            self.bound_context(target, lease, opened).await?;
+            let context = self.bound_context(target, lease, opened).await?;
             queue.acknowledge(message.id).await?;
             last_message = Some(message.id);
+            if context.state != ScaleSetState::Active && !context.has_tracked_jobs {
+                return Ok(());
+            }
         }
     }
 

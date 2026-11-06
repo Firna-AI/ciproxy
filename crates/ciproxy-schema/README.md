@@ -47,7 +47,7 @@ One forward migration preserves legacy pending stops as eligible per-event
 decisions and retains the latest collection-change time.
 Their workspace ownership and subscription index keep queries scoped.
 The last organization removal keeps a durable cancellation request.
-Later milestones own members and roles.
+Dashboard tables own verified memberships, roles, and access requests.
 Workspace deletion cascades through its retained records after 30 days.
 
 The GitHub area adds visible repository snapshots and pending initial
@@ -78,6 +78,15 @@ Unfinished deliveries keep their Boat key reference during rotation.
 The overflow advisory-key sequence has its own reserved range.
 Delivery metadata has no cascading organization reference, so retention
 cannot discard live cleanup authority when one organization leaves.
+
+The dashboard area stores verified GitHub memberships, workspace roles,
+access requests, opaque session digests, and encrypted OAuth grants.
+A person record stays only with a role or an open request. Intentional
+organization removal keeps a separate durable marker and no owner-removal
+retention deadline. Retired labels preserve history while active names
+remain unique.
+Scale-set bindings retain a separate remote cleanup confirmation. Label
+retirement and confirmed removal preserve the binding and its job references.
 
 ## Quick Start
 
@@ -115,6 +124,8 @@ New migration names use a full date, hour, and minute prefix.
 Each migration has an up.sql and a down.sql.
 
 ### Key Code
+
+- [src/dashboard.rs](src/dashboard.rs) defines dashboard authentication tables.
 
 - [src/billing.rs](src/billing.rs) defines billing accounts and event receipts.
 

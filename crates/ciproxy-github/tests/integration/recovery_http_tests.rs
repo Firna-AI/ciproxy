@@ -138,6 +138,13 @@ async fn owned_group_survives_rename_and_sdk_recovers_204_absence_with_typed_mis
         })
     ));
     assert_eq!(server.state.requests.lock().unwrap().iter().filter(|(method, path, _)| *method == Method::PATCH && path.contains("runnerscalesets")).count(), 0);
+    assert!(
+        matches!(
+            sdk.rename_scale_set(99, "ciproxy-retired-absent").await,
+            Ok(())
+        ),
+        "an absent retired scale set must not block preparation"
+    );
 }
 
 #[tokio::test]
