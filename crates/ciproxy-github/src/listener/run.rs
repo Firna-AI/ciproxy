@@ -22,6 +22,9 @@ impl DurableListener {
             return Err(Error::SessionOwned);
         };
         let context = self.check(target, &*lease).await?;
+        if !context.organization_enabled && !context.has_tracked_jobs {
+            return Err(Error::OrganizationInactive);
+        }
         if context.state != ScaleSetState::Active && !context.has_tracked_jobs {
             self.deliver(target).await?;
             return Ok(());
@@ -48,7 +51,7 @@ impl DurableListener {
     ) -> Result<ListenerContext> {
         lease.check().await?;
         let context = self.store.context(target).await?;
-        if context.organization.app_state != AppState::Active || !context.organization_enabled {
+        if context.organization.app_state != AppState::Active {
             return Err(Error::OrganizationInactive);
         }
         Ok(context)
@@ -95,10 +98,13 @@ impl DurableListener {
             } else {
                 context
             };
-            if context.state != ScaleSetState::Active && !context.has_tracked_jobs {
+            if (!context.organization_enabled || context.state != ScaleSetState::Active)
+                && !context.has_tracked_jobs
+            {
                 return Ok(());
             }
-            let capacity = if context.state == ScaleSetState::Active {
+            let capacity = if context.organization_enabled && context.state == ScaleSetState::Active
+            {
                 options.capacity
             } else {
                 0
@@ -120,14 +126,19 @@ impl DurableListener {
                 .filter(|id| id.get() > 0)
                 .collect();
             let current = self.bound_context(target, lease, opened).await?;
-            if current.state == ScaleSetState::Active && !requests.is_empty() {
+            if current.organization_enabled
+                && current.state == ScaleSetState::Active
+                && !requests.is_empty()
+            {
                 queue.acquire(&requests).await?;
             }
             self.deliver(target).await?;
             let context = self.bound_context(target, lease, opened).await?;
             queue.acknowledge(message.id).await?;
             last_message = Some(message.id);
-            if context.state != ScaleSetState::Active && !context.has_tracked_jobs {
+            if (!context.organization_enabled || context.state != ScaleSetState::Active)
+                && !context.has_tracked_jobs
+            {
                 return Ok(());
             }
         }

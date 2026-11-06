@@ -19,18 +19,20 @@ use ciproxy_store_interface::organizations::AppState;
 use ciproxy_store_interface::own_runners::RoutingSnapshot;
 use ciproxy_store_interface::runners::{self, RunnerPlace};
 use ciproxy_store_interface::settings::OverflowWait;
+use uuid::Uuid;
 
 use crate::warm::allocate;
 
 pub(crate) fn build(
     input: &RoutingSnapshot,
+    runnable: &[Uuid],
     now: DateTime<Utc>,
     root_sizing: RootSizing,
 ) -> Snapshot {
     let active: Vec<_> = input
         .organizations
         .iter()
-        .filter(|o| o.app_state == AppState::Active)
+        .filter(|o| o.app_state == AppState::Active && runnable.contains(&o.id))
         .collect();
     let history: Vec<_> = active
         .iter()
@@ -81,6 +83,7 @@ pub(crate) fn build(
             .jobs
             .iter()
             .filter(|job| job.phase <= DemandPhase::Assigned)
+            .filter(|job| runnable.contains(&job.organization_id))
             .filter_map(|job| {
                 let label = input.labels.iter().find(|label| label.id == job.label_id)?;
                 Some(WaitingJob {

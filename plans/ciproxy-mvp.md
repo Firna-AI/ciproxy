@@ -991,7 +991,7 @@ UTC RFC 3339, and IDs as strings. Reason: JavaScript loses 64-bit numbers.
       stay on. Use automatic installation events only. Milestone 13 owns
       `/hooks/github` and periodic repository refresh. Branch:
       `conductor/ciproxy-mvp-milestone-14-api`.
-- [ ] Add an organization to a workspace, take one out, and keep the
+- [x] Add an organization to a workspace, take one out, and keep the
       repository access of each one. A take-out deletes the scale sets and
       removes the install through the GitHub API, as item 51 says. ciproxy
       tells its own removal apart from a removal by an owner.
@@ -1017,7 +1017,7 @@ UTC RFC 3339, and IDs as strings. Reason: JavaScript loses 64-bit numbers.
         asked. Never infer a workspace from the start page, the newest add,
         the person, or the time of an event.
         Branch: `conductor/ciproxy-add-organization`. Waits for Milestone 30.
-  - [ ] Keep an inactive organization out of every runner path. Keep the
+  - [x] Keep an inactive organization out of every runner path. Keep the
         plan reason and the Admin reason apart from a GitHub suspension or
         removal, and let both hold. Count every linked organization except
         removed ones. End the plan reason when the organizations fit the

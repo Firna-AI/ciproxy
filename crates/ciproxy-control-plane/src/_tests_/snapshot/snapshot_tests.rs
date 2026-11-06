@@ -10,7 +10,13 @@ use crate::snapshot::build;
 #[test]
 fn persisted_image_budget_still_limits_warm_starts_when_cache_reporting_fails() {
     let input = input();
-    let actions = ciproxy_scaler::decision::decide(&build(&input, at(), RootSizing::default()));
+    let runnable = input
+        .organizations
+        .iter()
+        .map(|organization| organization.id)
+        .collect::<Vec<_>>();
+    let actions =
+        ciproxy_scaler::decision::decide(&build(&input, &runnable, at(), RootSizing::default()));
     assert_eq!(actions.iter().filter(|action|matches!(action,Action::StartRunner(start) if start.reason==StartReason::WarmPool)).count(),1);
 }
 
@@ -30,7 +36,13 @@ fn warm_history_uses_only_default_label_jobs_in_the_last_day() {
         job(12, 2, 25),
         job(13, 6, 1),
     ];
-    let actions = ciproxy_scaler::decision::decide(&build(&input, at(), RootSizing::default()));
+    let runnable = input
+        .organizations
+        .iter()
+        .map(|organization| organization.id)
+        .collect::<Vec<_>>();
+    let actions =
+        ciproxy_scaler::decision::decide(&build(&input, &runnable, at(), RootSizing::default()));
     let starts = actions
         .into_iter()
         .filter_map(|action| match action {
@@ -58,8 +70,14 @@ fn older_selected_local_image_keeps_its_own_root_allocation_during_a_new_release
         .images
         .available[0]
         .root_disk_bytes = 1_000_000_000;
+    let runnable = input
+        .organizations
+        .iter()
+        .map(|organization| organization.id)
+        .collect::<Vec<_>>();
     let snapshot = build(
         &input,
+        &runnable,
         at(),
         RootSizing {
             image_root_bytes: 10_000_000_000,

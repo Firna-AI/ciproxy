@@ -6,6 +6,8 @@ mod app_removal_tests;
 mod clock;
 mod failure_isolation_tests;
 mod image_delivery_tests;
+mod inactive_organization_tests;
+mod inactive_support;
 mod inventory_tests;
 mod job_delivery_tests;
 mod management_tests;

@@ -41,14 +41,14 @@ pub enum InstallationDecision {
     AwaitingAssignment,
 }
 
-/// The role service's persisted installation-intent and first-Admin boundary.
+/// The role service's exact installation-claim and first-Admin boundary.
 #[cfg_attr(test, unimock::unimock(api = InstallAuthorityMock))]
 #[async_trait]
 pub trait InstallAuthority: Send + Sync {
-    /// Resolve the initiating Admin, including requests an owner approves later.
+    /// Resolve the original requester for this exact organization and installation.
     ///
-    /// The implementation persists intent by requester. It checks the Admin
-    /// role and the Free organization limit before it returns a workspace.
+    /// An unresolved Add waits for the person's own installed proof and workspace choice.
+    /// A chosen workspace can retain independent Admin and billing holds.
     async fn installation_decision(
         &self,
         requester_id: i64,
@@ -126,7 +126,7 @@ pub struct AppService {
     pub rest: Arc<dyn GitHubRest>,
     /// Organization-scoped scale-set APIs.
     pub scale_sets: Arc<dyn ScaleSetFactory>,
-    /// The later sign-in service's intent and role adapter.
+    /// The sign-in service's exact claim, local admission, and role adapter.
     pub authority: Arc<dyn InstallAuthority>,
     /// Lifecycle consumers from other milestones.
     pub lifecycle: Arc<dyn LifecycleOutput>,
