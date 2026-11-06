@@ -1,6 +1,7 @@
 import { defineScreen } from "@mokly/mokly";
 
-import { related } from "../../../../components/related-docs.ts";
+import { paths } from "../../../../components/paths.ts";
+import { related, relatedMvp } from "../../../../components/related-docs.ts";
 import { orgAddress } from "../../../../fixtures/org.ts";
 import { CheckoutReviewScreen } from "../../../../screens/billing/checkout-review.tsx";
 import { PlanUsageScreen } from "../../../../screens/billing/plan-usage.tsx";
@@ -25,6 +26,7 @@ export const moveToFree = defineScreen({
     "Move to Free on the Plans page asks first. Team and its add-ons stay until the end of the period, then mokly-ai is on Free, and jobs keep running on all three machines.",
   relatedDocs: related("billing", "metering"),
   address: orgAddress("billing/plans"),
+  useCasePaths: [paths.flowFreeKeepsOrganizations],
   render: (_props, context) => (
     <PlansScreen viewport={context.viewport} state="move-to-free" />
   ),
@@ -37,7 +39,23 @@ export const freeScheduled = defineScreen({
     "After Move to Free, Plan and usage shows the day Team ends. Until then, Keep Team opens the Stripe billing portal, which undoes the move.",
   relatedDocs: related("billing", "metering"),
   address: orgAddress("billing"),
+  useCasePaths: [paths.flowFreeKeepsOrganizations],
   render: (_props, context) => (
     <PlanUsageScreen viewport={context.viewport} state="free-scheduled" />
+  ),
+});
+
+export const freeOrganizations = defineScreen({
+  slug: "free-organizations",
+  title: "On Free with two organizations",
+  description:
+    "On 4 December, the day after Team ended, mokly-ai is on Free and keeps both its organizations, mokly-ai and mokly-labs. Their jobs keep running on all three machines. Free includes one organization, so the banner of every page says so and offers Team, which covers the use. At the pace of the first day, the starts pass the 2,000 of Free on 9 December, so the page also shows that notice.",
+  rationale:
+    "A workspace that holds more than one organization when it moves to Free keeps them all, and on Free the number of organizations is a soft limit, with the banner and the offer, as for the machine count. The Organizations tab shows the same banner.",
+  relatedDocs: relatedMvp("workspaces", "metering", "billing"),
+  address: orgAddress("billing"),
+  useCasePaths: [paths.flowFreeKeepsOrganizations],
+  render: (_props, context) => (
+    <PlanUsageScreen viewport={context.viewport} state="free-organizations" />
   ),
 });

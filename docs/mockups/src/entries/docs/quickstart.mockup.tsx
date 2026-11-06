@@ -11,7 +11,7 @@ export const quickstart = defineScreen({
     "Five steps from sign-in to the first job on an own machine: install the GitHub App, run the install command of Add machine, connect Boat, change runs-on, and push.",
   rationale:
     "The code blocks are the same install command and workflow change that setup shows in the dashboard, so the docs and the product never disagree.",
-  relatedDocs: related("agent", "jobRouting", "security"),
+  relatedDocs: related("agent", "labels", "jobRouting", "security"),
   address: siteAddress("docs/quickstart"),
   useCasePaths: [paths.flowLandingToSignIn],
   render: (_props, context) => <QuickstartScreen viewport={context.viewport} />,

@@ -64,8 +64,7 @@ Confirm the actual parent and version metadata with operator credentials:
 ```sh
 gcloud secrets describe "ciproxy-$DEPLOY_ENV-release-github-token" \
   --project=ciproxy --format='value(name)'
-gcloud secrets versions list \
-  --secret="ciproxy-$DEPLOY_ENV-release-github-token" \
+gcloud secrets versions list "ciproxy-$DEPLOY_ENV-release-github-token" \
   --project=ciproxy --format='table(name,state)'
 ```
 

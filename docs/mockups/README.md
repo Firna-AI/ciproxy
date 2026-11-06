@@ -60,11 +60,11 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   that day, and runs three Hetzner AX42 machines with Boat overflow from
   mid-September. Its workspace takes the name mokly-ai, and adds a second
   organization, mokly-labs, on 2 November. The November screens show the busy
-  Team workspace, and the December screens the payment problems. Each tier
-  counts only the starts of its own period, which begins on the day the tier
-  begins. Cal Moore installs the GitHub App, so he is the first Admin.
-  `members.ts` names the person of each role, the owner with the Billing role,
-  and the Admin without the GitHub runner right.
+  Team workspace, and the December screens the payment problems and a move to
+  Free that keeps both organizations. Each tier counts only the starts of its
+  own period, which begins on the day the tier begins. Cal Moore installs the
+  GitHub App, so he is the first Admin. `members.ts` names the person of each
+  role, the owner with the Billing role, and a second Admin.
 - Some screens are what-ifs of November, in `access.ts` and `machines.ts`: a
   fourth machine, the mini PC office-mini-1, whose disk holds fewer jobs than
   its slots; Tom Becker suspends or removes the GitHub App; and Jonas Weber
@@ -101,8 +101,8 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   the Graphite theme.
 - A banner of a passed limit or a failed payment comes from
   `src/components/usage-banner.tsx`, so one state shows one banner on every
-  page. At a failed payment, the payment banner takes the place of the
-  soft-limit banner.
+  page. On Free, a second organization passes a soft limit too. At a failed
+  payment, the payment banner takes the place of the soft-limit banner.
 - The legal pages show grey lines in place of the text that the user writes
   or approves before the launch. Only the data retention of the privacy policy
   has text, from `legal.ts`.

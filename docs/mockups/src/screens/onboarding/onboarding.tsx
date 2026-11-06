@@ -9,7 +9,6 @@ import { PageHeader } from "../../components/page.tsx";
 import { AppShell } from "../../components/shell/app-shell.tsx";
 import { dotJoin, monthly } from "../../fixtures/format.ts";
 import { boat } from "../../fixtures/machines.ts";
-import { requester } from "../../fixtures/members.ts";
 import { org, workspace } from "../../fixtures/org.ts";
 import { BoatStep, FirstJobStep, MachineStep } from "./step-bodies.tsx";
 import "./onboarding.css";
@@ -18,7 +17,6 @@ export const onboardingStates = [
   "machine-waiting",
   "machine-connected",
   "machine-no-kvm",
-  "machine-no-right",
   "boat",
   "boat-invalid",
   "first-job-waiting",
@@ -69,7 +67,6 @@ const openStep: Record<OnboardingState, StepKey> = {
   "machine-waiting": "machine",
   "machine-connected": "machine",
   "machine-no-kvm": "machine",
-  "machine-no-right": "machine",
   boat: "boat",
   "boat-invalid": "boat",
   "first-job-waiting": "job",
@@ -100,7 +97,6 @@ export function OnboardingScreen({
     <AppShell
       viewport={viewport}
       tier="free"
-      person={state === "machine-no-right" ? requester : undefined}
       setup={{ done, total: steps.length, active: true }}
     >
       <PageHeader

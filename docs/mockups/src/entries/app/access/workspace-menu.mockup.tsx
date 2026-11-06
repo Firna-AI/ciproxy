@@ -11,7 +11,7 @@ export const workspaceMenu = defineScreen({
     "The switch of the top bar opens the workspaces of Cal Moore: mokly-ai on Team with its two organizations, and tidepool on Free, where he is a Viewer. Install on another organization makes a new workspace.",
   rationale:
     "The answer to item 48: the switch of the top bar switches workspaces, not organizations, because a workspace holds the jobs, the machines, and the plan of all its organizations.",
-  relatedDocs: relatedMvp("security"),
+  relatedDocs: relatedMvp("workspaces", "security"),
   address: orgAddress("jobs"),
   render: (_props, context) => (
     <JobsLiveScreen viewport={context.viewport} state="steady" workspaceMenu />

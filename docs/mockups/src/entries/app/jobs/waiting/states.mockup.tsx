@@ -25,7 +25,7 @@ export const nothingFits = defineScreen({
   title: "Jobs of a label that nothing fits",
   description:
     "Two load tests use ciproxy-32vcpu, which no own machine and no Boat size fits. The label is set to wait when nothing fits, so the jobs stay queued in GitHub. Edit label opens its dialog.",
-  relatedDocs: related("overflow", "jobRouting"),
+  relatedDocs: related("labels", "overflow", "jobRouting"),
   address,
   render: (_props, context) => (
     <JobsLiveScreen viewport={context.viewport} state="nothing-fits" />

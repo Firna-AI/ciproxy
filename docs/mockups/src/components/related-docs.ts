@@ -14,6 +14,7 @@ const docs = {
   metering: "docs/protocol/metering.md",
   overflow: "docs/protocol/overflow.md",
   security: "docs/protocol/security.md",
+  workspaces: "docs/protocol/workspaces.md",
 } as const;
 
 export type DocKey = keyof typeof docs;

@@ -39,7 +39,7 @@ export function usageNotice(
       </Notice>
     );
   }
-  if (scene === "free" && usage.passesOn) {
+  if ((scene === "free" || scene === "free-organizations") && usage.passesOn) {
     return (
       <Notice
         tone="warning"

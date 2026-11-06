@@ -1,18 +1,27 @@
 // The finished jobs that the job page shows, on Wednesday 18 November: one
-// that a warm runner took on an own machine, one that ran on Boat, and one
-// whose machine cache was not available, so it used the GitHub cache. Only a
-// job whose restores the machine cache handled shows the cache counts.
+// that a warm runner took on an own machine, one that ran on Boat, one whose
+// machine cache was not available, so it used the GitHub cache, one of
+// mokly-labs that restored from both caches, and one that restored no entry.
+// Only a job whose restores the machine cache handled shows the cache counts.
 
-import { onBoat, own, type Where } from "./jobs.ts";
+import { onBoat, own, repositoryName, type Where } from "./jobs.ts";
 import { boat } from "./machines.ts";
-import { org } from "./org.ts";
 import { labelNamed, type Label } from "./settings.ts";
 import { boatSizeFor, type BoatSize } from "./sizes.ts";
 
-/** Where the restores of a job came from, and their counts when known. */
+/** The counts of the restores that the machine cache handled. */
+type CacheCounts = { restored: number; sizeGb: number };
+
+/**
+ * Where the restores of a job came from, and their counts when known. The
+ * machine cache counts the restores that it handled, also those whose
+ * contents came from the GitHub cache: "both" names the two caches.
+ */
 export type CacheUse =
-  | { source: "machine"; restored: number; sizeGb: number }
-  | { source: "github"; fallback: boolean };
+  | ({ source: "machine" } & CacheCounts)
+  | ({ source: "both" } & CacheCounts)
+  | { source: "github"; fallback: boolean }
+  | { source: "none" };
 
 /** One line of the timeline; a machine name in it shows in monospace. */
 export type JobEvent = { time: string; text: string; machine?: string };
@@ -36,7 +45,13 @@ export type JobDetail = {
 /** Every job of the page uses the default label. */
 const label = labelNamed("ciproxy");
 
-export const jobDetailStates = ["own", "boat", "fallback"] as const;
+export const jobDetailStates = [
+  "own",
+  "boat",
+  "fallback",
+  "mixed-cache",
+  "no-restores",
+] as const;
 export type JobDetailState = (typeof jobDetailStates)[number];
 
 const warmReason = "A warm runner was ready, so the job started at once.";
@@ -44,7 +59,7 @@ const warmReason = "A warm runner was ready, so the job started at once.";
 export const jobDetails: Readonly<Record<JobDetailState, JobDetail>> = {
   own: {
     name: "test (rust)",
-    context: `${org.login}/mokly · CI · #1542 Add catalogue search`,
+    context: `${repositoryName("mokly")} · CI · #1542 Add catalogue search`,
     ref: "#1542",
     where: own(1, 3),
     label,
@@ -64,7 +79,7 @@ export const jobDetails: Readonly<Record<JobDetailState, JobDetail>> = {
   },
   boat: {
     name: "e2e (chromium) 3/4",
-    context: `${org.login}/mokly · E2E · main`,
+    context: `${repositoryName("mokly")} · E2E · main`,
     ref: "main",
     where: onBoat,
     label,
@@ -83,7 +98,7 @@ export const jobDetails: Readonly<Record<JobDetailState, JobDetail>> = {
   },
   fallback: {
     name: "clippy",
-    context: `${org.login}/mokly · CI · #1542 Add catalogue search`,
+    context: `${repositoryName("mokly")} · CI · #1542 Add catalogue search`,
     ref: "#1542",
     where: own(2, 4),
     label,
@@ -100,5 +115,45 @@ export const jobDetails: Readonly<Record<JobDetailState, JobDetail>> = {
     waited: "0s",
     duration: "2m 48s",
     cache: { source: "github", fallback: true },
+  },
+  "mixed-cache": {
+    name: "eval (agents)",
+    context: `${repositoryName("eval-runner")} · Evals · main`,
+    ref: "main",
+    where: own(2, 3),
+    label,
+    why: warmReason,
+    timeline: [
+      { time: "14:20:00", text: "Queued on GitHub" },
+      {
+        time: "14:20:00",
+        text: "Taken by a warm runner on",
+        machine: "hetzner-ax42-2",
+      },
+      { time: "14:25:08", text: "Passed" },
+    ],
+    waited: "0s",
+    duration: "5m 08s",
+    cache: { source: "both", restored: 4, sizeGb: 3.6 },
+  },
+  "no-restores": {
+    name: "fmt",
+    context: `${repositoryName("mokly")} · CI · #1538 Restyle the catalogue sidebar`,
+    ref: "#1538",
+    where: own(2, 6),
+    label,
+    why: warmReason,
+    timeline: [
+      { time: "14:18:41", text: "Queued on GitHub" },
+      {
+        time: "14:18:41",
+        text: "Taken by a warm runner on",
+        machine: "hetzner-ax42-2",
+      },
+      { time: "14:19:02", text: "Passed" },
+    ],
+    waited: "0s",
+    duration: "21s",
+    cache: { source: "none" },
   },
 };

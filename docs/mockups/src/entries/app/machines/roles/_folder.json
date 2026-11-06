@@ -1,4 +1,1 @@
-{
-  "title": "Roles and the runner right",
-  "order": ["viewer", "billing", "no-runner-right", "machine-viewer"]
-}
+{ "title": "Roles", "order": ["viewer", "billing", "machine-viewer"] }
