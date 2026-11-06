@@ -1,5 +1,6 @@
-//! Host subprocess adapter. Inputs use argv or stdin without a shell.
+//! Host subprocess adapter and shared mandatory reflink copy operation.
 
+use std::path::Path;
 use std::process::Stdio;
 
 use async_trait::async_trait;
@@ -115,4 +116,26 @@ impl Commands for LinuxCommands {
 
 pub(crate) fn arguments(values: &[&str]) -> Vec<String> {
     values.iter().map(|value| (*value).to_owned()).collect()
+}
+
+/// Copy a VM root or Docker disk with mandatory sparse-preserving block sharing.
+pub(crate) async fn reflink_copy(
+    commands: &dyn Commands,
+    source: &Path,
+    destination: &Path,
+) -> Result<()> {
+    commands
+        .run(
+            "cp",
+            &arguments(&[
+                "--reflink=always",
+                "--sparse=auto",
+                "--",
+                &source.to_string_lossy(),
+                &destination.to_string_lossy(),
+            ]),
+            &[],
+        )
+        .await?;
+    Ok(())
 }

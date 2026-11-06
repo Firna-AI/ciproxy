@@ -1,7 +1,6 @@
 //! Checked repository disk attachments with durable bounded capacity leases.
 
-use std::fs::{self, OpenOptions};
-use std::io::Write;
+use std::fs::{self, File};
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -61,10 +60,8 @@ impl DockerDisks for LinuxDockers {
         if !facts.sticky_docker || data_bytes == 0 {
             return Ok(None);
         }
-        if let Some((_, lease)) = docker_files::leases(&self.layout)?
-            .into_iter()
-            .find(|(id, _)| *id == vm.local_id)
-        {
+        let leases = docker_files::leases(&self.layout)?;
+        if let Some((_, lease)) = leases.iter().find(|(id, _)| *id == vm.local_id) {
             return Ok(Some(attachment(
                 lease.writer,
                 vm.report.requested_size.disk_bytes,
@@ -75,25 +72,10 @@ impl DockerDisks for LinuxDockers {
         ));
         let directory = self.layout.data.join("docker").join(&key);
         private_directory(&directory)?;
-        let writer = directory.join("writer");
-        let exclusive = if persistent(facts, scope) {
-            match OpenOptions::new()
-                .create_new(true)
-                .write(true)
-                .open(&writer)
-            {
-                Ok(mut file) => {
-                    file.write_all(vm.local_id.as_bytes())
-                        .context("record Docker writer")?;
-                    file.sync_all().context("sync Docker writer")?;
-                    true
-                }
-                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => false,
-                Err(error) => return Err(error).context("claim Docker writer"),
-            }
-        } else {
-            false
-        };
+        let exclusive = persistent(facts, scope)
+            && !leases
+                .iter()
+                .any(|(_, lease)| lease.writer && lease.repository == key);
         let base = directory.join("base.ext4");
         let path = self.layout.jail_root(vm).join("docker-job.ext4");
         let old_size = match base.metadata() {
@@ -103,16 +85,13 @@ impl DockerDisks for LinuxDockers {
         };
         let limit = spare
             .min(free_pool)
-            .saturating_sub(docker_files::held(&self.layout)?);
+            .saturating_sub(leases.iter().map(|(_, lease)| lease.bytes).sum());
         let desired = data_bytes
             .saturating_add(vm.report.requested_size.disk_bytes)
             .max(old_size)
             .div_ceil(4096)
             * 4096;
         if desired > limit {
-            if exclusive {
-                fs::remove_file(&writer).context("release no-fit Docker writer")?;
-            }
             return Ok(None);
         }
         let lease = Lease {
@@ -120,12 +99,7 @@ impl DockerDisks for LinuxDockers {
             writer: exclusive,
             bytes: desired,
         };
-        if let Err(error) = docker_files::save(&self.layout, vm, &lease) {
-            if exclusive {
-                let _ = fs::remove_file(&writer);
-            }
-            return Err(error);
-        }
+        docker_files::save(&self.layout, vm, &lease)?;
         let result = self
             .prepare_file(
                 vm,
@@ -152,32 +126,21 @@ impl DockerDisks for LinuxDockers {
     }
 
     fn release(&self, vm: &VmRecord) -> Result<()> {
-        let Some((_, lease)) = docker_files::leases(&self.layout)?
-            .into_iter()
-            .find(|(id, _)| *id == vm.local_id)
-        else {
-            return Ok(());
-        };
-        if lease.writer {
-            let marker = self
-                .layout
-                .data
-                .join("docker")
-                .join(&lease.repository)
-                .join("writer");
-            if fs::read_to_string(&marker).context("read Docker writer")? == vm.local_id {
-                fs::remove_file(marker).context("release Docker writer")?;
-            }
-        }
+        let directory = self.layout.data.join("docker-leases");
         for path in [
-            self.layout.data.join("docker-leases").join(&vm.local_id),
             self.layout.jail_root(vm).join("docker-job.ext4"),
+            directory.join(&vm.local_id),
         ] {
             match fs::remove_file(path) {
                 Ok(()) => {}
                 Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
                 Err(error) => return Err(error).context("release Docker attachment"),
             }
+        }
+        match File::open(directory) {
+            Ok(directory) => directory.sync_all().context("sync released Docker lease")?,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error).context("open Docker lease directory"),
         }
         Ok(())
     }
