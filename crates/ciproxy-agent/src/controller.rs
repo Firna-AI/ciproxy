@@ -10,6 +10,7 @@ use tokio::sync::Mutex;
 
 use crate::boundaries::{Cache, Host, Images, Store, Vms};
 use crate::capacity::machine_resources;
+use crate::docker::DockerDisks;
 use crate::error::Result;
 use crate::mode::ModeAction;
 use crate::state::{MachineState, Mode};
@@ -34,6 +35,7 @@ pub(crate) struct Controller {
     pub(crate) images: Arc<dyn Images>,
     pub(crate) cache: Arc<dyn Cache>,
     pub(crate) image_budget: u64,
+    pub(crate) dockers: Option<Arc<dyn DockerDisks>>,
 }
 
 #[async_trait]
@@ -50,7 +52,7 @@ impl Agent for Controller {
                 .available(state.runners.iter().map(|vm| vm.report.size))
                 .job_disk_bytes
         };
-        if let Err(error) = self.cache.budget(budget).await {
+        if let Err(error) = self.cache.budget(self.cache_budget(budget)?).await {
             tracing::warn!(error = %error, "cache budget unavailable; keep jobs running");
         }
         self.enforce_mode().await
@@ -97,3 +99,15 @@ mod drain_tests;
 #[cfg(test)]
 #[path = "_tests_/startup_failure_tests.rs"]
 mod startup_failure_tests;
+
+#[cfg(test)]
+#[path = "_tests_/slot_allocation_tests.rs"]
+mod slot_allocation_tests;
+
+#[cfg(test)]
+#[path = "_tests_/docker_admission_tests.rs"]
+mod docker_admission_tests;
+
+#[cfg(test)]
+#[path = "_tests_/docker_policy_tests.rs"]
+mod docker_policy_tests;

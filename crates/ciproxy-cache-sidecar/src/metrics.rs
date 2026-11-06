@@ -7,8 +7,10 @@ use async_trait::async_trait;
 use ciproxy_protocol::cache::{
     CacheRestoreCounts, JobCacheReport, JobCacheUsage, MachineCacheReport, UnknownJobCount,
 };
-use ciproxy_protocol::identifiers::JobId;
+use ciproxy_protocol::identifiers::{JobId, OrganizationId, RepositoryId};
+use ciproxy_protocol::jobs::JobAssignment;
 use ciproxy_protocol::jobs::{JobScope, UnknownJobScopeReason};
+use ciproxy_protocol::runtime::CacheRegistration;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
@@ -32,6 +34,10 @@ struct Event {
 
 #[derive(Deserialize, Serialize)]
 struct Job {
+    job_id: JobId,
+    organization_id: OrganizationId,
+    repository_id: RepositoryId,
+    assignment: JobAssignment,
     usage: JobCacheUsage,
     active: bool,
     updated: u64,
@@ -41,10 +47,10 @@ struct Job {
 
 #[async_trait]
 pub(crate) trait Reports: Send + Sync {
-    async fn registered(&self, job: &JobId, scope: &JobScope);
-    async fn closed(&self, job: &JobId);
-    async fn restored(&self, job: &JobId, local: bool, bytes: u64);
-    async fn fallback(&self, job: &JobId);
+    async fn registered(&self, registration: &CacheRegistration, scope: &JobScope);
+    async fn closed(&self, registration: &CacheRegistration);
+    async fn restored(&self, registration: &CacheRegistration, local: bool, bytes: u64);
+    async fn fallback(&self, registration: &CacheRegistration);
     async fn report(&self) -> Result<MachineCacheReport>;
 }
 
@@ -91,13 +97,17 @@ impl Metrics {
 
 #[async_trait]
 impl Reports for Metrics {
-    async fn registered(&self, job: &JobId, scope: &JobScope) {
+    async fn registered(&self, registration: &CacheRegistration, scope: &JobScope) {
         let mut lock = self.records.lock().await;
         if lock.is_none() {
             *lock = Some(self.load().await);
         }
         if let Some(records) = lock.as_mut() {
-            records.jobs.entry(job.0.clone()).or_insert(Job {
+            let job = records.jobs.entry(key(registration)).or_insert(Job {
+                job_id: registration.job_id.clone(),
+                organization_id: registration.facts.organization_id.clone(),
+                repository_id: registration.facts.repository.id.clone(),
+                assignment: registration.facts.assignment.clone(),
                 usage: JobCacheUsage::MachineHandled(CacheRestoreCounts {
                     local_entries: 0,
                     github_entries: 0,
@@ -110,21 +120,26 @@ impl Reports for Metrics {
                     JobScope::Checked { .. } => None,
                 },
             });
+            if job.unknown_reason.is_none()
+                && let JobScope::Unknown { reason } = scope
+            {
+                job.unknown_reason = Some(*reason);
+            }
             self.persist(records).await;
         }
     }
 
-    async fn closed(&self, job: &JobId) {
+    async fn closed(&self, registration: &CacheRegistration) {
         let mut lock = self.records.lock().await;
         if let Some(records) = lock.as_mut() {
-            if let Some(job) = records.jobs.get_mut(&job.0) {
+            if let Some(job) = records.jobs.get_mut(&key(registration)) {
                 job.active = false;
             }
             self.persist(records).await;
         }
     }
 
-    async fn restored(&self, job: &JobId, local: bool, bytes: u64) {
+    async fn restored(&self, registration: &CacheRegistration, local: bool, bytes: u64) {
         let mut lock = self.records.lock().await;
         if lock.is_none() {
             *lock = Some(self.load().await);
@@ -134,7 +149,7 @@ impl Reports for Metrics {
                 time: self.clock.now(),
                 local,
             });
-            if let Some(job) = records.jobs.get_mut(&job.0) {
+            if let Some(job) = records.jobs.get_mut(&key(registration)) {
                 if let JobCacheUsage::MachineHandled(counts) = &mut job.usage {
                     if local {
                         counts.local_entries += 1;
@@ -149,16 +164,23 @@ impl Reports for Metrics {
         }
     }
 
-    async fn fallback(&self, job: &JobId) {
+    async fn fallback(&self, registration: &CacheRegistration) {
         let mut lock = self.records.lock().await;
         if lock.is_none() {
             *lock = Some(self.load().await);
         }
         if let Some(records) = lock.as_mut() {
-            let unknown_reason = records.jobs.get(&job.0).and_then(|job| job.unknown_reason);
+            let unknown_reason = records
+                .jobs
+                .get(&key(registration))
+                .and_then(|job| job.unknown_reason);
             records.jobs.insert(
-                job.0.clone(),
+                key(registration),
                 Job {
+                    job_id: registration.job_id.clone(),
+                    organization_id: registration.facts.organization_id.clone(),
+                    repository_id: registration.facts.repository.id.clone(),
+                    assignment: registration.facts.assignment.clone(),
                     usage: JobCacheUsage::Github,
                     active: true,
                     updated: self.clock.now(),
@@ -190,9 +212,12 @@ impl Reports for Metrics {
             unknown_jobs: unknown_counts(records, cutoff),
             jobs: records
                 .jobs
-                .iter()
-                .map(|(id, job)| JobCacheReport {
-                    job_id: JobId(id.clone()),
+                .values()
+                .map(|job| JobCacheReport {
+                    job_id: job.job_id.clone(),
+                    organization_id: job.organization_id.clone(),
+                    repository_id: job.repository_id.clone(),
+                    assignment: job.assignment.clone(),
                     usage: job.usage.clone(),
                 })
                 .collect(),
@@ -211,4 +236,15 @@ fn unknown_counts(records: &Records, cutoff: u64) -> Vec<UnknownJobCount> {
         .into_iter()
         .map(|(reason, jobs)| UnknownJobCount { reason, jobs })
         .collect()
+}
+
+fn key(registration: &CacheRegistration) -> String {
+    format!(
+        "{}:{}:{}:{}:{}",
+        registration.facts.organization_id.0,
+        registration.facts.repository.id.0,
+        registration.facts.assignment.run_id,
+        registration.facts.assignment.runner_id,
+        registration.job_id.0
+    )
 }

@@ -1,10 +1,10 @@
-//! Boot drives contain the disposable job root without an unused Docker disk.
+//! Boot drives contain the disposable job root with a dormant slot for the checked Docker drive.
 
 use crate::fixtures::vm;
 use crate::vm_config::VmConfig;
 
 #[test]
-fn vm_boots_with_one_writable_root_drive() {
+fn vm_boots_with_one_writable_root_and_a_dormant_docker_slot() {
     let config = serde_json::to_value(VmConfig::for_vm(&vm("runner", false))).unwrap();
     assert_eq!(
         config["drives"],
@@ -13,6 +13,6 @@ fn vm_boots_with_one_writable_root_drive() {
             "path_on_host": "/rootfs.ext4",
             "is_root_device": true,
             "is_read_only": false,
-        }])
+        }, {"drive_id":"docker","path_on_host":"/docker-slot","is_root_device":false,"is_read_only":false}])
     );
 }

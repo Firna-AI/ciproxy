@@ -25,6 +25,49 @@ impl Controller {
             .cloned()
             .ok_or(Error::GuestMismatch)?;
         let response = match message {
+            GuestToAgent::JobStarting {
+                runner_id,
+                job_id,
+                mut runtime,
+            } => {
+                if runner_id != vm.report.runner_id {
+                    return Err(Error::GuestMismatch);
+                }
+                let updated = self
+                    .started_record(&vm, &job_id, Some(runtime.permissions))
+                    .await?;
+                runtime.permissions = updated.cache_permissions.unwrap_or_default();
+                if let Err(error) = self.cache.handoff(&updated, &job_id, runtime).await {
+                    tracing::warn!(%error,"cache assignment unavailable; preserve GitHub fallback");
+                }
+                AgentMessage::JobStarted { runner_id, job_id }
+            }
+            GuestToAgent::JobPrepared {
+                runner_id,
+                job_id,
+                outcome,
+            } => {
+                if runner_id != vm.report.runner_id
+                    || vm.report.state != (RunnerState::Running { job_id })
+                {
+                    return Err(Error::GuestMismatch);
+                }
+                if !outcome.cache_ready
+                    && let Err(error) = self.cache.fallback(&vm).await
+                {
+                    tracing::warn!(%error,"cache fallback cleanup will retry");
+                }
+                if !outcome.docker_attached
+                    && let Some(dockers) = &self.dockers
+                    && dockers.reserved(&vm)?
+                {
+                    self.vms.clear_docker(&vm).await?;
+                    dockers.release(&vm)?;
+                }
+                self.prepared_record(&vm, outcome).await?;
+                tracing::info!(event="job_prepared_observed",vm_id=%vm.local_id,"accepted local job readiness");
+                return Ok(None);
+            }
             GuestToAgent::Hello {
                 protocol_version,
                 image_id,
@@ -32,7 +75,7 @@ impl Controller {
                 if protocol_version != ProtocolVersion::CURRENT || image_id != vm.report.image_id {
                     return Err(Error::GuestMismatch);
                 }
-                if self.state.lock().await.mode != Mode::Active
+                if self.state.lock().await.mode == Mode::Removed
                     || vm.report.state == RunnerState::Stopping
                 {
                     self.request_idle_stop(&vm).await?;
@@ -67,24 +110,7 @@ impl Controller {
                 if runner_id != vm.report.runner_id {
                     return Err(Error::GuestMismatch);
                 }
-                let mut state = self.state.lock().await;
-                let mut next = state.clone();
-                let record = next
-                    .runners
-                    .iter_mut()
-                    .find(|r| r.local_id == vm.local_id)
-                    .ok_or(Error::GuestMismatch)?;
-                if let RunnerState::Running { job_id: previous } = &record.report.state
-                    && *previous != job_id
-                {
-                    return Err(Error::GuestMismatch);
-                }
-                record.report.state = RunnerState::Running {
-                    job_id: job_id.clone(),
-                };
-                self.store.save(&next)?;
-                *state = next;
-                tracing::info!(event = "job_started_observed", vm_id = %vm.local_id, "accepted guest job state");
+                self.started_record(&vm, &job_id, None).await?;
                 AgentMessage::JobStarted { runner_id, job_id }
             }
             GuestToAgent::RunnerExited { runner_id, exit } => {
@@ -123,9 +149,10 @@ impl Controller {
 
     pub(crate) async fn retire(&self, vm: &VmRecord) -> Result<()> {
         self.vms.stop(vm).await?;
-        if let Err(error) = self.cache.release(&vm.report.runner_id).await {
-            tracing::warn!(error = %error, "machine cache release failed");
+        if let Some(dockers) = &self.dockers {
+            dockers.release(vm)?;
         }
+        self.cache.release(vm).await?;
         let mut state = self.state.lock().await;
         let mut next = state.clone();
         next.runners.retain(|record| record.local_id != vm.local_id);
@@ -134,3 +161,11 @@ impl Controller {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "_tests_/preparation_outcome_tests.rs"]
+mod preparation_outcome_tests;
+
+#[cfg(test)]
+#[path = "_tests_/preparation_replay_tests.rs"]
+mod preparation_replay_tests;

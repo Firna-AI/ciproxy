@@ -6,7 +6,6 @@ use std::time::Duration;
 
 use ciproxy_protocol::reports::REPORT_INTERVAL_SECONDS;
 use clap::Parser;
-use reqwest::Client;
 use tokio::signal::unix::{SignalKind, signal};
 use tokio::sync::{Mutex, mpsc};
 use tokio::time::interval;
@@ -16,12 +15,15 @@ use tracing_subscriber::util::SubscriberInitExt;
 use crate::area::AreaFiles;
 use crate::area_files::LinuxAreaFiles;
 use crate::area_types::Phase;
-use crate::boundaries::{Cache, Connection, Host, Images, Service, Store, Vms};
-use crate::cache::UnixCache;
+use crate::boundaries::{Cache, Connection, Host, Service, Store, Vms};
+use crate::cache::HttpCache;
+use crate::cache_network::GuardedCacheStart;
+use crate::cache_service::{CacheService, ReleasedCache};
 use crate::cli::{Action, Cli};
 use crate::connection::WebSocketConnection;
 use crate::connection_socket::TlsWebSocketDialer;
 use crate::controller::{Agent, Controller};
+use crate::docker::{DockerDisks, LinuxDockers};
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::gateway::ReconnectingGateway;
 use crate::hardware::LinuxHost;
@@ -30,10 +32,6 @@ use crate::host_file_ops::directory;
 use crate::host_paths::{AREA, CONTROL, tools};
 use crate::host_preparation::{FinalUninstall, Uninstall, stage_error};
 use crate::host_system::LinuxHostSystem;
-use crate::image_download::HttpsImageDownload;
-use crate::image_space::{ImageBudget, ImageSpace, LinuxSpaceUsage};
-use crate::image_store::LinuxImageStore;
-use crate::images::ManagedImages;
 use crate::installation::{Install, Installer};
 use crate::layout::Layout;
 use crate::logging::subscriber;
@@ -116,37 +114,16 @@ async fn execute(action: Action) -> Result<()> {
         .map_or(requested_budget.unwrap_or(DEFAULT_IMAGE_BYTES), |record| {
             record.image_budget
         });
-    let space: Arc<dyn ImageSpace> = Arc::new(ImageBudget::new(
-        image_budget,
-        Arc::new(LinuxSpaceUsage {
-            area: layout.data.clone(),
-        }),
-    ));
+    let image_services = crate::application_images::prepare(&layout, image_budget)?;
+    let space = image_services.space;
+    let images = image_services.images;
     let empty = state.runners.is_empty();
     let identity = state.identity.clone();
     let removing = state.mode == Mode::Removed;
     let commands: Arc<dyn Commands> = Arc::new(LinuxCommands);
-    let cache: Arc<dyn Cache> = Arc::new(UnixCache {
-        socket: PathBuf::from("/run/ciproxy-cache/control.sock"),
-    });
-    let images: Arc<dyn Images> = Arc::new(ManagedImages::new(
-        Arc::new(LinuxImageStore::new(layout.clone(), space.clone())),
-        Arc::new(HttpsImageDownload {
-            client: Client::builder()
-                .https_only(true)
-                .connect_timeout(Duration::from_secs(20))
-                .timeout(Duration::from_secs(3600))
-                .build()
-                .context("configure image downloads")?,
-        }),
-    ));
+    let cache: Arc<dyn Cache> = Arc::new(HttpCache::new(commands.clone())?);
     let (guest_tx, mut guest_rx) = mpsc::channel(256);
-    let guests = Arc::new(LinuxGuests::new(
-        layout.clone(),
-        commands.clone(),
-        cache.clone(),
-        guest_tx,
-    ));
+    let guests = Arc::new(LinuxGuests::new(layout.clone(), commands.clone(), guest_tx));
     let vms: Arc<dyn Vms> = Arc::new(LinuxVms {
         tools: services.tools,
         layout: layout.clone(),
@@ -155,7 +132,7 @@ async fn execute(action: Action) -> Result<()> {
             commands: commands.clone(),
         }),
         files: Arc::new(LinuxVmFiles {
-            layout,
+            layout: layout.clone(),
             root: Arc::new(ReflinkRoot {
                 files: Arc::new(LinuxRootFiles),
                 commands: commands.clone(),
@@ -171,8 +148,13 @@ async fn execute(action: Action) -> Result<()> {
         host: host.clone(),
         vms,
         images: images.clone(),
-        cache,
+        cache: cache.clone(),
         image_budget,
+        dockers: Some(Arc::new(LinuxDockers {
+            layout: layout.clone(),
+            commands: commands.clone(),
+            cache,
+        }) as Arc<dyn DockerDisks>),
     });
     let connection: Arc<dyn Connection> = Arc::new(WebSocketConnection::new(
         std::env::var("CIPROXY_AGENT_URL")
@@ -181,6 +163,18 @@ async fn execute(action: Action) -> Result<()> {
     ));
     match action {
         Action::Install(token) => {
+            preparation.prepare().await?;
+            let cache_service: Arc<dyn CacheService> = Arc::new(ReleasedCache {
+                starter: Arc::new(GuardedCacheStart {
+                    commands: commands.clone(),
+                }),
+                commands: commands.clone(),
+                release_server: std::env::var("CIPROXY_RELEASE_SERVER_URL")
+                    .unwrap_or_else(|_| "https://get.ciproxy.dev".to_owned()),
+            });
+            if let Err(error) = cache_service.install().await {
+                tracing::warn!(%error, "machine cache install unavailable; GitHub fallback remains available");
+            }
             let installer: Arc<dyn Install> = Arc::new(Installer {
                 store,
                 host,

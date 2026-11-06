@@ -17,7 +17,7 @@ use crate::error::{Error, Result};
 use crate::service::Supervisor;
 
 #[derive(Debug, Eq, PartialEq)]
-pub(super) enum Observation {
+pub(in crate::service) enum Observation {
     Message(GuestToAgent),
     Start,
     Stop,
@@ -26,9 +26,9 @@ pub(super) enum Observation {
     Poweroff,
 }
 
-pub(super) type Trace = Arc<Mutex<Vec<Observation>>>;
+pub(in crate::service) type Trace = Arc<Mutex<Vec<Observation>>>;
 
-pub(super) fn configure() -> AgentToGuest {
+pub(in crate::service) fn configure() -> AgentToGuest {
     AgentToGuest::ConfigureRunner {
         protocol_version: ProtocolVersion::CURRENT,
         runner_id: RunnerId("runner-7".into()),
@@ -166,7 +166,11 @@ pub(super) fn shutdown_pair(trace: &Trace) -> (Unimock, Unimock) {
     (channel, runner)
 }
 
-pub(super) fn supervisor(channel: Unimock, runner: Unimock, trace: &Trace) -> Supervisor {
+pub(in crate::service) fn supervisor(
+    channel: Unimock,
+    runner: Unimock,
+    trace: &Trace,
+) -> Supervisor {
     let powered = trace.clone();
     Supervisor {
         image_id: ImageId("image-1".into()),

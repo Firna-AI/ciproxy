@@ -37,12 +37,12 @@ diesel::table! {
     }
 }
 diesel::table! {
-    metering_daily_sizes (workspace_id, day, vcpus, memory_gb, disk_gb) {
+    metering_daily_sizes (workspace_id, day, vcpus, memory_bytes, disk_bytes) {
         workspace_id -> Uuid,
         day -> Date,
         vcpus -> Int4,
-        memory_gb -> Int4,
-        disk_gb -> Int4,
+        memory_bytes -> Int8,
+        disk_bytes -> Int8,
         machine_starts -> Int8,
         machine_minutes -> Numeric,
         boat_starts -> Int8,
@@ -59,22 +59,18 @@ diesel::table! {
 diesel::table! {
     metering_start_totals (workspace_id, taken_at) {
         workspace_id -> Uuid,
-        taken_at -> Timestamptz,
+        taken_at -> Text,
         starts -> Int8,
     }
 }
 diesel::table! {
-    metering_job_cursors (job_id) {
+    metering_job_cursors (workspace_id, organization_id, source, job_id) {
         job_id -> Uuid,
         workspace_id -> Uuid,
         organization_id -> Uuid,
-        started_at -> Timestamptz,
-        completed_at -> Nullable<Timestamptz>,
-        observed_at -> Timestamptz,
-        vcpus -> Int4,
-        memory_gb -> Int4,
-        disk_gb -> Int4,
-        place -> Text,
+        observed_at -> Text,
+        source -> Text,
+        facts -> Jsonb,
     }
 }
 diesel::table! {

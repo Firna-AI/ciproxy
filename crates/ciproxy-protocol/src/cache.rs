@@ -3,6 +3,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::identifiers::JobId;
+use crate::identifiers::{OrganizationId, RepositoryId};
+use crate::images::ImageMetadata;
+use crate::jobs::JobAssignment;
 use crate::jobs::UnknownJobScopeReason;
 use crate::secret::Secret;
 
@@ -36,6 +39,12 @@ pub struct UnknownJobCount {
 /// The cache metadata for one job.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct JobCacheReport {
+    /// Trusted organization scope of this taken attempt.
+    pub organization_id: OrganizationId,
+    /// Trusted repository scope of this taken attempt.
+    pub repository_id: RepositoryId,
+    /// Exact run/job/ephemeral-runner assignment for reused job UUIDs.
+    pub assignment: JobAssignment,
     /// The job whose cache use this describes.
     pub job_id: JobId,
     /// How restores were handled, with measured counts when available.
@@ -101,15 +110,28 @@ pub struct CacheConnection {
 /// Space occupied by the machine's persistent repository Docker disks.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct DockerDiskReport {
+    /// Logical disk reserved by active attachments and their disposable copies.
+    pub leased_bytes: u64,
     /// Repositories with a Docker disk on the machine.
     pub repositories: u64,
     /// Total space occupied by those disks.
     pub used_bytes: u64,
 }
 
+/// Total attachment reservation allowed by one selected-image routing policy.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct DockerBudget {
+    /// Exact local release whose root sizes produced this grant.
+    pub image: ImageMetadata,
+    /// Logical attachment bytes that no feasible VM root allocation can use.
+    pub spare_bytes: u64,
+}
+
 /// A Docker disk made available to a guest after a job starts.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct DockerDiskAttachment {
+    /// Free bytes the prepared filesystem must retain after its seed copy.
+    pub free_bytes: u64,
     /// Firecracker drive identifier used to find the attached disk.
     pub drive_id: String,
     /// Whether changes persist or the job uses a disposable copy.

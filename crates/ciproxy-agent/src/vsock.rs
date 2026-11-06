@@ -8,7 +8,7 @@ use ciproxy_protocol::guest::AgentToGuest;
 use tokio::sync::{Mutex, mpsc, watch};
 use tokio::task::JoinHandle;
 
-use crate::boundaries::{Cache, GuestEvent};
+use crate::boundaries::GuestEvent;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::layout::Layout;
 use crate::process::Commands;
@@ -32,7 +32,6 @@ struct Channel {
 pub(crate) struct LinuxGuests {
     pub(crate) layout: Layout,
     pub(crate) commands: Arc<dyn Commands>,
-    pub(crate) cache: Arc<dyn Cache>,
     pub(crate) events: mpsc::Sender<GuestEvent>,
     channels: Mutex<HashMap<String, Channel>>,
 }
@@ -41,13 +40,11 @@ impl LinuxGuests {
     pub(crate) fn new(
         layout: Layout,
         commands: Arc<dyn Commands>,
-        cache: Arc<dyn Cache>,
         events: mpsc::Sender<GuestEvent>,
     ) -> Self {
         Self {
             layout,
             commands,
-            cache,
             events,
             channels: Mutex::new(HashMap::new()),
         }
@@ -66,7 +63,6 @@ impl Guests for LinuxGuests {
         let bridge = GuestBridge {
             layout: self.layout.clone(),
             commands: self.commands.clone(),
-            cache: self.cache.clone(),
             events: self.events.clone(),
             vm: vm.clone(),
         };

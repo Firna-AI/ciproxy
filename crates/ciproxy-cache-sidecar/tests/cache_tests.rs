@@ -10,6 +10,8 @@ mod replacement_tests;
 mod runtime_scope_tests;
 #[path = "cases/scope_tests.rs"]
 mod scope_tests;
+#[path = "cases/session_tests.rs"]
+mod session_tests;
 #[path = "cases/storage_tests.rs"]
 mod storage_tests;
 #[path = "cases/trusted_event_tests.rs"]

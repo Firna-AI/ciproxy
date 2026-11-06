@@ -1,7 +1,7 @@
 //! Trusted events govern shared saves and publication of reader fills.
 
-use ciproxy_cache_sidecar::session::Permissions;
 use ciproxy_protocol::identifiers::JobEvent;
+use ciproxy_protocol::runtime::CachePermissions;
 use serde_json::{Value, json};
 
 use crate::support::{Fixture, V2, facts};
@@ -103,7 +103,7 @@ async fn reader_fills_stay_private_unless_the_event_is_trusted() {
             .job_with(
                 &format!("reader-{event}"),
                 job_facts,
-                Permissions {
+                CachePermissions {
                     read: true,
                     write: false,
                 },

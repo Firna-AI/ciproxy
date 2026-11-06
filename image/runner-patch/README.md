@@ -5,81 +5,50 @@ the [cache sidecar](../../crates/ciproxy-cache-sidecar/README.md). It keeps
 the runner's managed string table and PE offsets in place. Boat runs the
 original runner and does not use this directory.
 
-## Patch a runner
+## Build the trusted assignment hook
 
-Run from the repository root:
+The image uses the pinned official runner archive.
+It replaces only `Runner.Worker.dll` with a source-built assembly.
+`image/build-runner.sh WORK_DIR` downloads the pinned source, verifies its
+checksum, applies `prepare-source.py`, and publishes the Worker.
+The source requires the .NET SDK version in its `global.json`.
+The assembly keeps the official identity and dependency references.
+The image retains separate stock and own-machine Worker assemblies.
+The trusted entry mode selects the own-machine assembly for vsock mode.
+Boat mode restores the byte-identical official stock assembly before launch.
+Each fresh VM or sandbox has one listener, so this selection has no race.
+The image runs the original listener and other official assemblies.
 
-```sh
-python3 image/runner-patch/patch-runner.py \
-  /path/to/actions-runner/bin/Runner.Worker.dll
-python3 image/runner-patch/patch-runner.py \
-  /path/to/actions-runner/bin/Runner.Worker.dll --check
-```
+`CiproxyAssignment.cs` reads `SystemVssConnection` from the original GitHub
+job request before action setup. It reads the runtime token, cache URL,
+results URL, job UUID, and effective `actions_cache_mode` there.
+It does not read job environment values for those facts.
+The four modes are `read`, `write`, `write-only`, and `none`.
+Missing rights grant neither local read nor local write.
 
-Use `--output PATH` to write a separate patched DLL. The script replaces
-the first letter of these strings with `Z`:
+The hook connects to the supervisor's private Unix socket.
+The guest passes the original values over vsock to its own agent.
+The original runtime token never enters the hosted control plane.
+The machine cache checks the signed token against hosted assignment facts.
+The guest derives its proxy URL from the actual Docker bridge gateway.
 
-- `ACTIONS_CACHE_URL`
-- `ACTIONS_CACHE_SERVICE_V2`
-- `ACTIONS_RESULTS_URL`
+The worker waits up to 30 seconds for preparation to begin.
+A missing socket or unavailable preparation leaves the GitHub endpoints.
+Before local setup, the guest sends `preparing` and waits for the worker's
+acknowledgement. The worker then waits for final readiness or fallback.
+This prevents a timeout from starting actions during a Docker mount change.
+When the proxy is ready, the hook replaces the assignment's cache and
+results URLs with that same container-reachable proxy address.
+The original runtime token remains unchanged.
+Proxy configuration goes through stdin and stays in memory.
 
-It supports the UTF-16LE managed string table and ASCII. It preserves byte
-length. A repeated patch keeps the same bytes. Missing strings or a mixed
-patch stop before the destination changes. The script does not change
-runtime tokens, artifact endpoints, or log endpoints.
+The source hook stays inactive in Boat mode.
+Boat uses the original GitHub cache endpoints.
+No workflow hook or workflow edit is needed for ordinary cache use.
 
-Runner v2.338.2 is the verified baseline. Its official Linux x64 archive
-has SHA256
-`baebf204307bac6193480852732f0aba2ae97b6c5597c244f4d5558390147c40`.
-The original DLL has 639488 bytes. It has one UTF-16LE instance of each
-target string. The patch changes three bytes in that DLL.
-
-## Start the job VM runner
-
-The VM knows its proxy address before the runner listener starts. Start
-the Docker daemon inside the VM first. Derive a VM address that Docker
-actions and job containers can reach. Then start the runner listener:
-
-```sh
-cache_proxy_url="$(image/runner-patch/container-proxy-url.sh)"
-image/runner-patch/run-with-cache.sh "$cache_proxy_url" ./run.sh
-```
-
-GitHub assigns a job after the listener starts. At job start, the existing
-agent hook must get trusted facts and register that assignment. It must
-start the VM proxy and wait for readiness before it returns. The
-[sidecar guide](../../crates/ciproxy-cache-sidecar/README.md#agent-integration)
-gives the handoff contract. A normal shell hook does not receive original
-cache runtime credentials. Agent and image integration must supply them
-through a trusted assignment handoff before action steps run.
-
-The assignment carries the expected repository, scale-message run and job,
-JIT runner, API event and head repository, and default branch. It carries
-no full job ref. The host checks the original signed runtime token and
-returns a checked scope or an unknown reason. The agent uses that result
-for Docker persistence. Unknown jobs get disposable Docker copies and
-default-branch local cache restores only. Their permitted saves still go
-through GitHub and a local private scope that no job restores.
-
-The wrapper preserves the existing job-start hook. Its chained hook keeps
-that hook's supported shell and exit status. A `.sh` file needs no
-executable bit. The chain appends the three proxy values to `GITHUB_ENV`.
-The runner then gives them to Docker actions and job-container steps.
-The wrapper also sets them in the listener's parent environment.
-
-The patched runner writes GitHub's original values to `ZCTIONS_*` instead.
-Its `ACTIONS_RUNTIME_TOKEN` remains the original runtime token. Cache v1
-and v2 requests reach the proxy. Other results requests go to GitHub.
-A failed machine connection returns a cache miss. The proxy starts no
-direct cache restore during an outage. A lost transfer ticket produces
-the normal unavailable-cache result.
-
-`container-proxy-url.sh` prints the gateway of Docker's VM-local `bridge`
-network. Set `CIPROXY_DOCKER_BRIDGE` to use another existing bridge. A
-typical result is `http://172.17.0.1:8230`. Set the registered `proxy_url`
-to that exact value. Bind the proxy to `0.0.0.0:8230` inside the job VM.
-The VM's network policy must keep other VMs out of that listener. A
-loopback URL works for host processes only. It cannot serve Docker jobs.
+The byte-string patch and shell wrapper remain available for the isolated
+M11 compatibility smoke below. Image provisioning uses the source hook.
+They are not a source of trusted credentials or cache permissions.
 
 ## Local executable smoke
 

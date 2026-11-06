@@ -100,7 +100,7 @@ fn retired_key_erasure_preserves_a_concurrently_registered_live_runner() {
     diesel::sql_query(
         "INSERT INTO runners (
              id, workspace_id, organization_id, label_id, scale_set_id, state,
-             vcpus, memory_gb, disk_gb, boat_key_id, sandbox_id, boat_size_name, github_id
+             vcpus, memory_bytes, disk_bytes, boat_key_id, sandbox_id, boat_size_name, github_id
          ) VALUES ($1, $2, $3, $4, $5, 'busy', $6, $7, $8, $9, $10, $11, $12)",
     )
     .bind::<sql_types::Uuid, _>(pending.id)
@@ -108,9 +108,9 @@ fn retired_key_erasure_preserves_a_concurrently_registered_live_runner() {
     .bind::<sql_types::Uuid, _>(organization.id)
     .bind::<sql_types::Uuid, _>(label.id)
     .bind::<sql_types::Uuid, _>(scale_set.id)
-    .bind::<sql_types::Integer, _>(pending.size.vcpus)
-    .bind::<sql_types::Integer, _>(pending.size.memory_gb)
-    .bind::<sql_types::Integer, _>(pending.size.disk_gb)
+    .bind::<sql_types::Integer, _>(i32::try_from(pending.size.vcpu).unwrap())
+    .bind::<sql_types::BigInt, _>(i64::try_from(pending.size.memory_bytes).unwrap())
+    .bind::<sql_types::BigInt, _>(i64::try_from(pending.size.disk_bytes).unwrap())
     .bind::<sql_types::Uuid, _>(key.id)
     .bind::<sql_types::Text, _>(sandbox_id)
     .bind::<sql_types::Text, _>(size_name)

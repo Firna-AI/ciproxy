@@ -65,6 +65,7 @@ impl JobAssignments for AssignmentService {
                 full_name: head.full_name.clone(),
             }),
             default_ref: GitRef(format!("refs/heads/{}", repository.default_branch)),
+            sticky_docker: snapshot.sticky_docker,
         }))
     }
 }

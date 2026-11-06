@@ -12,7 +12,7 @@ use crate::fixtures::{applied, controller, vm};
 use crate::state::{MachineState, Mode};
 
 #[tokio::test]
-async fn drain_requests_idle_shutdown_and_keeps_jobs_until_resume() {
+async fn drain_waits_for_confirmed_stop_and_keeps_jobs_until_resume() {
     let mock = Unimock::new((
         StoreMock::save
             .each_call(matching!(_))
@@ -32,6 +32,21 @@ async fn drain_requests_idle_shutdown_and_keeps_jobs_until_resume() {
         agent
             .control(ControlMessage::Drain {
                 command_id: CommandId("command-1".to_owned())
+            })
+            .await
+            .unwrap(),
+        applied()
+    );
+    assert_eq!(
+        agent.state.lock().await.runners,
+        vec![vm("idle", false), vm("job", true)]
+    );
+    assert_eq!(
+        agent
+            .control(ControlMessage::StopRunner {
+                command_id: CommandId("command-1".to_owned()),
+                organization_id: ciproxy_protocol::identifiers::OrganizationId("org-1".to_owned()),
+                runner_id: RunnerId("idle".to_owned())
             })
             .await
             .unwrap(),

@@ -35,7 +35,6 @@ async fn an_absent_guest_coalesces_shutdown_without_losing_configuration() {
             firecracker: PathBuf::from("/tools/firecracker"),
             jailer: PathBuf::from("/tools/jailer"),
         },
-        mock.clone(),
         mock,
         events,
     );

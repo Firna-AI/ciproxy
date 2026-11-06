@@ -24,6 +24,9 @@ impl Resources {
 }
 #[async_trait]
 impl ScaleSetApi for Resources {
+    async fn find_runner(&self, _name: &str) -> Result<Option<i64>> {
+        Ok(None)
+    }
     async fn ensure(&self, label: &str, group: i64, saved: Option<i64>) -> Result<i64> {
         if self.fail_next.swap(false, Ordering::SeqCst) {
             return Err(Error::AccessUnavailable(503));

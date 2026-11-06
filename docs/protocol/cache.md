@@ -181,7 +181,20 @@ This doc states the cache rules for jobs on
 - The Docker disk of one repository never attaches to a job of another
   repository.
 - A job on Boat gets no Docker disk.
-- When a Docker disk cannot attach, the job runs without it.
+- An attached Docker disk or copy reserves its data plus the free disk of
+  the label of its job.
+- It takes that reservation only from the spare disk of the machine, as
+  [Disk](job-routing.md#disk) says.
+- It keeps the reservation until its job ends.
+- It never shrinks or detaches during its job.
+- When the spare disk has no room for the reservation, or the disk cannot
+  attach, the job runs without its Docker disk.
+- Docker then keeps its data on the root disk of the job VM.
+- So a machine whose disk limits its jobs gets few or no Docker disks.
+- **Decision:** an attached Docker disk reserves its data plus the free disk
+  of its label. Rejected: a Docker budget, because the 250 GB minimum then
+  fits no default job. Reason: Docker then gets the free disk of the label,
+  as it does on the root disk.
 - The machine page shows how many repositories have a Docker disk on the
   machine, and the space that these disks take.
 - Only Team and Business include Docker disks, as

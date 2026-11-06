@@ -11,7 +11,7 @@ use tokio::net::UnixStream;
 use tokio::sync::{mpsc, watch};
 use tokio::time::{MissedTickBehavior, interval, sleep, timeout};
 
-use crate::boundaries::{Cache, GuestEvent};
+use crate::boundaries::GuestEvent;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::layout::{Layout, unit_name};
 use crate::process::{Commands, UnitState};
@@ -20,7 +20,6 @@ use crate::state::VmRecord;
 pub(crate) struct GuestBridge {
     pub(crate) layout: Layout,
     pub(crate) commands: Arc<dyn Commands>,
-    pub(crate) cache: Arc<dyn Cache>,
     pub(crate) events: mpsc::Sender<GuestEvent>,
     pub(crate) vm: VmRecord,
 }
@@ -77,7 +76,7 @@ impl GuestBridge {
         let (read, mut write) = stream.into_split();
         let mut read = BufReader::new(read);
         write
-            .write_all(b"CONNECT 52\n")
+            .write_all(b"CONNECT 5252\n")
             .await
             .context("connect guest port")?;
         let mut ack = String::new();
@@ -109,13 +108,7 @@ impl GuestBridge {
             return Err(Error::GuestMismatch);
         }
         self.emit(message).await?;
-        if let Some(mut configure) = config.clone() {
-            if let AgentToGuest::ConfigureRunner { cache, .. } = &mut configure {
-                *cache = self.cache.configure(&self.vm).await.unwrap_or_else(|error| {
-                    tracing::warn!(error = %error, "machine cache unavailable; use GitHub cache");
-                    None
-                });
-            }
+        if let Some(configure) = config.clone() {
             let mut bytes = serde_json::to_vec(&configure).context("encode registration")?;
             bytes.push(b'\n');
             write

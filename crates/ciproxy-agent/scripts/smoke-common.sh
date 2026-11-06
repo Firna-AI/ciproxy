@@ -1,9 +1,16 @@
 #!/usr/bin/env bash
 # Apache-2.0. Run on the registered KVM machine from the repository root.
+set +x
 set -euo pipefail
 
 skip() { printf 'SKIP: %s\n' "$1" >&2; exit 77; }
 fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
+
+credentials() {
+  [ -n "${CIPROXY_SMOKE_CREDENTIALS:-}" ] && [ -r "$CIPROXY_SMOKE_CREDENTIALS" ] || skip 'set CIPROXY_SMOKE_CREDENTIALS to a private JSON credential file'
+  GH_TOKEN="$(jq -er '.github_token' "$CIPROXY_SMOKE_CREDENTIALS")" || skip 'the credential file needs github_token'
+  export GH_TOKEN
+}
 
 prerequisites() {
   [ "$(uname -s)" = Linux ] || skip 'an x64 Linux machine is required'
@@ -15,6 +22,7 @@ prerequisites() {
   done
   [ -n "${CIPROXY_SMOKE_REPO:-}" ] || skip 'set CIPROXY_SMOKE_REPO to the private test repository'
   [ -n "${CIPROXY_SMOKE_REF:-}" ] || skip 'set CIPROXY_SMOKE_REF to the workflow branch'
+  credentials
   gh auth status >/dev/null 2>&1 || skip 'gh needs permission to dispatch the private test workflow'
   systemctl is-active --quiet ciproxy-agent.service || skip 'the registered staging agent must be active'
   smoke_state="${CIPROXY_SMOKE_STATE:-/var/lib/ciproxy/state.json}"
@@ -44,11 +52,12 @@ dispatch() {
 }
 
 wait_for_local_job() {
-  local attempt job
+  local attempt runner_name runner_id
   for attempt in $(seq 1 180); do
-    job="$(gh api "repos/$CIPROXY_SMOKE_REPO/actions/runs/$smoke_run/jobs" --jq '.jobs[0].id // empty')"
-    if [ -n "$job" ]; then
-      smoke_vm="$(jq -c --arg job "$job" '.runners[] | select(.report.state.state == "running" and .report.state.job_id == $job) |
+    runner_name="$(gh api "repos/$CIPROXY_SMOKE_REPO/actions/runs/$smoke_run/jobs" --jq '.jobs[0].runner_name // empty')"
+    if [ -n "$runner_name" ]; then
+      runner_id="${runner_name#ciproxy-}"
+      smoke_vm="$(jq -c --arg runner "$runner_id" '.runners[] | select(.report.state.state == "running" and .report.runner_id == $runner) |
         {local_id, network_index, report: {runner_id: .report.runner_id, state: .report.state, image_id: .report.image_id}}' "$smoke_state")"
       if [ -n "$smoke_vm" ]; then
         printf '%s\n' "$smoke_vm" >"$smoke_evidence/vm-before.json"

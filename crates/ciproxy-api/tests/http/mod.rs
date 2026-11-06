@@ -5,6 +5,7 @@ mod database;
 mod fixture;
 mod machine_tests;
 mod ports;
+mod runtime_inputs;
 mod settings_tests;
 
 mod fixture_io;

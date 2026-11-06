@@ -88,9 +88,10 @@ Repository refresh reads every installation page and saves the default
 branches. The group's selected repositories intersect the customer's
 choice with visible private repositories. Public access stays false.
 An all-private choice includes new visible private repositories on refresh.
-Subscribe the App to repository metadata events. Dispatch `repository` and
-`installation_repositories` through the authenticated webhook handler.
-The control plane can also call `refresh_repositories` after a reconnect.
+The runtime refreshes repository visibility at startup and every five minutes.
+This needs no optional webhook subscription.
+Verified `repository` and `installation_repositories` deliveries also trigger
+refresh when a provider sends them.
 
 Managed group names use the stable GitHub organization ID. Reconcile first
 reads a saved managed group ID, including retained registrations, so an
@@ -162,8 +163,8 @@ The runtime restarts it from the current internal row. On ScaleSetMissing,
 The control-plane runtime first calls refresh_repositories to reconcile.
 It then retries with the
 saved binding. It must not repeatedly open the obsolete remote ID.
-Actual Actions-resource lookups accept GitHub's observed 204 absence and
-404. SDK errors from token or organization-auth routes remain errors.
+Actual Actions-resource lookups accept GitHub's observed 204 absence
+and 404. SDK errors from token or organization-auth routes remain errors.
 They cannot claim runner deletion or trigger scale-set replacement.
 The runtime also retries failed webhook deliveries.
 
@@ -240,6 +241,13 @@ It checks cache trust, also for reusable workflows. The agent uses the
 checked ref for Docker policy and owns the Docker-disk lifecycle.
 The App keeps all three permissions for API event and head metadata.
 
+The hosted runtime can recover failed webhook deliveries through the
+App-JWT delivery-history API. Recovery reads every cursor page and groups
+attempts by event GUID. A successful latest retry prevents an older failure
+from being redelivered again. Individual redelivery failures remain
+retryable without blocking the other retained events.
+This uses no extra installation permission.
+
 ## Quick Start
 
 Run commands from the repository root:
@@ -279,6 +287,8 @@ The [live-probe guide](scripts/README.md) gives credentials, prerequisites,
 commands, fixture contracts, and cleanup for the live probes.
 
 ### Key Code
+
+- [src/redelivery.rs](src/redelivery.rs) recovers failed App webhooks.
 
 - [src/app/mod.rs](src/app/mod.rs) owns `GitHubApp` and its role and
   lifecycle callbacks.

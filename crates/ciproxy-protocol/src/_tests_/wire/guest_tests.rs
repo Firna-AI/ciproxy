@@ -44,6 +44,7 @@ fn docker_disk_identifies_the_job_drive_and_copy_mode() {
         AgentToGuest::DockerDisk {
             job_id: fixtures::job_id(),
             disk: DockerDiskAttachment {
+                free_bytes: 20_000_000_000,
                 drive_id: "docker_cache".into(),
                 access: DockerDiskAccess::DisposableCopy,
             },

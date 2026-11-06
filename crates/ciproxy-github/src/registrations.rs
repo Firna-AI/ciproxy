@@ -22,12 +22,15 @@ pub enum Removal {
 }
 
 /// The runtime's JIT configuration boundary for one ephemeral runner.
+#[unimock::unimock(api = RunnerRegistrationsMock)]
 #[async_trait]
 pub trait RunnerRegistrations: Send + Sync {
     /// Register one runner after the orchestrator reserves its destination.
     async fn create(&self, target: ListenerTarget, runner_name: &str) -> Result<JitRegistration>;
     /// Remove an idle/ended registration before the orchestrator frees its VM.
     async fn remove(&self, target: ListenerTarget, github_runner_id: i64) -> Result<Removal>;
+    /// Recover a registration whose response preceded a hosted process crash.
+    async fn find(&self, target: ListenerTarget, runner_name: &str) -> Result<Option<i64>>;
 }
 
 /// The JIT service, consumed through dyn RunnerRegistrations.
@@ -40,6 +43,14 @@ pub struct RegistrationService {
 
 #[async_trait]
 impl RunnerRegistrations for RegistrationService {
+    async fn find(&self, target: ListenerTarget, runner_name: &str) -> Result<Option<i64>> {
+        let context = self.store.context(target).await?;
+        let api = self
+            .scale_sets
+            .for_organization(&context.organization)
+            .await?;
+        api.find_runner(runner_name).await
+    }
     async fn create(&self, target: ListenerTarget, runner_name: &str) -> Result<JitRegistration> {
         let context = self.store.context(target).await?;
         if context.organization.app_state != AppState::Active

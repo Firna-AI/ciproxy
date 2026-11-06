@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 /// Runtime inputs that unit tests supply without clocks or randomness.
-#[cfg_attr(test, unimock::unimock(api = RuntimeMock))]
+#[unimock::unimock(api = RuntimeMock)]
 pub trait Runtime: Send + Sync {
     /// Read the current UTC time.
     fn now(&self) -> DateTime<Utc>;

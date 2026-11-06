@@ -32,9 +32,13 @@ pub(super) fn identity() -> Identity {
 
 pub(super) fn vm(name: &str, running: bool) -> VmRecord {
     VmRecord {
+        preparation: crate::state::PreparationState::Waiting,
+        cache_permissions: None,
+        job_facts: None,
         local_id: format!("local-{name}"),
         network_index: 1,
         report: RunnerReport {
+            slot_indices: if name == "idle" { vec![1] } else { vec![0] },
             runner_id: RunnerId(name.to_owned()),
             organization_id: OrganizationId("org-1".to_owned()),
             label: LabelName("ciproxy".to_owned()),
@@ -58,6 +62,7 @@ pub(super) fn size() -> VmSize {
 
 pub(super) fn spec() -> RunnerSpec {
     RunnerSpec {
+        slot_indices: vec![0],
         runner_id: RunnerId("runner-1".to_owned()),
         organization_id: OrganizationId("org-1".to_owned()),
         label: LabelName("ciproxy".to_owned()),
@@ -114,6 +119,7 @@ pub(super) fn controller(state: MachineState, mock: Unimock) -> Controller {
         images: mock.clone(),
         cache: mock,
         image_budget: DEFAULT_IMAGE_BYTES,
+        dockers: None,
     }
 }
 
@@ -158,4 +164,8 @@ pub(super) fn metadata(id: &str, root_disk_bytes: u64) -> ImageMetadata {
         image_id: ImageId(id.to_owned()),
         root_disk_bytes,
     }
+}
+
+pub(super) fn trusted_facts() -> ciproxy_protocol::jobs::JobFacts {
+    serde_json::from_value(serde_json::json!({"organization_id":"org-1","repository":{"id":"repo-1","full_name":"first/project"},"assignment":{"run_id":"run-1","job_id":"job-1","runner_id":"github-runner-1"},"event":"push","head_repository":null,"default_ref":"refs/heads/main","sticky_docker":true})).unwrap()
 }

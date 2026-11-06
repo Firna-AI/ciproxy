@@ -452,10 +452,12 @@ dependencies = [
  "async-trait",
  "ciproxy-protocol",
  "clap",
+ "cli-release-interface",
  "cli-updater",
  "flate2",
  "fs2",
  "futures-util",
+ "getrandom 0.4.3",
  "hex",
  "internal-error 0.1.0 (git+https://github.com/futex-ai/internal-error?rev=d7b94d766bf2844aa0b4a801fd21c465543e8a58)",
  "log",
@@ -473,6 +475,7 @@ dependencies = [
  "tracing-subscriber",
  "unimock",
  "uuid",
+ "zstd",
 ]
 
 [[package]]
@@ -563,12 +566,36 @@ dependencies = [
 name = "ciproxy-control-plane"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
+ "axum",
+ "base64 0.23.1",
+ "chrono",
  "ciproxy-agent",
+ "ciproxy-api",
  "ciproxy-gateway",
+ "ciproxy-github",
+ "ciproxy-metering",
  "ciproxy-protocol",
+ "ciproxy-scaler",
+ "ciproxy-store-interface",
+ "ciproxy-store-pg",
  "clap",
+ "diesel",
+ "hmac",
+ "internal-error 0.1.0 (git+https://github.com/futex-ai/internal-error?rev=d7b94d766bf2844aa0b4a801fd21c465543e8a58)",
+ "reqwest",
+ "rust_decimal",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "sha1 0.11.0",
+ "thiserror",
+ "tokio",
+ "tower",
  "tracing",
  "tracing-subscriber",
+ "unimock",
+ "uuid",
 ]
 
 [[package]]
@@ -653,6 +680,7 @@ name = "ciproxy-metering"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "ciproxy-protocol",
  "ciproxy-store-interface",
  "rust_decimal",
  "unimock",
@@ -746,6 +774,7 @@ dependencies = [
  "diesel",
  "diesel_migrations",
  "rust_decimal",
+ "serde",
  "serde_json",
  "thiserror",
  "url",
@@ -4431,3 +4460,31 @@ name = "zmij"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
+
+[[package]]
+name = "zstd"
+version = "0.14.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "db3ae9bf90af6e40197bef767eeefc46ad6397420fe873830bd85e5fbbfb3c70"
+dependencies = [
+ "zstd-safe",
+]
+
+[[package]]
+name = "zstd-safe"
+version = "8.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ded520f16b29e1a9b771c722221b2b0a0398c2316d9bb3c42b458a5414d7434b"
+dependencies = [
+ "zstd-sys",
+]
+
+[[package]]
+name = "zstd-sys"
+version = "2.1.2+zstd.1.5.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "481ada9c543b2323cbb7bbdbb5249177fbf0188ed959ed2c15e4b22421c84ed3"
+dependencies = [
+ "cc",
+ "pkg-config",
+]

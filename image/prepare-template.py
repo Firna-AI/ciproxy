@@ -49,6 +49,14 @@ def main():
     inline = ["mkdir -p /tmp/ciproxy-image"]
   }
   provisioner "file" {
+    source = var.cache_binary
+    destination = "/tmp/ciproxy-cache-sidecar"
+  }
+  provisioner "file" {
+    source = var.worker_binary
+    destination = "/tmp/ciproxy-worker.dll"
+  }
+  provisioner "file" {
     source = "${var.image_definition}/"
     destination = "/tmp/ciproxy-image"
   }

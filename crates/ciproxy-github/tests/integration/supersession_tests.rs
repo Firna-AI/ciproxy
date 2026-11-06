@@ -76,7 +76,11 @@ fn credentials(store: &Arc<dyn Store>) -> (TokenHash, TokenHash, TokenHash) {
                 scale_set_id: id(6),
                 github_id: Some(15),
                 state: RunnerState::Busy,
-                size: label.size,
+                size: ciproxy_protocol::resources::VmSize {
+                    vcpu: label.size.vcpus as u32,
+                    memory_bytes: label.size.memory_gb as u64 * 1_000_000_000,
+                    disk_bytes: label.size.disk_gb as u64 * 1_000_000_000,
+                },
                 place: RunnerPlace::Boat {
                     key_id: Some(account.id),
                     sandbox_id: "live-job".to_owned(),

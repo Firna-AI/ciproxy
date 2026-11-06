@@ -207,6 +207,14 @@ Listener discovery includes unfinished work and pending notification revisions.
 Confirmed remote removal excludes the old binding from later cleanup and
 discovery without deleting job history.
 
+Own-machine queries save runner and command reservations atomically.
+A repeatable-read routing snapshot keeps reports, demand, and settings
+consistent. A separate negative advisory-key range owns execution leases.
+Mutable machine, organization, and label authority is checked again under
+row locks before a new reservation commits.
+The command records retain exact byte dimensions and logical slot sets.
+No conversion through integer GB changes the held root allocation.
+
 ## Quick Start
 
 ```rust
@@ -255,6 +263,8 @@ CI starts the database for the existing workspace test phase.
 ### Key Code
 
 - [src/dashboard](src/dashboard) owns dashboard identity and access queries.
+- [src/own_runners.rs](src/own_runners.rs) stores exact execution intents.
+- [src/routing_snapshot.rs](src/routing_snapshot.rs) reads coherent routing.
 
 - [src/billing/session.rs](src/billing/session.rs) commits billing state.
 - [src/billing/renewals.rs](src/billing/renewals.rs) stores owned renewal

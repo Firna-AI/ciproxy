@@ -38,9 +38,6 @@ async fn retries_after_publication_and_restart_keep_the_original_request_and_all
         CacheMock::budget
             .some_call(matching!(563_364_143_616))
             .returns(Ok(())),
-        CacheMock::configure
-            .each_call(matching!(_))
-            .answers(&|_, _| Ok(None)),
         ImagesMock::report
             .each_call(matching!())
             .answers_arc(Arc::new(move |_| {

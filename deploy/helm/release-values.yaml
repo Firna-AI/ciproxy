@@ -3,7 +3,7 @@ replicaCount: 1
 config:
   releaseGithubRepository: Firna-AI/ciproxy
   defaultBinary: ciproxy-agent
-  binaries: [ciproxy-agent]
+  binaries: [ciproxy-agent, ciproxy-cache-sidecar]
   tagPrefix: ciproxy-agent-v
   clientServerUrlEnv: CIPROXY_RELEASE_SERVER_URL
   installDirEnv: CIPROXY_INSTALL_DIR

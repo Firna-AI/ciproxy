@@ -43,7 +43,7 @@ def main():
     config = json.loads(run("terraform", f"-chdir={root}", "output", "-json",
                             "deployment", capture=True))
     if not runtime_enabled:
-        print("Control-plane runtime stays disabled. The current binary has no HTTP service.",
+        print("Control-plane runtime stays disabled. Static exports and the release server can deploy.",
               flush=True)
 
     run("gcloud", "container", "clusters", "get-credentials", config["cluster_name"],
@@ -57,6 +57,18 @@ def main():
 
     release, ciproxy = helm_values(config, digest, runtime_enabled, control_image)
     ciproxy["controlPlane"]["cdnSigningKeyName"] = os.environ.get("CDN_SIGNING_KEY_NAME", "")
+    ciproxy["controlPlane"]["env"] = [
+        {"name": name, "value": os.environ.get(source, "")}
+        for name, source in (
+            ("GITHUB_APP_ID", "CIPROXY_APP_ID"),
+            ("GITHUB_OAUTH_CLIENT_ID", "CIPROXY_APP_CLIENT_ID"),
+            ("GITHUB_APP_SLUG", "CIPROXY_APP_SLUG"),
+            ("JOB_IMAGE_MANIFEST_PATH", "JOB_IMAGE_MANIFEST_PATH"),
+        )
+    ] + [
+        {"name": "DOWNLOAD_URL", "value": "https://" + config["hosts"]["releases"]},
+        {"name": "BUILD_ID", "value": os.environ.get("CIPROXY_SOURCE_SHA", "")},
+    ]
     release_file = scratch / "release-values.json"
     ciproxy_file = scratch / "ciproxy-values.json"
     release_file.write_text(json.dumps(release))

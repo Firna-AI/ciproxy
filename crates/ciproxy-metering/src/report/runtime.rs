@@ -3,11 +3,11 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use chrono::{DateTime, Utc};
-use ciproxy_store_interface::metering::facts::{JobPlace, UsageJob};
+use ciproxy_protocol::resources::VmSize;
+use ciproxy_store_interface::metering::facts::{Completion, JobPlace, UsageJob};
 use ciproxy_store_interface::metering::totals::{
     AccountedJob, DailyDelta, DailyTotal, LocationTotals, SizeTotal, StartTotal,
 };
-use ciproxy_store_interface::vm_size::VmSize;
 use rust_decimal::Decimal;
 
 use crate::report::range::{DateRange, midnight};
@@ -25,15 +25,20 @@ pub fn daily_totals(jobs: &[UsageJob], range: DateRange, at: DateTime<Utc>) -> V
         };
         let from = midnight(day);
         let until = midnight(next).min(at);
-        let mut sizes: BTreeMap<(i32, i32, i32), SizeTotal> = BTreeMap::new();
+        let mut sizes: BTreeMap<(u32, u64, u64), SizeTotal> = BTreeMap::new();
         let mut seen = BTreeSet::new();
         for job in jobs {
-            if !seen.insert(job.id) || job.started_at > at {
+            if !seen.insert(job.key()) || job.started_at > at {
                 continue;
             }
             let starts = u64::from(job.started_at >= from && job.started_at < midnight(next));
-            let end = job.completed_at.unwrap_or(at).min(at).min(until);
-            let minutes = elapsed_minutes(job.started_at.max(from), end);
+            let minutes = match job.completion {
+                Completion::Running => elapsed_minutes(job.started_at.max(from), at.min(until)),
+                Completion::Finished(finished) => {
+                    elapsed_minutes(job.started_at.max(from), finished.min(at).min(until))
+                }
+                Completion::TerminalUnknown => Decimal::ZERO,
+            };
             if starts == 0 && minutes == Decimal::ZERO {
                 continue;
             }
@@ -97,6 +102,33 @@ pub fn accounting_deltas(
         .collect()
 }
 
+/// Retract a duplicate projection only after its real numeric mapping is known.
+pub fn removal_deltas(
+    previous: &AccountedJob,
+    range: DateRange,
+) -> (Vec<DailyDelta>, Vec<StartTotal>) {
+    let mut changes = BTreeMap::new();
+    for total in daily_totals(
+        std::slice::from_ref(&previous.job),
+        range,
+        previous.observed_at,
+    ) {
+        add_changes(&mut changes, total, -1);
+    }
+    let starts = if previous.job.started_at >= midnight(range.from)
+        && previous.job.started_at < midnight(range.until)
+        && previous.job.started_at <= previous.observed_at
+    {
+        vec![StartTotal {
+            taken_at: previous.job.started_at,
+            starts: -1,
+        }]
+    } else {
+        Vec::new()
+    };
+    (changes.into_values().collect(), starts)
+}
+
 /// Correct exact taken-at counts without retaining job or organization identity.
 pub fn start_deltas(
     previous: Option<&AccountedJob>,
@@ -134,7 +166,7 @@ pub fn elapsed_minutes(from: DateTime<Utc>, until: DateTime<Utc>) -> Decimal {
 }
 
 fn add_changes(
-    changes: &mut BTreeMap<(chrono::NaiveDate, (i32, i32, i32)), DailyDelta>,
+    changes: &mut BTreeMap<(chrono::NaiveDate, (u32, u64, u64)), DailyDelta>,
     total: DailyTotal,
     direction: i64,
 ) {
@@ -156,8 +188,8 @@ fn add_changes(
     }
 }
 
-fn size_key(size: VmSize) -> (i32, i32, i32) {
-    (size.vcpus, size.memory_gb, size.disk_gb)
+fn size_key(size: VmSize) -> (u32, u64, u64) {
+    (size.vcpu, size.memory_bytes, size.disk_bytes)
 }
 
 #[cfg(test)]

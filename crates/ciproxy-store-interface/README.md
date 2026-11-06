@@ -174,6 +174,13 @@ includes active bindings and draining bindings with tracked work or pending
 delivery. Exact context survives cleanup for final acknowledgements and runner
 removal. Confirmed removal applies only to the exact saved binding and remote ID.
 
+OwnRunnerStore exposes one coherent workspace routing snapshot.
+Its dedicated session lease serializes own-machine decisions.
+Runner intents retain exact slot sets and the original whole-GB label
+request. The shared Runner record is the byte-precise actual allocation.
+Metering facts, cursors, and totals use that same actual resource type.
+No JIT or original runtime-token credential enters these records.
+
 ## Quick Start
 
 Use the same interface for PostgreSQL and service test doubles:
@@ -212,6 +219,7 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 ### Key Code
 
 - [src/dashboard](src/dashboard) owns dashboard identity and access queries.
+- [src/own_runners.rs](src/own_runners.rs) owns exact execution records.
 
 - [src/store.rs](src/store.rs) defines Store and its connection factory.
 - [src/billing/store.rs](src/billing/store.rs) owns durable billing sessions.

@@ -117,9 +117,12 @@ async fn stop_runner_cannot_stop_a_job_or_another_organization() {
 async fn reports_current_hardware_and_each_job_or_warm_slot() {
     let mut job = vm("job", true);
     job.report.size.vcpu = 4;
+    job.report.slot_indices = vec![0, 1];
+    let mut idle = vm("idle", false);
+    idle.report.slot_indices = vec![2];
     let agent = controller(
         MachineState {
-            runners: vec![job, vm("idle", false)],
+            runners: vec![job, idle],
             mode: Mode::Draining,
             ..MachineState::default()
         },

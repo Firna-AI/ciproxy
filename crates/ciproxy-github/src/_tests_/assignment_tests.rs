@@ -45,6 +45,7 @@ async fn assignment_uses_api_repository_event_head_and_message_jit_ids() {
                 .answers(&|_, received| {
                     assert_eq!(received, target());
                     Ok(AssignmentSnapshot {
+                        sticky_docker: false,
                         organization_id: 17,
                         repositories: repositories(),
                     })
@@ -79,6 +80,7 @@ async fn assignment_uses_api_repository_event_head_and_message_jit_ids() {
                 full_name: "fork/project".into()
             }),
             default_ref: GitRef("refs/heads/trunk".into()),
+            sticky_docker: false,
         })
     );
 }
@@ -90,6 +92,7 @@ async fn absent_repository_snapshot_never_guesses_a_default_branch() {
             AssignmentStoreMock::snapshot
                 .some_call(matching!(_))
                 .returns(Ok(AssignmentSnapshot {
+                    sticky_docker: false,
                     organization_id: 17,
                     repositories: vec![],
                 })),

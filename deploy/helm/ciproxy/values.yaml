@@ -5,8 +5,7 @@ allowedZones: []
 releaseServer:
   instance: cli-release-server
 
-# The current binary is a CLI skeleton. It cannot serve these HTTP routes.
-# Enable only when a real runtime implements this deployment contract.
+# Enable after runtime setup supplies the image, settings, and secret versions.
 controlPlane:
   enabled: false
   image: ""

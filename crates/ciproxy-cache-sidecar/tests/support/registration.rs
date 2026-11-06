@@ -2,10 +2,12 @@
 
 use std::sync::Arc;
 
-use ciproxy_cache_sidecar::proxy::{ProxyConfig, VmProxy};
-use ciproxy_cache_sidecar::service::{Service, job_router};
-use ciproxy_cache_sidecar::session::{Permissions, Registration, SessionCredential};
+use ciproxy_cache_sidecar::proxy::{ProxyControl, VmProxy};
+use ciproxy_cache_sidecar::service::job_router;
+use ciproxy_cache_sidecar::session::SessionCredential;
 use ciproxy_protocol::identifiers::JobId;
+use ciproxy_protocol::runtime::CacheProxyConfig;
+use ciproxy_protocol::runtime::{CachePermissions, CacheRegistration};
 use ciproxy_protocol::secret::Secret;
 use tokio::net::TcpListener;
 
@@ -18,7 +20,7 @@ impl Fixture {
         self.job_with(
             id,
             facts,
-            Permissions {
+            CachePermissions {
                 read: true,
                 write: true,
             },
@@ -31,7 +33,7 @@ impl Fixture {
         &self,
         id: &str,
         facts: JobSpec,
-        permissions: Permissions,
+        permissions: CachePermissions,
         machine_down: bool,
     ) -> Job {
         let machine = if machine_down {
@@ -46,14 +48,14 @@ impl Fixture {
         &self,
         id: &str,
         mut facts: JobSpec,
-        permissions: Permissions,
+        permissions: CachePermissions,
         machine_url: &str,
     ) -> Job {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let origin = format!("http://{}", listener.local_addr().unwrap());
         facts.assignment.job_id = Some(JobId(id.into()));
         let github_token = facts.runtime_token();
-        let registration = Registration {
+        let registration = CacheRegistration {
             job_id: JobId(id.into()),
             facts: facts.facts,
             permissions,
@@ -75,16 +77,17 @@ impl Fixture {
             .json()
             .await
             .unwrap();
-        let proxy: Arc<dyn Service> = Arc::new(VmProxy::new(
-            ProxyConfig {
+        let proxy: Arc<dyn ProxyControl> = Arc::new(VmProxy::new(
+            CacheProxyConfig {
                 machine_url: Secret::new(machine_url),
                 machine_token: credential.token.clone(),
-                registration,
+                registration: registration.clone(),
             },
             self.network.clone(),
         ));
+        let service = proxy.clone();
         let task = tokio::spawn(async move {
-            axum::serve(listener, job_router(proxy)).await.unwrap();
+            axum::serve(listener, job_router(service)).await.unwrap();
         });
         Job {
             origin,
@@ -92,6 +95,8 @@ impl Fixture {
             token: credential.token,
             github_token,
             scope: credential.scope,
+            registration,
+            proxy,
             task,
         }
     }

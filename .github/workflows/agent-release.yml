@@ -99,7 +99,7 @@ jobs:
         id: release
         run: scripts/cli-release.sh resolve-agent-tag "$GITHUB_REF" Cargo.toml >> "$GITHUB_OUTPUT"
       - name: Build for glibc 2.17
-        run: cargo zigbuild --locked --release --package ciproxy-agent --target x86_64-unknown-linux-gnu.2.17
+        run: cargo zigbuild --locked --release --package ciproxy-agent --package ciproxy-cache-sidecar --target x86_64-unknown-linux-gnu.2.17
       - name: Check the binary and package the release
         env:
           VERSION: ${{ steps.release.outputs.version }}
@@ -109,6 +109,9 @@ jobs:
           "$binary" --version
           scripts/cli-release.sh verify-glibc "$binary" 2.17
           scripts/cli-release.sh package ciproxy-agent "$VERSION" x86_64-unknown-linux-gnu "$binary" .context/agent-release
+          cache_binary=target/x86_64-unknown-linux-gnu/release/ciproxy-cache-sidecar
+          scripts/cli-release.sh verify-glibc "$cache_binary" 2.17
+          scripts/cli-release.sh package ciproxy-cache-sidecar "$VERSION" x86_64-unknown-linux-gnu "$cache_binary" .context/agent-release
       - name: Keep the verified release assets
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

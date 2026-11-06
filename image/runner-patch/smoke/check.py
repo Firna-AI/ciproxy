@@ -112,7 +112,7 @@ def main():
         registration = {"job_id": "manual-smoke", "facts": {"organization_id": "1", "repository": {"id": "10", "full_name": "example/repository"},
                          "assignment": {"run_id": "31", "job_id": "manual-smoke", "runner_id": "71"},
                          "event": "push", "head_repository": None,
-                         "default_ref": "refs/heads/main"}, "permissions": {"read": True, "write": True},
+                         "default_ref": "refs/heads/main", "sticky_docker": False}, "permissions": {"read": True, "write": True},
                          "cache_url": github + "/legacy-prefix/", "results_url": github}
         with signed_assignment(processes, registration):
             environment = start_cache(processes, registration)

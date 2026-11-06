@@ -1,9 +1,9 @@
 //! Literal fixtures shared by metering boundary tests.
 
 use chrono::{DateTime, NaiveDate, Utc};
+use ciproxy_protocol::resources::VmSize;
 use ciproxy_store_interface::metering::facts::{JobPlace, UsageJob};
 use ciproxy_store_interface::metering::history::{CostHistory, PlanCost};
-use ciproxy_store_interface::vm_size::VmSize;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -22,9 +22,9 @@ pub(crate) fn usd(value: &str) -> Decimal {
 }
 pub(crate) fn size() -> VmSize {
     VmSize {
-        vcpus: 2,
-        memory_gb: 8,
-        disk_gb: 60,
+        vcpu: 2,
+        memory_bytes: 8_000_000_000,
+        disk_bytes: 60_000_000_000,
     }
 }
 pub(crate) fn plan(tier: Tier) -> Plan {
@@ -42,10 +42,14 @@ pub(crate) fn range(from: &str, until: &str) -> DateRange {
 
 pub(crate) fn job(id: u128, start: &str, end: Option<&str>, place: JobPlace) -> UsageJob {
     UsageJob {
+        source: ciproxy_store_interface::metering::facts::JobSource::Actions,
         id: Uuid::from_u128(id),
         organization_id: Uuid::from_u128(100),
         started_at: at(start),
-        completed_at: end.map(at),
+        completion: end.map(at).map_or(
+            ciproxy_store_interface::metering::facts::Completion::Running,
+            ciproxy_store_interface::metering::facts::Completion::Finished,
+        ),
         size: size(),
         place,
     }

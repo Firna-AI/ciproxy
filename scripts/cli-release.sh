@@ -24,9 +24,11 @@ package_cli() {
   mkdir -p "$staging/$artifact" "$dist_dir"
   cp "$binary_path" "$staging/$artifact/$binary"
   chmod 755 "$staging/$artifact/$binary"
-  if [ "$binary" = ciproxy-agent ]; then
-    cp crates/ciproxy-agent/LICENSE "$staging/$artifact/LICENSE"
-  fi
+  case "$binary" in
+    ciproxy-agent|ciproxy-cache-sidecar)
+      cp "crates/$binary/LICENSE" "$staging/$artifact/LICENSE"
+      ;;
+  esac
   tar -C "$staging" -czf "$dist_dir/$artifact.tar.gz" "$artifact"
   if command -v sha256sum >/dev/null 2>&1; then
     sha256sum "$dist_dir/$artifact.tar.gz" | awk '{print $1}' >"$dist_dir/$artifact.tar.gz.sha256"

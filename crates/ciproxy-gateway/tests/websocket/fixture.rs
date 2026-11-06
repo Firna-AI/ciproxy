@@ -67,6 +67,13 @@ impl Authorization for Authority {
 struct Events(UnboundedSender<(Session, AgentMessage)>);
 
 impl AgentEvents for Events {
+    fn machine_removed(
+        &self,
+        _workspace_id: uuid::Uuid,
+        _machine_id: uuid::Uuid,
+    ) -> ciproxy_gateway::error::Result<()> {
+        Ok(())
+    }
     fn receive(&self, session: Session, message: AgentMessage) -> Result<()> {
         self.0.send((session, message)).unwrap();
         Ok(())

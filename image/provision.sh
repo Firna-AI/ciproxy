@@ -10,9 +10,14 @@ printf 'runner ALL=(ALL) NOPASSWD:ALL\n' > /etc/sudoers.d/ciproxy-runner
 chmod 0440 /etc/sudoers.d/ciproxy-runner
 printf '%s  /tmp/ciproxy-runner.tar.gz\n' "$RUNNER_SHA256" | sha256sum --check
 tar -xzf /tmp/ciproxy-runner.tar.gz -C /opt/actions-runner
+install -m 0644 /opt/actions-runner/bin/Runner.Worker.dll /opt/actions-runner/bin/Runner.Worker.stock.dll
+install -m 0644 /tmp/ciproxy-worker.dll /opt/actions-runner/bin/Runner.Worker.own.dll
 chown -R runner:runner /opt/actions-runner
 install -m 0755 /tmp/ciproxy-guest /usr/local/bin/ciproxy-guest
+install -m 0755 /tmp/ciproxy-cache-sidecar /usr/local/bin/ciproxy-cache-sidecar
 install -m 0755 "$definition/runner-entry.sh" /usr/local/libexec/ciproxy-runner
+install -m 0755 "$definition/docker-attach.sh" /usr/local/libexec/ciproxy-docker-attach
+install -m 0755 "$definition/runner-patch/container-proxy-url.sh" /usr/local/libexec/ciproxy-container-proxy-url
 install -m 0644 /tmp/vmlinux-ciproxy /boot/vmlinux-ciproxy
 install -m 0644 "$definition/ciproxy-guest.service" /etc/systemd/system/
 printf '%s\n' "$IMAGE_ID" > /etc/ciproxy/image-id
@@ -28,6 +33,9 @@ cat > /etc/systemd/network/10-ciproxy.network <<'EOF'
 Name=eth0
 [Network]
 DHCP=yes
+KeepConfiguration=static
+DNS=1.1.1.1
 EOF
 systemctl enable systemd-networkd systemd-resolved
-rm -f /tmp/ciproxy-runner.tar.gz /tmp/ciproxy-guest /tmp/vmlinux-ciproxy
+rm -f /tmp/ciproxy-runner.tar.gz /tmp/ciproxy-guest /tmp/vmlinux-ciproxy \
+    /tmp/ciproxy-cache-sidecar /tmp/ciproxy-worker.dll

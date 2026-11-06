@@ -48,6 +48,7 @@ pub(super) fn facts() -> JobFacts {
         event: JobEvent("push".into()),
         head_repository: None,
         default_ref: GitRef("refs/heads/main".into()),
+        sticky_docker: false,
     }
 }
 

@@ -49,7 +49,7 @@ That session reads only default-branch entries locally. Its other restores
 use GitHub. Permitted saves go to GitHub and a fresh private local scope.
 No session restores that private scope, including its creator. Unknown
 tokens never fail the job. Reports count unknown jobs by reason for seven
-days. A retained job ID keeps its first registration's reason on replay.
+days. Each assignment keeps its first unknown reason on replay.
 
 The machine refreshes public keys every five minutes. An unknown key ID
 permits one extra refresh per minute across all jobs. Failures consume the
@@ -120,17 +120,21 @@ loopback. The agent must not bind it to a VM-reachable interface.
 
 The agent calls the admin listener with `Authorization: Bearer TOKEN`:
 
-| Method and path          | Input or result                                        |
-| ------------------------ | ------------------------------------------------------ |
-| `POST /sessions`         | `Registration` JSON. Returns `SessionCredential` JSON. |
-| `DELETE /sessions/TOKEN` | Revoke that VM's credential and finish its report.     |
-| `GET /report`            | `ciproxy_protocol::cache::MachineCacheReport` JSON.    |
-| `POST /clear`            | Clear this machine's local entries. Returns HTTP 204.  |
-| `PUT /budget`            | `{"capacity_bytes":12345}`. Returns HTTP 204.          |
+| Method and path           | Input or result                                             |
+| ------------------------- | ----------------------------------------------------------- |
+| `POST /sessions`          | `CacheRegistration` JSON. Returns `SessionCredential` JSON. |
+| `DELETE /sessions/TOKEN`  | Revoke that VM's credential and finish its report.          |
+| `POST /sessions/recover`  | Recover a live session with its exact registration.         |
+| `POST /sessions/close`    | Revoke sessions with the exact trusted `JobFacts`.          |
+| `POST /sessions/fallback` | Hide counts for the exact trusted `JobFacts`.               |
+| `GET /report`             | `ciproxy_protocol::cache::MachineCacheReport` JSON.         |
+| `POST /clear`             | Clear this machine's local entries. Returns HTTP 204.       |
+| `PUT /budget`             | `{"capacity_bytes":12345}`. Returns HTTP 204.               |
 
-`Registration` contains `job_id`, `facts`, `permissions`, `github_token`,
+`CacheRegistration` contains `job_id`, `facts`, `permissions`, `github_token`,
 `cache_url`, `results_url`, and `proxy_url`. The exact types live in
-[session.rs](src/session.rs). `facts` is the existing protocol `JobFacts`.
+[protocol runtime types](../ciproxy-protocol/src/runtime.rs).
+`facts` is the existing protocol `JobFacts`.
 The hosted `JobAssignments` builder combines API facts with the scale
 message and JIT runner identity. `facts` has no full job ref.
 The agent supplies
@@ -149,27 +153,32 @@ assignment data. It must not read a job's environment override. Missing
 permission information leaves the cache unavailable. The machine and proxy
 both apply these permissions.
 
-The agent writes a `ProxyConfig` JSON file inside the VM. It contains
-`machine_url`, `machine_token`, and the same `registration`. `proxy_url`
-must be reachable from that VM's Docker containers. The runner listener
-can start before GitHub assigns its job. At job start, the agent's existing
-hook must register the assignment and start the proxy. It must wait for
-proxy readiness before action steps run. The new cache hook preserves
-that synchronization point. A shell hook does not supply the original
-runtime credentials. The trusted assignment handoff remains the agent's
-and image's responsibility.
+The own-machine guest receives `CacheProxyConfig` through its parent pipe.
+It contains `machine_url`, `machine_token`, and the same `registration`.
+The original runtime token never needs a configuration file.
+`proxy_url` uses the actual Docker bridge gateway.
+The trusted source hook pauses before action setup.
+The guest acknowledges readiness after its proxy has bound the listener.
+A failed machine cache returns a miss or leaves the GitHub endpoints.
 
-With an existing Docker bridge, use its VM gateway as `proxy_url`. Bind
-the proxy inside that job VM:
+The file input stays available for isolated operator checks:
 
 ```sh
 ciproxy-cache-sidecar proxy --listen 0.0.0.0:8230 \
   --config /run/ciproxy/cache-proxy.json
 ```
 
-The [runner guide](../../image/runner-patch/README.md#start-the-job-vm-runner)
-shows bridge-address discovery and the listener wrapper. Loopback-only
-addresses cannot serve Docker actions or job-container steps.
+The guest uses `--config-stdin --ready-stdout` instead.
+Its pipe starts with one newline-delimited `CacheProxyConfig`.
+The proxy acknowledges its bound listener with `READY`.
+Later lines carry `CacheProxyUpdate` with a sequence and `CacheConnection`.
+The proxy acknowledges each update with `UPDATED SEQUENCE`.
+Updates keep the original assignment and results credentials unchanged.
+The guest keeps this proxy when the machine service restarts.
+It retries failed credential updates without repeating Docker setup.
+Diagnostics go to stderr. Credentials stay in memory.
+The machine's budget acknowledgement waits for active file reads and writes.
+Shrinking cancels captures before it releases occupied files.
 
 The proxy supplies `X-Ciproxy-Session` to the machine. Each random transfer
 ticket belongs to that session. Job requests cannot reuse another VM's
@@ -178,8 +187,8 @@ own counts through `POST /ciproxy/fallback`. That operation accepts no
 counts. Machine-connection failures return a miss without a notification.
 The agent must revoke the session when the job ends.
 
-Run the original runner on Boat. Do not use the patch, wrapper, or proxy
-there. This crate adds no Boat, KVM, agent lifecycle, or image wiring.
+The trusted source hook stays inactive on Boat. Boat uses GitHub directly.
+The agent owns host service installation and VM lifecycle wiring.
 
 Production uses the fixed GitHub Actions JWKS endpoint. An isolated smoke
 machine can use `--verification-config PATH`, or the operator environment

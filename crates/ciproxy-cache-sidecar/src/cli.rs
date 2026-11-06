@@ -6,7 +6,6 @@ use std::sync::Arc;
 
 use ciproxy_cache_sidecar::clock::{Clock, SystemClock};
 use ciproxy_cache_sidecar::machine::MachineCache;
-use ciproxy_cache_sidecar::proxy::{ProxyConfig, VmProxy};
 use ciproxy_cache_sidecar::runtime_token::TokenVerifier;
 use ciproxy_cache_sidecar::runtime_token::keys::{CachedKeys, SigningKeys};
 use ciproxy_cache_sidecar::runtime_token::source::{HttpKeys, VerificationConfig};
@@ -39,6 +38,11 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Reclaim offline archive and staging files while preserving report history.
+    Reclaim {
+        #[arg(long)]
+        cache_dir: PathBuf,
+    },
     /// Serve the machine cache and its separate agent-only admin API.
     Machine {
         #[arg(long, default_value = "127.0.0.1:8228")]
@@ -59,17 +63,26 @@ enum Command {
     Proxy {
         #[arg(long, default_value = "127.0.0.1:8230")]
         listen: SocketAddr,
+        #[arg(long, required_unless_present = "config_stdin")]
+        config: Option<PathBuf>,
+        /// Receive credentials from a parent pipe, without writing a file.
+        #[arg(long, conflicts_with = "config")]
+        config_stdin: bool,
+        /// Acknowledge the bound listener to the supervising guest.
         #[arg(long)]
-        config: PathBuf,
+        ready_stdout: bool,
     },
 }
 
 pub(crate) async fn run() -> Result<()> {
-    let network: Arc<dyn Transport> = match HttpTransport::new() {
-        Ok(network) => Arc::new(network),
-        Err(error) => return Err(CliError::Cache(error)),
-    };
     match Cli::parse().command {
+        Command::Reclaim { cache_dir } => {
+            let store = DiskStorage::new(cache_dir, 0);
+            match store.clear().await {
+                Ok(()) => Ok(()),
+                Err(error) => Err(CliError::Cache(error)),
+            }
+        }
         Command::Machine {
             listen,
             admin_listen,
@@ -78,6 +91,7 @@ pub(crate) async fn run() -> Result<()> {
             admin_token_file,
             verification_config,
         } => {
+            let network = network()?;
             let token = match fs::read_to_string(admin_token_file).await {
                 Ok(value) => value,
                 Err(error) => return Err(CliError::Io(error)),
@@ -139,25 +153,18 @@ pub(crate) async fn run() -> Result<()> {
             refresh.abort();
             result
         }
-        Command::Proxy { listen, config } => {
-            let bytes = match fs::read(config).await {
-                Ok(value) => value,
-                Err(error) => return Err(CliError::Io(error)),
-            };
-            let config: ProxyConfig = match serde_json::from_slice(&bytes) {
-                Ok(value) => value,
-                Err(error) => return Err(CliError::Json(error)),
-            };
-            let service: Arc<dyn Service> = Arc::new(VmProxy::new(config, network));
-            let listener = match TcpListener::bind(listen).await {
-                Ok(value) => value,
-                Err(error) => return Err(CliError::Io(error)),
-            };
-            tracing::info!(%listen, "VM cache proxy listening");
-            match axum::serve(listener, job_router(service)).await {
-                Ok(()) => Ok(()),
-                Err(error) => Err(CliError::Io(error)),
-            }
-        }
+        Command::Proxy {
+            listen,
+            config,
+            config_stdin,
+            ready_stdout,
+        } => crate::proxy_cli::run(listen, config, config_stdin, ready_stdout, network()?).await,
+    }
+}
+
+fn network() -> Result<Arc<dyn Transport>> {
+    match HttpTransport::new() {
+        Ok(network) => Ok(Arc::new(network)),
+        Err(error) => Err(CliError::Cache(error)),
     }
 }

@@ -3,7 +3,7 @@
 use ciproxy_store_interface::error::{Error, Result, ResultExt};
 use ciproxy_store_interface::overflow::record::{StartPhase, StartRecord};
 use diesel::prelude::*;
-use diesel::sql_types::{Integer, Text, Timestamptz};
+use diesel::sql_types::{BigInt, Integer, Text, Timestamptz};
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -28,7 +28,7 @@ pub(super) fn save(
     };
     diesel::sql_query(
         "INSERT INTO runners (id, workspace_id, organization_id, label_id, scale_set_id,
-            state, vcpus, memory_gb, disk_gb, boat_key_id, sandbox_id, boat_size_name)
+            state, vcpus, memory_bytes, disk_bytes, boat_key_id, sandbox_id, boat_size_name)
          SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
          WHERE EXISTS (SELECT 1 FROM organizations WHERE id = $3 AND workspace_id = $2)
          AND EXISTS (SELECT 1 FROM scale_sets WHERE id = $5 AND workspace_id = $2)
@@ -45,8 +45,8 @@ pub(super) fn save(
     .bind::<diesel::sql_types::Uuid, _>(record.scale_set_id)
     .bind::<Text, _>(state)
     .bind::<Integer, _>(i32::try_from(parameters.size.vcpus).internal()?)
-    .bind::<Integer, _>(i32::try_from(parameters.size.memory_bytes / 1_000_000_000).internal()?)
-    .bind::<Integer, _>(i32::try_from(parameters.size.disk_bytes / 1_000_000_000).internal()?)
+    .bind::<BigInt, _>(i64::try_from(parameters.size.memory_bytes).internal()?)
+    .bind::<BigInt, _>(i64::try_from(parameters.size.disk_bytes).internal()?)
     .bind::<diesel::sql_types::Uuid, _>(record.key_id)
     .bind::<Text, _>(sandbox.id())
     .bind::<Text, _>(&parameters.size.name)

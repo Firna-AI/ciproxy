@@ -9,6 +9,7 @@ pub mod jobs;
 pub mod reports;
 pub mod resources;
 pub mod runners;
+pub mod runtime;
 pub mod secret;
 pub mod version;
 

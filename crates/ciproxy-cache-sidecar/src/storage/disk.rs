@@ -10,7 +10,7 @@ use bytes::Bytes;
 use sha2::{Digest, Sha256};
 use tempfile::NamedTempFile;
 use tokio::fs;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, RwLock};
 use uuid::Uuid;
 
 use crate::error::{CacheError, Result, ResultExt};
@@ -31,6 +31,7 @@ pub struct DiskStorage {
     pub(super) captures: Mutex<Vec<Weak<Reservation>>>,
     pub(super) index: Arc<Mutex<Option<Vec<Entry>>>>,
     pub(super) allocation: Arc<dyn Allocation>,
+    pub(super) reads: RwLock<()>,
 }
 
 impl DiskStorage {
@@ -53,6 +54,7 @@ impl DiskStorage {
             captures: Mutex::new(Vec::new()),
             index,
             allocation,
+            reads: RwLock::new(()),
         }
     }
 
@@ -82,6 +84,7 @@ impl Storage for DiskStorage {
     }
 
     async fn read(&self, source: &ReadSource, offset: u64, length: usize) -> Result<Bytes> {
+        let _reading = self.reads.read().await;
         read::read(&self.root, source, offset, length).await
     }
 

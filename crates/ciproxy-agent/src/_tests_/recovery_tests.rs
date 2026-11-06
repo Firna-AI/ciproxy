@@ -6,7 +6,7 @@ use ciproxy_protocol::identifiers::{CommandId, RunnerId};
 use ciproxy_protocol::runners::RunnerState;
 use unimock::{MockFn, Unimock, matching};
 
-use crate::boundaries::{CacheMock, StoreMock, VmsMock};
+use crate::boundaries::{StoreMock, VmsMock};
 use crate::controller::Agent;
 use crate::fixtures::{applied, controller, report_dependencies, spec, vm};
 use crate::state::MachineState;
@@ -20,7 +20,6 @@ async fn a_matching_starting_retry_delivers_registration_without_recreating_the_
         ..MachineState::default()
     };
     let mock = Unimock::new((report_dependencies(),
-        CacheMock::configure.some_call(matching!(_)).returns(Ok(None)),
         VmsMock::send.some_call(matching!((_, message) if matches!(message, AgentToGuest::ConfigureRunner { runner_id, registration, .. }
             if runner_id.0 == "runner-1" && registration.expose_secret() == "one-use-registration"))).returns(Ok(())),
     ));

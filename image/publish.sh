@@ -4,11 +4,15 @@ set -euo pipefail
 
 artifacts=$(realpath "${1:?Usage: image/publish.sh ARTIFACT_DIR gs://BUCKET/PREFIX}")
 destination=${2:?Cloud Storage release prefix required}
+generation_options=()
+if [[ ${3:-} == --new-release ]]; then
+    generation_options+=(--if-generation-match=0)
+fi
 (
     cd "$artifacts"
     sha256sum --check SHA256SUMS
 )
-gcloud storage cp \
+gcloud storage cp "${generation_options[@]}" \
     "$artifacts/rootfs.ext4" "$artifacts/rootfs.tar.zst" \
     "$artifacts/vmlinux" "$artifacts/upstream-software.json" \
     "$artifacts/software-report.json" \

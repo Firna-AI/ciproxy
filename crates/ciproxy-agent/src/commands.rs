@@ -12,6 +12,22 @@ use crate::mode::ModeAction;
 impl Controller {
     pub(crate) async fn apply(&self, message: ControlMessage) -> Result<Option<AgentMessage>> {
         let (command_id, result, failure) = match message {
+            ControlMessage::DockerBudget { command_id, budget } => {
+                let mut state = self.state.lock().await;
+                let mut next = state.clone();
+                next.docker_budget = budget;
+                let result = if *state == next {
+                    Ok(())
+                } else {
+                    self.store.save(&next)
+                };
+                if result.is_ok() {
+                    *state = next;
+                } else {
+                    state.docker_budget = None;
+                }
+                (command_id, result, CommandFailure::RunnerStart)
+            }
             ControlMessage::StartRunner { command_id, runner } => (
                 command_id,
                 self.start(runner).await,
@@ -63,11 +79,70 @@ impl Controller {
                     .cloned();
                 let result = match vm {
                     Some(vm) => {
-                        if let Err(error) = self.cache.facts(&runner_id, &facts).await {
-                            tracing::warn!(error = %error, "machine cache unavailable; use GitHub cache");
-                        }
+                        let facts = self.trusted_facts(&vm, facts).await?;
+                        let first_preparation = self.begin_preparation(&vm).await?;
+                        let prepared = self.cache.prepare(&runner_id, &facts).await;
+                        let (cache, scope, data_bytes) = match prepared {
+                            Ok(Some((cache, scope, bytes))) => (Some(cache), Some(scope), bytes),
+                            Ok(None) => (None, None, 0),
+                            Err(error) => {
+                                tracing::warn!(%error, "cache session unavailable; use GitHub cache");
+                                (None, None, 0)
+                            }
+                        };
+                        let budget = self.state.lock().await.docker_budget.clone();
+                        let spare = match budget {
+                            Some(budget)
+                                if first_preparation
+                                    && self.dockers.is_some()
+                                    && budget.image.image_id == vm.report.image_id
+                                    && self.images.report()?.selected() == Some(&budget.image) =>
+                            {
+                                budget.spare_bytes
+                            }
+                            _ => 0,
+                        };
+                        let free_pool = if first_preparation && self.dockers.is_some() {
+                            let hardware = self.host.hardware()?;
+                            let state = self.state.lock().await;
+                            crate::capacity::machine_resources(&hardware, self.image_budget)
+                                .available(state.runners.iter().map(|vm| vm.report.size))
+                                .job_disk_bytes
+                        } else {
+                            0
+                        };
+                        let docker = match (&self.dockers, scope, first_preparation) {
+                            (Some(dockers), Some(scope), true) => {
+                                match dockers
+                                    .prepare(&vm, &facts, &scope, data_bytes, spare, free_pool)
+                                    .await
+                                {
+                                    Ok(Some(disk)) => match self.vms.swap_docker(&vm).await {
+                                        Ok(()) => Some(disk),
+                                        Err(error) => {
+                                            tracing::warn!(%error, "Docker drive unavailable; use root disk");
+                                            None
+                                        }
+                                    },
+                                    Ok(None) => None,
+                                    Err(error) => {
+                                        tracing::warn!(%error, "Docker cache unavailable; use root disk");
+                                        None
+                                    }
+                                }
+                            }
+                            _ => None,
+                        };
                         self.vms
-                            .send(&vm, &AgentToGuest::JobFacts { job_id, facts })
+                            .send(
+                                &vm,
+                                &AgentToGuest::PrepareJob {
+                                    job_id: job_id.clone(),
+                                    facts: facts.clone(),
+                                    cache,
+                                    docker,
+                                },
+                            )
                             .await
                     }
                     None => Err(Error::RunnerMismatch),

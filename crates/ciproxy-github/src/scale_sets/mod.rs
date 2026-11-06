@@ -43,6 +43,8 @@ pub trait ScaleSetApi: Send + Sync {
     async fn register(&self, scale_set_id: i64, name: &str) -> Result<JitRegistration>;
     /// Delete an idle or ended runner. A busy runner returns RunnerBusy.
     async fn remove_runner(&self, runner_id: i64) -> Result<()>;
+    /// Find only this runtime's unique persisted runner name after a crash.
+    async fn find_runner(&self, name: &str) -> Result<Option<i64>>;
     /// Delete a scale set while App access still exists, such as a take-out.
     async fn remove_scale_set(&self, scale_set_id: i64) -> Result<()>;
     /// Release a retired label name while retaining its exact remote binding.

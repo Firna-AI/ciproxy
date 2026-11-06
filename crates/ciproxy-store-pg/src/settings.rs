@@ -11,14 +11,14 @@ use crate::error::QueryResultExt;
 
 #[derive(Queryable, Selectable)]
 #[diesel(table_name = settings)]
-struct SettingsRow {
+pub(crate) struct SettingsRow {
     overflow_enabled: bool,
     overflow_wait: String,
     boat_spend_limit_usd_micros: Option<i64>,
 }
 
 impl SettingsRow {
-    fn into_record(self) -> Result<Settings> {
+    pub(crate) fn into_record(self) -> Result<Settings> {
         Ok(Settings {
             overflow_enabled: self.overflow_enabled,
             overflow_wait: self.overflow_wait.parse().internal()?,

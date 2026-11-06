@@ -40,6 +40,7 @@ async fn http_upgrade_denials_retry_without_changing_identity_or_vms() {
         Ok(removal_socket),
     ]);
     let initial = MachineState {
+        docker_budget: None,
         identity: Some(identity()),
         mode: Mode::Active,
         runners: vec![vm("running", true), vm("warm", false)],

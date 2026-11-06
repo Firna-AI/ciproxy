@@ -42,6 +42,10 @@ impl VmFiles for LinuxVmFiles {
                 vm.report.size.disk_bytes,
             )
             .await?;
+        let slot = fs::File::create(root.join("docker-slot"))
+            .context("create inactive Docker drive slot")?;
+        slot.set_len(512)
+            .context("size inactive Docker drive slot")?;
         let mut kernel = BudgetFile::create(&root.join("vmlinux"), self.space.clone())?;
         kernel.copy(&image.join("vmlinux"))?;
         let config =
@@ -49,7 +53,7 @@ impl VmFiles for LinuxVmFiles {
         let mut file = BudgetFile::create(&root.join("config.json"), self.space.clone())?;
         file.write(&config)?;
         file.sync()?;
-        for file in ["vmlinux", "rootfs.ext4", "config.json"] {
+        for file in ["vmlinux", "rootfs.ext4", "config.json", "docker-slot"] {
             let path = root.join(file);
             fs::set_permissions(&path, fs::Permissions::from_mode(0o600))
                 .context("protect VM files")?;

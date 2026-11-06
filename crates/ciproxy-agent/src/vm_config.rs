@@ -8,7 +8,7 @@ use crate::state::VmRecord;
 #[serde(rename_all = "kebab-case")]
 pub(crate) struct VmConfig {
     boot_source: BootSource,
-    drives: [Drive; 1],
+    drives: [Drive; 2],
     machine_config: MachineConfig,
     network_interfaces: [NetworkInterface; 1],
     vsock: Vsock,
@@ -58,12 +58,20 @@ impl VmConfig {
                 kernel_image_path: "/vmlinux",
                 boot_args: "console=ttyS0 reboot=k panic=1 pci=off root=/dev/vda rw ip=172.30.0.2::172.30.0.1:255.255.255.252::eth0:off",
             },
-            drives: [Drive {
-                drive_id: "rootfs",
-                path_on_host: "/rootfs.ext4",
-                is_root_device: true,
-                is_read_only: false,
-            }],
+            drives: [
+                Drive {
+                    drive_id: "rootfs",
+                    path_on_host: "/rootfs.ext4",
+                    is_root_device: true,
+                    is_read_only: false,
+                },
+                Drive {
+                    drive_id: "docker",
+                    path_on_host: "/docker-slot",
+                    is_root_device: false,
+                    is_read_only: false,
+                },
+            ],
             machine_config: MachineConfig {
                 vcpu_count: vm.report.size.vcpu,
                 mem_size_mib: vm.report.size.memory_bytes.div_ceil(1_048_576),

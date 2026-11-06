@@ -12,7 +12,7 @@ use crate::error::Error;
 use crate::service::Guest;
 
 #[path = "support.rs"]
-mod support;
+pub(super) mod support;
 
 use support::{Observation, channel, configure, exited, hello, runner, shutdown_pair, supervisor};
 

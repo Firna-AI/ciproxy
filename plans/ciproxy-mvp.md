@@ -490,16 +490,15 @@ reserve. The image measurement sets the real budget later.
       cleanup for PR #25 review finding 1, option A. Check returned errors,
       cleanup requests, and released disk and slots at both boundaries.
       Branch: `conductor/ciproxy-mvp-73a-disk-sizes`.
+- [x] Align the released image bundle, vsock port, and guest state,
+      reconnect, and shutdown behavior. Use the selected image's exact
+      root size and the original free-disk request under item 77 = D.
+      Reflink the image and grow each fresh ext4 root before boot.
+      Keep sticky Docker disks under the checked-scope cache integration.
+      Apply the approved removal rule of item 79 = A and the Docker space
+      rule of item 80 = D.
+      Branch: `conductor/ciproxy-mvp-milestone-13-e2e`.
 - [ ] Smoke-test a Docker job, a warm runner, and a restart during a job.
-      Orchestrator: align the image bundle, root/Docker disk allocation,
-      vsock port, and guest state/reconnect/shutdown behavior first.
-      Item 77 integration: each VM gets the image plus its label's free
-      disk, with filesystem allowance. Reflink the image and grow the copy
-      before boot.
-      Docker shares that disk. Remove the unused empty Docker drive.
-      Sticky Docker disks remain the separate cache integration below.
-      Keep the capacity error only when the VM disk cannot hold the image.
-      Item 77 = D settles the smaller-label policy.
       Orchestrator: run `crates/ciproxy-agent/scripts/smoke-docker.sh`,
       `crates/ciproxy-agent/scripts/smoke-warm.sh`, and
       `crates/ciproxy-agent/scripts/smoke-restart.sh` on the KVM test host
@@ -507,7 +506,7 @@ reserve. The image measurement sets the real budget later.
       Orchestrator: run `crates/ciproxy-agent/scripts/smoke-host.sh` on a
       fresh disposable KVM host with `/var/lib` on ext4. It checks the first
       install, a repair, two reflink jobs, and uninstall.
-      Branch: `conductor/ciproxy-mvp-milestone-9-agent`.
+      Branch: `conductor/ciproxy-mvp-milestone-13-e2e`.
 
 ## Milestone 10: Job VM image
 
@@ -817,18 +816,41 @@ Depends on: 6, 7, 8, 9, 10, 11
 This milestone builds "A job on an own machine" of `architecture.md`, on a
 test host in `internal-498318`.
 
-- [ ] Wire the control plane and the agent. Add the patch and the sidecar to
+Code and local verification evidence: `.context/ciproxy-mvp/`.
+Live KVM and authenticated job checks remain with the orchestrator.
+
+- [x] Wire the control plane and the agent. Add the patch and the sidecar to
       the image.
-- [ ] Register each job with the machine cache, and attach its Docker disk
-      by its checked scope, as items 54, 55, and 66 say. Add the missing
-      guest handoff: the original runtime token, the cache URLs, the
-      effective cache permissions, and a readiness pause. The
+      Branch: `conductor/ciproxy-mvp-milestone-13-e2e`.
+- [x] Register each job with the machine cache. Add the missing guest
+      handoff: the original runtime token, the cache URLs, the effective
+      cache permissions, and a readiness pause. The
       [integration record](follow-ups/agent-cache-area-integration.md)
-      gives the missing inputs and the component paths.
-- [ ] Stop a warm runner only after GitHub removed it. My call: a runner
-      that just took a job keeps it.
+      keeps the remaining live verification.
+      Branch: `conductor/ciproxy-mvp-milestone-13-e2e`.
+- [x] Attach each Docker disk by its checked scope, as items 54, 55, and 66
+      say. Reserve its data plus label free disk under item 80 = D.
+      Use only spare disk that no set of job roots can use. If no
+      reservation fits, keep the job on its root without a Docker disk.
+      Branch: `conductor/ciproxy-mvp-milestone-13-e2e`.
+- [x] Stop a warm runner only after GitHub removed it. My call: a runner
+      that just took a job keeps it. Item 79 = A keeps this rule for
+      ordinary stops and Drain. Remove, uninstall, and every App removal
+      stop warm runners at once. A job assigned before its guest handover
+      can fail. Jobs that the guest received still finish.
+      Branch: `conductor/ciproxy-mvp-milestone-13-e2e`.
+- [x] Count each trusted taken assignment through metering, without a
+      numeric job-ID guess. Preserve prior starts across new assignments
+      of the same UUID. Keep a terminal job without a trusted finish out
+      of minutes, and retry the GitHub job lookup with backoff. Preserve
+      exact actual allocations and trusted timestamp precision.
+      Branch: `conductor/ciproxy-mvp-milestone-13-e2e`.
 - [ ] Smoke-test warm starts, slots, drain, remove, offline, a cache hit, a
       restart, and a disallowed repository.
+      Orchestrator: use the credential-file scripts on the KVM host with
+      the main preview control plane. Keep live evidence separate from
+      the code checks.
+      Branch: `conductor/ciproxy-mvp-milestone-13-e2e`.
 
 ## Milestone 14: Dashboard API: sign-in, setup, machines, and settings
 
@@ -938,8 +960,8 @@ Depends on: 4
 - [x] Write items 63 and 64 into `metering.md`: the last price counts for
       a day with a price change, and a month has the days of its calendar
       month. Build both rules, and fix the 30-day view of the Savings
-      mockup. Then run `cargo test --package ciproxy-metering` and `cargo
-      xtask check` with `DATABASE_URL` set.
+      mockup. Then run `cargo test --package ciproxy-metering` and
+      `cargo xtask check` with `DATABASE_URL` set.
       The report, service, and test callers no longer choose a monthly
       divisor. Each date uses its calendar month.
       Branch: `conductor/ciproxy-mvp-milestone-16-cost-rules`.
@@ -1102,17 +1124,12 @@ require and the product does.
 
 Depends on: 13, 18
 
-This milestone builds the Docker disks of Team and Business, which ship at
-launch, as item 8 says. Several organizations come with the workspace of
-item 48 in Milestones 6, 14, and 20. The job hooks spike confirms the Docker
-disks.
+Milestone 13 owns the Docker attachment, trusted writer, disposable copies,
+valid drive IDs, and the item 80 = D reservation. This milestone keeps
+the remaining Docker disk recovery work for Team and Business at launch.
+Several organizations come with the workspace of item 48 in Milestones 6,
+14, and 20.
 
-- [ ] Attach the Docker disk in the job-started hook, as "Docker disks" in
-      `cache.md` says.
-- [ ] Give the disk to the first default-branch job of a trusted event, as
-      item 66 says, and a reflink copy to each other job.
-- [ ] Use drive IDs of letters, digits, and underscores. Keep each Docker
-      image store on the disk.
 - [ ] Discard a disk that fails to mount. My call: a rebuild loses only
       time.
 
@@ -1679,7 +1696,7 @@ calls and those of the mockups agent, 4 November 2026:
 - A suspension shows a notice on Jobs, with no waiting count for that
   organization. Reason: the other reasons why jobs wait show there.
 - The install command reads `curl -fsSL https://get.ciproxy.dev | sudo sh
-  -s -- install --token …`. Reason: design call 30 runs the agent with the
+-s -- install --token …`. Reason: design call 30 runs the agent with the
   arguments of the install script.
 - The page of a removed App shows no data of the workspace, because ciproxy
   cannot check a membership after a removal.
@@ -1705,8 +1722,9 @@ the end of this plan hold their answers of 5 November 2026. The options check of
 items 50 and 51 ran, and its report is in
 `.context/ciproxy-mvp/options-check-50-51.md`.
 
-The options check of the `plans` skill ran over these items on 4 November
-2026. Its reports are under `.context/ciproxy-mvp-foundation/`:
+The options check of the `plans` skill ran over these items on
+4 November 2026. Its reports are under
+`.context/ciproxy-mvp-foundation/`:
 
 - `options-check-3.md`, over items 29 to 45. It changed the
   recommendations of items 29, 32, 37, and 39.
@@ -2059,7 +2077,7 @@ The options check of the `plans` skill ran over these items on 4 November
     end an instance at its own shutdown. Effort: Large.
   - **D.** Keep the contract with the in-sandbox key. Each sandbox starts in
     a Boat environment that passes only this key. The guest runs `boat stop
-    self` after the runner exits, and A's TTL stays as a backstop. Effort:
+self` after the runner exits, and A's TTL stays as a backstop. Effort:
     Medium.
     - Job code gets the key, and can stop, run commands, use SSH, publish a
       port, and prompt Boat's agent, on its own sandbox.
@@ -3171,7 +3189,7 @@ refuses D's grant, so the item came back with A, B, C, and the new E and F.
 - **Background:**
   - "Remove" revokes the machine credential at once. The agent then stops
     its warm runners and lets running jobs finish. `ciproxy-agent
-    uninstall` does the same without the control plane. After the last
+uninstall` does the same without the control plane. After the last
     organization removes the App, each machine of the workspace acts as
     removed.
   - Ordinary stops and Drain ask GitHub to delete the runner first, and a

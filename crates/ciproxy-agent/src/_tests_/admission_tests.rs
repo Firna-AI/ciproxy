@@ -20,6 +20,7 @@ fn held(count: usize) -> Vec<VmRecord> {
         .map(|index| {
             let mut record = vm(&format!("held-{index}"), false);
             record.network_index = index as u16 + 1;
+            record.report.slot_indices = vec![index as u64];
             record.report.state = match index % 4 {
                 0 => RunnerState::Starting,
                 1 => RunnerState::Warm,
@@ -94,6 +95,8 @@ async fn a_fitting_vm_reclaims_cache_before_preparation_at_each_resource_boundar
                 .answers_arc(Arc::new(move |_, report, used| {
                     assert_eq!(used.len(), count);
                     Ok(VmRecord {
+                        cache_permissions: None,
+                        job_facts: None,
                         report,
                         ..vm("new-local", false)
                     })
@@ -115,7 +118,11 @@ async fn a_fitting_vm_reclaims_cache_before_preparation_at_each_resource_boundar
             mock,
         );
         agent.image_budget = image_gb * GIGABYTE;
-        assert_eq!(agent.control(start()).await.unwrap(), applied());
+        let mut command = start();
+        if let ControlMessage::StartRunner { runner, .. } = &mut command {
+            runner.slot_indices = vec![count as u64];
+        }
+        assert_eq!(agent.control(command).await.unwrap(), applied());
         assert_eq!(agent.state.lock().await.runners.len(), expected_count);
     }
 }

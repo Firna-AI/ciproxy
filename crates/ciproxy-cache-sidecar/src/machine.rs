@@ -17,15 +17,15 @@ use crate::metrics::{Metrics, Reports};
 use crate::runtime_token::RuntimeTokens;
 use crate::scope::can_save;
 use crate::service::Service;
-use crate::session::Registration;
 use crate::storage::interface::Storage;
 use crate::transport::{Outbound, Transport};
 use crate::upload::state::Upload;
 use crate::upstream::{canonicalize, destination};
 use crate::wire::{V2, cache_path, miss, save_path, status};
+use ciproxy_protocol::runtime::CacheRegistration;
 
 pub(crate) struct Session {
-    pub registration: Registration,
+    pub registration: CacheRegistration,
     pub scope: JobScope,
     pub private_ref: String,
     pub uploads: Mutex<HashMap<String, Arc<Mutex<Upload>>>>,
@@ -108,7 +108,7 @@ impl MachineCache {
         let (parts, body) = request.into_parts();
         let path = parts.uri.path();
         if path == "/ciproxy/fallback" {
-            self.metrics.fallback(&session.registration.job_id).await;
+            self.metrics.fallback(&session.registration).await;
             return Ok(status(StatusCode::NO_CONTENT));
         }
         if path.starts_with("/ciproxy/blob/") {
@@ -182,7 +182,7 @@ impl Service for MachineCache {
             Ok(response) => response,
             Err(_) => {
                 tracing::warn!("Machine cache operation unavailable");
-                self.metrics.fallback(&session.registration.job_id).await;
+                self.metrics.fallback(&session.registration).await;
                 if cache_path(&path) || path.starts_with("/ciproxy/blob/") {
                     miss(&path)
                 } else {

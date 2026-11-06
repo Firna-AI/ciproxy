@@ -102,8 +102,9 @@ elif tool == "kubectl" and args[:2] == ["get", "serviceaccount"]:
 elif tool == "kubectl" and args[:2] == ["get", "service"]:
     if os.environ.get("FAKE_NEG_FAIL") == "true":
         sys.exit(1)
+    suffix = "control" if args[2] == "control-plane-neg" else "release"
     print(json.dumps({"metadata": {"annotations": {"cloud.google.com/neg-status": json.dumps({
-        "network_endpoint_groups": {"8080": "ciproxy-main-preview-release"},
+        "network_endpoint_groups": {"8080": "ciproxy-main-preview-" + suffix},
         "zones": ["us-central1-a", "us-central1-b", "us-central1-c"],
     })}}}))
 elif tool == "python3" and args[:1] != ["deploy/scripts/publish_static.py"]:

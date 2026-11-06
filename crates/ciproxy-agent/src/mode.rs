@@ -42,7 +42,7 @@ impl Controller {
                 .iter()
                 .filter(|vm| {
                     !matches!(vm.report.state, RunnerState::Running { .. })
-                        && (state.mode != Mode::Active || vm.report.state == RunnerState::Stopping)
+                        && (state.mode == Mode::Removed || vm.report.state == RunnerState::Stopping)
                 })
                 .cloned()
                 .collect::<Vec<_>>()

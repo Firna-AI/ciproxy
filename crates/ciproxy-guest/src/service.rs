@@ -89,11 +89,13 @@ impl Supervisor {
 
     async fn supervise(&mut self, runner_id: &RunnerId) -> Result<()> {
         let mut connected = true;
+        let mut running = None;
         loop {
             tokio::select! {
                 biased;
                 command = self.channel.receive(), if connected => match command {
                     Ok(Some(AgentToGuest::Shutdown)) => {
+                        if running.is_some() { continue; }
                         let exit = self.runner.stop().await?;
                         self.report_exit(runner_id, exit).await;
                         return Ok(());
@@ -105,12 +107,22 @@ impl Supervisor {
                     Ok(Some(AgentToGuest::ConfigureRunner { .. })) => {
                         warn!("guest already has its one runner");
                     }
+                    Ok(Some(AgentToGuest::PrepareJob { job_id, facts, cache, docker })) if running.as_ref() == Some(&job_id) => {
+                        match self.runner.prepare(job_id.clone(), facts, cache, docker).await {
+                            Ok(outcome) => self.report(GuestToAgent::JobPrepared { runner_id: runner_id.clone(), job_id,outcome }).await,
+                            Err(error) => {warn!(%error, "local preparation unavailable; runner keeps its GitHub fallback"); self.report(GuestToAgent::JobPrepared{runner_id:runner_id.clone(),job_id,outcome:ciproxy_protocol::guest::JobPreparation::default()}).await;},
+                        }
+                    }
                     Ok(Some(_)) => warn!("cache integration is not installed"),
                 },
                 event = self.runner.next_event() => match event? {
-                    RunnerEvent::Ready => self.report(GuestToAgent::RunnerReady {
+                    RunnerEvent::Starting { job_id, runtime } => {
+                        running = Some(job_id.clone());
+                        self.report(GuestToAgent::JobStarting { runner_id: runner_id.clone(), job_id, runtime }).await;
+                    }
+                    RunnerEvent::Ready => { if running.is_none() { self.report(GuestToAgent::RunnerReady {
                         runner_id: runner_id.clone(),
-                    }).await,
+                    }).await; } },
                     RunnerEvent::Exited(exit) => {
                         self.report_exit(runner_id, exit).await;
                         return Ok(());
@@ -124,3 +136,7 @@ impl Supervisor {
 #[cfg(test)]
 #[path = "_tests_/service_tests.rs"]
 mod service_tests;
+
+#[cfg(test)]
+#[path = "_tests_/preparation_tests.rs"]
+mod preparation_tests;

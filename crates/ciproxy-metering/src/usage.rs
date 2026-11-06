@@ -71,7 +71,7 @@ pub fn workspace_usage(
         .iter()
         .filter(|job| job.started_at >= period.starts_at && job.started_at < period.ends_at)
         .filter(|job| job.started_at <= at)
-        .map(|job| job.id)
+        .map(|job| job.key())
         .collect();
     let within = |taken| taken >= period.starts_at && taken < period.ends_at && taken <= at;
     let recorded: i64 = facts

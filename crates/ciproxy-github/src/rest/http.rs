@@ -75,6 +75,16 @@ impl RestClient {
 
 #[async_trait]
 impl GitHubRest for RestClient {
+    async fn job_times(
+        &self,
+        installation_id: i64,
+        repository: &str,
+        run_id: i64,
+        runner_id: i64,
+    ) -> Result<Option<ciproxy_store_interface::github_timing::JobTimes>> {
+        self.times(installation_id, repository, run_id, runner_id)
+            .await
+    }
     async fn repositories(&self, installation_id: i64) -> Result<Vec<Repository>> {
         let mut result = Vec::new();
         let mut page = 1;

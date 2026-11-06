@@ -37,12 +37,14 @@ async fn root_preparation_failures_clean_up_the_new_vm_and_release_its_reservati
             ..MachineState::default()
         };
         let mut runner = spec();
+        runner.slot_indices = vec![1, 2];
         runner.size.vcpu = 4;
         runner.size.memory_bytes = 16_000_000_000;
         runner.size.disk_bytes = 100_000_000_000;
         let mut allocated = vm("new", false);
         allocated.network_index = 2;
         allocated.report = RunnerReport {
+            slot_indices: vec![1, 2],
             runner_id: runner.runner_id.clone(),
             organization_id: runner.organization_id.clone(),
             label: runner.label.clone(),
@@ -169,4 +171,39 @@ async fn root_preparation_failures_clean_up_the_new_vm_and_release_its_reservati
             "{stage:?}"
         );
     }
+}
+
+#[tokio::test]
+async fn failed_cache_reclaim_releases_the_reservation_before_retrying_the_vm() {
+    let mock = Unimock::new((
+        report_dependencies_for(hardware()),
+        start_image(),
+        VmsMock::allocate
+            .each_call(matching!(_, _))
+            .answers(&|_, _, _| Ok(vm("runner-1", false))),
+        StoreMock::save
+            .each_call(matching!(_))
+            .answers(&|_, _| Ok(())),
+        CacheMock::budget.stub(|each| {
+            each.call(matching!(_))
+                .answers(&|_, _| Err(crate::error::Error::CacheUnavailable))
+                .once()
+                .then()
+                .answers(&|_, _| Ok(()));
+        }),
+        VmsMock::stop.some_call(matching!(_)).returns(Ok(())),
+        CacheMock::release.some_call(matching!(_)).returns(Ok(())),
+        VmsMock::start.some_call(matching!(_, _)).returns(Ok(())),
+    ));
+    let agent = controller(MachineState::default(), mock);
+    assert_eq!(
+        agent
+            .start(spec())
+            .await
+            .map_err(|error| matches!(error, crate::error::Error::CacheUnavailable)),
+        Err(true)
+    );
+    assert_eq!(agent.state.lock().await.runners, Vec::<VmRecord>::new());
+    agent.start(spec()).await.unwrap();
+    assert_eq!(agent.state.lock().await.runners.len(), 1);
 }

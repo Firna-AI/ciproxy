@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::cache::DockerBudget;
 use crate::identifiers::{CommandId, JobId, MachineId, OrganizationId, RunnerId, WorkspaceId};
 use crate::images::ImageDownload;
 use crate::jobs::JobFacts;
@@ -73,6 +74,13 @@ pub enum AgentMessage {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ControlMessage {
+    /// Set spare job disk available for bounded sticky Docker attachments.
+    DockerBudget {
+        /// Correlate the durable machine policy update.
+        command_id: CommandId,
+        /// Image-bound capacity, or no grant until local metadata is known.
+        budget: Option<DockerBudget>,
+    },
     /// Return the identity and credential of a newly registered machine.
     Registered {
         /// Workspace that owns the registered machine and its credential.

@@ -54,7 +54,9 @@ It applies no invoice, minute, or display rounding.
 Missing monthly price history produces a CostGap.
 Other known costs remain visible when a gap prevents a savings figure.
 
-Anonymous daily totals retain actual VM sizes and Boat costs.
+Anonymous daily totals retain byte-precise actual VM sizes and Boat costs.
+The same protocol resource type serves runner facts, cursors, and totals.
+No integer-GB conversion rounds an actual root allocation.
 Anonymous timestamp counts preserve exact billing-period boundaries.
 These aggregates retain no job or organization identifier.
 Accounting cursors retain job and runner references only until deletion.

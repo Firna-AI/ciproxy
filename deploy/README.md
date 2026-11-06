@@ -11,9 +11,9 @@ enforce, audit, and warn at the Baseline PodSecurity level. Only the
 operator Namespace manifest manages these labels. Central Terraform
 ownership does not combine their data or routing.
 
-The control-plane runtime stays disabled until a real HTTP image exists.
-The current binary is a CLI skeleton. The release server and static exports
-can deploy independently.
+The control-plane runtime stays disabled until [runtime setup](runtime.md)
+supplies its image, settings, and secret versions. The release server and
+static exports can deploy independently.
 
 - [Setup](setup.md) gives the first operator steps.
 - [First deploy](first-deploy.md) gives CI data creation, the expected token
@@ -25,10 +25,10 @@ can deploy independently.
 
 ## Environments
 
-| Environment | Namespace | Hosts | Deploys on |
-| --- | --- | --- | --- |
+| Environment    | Namespace              | Hosts                                                                                               | Deploys on                                                 |
+| -------------- | ---------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
 | `main-preview` | `ciproxy-main-preview` | `br-main.preview.ciproxy.dev`, `br-main.preview.app.ciproxy.dev`, `br-main.preview.get.ciproxy.dev` | Each push to `calummoore/ci-proxy-load-balancer` or `main` |
-| `production` | `ciproxy-production` | `ciproxy.dev`, `app.ciproxy.dev`, `get.ciproxy.dev` | Successful preview of the same `main` commit, after launch |
+| `production`   | `ciproxy-production`   | `ciproxy.dev`, `app.ciproxy.dev`, `get.ciproxy.dev`                                                 | Successful preview of the same `main` commit, after launch |
 
 Project `ciproxy` keeps domain-restricted sharing through the managed rule
 `iam.managed.allowedPolicyMembers`, in place of the legacy rule. It allows the
@@ -44,13 +44,13 @@ owns only `app.ciproxy.dev` and `get.ciproxy.dev`, including their preview
 child delegations. The operator adds a DNS-only apex A record to the
 production edge IP. See [DNS setup](dns.md).
 
-| Host and path | Backend |
-| --- | --- |
-| Site host | Uncached HTML/docs and cached assets from one private site origin. Docs use `/docs`. |
-| Dashboard host | Uncached HTML and cached assets from one private dashboard origin. |
-| Dashboard `/api`, `/agent`, `/hooks` | Control plane. These paths fail while its runtime is off. |
-| Dashboard `/images` | Private image bucket through signed Cloud CDN URLs. |
-| Download host | The `futex-ai/cli-release` server. |
+| Host and path                        | Backend                                                                              |
+| ------------------------------------ | ------------------------------------------------------------------------------------ |
+| Site host                            | Uncached HTML/docs and cached assets from one private site origin. Docs use `/docs`. |
+| Dashboard host                       | Uncached HTML and cached assets from one private dashboard origin.                   |
+| Dashboard `/api`, `/agent`, `/hooks` | Control plane. These paths fail while its runtime is off.                            |
+| Dashboard `/images`                  | Private image bucket through signed Cloud CDN URLs.                                  |
+| Download host                        | The `futex-ai/cli-release` server.                                                   |
 
 Each static origin has separate HTML, mutable, and immutable wrappers. Private
 asset caching requires `FORCE_CACHE_ALL`; object metadata alone does not
@@ -103,34 +103,34 @@ writes. The operator drains preview before the launch handoff.
 
 ## Layout
 
-| Path | Responsibility |
-| --- | --- |
-| `terraform/seed/` | Four state buckets and trust APIs. Operator first, then main-only trust apply. |
-| `terraform/bootstrap/` | Accounts, federation, IAM, launch phase, and edge tags. Operator first, then main-only trust apply. |
-| `terraform/shared/` | Operator-first network, NAT, cluster, registry, and phase-selected UID runtime federation from protected trust state. |
-| `terraform/data/` | Separate central instances for environment SQL, KMS, secrets, buckets, and zones. |
-| `terraform/edge/` | Separate central edge instances with certificates, CDN, DNS, alert channels, and uptime checks. |
-| `environments/<env>/` | The completed workload snapshot for one environment. |
-| `terraform/modules/` | Environment data resources and edge resources. |
-| `helm/` | The release server and control-plane charts. |
-| `scripts/bootstrap.sh` | Operator seed, remote state preparation, and trust setup. |
-| `scripts/namespace_access.py` | Operator namespace, RoleBinding, and network policy setup. |
-| `scripts/shared_routing.py`, `scripts/ci_roots.py` | GCP launch checks and executable CI root selection. |
-| `scripts/terraform.py`, `scripts/terraform_roots.py` | Saved-plan promotion and shared root/backend metadata. |
-| `scripts/terraform_policy.py` | Exact destructive approval checks. |
-| `scripts/workload_snapshot.py` | Inputs from a ready rollout, bound to its commit and run attempt. |
-| `scripts/deploy.py` | Own-namespace Helm, static publishing, NEG readiness, and CDN invalidation. |
-| `scripts/github-ruleset.sh` | Idempotent protected `main` ruleset setup. |
-| `org-policies/` | The managed sharing rule of project `ciproxy`, applied once by an operator. |
-| `tests/` | Executable CI tests and recorded plan-policy cases. |
-| `.github/workflows/deploy-*.yml` | Trusted event, plan, reusable apply, and workload ordering. |
+| Path                                                 | Responsibility                                                                                                        |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `terraform/seed/`                                    | Four state buckets and trust APIs. Operator first, then main-only trust apply.                                        |
+| `terraform/bootstrap/`                               | Accounts, federation, IAM, launch phase, and edge tags. Operator first, then main-only trust apply.                   |
+| `terraform/shared/`                                  | Operator-first network, NAT, cluster, registry, and phase-selected UID runtime federation from protected trust state. |
+| `terraform/data/`                                    | Separate central instances for environment SQL, KMS, secrets, buckets, and zones.                                     |
+| `terraform/edge/`                                    | Separate central edge instances with certificates, CDN, DNS, alert channels, and uptime checks.                       |
+| `environments/<env>/`                                | The completed workload snapshot for one environment.                                                                  |
+| `terraform/modules/`                                 | Environment data resources and edge resources.                                                                        |
+| `helm/`                                              | The release server and control-plane charts.                                                                          |
+| `scripts/bootstrap.sh`                               | Operator seed, remote state preparation, and trust setup.                                                             |
+| `scripts/namespace_access.py`                        | Operator namespace, RoleBinding, and network policy setup.                                                            |
+| `scripts/shared_routing.py`, `scripts/ci_roots.py`   | GCP launch checks and executable CI root selection.                                                                   |
+| `scripts/terraform.py`, `scripts/terraform_roots.py` | Saved-plan promotion and shared root/backend metadata.                                                                |
+| `scripts/terraform_policy.py`                        | Exact destructive approval checks.                                                                                    |
+| `scripts/workload_snapshot.py`                       | Inputs from a ready rollout, bound to its commit and run attempt.                                                     |
+| `scripts/deploy.py`                                  | Own-namespace Helm, static publishing, NEG readiness, and CDN invalidation.                                           |
+| `scripts/github-ruleset.sh`                          | Idempotent protected `main` ruleset setup.                                                                            |
+| `org-policies/`                                      | The managed sharing rule of project `ciproxy`, applied once by an operator.                                           |
+| `tests/`                                             | Executable CI tests and recorded plan-policy cases.                                                                   |
+| `.github/workflows/deploy-*.yml`                     | Trusted event, plan, reusable apply, and workload ordering.                                                           |
 
-| State bucket | Prefixes |
-| --- | --- |
-| `ciproxy-trust-tfstate-ciproxy` | `trust/seed`, `trust/bootstrap` |
-| `ciproxy-shared-tfstate-ciproxy` | `shared/shared` |
+| State bucket                           | Prefixes                                                            |
+| -------------------------------------- | ------------------------------------------------------------------- |
+| `ciproxy-trust-tfstate-ciproxy`        | `trust/seed`, `trust/bootstrap`                                     |
+| `ciproxy-shared-tfstate-ciproxy`       | `shared/shared`                                                     |
 | `ciproxy-main-preview-tfstate-ciproxy` | `main-preview/data`, `main-preview/edge`, `main-preview/foundation` |
-| `ciproxy-production-tfstate-ciproxy` | `production/data`, `production/edge`, `production/foundation` |
+| `ciproxy-production-tfstate-ciproxy`   | `production/data`, `production/edge`, `production/foundation`       |
 
 ## Offline checks
 
@@ -173,7 +173,8 @@ python3 deploy/scripts/namespace_access.py main-preview --render
 The default chart render has no control plane. The enabled render selects
 CDN secret version 1 and uses the operator-owned `control-plane` account.
 Build both exports before the inventory routing test. It reads their actual
-paths and the mocked Terraform URL map. The namespace command prints manifests only.
+paths and the mocked Terraform URL map. The namespace command prints
+manifests only.
 Static publishing also supports a local smoke check:
 
 ```sh

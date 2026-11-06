@@ -88,6 +88,16 @@ remain unique.
 Scale-set bindings retain a separate remote cleanup confirmation. Label
 retirement and confirmed removal preserve the binding and its job references.
 
+Own-machine command records retain delivery identity, exact slot indices,
+and byte-precise requested and actual VM dimensions.
+They contain no JIT configuration or runtime-token secret.
+Workspace execution leases have their own negative advisory-key range.
+
+The exact-resource migration keeps actual VM allocations in integer bytes.
+Its rollback works only when every value fits exactly in signed integer GB.
+It refuses an unsupported rollback before it changes tables or values.
+Keep the exact-resource schema when a released root needs fractional GB.
+
 ## Quick Start
 
 Use the migration constant through Diesel's migration harness:
@@ -126,6 +136,7 @@ Each migration has an up.sql and a down.sql.
 ### Key Code
 
 - [src/dashboard.rs](src/dashboard.rs) defines dashboard authentication tables.
+- [src/own_runners.rs](src/own_runners.rs) defines execution command state.
 
 - [src/billing.rs](src/billing.rs) defines billing accounts and event receipts.
 

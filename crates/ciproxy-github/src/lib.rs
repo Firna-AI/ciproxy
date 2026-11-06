@@ -10,9 +10,11 @@ pub mod hooks;
 pub mod installation_state;
 pub mod listener;
 pub mod persistence;
+pub mod redelivery;
 pub mod registrations;
 pub mod rest;
 pub mod runtime;
+pub mod timing;
 
 pub mod scale_sets;
 #[cfg(test)]

@@ -25,6 +25,12 @@ struct PausedVms {
 
 #[async_trait]
 impl Vms for PausedVms {
+    async fn clear_docker(&self, vm: &VmRecord) -> Result<()> {
+        self.delegate.clear_docker(vm).await
+    }
+    async fn swap_docker(&self, vm: &VmRecord) -> Result<()> {
+        self.delegate.swap_docker(vm).await
+    }
     fn allocate(&self, report: RunnerReport, used: &[VmRecord]) -> Result<VmRecord> {
         self.delegate.allocate(report, used)
     }
@@ -57,6 +63,8 @@ async fn hardware_reports_continue_while_vm_startup_is_pending() {
             .some_call(matching!(_, _))
             .answers(&|_, report, _| {
                 Ok(VmRecord {
+                    cache_permissions: None,
+                    job_facts: None,
                     report,
                     ..vm("runner-1", false)
                 })

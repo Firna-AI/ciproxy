@@ -178,8 +178,14 @@ impl MachineGateway for Gateway {
         machine_id: Uuid,
         action: MachineAction,
     ) -> Result<Delivery> {
-        let _operation = self.operation()?;
-        self.manage_machine(principal, workspace_id, machine_id, action)
+        let delivery = {
+            let _operation = self.operation()?;
+            self.manage_machine(principal, workspace_id, machine_id, action)?
+        };
+        if action == MachineAction::Remove {
+            self.events.machine_removed(workspace_id, machine_id)?;
+        }
+        Ok(delivery)
     }
 
     fn send(
@@ -191,6 +197,7 @@ impl MachineGateway for Gateway {
         let _operation = self.operation()?;
         match &message {
             ControlMessage::StartRunner { .. }
+            | ControlMessage::DockerBudget { .. }
             | ControlMessage::StopRunner { .. }
             | ControlMessage::JobFacts { .. }
             | ControlMessage::FetchImage { .. } => (),

@@ -2,6 +2,7 @@
 
 mod adapter;
 mod aggregates;
+mod aliases;
 mod boat_cursors;
 mod facts;
 mod history;

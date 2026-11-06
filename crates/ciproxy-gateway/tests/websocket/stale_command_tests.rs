@@ -66,6 +66,7 @@ async fn closes_stale_socket_before_a_queued_runner_start_can_reach_it() {
     let command = ControlMessage::StartRunner {
         command_id: CommandId("stale-start".into()),
         runner: RunnerSpec {
+            slot_indices: Vec::new(),
             runner_id: RunnerId("stale-runner".into()),
             organization_id: OrganizationId("org-1".into()),
             label: LabelName("ciproxy".into()),

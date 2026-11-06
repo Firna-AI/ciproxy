@@ -1,8 +1,8 @@
 //! Dated per-minute price catalogs with explicit incomplete comparisons.
 
 use chrono::NaiveDate;
+use ciproxy_protocol::resources::VmSize;
 use ciproxy_store_interface::metering::totals::DailyTotal;
-use ciproxy_store_interface::vm_size::VmSize;
 use rust_decimal::Decimal;
 
 /// An alternative to ciproxy.
@@ -74,7 +74,11 @@ pub fn match_price(list: &PriceList, size: VmSize) -> PriceMatch {
     let fitting: Vec<_> = list
         .sizes
         .iter()
-        .filter(|price| price.vcpus >= size.vcpus && price.memory_gb >= size.memory_gb)
+        .filter(|price| {
+            u32::try_from(price.vcpus).is_ok_and(|vcpu| vcpu >= size.vcpu)
+                && u64::try_from(price.memory_gb)
+                    .is_ok_and(|memory| memory.saturating_mul(1_000_000_000) >= size.memory_bytes)
+        })
         .collect();
     let smallest: Vec<_> = fitting
         .iter()

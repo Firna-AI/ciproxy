@@ -40,7 +40,7 @@ impl PendingImage {
     }
 
     pub(crate) fn archive(&self) -> PathBuf {
-        self.directory.join("image.tar.gz")
+        self.directory.join("image.tar.zst")
     }
 }
 

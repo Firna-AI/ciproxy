@@ -9,7 +9,7 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::boundaries::Vms;
-use crate::error::{Error, Result};
+use crate::error::{Error, ErrorResultExt, Result};
 use crate::host_tools::Tools;
 use crate::layout::{Layout, jail_uid, unit_name};
 use crate::network::{Network, network_name};
@@ -30,11 +30,20 @@ pub(crate) struct LinuxVms {
 
 #[async_trait]
 impl Vms for LinuxVms {
+    async fn clear_docker(&self, vm: &VmRecord) -> Result<()> {
+        self.switch_docker(vm, "/docker-slot").await
+    }
+    async fn swap_docker(&self, vm: &VmRecord) -> Result<()> {
+        self.switch_docker(vm, "/docker-job.ext4").await
+    }
     fn allocate(&self, report: RunnerReport, used: &[VmRecord]) -> Result<VmRecord> {
         let network_index = (1..16_383)
             .find(|index| !used.iter().any(|vm| vm.network_index == *index))
             .ok_or(Error::Capacity)?;
         Ok(VmRecord {
+            preparation: crate::state::PreparationState::Waiting,
+            cache_permissions: None,
+            job_facts: None,
             local_id: Uuid::new_v4().simple().to_string(),
             network_index,
             report,
@@ -116,7 +125,8 @@ impl LinuxVms {
             "--",
             "--config-file",
             "/config.json",
-            "--no-api",
+            "--api-sock",
+            "/api.sock",
         ])
     }
 }
@@ -124,3 +134,23 @@ impl LinuxVms {
 #[cfg(test)]
 #[path = "_tests_/vms_tests.rs"]
 mod vms_tests;
+
+impl LinuxVms {
+    async fn switch_docker(&self, vm: &VmRecord, path: &str) -> Result<()> {
+        let client = reqwest::Client::builder()
+            .unix_socket(self.layout.jail_root(vm).join("api.sock"))
+            .timeout(std::time::Duration::from_secs(10))
+            .build()
+            .context("connect jailed VMM API")?;
+        let response = client
+            .patch("http://localhost/drives/docker")
+            .json(&serde_json::json!({"drive_id":"docker","path_on_host":path}))
+            .send()
+            .await
+            .context("switch checked Docker drive")?;
+        if !response.status().is_success() {
+            return Err(Error::GuestMismatch);
+        }
+        Ok(())
+    }
+}

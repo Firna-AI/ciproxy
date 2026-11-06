@@ -1,6 +1,10 @@
 //! The runner's literal JSON and transfer calls through the public proxy.
 
+use std::sync::Arc;
+
+use ciproxy_cache_sidecar::proxy::ProxyControl;
 use ciproxy_protocol::jobs::JobScope;
+use ciproxy_protocol::runtime::CacheRegistration;
 use ciproxy_protocol::secret::Secret;
 use reqwest::Client;
 use serde_json::{Value, json};
@@ -14,6 +18,8 @@ pub struct Job {
     pub token: Secret,
     pub github_token: Secret,
     pub scope: JobScope,
+    pub registration: CacheRegistration,
+    pub proxy: Arc<dyn ProxyControl>,
     pub task: JoinHandle<()>,
 }
 

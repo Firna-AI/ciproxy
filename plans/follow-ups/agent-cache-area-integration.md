@@ -1,97 +1,220 @@
-# Cache storage and control need integration
+# Own-machine cache and Docker need live proof
 
 - **Severity:** Medium. **Effort:** Medium. **Confidence:** High.
   **Harder later:** No.
 - **Kind:** Post-merge task.
 - **Added:** 2026-11-05, from
-  `conductor/ciproxy-mvp-milestone-9-agent`, host storage checks.
-- **Location:** `crates/ciproxy-agent/src/cache.rs`,
-  `crates/ciproxy-agent/src/launches.rs`,
-  `crates/ciproxy-cache-sidecar/src/cli.rs`,
-  `crates/ciproxy-cache-sidecar/src/session.rs`, guest startup, and runtime
-  composition.
-- **Reason:** The host task prepares the data path, but complete cache
-  wiring crosses the agent, sidecar, guest, and runtime boundaries.
+  `conductor/ciproxy-mvp-milestone-9-agent`, host storage checks. Updated
+  2026-11-06 from `conductor/ciproxy-mvp-milestone-13-e2e`, after its cache
+  and Docker integration code.
+- **Location:** `crates/ciproxy-agent/scripts/smoke-own-machines.py`,
+  `crates/ciproxy-agent/scripts/own_cache.py`,
+  `crates/ciproxy-agent/scripts/own_docker.py`,
+  `crates/ciproxy-agent/scripts/smoke-host.sh`,
+  `crates/ciproxy-agent/src/cache.rs`,
+  `crates/ciproxy-agent/src/cache_service.rs`,
+  `crates/ciproxy-agent/src/docker.rs`,
+  `crates/ciproxy-guest/src/handoff.rs`, and `image/docker-attach.sh`.
+- **Reason:** The live checks need the merged change on the main preview
+  control plane, a fresh disposable KVM host, and private credential files.
 
 - **Terms:**
   - **Area:** The agent's mounted XFS filesystem at
     `/var/lib/ciproxy/area`.
-  - **Machine cache:** The persistent cache service for jobs on one
-    customer machine.
-  - **Budget acknowledgement:** Confirmation that the cache reclaimed
-    enough space before a VM starts.
-- **Background:** Host preparation creates `/var/lib/ciproxy/area/cache`.
-  The agent currently expects newline JSON at
-  `/run/ciproxy-cache/control.sock`. The merged sidecar instead exposes
-  authenticated HTTP administration and trusted runtime-session
-  registration. Its data location comes from `--cache-dir`. Creating the
-  directory alone does not start or configure that service.
-- **Task:** Wire the machine service to the prepared cache directory and
-  persistent area dependency. Align its control interface with the agent.
-  Supply trusted job facts, runtime credentials, and permissions through
-  the guest/runtime integration. Use the machine service's existing token
-  verification outside the VM. It checks signature, issuer, validity,
-  repository, run, runner, and optional job identity. Use its returned
-  checked scope for Docker persistence. Only the first job with the exact
-  default ref, a trusted event, and no foreign head keeps its changes.
-  Other jobs and unknown jobs get disposable copies. Keep administration
-  credentials outside job VMs. Revoke sessions when jobs finish.
-  Coordinate cache shutdown and file-handle closure before area unmount.
-- **Impact if no action:** The agent falls back to direct GitHub caching
-  and reports no local cache use. A separately configured cache can store
-  data outside the area. If cache reclaim fails after it held space,
-  `launches.rs` currently warns and starts the VM anyway. Occupied cache
-  bytes can then block the disk promised to that VM.
-- **Needs:** An integration owner that can change the agent, sidecar,
-  guest, image startup, and public protocol when necessary. Follow
-  `docs/protocol/cache.md` and the sidecar README's Agent integration
-  section. The cache uses the job disk that no VM holds, as "Disk" in
-  `docs/protocol/job-routing.md` says. The images use a separate budget in
-  the area, which the orchestrator chose on 5 November 2026. That budget
-  waits for no answer. The
-  [project quota item](agent-xfs-image-project-quota.md) asks only whether
-  the kernel also enforces it. Such a quota does not reclaim cache space.
-  The user chose signed token verification and fail-closed unknown
-  scopes on 5 November 2026. Unknown jobs restore default-branch local
-  entries, use GitHub for other restores, save privately, and receive a
-  disposable Docker copy. This policy is settled.
-- **Done when:** The service uses the area's cache directory. Its budget
-  acknowledgement follows actual reclaim. On service failure, an owned
-  cleanup path releases occupied space before VM use and preserves the
-  required GitHub fallback. Removal closes cache handles before unmount.
-  Real jobs prove cache use, scope isolation, fallback, and data placement.
-  Failure-and-retry tests cover budget acknowledgement failure. The
-  public agent still depends on no workspace crate except protocol.
+  - **Machine cache:** `ciproxy-cache.service`, the host service that keeps
+    the cache entries of the jobs on one customer machine.
+  - **Budget acknowledgement:** The HTTP 204 answer of the machine cache to
+    `PUT /budget`. It confirms the smaller budget before a VM starts.
+  - **Docker lease:** The agent's durable record of the bytes that the
+    Docker disk or disposable copy of one job reserves.
+  - **Live check:** A run on a real KVM host with real GitHub Actions jobs.
+    A `SKIP` result is not a live check.
+- **Background:** The cache and Docker integration is implemented in code.
+  No live check of it has run. The implementation environment had no KVM
+  device, and its smoke command exited 77 before it read credentials.
+  The code does these things:
+  - The source-built runner Worker hook,
+    `image/runner-patch/CiproxyAssignment.cs`, pauses before action setup.
+    It sends the original `ACTIONS_RUNTIME_TOKEN`, cache URL, results URL,
+    and effective cache permissions to the guest over
+    `/run/ciproxy/assignment.sock`.
+  - The guest adds the Docker bridge proxy URL and the preloaded Docker
+    bytes. It sends `GuestToAgent::JobStarting` to the agent over vsock.
+    The agent answers with `AgentToGuest::PrepareJob`. The guest answers
+    with `GuestToAgent::JobPrepared` after its proxy binds. Then action
+    setup continues. `crates/ciproxy-protocol/src/guest.rs` defines these
+    messages.
+  - These credentials stay in memory. They never enter hosted messages,
+    logs, or durable agent state. The control plane gets only the runner
+    and job IDs.
+  - The agent calls the authenticated HTTP administration of the machine
+    cache on `127.0.0.1:8229`. It reads the token file
+    `/var/lib/ciproxy/cache-admin-token`. The old newline JSON socket is
+    gone.
+  - Agent install writes `ciproxy-cache.service`. The unit requires
+    `var-lib-ciproxy-area.mount` and uses `/var/lib/ciproxy/area/cache`.
+    VMs reach only its job listener, on TCP port 7887.
+  - Each job gets its own session token and checked scope from
+    `POST /sessions`. Recovery reuses a live session only for the exact
+    registration. Close and fallback match the complete trusted
+    assignment: organization, repository, run, job, and runner.
+  - Before a VM starts, the agent sends the smaller cache budget. When
+    administration fails, the agent stops the service, runs
+    `ciproxy-cache-sidecar reclaim` on the cache directory, and starts the
+    service again. When that release fails, the agent retires the new VM.
+    Admission then waits for repair.
+  - A failed fallback or revoke call stops the service. This invalidates
+    its sessions.
+  - The hosted runtime sends each machine its Docker spare disk: the job
+    disk that no set of feasible roots can use. The agent grants a Docker
+    lease only from that spare disk. Active leases reduce root admission.
+    A job without room keeps Docker on its root disk.
+  - Only the first trusted default-branch writer of a repository keeps its
+    Docker changes. Every other job gets a disposable disk. The guest
+    mounts the disk with `image/docker-attach.sh` and checks its free bytes
+    before Docker starts again.
+  - Agent, guest, and cache tests cover these paths with mocks, local
+    files, and local HTTP. They use no KVM host.
+  - These decisions are settled. On 5 November 2026, the user chose signed
+    token verification and fail-closed unknown scopes. An unknown job
+    restores default-branch local entries, uses GitHub for other restores,
+    saves privately, and gets a disposable Docker copy. Also on 5 November
+    2026, the user chose that a Docker disk reserves its data plus the
+    free disk of its label, only from spare disk. The images keep their
+    own budget in the area, as the orchestrator chose on 5 November 2026.
+- **Task:** Run each live requirement below on a fresh disposable KVM host
+  against the main preview. Write a repeatable check for each requirement
+  that has no script yet. Give each defect that a check finds its own fix
+  or follow-up item.
+  1. Actual KVM jobs: every scenario below runs real GitHub Actions jobs
+     in Firecracker VMs on the registered machine.
+  2. Cache hit: the `cache` scenario runs two jobs with the same key in two
+     fresh VMs. `GET /report` must show the second job as
+     `machine_handled` with at least one local entry.
+  3. Scope isolation: the `cache_isolation` scenario saves a private entry
+     on a non-default branch. A job of a second allowed repository and a
+     job of another non-default branch must both miss it.
+  4. Fallback: the `cache_fallback` scenario masks `ciproxy-cache.service`.
+     The next job must restore the entry from GitHub and succeed. The
+     script unmasks and starts the unit again in a `finally` block.
+  5. Docker attach and space: the `sticky_docker` scenario needs a writer
+     lease for the first default-branch job and the same image in the next
+     fresh VM. It needs a disposable lease for `sticky_copy_ref`, and a
+     later writer must keep the original image. Each attached disk length
+     must equal its leased bytes. The `docker_no_fit` scenario needs zero
+     spare disk, no lease, and a successful Docker job on the root disk.
+     Both scenarios wait for the agent's `job_prepared_observed` journal
+     event, which proves the preparation acknowledgement in a real VM.
+  6. Data placement: `sticky_docker` reads its leases and disks inside the
+     area. No script checks cache entries yet. Show that the cache entries
+     go to `/var/lib/ciproxy/area/cache` on the area mount. Show that no
+     cache data goes to the root filesystem outside the area.
+  7. Budget failure recovery: no script checks it yet. Make the budget
+     acknowledgement fail while cache files hold space. Show that the agent
+     stops the service, reclaims the files, starts the service again, and
+     starts the VM with its promised free disk. Show that the job uses
+     GitHub or sees a miss. Show that a failed reclaim retires the start
+     and blocks admission until repair.
+  8. Service restart: no script checks it yet. The `restart` scenario
+     restarts the agent, not the machine cache. Restart
+     `ciproxy-cache.service` during a running cache job. Show that the job
+     succeeds and that the next job gets a machine-cache hit again. Show
+     that the report hides the counts of the interrupted job and keeps the
+     seven-day hit counts.
+  9. File closure before unmount: no script checks it yet.
+     `smoke-host.sh` proves that uninstall removes the area, its record,
+     its mount unit, and the mount. It does not prove the stop order with
+     an active machine cache. Run uninstall while the service is active
+     and holds entries. Show from the journal that the service stopped
+     before the area mount. Show that uninstall then removed the area.
+- **Impact if no action:** The tests use mocks and local files. A real host
+  can still break the systemd stop order, the guest drive switch and
+  mount, the filesystem growth, the Docker restart, or the proxy readiness.
+  The machine cache falls back to GitHub by design. So a broken machine
+  cache can look like a normal cache miss, and customers lose the local
+  cache without a visible error. An unproved scope boundary can let one
+  branch or repository restore a private entry of another. An unproved
+  budget recovery can start a VM without its promised free disk.
+- **Needs:**
+  - The merged change on the main preview, with the runtime turned on. The
+    deploy workflow runs for each push to
+    `calummoore/ci-proxy-load-balancer` and `main`. The pinned image
+    release must include the guest program, the runner hook, and Docker.
+  - Matching verified `ciproxy-agent` and `ciproxy-cache-sidecar` archives
+    at `CIPROXY_RELEASE_SERVER_URL`, because install fetches both.
+    `crates/ciproxy-agent/scripts/prepare-smoke-release.py` makes a draft
+    GitHub release from them. Add `--publish` only to release them.
+  - A fresh disposable x64 host with root, a usable `/dev/kvm`, systemd,
+    cgroup v2, journalctl, `gh`, `jq`, `rg`, and Python 3. Reuse no agent
+    state, image index, or VM record of an older installation.
+  - Private files outside the repository. Each environment variable below
+    holds a file path, never a credential:
+    - `CIPROXY_OWN_SMOKE_INPUT` names the operator settings JSON. These
+      scenarios need `public_url`, `workspace_id`, `machine_id`,
+      `repository`, `ref`, `workflow`, `cache_isolation_repository`,
+      `cache_writer_ref`, `cache_reader_ref`, `sticky_tier_ready`,
+      `sticky_copy_ref`, and `docker_no_fit_ready`.
+      `crates/ciproxy-agent/smoke-checks.md` gives the complete schema.
+    - `CIPROXY_SMOKE_CREDENTIALS` names a JSON file with `github_token`
+      and `session_cookie`, the private `__Host-ciproxy` dashboard value.
+      `smoke-host.sh` also reads `install_token` from it.
+      `prepare-smoke-release.py` reads `github_token` from it.
+    - `CIPROXY_CACHE_ADMIN_TOKEN_FILE` names
+      `/var/lib/ciproxy/cache-admin-token`, which agent install creates.
+      The `cache` scenario reads it for `GET /report`.
+  - The private allowed repository, a second allowed private repository,
+    and a disallowed private repository. Each has
+    `crates/ciproxy-agent/scripts/github-smoke-workflow.yml` as
+    `.github/workflows/ciproxy-agent-smoke.yml`. Add two non-default
+    branches for the cache writer and reader, and a non-default
+    `sticky_copy_ref` branch, with the same workflow.
+  - A workspace on Team or Business for `sticky_docker`. A separate
+    disk-limited machine with zero spare disk for `docker_no_fit`.
+  - Run the scripted checks as root from the repository root:
 
-## Missing own-machine handoff
+    ```sh
+    export CIPROXY_OWN_SMOKE_INPUT=/private/own-smoke-input.json
+    export CIPROXY_SMOKE_CREDENTIALS=/private/own-smoke-credentials.json
+    export CIPROXY_CACHE_ADMIN_TOKEN_FILE=/var/lib/ciproxy/cache-admin-token
+    for scenario in cache cache_isolation cache_fallback sticky_docker; do
+      python3 crates/ciproxy-agent/scripts/smoke-own-machines.py \
+        --scenario "$scenario"
+    done
+    python3 crates/ciproxy-agent/scripts/smoke-own-machines.py \
+      --scenario docker_no_fit
+    ```
 
-`crates/ciproxy-protocol/src/guest.rs` sends only runner and job IDs in
-`GuestToAgent::JobStarted`. It carries no original `ACTIONS_RUNTIME_TOKEN`
-or original cache and results URLs. `RunnerSpec` also carries no effective
-cache permissions. The guest emits Ready and Exited only. It has no
-trusted job-start pause, credential handoff, or readiness acknowledgement.
-A shell hook does not receive the original runner runtime credentials.
-Reading job-controlled environment values would break the trust boundary.
+    Run `docker_no_fit` on the disk-limited machine. Run the install,
+    repair, and uninstall smoke on a host with `/var/lib` on ext4:
 
-The machine service's authenticated `POST /sessions` requires those
-credentials and URLs with trusted assignment facts, effective permissions,
-and the VM's proxy URL. It returns a session token and checked or unknown
-scope. The agent must never invent these inputs or send the runtime token
-to the control plane. It must keep them out of logs and persistent state.
+    ```sh
+    export CIPROXY_SMOKE_REPO=owner/private-agent-smoke
+    export CIPROXY_SMOKE_REF=main
+    export CIPROXY_AGENT_URL=wss://PREVIEW_HOST/agent/
+    export CIPROXY_SMOKE_CREDENTIALS=/private/own-smoke-credentials.json
+    export CIPROXY_SMOKE_BINARY=target/debug/ciproxy-agent
+    export CIPROXY_SMOKE_INTEGRATION_READY=1
+    bash crates/ciproxy-agent/scripts/smoke-host.sh
+    ```
 
-The agent starts Firecracker with `--no-api` and two fixed drives. It has
-no safe job-start drive switch or persistent repository Docker store.
-`AgentToGuest::DockerDisk` names an attachment but supplies no preparation
-or attach acknowledgement. The guest currently ignores that message.
-Choosing a persistent backing file after GitHub assigns a warm runner
-therefore also needs coordinated guest and VMM work before action steps.
-
-Extend or supply the shared handoff through
-`crates/ciproxy-protocol/src/guest.rs`,
-`crates/ciproxy-protocol/src/runners.rs`,
-`crates/ciproxy-guest/src/boundary.rs`,
-`crates/ciproxy-guest/src/service.rs`, and `image/runner-patch` with their
-owners before claiming own-machine cache registration or checked-scope
-Docker persistence. Those sources are outside the agent workspace's
-assigned file scope. No change to those sources was made by the
-host-preparation implementation.
+  - Each script exits 0 on success, 77 with `SKIP` for a missing
+    prerequisite, and 1 on a failure. Evidence goes under
+    `.context/ciproxy-mvp/own-smoke-*` and
+    `.context/ciproxy-mvp/host-smoke-*`. It holds run IDs, job UUIDs, VM
+    IDs, and counts, but no token or cookie.
+- **Done when:**
+  - Each of the nine live requirements has a passing live check on a fresh
+    disposable KVM host against the main preview.
+  - Each requirement that had no script has a repeatable check under
+    `crates/ciproxy-agent/scripts/`, described in
+    `crates/ciproxy-agent/smoke-checks.md`.
+  - The saved evidence holds no token, cookie, or other credential.
+  - Each fix keeps `ciproxy-agent` free of workspace crates other than
+    `ciproxy-protocol`.
+- **Related:**
+  - [Image project quota](agent-xfs-image-project-quota.md) asks only
+    whether the kernel also enforces the image budget. Such a quota does
+    not reclaim cache space. This task does not wait for that answer.
+  - [Interrupted uninstall](agent-interrupted-install-uninstall.md) fixes
+    uninstall of an incomplete installation. Both use guarded area
+    removal. The unmount check of this task uses a complete installation.

@@ -150,9 +150,9 @@ runs on own machines.
   boot. It keeps the base image unchanged.
 - The actual total allocation must hold the image. An insufficient total
   keeps the existing capacity error.
-- Docker shares the root disk's free space and its cached Docker images.
-- A separate sticky [Docker disk](cache.md#docker-disks) attaches only under
-  the cache rules.
+- Docker shares the root disk's free space and its cached Docker images,
+  unless a sticky [Docker disk](cache.md#docker-disks) attaches under the
+  cache rules. Docker then keeps its data on that disk.
 - **Decision:** each job runs in a fresh VM. Rejected: a VM that runs
   several jobs, because a job must not read the secrets or the files of
   another job.
@@ -232,12 +232,24 @@ runs on own machines.
 - "Remove" revokes the machine credential at once.
 - A removed machine leaves the Machines page and the machine count at once.
 - A removed machine takes no new job, and its warm runners stop at once.
-- The agent of a removed machine lets its running jobs finish, then stops
-  its job VMs and stops.
 - "Remove" takes effect at once, also for an offline machine.
 - [The last organization](app-removal.md#the-last-organization-of-a-workspace)
   says what happens to the machines of a workspace when its last
   organization removes the GitHub App.
+- In a job VM, the guest is the ciproxy program that supervises the runner.
+- The runner hands its job to the guest just before the first step.
+- "Remove", uninstall, and the App removal of the last organization stop
+  warm runners at once.
+- A warm runner can take a job just before such a stop.
+- That job can fail when the runner has not handed it to the guest yet.
+- Each job that the guest received finishes. The agent of a removed machine
+  then stops its job VMs and stops.
+- **Decision:** these stops act at once, also when a job can then fail.
+  Reason: the owner wants no extra mechanism, and accepts that a removal
+  can fail a job. Rejected: a stop after GitHub removes the runner, a drain
+  before "Remove", and a runner that finishes a taken job at a stop.
+- A drain and each other stop end the job VM of a warm runner only after
+  GitHub removes the runner. A runner that GitHub reports as busy keeps its job.
 
 ## Related docs
 

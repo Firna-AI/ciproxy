@@ -2,7 +2,9 @@
 
 use std::collections::BTreeMap;
 
-use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
+use crate::exact_size::convert;
+use chrono::{DateTime, NaiveDate, NaiveTime, SecondsFormat, Utc};
+use ciproxy_protocol::resources::VmSize;
 use ciproxy_schema::metering::{
     metering_daily_boat_costs, metering_daily_sizes, metering_start_totals,
 };
@@ -10,7 +12,6 @@ use ciproxy_schema::workspaces::workspaces;
 use ciproxy_store_interface::metering::totals::{
     DailyDelta, DailyTotal, LocationTotals, SizeTotal, StartTotal,
 };
-use ciproxy_store_interface::vm_size::VmSize;
 use diesel::prelude::*;
 use rust_decimal::Decimal;
 use uuid::Uuid;
@@ -30,9 +31,9 @@ pub(super) fn apply_usage(
             .values((
                 metering_daily_sizes::workspace_id.eq(workspace_id),
                 metering_daily_sizes::day.eq(delta.day),
-                metering_daily_sizes::vcpus.eq(delta.size.vcpus),
-                metering_daily_sizes::memory_gb.eq(delta.size.memory_gb),
-                metering_daily_sizes::disk_gb.eq(delta.size.disk_gb),
+                metering_daily_sizes::vcpus.eq(convert::<i32, _>(delta.size.vcpu)?),
+                metering_daily_sizes::memory_bytes.eq(convert::<i64, _>(delta.size.memory_bytes)?),
+                metering_daily_sizes::disk_bytes.eq(convert::<i64, _>(delta.size.disk_bytes)?),
                 metering_daily_sizes::machine_starts.eq(delta.machine_starts),
                 metering_daily_sizes::machine_minutes.eq(delta.machine_minutes),
                 metering_daily_sizes::boat_starts.eq(delta.boat_starts),
@@ -42,8 +43,8 @@ pub(super) fn apply_usage(
                 metering_daily_sizes::workspace_id,
                 metering_daily_sizes::day,
                 metering_daily_sizes::vcpus,
-                metering_daily_sizes::memory_gb,
-                metering_daily_sizes::disk_gb,
+                metering_daily_sizes::memory_bytes,
+                metering_daily_sizes::disk_bytes,
             ))
             .do_update()
             .set((
@@ -65,7 +66,8 @@ pub(super) fn apply_usage(
         diesel::insert_into(metering_start_totals::table)
             .values((
                 metering_start_totals::workspace_id.eq(workspace_id),
-                metering_start_totals::taken_at.eq(start.taken_at),
+                metering_start_totals::taken_at
+                    .eq(start.taken_at.to_rfc3339_opts(SecondsFormat::Nanos, true)),
                 metering_start_totals::starts.eq(start.starts),
             ))
             .on_conflict((
@@ -84,8 +86,8 @@ pub(super) fn apply_usage(
 struct DailyRow {
     day: NaiveDate,
     vcpus: i32,
-    memory_gb: i32,
-    disk_gb: i32,
+    memory_bytes: i64,
+    disk_bytes: i64,
     machine_starts: i64,
     machine_minutes: Decimal,
     boat_starts: i64,
@@ -105,8 +107,8 @@ pub(super) fn load(
         .order((
             metering_daily_sizes::day,
             metering_daily_sizes::vcpus,
-            metering_daily_sizes::memory_gb,
-            metering_daily_sizes::disk_gb,
+            metering_daily_sizes::memory_bytes,
+            metering_daily_sizes::disk_bytes,
         ))
         .select(DailyRow::as_select())
         .load::<DailyRow>(connection)?;
@@ -119,9 +121,9 @@ pub(super) fn load(
         });
         total.sizes.push(SizeTotal {
             size: VmSize {
-                vcpus: row.vcpus,
-                memory_gb: row.memory_gb,
-                disk_gb: row.disk_gb,
+                vcpu: convert(row.vcpus)?,
+                memory_bytes: convert(row.memory_bytes)?,
+                disk_bytes: convert(row.disk_bytes)?,
             },
             machines: LocationTotals {
                 starts: row.machine_starts as u64,
@@ -188,7 +190,9 @@ pub(super) fn purge(
     let starts = diesel::delete(
         metering_start_totals::table
             .filter(metering_start_totals::workspace_id.eq(workspace_id))
-            .filter(metering_start_totals::taken_at.lt(at)),
+            .filter(
+                metering_start_totals::taken_at.lt(at.to_rfc3339_opts(SecondsFormat::Nanos, true)),
+            ),
     )
     .execute(connection)?;
     Ok(sizes + costs + starts)
