@@ -10,6 +10,7 @@ diesel::table! {
         acknowledged -> Bool,
         slot_indices -> Array<Int8>,
         requested_size -> Jsonb,
+        confirmed_at -> Nullable<Timestamptz>,
     }
 }
 

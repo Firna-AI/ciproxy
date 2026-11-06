@@ -1,6 +1,6 @@
 //! Public App retries preserve required cleanup and ordered lifecycle transitions.
 
-use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
+use ciproxy_store_interface::github_lifecycle::{LifecycleEvent, RemovalCause};
 use std::sync::atomic::Ordering;
 
 use ciproxy_github::app::InstallationOutcome;
@@ -70,7 +70,7 @@ async fn failed_replacement_cleanup_is_replayed_before_activation_in_either_work
             "explicit_target={explicit_target}: failed cleanup was lost"
         );
         assert!(
-            matches!(&accepted[0], LifecycleEvent::Removed { organization, last_organization: true }
+            matches!(&accepted[0], LifecycleEvent::Removed { organization, last_organization: true, cause: RemovalCause::Owner }
             if organization.workspace_id == id(1) && organization.id == id(5) && organization.installation_id == 19)
         );
         let expected_workspace = if explicit_target { id(90) } else { id(1) };

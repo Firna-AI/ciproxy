@@ -3,10 +3,12 @@
 use std::sync::Arc;
 
 use chrono::{DateTime, Duration, Utc};
+use ciproxy_control_plane::accounting::{Accounting, AccountingWorker};
 use ciproxy_control_plane::runtime::{MachineRuntime, OwnMachines};
 use ciproxy_github::assignments::AssignmentService;
 use ciproxy_github::persistence::StoreAdapter;
 use ciproxy_github::runtime::{Runtime, RuntimeMock};
+use ciproxy_github::timing::JobTimingMock;
 use ciproxy_metering::service::StoredMetering;
 use ciproxy_store_interface::github::{DemandPhase, GithubJob, RepositoryIdentity, RunFacts};
 use ciproxy_store_interface::github_timing::JobTimes;
@@ -18,24 +20,33 @@ use uuid::Uuid;
 
 use super::support::{Fixture, at};
 
-fn make_runtime(fixture: &Fixture) -> MachineRuntime {
+fn make_runtime(fixture: &Fixture) -> (MachineRuntime, AccountingWorker) {
     let clock: Arc<dyn Runtime> = Arc::new(Unimock::new(
         RuntimeMock::now
             .each_call(matching!())
             .returns(at() + Duration::minutes(5)),
     ));
-    let mut runtime = MachineRuntime::new(
+    let runtime = MachineRuntime::new(
         fixture.store.clone(),
         Arc::new(Unimock::new(())),
         Arc::new(Unimock::new(())),
         Arc::new(AssignmentService {
             store: Arc::new(StoreAdapter::new(fixture.store.clone(), clock.clone())),
         }),
-        clock,
+        clock.clone(),
         None,
     );
-    runtime.metering = Some(Arc::new(StoredMetering::new(fixture.store.clone())));
-    runtime
+    let accounting = AccountingWorker::new(
+        fixture.store.clone(),
+        Arc::new(Unimock::new(
+            JobTimingMock::repair
+                .each_call(matching!(_))
+                .answers(&|_, _| Ok(())),
+        )),
+        Arc::new(StoredMetering::new(fixture.store.clone())),
+        clock,
+    );
+    (runtime, accounting)
 }
 fn time(value: &str) -> DateTime<Utc> {
     value.parse().unwrap()
@@ -104,9 +115,10 @@ async fn actual_scale_attempts_count_once_across_replay_restart_reassignment_map
         .store
         .save_github_job(fixture.workspace, &job, at())
         .unwrap();
-    let runtime = make_runtime(&fixture);
+    let (runtime, accounting) = make_runtime(&fixture);
     runtime.job(fixture.workspace, job.clone()).await.unwrap();
     runtime.job(fixture.workspace, job.clone()).await.unwrap();
+    accounting.pass().await;
     assert_eq!(totals(&fixture).0, 1);
     let facts = fixture.store.workspace_usage(fixture.workspace).unwrap();
     assert_eq!(
@@ -120,6 +132,7 @@ async fn actual_scale_attempts_count_once_across_replay_restart_reassignment_map
         .save_github_job(fixture.workspace, &job, at())
         .unwrap();
     runtime.job(fixture.workspace, job.clone()).await.unwrap();
+    accounting.pass().await;
     assert_eq!(totals(&fixture), (1, "0".to_owned()));
     assert_eq!(
         fixture
@@ -150,12 +163,14 @@ async fn actual_scale_attempts_count_once_across_replay_restart_reassignment_map
         .unwrap()
         .remove(0);
     runtime.job(fixture.workspace, known.clone()).await.unwrap();
+    accounting.pass().await;
     assert_eq!(totals(&fixture), (1, "1".to_owned()));
-    let restarted = make_runtime(&fixture);
+    let (restarted, restarted_accounting) = make_runtime(&fixture);
     restarted
         .job(fixture.workspace, known.clone())
         .await
         .unwrap();
+    restarted_accounting.pass().await;
     assert_eq!(totals(&fixture), (1, "1".to_owned()));
     let mut second = fixture.intent.clone();
     second.runner.id = Uuid::new_v4();
@@ -185,6 +200,7 @@ async fn actual_scale_attempts_count_once_across_replay_restart_reassignment_map
         .job(fixture.workspace, retry.clone())
         .await
         .unwrap();
+    restarted_accounting.pass().await;
     assert_eq!(totals(&fixture), (2, "2".to_owned()));
     let facts = fixture.store.workspace_usage(fixture.workspace).unwrap();
     assert_eq!(facts.jobs.len(), 2);
@@ -222,6 +238,7 @@ async fn actual_scale_attempts_count_once_across_replay_restart_reassignment_map
         .job(fixture.workspace, retry.clone())
         .await
         .unwrap();
+    restarted_accounting.pass().await;
     assert_eq!(totals(&fixture), (2, "2".to_owned()));
     let facts = fixture.store.workspace_usage(fixture.workspace).unwrap();
     assert_eq!(
@@ -256,6 +273,7 @@ async fn actual_scale_attempts_count_once_across_replay_restart_reassignment_map
     let after = fixture.store.workspace_usage(fixture.workspace).unwrap();
     assert_eq!(after.accounted_jobs.len(), 1);
     assert_eq!(after.accounted_jobs[0].job.source, JobSource::Actions);
+    restarted_accounting.pass().await;
     assert_eq!(totals(&fixture), (2, "2".to_owned()));
     let retained = fixture
         .store

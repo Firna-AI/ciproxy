@@ -18,6 +18,7 @@ pub(crate) fn policy(input: &RoutingSnapshot, machine_id: Uuid) -> Option<Docker
         .find(|machine| machine.machine.id == machine_id)?
         .report
         .as_ref()?;
+    let report = &report.report;
     let image = report.images.selected()?.clone();
     let sizing = RootSizing::for_image(&image);
     let roots: Vec<_> = input

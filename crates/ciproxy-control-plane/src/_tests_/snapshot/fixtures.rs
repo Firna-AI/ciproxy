@@ -1,7 +1,7 @@
 //! Pure routing inputs with explicit trusted times and capacity.
 
 use chrono::{DateTime, Utc};
-use ciproxy_store_interface::gateway::MachineSnapshot;
+use ciproxy_store_interface::gateway::{MachineSnapshot, ReceivedReport};
 use ciproxy_store_interface::github::{DemandPhase, GithubJob, RepositoryIdentity, RunFacts};
 use ciproxy_store_interface::labels::{Label, WhenNothingFits};
 use ciproxy_store_interface::machines::Machine;
@@ -53,7 +53,10 @@ pub(super) fn input() -> RoutingSnapshot {
                 disks: vec![],
                 removed_at: None,
             },
-            report: Some(report),
+            report: Some(ReceivedReport {
+                report,
+                received_at: at(),
+            }),
         }],
         runners: vec![],
         jobs: vec![],

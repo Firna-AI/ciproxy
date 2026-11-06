@@ -33,6 +33,7 @@ use reqwest::{Client, Url, redirect};
 use secrecy::ExposeSecret;
 use tokio::runtime::Handle;
 
+use crate::accounting::{Accounting, AccountingWorker};
 use crate::config::Config;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::image_signing::CdnSigning;
@@ -59,6 +60,7 @@ pub struct Hosted {
     pub(crate) ready: Arc<AtomicBool>,
     pub(crate) recovery: Arc<dyn WebhookRecovery>,
     pub(crate) repositories: Arc<dyn RepositoryRefresh>,
+    pub(crate) accounting: Arc<dyn Accounting>,
 }
 
 impl Hosted {
@@ -126,12 +128,16 @@ impl Hosted {
             config.cdn_signing_key_name.clone(),
             config.secret("cdn-signing-key")?.expose_secret(),
         )?));
-        machine_runtime.timing = Some(Arc::new(RepairTiming::new(
-            persistence.clone(),
-            rest.clone(),
+        let accounting = Arc::new(AccountingWorker::new(
+            store.clone(),
+            Arc::new(RepairTiming::new(
+                persistence.clone(),
+                rest.clone(),
+                clock.clone(),
+            )),
+            Arc::new(StoredMetering::new(store.clone())),
             clock,
-        )));
-        machine_runtime.metering = Some(Arc::new(StoredMetering::new(store.clone())));
+        ));
         let machines: Arc<dyn OwnMachines> = Arc::new(machine_runtime);
         relay
             .machines
@@ -165,6 +171,7 @@ impl Hosted {
             app: app.clone(),
         });
         Ok(Self {
+            accounting,
             repositories,
             gateway,
             app,

@@ -6,6 +6,7 @@ use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
 use ciproxy_store_interface::vm_size::VmSize;
 
 use crate::error::{Error, ErrorResultExt, Result};
+use crate::retirement::RetirementPolicy;
 use crate::runtime::MachineRuntime;
 
 impl MachineRuntime {
@@ -30,17 +31,30 @@ impl MachineRuntime {
             return Ok(());
         };
         let Some(machine) = input.machines.iter().find(|m| m.machine.id == machine_id) else {
-            self.stop(input.workspace_id, runner).await?;
+            self.stop(input, runner).await?;
             return Ok(());
         };
-        let Some(report) = &machine.report else {
+        let Some(received) = &machine.report else {
             return Ok(());
         };
+        let report = &received.report;
         if let Some(observed) = report
             .runners
             .iter()
             .find(|report| report.runner_id.0 == runner.runner.id.to_string())
         {
+            if runner.confirmed_at.is_none() {
+                let store = self.store.clone();
+                let workspace_id = input.workspace_id;
+                let runner_id = runner.runner.id;
+                let at = received.received_at;
+                tokio::task::spawn_blocking(move || {
+                    store.confirm_own_runner(workspace_id, runner_id, at)
+                })
+                .await
+                .internal()?
+                .internal()?;
+            }
             let requested = match VmSize::from_request(observed.requested_size) {
                 Ok(requested) => requested,
                 Err(error) => {
@@ -73,7 +87,8 @@ impl MachineRuntime {
                 .internal()?;
             }
             if observed.configuration_lost && observed.state == runners::RunnerState::Starting {
-                self.stop(input.workspace_id, runner).await?;
+                self.retire_runner(input.workspace_id, runner, RetirementPolicy::GithubFirst)
+                    .await?;
                 return Ok(());
             }
             let state = match observed.state {
@@ -98,10 +113,9 @@ impl MachineRuntime {
                 )
                 .await?;
             }
-        } else if machine
-            .machine
-            .last_contact_at
-            .is_some_and(|at| at > runner.issued_at)
+        } else if runner
+            .confirmed_at
+            .is_some_and(|at| received.received_at > at)
         {
             if matches!(
                 runner.runner.state,
@@ -114,11 +128,17 @@ impl MachineRuntime {
                     runner.runner.github_id,
                 )
                 .await?;
-            } else if runner.acknowledged
-                || runner.issued_at + chrono::Duration::seconds(60) < self.clock.now()
-            {
-                self.stop(input.workspace_id, runner).await?;
+            } else {
+                self.retire_runner(input.workspace_id, runner, RetirementPolicy::GithubFirst)
+                    .await?;
             }
+        } else if runner.confirmed_at.is_none()
+            && runner.runner.state == RunnerState::Starting
+            && received.received_at > runner.issued_at
+            && runner.issued_at + chrono::Duration::seconds(60) < self.clock.now()
+        {
+            self.retire_runner(input.workspace_id, runner, RetirementPolicy::GithubFirst)
+                .await?;
         }
         Ok(())
     }

@@ -125,9 +125,9 @@ impl Fixture {
             at: at(),
         };
         let mut connection = PgConnection::establish(url.as_str()).unwrap();
-        diesel::sql_query("INSERT INTO machine_reports (workspace_id, machine_id, session_id, report) VALUES ($1,$2,$3,$4)")
+        diesel::sql_query("INSERT INTO machine_reports (workspace_id, machine_id, session_id, report, received_at) VALUES ($1,$2,$3,$4,$5)")
             .bind::<sql_types::Uuid,_>(workspace).bind::<sql_types::Uuid,_>(machine).bind::<sql_types::Uuid,_>(contact.session_id)
-            .bind::<sql_types::Jsonb,_>(serde_json::to_value(&contact.report).unwrap()).execute(&mut connection).unwrap();
+            .bind::<sql_types::Jsonb,_>(serde_json::to_value(&contact.report).unwrap()).bind::<sql_types::Timestamptz,_>(contact.at).execute(&mut connection).unwrap();
         let intent = OwnRunner {
             requested_size: VmSize {
                 vcpus: 2,
@@ -156,6 +156,7 @@ impl Fixture {
             command_id: Uuid::new_v4(),
             issued_at: at() - chrono::Duration::minutes(1),
             acknowledged: true,
+            confirmed_at: None,
         };
         store.create_own_runner(workspace, &intent).unwrap();
         Self {
@@ -181,11 +182,11 @@ impl Fixture {
         machine.draining = false;
         machine.warm_runners = 1;
         self.store.create_machine(self.workspace, &machine).unwrap();
-        let mut report = source.report.unwrap();
+        let mut report = source.report.unwrap().report;
         report.runners.clear();
-        diesel::sql_query("INSERT INTO machine_reports (workspace_id, machine_id, session_id, report) VALUES ($1,$2,$3,$4)")
+        diesel::sql_query("INSERT INTO machine_reports (workspace_id, machine_id, session_id, report, received_at) VALUES ($1,$2,$3,$4,$5)")
             .bind::<sql_types::Uuid,_>(self.workspace).bind::<sql_types::Uuid,_>(machine.id).bind::<sql_types::Uuid,_>(Uuid::new_v4())
-            .bind::<sql_types::Jsonb,_>(serde_json::to_value(report).unwrap()).execute(&mut self.connection).unwrap();
+            .bind::<sql_types::Jsonb,_>(serde_json::to_value(report).unwrap()).bind::<sql_types::Timestamptz,_>(at()).execute(&mut self.connection).unwrap();
         machine.id
     }
 }

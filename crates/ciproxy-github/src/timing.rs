@@ -89,6 +89,7 @@ impl TimingStore for StoreAdapter {
 }
 
 /// Timing recovery never invents starts, completions, or numeric job IDs.
+#[unimock::unimock(api = JobTimingMock)]
 #[async_trait]
 pub trait JobTiming: Send + Sync {
     /// Retry pending attempts after their bounded backoff interval.

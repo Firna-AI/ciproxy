@@ -45,6 +45,9 @@ pub struct RegistrationService {
 impl RunnerRegistrations for RegistrationService {
     async fn find(&self, target: ListenerTarget, runner_name: &str) -> Result<Option<i64>> {
         let context = self.store.context(target).await?;
+        if context.organization.app_state == AppState::Removed {
+            return Ok(None);
+        }
         let api = self
             .scale_sets
             .for_organization(&context.organization)

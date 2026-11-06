@@ -50,17 +50,18 @@ impl MachineRuntime {
                 return Ok(());
             };
             require_machine(runner, machine_id)?;
-            if *outcome == CommandOutcome::Applied {
-                let store = self.store.clone();
-                let command = runner.command_id;
-                tokio::task::spawn_blocking(move || {
-                    store.acknowledge_own_runner(workspace_id, command)
-                })
-                .await
-                .internal()?
-                .internal()?;
-            } else if runner.runner.state == RunnerState::Starting {
-                self.stop(workspace_id, runner).await?;
+            let store = self.store.clone();
+            let command = runner.command_id;
+            let applied = *outcome == CommandOutcome::Applied;
+            let at = self.clock.now();
+            tokio::task::spawn_blocking(move || {
+                store.record_own_command_result(workspace_id, command, applied, at)
+            })
+            .await
+            .internal()?
+            .internal()?;
+            if !applied && runner.runner.state == RunnerState::Starting {
+                self.stop(&input, runner).await?;
             }
             return Ok(());
         }
@@ -76,7 +77,12 @@ impl MachineRuntime {
             .find(|runner| runner.runner.id.to_string() == id.0)
             .ok_or(Error::RunnerOwnership)?;
         require_machine(runner, machine_id)?;
-        if state == RunnerState::Ready && runner.runner.state == RunnerState::Busy {
+        if state == RunnerState::Ready
+            && matches!(
+                runner.runner.state,
+                RunnerState::Busy | RunnerState::Stopping
+            )
+        {
             return Ok(());
         }
         self.save_state(workspace_id, runner, state, runner.runner.github_id)
@@ -135,7 +141,7 @@ impl MachineRuntime {
             }
             return Ok(());
         }
-        if job.phase == DemandPhase::Started {
+        if job.phase == DemandPhase::Started && runner.runner.state != RunnerState::Stopping {
             self.save_state(workspace_id, runner, RunnerState::Busy, Some(github_id))
                 .await?;
         }

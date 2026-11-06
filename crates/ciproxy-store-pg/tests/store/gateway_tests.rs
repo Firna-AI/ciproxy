@@ -5,7 +5,7 @@ use std::thread;
 
 use chrono::Duration;
 use ciproxy_store_interface::error::Error;
-use ciproxy_store_interface::gateway::Contact;
+use ciproxy_store_interface::gateway::{Contact, ReceivedReport};
 use ciproxy_store_interface::store::StoreFactory;
 use ciproxy_store_pg::factory::PgStoreFactory;
 use uuid::Uuid;
@@ -88,7 +88,13 @@ fn rolls_back_registration_and_fences_replaced_or_removed_sessions() {
         observed.machine.last_contact_at,
         Some(at() + Duration::seconds(15))
     );
-    assert_eq!(observed.report, Some(newer.report.clone()));
+    assert_eq!(
+        observed.report,
+        Some(ReceivedReport {
+            report: newer.report.clone(),
+            received_at: newer.at
+        })
+    );
     assert!(observed.machine.draining);
     assert_eq!(observed.machine.warm_runners, 7);
     assert!(matches!(

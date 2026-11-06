@@ -31,7 +31,7 @@ pub(super) fn machine(
         })
         .max_by_key(|cost| cost.starts_at)
         .and_then(|cost| Cents::from_usd(cost.monthly_usd));
-    let report = value.snapshot.report;
+    let report = value.snapshot.report.map(|received| received.report);
     let occupancy = report
         .as_ref()
         .map(|report| {

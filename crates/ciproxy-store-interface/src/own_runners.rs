@@ -24,10 +24,13 @@ pub struct OwnRunner {
     pub label_name: String,
     /// Current start or stop command identity.
     pub command_id: Uuid,
-    /// Trusted issue time used to fence older full machine reports.
+    /// Trusted issue time of the current command.
     pub issued_at: DateTime<Utc>,
     /// Whether the machine accepted this command.
     pub acknowledged: bool,
+    /// First current-command result or full inventory that confirmed this runner.
+    /// Retirement preserves this evidence for the VM's complete lifetime.
+    pub confirmed_at: Option<DateTime<Utc>>,
 }
 
 /// Queries used by the own-machine runtime, without storing JIT secrets.
@@ -60,8 +63,21 @@ pub trait OwnRunnerStore: Send + Sync {
         command_id: Uuid,
         at: DateTime<Utc>,
     ) -> Result<()>;
-    /// Confirm one current command without accepting a superseded result.
-    fn acknowledge_own_runner(&self, workspace_id: Uuid, command_id: Uuid) -> Result<()>;
+    /// Keep first inventory evidence without replacing an earlier confirmation.
+    fn confirm_own_runner(
+        &self,
+        workspace_id: Uuid,
+        runner_id: Uuid,
+        at: DateTime<Utc>,
+    ) -> Result<()>;
+    /// Record current-command evidence and close delivery only for an applied result.
+    fn record_own_command_result(
+        &self,
+        workspace_id: Uuid,
+        command_id: Uuid,
+        applied: bool,
+        at: DateTime<Utc>,
+    ) -> Result<()>;
 }
 
 /// Coherent persisted input to one workspace's pure routing calculation.

@@ -13,6 +13,7 @@ use crate::persistence::session::ListenerTarget;
 use crate::scale_sets::JitRegistration;
 
 /// Assignment facts for the agent, with no inferred or trusted job ref.
+#[unimock::unimock(api = JobAssignmentsMock)]
 #[async_trait]
 pub trait JobAssignments: Send + Sync {
     /// Build facts from a saved scale-message job, repository snapshot, and JIT.

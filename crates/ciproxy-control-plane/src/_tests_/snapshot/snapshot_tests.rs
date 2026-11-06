@@ -18,7 +18,12 @@ fn persisted_image_budget_still_limits_warm_starts_when_cache_reporting_fails() 
 fn warm_history_uses_only_default_label_jobs_in_the_last_day() {
     let mut input = input();
     input.organizations.push(organization(6));
-    input.machines[0].report.as_mut().unwrap().job_disk_bytes = 600_000_000_000;
+    input.machines[0]
+        .report
+        .as_mut()
+        .unwrap()
+        .report
+        .job_disk_bytes = 600_000_000_000;
     input.jobs = vec![
         job(10, 2, 25),
         job(11, 2, 25),
@@ -45,7 +50,14 @@ fn warm_history_uses_only_default_label_jobs_in_the_last_day() {
 #[test]
 fn older_selected_local_image_keeps_its_own_root_allocation_during_a_new_release_download() {
     let mut input = input();
-    input.machines[0].report.as_mut().unwrap().images.available[0].root_disk_bytes = 1_000_000_000;
+    input.machines[0]
+        .report
+        .as_mut()
+        .unwrap()
+        .report
+        .images
+        .available[0]
+        .root_disk_bytes = 1_000_000_000;
     let snapshot = build(
         &input,
         at(),

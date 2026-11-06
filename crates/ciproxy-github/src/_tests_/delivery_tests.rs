@@ -3,7 +3,7 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use ciproxy_store_interface::github_lifecycle::{LifecycleDelivery, LifecycleEvent};
+use ciproxy_store_interface::github_lifecycle::{LifecycleDelivery, LifecycleEvent, RemovalCause};
 use unimock::{MockFn, Unimock, matching};
 
 use crate::app::{GitHubApp, LifecycleOutputMock};
@@ -24,6 +24,7 @@ async fn lifecycle_delivery_confirms_only_after_acceptance_and_retries_unconfirm
     let event = LifecycleEvent::Removed {
         organization: organization(),
         last_organization: true,
+        cause: RemovalCause::Owner,
     };
     let service = app(Unimock::new((
         lease(),

@@ -4,6 +4,7 @@ use ciproxy_gateway::types::Delivery;
 use ciproxy_protocol::agent::ControlMessage;
 use ciproxy_protocol::identifiers::{CommandId, MachineId, OrganizationId, RunnerId};
 use ciproxy_protocol::secret::Secret;
+use ciproxy_store_interface::gateway::ReceivedReport;
 use uuid::Uuid;
 
 use super::fixture::{ADMIN, Fixture, WORKSPACE, at};
@@ -72,7 +73,13 @@ async fn rejects_another_machine_credential_without_changing_the_live_session_or
         .into_iter()
         .find(|record| record.machine.id == machine_uuid)
         .unwrap();
-    assert_eq!(snapshot.report, Some(original_report));
+    assert_eq!(
+        snapshot.report,
+        Some(ReceivedReport {
+            report: original_report,
+            received_at: at()
+        })
+    );
     assert_eq!(snapshot.machine.last_contact_at, Some(at()));
     assert_eq!(
         fixture
