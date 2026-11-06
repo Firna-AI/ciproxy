@@ -16,10 +16,7 @@ impl AppService {
             .claim(id)
             .await?
             .ok_or(Error::OrganizationInactive)?;
-        if !claim.event_seen
-            || !claim.user_verified
-            || (!claim.direct && claim.workspace_id.is_none())
-        {
+        if !claim.recovery().is_ready() {
             return Ok(InstallationOutcome::AwaitingAssignment { claim_id: claim.id });
         }
         self.handle_installation(InstallationEvent {

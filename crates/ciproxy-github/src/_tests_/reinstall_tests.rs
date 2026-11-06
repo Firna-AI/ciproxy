@@ -106,7 +106,11 @@ async fn expired_retained_organization_joins_admin_workspace_as_new_registration
         coordination(false),
         InstallationStoreMock::stage
             .some_call(matching!(_))
-            .answers(&|_, claim| Ok(claim)),
+            .answers(&|_, mut claim| {
+                claim.user_verified = true;
+                claim.workspace_id = Some(id(1));
+                Ok(claim)
+            }),
         InstallAuthorityMock::installation_decision
             .some_call(matching!(41, 17, 19))
             .returns(Ok(InstallationDecision::Target {

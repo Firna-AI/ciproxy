@@ -54,8 +54,13 @@ pub(super) fn owned(store: &PgStore, requester: i64) -> Result<Vec<InstallationC
 }
 
 pub(super) fn pending_choices(store: &PgStore) -> Result<Vec<Uuid>> {
-    diesel::sql_query("SELECT row_to_json(c)::text AS body FROM installation_claims c WHERE event_seen AND user_verified AND workspace_id IS NOT NULL AND organization_id IS NULL ORDER BY installation_id")
-        .load::<Row>(&mut *store.connection()?).store()?.into_iter().map(|row|decode(row).map(|claim|claim.id)).collect()
+    let claims = diesel::sql_query("SELECT row_to_json(c)::text AS body FROM installation_claims c WHERE organization_id IS NULL ORDER BY installation_id")
+        .load::<Row>(&mut *store.connection()?).store()?.into_iter().map(decode).collect::<Result<Vec<_>>>()?;
+    Ok(claims
+        .into_iter()
+        .filter(|claim| claim.recovery().is_ready())
+        .map(|claim| claim.id)
+        .collect())
 }
 
 pub(super) fn save(

@@ -47,6 +47,7 @@ pub enum InstallationDecision {
 pub trait InstallAuthority: Send + Sync {
     /// Resolve the original requester for this exact organization and installation.
     ///
+    /// The caller has verified the current signed creation event and App identity.
     /// An unresolved Add waits for the person's own installed proof and workspace choice.
     /// A chosen workspace can retain independent Admin and billing holds.
     async fn installation_decision(

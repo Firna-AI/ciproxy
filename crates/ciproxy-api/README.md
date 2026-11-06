@@ -137,8 +137,10 @@ The registered setup return starts the same browser-bound OAuth proof.
 `setup_action=request` stays waiting and chooses no workspace.
 
 GET `/installation-links` refreshes the original person's installed claims.
-An exact signed requester and fresh own-user installation proof are both
-required. One current Admin workspace links automatically. Several require
+Add requires the exact signed requester and fresh own-user installation proof.
+Signed Direct claims retry without Add proof, even when the person's installation
+list omits them. A provisional Direct return still waits for the signed event.
+One current Admin workspace links Add automatically. Several require
 PUT `/installation-links/{claim_id}/workspace` with an offered workspace ID.
 No eligible workspace leaves the claim waiting. Exact offers survive the
 choice-to-link role-loss window. Missing state never proves a Direct flow.

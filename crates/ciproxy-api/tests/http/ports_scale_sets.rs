@@ -29,6 +29,9 @@ impl ScaleSetApi for Remote {
         group: i64,
         saved: Option<i64>,
     ) -> ciproxy_github::error::Result<i64> {
+        if self.fail_ensure.swap(false, Ordering::SeqCst) {
+            return Err(ciproxy_github::error::Error::AccessUnavailable(503));
+        }
         let gate = self.ensure_gate.lock().unwrap().take();
         if let Some(gate) = gate {
             gate.entered.notify_one();

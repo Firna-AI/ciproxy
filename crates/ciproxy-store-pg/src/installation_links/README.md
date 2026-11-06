@@ -25,8 +25,10 @@ tier. Retained reinstalls preserve their policy rows.
 
 Registration locks the workspace before counting organizations and writing
 policy, resources, claim completion, and lifecycle output together. Billing
-commits serialize on that same workspace row. Pending policy and verified
-choice queries supply durable maintenance work after restart.
+commits serialize on that same workspace row. Pending policy and installation
+queries supply durable maintenance work after restart. Installation discovery
+uses the interface's typed recovery state for signed Direct claims and verified
+Add choices. Callback-only Direct claims still wait for their signed event.
 
 Run checks from the repository root with DATABASE_URL set:
 

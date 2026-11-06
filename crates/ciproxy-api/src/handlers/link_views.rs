@@ -3,7 +3,9 @@
 use ciproxy_store_interface::billing::state::Tier;
 use ciproxy_store_interface::dashboard::records::Role;
 use ciproxy_store_interface::error::{Error, Result};
-use ciproxy_store_interface::installation_links::{InstallationClaim, OrganizationActivation};
+use ciproxy_store_interface::installation_links::{
+    InstallationClaim, InstallationRecovery, OrganizationActivation,
+};
 use ciproxy_store_interface::organizations::AppState;
 use ciproxy_store_interface::store::Store;
 
@@ -100,25 +102,32 @@ pub(super) fn view(
         )),
         _ => None,
     };
+    let recovery = claim.recovery();
     let state = if let Some(local) = &local {
         if local.admitted {
             LinkState::Linked
         } else {
             LinkState::LinkedInactive
         }
-    } else if !claim.event_seen {
-        LinkState::ConfirmingInstallation
-    } else if !claim.user_verified {
-        LinkState::ReauthorizationRequired
-    } else if claim.workspace_id.is_some() {
-        LinkState::Linking
-    } else if workspaces.is_empty() {
-        LinkState::WaitingForAdmin
     } else {
-        LinkState::ChooseWorkspace
+        match recovery {
+            InstallationRecovery::DirectAwaitingEvent | InstallationRecovery::AddAwaitingEvent => {
+                LinkState::ConfirmingInstallation
+            }
+            InstallationRecovery::AddAwaitingProof => LinkState::ReauthorizationRequired,
+            InstallationRecovery::Direct | InstallationRecovery::Add { .. } => LinkState::Linking,
+            InstallationRecovery::AddAwaitingWorkspace if workspaces.is_empty() => {
+                LinkState::WaitingForAdmin
+            }
+            InstallationRecovery::AddAwaitingWorkspace => LinkState::ChooseWorkspace,
+        }
     };
     Ok(OrganizationLinkView {
-        reauthorization_required: !claim.user_verified,
+        reauthorization_required: !claim.user_verified
+            && !matches!(
+                recovery,
+                InstallationRecovery::DirectAwaitingEvent | InstallationRecovery::Direct
+            ),
         id: claim.id,
         installation_id: claim.installation_id.to_string(),
         organization: claim.login,

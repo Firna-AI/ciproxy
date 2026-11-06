@@ -5,6 +5,7 @@ use ciproxy_github::app::{InstallAuthority, InstallationDecision};
 use ciproxy_github::error::{Error, Result, ResultExt};
 use ciproxy_store_interface::billing::state::Tier;
 use ciproxy_store_interface::dashboard::records::Role;
+use ciproxy_store_interface::installation_links::InstallationRecovery;
 use ciproxy_store_interface::organizations::AppState;
 use uuid::Uuid;
 
@@ -27,17 +28,15 @@ impl InstallAuthority for AccessService {
         .await
         .internal()?;
         if let Some(claim) = claim {
-            if claim.requester_id != requester
-                || claim.github_id != github_id
-                || !claim.user_verified
-            {
+            if claim.requester_id != requester || claim.github_id != github_id {
                 return Ok(InstallationDecision::AwaitingAssignment);
             }
-            if claim.direct {
-                return Ok(InstallationDecision::Direct);
-            }
-            let Some(workspace) = claim.workspace_id else {
-                return Ok(InstallationDecision::AwaitingAssignment);
+            let workspace = match claim.recovery() {
+                InstallationRecovery::DirectAwaitingEvent | InstallationRecovery::Direct => {
+                    return Ok(InstallationDecision::Direct);
+                }
+                InstallationRecovery::Add { workspace_id } => workspace_id,
+                _ => return Ok(InstallationDecision::AwaitingAssignment),
             };
             let approved = if let Some(organization) = claim.organization_id {
                 !query(self.store.clone(), move |store| {

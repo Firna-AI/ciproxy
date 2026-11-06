@@ -48,6 +48,52 @@ pub struct InstallationClaim {
     pub verified_at: Option<DateTime<Utc>>,
 }
 
+/// Recovery authority derived from the durable evidence for one installation.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum InstallationRecovery {
+    /// Explicit Direct entry still needs its signed creation event.
+    DirectAwaitingEvent,
+    /// A signed Direct installation needs no Add proof or workspace choice.
+    Direct,
+    /// Add proof cannot finish before its signed creation event.
+    AddAwaitingEvent,
+    /// Add requires fresh installed proof from its original requester.
+    AddAwaitingProof,
+    /// Verified Add evidence still needs an exact workspace choice.
+    AddAwaitingWorkspace,
+    /// Signed Add evidence and original-person proof name one workspace.
+    Add {
+        /// The immutable destination selected from the exact offers.
+        workspace_id: Uuid,
+    },
+}
+
+impl InstallationClaim {
+    /// Interpret Direct and Add proof requirements without changing stored facts.
+    pub fn recovery(&self) -> InstallationRecovery {
+        match (
+            self.direct,
+            self.event_seen,
+            self.user_verified,
+            self.workspace_id,
+        ) {
+            (true, false, _, _) => InstallationRecovery::DirectAwaitingEvent,
+            (true, true, _, _) => InstallationRecovery::Direct,
+            (false, false, _, _) => InstallationRecovery::AddAwaitingEvent,
+            (false, true, false, _) => InstallationRecovery::AddAwaitingProof,
+            (false, true, true, None) => InstallationRecovery::AddAwaitingWorkspace,
+            (false, true, true, Some(workspace_id)) => InstallationRecovery::Add { workspace_id },
+        }
+    }
+}
+
+impl InstallationRecovery {
+    /// Test whether stored evidence alone can retry exact installation work.
+    pub fn is_ready(self) -> bool {
+        matches!(self, Self::Direct | Self::Add { .. })
+    }
+}
+
 /// Local execution authority, separate from GitHub suspension or removal.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct OrganizationActivation {
@@ -129,6 +175,6 @@ pub trait InstallationLinkStore: Send + Sync {
     ) -> Result<()>;
     /// Discover durable unfinished admission work after restart and billing changes.
     fn pending_organization_activations(&self) -> Result<Vec<Uuid>>;
-    /// Retry exact verified choices which have not committed registration yet.
+    /// Discover signed Direct installs and verified Add choices awaiting registration.
     fn pending_installation_choices(&self) -> Result<Vec<Uuid>>;
 }

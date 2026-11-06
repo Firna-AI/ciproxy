@@ -180,6 +180,9 @@ removal. Confirmed removal applies only to the exact saved binding and remote ID
 
 InstallationLinkStore owns explicit typed entry evidence, signed requester
 claims, fresh-user proof, exact eligible offers, and immutable workspace choice.
+InstallationClaim derives one typed recovery state from those durable facts.
+Signed Direct events need no Add proof or choice. Provisional Direct callbacks
+still wait for the signed event. Add retains both proof and choice requirements.
 Its records retain no GitHub grant or profile and do not retain dashboard users.
 OrganizationActivation stores separate billing and Admin holds. Missing metadata
 never authorizes execution. Existing organizations have explicit admitted data.

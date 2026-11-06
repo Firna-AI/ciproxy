@@ -3,7 +3,9 @@
 use ciproxy_github::app::GitHubApp;
 use ciproxy_github::app::webhook::AccountKind;
 use ciproxy_store_interface::dashboard::records::{Membership, Role};
-use ciproxy_store_interface::installation_links::{InstallationAttempt, InstallationClaim};
+use ciproxy_store_interface::installation_links::{
+    InstallationAttempt, InstallationClaim, InstallationRecovery,
+};
 use ciproxy_store_interface::organizations::AppState;
 use ciproxy_store_interface::store::Store;
 use uuid::Uuid;
@@ -119,6 +121,10 @@ impl AccessService {
             if claim.organization_id.is_some() {
                 continue;
             }
+            if claim.recovery() == InstallationRecovery::Direct {
+                github.resolve_installation_link(claim.id).await.api()?;
+                continue;
+            }
             let Some(actual) = self
                 .identity
                 .installation(grant, claim.installation_id)
@@ -141,14 +147,17 @@ impl AccessService {
             claim.user_verified = true;
             claim.verified_at = Some(self.runtime.now());
             let claim = self.save_claim(claim, None).await?;
-            if !claim.event_seen {
+            if matches!(
+                claim.recovery(),
+                InstallationRecovery::DirectAwaitingEvent | InstallationRecovery::AddAwaitingEvent
+            ) {
                 continue;
             }
             let id = claim.id;
             let person = profile.id;
             let observed = memberships.to_vec();
             let current = query(self.store.clone(), move |store| {
-                if claim.workspace_id.is_none() && !claim.direct {
+                if claim.recovery() == InstallationRecovery::AddAwaitingWorkspace {
                     let eligible = eligible_workspaces(store, person, &observed)?;
                     store.offer_installation_workspaces(id, person, &eligible)?;
                     if eligible.len() == 1 {
@@ -159,7 +168,7 @@ impl AccessService {
             })
             .await?
             .ok_or(Error::NotFound)?;
-            if current.direct || current.workspace_id.is_some() {
+            if current.recovery().is_ready() {
                 github.resolve_installation_link(id).await.api()?;
             }
         }

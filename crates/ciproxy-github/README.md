@@ -37,7 +37,10 @@ The role service implements `InstallAuthority::installation_decision` for the
 exact requester, account, and installation. An unambiguous direct install keeps
 normal first-install and retained-reinstall behavior. An unresolved Add saves
 `AwaitingAssignment` before any workspace or runner preparation.
-The original person must prove installed association and choose a workspace.
+Signed Direct evidence retries after preparation failure without Add proof.
+Callback-only Direct evidence still waits for its signed creation event.
+For Add, the original person must prove installed association and choose a
+workspace.
 App access, missing state, or the newest attempt cannot select that workspace.
 The service asks for no GitHub runner right.
 
@@ -84,7 +87,8 @@ explicitly chose another workspace. It restores no revoked credential.
 A personal install returns organizations-only setup data and a removal
 link. It creates no workspace or runner resource.
 
-`resolve_installation_link` retries one exact verified choice.
+`resolve_installation_link` retries one exact signed Direct claim or verified
+Add choice.
 `reconcile_organization_activation` retries pending admission in a workspace.
 Local billing/Admin holds are separate from GitHub App state. `Inactive`
 lifecycle output blocks new work for only that organization. Original-requester

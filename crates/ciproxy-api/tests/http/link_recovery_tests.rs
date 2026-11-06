@@ -125,6 +125,24 @@ async fn lost_add_return_recovers_without_state_and_direct_callback_before_event
         .unwrap();
     assert!(provisional.direct && !provisional.event_seen);
     assert!(provisional.organization_id.is_none());
+    assert_eq!(
+        fixture
+            .app
+            .resolve_installation_link(provisional.id)
+            .await
+            .unwrap(),
+        InstallationOutcome::AwaitingAssignment {
+            claim_id: provisional.id
+        }
+    );
+    assert!(
+        fixture
+            .database
+            .store
+            .pending_installation_choices()
+            .unwrap()
+            .is_empty()
+    );
     let outcome = fixture
         .app
         .installation(event(&added, 7, InstallationAction::Created))

@@ -51,4 +51,5 @@ mod token_tests;
 
 mod setup_personal_tests;
 
+mod direct_recovery_tests;
 mod link_final_tests;

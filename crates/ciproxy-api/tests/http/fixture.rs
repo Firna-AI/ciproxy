@@ -85,6 +85,7 @@ impl Fixture {
             lifecycle_events: Mutex::new(Vec::new()),
             fail_uninstall: AtomicBool::new(false),
             fail_delete: AtomicBool::new(false),
+            fail_ensure: AtomicBool::new(false),
             fail_lifecycle: AtomicBool::new(false),
         });
         let factory = Arc::new(Factory(remote.clone()));

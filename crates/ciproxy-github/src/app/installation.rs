@@ -1,7 +1,7 @@
 //! First installation, retained reinstall, and requester-owned workspace choice.
 
 use ciproxy_store_interface::github_lifecycle::{GithubLifecycleTarget, GithubRegistration};
-use ciproxy_store_interface::installation_links::InstallationClaim;
+use ciproxy_store_interface::installation_links::{InstallationClaim, InstallationRecovery};
 use ciproxy_store_interface::labels::{Label, WhenNothingFits};
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
 use ciproxy_store_interface::vm_size::VmSize;
@@ -102,6 +102,17 @@ impl AppService {
                 verified_at: None,
             })
             .await?;
+        let decision = match (claim.recovery(), decision) {
+            (InstallationRecovery::Direct, _) => InstallationDecision::Direct,
+            (
+                InstallationRecovery::Add { workspace_id },
+                target @ InstallationDecision::Target {
+                    workspace_id: chosen,
+                    ..
+                },
+            ) if workspace_id == chosen => target,
+            _ => InstallationDecision::AwaitingAssignment,
+        };
         if decision == InstallationDecision::AwaitingAssignment {
             return Ok(InstallationOutcome::AwaitingAssignment { claim_id: claim.id });
         }

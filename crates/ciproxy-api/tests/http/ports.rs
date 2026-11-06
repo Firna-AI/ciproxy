@@ -79,6 +79,7 @@ pub(super) struct Remote {
     pub(super) lifecycle_events: Mutex<Vec<LifecycleEvent>>,
     pub(super) fail_uninstall: AtomicBool,
     pub(super) fail_delete: AtomicBool,
+    pub(super) fail_ensure: AtomicBool,
     pub(super) fail_lifecycle: AtomicBool,
 }
 #[async_trait]

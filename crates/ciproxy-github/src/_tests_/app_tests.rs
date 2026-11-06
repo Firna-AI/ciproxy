@@ -148,7 +148,11 @@ async fn admin_intent_uses_shared_workspace_and_replay_keeps_label_edits() {
         coordination(false),
         InstallationStoreMock::stage
             .some_call(matching!(_))
-            .answers(&|_, claim| Ok(claim)),
+            .answers(&|_, mut claim| {
+                claim.user_verified = true;
+                claim.workspace_id = Some(id(1));
+                Ok(claim)
+            }),
         InstallAuthorityMock::installation_decision
             .some_call(matching!(41, 17, 19))
             .returns(Ok(InstallationDecision::Target {
