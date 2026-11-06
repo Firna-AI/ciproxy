@@ -1289,6 +1289,13 @@ Answers of 5 November 2026:
   an organization that removes the App while other organizations of its
   workspace stay. Reason: the root question of item 79 includes a leaving
   organization, and the answer accepts a failed job on any removal.
+- My call, 6 November 2026, from Milestone 13: when GitHub reports a job as
+  completed with no finish time, metering counts its start at once and
+  reads the finish from the GitHub job with the "Actions" read permission.
+  Until a finish arrives, the job is finished with an unknown time and adds
+  no minutes. If no finish ever arrives, the job stays out of the minutes.
+  Reason: GitHub's own finish meets the minutes rule of `metering.md`, and
+  the rare fallback can understate the savings but never overstate them.
 - Item 80, D: an attached Docker disk reserves its data plus the free disk
   of its label. The reservation comes only from spare disk that no set of
   job VMs can use, so a Docker disk stops no start, except for a short time
