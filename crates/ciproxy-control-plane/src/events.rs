@@ -9,13 +9,13 @@ use ciproxy_protocol::agent::{
 use ciproxy_protocol::identifiers::{CommandId, JobId, RunnerId};
 use ciproxy_store_interface::github::{DemandPhase, GithubJob};
 use ciproxy_store_interface::organizations::AppState;
-use ciproxy_store_interface::own_runners::OwnRunner;
+use ciproxy_store_interface::own_runners::{OwnRunner, OwnRunnerObservation, RoutingSnapshot};
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
 use uuid::Uuid;
 
+use crate::actions::UnobservedRunnerUpdate;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::runtime::MachineRuntime;
-use ciproxy_store_interface::own_runners::RoutingSnapshot;
 
 impl MachineRuntime {
     pub(crate) async fn agent_event(
@@ -79,16 +79,28 @@ impl MachineRuntime {
             .find(|runner| runner.runner.id.to_string() == id.0)
             .ok_or(Error::RunnerOwnership)?;
         require_machine(runner, machine_id)?;
-        if state == RunnerState::Ready
+        let protected_ready = state == RunnerState::Ready
             && matches!(
                 runner.runner.state,
                 RunnerState::Busy | RunnerState::Stopping
-            )
-        {
+            );
+        self.observe_runner(
+            workspace_id,
+            runner,
+            OwnRunnerObservation {
+                state: if protected_ready {
+                    runner.runner.state
+                } else {
+                    state
+                },
+                github_id: runner.runner.github_id,
+                observed_at: self.clock.now(),
+            },
+        )
+        .await?;
+        if protected_ready {
             return Ok(());
         }
-        self.save_state(workspace_id, runner, state, runner.runner.github_id)
-            .await?;
         for job in &input.jobs {
             self.route_job(&input, job).await?;
         }
@@ -141,24 +153,52 @@ impl MachineRuntime {
                     .internal()?
                 {
                     RegistrationRetirement::Removed { id } => {
-                        self.save_state(workspace_id, runner, RunnerState::Stopped, Some(id))
-                            .await?
+                        self.save_state(
+                            workspace_id,
+                            runner,
+                            UnobservedRunnerUpdate::Stopped {
+                                github_id: Some(id),
+                            },
+                        )
+                        .await?
                     }
                     RegistrationRetirement::Absent => {
-                        self.save_state(workspace_id, runner, RunnerState::Stopped, Some(github_id))
-                            .await?
+                        self.save_state(
+                            workspace_id,
+                            runner,
+                            UnobservedRunnerUpdate::Stopped {
+                                github_id: Some(github_id),
+                            },
+                        )
+                        .await?
                     }
                     RegistrationRetirement::Busy { id } => {
-                        self.save_state(workspace_id, runner, RunnerState::Busy, Some(id))
-                            .await?
+                        self.observe_runner(
+                            workspace_id,
+                            runner,
+                            OwnRunnerObservation {
+                                state: RunnerState::Busy,
+                                github_id: Some(id),
+                                observed_at: self.clock.now(),
+                            },
+                        )
+                        .await?
                     }
                 }
             }
             return Ok(());
         }
         if job.phase == DemandPhase::Started && runner.runner.state != RunnerState::Stopping {
-            self.save_state(workspace_id, runner, RunnerState::Busy, Some(github_id))
-                .await?;
+            self.observe_runner(
+                workspace_id,
+                runner,
+                OwnRunnerObservation {
+                    state: RunnerState::Busy,
+                    github_id: Some(github_id),
+                    observed_at: self.clock.now(),
+                },
+            )
+            .await?;
         }
         let target = ListenerTarget {
             workspace_id,

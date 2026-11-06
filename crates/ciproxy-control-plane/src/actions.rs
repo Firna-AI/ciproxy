@@ -7,7 +7,7 @@ use ciproxy_protocol::identifiers::{CommandId, OrganizationId, RunnerId};
 use ciproxy_protocol::runners::RunnerSpec;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_scaler::actions::{Action, Destination, StartRunner};
-use ciproxy_store_interface::own_runners::OwnRunner;
+use ciproxy_store_interface::own_runners::{OwnRunner, OwnRunnerObservation, RoutingSnapshot};
 use ciproxy_store_interface::runners::{Runner, RunnerPlace, RunnerState};
 use secrecy::ExposeSecret;
 use uuid::Uuid;
@@ -15,7 +15,14 @@ use uuid::Uuid;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::runtime::MachineRuntime;
 use crate::slots::allocate_slots;
-use ciproxy_store_interface::own_runners::RoutingSnapshot;
+
+/// State writes that supply no new execution evidence.
+pub(crate) enum UnobservedRunnerUpdate {
+    /// GitHub registration alone does not prove that the VM exists.
+    Registered { github_id: i64 },
+    /// Absence or registration cleanup can end a reservation without new evidence.
+    Stopped { github_id: Option<i64> },
+}
 
 impl MachineRuntime {
     pub(crate) async fn apply(&self, input: &RoutingSnapshot, action: Action) -> Result<()> {
@@ -118,8 +125,9 @@ impl MachineRuntime {
         self.save_state(
             workspace_id,
             &runner,
-            RunnerState::Starting,
-            Some(registration.runner_id),
+            UnobservedRunnerUpdate::Registered {
+                github_id: registration.runner_id,
+            },
         )
         .await?;
         let message = ControlMessage::StartRunner {
@@ -149,14 +157,36 @@ impl MachineRuntime {
         &self,
         workspace_id: Uuid,
         runner: &OwnRunner,
-        state: RunnerState,
-        github_id: Option<i64>,
+        update: UnobservedRunnerUpdate,
     ) -> Result<()> {
+        let (state, github_id) = match update {
+            UnobservedRunnerUpdate::Registered { github_id } => {
+                (RunnerState::Starting, Some(github_id))
+            }
+            UnobservedRunnerUpdate::Stopped { github_id } => (RunnerState::Stopped, github_id),
+        };
         let store = self.store.clone();
         let organization_id = runner.runner.organization_id;
         let id = runner.runner.id;
         tokio::task::spawn_blocking(move || {
             store.update_runner(workspace_id, organization_id, id, state, github_id)
+        })
+        .await
+        .internal()?
+        .internal()
+    }
+
+    pub(crate) async fn observe_runner(
+        &self,
+        workspace_id: Uuid,
+        runner: &OwnRunner,
+        observation: OwnRunnerObservation,
+    ) -> Result<()> {
+        let store = self.store.clone();
+        let organization_id = runner.runner.organization_id;
+        let id = runner.runner.id;
+        tokio::task::spawn_blocking(move || {
+            store.observe_own_runner(workspace_id, organization_id, id, observation)
         })
         .await
         .internal()?

@@ -93,7 +93,8 @@ retirement and confirmed removal preserve the binding and its job references.
 
 Own-machine command records retain delivery identity, exact slot indices,
 and byte-precise requested and actual VM dimensions.
-Their optional `confirmed_at` holds the first agent evidence of the runner.
+Their optional `confirmed_at` holds the time of the first agent or GitHub
+evidence of the runner.
 The same migration sets it to the migration time for acknowledged commands.
 Other older commands keep it empty.
 They contain no JIT configuration or runtime-token secret.

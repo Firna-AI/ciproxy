@@ -108,11 +108,12 @@ async fn transient_assignment_failure_returns_an_error_and_retries_without_fallb
         &fixture,
         Arc::new(Unimock::new(())),
         gateway(messages.clone()),
-        Arc::new(Unimock::new(
+        Arc::new(Unimock::new((
+            RuntimeMock::now.each_call(matching!()).returns(at()),
             RuntimeMock::uuid
                 .each_call(matching!())
                 .returns(Uuid::from_u128(99)),
-        )),
+        ))),
     );
     runtime.assignments = Arc::new(Unimock::new(JobAssignmentsMock::facts.stub(|each| {
         each.call(matching!(_, _, _))
