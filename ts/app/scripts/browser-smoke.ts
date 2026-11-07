@@ -3,30 +3,33 @@ import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import { storageKeys } from "../src/state/storage.ts";
-import { exerciseCase, copyFailure } from "./browser-actions.ts";
-import { buildNavigation } from "./browser-build.ts";
-import { smokeCases } from "./browser-cases.ts";
 import {
   launchBrowser,
   type BrowserContext,
   type Page,
 } from "./browser-driver.ts";
-import { control, viewportControls, visible } from "./browser-fixture.ts";
-import { shellJourney, staticReloads } from "./browser-journeys.ts";
+import { viewportControls } from "./browser-fixture.ts";
+import { createSmokeRegistry, selectSmokeRuns } from "./browser-registry.ts";
 import { fixtureTime } from "./fixtures-core.ts";
 
 const origin = process.env.CIPROXY_HARNESS_URL ?? "http://127.0.0.1:4340";
 const output = resolve(
   process.env.CIPROXY_SMOKE_OUTPUT ?? ".context/ciproxy-mvp-m19/browser-smoke",
 );
-const selected = new Set(
-  process.argv
-    .filter((value) => value.startsWith("--case="))
-    .flatMap((value) => value.slice(7).split(",")),
-);
-const includesCase = (name: string): boolean =>
-  selected.size === 0 || selected.has(name);
+const selected = (() => {
+  try {
+    return selectSmokeRuns(
+      createSmokeRegistry(origin, output),
+      process.argv.slice(2),
+      (message) => process.stderr.write(`WARNING ${message}\n`),
+    );
+  } catch (error) {
+    process.stderr.write(
+      `FAIL ${error instanceof Error ? error.message : "Unable to select smoke cases"}\n`,
+    );
+    process.exit(1);
+  }
+})();
 const results: {
   name: string;
   width: number;
@@ -148,78 +151,14 @@ async function run(
 
 try {
   for (const width of [1440, 720, 390]) {
-    for (const item of smokeCases) {
-      if (!includesCase(item.name)) continue;
-      const storage =
-        item.name === "auth-expired"
-          ? {
-              ...item.storage,
-              [storageKeys.signInEnds]: "2026-11-06T11:00:00Z",
-            }
-          : item.storage;
-      const entries =
-        storage === undefined
-          ? undefined
-          : Object.entries(storage)
-              .map(([key, value]) => {
-                const area =
-                  key === storageKeys.installStarted
-                    ? "sessionStorage"
-                    : "localStorage";
-                return `${area}.setItem(${JSON.stringify(key)}, ${JSON.stringify(value)})`;
-              })
-              .join(";\n");
-      // Seed this context once. A document reload must keep product updates.
-      const init =
-        entries === undefined
-          ? undefined
-          : `if (sessionStorage.getItem("ciproxy.fixture-seeded") !== "1") {\n${entries};\nsessionStorage.setItem("ciproxy.fixture-seeded", "1");\n}`;
+    for (const entry of selected) {
       await run(
-        item.name,
+        entry.name,
         width,
-        async (page, context) => {
-          await control(origin, { scenario: item.scenario });
-          await page.goto(origin + item.path, {
-            waitUntil: "domcontentloaded",
-          });
-          await visible(
-            page.getByRole("heading", { name: item.heading, exact: true }),
-          );
-          if (item.text !== undefined)
-            await visible(page.getByText(item.text, { exact: true }));
-          await viewportControls(page, width);
-          await page.screenshot({
-            path: resolve(output, `${item.name}-${width}-initial.png`),
-            fullPage: true,
-          });
-          await exerciseCase(page, context, item, origin, width);
-        },
-        init,
+        (page, context) => entry.check(page, context, width),
+        entry.init,
       );
     }
-    for (const mode of ["link", "programmatic", "history"] as const) {
-      if (!includesCase(`build-${mode}`)) continue;
-      await run(`build-${mode}`, width, (page) =>
-        buildNavigation(page, origin, mode),
-      );
-    }
-    for (const journey of ["add", "switch", "sign-out"] as const) {
-      if (!includesCase(`shell-${journey}`)) continue;
-      await run(`shell-${journey}`, width, (page) =>
-        shellJourney(page, origin, journey),
-      );
-    }
-    if (includesCase("copy-failure")) {
-      // Arrange a denied clipboard. A user can deny this browser permission.
-      await run(
-        "copy-failure",
-        width,
-        (page) => copyFailure(page, origin),
-        'Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async () => { throw new Error("Denied") } } })',
-      );
-    }
-    if (includesCase("static-reloads"))
-      await run("static-reloads", width, (page) => staticReloads(page, origin));
   }
 } finally {
   await browser.close();
