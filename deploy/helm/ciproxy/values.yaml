@@ -14,6 +14,8 @@ controlPlane:
   sqlUser: ""
   sqlProxyImage: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.27.0
   kmsKey: ""
+  # Public Kubernetes Secret revision. The share code never enters Helm values.
+  boatSharedSnapshotRevision: ""
   publicUrl: https://br-main.preview.app.ciproxy.dev
   imageUrlPrefix: https://br-main.preview.app.ciproxy.dev/images/
   # Registration prints <prefix>-images-v<N>. N pins the mounted key version.

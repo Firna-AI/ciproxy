@@ -14,6 +14,8 @@ ownership does not combine their data or routing.
 The control-plane runtime stays disabled until [runtime setup](runtime.md)
 supplies its image, settings, and secret versions. The release server and
 static exports can deploy independently.
+The optional [Boat snapshot](runtime.md#boat-shared-snapshot) follows the
+release-token delivery path and needs no secret version while Boat is off.
 
 - [Setup](setup.md) gives the first operator steps.
 - [First deploy](first-deploy.md) gives CI data creation, the expected token
@@ -120,6 +122,7 @@ writes. The operator drains preview before the launch handoff.
 | `scripts/terraform_policy.py`                        | Exact destructive approval checks.                                                                                    |
 | `scripts/workload_snapshot.py`                       | Inputs from a ready rollout, bound to its commit and run attempt.                                                     |
 | `scripts/deploy.py`                                  | Own-namespace Helm, static publishing, NEG readiness, and CDN invalidation.                                           |
+| `scripts/boat_secret.py`                             | Optional Boat snapshot delivery over standard input and its public rollout revision.                                  |
 | `scripts/github-ruleset.sh`                          | Idempotent protected `main` ruleset setup.                                                                            |
 | `org-policies/`                                      | The managed sharing rule of project `ciproxy`, applied once by an operator.                                           |
 | `tests/`                                             | Executable CI tests and recorded plan-policy cases.                                                                   |

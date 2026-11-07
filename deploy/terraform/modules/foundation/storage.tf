@@ -75,6 +75,24 @@ resource "google_secret_manager_secret_iam_member" "release_sync" {
   member    = "serviceAccount:${local.ci_email}"
 }
 
+resource "google_secret_manager_secret" "boat_shared_snapshot" {
+  secret_id           = "${local.prefix}-boat-shared-snapshot"
+  deletion_protection = true
+  replication {
+    user_managed {
+      replicas {
+        location = local.region
+      }
+    }
+  }
+}
+
+resource "google_secret_manager_secret_iam_member" "boat_snapshot_sync" {
+  secret_id = google_secret_manager_secret.boat_shared_snapshot.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${local.ci_email}"
+}
+
 resource "google_dns_managed_zone" "public" {
   for_each    = local.dns_domains
   name        = each.key == "site" ? local.prefix : "${local.prefix}-${each.key}"
