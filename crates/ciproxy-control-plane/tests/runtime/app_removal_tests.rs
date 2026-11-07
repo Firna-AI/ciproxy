@@ -10,7 +10,6 @@ use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
 use ciproxy_store_interface::runners::RunnerState;
 use unimock::{MockFn, Unimock, matching};
 
-use super::clock::clock;
 use super::recovery_support::{
     gateway, job, other_organization, runtime, runtime_with_clock, saved,
 };
@@ -185,7 +184,7 @@ async fn workspace_takeout_keeps_a_busy_runner_and_records_the_distinct_cause() 
         &fixture,
         Arc::new(Unimock::new(())),
         messages.clone(),
-        clock(false),
+        Arc::new(Unimock::new(())),
     );
     runtime.installations = Probe::present();
     runtime.lifecycle(event).await.unwrap();
