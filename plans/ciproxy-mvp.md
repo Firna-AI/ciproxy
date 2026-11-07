@@ -4089,3 +4089,43 @@ should not be manual".
 - **Recommendation:** A. Shared styles keep the approved mockups.
 - **Action:** ask the user, because the user decides which side of a mockup
   and product mismatch is right.
+
+### 97. The gate's Markdown link check differs from GitHub
+
+- **Severity:** Medium. **Effort:** Large.
+- **Source:** Implementation, pull request #45, the follow-up item
+  `follow-ups/markdown-heading-ids-comrak.md`.
+- **Category:** Repository rule.
+- **Location:** `xtask/src/markdown/parser.rs`.
+- **Background:** The Markdown phase of the gate finds broken links in the
+  docs and plans. Its own parser computes the link target of each heading.
+  The follow-up item chose comrak, a Rust parser of GitHub's Markdown. The
+  orchestrator told the branch to add no new refusal without the user.
+- **Problem:** An exact match with GitHub refuses some links that pass
+  today. A direct switch to comrak also refuses valid `#softbreak` and
+  `#hardbreak` links.
+- **Impact if no action:** Valid links can fail the gate, and some broken
+  links can pass it.
+- **Root question:** How does the gate find the same link targets as
+  GitHub?
+- **Options:**
+  - **A.** Repair the current parser by hand. Effort: Medium.
+  - **B.** Switch directly to comrak, which fails valid-link tests.
+    Effort: Medium.
+  - **C.** Use a Node link checker, which also refuses missing images.
+    Effort: Medium.
+  - **D.** Fix comrak upstream first, then switch. Effort: Large.
+  - **E.** Fix the known gaps of the current parser. Some gaps stay.
+    Effort: Small.
+  - **F.** Keep both parsers, and accept a link that either accepts.
+    Effort: Medium.
+  - **G.** Render each page with comrak, and take the heading targets from
+    the HTML. It changes `Cargo.lock`, so it waits for pull request #39.
+    Effort: Large.
+- **Left out:** A live GitHub call, because the gate then needs the
+  network. A check of today's documents only, because known defects stay.
+- **Wider fix:** G.
+- **Recommendation:** G. One rendering model gives GitHub's targets for
+  every kind of heading.
+- **Action:** ask the user, because G refuses some links that pass today,
+  and a new refusal in the gate needs the user.
