@@ -63,7 +63,6 @@ pub(crate) enum InstallContext {
 
 /// An authenticated browser, with credentials excluded from Debug.
 pub struct Principal {
-    pub(crate) installation_continuation: Vec<Uuid>,
     pub(crate) install_context: Option<InstallContext>,
     pub(crate) user: User,
     pub(crate) session: Session,
@@ -90,10 +89,6 @@ impl Principal {
     /// Verified setup metadata without a frontend installation-ID bridge.
     pub fn setup(&self) -> Option<&SetupOutcome> {
         self.setup.as_ref()
-    }
-    /// Exact claims proved or completed during this browser's latest authorization.
-    pub fn installation_continuation(&self) -> &[Uuid] {
-        &self.installation_continuation
     }
     /// CSRF value restored from the sealed browser sign-in.
     pub fn csrf(&self) -> &str {

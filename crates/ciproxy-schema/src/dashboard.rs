@@ -30,6 +30,14 @@ diesel::table! {
 }
 
 diesel::table! {
+    dashboard_continuations (session_id) {
+        session_id -> Uuid,
+        claim_ids -> Array<Uuid>,
+        expires_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     dashboard_login_states (id) {
         id -> Uuid,
         digest -> Bytea,

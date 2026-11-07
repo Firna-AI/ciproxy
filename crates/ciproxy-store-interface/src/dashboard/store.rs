@@ -27,13 +27,17 @@ pub trait DashboardStore: Send + Sync {
     fn save_dashboard_user(&self, user: &User, memberships: &[Membership]) -> Result<()>;
     /// Save a rotated encrypted pair without changing membership freshness or roles.
     fn save_dashboard_credentials(&self, user_id: Uuid, credentials: &[u8]) -> Result<()>;
-    /// Commit identity, memberships, access requests, and its session together.
+    /// Commit identity, memberships, requests, session, and exact continuation together.
+    /// Keep token-free continuation even when no person or private session remains.
     fn establish_dashboard_session(
         &self,
         user: &User,
         memberships: &[Membership],
         session: &Session,
+        installation_continuation: &[Uuid],
     ) -> Result<bool>;
+    /// Read exact latest authorization claims before this browser's fixed expiry.
+    fn dashboard_continuation(&self, session_id: Uuid, at: DateTime<Utc>) -> Result<Vec<Uuid>>;
     /// Read the verified current membership snapshot.
     fn dashboard_memberships(&self, user_id: Uuid) -> Result<Vec<Membership>>;
     /// Read workspaces whose organizations still contain this person.

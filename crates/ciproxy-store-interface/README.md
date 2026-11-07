@@ -164,6 +164,9 @@ Gateway token issuance and registration serialize with workspace removal.
 
 The dashboard area stores verified GitHub memberships, workspace roles,
 access requests, opaque session digests, and encrypted OAuth grants.
+Session establishment atomically replaces exact authorization claim IDs under
+the existing browser session ID. This token-free continuation expires with the
+sign-in and retains no person or OAuth grant for browser-only sign-ins.
 A person record stays only with a role or an open request. Intentional
 organization removal keeps a separate durable marker and no owner-removal
 retention deadline. Retired labels preserve history while active names
@@ -176,7 +179,8 @@ write reads the injected clock after acquiring its locks.
 Scale-set bindings distinguish Active, Draining, and Removed. Listener discovery
 includes active bindings and draining bindings with tracked work or pending
 delivery. Exact context survives cleanup for final acknowledgements and runner
-removal. Confirmed removal applies only to the exact saved binding and remote ID.
+removal. Confirmed removal applies only to the exact saved binding and remote
+ID.
 
 InstallationLinkStore owns explicit typed entry evidence, signed requester
 claims, fresh-user proof, exact eligible offers, and immutable workspace choice.
@@ -192,7 +196,8 @@ OrganizationActivation stores separate billing and Admin holds. Missing metadata
 never authorizes execution. Existing organizations have explicit admitted data.
 New linked organizations count even while inactive. Removed ones do not count.
 Retained reinstall preserves holds and admission. Only a confirmed new workspace
-creates first-Admin work. Runnable authority also requires active GitHub App state.
+creates first-Admin work. Runnable authority also requires active GitHub App
+state.
 
 OwnRunnerStore exposes one coherent workspace routing snapshot.
 Its dedicated session lease serializes own-machine decisions.

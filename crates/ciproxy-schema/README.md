@@ -84,6 +84,8 @@ cannot discard live cleanup authority when one organization leaves.
 
 The dashboard area stores verified GitHub memberships, workspace roles,
 access requests, opaque session digests, and encrypted OAuth grants.
+A separate token-free continuation stores exact claim IDs under the existing
+browser session ID until its fixed expiry. It has no person reference.
 A person record stays only with a role or an open request. Intentional
 organization removal keeps a separate durable marker and no owner-removal
 retention deadline. Retired labels preserve history while active names

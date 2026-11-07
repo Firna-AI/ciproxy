@@ -68,6 +68,7 @@ pub(super) fn establish(
     user: &User,
     memberships: &[Membership],
     session: &Session,
+    installation_continuation: &[Uuid],
 ) -> Result<bool> {
     store
         .connection()?
@@ -79,11 +80,11 @@ pub(super) fn establish(
                 .find(user.id)
                 .count()
                 .get_result::<i64>(connection)?;
-            if exists == 0 {
-                return QueryResult::Ok(false);
+            if exists != 0 {
+                save_on(connection, session)?;
             }
-            save_on(connection, session)?;
-            Ok(true)
+            super::continuations::save_on(connection, session, installation_continuation)?;
+            Ok(exists != 0)
         })
         .store()
 }
@@ -110,6 +111,7 @@ pub(super) fn expire(store: &PgStore, at: DateTime<Utc>) -> Result<()> {
     store
         .connection()?
         .transaction(|connection| {
+            super::continuations::expire_on(connection, at)?;
             diesel::delete(dashboard_sessions::table.filter(dashboard_sessions::expires_at.le(at)))
                 .execute(connection)?;
             diesel::delete(

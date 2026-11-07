@@ -51,7 +51,9 @@ mod token_tests;
 
 mod setup_personal_tests;
 
+mod continuation_tests;
 mod direct_recovery_tests;
 mod late_approval_tests;
 mod link_final_tests;
+mod session_failure_tests;
 mod signed_association_tests;

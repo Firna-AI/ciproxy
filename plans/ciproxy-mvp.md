@@ -1216,6 +1216,13 @@ smoke-tests its pages at 1440, 720, and 390 pixels.
       latest GitHub authorization to their link results. Handle each ended
       continuation once. Show every result when several claims end,
       because claim order and the remembered workspace choose nothing.
+      Orchestrator call, 7 November 2026: fix PR #36 finding 8 with B.
+      Keep continuation data in the store, so claim counts cannot enlarge
+      the sign-in cookie. Include its schema, migration, and store support.
+      Implementation call, 7 November 2026: key a companion record by the
+      session ID already in the cookie. The private session row depends on
+      a retained person and does not exist for browser-only sign-ins.
+      The companion keeps those results without a new cookie reference.
 - [x] Reload a dashboard tab that is older than the API. My call: the API
       gives its build with each response, and the dashboard reloads at the
       next page change after the build changes. Reason: an old tab must not

@@ -149,6 +149,11 @@ delivery authority, dispatch, callbacks, and Boat accounting reads.
 
 The dashboard area stores verified GitHub memberships, workspace roles,
 access requests, opaque session digests, and encrypted OAuth grants.
+Session establishment commits the exact claim continuation and session rotation
+together. The continuation uses the existing browser session ID and fixed
+expiry.
+It survives person pruning without a person reference, profile, or OAuth grant.
+Authentication expiry cleanup deletes expired continuations.
 A person record stays only with a role or an open request. Intentional
 organization removal keeps a separate durable marker and no owner-removal
 retention deadline. Retired labels preserve history while active names
