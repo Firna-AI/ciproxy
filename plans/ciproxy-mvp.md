@@ -1707,6 +1707,10 @@ Answers of 5 November 2026:
   socket error go. A reconnect before the first handoff still means only
   GitHub's cache. There is no guessed time limit; GitHub's job time limit is
   the backstop. Rejected: A and C.
+- Item 89, A, 7 November 2026: after an App removal, idle Boat sandboxes
+  are not retired early. They end at their lifetime limit, six hours or two
+  on a trial, and running jobs finish. The user asked to review B later:
+  `follow-ups/boat-guest-retirement.md`. Rejected for now: B, C, and D.
 - Item 80, D: an attached Docker disk reserves its data plus the free disk
   of its label. The reservation comes only from spare disk that no set of
   job VMs can use, so a Docker disk stops no start, except for a short time
@@ -2617,7 +2621,8 @@ See the answers above.
 
 The user answered items 54 to 81 on 5 November 2026, and item 76 became a
 design call. Item 76 came back on 6 November 2026, and the user chose E.
-The user answered items 82 to 86 on 6 November 2026.
+The user answered items 82 to 86 on 6 November 2026, and item 89 on
+7 November 2026.
 The conversation gave each item in full in the layout of the
 `decisions-and-findings` skill. Each holds one root question,
 and its options keep the letters that the user saw.
@@ -3685,3 +3690,26 @@ above.
 - **Recommendation:** B.
 - **Action:** ask the user, because B removes an automatic fallback, A
   removes features, and C changes root inside the VM.
+
+### 89. Idle Boat sandboxes keep running after an App removal
+
+**Answer, 7 November 2026:** A, with B as a follow-up item to review later.
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Review, Milestone 15, pull request #35, its finding 2.
+- **Category:** Product bug.
+- **Location:** `crates/ciproxy-control-plane/src/boat_authority.rs:108`.
+- **Background:** ciproxy finds idle Boat sandboxes through GitHub. An App
+  removal ends that access, and the Boat guest reports only its runner exit.
+- **Problem:** After an App removal, idle Boat sandboxes keep running.
+- **Impact if no action:** Each idle sandbox bills until its lifetime ends:
+  six hours, or two hours on a trial.
+- **Root question:** How does ciproxy stop idle Boat cost after an App
+  removal, without stopping running jobs?
+- **Options:**
+  - **A.** Accept it, and state the lifetime exception. Effort: Small.
+  - **B.** Guest retirement through Boat's trusted controller. Effort: Large.
+  - **C.** A confirmed handover receipt. Effort: Large.
+  - **D.** A runner patch that stops taking jobs. Effort: Large.
+- **Recommendation:** A for the MVP. Milestone 15 recommended B.
+- **Action:** ask the user, because A changes a protocol promise.
