@@ -15,16 +15,30 @@ use super::AppService;
 impl AppService {
     pub(super) async fn validate_label(&self, workspace: Uuid, label: Label) -> Result<()> {
         let mut checked = false;
-        for organization in self.store.organizations(workspace).await? {
-            if organization.app_state != AppState::Active
+        for candidate in self
+            .store
+            .organizations(workspace)
+            .await?
+            .into_iter()
+            .filter(|organization| organization.app_state == AppState::Active)
+        {
+            let Some(locked) = self.locked_registration(candidate.installation_id).await? else {
+                continue;
+            };
+            let Some(mut organization) = locked.organization else {
+                continue;
+            };
+            if organization.workspace_id != workspace
+                || organization.app_state != AppState::Active
+                || locked.current.suspended
                 || !self.store.activation(&organization).await?.admitted
             {
                 continue;
             }
-            let lease = self.leases.acquire(organization.github_id).await?;
+            organization.login = locked.current.account.login;
             let mut labels = self.store.labels(workspace).await?;
             labels.push(label.clone());
-            self.prepare(&organization, labels, &*lease).await?;
+            self.prepare(&organization, labels, &*locked.lease).await?;
             checked = true;
         }
         if !checked {
@@ -35,18 +49,41 @@ impl AppService {
 
     pub(super) async fn reconcile_workspace_labels(&self, workspace: Uuid) -> Result<()> {
         let mut failure = None;
-        for organization in self.store.organizations(workspace).await? {
-            if organization.app_state != AppState::Active {
+        for candidate in self
+            .store
+            .organizations(workspace)
+            .await?
+            .into_iter()
+            .filter(|organization| organization.app_state == AppState::Active)
+        {
+            let locked = match self.locked_registration(candidate.installation_id).await {
+                Ok(Some(locked)) => locked,
+                Ok(None) => continue,
+                Err(error) => {
+                    failure = Some(error);
+                    continue;
+                }
+            };
+            let Some(mut organization) = locked.organization else {
+                continue;
+            };
+            if organization.workspace_id != workspace || organization.app_state != AppState::Active
+            {
                 continue;
             }
             let result = if self.store.activation(&organization).await?.admitted {
-                self.refresh(organization.installation_id).await
+                self.synchronize(organization, locked.current, None, false, &*locked.lease)
+                    .await
+                    .map(|_| ())
             } else {
-                let lease = self.leases.acquire(organization.github_id).await?;
+                if locked.current.suspended {
+                    continue;
+                }
+                organization.login = locked.current.account.login;
                 let api = self.scale_sets.for_organization(&organization).await?;
                 let labels = self.store.labels(workspace).await?;
                 let bindings = self.store.scale_sets(&organization).await?;
-                self.retire_bindings(&organization, &labels, &bindings, &*api, &*lease)
+                self.retire_bindings(&organization, &labels, &bindings, &*api, &*locked.lease)
                     .await
             };
             if let Err(error) = result {

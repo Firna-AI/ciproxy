@@ -13,7 +13,7 @@ use crate::state::{ApiState, query};
 use crate::wire::access::{Success, WorkspacePath};
 use crate::wire::settings::{LabelFit, LabelInput, LabelPath, LabelView};
 
-use super::{label_cleanup, label_views};
+use super::label_views;
 
 pub(super) async fn read(state: &ApiState, workspace: Uuid) -> Result<Vec<LabelView>> {
     let labels = query(state.store.clone(), move |store| store.labels(workspace)).await?;
@@ -89,7 +89,7 @@ pub(crate) async fn create(
         store.create_label(workspace_id, &saved)
     })
     .await?;
-    label_cleanup::cleanup(&state, workspace_id).await?;
+    state.github.reconcile_labels(workspace_id).await.api()?;
     Ok(Json(
         read(&state, workspace_id)
             .await?
@@ -147,7 +147,7 @@ pub(crate) async fn remove(
         store.retire_dashboard_label(workspace_id, path.label_id, at)
     })
     .await?;
-    label_cleanup::cleanup(&state, workspace_id).await?;
+    state.github.reconcile_labels(workspace_id).await.api()?;
     Ok(Json(Success { ok: true }))
 }
 

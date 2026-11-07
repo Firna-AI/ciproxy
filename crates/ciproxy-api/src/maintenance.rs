@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use ciproxy_store_interface::dashboard::records::Takeout;
 
 use crate::error::{Result, ServiceResultExt};
-use crate::handlers::{label_cleanup, organizations};
+use crate::handlers::organizations;
 use crate::state::{ApiState, query};
 
 /// Background work driven by the control-plane owner at least hourly.
@@ -68,7 +68,7 @@ impl ApiMaintenance for Maintenance {
         })
         .await?;
         for workspace in workspaces {
-            if let Err(error) = label_cleanup::cleanup(&self.state, workspace).await {
+            if let Err(error) = self.state.github.reconcile_labels(workspace).await.api() {
                 failure = Some(error);
             }
         }
