@@ -3891,9 +3891,46 @@ above.
     types, and show them as the mockup does. Effort: Medium.
   - **C.** Read the plan and the organization summaries in separate
     requests, with their own loading and error states. Effort: Medium.
+  - **D.** Add both facts to the workspace summaries of the session.
+    Effort: Medium.
+  - **E.** Share one workspace summary and one formatter between the
+    picker and the workspace switch of item 92. Effort: Medium.
 - **Left out:** Deriving them from `requires_upgrade`. It gives neither
-  fact.
-- **Wider fix:** None.
+  fact. Stored counts, because they can become stale.
+- **Wider fix:** E, if item 92 also shows the facts.
+- **Related:** Item 92 has the same gap in the workspace switch. E serves
+  both. B does not wait for item 92.
 - **Recommendation:** B. One generated contract supplies the approved facts.
+- **Action:** ask the user, because the user decides which side of a mockup
+  and product mismatch is right.
+
+### 92. The workspace switch shows roles, not plan facts
+
+- **Severity:** Low. **Effort:** Medium.
+- **Source:** Review, Milestone 19, pull request #36, the check of round 2,
+  finding 2.
+- **Category:** Mockup.
+- **Location:** `ts/app/src/view/shell.ts:96`, and
+  `ts/app/src/components/shell/menus.tsx:47`.
+- **Background:** The workspace switch is the dashboard menu that opens
+  another workspace. Its approved mockup shows the tier and the
+  organization count of each workspace. The built switch shows the role of
+  the person in each workspace.
+- **Problem:** The session summary supplies neither the tier nor the count.
+- **Impact if no action:** The switch differs from the approved mockup.
+- **Root question:** What does each row of the switch show?
+- **Options:**
+  - **A.** Keep the role, and update the mockup. Effort: Small.
+  - **B.** Show the tier and the count for each workspace where the person
+    has a role. Keep "No role yet" for the others. Effort: Medium.
+  - **C.** Show the tier and the count on every row, also without a role.
+    Effort: Medium.
+  - **D.** Show the role, the tier, and the count together. Effort: Medium.
+- **Left out:** The limit flag of the summary. It gives neither fact.
+- **Wider fix:** E of item 91.
+- **Related:** Item 91, the same gap in the picker. This answer does not
+  block B of item 91.
+- **Recommendation:** B. It follows the mockup and keeps the current text
+  for a person with no role.
 - **Action:** ask the user, because the user decides which side of a mockup
   and product mismatch is right.
