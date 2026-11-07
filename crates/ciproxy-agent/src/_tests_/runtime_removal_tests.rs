@@ -35,14 +35,14 @@ async fn disconnected_removal_exits_after_cleanup_without_another_input_event() 
         AgentMock::control_connection
             .some_call(matching!(false))
             .returns(Ok(())),
-        AgentMock::finished
-            .each_call(matching!())
-            .answers_arc(Arc::new(move |_| {
+        AgentMock::complete_removal
+            .each_call(matching!(_))
+            .answers_arc(Arc::new(move |_, _| {
                 let finished = observed.load(Ordering::SeqCst);
                 if finished {
                     checked.send(()).unwrap();
                 }
-                finished
+                Ok(finished)
             })),
         AgentMock::guest
             .some_call(matching!(_, "runner", GuestToAgent::RunnerExited { .. }))
@@ -98,7 +98,7 @@ async fn disconnected_removal_exits_after_cleanup_without_another_input_event() 
         .await
         .unwrap();
     let (_remove, removal) = mpsc::channel(1);
-    let run = unconstrained(daemon.run(identity(), guest_events, true, removal));
+    let run = unconstrained(daemon.run(Some(identity()), guest_events, true, removal));
     pin_mut!(run);
     assert!(poll!(run.as_mut()).is_pending());
     exit_ready.recv().await.unwrap();

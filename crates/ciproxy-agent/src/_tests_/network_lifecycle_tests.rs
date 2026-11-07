@@ -16,6 +16,7 @@ use crate::fixtures::{controller, report_dependencies, vm};
 use crate::network_fixtures::{Deletion, HostNetworks, commands, restored, runtime, saving};
 use crate::process::{CommandsMock, UnitState};
 use crate::state::{MachineState, Mode};
+use crate::terminal_completion::CompletionAction;
 use crate::vm_files::VmFilesMock;
 use crate::vsock::GuestsMock;
 
@@ -85,11 +86,15 @@ async fn runner_exit_releases_slots_before_cleanup_and_recovers_network_ownershi
     recovered.vms = vms.clone();
     recovered.restore().await.unwrap();
     assert_eq!(host.lock().unwrap().deletions.len(), 0);
-    assert!(!recovered.finished().await);
+    assert!(
+        matches!(recovered.complete_removal(CompletionAction::Stop).await, Err(Error::HostCommand { program }) if program == "ip")
+    );
     let result = recovered.reconcile().await;
     assert!(matches!(result, Err(Error::HostCommand { program }) if program == "ip"));
     assert_eq!(recovered.state.lock().await.pending_networks, [1].into());
-    assert!(!recovered.finished().await);
+    assert!(
+        matches!(recovered.complete_removal(CompletionAction::Stop).await, Err(Error::HostCommand { program }) if program == "ip")
+    );
     let next = vms.allocate(vm("next", false).report, &[1]).await.unwrap();
     assert_eq!(next.network_index, 2);
     host.lock().unwrap().deletion = Deletion::Succeed;
@@ -98,7 +103,12 @@ async fn runner_exit_releases_slots_before_cleanup_and_recovers_network_ownershi
         recovered.state.lock().await.pending_networks,
         Default::default()
     );
-    assert!(recovered.finished().await);
+    assert!(
+        recovered
+            .complete_removal(CompletionAction::Stop)
+            .await
+            .unwrap()
+    );
     assert_eq!(restored(&saved).mode, Mode::Removed);
     assert_eq!(host.lock().unwrap().namespaces, Default::default());
     assert_eq!(

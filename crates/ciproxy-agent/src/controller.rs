@@ -16,14 +16,13 @@ use crate::docker::DockerDisks;
 use crate::error::{Error, Result};
 use crate::mode::ModeAction;
 use crate::state::{MachineState, Mode};
+use crate::terminal_completion::{CompletionAction, UninstallCleanup};
 
 #[cfg_attr(test, unimock::unimock(api = AgentMock))]
 #[async_trait]
 pub(crate) trait Agent: Send + Sync {
-    /// Finish checked local cleanup for an empty Removed startup.
-    async fn finish_removed_startup(&self) -> Result<bool>;
-    /// Retry owned network cleanup without reading the workload area.
-    async fn cleanup_networks(&self) -> Result<()>;
+    /// Check terminal networks and finish local cleanup before forgetting identity.
+    async fn complete_removal(&self, action: CompletionAction) -> Result<bool>;
     async fn control_connection(&self, connected: bool) -> Result<()>;
     async fn configuration_lost(&self, runner_id: &str) -> Result<()>;
     async fn restore(&self) -> Result<()>;
@@ -37,7 +36,6 @@ pub(crate) trait Agent: Send + Sync {
         message: GuestToAgent,
     ) -> Result<Option<AgentMessage>>;
     async fn remove(&self) -> Result<()>;
-    async fn finished(&self) -> bool;
 }
 
 pub(crate) struct Controller {
@@ -45,8 +43,6 @@ pub(crate) struct Controller {
     pub(crate) allocation: Mutex<()>,
     /// Prevent overlapping cleanup attempts from deleting a reused index.
     pub(crate) network_cleanup: Mutex<()>,
-    /// Unknown host inspection keeps terminal removal unfinished.
-    pub(crate) network_inventory_valid: AtomicBool,
     pub(crate) control_connected: AtomicBool,
     pub(crate) state: Mutex<MachineState>,
     pub(crate) store: Arc<dyn Store>,
@@ -60,7 +56,7 @@ pub(crate) struct Controller {
 
 #[async_trait]
 impl Agent for Controller {
-    async fn finish_removed_startup(&self) -> Result<bool> {
+    async fn complete_removal(&self, action: CompletionAction) -> Result<bool> {
         let removed_empty = {
             let state = self.state.lock().await;
             state.mode == Mode::Removed && state.runners.is_empty()
@@ -68,12 +64,30 @@ impl Agent for Controller {
         if !removed_empty {
             return Ok(false);
         }
-        self.cleanup_networks().await?;
-        Ok(self.finished().await)
-    }
-
-    async fn cleanup_networks(&self) -> Result<()> {
-        self.retry_network_cleanup().await
+        self.retry_network_cleanup().await?;
+        let uninstall = matches!(action, CompletionAction::Uninstall(_));
+        if let CompletionAction::Uninstall(UninstallCleanup {
+            images,
+            preparation,
+            service,
+        }) = action
+        {
+            if let Some(images) = images {
+                images.purge()?;
+            }
+            preparation.remove().await?;
+            service.uninstall()?;
+        }
+        let mut state = self.state.lock().await;
+        let mut next = state.clone();
+        next.identity = None;
+        if uninstall {
+            self.store.clear()?;
+        } else if next != *state {
+            self.store.save(&next)?;
+        }
+        *state = next;
+        Ok(true)
     }
 
     async fn control_connection(&self, connected: bool) -> Result<()> {
@@ -161,14 +175,6 @@ impl Agent for Controller {
 
     async fn remove(&self) -> Result<()> {
         self.change_mode(ModeAction::Remove).await
-    }
-
-    async fn finished(&self) -> bool {
-        let state = self.state.lock().await;
-        state.mode == Mode::Removed
-            && state.runners.is_empty()
-            && state.pending_networks.is_empty()
-            && self.network_inventory_valid.load(Ordering::Acquire)
     }
 }
 

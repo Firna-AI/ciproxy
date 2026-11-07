@@ -6,17 +6,16 @@ use unimock::{MockFn, Unimock, matching};
 
 use crate::area::{AreaFilesMock, DiskAreaMock};
 use crate::area_types::Phase;
-use crate::boundaries::{ImagesMock, ServiceMock, StoreMock};
-use crate::controller::AgentMock;
+use crate::boundaries::{ImagesMock, ServiceMock, StoreMock, VmsMock};
 use crate::error::{Error, ErrorResultExt};
-use crate::fixtures::vm;
+use crate::fixtures::{controller, vm};
 use crate::host_fixtures::inventory;
 use crate::host_packages::PackagesMock;
 use crate::host_preparation::{
     FinalUninstall, HostPreparation, Preparation, PreparationMock, Uninstall, UninstallState,
 };
 use crate::host_tools::ToolsMock;
-use crate::state::MachineState;
+use crate::state::{MachineState, Mode};
 
 use super::uninstall_fixtures::{Event, cleanup, runtime, uninstall};
 
@@ -51,7 +50,7 @@ async fn uninstall_cleans_an_empty_creating_machine_and_verifies_a_recorded_vm_b
     let result = service.start().await;
     assert_eq!(
         *events.lock().unwrap(),
-        vec![Event::Area, Event::Service, Event::State],
+        vec![Event::Drain, Event::Complete],
         "an empty Creating machine must reach guarded removal without runtime checks"
     );
     assert_eq!(result.unwrap(), UninstallState::Complete);
@@ -59,9 +58,8 @@ async fn uninstall_cleans_an_empty_creating_machine_and_verifies_a_recorded_vm_b
     assert_eq!(
         *events.lock().unwrap(),
         vec![
-            Event::Area,
-            Event::Service,
-            Event::State,
+            Event::Drain,
+            Event::Complete,
             Event::Verify,
             Event::Recover,
             Event::Restore,
@@ -179,21 +177,34 @@ async fn final_uninstall_waits_for_jobs_then_preserves_identity_until_cleanup_su
                 }))
                 .at_least_times(0),
         );
-        let finished = AgentMock::finished
+        let network = VmsMock::networks
             .some_call(matching!())
-            .returns(jobs_finished);
+            .answers(&|_| Ok(Vec::new()))
+            .at_least_times(0);
         let mock = Arc::new(if jobs_finished {
-            Unimock::new((finished, callbacks))
+            Unimock::new((network, callbacks))
         } else {
-            Unimock::new(finished)
+            Unimock::new(())
         });
+        let agent = controller(
+            MachineState {
+                mode: Mode::Removed,
+                runners: if jobs_finished {
+                    vec![]
+                } else {
+                    vec![vm("job", true)]
+                },
+                ..MachineState::default()
+            },
+            mock.as_ref().clone(),
+        );
         let result = FinalUninstall {
             files: mock.clone(),
             images: mock.clone(),
             preparation: mock.clone(),
             service: mock.clone(),
             store: mock.clone(),
-            agent: mock.clone(),
+            agent: Arc::new(agent),
         }
         .finish()
         .await;

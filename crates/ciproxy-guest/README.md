@@ -108,6 +108,8 @@ cargo clippy --package ciproxy-guest --all-targets -- -D warnings
 ```
 
 The unit tests use `unimock` at each runtime boundary.
+The source-hook integration test uses a real temporary Unix socket.
+It checks the original credentials and the preparation and decision lines.
 The Shutdown test waits for an actual pending runner future.
 It uses a notification, with no sleep or wall-clock assertion.
 Live vsock, Docker, GitHub, and Boat checks need external infrastructure.
@@ -131,6 +133,8 @@ Live vsock, Docker, GitHub, and Boat checks need external infrastructure.
 - [src/cli.rs](src/cli.rs) composes the selected Linux runtime.
 - [src/_tests_/service_tests.rs](src/_tests_/service_tests.rs) protects the
   lifecycle requirements.
+- [tests/assignment_socket.rs](tests/assignment_socket.rs)
+  checks the source-hook wire contract through the production socket path.
 
 ### Related Docs
 
