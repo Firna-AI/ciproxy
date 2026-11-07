@@ -80,6 +80,7 @@ elif tool == "terraform":
                 "namespace": "ciproxy-main-preview",
                 "allowed_zones": ["us-central1-a", "us-central1-b", "us-central1-c"],
                 "release_secret": "fake-release-token", "runtime_repository": "example.invalid/runtime",
+                "boat_shared_snapshot_secret": "fake-boat-shared-snapshot",
                 "hosts": {"releases": "downloads.invalid", "dashboard": "app.invalid"},
                 "buckets": {"site": "site-bucket", "dashboard": "app-bucket"},
                 "control_plane_account": "runtime@example.invalid", "sql_connection": "test:eu:sql",
@@ -96,7 +97,20 @@ elif tool == "gcloud" and args[:3] == ["iam", "service-accounts", "describe"]:
         disabled = os.environ["FAKE_TRUST_DISABLED"] == "true"
     print(json.dumps({"disabled": disabled}))
 elif tool == "gcloud" and args[:3] == ["secrets", "versions", "access"]:
-    print("fake-token")
+    if "--secret=fake-boat-shared-snapshot" in args:
+        error = os.environ.get("FAKE_BOAT_ERROR")
+        if error:
+            print(f"ERROR: (gcloud.secrets.versions.access) {error}: fixture failure", file=sys.stderr)
+            sys.exit(1)
+        print(os.environ.get("FAKE_BOAT_SNAPSHOT", "fixture-boat-share-code"))
+    else:
+        print("fake-token")
+elif (tool == "kubectl" and args[:1] == ["apply"]
+      and record["manifest"].get("metadata", {}).get("name") == "boat-shared-snapshot"):
+    if os.environ.get("FAKE_BOAT_APPLY_ERROR") == "true":
+        print(json.dumps(record["manifest"]), file=sys.stderr)
+        sys.exit(1)
+    print(os.environ.get("FAKE_BOAT_REVISION", "41"))
 elif tool == "kubectl" and args[:2] == ["get", "serviceaccount"]:
     print(os.environ.get("FAKE_KSA_UID", "22222222-2222-4222-8222-222222222222" if "--namespace=ciproxy-production" in args else "11111111-1111-4111-8111-111111111111"))
 elif tool == "kubectl" and args[:2] == ["get", "service"]:

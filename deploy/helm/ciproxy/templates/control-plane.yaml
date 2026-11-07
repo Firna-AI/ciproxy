@@ -17,6 +17,8 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: ciproxy-control-plane
+      annotations:
+        checksum/boat-shared-snapshot: {{ .Values.controlPlane.boatSharedSnapshotRevision | sha256sum | quote }}
     spec:
       serviceAccountName: control-plane
       affinity:
@@ -55,6 +57,12 @@ spec:
               value: {{ .Values.controlPlane.imageUrlPrefix | quote }}
             - name: BOAT_KMS_KEY
               value: {{ .Values.controlPlane.kmsKey | quote }}
+            - name: BOAT_SHARED_SNAPSHOT
+              valueFrom:
+                secretKeyRef:
+                  name: boat-shared-snapshot
+                  key: BOAT_SHARED_SNAPSHOT
+                  optional: true
             - name: SECRETS_DIRECTORY
               value: /var/run/secrets/ciproxy
             - name: CDN_SIGNING_KEY_NAME

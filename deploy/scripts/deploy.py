@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 
+from boat_secret import sync_boat_secret
 from deploy_support import (
     helm_values, neg_zones, run, runtime_configuration,
     sync_release_secret, terraform_init,
@@ -54,8 +55,10 @@ def main():
         if os.environ.get("CONTROL_PLANE_RUNTIME_READY") != "false":
             raise ValueError("A running control plane requires true or explicit false readiness.")
     sync_release_secret(config)
+    boat_revision = sync_boat_secret(config)
 
     release, ciproxy = helm_values(config, digest, runtime_enabled, control_image)
+    ciproxy["controlPlane"]["boatSharedSnapshotRevision"] = boat_revision
     ciproxy["controlPlane"]["cdnSigningKeyName"] = os.environ.get("CDN_SIGNING_KEY_NAME", "")
     ciproxy["controlPlane"]["env"] = [
         {"name": name, "value": os.environ.get(source, "")}

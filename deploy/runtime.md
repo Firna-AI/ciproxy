@@ -68,6 +68,7 @@ enabling it. The `deploy/helm/ciproxy` chart supplies this interface:
 | Health            | Answer `GET /api/health/ready` when ready, and `GET /api/health/live` while alive. The load balancer checks the ready path with the dashboard host.                                                                                                                                                                                                                                           |
 | Database          | Use `DATABASE_URL`: the Cloud SQL Auth Proxy beside it, on `127.0.0.1:5432`, with IAM login and no password.                                                                                                                                                                                                                                                                                  |
 | Settings          | Read `PUBLIC_URL`, `IMAGE_URL_PREFIX`, `BOAT_KMS_KEY`, and `CDN_SIGNING_KEY_NAME`. The chart sets `CDN_SIGNING_KEY_NAME` to `ciproxy-<env>-images-v<N>`.                                                                                                                                                                                                                                      |
+| Boat snapshot     | Read the optional `BOAT_SHARED_SNAPSHOT` pod variable from a Kubernetes Secret. See [Boat setup](#boat-shared-snapshot).                                                                                                                                                                                                                                                                      |
 | GitHub App        | Read the pod variables `GITHUB_APP_ID`, `GITHUB_OAUTH_CLIENT_ID`, and `GITHUB_APP_SLUG`. Deploy maps them from this environment's `CIPROXY_APP_ID`, `CIPROXY_APP_CLIENT_ID`, and `CIPROXY_APP_SLUG` GitHub variables. Build the installation URL from the slug. The OAuth secret stays in `github-oauth-secret`.                                                                              |
 | Job image         | Read `JOB_IMAGE_MANIFEST_PATH` from this environment's GitHub variable. It pins one immutable path relative to `IMAGE_URL_PREFIX`, such as `<release>/manifest.json`.                                                                                                                                                                                                                         |
 | Build and install | Read `BUILD_ID` from the trusted deployment source commit. Read `DOWNLOAD_URL` from the HTTPS origin of this environment's release host. Deploy derives both values.                                                                                                                                                                                                                          |
@@ -116,3 +117,73 @@ to the edge. With uptime checks on, it also checks `/api/health/ready`. To
 turn off a running runtime, set `CONTROL_PLANE_RUNTIME_READY` to `false`
 and deploy. While a runtime runs, an unset value stops the deploy with an
 error, so a lost variable cannot remove the runtime.
+
+## Boat shared snapshot
+
+`BOAT_SHARED_SNAPSHOT` selects the shared Boat snapshot of the job image.
+An absent or empty value disables Boat. Own machines still run jobs.
+Use the snapshot of the same image release as `JOB_IMAGE_MANIFEST_PATH`.
+Set both before the next deploy. The runtime does not compare them.
+
+The `deploy/terraform/data` root creates one Secret Manager parent per
+environment, with no version. Apply it through the normal CI promotion for
+both `main-preview/data` and `production/data` state prefixes. No bootstrap,
+shared, edge, or environment snapshot root needs an apply for this change.
+Each `ciproxy-<env>-deploy` identity gets
+`roles/secretmanager.secretAccessor` on its own
+`ciproxy-<env>-boat-shared-snapshot` parent, as for its release token.
+
+After that data apply succeeds, run these commands as the operator.
+Repeat them for `DEPLOY_ENV=production` after its data apply succeeds.
+The prompt keeps the share code out of shell arguments, files, and logs:
+
+```sh
+export DEPLOY_ENV=main-preview
+gcloud secrets describe "ciproxy-$DEPLOY_ENV-boat-shared-snapshot" \
+  --project=ciproxy --format='value(name)'
+python3 - <<'PY'
+import getpass
+import os
+import subprocess
+
+subprocess.run([
+    "gcloud", "secrets", "versions", "add",
+    f"ciproxy-{os.environ['DEPLOY_ENV']}-boat-shared-snapshot",
+    "--project=ciproxy", "--data-file=-",
+], input=getpass.getpass("Boat share code: "), text=True, check=True)
+PY
+```
+
+Set the existing `JOB_IMAGE_MANIFEST_PATH` GitHub environment variable to
+the matching immutable release path. Run a fresh accepted deploy of this
+code, with a control-plane image that supports Boat. Use the
+[all-jobs retry](first-deploy.md#retry-all-jobs-and-create-the-edge) when
+retrying a selected run. Add no GitHub variable or secret for the share code.
+
+Deploy reads `latest` into memory and applies `boat-shared-snapshot` in
+the environment namespace over standard input. It uses server-side apply,
+so no last-applied annotation stores the value. Helm receives only the
+Kubernetes Secret revision. The pod checksum hashes that public revision,
+not the share code. A changed revision restarts the control-plane pods.
+A new Secret Manager version reaches the pods at the next deploy.
+
+Without a version, deploy applies an empty Secret and continues. It removes
+any previous `BOAT_SHARED_SNAPSHOT` key that it owns. The chart's optional
+key reference then leaves the variable unset. Access denials, disabled
+versions, and apply failures stop the deploy with no payload in the log.
+Keep a usable version while Boat sandboxes can exist. Without the value,
+the runtime stops Boat cleanup and removes the exit callback.
+
+`BOAT_KMS_KEY` already uses the full resource path:
+
+```text
+projects/ciproxy/locations/us-central1/keyRings/ciproxy-<env>/cryptoKeys/boat-account-keys
+```
+
+The runtime identity `ciproxy-<env>-control` already has
+`roles/cloudkms.cryptoKeyEncrypterDecrypter` on that environment's key.
+This role supplies `cloudkms.cryptoKeyVersions.useToEncrypt` and
+`cloudkms.cryptoKeyVersions.useToDecrypt`. No KMS role changes are needed.
+The runtime gets access tokens from the GKE metadata service through its
+[UID binding](runtime-identity.md). Offline checks cannot prove live IAM
+access or a real Boat start.
