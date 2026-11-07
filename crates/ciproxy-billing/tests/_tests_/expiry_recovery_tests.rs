@@ -3,7 +3,7 @@
 use ciproxy_billing::error::Error;
 use ciproxy_billing::service::view::{ChangeOutcome, CheckoutOutcome, EventOutcome};
 use ciproxy_billing::stripe::wire::types::{CheckoutSession, CheckoutStatus, PaymentStatus};
-use ciproxy_store_interface::billing::state::{SubscriptionState, Tier};
+use ciproxy_store_interface::billing::state::{AddOns, SubscriptionState, Tier};
 
 use super::expiry_support::{event, lost_upgrade, renewal, started};
 use super::fake_subscriptions::SubscriptionOutcome;
@@ -40,7 +40,13 @@ fn every_observer_saves_lost_upgrade_expiry_before_a_renewal_replaces_latest_inv
             }
             Observer::ConflictingChange => {
                 matches!(
-                    reader.change(access(), wanted(Tier::Team, 0, 0)),
+                    reader.change_add_ons(
+                        access(),
+                        AddOns {
+                            start_blocks: 0,
+                            machines: 0
+                        }
+                    ),
                     Err(Error::PaymentConfirming)
                 )
             }
@@ -87,7 +93,13 @@ fn every_observer_saves_lost_upgrade_expiry_before_a_renewal_replaces_latest_inv
         updated.items.data.truncate(1);
         fake.expect_subscription(remove_all_addons(), SubscriptionOutcome::respond(updated));
         assert!(matches!(
-            billing.change(access(), wanted(Tier::Team, 0, 0)),
+            billing.change_add_ons(
+                access(),
+                AddOns {
+                    start_blocks: 0,
+                    machines: 0
+                }
+            ),
             Ok(ChangeOutcome::Applied(_))
         ));
         assert_eq!(
@@ -107,7 +119,13 @@ fn unobserved_upgrade_releases_at_one_day_without_showing_the_renewal_payment_pa
     let before = "2026-12-05T10:59:59Z".parse().unwrap();
     let reader = read_service(&database, &fake, before);
     assert!(matches!(
-        reader.change(access(), wanted(Tier::Team, 0, 0)),
+        reader.change_add_ons(
+            access(),
+            AddOns {
+                start_blocks: 0,
+                machines: 0
+            }
+        ),
         Err(Error::PaymentConfirming)
     ));
     let saved = database
@@ -140,7 +158,13 @@ fn unobserved_upgrade_releases_at_one_day_without_showing_the_renewal_payment_pa
     updated.items.data.truncate(1);
     fake.expect_subscription(remove_all_addons(), SubscriptionOutcome::respond(updated));
     assert!(matches!(
-        billing.change(access(), wanted(Tier::Team, 0, 0)),
+        billing.change_add_ons(
+            access(),
+            AddOns {
+                start_blocks: 0,
+                machines: 0
+            }
+        ),
         Ok(ChangeOutcome::Applied(_))
     ));
     assert_eq!(database.store.billing(workspace()).unwrap().command, None);

@@ -12,7 +12,8 @@ use utoipa_axum::routes;
 
 use crate::error::{Error, Problem, ProblemCode};
 use crate::handlers::{
-    auth, github_setup, labels, links, machines, members, organizations, sessions, setup,
+    auth, billing_pages, checkout, github_setup, jobs, labels, links, machines, members,
+    organizations, savings, sessions, setup,
 };
 use crate::state::ApiState;
 
@@ -51,6 +52,20 @@ pub(crate) fn routes() -> OpenApiRouter<ApiState> {
         .routes(routes!(links::detail))
         .routes(routes!(links::choose))
         .routes(routes!(links::enable))
+        .routes(routes!(jobs::live))
+        .routes(routes!(jobs::history))
+        .routes(routes!(jobs::detail))
+        .routes(routes!(savings::report))
+        .routes(routes!(billing_pages::usage))
+        .routes(routes!(billing_pages::plans))
+        .routes(routes!(billing_pages::banner))
+        .routes(routes!(checkout::review))
+        .routes(routes!(checkout::open))
+        .routes(routes!(checkout::returned))
+        .routes(routes!(checkout::change))
+        .routes(routes!(checkout::addons))
+        .routes(routes!(checkout::free))
+        .routes(routes!(checkout::portal))
 }
 
 /// Build the complete dashboard router. Mount it under /api at the host root.
@@ -72,10 +87,14 @@ pub(crate) fn cookie(headers: &HeaderMap, name: &str) -> Option<String> {
         .find_map(|(key, value)| (key == name).then(|| value.to_owned()))
 }
 
-async fn protect(State(state): State<ApiState>, mut request: Request, next: Next) -> Response {
+pub(crate) async fn protect(
+    State(state): State<ApiState>,
+    mut request: Request,
+    next: Next,
+) -> Response {
     let public = matches!(
         request.uri().path(),
-        "/auth/github" | "/auth/github/callback" | "/github/setup"
+        "/auth/github" | "/auth/github/callback" | "/github/setup" | "/hooks/stripe"
     ) || request.extensions().get::<MatchedPath>().is_none();
     let result = async {
         if !public {

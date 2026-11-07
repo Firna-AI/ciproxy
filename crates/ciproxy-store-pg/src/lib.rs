@@ -14,6 +14,7 @@ mod gateway_registration;
 mod gateway_transaction;
 mod github;
 mod installation_links;
+mod job_views;
 mod jobs;
 mod labels;
 mod machine_observation;

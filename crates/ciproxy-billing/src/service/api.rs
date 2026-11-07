@@ -1,6 +1,6 @@
 //! Object-safe service entry points for dashboard and webhook callers.
 
-use ciproxy_store_interface::billing::state::Selection;
+use ciproxy_store_interface::billing::state::{AddOns, Selection};
 use ciproxy_store_interface::billing::store::BillingRecord;
 use unimock::unimock;
 use uuid::Uuid;
@@ -27,8 +27,10 @@ pub trait BillingApi: Send + Sync {
         access: BillingAccess,
         session_id: &str,
     ) -> Result<CheckoutOutcome>;
-    /// Change paid tiers or save add-on quantities with Stripe proration.
+    /// Apply an explicitly chosen paid tier and its selected quantities.
     fn change(&self, access: BillingAccess, selection: Selection) -> Result<ChangeOutcome>;
+    /// Save quantities while keeping the Stripe tier reconciled under the billing lock.
+    fn change_add_ons(&self, access: BillingAccess, add_ons: AddOns) -> Result<ChangeOutcome>;
     /// Keep paid coverage until Stripe actually ends the subscription.
     fn move_to_free(&self, access: BillingAccess) -> Result<()>;
     /// Open invoices, saved card, cancellation, and undo-cancellation only.

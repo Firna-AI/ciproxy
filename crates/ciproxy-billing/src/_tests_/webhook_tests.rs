@@ -3,12 +3,15 @@
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
+use hmac::{Hmac, KeyInit, Mac};
+use sha2::Sha256;
 use unimock::{MockFn, Unimock, matching};
 
 use crate::clock::ClockMock;
 use crate::error::Error;
 use crate::service::api::BillingApi;
 use crate::service::runtime::{BillingService, Redirects};
+use crate::service::view::EventOutcome;
 use crate::webhook::SigningSecret;
 
 #[test]
@@ -34,5 +37,37 @@ fn webhook_rejects_a_wrong_signature_even_for_an_ignored_event() {
     assert!(
         matches!(result, Err(Error::InvalidSignature)),
         "expected InvalidSignature, got {result:?}"
+    );
+}
+
+#[test]
+fn signed_unused_event_with_object_data_is_ignored_without_external_io() {
+    let now: DateTime<Utc> = "2026-11-04T12:00:00Z".parse().unwrap();
+    let billing: Box<dyn BillingApi> = Box::new(BillingService::new(
+        Arc::new(Unimock::new(())),
+        Arc::new(Unimock::new(())),
+        Arc::new(Unimock::new(
+            ClockMock::now.each_call(matching!()).returns(now),
+        )),
+        SigningSecret::new("whsec_offline_boundary".into()),
+        Redirects {
+            success_url: "https://app.example/success".into(),
+            cancel_url: "https://app.example/cancel".into(),
+            portal_return_url: "https://app.example/billing".into(),
+        },
+    ));
+    let raw = br#"{"id":"evt_signed_unused","created":1793793600,"type":"charge.succeeded","data":{"object":{"id":"ch_unused"}}}"#;
+    let mut mac = Hmac::<Sha256>::new_from_slice(b"whsec_offline_boundary").unwrap();
+    mac.update(format!("{}.", now.timestamp()).as_bytes());
+    mac.update(raw);
+    let signature = format!(
+        "t={},v1={}",
+        now.timestamp(),
+        hex::encode(mac.finalize().into_bytes())
+    );
+    let result = billing.webhook(&signature, raw);
+    assert!(
+        matches!(result, Ok(EventOutcome::Ignored)),
+        "expected ignored event with no external IO, got {result:?}"
     );
 }

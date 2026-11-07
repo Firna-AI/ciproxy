@@ -35,6 +35,10 @@ They delete removed organization data after 30 days.
 The workspace purge deletes one empty workspace after its 30-day deadline.
 A reinstall clears that deadline without restoring execution credentials.
 It preserves labels, settings, and job resource history.
+Dashboard jobs read current label requests only while queued.
+Executed jobs read the retained own-machine or Boat request by runner identity.
+Missing retained requests stay unknown, including their vCPUs and decimal-GB
+memory and free job disk. Actual allocation stays separate.
 Job rows map machine-handled entry and byte measurements as one optional bundle.
 The content source stays independent of measurement presence.
 Measured GitHub-only and zero-entry restores both round-trip.
@@ -241,6 +245,9 @@ CI starts the database for the existing workspace test phase.
 - [src/organizations.rs](src/organizations.rs) updates App installation state.
 - [src/error.rs](src/error.rs) maps database failures to interface errors.
 - [src/scale_sets.rs](src/scale_sets.rs) owns advisory lock sessions.
+- [src/job_views.rs](src/job_views.rs) reads tier-visible dashboard jobs,
+  preserves trusted alias metadata and retained requests, and keeps actual
+  runner dimensions.
 - [src/scale_set_tracking.rs](src/scale_set_tracking.rs) owns retired binding
   context, listener discovery, and exact remote cleanup confirmation.
 - [src/boat.rs](src/boat.rs) rotates and erases encrypted keys.

@@ -1,7 +1,15 @@
 //! HTTP entry points registered once with the OpenAPI router.
 
 pub(crate) mod auth;
+mod billing_call;
+pub(crate) mod billing_pages;
+mod billing_views;
+pub(crate) mod checkout;
 pub(crate) mod github_setup;
+mod job_fit;
+mod job_views;
+pub(crate) mod jobs;
+mod jobs_live;
 pub(crate) mod label_cleanup;
 mod label_views;
 pub(crate) mod labels;
@@ -11,6 +19,10 @@ mod machine_views;
 pub(crate) mod machines;
 pub(crate) mod members;
 pub(crate) mod organizations;
+mod page_context;
+pub(crate) mod savings;
+mod savings_views;
 pub(crate) mod sessions;
 pub(crate) mod setup;
+pub(crate) mod stripe;
 mod views;

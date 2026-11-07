@@ -12,6 +12,7 @@ pub mod github_lifecycle;
 pub mod github_timing;
 pub mod installation_association;
 pub mod installation_links;
+pub mod job_views;
 pub mod jobs;
 pub mod labels;
 pub mod machines;
