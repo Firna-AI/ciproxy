@@ -98,9 +98,10 @@ impl Controller {
                 if !outcome.docker_attached
                     && let Some(dockers) = &self.dockers
                     && dockers.reserved(&vm)?
+                    && dockers.failed(&vm)?
                 {
                     self.vms.clear_docker(&vm).await?;
-                    dockers.release(&vm)?;
+                    dockers.discard(&vm).await?;
                 }
                 self.prepared_record(&vm, outcome).await?;
                 if !outcome.cache_ready && vm.cache_authority != CacheAuthority::GitHubOnly {
@@ -205,6 +206,9 @@ impl Controller {
     pub(crate) async fn retire(&self, vm: &VmRecord) -> Result<()> {
         self.vms.stop(vm).await?;
         if let Some(dockers) = &self.dockers {
+            if dockers.pending(vm)? {
+                dockers.discard(vm).await?;
+            }
             dockers.release(vm)?;
         }
         self.cache.release(vm).await?;
@@ -224,3 +228,7 @@ mod preparation_outcome_tests;
 #[cfg(test)]
 #[path = "_tests_/preparation_replay_tests.rs"]
 mod preparation_replay_tests;
+
+#[cfg(test)]
+#[path = "_tests_/docker_recovery_tests.rs"]
+mod docker_recovery_tests;

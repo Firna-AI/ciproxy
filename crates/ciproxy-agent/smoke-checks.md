@@ -156,3 +156,37 @@ spare bytes. The script waits for the guest readiness observation.
 It then requires no host lease and a successful Docker job on the root disk.
 This case does not need a new Docker budget setting or a host ledger.
 These scenarios have not run here because KVM is unavailable.
+
+## Docker disk recovery
+
+Use a disposable registered KVM machine with the current agent and image.
+Install the workflow fixture in its allowed private repository.
+The workspace needs Team or Business and enough spare Docker disk.
+Set the two private input paths from the runtime check above.
+Set `sticky_tier_ready` to true after you confirm that spare disk fits.
+Keep other workflows of this repository stopped during this check.
+
+```sh
+sudo --preserve-env=CIPROXY_OWN_SMOKE_INPUT,CIPROXY_SMOKE_CREDENTIALS \
+  python3 crates/ciproxy-agent/scripts/smoke-docker-recovery.py
+```
+
+The script creates a repository disk through a trusted job.
+Its default `--fault guest` mode installs a temporary systemd override.
+A private `dumpe2fs` wrapper returns the real admitted free-space result.
+Before returning it, the wrapper corrupts that job's writer disk once.
+It checks the repository, writer lease, hard-link identity, and byte length.
+The actual guest mount must fail and report root Docker fallback.
+The detached lease must retain its bytes across an agent restart.
+The VM must keep the same process through that restart.
+The script removes its service override in a `finally` block.
+Its separate `--fault offline` mode corrupts the unused disk while the
+agent is stopped. It checks host filesystem rejection before attachment.
+Both modes require a successful Docker job on its root.
+The following trusted job must create a new persistent disk.
+A later job must restore that new disk's Docker image.
+Evidence stays under `.context/ciproxy-mvp/m25/`.
+Missing root, KVM, or private inputs reports `SKIP` with exit 77.
+The host also needs Python 3, systemd, `dumpe2fs`, and `/usr/bin/env`.
+It must use the standard agent service at `/usr/local/bin/ciproxy-agent`.
+These live checks have not run here because KVM is unavailable.

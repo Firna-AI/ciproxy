@@ -40,12 +40,12 @@ impl Commands for LinuxCommands {
             .status()
             .await
             .context("check cached Docker filesystem")?;
-        if matches!(status.code(), Some(0 | 1)) {
-            Ok(())
-        } else {
-            Err(Error::HostCommand {
+        match status.code() {
+            Some(0 | 1) => Ok(()),
+            Some(2..=15) => Err(Error::DockerFilesystem),
+            _ => Err(Error::HostCommand {
                 program: "e2fsck".to_owned(),
-            })
+            }),
         }
     }
     async fn unit(&self, name: &str) -> Result<UnitState> {

@@ -203,7 +203,9 @@ Real VM and GitHub checks use separate smoke scripts.
 The [real root regression](image-budget.md#disposable-root-growth-regression)
 checks free bytes as runner UID 1001 on two image sizes.
 Docker lease integration tests call the real adapter in temporary folders.
-They mock host commands and cache administration, and need no root access:
+They mock cache administration and most host commands.
+The corruption case runs real `e2fsck` on temporary files.
+These tests need `e2fsprogs`, without root access:
 
 ```sh
 cargo test --package ciproxy-agent --test docker_regression docker_regressions
@@ -250,6 +252,8 @@ The [host guide](host-preparation.md#ext4-and-kvm-smoke) gives the ext4 check.
 - [src/cache_unit.rs](src/cache_unit.rs) writes the cache service unit and
   its private listener rules.
 - [src/docker.rs](src/docker.rs) owns Docker leases, attachment, and release.
+- [src/docker_recovery.rs](src/docker_recovery.rs) discards safely closed
+  failed attachments and keeps their byte reservations through job exit.
 - [src/vm_config.rs](src/vm_config.rs) owns the root and dormant Docker drives.
 - [src/vsock_stream.rs](src/vsock_stream.rs) keeps each registration in
   memory until the guest confirms receipt.

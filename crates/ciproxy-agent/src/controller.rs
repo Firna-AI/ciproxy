@@ -74,6 +74,9 @@ impl Agent for Controller {
         let owned = self.state.lock().await.runners.clone();
         for vm in owned {
             self.vms.restore(&vm).await?;
+            if let Err(error) = self.recover_docker(&vm).await {
+                tracing::warn!(%error, "pending Docker recovery will retry");
+            }
         }
         let budget = {
             let state = self.state.lock().await;
@@ -91,6 +94,9 @@ impl Agent for Controller {
         let runners = self.state.lock().await.runners.clone();
         for vm in runners {
             self.vms.restore(&vm).await?;
+            if let Err(error) = self.recover_docker(&vm).await {
+                tracing::warn!(%error, "pending Docker recovery will retry");
+            }
         }
         self.enforce_mode().await
     }

@@ -1447,8 +1447,9 @@ the remaining Docker disk recovery work for Team and Business at launch.
 Several organizations come with the workspace of item 48 in Milestones 6,
 14, and 20.
 
-- [ ] Discard a disk that fails to mount. My call: a rebuild loses only
+- [x] Discard a disk that fails to mount. My call: a rebuild loses only
       time.
+      Branch: `conductor/m25-docker-disk-recovery`.
 
 ## Milestone 26: Dashboard UI: tier features
 
