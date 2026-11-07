@@ -1145,8 +1145,8 @@ Implementation calls, 6 November 2026:
       explicit deferred result. Keep broader registration retention in
       `plans/follow-ups/boat-registration-retention.md` for after merge.
       Branch: `conductor/mvp-m15-overflow`.
-- [ ] Orchestrator: Forward `BOAT_SHARED_SNAPSHOT` through
-      `deploy/scripts/deploy.py` and both deployment workflows.
+- [ ] Orchestrator: Configure the optional Boat deployment secret as
+      `deploy/runtime.md#boat-shared-snapshot` describes.
       Set it to the shared Milestone 10 snapshot.
       Keep the selected image manifest at the same release.
       Run the three live scenarios with the private credential file, as
@@ -1250,9 +1250,88 @@ Depends on: 14, 16, 17
 
 These routes serve the other pages of the dashboard.
 
-- [ ] Serve Jobs, Savings, Plan and usage, Plans, Checkout, and one banner
-      for each page.
-- [ ] Test each route at the HTTP level.
+- [ ] Orchestrator: finish serving Jobs, Savings, Plan and usage, Plans,
+      Checkout, and one banner for each page. Complete the composition and
+      paid-review steps below.
+      Branch: `calummoore/ci-proxy-load-balancer`.
+  - [x] Add the API routes, Rust wire forms, and store projection. Preserve
+        opaque workspace access, tier windows, trusted job facts, and the
+        single-banner priority. Generate the TypeScript contract.
+        Branch: `conductor/mvp-m18-api`.
+        Implementation call, 6 November 2026: round only displayed savings
+        amounts to integer cents, with half cents away from zero. Reason:
+        this matches the existing mockup formatter and keeps metering exact.
+  - [x] Add label-specific fit data for the Jobs waiting notice. Reuse the
+        existing machine fit, Boat size selection, and image root sizing.
+        Keep unknown fit distinct from no fit. Test role-aware actions over
+        HTTP.
+        Branch: `conductor/mvp-m18-api`.
+        Evidence: `.context/ciproxy-mvp/m18/nothing-fits-handoff.md`.
+- [x] Finish HTTP verification after the ignored-event parser repair.
+      Keep its HTTP regression in the suite.
+      Branch: `conductor/mvp-m18-api`.
+  - [x] Add real-PgStore HTTP tests for every route and a supported signed
+        Checkout smoke through a bound dashboard server. Verify the twelve
+        independent tests in ten exact-name runs each.
+        Branch: `conductor/mvp-m18-api`.
+        Evidence: `.context/ciproxy-mvp/m18/requirements.md` and
+        `.context/ciproxy-mvp/m18/test-cost.md`.
+  - [x] Apply review findings 3, 4, 5, and 6 within the owned API and store
+        files. Preserve aliased lifecycle facts, known starts without a
+        timestamp, current queue membership, and fit during accounting gaps.
+        Add HTTP regressions and repeat the new or changed tests ten times.
+        Branch: `conductor/mvp-m18-api`.
+        Evidence: `.context/ciproxy-mvp/m18/review-fix-round1/`.
+- [ ] Orchestrator: compose `PageServices` in the control plane. Mount
+      `router_with_pages` under `/api` and `stripe_router` at the dashboard
+      host root for `/hooks/stripe`. Supply the existing billing, metering,
+      and overflow services and dated USD comparison price lists. Supply
+      the exact Boat `RootSizing` already used by the overflow runtime.
+      Poll `billing_cancellations` and call `reconcile_removal` on blocking
+      workers so durable last-organization cancellations complete.
+      Branch: `calummoore/ci-proxy-load-balancer`.
+- [ ] Orchestrator: implement and inject `PaidReview` with an authoritative
+      Stripe invoice preview for a move between paid plans. The existing
+      billing review gives the full monthly price as today's charge. The
+      API keeps paid review unavailable until the preview exists.
+      Branch: `calummoore/ci-proxy-load-balancer`.
+- [x] Fix the billing parser for signed Stripe events that it ignores.
+      Use a typed parser and add the billing-level unit regression.
+      Keep the HTTP regression for real `data.object` payloads.
+      Branch: `conductor/mvp-m18-api`.
+      The user extended the billing scope on 7 November 2026 for item 1-E.
+      Evidence: `.context/ciproxy-mvp/m18/billing-fix-round2/report.md`.
+- [x] Add the quantity-only billing operation of review finding 2.
+      Resolve the confirmed tier after Stripe reconciliation under the
+      existing billing lock. Switch the add-on route and quantity-only
+      callers. Preserve the paid tier in the stale-store HTTP and
+      provider-form regressions.
+      Branch: `conductor/mvp-m18-api`.
+      The user extended the billing scope on 7 November 2026 for item 2-B.
+      Evidence: `.context/ciproxy-mvp/m18/billing-fix-round2/report.md`.
+- [x] Apply owner review round 1, finding 1, option A. Preserve original
+      job requests from retained own-machine and Boat execution facts.
+      Use current labels only while queued. Report missing executed
+      requests as unknown. Keep the public request field names and make
+      their values nullable. Update their generated types and descriptions.
+      Add real-PgStore history and detail regressions after a label edit.
+      Branch: `conductor/mvp-m18-api`.
+      Implementation call, 7 November 2026: keep one optional request in
+      the store projection and nullable values at the existing wire paths.
+      Reason: preserve one complete request and the current field names.
+      Evidence: `.context/ciproxy-mvp/m18/owner-fix-round1/report.md`.
+- [ ] Orchestrator: expose the overflow owner's resource-only catalog
+      accessor of review finding 6. Replace the private fit-conversion
+      adapter after this workspace merges. Keep accounting and availability
+      outside physical fit, and preserve the accounting-gap regression.
+      Branch: `calummoore/ci-proxy-load-balancer`.
+- [ ] Orchestrator: run the
+      [live page checks](../crates/ciproxy-api/scripts/README.md#jobs-savings-and-billing)
+      after the runtime and Stripe test workspace are ready. Set
+      `CIPROXY_API_CREDENTIALS_FILE` to a private file outside the repository.
+      Run `live_pages.py` for reads, review, Checkout and return, paid
+      changes, add-ons, the portal, Move to Free, and signed webhook replay.
+      Branch: `calummoore/ci-proxy-load-balancer`.
 
 ## Milestone 19: Dashboard UI: shell, sign-in, and setup
 
@@ -1293,6 +1372,10 @@ Each screen follows its mockup, as Milestone 19 says.
 
 - [ ] Build Jobs, Savings, Plan and usage, Plans, Checkout, and the banners.
 - [ ] Run one checkout in the Stripe test mode.
+- [ ] Show an unknown request on Jobs. The API returns null vCPUs, memory,
+      and free disk for a running or finished job whose request was not
+      saved. Add that state to the Jobs mockups first.
+      Source: pull request #34, fix round 1, 7 November 2026.
 
 ## Milestone 22: Dashboard UI: Boat
 

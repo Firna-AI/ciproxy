@@ -68,7 +68,7 @@ pub(crate) struct Event {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(tag = "type", content = "data")]
+#[serde(tag = "type")]
 pub(crate) enum Payload {
     #[serde(
         rename = "checkout.session.completed",
@@ -76,7 +76,7 @@ pub(crate) enum Payload {
         alias = "checkout.session.async_payment_failed",
         alias = "checkout.session.expired"
     )]
-    Checkout(Object),
+    Checkout { data: Object },
     #[serde(
         rename = "customer.subscription.created",
         alias = "customer.subscription.updated",
@@ -84,17 +84,17 @@ pub(crate) enum Payload {
         alias = "customer.subscription.pending_update_applied",
         alias = "customer.subscription.pending_update_expired"
     )]
-    Subscription(Object),
+    Subscription { data: Object },
     #[serde(rename = "invoice.payment_failed")]
-    InvoiceFailed(Object),
+    InvoiceFailed { data: Object },
     #[serde(rename = "invoice.updated")]
-    InvoiceUpdated(InvoiceUpdate),
+    InvoiceUpdated { data: InvoiceUpdate },
     #[serde(
         rename = "invoice.paid",
         alias = "invoice.payment_action_required",
         alias = "invoice.marked_uncollectible"
     )]
-    Invoice(Object),
+    Invoice { data: Object },
     #[serde(other)]
     Ignore,
 }
@@ -144,11 +144,11 @@ pub(crate) struct UpdatedInvoice {
 impl Event {
     pub(crate) fn subscription_id(&self) -> Option<&str> {
         let parent = match &self.payload {
-            Payload::Subscription(object) => return Some(&object.object.id),
-            Payload::Invoice(object) | Payload::InvoiceFailed(object) => {
+            Payload::Subscription { data: object } => return Some(&object.object.id),
+            Payload::Invoice { data: object } | Payload::InvoiceFailed { data: object } => {
                 object.object.parent.as_ref()
             }
-            Payload::InvoiceUpdated(update) => update.object.parent.as_ref(),
+            Payload::InvoiceUpdated { data: update } => update.object.parent.as_ref(),
             _ => return None,
         }?;
         parent

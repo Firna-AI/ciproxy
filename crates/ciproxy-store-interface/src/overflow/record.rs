@@ -69,11 +69,11 @@ pub struct StartRecord {
     pub label_id: Uuid,
     /// Internal scale-set identifier.
     pub scale_set_id: Uuid,
-    /// Original requested label dimensions, in decimal GB.
+    /// Original requested virtual CPU count.
     pub requested_vcpus: u32,
-    /// Original requested memory.
+    /// Original requested memory, in decimal GB.
     pub requested_memory_gb: u32,
-    /// Original requested free job disk.
+    /// Original requested free job disk, in decimal GB.
     pub requested_disk_gb: u32,
     /// Logical root length of the exact saved image release.
     pub image_root_bytes: u64,

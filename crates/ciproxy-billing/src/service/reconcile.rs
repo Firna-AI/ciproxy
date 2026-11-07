@@ -1,6 +1,6 @@
 //! Public dyn service implementation delegates to each coherent workflow.
 
-use ciproxy_store_interface::billing::state::Selection;
+use ciproxy_store_interface::billing::state::{AddOns, Selection};
 use ciproxy_store_interface::billing::store::BillingRecord;
 use uuid::Uuid;
 
@@ -31,6 +31,9 @@ impl BillingApi for BillingService {
     }
     fn change(&self, access: BillingAccess, selection: Selection) -> Result<ChangeOutcome> {
         self.change(access, selection)
+    }
+    fn change_add_ons(&self, access: BillingAccess, add_ons: AddOns) -> Result<ChangeOutcome> {
+        self.change_add_ons(access, add_ons)
     }
     fn move_to_free(&self, access: BillingAccess) -> Result<()> {
         self.move_to_free(access)

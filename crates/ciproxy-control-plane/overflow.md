@@ -36,7 +36,8 @@ It removes a trailing slash first. Boat sandboxes must reach
 Keep the value set while a Boat sandbox can exist. Without it, the runtime
 does no Boat cleanup and serves no exit callback. Boat then ends each
 sandbox only at its lifetime. That is six hours, or two hours on a free
-trial. The deploy script does not set this variable.
+trial. The deployment reads the optional value from its Kubernetes Secret.
+[Boat setup](../../deploy/runtime.md#boat-shared-snapshot) gives the steps.
 [Runtime setup](../../deploy/runtime.md#turn-on-the-runtime) gives the other
 settings.
 

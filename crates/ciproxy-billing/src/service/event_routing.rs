@@ -28,7 +28,7 @@ impl BillingService {
             }));
         }
         let (workspace, target, checkout) = match &event.payload {
-            Payload::Checkout(object) => {
+            Payload::Checkout { data: object } => {
                 let current = self.stripe.checkout_session(&object.object.id)?;
                 (
                     current.metadata.workspace_id.ok_or(Error::Ownership)?,
@@ -36,7 +36,7 @@ impl BillingService {
                     true,
                 )
             }
-            Payload::Subscription(object) => {
+            Payload::Subscription { data: object } => {
                 let current = self.stripe.subscription(&object.object.id)?;
                 (
                     current.metadata.workspace_id.ok_or(Error::Ownership)?,
@@ -44,13 +44,13 @@ impl BillingService {
                     false,
                 )
             }
-            Payload::Invoice(object) | Payload::InvoiceFailed(object) => {
+            Payload::Invoice { data: object } | Payload::InvoiceFailed { data: object } => {
                 let Some(route) = self.invoice_target(&object.object.id)? else {
                     return Ok(None);
                 };
                 return Ok(Some(route));
             }
-            Payload::InvoiceUpdated(update) => {
+            Payload::InvoiceUpdated { data: update } => {
                 return self.invoice_target(&update.object.id);
             }
             Payload::Ignore => return Ok(None),

@@ -3,14 +3,14 @@
 use crate::error::{Error, Result, ResultExt};
 use serde::{Deserialize, Serialize};
 
-/// The resources of one job VM or Boat sandbox.
+/// The whole-GB label request of one job VM or Boat sandbox.
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct VmSize {
     /// The virtual CPU count.
     pub vcpus: i32,
-    /// Memory in GB.
+    /// Memory in decimal GB.
     pub memory_gb: i32,
-    /// Disk capacity in GB.
+    /// Free job disk in decimal GB, beyond the image root.
     pub disk_gb: i32,
 }
 
