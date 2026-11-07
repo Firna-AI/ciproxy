@@ -8,6 +8,7 @@ use diesel::dsl::max;
 use diesel::prelude::*;
 use uuid::Uuid;
 
+use crate::boat_registration_ownership;
 use crate::installation_links::retention;
 use crate::workspace_credentials::revoke_workspace_access;
 
@@ -79,6 +80,8 @@ pub(crate) fn purge_retained_organizations(
     if workspace.is_none() {
         return Ok(0);
     }
+    boat_registration_ownership::retain_deadlines(connection, workspace_id, at)?;
+    boat_registration_ownership::purge(connection, workspace_id, at)?;
     retention::purge(connection, workspace_id, Some(at))?;
     diesel::delete(
         organizations::table

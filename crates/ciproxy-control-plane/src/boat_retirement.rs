@@ -2,7 +2,6 @@
 
 use ciproxy_overflow::api::Retirement;
 use ciproxy_store_interface::boat_runtime::BoatRunnerIntent;
-use ciproxy_store_interface::organizations::Organization;
 use ciproxy_store_interface::overflow::record::{StartPhase, StartRecord};
 use ciproxy_store_interface::own_runners::{OwnRunnerLease, RoutingSnapshot};
 use uuid::Uuid;
@@ -32,12 +31,7 @@ impl MachineRuntime {
                 .find(|record| record.delivery_id == intent.delivery_id);
             lease.check_connection().internal()?;
             match self
-                .retire_boat_registration(
-                    input.workspace_id,
-                    intent,
-                    delivery,
-                    &input.organizations,
-                )
+                .retire_boat_registration(input.workspace_id, intent, delivery)
                 .await
             {
                 Ok(result) => results.push(result),
@@ -56,13 +50,16 @@ impl MachineRuntime {
         workspace: Uuid,
         intent: &BoatRunnerIntent,
         delivery: Option<&StartRecord>,
-        organizations: &[Organization],
     ) -> Result<RunnerRetirement> {
-        if organizations
-            .iter()
-            .find(|organization| organization.id == intent.organization_id)
-            .is_none_or(|organization| organization.removed_at.is_some())
-        {
+        let store = self.store.clone();
+        let runner = intent.runner_id;
+        let access_ended = tokio::task::spawn_blocking(move || {
+            store.boat_registration_access_ended(workspace, runner)
+        })
+        .await
+        .internal()?
+        .internal()?;
+        if access_ended {
             return Ok(RunnerRetirement::Deferred);
         }
         let withdrawn = delivery
