@@ -15,6 +15,7 @@ use crate::identity::{Grant, Profile};
 use crate::state::query;
 
 use super::authentication::digest;
+use super::link_continuation::ProofResults;
 use super::setup::SetupTarget;
 use super::{AccessService, Principal};
 
@@ -80,7 +81,8 @@ impl AccessService {
         memberships: &[Membership],
         setup: Option<(&SetupTarget, Option<&str>)>,
         github: &dyn GitHubApp,
-    ) -> Result<Vec<Uuid>> {
+        results: &mut ProofResults,
+    ) -> Result<()> {
         if let Some((target, state)) = setup {
             let attempt = match state {
                 Some(state) => self.lookup_attempt(state).await?,
@@ -94,9 +96,10 @@ impl AccessService {
             }
             let installation = target.installation_id;
             let person = profile.id;
-            let relevant = query(self.store.clone(), move |store| {
-                Ok(store.claim_for_installation(installation)?.is_some()
-                    || store.has_pending_add(person)?)
+            let (previous, relevant) = query(self.store.clone(), move |store| {
+                let previous = store.claim_for_installation(installation)?;
+                let relevant = previous.is_some() || store.has_pending_add(person)?;
+                Ok((previous, relevant))
             })
             .await?;
             if attempt.is_some() || relevant {
@@ -107,24 +110,28 @@ impl AccessService {
                     login: target.login.clone(),
                     requester_id: profile.id,
                     event_seen: false,
-                    user_verified: true,
+                    user_verified: false,
                     direct: attempt.as_ref().is_some_and(|attempt| attempt.direct),
                     workspace_id: None,
                     organization_id: None,
-                    verified_at: Some(self.runtime.now()),
+                    verified_at: None,
                 };
-                self.save_claim(claim, attempt.map(|attempt| attempt.id))
-                    .await?;
+                self.save_claim_proof(
+                    claim,
+                    previous.as_ref(),
+                    attempt.map(|attempt| attempt.id),
+                    results,
+                )
+                .await?;
             }
         }
-        let mut continuation = Vec::new();
         for mut claim in self.owned_claims(profile.id).await? {
             if claim.organization_id.is_some() {
                 continue;
             }
             if claim.recovery() == InstallationRecovery::Direct {
                 github.resolve_installation_link(claim.id).await.api()?;
-                continuation.push(claim.id);
+                results.record(Some(&claim), claim.id);
                 continue;
             }
             let Some(actual) = self
@@ -146,10 +153,10 @@ impl AccessService {
             {
                 return Err(Error::Forbidden);
             }
-            claim.user_verified = true;
-            claim.verified_at = Some(self.runtime.now());
-            let claim = self.save_claim(claim, None).await?;
-            continuation.push(claim.id);
+            let previous = claim.clone();
+            let claim = self
+                .save_claim_proof(claim, Some(&previous), None, results)
+                .await?;
             if matches!(
                 claim.recovery(),
                 InstallationRecovery::DirectAwaitingEvent | InstallationRecovery::AddAwaitingEvent
@@ -175,7 +182,7 @@ impl AccessService {
                 github.resolve_installation_link(id).await.api()?;
             }
         }
-        Ok(continuation)
+        Ok(())
     }
 
     pub(super) async fn refresh_links(
@@ -197,8 +204,15 @@ impl AccessService {
             if profile.id != person {
                 return Err(Error::Forbidden);
             }
-            self.prove_links(&profile, &grant, &memberships, None, github)
-                .await?;
+            self.prove_links(
+                &profile,
+                &grant,
+                &memberships,
+                None,
+                github,
+                &mut ProofResults::default(),
+            )
+            .await?;
         }
         self.owned_claims(person).await
     }

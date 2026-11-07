@@ -2,6 +2,11 @@
 // Button. A link button is a real anchor, so it opens in a new tab, shows its
 // address, and works before the page script runs. It takes its look from the
 // Firna button styles and its focus glow from the Firna focus ring.
+//
+// Both grow with their label, because a label can hold a name of any length.
+// A label that fits on one line keeps the Firna box. A longer label wraps
+// between words, and inside a word that is wider than the control. A control
+// is never wider than its row, and a short one keeps its width in a row.
 
 import { useMemo, useState, type CSSProperties, type MouseEvent } from "react";
 import type { IconComponent } from "@firna/ui";
@@ -12,12 +17,43 @@ import { useSharedUiTheme } from "@firna/ui/theme";
 export type Tone = "primary" | "secondary" | "ghost";
 export type Size = "sm" | "md" | "lg";
 
+type ButtonStyles = ReturnType<typeof createButtonStyles>;
+
 type Common = {
   label: string;
   tone?: Tone;
   size?: Size;
   icon?: IconComponent;
   block?: boolean;
+};
+
+/**
+ * The box of a control that grows with its label. The Firna track height is
+ * its least height, and the vertical padding centres one label line in that
+ * track, so each more line adds one line height.
+ */
+function growingBox({ button, label }: ButtonStyles) {
+  return {
+    height: "auto",
+    minHeight: button.height,
+    paddingVertical:
+      (button.height - 2 * button.borderWidth - label.lineHeight) / 2,
+    flexShrink: 0,
+    maxWidth: "100%",
+  } as const;
+}
+
+/**
+ * The label of a control that grows. Its lines are centred, and it can be
+ * narrower than its longest word. That word then breaks at the edge of the
+ * control: React Native Web text breaks it, and a link label sets the same
+ * rule.
+ */
+const wrappingLabel = { minWidth: 0, textAlign: "center" } as const;
+
+const wrappingLinkLabel: CSSProperties = {
+  ...wrappingLabel,
+  overflowWrap: "break-word",
 };
 
 export function ActionButton({
@@ -30,6 +66,11 @@ export function ActionButton({
   disabled,
   onPress,
 }: Common & { busy?: boolean; disabled?: boolean; onPress: () => void }) {
+  const theme = useSharedUiTheme();
+  const box = useMemo(
+    () => growingBox(createButtonStyles(theme, size)),
+    [theme, size],
+  );
   return (
     <Button
       tone={tone}
@@ -39,6 +80,8 @@ export function ActionButton({
       busy={busy}
       disabled={disabled}
       onPress={disabled ? undefined : onPress}
+      style={box}
+      labelStyle={wrappingLabel}
     >
       {label}
     </Button>
@@ -46,12 +89,13 @@ export function ActionButton({
 }
 
 function linkStyle(
-  styles: ReturnType<typeof createButtonStyles>,
+  styles: ButtonStyles,
   tone: Tone,
   hovered: boolean,
   block: boolean,
 ): CSSProperties {
   const { button, label } = styles;
+  const box = growingBox(styles);
   const fill =
     tone === "primary"
       ? styles.primary
@@ -68,9 +112,12 @@ function linkStyle(
     justifyContent: "center",
     gap: button.gap,
     boxSizing: "border-box",
-    height: button.height,
-    padding: `0 ${button.paddingHorizontal}px`,
+    height: box.height,
+    minHeight: box.minHeight,
+    padding: `${box.paddingVertical}px ${button.paddingHorizontal}px`,
+    flexShrink: box.flexShrink,
     width: block ? "100%" : undefined,
+    maxWidth: box.maxWidth,
     borderRadius: button.borderRadius,
     borderStyle: "solid",
     borderWidth: button.borderWidth,
@@ -81,7 +128,7 @@ function linkStyle(
     fontWeight: label.fontWeight,
     lineHeight: `${label.lineHeight}px`,
     textDecoration: "none",
-    whiteSpace: "nowrap",
+    whiteSpace: "normal",
     cursor: "pointer",
   };
 }
@@ -135,7 +182,7 @@ export function ActionLink({
       }}
     >
       {Icon ? <Icon size={buttonIconSize(size)} color={color} /> : null}
-      {hideLabel ? null : <span>{label}</span>}
+      {hideLabel ? null : <span style={wrappingLinkLabel}>{label}</span>}
     </a>
   );
 }

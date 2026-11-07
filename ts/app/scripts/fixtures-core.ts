@@ -13,6 +13,9 @@ export const otherWorkspaceId = "10000000-0000-4000-8000-000000000002";
 export const claimId = "20000000-0000-4000-8000-000000000001";
 export const otherClaimId = "20000000-0000-4000-8000-000000000002";
 export const longWorkspaceName = "centralized-infrastructure-automation-x";
+export const longRenamedWorkspaceName = longWorkspaceName
+  .replaceAll("-", "")
+  .repeat(2);
 
 export function workspace(
   overrides: Partial<WorkspaceView> = {},

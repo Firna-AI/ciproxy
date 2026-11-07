@@ -12,6 +12,7 @@ use ciproxy_store_interface::organizations::AppState;
 
 use super::authentication::digest;
 use super::flow::Purpose;
+use super::link_continuation::ProofResults;
 use super::pending::BrowserState;
 use super::{AccessService, InstallContext, LoginSuccess};
 
@@ -113,15 +114,19 @@ impl AccessService {
             }
             _ => None,
         };
-        let mut installation_continuation = self
-            .prove_links(&profile, &grant, &memberships, target, github)
+        let mut proof_results = ProofResults::default();
+        self.prove_links(
+            &profile,
+            &grant,
+            &memberships,
+            target,
+            github,
+            &mut proof_results,
+        )
+        .await?;
+        self.prove_completed_links(&profile, &grant, &memberships, &mut proof_results)
             .await?;
-        installation_continuation.extend(
-            self.prove_completed_links(&profile, &grant, &memberships)
-                .await?,
-        );
-        installation_continuation.sort_unstable();
-        installation_continuation.dedup();
+        let installation_continuation = proof_results.into_claims();
         let github_id = profile.id;
         let organization_ids = memberships
             .iter()

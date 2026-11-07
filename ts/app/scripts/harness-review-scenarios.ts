@@ -1,5 +1,13 @@
 import type { Scenario } from "./harness-scenarios.ts";
-import { longWorkspaceName, workspace } from "./fixtures-core.ts";
+import {
+  activation,
+  link,
+  longRenamedWorkspaceName,
+  longWorkspaceName,
+  offers,
+  workspace,
+  workspaceId,
+} from "./fixtures-core.ts";
 import {
   browserOnlyReturn,
   completedReturn,
@@ -10,6 +18,31 @@ import {
 export function applyReviewScenario(data: Scenario): void {
   if (data.name === "workspace-long") {
     data.session.workspaces = [workspace({ name: longWorkspaceName })];
+  }
+  if (data.name === "links-long-names-visible") {
+    data.session.workspaces = [workspace({ name: longWorkspaceName })];
+    data.session.organization_links = [
+      link({
+        organization: longWorkspaceName,
+        workspaces: offers().map((offer) => ({
+          ...offer,
+          name: offer.id === workspaceId ? longWorkspaceName : offer.name,
+        })),
+      }),
+    ];
+  }
+  if (data.name === "links-renamed-open-visible") {
+    data.session.workspaces = [workspace({ name: longRenamedWorkspaceName })];
+    data.session.organization_links = [
+      link({
+        organization: longWorkspaceName,
+        state: "linked",
+        workspace_id: workspaceId,
+        activation: activation(),
+      }),
+    ];
+    data.session.installation_continuation =
+      data.session.organization_links.map((item) => item.id);
   }
   if (
     [

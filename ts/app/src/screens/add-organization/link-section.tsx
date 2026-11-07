@@ -4,9 +4,9 @@
 // workspace.
 
 import { StyleSheet, Text, View } from "react-native";
-import { Button } from "@firna/ui/button";
 import { RadioCard, RadioCardGroup } from "@firna/ui/radio";
 
+import { ActionButton } from "../../components/actions.tsx";
 import { Notice } from "../../components/notice.tsx";
 import { WaitingLine } from "../../components/page-state.tsx";
 import {
@@ -73,16 +73,15 @@ export function LinkSectionView({
       ) : null}
       <View style={styles.actions}>
         {section.submit ? (
-          <Button
+          <ActionButton
+            label={section.submit.label}
             tone="primary"
             size="lg"
             block
             busy={section.submit.busy}
             disabled={!section.submit.enabled}
-            onPress={section.submit.enabled ? onSubmit : undefined}
-          >
-            {section.submit.label}
-          </Button>
+            onPress={onSubmit}
+          />
         ) : null}
         {section.actions.map((action) => (
           <PageActionView

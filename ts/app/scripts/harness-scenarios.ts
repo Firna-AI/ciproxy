@@ -33,6 +33,8 @@ export const scenarios = [
   "viewer-claim",
   "soft-limit",
   "links-picker",
+  "links-long-names-visible",
+  "links-renamed-open-visible",
   "links-request",
   "links-recovery",
   "links-waiting",

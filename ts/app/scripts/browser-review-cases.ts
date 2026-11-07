@@ -1,6 +1,11 @@
 import { storageKeys } from "../src/state/storage.ts";
 import type { SmokeCase } from "./browser-cases.ts";
-import { otherWorkspaceId, workspaceId } from "./fixtures-core.ts";
+import {
+  longRenamedWorkspaceName,
+  longWorkspaceName,
+  otherWorkspaceId,
+  workspaceId,
+} from "./fixtures-core.ts";
 import { returnedInstallationId } from "./fixtures-returns.ts";
 
 function memory(
@@ -26,6 +31,18 @@ export const reviewCases: readonly SmokeCase[] = [
     scenario: "workspace-long",
     path: jobs,
     heading: "Jobs",
+  },
+  {
+    name: "links-long-names-visible",
+    scenario: "links-long-names-visible",
+    path: "/add-organization",
+    heading: `Choose a workspace for ${longWorkspaceName}`,
+  },
+  {
+    name: "links-renamed-open-visible",
+    scenario: "links-renamed-open-visible",
+    path: "/add-organization",
+    heading: `${longWorkspaceName} joined ${longRenamedWorkspaceName}`,
   },
   {
     name: "root-install-completed",

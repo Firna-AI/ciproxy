@@ -9,6 +9,9 @@ state until later work fills them.
 
 The screens follow the [mockups](../../docs/mockups/README.md).
 Controls come from `@firna/ui` first, then from `src/components`.
+Action buttons and link buttons come from
+[src/components/actions.tsx](src/components/actions.tsx). They grow with their
+label, so a long name in a label shows in full at each width.
 Colours, fonts, and radii come from the [token package](../tokens/README.md).
 The icons and the brand mark are inline SVG elements.
 

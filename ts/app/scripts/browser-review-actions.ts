@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import type { Page } from "./browser-driver.ts";
 import type { SmokeCase } from "./browser-cases.ts";
 import { control, facts, insideViewport, visible } from "./browser-fixture.ts";
+import { exerciseLongActionCase } from "./browser-long-actions.ts";
 import {
   longWorkspaceName,
   otherWorkspaceId,
@@ -15,6 +16,7 @@ export async function exerciseReviewCase(
   origin: string,
   width: number,
 ): Promise<void> {
+  await exerciseLongActionCase(page, item, width);
   if (item.name === "workspace-long") {
     await insideViewport(
       page.getByRole("button", { name: "Account of mira", exact: true }),

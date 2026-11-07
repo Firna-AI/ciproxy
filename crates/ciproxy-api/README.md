@@ -99,6 +99,8 @@ The cookie and OAuth binding contain no claim list.
 Each successful authorization replaces it, including an empty result.
 Previously proved completed claims stay out. A signed Direct install completed
 before sign-in appears after its first successful own-user installation proof.
+Setup proof counts as that first proof. Repeated proof of an open claim keeps
+its ID in the result.
 This metadata grants no access.
 Failed proof preserves business records and the existing sign-in. A matching
 identity keeps its original expiry.

@@ -1223,6 +1223,11 @@ smoke-tests its pages at 1440, 720, and 390 pixels.
       session ID already in the cookie. The private session row depends on
       a retained person and does not exist for browser-only sign-ins.
       The companion keeps those results without a new cookie reference.
+      Owner review round 1, 7 November 2026: use one proof-result collector
+      for setup and sign-in. Record canonical IDs at proof or completion,
+      and keep previously proved completed claims out. Give the app action
+      wrappers content-based sizing by default, so full names stay visible.
+      Keep Firna unchanged and preserve its minimum size for short labels.
 - [x] Reload a dashboard tab that is older than the API. My call: the API
       gives its build with each response, and the dashboard reloads at the
       next page change after the build changes. Reason: an old tab must not
