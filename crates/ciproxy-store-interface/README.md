@@ -28,7 +28,10 @@ Account metadata excludes encrypted keys.
 Token metadata excludes hashes.
 KMS encryption and token hashing belong to callers.
 
-The store preserves runner placements and actual VM sizes for job history.
+The store preserves runner placements, retained requests, and actual VM sizes
+for job history. Dashboard jobs use current requests only while queued.
+Executed jobs keep an optional whole-GB request separate from actual allocation.
+Missing retained requests stay unknown.
 It accepts optional ref metadata without choosing its provenance.
 The later job-facts service must supply trusted GitHub metadata.
 Job cache metadata separates content origin from machine-handled measurements.

@@ -12305,7 +12305,7 @@
       },
       "JobLabel": {
         "type": "object",
-        "description": "Requested label dimensions.",
+        "description": "Label name and optional whole-GB resource request.\nQueued jobs use the current request. Executed jobs use the retained request.\nAll three dimensions are null when the execution request was not retained.",
         "required": [
           "name",
           "vcpus",
@@ -12314,23 +12314,32 @@
         ],
         "properties": {
           "disk_gb": {
-            "type": "integer",
+            "type": [
+              "integer",
+              "null"
+            ],
             "format": "int32",
-            "description": "Requested free job disk in decimal GB."
+            "description": "Requested free job disk in decimal GB, null when the request was not retained."
           },
           "memory_gb": {
-            "type": "integer",
+            "type": [
+              "integer",
+              "null"
+            ],
             "format": "int32",
-            "description": "Requested memory in decimal GB."
+            "description": "Requested memory in decimal GB, null when the execution request was not retained."
           },
           "name": {
             "type": "string",
-            "description": "Retained label name."
+            "description": "Current name of the retained label."
           },
           "vcpus": {
-            "type": "integer",
+            "type": [
+              "integer",
+              "null"
+            ],
             "format": "int32",
-            "description": "Requested virtual CPUs."
+            "description": "Requested virtual CPUs, null when the execution request was not retained."
           }
         }
       },

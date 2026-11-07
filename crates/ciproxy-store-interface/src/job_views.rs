@@ -6,6 +6,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::jobs::{CacheSource, JobState, MachineHandledCacheCounts};
+use crate::vm_size;
 
 /// One retained job with trusted placement and its organization identity.
 #[derive(Clone, Debug, Deserialize)]
@@ -44,14 +45,11 @@ pub struct DashboardJob {
     pub started_at: Option<DateTime<Utc>>,
     /// Real GitHub finish, absent for unknown terminal timing.
     pub completed_at: Option<DateTime<Utc>>,
-    /// Requested label name.
+    /// Current name of the retained label.
     pub label: String,
-    /// Requested label CPU count.
-    pub requested_vcpus: i32,
-    /// Requested label memory in decimal GB.
-    pub requested_memory_gb: i32,
-    /// Requested free job disk in decimal GB.
-    pub requested_disk_gb: i32,
+    /// Retained execution request, or current queued request, in whole decimal GB.
+    /// Absent when the execution request was not retained.
+    pub requested_size: Option<vm_size::VmSize>,
     /// Runner's immutable resources, absent until placement is known.
     pub actual_size: Option<VmSize>,
     /// Own-machine identity, absent for Boat or unknown placement.

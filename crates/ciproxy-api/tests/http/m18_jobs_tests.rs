@@ -10,6 +10,7 @@ use serde_json::Value;
 use uuid::Uuid;
 
 use super::fixture_io::json;
+use super::m18_job_requests_support::own_runner;
 use super::m18_jobs_support::{actions, demand, demand_at, runner};
 use super::m18_stripe::Stripe;
 use super::m18_support::{Pages, capacity};
@@ -23,7 +24,7 @@ async fn m18_history_applies_plan_window_aliases_and_actual_job_metadata() {
     pages.fixture.state.capacity = capacity();
     let admin = pages.fixture.login(7, Some(Role::Admin)).await;
     let (machine, _connection) = register(&pages.fixture, &admin).await;
-    let own = runner(&pages, Some(machine), 1001);
+    let own = own_runner(&pages, machine, 1001);
     let boat = runner(&pages, None, 1002);
     let mut recent = actions(&pages, &own, 11, "2026-11-06T11:59:00Z");
     recent.state = JobState::Running;

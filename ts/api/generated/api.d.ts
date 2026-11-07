@@ -879,25 +879,29 @@ export interface components {
             /** @description Trusted job metadata. */
             job: components["schemas"]["JobView"];
         };
-        /** @description Requested label dimensions. */
+        /**
+         * @description Label name and optional whole-GB resource request.
+         *     Queued jobs use the current request. Executed jobs use the retained request.
+         *     All three dimensions are null when the execution request was not retained.
+         */
         JobLabel: {
             /**
              * Format: int32
-             * @description Requested free job disk in decimal GB.
+             * @description Requested free job disk in decimal GB, null when the request was not retained.
              */
-            disk_gb: number;
+            disk_gb: number | null;
             /**
              * Format: int32
-             * @description Requested memory in decimal GB.
+             * @description Requested memory in decimal GB, null when the execution request was not retained.
              */
-            memory_gb: number;
-            /** @description Retained label name. */
+            memory_gb: number | null;
+            /** @description Current name of the retained label. */
             name: string;
             /**
              * Format: int32
-             * @description Requested virtual CPUs.
+             * @description Requested virtual CPUs, null when the execution request was not retained.
              */
-            vcpus: number;
+            vcpus: number | null;
         };
         /** @description Actual runner placement, absent until a runner is identified. */
         JobLocation: {

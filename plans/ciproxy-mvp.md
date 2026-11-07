@@ -1248,6 +1248,17 @@ These routes serve the other pages of the dashboard.
       Branch: `conductor/mvp-m18-api`.
       The user extended the billing scope on 7 November 2026 for item 2-B.
       Evidence: `.context/ciproxy-mvp/m18/billing-fix-round2/report.md`.
+- [x] Apply owner review round 1, finding 1, option A. Preserve original
+      job requests from retained own-machine and Boat execution facts.
+      Use current labels only while queued. Report missing executed
+      requests as unknown. Keep the public request field names and make
+      their values nullable. Update their generated types and descriptions.
+      Add real-PgStore history and detail regressions after a label edit.
+      Branch: `conductor/mvp-m18-api`.
+      Implementation call, 7 November 2026: keep one optional request in
+      the store projection and nullable values at the existing wire paths.
+      Reason: preserve one complete request and the current field names.
+      Evidence: `.context/ciproxy-mvp/m18/owner-fix-round1/report.md`.
 - [ ] Orchestrator: expose the overflow owner's resource-only catalog
       accessor of review finding 6. Replace the private fit-conversion
       adapter after this workspace merges. Keep accounting and availability

@@ -215,7 +215,10 @@ jobs and exact scale-set attempts contribute rows. Mapped aliases keep one row.
 The shared attempt shape fills unknown Actions facts while known Actions facts
 stay authoritative. Result words remain verbatim from their trusted source.
 The current plan limits finished-job visibility to seven, thirty, or ninety
-days without deleting retained metadata. Actual runner resources stay distinct
+days without deleting retained metadata. Queued jobs report the current label
+request. Running and finished jobs report the retained execution request.
+Their requested vCPUs, memory GB, and free-disk GB are null when that record is
+absent. Label names remain available. Actual runner resources stay distinct
 from requested free job disk. Missing real finish times remain unknown.
 Trusted taken evidence stays true while a real start time is unknown. Period
 accounting still needs the actual time.

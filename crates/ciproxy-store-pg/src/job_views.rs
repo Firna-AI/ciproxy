@@ -105,8 +105,15 @@ WITH demands AS (
 )
 SELECT v.body || jsonb_build_object(
   'organization_id',v.organization_id,'organization',o.login,'label',l.name,
-  'requested_vcpus',l.vcpus,'requested_memory_gb',l.memory_gb,
-  'requested_disk_gb',l.disk_gb,
+  'requested_size',CASE
+    WHEN v.body->>'state'='queued' THEN jsonb_build_object(
+      'vcpus',l.vcpus,'memory_gb',l.memory_gb,'disk_gb',l.disk_gb)
+    WHEN r.machine_id IS NOT NULL THEN c.requested_size
+    WHEN b.runner_id IS NOT NULL THEN jsonb_build_object(
+      'vcpus',b.record_json::jsonb->'requested_vcpus',
+      'memory_gb',b.record_json::jsonb->'requested_memory_gb',
+      'disk_gb',b.record_json::jsonb->'requested_disk_gb')
+    ELSE NULL END,
   'runner_taken',r.id IS NOT NULL AND COALESCE((v.body->>'runner_taken')::boolean,false),
   'actual_size',CASE WHEN r.id IS NULL THEN NULL ELSE jsonb_build_object(
     'vcpu',r.vcpus,'memory_bytes',r.memory_bytes,'disk_bytes',r.disk_bytes) END,
@@ -117,6 +124,8 @@ JOIN labels l ON l.id=v.label_id AND l.workspace_id=$1
 LEFT JOIN runners r ON r.workspace_id=$1 AND r.organization_id=v.organization_id
   AND (r.id=v.runner_id OR (v.runner_id IS NULL
     AND r.scale_set_id=v.scale_set_id AND r.github_id=v.runner_github_id))
+LEFT JOIN own_runner_commands c ON c.runner_id=r.id AND c.workspace_id=$1
+LEFT JOIN overflow_starts b ON b.runner_id=r.id AND b.workspace_id=$1
 LEFT JOIN machines h ON h.id=r.machine_id AND h.workspace_id=$1
 ORDER BY COALESCE((v.body->>'started_at')::timestamptz,
   (v.body->>'queued_at')::timestamptz) DESC NULLS LAST,v.body->>'id'

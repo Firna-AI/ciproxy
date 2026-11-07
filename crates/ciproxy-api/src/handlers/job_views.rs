@@ -64,9 +64,9 @@ pub(super) fn job(value: DashboardJob, at: DateTime<Utc>) -> JobView {
         runtime_seconds,
         label: JobLabel {
             name: value.label,
-            vcpus: value.requested_vcpus,
-            memory_gb: value.requested_memory_gb,
-            disk_gb: value.requested_disk_gb,
+            vcpus: value.requested_size.map(|size| size.vcpus),
+            memory_gb: value.requested_size.map(|size| size.memory_gb),
+            disk_gb: value.requested_size.map(|size| size.disk_gb),
         },
         location,
         actual_size: value

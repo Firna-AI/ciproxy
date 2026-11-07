@@ -58,6 +58,8 @@ mod m18_checkout_tests;
 mod m18_fit_support;
 mod m18_fit_tests;
 mod m18_gap_support;
+mod m18_job_requests_support;
+mod m18_job_requests_tests;
 mod m18_jobs_support;
 mod m18_jobs_tests;
 mod m18_live_tests;

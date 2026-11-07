@@ -90,17 +90,22 @@ pub struct JobVmSize {
     pub disk_bytes: String,
 }
 
-/// Requested label dimensions.
+/// Label name and optional whole-GB resource request.
+/// Queued jobs use the current request. Executed jobs use the retained request.
+/// All three dimensions are null when the execution request was not retained.
 #[derive(Serialize, ToSchema)]
 pub struct JobLabel {
-    /// Retained label name.
+    /// Current name of the retained label.
     pub name: String,
-    /// Requested virtual CPUs.
-    pub vcpus: i32,
-    /// Requested memory in decimal GB.
-    pub memory_gb: i32,
-    /// Requested free job disk in decimal GB.
-    pub disk_gb: i32,
+    /// Requested virtual CPUs, null when the execution request was not retained.
+    #[schema(required = true)]
+    pub vcpus: Option<i32>,
+    /// Requested memory in decimal GB, null when the execution request was not retained.
+    #[schema(required = true)]
+    pub memory_gb: Option<i32>,
+    /// Requested free job disk in decimal GB, null when the request was not retained.
+    #[schema(required = true)]
+    pub disk_gb: Option<i32>,
 }
 
 /// Restored content origins, independent of whether counts were measured.
