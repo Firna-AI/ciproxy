@@ -1,8 +1,9 @@
 // The return page of an install on GitHub. It shows each link of the person
-// that still needs something, and keeps a link that the person acted on here
-// until it ends, so the outcome shows. Two links stay independent: each has
-// its own pick, request, and failure. A link to another page of the app is
-// the person's exit, which ends the continuation of the current install.
+// that still needs something, each link that the latest sign-in names, and
+// keeps a link that the person acted on here until it ends, so the outcome
+// shows. Two links stay independent: each has its own pick, request, and
+// failure. A link to another page of the app is the person's exit, which
+// ends the continuation of the current install.
 
 import { Fragment, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
@@ -11,11 +12,12 @@ import { colors } from "@ciproxy/tokens";
 
 import { AuthShell } from "../../components/auth-shell.tsx";
 import { SessionWaiting } from "../../components/page-state.tsx";
+import { endedContinuationKey } from "../../routing/claim-continuation.ts";
 import { verifiedInstallation } from "../../routing/continuation.ts";
 import { pages } from "../../routing/pages.ts";
 import { useServices } from "../../services/context.tsx";
 import { useRedirect, useSession, useValue } from "../../services/hooks.ts";
-import { createLinksStore, isOpenLink } from "../../state/links.ts";
+import { createLinksStore, joinsReturnPage } from "../../state/links.ts";
 import { linkSection } from "../../view/add-organization.ts";
 import { linkFailure, requestSection } from "../../view/link-notes.ts";
 import { checkAgainTarget } from "../../view/access.ts";
@@ -36,18 +38,22 @@ export function AddOrganizationScreen() {
   const links = useValue(store.state);
   useEffect(() => store.watch(), [store]);
   useEffect(() => {
-    if (snapshot.status === "signed-in")
-      store.seed(snapshot.session.organization_links);
+    if (snapshot.status !== "signed-in") return;
+    const { session } = snapshot;
+    store.seed(session.organization_links, session.installation_continuation);
   }, [snapshot, store]);
 
   const session = snapshot.status === "signed-in" ? snapshot.session : null;
   const requests = session === null ? null : requestSection(session);
-  // The store seeds after the first render, so the open links of the session
-  // count too; otherwise the page would leave before it shows them.
+  // The store seeds after the first render, so the links of the session that
+  // join the page count too; otherwise the page would leave before it shows
+  // them.
   const empty =
     session !== null &&
     links.entries.length === 0 &&
-    !session.organization_links.some(isOpenLink) &&
+    !session.organization_links.some((link) =>
+      joinsReturnPage(link, session.installation_continuation),
+    ) &&
     requests === null;
   useRedirect(empty ? pages.home : null);
   if (session === null || empty) return <SessionWaiting snapshot={snapshot} />;
@@ -58,10 +64,17 @@ export function AddOrganizationScreen() {
     else void store.checkAgain();
   };
   // Leaving for a page of the app ends the continuation of the install: the
-  // landing no longer opens its workspace in place of the chosen page.
+  // landing no longer opens its workspace in place of the chosen page. The
+  // named claims of the sign-in end too once they all ended, by the newest
+  // state on this page. While one still waits, a later landing keeps it.
   const exit = () => {
     const installationId = verifiedInstallation(session);
     if (installationId !== null) services.rememberInstallation(installationId);
+    const ended = endedContinuationKey(
+      session,
+      links.entries.map((entry) => entry.link),
+    );
+    if (ended !== null) services.rememberContinuation(ended);
     services.clearInstallStarted();
   };
   const handlers = {

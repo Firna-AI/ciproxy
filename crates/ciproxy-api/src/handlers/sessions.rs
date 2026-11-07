@@ -12,6 +12,7 @@ use crate::access::Principal;
 use crate::error::{Error, Result};
 use crate::state::{ApiState, query};
 use crate::wire::access::{SessionView, SignInState, Success, WorkspacePath, WorkspaceView};
+use crate::wire::links::OrganizationLinkView;
 
 use super::{link_views, links, views};
 
@@ -27,7 +28,7 @@ pub(crate) async fn session(
     let id = principal.id();
     let github_id = principal.github_id();
     let durable = !principal.browser_only();
-    let organization_links = query(state.store.clone(), move |store| {
+    let organization_links: Vec<OrganizationLinkView> = query(state.store.clone(), move |store| {
         store
             .installation_claims(github_id)?
             .into_iter()
@@ -121,6 +122,12 @@ pub(crate) async fn session(
     })
     .await?;
     Ok(Json(SessionView {
+        installation_continuation: principal
+            .installation_continuation()
+            .iter()
+            .copied()
+            .filter(|id| organization_links.iter().any(|link| link.id == *id))
+            .collect(),
         organization_links,
         setup: principal.setup().cloned(),
         pending_install_requests,

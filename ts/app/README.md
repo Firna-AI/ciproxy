@@ -46,6 +46,13 @@ the Admins, in place of each workspace page.
   sign-in to `/api/auth/github/callback` and an install to `/api/github/setup`.
   The API checks each return, then opens `/`, or `/sign-in?reason=github` on
   a failure. The app takes no installation ID from a URL.
+- The session names the exact claims that the latest GitHub sign-in proved
+  or completed, such as an install that an owner approved later. When one
+  named claim ended, `/` opens its workspace before a remembered one. When
+  several ended, `/` opens the return page, which shows each outcome. A
+  named claim that still waits adds no route, so the removed-App and
+  ended-access pages stay first. The browser handles each ended
+  continuation once, and claim order, time, and roles choose nothing.
 - Each API response names its build in the `x-ciproxy-build` header. After a
   new build, the next page change loads a new document, also through the
   back and forward buttons. Until then, the page keeps its input.
@@ -132,6 +139,8 @@ Without the credential variable, it prints `SKIP` and exits with status 2.
 - [src/app/_layout.tsx](src/app/_layout.tsx) sets the Firna theme, loads the
   fonts, and provides the services. Each other file in `src/app` is a route.
 - [src/routing/landing.ts](src/routing/landing.ts) decides where `/` goes.
+  [src/routing/claim-continuation.ts](src/routing/claim-continuation.ts)
+  reads the exact claims of the latest sign-in.
 - [src/screens/workspace-page.tsx](src/screens/workspace-page.tsx) shows a
   workspace page in the [shell](src/components/shell/app-shell.tsx), or the
   page for no role.

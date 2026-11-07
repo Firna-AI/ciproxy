@@ -13,6 +13,7 @@ import {
   workspaceId,
 } from "./fixtures-core.ts";
 import { job, machine, setup } from "./fixtures-setup.ts";
+import { applyLateApprovalScenario } from "./harness-late-approval.ts";
 import { applyReviewScenario } from "./harness-review-scenarios.ts";
 
 export const scenarios = [
@@ -70,6 +71,11 @@ export const scenarios = [
   "claim-failure-csrf",
   "claim-network-failure",
   "workspace-long",
+  "late-first-wait",
+  "late-first-completed",
+  "late-add-wait",
+  "late-add-completed",
+  "late-multiple-completed",
 ] as const;
 
 export type ScenarioName = (typeof scenarios)[number];
@@ -88,6 +94,7 @@ export type Scenario = {
   commandFails: boolean;
   revokeFails: boolean;
   linkedOutcome?: OrganizationLinkView;
+  signInOutcome?: ScenarioName;
 };
 
 function linkFor(name: ScenarioName): OrganizationLinkView {
@@ -232,5 +239,6 @@ export function recordedScenario(name: ScenarioName): Scenario {
     });
   }
   applyReviewScenario(data);
+  applyLateApprovalScenario(data);
   return data;
 }

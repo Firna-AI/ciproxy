@@ -113,8 +113,15 @@ impl AccessService {
             }
             _ => None,
         };
-        self.prove_links(&profile, &grant, &memberships, target, github)
+        let mut installation_continuation = self
+            .prove_links(&profile, &grant, &memberships, target, github)
             .await?;
+        installation_continuation.extend(
+            self.prove_completed_links(&profile, &grant, &memberships)
+                .await?,
+        );
+        installation_continuation.sort_unstable();
+        installation_continuation.dedup();
         let github_id = profile.id;
         let organization_ids = memberships
             .iter()
@@ -194,6 +201,7 @@ impl AccessService {
         })
         .await?;
         let browser = BrowserState {
+            installation_continuation,
             install_context,
             user_id: id,
             session_id,

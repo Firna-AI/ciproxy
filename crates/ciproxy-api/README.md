@@ -91,6 +91,13 @@ requires organization membership or exact personal ownership. Only then can
 sign-in persistence run. Verified Add claims can then choose their workspace.
 GET `/session` returns typed setup and installation-link outcomes without
 frontend installation-ID forwarding.
+Its `installation_continuation` lists the exact claim IDs proved or completed
+by the latest successful GitHub authorization. Match every ID to
+`organization_links`. The sealed browser metadata keeps this list across
+reloads. Each successful authorization replaces it, including an empty result.
+Previously proved completed claims stay out. A signed Direct install completed
+before sign-in appears after its first successful own-user installation proof.
+This metadata grants no access.
 Failed proof preserves business records and the existing sign-in. A matching
 identity keeps its original expiry.
 
@@ -195,7 +202,8 @@ It never prints a cookie, token, install command, or response body.
 - [src/identity/http.rs](src/identity/http.rs) implements GitHub user OAuth.
 - [src/installations.rs](src/installations.rs) implements App-JWT metadata reads
   and intentional uninstall.
-- [src/handlers/links.rs](src/handlers/links.rs) owns requester choice and enable.
+- [src/handlers/links.rs](src/handlers/links.rs) owns requester choice and
+  enable.
 - [src/maintenance.rs](src/maintenance.rs) owns restart and hourly work.
 - [src/wire](src/wire) owns the Rust dashboard boundary types.
 - [src/openapi.rs](src/openapi.rs) builds the generated reference.

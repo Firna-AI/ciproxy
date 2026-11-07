@@ -112,6 +112,7 @@ export const parseSession = parser((value): SessionView => {
     csrf_token: string(fields.csrf_token),
     expires_at: time(fields.expires_at),
     install_url: string(fields.install_url),
+    installation_continuation: array(fields.installation_continuation, string),
     login: string(fields.login),
     organization_links: array(fields.organization_links, readLink),
     pending_install_requests: array(fields.pending_install_requests, pending),

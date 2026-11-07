@@ -17,6 +17,8 @@ use super::{AccessService, InstallContext, Principal};
 #[derive(Clone, Deserialize, Serialize)]
 pub(super) struct BrowserState {
     #[serde(default)]
+    pub(super) installation_continuation: Vec<Uuid>,
+    #[serde(default)]
     pub(super) install_context: Option<InstallContext>,
     pub(super) user_id: Uuid,
     pub(super) session_id: Uuid,
@@ -88,6 +90,7 @@ impl BrowserState {
             expires_at: self.expires_at,
         };
         Principal {
+            installation_continuation: self.installation_continuation,
             install_context: self.install_context,
             user: user.unwrap_or(User {
                 id: self.user_id,

@@ -26,6 +26,7 @@ test("a verified completed install opens its exact workspace before a remembered
       {
         landing: { workspace: workspace() },
         remember: returnedInstallationId,
+        rememberContinuation: null,
         installOpen: false,
       },
     );
@@ -44,6 +45,7 @@ test("a GitHub-started verified install is handled once in a ready session", () 
       {
         landing: { workspace: workspace() },
         remember: returnedInstallationId,
+        rememberContinuation: null,
         installOpen: false,
       },
     );
@@ -64,6 +66,7 @@ test("a GitHub-started verified install is handled once in a ready session", () 
           }),
         },
         remember: null,
+        rememberContinuation: null,
         installOpen: false,
       },
     );
@@ -81,6 +84,7 @@ test("a marked current return opens recovery before removed or ended access", ()
       {
         landing: { href: "/add-organization" },
         remember: null,
+        rememberContinuation: null,
         installOpen: true,
       },
     );
@@ -117,11 +121,13 @@ test("a pending install keeps its continuation until its exact destination opens
   assert.deepEqual(landingDecision(pendingReturn(), context), {
     landing: { href: "/add-organization" },
     remember: null,
+    rememberContinuation: null,
     installOpen: true,
   });
   assert.deepEqual(landingDecision(completedReturn("viewer"), context), {
     landing: { workspace: workspace() },
     remember: returnedInstallationId,
+    rememberContinuation: null,
     installOpen: false,
   });
 });

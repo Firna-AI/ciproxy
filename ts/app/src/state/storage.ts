@@ -1,7 +1,8 @@
 // Small browser memories that hold no secret: the end of the sign-in, the
-// last workspace, and whether this tab started an install. Storage can be
-// missing or refuse writes, for example in a private window, so every call
-// falls back to memory and never throws.
+// last workspace, whether this tab started an install, and the installs and
+// claims that the landing handled. Storage can be missing or refuse writes,
+// for example in a private window, so every call falls back to memory and
+// never throws.
 
 export type KeyValueStorage = {
   get(key: string): string | null;
@@ -65,4 +66,6 @@ export const storageKeys = {
   installStarted: "ciproxy.install-started",
   /** The last verified installation that the landing handled. */
   handledInstallation: "ciproxy.installation",
+  /** The claim IDs of the last ended continuation that the browser handled. */
+  handledContinuation: "ciproxy.continuation",
 } as const;

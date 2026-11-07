@@ -40,6 +40,17 @@ export function isOpenLink(link: OrganizationLinkView): boolean {
   return !finalStates.has(link.state);
 }
 
+/**
+ * A link that joins the return page: one that is still open, or one that the
+ * exact claims of the latest sign-in name, so that its outcome shows.
+ */
+export function joinsReturnPage(
+  link: OrganizationLinkView,
+  named: readonly string[],
+): boolean {
+  return isOpenLink(link) || named.includes(link.id);
+}
+
 /** A link that changes by itself, so the page reads it again. */
 export function isMovingLink(link: OrganizationLinkView): boolean {
   return movingStates.has(link.state) || link.activation?.preparing === true;
@@ -49,8 +60,11 @@ export const linkPollInterval = 3_000;
 
 export type LinksStore = {
   readonly state: Store<LinksSnapshot>;
-  /** Merge links read elsewhere, such as the links of the session. */
-  seed(links: readonly OrganizationLinkView[]): void;
+  /**
+   * Merge links read elsewhere, such as the links of the session. A new link
+   * joins the page when it joins the return page with the `named` claims.
+   */
+  seed(links: readonly OrganizationLinkView[], named?: readonly string[]): void;
   pick(claimId: string, workspaceId: string): void;
   choose(claimId: string): Promise<void>;
   /** Check the links again with fresh GitHub proof, then the session. */
@@ -103,7 +117,10 @@ export function createLinksStore(options: {
     return { ...entry, link, picked: offered ? entry.picked : null };
   };
 
-  const seed = (links: readonly OrganizationLinkView[]) => {
+  const seed = (
+    links: readonly OrganizationLinkView[],
+    named: readonly string[] = [],
+  ) => {
     const current = state.get();
     const known = new Map(
       current.entries.map((entry) => [entry.link.id, entry]),
@@ -113,7 +130,7 @@ export function createLinksStore(options: {
       return next === undefined ? entry : withLink(entry, next);
     });
     for (const link of links) {
-      if (!known.has(link.id) && isOpenLink(link)) {
+      if (!known.has(link.id) && joinsReturnPage(link, named)) {
         entries.push({ link, picked: null, choosing: false, failure: null });
       }
     }

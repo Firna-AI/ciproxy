@@ -55,6 +55,9 @@ export type AppServices = {
   /** The last verified installation that the landing handled, if stored. */
   handledInstallation(): string | null;
   rememberInstallation(installationId: string): void;
+  /** The key of the last ended continuation that the browser handled. */
+  handledContinuation(): string | null;
+  rememberContinuation(key: string): void;
 };
 
 function cached<T>(create: (key: string) => T): (key: string) => T {
@@ -119,6 +122,10 @@ export function createAppServices(env: AppEnvironment): AppServices {
     handledInstallation: () => env.local.get(storageKeys.handledInstallation),
     rememberInstallation(installationId) {
       env.local.set(storageKeys.handledInstallation, installationId);
+    },
+    handledContinuation: () => env.local.get(storageKeys.handledContinuation),
+    rememberContinuation(key) {
+      env.local.set(storageKeys.handledContinuation, key);
     },
   };
 }

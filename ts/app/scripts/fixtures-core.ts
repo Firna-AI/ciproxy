@@ -72,6 +72,7 @@ export function session(overrides: Partial<SessionView> = {}): SessionView {
   return {
     csrf_token: "fixture-csrf-current",
     expires_at: "2026-12-06T12:00:00Z",
+    installation_continuation: [],
     install_url: "/__fixture/github/install",
     login: "mira",
     organization_links: [],

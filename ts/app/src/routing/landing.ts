@@ -1,8 +1,9 @@
 // Where the dashboard opens. The session decides it: a role that waits for a
 // new GitHub sign-in, the continuation of a new install, a removed App, an
-// ended access, a personal-account install, an install that waits for the
-// person, or a workspace. The client never infers a workspace for an
-// organization; it only opens the page that the server state asks for.
+// ended access, a personal-account install, the exact claims of the latest
+// sign-in, an install that waits for the person, or a workspace. The client
+// never infers a workspace for an organization; it only opens the page that
+// the server state asks for.
 
 import type {
   OrganizationLinkView,
@@ -12,6 +13,11 @@ import type {
 } from "../api/schema.ts";
 import { isOpenLink } from "../state/links.ts";
 import { setupWaits } from "../state/setup.ts";
+import {
+  claimContinuation,
+  continuationToRemember,
+  type ClaimContinuation,
+} from "./claim-continuation.ts";
 import {
   installContinuation,
   installationToRemember,
@@ -29,6 +35,8 @@ export type LandingContext = {
   preferredWorkspaceId: string | null;
   /** The stored last handled installation; absent or null when none. */
   handledInstallationId?: string | null;
+  /** The stored key of the last handled ended continuation, if any. */
+  handledContinuation?: string | null;
 };
 
 /** The page to open, and what the browser keeps about the install. */
@@ -38,6 +46,8 @@ export type LandingDecision = {
   remember: string | null;
   /** The install stays open, so the tab keeps its install mark. */
   installOpen: boolean;
+  /** The ended continuation to store once the page opens, or null. */
+  rememberContinuation: string | null;
 };
 
 export function openLinks(session: SessionView): OrganizationLinkView[] {
@@ -72,17 +82,16 @@ function freshOutcome(session: SessionView, context: LandingContext): boolean {
 }
 
 /**
- * The landing of a session. A sign-in without a workspace session whose
- * role or request is ready signs in again first, as the API asks. The claim
- * of a new install comes next, also before the removed-App and ended-access
- * pages, and its workspace before any remembered one. Older claims keep
- * their place after those pages.
+ * The pages that come before the destination of an ended continuation. A
+ * sign-in without a workspace session whose role or request is ready signs
+ * in again first, as the API asks. The claim of a new install comes next,
+ * also before the removed-App and ended-access pages.
  */
-function route(
+function firstLanding(
   session: SessionView,
   context: LandingContext,
-  continuation: InstallContinuation,
-): Landing {
+  install: InstallContinuation,
+): Landing | null {
   if (
     session.state !== "ready" &&
     session.reauthorization_required &&
@@ -90,16 +99,33 @@ function route(
   ) {
     return { href: pages.install };
   }
-  if (continuation.kind === "return") return { href: pages.addOrganization };
+  if (install.kind === "return") return { href: pages.addOrganization };
   if (session.state === "app_removed") return { href: pages.appRemoved };
   if (session.state === "access_ended") return { href: pages.accessEnded };
-  const fresh = freshOutcome(session, context);
-  if (fresh && session.setup?.kind === "organizations_only") {
+  if (
+    freshOutcome(session, context) &&
+    session.setup?.kind === "organizations_only"
+  ) {
     return { href: pages.personalAccount };
   }
-  if (continuation.kind === "workspace") {
-    return { workspace: continuation.workspace };
-  }
+  return null;
+}
+
+/**
+ * The rest of the landing. The exact claims of the latest sign-in come
+ * first: one ended claim opens its workspace, before any remembered one,
+ * and several show their outcomes on the return page. The workspace of a
+ * new install follows. Older claims keep their place after it.
+ */
+function laterLanding(
+  session: SessionView,
+  context: LandingContext,
+  install: InstallContinuation,
+  claims: ClaimContinuation,
+): Landing {
+  if (claims.kind === "outcomes") return { href: pages.addOrganization };
+  if (claims.kind === "workspace") return { workspace: claims.workspace };
+  if (install.kind === "workspace") return { workspace: install.workspace };
   if (openLinks(session).length > 0) return { href: pages.addOrganization };
   if (session.state === "install_required") return { href: pages.install };
   if (
@@ -124,11 +150,19 @@ export function landingDecision(
     installStarted: context.installStarted,
     handledInstallationId: context.handledInstallationId ?? null,
   };
-  const continuation = installContinuation(session, memory);
+  const install = installContinuation(session, memory);
+  const claims = claimContinuation(
+    session,
+    context.handledContinuation ?? null,
+  );
+  const first = firstLanding(session, context, install);
   return {
-    landing: route(session, context, continuation),
-    remember: installationToRemember(session, memory, continuation),
-    installOpen: installStaysOpen(continuation),
+    landing: first ?? laterLanding(session, context, install, claims),
+    remember: installationToRemember(session, memory, install),
+    installOpen: installStaysOpen(install),
+    // An earlier page leaves the continuation for a later landing.
+    rememberContinuation:
+      first === null ? continuationToRemember(claims) : null,
   };
 }
 

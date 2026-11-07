@@ -3,7 +3,8 @@
 // the install for the whole sign-in. The landing acts on that install once:
 // when its installation is new to this browser, its claim names where the
 // person goes next. The claim of the same installation ID decides it; no
-// other claim and no remembered workspace replaces it.
+// remembered workspace replaces it. Only an ended continuation of the
+// latest sign-in, which names its exact claims, opens before its workspace.
 //
 // A browser keeps the last installation that the landing handled, and that
 // installation is never new again, also when a later install was cancelled.

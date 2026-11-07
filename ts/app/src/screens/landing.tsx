@@ -3,7 +3,8 @@
 // an Admin until it is done, Jobs otherwise. The API sends every sign-in and
 // install return here. The landing stores an install as handled only when it
 // opens the final destination of its claim. An open install stays new, also
-// after the return page, so the next landing still opens its workspace.
+// after the return page, so the next landing still opens its workspace. It
+// stores the exact claims of the sign-in the same way, once they all ended.
 
 import { useEffect } from "react";
 import { useLocalSearchParams } from "expo-router";
@@ -27,11 +28,15 @@ export function LandingScreen() {
     let cancelled = false;
     /** What the browser keeps once the landing opens its page. */
     let remember: string | null = null;
+    let rememberContinuation: string | null = null;
     let installOpen = false;
     const go = (href: string) => {
       if (cancelled) return;
       if (!installOpen) services.clearInstallStarted();
       if (remember !== null) services.rememberInstallation(remember);
+      if (rememberContinuation !== null) {
+        services.rememberContinuation(rememberContinuation);
+      }
       services.navigator.go(href, { replace: true });
     };
     const open = async (workspace: WorkspaceView) => {
@@ -59,8 +64,10 @@ export function LandingScreen() {
         installStarted: services.installStarted(),
         preferredWorkspaceId: requested ?? services.lastWorkspace(),
         handledInstallationId: services.handledInstallation(),
+        handledContinuation: services.handledContinuation(),
       });
       remember = decision.remember;
+      rememberContinuation = decision.rememberContinuation;
       installOpen = decision.installOpen;
       const { landing } = decision;
       if ("href" in landing) go(landing.href);

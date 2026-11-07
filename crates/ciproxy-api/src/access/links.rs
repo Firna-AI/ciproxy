@@ -80,7 +80,7 @@ impl AccessService {
         memberships: &[Membership],
         setup: Option<(&SetupTarget, Option<&str>)>,
         github: &dyn GitHubApp,
-    ) -> Result<()> {
+    ) -> Result<Vec<Uuid>> {
         if let Some((target, state)) = setup {
             let attempt = match state {
                 Some(state) => self.lookup_attempt(state).await?,
@@ -117,12 +117,14 @@ impl AccessService {
                     .await?;
             }
         }
+        let mut continuation = Vec::new();
         for mut claim in self.owned_claims(profile.id).await? {
             if claim.organization_id.is_some() {
                 continue;
             }
             if claim.recovery() == InstallationRecovery::Direct {
                 github.resolve_installation_link(claim.id).await.api()?;
+                continuation.push(claim.id);
                 continue;
             }
             let Some(actual) = self
@@ -147,6 +149,7 @@ impl AccessService {
             claim.user_verified = true;
             claim.verified_at = Some(self.runtime.now());
             let claim = self.save_claim(claim, None).await?;
+            continuation.push(claim.id);
             if matches!(
                 claim.recovery(),
                 InstallationRecovery::DirectAwaitingEvent | InstallationRecovery::AddAwaitingEvent
@@ -172,7 +175,7 @@ impl AccessService {
                 github.resolve_installation_link(id).await.api()?;
             }
         }
-        Ok(())
+        Ok(continuation)
     }
 
     pub(super) async fn refresh_links(

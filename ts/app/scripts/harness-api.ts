@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { InstallLink, WorkspaceChoice } from "../src/api/schema.ts";
 import { activation } from "./fixtures-core.ts";
 import { installCommand } from "./fixtures-setup.ts";
+import { recordedScenario } from "./harness-scenarios.ts";
 import {
   fields,
   problem,
@@ -60,9 +61,12 @@ export async function serveApi(
     path === "/api/auth/github/callback" ||
     path === "/api/github/setup"
   ) {
+    const outcome =
+      path === "/api/auth/github" ? current.signInOutcome : undefined;
+    if (outcome !== undefined) state.scenario = recordedScenario(outcome);
     state.facts.push({ method, path, status: 302, kind: "navigation" });
     response.writeHead(302, {
-      Location: "/__fixture/navigation-complete",
+      Location: outcome === undefined ? "/__fixture/navigation-complete" : "/",
       "x-ciproxy-build": state.build,
     });
     response.end();
