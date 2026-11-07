@@ -1108,11 +1108,19 @@ Implementation calls, 6 November 2026:
       Branch: `conductor/mvp-m15-overflow`.
 - [x] Keep fractional queue times when applying the overflow wait.
       Branch: `conductor/mvp-m15-overflow`.
-- [ ] Orchestrator: Resolve Boat retirement after GitHub App access ends.
-      The guest reports no job handover today. The pre-handover job-failure
-      exception covers own-machine warm runners only. Apply the user's
-      chosen rule in the protocol and guest/image work, then run its live
-      check. The independent review records the options.
+- [x] Apply item 89 A after an owner removes the App. Keep launched Boat
+      sandboxes until runner exit or their saved lifetime. Keep running
+      jobs and the existing exit callback. State the exception and its
+      reason in both protocol docs. The user chose A on 7 November 2026:
+      App removal is rare, and lifetime plus the spend limit bound cost.
+      My calls, 7 November 2026: use the saved owner-removal timestamp and
+      the existing runner hold. Read removal again after successful GitHub
+      retirement. Keep registration-only recovery and exit cleanup
+      separate, because ended deliveries already permit safe cleanup.
+      A new install in the same workspace restores ordinary retirement,
+      because it ends the saved removal state. Keep guest retirement B in
+      `plans/follow-ups/boat-guest-retirement.md` for later review.
+      Branch: `conductor/mvp-m15-overflow`.
 - [x] Record the broader immutable scheduler-binding fix in
       `plans/follow-ups/immutable-scheduler-bindings.md`.
       Include the existing own-machine name-matching problem.

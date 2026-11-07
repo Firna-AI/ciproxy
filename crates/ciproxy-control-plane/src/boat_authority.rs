@@ -1,4 +1,4 @@
-//! GitHub-first idle retirement without entering the runtime operation lock.
+//! GitHub-first idle retirement with the App-removal lifetime exception.
 
 use std::sync::Arc;
 
@@ -59,6 +59,11 @@ impl RunnerAuthority for BoatRunnerAuthority {
             Ok(Ok(value)) => value,
             _ => return Err(Error::ProviderUnavailable),
         };
+        if input.organizations.iter().any(|organization| {
+            organization.id == organization_id && organization.removed_at.is_some()
+        }) {
+            return Err(Error::RunnerNeeded);
+        }
         let intents = &input.boat_intents;
         let intent = intents
             .iter()
@@ -99,7 +104,20 @@ impl RunnerAuthority for BoatRunnerAuthority {
         if !retire {
             return Ok(Retirement::WaitingDemand);
         }
-        self.remove(workspace_id, intent).await
+        let retirement = self.remove(workspace_id, intent).await?;
+        if retirement == Retirement::Removed {
+            let store = self.store.clone();
+            match tokio::task::spawn_blocking(move || {
+                store.organization(workspace_id, organization_id)
+            })
+            .await
+            {
+                Ok(Ok(Some(organization))) if organization.removed_at.is_none() => {}
+                Ok(Ok(Some(_))) => return Err(Error::RunnerNeeded),
+                _ => return Err(Error::ProviderUnavailable),
+            }
+        }
+        Ok(retirement)
     }
 }
 

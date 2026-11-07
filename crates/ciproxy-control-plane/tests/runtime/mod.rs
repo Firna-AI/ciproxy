@@ -13,6 +13,7 @@ mod job_delivery_tests;
 mod management_tests;
 mod metering_tests;
 mod observation_tests;
+mod overflow_app_removal_tests;
 mod overflow_callback_tests;
 mod overflow_ports;
 mod overflow_replacement_tests;

@@ -69,6 +69,17 @@ overflow service.
 - Idle retirement keeps a runner that a running job or waiting demand needs.
   Otherwise GitHub removes the registration first. A busy answer keeps the
   sandbox.
+- After an owner removes the App, launched sandboxes stay until their
+  runner exits or their saved lifetime ends. Missing job facts do not prove
+  that a sandbox is idle. The runtime checks saved owner removal before and
+  after GitHub retirement. A successful GitHub response does not permit
+  early sandbox deletion after removal.
+- App removal stops new Boat starts. The last organization removal retires
+  the Boat key and holds it until the unfinished sandboxes end. Exit
+  reports still delete their sandbox at once. App removal is rare, and the
+  lifetime and spend limit bound its cost, as
+  [Removing the App](../../docs/protocol/app-removal.md#removing-the-app)
+  explains.
 - Old idle supply cannot cover a replacement label with the same name.
   Retired labels and removed bindings cannot start an undispatched delivery.
 - When Boat or its cost data fails, accepted Boat supply stays reserved and

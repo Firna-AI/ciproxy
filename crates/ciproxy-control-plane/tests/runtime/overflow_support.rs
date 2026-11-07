@@ -34,6 +34,7 @@ pub(super) struct Harness {
     pub(super) runtime: MachineRuntime,
     pub(super) service: Arc<dyn Overflow>,
     pub(super) busy: Arc<AtomicBool>,
+    pub(super) remove_app_on_retire: Arc<AtomicBool>,
     pub(super) own_starts: Arc<AtomicUsize>,
 }
 
@@ -87,6 +88,11 @@ impl Harness {
         let ports = Ports::new();
         let busy = Arc::new(AtomicBool::new(false));
         let race = busy.clone();
+        let remove_app_on_retire = Arc::new(AtomicBool::new(false));
+        let removal = remove_app_on_retire.clone();
+        let removal_store = fixture.store.clone();
+        let workspace = fixture.workspace;
+        let organization = fixture.organization;
         let ids = AtomicI64::new(100);
         let registrations: Arc<dyn RunnerRegistrations> = Arc::new(
             Unimock::new((
@@ -101,6 +107,11 @@ impl Harness {
                 RunnerRegistrationsMock::retire
                     .some_call(matching!(_, _, _))
                     .answers_arc(Arc::new(move |_, _, _, _| {
+                        if removal.swap(false, Ordering::SeqCst) {
+                            removal_store
+                                .record_app_removal(workspace, organization, at())
+                                .unwrap();
+                        }
                         Ok(if race.load(Ordering::SeqCst) {
                             RegistrationRetirement::Busy { id: 100 }
                         } else {
@@ -178,6 +189,7 @@ impl Harness {
             runtime,
             service,
             busy,
+            remove_app_on_retire,
             own_starts,
         }
     }

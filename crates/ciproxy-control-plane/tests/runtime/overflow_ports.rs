@@ -29,6 +29,7 @@ pub(super) struct Ports {
     pub(super) now: Mutex<DateTime<Utc>>,
     pub(super) fail: AtomicBool,
     pub(super) reject: AtomicBool,
+    pub(super) trial: AtomicBool,
     pub(super) pending: AtomicBool,
     pub(super) creates: Mutex<Vec<BackendCreateSandboxRequest>>,
     pub(super) launches: AtomicUsize,
@@ -45,6 +46,7 @@ impl Ports {
             now: Mutex::new("2026-11-05T12:00:00Z".parse().unwrap()),
             fail: AtomicBool::new(false),
             reject: AtomicBool::new(false),
+            trial: AtomicBool::new(false),
             pending: AtomicBool::new(false),
             creates: Mutex::new(Vec::new()),
             launches: AtomicUsize::new(0),
@@ -72,7 +74,7 @@ impl Ports {
                         Ok(AccountFacts {
                             name: "Customer Boat".to_owned(),
                             wallet: "personal".to_owned(),
-                            trial: false,
+                            trial: account.trial.load(Ordering::SeqCst),
                             billing_ready: true,
                             start_fee_bound_usd: Some(Decimal::new(7, 2)),
                         })

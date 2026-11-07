@@ -94,6 +94,9 @@ Without it, own machines still run jobs, and Boat stays off.
 The runtime, the dashboard API, and the exit callback share one overflow
 service. The [overflow guide](overflow.md) gives the configuration, the
 runtime guarantees, the exit callback, and the live smoke checks.
+After an owner removes the App, launched sandboxes run until their runner
+exits or their saved lifetime ends. The runtime holds the Boat key for
+their cleanup, also after the last organization leaves.
 
 ### GitHub workers
 
@@ -255,7 +258,8 @@ GitHub, and database access, so they stay operator work.
   the scaler snapshot.
 - [src/boat_authority.rs](src/boat_authority.rs) defines
   `BoatRunnerAuthority`. It retires Boat registrations GitHub-first for the
-  overflow service and for runtime recovery.
+  overflow service and for runtime recovery. It preserves the launched
+  sandboxes of an organization whose owner removed the App.
 - [src/boat_jobs.rs](src/boat_jobs.rs) binds trusted GitHub job facts to
   Boat runners.
 - [src/boat_callback.rs](src/boat_callback.rs) mounts the sandbox exit

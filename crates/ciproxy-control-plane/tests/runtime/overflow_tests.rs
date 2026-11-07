@@ -16,6 +16,7 @@ use tower::ServiceExt;
 use uuid::Uuid;
 
 use super::overflow_support::Harness;
+use super::recovery_support::other_organization;
 use super::support::at;
 
 #[tokio::test]
@@ -116,32 +117,46 @@ async fn boat_failure_keeps_free_own_capacity_scheduling() {
 
 #[tokio::test]
 async fn idle_cleanup_preserves_a_github_busy_race_then_deletes_after_completion() {
-    let harness = Harness::new(false, false).await;
-    let mut job = harness.queued();
-    harness.runtime.tick().await.unwrap();
-    job.phase = DemandPhase::Completed;
-    job.completed_at = Some(at());
-    harness
-        .fixture
-        .store
-        .save_github_job(harness.fixture.workspace, &job, at())
-        .unwrap();
-    harness.busy.store(true, Ordering::SeqCst);
-    harness.runtime.tick().await.unwrap();
-    assert_eq!(harness.ports.deletes.load(Ordering::SeqCst), 0);
-    harness.busy.store(false, Ordering::SeqCst);
-    harness.runtime.tick().await.unwrap();
-    assert_eq!(harness.ports.deletes.load(Ordering::SeqCst), 1);
-    assert_eq!(
+    for takeout in [false, true] {
+        let harness = Harness::new(false, false).await;
+        let mut job = harness.queued();
+        harness.runtime.tick().await.unwrap();
+        job.phase = DemandPhase::Completed;
+        job.completed_at = Some(at());
         harness
             .fixture
             .store
-            .boat_runtime_snapshot(harness.fixture.workspace)
-            .unwrap()
-            .starts[0]
-            .phase,
-        StartPhase::Ended
-    );
+            .save_github_job(harness.fixture.workspace, &job, at())
+            .unwrap();
+        if takeout {
+            other_organization(&harness.fixture);
+            harness
+                .fixture
+                .store
+                .begin_organization_takeout(harness.fixture.workspace, harness.fixture.organization)
+                .unwrap();
+        }
+        harness.busy.store(true, Ordering::SeqCst);
+        harness.runtime.tick().await.unwrap();
+        assert_eq!(harness.ports.deletes.load(Ordering::SeqCst), 0);
+        harness.busy.store(false, Ordering::SeqCst);
+        harness.runtime.tick().await.unwrap();
+        assert_eq!(
+            harness.ports.deletes.load(Ordering::SeqCst),
+            1,
+            "takeout: {takeout}"
+        );
+        assert_eq!(
+            harness
+                .fixture
+                .store
+                .boat_runtime_snapshot(harness.fixture.workspace)
+                .unwrap()
+                .starts[0]
+                .phase,
+            StartPhase::Ended
+        );
+    }
 }
 
 #[tokio::test]
@@ -182,6 +197,15 @@ async fn callback_checks_runner_scope_and_consumes_its_token_before_deletion() {
             .status(),
         StatusCode::BAD_REQUEST
     );
+    harness
+        .fixture
+        .store
+        .record_app_removal(
+            harness.fixture.workspace,
+            harness.fixture.organization,
+            at(),
+        )
+        .unwrap();
     assert_eq!(
         router
             .clone()
@@ -200,6 +224,16 @@ async fn callback_checks_runner_scope_and_consumes_its_token_before_deletion() {
         StatusCode::UNAUTHORIZED
     );
     assert_eq!(harness.ports.deletes.load(Ordering::SeqCst), 1);
+    assert_eq!(
+        harness
+            .fixture
+            .store
+            .boat_runtime_snapshot(harness.fixture.workspace)
+            .unwrap()
+            .accounts
+            .len(),
+        0
+    );
 }
 
 #[tokio::test]
