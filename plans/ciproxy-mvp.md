@@ -1138,6 +1138,13 @@ Implementation calls, 6 November 2026:
       with the real store. Prove early deletion of old idle supply while
       running work stays. Prove failure with a permanent removal hold.
       Branch: `conductor/mvp-m15-overflow`.
+- [x] Apply re-review finding 6 B. Defer inaccessible registration recovery
+      without GitHub calls after owner removal. Keep take-out unanswered
+      and resume ordinary recovery after reinstall.
+      My call, 7 November 2026: pass loaded organization facts and use an
+      explicit deferred result. Keep broader registration retention in
+      `plans/follow-ups/boat-registration-retention.md` for after merge.
+      Branch: `conductor/mvp-m15-overflow`.
 - [ ] Orchestrator: Forward `BOAT_SHARED_SNAPSHOT` through
       `deploy/scripts/deploy.py` and both deployment workflows.
       Set it to the shared Milestone 10 snapshot.

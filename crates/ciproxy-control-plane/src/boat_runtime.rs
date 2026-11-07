@@ -58,7 +58,7 @@ impl MachineRuntime {
                 .find(|record| record.delivery_id == intent.delivery_id);
             if record.is_none_or(|record| record.ends_at.is_some()) {
                 if let Err(error) = self
-                    .retire_boat_registration(workspace, intent, record)
+                    .retire_boat_registration(workspace, intent, record, &current.organizations)
                     .await
                 {
                     tracing::warn!(%error,"Boat registration cleanup will retry");

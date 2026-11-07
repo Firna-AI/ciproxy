@@ -114,9 +114,12 @@ impl MachineRuntime {
                 .internal()?
                 .internal()?;
         results.extend(retirement_results(&saved, organization.id, &runners));
-        let unanswered = results
-            .iter()
-            .any(|result| matches!(result, RunnerRetirement::Pending));
+        let unanswered = results.iter().any(|result| match result {
+            RunnerRetirement::Pending | RunnerRetirement::Deferred => true,
+            RunnerRetirement::Stopping(_) | RunnerRetirement::Retired | RunnerRetirement::Busy => {
+                false
+            }
+        });
         if failed || unanswered {
             Err(Error::StateChanged)
         } else {

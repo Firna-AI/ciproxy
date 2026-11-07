@@ -60,6 +60,9 @@ overflow service.
 - A registration without a live delivery is retired GitHub-first by its
   unique runner name, `ciproxy-<runner ID>`. The runtime then deletes its
   identity.
+- Saved owner removal defers registration recovery without a GitHub call.
+  Recovery also defers when the organization is absent. It keeps the saved
+  identities and resumes ordinary retirement after reinstall.
 - An accepted delivery keeps its original request and its required root
   bytes, also after a new image release.
 - A dispatched delivery keeps its fixed provider size. An unsent delivery

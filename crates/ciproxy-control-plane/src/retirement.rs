@@ -31,6 +31,8 @@ pub(crate) enum RunnerRetirement {
     Busy,
     /// The reservation still lacks a durable answer.
     Pending,
+    /// Owner removal or an absent organization prevents registration recovery.
+    Deferred,
 }
 
 impl MachineRuntime {

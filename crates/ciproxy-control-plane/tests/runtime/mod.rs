@@ -16,6 +16,7 @@ mod observation_tests;
 mod overflow_app_removal_tests;
 mod overflow_callback_tests;
 mod overflow_ports;
+mod overflow_registration_removal_tests;
 mod overflow_reinstall_tests;
 mod overflow_replacement_tests;
 mod overflow_retirement_tests;
