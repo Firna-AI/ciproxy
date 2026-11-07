@@ -15,8 +15,146 @@ jobs:
     with:
       environment: main-preview
       source: ${{ github.sha }}
-  workloads:
+  image-lookup:
     needs: infrastructure
+    runs-on: ubuntu-24.04
+    environment: main-preview
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      source_hash: ${{ steps.inputs.outputs.source_hash }}
+      tools_sha: ${{ steps.inputs.outputs.tools_sha }}
+      image: ${{ steps.lookup.outputs.image }}
+    steps:
+      - name: Checkout trusted image tools
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Checkout exact source inputs
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.sha }}
+          path: source
+          persist-credentials: false
+      - name: Check the trusted deployment event
+        run: python3 deploy/scripts/promotion_event.py main-preview "${{ github.sha }}"
+      - name: Hash the exact build inputs
+        id: inputs
+        run: python3 deploy/scripts/control_plane_image.py inputs --source source --revision "${{ github.sha }}"
+      - name: Install pinned crane
+        run: bash deploy/scripts/install-image-tools.sh
+      - name: Authenticate the image lookup identity
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          project_id: ciproxy
+          workload_identity_provider: ${{ vars.GCP_IMAGE_LOOKUP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_IMAGE_LOOKUP_SERVICE_ACCOUNT }}
+      - name: Set up Google Cloud tools
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db
+        with:
+          version: 592.0.0
+      - name: Reuse the source image or select an explicit rollback
+        id: lookup
+        env:
+          SOURCE_HASH: ${{ steps.inputs.outputs.source_hash }}
+          ROLLBACK_IMAGE: ${{ vars.CONTROL_PLANE_ROLLBACK_IMAGE }}
+        run: python3 deploy/scripts/control_plane_image.py lookup --source-hash "$SOURCE_HASH" --rollback "$ROLLBACK_IMAGE"
+  image-build:
+    needs: image-lookup
+    if: needs.image-lookup.outputs.image == ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout trusted image tools
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ needs.image-lookup.outputs.tools_sha }}
+          persist-credentials: false
+      - name: Checkout exact source inputs
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.sha }}
+          path: source
+          persist-credentials: false
+      - name: Install pinned BuildKit and start it
+        run: |
+          bash deploy/scripts/install-image-tools.sh build
+          bash deploy/scripts/start-buildkit.sh
+      - name: Build without cloud credentials
+        env:
+          SOURCE_HASH: ${{ needs.image-lookup.outputs.source_hash }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: >-
+          python3 deploy/scripts/control_plane_image.py build
+          --source source --revision "$SOURCE_SHA" --source-hash "$SOURCE_HASH"
+          --archive .context/control-plane-image/control-plane.tar
+      - name: Transfer the image archive
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: control-plane-image-${{ github.run_attempt }}
+          path: .context/control-plane-image/control-plane.tar
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+  image-publish:
+    needs: [image-lookup, image-build]
+    if: >-
+      always() && needs.image-lookup.result == 'success' &&
+      (needs.image-build.result == 'success' || needs.image-build.result == 'skipped')
+    runs-on: ubuntu-24.04
+    environment: main-preview
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+    steps:
+      - name: Checkout trusted publish tools
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ needs.image-lookup.outputs.tools_sha }}
+          persist-credentials: false
+      - name: Check the trusted deployment event
+        run: python3 deploy/scripts/promotion_event.py main-preview "${{ github.sha }}"
+      - name: Install pinned crane
+        if: needs.image-lookup.outputs.image == ''
+        run: bash deploy/scripts/install-image-tools.sh
+      - name: Download the built image
+        if: needs.image-lookup.outputs.image == ''
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: control-plane-image-${{ github.run_attempt }}
+          path: .context/control-plane-image
+      - name: Authenticate the image publisher
+        if: needs.image-lookup.outputs.image == ''
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          project_id: ciproxy
+          workload_identity_provider: ${{ vars.GCP_IMAGE_PUBLISH_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_IMAGE_PUBLISH_SERVICE_ACCOUNT }}
+      - name: Set up Google Cloud tools
+        if: needs.image-lookup.outputs.image == ''
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db
+        with:
+          version: 592.0.0
+      - name: Select the immutable deployment image
+        id: image
+        env:
+          SOURCE_HASH: ${{ needs.image-lookup.outputs.source_hash }}
+          EXISTING_IMAGE: ${{ needs.image-lookup.outputs.image }}
+        run: >-
+          python3 deploy/scripts/control_plane_image.py publish
+          --source-hash "$SOURCE_HASH" --existing "$EXISTING_IMAGE"
+          --archive .context/control-plane-image/control-plane.tar
+  workloads:
+    needs: [infrastructure, image-publish]
+    if: >-
+      always() && needs.infrastructure.result == 'success' &&
+      needs.image-publish.result == 'success'
     runs-on: ubuntu-24.04
     environment: main-preview
     env:
@@ -26,7 +164,7 @@ jobs:
       PUBLIC_UPTIME_ENABLED: ${{ vars.PUBLIC_UPTIME_ENABLED }}
       RELEASE_SERVER_IMAGE_DIGEST: ${{ vars.RELEASE_SERVER_IMAGE_DIGEST }}
       CONTROL_PLANE_RUNTIME_READY: ${{ vars.CONTROL_PLANE_RUNTIME_READY }}
-      CONTROL_PLANE_IMAGE: ${{ vars.CONTROL_PLANE_IMAGE }}
+      CONTROL_PLANE_IMAGE: ${{ needs.image-publish.outputs.image }}
       CDN_SIGNING_KEY_NAME: ${{ vars.CDN_SIGNING_KEY_NAME }}
       CIPROXY_APP_ID: ${{ vars.CIPROXY_APP_ID }}
       CIPROXY_APP_CLIENT_ID: ${{ vars.CIPROXY_APP_CLIENT_ID }}

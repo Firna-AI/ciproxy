@@ -31,6 +31,7 @@ def save(environment, configuration, runtime_enabled):
         "control_plane_enabled": runtime_enabled,
         "enable_uptime_checks": os.environ.get("PUBLIC_UPTIME_ENABLED") == "true",
         "source_sha": binding(environment)["commit"],
+        "control_plane_image": os.environ.get("CONTROL_PLANE_IMAGE", ""),
     }
     path = location(environment)
     path.parent.mkdir(parents=True, exist_ok=True)

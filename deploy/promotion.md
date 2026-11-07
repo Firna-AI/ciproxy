@@ -40,8 +40,11 @@ Workloads read central outputs and deploy only their own namespace and
 static buckets. They wait for every configured NEG zone.
 
 A ready workload saves `ready-inputs.json`. It records the actual zones,
-runtime/uptime flags, alert addresses, source commit, environment, workflow
-run, and run attempt. The next read-only plan checks those bindings. The
+runtime/uptime flags, immutable control-plane image, alert addresses, source
+commit, environment, workflow run, and run attempt. Production selects its
+image from that exact upstream preview evidence before deploying.
+[Image promotion and rollback](control-plane-images.md) gives the operator
+steps. The next read-only plan checks those bindings. The
 environment apply account writes the exact saved snapshot plan only to its
 own state bucket. A failed rollout never publishes a new ready snapshot.
 

@@ -76,6 +76,13 @@ namespaces as [the admission procedure](identities.md#baseline-admission)
 describes. Future trust updates on protected `main` preserve the UID map.
 Preview artifacts cannot supply production UIDs.
 
+After shared core creates the runtime registry, install the grants from
+[image setup](control-plane-images.md#install-the-repository-grants).
+This operator bootstrap update preserves captured UIDs and the launch phase.
+It gives the separate lookup and publisher accounts access only to that
+registry. Complete it before the first push with automatic image publication.
+Set its image identity variables with the other GitHub variables below.
+
 ## 3. Push the release image
 
 The UID procedure created registry `ciproxy-shared-runtime`. Start Docker.
@@ -92,7 +99,7 @@ Both environments can use the same immutable digest.
 
 ## 4. Set GitHub variables
 
-Create the selected GitHub environment. Read its twelve identity values
+Create the selected GitHub environment. Read its identity values
 from the already-applied bootstrap output:
 
 ```sh
@@ -106,6 +113,8 @@ gh variable set GCP_WIF_PROVIDER --repo=Firna-AI/ciproxy \
 Set every printed identity variable in that environment. They cover
 workload, environment plan/apply, central plan/apply, and central trust
 apply. Never copy preview's central apply identities into production.
+Preview also receives the four image identity variables described in
+[image setup](control-plane-images.md#install-the-repository-grants).
 
 | Variable                      | Initial value                                                                                                                                                   |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -113,7 +122,7 @@ apply. Never copy preview's central apply identities into production.
 | `RELEASE_SERVER_IMAGE_DIGEST` | The mirrored `sha256:` digest from [image setup](#3-push-the-release-image).                                                                                    |
 | `PUBLIC_UPTIME_ENABLED`       | `false` until [HTTPS verification](#10-enable-uptime-alerts).                                                                                                   |
 | `CONTROL_PLANE_RUNTIME_READY` | `false` until [runtime setup](runtime.md) is complete.                                                                                                          |
-| `CONTROL_PLANE_IMAGE`         | Unset while runtime is off. Later use an image pinned with `@sha256:`.                                                                                          |
+| `CONTROL_PLANE_ROLLBACK_IMAGE` | Unset. Set a shared-registry digest in preview only for [an explicit rollback](control-plane-images.md#roll-back-and-resume).                                    |
 | `CDN_SIGNING_KEY_NAME`        | **Unset** until [registration](#9-register-the-cdn-signing-key) prints the real key name.                                                                       |
 | `CIPROXY_APP_ID`              | This environment's public GitHub App ID. Set it before enabling the runtime.                                                                                    |
 | `CIPROXY_APP_CLIENT_ID`       | This environment's public GitHub App OAuth client ID. Its secret stays in the mounted `github-oauth-secret` file.                                               |

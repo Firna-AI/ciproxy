@@ -1,5 +1,12 @@
 # Build the control-plane container
 
+The deploy workflow builds and publishes this image automatically.
+It reuses unchanged source inputs. Preview deploys an immutable digest,
+and production promotes that exact digest from the saved preview workload.
+[Image deployment](../../deploy/control-plane-images.md) gives identity
+setup, source reuse, and explicit rollback. The commands below support
+local builds and operator recovery.
+
 The image runs the hosted Rust control plane. Build it from the repository
 root. Docker builds the release executable inside the Rust 1.99.1 builder.
 The Debian Bookworm runtime has PostgreSQL client libraries and CA roots.
@@ -14,8 +21,10 @@ service. Mount its secrets as files. Do not pass secrets to the build.
 ## Build
 
 Install Docker and Bash. A build needs no registry credentials. All Cargo
-dependencies are public. The root `.dockerignore` sends only Rust workspace
-inputs. It excludes private operator files and local build output.
+dependencies are public. The root `.dockerignore` limits the context to the
+Rust workspace. It excludes private operator files and local build output.
+CI also selects tracked source files, as the
+[image deployment guide](../../deploy/control-plane-images.md) describes.
 
 ```sh
 bash crates/ciproxy-control-plane/scripts/container-image.sh \
@@ -87,9 +96,11 @@ It removes that directory on success, failure, or a handled signal. It
 keeps the original credentials file. Remove that file when it expires.
 
 Docker prints `digest: sha256:...` after a successful push. The script then
-prints `Pushed IMAGE. Use its registry digest for deployment.` Set
-`CONTROL_PLANE_IMAGE` to the repository path followed by `@sha256:DIGEST`.
-Remove the tag from that path. Follow the separate
+prints `Pushed IMAGE. Use its registry digest for deployment.` For operator
+recovery, select the repository path followed by `@sha256:DIGEST` with the
+[image rollback](../../deploy/control-plane-images.md#roll-back-and-resume).
+Remove the tag from that path. Normal deployments select their image
+automatically. Follow the separate
 [runtime setup](../../deploy/runtime.md) before deployment. A successful
 build or push does not enable the runtime.
 

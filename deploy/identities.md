@@ -11,6 +11,8 @@ edges separate.
 | `ciproxy-<env>-plan` | Read only its snapshot prefix and list workspace object names. Create/delete only its exact `foundation/default.tflock`. Read the two prelaunch account statuses. No state writes or secret values. |
 | `ciproxy-<env>-apply` | Write only its own `foundation/` snapshot prefix. Read its record and prelaunch status. No project admin or Kubernetes object permissions. |
 | `ciproxy-<env>-deploy` | Publish public content to its own private static buckets. Read its own release token and optional Boat share code. Connect to the cluster. Operate only its namespace through Kubernetes RBAC. Invalidate only its tagged URL map. Read global operation completion. |
+| `ciproxy-image-lookup` | Read image manifests from the shared runtime repository only. Trusted preview pushes only. |
+| `ciproxy-image-publish` | Read and upload image contents in the shared runtime repository only. Trusted preview pushes only. No deletion or IAM policy rights. |
 | `ciproxy-shared-plan`, `ciproxy-shared-prod-plan` | Central metadata/state reads and exact central lock writes. No state writes or secret values. No Kubernetes object reads. Separate caller trust for preview and production. Preview central plan retires at launch. |
 | `ciproxy-shared-preview-apply` | Core updates and preview resources before launch. Exact shared-cluster get/update only. No cluster create/delete or node actAs. No production state writes or project IAM administration. Runtime policy writes name preview only. Permanently disabled at launch. |
 | `ciproxy-shared-prod-apply` | Central cloud resources after launch. Production workflow on protected `main` only. Production/preview central state writes. Broader cloud roles than prelaunch shared apply. |
@@ -42,6 +44,11 @@ platform infrastructure, not an environment deploy/runtime identity.
 Prelaunch registry lifecycle has create/get/update/delete and no IAM
 setter. It cannot install a persistent registry admin on another account.
 Only protected production shared apply has node `actAs`, on that one account.
+Separate image lookup/publish accounts use repository-bound custom roles.
+Protected-main trust accounts maintain only that repository's IAM policy
+through `ciproxyImageRepositoryPolicy`. The build runner has no cloud role.
+[Image setup](control-plane-images.md#install-the-repository-grants) lists
+every permission and the operator enablement steps.
 The operator creates the first Autopilot core. Prelaunch has no cluster
 create/delete and cannot replace it with another cluster. Both phase owners
 have cluster get/update only under the exact regional cluster condition.

@@ -31,14 +31,16 @@ def variables(environment, root, target=None):
     if root == "bootstrap":
         outputs = json.loads(command(backend(environment, "bootstrap").directory, "output", "-json", capture=True))
         return {"project_id": ENVIRONMENTS[environment], "production_enabled": launched(),
-                "runtime_service_account_uids": outputs["runtime_service_account_uids"]["value"]}
+                "runtime_service_account_uids": outputs["runtime_service_account_uids"]["value"],
+                "control_plane_registry_ready": outputs.get("control_plane_registry_ready", {}).get("value", False)}
     if root == "shared":
         return {"production_enabled": launched()}
     if root == "data":
         return {"environment": target}
     if root == "edge":
         return {"environment": target, "workload": workload_inputs(target, environment)}
-    return workload_inputs(target, environment)
+    return {key: value for key, value in workload_inputs(target, environment).items()
+            if key != "control_plane_image"}
 
 
 def metadata(repository, environment, root, binary, target=None):
