@@ -11,6 +11,43 @@ use crate::error::Error;
 use crate::host_fixtures::{inventory, record};
 
 #[tokio::test]
+async fn uninstall_erases_an_owned_creating_area_that_was_never_formatted() {
+    let mut current = inventory();
+    current.record.as_mut().unwrap().phase = Phase::Creating;
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let mock = Arc::new(Unimock::new((
+        claim(),
+        cleanup(events.clone()),
+        erasing(events.clone()),
+        AreaFilesMock::inspect
+            .some_call(matching!())
+            .returns(Ok(current)),
+        AreaMountsMock::filesystem
+            .each_call(matching!())
+            .answers(&|_| Ok(None)),
+        AreaMountsMock::mounted
+            .some_call(matching!())
+            .returns(Ok(false)),
+    )));
+    let result = area(mock.clone()).remove().await;
+    assert!(result.is_ok(), "owned blank Creating cleanup: {result:?}");
+    let removing = AreaRecord {
+        phase: Phase::Removing,
+        ..record()
+    };
+    assert_eq!(
+        *events.lock().unwrap(),
+        vec![
+            Event::Unit,
+            Event::Record(removing.clone()),
+            Event::Stop(true),
+            Event::Erase(removing),
+            Event::Reload,
+        ]
+    );
+}
+
+#[tokio::test]
 async fn uninstall_unmounts_before_erasing_only_its_recorded_area() {
     let mut current = inventory();
     current.backing.as_mut().unwrap().device = 17;

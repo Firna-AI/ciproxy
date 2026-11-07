@@ -162,9 +162,9 @@
     sizing and bounded writes on disposable ext4/XFS. Its opt-in target is
     `crates/ciproxy-agent/tests/storage_regression.rs`. Extend that proof
     for the selected quota and cross-project placement before enabling it.
-  - [Interrupted uninstall](agent-interrupted-install-uninstall.md) fixes
-    the removal of a partly prepared area. A quota step in preparation must
-    keep that removal route. Neither item waits for the other.
+  - [Uninstall](../../crates/ciproxy-agent/host-preparation.md#uninstall)
+    removes a partly prepared area without runtime verification when no VM
+    is recorded. A quota step in preparation must keep that removal route.
 - **Recommendation:** G, changed from F after the options check. Its
   default covers both image files and VM support files. F remains a
   smaller change. A stays adequate and does not wait for either option.

@@ -17,7 +17,7 @@ use crate::controller::AgentMock;
 use crate::fixtures::{identity, report, spec};
 use crate::gateway::GatewayMock;
 use crate::maintenance::MaintenanceMock;
-use crate::runtime_fakes::{IncomingConnection, WaitingAgent};
+use crate::runtime_fakes::{IncomingConnection, WaitingAgent, WaitingOperation};
 use crate::timed_fakes::ManualDelay;
 
 use super::{AgentDaemon, Daemon};
@@ -88,6 +88,7 @@ async fn daemon_reports_every_wait_beyond_queue_capacity_while_control_stays_pen
     let completed = Arc::new(AtomicBool::new(false));
     let (started, mut command_started) = mpsc::unbounded_channel();
     let agent = Arc::new(WaitingAgent {
+        operation: WaitingOperation::Control,
         delegate: mock.clone(),
         started,
         barrier: Mutex::new(Some(barrier)),

@@ -94,7 +94,8 @@ Evidence contains only run IDs, job UUIDs, VM IDs, and observed counts.
 It stays under `.context/ciproxy-mvp/own-smoke-*`.
 
 The scenarios are warm, slots, drain, offline, cache, cache_isolation,
-cache_fallback, sticky_docker, docker_no_fit, restart, disallowed, and remove. Use `--scenario NAME` to run one scenario.
+cache_fallback, sticky_docker, docker_no_fit, restart, disallowed, and remove.
+Use `--scenario NAME` to run one scenario.
 Remove runs last because it revokes the disposable machine.
 It requires `item_79_policy_verified` after the policy is selected and checked.
 It checks a job already observed as running.
@@ -190,3 +191,9 @@ Missing root, KVM, or private inputs reports `SKIP` with exit 77.
 The host also needs Python 3, systemd, `dumpe2fs`, and `/usr/bin/env`.
 It must use the standard agent service at `/usr/local/bin/ciproxy-agent`.
 These live checks have not run here because KVM is unavailable.
+
+## Cache output firewall
+
+The [cache firewall proof](cache-egress-smoke.md) checks the installed
+service user, private upstream blocks, DNS, cache jobs, and failed starts.
+It also requires a real host reboot before it reports PASS.

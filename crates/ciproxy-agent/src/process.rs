@@ -12,6 +12,8 @@ use crate::error::{Error, ErrorResultExt, Result};
 #[cfg_attr(test, unimock::unimock(api = CommandsMock))]
 #[async_trait]
 pub(crate) trait Commands: Send + Sync {
+    /// List namespace names with typed absence and filesystem errors.
+    async fn namespaces(&self) -> Result<Vec<String>>;
     async fn check_filesystem(&self, path: &str) -> Result<()>;
     async fn run(&self, program: &str, args: &[String], input: &[u8]) -> Result<Vec<u8>>;
     async fn unit(&self, name: &str) -> Result<UnitState>;
@@ -32,6 +34,23 @@ pub(crate) struct LinuxCommands;
 
 #[async_trait]
 impl Commands for LinuxCommands {
+    async fn namespaces(&self) -> Result<Vec<String>> {
+        let mut directory = match tokio::fs::read_dir("/run/netns").await {
+            Ok(directory) => directory,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+            Err(error) => return Err(error).context("inspect network namespaces"),
+        };
+        let mut names = Vec::new();
+        while let Some(entry) = directory
+            .next_entry()
+            .await
+            .context("list network namespaces")?
+        {
+            names.push(entry.file_name().to_string_lossy().into_owned());
+        }
+        Ok(names)
+    }
+
     async fn check_filesystem(&self, path: &str) -> Result<()> {
         let status = Command::new("e2fsck")
             .args(["-p", path])

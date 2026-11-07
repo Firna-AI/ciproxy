@@ -15,9 +15,9 @@ use tracing_subscriber::util::SubscriberInitExt;
 
 use crate::area::AreaFiles;
 use crate::area_files::LinuxAreaFiles;
-use crate::area_types::Phase;
 use crate::boundaries::{Cache, Connection, Host, Service, Store, Vms};
 use crate::cache::HttpCache;
+use crate::cache_install::{CheckedCacheRelease, LinuxCacheInstallFiles};
 use crate::cache_network::GuardedCacheStart;
 use crate::cache_service::{CacheService, ReleasedCache};
 use crate::cache_unit::{InstalledCacheUnit, LinuxCacheUnitFiles};
@@ -32,7 +32,9 @@ use crate::hardware::LinuxHost;
 use crate::host_composition::services;
 use crate::host_file_ops::directory;
 use crate::host_paths::{AREA, CONTROL, tools};
-use crate::host_preparation::{FinalUninstall, Uninstall, stage_error};
+use crate::host_preparation::{
+    FinalUninstall, Uninstall, UninstallState, stage_error, uninstall_inventory,
+};
 use crate::host_system::LinuxHostSystem;
 use crate::installation::{Install, Installer};
 use crate::layout::Layout;
@@ -110,8 +112,12 @@ async fn execute(action: Action) -> Result<()> {
             ));
         }
     };
-    let image_budget = files
-        .inspect()?
+    let inventory = if matches!(action, Action::Uninstall) {
+        uninstall_inventory(files.as_ref())?
+    } else {
+        files.inspect()?
+    };
+    let image_budget = inventory
         .record
         .map_or(requested_budget.unwrap_or(DEFAULT_IMAGE_BYTES), |record| {
             record.image_budget
@@ -119,7 +125,6 @@ async fn execute(action: Action) -> Result<()> {
     let image_services = crate::application_images::prepare(&layout, image_budget)?;
     let space = image_services.space;
     let images = image_services.images;
-    let empty = state.runners.is_empty();
     let identity = state.identity.clone();
     let removing = state.mode == Mode::Removed;
     let commands: Arc<dyn Commands> = Arc::new(LinuxCommands);
@@ -145,6 +150,9 @@ async fn execute(action: Action) -> Result<()> {
         operation: Mutex::new(()),
     });
     let agent: Arc<dyn Agent> = Arc::new(Controller {
+        allocation: Mutex::new(()),
+        network_cleanup: Mutex::new(()),
+        network_inventory_valid: AtomicBool::new(false),
         control_connected: AtomicBool::new(false),
         state: Mutex::new(state),
         store: store.clone(),
@@ -175,8 +183,11 @@ async fn execute(action: Action) -> Result<()> {
                     commands: commands.clone(),
                 }),
                 commands: commands.clone(),
-                release_server: std::env::var("CIPROXY_RELEASE_SERVER_URL")
-                    .unwrap_or_else(|_| "https://get.ciproxy.dev".to_owned()),
+                files: Arc::new(LinuxCacheInstallFiles),
+                release: Arc::new(CheckedCacheRelease {
+                    release_server: std::env::var("CIPROXY_RELEASE_SERVER_URL")
+                        .unwrap_or_else(|_| "https://get.ciproxy.dev".to_owned()),
+                }),
             });
             if let Err(error) = cache_service.install().await {
                 tracing::warn!(%error, "machine cache install unavailable; GitHub fallback remains available");
@@ -193,11 +204,11 @@ async fn execute(action: Action) -> Result<()> {
             println!("ciproxy agent installed");
         }
         Action::Run => {
-            preparation.verify().await?;
-            images.recover()?;
-            if removing && agent.finished().await {
+            if agent.finish_removed_startup().await? {
                 return Ok(());
             }
+            preparation.verify().await?;
+            images.recover()?;
             let identity = identity.ok_or(Error::NotInstalled)?;
             let delay = Arc::new(TokioDelay);
             let daemon: Arc<dyn Daemon> = Arc::new(AgentDaemon {
@@ -237,30 +248,18 @@ async fn execute(action: Action) -> Result<()> {
             store.save(&state)?;
         }
         Action::Uninstall => {
-            let inventory = match files.inspect() {
-                Ok(inventory) => inventory,
-                Err(error) => {
-                    return Err(stage_error(
-                        error,
-                        "area ownership record",
-                        "Restore area.json and its matching backing file from backup. Then rerun uninstall.",
-                    ));
-                }
-            };
-            let cleanup_only = inventory
-                .record
-                .is_none_or(|record| record.phase == Phase::Removing);
-            if cleanup_only && empty {
-                preparation.remove().await?;
-                service.uninstall()?;
-                store.clear()?;
+            let uninstall: Arc<dyn Uninstall> = Arc::new(FinalUninstall {
+                files,
+                images,
+                preparation,
+                service,
+                store,
+                agent: agent.clone(),
+            });
+            if uninstall.start().await? == UninstallState::Complete {
                 println!("ciproxy agent uninstalled");
                 return Ok(());
             }
-            preparation.verify().await?;
-            images.recover()?;
-            agent.restore().await?;
-            agent.remove().await?;
             let mut timer = interval(Duration::from_secs(REPORT_INTERVAL_SECONDS));
             while !agent.finished().await {
                 let result = tokio::select! {
@@ -277,13 +276,6 @@ async fn execute(action: Action) -> Result<()> {
                     tracing::warn!(error = %error, "uninstall is waiting for job and VM cleanup");
                 }
             }
-            let uninstall: Arc<dyn Uninstall> = Arc::new(FinalUninstall {
-                images,
-                preparation,
-                service,
-                store,
-                agent,
-            });
             uninstall.finish().await?;
             println!("ciproxy agent uninstalled");
         }

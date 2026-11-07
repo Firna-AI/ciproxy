@@ -12,7 +12,7 @@ use futures_util::{pin_mut, poll};
 use tokio::sync::{Mutex, oneshot};
 use unimock::{MockFn, Unimock, matching};
 
-use crate::boundaries::{Cache, CacheMock, HostMock, StoreMock};
+use crate::boundaries::{Cache, CacheMock, HostMock, StoreMock, VmsMock};
 use crate::controller::Agent;
 use crate::error::Result;
 use crate::fixtures::{controller, hardware};
@@ -60,6 +60,9 @@ impl Cache for WaitingCache {
 #[tokio::test]
 async fn removal_during_a_delayed_reconciliation_stays_terminal() {
     let mock = Unimock::new((
+        VmsMock::networks
+            .some_call(matching!())
+            .returns(Ok(Vec::new())),
         HostMock::hardware
             .some_call(matching!())
             .returns(Ok(hardware())),

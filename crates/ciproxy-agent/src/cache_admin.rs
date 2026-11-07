@@ -149,26 +149,28 @@ pub(crate) struct OwnedCacheFiles {
 #[async_trait]
 impl CacheFiles for OwnedCacheFiles {
     async fn release_occupied_space(&self) -> Result<()> {
-        let mut files = match tokio::fs::read_dir(&self.directory).await {
-            Ok(files) => files,
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
-            Err(error) => return Err(error).context("inspect unavailable cache data"),
-        };
-        if files
-            .next_entry()
-            .await
-            .context("inspect occupied cache data")?
-            .is_none()
-        {
-            return Ok(());
+        for directory in [self.directory.clone(), self.directory.join("data")] {
+            let mut files = match tokio::fs::read_dir(&directory).await {
+                Ok(files) => files,
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+                Err(error) => return Err(error).context("inspect unavailable cache data"),
+            };
+            if files
+                .next_entry()
+                .await
+                .context("inspect occupied cache data")?
+                .is_none()
+            {
+                continue;
+            }
+            self.commands
+                .run(
+                    "/usr/local/bin/ciproxy-cache-sidecar",
+                    &arguments(&["reclaim", "--cache-dir", &directory.to_string_lossy()]),
+                    &[],
+                )
+                .await?;
         }
-        self.commands
-            .run(
-                "/usr/local/bin/ciproxy-cache-sidecar",
-                &arguments(&["reclaim", "--cache-dir", &self.directory.to_string_lossy()]),
-                &[],
-            )
-            .await?;
         Ok(())
     }
 }
