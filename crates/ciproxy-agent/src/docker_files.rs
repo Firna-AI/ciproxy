@@ -11,11 +11,35 @@ use crate::layout::Layout;
 use crate::persistence::{atomic_private_write, private_directory, private_write_temporary};
 use crate::state::VmRecord;
 
+#[derive(Clone, Copy, Default, Eq, PartialEq, Serialize, Deserialize)]
+/// Failed writer ownership persists until deletion and the detached phase are durable.
+pub(crate) enum AttachmentPhase {
+    #[default]
+    Preparing,
+    Offered,
+    Discard,
+    Abandon,
+    Detached,
+}
+
 #[derive(Serialize, Deserialize)]
 pub(crate) struct Lease {
     pub(crate) repository: String,
     pub(crate) writer: bool,
     pub(crate) bytes: u64,
+    #[serde(default)]
+    pub(crate) phase: AttachmentPhase,
+}
+
+pub(crate) fn load(layout: &Layout, vm: &VmRecord) -> Result<Option<Lease>> {
+    let bytes = match fs::read(layout.data.join("docker-leases").join(&vm.local_id)) {
+        Ok(bytes) => bytes,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(error).context("read job Docker lease"),
+    };
+    Ok(Some(
+        serde_json::from_slice(&bytes).context("decode job Docker lease")?,
+    ))
 }
 
 pub(crate) fn leases(layout: &Layout) -> Result<Vec<(String, Lease)>> {

@@ -55,6 +55,9 @@ pub enum Error {
     /// The machine cache service is unavailable.
     #[error("[agent] the machine cache service is unavailable")]
     CacheUnavailable,
+    /// The Docker filesystem failed its offline check.
+    #[error("[agent/docker] the Docker filesystem failed its offline check")]
+    DockerFilesystem,
     /// The image checksum or byte count does not match.
     #[error("[agent] the image checksum or byte count does not match")]
     ImageVerification,

@@ -9,7 +9,7 @@ use ciproxy_protocol::jobs::{JobFacts, JobScope};
 use sha2::{Digest, Sha256};
 
 use crate::boundaries::Cache;
-use crate::docker_files::{self, Lease};
+use crate::docker_files::{self, AttachmentPhase, Lease};
 use crate::docker_prepare::Preparation;
 use crate::error::{ErrorResultExt, Result};
 use crate::layout::Layout;
@@ -21,6 +21,10 @@ use crate::state::VmRecord;
 #[async_trait]
 pub(crate) trait DockerDisks: Send + Sync {
     fn reserved(&self, vm: &VmRecord) -> Result<bool>;
+    fn offered(&self, vm: &VmRecord) -> Result<()>;
+    fn failed(&self, vm: &VmRecord) -> Result<bool>;
+    fn pending(&self, vm: &VmRecord) -> Result<bool>;
+    async fn discard(&self, vm: &VmRecord) -> Result<()>;
     async fn prepare(
         &self,
         vm: &VmRecord,
@@ -43,6 +47,27 @@ pub(crate) struct LinuxDockers {
 
 #[async_trait]
 impl DockerDisks for LinuxDockers {
+    fn offered(&self, vm: &VmRecord) -> Result<()> {
+        if let Some(mut lease) = docker_files::load(&self.layout, vm)? {
+            lease.phase = AttachmentPhase::Offered;
+            docker_files::save(&self.layout, vm, &lease)?;
+        }
+        Ok(())
+    }
+    fn failed(&self, vm: &VmRecord) -> Result<bool> {
+        self.fail_attachment(vm)
+    }
+    fn pending(&self, vm: &VmRecord) -> Result<bool> {
+        Ok(docker_files::load(&self.layout, vm)?.is_some_and(|lease| {
+            matches!(
+                lease.phase,
+                AttachmentPhase::Discard | AttachmentPhase::Abandon
+            )
+        }))
+    }
+    async fn discard(&self, vm: &VmRecord) -> Result<()> {
+        self.discard_attachment(vm).await
+    }
     fn reserved(&self, vm: &VmRecord) -> Result<bool> {
         Ok(docker_files::leases(&self.layout)?
             .iter()
@@ -98,6 +123,7 @@ impl DockerDisks for LinuxDockers {
             repository: key,
             writer: exclusive,
             bytes: desired,
+            phase: AttachmentPhase::Preparing,
         };
         docker_files::save(&self.layout, vm, &lease)?;
         let result = self

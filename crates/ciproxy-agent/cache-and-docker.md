@@ -102,6 +102,15 @@ A repository has at most one writer lease at a time.
 The agent counts the leased bytes before it admits a new VM root.
 Cleanup removes the job's Docker disk before its lease, so a failed cleanup
 keeps the reservation. A file that is already gone counts as removed.
+Each lease also records drive handoff and failed attachment recovery.
+A failed mount first waits for Firecracker to close the drive.
+Recovery discards a failed writer's base and the failed job attachment.
+It keeps the reserved bytes until that job exits.
+A failed copy cannot discard a source held by a running writer.
+Offline checks discard an unusable idle source before another job uses it.
+A failed Firecracker switch preserves the source because it proves no
+filesystem failure. Reconnect and periodic reconciliation retry pending
+drive closure. Repeated guest outcomes cannot discard a replacement base.
 Disposable Docker disks use the same reflink copy as VM roots.
 Only hosted spare disk can grant a new lease. A no-fit disk uses root Docker.
 Filesystem growth checks actual free blocks before it acknowledges readiness.

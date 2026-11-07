@@ -1,11 +1,10 @@
 //! Repeated hosted facts cannot change a drive after pre-action setup starts.
 
-use ciproxy_protocol::guest::JobDecision;
 use std::sync::{Arc, Mutex};
 
 use ciproxy_protocol::agent::{ControlMessage, JobPreparationOutcome};
 use ciproxy_protocol::cache::{CacheConnection, DockerDiskAccess, DockerDiskAttachment};
-use ciproxy_protocol::guest::AgentToGuest;
+use ciproxy_protocol::guest::{AgentToGuest, JobDecision};
 use ciproxy_protocol::identifiers::{CommandId, JobId, RunnerId};
 use ciproxy_protocol::jobs::{JobScope, UnknownJobScopeReason};
 use ciproxy_protocol::secret::Secret;
@@ -52,6 +51,9 @@ async fn repeated_facts_do_not_repeat_attachment_before_the_guest_acknowledges_s
             .some_call(matching!(_, _, _, 7, 0, _))
             .returns(Ok(Some(attachment))),
         VmsMock::swap_docker.some_call(matching!(_)).returns(Ok(())),
+        DockerDisksMock::offered
+            .some_call(matching!(_))
+            .returns(Ok(())),
         VmsMock::send
             .each_call(matching!(_, _))
             .answers_arc(Arc::new(move |_, _, message| {
