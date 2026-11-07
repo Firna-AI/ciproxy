@@ -1,6 +1,10 @@
 //! Hosted runtime integration requirements.
 
 mod accounting_lifecycle_tests;
+mod accounting_refresh_faults;
+mod accounting_retention_failure_tests;
+mod accounting_retention_support;
+mod accounting_retention_tests;
 mod accounting_tests;
 mod app_removal_tests;
 mod clock;
