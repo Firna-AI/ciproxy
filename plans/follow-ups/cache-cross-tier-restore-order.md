@@ -34,6 +34,64 @@
 - **Evidence:** An isolated executable lookup expected `deps-exact` from
   the feature branch. The machine instead returned default-branch
   `deps-old` with contents `old-default`.
+- **HTTP evidence, 2026-11-07:** Both public protocol paths reproduced the
+  early local return with a checked feature-branch session.
+  - The v1 assertion expected `cacheKey` to equal `deps-exact`.
+    The response gave `deps-old`.
+  - The v2 assertion expected `matchedKey` to equal `deps-exact`.
+    The response gave `deps-old`.
+  - Each case saved a default-branch local prefix and made an exact
+    upstream candidate available. Each failure came from its assertion.
+  - A separate guard saved `deps-retained` in the feature scope, removed
+    its upstream copy, and restarted the machine service. Both protocols
+    restored `retained-feature` from that local prefix while an upstream
+    exact candidate remained available.
+  - The upstream fixture had no ref metadata index. These checks proved
+    the ordering fault and retained local behavior. They did not prove
+    trusted upstream source-ref binding.
+- **Current integration, 2026-11-07:** The machine has no trusted
+  connection to hosted cache entry metadata.
+  - `JobFacts` and `JobScope` live in
+    `crates/ciproxy-protocol/src/jobs.rs`. `JobFacts` identifies the job.
+    `JobScope` holds the machine-checked readable refs. Neither identifies
+    an upstream entry's ref.
+  - `CacheRegistration` and `RuntimeCredentials` live in
+    `crates/ciproxy-protocol/src/runtime.rs`. They carry the original
+    GitHub cache credentials and URLs. They carry no hosted metadata
+    endpoint or metadata credential.
+  - `AssignmentService` in `crates/ciproxy-github/src/assignments.rs`
+    supplies `JobFacts` from repository snapshots and saved job facts.
+    Its `AssignmentStore` in
+    `crates/ciproxy-github/src/persistence/assignment.rs` supplies no cache
+    entry metadata.
+  - `crates/ciproxy-control-plane/src/events.rs` sends those facts through
+    the gateway. The gateway has no cache metadata request or response.
+  - `crates/ciproxy-cache-sidecar/src/download.rs` receives matched keys
+    and download URLs from GitHub. Neither protocol response supplies the
+    source ref. `crates/ciproxy-cache-sidecar/src/blobs.rs` therefore
+    retains fills within the reader's writable or private scope.
+- **Scope dependency, 2026-11-07:** One concrete integration route needs
+  these existing files, plus new metadata service code:
+  - `crates/ciproxy-control-plane/src/composition.rs` would construct a
+    hosted metadata service with App, HTTP, store, and runtime boundaries.
+    It could mount the service through `Hosted::router` or inject it into
+    a gateway channel. Concurrent control-plane work protected this file
+    during the implementation attempt.
+  - `crates/ciproxy-agent/src/application.rs` would supply the trusted
+    hosted connection and host identity boundary to the cache integration.
+    Its current `HttpCache::new` call supplies only `Commands`.
+  - `crates/ciproxy-agent/src/cache.rs` would connect that channel to each
+    checked cache session. Its current registration carries no hosted
+    metadata access.
+  - `crates/ciproxy-agent/src/cache_admin.rs` would carry host-only
+    metadata configuration or responses through the sidecar's admin
+    listener.
+  - This is one concrete route. API route alternatives can avoid the
+    protected composition file. They still need agent transport outside
+    this item's named cache-sidecar and control-plane area.
+  - The implementation scope excluded agent changes. These integration
+    changes need scope and concurrent ownership coordination. Completing
+    the concurrent control-plane work alone does not supply the channel.
 - **Requirement:** `docs/protocol/cache.md`, "Cache scopes", requires the
   same keys, versions, and allowed scopes as GitHub. The existing key and
   branch ordering must apply across both content stores. Retained local
