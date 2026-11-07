@@ -21,10 +21,26 @@ pub(crate) enum StopAuthority {
     OwnerRemoval,
 }
 
+/// Saved authority shared by own-machine and Boat retirement acceptance.
+pub(crate) enum RunnerRetirement {
+    /// A new durable machine stop is ready for delivery.
+    Stopping(Box<OwnRunner>),
+    /// Durable retirement needs no further registration access.
+    Retired,
+    /// A saved Busy answer protects the running job.
+    Busy,
+    /// The reservation still lacks a durable answer.
+    Pending,
+    /// Owner removal or an absent organization prevents registration recovery.
+    Deferred,
+}
+
 impl MachineRuntime {
     /// Save a GitHub-first retirement and deliver its new stop intent once.
     pub(crate) async fn stop(&self, input: &RoutingSnapshot, runner: &OwnRunner) -> Result<()> {
-        let Some(stopping) = self.retire_runner(input.workspace_id, runner).await? else {
+        let RunnerRetirement::Stopping(stopping) =
+            self.retire_runner(input.workspace_id, runner).await?
+        else {
             return Ok(());
         };
         let organization = input
@@ -41,18 +57,18 @@ impl MachineRuntime {
         &self,
         workspace_id: Uuid,
         runner: &OwnRunner,
-    ) -> Result<Option<OwnRunner>> {
+    ) -> Result<RunnerRetirement> {
         if !matches!(runner.runner.place, RunnerPlace::Machine { .. }) {
-            return Ok(None);
+            return Ok(RunnerRetirement::Pending);
         }
         if matches!(
             runner.runner.state,
             RunnerState::Stopped | RunnerState::Stopping
         ) {
-            return Ok(None);
+            return Ok(RunnerRetirement::Retired);
         }
         if runner.runner.state == RunnerState::Busy {
-            return Ok(None);
+            return Ok(RunnerRetirement::Busy);
         }
         let target = ListenerTarget {
             workspace_id,
@@ -84,10 +100,12 @@ impl MachineRuntime {
                     },
                 )
                 .await?;
-                return Ok(None);
+                return Ok(RunnerRetirement::Busy);
             }
         };
-        Ok(Some(self.save_stop(workspace_id, runner, authority).await?))
+        Ok(RunnerRetirement::Stopping(Box::new(
+            self.save_stop(workspace_id, runner, authority).await?,
+        )))
     }
 
     /// Persist the GitHub identity and stop command only after positive authority.

@@ -3,11 +3,13 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
+use crate::boat_runtime::BoatRunnerIntent;
 use crate::error::Result;
 use crate::gateway::MachineSnapshot;
 use crate::github::GithubJob;
 use crate::labels::Label;
 use crate::organizations::Organization;
+use crate::overflow::store::OverflowSnapshot;
 use crate::runners::{Runner, RunnerState};
 use crate::settings::Settings;
 
@@ -95,6 +97,10 @@ pub trait OwnRunnerStore: Send + Sync {
 
 /// Coherent persisted input to one workspace's pure routing calculation.
 pub struct RoutingSnapshot {
+    /// Boat account and delivery facts from this same committed snapshot.
+    pub overflow: OverflowSnapshot,
+    /// Registration identities saved before GitHub JIT requests.
+    pub boat_intents: Vec<BoatRunnerIntent>,
     /// Workspace that owns every resource below.
     pub workspace_id: Uuid,
     /// Current and retained organization registrations.

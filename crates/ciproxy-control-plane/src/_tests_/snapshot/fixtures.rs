@@ -23,6 +23,13 @@ pub(super) fn input() -> RoutingSnapshot {
   "cache":{"used_bytes":0,"capacity_bytes":0,"restores_last_7_days":0,"hits_last_7_days":0,"jobs":[]},"docker_disks":{"leased_bytes":0,"repositories":0,"used_bytes":0},"images":{"available":[{"image_id":"fixture","root_disk_bytes":60_263_759_872u64}],"newest":"fixture"}
  })).unwrap();
     RoutingSnapshot {
+        boat_intents: Vec::new(),
+        overflow: ciproxy_store_interface::overflow::store::OverflowSnapshot {
+            accounts: Vec::new(),
+            starts: Vec::new(),
+            enabled: false,
+            spend_limit_usd_micros: None,
+        },
         workspace_id: Uuid::from_u128(1),
         organizations: vec![organization(2)],
         labels: vec![Label {

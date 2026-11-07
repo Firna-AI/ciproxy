@@ -7,6 +7,7 @@ use ciproxy_scaler::boat::{BoatAccount, MonthlySpend, Refusal};
 use ciproxy_store_interface::boat;
 use ciproxy_store_interface::overflow::account::AccountState;
 use ciproxy_store_interface::overflow::record::StartRecord;
+use ciproxy_store_interface::overflow::store::OverflowSnapshot;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -63,6 +64,36 @@ pub struct OverflowView {
 }
 
 impl OverflowView {
+    /// Read durable supply and costs without external provider access.
+    pub fn from_snapshot(snapshot: OverflowSnapshot, now: DateTime<Utc>) -> Result<Self> {
+        let account = snapshot
+            .accounts
+            .into_iter()
+            .find(|account| account.account.retired_at.is_none());
+        Ok(Self {
+            account: account.as_ref().map(|account| account.account.clone()),
+            state: account.map(|account| account.state).unwrap_or_default(),
+            spend: crate::spend::current(&snapshot.starts, now)?,
+            limit_usd: snapshot
+                .spend_limit_usd_micros
+                .map(|limit| Decimal::new(limit, 6)),
+            enabled: snapshot.enabled,
+            starts: snapshot.starts,
+        })
+    }
+
+    /// Preserve catalog policy for retained runners while permitting no new start.
+    pub fn retained_scaler_account(&self) -> Result<BoatAccount> {
+        let sizes = scaler_sizes(&self.state)?;
+        Ok(BoatAccount {
+            enabled: false,
+            connected: false,
+            spend: MonthlySpend { spent: 0, limit: 0 },
+            largest_size: sizes.last().map(|size| size.id.clone()),
+            sizes,
+            refusals: Vec::new(),
+        })
+    }
     /// Map known facts to the scaler, using the same UTC origin as its snapshot.
     ///
     /// Pending and settled bounds count without becoming measured costs.

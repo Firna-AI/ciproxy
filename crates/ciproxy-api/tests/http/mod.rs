@@ -73,4 +73,9 @@ mod m18_server_tests;
 mod m18_stripe;
 mod m18_support;
 mod m18_usage_tests;
+#[path = "../../../ciproxy-control-plane/tests/runtime/overflow_ports.rs"]
+mod overflow_ports;
+mod overflow_spend_tests;
+mod overflow_support;
+mod overflow_tests;
 mod signed_association_tests;

@@ -13,7 +13,7 @@ use utoipa_axum::routes;
 use crate::error::{Error, Problem, ProblemCode};
 use crate::handlers::{
     auth, billing_pages, checkout, github_setup, jobs, labels, links, machines, members,
-    organizations, savings, sessions, setup,
+    organizations, overflow, savings, sessions, setup,
 };
 use crate::state::ApiState;
 
@@ -52,6 +52,11 @@ pub(crate) fn routes() -> OpenApiRouter<ApiState> {
         .routes(routes!(links::detail))
         .routes(routes!(links::choose))
         .routes(routes!(links::enable))
+        .routes(routes!(overflow::settings))
+        .routes(routes!(overflow::summary))
+        .routes(routes!(overflow::connect))
+        .routes(routes!(overflow::disconnect))
+        .routes(routes!(overflow::save))
         .routes(routes!(jobs::live))
         .routes(routes!(jobs::history))
         .routes(routes!(jobs::detail))
