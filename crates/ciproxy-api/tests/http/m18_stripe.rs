@@ -17,12 +17,14 @@ pub(super) enum Scenario {
     Checkout,
     Expired,
     Paid,
+    AddOns,
 }
 
 pub(super) struct Stripe {
     pub(super) session: Mutex<CheckoutSession>,
     pub(super) subscription: Mutex<Subscription>,
     pub(super) checkouts: AtomicUsize,
+    pub(super) selections: Mutex<Vec<Selection>>,
     pub(super) payment_required: AtomicBool,
 }
 
@@ -45,6 +47,7 @@ impl Stripe {
                 .unwrap(),
             ),
             checkouts: AtomicUsize::new(0),
+            selections: Mutex::new(Vec::new()),
             payment_required: AtomicBool::new(false),
         })
     }
@@ -101,6 +104,7 @@ impl Stripe {
         let change = StripeApiMock::change
             .each_call(matching!())
             .answers_arc(Arc::new(move |_, current, selection, _| {
+                change.selections.lock().unwrap().push(selection);
                 let mut updated = current.clone();
                 if change.payment_required.load(Ordering::SeqCst) {
                     updated.pending_update = Some(PendingUpdate {
@@ -131,6 +135,7 @@ impl Stripe {
             Scenario::Checkout => Arc::new(Unimock::new((checkout, read, subscription))),
             Scenario::Expired => Arc::new(Unimock::new((checkout, read))),
             Scenario::Paid => Arc::new(Unimock::new((subscription, change, cancel, portal))),
+            Scenario::AddOns => Arc::new(Unimock::new((subscription, change))),
         }
     }
 

@@ -3,7 +3,7 @@
 use ciproxy_billing::catalog::PriceCode;
 use ciproxy_billing::error::Error;
 use ciproxy_billing::service::view::ChangeOutcome;
-use ciproxy_store_interface::billing::state::Tier;
+use ciproxy_store_interface::billing::state::{AddOns, Tier};
 
 use super::database::Database;
 use super::expiry_support::{lost_upgrade, pending, started};
@@ -26,7 +26,13 @@ fn current_pending_update_survives_age_then_applied_selection_wins_over_age() {
     let later = "2026-12-06T11:00:00Z".parse().unwrap();
     let billing = read_service(&database, &fake, later);
     assert!(matches!(
-        billing.change(access(), wanted(Tier::Team, 0, 0)),
+        billing.change_add_ons(
+            access(),
+            AddOns {
+                start_blocks: 0,
+                machines: 0
+            }
+        ),
         Err(Error::PaymentConfirming)
     ));
     assert_eq!(
@@ -78,7 +84,13 @@ fn canceling_a_pending_upgrade_keeps_other_selections_out_of_its_payment_context
     );
     billing.move_to_free(access()).unwrap();
     assert_eq!(database.store.billing(workspace()).unwrap().command, None);
-    let result = billing.change(access(), wanted(Tier::Team, 0, 0));
+    let result = billing.change_add_ons(
+        access(),
+        AddOns {
+            start_blocks: 0,
+            machines: 0,
+        },
+    );
     assert!(matches!(result, Err(Error::PaymentConfirming)));
     assert_eq!(database.store.billing(workspace()).unwrap().command, None);
     assert_eq!(fake.posts("/v1/subscriptions/sub_recorded").len(), 2);

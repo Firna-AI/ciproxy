@@ -1,5 +1,6 @@
 //! Public service scenarios, sharing only infrastructure fixtures.
 
+mod addons_tests;
 mod changes_tests;
 mod checked_stripe;
 mod checkout_tests;

@@ -30,18 +30,20 @@ impl InvoiceEvidence {
     pub(super) fn from_event(event: &Event) -> Result<Option<Self>> {
         if !matches!(
             event.payload,
-            Payload::Invoice(_) | Payload::InvoiceFailed(_) | Payload::InvoiceUpdated(_)
+            Payload::Invoice { .. }
+                | Payload::InvoiceFailed { .. }
+                | Payload::InvoiceUpdated { .. }
         ) {
             return Ok(None);
         }
         let at = DateTime::from_timestamp(event.created, 0).ok_or(Error::StripeState)?;
         let evidence = match &event.payload {
-            Payload::Invoice(object) | Payload::InvoiceFailed(object) => Self {
+            Payload::Invoice { data: object } | Payload::InvoiceFailed { data: object } => Self {
                 invoice_id: object.object.id.clone(),
-                failed_at: matches!(event.payload, Payload::InvoiceFailed(_)).then_some(at),
+                failed_at: matches!(event.payload, Payload::InvoiceFailed { .. }).then_some(at),
                 collection_change: None,
             },
-            Payload::InvoiceUpdated(update) => {
+            Payload::InvoiceUpdated { data: update } => {
                 let invoice = &update.object;
                 let changed = update
                     .previous_attributes

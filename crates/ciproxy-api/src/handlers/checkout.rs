@@ -5,6 +5,7 @@ use std::sync::Arc;
 use axum::extract::{Path, Query, State};
 use axum::{Extension, Json};
 use ciproxy_metering::pricing::plan_choice;
+use ciproxy_store_interface::billing::state::AddOns;
 
 use crate::access::Principal;
 use crate::error::{Error, ErrorResultExt, Result};
@@ -169,13 +170,13 @@ pub(crate) async fn addons(
 ) -> Result<Json<PaymentOutcome>> {
     let (workspace, context) = context(&state, &principal, path).await?;
     let access = billing_views::access(workspace, context.role);
-    let selected = billing_views::stored(PlanSelection {
-        tier: billing_views::tier(context.record.state.tier),
-        add_ons: input,
-    });
+    let add_ons = AddOns {
+        start_blocks: input.start_blocks,
+        machines: input.machines,
+    };
     Ok(Json(billing_views::change(
         billing_call::call(services(pages)?, move |billing| {
-            billing.change(access, selected)
+            billing.change_add_ons(access, add_ons)
         })
         .await?,
     )))

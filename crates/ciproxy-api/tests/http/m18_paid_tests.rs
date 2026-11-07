@@ -5,11 +5,13 @@ use std::sync::atomic::Ordering;
 
 use axum::http::StatusCode;
 use ciproxy_api::pages::{PageServices, PaidReviewMock};
-use ciproxy_billing::catalog::CheckoutReview;
-use ciproxy_store_interface::billing::state::Tier;
+use ciproxy_billing::catalog::{CheckoutReview, PriceCode};
+use ciproxy_store_interface::billing::commands::{BillingCommand, CommandKind};
+use ciproxy_store_interface::billing::state::{AddOns, Selection, Tier};
 use ciproxy_store_interface::dashboard::records::Role;
 use serde_json::json;
 use unimock::{MockFn, Unimock, matching};
+use uuid::Uuid;
 
 use super::fixture_io;
 use super::m18_stripe::{Scenario, Stripe};
@@ -174,4 +176,92 @@ async fn m18_paid_actions_preserve_period_wait_for_upgrade_payment_and_open_port
     assert_eq!(saved.tier, Tier::Team);
     assert_eq!(saved.cancel_at, Some(at("2026-12-01T00:00:00Z")));
     assert_eq!(saved.paid_period_end, Some(at("2026-12-01T00:00:00Z")));
+}
+
+#[tokio::test]
+async fn m18_addon_save_preserves_the_reconciled_stripe_tier_after_a_stale_upgrade() {
+    let stripe = Stripe::new();
+    let pages = Pages::new(stripe.provider_for(Scenario::AddOns));
+    stripe.bind(pages.fixture.workspace);
+    let billing = pages.fixture.login(7, Some(Role::Billing)).await;
+    pages.save(&pages.state(Tier::Team));
+    {
+        let mut saved = pages
+            .fixture
+            .database
+            .store
+            .try_lock_billing(pages.fixture.workspace)
+            .unwrap()
+            .unwrap();
+        saved
+            .save_command(&BillingCommand {
+                id: Uuid::new_v4(),
+                started_at: at("2026-11-06T11:59:00Z"),
+                payment_expires_at: None,
+                kind: CommandKind::Change {
+                    selection: Selection {
+                        tier: Tier::Business,
+                        add_ons: AddOns::default(),
+                    },
+                    upgrade: true,
+                },
+            })
+            .unwrap();
+        let mut current = stripe.subscription.lock().unwrap();
+        current.items.data[0].price.id = "price_business".into();
+        current.items.data[0].price.lookup_key = PriceCode::Business;
+    }
+    assert_eq!(
+        pages
+            .fixture
+            .database
+            .store
+            .billing(pages.fixture.workspace)
+            .unwrap()
+            .state
+            .tier,
+        Tier::Team
+    );
+    let response = pages
+        .request(
+            Some(&billing),
+            "PUT",
+            "/billing/add-ons",
+            Some(json!({"start_blocks":1,"machines":2})),
+        )
+        .await;
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(fixture_io::json(response).await["state"], "confirmed");
+    let saved = pages
+        .fixture
+        .database
+        .store
+        .billing(pages.fixture.workspace)
+        .unwrap();
+    assert_eq!(saved.state.tier, Tier::Business);
+    assert_eq!(
+        saved.state.add_ons,
+        AddOns {
+            start_blocks: 1,
+            machines: 2
+        }
+    );
+    assert_eq!(
+        saved.state.paid_period_start,
+        Some(at("2026-11-01T00:00:00Z"))
+    );
+    assert_eq!(
+        saved.state.paid_period_end,
+        Some(at("2026-12-01T00:00:00Z"))
+    );
+    assert_eq!(
+        *stripe.selections.lock().unwrap(),
+        vec![Selection {
+            tier: Tier::Business,
+            add_ons: AddOns {
+                start_blocks: 1,
+                machines: 2
+            }
+        }]
+    );
 }

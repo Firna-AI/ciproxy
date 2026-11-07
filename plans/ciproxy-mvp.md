@@ -1206,9 +1206,9 @@ These routes serve the other pages of the dashboard.
         HTTP.
         Branch: `conductor/mvp-m18-api`.
         Evidence: `.context/ciproxy-mvp/m18/nothing-fits-handoff.md`.
-- [ ] Orchestrator: finish HTTP verification after the ignored-event
-      parser repair below. Keep its failing regression in the suite.
-      Branch: `calummoore/ci-proxy-load-balancer`.
+- [x] Finish HTTP verification after the ignored-event parser repair.
+      Keep its HTTP regression in the suite.
+      Branch: `conductor/mvp-m18-api`.
   - [x] Add real-PgStore HTTP tests for every route and a supported signed
         Checkout smoke through a bound dashboard server. Verify the twelve
         independent tests in ten exact-name runs each.
@@ -1234,17 +1234,20 @@ These routes serve the other pages of the dashboard.
       billing review gives the full monthly price as today's charge. The
       API keeps paid review unavailable until the preview exists.
       Branch: `calummoore/ci-proxy-load-balancer`.
-- [ ] Orchestrator: fix the billing parser for signed Stripe events that
-      it ignores. A real `data.object` currently fails with
-      `expected unit variant Payload::Ignore`. Keep the HTTP regression
-      and rerun the complete gate with `DATABASE_URL` set.
-      Branch: `calummoore/ci-proxy-load-balancer`.
-- [ ] Orchestrator: add the quantity-only billing operation of review
-      finding 2. Resolve the confirmed tier after Stripe reconciliation
-      under the existing billing lock. Switch the add-on route and
-      quantity-only callers. Preserve the paid tier in the stale-store
-      HTTP and provider-form regressions.
-      Branch: `calummoore/ci-proxy-load-balancer`.
+- [x] Fix the billing parser for signed Stripe events that it ignores.
+      Use a typed parser and add the billing-level unit regression.
+      Keep the HTTP regression for real `data.object` payloads.
+      Branch: `conductor/mvp-m18-api`.
+      The user extended the billing scope on 7 November 2026 for item 1-E.
+      Evidence: `.context/ciproxy-mvp/m18/billing-fix-round2/report.md`.
+- [x] Add the quantity-only billing operation of review finding 2.
+      Resolve the confirmed tier after Stripe reconciliation under the
+      existing billing lock. Switch the add-on route and quantity-only
+      callers. Preserve the paid tier in the stale-store HTTP and
+      provider-form regressions.
+      Branch: `conductor/mvp-m18-api`.
+      The user extended the billing scope on 7 November 2026 for item 2-B.
+      Evidence: `.context/ciproxy-mvp/m18/billing-fix-round2/report.md`.
 - [ ] Orchestrator: expose the overflow owner's resource-only catalog
       accessor of review finding 6. Replace the private fit-conversion
       adapter after this workspace merges. Keep accounting and availability

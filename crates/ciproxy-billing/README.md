@@ -32,6 +32,10 @@ The old tier stays until payment succeeds.
 An open subscription-update invoice supplies its upgrade payment page.
 A renewal invoice never supplies that page.
 Confirmed expiry releases the old change for a fresh attempt.
+Use change only for an explicitly chosen paid tier and quantities.
+Use change_add_ons for quantities alone. It reconciles the current Stripe tier
+inside the billing lock before it resolves the selection.
+Both operations share durable commands, retry recovery, and Stripe proration.
 Add-on changes apply at once with create_prorations.
 The portal permits invoices, card changes, and period-end cancellation.
 It permits undo-cancellation before the period ends.
