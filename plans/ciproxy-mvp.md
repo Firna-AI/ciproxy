@@ -673,8 +673,12 @@ Replaced ways for item 77:
       growth. Run every new or changed scheduler test ten times.
       Branch: `conductor/ciproxy-mvp-77d-free-disk`.
       Evidence: `.context/ciproxy-mvp-77d-free-disk/fix-round-3/`.
-- [ ] Publish it with its SHA-256, and as a shared Boat snapshot. Rebuild
+- [x] Publish it with its SHA-256, and as a shared Boat snapshot. Rebuild
       before GitHub stops accepting the runner.
+      Done 7 November 2026: release `2026-11-06-7484d1b` is on the CDN with
+      its checksums, and the shared Boat snapshot has the same name. Its
+      pinned runner 2.338.2 was the latest release that day. The weekly
+      check of `image/check-runner.sh` stays an operations task.
       Orchestrator: run `image/publish.sh` and the create, prepare, and
       snapshot commands of `image/boat.py` from the
       [image guide](../image/README.md#boat-shared-snapshot).
@@ -1150,12 +1154,18 @@ Implementation calls, 6 November 2026:
       Keep identities, one create request, and one counted cost bound.
       Prove failure when runtime recovery admits only Unsent deliveries.
       Branch: `conductor/mvp-m15-overflow`.
-- [ ] Orchestrator: Configure the optional Boat deployment secret as
+- [x] Orchestrator: Configure the optional Boat deployment secret as
       `deploy/runtime.md#boat-shared-snapshot` describes.
       Set it to the shared Milestone 10 snapshot.
       Keep the selected image manifest at the same release.
-      Run the three live scenarios with the private credential file, as
-      `crates/ciproxy-control-plane/overflow.md` describes.
+      My call, 7 November 2026: deliver the share code through Secret
+      Manager and a Kubernetes Secret, like the release token, and not
+      through a GitHub variable, because the deploy logs are public.
+      Pull request #37 built it. The main preview holds version 1, the
+      share code of snapshot `2026-11-06-7484d1b`, which is also the release
+      of its `JOB_IMAGE_MANIFEST_PATH`. Production gets its version at launch.
+- [ ] Orchestrator: Run the three live scenarios with the private credential
+      file, as `crates/ciproxy-control-plane/overflow.md` describes.
 
 Verification evidence: `.context/ciproxy-mvp-m15/`.
 

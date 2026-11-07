@@ -178,7 +178,9 @@ and `JOB_IMAGE_MANIFEST_PATH`.
 `DOWNLOAD_URL` selects the environment's release host.
 `BUILD_ID` identifies the built commit.
 `BOAT_SHARED_SNAPSHOT` is optional. The
-[overflow guide](overflow.md#configuration) gives its rules.
+[overflow guide](overflow.md#configuration) gives its rules. Deploy reads it
+from a Secret Manager secret, as
+[Boat setup](../../deploy/runtime.md#boat-shared-snapshot) says.
 The runtime uses mounted private key, webhook, OAuth, session, and CDN keys.
 Artifact delivery gets a fresh Cloud CDN signature each time.
 `IMAGE_URL_PREFIX` selects the existing CDN /images origin.
