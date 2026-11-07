@@ -3940,3 +3940,102 @@ above.
   for a person with no role.
 - **Action:** ask the user, because the user decides which side of a mockup
   and product mismatch is right.
+
+### 93. The installer supports fewer hosts than the docs say
+
+- **Severity:** Medium. **Effort:** Medium.
+- **Source:** Implementation, Milestone 24, pull request #40, its item 1.
+- **Category:** Docs or spec.
+- **Location:** `docs/protocol/agent.md:74`, and
+  `crates/ciproxy-agent/src/host_packages.rs:39`.
+- **Background:** The protocol and the install note of the dashboard give an
+  x64 Linux hardware minimum. The installer also needs systemd and cgroup
+  v2. It accepts only Debian, Ubuntu, Fedora, RHEL, Rocky Linux, and
+  AlmaLinux.
+- **Problem:** The protocol and the dashboard mockup do not state these
+  limits.
+- **Impact if no action:** A customer can prepare a machine that meets the
+  stated list, and then the installer refuses it.
+- **Root question:** Which hosts does ciproxy promise to support?
+- **Options:**
+  - **A.** Keep the hardware list, and rely on the repair messages of the
+    installer. Effort: Small.
+  - **B.** State the current support in the docs only. Effort: Small.
+  - **C.** State these limits in the protocol, the mockup, the dashboard,
+    and the docs. Effort: Medium.
+  - **D.** Broaden the installer, then document the wider support.
+    Effort: Large.
+- **Left out:** None.
+- **Wider fix:** C.
+- **Recommendation:** C. Customers learn the real requirements before they
+  prepare a machine.
+- **Action:** ask the user, because C changes an approved requirement and
+  the install note.
+
+### 94. The Boat setup cannot connect an organization key
+
+- **Severity:** Medium. **Likelihood:** Common. **Effort:** Medium.
+- **Source:** Implementation, Milestone 24, pull request #40, its item 2.
+- **Category:** Product bug.
+- **Location:** `crates/ciproxy-api/src/wire/overflow.rs:16`, and
+  `crates/ciproxy-overflow/src/boat/account.rs:46`.
+- **Background:** A wallet is the personal Boat account or the Boat
+  organization that pays for sandboxes. ciproxy sends it with each Boat
+  request. The planned Boat form asks for a key and a spend limit. The API
+  also accepts a wallet, and it uses the personal wallet when none comes.
+- **Problem:** A key of a Boat organization then fails with HTTP 503 and
+  "Try again". A retry does not help.
+- **Impact if no action:** A customer whose Boat account is an organization
+  cannot connect Boat from the dashboard.
+- **Root question:** Which Boat accounts can the dashboard connect?
+- **Options:**
+  - **A.** Support personal accounts only. State the rule, and give an
+    organization key a clear error. Effort: Small.
+  - **B.** Add a choice of personal or organization to the form, the
+    protocol, the mockup, and the docs. Effort: Medium.
+  - **C.** Use the organization of the key when the form sends no wallet,
+    and keep an explicit wallet of the API. A key that can reach several
+    wallets still uses the personal one. Effort: Medium.
+- **Left out:** Removing the wallet of the API. It loses a working
+  capability and still needs the rule and the error of A.
+- **Wider fix:** None.
+- **Recommendation:** C. It connects both kinds of account with no new form
+  field. Pull request #40 recommended A as the smallest change.
+- **Action:** ask the user, because no requirement says which Boat accounts
+  ciproxy supports.
+
+### 95. A paid change can charge another amount than its review
+
+- **Severity:** High. **Likelihood:** Common. **Effort:** Medium.
+- **Source:** Review, Milestone 18, pull request #39, round 1, its finding 1.
+- **Category:** Product bug.
+- **Location:** `crates/ciproxy-billing/src/stripe/http/preview.rs:64`, and
+  `crates/ciproxy-billing/src/stripe/forms.rs:40`.
+- **Background:** Proration is Stripe's charge for the rest of the current
+  billing period after a plan change. A move between paid plans first
+  shows a review with Stripe's preview of that charge, computed at a fixed
+  proration time. The payment then builds a separate Stripe request.
+- **Problem:** The payment request does not send the proration time of the
+  review, so Stripe computes the charge at the time of payment. Stripe
+  documents that the same time must be sent to match the preview.
+- **Impact if no action:** The charge can differ from the reviewed amount.
+  Across a renewal, the difference can be large.
+- **Root question:** How does a paid change keep the charge that the
+  customer reviewed?
+- **Options:**
+  - **A.** Return a signed quote with the review, and send it back with the
+    payment. The server checks its signature and age, and gives its
+    proration time to Stripe. Effort: Medium.
+  - **B.** Store each quote on the server. The payment names its quote, and
+    each retry keeps the same proration time. The server refuses an unknown
+    or outdated quote. Effort: Medium.
+  - **C.** Preview again at payment. When the amount changed, ask the
+    customer to confirm again. Effort: Medium.
+- **Left out:** Changing nothing, because it fails the review requirement.
+  A proration time from the browser without a check, because a customer
+  could choose a cheaper time.
+- **Wider fix:** B.
+- **Recommendation:** B. A stored quote best keeps the payment and its
+  retries the same as the review.
+- **Action:** ask the user, because each option adds a new refusal or a new
+  confirmation for an outdated quote.
