@@ -76,6 +76,17 @@ A full report that omits a confirmed runner releases it only when the report
 arrived after that confirmation. Absence alone never stops an unconfirmed
 start.
 
+When the agent sends `RunnerReady`, `JobStarted`, or `RunnerExited`, the
+runtime saves that observation first.
+Then it reads a fresh workspace snapshot, which holds the saved runner state.
+It routes each saved GitHub job of the workspace with that snapshot.
+A `RunnerReady` that cannot replace `Busy` or `Stopping` routes no job.
+For `RunnerExited`, the runtime saves `Stopped`.
+The runner stays `Stopped` while its saved GitHub job is still `Started`,
+because job routing skips a `Stopped` runner.
+The exit releases the slots and disk of that runner for the next pass, with
+no new full report.
+
 Retirement saves `Stopping` and its stop command before delivery.
 Each pass resends every saved stop with its command ID, after report
 reconciliation and before job routing and new actions. Removed machines
@@ -144,6 +155,10 @@ A provider deletion failure after Boat retirement also permits acceptance.
 Cleanup retries its saved `Deleting` phase without another GitHub removal.
 A completed take-out marker never permits a stop. An unknown older idle
 state keeps its capacity.
+After a completed take-out of the current installation, recovery makes no
+GitHub call for the Boat registration records of that organization.
+Identity cleanup can then delete such a record after its delivery and
+runner end, as the [overflow guide](overflow.md#runtime-guarantees) says.
 
 ## Registration rollout and live validation
 

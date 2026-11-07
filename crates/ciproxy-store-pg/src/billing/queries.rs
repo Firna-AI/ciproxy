@@ -50,6 +50,7 @@ impl BillingStore for PgStore {
         Ok(Some(Box::new(Session {
             connection,
             workspace_id,
+            lock_key: key,
         })))
     }
 

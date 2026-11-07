@@ -53,6 +53,16 @@ pub trait BoatRuntimeStore: Send + Sync {
     fn boat_runtime_snapshot(&self, workspace_id: Uuid) -> Result<OverflowSnapshot>;
     /// Read all unfinished or retained registration intents in one workspace.
     fn boat_runner_intents(&self, workspace_id: Uuid) -> Result<Vec<BoatRunnerIntent>>;
+    /// Read saved removal, completed take-out, or absent-owner access facts.
+    /// A missing intent has no remaining registration recovery work.
+    fn boat_registration_access_ended(&self, workspace_id: Uuid, runner_id: Uuid) -> Result<bool>;
+    /// Delete terminal intents whose saved ownership permits metadata cleanup.
+    /// Live deliveries, pending take-outs, unknown authority, and history stay.
+    fn purge_terminal_boat_runner_intents(
+        &self,
+        workspace_id: Uuid,
+        at: DateTime<Utc>,
+    ) -> Result<usize>;
     /// Save a new identity only under current organization, label, and Boat authority.
     fn create_boat_runner_intent(
         &self,
