@@ -294,9 +294,15 @@ each label. The scale set spike confirms it.
       when GitHub omits the finish time. Replay keeps that observation.
       Branch:
       `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
-- [ ] Read the ref, the event, and the head repository of each run with
+- [x] Read the ref, the event, and the head repository of each run with
       the "Actions" read permission, and forward them to the agent, as item
       32 says.
+      Closed 7 November 2026: the user answered items 54 = E and 55 = A on
+      5 November 2026. The full ref now comes from the checked runtime token
+      in the machine cache, which Milestone 11 built, and an unknown ref
+      fails closed. The agent gets the event and the head repository in
+      `JobFacts` from `crates/ciproxy-github/src/assignments.rs`. The text
+      below is the history of the API research.
       Raw API metadata is implemented. Full-ref forwarding stays blocked.
       Orchestrator: run `ref_metadata_probe.py` and `push_ref_probe.py`
       from `crates/ciproxy-github/scripts/`. Inspect supplied PR and
@@ -305,11 +311,8 @@ each label. The scale set spike confirms it.
       refs for all five cases with the approved existing fixtures.
       The orchestrator verified all five cases with cleanup. A top-level
       workflow ref distinguishes branch and tag pushes. A reusable
-      workflow ref names the called file. Owner items 54 and 55 stay open.
-      The crate README gives the environment and arguments.
-      Ask the user to choose the full-ref source and unknown-ref policy.
-      Then update the protocol and wire contracts in their owning scope,
-      and complete forwarding. No ref is guessed on this branch.
+      workflow ref names the called file. The crate README gives the
+      environment and arguments. No ref is guessed on this branch.
       Branch:
       `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
 - [x] Link each installation to the workspace of the Admin who started it,
