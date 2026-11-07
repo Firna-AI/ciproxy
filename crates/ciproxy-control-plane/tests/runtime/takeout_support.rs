@@ -1,5 +1,6 @@
 //! Real registration persistence with controlled remote runner answers.
 
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
@@ -35,7 +36,8 @@ pub(super) enum Answer {
 pub(super) struct Remote {
     pub(super) calls: Mutex<Vec<Call>>,
     pub(super) contexts: Mutex<Vec<(i64, AppState)>>,
-    answer: Answer,
+    pub(super) answer: Mutex<Answer>,
+    pub(super) answers: Mutex<HashMap<i64, Answer>>,
 }
 
 impl Remote {
@@ -43,7 +45,8 @@ impl Remote {
         Arc::new(Self {
             calls: Mutex::new(Vec::new()),
             contexts: Mutex::new(Vec::new()),
-            answer,
+            answer: Mutex::new(answer),
+            answers: Mutex::new(HashMap::new()),
         })
     }
 }
@@ -66,7 +69,7 @@ impl ScaleSetFactory for Factory {
 impl ScaleSetApi for Remote {
     async fn find_runner(&self, _: &str) -> Result<Option<i64>> {
         self.calls.lock().unwrap().push(Call::Find);
-        match self.answer {
+        match *self.answer.lock().unwrap() {
             Answer::Absent => Ok(None),
             Answer::LookupUnavailable => Err(Error::AccessUnavailable(404)),
             _ => Ok(Some(47)),
@@ -74,7 +77,14 @@ impl ScaleSetApi for Remote {
     }
     async fn remove_runner(&self, id: i64) -> Result<()> {
         self.calls.lock().unwrap().push(Call::Remove(id));
-        match self.answer {
+        let answer = self
+            .answers
+            .lock()
+            .unwrap()
+            .get(&id)
+            .copied()
+            .unwrap_or(*self.answer.lock().unwrap());
+        match answer {
             Answer::Busy => Err(Error::RunnerBusy),
             Answer::DeleteUnavailable => Err(Error::AccessUnavailable(403)),
             _ => Ok(()),

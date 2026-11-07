@@ -57,6 +57,8 @@ pub(crate) fn snapshot(
             .store()?
             .into_record()?;
         Ok(RoutingSnapshot {
+            overflow: crate::overflow::rows::load(connection, workspace_id)?,
+            boat_intents: crate::boat_runtime::load(connection, workspace_id)?,
             workspace_id,
             organizations,
             labels,

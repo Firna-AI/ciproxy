@@ -11,6 +11,7 @@ use rust_decimal::Decimal;
 use uuid::Uuid;
 
 use super::super::support::{Database, at};
+use super::authority_support::assert_label_and_binding_liveness;
 use super::support::{reserve, setup};
 
 #[test]
@@ -235,6 +236,7 @@ fn overflow_sessions_exclude_each_other_and_reservation_rechecks_tenant_authorit
         session.startup_account(retained.delivery_id).unwrap(),
         Some(account)
     );
+    assert_label_and_binding_liveness(&mut database, &mut *session, &retained);
     diesel::sql_query("UPDATE organization_activation SET admitted=FALSE,billing_hold=TRUE WHERE organization_id=$1")
         .bind::<sql_types::Uuid,_>(record.organization_id).execute(&mut database.connection).unwrap();
     assert_eq!(session.startup_account(retained.delivery_id).unwrap(), None);

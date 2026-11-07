@@ -38,6 +38,10 @@ utoipa-axum = "0.3.0"
 uuid = { version = "1.29.0", features = ["serde", "v4"] }
 
 [dev-dependencies]
+sandbox-interface = { workspace = true }
+sandbox-boat = { workspace = true }
+ciproxy-agent = { workspace = true }
+ciproxy-scaler = { workspace = true }
 ciproxy-store-pg = { workspace = true }
 diesel = { version = "2.3.14", features = ["postgres"] }
 hex = "0.4.3"

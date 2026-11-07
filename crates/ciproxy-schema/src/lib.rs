@@ -4,6 +4,7 @@
 
 pub mod billing;
 pub mod boat;
+pub mod boat_runner_intents;
 pub mod dashboard;
 pub mod github;
 pub mod github_attempts;

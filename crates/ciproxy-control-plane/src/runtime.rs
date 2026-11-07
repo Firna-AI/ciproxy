@@ -10,6 +10,7 @@ use ciproxy_github::assignments::JobAssignments;
 use ciproxy_github::installation_state::InstallationApi;
 use ciproxy_github::registrations::RunnerRegistrations;
 use ciproxy_github::runtime::Runtime;
+use ciproxy_overflow::api::Overflow;
 use ciproxy_protocol::agent::AgentMessage;
 use ciproxy_protocol::images::ImageDownload;
 use ciproxy_store_interface::github::GithubJob;
@@ -18,6 +19,7 @@ use ciproxy_store_interface::store::Store;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
+use crate::boat_authority::BoatRegistrationRetirement;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::image_signing::ImageSigning;
 use crate::snapshot::build;
@@ -45,6 +47,10 @@ pub trait OwnMachines: Send + Sync {
 
 /// Dependencies assembled once at the hosted composition root.
 pub struct MachineRuntime {
+    /// GitHub-first recovery of interrupted Boat registrations.
+    pub boat_retirement: Option<Arc<dyn BoatRegistrationRetirement>>,
+    /// Shared optional Boat service, configured only with the deployed image snapshot.
+    pub overflow: Option<Arc<dyn Overflow>>,
     /// Tenant-scoped durable persistence.
     pub store: Arc<dyn Store>,
     /// The shared owner of machine WebSockets and command routing.
@@ -83,6 +89,8 @@ impl MachineRuntime {
         installations: Arc<dyn InstallationApi>,
     ) -> Self {
         Self {
+            boat_retirement: None,
+            overflow: None,
             store,
             gateway,
             registrations,
@@ -147,6 +155,7 @@ impl MachineRuntime {
         input = self.load(workspace_id).await?;
         self.recover_stops(&input, &mut *lease).await?;
         for job in &input.jobs {
+            self.route_boat_job(&input, job).await?;
             self.route_job(&input, job).await?;
         }
         self.ensure_image(&input).await?;
@@ -163,15 +172,7 @@ impl MachineRuntime {
             });
         let runnable = self.runnable_organizations(&input).await?;
         let mut snapshot = build(&input, &runnable, self.clock.now(), root_sizing);
-        for machine in &mut snapshot.machines {
-            let confirmed = input
-                .machines
-                .iter()
-                .find(|candidate| candidate.machine.id.to_string() == machine.id.0)
-                .and_then(|candidate| candidate.report.as_ref())
-                .is_some_and(|report| report.report.images.selected().is_some());
-            machine.connected &= confirmed;
-        }
+        self.reconcile_boat(&input, &mut snapshot).await;
         for action in ciproxy_scaler::decision::decide(&snapshot) {
             lease.check_connection().internal()?;
             match self.apply(&input, action).await {
@@ -218,6 +219,7 @@ impl OwnMachines for MachineRuntime {
     async fn job(&self, workspace_id: Uuid, job: GithubJob) -> Result<()> {
         let _operation = self.operation.lock().await;
         let input = self.load(workspace_id).await?;
+        self.route_boat_job(&input, &job).await?;
         self.route_job(&input, &job).await
     }
 

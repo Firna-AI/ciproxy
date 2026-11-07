@@ -1,0 +1,23 @@
+name: ciproxy overflow smoke
+run-name: ciproxy-smoke-${{ inputs.marker }}
+on:
+  workflow_dispatch:
+    inputs:
+      marker:
+        required: true
+        type: string
+      label:
+        required: true
+        type: string
+      hold_seconds:
+        required: true
+        type: string
+permissions: {}
+jobs:
+  smoke:
+    runs-on: ${{ inputs.label }}
+    steps:
+      - name: Hold the test runner
+        env:
+          HOLD_SECONDS: ${{ inputs.hold_seconds }}
+        run: sleep "$HOLD_SECONDS"

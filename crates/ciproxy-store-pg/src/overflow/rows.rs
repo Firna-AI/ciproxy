@@ -56,45 +56,48 @@ impl AccountRow {
     }
 }
 
-pub(super) fn snapshot(
+pub(crate) fn snapshot(
     connection: &mut PgConnection,
     workspace_id: Uuid,
 ) -> Result<OverflowSnapshot> {
-    read_snapshot(connection, |connection| {
-        let (enabled, spend_limit_usd_micros) = settings::table
-            .find(workspace_id)
-            .select((
-                settings::overflow_enabled,
-                settings::boat_spend_limit_usd_micros,
-            ))
-            .first::<(bool, Option<i64>)>(connection)
-            .store()?;
-        let accounts = diesel::sql_query(
-            "SELECT a.id, a.account_name, a.key_ciphertext, a.connected_at,
+    read_snapshot(connection, |connection| load(connection, workspace_id))
+}
+
+/// Read account and delivery rows inside the caller's existing transaction.
+pub(crate) fn load(connection: &mut PgConnection, workspace_id: Uuid) -> Result<OverflowSnapshot> {
+    let (enabled, spend_limit_usd_micros) = settings::table
+        .find(workspace_id)
+        .select((
+            settings::overflow_enabled,
+            settings::boat_spend_limit_usd_micros,
+        ))
+        .first::<(bool, Option<i64>)>(connection)
+        .store()?;
+    let accounts = diesel::sql_query(
+        "SELECT a.id, a.account_name, a.key_ciphertext, a.connected_at,
                     a.retired_at, a.rejected_at, s.state_json
                  FROM boat_accounts a LEFT JOIN overflow_accounts s ON s.key_id = a.id
                  WHERE a.workspace_id = $1 ORDER BY a.connected_at, a.id",
-        )
-        .bind::<diesel::sql_types::Uuid, _>(workspace_id)
-        .load::<AccountRow>(connection)
+    )
+    .bind::<diesel::sql_types::Uuid, _>(workspace_id)
+    .load::<AccountRow>(connection)
+    .store()?
+    .into_iter()
+    .map(AccountRow::into_record)
+    .collect::<Result<Vec<_>>>()?;
+    let starts = overflow_starts::table
+        .filter(overflow_starts::workspace_id.eq(workspace_id))
+        .select(overflow_starts::record_json)
+        .order(overflow_starts::delivery_id)
+        .load::<String>(connection)
         .store()?
         .into_iter()
-        .map(AccountRow::into_record)
+        .map(|json| serde_json::from_str(&json).internal())
         .collect::<Result<Vec<_>>>()?;
-        let starts = overflow_starts::table
-            .filter(overflow_starts::workspace_id.eq(workspace_id))
-            .select(overflow_starts::record_json)
-            .order(overflow_starts::delivery_id)
-            .load::<String>(connection)
-            .store()?
-            .into_iter()
-            .map(|json| serde_json::from_str(&json).internal())
-            .collect::<Result<Vec<_>>>()?;
-        Ok(OverflowSnapshot {
-            accounts,
-            starts,
-            enabled,
-            spend_limit_usd_micros,
-        })
+    Ok(OverflowSnapshot {
+        accounts,
+        starts,
+        enabled,
+        spend_limit_usd_micros,
     })
 }

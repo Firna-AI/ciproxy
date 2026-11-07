@@ -102,6 +102,7 @@ impl Fixture {
             runtime: runtime.clone(),
         });
         let state = ApiState {
+            overflow: None,
             capacity: Arc::new(Unimock::new(())),
             config: ApiConfig {
                 public_origin: "https://app.ciproxy.example".to_owned(),

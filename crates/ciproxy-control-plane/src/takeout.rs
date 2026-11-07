@@ -6,6 +6,8 @@ use ciproxy_store_interface::own_runners::{OwnRunnerLease, RoutingSnapshot};
 use ciproxy_store_interface::runners::RunnerState;
 
 use crate::error::{Error, ErrorResultExt, Result};
+use crate::reservations::retirement_results;
+use crate::retirement::RunnerRetirement;
 use crate::runtime::MachineRuntime;
 
 impl MachineRuntime {
@@ -77,8 +79,8 @@ impl MachineRuntime {
                 runner.clone()
             } else {
                 match self.retire_runner(workspace_id, runner).await {
-                    Ok(Some(stopping)) => stopping,
-                    Ok(None) => continue,
+                    Ok(RunnerRetirement::Stopping(stopping)) => *stopping,
+                    Ok(_) => continue,
                     Err(error) => {
                         failed = true;
                         tracing::warn!(runner=%runner.runner.id,%error,"take-out retirement lacks authority; independent runners continue");
@@ -95,13 +97,28 @@ impl MachineRuntime {
                 tracing::warn!(runner=%runner.runner.id,%error,"authorized take-out stop delivery will retry");
             }
         }
+        lease.check_connection().internal()?;
+        if let Err(error) = self.cleanup_boat(workspace_id).await {
+            tracing::warn!(%error,"take-out Boat cleanup will retry from saved retirement");
+        }
+        let current = self.load(workspace_id).await?;
+        let mut results = self
+            .retire_boat_registrations(&current, organization.id, lease)
+            .await?;
         let saved = self.load(workspace_id).await?;
-        let unanswered = saved.runners.iter().any(|runner| {
-            runner.runner.organization_id == organization.id
-                && !matches!(
-                    runner.runner.state,
-                    RunnerState::Busy | RunnerState::Stopping | RunnerState::Stopped
-                )
+        let store = self.store.clone();
+        let organization_id = organization.id;
+        let runners =
+            tokio::task::spawn_blocking(move || store.runners(workspace_id, organization_id))
+                .await
+                .internal()?
+                .internal()?;
+        results.extend(retirement_results(&saved, organization.id, &runners));
+        let unanswered = results.iter().any(|result| match result {
+            RunnerRetirement::Pending | RunnerRetirement::Deferred => true,
+            RunnerRetirement::Stopping(_) | RunnerRetirement::Retired | RunnerRetirement::Busy => {
+                false
+            }
         });
         if failed || unanswered {
             Err(Error::StateChanged)

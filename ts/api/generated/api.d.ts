@@ -628,6 +628,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workspaces/{workspace_id}/overflow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["overflow_settings"];
+        put: operations["overflow_save"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace_id}/overflow/connection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["overflow_connect"];
+        delete: operations["overflow_disconnect"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspace_id}/overflow/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["overflow_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workspaces/{workspace_id}/plans": {
         parameters: {
             query?: never;
@@ -722,6 +770,30 @@ export interface components {
          * @enum {string}
          */
         BannerAction: "update_card" | "choose_plan" | "ask_admin_or_billing";
+        /** @description Safe connected-account metadata with no key or key ciphertext. */
+        BoatAccountView: {
+            /**
+             * Format: date-time
+             * @description The time this key version connected.
+             */
+            connected_at: string;
+            /** @description The account name returned by Boat during verification. */
+            name: string;
+            /**
+             * Format: date-time
+             * @description The first time Boat refused this key, absent while the key is accepted.
+             */
+            rejected_at?: string | null;
+        };
+        /** @description Key verification and a required monthly limit for every Boat connection. */
+        BoatConnection: {
+            /** @description The customer's own Boat key, used only for this request. */
+            api_key: string;
+            /** @description Positive integer US cents as a decimal string. */
+            spend_limit_cents: components["schemas"]["Cents"];
+            /** @description Boat wallet identity. Personal is the default when no organization is selected. */
+            wallet?: string;
+        };
         /** @description Boat resources under the label policy, without claiming a start is available. */
         BoatLabelFit: {
             /** @enum {string} */
@@ -750,6 +822,22 @@ export interface components {
             size_name: string;
             /** @enum {string} */
             state: "largest_fallback";
+        };
+        /** @description Rounded display amounts. Exact decimal costs still govern Boat admission. */
+        BoatSpendView: {
+            /** @description Whether all current-month costs have either a known value or a safe bound. */
+            bounded: boolean;
+            /** @description Provider-confirmed costs, rounded once after aggregation to integer US cents. */
+            confirmed_cents: components["schemas"]["Cents"];
+            /** @description Whether exact counted costs have reached the saved monthly limit. */
+            limit_reached?: boolean | null;
+            /** @description The settled-bound portion of unconfirmed costs, rounded after aggregation. */
+            settled_bound_cents: components["schemas"]["Cents"];
+            /**
+             * @description Unconfirmed costs, including pending bounds and expired settled bounds.
+             *     Rounded once after both parts are added. This is not a provider-confirmed charge.
+             */
+            unconfirmed_cents: components["schemas"]["Cents"];
         };
         /** @description Machine-cache metadata. Clear cache acts only on this machine's entries. */
         CacheView: {
@@ -1305,6 +1393,38 @@ export interface components {
             /** @description Active, suspended, or removed App state. */
             state: components["schemas"]["InstallationState"];
         };
+        /** @description Complete routing policy editable in Settings under Overflow. */
+        OverflowPolicy: {
+            /** @description Whether the workspace permits new Boat runners. */
+            enabled: boolean;
+            /** @description Positive monthly integer US cents as a decimal string. */
+            spend_limit_cents: components["schemas"]["Cents"];
+            /**
+             * Format: int32
+             * @description The supported overflow waits are 0, 15, 30, 60, and 120 seconds.
+             */
+            wait_seconds: number;
+        };
+        /** @description Boat Setup and Settings data shared by their connection form. */
+        OverflowSettings: {
+            account?: components["schemas"]["BoatAccountView"] | null;
+            /** @description Whether the deployment has a shared Boat image and the Boat service. */
+            available: boolean;
+            /** @description The switch that permits new Boat starts. */
+            enabled: boolean;
+            /**
+             * Format: date-time
+             * @description First instant of the next calendar month in UTC.
+             */
+            next_month_at: string;
+            spend?: components["schemas"]["BoatSpendView"] | null;
+            spend_limit_cents?: components["schemas"]["Cents"] | null;
+            /**
+             * Format: int32
+             * @description The saved overflow wait in seconds.
+             */
+            wait_seconds: number;
+        };
         /** @description One banner after payment, inactive-organization, and soft-limit priority. */
         PageBanner: {
             /** @description Role-aware recovery action. */
@@ -1531,7 +1651,7 @@ export interface components {
          * @description Closed set of machine-readable dashboard failures.
          * @enum {string}
          */
-        ProblemCode: "sign_in_required" | "access_denied" | "not_found" | "conflict" | "invalid_request" | "github_label_refused" | "unavailable" | "internal" | "method_not_allowed";
+        ProblemCode: "boat_key_rejected" | "sign_in_required" | "access_denied" | "not_found" | "conflict" | "invalid_request" | "github_label_refused" | "unavailable" | "internal" | "method_not_allowed";
         /** @description Organization removal metadata verified through this person's GitHub membership. */
         RemovedOrganization: {
             /**
@@ -7802,6 +7922,699 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Success"];
+                };
+            };
+            /** @description Malformed request */
+            400: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sign-in absent, expired, or revoked */
+            401: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Workspace role, origin, or CSRF token refused */
+            403: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Resource absent in this workspace */
+            404: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method not allowed */
+            405: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflicting resource state */
+            409: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Request body is too large */
+            413: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unsupported content type */
+            415: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description GitHub label refusal or malformed body */
+            422: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal operation failed */
+            500: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Temporary upstream or agent failure */
+            503: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    overflow_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Stable workspace identity. */
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverflowSettings"];
+                };
+            };
+            /** @description Malformed request */
+            400: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sign-in absent, expired, or revoked */
+            401: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Workspace role, origin, or CSRF token refused */
+            403: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Resource absent in this workspace */
+            404: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method not allowed */
+            405: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflicting resource state */
+            409: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Request body is too large */
+            413: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unsupported content type */
+            415: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description GitHub label refusal or malformed body */
+            422: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal operation failed */
+            500: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Temporary upstream or agent failure */
+            503: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    overflow_save: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Exact configured dashboard origin. */
+                Origin: string;
+                /** @description The session's CSRF token returned by the session endpoint. */
+                "x-ciproxy-csrf": string;
+            };
+            path: {
+                /** @description Stable workspace identity. */
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OverflowPolicy"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Success"];
+                };
+            };
+            /** @description Malformed request */
+            400: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sign-in absent, expired, or revoked */
+            401: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Workspace role, origin, or CSRF token refused */
+            403: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Resource absent in this workspace */
+            404: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method not allowed */
+            405: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflicting resource state */
+            409: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Request body is too large */
+            413: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unsupported content type */
+            415: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description GitHub label refusal or malformed body */
+            422: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal operation failed */
+            500: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Temporary upstream or agent failure */
+            503: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    overflow_connect: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Exact configured dashboard origin. */
+                Origin: string;
+                /** @description The session's CSRF token returned by the session endpoint. */
+                "x-ciproxy-csrf": string;
+            };
+            path: {
+                /** @description Stable workspace identity. */
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BoatConnection"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Success"];
+                };
+            };
+            /** @description Malformed request */
+            400: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sign-in absent, expired, or revoked */
+            401: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Workspace role, origin, or CSRF token refused */
+            403: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Resource absent in this workspace */
+            404: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method not allowed */
+            405: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflicting resource state */
+            409: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Request body is too large */
+            413: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unsupported content type */
+            415: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description GitHub label refusal or malformed body */
+            422: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal operation failed */
+            500: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Temporary upstream or agent failure */
+            503: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    overflow_disconnect: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Exact configured dashboard origin. */
+                Origin: string;
+                /** @description The session's CSRF token returned by the session endpoint. */
+                "x-ciproxy-csrf": string;
+            };
+            path: {
+                /** @description Stable workspace identity. */
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Success"];
+                };
+            };
+            /** @description Malformed request */
+            400: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sign-in absent, expired, or revoked */
+            401: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Workspace role, origin, or CSRF token refused */
+            403: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Resource absent in this workspace */
+            404: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method not allowed */
+            405: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflicting resource state */
+            409: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Request body is too large */
+            413: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unsupported content type */
+            415: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description GitHub label refusal or malformed body */
+            422: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal operation failed */
+            500: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Temporary upstream or agent failure */
+            503: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    overflow_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Stable workspace identity. */
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverflowSettings"];
                 };
             };
             /** @description Malformed request */

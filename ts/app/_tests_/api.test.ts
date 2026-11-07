@@ -78,10 +78,18 @@ test("API preserves typed HTTP failures and rejects malformed or unreachable res
     code: "access_denied",
     message: "Access changed.",
   } satisfies Problem;
+  const rejectedKey = {
+    code: "boat_key_rejected",
+    message: "Boat rejected the account key.",
+  } satisfies Problem;
   const cases = [
     {
       reply: response(denied, 403),
       expected: { kind: "problem", status: 403, problem: denied },
+    },
+    {
+      reply: response(rejectedKey, 422),
+      expected: { kind: "problem", status: 422, problem: rejectedKey },
     },
     {
       reply: response({ code: "unknown-code", message: "bad" }, 500),

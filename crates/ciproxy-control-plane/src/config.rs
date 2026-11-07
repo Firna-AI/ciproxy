@@ -15,6 +15,8 @@ use crate::error::{Error, ErrorResultExt, Result};
 
 /// Explicit process configuration. Debug never reveals secret files.
 pub struct Config {
+    /// Shared Boat snapshot of the same image release, absent until publication.
+    pub boat_shared_snapshot: Option<String>,
     /// Bound HTTP socket behind the TLS ingress.
     pub http_bind: SocketAddr,
     /// PostgreSQL connection kept in the hosted process.
@@ -51,6 +53,9 @@ impl Config {
     /// Read the chart's environment without putting secrets in diagnostics.
     pub fn from_env() -> Result<Self> {
         Ok(Self {
+            boat_shared_snapshot: env::var("BOAT_SHARED_SNAPSHOT")
+                .ok()
+                .filter(|value| !value.is_empty()),
             http_bind: env::var("HTTP_BIND")
                 .unwrap_or_else(|_| "0.0.0.0:8080".to_owned())
                 .parse()

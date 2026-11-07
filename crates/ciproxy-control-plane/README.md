@@ -1,9 +1,10 @@
 # ciproxy-control-plane
 
 The hosted ciproxy runtime connects GitHub scale sets to customer machines.
-Its executable serves the dashboard API, the machine gateway, and GitHub
-webhooks on one HTTP host. It also runs the scaler and the GitHub workers.
-This crate has no open licence.
+When those machines are busy, it starts runners on Boat.
+Its executable serves the dashboard API, the machine gateway, GitHub
+webhooks, and Boat exit reports on one HTTP host. It also runs the scaler
+and the GitHub workers. This crate has no open licence.
 
 ## Responsibilities
 
@@ -11,6 +12,8 @@ Own the executable and the single HTTP host.
 Keep GitHub App credentials in the hosted process.
 Persist runner reservations before one-use registrations leave the process.
 Preserve running jobs across busy races, offline machines, and restarts.
+Compose the Boat overflow service and keep accepted Boat supply across
+restarts.
 
 ## What This Crate Does
 
@@ -58,6 +61,7 @@ release file gives each field.
 | --------------------------- | --------------------------------------------------------- |
 | `/agent/`                   | The agent WebSocket.                                      |
 | `/hooks/github`             | GitHub App webhooks, up to GitHub's 25 MiB payload limit. |
+| `/hooks/boat/runner-exit`   | Boat sandbox exit reports, while Boat is configured.      |
 | `/api`                      | The dashboard API.                                        |
 | `/api/auth/github/callback` | The GitHub sign-in callback.                              |
 | `/api/github/setup`         | The GitHub App setup URL.                                 |
@@ -82,6 +86,19 @@ finish. Other runtime work then gets up to five more seconds.
 The [runner guide](runners.md) gives routing, reservations, report
 confirmation, stop replay, retirement authority, and the removal and
 take-out policies.
+Take-out checks saved retirement for both own-machine and Boat reservations
+before the API removes GitHub access.
+
+### Boat overflow
+
+The optional `BOAT_SHARED_SNAPSHOT` setting turns on the Boat service.
+Without it, own machines still run jobs, and Boat stays off.
+The runtime, the dashboard API, and the exit callback share one overflow
+service. The [overflow guide](overflow.md) gives the configuration, the
+runtime guarantees, the exit callback, and the live smoke checks.
+After an owner removes the App, launched sandboxes run until their runner
+exits or their saved lifetime ends. The runtime holds the Boat key for
+their cleanup, also after the last organization leaves.
 
 ### GitHub workers
 
@@ -160,6 +177,10 @@ variables `CIPROXY_APP_ID`, `CIPROXY_APP_CLIENT_ID`, `CIPROXY_APP_SLUG`,
 and `JOB_IMAGE_MANIFEST_PATH`.
 `DOWNLOAD_URL` selects the environment's release host.
 `BUILD_ID` identifies the built commit.
+`BOAT_SHARED_SNAPSHOT` is optional. The
+[overflow guide](overflow.md#configuration) gives its rules. Deploy reads it
+from a Secret Manager secret, as
+[Boat setup](../../deploy/runtime.md#boat-shared-snapshot) says.
 The runtime uses mounted private key, webhook, OAuth, session, and CDN keys.
 Artifact delivery gets a fresh Cloud CDN signature each time.
 `IMAGE_URL_PREFIX` selects the existing CDN /images origin.
@@ -198,6 +219,8 @@ cargo clippy --package ciproxy-control-plane --all-targets -- -D warnings
 Runtime integration tests create and remove isolated PostgreSQL databases.
 They mock GitHub and gateway side effects.
 The PostgreSQL role needs CREATEDB rights.
+The [live smoke checks](overflow.md#live-smoke-checks) need live Boat,
+GitHub, and database access, so they stay operator work.
 
 ### Key Code
 
@@ -224,6 +247,10 @@ The PostgreSQL role needs CREATEDB rights.
   App removal cause.
 - [src/takeout.rs](src/takeout.rs) accepts a take-out only when each
   reservation of its organization has an answer.
+- [src/reservations.rs](src/reservations.rs) gives one saved retirement
+  result for machine commands, Boat registrations, deliveries, and runners.
+- [src/boat_retirement.rs](src/boat_retirement.rs) shares durable Boat
+  registration cleanup between take-out and ordinary recovery.
 - [src/accounting.rs](src/accounting.rs) runs coalesced accounting passes
   outside runner operations.
 - [src/events.rs](src/events.rs) binds authenticated observations to runners.
@@ -231,11 +258,31 @@ The PostgreSQL role needs CREATEDB rights.
 - [src/warm.rs](src/warm.rs) allocates warm runners from recent jobs.
 - [src/slots.rs](src/slots.rs) selects exact logical slot sets.
 - [src/http.rs](src/http.rs) mounts shared HTTP routes and health checks.
+- [src/overflow_composition.rs](src/overflow_composition.rs) builds the
+  Boat service and its registration authority when Boat is configured.
+- [src/boat_runtime.rs](src/boat_runtime.rs) starts and recovers Boat
+  deliveries and their GitHub registrations.
+- [src/boat_snapshot.rs](src/boat_snapshot.rs) adds accepted Boat supply to
+  the scaler snapshot.
+- [src/boat_authority.rs](src/boat_authority.rs) defines
+  `BoatRunnerAuthority`. It retires Boat registrations GitHub-first for the
+  overflow service and for runtime recovery. It preserves the launched
+  sandboxes of an organization whose owner removed the App.
+- [src/boat_jobs.rs](src/boat_jobs.rs) binds trusted GitHub job facts to
+  Boat runners.
+- [src/boat_callback.rs](src/boat_callback.rs) mounts the sandbox exit
+  callback.
+- [scripts/overflow-smoke.py](scripts/overflow-smoke.py) runs the live Boat
+  checks.
 - [tests/runtime](tests/runtime) checks durable runtime behavior.
 
 ### Related Docs
 
-- [Architecture](../../docs/architecture.md) describes the own-machine flow.
+- [Architecture](../../docs/architecture.md) describes the own-machine and
+  Boat flows.
+- [Overflow](../../docs/protocol/overflow.md) defines Boat runners, cleanup,
+  and the spend limit.
+- [ciproxy-overflow](../ciproxy-overflow/README.md) executes Boat deliveries.
 - [Agent](../../docs/protocol/agent.md) defines machine and VM lifecycle.
 - [Routing](../../docs/protocol/job-routing.md) defines fit and warm runners.
 - [Cache](../../docs/protocol/cache.md) defines trusted cache and Docker use.

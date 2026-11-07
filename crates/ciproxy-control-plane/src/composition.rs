@@ -26,6 +26,7 @@ use ciproxy_github::runtime::{Runtime, SystemRuntime};
 use ciproxy_github::scale_sets::{ScaleSetFactory, sdk::AppScaleSetFactory};
 use ciproxy_github::timing::RepairTiming;
 use ciproxy_metering::service::StoredMetering;
+use ciproxy_overflow::api::Overflow;
 use ciproxy_protocol::agent::AgentMessage;
 use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
 use ciproxy_store_interface::store::Store;
@@ -42,6 +43,8 @@ use crate::runtime::{MachineRuntime, OwnMachines};
 
 /// The process's shared gateway, GitHub App, and runtime service boundaries.
 pub struct Hosted {
+    /// Shared Boat executor for runtime, callback, and dashboard routes.
+    pub overflow: Option<Arc<dyn Overflow>>,
     /// Gateway used by the dashboard and its WebSocket transport.
     pub gateway: Arc<dyn MachineGateway>,
     /// App used by dashboard setup and repository changes.
@@ -116,13 +119,16 @@ impl Hosted {
             api.clone(),
             signer.clone(),
         ));
+        let registrations = Arc::new(RegistrationService {
+            store: persistence.clone(),
+            scale_sets: scale_sets.clone(),
+        });
+        let overflow =
+            crate::overflow_composition::compose(config, store.clone(), registrations.clone())?;
         let mut machine_runtime = MachineRuntime::new(
             store.clone(),
             gateway.clone(),
-            Arc::new(RegistrationService {
-                store: persistence.clone(),
-                scale_sets: scale_sets.clone(),
-            }),
+            registrations,
             Arc::new(AssignmentService {
                 store: persistence.clone(),
             }),
@@ -130,6 +136,10 @@ impl Hosted {
             config.image.clone(),
             installations.clone(),
         );
+        machine_runtime.overflow = overflow.as_ref().map(|overflow| overflow.service.clone());
+        machine_runtime.boat_retirement = overflow
+            .as_ref()
+            .map(|overflow| overflow.retirement.clone());
         machine_runtime.image_signing = Some(Arc::new(CdnSigning::new(
             config.cdn_signing_key_name.clone(),
             config.secret("cdn-signing-key")?.expose_secret(),
@@ -173,6 +183,7 @@ impl Hosted {
             app: app.clone(),
         });
         Ok(Self {
+            overflow: overflow.map(|overflow| overflow.service),
             accounting,
             repositories,
             gateway,
@@ -198,12 +209,17 @@ impl Hosted {
 
     /// Mount the dashboard service under /api on the same public host.
     pub fn router(&self, api: Router) -> Router {
-        crate::http::router(
+        let router = crate::http::router(
             self.transport.router(),
             api,
             self.hooks.clone(),
             self.ready.clone(),
-        )
+        );
+        if let Some(overflow) = &self.overflow {
+            router.merge(crate::boat_callback::router(overflow.clone()))
+        } else {
+            router
+        }
     }
 }
 

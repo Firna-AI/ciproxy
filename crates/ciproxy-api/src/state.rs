@@ -5,6 +5,7 @@ use std::sync::Arc;
 use ciproxy_gateway::gateway::MachineGateway;
 use ciproxy_github::app::GitHubApp;
 use ciproxy_github::scale_sets::ScaleSetFactory;
+use ciproxy_overflow::api::Overflow;
 use ciproxy_store_interface::store::Store;
 
 use crate::access::DashboardAccess;
@@ -31,6 +32,8 @@ pub struct ApiConfig {
 /// Runtime collaborators constructed by the hosted control-plane owner.
 #[derive(Clone)]
 pub struct ApiState {
+    /// Boat executor shared with the scaler, absent before snapshot configuration.
+    pub overflow: Option<Arc<dyn Overflow>>,
     /// Public locations and immutable build metadata.
     pub config: ApiConfig,
     /// Durable tenant-scoped PostgreSQL query boundary.

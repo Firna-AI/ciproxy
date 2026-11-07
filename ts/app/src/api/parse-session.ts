@@ -40,6 +40,7 @@ export const workspaceRole = oneOf<WorkspaceRole>({
 });
 
 const problemCode = oneOf<ProblemCode>({
+  boat_key_rejected: true,
   sign_in_required: true,
   access_denied: true,
   not_found: true,

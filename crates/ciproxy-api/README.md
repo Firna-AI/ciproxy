@@ -2,8 +2,8 @@
 
 The hosted dashboard API for ciproxy. The control plane mounts its axum router
 under `/api`. Depend on this crate to compose sign-in, workspace access, Setup,
-Machines, non-Boat Settings, Jobs, Savings, and billing pages. This crate has no
-open licence.
+Machines, Settings, Jobs, Savings, and billing pages. Settings includes
+[Boat under Overflow](overflow.md). This crate has no open licence.
 
 ## Responsibilities
 
@@ -183,8 +183,9 @@ Run the existing maintenance method to reconcile billing eligibility and
 retry saved choices. It discovers durable pending work after restart.
 
 Pass the existing GitHub service to `DashboardAccess::finish_login` for this
-operation. Constructors and ApiState remain unchanged. Fresh proof resolves
-before the identity lease. No browser-only grant is retained.
+operation. Organization linking needs no other constructor or ApiState field.
+Fresh proof resolves before the identity lease. No browser-only grant is
+retained.
 
 ## Jobs, Savings, and billing composition
 
@@ -293,6 +294,11 @@ It never prints a cookie, token, install command, or response body.
   and intentional uninstall.
 - [src/handlers/links.rs](src/handlers/links.rs) owns requester choice and
   enable.
+- [src/handlers/overflow.rs](src/handlers/overflow.rs) serves the Boat Setup
+  and Settings routes.
+- [src/handlers/overflow_views.rs](src/handlers/overflow_views.rs) builds the
+  safe Boat view and converts limits and display amounts.
+- [src/wire/overflow.rs](src/wire/overflow.rs) defines the Boat wire types.
 - [src/maintenance.rs](src/maintenance.rs) owns restart and hourly work.
 - [src/wire](src/wire) owns the Rust dashboard boundary types.
 - [src/openapi.rs](src/openapi.rs) builds the generated reference.
@@ -306,5 +312,7 @@ It never prints a cookie, token, install command, or response body.
 - [Workspaces](../../docs/protocol/workspaces.md) defines organization joins.
 - [Agent](../../docs/protocol/agent.md) defines install and machine controls.
 - [Labels](../../docs/protocol/labels.md) defines label policy.
+- [Overflow](../../docs/protocol/overflow.md) defines the Boat account and
+  the spend limit.
 - [Cache](../../docs/protocol/cache.md) defines Clear cache.
 - [App removal](../../docs/protocol/app-removal.md) defines owner removal.

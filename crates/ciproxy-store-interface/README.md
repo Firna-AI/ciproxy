@@ -154,6 +154,11 @@ Finite measured intervals clamp to their latest provider observation.
 One known-sandbox value contains both identity and lifetime proof.
 The overflow service supplies prices, calculations, KMS, and provider calls.
 
+BoatRuntimeStore keeps credential-free Boat registration identities.
+The runtime saves each identity before the GitHub JIT request.
+A save requires current organization, label, scale-set, and Boat authority.
+Its durable snapshot read needs no provider access or overflow session.
+
 The gateway queries atomically register a machine and its hashed credential.
 GatewayStore reuses TokenStore authority lookup to derive the workspace from
 the install hash. Registration rechecks the token under its transaction
@@ -210,6 +215,7 @@ creates first-Admin work. Runnable authority also requires active GitHub App
 state.
 
 OwnRunnerStore exposes one coherent workspace routing snapshot.
+It also holds the Boat account, deliveries, and registration identities.
 Its dedicated session lease serializes own-machine decisions.
 Runner intents retain exact slot sets and the original whole-GB label
 request. The shared Runner record is the byte-precise actual allocation.
@@ -272,6 +278,7 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
   authorization results and their delivery mode.
 - [src/dashboard](src/dashboard) owns dashboard identity and access queries.
 - [src/own_runners.rs](src/own_runners.rs) owns exact execution records.
+- [src/boat_runtime.rs](src/boat_runtime.rs) owns Boat registration identities.
 
 - [src/store.rs](src/store.rs) defines Store and its connection factory.
 - [src/billing/store.rs](src/billing/store.rs) owns durable billing sessions.

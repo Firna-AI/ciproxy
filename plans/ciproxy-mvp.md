@@ -673,8 +673,12 @@ Replaced ways for item 77:
       growth. Run every new or changed scheduler test ten times.
       Branch: `conductor/ciproxy-mvp-77d-free-disk`.
       Evidence: `.context/ciproxy-mvp-77d-free-disk/fix-round-3/`.
-- [ ] Publish it with its SHA-256, and as a shared Boat snapshot. Rebuild
+- [x] Publish it with its SHA-256, and as a shared Boat snapshot. Rebuild
       before GitHub stops accepting the runner.
+      Done 7 November 2026: release `2026-11-06-7484d1b` is on the CDN with
+      its checksums, and the shared Boat snapshot has the same name. Its
+      pinned runner 2.338.2 was the latest release that day. The weekly
+      check of `image/check-runner.sh` stays an operations task.
       Orchestrator: run `image/publish.sh` and the create, prepare, and
       snapshot commands of `image/boat.py` from the
       [image guide](../image/README.md#boat-shared-snapshot).
@@ -1088,10 +1092,82 @@ Depends on: 12, 13, 14
 
 This milestone builds "A job on Boat" of `architecture.md`.
 
-- [ ] Wire Boat into the scaler loop with every rule of `overflow.md`.
-- [ ] Serve the Boat step of Setup and Settings under Overflow, with the key
+Implementation calls, 6 November 2026:
+
+- Keep `BOAT_SHARED_SNAPSHOT` optional until the shared image exists.
+  Without it, own-machine service starts and Boat dispatch stays off.
+- Match the approved mockup money format for derived Boat amounts: round
+  each aggregate once to the nearest cent, with half-cents away from zero.
+  Keep spend admission unchanged. Show unconfirmed costs separately from
+  confirmed spend, including bounds that settled after their lifetime.
+
+- [x] Wire Boat into the scaler loop with every rule of `overflow.md`.
+      Branch: `conductor/mvp-m15-overflow`.
+- [x] Serve the Boat step of Setup and Settings under Overflow, with the key
       check and the spend limit at each connection.
-- [ ] Smoke-test an overflow, an idle delete, and the spend limit.
+      Branch: `conductor/mvp-m15-overflow`.
+- [x] Supply scripts for the overflow, idle-delete, and spend-limit smokes.
+      Branch: `conductor/mvp-m15-overflow`.
+- [x] Reject startup authority for a retired label before dispatch.
+      Branch: `conductor/mvp-m15-overflow`.
+- [x] Keep fractional queue times when applying the overflow wait.
+      Branch: `conductor/mvp-m15-overflow`.
+- [x] Apply item 89 A after an owner removes the App. Keep launched Boat
+      sandboxes until runner exit or their saved lifetime. Keep running
+      jobs and the existing exit callback. State the exception and its
+      reason in both protocol docs. The user chose A on 7 November 2026:
+      App removal is rare, and lifetime plus the spend limit bound cost.
+      My calls, 7 November 2026: use the saved owner-removal timestamp and
+      the existing runner hold. Read removal again after successful GitHub
+      retirement. Keep registration-only recovery and exit cleanup
+      separate, because ended deliveries already permit safe cleanup.
+      A new install in the same workspace restores ordinary retirement,
+      because it ends the saved removal state. Keep guest retirement B in
+      `plans/follow-ups/boat-guest-retirement.md` for later review.
+      Branch: `conductor/mvp-m15-overflow`.
+- [x] Record the broader immutable scheduler-binding fix in
+      `plans/follow-ups/immutable-scheduler-bindings.md`.
+      Include the existing own-machine name-matching problem.
+      Branch: `conductor/mvp-m15-overflow`.
+- [x] Apply owner review finding 1 C. Give both runner destinations one
+      retirement result. Keep take-out pending until every saved own-machine
+      and Boat reservation has retirement or running-job proof.
+      My calls, 7 November 2026: reuse the lifecycle acceptance barrier,
+      saved provider deletion, Busy writes, and registration-intent removal.
+      Count the union of Boat intents, deliveries, and stored runners.
+      Require a current busy answer beside the saved result, because an
+      old Busy row cannot prove that a failed GitHub call is safe.
+      Branch: `conductor/mvp-m15-overflow`.
+- [x] Apply owner review finding 2 A. Test reinstall and Boat reconnect
+      with the real store. Prove early deletion of old idle supply while
+      running work stays. Prove failure with a permanent removal hold.
+      Branch: `conductor/mvp-m15-overflow`.
+- [x] Apply re-review finding 6 B. Defer inaccessible registration recovery
+      without GitHub calls after owner removal. Keep take-out unanswered
+      and resume ordinary recovery after reinstall.
+      My call, 7 November 2026: pass loaded organization facts and use an
+      explicit deferred result. Keep broader registration retention in
+      `plans/follow-ups/boat-registration-retention.md` for after merge.
+      Branch: `conductor/mvp-m15-overflow`.
+- [x] Apply owner review round 2 finding 1 A. Test successful recovery of
+      a saved post-create Boat delivery through a recreated runtime tick.
+      Keep identities, one create request, and one counted cost bound.
+      Prove failure when runtime recovery admits only Unsent deliveries.
+      Branch: `conductor/mvp-m15-overflow`.
+- [x] Orchestrator: Configure the optional Boat deployment secret as
+      `deploy/runtime.md#boat-shared-snapshot` describes.
+      Set it to the shared Milestone 10 snapshot.
+      Keep the selected image manifest at the same release.
+      My call, 7 November 2026: deliver the share code through Secret
+      Manager and a Kubernetes Secret, like the release token, and not
+      through a GitHub variable, because the deploy logs are public.
+      Pull request #37 built it. The main preview holds version 1, the
+      share code of snapshot `2026-11-06-7484d1b`, which is also the release
+      of its `JOB_IMAGE_MANIFEST_PATH`. Production gets its version at launch.
+- [ ] Orchestrator: Run the three live scenarios with the private credential
+      file, as `crates/ciproxy-control-plane/overflow.md` describes.
+
+Verification evidence: `.context/ciproxy-mvp-m15/`.
 
 ## Milestone 16: Metering and the savings report
 
