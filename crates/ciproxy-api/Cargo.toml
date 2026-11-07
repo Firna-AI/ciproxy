@@ -12,6 +12,11 @@ axum = "0.8.9"
 base64 = "0.23.1"
 chrono = { version = "0.4.45", features = ["serde"] }
 ciproxy-gateway = { workspace = true }
+ciproxy-agent = { workspace = true }
+ciproxy-scaler = { workspace = true }
+ciproxy-billing = { workspace = true }
+ciproxy-metering = { workspace = true }
+ciproxy-overflow = { workspace = true }
 ciproxy-github = { workspace = true }
 ciproxy-protocol = { workspace = true }
 ciproxy-store-interface = { workspace = true }
@@ -35,6 +40,8 @@ uuid = { version = "1.29.0", features = ["serde", "v4"] }
 [dev-dependencies]
 ciproxy-store-pg = { workspace = true }
 diesel = { version = "2.3.14", features = ["postgres"] }
+hex = "0.4.3"
+hmac = "0.13.0"
 http-body-util = "0.1.5"
 tower = { version = "0.5.3", features = ["util"] }
 url = "2.5.8"

@@ -90,6 +90,45 @@ until an operator supplies the test App and organization credentials.
 [install-url]:
   https://docs.github.com/en/apps/creating-github-apps/about-creating-github-apps/migrating-oauth-apps-to-github-apps#prompt-users-to-install-your-github-app
 
+## Jobs, Savings, and billing
+
+The primary orchestrator must first mount the page router and raw Stripe hook.
+The [API guide](../README.md#jobs-savings-and-billing-composition) gives the
+composition and the required trusted Stripe invoice-preview adapter.
+
+Use the same private credential path as the other API checks:
+
+```sh
+export CIPROXY_API_CREDENTIALS_FILE=/private/path/dashboard-api.json
+python3 crates/ciproxy-api/scripts/live_pages.py read
+python3 crates/ciproxy-api/scripts/live_pages.py review
+```
+
+For review, add `selection` with `tier` and `add_ons`. The add-ons hold
+`start_blocks` and `machines`. Add `private_result_file` outside the repository.
+The script writes payment and portal results there with mode 600. It prints
+only route names and pass/fail status.
+
+Use a Stripe test-mode workspace for the payment actions. `checkout` opens one
+payment. Open its URL from the private result file in a browser. Add the
+returned
+`checkout_session_id` to the private credential file. Run `return` until Stripe
+confirms the payment. Run it while confirmation waits too. Confirm that Plans
+offers no second checkout. Repeat with an unfinished checkout.
+
+`change` sends `selection`. `addons` sends a separate `add_ons` value. `portal`
+opens invoices and card management. `free` schedules the end of the paid plan.
+Each command changes only this explicit test workspace. Confirm the proration,
+payment-required state, original period dates, and portal cancel/undo behavior.
+
+To replay an actual signed delivery, add `stripe_webhook_body_file` and
+`stripe_webhook_signature_file` outside the repository. Run `webhook` before
+Stripe's signature tolerance ends. The script sends the exact bytes to the
+dashboard host's `/hooks/stripe`, without a browser cookie or CSRF token.
+Register that exact URL in Stripe. Keep the signing secret in the host's secret
+store. Record no secret, cookie, signature, provider body, or private URL in
+verification evidence.
+
 ## Exact App registration
 
 Use `PUBLIC_URL/api/auth/github/callback` for sign-in. Use

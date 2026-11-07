@@ -108,6 +108,13 @@ impl JobRow {
 }
 
 impl JobStore for PgStore {
+    fn dashboard_jobs(
+        &self,
+        workspace_id: Uuid,
+        finished_since: DateTime<Utc>,
+    ) -> Result<Vec<ciproxy_store_interface::job_views::DashboardJob>> {
+        crate::job_views::load(self, workspace_id, finished_since)
+    }
     fn insert_job(&self, workspace_id: Uuid, job: &Job) -> Result<bool> {
         let count = diesel::insert_into(jobs::table)
             .values(JobRow::from_record(workspace_id, job))

@@ -56,6 +56,10 @@ fn viewers_cannot_choose_pay_change_cancel_or_open_invoices() {
         Err(Error::Forbidden)
     ));
     assert!(matches!(
+        service.change_add_ons(access, AddOns::default()),
+        Err(Error::Forbidden)
+    ));
+    assert!(matches!(
         service.move_to_free(access),
         Err(Error::Forbidden)
     ));

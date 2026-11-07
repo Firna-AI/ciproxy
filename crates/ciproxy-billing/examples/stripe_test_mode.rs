@@ -112,13 +112,7 @@ fn run() -> Result<(), Box<dyn Error>> {
             )?;
             show_change(result);
         }
-        "addons" => show_change(billing.change(
-            access,
-            Selection {
-                tier: store.billing(workspace)?.state.tier,
-                add_ons: AddOns::default(),
-            },
-        )?),
+        "addons" => show_change(billing.change_add_ons(access, AddOns::default())?),
         "portal" => println!("Open the restricted portal: {}", billing.portal(access)?),
         "cancel" => {
             billing.move_to_free(access)?;

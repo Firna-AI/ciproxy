@@ -948,6 +948,243 @@
         }
       }
     },
+    "/hooks/stripe": {
+      "servers": [
+        {
+          "url": "/"
+        }
+      ],
+      "post": {
+        "operationId": "stripe_webhook",
+        "parameters": [
+          {
+            "name": "Stripe-Signature",
+            "in": "header",
+            "description": "Stripe signature over the exact raw bytes",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StripeReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in absent, expired, or revoked",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Workspace role, origin, or CSRF token refused",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent in this workspace",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting resource state",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body is too large",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported content type",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "GitHub label refusal or malformed body",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal operation failed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary upstream or agent failure",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/installation-links": {
       "get": {
         "operationId": "installation_links_list",
@@ -1669,6 +1906,2256 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SessionView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in absent, expired, or revoked",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Workspace role, origin, or CSRF token refused",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent in this workspace",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting resource state",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body is too large",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported content type",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "GitHub label refusal or malformed body",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal operation failed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary upstream or agent failure",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/workspaces/{workspace_id}/banner": {
+      "get": {
+        "operationId": "page_banner",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Stable workspace identity.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Organizations uses its inactive notice before a soft-limit notice.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Page-specific banner scope.",
+              "enum": [
+                "organizations"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageBannerView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in absent, expired, or revoked",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Workspace role, origin, or CSRF token refused",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent in this workspace",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting resource state",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body is too large",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported content type",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "GitHub label refusal or malformed body",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal operation failed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary upstream or agent failure",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/workspaces/{workspace_id}/billing": {
+      "get": {
+        "operationId": "plan_usage",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Stable workspace identity.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanUsagePage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in absent, expired, or revoked",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Workspace role, origin, or CSRF token refused",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent in this workspace",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting resource state",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body is too large",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported content type",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "GitHub label refusal or malformed body",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal operation failed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary upstream or agent failure",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/workspaces/{workspace_id}/billing/add-ons": {
+      "put": {
+        "operationId": "billing_addons",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Stable workspace identity.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "description": "Exact configured dashboard origin.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-ciproxy-csrf",
+            "in": "header",
+            "description": "The session's CSRF token returned by the session endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanAddOns"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentOutcome"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in absent, expired, or revoked",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Workspace role, origin, or CSRF token refused",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent in this workspace",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting resource state",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body is too large",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported content type",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "GitHub label refusal or malformed body",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal operation failed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary upstream or agent failure",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "csrf": [],
+            "session": []
+          }
+        ]
+      }
+    },
+    "/workspaces/{workspace_id}/billing/change": {
+      "post": {
+        "operationId": "billing_change",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Stable workspace identity.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "description": "Exact configured dashboard origin.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-ciproxy-csrf",
+            "in": "header",
+            "description": "The session's CSRF token returned by the session endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanSelection"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentOutcome"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in absent, expired, or revoked",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Workspace role, origin, or CSRF token refused",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent in this workspace",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting resource state",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body is too large",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported content type",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "GitHub label refusal or malformed body",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal operation failed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary upstream or agent failure",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "csrf": [],
+            "session": []
+          }
+        ]
+      }
+    },
+    "/workspaces/{workspace_id}/billing/move-to-free": {
+      "post": {
+        "operationId": "billing_move_to_free",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Stable workspace identity.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "description": "Exact configured dashboard origin.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-ciproxy-csrf",
+            "in": "header",
+            "description": "The session's CSRF token returned by the session endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Success"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in absent, expired, or revoked",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Workspace role, origin, or CSRF token refused",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent in this workspace",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting resource state",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body is too large",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported content type",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "GitHub label refusal or malformed body",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal operation failed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary upstream or agent failure",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "csrf": [],
+            "session": []
+          }
+        ]
+      }
+    },
+    "/workspaces/{workspace_id}/billing/portal": {
+      "post": {
+        "operationId": "billing_portal",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Stable workspace identity.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "description": "Exact configured dashboard origin.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-ciproxy-csrf",
+            "in": "header",
+            "description": "The session's CSRF token returned by the session endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalLink"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in absent, expired, or revoked",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Workspace role, origin, or CSRF token refused",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent in this workspace",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting resource state",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body is too large",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported content type",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "GitHub label refusal or malformed body",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal operation failed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary upstream or agent failure",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "csrf": [],
+            "session": []
+          }
+        ]
+      }
+    },
+    "/workspaces/{workspace_id}/checkout": {
+      "post": {
+        "operationId": "checkout_open",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Stable workspace identity.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "description": "Exact configured dashboard origin.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-ciproxy-csrf",
+            "in": "header",
+            "description": "The session's CSRF token returned by the session endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanSelection"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentOutcome"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in absent, expired, or revoked",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Workspace role, origin, or CSRF token refused",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent in this workspace",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting resource state",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body is too large",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported content type",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "GitHub label refusal or malformed body",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal operation failed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary upstream or agent failure",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "csrf": [],
+            "session": []
+          }
+        ]
+      }
+    },
+    "/workspaces/{workspace_id}/checkout/return": {
+      "post": {
+        "operationId": "checkout_return",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Stable workspace identity.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "description": "Exact configured dashboard origin.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-ciproxy-csrf",
+            "in": "header",
+            "description": "The session's CSRF token returned by the session endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutReturn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutReturnPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in absent, expired, or revoked",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Workspace role, origin, or CSRF token refused",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent in this workspace",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting resource state",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body is too large",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported content type",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "GitHub label refusal or malformed body",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal operation failed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary upstream or agent failure",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "csrf": [],
+            "session": []
+          }
+        ]
+      }
+    },
+    "/workspaces/{workspace_id}/checkout/review": {
+      "get": {
+        "operationId": "checkout_review",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Stable workspace identity.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tier",
+            "in": "query",
+            "description": "Desired plan, defaulting to the current offer.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/PlanTier"
+            }
+          },
+          {
+            "name": "start_blocks",
+            "in": "query",
+            "description": "Explicit start blocks, defaulting to the offer for the suggested plan.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "machines",
+            "in": "query",
+            "description": "Explicit machines, defaulting to the offer for the suggested plan.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutReviewPage"
                 }
               }
             }
@@ -2614,6 +5101,743 @@
         "security": [
           {
             "csrf": [],
+            "session": []
+          }
+        ]
+      }
+    },
+    "/workspaces/{workspace_id}/jobs/history": {
+      "get": {
+        "operationId": "jobs_history",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Stable workspace identity.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Case-insensitive job, workflow, repository, or organization search.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "place",
+            "in": "query",
+            "description": "Execution place, absent for all places.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Execution place filter.",
+              "enum": [
+                "machine",
+                "boat"
+              ]
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "First included UTC date, absent for the full plan window.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "description": "First excluded UTC date.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobsHistoryPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in absent, expired, or revoked",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Workspace role, origin, or CSRF token refused",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent in this workspace",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting resource state",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body is too large",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported content type",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "GitHub label refusal or malformed body",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal operation failed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary upstream or agent failure",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/workspaces/{workspace_id}/jobs/live": {
+      "get": {
+        "operationId": "jobs_live",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Stable workspace identity.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobsLivePage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in absent, expired, or revoked",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Workspace role, origin, or CSRF token refused",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent in this workspace",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting resource state",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body is too large",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported content type",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "GitHub label refusal or malformed body",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal operation failed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary upstream or agent failure",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/workspaces/{workspace_id}/jobs/{job_id}": {
+      "get": {
+        "operationId": "jobs_detail",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Opaque workspace candidate.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "job_id",
+            "in": "path",
+            "description": "Stable job or exact attempt identity.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobDetailPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in absent, expired, or revoked",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Workspace role, origin, or CSRF token refused",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent in this workspace",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting resource state",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body is too large",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported content type",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "GitHub label refusal or malformed body",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal operation failed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary upstream or agent failure",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
             "session": []
           }
         ]
@@ -7406,6 +10630,471 @@
         ]
       }
     },
+    "/workspaces/{workspace_id}/plans": {
+      "get": {
+        "operationId": "plans",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Stable workspace identity.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlansPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in absent, expired, or revoked",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Workspace role, origin, or CSRF token refused",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent in this workspace",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting resource state",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body is too large",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported content type",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "GitHub label refusal or malformed body",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal operation failed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary upstream or agent failure",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/workspaces/{workspace_id}/savings": {
+      "get": {
+        "operationId": "savings",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "description": "Stable workspace identity.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "description": "UTC range to show.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/SavingsRange"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavingsPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in absent, expired, or revoked",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Workspace role, origin, or CSRF token refused",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent in this workspace",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting resource state",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body is too large",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported content type",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "GitHub label refusal or malformed body",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal operation failed",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Temporary upstream or agent failure",
+            "headers": {
+              "x-ciproxy-build": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/workspaces/{workspace_id}/settings": {
       "get": {
         "operationId": "setup_settings",
@@ -8182,6 +11871,125 @@
           }
         }
       },
+      "BannerAction": {
+        "type": "string",
+        "description": "The payer action, replaced with a request for an authorized person.",
+        "enum": [
+          "update_card",
+          "choose_plan",
+          "ask_admin_or_billing"
+        ]
+      },
+      "BoatLabelFit": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "The trusted image sizing, account, or catalog observation is unavailable.",
+            "required": [
+              "state"
+            ],
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "unavailable"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "This label does not permit Boat.",
+            "required": [
+              "state"
+            ],
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "disabled"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "No catalog size fits and no permitted largest-size fallback exists.",
+            "required": [
+              "state"
+            ],
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "no_size_fits"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A catalog size covers all requested resources.",
+            "required": [
+              "size_name",
+              "size",
+              "refused",
+              "state"
+            ],
+            "properties": {
+              "refused": {
+                "type": "boolean",
+                "description": "A provider refusal currently excludes this size from starts."
+              },
+              "size": {
+                "$ref": "#/components/schemas/JobVmSize",
+                "description": "Actual byte-precise catalog resources."
+              },
+              "size_name": {
+                "type": "string",
+                "description": "Actual catalog size name."
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "fitting"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "The label permits the largest size with enough disk for the image.",
+            "required": [
+              "size_name",
+              "size",
+              "refused",
+              "state"
+            ],
+            "properties": {
+              "refused": {
+                "type": "boolean",
+                "description": "A provider refusal currently excludes this size from starts."
+              },
+              "size": {
+                "$ref": "#/components/schemas/JobVmSize",
+                "description": "Actual resources, which can be smaller than the requested label."
+              },
+              "size_name": {
+                "type": "string",
+                "description": "Actual catalog size name."
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "largest_fallback"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "Boat resources under the label policy, without claiming a start is available."
+      },
       "CacheView": {
         "type": "object",
         "description": "Machine-cache metadata. Clear cache acts only on this machine's entries.",
@@ -8219,6 +12027,90 @@
         "type": "string",
         "description": "Integer US cents encoded as a string to preserve JavaScript precision.",
         "pattern": "^-?[0-9]+$"
+      },
+      "CheckoutReturn": {
+        "type": "object",
+        "description": "A Stripe Checkout return supplied only to the authorized payer.",
+        "required": [
+          "session_id"
+        ],
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "description": "Exact session returned by Stripe."
+          }
+        }
+      },
+      "CheckoutReturnPage": {
+        "type": "object",
+        "description": "Checkout return page state, including the current shared banner.",
+        "required": [
+          "outcome"
+        ],
+        "properties": {
+          "banner": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PageBanner",
+                "description": "One banner from the latest confirmed workspace state."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/PaymentOutcome",
+            "description": "Stripe reconciliation result for this exact payer's session."
+          }
+        }
+      },
+      "CheckoutReviewPage": {
+        "type": "object",
+        "description": "Checkout review before any payment begins.",
+        "required": [
+          "choice",
+          "today_cents",
+          "billing_day",
+          "prorated",
+          "period_end"
+        ],
+        "properties": {
+          "banner": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PageBanner",
+                "description": "One page banner."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "billing_day": {
+            "type": "integer",
+            "format": "int32",
+            "description": "UTC day of each later monthly charge.",
+            "minimum": 0
+          },
+          "choice": {
+            "$ref": "#/components/schemas/PlanOffer",
+            "description": "Selected plan, capacities, and monthly total."
+          },
+          "period_end": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Current period end for a paid change."
+          },
+          "prorated": {
+            "type": "boolean",
+            "description": "Paid changes use Stripe's prorated saved-card charge."
+          },
+          "today_cents": {
+            "$ref": "#/components/schemas/Cents",
+            "description": "Initial Checkout payment in integer US cents."
+          }
+        }
       },
       "CommandResult": {
         "type": "object",
@@ -8280,6 +12172,29 @@
           }
         }
       },
+      "InactiveOrganization": {
+        "type": "object",
+        "description": "One inactive organization and every reason it cannot start jobs.",
+        "required": [
+          "id",
+          "login",
+          "activation"
+        ],
+        "properties": {
+          "activation": {
+            "$ref": "#/components/schemas/ActivationView",
+            "description": "Role-aware activation reasons and actions."
+          },
+          "id": {
+            "type": "string",
+            "description": "Stable organization identity."
+          },
+          "login": {
+            "type": "string",
+            "description": "Organization login."
+          }
+        }
+      },
       "InstallCommand": {
         "type": "object",
         "description": "Install command returned to an Admin only.",
@@ -8336,6 +12251,620 @@
           "suspended",
           "removed"
         ]
+      },
+      "JobCacheCounts": {
+        "type": "object",
+        "description": "Measurements made only by the machine cache handling a restore.",
+        "required": [
+          "restored_entries",
+          "restored_bytes"
+        ],
+        "properties": {
+          "restored_bytes": {
+            "type": "string",
+            "description": "Restored bytes as a decimal string, including zero."
+          },
+          "restored_entries": {
+            "type": "string",
+            "description": "Restored entry count as a decimal string, including zero."
+          }
+        }
+      },
+      "JobCacheSource": {
+        "type": "string",
+        "description": "Restored content origins, independent of whether counts were measured.",
+        "enum": [
+          "machine",
+          "github",
+          "machine_and_github"
+        ]
+      },
+      "JobDetailPage": {
+        "type": "object",
+        "description": "One authorized visible job with the shared banner.",
+        "required": [
+          "job"
+        ],
+        "properties": {
+          "banner": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PageBanner",
+                "description": "One page banner."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "job": {
+            "$ref": "#/components/schemas/JobView",
+            "description": "Trusted job metadata."
+          }
+        }
+      },
+      "JobLabel": {
+        "type": "object",
+        "description": "Label name and optional whole-GB resource request.\nQueued jobs use the current request. Executed jobs use the retained request.\nAll three dimensions are null when the execution request was not retained.",
+        "required": [
+          "name",
+          "vcpus",
+          "memory_gb",
+          "disk_gb"
+        ],
+        "properties": {
+          "disk_gb": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Requested free job disk in decimal GB, null when the request was not retained."
+          },
+          "memory_gb": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Requested memory in decimal GB, null when the execution request was not retained."
+          },
+          "name": {
+            "type": "string",
+            "description": "Current name of the retained label."
+          },
+          "vcpus": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Requested virtual CPUs, null when the execution request was not retained."
+          }
+        }
+      },
+      "JobLocation": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "A VM on one own machine.",
+            "required": [
+              "id",
+              "kind"
+            ],
+            "properties": {
+              "first_slot": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int32",
+                "description": "First assigned slot, when known."
+              },
+              "id": {
+                "type": "string",
+                "description": "Registered machine identity."
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "machine"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Retained machine hostname."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A sandbox on Boat.",
+            "required": [
+              "size",
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "boat"
+                ]
+              },
+              "size": {
+                "type": "string",
+                "description": "Actual billed Boat size name."
+              }
+            }
+          }
+        ],
+        "description": "Actual runner placement, absent until a runner is identified."
+      },
+      "JobOverflow": {
+        "type": "object",
+        "description": "Existing overflow service observations, absent when that source is unavailable.",
+        "required": [
+          "connected",
+          "key_rejected",
+          "billing_required",
+          "measured_complete",
+          "next_month",
+          "refused_sizes"
+        ],
+        "properties": {
+          "billing_required": {
+            "type": "boolean",
+            "description": "Boat requires account billing before it starts more sandboxes."
+          },
+          "connected": {
+            "type": "boolean",
+            "description": "An active Boat account is connected."
+          },
+          "counted_cents": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Cents",
+                "description": "Conservatively counted spend, absent when safe bounds are unavailable."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "key_rejected": {
+            "type": "boolean",
+            "description": "Boat rejected the active key."
+          },
+          "limit_cents": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Cents",
+                "description": "Saved monthly spend limit in integer US cents."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "limit_reached": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Current spend has reached the monthly limit, absent with incomplete bounds."
+          },
+          "measured_complete": {
+            "type": "boolean",
+            "description": "True when all provider start and runtime measurements are complete."
+          },
+          "next_month": {
+            "type": "string",
+            "format": "date-time",
+            "description": "First UTC instant at which the monthly budget resets."
+          },
+          "refused_sizes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Provider-refused size names until a catalog refresh."
+          },
+          "retry_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Provider-supplied next retry date."
+          }
+        }
+      },
+      "JobStatus": {
+        "type": "string",
+        "description": "The visible lifecycle, including terminal jobs with unknown finish times.",
+        "enum": [
+          "queued",
+          "running",
+          "completed"
+        ]
+      },
+      "JobView": {
+        "type": "object",
+        "description": "Credential-free trusted metadata for one visible job.",
+        "required": [
+          "id",
+          "organization_id",
+          "organization",
+          "name",
+          "workflow",
+          "repository",
+          "status",
+          "counts_as_start",
+          "label"
+        ],
+        "properties": {
+          "actual_size": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/JobVmSize",
+                "description": "Actual runner resources."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cache_counts": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/JobCacheCounts",
+                "description": "Machine-handled measurements, absent for direct GitHub and fallback."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cache_source": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/JobCacheSource",
+                "description": "Restored content origins, absent for zero or unknown restores."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "completed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Actual finish supplied by GitHub, absent for terminal unknown timing."
+          },
+          "counts_as_start": {
+            "type": "boolean",
+            "description": "True for a job taken by an identified ciproxy runner, even with unknown time."
+          },
+          "git_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Trusted full ref, when supplied by the source."
+          },
+          "github_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "GitHub page that holds logs, absent when no stable URL is known."
+          },
+          "head_branch": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "GitHub's branch or tag name, without an invented namespace."
+          },
+          "id": {
+            "type": "string",
+            "description": "Stable job or exact attempt identity."
+          },
+          "label": {
+            "$ref": "#/components/schemas/JobLabel",
+            "description": "Requested label and free job disk."
+          },
+          "location": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/JobLocation",
+                "description": "Actual execution place."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "type": "string",
+            "description": "Trusted job name."
+          },
+          "organization": {
+            "type": "string",
+            "description": "Owning organization login."
+          },
+          "organization_id": {
+            "type": "string",
+            "description": "Owning organization identity."
+          },
+          "queued_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Queue time supplied by GitHub."
+          },
+          "repository": {
+            "type": "string",
+            "description": "Trusted owner and repository."
+          },
+          "result": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Verbatim result from its trusted source, without vocabulary normalization.\nREST examples are success, failure, and cancelled.\nScale-set examples are succeeded, failed, and canceled."
+          },
+          "routing_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Saved routing explanation when supplied."
+          },
+          "runtime_seconds": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Runtime in exact decimal seconds, absent for unknown terminal finish."
+          },
+          "started_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Runner-taken time supplied by GitHub."
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus",
+            "description": "Lifecycle state."
+          },
+          "waited_seconds": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Wait in exact decimal seconds when both boundaries are known."
+          },
+          "workflow": {
+            "type": "string",
+            "description": "Trusted workflow name or file identity."
+          }
+        }
+      },
+      "JobVisibility": {
+        "type": "object",
+        "description": "Current suspension or retained owner removal, without changing current membership.",
+        "required": [
+          "organization",
+          "suspended",
+          "removed",
+          "github_url"
+        ],
+        "properties": {
+          "github_url": {
+            "type": "string",
+            "description": "Current installation settings, or the configured App install URL after removal."
+          },
+          "organization": {
+            "type": "string",
+            "description": "Organization login."
+          },
+          "removed": {
+            "type": "boolean",
+            "description": "True after the App was removed."
+          },
+          "suspended": {
+            "type": "boolean",
+            "description": "True while GitHub suspended the App."
+          }
+        }
+      },
+      "JobVmSize": {
+        "type": "object",
+        "description": "Actual byte-precise VM dimensions, distinct from requested free job disk.",
+        "required": [
+          "vcpus",
+          "memory_bytes",
+          "disk_bytes"
+        ],
+        "properties": {
+          "disk_bytes": {
+            "type": "string",
+            "description": "Actual root disk bytes as a decimal string."
+          },
+          "memory_bytes": {
+            "type": "string",
+            "description": "Actual memory bytes as a decimal string."
+          },
+          "vcpus": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Actual virtual CPUs.",
+            "minimum": 0
+          }
+        }
+      },
+      "JobsHistoryPage": {
+        "type": "object",
+        "description": "Finished jobs filtered within the plan window, without deleting older data.",
+        "required": [
+          "jobs",
+          "history_days"
+        ],
+        "properties": {
+          "banner": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PageBanner",
+                "description": "One page banner."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "history_days": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Current plan's finished-job window.",
+            "minimum": 0
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JobView"
+            },
+            "description": "Finished jobs that match the filters."
+          }
+        }
+      },
+      "JobsLivePage": {
+        "type": "object",
+        "description": "The live queue with explicit unknown waiting visibility.",
+        "required": [
+          "waiting_labels",
+          "running",
+          "waiting",
+          "on_boat",
+          "warm_runners",
+          "starting_runners",
+          "visibility",
+          "overflow_enabled",
+          "overflow_wait_seconds",
+          "can_manage"
+        ],
+        "properties": {
+          "banner": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PageBanner",
+                "description": "One page banner."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "can_manage": {
+            "type": "boolean",
+            "description": "Current caller may change labels or overflow settings."
+          },
+          "on_boat": {
+            "type": "string",
+            "description": "Number of running Boat jobs."
+          },
+          "overflow": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/JobOverflow",
+                "description": "Current Boat refusal and spend facts, absent when their source is unavailable."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "overflow_enabled": {
+            "type": "boolean",
+            "description": "Workspace overflow policy that explains queue wait."
+          },
+          "overflow_wait_seconds": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Saved overflow wait in seconds.",
+            "minimum": 0
+          },
+          "own_slots_total": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Available own slot capacity, absent when it is unknown."
+          },
+          "own_slots_used": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Own slots with jobs, absent when report data is unavailable."
+          },
+          "running": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JobView"
+            },
+            "description": "Running jobs across all workspace organizations."
+          },
+          "starting_runners": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StartingRunner"
+            },
+            "description": "Actual starting runners and their target places."
+          },
+          "visibility": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JobVisibility"
+            },
+            "description": "Current suspensions and retained owner removals, excluding intentional take-outs."
+          },
+          "waiting": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JobView"
+            },
+            "description": "Visible waiting jobs with no machine assigned."
+          },
+          "waiting_count": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Complete current-member waiting count, absent during current suspension."
+          },
+          "waiting_labels": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WaitingLabelFit"
+            },
+            "description": "Current resource fit for each exact label with visible waiting jobs."
+          },
+          "warm_runners": {
+            "type": "string",
+            "description": "Actual ready own-machine runners."
+          }
+        }
       },
       "LabelFit": {
         "type": "object",
@@ -8845,6 +13374,230 @@
           }
         }
       },
+      "PageBanner": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Paid coverage stays active while Stripe retries.",
+            "required": [
+              "action",
+              "kind"
+            ],
+            "properties": {
+              "action": {
+                "$ref": "#/components/schemas/BannerAction",
+                "description": "Role-aware recovery action."
+              },
+              "failed_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "description": "Last failed payment date."
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "payment_failed"
+                ]
+              },
+              "next_retry_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "description": "Next Stripe retry date when available."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Paid coverage ended but all own machines continue to run jobs.",
+            "required": [
+              "until",
+              "action",
+              "kind"
+            ],
+            "properties": {
+              "action": {
+                "$ref": "#/components/schemas/BannerAction",
+                "description": "Role-aware plan action."
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "subscription_ended"
+                ]
+              },
+              "until": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Exclusive end of this notice."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Other organizations keep running while these wait.",
+            "required": [
+              "organizations",
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "inactive_organizations"
+                ]
+              },
+              "organizations": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/InactiveOrganization"
+                },
+                "description": "Inactive organizations and all their hold reasons."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Jobs continue with no extra charge above advisory limits.",
+            "required": [
+              "offer",
+              "action",
+              "kind"
+            ],
+            "properties": {
+              "action": {
+                "$ref": "#/components/schemas/BannerAction",
+                "description": "Role-aware plan action."
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "soft_limit"
+                ]
+              },
+              "offer": {
+                "$ref": "#/components/schemas/PlanOffer",
+                "description": "Cheapest paid choice that covers forecast use."
+              }
+            }
+          }
+        ],
+        "description": "One banner after payment, inactive-organization, and soft-limit priority."
+      },
+      "PageBannerView": {
+        "type": "object",
+        "description": "Shared banner response for existing workspace pages.",
+        "properties": {
+          "banner": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PageBanner",
+                "description": "At most one banner, absent when no rule requires it."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "PaymentOutcome": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Continue an existing hosted payment.",
+            "required": [
+              "url",
+              "state"
+            ],
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "open"
+                ]
+              },
+              "url": {
+                "type": "string",
+                "description": "Stripe-hosted payment URL."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Keep polling without opening another payment.",
+            "required": [
+              "state"
+            ],
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "confirming"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Confirmed payment or paid change.",
+            "required": [
+              "state"
+            ],
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "confirmed"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Checkout ended without changing the plan.",
+            "required": [
+              "state"
+            ],
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "unfinished"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Paid change kept the old plan until payment succeeds.",
+            "required": [
+              "state"
+            ],
+            "properties": {
+              "payment_url": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Hosted invoice or bank-confirmation page when Stripe provides one."
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "payment_required"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "Recoverable Checkout and paid-change outcomes."
+      },
       "PendingInstallation": {
         "type": "object",
         "description": "An organization installation request that an owner has not approved.",
@@ -8871,6 +13624,322 @@
           "organization": {
             "type": "string",
             "description": "Organization name chosen on GitHub."
+          }
+        }
+      },
+      "PlanAddOns": {
+        "type": "object",
+        "description": "Customer-selected extra capacity.",
+        "required": [
+          "start_blocks",
+          "machines"
+        ],
+        "properties": {
+          "machines": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Additional own machines.",
+            "minimum": 0
+          },
+          "start_blocks": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Blocks of ten thousand starts.",
+            "minimum": 0
+          }
+        }
+      },
+      "PlanCard": {
+        "type": "object",
+        "description": "One plan card, including launch availability of its features.",
+        "required": [
+          "plan",
+          "current",
+          "covers_use",
+          "can_choose",
+          "history_days",
+          "features",
+          "initial_add_ons"
+        ],
+        "properties": {
+          "can_choose": {
+            "type": "boolean",
+            "description": "Selection can proceed for this payer now."
+          },
+          "covers_use": {
+            "type": "boolean",
+            "description": "Offer plan when it differs from the current plan."
+          },
+          "current": {
+            "type": "boolean",
+            "description": "Current confirmed plan."
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanFeature"
+            },
+            "description": "Product features and availability."
+          },
+          "history_days": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Finished-job window in days.",
+            "minimum": 0
+          },
+          "initial_add_ons": {
+            "$ref": "#/components/schemas/PlanAddOns",
+            "description": "Initial checkout quantities for this card."
+          },
+          "organizations": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Linked-organization capacity, absent for unlimited.",
+            "minimum": 0
+          },
+          "plan": {
+            "$ref": "#/components/schemas/PlanOffer",
+            "description": "Published base plan capacity and price."
+          }
+        }
+      },
+      "PlanFeature": {
+        "type": "object",
+        "description": "One feature with an explicit launch state.",
+        "required": [
+          "name",
+          "coming_later"
+        ],
+        "properties": {
+          "coming_later": {
+            "type": "boolean",
+            "description": "True only for a feature not yet available."
+          },
+          "name": {
+            "type": "string",
+            "description": "Customer-facing feature name."
+          }
+        }
+      },
+      "PlanOffer": {
+        "type": "object",
+        "description": "Published capacity and the monthly price of a choice.",
+        "required": [
+          "selection",
+          "included_starts",
+          "included_machines",
+          "monthly_cents"
+        ],
+        "properties": {
+          "included_machines": {
+            "type": "string",
+            "description": "Included registered machines as a decimal string."
+          },
+          "included_starts": {
+            "type": "string",
+            "description": "Included starts as a decimal string."
+          },
+          "monthly_cents": {
+            "$ref": "#/components/schemas/Cents",
+            "description": "Monthly integer US cents."
+          },
+          "selection": {
+            "$ref": "#/components/schemas/PlanSelection",
+            "description": "Plan and add-on quantities."
+          }
+        }
+      },
+      "PlanSelection": {
+        "type": "object",
+        "description": "A plan choice, including its manually selected add-ons.",
+        "required": [
+          "tier",
+          "add_ons"
+        ],
+        "properties": {
+          "add_ons": {
+            "$ref": "#/components/schemas/PlanAddOns",
+            "description": "Selected add-ons."
+          },
+          "tier": {
+            "$ref": "#/components/schemas/PlanTier",
+            "description": "Selected plan."
+          }
+        }
+      },
+      "PlanStatus": {
+        "type": "object",
+        "description": "Confirmed billing status without Stripe customer or subscription identifiers.",
+        "required": [
+          "selection",
+          "subscription",
+          "period_start",
+          "period_end",
+          "payment_pending",
+          "operation_in_progress",
+          "can_pay"
+        ],
+        "properties": {
+          "can_pay": {
+            "type": "boolean",
+            "description": "Current caller may pay and open invoices."
+          },
+          "cancel_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Scheduled end of paid coverage."
+          },
+          "operation_in_progress": {
+            "type": "boolean",
+            "description": "A saved billing command is in progress, including cancellation."
+          },
+          "payment_pending": {
+            "type": "boolean",
+            "description": "A durable payment is open or awaiting confirmation."
+          },
+          "period_end": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Exclusive UTC period end."
+          },
+          "period_start": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Inclusive UTC period start."
+          },
+          "selection": {
+            "$ref": "#/components/schemas/PlanSelection",
+            "description": "Confirmed plan and add-ons."
+          },
+          "subscription": {
+            "$ref": "#/components/schemas/SubscriptionStatus",
+            "description": "Current subscription lifecycle."
+          }
+        }
+      },
+      "PlanTier": {
+        "type": "string",
+        "description": "The manually selected product plan.",
+        "enum": [
+          "free",
+          "team",
+          "business"
+        ]
+      },
+      "PlanUsagePage": {
+        "type": "object",
+        "description": "Plan and usage page for all workspace roles.",
+        "required": [
+          "status",
+          "current",
+          "starts",
+          "machines",
+          "organizations",
+          "expected_starts",
+          "starts_over",
+          "machines_over",
+          "organizations_over",
+          "offer"
+        ],
+        "properties": {
+          "banner": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PageBanner",
+                "description": "One page banner after priority rules."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "crossing_day": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "Projected UTC date strictly above starts capacity."
+          },
+          "current": {
+            "$ref": "#/components/schemas/PlanOffer",
+            "description": "Current tier's included capacity and monthly total."
+          },
+          "expected_starts": {
+            "type": "string",
+            "description": "Forecast starts as an exact decimal string."
+          },
+          "machines": {
+            "type": "string",
+            "description": "Current registrations, including offline and draining machines."
+          },
+          "machines_over": {
+            "type": "string",
+            "description": "Machines above capacity as a decimal string."
+          },
+          "offer": {
+            "$ref": "#/components/schemas/PlanOffer",
+            "description": "Cheapest manually selectable paid choice."
+          },
+          "organizations": {
+            "type": "string",
+            "description": "Current linked organizations, including inactive ones."
+          },
+          "organizations_over": {
+            "type": "string",
+            "description": "Organizations above Free capacity as a decimal string."
+          },
+          "starts": {
+            "type": "string",
+            "description": "Runner-taken starts in this period."
+          },
+          "starts_over": {
+            "type": "string",
+            "description": "Starts above capacity as a decimal string."
+          },
+          "status": {
+            "$ref": "#/components/schemas/PlanStatus",
+            "description": "Confirmed subscription and payer capabilities."
+          }
+        }
+      },
+      "PlansPage": {
+        "type": "object",
+        "description": "Plans page with confirmed status and an advisory offer.",
+        "required": [
+          "usage",
+          "plans"
+        ],
+        "properties": {
+          "plans": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanCard"
+            },
+            "description": "Published Free, Team, and Business cards."
+          },
+          "usage": {
+            "$ref": "#/components/schemas/PlanUsagePage",
+            "description": "Current use, offer, and the one page banner."
+          }
+        }
+      },
+      "PortalLink": {
+        "type": "object",
+        "description": "One Stripe portal redirect for invoices, card, or cancellation.",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Stripe-hosted customer portal URL."
           }
         }
       },
@@ -9012,6 +14081,344 @@
           "role": {
             "$ref": "#/components/schemas/WorkspaceRole",
             "description": "The granted nested workspace role."
+          }
+        }
+      },
+      "SavingsAlternative": {
+        "type": "string",
+        "description": "One comparison provider.",
+        "enum": [
+          "blacksmith",
+          "github"
+        ]
+      },
+      "SavingsComparison": {
+        "type": "object",
+        "description": "Alternative cost and signed savings using its dated USD price list.",
+        "required": [
+          "alternative",
+          "price_list_date",
+          "missing_prices"
+        ],
+        "properties": {
+          "alternative": {
+            "$ref": "#/components/schemas/SavingsAlternative",
+            "description": "Alternative provider."
+          },
+          "cost_cents": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Cents",
+                "description": "Total comparison cost, absent when any used size has no unique price."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "missing_prices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SavingsPriceGap"
+            },
+            "description": "Actual sizes with no unique comparison price."
+          },
+          "price_list_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date of the exact price list used."
+          },
+          "savings_cents": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Cents",
+                "description": "Alternative cost minus ciproxy cost, negative when ciproxy costs more."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "SavingsCostGap": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Trusted workspace creation time is unavailable.",
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "workspace_start"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Trusted machine registration time is unavailable.",
+            "required": [
+              "machine_id",
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "machine_registration"
+                ]
+              },
+              "machine_id": {
+                "type": "string",
+                "description": "Own machine that needs trusted registration history."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A registered UTC date has no monthly machine cost.",
+            "required": [
+              "machine_id",
+              "day",
+              "kind"
+            ],
+            "properties": {
+              "day": {
+                "type": "string",
+                "format": "date",
+                "description": "UTC date without a known cost."
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "machine_price"
+                ]
+              },
+              "machine_id": {
+                "type": "string",
+                "description": "Own machine needing a monthly cost."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A UTC date has no confirmed monthly plan price.",
+            "required": [
+              "day",
+              "kind"
+            ],
+            "properties": {
+              "day": {
+                "type": "string",
+                "format": "date",
+                "description": "UTC date without a known plan price."
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "plan_price"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "A missing monthly-price or registration fact."
+      },
+      "SavingsDay": {
+        "type": "object",
+        "description": "One UTC date for the starts chart and runtime details.",
+        "required": [
+          "day",
+          "machines",
+          "boat"
+        ],
+        "properties": {
+          "boat": {
+            "$ref": "#/components/schemas/SavingsRuntime",
+            "description": "Boat starts and elapsed runtime."
+          },
+          "day": {
+            "type": "string",
+            "format": "date",
+            "description": "Included UTC date."
+          },
+          "machines": {
+            "$ref": "#/components/schemas/SavingsRuntime",
+            "description": "Own-machine starts and elapsed runtime."
+          }
+        }
+      },
+      "SavingsPage": {
+        "type": "object",
+        "description": "Workspace-wide report independent of the plan's visible job history.",
+        "required": [
+          "range",
+          "from",
+          "until",
+          "machines",
+          "boat",
+          "days",
+          "known_machine_cents",
+          "boat_cents",
+          "known_plan_cents",
+          "missing_costs",
+          "comparisons",
+          "can_add_machine_costs",
+          "refresh_complete"
+        ],
+        "properties": {
+          "banner": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PageBanner",
+                "description": "One shared page banner."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "boat": {
+            "$ref": "#/components/schemas/SavingsRuntime",
+            "description": "Boat starts and minutes."
+          },
+          "boat_cents": {
+            "$ref": "#/components/schemas/Cents",
+            "description": "Measured Boat cost in integer US cents, including idle sandboxes."
+          },
+          "can_add_machine_costs": {
+            "type": "boolean",
+            "description": "Current caller may enter a machine's monthly cost."
+          },
+          "comparisons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SavingsComparison"
+            },
+            "description": "Both dated alternatives and their signed savings."
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SavingsDay"
+            },
+            "description": "Every UTC date in the range, including dates with zero starts."
+          },
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "First included UTC date."
+          },
+          "known_machine_cents": {
+            "$ref": "#/components/schemas/Cents",
+            "description": "Known own-machine registered-day costs in integer US cents."
+          },
+          "known_plan_cents": {
+            "$ref": "#/components/schemas/Cents",
+            "description": "Known plan and add-on date costs in integer US cents."
+          },
+          "lead": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SavingsAlternative",
+                "description": "Cheaper alternative when both comparison costs are known."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "machines": {
+            "$ref": "#/components/schemas/SavingsRuntime",
+            "description": "Own-machine starts and minutes."
+          },
+          "missing_costs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SavingsCostGap"
+            },
+            "description": "Missing facts that prevent a complete ciproxy total."
+          },
+          "range": {
+            "$ref": "#/components/schemas/SavingsRange",
+            "description": "Selected range."
+          },
+          "refresh_complete": {
+            "type": "boolean",
+            "description": "False when another refresh raced and the client should read again."
+          },
+          "total_cents": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Cents",
+                "description": "Complete ciproxy cost, absent when monthly histories are incomplete."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "until": {
+            "type": "string",
+            "format": "date",
+            "description": "First excluded UTC date."
+          }
+        }
+      },
+      "SavingsPriceGap": {
+        "type": "object",
+        "description": "An actual job size missing a unique price from the supplied catalog.",
+        "required": [
+          "size",
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/SavingsPriceGapReason",
+            "description": "Missing or ambiguous match."
+          },
+          "size": {
+            "$ref": "#/components/schemas/JobVmSize",
+            "description": "Actual runner resources."
+          }
+        }
+      },
+      "SavingsPriceGapReason": {
+        "type": "string",
+        "description": "Why an alternative has no complete cost for this actual VM size.",
+        "enum": [
+          "unavailable",
+          "ambiguous"
+        ]
+      },
+      "SavingsRange": {
+        "type": "string",
+        "description": "One of the three UTC report ranges.",
+        "enum": [
+          "last30_days",
+          "this_month",
+          "last_month"
+        ]
+      },
+      "SavingsRuntime": {
+        "type": "object",
+        "description": "Starts and elapsed fractional runtime at one execution place.",
+        "required": [
+          "starts",
+          "minutes"
+        ],
+        "properties": {
+          "minutes": {
+            "type": "string",
+            "description": "Exact elapsed minutes as a decimal string, without invoice rounding."
+          },
+          "starts": {
+            "type": "string",
+            "description": "Runner-taken starts as a decimal string."
           }
         }
       },
@@ -9433,6 +14840,55 @@
           }
         }
       },
+      "StartingRunner": {
+        "type": "object",
+        "description": "One runner that the runtime is preparing, without registration credentials.",
+        "required": [
+          "id",
+          "label_id",
+          "boat"
+        ],
+        "properties": {
+          "boat": {
+            "type": "boolean",
+            "description": "True for a Boat sandbox."
+          },
+          "id": {
+            "type": "string",
+            "description": "Stable runner identity."
+          },
+          "label_id": {
+            "type": "string",
+            "description": "Label it will serve."
+          },
+          "machine_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Registered own-machine identity, absent for Boat."
+          }
+        }
+      },
+      "StripeReceipt": {
+        "type": "string",
+        "description": "The durable result of an authenticated Stripe delivery.",
+        "enum": [
+          "applied",
+          "duplicate",
+          "ignored"
+        ]
+      },
+      "SubscriptionStatus": {
+        "type": "string",
+        "description": "Public subscription lifecycle.",
+        "enum": [
+          "none",
+          "active",
+          "payment_failed",
+          "ended"
+        ]
+      },
       "Success": {
         "type": "object",
         "description": "Empty success payload for idempotent mutations.",
@@ -9443,6 +14899,62 @@
           "ok": {
             "type": "boolean",
             "description": "The mutation completed successfully."
+          }
+        }
+      },
+      "WaitingLabelFit": {
+        "type": "object",
+        "description": "One waiting label's current resource policy for every workspace role.",
+        "required": [
+          "label_id",
+          "label_name",
+          "waiting_jobs",
+          "boat",
+          "can_edit",
+          "ask_admin"
+        ],
+        "properties": {
+          "ask_admin": {
+            "type": "boolean",
+            "description": "This notice asks an Admin because the current caller cannot edit the label."
+          },
+          "boat": {
+            "$ref": "#/components/schemas/BoatLabelFit",
+            "description": "Boat resource fit, distinct from current provider availability."
+          },
+          "can_edit": {
+            "type": "boolean",
+            "description": "The current caller may edit this active label."
+          },
+          "current": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/LabelView",
+                "description": "Current label policy and physical own-machine fit, absent after retirement."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "label_id": {
+            "type": "string",
+            "description": "Exact retained label identity, independent of name reuse."
+          },
+          "label_name": {
+            "type": "string",
+            "description": "Retained label name."
+          },
+          "nothing_fits": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "No permitted resource choice exists, absent while required facts are unknown."
+          },
+          "waiting_jobs": {
+            "type": "string",
+            "description": "Visible waiting jobs with this exact label as a decimal string."
           }
         }
       },

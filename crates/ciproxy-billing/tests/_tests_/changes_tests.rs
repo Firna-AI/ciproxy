@@ -4,7 +4,7 @@ use ciproxy_billing::error::Error;
 use ciproxy_billing::service::view::ChangeOutcome;
 use ciproxy_billing::stripe::wire::invoice::{BillingReason, InvoiceStatus};
 use ciproxy_billing::stripe::wire::types::PendingUpdate;
-use ciproxy_store_interface::billing::state::{SubscriptionState, Tier};
+use ciproxy_store_interface::billing::state::{AddOns, SubscriptionState, Tier};
 
 use super::database::Database;
 use super::fake::{Fake, field};
@@ -100,7 +100,13 @@ fn saved_addon_removal_prorates_at_once_and_lost_reply_does_not_replay_a_changed
         remote.lose_next_post = true;
     }
     assert!(matches!(
-        service.change(access(), wanted(Tier::Team, 0, 1)),
+        service.change_add_ons(
+            access(),
+            AddOns {
+                start_blocks: 0,
+                machines: 1
+            }
+        ),
         Err(Error::StripeHttp { status: 503 })
     ));
     assert_eq!(state(&database).add_ons.start_blocks, 2);
@@ -111,7 +117,13 @@ fn saved_addon_removal_prorates_at_once_and_lost_reply_does_not_replay_a_changed
         SubscriptionOutcome::respond(second_change),
     );
     assert!(matches!(
-        service.change(access(), wanted(Tier::Team, 0, 0)),
+        service.change_add_ons(
+            access(),
+            AddOns {
+                start_blocks: 0,
+                machines: 0
+            }
+        ),
         Ok(ChangeOutcome::Applied(_))
     ));
     assert_eq!(state(&database).add_ons.start_blocks, 0);
@@ -123,7 +135,13 @@ fn saved_addon_removal_prorates_at_once_and_lost_reply_does_not_replay_a_changed
     assert_eq!(state(&database).add_ons.machines, 0);
     assert_eq!(database.store.billing(workspace()).unwrap().command, None);
     assert!(matches!(
-        service.change(access(), wanted(Tier::Team, 0, 0)),
+        service.change_add_ons(
+            access(),
+            AddOns {
+                start_blocks: 0,
+                machines: 0
+            }
+        ),
         Err(Error::CurrentTier)
     ));
     for status in [409, 429] {
@@ -131,7 +149,13 @@ fn saved_addon_removal_prorates_at_once_and_lost_reply_does_not_replay_a_changed
             rejected_large_selection(),
             SubscriptionOutcome::Reject(status),
         );
-        let result = service.change(access(), wanted(Tier::Team, u32::MAX, 1));
+        let result = service.change_add_ons(
+            access(),
+            AddOns {
+                start_blocks: u32::MAX,
+                machines: 1,
+            },
+        );
         assert!(matches!(result, Err(Error::StripeHttp { status: actual }) if actual == status));
         assert!(
             database
@@ -144,7 +168,13 @@ fn saved_addon_removal_prorates_at_once_and_lost_reply_does_not_replay_a_changed
     }
     fake.expect_subscription(rejected_large_selection(), SubscriptionOutcome::Reject(400));
     assert!(matches!(
-        service.change(access(), wanted(Tier::Team, u32::MAX, 1)),
+        service.change_add_ons(
+            access(),
+            AddOns {
+                start_blocks: u32::MAX,
+                machines: 1
+            }
+        ),
         Err(Error::StripeRejected { status: 400 })
     ));
     assert_eq!(database.store.billing(workspace()).unwrap().command, None);
@@ -156,7 +186,13 @@ fn saved_addon_removal_prorates_at_once_and_lost_reply_does_not_replay_a_changed
         SubscriptionOutcome::respond(corrected),
     );
     assert!(matches!(
-        service.change(access(), wanted(Tier::Team, 1, 0)),
+        service.change_add_ons(
+            access(),
+            AddOns {
+                start_blocks: 1,
+                machines: 0
+            }
+        ),
         Ok(ChangeOutcome::Applied(_))
     ));
 }
@@ -208,7 +244,15 @@ fn cancel_lost_reply_clears_claim_and_portal_undo_allows_later_paid_change() {
         remote.expect_subscription(remove_all_addons(), SubscriptionOutcome::respond(no_addons));
     }
     assert!(matches!(
-        service.change(access(), wanted(Tier::Team, 0, 0)).unwrap(),
+        service
+            .change_add_ons(
+                access(),
+                AddOns {
+                    start_blocks: 0,
+                    machines: 0
+                }
+            )
+            .unwrap(),
         ChangeOutcome::Applied(_)
     ));
     assert_eq!(state(&database).cancel_at, None);

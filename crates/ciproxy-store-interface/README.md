@@ -28,7 +28,10 @@ Account metadata excludes encrypted keys.
 Token metadata excludes hashes.
 KMS encryption and token hashing belong to callers.
 
-The store preserves runner placements and actual VM sizes for job history.
+The store preserves runner placements, retained requests, and actual VM sizes
+for job history. Dashboard jobs use current requests only while queued.
+Executed jobs keep an optional whole-GB request separate from actual allocation.
+Missing retained requests stay unknown.
 It accepts optional ref metadata without choosing its provenance.
 The later job-facts service must supply trusted GitHub metadata.
 Job cache metadata separates content origin from machine-handled measurements.
@@ -273,6 +276,8 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 - [src/secrets.rs](src/secrets.rs) owns opaque hashes and ciphertext.
 - [src/scale_sets.rs](src/scale_sets.rs) defines session lock ownership.
 - [src/jobs.rs](src/jobs.rs) defines metadata-only job records.
+- [src/job_views.rs](src/job_views.rs) defines trusted dashboard projections
+  across Actions jobs and exact scale-set attempts.
 - [src/github.rs](src/github.rs) defines repository snapshots and durable
   UUID demand and pending role delivery.
 - [src/github_lifecycle.rs](src/github_lifecycle.rs) defines atomic App

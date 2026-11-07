@@ -1,12 +1,16 @@
 //! Job metadata persistence without job contents or secrets.
 
 use chrono::{DateTime, Utc};
+use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::error::Result;
 
 /// The visible lifecycle state of a GitHub job.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, strum::EnumString, strum::IntoStaticStr)]
+#[derive(
+    Clone, Copy, Debug, Deserialize, Eq, PartialEq, strum::EnumString, strum::IntoStaticStr,
+)]
+#[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum JobState {
     /// GitHub has queued the job.
@@ -42,7 +46,10 @@ pub enum JobResult {
 }
 
 /// The content origins of restored cache entries.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, strum::EnumString, strum::IntoStaticStr)]
+#[derive(
+    Clone, Copy, Debug, Deserialize, Eq, PartialEq, strum::EnumString, strum::IntoStaticStr,
+)]
+#[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum CacheSource {
     /// All restored contents came from this machine's cache.
@@ -54,7 +61,7 @@ pub enum CacheSource {
 }
 
 /// Entry and byte totals measured when the machine cache handled restores.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
 pub struct MachineHandledCacheCounts {
     /// Total entries restored from all content origins.
     pub restored_entries: i64,
@@ -111,6 +118,14 @@ pub struct Job {
 
 /// Queries for durable GitHub job messages and retained history.
 pub trait JobStore: Send + Sync {
+    /// Read live jobs and finished jobs within the caller's tier window.
+    ///
+    /// Include exact scale-set attempts and omit their mapped Actions duplicate.
+    fn dashboard_jobs(
+        &self,
+        workspace_id: Uuid,
+        finished_since: DateTime<Utc>,
+    ) -> Result<Vec<crate::job_views::DashboardJob>>;
     /// Persist a new message once per organization and GitHub job identifier.
     ///
     /// Return false for a duplicate without replacing its current metadata.

@@ -1,7 +1,7 @@
 //! Paid item changes and durable period-end cancellation.
 
 use ciproxy_store_interface::billing::commands::{BillingCommand, CommandKind};
-use ciproxy_store_interface::billing::state::{Selection, Tier};
+use ciproxy_store_interface::billing::state::{AddOns, Selection, Tier};
 use ciproxy_store_interface::billing::store::BillingSession;
 use uuid::Uuid;
 
@@ -14,16 +14,55 @@ use super::runtime::BillingService;
 use super::transition::{selection, terminal};
 use super::view::ChangeOutcome;
 
+#[derive(Clone, Copy)]
+enum ChangeIntent {
+    Tier(Selection),
+    AddOns(AddOns),
+}
+
+impl ChangeIntent {
+    fn resolve(self, confirmed_tier: Tier) -> Selection {
+        match self {
+            Self::Tier(selection) => selection,
+            Self::AddOns(add_ons) => Selection {
+                tier: confirmed_tier,
+                add_ons,
+            },
+        }
+    }
+}
+
 impl BillingService {
     pub(super) fn change(&self, access: BillingAccess, wanted: Selection) -> Result<ChangeOutcome> {
+        self.change_items(access, ChangeIntent::Tier(wanted))
+    }
+
+    pub(super) fn change_add_ons(
+        &self,
+        access: BillingAccess,
+        add_ons: AddOns,
+    ) -> Result<ChangeOutcome> {
+        self.change_items(access, ChangeIntent::AddOns(add_ons))
+    }
+
+    fn change_items(&self, access: BillingAccess, intent: ChangeIntent) -> Result<ChangeOutcome> {
         let workspace = access.require_payer()?;
-        if wanted.tier == Tier::Free {
+        if matches!(
+            intent,
+            ChangeIntent::Tier(Selection {
+                tier: Tier::Free,
+                ..
+            })
+        ) {
             return Err(Error::PaidTierRequired);
         }
         let mut session = self.lock(workspace)?;
         let mut record = session.record().internal()?;
         if record.state.tier == Tier::Free {
-            return Err(Error::SubscriptionRequired);
+            return Err(match intent {
+                ChangeIntent::Tier(_) => Error::SubscriptionRequired,
+                ChangeIntent::AddOns(_) => Error::PaidTierRequired,
+            });
         }
         let current = self.current_subscription(&mut *session, &record.state)?;
         let (current, baseline) =
@@ -47,6 +86,7 @@ impl BillingService {
         if terminal(&current) {
             return Err(Error::SubscriptionRequired);
         }
+        let wanted = intent.resolve(baseline.tier);
         let original_retry = record
             .command
             .as_ref()
