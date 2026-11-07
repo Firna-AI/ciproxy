@@ -20,12 +20,12 @@ use crate::runtime::MachineRuntime;
 
 impl MachineRuntime {
     pub(crate) async fn reconcile_boat(&self, input: &RoutingSnapshot, snapshot: &mut Snapshot) {
+        if let Err(error) = self.cleanup_boat(input.workspace_id).await {
+            tracing::warn!(%error, "Boat cleanup will retry");
+        }
         let Some(overflow) = &self.overflow else {
             return;
         };
-        if let Err(error) = overflow.cleanup(input.workspace_id).await {
-            tracing::warn!(%error, "Boat cleanup will retry");
-        }
         let workspace = input.workspace_id;
         let current = match self.load(workspace).await {
             Ok(current) => current,
@@ -58,7 +58,7 @@ impl MachineRuntime {
                 .find(|record| record.delivery_id == intent.delivery_id);
             if record.is_none_or(|record| record.ends_at.is_some()) {
                 if let Err(error) = self
-                    .retire_boat_registration(workspace, intent, record, &current.organizations)
+                    .retire_boat_registration(workspace, intent, record)
                     .await
                 {
                     tracing::warn!(%error,"Boat registration cleanup will retry");
@@ -110,10 +110,19 @@ impl MachineRuntime {
     }
 
     pub(crate) async fn cleanup_boat(&self, workspace: Uuid) -> Result<()> {
-        if let Some(overflow) = &self.overflow {
-            overflow.cleanup(workspace).await.internal()?;
-        }
-        Ok(())
+        let cleanup = match &self.overflow {
+            Some(overflow) => overflow.cleanup(workspace).await.internal(),
+            None => Ok(()),
+        };
+        let store = self.store.clone();
+        let at = self.clock.now();
+        tokio::task::spawn_blocking(move || {
+            store.purge_terminal_boat_runner_intents(workspace, at)
+        })
+        .await
+        .internal()?
+        .internal()?;
+        cleanup
     }
 
     pub(crate) async fn start_boat(

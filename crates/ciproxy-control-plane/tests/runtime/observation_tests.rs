@@ -1,4 +1,4 @@
-//! Lost start results retain execution evidence until later inventory releases capacity.
+//! Durable execution evidence and runner exits release own-machine capacity.
 
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -10,16 +10,18 @@ use ciproxy_gateway::types::Delivery;
 use ciproxy_github::registrations::RunnerRegistrationsMock;
 use ciproxy_github::runtime::{Runtime, RuntimeMock};
 use ciproxy_github::scale_sets::JitRegistration;
-use ciproxy_protocol::agent::ControlMessage;
+use ciproxy_protocol::agent::{AgentMessage, ControlMessage};
+use ciproxy_protocol::identifiers::RunnerId;
 use ciproxy_protocol::reports::DrainState;
 use ciproxy_protocol::resources::Slots;
+use ciproxy_protocol::runners::RunnerExit;
 use ciproxy_store_interface::github::DemandPhase;
 use ciproxy_store_interface::own_runners::OwnRunner;
 use ciproxy_store_interface::runners::RunnerState;
 use unimock::{MockFn, Unimock, matching};
 use uuid::Uuid;
 
-use super::recovery_support::{job, keep_warm, runtime_with_clock};
+use super::recovery_support::{gateway, job, keep_warm, runtime_with_clock};
 use super::support::{Fixture, at};
 
 #[tokio::test]
@@ -147,6 +149,76 @@ async fn lost_start_reply_then_completed_github_job_releases_slots_and_disk_on_l
     assert_eq!(starts[0].runner_id.0, issued.runner.id.to_string());
     assert_eq!(starts[1].runner_id.0, replacement.runner.id.to_string());
     assert_eq!(starts[1].slot_indices, vec![0]);
+}
+
+#[tokio::test]
+async fn runner_exit_before_github_completion_stays_stopped_and_releases_slots_and_disk() {
+    let mut fixture = Fixture::new();
+    keep_warm(&fixture);
+    fixture.contact.report.capacity = Slots(1);
+    fixture.contact.report.job_disk_bytes = 142_755_282_944;
+    fixture.contact.report.drain = DrainState::Active;
+    fixture
+        .store
+        .record_contact(fixture.workspace, fixture.machine, &fixture.contact)
+        .unwrap();
+    let demand = job(&fixture);
+    fixture
+        .store
+        .save_github_job(fixture.workspace, &demand, at())
+        .unwrap();
+    let registrations = Arc::new(Unimock::new(
+        RunnerRegistrationsMock::create
+            .some_call(matching!(_, _))
+            .returns(Ok(JitRegistration {
+                runner_id: 48,
+                configuration: "jit-fixture".into(),
+            })),
+    ));
+    let messages = Arc::new(Mutex::new(Vec::new()));
+    let (clock, _) = clock();
+    let runtime = runtime_with_clock(&fixture, registrations, gateway(messages.clone()), clock);
+    runtime.job(fixture.workspace, demand).await.unwrap();
+    assert_eq!(registered(&fixture, 47).runner.state, RunnerState::Busy);
+
+    runtime
+        .agent(
+            fixture.workspace,
+            fixture.machine,
+            AgentMessage::RunnerExited {
+                runner_id: RunnerId(fixture.intent.runner.id.to_string()),
+                exit: RunnerExit { code: Some(0) },
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(registered(&fixture, 47).runner.state, RunnerState::Stopped);
+    let input = fixture
+        .store
+        .own_routing_snapshot(fixture.workspace)
+        .unwrap();
+    assert_eq!(input.jobs[0].phase, DemandPhase::Started);
+    assert_eq!(input.jobs[0].completed_at, None);
+
+    runtime.tick().await.unwrap();
+    assert_eq!(registered(&fixture, 47).runner.state, RunnerState::Stopped);
+    let replacement = registered(&fixture, 48);
+    assert_eq!(replacement.runner.state, RunnerState::Starting);
+    assert_eq!(replacement.slot_indices, vec![0]);
+    assert_eq!(replacement.runner.size.disk_bytes, 142_755_282_944);
+    let starts: Vec<_> = messages
+        .lock()
+        .unwrap()
+        .iter()
+        .filter_map(|message| match message {
+            ControlMessage::StartRunner { runner, .. } => Some(runner.clone()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(starts.len(), 1);
+    assert_eq!(starts[0].runner_id.0, replacement.runner.id.to_string());
+    assert_eq!(starts[0].slot_indices, vec![0]);
+    assert_eq!(starts[0].size.disk_bytes, 80_000_000_000);
 }
 
 fn registered(fixture: &Fixture, github_id: i64) -> OwnRunner {

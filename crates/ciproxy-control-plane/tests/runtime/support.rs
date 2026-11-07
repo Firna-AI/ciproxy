@@ -201,6 +201,19 @@ impl Fixture {
             .bind::<sql_types::Uuid,_>(self.workspace).bind::<sql_types::Uuid,_>(self.organization)
             .execute(&mut self.connection).unwrap();
     }
+
+    /// Remove source proof to model conservative legacy registration recovery.
+    pub(super) fn clear_boat_installation_authority(&mut self, runner: Uuid) {
+        let count = diesel::sql_query(
+            "UPDATE boat_runner_intents SET installation_id=NULL
+             WHERE workspace_id=$1 AND runner_id=$2",
+        )
+        .bind::<sql_types::Uuid, _>(self.workspace)
+        .bind::<sql_types::Uuid, _>(runner)
+        .execute(&mut self.connection)
+        .unwrap();
+        assert_eq!(count, 1);
+    }
 }
 
 impl Drop for Fixture {
