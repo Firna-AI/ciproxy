@@ -66,10 +66,14 @@
     entry metadata.
   - `crates/ciproxy-control-plane/src/events.rs` sends those facts through
     the gateway. The gateway has no cache metadata request or response.
-  - `crates/ciproxy-cache-sidecar/src/download.rs` receives matched keys
-    and download URLs from GitHub. Neither protocol response supplies the
-    source ref. `crates/ciproxy-cache-sidecar/src/blobs.rs` therefore
-    retains fills within the reader's writable or private scope.
+  - `crates/ciproxy-cache-sidecar/src/download.rs` decodes matched keys
+    and download URLs from GitHub. Its legacy `LegacyEntry` type in
+    `crates/ciproxy-cache-sidecar/src/wire.rs` omits the optional `scope`
+    and `creationTime` fields that the
+    [upstream contract][legacy-entry] declares. The v2 response has no
+    entry ref. The combined resolver still needs trusted metadata.
+    `crates/ciproxy-cache-sidecar/src/blobs.rs` retains fills within the
+    reader's writable or private scope.
 - **Scope dependency, 2026-11-07:** One concrete integration route needs
   these existing files, plus new metadata service code:
   - `crates/ciproxy-control-plane/src/composition.rs` would construct a
@@ -130,3 +134,5 @@
   over a default-branch local prefix. Tests also preserve higher-priority
   retained entries when GitHub has only a lower-priority candidate. The
   resolver accepts no job-provided scope authority.
+
+[legacy-entry]: https://github.com/actions/toolkit/blob/main/packages/cache/src/internal/contracts.ts
