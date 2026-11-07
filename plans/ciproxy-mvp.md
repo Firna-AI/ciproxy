@@ -4039,3 +4039,29 @@ above.
   retries the same as the review.
 - **Action:** ask the user, because each option adds a new refusal or a new
   confirmation for an outdated quote.
+
+### 96. The docs navigation grids differ from the mockups
+
+- **Severity:** Low. **Effort:** Small.
+- **Source:** Review, Milestone 24, pull request #40, round 1, its finding 2.
+- **Category:** Mockup.
+- **Location:** `ts/site/src/content/docs/docs/index.mdx:38`, and
+  `ts/site/src/content/docs/docs/quickstart.mdx:93`.
+- **Background:** The docs mockups show the navigation cards in two columns
+  at 720 and 1440 pixels, and in one column at 390 pixels.
+- **Problem:** At 720 pixels, Overview and Quickstart stack their cards in
+  one column. Overview also stretches its Next link across the article,
+  where the mockup puts it in the right half.
+- **Impact if no action:** The pages stay usable, but they differ from the
+  mockups, and the tablet pages get longer.
+- **Root question:** How does the docs navigation use the available width?
+- **Options:**
+  - **A.** Set the shared grid styles to match the mockups. Effort: Small.
+  - **B.** Keep the current layout, and update the mockups. Effort: Small.
+  - **C.** Choose the columns from the article width, and revise the
+    mockups around that rule. Effort: Medium.
+- **Left out:** A change on each page, because it repeats the layout rules.
+- **Wider fix:** A.
+- **Recommendation:** A. Shared styles keep the approved mockups.
+- **Action:** ask the user, because the user decides which side of a mockup
+  and product mismatch is right.
