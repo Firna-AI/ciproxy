@@ -29,7 +29,7 @@ const ACCOUNT: &str = "
             WHERE activation.organization_id=o.id
             AND activation.workspace_id=o.workspace_id AND activation.admitted)
         AND a.retired_at IS NULL AND a.rejected_at IS NULL
-        AND l.allow_boat
+        AND l.allow_boat AND l.deleted_at IS NULL AND ss.remote_removed_at IS NULL
         AND l.vcpus = (d.record_json::jsonb ->> 'requested_vcpus')::bigint
         AND l.memory_gb = (d.record_json::jsonb ->> 'requested_memory_gb')::bigint
         AND l.disk_gb = (d.record_json::jsonb ->> 'requested_disk_gb')::bigint

@@ -82,6 +82,12 @@ The overflow advisory-key sequence has its own reserved range.
 Delivery metadata has no cascading organization reference, so retention
 cannot discard live cleanup authority when one organization leaves.
 
+The `202611070000_boat_runner_intents` migration adds Boat registration
+identities. Each row keeps the runner, delivery, organization, label, and
+scale-set IDs, with the sizes and the required root bytes. It keeps the
+GitHub runner ID after the registration. It holds no JIT configuration or
+callback token. Workspace deletion removes its rows.
+
 The dashboard area stores verified GitHub memberships, workspace roles,
 access requests, opaque session digests, and encrypted OAuth grants.
 A person record stays only with a role or an open request. Intentional
@@ -149,6 +155,8 @@ Each migration has an up.sql and a down.sql.
 
 ### Key Code
 
+- [src/boat_runner_intents.rs](src/boat_runner_intents.rs) defines the Boat
+  registration identity table.
 - [src/dashboard.rs](src/dashboard.rs) defines dashboard authentication tables.
 - [src/own_runners.rs](src/own_runners.rs) defines execution command state.
 

@@ -17,12 +17,21 @@ person installs the App.
 - A warm runner can take a job just before that stop.
 - That job can fail when the runner has not handed it to the
   [guest](agent.md#drain-and-remove) yet.
-- ciproxy also deletes each [sandbox](overflow.md#overflow-runners) of the
-  organization that runs no job.
 - The other jobs of the organization that run at that moment finish,
   including each job that the guest received.
 - **Decision:** the warm runners stop at once, also when a job can then
   fail, as at "Remove" in [Drain and remove](agent.md#drain-and-remove).
+- ciproxy does not stop a [sandbox](overflow.md#terms) of the organization
+  whose runner started, also when the runner has no job.
+- Each such sandbox ends when its runner reports its exit, as
+  [After an App removal](overflow.md#after-an-app-removal) says.
+- Otherwise, Boat ends it at its [lifetime](overflow.md#overflow-runners)
+  of 6 hours, or 2 hours on a Boat free trial.
+- **Decision:** after an App removal, ciproxy does not stop idle sandboxes
+  early, and they end at their lifetime. Rejected: a new mechanism in the
+  sandbox that lets ciproxy stop idle sandboxes early. Reason: App removal
+  is rare, and the cost is bounded by the lifetime and the
+  [spend limit](overflow.md#spend-limit).
 - The scale sets and the runners of the organization stay on GitHub,
   because ciproxy has no GitHub access left to delete them.
 - After a removal, the [dashboard](../architecture.md#components) says that
@@ -53,15 +62,14 @@ person installs the App.
   [install token](agent.md#install) of the workspace at once.
 - Each [own machine](agent.md#terms) of the workspace then acts as a
   removed machine, as [Drain and remove](agent.md#drain-and-remove) says.
-- At the removal, ciproxy deletes each sandbox of the workspace that runs
-  no job, and starts no new Boat runner.
-- The Boat jobs that run at that moment finish. ciproxy deletes each of
-  their sandboxes when its runner reports its end, as
-  [Overflow runners](overflow.md#overflow-runners) says.
+- At the removal, ciproxy starts no new Boat runner.
+- The Boat jobs that run at that moment finish.
+- The sandboxes of the workspace end as
+  [After an App removal](overflow.md#after-an-app-removal) says.
 - ciproxy deletes the Boat key when the last of these sandboxes ends, as
   after [Disconnect](overflow.md#change-key-and-disconnect).
-- Reason: ciproxy needs the key to delete these sandboxes, so that none
-  bills until its lifetime ends.
+- Reason: ciproxy needs the key to delete each sandbox when its runner
+  reports its exit.
 - The subscription of the workspace ends as
   [Subscription states](billing.md#subscription-states) says.
 - 30 days after the removal, ciproxy also deletes the data of the
@@ -99,8 +107,8 @@ person installs the App.
   Admin takes one out.
 - [Security](security.md): sign-in, roles, key custody, and job data.
 - [Agent](agent.md#drain-and-remove): what a removed machine does.
-- [Overflow](overflow.md#change-key-and-disconnect): the Boat key and the
-  sandboxes.
+- [Overflow](overflow.md#after-an-app-removal): the sandboxes after a
+  removal, and the Boat key.
 - [Billing](billing.md#subscription-states): the end of a subscription.
 - [Architecture](../architecture.md#boundaries): the events that GitHub
   sends to the control plane.

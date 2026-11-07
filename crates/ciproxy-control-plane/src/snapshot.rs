@@ -138,7 +138,7 @@ fn machine_input(
     Machine {
         id: MachineId(machine.machine.id.to_string()),
         selected_image: machine.report.as_ref().and_then(|report| report.report.images.selected().cloned()),
-        connected: machine.machine.last_contact_at.is_some_and(|at| now < at + chrono::Duration::seconds(60)),
+        connected: machine.machine.last_contact_at.is_some_and(|at| now < at + chrono::Duration::seconds(60)) && machine.report.as_ref().is_some_and(|report| report.report.images.selected().is_some()),
         draining: machine.machine.draining,
         capacity: resources.slots, disk_budget_bytes: resources.job_disk_bytes,
         warm_count: count, warm_allocation: allocate(count, history),
@@ -159,7 +159,9 @@ pub(crate) fn size(size: ciproxy_store_interface::vm_size::VmSize) -> VmSize {
 }
 
 fn instant(at: DateTime<Utc>) -> Duration {
-    Duration::from_secs(at.timestamp().unsigned_abs())
+    at.signed_duration_since(DateTime::UNIX_EPOCH)
+        .to_std()
+        .unwrap_or(Duration::ZERO)
 }
 
 #[cfg(test)]

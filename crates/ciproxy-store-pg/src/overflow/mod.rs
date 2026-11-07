@@ -11,7 +11,7 @@ mod dispatch;
 mod placements;
 mod preparation;
 mod queries;
-mod rows;
+pub(crate) mod rows;
 mod starts;
 
 use diesel::PgConnection;

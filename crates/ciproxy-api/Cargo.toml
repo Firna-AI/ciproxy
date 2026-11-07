@@ -13,6 +13,7 @@ base64 = "0.23.1"
 chrono = { version = "0.4.45", features = ["serde"] }
 ciproxy-gateway = { workspace = true }
 ciproxy-github = { workspace = true }
+ciproxy-overflow = { workspace = true }
 ciproxy-protocol = { workspace = true }
 ciproxy-store-interface = { workspace = true }
 getrandom = "0.4.3"
@@ -33,6 +34,10 @@ utoipa-axum = "0.3.0"
 uuid = { version = "1.29.0", features = ["serde", "v4"] }
 
 [dev-dependencies]
+sandbox-interface = { workspace = true }
+sandbox-boat = { workspace = true }
+ciproxy-agent = { workspace = true }
+ciproxy-scaler = { workspace = true }
 ciproxy-store-pg = { workspace = true }
 diesel = { version = "2.3.14", features = ["postgres"] }
 http-body-util = "0.1.5"

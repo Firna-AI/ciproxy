@@ -122,6 +122,8 @@ backend must give ciproxy.
   waiting job first.
 - ciproxy stops and deletes the sandbox of such a runner as soon as no
   waiting job needs the runner.
+- An App removal changes this rule, as
+  [After an App removal](#after-an-app-removal) says.
 - A Boat runner that takes no job is not a [start](metering.md#starts).
 - A job on Boat uses only the [GitHub cache](cache.md#cache-tiers).
 
@@ -132,7 +134,32 @@ backend must give ciproxy.
   waiting job needs.
 - This rule also covers sandboxes whose jobs ended during an outage of the
   [control plane](../architecture.md#components).
+- An App removal changes this rule, as
+  [After an App removal](#after-an-app-removal) says.
 - ciproxy never stops or deletes a sandbox that it did not start.
+
+### After an App removal
+
+- These rules apply to the sandboxes of an
+  [organization](workspaces.md#terms) that removed the GitHub App.
+- A new install that joins the organization to the workspace that it left
+  ends these rules.
+- [Removing the App](app-removal.md#removing-the-app) states the other
+  effects of a removal.
+- ciproxy does not stop a sandbox of the organization whose runner started,
+  also when the runner has no job.
+- ciproxy still deletes such a sandbox at once when its runner reports its
+  exit.
+- Otherwise, Boat ends the sandbox at its lifetime of 6 hours, or 2 hours on
+  a Boat free trial.
+- So an idle sandbox of the organization can bill until its lifetime ends.
+- Boat jobs of the organization that run at the removal finish.
+- ciproxy deletes each sandbox of the organization whose runner has not
+  started.
+- **Decision:** after an App removal, ciproxy does not stop idle sandboxes
+  early, and they end at their lifetime. Rejected: a new mechanism in the
+  sandbox that lets ciproxy stop idle sandboxes early. Reason: App removal
+  is rare, and the cost is bounded by the lifetime and the spend limit.
 
 ## Spend limit
 

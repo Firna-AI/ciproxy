@@ -53,4 +53,9 @@ mod setup_personal_tests;
 
 mod direct_recovery_tests;
 mod link_final_tests;
+#[path = "../../../ciproxy-control-plane/tests/runtime/overflow_ports.rs"]
+mod overflow_ports;
+mod overflow_spend_tests;
+mod overflow_support;
+mod overflow_tests;
 mod signed_association_tests;
