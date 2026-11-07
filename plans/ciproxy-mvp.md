@@ -1113,8 +1113,10 @@ Implementation calls, 6 November 2026:
       exception covers own-machine warm runners only. Apply the user's
       chosen rule in the protocol and guest/image work, then run its live
       check. The independent review records the options.
-- [ ] Orchestrator: Record the broader immutable scheduler-binding fix.
+- [x] Record the broader immutable scheduler-binding fix in
+      `plans/follow-ups/immutable-scheduler-bindings.md`.
       Include the existing own-machine name-matching problem.
+      Branch: `conductor/mvp-m15-overflow`.
 - [ ] Orchestrator: Forward `BOAT_SHARED_SNAPSHOT` through
       `deploy/scripts/deploy.py` and both deployment workflows.
       Set it to the shared Milestone 10 snapshot.
