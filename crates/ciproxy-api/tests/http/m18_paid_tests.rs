@@ -4,8 +4,9 @@ use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
 use axum::http::StatusCode;
-use ciproxy_api::pages::{PageServices, PaidReviewMock};
+use ciproxy_api::pages::PageServices;
 use ciproxy_billing::catalog::{CheckoutReview, PriceCode};
+use ciproxy_billing::service::paid_review::PaidReviewMock;
 use ciproxy_store_interface::billing::commands::{BillingCommand, CommandKind};
 use ciproxy_store_interface::billing::state::{AddOns, Selection, Tier};
 use ciproxy_store_interface::dashboard::records::Role;
@@ -61,7 +62,7 @@ async fn m18_paid_review_requires_authoritative_quote_and_uses_its_anchor_day() 
                     assert_eq!(selected.tier, Tier::Business);
                     assert_eq!(time, at("2027-03-06T12:00:00Z"));
                     Ok(CheckoutReview {
-                        monthly_cents: 29900,
+                        monthly_cents: 28900,
                         today_cents: 21000,
                         billing_day: 31,
                     })
@@ -80,7 +81,7 @@ async fn m18_paid_review_requires_authoritative_quote_and_uses_its_anchor_day() 
     )
     .await;
     assert_eq!(review["today_cents"], "21000");
-    assert_eq!(review["choice"]["monthly_cents"], "29900");
+    assert_eq!(review["choice"]["monthly_cents"], "28900");
     assert_eq!(review["billing_day"], 31);
     assert_eq!(review["period_end"], "2027-03-31T12:00:00Z");
     assert_eq!(review["prorated"], true);

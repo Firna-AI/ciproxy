@@ -1,10 +1,12 @@
 //! Stripe provider boundary and its pinned HTTP implementation.
 
+use chrono::{DateTime, Utc};
 use ciproxy_store_interface::billing::commands::BillingCommand;
 use ciproxy_store_interface::billing::state::Selection;
 use unimock::unimock;
 use uuid::Uuid;
 
+use crate::catalog::CheckoutReview;
 use crate::error::Result;
 
 use super::wire::invoice::RetrievedInvoice;
@@ -28,6 +30,14 @@ pub trait StripeApi: Send + Sync {
     fn subscription(&self, subscription_id: &str) -> Result<Subscription>;
     /// Retrieve a current invoice and its customer and subscription ownership.
     fn invoice(&self, invoice_id: &str) -> Result<RetrievedInvoice>;
+    /// Preview the exact item replacement without changing the subscription.
+    fn preview(
+        &self,
+        current: &Subscription,
+        selection: Selection,
+        at: DateTime<Utc>,
+        upgrade: bool,
+    ) -> Result<CheckoutReview>;
     /// Replace paid items with proration and payment-gated upgrades.
     fn change(
         &self,

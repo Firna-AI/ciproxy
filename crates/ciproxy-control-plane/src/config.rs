@@ -8,13 +8,17 @@ use base64::Engine;
 use base64::alphabet;
 use base64::engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig};
 use ciproxy_agent::root_sizing::RootSizing;
+use ciproxy_metering::report::catalog::PriceList;
 use ciproxy_protocol::images::ImageDownload;
 use secrecy::SecretString;
 
+use crate::comparison_prices;
 use crate::error::{Error, ErrorResultExt, Result};
 
 /// Explicit process configuration. Debug never reveals secret files.
 pub struct Config {
+    /// Trusted dated Linux x64 comparison prices in USD per minute.
+    pub comparison_prices: [PriceList; 2],
     /// Shared Boat snapshot of the same image release, absent until publication.
     pub boat_shared_snapshot: Option<String>,
     /// Bound HTTP socket behind the TLS ingress.
@@ -75,6 +79,7 @@ impl Config {
             image: None,
             image_disk_bytes: 0,
             image_manifest_path: required("JOB_IMAGE_MANIFEST_PATH")?,
+            comparison_prices: comparison_prices::configured()?,
         })
     }
 

@@ -92,9 +92,9 @@ until an operator supplies the test App and organization credentials.
 
 ## Jobs, Savings, and billing
 
-The primary orchestrator must first mount the page router and raw Stripe hook.
-The [API guide](../README.md#jobs-savings-and-billing-composition) gives the
-composition and the required trusted Stripe invoice-preview adapter.
+The control plane mounts the page router and raw Stripe hook.
+The [API guide](../README.md#jobs-savings-and-billing-composition) describes
+the shared billing service and its Stripe invoice-preview adapter.
 
 Use the same private credential path as the other API checks:
 
@@ -108,6 +108,10 @@ For review, add `selection` with `tier` and `add_ons`. The add-ons hold
 `start_blocks` and `machines`. Add `private_result_file` outside the repository.
 The script writes payment and portal results there with mode 600. It prints
 only route names and pass/fail status.
+For a paid change, compare the monthly total and today's charge with Stripe's
+invoice preview. Check the recurring day for an anchor on day 29 to 31 after
+a shorter month. A downgrade can have a negative later credit and no charge
+today. The preview must keep the existing paid-period dates.
 
 Use a Stripe test-mode workspace for the payment actions. `checkout` opens one
 payment. Open its URL from the private result file in a browser. Add the

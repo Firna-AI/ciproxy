@@ -43,7 +43,6 @@ pub(super) fn replacement(
     prices: &[(String, u32)],
     upgrade: bool,
 ) -> Result<Vec<(String, String)>> {
-    let wanted = line_items(selection)?;
     let mut form = vec![
         (
             "proration_behavior".into(),
@@ -64,20 +63,35 @@ pub(super) fn replacement(
             .into(),
         ),
     ];
+    form.extend(items(current, selection, prices, "items")?);
+    Ok(form)
+}
+
+pub(super) fn items(
+    current: &Subscription,
+    selection: Selection,
+    prices: &[(String, u32)],
+    prefix: &str,
+) -> Result<Vec<(String, String)>> {
+    let wanted = line_items(selection)?;
+    let mut form = Vec::new();
     let mut index = 0;
     for old in &current.items.data {
-        form.push((format!("items[{index}][id]"), old.id.clone()));
+        form.push((format!("{prefix}[{index}][id]"), old.id.clone()));
         if let Some(position) = wanted
             .iter()
             .position(|(code, _)| *code == old.price.lookup_key)
         {
-            form.push((format!("items[{index}][price]"), prices[position].0.clone()));
             form.push((
-                format!("items[{index}][quantity]"),
+                format!("{prefix}[{index}][price]"),
+                prices[position].0.clone(),
+            ));
+            form.push((
+                format!("{prefix}[{index}][quantity]"),
                 prices[position].1.to_string(),
             ));
         } else {
-            form.push((format!("items[{index}][deleted]"), "true".into()));
+            form.push((format!("{prefix}[{index}][deleted]"), "true".into()));
         }
         index += 1;
     }
@@ -88,9 +102,12 @@ pub(super) fn replacement(
             .iter()
             .any(|item| item.price.lookup_key == *code)
         {
-            form.push((format!("items[{index}][price]"), prices[position].0.clone()));
             form.push((
-                format!("items[{index}][quantity]"),
+                format!("{prefix}[{index}][price]"),
+                prices[position].0.clone(),
+            ));
+            form.push((
+                format!("{prefix}[{index}][quantity]"),
                 prices[position].1.to_string(),
             ));
             index += 1;

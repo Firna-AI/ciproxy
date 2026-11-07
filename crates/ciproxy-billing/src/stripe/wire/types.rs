@@ -99,6 +99,10 @@ pub struct Subscription {
     pub id: String,
     /// Stripe's customer identifier.
     pub customer: String,
+    /// Original UTC reference for the monthly billing cycle.
+    pub billing_cycle_anchor: Option<i64>,
+    /// Explicit recurring anchor values, when Stripe configured them.
+    pub billing_cycle_anchor_config: Option<BillingCycleAnchor>,
     /// Server-owned ownership metadata.
     pub metadata: Metadata,
     /// Stripe's current subscription state.
@@ -121,6 +125,13 @@ pub struct Subscription {
     pub collection_method: Option<CollectionMethod>,
     /// Present while the customer or operator has paused collection.
     pub pause_collection: Option<PauseCollection>,
+}
+
+/// Fixed recurring values used by Stripe to calculate the billing anchor.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct BillingCycleAnchor {
+    /// The requested day, including day 31 across a shorter month.
+    pub day_of_month: u32,
 }
 
 /// A provider collection pause, independent of subscription status.

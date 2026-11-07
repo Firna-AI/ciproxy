@@ -1,11 +1,12 @@
 //! Stripe provider calls for paid changes, cancellation, and customer portal.
 
+use chrono::{DateTime, Utc};
 use ciproxy_store_interface::billing::commands::{BillingCommand, CommandKind};
 use ciproxy_store_interface::billing::state::Selection;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::catalog::PriceCode;
+use crate::catalog::{CheckoutReview, PriceCode};
 use crate::error::{Error, Result, ResultExt};
 use crate::stripe::api::StripeApi;
 use crate::stripe::forms;
@@ -86,6 +87,16 @@ impl StripeApi for HttpStripe {
             Some(&key),
         )?;
         self.subscription(&current.id)
+    }
+
+    fn preview(
+        &self,
+        current: &Subscription,
+        selection: Selection,
+        at: DateTime<Utc>,
+        upgrade: bool,
+    ) -> Result<CheckoutReview> {
+        self.preview_change(current, selection, at, upgrade)
     }
 
     fn cancel(&self, subscription_id: &str, command_id: Uuid) -> Result<Subscription> {

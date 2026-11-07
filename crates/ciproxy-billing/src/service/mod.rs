@@ -10,6 +10,7 @@ mod event_routing;
 mod events;
 mod invoice_evidence;
 mod observations;
+pub mod paid_review;
 mod reconcile;
 mod renewal;
 pub mod runtime;

@@ -27,6 +27,15 @@ This also covers retries after Stripe removes an old idempotency key.
 Checkout return and webhook paths retrieve current session state.
 They apply confirmed coverage through the same reconciliation method.
 Paid changes preserve the Stripe period and prorate the difference.
+`PaidReview` quotes an exact paid selection at the supplied observation time.
+It holds the workspace billing lock and verifies the subscription owner.
+The HTTP adapter previews that item replacement with Stripe's proration flags.
+It also requests a recurring preview for the new monthly total.
+An upgrade uses the immediate preview's amount due for today's charge.
+A downgrade keeps its credit for the later invoice and charges nothing today.
+Signed invoice totals preserve negative downgrade credits.
+The recurring day comes from Stripe's explicit anchor configuration or anchor.
+The current period start never supplies that day.
 Upgrades invoice at once with pending_if_incomplete.
 The old tier stays until payment succeeds.
 An open subscription-update invoice supplies its upgrade payment page.
@@ -273,6 +282,8 @@ Never run this smoke script with a live key.
 
 - [src/service/api.rs](src/service/api.rs) owns the dyn BillingApi entry points.
 - [src/service/runtime.rs](src/service/runtime.rs) constructs BillingService.
+- [src/service/paid_review.rs](src/service/paid_review.rs) defines and
+  implements the authorized paid-plan preview boundary.
 - [src/service/completion.rs](src/service/completion.rs) owns the rules for
   command completion.
 - [src/service/renewal.rs](src/service/renewal.rs) refreshes failed renewals.
@@ -286,6 +297,8 @@ Never run this smoke script with a live key.
   subscription owners before provider reads and discovers unknown identities.
 - [src/stripe/api.rs](src/stripe/api.rs) owns the dyn StripeApi boundary.
 - [src/stripe/http/client.rs](src/stripe/http/client.rs) owns the HTTP adapter.
+- [src/stripe/http/preview.rs](src/stripe/http/preview.rs) reads immediate
+  and recurring invoice previews without changing subscription items.
 - [src/webhook.rs](src/webhook.rs) verifies raw signatures and routes events.
 - [src/catalog.rs](src/catalog.rs) owns USD prices and checkout reviews.
 - [tests/_tests_](tests/_tests_) contains the public integration scenarios.

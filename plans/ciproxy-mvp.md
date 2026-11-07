@@ -1297,19 +1297,25 @@ These routes serve the other pages of the dashboard.
         Add HTTP regressions and repeat the new or changed tests ten times.
         Branch: `conductor/mvp-m18-api`.
         Evidence: `.context/ciproxy-mvp/m18/review-fix-round1/`.
-- [ ] Orchestrator: compose `PageServices` in the control plane. Mount
+- [x] Orchestrator: compose `PageServices` in the control plane. Mount
       `router_with_pages` under `/api` and `stripe_router` at the dashboard
       host root for `/hooks/stripe`. Supply the existing billing, metering,
       and overflow services and dated USD comparison price lists. Supply
       the exact Boat `RootSizing` already used by the overflow runtime.
       Poll `billing_cancellations` and call `reconcile_removal` on blocking
       workers so durable last-organization cancellations complete.
-      Branch: `calummoore/ci-proxy-load-balancer`.
-- [ ] Orchestrator: implement and inject `PaidReview` with an authoritative
+      Implementation calls, 7 November 2026: supply the verified dated
+      comparison lists as trusted configuration defaults. Run billing
+      cancellation recovery independently of GitHub maintenance.
+      Branch: `conductor/m18-composition-pages-stripe-hook-paid-review`.
+- [x] Orchestrator: implement and inject `PaidReview` with an authoritative
       Stripe invoice preview for a move between paid plans. The existing
       billing review gives the full monthly price as today's charge. The
       API keeps paid review unavailable until the preview exists.
-      Branch: `calummoore/ci-proxy-load-balancer`.
+      Implementation calls, 7 November 2026: keep `PaidReview` in billing.
+      Use the same selected items for immediate and recurring previews.
+      Read the recurring day from Stripe's anchor, not the period start.
+      Branch: `conductor/m18-composition-pages-stripe-hook-paid-review`.
 - [x] Fix the billing parser for signed Stripe events that it ignores.
       Use a typed parser and add the billing-level unit regression.
       Keep the HTTP regression for real `data.object` payloads.
@@ -1335,11 +1341,11 @@ These routes serve the other pages of the dashboard.
       the store projection and nullable values at the existing wire paths.
       Reason: preserve one complete request and the current field names.
       Evidence: `.context/ciproxy-mvp/m18/owner-fix-round1/report.md`.
-- [ ] Orchestrator: expose the overflow owner's resource-only catalog
+- [x] Orchestrator: expose the overflow owner's resource-only catalog
       accessor of review finding 6. Replace the private fit-conversion
       adapter after this workspace merges. Keep accounting and availability
       outside physical fit, and preserve the accounting-gap regression.
-      Branch: `calummoore/ci-proxy-load-balancer`.
+      Branch: `conductor/m18-composition-pages-stripe-hook-paid-review`.
 - [ ] Orchestrator: run the
       [live page checks](../crates/ciproxy-api/scripts/README.md#jobs-savings-and-billing)
       after the runtime and Stripe test workspace are ready. Set

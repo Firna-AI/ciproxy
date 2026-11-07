@@ -84,10 +84,11 @@ pub(crate) async fn review(
     } else {
         billing_call::call(pages, move |billing| billing.review(access, selected)).await?
     };
-    let choice = page_context::offer(plan_choice(billing_views::plan(
+    let mut choice = page_context::offer(plan_choice(billing_views::plan(
         selected.tier,
         selected.add_ons,
     )))?;
+    choice.monthly_cents = Cents(i128::from(review.monthly_cents));
     Ok(Json(CheckoutReviewPage {
         choice,
         today_cents: Cents(i128::from(review.today_cents)),

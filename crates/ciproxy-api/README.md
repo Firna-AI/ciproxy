@@ -196,20 +196,19 @@ An absent catalog returns `unavailable` for Savings. An absent overflow service
 leaves live Boat observations explicitly unavailable. The existing
 `router(state)` remains available to callers without these collaborators.
 
-Supply `PaidReview` with a Stripe invoice-preview adapter for paid changes.
+Supply `ciproxy_billing::service::paid_review::PaidReview` for paid changes.
 It must quote the exact workspace, selection, and observation time. Return
 Stripe's current monthly total, today's prorated charge, and recurring anchor
 day. A short month's period start does not identify that anchor day. The
-existing billing service supplies Free Checkout reviews. It does not supply
-paid invoice previews. Paid review returns `unavailable` until the primary
-orchestrator constructs this adapter. It never substitutes a monthly price for
-today's charge.
+existing `BillingService` implements this boundary with authoritative Stripe
+invoice previews. Its separate `BillingApi::review` supplies Free Checkout
+reviews. A caller without the paid adapter gets `unavailable` for paid review.
+The response uses the preview's monthly total and today's charge.
 
-The primary orchestrator must replace the dashboard mount with this composition.
-It must also register `/hooks/stripe` in Stripe on the dashboard host, load the
-signing secret, and run the credential-path checks in
+The control plane uses this composition and loads the Stripe signing secret.
+Register `/hooks/stripe` in Stripe on the dashboard host. Run the checks in
 [the live guide](scripts/README.md#jobs-savings-and-billing).
-These composition and live operations need the deployment owner's credentials.
+These live operations need the deployment owner's credential paths.
 
 Jobs read all organizations of the authorized workspace. Both numeric Actions
 jobs and exact scale-set attempts contribute rows. Mapped aliases keep one row.
@@ -235,7 +234,7 @@ Every role sees this data without access to the Admin-only Labels routes.
 Admin receives the edit capability. Other roles receive an ask-Admin notice.
 Busy slots and temporary provider refusals remain separate from physical fit.
 An unknown spend bound keeps its original start hold and unavailable counted
-spend. The private resource-only fit adapter preserves the known catalog.
+spend. The overflow owner's resource-only accessor preserves the known catalog.
 The response preserves unknown facts and the permitted largest-size fallback.
 
 Every page includes one shared banner. Existing pages can read the banner route.

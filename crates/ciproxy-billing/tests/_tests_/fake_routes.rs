@@ -120,6 +120,21 @@ fn get(state: &mut State, request: &Request, path: &str) -> (u16, String) {
 
 fn post(state: &mut State, request: &Request, path: &str) -> (u16, String) {
     match path {
+        "/v1/invoices/create_preview" => {
+            let Some((mut expected, reply)) = state.previews.pop_front() else {
+                state.failure("unexpected invoice preview request".into());
+                return (500, "{}".into());
+            };
+            let mut actual = request.form.clone();
+            expected.sort();
+            actual.sort();
+            if expected != actual || request.key.is_some() {
+                state.failure(format!(
+                    "invoice preview fields: expected {expected:#?}, actual {actual:#?}"
+                ));
+            }
+            (200, reply.to_string())
+        }
         "/v1/prices" => {
             let code = request.value("lookup_key").unwrap_or_default();
             state.rejected_price_codes.push(code.into());
@@ -153,6 +168,9 @@ fn post(state: &mut State, request: &Request, path: &str) -> (u16, String) {
                 state.failure("Checkout lacks a valid command identifier".into());
             }
             checkout.metadata.command_id = command;
+            checkout.metadata.workspace_id = request
+                .value("metadata[workspace_id]")
+                .and_then(|value| value.parse().ok());
             state.checkout = Some(checkout.clone());
             encode(state, checkout)
         }

@@ -250,7 +250,8 @@ These commands contact Boat or Cloud KMS and can incur charges.
   pending connection grants.
 - [src/maintenance.rs](src/maintenance.rs) restricts retained-key capabilities.
 - [src/view.rs](src/view.rs) supplies safe scaler and cost facts, also from
-  durable facts alone.
+  durable facts alone. Its `OverflowView::resource_catalog` accessor supplies
+  physical fit without accounting or temporary start refusals.
 - [src/boat](src/boat) composes the pinned adapter and fixed image launcher.
 - [src/kms](src/kms) implements real Cloud KMS encryption and runtime OAuth.
 - [tests/boat](tests/boat) tests the production HTTPS boundaries.

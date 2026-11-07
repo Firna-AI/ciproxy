@@ -3,16 +3,12 @@
 use std::sync::Arc;
 
 use axum::{Extension, Router};
-use chrono::{DateTime, Utc};
 use ciproxy_agent::root_sizing::RootSizing;
-use ciproxy_billing::access::BillingAccess;
-use ciproxy_billing::catalog::CheckoutReview;
 use ciproxy_billing::service::api::BillingApi;
+use ciproxy_billing::service::paid_review::PaidReview;
 use ciproxy_metering::report::catalog::PriceList;
 use ciproxy_metering::service::Metering;
 use ciproxy_overflow::api::Overflow;
-use ciproxy_store_interface::billing::state::Selection;
-use unimock::unimock;
 
 use crate::router::router;
 use crate::state::ApiState;
@@ -31,18 +27,6 @@ pub struct PageServices {
     pub overflow: Option<Arc<dyn Overflow>>,
     /// The exact trusted sizing shared with OverflowConfig for the Boat image.
     pub boat_root_sizing: Option<RootSizing>,
-}
-
-/// Trusted Stripe invoice-preview boundary for the exact selected paid change.
-#[unimock(api = PaidReviewMock)]
-pub trait PaidReview: Send + Sync {
-    /// Quote today's prorated charge and the next monthly billing day.
-    fn review(
-        &self,
-        access: BillingAccess,
-        selection: Selection,
-        at: DateTime<Utc>,
-    ) -> ciproxy_billing::error::Result<CheckoutReview>;
 }
 
 /// Build the dashboard router with billing and metering. Mount under `/api`.

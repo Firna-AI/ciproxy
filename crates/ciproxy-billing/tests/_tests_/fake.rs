@@ -21,6 +21,7 @@ pub(super) struct State {
     pub(super) raw_reads: BTreeMap<String, Value>,
     pub(super) raw_read_sequences: BTreeMap<String, VecDeque<Value>>,
     pub(super) requests: Vec<Request>,
+    pub(super) previews: VecDeque<(Vec<(String, String)>, Value)>,
     pub(super) lose_next_post: bool,
     pub(super) lose_next_delete: bool,
     pub(super) reject_next_checkout: Option<u16>,
@@ -102,6 +103,7 @@ impl Fake {
             raw_reads: BTreeMap::new(),
             raw_read_sequences: BTreeMap::new(),
             requests: Vec::new(),
+            previews: VecDeque::new(),
             lose_next_post: false,
             lose_next_delete: false,
             reject_next_checkout: None,
@@ -204,6 +206,9 @@ impl Drop for Fake {
                     exchange.describe()
                 )
             }));
+            if !state.previews.is_empty() {
+                failures.push("unconsumed invoice preview request pair".into());
+            }
             failures
         };
         if worker_failed {
