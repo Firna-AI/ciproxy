@@ -1311,6 +1311,10 @@ Each screen follows its mockup, as Milestone 19 says.
 
 - [ ] Build Jobs, Savings, Plan and usage, Plans, Checkout, and the banners.
 - [ ] Run one checkout in the Stripe test mode.
+- [ ] Show an unknown request on Jobs. The API returns null vCPUs, memory,
+      and free disk for a running or finished job whose request was not
+      saved. Add that state to the Jobs mockups first.
+      Source: pull request #34, fix round 1, 7 November 2026.
 
 ## Milestone 22: Dashboard UI: Boat
 
