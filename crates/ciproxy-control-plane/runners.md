@@ -13,6 +13,10 @@ The snapshot gives the pure scaler machine capacity, durable demand,
 current labels, and the last 24 hours of default-label job history.
 It also gives the Boat account, its deliveries, and the saved Boat
 registrations. The [overflow guide](overflow.md) gives the Boat runtime.
+The snapshot also reads active saved scale-set bindings. Labels, waiting
+jobs, and start actions retain their exact registration target. Idle
+supply counts only for the same organization, label, binding, and remote
+scale-set ID. This applies to own machines and Boat.
 
 Warm shares follow proportional counts and the documented leftover order.
 Docker spare uses a conservative upper bound on feasible root allocations.
@@ -28,6 +32,12 @@ An incorrect release length can reduce the free disk promised to a job.
 
 A runner reservation keeps its organization, machine, label request,
 byte-precise allocation, GitHub runner identity, and delivery command.
+The successful registration response supplies its exact remote target.
+The runtime saves that response before it sends the JIT configuration.
+It does not derive the target from the earlier routing snapshot or from
+a later binding read. Reports, Busy results, and recovery preserve the
+saved target. Older uncaptured targets stay unknown. Their idle runners
+retire through ordinary GitHub-first cleanup. Running work stays protected.
 The database never stores its plaintext JIT configuration or runtime token.
 An interrupted JIT response can be recovered by its unique runner name.
 The runtime retires that registration before it releases the reservation.
@@ -134,3 +144,15 @@ A provider deletion failure after Boat retirement also permits acceptance.
 Cleanup retries its saved `Deleting` phase without another GitHub removal.
 A completed take-out marker never permits a stop. An unknown older idle
 state keeps its capacity.
+
+## Registration rollout and live validation
+
+The [registration storage guide](../ciproxy-store-interface/registration-targets.md)
+describes the nullable migration and rollback. Deploy all runtime writers
+together, then restart their workers. Old idle runners can retire and
+need replacement capacity. Their running jobs keep their original VM.
+
+Run [the binding smoke](scripts/binding-smoke.py) with a private credential
+file in a disposable test workspace. Its
+[operator guide](binding-validation.md) gives the rollout observations,
+replacement scenario, and resume and reinstall checks.

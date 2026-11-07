@@ -21,6 +21,9 @@ takes. A start has no job or repository assignment.
 
 The scaler counts Ready runners before Starting runners across both
 destinations. It counts persisted starts before it adds capacity.
+It matches supply to demand by the exact registration target. That target
+contains the organization, label, binding row, and remote scale-set ID.
+An equal label name does not establish compatibility.
 It tries free own capacity first. It starts eligible overflow
 after the configured wait. Without an eligible own machine, it can start
 Boat at once. It selects the cheapest fitting catalog size or uses the
@@ -71,6 +74,12 @@ jobs retain their VM. Cleanup deletes only marked sandboxes with no job.
   Keep it required for retained Boat runners. Do not infer it from current
   image settings or actual catalog disk. Orphans have no runner.
 - Supply each waiting GitHub job once. Exclude jobs already running.
+- Supply each label's active saved `targets` from the same snapshot as
+  demand. Each `WaitingJob.target` names its exact saved binding.
+- Supply each `Runner.target` from its captured registration response.
+  Keep an older unrecorded target as `None`. Do not infer it from the
+  current binding. Unknown or replaced idle supply retires. Running jobs
+  retain their VM.
 - Include every accepted start before the next decision call.
 - Retain starting, retiring, and exited VMs until capacity is released.
 - Supply only organizations that can receive new runners.
@@ -158,6 +167,8 @@ Tests use the public decision entry point with literal states and actions.
   capacity checks and new warm replenishment.
 - [src/snapshot.rs](src/snapshot.rs) defines the caller's workspace facts.
 - [src/actions.rs](src/actions.rs) defines start and retirement intents.
+- [src/registration.rs](src/registration.rs) defines the immutable target
+  carried through demand, supply, and start actions.
 - [src/boat.rs](src/boat.rs) defines catalog, refusal, and sandbox facts.
   `BoatRunner` requires the saved root for each retained Boat runner.
 - [src/capacity.rs](src/capacity.rs) checks complete allocated roots with the

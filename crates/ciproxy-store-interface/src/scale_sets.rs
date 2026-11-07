@@ -20,6 +20,30 @@ pub struct ScaleSet {
     pub runner_group_id: i64,
 }
 
+/// Immutable identities captured from the context used to register one runner.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct RegistrationTarget {
+    /// The owning organization registration.
+    pub organization_id: Uuid,
+    /// The original shared label identity.
+    pub label_id: Uuid,
+    /// The original stored scale-set binding.
+    pub scale_set_id: Uuid,
+    /// The exact remote scale-set ID passed to GitHub registration.
+    pub github_id: i64,
+}
+
+impl From<&ScaleSet> for RegistrationTarget {
+    fn from(binding: &ScaleSet) -> Self {
+        Self {
+            organization_id: binding.organization_id,
+            label_id: binding.label_id,
+            scale_set_id: binding.id,
+            github_id: binding.github_id,
+        }
+    }
+}
+
 /// Routing and remote cleanup state of one durable binding.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ScaleSetState {

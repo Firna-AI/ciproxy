@@ -4,6 +4,7 @@ use ciproxy_schema::boat_runner_intents::boat_runner_intents;
 use ciproxy_store_interface::boat_runtime::{BoatRunnerIntent, BoatRuntimeStore};
 use ciproxy_store_interface::error::{Error, Result, ResultExt};
 use ciproxy_store_interface::overflow::store::OverflowSnapshot;
+use ciproxy_store_interface::scale_sets::RegistrationTarget;
 use diesel::prelude::*;
 use diesel::sql_types::{self, BigInt, Jsonb};
 use uuid::Uuid;
@@ -13,6 +14,34 @@ use crate::error::QueryResultExt;
 use crate::gateway_transaction::transaction;
 
 impl BoatRuntimeStore for PgStore {
+    fn save_boat_registration(
+        &self,
+        workspace_id: Uuid,
+        runner_id: Uuid,
+        target: RegistrationTarget,
+        github_id: i64,
+    ) -> Result<()> {
+        transaction(&mut *self.connection()?, |connection| {
+            let count = diesel::sql_query(
+                "UPDATE boat_runner_intents SET body=jsonb_set(jsonb_set(body,'{github_id}',to_jsonb($3::bigint)),
+                 '{registration_scale_set_id}',to_jsonb($4::bigint))
+                 WHERE workspace_id=$1 AND runner_id=$2 AND organization_id=$5 AND label_id=$6 AND scale_set_id=$7
+                 AND (body->>'registration_scale_set_id' IS NULL OR (body->>'registration_scale_set_id')::bigint=$4)",
+            ).bind::<sql_types::Uuid,_>(workspace_id).bind::<sql_types::Uuid,_>(runner_id)
+                .bind::<BigInt,_>(github_id).bind::<BigInt,_>(target.github_id)
+                .bind::<sql_types::Uuid,_>(target.organization_id).bind::<sql_types::Uuid,_>(target.label_id)
+                .bind::<sql_types::Uuid,_>(target.scale_set_id).execute(connection).store()?;
+            if count == 0 {
+                return Err(Error::NotFound);
+            }
+            diesel::sql_query("UPDATE runners SET github_id=$3,registration_scale_set_id=$4 WHERE workspace_id=$1 AND id=$2 AND organization_id=$5 AND label_id=$6 AND scale_set_id=$7 AND sandbox_id IS NOT NULL AND (registration_scale_set_id IS NULL OR registration_scale_set_id=$4)")
+                .bind::<sql_types::Uuid,_>(workspace_id).bind::<sql_types::Uuid,_>(runner_id)
+                .bind::<BigInt,_>(github_id).bind::<BigInt,_>(target.github_id)
+                .bind::<sql_types::Uuid,_>(target.organization_id).bind::<sql_types::Uuid,_>(target.label_id)
+                .bind::<sql_types::Uuid,_>(target.scale_set_id).execute(connection).store()?;
+            Ok(())
+        })
+    }
     fn boat_runtime_snapshot(&self, workspace_id: Uuid) -> Result<OverflowSnapshot> {
         crate::overflow::rows::snapshot(&mut *self.connection()?, workspace_id)
     }

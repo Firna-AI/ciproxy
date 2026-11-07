@@ -68,16 +68,11 @@ impl ApiMaintenance for Maintenance {
         })
         .await?;
         for workspace in workspaces {
-            let retired = query(self.state.store.clone(), move |store| {
-                store.retired_dashboard_labels(workspace)
-            })
-            .await?;
-            for label in retired {
-                if let Err(error) = label_cleanup::cleanup(&self.state, workspace, label.id).await {
-                    failure = Some(error);
-                }
+            if let Err(error) = label_cleanup::cleanup(&self.state, workspace).await {
+                failure = Some(error);
             }
         }
+
         let now = self.state.runtime.now();
         query(self.state.store.clone(), move |store| {
             store.expire_dashboard_auth(now)

@@ -3,6 +3,7 @@
 mod accounting_lifecycle_tests;
 mod accounting_tests;
 mod app_removal_tests;
+mod binding_target_tests;
 mod clock;
 mod failure_isolation_tests;
 mod image_delivery_tests;
@@ -26,8 +27,10 @@ mod overflow_support;
 mod overflow_takeout_support;
 mod overflow_takeout_tests;
 mod overflow_tests;
+mod own_replacement_tests;
 mod preparation_delivery_tests;
 mod recovery_support;
+mod registration_race;
 mod reinstall_removal_tests;
 mod resource_report_tests;
 mod retirement_tests;

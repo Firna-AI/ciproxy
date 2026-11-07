@@ -120,8 +120,10 @@ impl OwnRunnerStore for PgStore {
     fn create_own_runner(&self, workspace_id: Uuid, runner: &OwnRunner) -> Result<()> {
         transaction(&mut *self.connection()?, |connection| {
             crate::own_reservation::require_authority(connection, workspace_id, runner)?;
+            let mut row = RunnerRow::from_record(workspace_id, &runner.runner)?;
+            row.registration_scale_set_id = runner.registration_scale_set_id;
             diesel::insert_into(runners::table)
-                .values(RunnerRow::from_record(workspace_id, &runner.runner)?)
+                .values(row)
                 .execute(connection)
                 .store()?;
             diesel::insert_into(own_runner_commands::table)
@@ -244,6 +246,7 @@ pub(crate) fn load(connection: &mut PgConnection, workspace_id: Uuid) -> Result<
         .into_iter()
         .map(|(command, runner)| {
             Ok(OwnRunner {
+                registration_scale_set_id: runner.registration_scale_set_id,
                 requested_size: serde_json::from_value(command.requested_size).internal()?,
                 slot_indices: command
                     .slot_indices

@@ -28,8 +28,11 @@ pub(super) fn save(
     };
     diesel::sql_query(
         "INSERT INTO runners (id, workspace_id, organization_id, label_id, scale_set_id,
-            state, vcpus, memory_bytes, disk_bytes, boat_key_id, sandbox_id, boat_size_name)
-         SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+            state, vcpus, memory_bytes, disk_bytes, boat_key_id, sandbox_id, boat_size_name,
+            registration_scale_set_id, github_id)
+         SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+            (SELECT (body->>'registration_scale_set_id')::bigint FROM boat_runner_intents WHERE workspace_id=$2 AND runner_id=$1 AND organization_id=$3 AND label_id=$4 AND scale_set_id=$5),
+            (SELECT (body->>'github_id')::bigint FROM boat_runner_intents WHERE workspace_id=$2 AND runner_id=$1 AND organization_id=$3 AND label_id=$4 AND scale_set_id=$5)
          WHERE EXISTS (SELECT 1 FROM organizations WHERE id = $3 AND workspace_id = $2)
          AND EXISTS (SELECT 1 FROM scale_sets WHERE id = $5 AND workspace_id = $2)
          ON CONFLICT (id) DO UPDATE SET state =
