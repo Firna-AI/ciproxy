@@ -246,6 +246,12 @@ stay in `europe-west1`.
       condition claim. Reason: valid jobs then keep the same trust limits.
       Evidence: `.context/ciproxy-mvp/fix-round-1-report.md`.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+- [ ] Build and publish the control-plane image in the deploy workflow, as
+      item 90 = G says. A build job builds it on the runner with no cloud
+      credentials. A publish job pushes it by digest with workload
+      identity. The preview deploys that digest, and production takes over
+      the same digest from the preview's saved inputs. A push that does not
+      change the control-plane sources reuses the image of their hash.
 
 ## Milestone 6: GitHub App and scale sets
 
@@ -1837,6 +1843,12 @@ Answers of 5 November 2026:
   socket error go. A reconnect before the first handoff still means only
   GitHub's cache. There is no guessed time limit; GitHub's job time limit is
   the backstop. Rejected: A and C.
+- Item 90, G, 7 November 2026: the deploy workflow builds the
+  control-plane image as `mokly-ai/mokly-cloud` does. A build job with no
+  cloud credentials builds it, a publish job pushes it by digest, and the
+  preview and then production deploy that digest. A push that keeps the
+  control-plane sources reuses their image. Rejected: A and B, because the
+  user wants no manual step, and C, D, E, and F.
 - Item 89, A, 7 November 2026: after an App removal, idle Boat sandboxes
   are not retired early. They end at their lifetime limit, six hours or two
   on a trial, and running jobs finish. The user asked to review B later:
@@ -3844,38 +3856,49 @@ above.
 - **Recommendation:** A for the MVP. Milestone 15 recommended B.
 - **Action:** ask the user, because A changes a protocol promise.
 
-### 90. Each control-plane update needs a manual image step
+### 90. The preview has no automatic control-plane build
 
-- **Severity:** Low. **Effort:** Small.
+**Answer, 7 November 2026:** G. The user ruled out A and B: "it defo
+should not be manual".
+
+- **Severity:** Low. **Effort:** Medium.
 - **Source:** Implementation, the runtime of the main preview.
 - **Category:** Process.
-- **Location:** `.github/workflows/deploy-main-preview.yml`, and the
-  `CONTROL_PLANE_IMAGE` row of `deploy/setup.md`.
+- **Location:** `.github/workflows/deploy-main-preview.yml`,
+  `.github/workflows/deploy-production.yml`, `deploy/scripts/deploy.py`,
+  and the `CONTROL_PLANE_IMAGE` row of `deploy/setup.md`.
 - **Background:** The deploy workflow does not build the control-plane
-  image. The orchestrator builds it with Cloud Build in about 5 minutes,
-  sets the GitHub variable `CONTROL_PLANE_IMAGE`, and starts a deploy. On
-  7 November 2026 the user signed the sandbox in to GitHub, so the
-  orchestrator sets the variable without the user's Mac.
-- **Problem:** The preview runs merged backend code only after the
-  orchestrator does this step.
-- **Impact if no action:** A forgotten step leaves the preview behind the
-  primary branch.
+  image. It deploys the image that the GitHub variable
+  `CONTROL_PLANE_IMAGE` names, and the orchestrator builds and sets it by
+  hand.
+- **Problem:** No automatic step builds the image of a merged commit.
+- **Impact if no action:** The preview runs older backend code than the
+  primary branch until someone builds by hand.
 - **Root question:** How does the preview get the control plane of each
-  merged commit?
+  merged commit with no manual step?
 - **Options:**
   - **A.** Keep the manual path through the user's Mac. Effort: Small.
-  - **B.** Keep the manual path through the sandbox GitHub login, which
-    the user set up on 7 November 2026. Effort: Small.
-  - **C.** The preview deploy builds the image of its own commit, pushes it,
-    and deploys it by digest. Production deploys the tested digest. CI
-    gets the right to push images. Effort: Medium.
-- **Left out:** A moving image tag that the deploy reads. C is better on
-  every point.
-- **Wider fix:** C.
-- **Recommendation:** B for the MVP, with C as a launch follow-up item. B
-  needs no more work now, and the launch pipeline of Milestone 27 can
-  build C with the production promotion.
-- **Action:** ask the user, because C gives CI a new right to push images.
+  - **B.** Keep the manual path through the sandbox GitHub login.
+    Effort: Small.
+  - **C.** The deploy workflow sends a missing build to Cloud Build and
+    deploys its digest. Effort: Medium.
+  - **D.** A separate GitHub workflow builds and pushes on each push, and
+    the deploy starts when it ends. Effort: Medium.
+  - **E.** A Cloud Build trigger in GCP builds on each push, and the deploy
+    waits for the image of its commit. Effort: Medium.
+  - **F.** An image updater in the cluster deploys each new image.
+    Effort: Large.
+  - **G.** As Mokly does: a build job with no cloud credentials, a publish
+    job that pushes by digest, and deploys of that digest, with a reuse of
+    the image of unchanged sources. Effort: Medium.
+- **Left out:** Google Cloud Deploy, because it replaces the GitHub
+  promotion for the same result. A moving tag, because it loses the fixed
+  digest.
+- **Wider fix:** G.
+- **Recommendation:** G. It is the pattern of Mokly, and its build step
+  holds no cloud credentials.
+- **Action:** ask the user, because G gives a CI job the right to push
+  images.
 
 ### 91. The workspace picker lacks the plan and organization count
 
