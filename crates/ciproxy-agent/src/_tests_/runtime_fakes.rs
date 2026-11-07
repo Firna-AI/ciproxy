@@ -24,6 +24,9 @@ pub(crate) struct WaitingAgent {
 
 #[async_trait]
 impl Agent for WaitingAgent {
+    async fn cleanup_networks(&self) -> Result<()> {
+        self.delegate.cleanup_networks().await
+    }
     async fn control_connection(&self, connected: bool) -> Result<()> {
         self.delegate.control_connection(connected).await
     }

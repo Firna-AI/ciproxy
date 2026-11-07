@@ -32,6 +32,8 @@ fn installer(mock: Unimock) -> Installer {
 #[tokio::test]
 async fn reinstall_keeps_registration_without_reusing_the_install_token() {
     let state = MachineState {
+        failed_starts: Default::default(),
+        pending_networks: Default::default(),
         docker_budget: None,
         identity: Some(identity()),
         mode: Mode::Draining,

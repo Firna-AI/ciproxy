@@ -212,12 +212,7 @@ impl Controller {
             dockers.release(vm)?;
         }
         self.cache.release(vm).await?;
-        let mut state = self.state.lock().await;
-        let mut next = state.clone();
-        next.runners.retain(|record| record.local_id != vm.local_id);
-        self.store.save(&next)?;
-        *state = next;
-        Ok(())
+        self.finish_vm_cleanup(vm).await
     }
 }
 

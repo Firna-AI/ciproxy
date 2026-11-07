@@ -79,9 +79,14 @@ pub(crate) trait Cache: Send + Sync {
 #[cfg_attr(test, unimock::unimock(api = VmsMock))]
 #[async_trait]
 pub(crate) trait Vms: Send + Sync {
+    /// List network indices whose reserved names remain on the host.
+    async fn networks(&self) -> Result<Vec<u16>>;
     async fn configuration_lost(&self, vm: &VmRecord) -> Result<bool>;
     async fn clear_docker(&self, vm: &VmRecord) -> Result<()>;
-    fn allocate(&self, report: RunnerReport, used: &[VmRecord]) -> Result<VmRecord>;
+    /// Allocate a VM identity while skipping active and pending network indices.
+    async fn allocate(&self, report: RunnerReport, used: &[u16]) -> Result<VmRecord>;
+    /// Retry network cleanup independently of VM and disk removal.
+    async fn remove_network(&self, index: u16) -> Result<()>;
     async fn start(&self, vm: &VmRecord, config: AgentToGuest) -> Result<()>;
     async fn restore(&self, vm: &VmRecord) -> Result<()>;
     async fn request_stop(&self, vm: &VmRecord) -> Result<()>;

@@ -80,6 +80,9 @@ async fn periodic_reconciliation_keeps_attached_docker_space_out_of_the_cache_bu
     let budgets = Arc::new(std::sync::Mutex::new(Vec::new()));
     let captured = budgets.clone();
     let mock = Unimock::new((
+        VmsMock::networks
+            .some_call(matching!())
+            .returns(Ok(Vec::new())),
         crate::boundaries::HostMock::hardware
             .some_call(matching!())
             .returns(Ok(hardware())),

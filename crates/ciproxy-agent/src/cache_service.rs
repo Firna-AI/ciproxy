@@ -48,7 +48,22 @@ impl CacheService for ReleasedCache {
         self.commands
             .run("systemctl", &arguments(&["daemon-reload"]), &[])
             .await?;
+        if unit_changed {
+            self.commands
+                .run(
+                    "systemctl",
+                    &arguments(&["stop", "ciproxy-cache.service"]),
+                    &[],
+                )
+                .await?;
+        }
         self.starter.repair().await?;
+        if unit_changed
+            && Path::new(BINARY).exists()
+            && let Err(error) = self.starter.start(true).await
+        {
+            tracing::warn!(%error, "protected cache start unavailable; checked release repair continues");
+        }
         let restart = old_version.trim() != env!("CARGO_PKG_VERSION")
             || !Path::new(BINARY).exists()
             || unit_changed;

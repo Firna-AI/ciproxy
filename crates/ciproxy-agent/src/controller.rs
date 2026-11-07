@@ -7,6 +7,7 @@ use async_trait::async_trait;
 use ciproxy_protocol::agent::{AgentMessage, ControlMessage};
 use ciproxy_protocol::guest::GuestToAgent;
 use ciproxy_protocol::reports::MachineReport;
+use ciproxy_protocol::runners::RunnerState;
 use tokio::sync::Mutex;
 
 use crate::boundaries::{Cache, GuestProvenance, Host, Images, Store, Vms};
@@ -19,6 +20,8 @@ use crate::state::{MachineState, Mode};
 #[cfg_attr(test, unimock::unimock(api = AgentMock))]
 #[async_trait]
 pub(crate) trait Agent: Send + Sync {
+    /// Retry owned network cleanup without reading the workload area.
+    async fn cleanup_networks(&self) -> Result<()>;
     async fn control_connection(&self, connected: bool) -> Result<()>;
     async fn configuration_lost(&self, runner_id: &str) -> Result<()>;
     async fn restore(&self) -> Result<()>;
@@ -36,6 +39,12 @@ pub(crate) trait Agent: Send + Sync {
 }
 
 pub(crate) struct Controller {
+    /// Serialize admission while host inventory runs outside the state lock.
+    pub(crate) allocation: Mutex<()>,
+    /// Prevent overlapping cleanup attempts from deleting a reused index.
+    pub(crate) network_cleanup: Mutex<()>,
+    /// Unknown host inspection keeps terminal removal unfinished.
+    pub(crate) network_inventory_valid: AtomicBool,
     pub(crate) control_connected: AtomicBool,
     pub(crate) state: Mutex<MachineState>,
     pub(crate) store: Arc<dyn Store>,
@@ -49,6 +58,10 @@ pub(crate) struct Controller {
 
 #[async_trait]
 impl Agent for Controller {
+    async fn cleanup_networks(&self) -> Result<()> {
+        self.retry_network_cleanup().await
+    }
+
     async fn control_connection(&self, connected: bool) -> Result<()> {
         self.control_connected.store(connected, Ordering::Release);
         if !connected {
@@ -73,6 +86,14 @@ impl Agent for Controller {
         let hardware = self.host.hardware()?;
         let owned = self.state.lock().await.runners.clone();
         for vm in owned {
+            if self.state.lock().await.failed_starts.contains(&vm.local_id)
+                && !matches!(vm.report.state, RunnerState::Running { .. })
+            {
+                if let Err(error) = self.retire(&vm).await {
+                    tracing::warn!(%error, "failed-start VM cleanup remains pending");
+                }
+                continue;
+            }
             self.vms.restore(&vm).await?;
             if let Err(error) = self.recover_docker(&vm).await {
                 tracing::warn!(%error, "pending Docker recovery will retry");
@@ -87,12 +108,18 @@ impl Agent for Controller {
         if let Err(error) = self.cache.refresh_budget(self.cache_budget(budget)?).await {
             tracing::warn!(error = %error, "cache budget unavailable; keep jobs running");
         }
-        self.enforce_mode().await
+        self.enforce_mode().await?;
+        self.retry_network_cleanup().await
     }
 
     async fn restore(&self) -> Result<()> {
         let runners = self.state.lock().await.runners.clone();
         for vm in runners {
+            if self.state.lock().await.failed_starts.contains(&vm.local_id)
+                && !matches!(vm.report.state, RunnerState::Running { .. })
+            {
+                continue;
+            }
             self.vms.restore(&vm).await?;
             if let Err(error) = self.recover_docker(&vm).await {
                 tracing::warn!(%error, "pending Docker recovery will retry");
@@ -124,7 +151,10 @@ impl Agent for Controller {
 
     async fn finished(&self) -> bool {
         let state = self.state.lock().await;
-        state.mode == Mode::Removed && state.runners.is_empty()
+        state.mode == Mode::Removed
+            && state.runners.is_empty()
+            && state.pending_networks.is_empty()
+            && self.network_inventory_valid.load(Ordering::Acquire)
     }
 }
 

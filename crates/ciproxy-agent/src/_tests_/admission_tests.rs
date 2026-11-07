@@ -133,6 +133,9 @@ async fn reconciliation_uses_the_same_held_disk_budget() {
     let mut hardware = hardware();
     hardware.disks[0].capacity_bytes = 250 * GIGABYTE;
     let mock = Unimock::new((
+        VmsMock::networks
+            .some_call(matching!())
+            .returns(Ok(Vec::new())),
         HostMock::hardware
             .some_call(matching!())
             .returns(Ok(hardware)),

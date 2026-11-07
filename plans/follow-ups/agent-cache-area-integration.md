@@ -256,9 +256,9 @@
   - [Image project quota](agent-xfs-image-project-quota.md) asks only
     whether the kernel also enforces the image budget. Such a quota does
     not reclaim cache space. This task does not wait for that answer.
-  - [Interrupted uninstall](agent-interrupted-install-uninstall.md) fixes
-    uninstall of an incomplete installation. Both use guarded area
-    removal. The unmount check of this task uses a complete installation.
+  - [Uninstall](../../crates/ciproxy-agent/host-preparation.md#uninstall)
+    removes an incomplete installation through guarded area removal.
+    The unmount check of this task uses a complete installation.
   - [The old runner patch remains](runner-string-patch-removal.md) removes
     the old runner scripts after the merge. It keeps the live `cache`
     scenario of this task as the end-to-end proof of the source hook.

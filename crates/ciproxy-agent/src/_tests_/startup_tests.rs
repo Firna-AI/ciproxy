@@ -26,6 +26,9 @@ struct PausedVms {
 
 #[async_trait]
 impl Vms for PausedVms {
+    async fn networks(&self) -> Result<Vec<u16>> {
+        self.delegate.networks().await
+    }
     async fn configuration_lost(&self, vm: &VmRecord) -> Result<bool> {
         self.delegate.configuration_lost(vm).await
     }
@@ -35,8 +38,11 @@ impl Vms for PausedVms {
     async fn swap_docker(&self, vm: &VmRecord) -> Result<()> {
         self.delegate.swap_docker(vm).await
     }
-    fn allocate(&self, report: RunnerReport, used: &[VmRecord]) -> Result<VmRecord> {
-        self.delegate.allocate(report, used)
+    async fn allocate(&self, report: RunnerReport, used: &[u16]) -> Result<VmRecord> {
+        self.delegate.allocate(report, used).await
+    }
+    async fn remove_network(&self, index: u16) -> Result<()> {
+        self.delegate.remove_network(index).await
     }
     async fn start(&self, vm: &VmRecord, config: AgentToGuest) -> Result<()> {
         let barrier = self.barrier.lock().await.take().unwrap();

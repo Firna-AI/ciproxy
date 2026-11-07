@@ -166,15 +166,21 @@ async fn reports_current_hardware_and_each_job_or_warm_slot() {
 #[tokio::test]
 async fn guest_exit_discards_vm_and_removal_finishes_only_after_the_job() {
     let mock = Unimock::new((
+        VmsMock::networks
+            .some_call(matching!())
+            .returns(Ok(Vec::new())),
+        VmsMock::remove_network
+            .some_call(matching!(1))
+            .returns(Ok(())),
         VmsMock::stop
             .some_call(matching!((record) if record.report.runner_id.0 == "job"))
             .returns(Ok(())),
         CacheMock::release.some_call(matching!(_)).returns(Ok(())),
         StoreMock::save
-            .some_call(
+            .each_call(
                 matching!((state) if state.runners.is_empty() && state.mode == Mode::Removed),
             )
-            .returns(Ok(())),
+            .answers(&|_, _| Ok(())),
     ));
     let agent = controller(
         MachineState {
@@ -201,6 +207,8 @@ async fn guest_exit_discards_vm_and_removal_finishes_only_after_the_job() {
             exit: RunnerExit { code: Some(0) }
         })
     );
+    assert!(!agent.finished().await);
+    agent.cleanup_networks().await.unwrap();
     assert!(agent.finished().await);
 }
 
