@@ -3997,3 +3997,39 @@ above.
   field. Pull request #40 recommended A as the smallest change.
 - **Action:** ask the user, because no requirement says which Boat accounts
   ciproxy supports.
+
+### 95. A paid change can charge another amount than its review
+
+- **Severity:** High. **Likelihood:** Common. **Effort:** Medium.
+- **Source:** Review, Milestone 18, pull request #39, round 1, its finding 1.
+- **Category:** Product bug.
+- **Location:** `crates/ciproxy-billing/src/stripe/http/preview.rs:64`, and
+  `crates/ciproxy-billing/src/stripe/forms.rs:40`.
+- **Background:** Proration is Stripe's charge for the rest of the current
+  billing period after a plan change. A move between paid plans first
+  shows a review with Stripe's preview of that charge, computed at a fixed
+  proration time. The payment then builds a separate Stripe request.
+- **Problem:** The payment request does not send the proration time of the
+  review, so Stripe computes the charge at the time of payment. Stripe
+  documents that the same time must be sent to match the preview.
+- **Impact if no action:** The charge can differ from the reviewed amount.
+  Across a renewal, the difference can be large.
+- **Root question:** How does a paid change keep the charge that the
+  customer reviewed?
+- **Options:**
+  - **A.** Return a signed quote with the review, and send it back with the
+    payment. The server checks its signature and age, and gives its
+    proration time to Stripe. Effort: Medium.
+  - **B.** Store each quote on the server. The payment names its quote, and
+    each retry keeps the same proration time. The server refuses an unknown
+    or outdated quote. Effort: Medium.
+  - **C.** Preview again at payment. When the amount changed, ask the
+    customer to confirm again. Effort: Medium.
+- **Left out:** Changing nothing, because it fails the review requirement.
+  A proration time from the browser without a check, because a customer
+  could choose a cheaper time.
+- **Wider fix:** B.
+- **Recommendation:** B. A stored quote best keeps the payment and its
+  retries the same as the review.
+- **Action:** ask the user, because each option adds a new refusal or a new
+  confirmation for an outdated quote.
