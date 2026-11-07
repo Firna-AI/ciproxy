@@ -50,6 +50,7 @@ pub(super) fn own_runner(pages: &Pages, machine_id: Uuid, github: i64) -> Runner
         .create_own_runner(
             fixture.workspace,
             &OwnRunner {
+                registration_scale_set_id: None,
                 requested_size: label.size,
                 slot_indices: vec![2],
                 runner: runner.clone(),

@@ -7,9 +7,9 @@ use chrono::{DateTime, Duration, Utc};
 use ciproxy_control_plane::runtime::OwnMachines;
 use ciproxy_gateway::gateway::MachineGatewayMock;
 use ciproxy_gateway::types::Delivery;
+use ciproxy_github::registrations::RegisteredRunner;
 use ciproxy_github::registrations::RunnerRegistrationsMock;
 use ciproxy_github::runtime::{Runtime, RuntimeMock};
-use ciproxy_github::scale_sets::JitRegistration;
 use ciproxy_protocol::agent::{AgentMessage, ControlMessage};
 use ciproxy_protocol::identifiers::RunnerId;
 use ciproxy_protocol::reports::DrainState;
@@ -52,8 +52,9 @@ async fn lost_start_reply_then_completed_github_job_releases_slots_and_disk_on_l
     let registrations = Arc::new(Unimock::new(
         RunnerRegistrationsMock::create
             .each_call(matching!(_, _))
-            .answers_arc(Arc::new(move |_, _, _| {
-                Ok(JitRegistration {
+            .answers_arc(Arc::new(move |_, request, _| {
+                Ok(RegisteredRunner {
+                    target: request.target,
                     runner_id: next_registration.fetch_add(1, Ordering::SeqCst),
                     configuration: "jit-fixture".into(),
                 })
@@ -170,10 +171,13 @@ async fn runner_exit_before_github_completion_stays_stopped_and_releases_slots_a
     let registrations = Arc::new(Unimock::new(
         RunnerRegistrationsMock::create
             .some_call(matching!(_, _))
-            .returns(Ok(JitRegistration {
-                runner_id: 48,
-                configuration: "jit-fixture".into(),
-            })),
+            .answers(&|_, request, _| {
+                Ok(RegisteredRunner {
+                    target: request.target,
+                    runner_id: 48,
+                    configuration: "jit-fixture".into(),
+                })
+            }),
     ));
     let messages = Arc::new(Mutex::new(Vec::new()));
     let (clock, _) = clock();

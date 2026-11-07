@@ -40,6 +40,7 @@ pub(super) struct Browser {
 }
 
 pub(super) struct Fixture {
+    pub(super) access: Arc<AccessService>,
     pub(super) database: Database,
     pub(super) state: ApiState,
     pub(super) identity: Arc<Identity>,
@@ -113,7 +114,7 @@ impl Fixture {
                 build: "http-test-build".to_owned(),
             },
             store: database.store.clone(),
-            access,
+            access: access.clone(),
             gateway: gateway.clone(),
             github: app.clone(),
             scale_sets: factory,
@@ -174,6 +175,7 @@ impl Fixture {
             .unwrap();
         remote.sets.lock().unwrap().insert((label.name, 47), 501);
         Self {
+            access,
             database,
             state,
             identity,

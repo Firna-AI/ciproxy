@@ -36,17 +36,35 @@ The integration tests check the current version with the spike's wire
 format and nanosecond timestamps.
 Scale-set creation uses GitHub's label acceptance and disables runner
 updates. The image release process controls runner versions.
-The API also exposes scale-set deletion for the later label and take-out
-services. Each reconcile upserts current remote IDs while preserving the
+The App service reconciles label creation and retirement together. Label
+create and delete, maintenance, resume, and reinstall use that service.
+Each reconcile upserts current remote IDs while preserving the
 internal UUID, advisory lock key, and retained job/runner references.
 A saved live set that reports a different group returns
 ScaleSetGroupChanged. The adapter makes no unproven remote move and deletes
 no unknown or retained resource. That case needs live move proof before
 automatic repair can be enabled. It does not erase retained job history.
 
-Before resume or retained reinstall prepares active label bindings, it releases
-the names of retired bindings by their exact remote IDs. A missing old remote
+Before preparing active bindings, reconciliation releases retired names by
+their exact remote IDs. It renames a binding while tracked work, pending
+delivery, or a listener lease remains. Otherwise it owns that listener
+lease, checks tracked work again, removes the remote resource, and records
+cleanup. It retains the binding and its job history. A missing old remote
 resource counts as released. Authentication and provider failures stay errors.
-This preserves label replacement without changing retained job references.
+
+New label validation uses this same reconciler before the API saves the
+label. Later reconciliation saves the prepared binding with activation.
+Scheduler snapshots read those saved bindings. They use no unsaved remote
+preparation result.
+
+`RegistrationService::create` captures the context used by its remote
+request. Its `RegisteredRunner` response returns that exact target with
+the JIT configuration and runner ID. Runtime callers save the returned
+target before delivering the configuration. A later binding read cannot
+reconstruct the registration target.
+
+[Binding reconciliation](src/app/bindings.rs) owns creation and retirement.
+[Registration storage](../ciproxy-store-interface/registration-targets.md)
+describes capture and older records.
 
 [free-groups]: https://github.blog/changelog/2024-10-17-actions-runner-groups-now-available-for-organizations-on-free-plan/

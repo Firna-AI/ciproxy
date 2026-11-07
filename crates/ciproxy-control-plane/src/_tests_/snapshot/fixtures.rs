@@ -7,6 +7,7 @@ use ciproxy_store_interface::labels::{Label, WhenNothingFits};
 use ciproxy_store_interface::machines::Machine;
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
 use ciproxy_store_interface::own_runners::RoutingSnapshot;
+use ciproxy_store_interface::scale_sets::ScaleSet;
 use ciproxy_store_interface::settings::{OverflowWait, Settings};
 use ciproxy_store_interface::vm_size::VmSize;
 use uuid::Uuid;
@@ -23,6 +24,7 @@ pub(super) fn input() -> RoutingSnapshot {
   "cache":{"used_bytes":0,"capacity_bytes":0,"restores_last_7_days":0,"hits_last_7_days":0,"jobs":[]},"docker_disks":{"leased_bytes":0,"repositories":0,"used_bytes":0},"images":{"available":[{"image_id":"fixture","root_disk_bytes":60_263_759_872u64}],"newest":"fixture"}
  })).unwrap();
     RoutingSnapshot {
+        scale_sets: vec![binding(2), binding(6)],
         boat_intents: Vec::new(),
         overflow: ciproxy_store_interface::overflow::store::OverflowSnapshot {
             accounts: Vec::new(),
@@ -118,5 +120,15 @@ pub(super) fn job(id: u128, org: u128, age_hours: i64) -> GithubJob {
             head_sha: "fixture".to_owned(),
             head_repository: None,
         },
+    }
+}
+
+pub(super) fn binding(org: u128) -> ScaleSet {
+    ScaleSet {
+        id: Uuid::from_u128(org + 100),
+        organization_id: Uuid::from_u128(org),
+        label_id: Uuid::from_u128(4),
+        github_id: org as i64,
+        runner_group_id: 45,
     }
 }

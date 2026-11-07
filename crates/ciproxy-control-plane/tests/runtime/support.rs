@@ -129,6 +129,7 @@ impl Fixture {
             .bind::<sql_types::Uuid,_>(workspace).bind::<sql_types::Uuid,_>(machine).bind::<sql_types::Uuid,_>(contact.session_id)
             .bind::<sql_types::Jsonb,_>(serde_json::to_value(&contact.report).unwrap()).bind::<sql_types::Timestamptz,_>(contact.at).execute(&mut connection).unwrap();
         let intent = OwnRunner {
+            registration_scale_set_id: Some(44),
             requested_size: VmSize {
                 vcpus: 2,
                 memory_gb: 8,
@@ -199,6 +200,19 @@ impl Fixture {
     pub(super) fn admit_organization(&mut self) {
         diesel::sql_query("UPDATE organization_activation SET admitted=TRUE,admin_approval_hold=FALSE WHERE workspace_id=$1 AND organization_id=$2")
             .bind::<sql_types::Uuid,_>(self.workspace).bind::<sql_types::Uuid,_>(self.organization)
+            .execute(&mut self.connection).unwrap();
+    }
+
+    pub(super) fn forget_registration_target(&mut self, runner: Uuid) {
+        diesel::sql_query(
+            "UPDATE runners SET registration_scale_set_id=NULL WHERE workspace_id=$1 AND id=$2",
+        )
+        .bind::<sql_types::Uuid, _>(self.workspace)
+        .bind::<sql_types::Uuid, _>(runner)
+        .execute(&mut self.connection)
+        .unwrap();
+        diesel::sql_query("UPDATE boat_runner_intents SET body=body-'registration_scale_set_id' WHERE workspace_id=$1 AND runner_id=$2")
+            .bind::<sql_types::Uuid,_>(self.workspace).bind::<sql_types::Uuid,_>(runner)
             .execute(&mut self.connection).unwrap();
     }
 

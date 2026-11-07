@@ -6,7 +6,9 @@ use ciproxy_github::error::Error;
 use ciproxy_github::listener::{DurableListener, ListenerOptions, ScaleSetListener};
 use ciproxy_github::persistence::StoreAdapter;
 use ciproxy_github::persistence::session::ListenerTarget;
-use ciproxy_github::registrations::{RegistrationService, RunnerRegistrations};
+use ciproxy_github::registrations::{
+    RegistrationRequest, RegistrationService, RunnerRegistrations,
+};
 use ciproxy_store_interface::scale_sets::ScaleSet;
 use tokio::sync::watch;
 use uuid::Uuid;
@@ -47,7 +49,15 @@ pub(super) async fn refuses_runners(fixture: &Fixture, organization: Uuid) {
         scale_sets: fixture.state.scale_sets.clone(),
     };
     assert!(matches!(
-        registrations.create(target, "must-not-start").await,
+        registrations
+            .create(
+                RegistrationRequest {
+                    workspace_id: target.workspace_id,
+                    target: (&set).into()
+                },
+                "must-not-start"
+            )
+            .await,
         Err(Error::OrganizationInactive)
     ));
     let listener = DurableListener {

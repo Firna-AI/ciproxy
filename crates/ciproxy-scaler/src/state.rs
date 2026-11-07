@@ -62,7 +62,8 @@ impl Plan {
         reason: StartReason,
     ) {
         self.actions.push(Action::StartRunner(StartRunner {
-            organization_id: job.organization_id.clone(),
+            target: job.target.clone(),
+            organization_id: job.target.organization_id.clone(),
             label: label.name.clone(),
             requested_size: label.size,
             size,
@@ -81,8 +82,10 @@ pub(crate) fn warm_candidate(runner: &Runner) -> bool {
 }
 
 pub(crate) fn label_for<'a>(snapshot: &'a Snapshot, runner: &Runner) -> Option<&'a Label> {
-    snapshot
-        .labels
-        .iter()
-        .find(|label| label.name == runner.label)
+    snapshot.labels.iter().find(|label| {
+        runner
+            .target
+            .as_ref()
+            .is_some_and(|target| label.targets.contains(target))
+    })
 }

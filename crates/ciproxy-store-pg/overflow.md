@@ -59,6 +59,12 @@ configuration or callback token. The saved GitHub runner ID also goes to
 the runner row of the delivery, when that row exists. The routing snapshot
 reads these rows with the account and delivery rows in one repeatable-read
 transaction. The separate durable snapshot read takes no overflow session.
+`save_boat_registration` saves the response's exact remote scale-set ID
+with its runner ID. It updates the intent and an existing runner together.
+Sandbox materialization copies this captured ID from the saved intent.
+It never copies a later binding ID. Ordinary recovery and Busy writes
+change the runner ID only. They preserve captured targets and leave
+older unknown targets unknown.
 
 ### Registration ownership
 

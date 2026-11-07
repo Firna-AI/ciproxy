@@ -12,6 +12,7 @@ use crate::actions::{Action, Destination, StartReason, StartRunner};
 use crate::boat::{
     BoatAccount, BoatRunner, BoatSize, BoatSizeId, MonthlySpend, Sandbox, SandboxId,
 };
+use crate::registration::RegistrationTarget;
 use crate::snapshot::{
     Destinations, Label, Machine, NothingFits, Runner, RunnerState, Snapshot, WaitingJob,
 };
@@ -71,8 +72,18 @@ pub(super) fn snapshot() -> Snapshot {
     }
 }
 
+pub(super) fn target(organization: &str, name: &str) -> RegistrationTarget {
+    RegistrationTarget {
+        organization_id: OrganizationId(organization.into()),
+        label_id: name.into(),
+        scale_set_id: format!("{organization}:{name}"),
+        github_id: 53,
+    }
+}
+
 pub(super) fn label(name: &str, size: VmSize) -> Label {
     Label {
+        targets: vec![target("a", name), target("b", name)],
         name: LabelName(name.into()),
         size,
         destinations: Destinations {
@@ -85,14 +96,14 @@ pub(super) fn label(name: &str, size: VmSize) -> Label {
 
 pub(super) fn queued(organization: &str, name: &str, age: u64) -> WaitingJob {
     WaitingJob {
-        organization_id: OrganizationId(organization.into()),
-        label: LabelName(name.into()),
+        target: target(organization, name),
         queued_at: Duration::from_secs(100 - age),
     }
 }
 
 pub(super) fn runner(id: &str, organization: &str, name: &str, state: RunnerState) -> Runner {
     Runner {
+        target: Some(target(organization, name)),
         id: RunnerId(id.into()),
         organization_id: OrganizationId(organization.into()),
         label: LabelName(name.into()),
@@ -142,6 +153,7 @@ pub(super) fn start(
     reason: StartReason,
 ) -> Action {
     Action::StartRunner(StartRunner {
+        target: target(organization, name),
         organization_id: OrganizationId(organization.into()),
         label: LabelName(name.into()),
         requested_size: size,
@@ -186,6 +198,7 @@ pub(super) fn boat_with_request(
     reason: StartReason,
 ) -> Action {
     Action::StartRunner(StartRunner {
+        target: target(organization, name),
         organization_id: OrganizationId(organization.into()),
         label: LabelName(name.into()),
         requested_size,
