@@ -1427,15 +1427,62 @@ Depends on: 13, 15, 23
 Each page of the docs sidebar mockup states only what the protocol docs
 require and the product does.
 
-- [ ] Start here: Overview, Quickstart, and How ciproxy works.
-- [ ] Guides: Add a machine, Connect Boat, Move your workflows, Set a spend
+- [x] Start here: Overview, Quickstart, and How ciproxy works.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Guides: Add a machine, Connect Boat, Move your workflows, Set a spend
       limit, and Remove a machine.
-- [ ] Reference: Labels and VM sizes, Agent install options, GitHub App
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Reference: Labels and VM sizes, Agent install options, GitHub App
       permissions, and Plans and starts.
-- [ ] Say on the docs page of the job image that a job can run its steps
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Say on the docs page of the job image that a job can run its steps
       in any Docker image with the `container:` key, as item 78 = C says.
-- [ ] Security: Job isolation, and The agent connection. Check each page
-      against the product on the test host.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Security: Job isolation, and The agent connection.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Show the mockup's steps, cards, and default-label badge. My call,
+      7 November 2026: use Astro's MDX component map and expressions with
+      the Starlight components, because the existing Markdown check accepts
+      them. The gate configuration stays unchanged.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Smoke-test all 14 pages at 1440, 720, and 390 pixels. Check mobile
+      navigation, search, page links, anchors, light mode, and aside borders.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [ ] Orchestrator: check each page against the running product at
+      `https://br-main.preview.app.ciproxy.dev`, after the dashboard
+      workspaces deliver their screens. Use a disposable private repository,
+      a KVM test machine, and a Boat test account.
+  - [ ] Overview: confirm the Free plan, an own-machine start, Boat after
+        the default wait, and a machine-cache restore.
+  - [ ] Quickstart: follow sign-in, App install, machine registration, and
+        the first job with the documented command and workflow change.
+  - [ ] How ciproxy works: check warm runners, drain, cache clearing, Boat
+        routing, and steps in a job container.
+  - [ ] Add a machine: check Admin access, token expiry and revoke,
+        registration, hardware, slots, no KVM, disk fit, and repeat install.
+  - [ ] Connect Boat: check the key, account name, spend limit, wait,
+        rejected key, key change, and disconnect.
+  - [ ] Move your workflows: check repository access, the `runs-on` change,
+        cache actions, and the Docker image example.
+  - [ ] Set a spend limit: check confirmed and pending spend, blocked new
+        Boat starts, running jobs, and a sufficient increase of the limit.
+  - [ ] Remove a machine: check drain, resume, removal while offline,
+        credential revocation, the machine count, and local uninstall.
+  - [ ] Labels and VM sizes: check default and custom labels, free disk,
+        slots, fit, names, deletion, and both "When nothing fits" choices.
+  - [ ] Agent install options: check command help, host preparation, the
+        systemd service, repeat install, outbound access, and updates.
+  - [ ] GitHub App permissions: check the three permissions, private
+        repository access, personal accounts, suspension, and removal.
+  - [ ] Plans and starts: check prices, starts, machine counts, history,
+        add-ons, period dates, soft limits, and the payment controls.
+  - [ ] Job isolation: check fresh VMs, cache scopes, Docker disks, public
+        internet access, and blocked private, host, and metadata access.
+  - [ ] The agent connection: check WSS, reports, offline detection,
+        reconnect, continuing jobs, credential protection, and agent version.
+
+The source map, browser evidence, and detailed live checklist are under
+`.context/ciproxy-mvp/` in the delegated workspace.
 
 ## Milestone 25: Tier features: backend
 

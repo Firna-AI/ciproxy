@@ -15,8 +15,15 @@ The pages follow the marketing and docs mockups under
 - `/terms/` and `/privacy/` are the frames of the legal pages. Grey lines
   hold the place of the text that the owner writes or approves before the
   launch. Only the data retention of the privacy policy has text.
-- `/docs/` is Starlight with a Graphite theme. The docs pages come with
-  their own work.
+- `/docs/` is Starlight with a Graphite theme. Its sidebar has the 14 pages
+  of the docs sidebar mockup, in its order:
+  - Start here: Overview at `/docs/`, Quickstart, and How ciproxy works.
+  - Guides under `/docs/guides/`: Add a machine, Connect Boat, Move your
+    workflows, Set a spend limit, and Remove a machine.
+  - Reference under `/docs/reference/`: Labels and VM sizes, Agent install
+    options, GitHub App permissions, and Plans and starts.
+  - Security under `/docs/security/`: Job isolation, and The agent
+    connection.
 
 The look is Graphite:
 
@@ -57,6 +64,35 @@ Rules for work on the site:
 - Icons are the Lucide paths in `src/components/icon/icons.ts`, under the
   licence beside them. The site adds no icon package.
 
+Rules for the docs pages:
+
+- A docs page states only what the [protocol docs](../../docs/protocol/)
+  require and the product does. The dashboard steps use the names of the
+  protocol docs, such as **Machines**, **Add machine**, and **Settings**
+  under **Overflow**.
+- The Markdown check of the gate refuses HTML and component tags, such as
+  `<Steps>` or `<LinkCard>`, in the source of a docs page. An MDX page shows
+  a Starlight component without a tag, in one of two ways:
+  - It maps a Markdown element to a component with
+    `export const components`. The Quickstart maps its ordered list to
+    `StepsList`, which puts the list in Starlight `Steps`.
+  - It calls `jsx()` of `astro/jsx-runtime` in an expression, such as
+    `{jsx(Badge, { text: "Default" })}`. The Overview and the Quickstart
+    draw their link cards with `CardGrid` and `LinkCard` in this way.
+- Keep the data of such a call in an `export const` block, and the call on
+  one line. Prettier formats the block as JavaScript, but it formats an
+  expression on several lines as Markdown text and drops its indent.
+- A page that shows a value of `src/data/` is MDX. It imports the value and
+  writes it as an expression, such as `{freePlanNote}`. Prices, limits, and
+  tier features come from `src/data/tiers.ts`. The VM disk of a default job
+  and the image budget come from `src/data/hardware.ts`, because they change
+  with the image.
+- A link between docs pages uses its absolute address, such as
+  `/docs/reference/labels/`, so that the gate does not read it as a file.
+- One fact has one page, and the other pages link to it. The full example
+  of a job container is under "Run steps in another image" of Move your
+  workflows.
+
 ## Development
 
 Use the Node version in [.nvmrc](../../.nvmrc).
@@ -84,7 +120,8 @@ It subtracts the 140 GB image budget before the host and job disk split.
 Each default job reserves its VM disk: the current image with the 20 GB of
 free disk of the label `ciproxy`. `src/data/hardware.ts` holds that VM disk
 as one value from `RootSizing` of `ciproxy-agent`. Change the value when the
-image or that rule changes. The AX42 calculation combines its two 512 GB
+image or that rule changes. The docs page Labels and VM sizes shows it in
+whole GB. The AX42 calculation combines its two 512 GB
 disks into one 1,024 GB filesystem, which fits all six slots.
 
 The build prints a Starlight warning about one code theme.
@@ -129,7 +166,13 @@ This keeps it separate from the Markdown lint tool's YAML version.
   Starlight variables to the tokens. The other files in that folder restyle
   the frame, the columns, the article, its blocks, the asides, and the
   search.
-- [src/content/docs/docs/index.md](src/content/docs/docs/index.md) is `/docs/`.
+- [src/content/docs/docs/](src/content/docs/docs/index.mdx) holds the docs
+  pages: `index.mdx` is `/docs/`, and the folders `guides`, `reference`, and
+  `security` hold the pages of those sidebar groups.
+- [src/components/docs/StepsList.astro](src/components/docs/StepsList.astro)
+  shows the ordered list of a docs page as Starlight steps.
+- [src/data/docs-links.ts](src/data/docs-links.ts) names the docs pages that
+  the marketing pages link to, such as the docs links of the footer.
 - [src/content/i18n/en.json](src/content/i18n/en.json) changes Starlight
   labels, such as the search label.
 - [src/components/Tokens.astro](src/components/Tokens.astro) adds the token

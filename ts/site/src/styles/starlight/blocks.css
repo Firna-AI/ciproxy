@@ -67,6 +67,7 @@
 .sl-steps > li::before {
   background-color: var(--c-surface);
   box-shadow: inset 0 0 0 1px var(--c-border2);
+  border-radius: var(--r-pill);
   color: var(--c-ink);
   font-family: var(--font-mono);
   font-size: 12px;
@@ -98,6 +99,29 @@
   justify-content: flex-start;
   padding-inline: 12px;
   font-weight: 400;
+}
+
+/* Put the copy target in the header, clear of wrapped command text. */
+
+.expressive-code .frame .header {
+  padding-inline-end: 3.25rem;
+}
+
+.expressive-code .frame:is(.has-title, .is-terminal) .copy {
+  inset-block-start: 0;
+}
+
+.expressive-code .copy button {
+  border-radius: var(--r-sm);
+  background: transparent;
+}
+
+.expressive-code .copy .feedback {
+  --tooltip-bg: var(--c-ink);
+
+  border-radius: var(--r-sm);
+  color: var(--c-on-solid);
+  font-family: var(--font-sans);
 }
 
 /* A table: a header band and hairline rows that wrap, in a frame with a

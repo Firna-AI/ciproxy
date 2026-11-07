@@ -1,0 +1,71 @@
+---
+title: Move your workflows
+description: Change one line in each job to run it on ciproxy.
+---
+
+## Change runs-on
+
+Replace `ubuntu-latest` in the `runs-on` line of a job with a ciproxy label:
+
+```diff lang="yaml" title=".github/workflows/ci.yml"
+ jobs:
+   test:
+-    runs-on: ubuntu-latest
++    runs-on: ciproxy
+     steps:
+       - uses: actions/checkout@v4
+       - run: cargo test --workspace
+```
+
+The label picks the size of the VM. Every workspace starts with the labels
+`ciproxy`, `ciproxy-4vcpu`, and `ciproxy-8vcpu`.
+[Labels and VM sizes](/docs/reference/labels/) gives their sizes, and how to
+add your own.
+
+Move one workflow first. **Jobs** in ciproxy shows where each of its jobs
+ran, and how long it waited for a runner.
+
+## The repositories that use ciproxy
+
+- ciproxy runs the jobs of private repositories only. A job of a public
+  repository never reaches a ciproxy runner, so keep the runners of public
+  repositories as they are.
+- GitHub decides which repositories ciproxy can see. Change them on GitHub,
+  in the installation of the ciproxy GitHub App.
+- In **Settings**, under **Organizations**, allow all private repositories
+  or selected repositories of each organization.
+- A job of a repository that you do not allow gets no ciproxy runner, and
+  GitHub keeps it queued.
+
+## The software of a job
+
+Each job starts from one image with the software of the GitHub runner image
+of `ubuntu-latest`. So a workflow keeps its steps, and only its `runs-on`
+line changes. A label sets the size of the VM, not its software.
+
+### Run steps in another image
+
+A job can run its steps in any Docker image, with the `container:` key of
+GitHub Actions. This works on every plan:
+
+```yaml title=".github/workflows/ci.yml"
+jobs:
+  test:
+    runs-on: ciproxy
+    container:
+      image: node:24
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npm test
+```
+
+The steps then run in a container of that image, in the VM of the job.
+Custom VM images, a feature of Business, are Coming later.
+
+## What stays the same
+
+- `actions/cache` and other actions that use the GitHub cache work without
+  workflow edits.
+- Artifacts and logs go to GitHub, as on GitHub-hosted runners.
+- Code and secrets go from GitHub straight to the runner.
