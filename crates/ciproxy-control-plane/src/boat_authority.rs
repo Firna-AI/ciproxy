@@ -1,4 +1,4 @@
-//! GitHub-first idle retirement with the App-removal lifetime exception.
+//! GitHub-first idle retirement with saved installation ownership holds.
 
 use std::sync::Arc;
 
@@ -62,11 +62,6 @@ impl RunnerAuthority for BoatRunnerAuthority {
             Ok(Ok(value)) => value,
             _ => return Err(Error::ProviderUnavailable),
         };
-        if input.organizations.iter().any(|organization| {
-            organization.id == organization_id && organization.removed_at.is_some()
-        }) {
-            return Err(Error::RunnerNeeded);
-        }
         let intents = &input.boat_intents;
         let intent = intents
             .iter()
@@ -74,6 +69,12 @@ impl RunnerAuthority for BoatRunnerAuthority {
                 intent.runner_id == runner_id && intent.organization_id == organization_id
             })
             .ok_or(Error::OwnershipUnknown)?;
+        if self
+            .registration_access_ended(workspace_id, runner_id)
+            .await?
+        {
+            return Err(Error::RunnerNeeded);
+        }
         let takeout = input.organizations.iter().any(|organization| {
             organization.id == organization_id && organization.app_state == AppState::Removed
         });
@@ -113,17 +114,12 @@ impl RunnerAuthority for BoatRunnerAuthority {
             return Ok(Retirement::WaitingDemand);
         }
         let retirement = self.remove(workspace_id, intent).await?;
-        if retirement == Retirement::Removed {
-            let store = self.store.clone();
-            match tokio::task::spawn_blocking(move || {
-                store.organization(workspace_id, organization_id)
-            })
-            .await
-            {
-                Ok(Ok(Some(organization))) if organization.removed_at.is_none() => {}
-                Ok(Ok(Some(_))) => return Err(Error::RunnerNeeded),
-                _ => return Err(Error::ProviderUnavailable),
-            }
+        if retirement == Retirement::Removed
+            && self
+                .registration_access_ended(workspace_id, runner_id)
+                .await?
+        {
+            return Err(Error::RunnerNeeded);
         }
         Ok(retirement)
     }
@@ -132,6 +128,12 @@ impl RunnerAuthority for BoatRunnerAuthority {
 #[async_trait]
 impl BoatRegistrationRetirement for BoatRunnerAuthority {
     async fn remove(&self, workspace_id: Uuid, intent: &BoatRunnerIntent) -> Result<Retirement> {
+        if self
+            .registration_access_ended(workspace_id, intent.runner_id)
+            .await?
+        {
+            return Err(Error::RunnerNeeded);
+        }
         let result = self
             .registrations
             .retire(
@@ -177,6 +179,20 @@ impl BoatRegistrationRetirement for BoatRunnerAuthority {
                 Ok(Retirement::Removed)
             }
             Err(_) => Err(Error::ProviderUnavailable),
+        }
+    }
+}
+
+impl BoatRunnerAuthority {
+    async fn registration_access_ended(&self, workspace_id: Uuid, runner_id: Uuid) -> Result<bool> {
+        let store = self.store.clone();
+        match tokio::task::spawn_blocking(move || {
+            store.boat_registration_access_ended(workspace_id, runner_id)
+        })
+        .await
+        {
+            Ok(Ok(ended)) => Ok(ended),
+            _ => Err(Error::ProviderUnavailable),
         }
     }
 }

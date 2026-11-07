@@ -34,7 +34,7 @@ It removes a trailing slash first. Boat sandboxes must reach
 `PUBLIC_URL/hooks/boat/runner-exit` over HTTPS.
 
 Keep the value set while a Boat sandbox can exist. Without it, the runtime
-does no Boat cleanup and serves no exit callback. Boat then ends each
+does no sandbox cleanup and serves no exit callback. Boat then ends each
 sandbox only at its lifetime. That is six hours, or two hours on a free
 trial. The deployment reads the optional value from its Kubernetes Secret.
 [Boat setup](../../deploy/runtime.md#boat-shared-snapshot) gives the steps.
@@ -53,7 +53,8 @@ overflow service.
 
 - The runtime saves a registration identity before it asks GitHub for a JIT
   registration. The identity holds the runner, delivery, organization,
-  label, and scale-set IDs, the sizes, and the required root bytes.
+  installation, label, and scale-set IDs, the sizes, and the required root
+  bytes.
 - The JIT configuration goes only into the encrypted delivery input. The
   database never holds it in plaintext.
 - An unfinished delivery resumes with the same IDs after a restart or an
@@ -61,9 +62,26 @@ overflow service.
 - A registration without a live delivery is retired GitHub-first by its
   unique runner name, `ciproxy-<runner ID>`. The runtime then deletes its
   identity.
-- Saved owner removal defers registration recovery without a GitHub call.
-  Recovery also defers when the organization is absent. It keeps the saved
-  identities and resumes ordinary retirement after reinstall.
+- When the GitHub access of an identity has ended, recovery defers with no
+  GitHub call and keeps the identity. Access ends at saved owner removal,
+  at a completed take-out of the current installation, or when the
+  organization is absent. A new install of a retained organization ends
+  the deferral, and ordinary retirement resumes. A completed take-out of an
+  older installation grants nothing over the new installation. A later
+  completed take-out of the new installation also applies to the older
+  identities.
+- Identity cleanup deletes a terminal identity when its saved ownership
+  allows it. An identity is terminal only when no unfinished delivery and
+  no live runner use it. A completed take-out allows deletion at once, but
+  it never permits a sandbox stop. Owner removal allows deletion at the
+  30-day deadline of the organization. The organization purge keeps that
+  deadline on each identity with a saved installation ID that is not
+  terminal yet. Identity cleanup
+  keeps an identity without a saved installation ID. It runs each pass with
+  no GitHub call, also while the Boat service is off. It deletes no
+  delivery, runner, or job history. The
+  [store guide](../ciproxy-store-pg/overflow.md#registration-ownership)
+  gives the exact rule.
 - An accepted delivery keeps its original request and its required root
   bytes, also after a new image release.
 - A dispatched delivery keeps its fixed provider size. An unsent delivery
@@ -78,8 +96,8 @@ overflow service.
   reservation. A saved provider deletion can finish after acceptance.
 - After an owner removes the App, launched sandboxes stay until their
   runner exits or their saved lifetime ends. Missing job facts do not prove
-  that a sandbox is idle. The runtime checks saved owner removal before and
-  after GitHub retirement. A successful GitHub response does not permit
+  that a sandbox is idle. The runtime checks for ended GitHub access before
+  and after GitHub retirement. A successful GitHub response does not permit
   early sandbox deletion after removal.
 - App removal stops new Boat starts. The last organization removal retires
   the Boat key and holds it until the unfinished sandboxes end. Exit

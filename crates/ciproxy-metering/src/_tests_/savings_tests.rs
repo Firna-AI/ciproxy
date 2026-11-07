@@ -6,8 +6,9 @@ use ciproxy_store_interface::metering::history::MachineCost;
 use ciproxy_store_interface::metering::totals::{DailyTotal, LocationTotals, SizeTotal};
 use uuid::Uuid;
 
-use crate::report::catalog::Alternative;
-use crate::report::savings::{ReportInput, savings_report};
+use crate::report::catalog::{Alternative, Comparison};
+use crate::report::costs::{CostGap, Costs};
+use crate::report::savings::{ReportInput, Saving, savings_report};
 use crate::test_support::{at, catalog, day, free_history, range, size, usd};
 
 #[test]
@@ -130,4 +131,85 @@ fn negative_savings_keep_their_sign_and_unknown_comparison_hides_lead() {
         (None, None, None)
     );
     assert_eq!(incomplete.comparisons[1].missing[0].size, size());
+}
+
+#[test]
+fn missing_machine_price_hides_both_savings_and_keeps_known_costs() {
+    let days = vec![DailyTotal {
+        day: day("2026-11-04"),
+        boat_usd: usd("2"),
+        sizes: vec![SizeTotal {
+            size: size(),
+            machines: LocationTotals {
+                starts: 2,
+                minutes: usd("10"),
+            },
+            boat: LocationTotals {
+                starts: 1,
+                minutes: usd("5"),
+            },
+        }],
+    }];
+    let machine = MachineRegistration {
+        machine_id: Uuid::from_u128(1),
+        registered_at: Some(at("2026-11-01T00:00:00Z")),
+        removed_at: None,
+    };
+    let mut costs = free_history();
+    costs.plans[0].monthly_usd = usd("90");
+    let lists = [
+        catalog(Alternative::Blacksmith, "0.2"),
+        catalog(Alternative::Github, "0.4"),
+    ];
+    let report = savings_report(ReportInput {
+        range: range("2026-11-04", "2026-11-05"),
+        at: at("2026-11-05T00:00:00Z"),
+        days: &days,
+        machines: std::slice::from_ref(&machine),
+        costs: &costs,
+        price_lists: &lists,
+    });
+    assert_eq!(
+        report.savings,
+        [
+            Saving {
+                alternative: Alternative::Blacksmith,
+                usd: None,
+            },
+            Saving {
+                alternative: Alternative::Github,
+                usd: None,
+            },
+        ]
+    );
+    assert_eq!(
+        report.costs,
+        Costs {
+            known_machines_usd: usd("0"),
+            boat_usd: usd("2"),
+            known_plan_usd: usd("3"),
+            total_usd: None,
+            missing: vec![CostGap::MachinePrice {
+                machine_id: machine.machine_id,
+                day: day("2026-11-04"),
+            }],
+        }
+    );
+    assert_eq!(
+        report.comparisons,
+        [
+            Comparison {
+                alternative: Alternative::Blacksmith,
+                dated: day("2026-11-04"),
+                usd: Some(usd("3")),
+                missing: vec![],
+            },
+            Comparison {
+                alternative: Alternative::Github,
+                dated: day("2026-11-04"),
+                usd: Some(usd("6")),
+                missing: vec![],
+            },
+        ]
+    );
 }

@@ -23,7 +23,7 @@ impl MachineRuntime {
         let Some(overflow) = &self.overflow else {
             return;
         };
-        if let Err(error) = overflow.cleanup(input.workspace_id).await {
+        if let Err(error) = self.cleanup_boat(input.workspace_id).await {
             tracing::warn!(%error, "Boat cleanup will retry");
         }
         let workspace = input.workspace_id;
@@ -58,7 +58,7 @@ impl MachineRuntime {
                 .find(|record| record.delivery_id == intent.delivery_id);
             if record.is_none_or(|record| record.ends_at.is_some()) {
                 if let Err(error) = self
-                    .retire_boat_registration(workspace, intent, record, &current.organizations)
+                    .retire_boat_registration(workspace, intent, record)
                     .await
                 {
                     tracing::warn!(%error,"Boat registration cleanup will retry");
