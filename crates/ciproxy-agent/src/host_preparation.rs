@@ -126,7 +126,7 @@ impl Uninstall for FinalUninstall {
         let state = self.store.load()?;
         if state.runners.is_empty() {
             self.agent.remove().await?;
-            self.complete(None).await?;
+            self.complete().await?;
             return Ok(UninstallState::Complete);
         }
         self.preparation.verify().await?;
@@ -137,16 +137,15 @@ impl Uninstall for FinalUninstall {
     }
 
     async fn finish(&self) -> Result<()> {
-        self.complete(Some(self.images.clone())).await
+        self.complete().await
     }
 }
 
 impl FinalUninstall {
-    async fn complete(&self, images: Option<Arc<dyn Images>>) -> Result<()> {
+    async fn complete(&self) -> Result<()> {
         if self
             .agent
             .complete_removal(CompletionAction::Uninstall(UninstallCleanup {
-                images,
                 preparation: self.preparation.clone(),
                 service: self.service.clone(),
             }))

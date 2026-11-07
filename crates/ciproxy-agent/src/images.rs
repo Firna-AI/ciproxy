@@ -42,10 +42,6 @@ impl Images for ManagedImages {
         self.registry.hold_newest()
     }
 
-    fn purge(&self) -> Result<()> {
-        self.registry.purge()
-    }
-
     async fn fetch(&self, image: &ImageDownload) -> Result<()> {
         let _fetch = self.fetch.lock().await;
         if self.registry.is_newest(&image.image_id) {

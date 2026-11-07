@@ -6,7 +6,7 @@ use unimock::{MockFn, Unimock, matching};
 
 use crate::area::{AreaFilesMock, DiskAreaMock};
 use crate::area_types::Phase;
-use crate::boundaries::{ImagesMock, ServiceMock, StoreMock, VmsMock};
+use crate::boundaries::{ServiceMock, StoreMock, VmsMock};
 use crate::error::{Error, ErrorResultExt};
 use crate::fixtures::{controller, vm};
 use crate::host_fixtures::inventory;
@@ -143,18 +143,10 @@ async fn preparation_secures_control_before_packages_tools_and_the_area() {
 async fn final_uninstall_waits_for_jobs_then_preserves_identity_until_cleanup_succeeds() {
     for jobs_finished in [false, true] {
         let events = Arc::new(Mutex::new(Vec::new()));
-        let purged = events.clone();
         let removed = events.clone();
         let uninstalled = events.clone();
         let cleared = events.clone();
         let callbacks = (
-            ImagesMock::purge
-                .some_call(matching!())
-                .answers_arc(Arc::new(move |_| {
-                    purged.lock().unwrap().push("purge");
-                    Ok(())
-                }))
-                .at_least_times(0),
             PreparationMock::remove
                 .some_call(matching!())
                 .answers_arc(Arc::new(move |_| {
@@ -209,7 +201,7 @@ async fn final_uninstall_waits_for_jobs_then_preserves_identity_until_cleanup_su
         .finish()
         .await;
         let expected = if jobs_finished {
-            vec!["purge", "area", "service", "identity"]
+            vec!["area", "service", "identity"]
         } else {
             vec![]
         };

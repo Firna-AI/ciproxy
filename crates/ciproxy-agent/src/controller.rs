@@ -67,14 +67,10 @@ impl Agent for Controller {
         self.retry_network_cleanup().await?;
         let uninstall = matches!(action, CompletionAction::Uninstall(_));
         if let CompletionAction::Uninstall(UninstallCleanup {
-            images,
             preparation,
             service,
         }) = action
         {
-            if let Some(images) = images {
-                images.purge()?;
-            }
             preparation.remove().await?;
             service.uninstall()?;
         }

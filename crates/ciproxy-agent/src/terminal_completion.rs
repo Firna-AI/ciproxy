@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use crate::boundaries::{Images, Service};
+use crate::boundaries::Service;
 use crate::host_preparation::Preparation;
 
 /// Terminal completion either stops the daemon or removes the installation.
@@ -15,9 +15,7 @@ pub enum CompletionAction {
 
 /// Local uninstall dependencies, kept until checked terminal cleanup succeeds.
 pub struct UninstallCleanup {
-    /// Only a recovered, drained runtime owns image mutation.
-    pub(crate) images: Option<Arc<dyn Images>>,
-    /// Remove the owned area and runtime tools.
+    /// Remove the owned area, including its images, and runtime tools.
     pub(crate) preparation: Arc<dyn Preparation>,
     /// Remove the installed agent service.
     pub(crate) service: Arc<dyn Service>,

@@ -7,7 +7,7 @@ use unimock::{Clause, MockFn, Unimock, matching};
 use crate::boundaries::ImagesMock;
 use crate::controller::AgentMock;
 use crate::host_preparation::{FinalUninstall, PreparationMock};
-use crate::terminal_completion::{CompletionAction, UninstallCleanup};
+use crate::terminal_completion::CompletionAction;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) enum Event {
@@ -31,10 +31,7 @@ pub(super) fn uninstall(mock: Arc<Unimock>) -> FinalUninstall {
 
 pub(super) fn cleanup(events: Arc<Mutex<Vec<Event>>>) -> impl Clause {
     AgentMock::complete_removal
-        .some_call(matching!(CompletionAction::Uninstall(UninstallCleanup {
-            images: None,
-            ..
-        })))
+        .some_call(matching!(CompletionAction::Uninstall(_)))
         .answers_arc(Arc::new(move |_, _| {
             events.lock().unwrap().push(Event::Complete);
             Ok(true)

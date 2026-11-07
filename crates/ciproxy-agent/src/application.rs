@@ -263,7 +263,10 @@ async fn execute(action: Action) -> Result<()> {
             loop {
                 match uninstall.finish().await {
                     Ok(()) => break,
-                    Err(error) => tracing::warn!(%error, "uninstall is waiting for local cleanup"),
+                    Err(Error::Draining) => {}
+                    Err(error) => {
+                        tracing::warn!(%error, "Uninstall cleanup will retry automatically. Stop this command before running uninstall again.")
+                    }
                 }
                 let result = tokio::select! {
                     event = guest_rx.recv() => {
