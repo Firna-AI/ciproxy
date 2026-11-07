@@ -112,6 +112,11 @@ The [scale-set guide](scale-sets.md) gives repository refresh, the
 managed runner groups, scale-set creation and reconcile, and label
 replacement.
 
+Runner group sync creates or updates the managed name and private-access
+policy. It sets selected repositories through the separate repository
+access endpoint after either operation. The create and update bodies omit
+repository IDs, so repeated syncs use GitHub's supported update fields.
+
 ### Durable demand and registrations
 
 Scale-set `jobId` is a UUID. It is separate from the numeric Actions job
