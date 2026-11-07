@@ -1,5 +1,6 @@
 import { workspaceId } from "./fixtures-core.ts";
 import type { ScenarioName } from "./harness-scenarios.ts";
+import { reviewCases } from "./browser-review-cases.ts";
 
 export type SmokeCase = {
   name: string;
@@ -7,6 +8,7 @@ export type SmokeCase = {
   path: string;
   heading: string;
   text?: string;
+  storage?: Readonly<Record<string, string>>;
 };
 
 const jobs = `/jobs?workspace=${workspaceId}`;
@@ -14,6 +16,7 @@ const setup = `/setup?workspace=${workspaceId}`;
 const add = "/add-organization";
 
 export const smokeCases: readonly SmokeCase[] = [
+  ...reviewCases,
   {
     name: "sign-in",
     scenario: "signed-out",

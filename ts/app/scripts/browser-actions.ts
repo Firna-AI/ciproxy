@@ -4,6 +4,7 @@ import type { BrowserContext, Page } from "./browser-driver.ts";
 import type { SmokeCase } from "./browser-cases.ts";
 import { control, facts, keyboardMenu, visible } from "./browser-fixture.ts";
 import { workspaceId } from "./fixtures-core.ts";
+import { exerciseReviewCase } from "./browser-review-actions.ts";
 
 async function pickWorkspace(page: Page): Promise<void> {
   const northstar = page.getByRole("radio", { name: /Northstar/ });
@@ -38,7 +39,9 @@ export async function exerciseCase(
   context: BrowserContext,
   item: SmokeCase,
   origin: string,
+  width: number,
 ): Promise<void> {
+  await exerciseReviewCase(page, item, origin, width);
   if (
     item.name.startsWith("links-inactive") ||
     item.name === "links-preparing"
@@ -102,11 +105,19 @@ export async function exerciseCase(
     );
   }
   if (item.name === "setup-waiting") {
+    const before = await page.getByTestId("install-command").textContent();
     await context.grantPermissions(["clipboard-read", "clipboard-write"], {
       origin,
     });
-    await page.getByRole("button", { name: "Copy", exact: true }).click();
-    await visible(page.getByRole("button", { name: "Copied", exact: true }));
+    await page
+      .getByRole("button", { name: "Copy the install command", exact: true })
+      .click();
+    await visible(
+      page.getByRole("button", {
+        name: "Copied the install command",
+        exact: true,
+      }),
+    );
     await page
       .getByRole("button", { name: "Revoke token", exact: true })
       .click();
@@ -115,6 +126,49 @@ export async function exerciseCase(
       .getByRole("button", { name: "Create a new command", exact: true })
       .click();
     await visible(page.getByTestId("install-command"));
+    assert.notEqual(
+      await page.getByTestId("install-command").textContent(),
+      before,
+      "The replacement command must use different text",
+    );
+    await visible(
+      page.getByRole("button", {
+        name: "Copy the install command",
+        exact: true,
+      }),
+    );
+    assert.equal(
+      await page
+        .getByRole("button", {
+          name: "Copied the install command",
+          exact: true,
+        })
+        .count(),
+      0,
+    );
+    await page
+      .getByRole("button", { name: "Copy the install command", exact: true })
+      .click();
+    await visible(
+      page.getByRole("button", {
+        name: "Copied the install command",
+        exact: true,
+      }),
+    );
+  }
+  if (item.name === "setup-available") {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"], {
+      origin,
+    });
+    await page
+      .getByRole("button", { name: "Copy the workflow change", exact: true })
+      .click();
+    await visible(
+      page.getByRole("button", {
+        name: "Copied the workflow change",
+        exact: true,
+      }),
+    );
   }
   if (
     item.name === "setup-load-failure" ||
@@ -214,6 +268,10 @@ export async function copyFailure(page: Page, origin: string): Promise<void> {
   await page.goto(`${origin}/setup?workspace=${workspaceId}`, {
     waitUntil: "domcontentloaded",
   });
-  await page.getByRole("button", { name: "Copy", exact: true }).click();
-  await visible(page.getByText("Unable to copy the command", { exact: true }));
+  await page
+    .getByRole("button", { name: "Copy the install command", exact: true })
+    .click();
+  await visible(
+    page.getByText("Unable to copy the install command", { exact: true }),
+  );
 }

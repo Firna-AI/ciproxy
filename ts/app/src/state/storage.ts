@@ -63,4 +63,6 @@ export const storageKeys = {
   signInEnds: "ciproxy.sign-in-ends",
   lastWorkspace: "ciproxy.workspace",
   installStarted: "ciproxy.install-started",
+  /** The last verified installation that the landing handled. */
+  handledInstallation: "ciproxy.installation",
 } as const;

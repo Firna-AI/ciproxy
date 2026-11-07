@@ -1,14 +1,15 @@
 // The one-line install command of the machine step. The store creates one
 // command when the step first shows, never on a refresh. The command shows
-// with Copy and Revoke token, its end, and what a machine needs. After
-// Revoke token or the end, a new command is one press away.
+// with Copy in its head, then its end, what a machine needs, and Revoke
+// token. After Revoke token or the end, a new command is one press away. The
+// copy result belongs to the text of the command, so a new command never
+// shows the result of an earlier one.
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { ActionButton } from "../../components/actions.tsx";
 import { CodeBlock } from "../../components/code-block.tsx";
-import { CopyIcon } from "../../components/icons.tsx";
 import { Notice } from "../../components/notice.tsx";
 import { WaitingLine } from "../../components/page-state.tsx";
 import { text } from "../../components/text.ts";
@@ -17,22 +18,10 @@ import { useValue } from "../../services/hooks.ts";
 import { commandExpired } from "../../state/install-command.ts";
 import { formatTime } from "../../view/format.ts";
 
-type CopyState = "idle" | "copied" | "failed";
-
-async function copy(value: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(value);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 export function InstallCommandView({ workspaceId }: { workspaceId: string }) {
   const services = useServices();
   const store = services.installCommand(workspaceId);
   const snapshot = useValue(store.state);
-  const [copied, setCopied] = useState<CopyState>("idle");
   useEffect(() => {
     if (store.state.get().status === "none") void store.create();
   }, [store]);
@@ -87,19 +76,15 @@ export function InstallCommandView({ workspaceId }: { workspaceId: string }) {
       <CodeBlock
         label="On the machine"
         lines={[command.command]}
+        copy={{ text: command.command, subject: "the install command" }}
         testID="install-command"
       />
-      <View style={styles.row}>
-        <ActionButton
-          label={copied === "copied" ? "Copied" : "Copy"}
-          icon={CopyIcon}
-          size="sm"
-          onPress={() =>
-            void copy(command.command).then((done) =>
-              setCopied(done ? "copied" : "failed"),
-            )
-          }
-        />
+      <View style={styles.note}>
+        <Text style={[text.caption, styles.noteText]}>
+          The command adds any number of machines until{" "}
+          {formatTime(command.expires_at)}. A machine needs{" "}
+          {command.requirements}
+        </Text>
         <ActionButton
           label="Revoke token"
           tone="ghost"
@@ -108,26 +93,24 @@ export function InstallCommandView({ workspaceId }: { workspaceId: string }) {
           onPress={() => void store.revoke()}
         />
       </View>
-      {copied === "failed" ? (
-        <Notice tone="warning" title="Unable to copy the command">
-          Select the command and copy it.
-        </Notice>
-      ) : null}
       {snapshot.status === "open" && snapshot.revokeFailure ? (
         <Notice tone="danger" title="Unable to revoke the token">
           The command still works until {formatTime(command.expires_at)}. Try
           again.
         </Notice>
       ) : null}
-      <Text style={text.caption}>
-        The command adds any number of machines until{" "}
-        {formatTime(command.expires_at)}. A machine needs {command.requirements}
-      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   command: { gap: 8 },
-  row: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  note: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  noteText: { flexGrow: 1, flexShrink: 1, flexBasis: 240 },
 });

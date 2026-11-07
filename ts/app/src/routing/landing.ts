@@ -1,4 +1,5 @@
-// Where the dashboard opens. The session decides it: a removed App, an
+// Where the dashboard opens. The session decides it: a role that waits for a
+// new GitHub sign-in, the continuation of a new install, a removed App, an
 // ended access, a personal-account install, an install that waits for the
 // person, or a workspace. The client never infers a workspace for an
 // organization; it only opens the page that the server state asks for.
@@ -11,6 +12,12 @@ import type {
 } from "../api/schema.ts";
 import { isOpenLink } from "../state/links.ts";
 import { setupWaits } from "../state/setup.ts";
+import {
+  installContinuation,
+  installationToRemember,
+  installStaysOpen,
+  type InstallContinuation,
+} from "./continuation.ts";
 import { pages, workspaceHref } from "./pages.ts";
 
 export type Landing = { href: string } | { workspace: WorkspaceView };
@@ -20,6 +27,17 @@ export type LandingContext = {
   installStarted: boolean;
   /** The workspace that the URL or the last visit names. */
   preferredWorkspaceId: string | null;
+  /** The stored last handled installation; absent or null when none. */
+  handledInstallationId?: string | null;
+};
+
+/** The page to open, and what the browser keeps about the install. */
+export type LandingDecision = {
+  landing: Landing;
+  /** The installation to store once the page opens, or null for no change. */
+  remember: string | null;
+  /** The install stays open, so the tab keeps its install mark. */
+  installOpen: boolean;
 };
 
 export function openLinks(session: SessionView): OrganizationLinkView[] {
@@ -53,15 +71,34 @@ function freshOutcome(session: SessionView, context: LandingContext): boolean {
   return session.state !== "ready" || context.installStarted;
 }
 
-export function sessionLanding(
+/**
+ * The landing of a session. A sign-in without a workspace session whose
+ * role or request is ready signs in again first, as the API asks. The claim
+ * of a new install comes next, also before the removed-App and ended-access
+ * pages, and its workspace before any remembered one. Older claims keep
+ * their place after those pages.
+ */
+function route(
   session: SessionView,
   context: LandingContext,
+  continuation: InstallContinuation,
 ): Landing {
+  if (
+    session.state !== "ready" &&
+    session.reauthorization_required &&
+    session.reauthorization_url
+  ) {
+    return { href: pages.install };
+  }
+  if (continuation.kind === "return") return { href: pages.addOrganization };
   if (session.state === "app_removed") return { href: pages.appRemoved };
   if (session.state === "access_ended") return { href: pages.accessEnded };
   const fresh = freshOutcome(session, context);
   if (fresh && session.setup?.kind === "organizations_only") {
     return { href: pages.personalAccount };
+  }
+  if (continuation.kind === "workspace") {
+    return { workspace: continuation.workspace };
   }
   if (openLinks(session).length > 0) return { href: pages.addOrganization };
   if (session.state === "install_required") return { href: pages.install };
@@ -77,6 +114,29 @@ export function sessionLanding(
     context.preferredWorkspaceId,
   );
   return workspace === null ? { href: pages.install } : { workspace };
+}
+
+export function landingDecision(
+  session: SessionView,
+  context: LandingContext,
+): LandingDecision {
+  const memory = {
+    installStarted: context.installStarted,
+    handledInstallationId: context.handledInstallationId ?? null,
+  };
+  const continuation = installContinuation(session, memory);
+  return {
+    landing: route(session, context, continuation),
+    remember: installationToRemember(session, memory, continuation),
+    installOpen: installStaysOpen(continuation),
+  };
+}
+
+export function sessionLanding(
+  session: SessionView,
+  context: LandingContext,
+): Landing {
+  return landingDecision(session, context).landing;
 }
 
 /** An Admin opens Setup until it is done; everyone else opens Jobs. */

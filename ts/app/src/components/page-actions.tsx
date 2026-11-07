@@ -12,6 +12,8 @@ import { ExternalIcon } from "./icons.tsx";
 export type ActionHandlers = {
   onCheckAgain?: () => void;
   onClaim?: (workspaceId: string) => void;
+  /** Called before a link to another page of the app opens it. */
+  onExit?: () => void;
   /** The action that runs now, which shows busy. */
   busy?: PageAction["kind"] | null;
 };
@@ -53,6 +55,7 @@ export function PageActionView({
             tone={action.tone}
             size={size}
             block={block}
+            onClick={handlers.onExit ? () => handlers.onExit?.() : undefined}
           />
         </Link>
       );

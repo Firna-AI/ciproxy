@@ -41,7 +41,10 @@ export function MobileShell(props: ShellFrameProps) {
             <View style={styles.switch}>
               <BrandMark size={18} />
               <View style={styles.divider} />
-              <Text style={[text.body, text.strong]} numberOfLines={1}>
+              <Text
+                style={[text.body, text.strong, styles.name]}
+                numberOfLines={1}
+              >
                 {workspace.name}
               </Text>
               <SwitchIcon size={14} color={navColors.icon} />
@@ -81,13 +84,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 8,
     paddingLeft: 8,
     paddingRight: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     backgroundColor: colors.surface,
   },
-  switch: { flexDirection: "row", alignItems: "center", gap: 10, minWidth: 0 },
+  switch: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  name: { flexShrink: 1 },
   divider: {
     width: 1,
     height: 18,

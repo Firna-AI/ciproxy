@@ -6,24 +6,20 @@ import { useCallback, useRef, useState } from "react";
 
 import { pages, workspaceHomeHref } from "../../routing/pages.ts";
 import { useServices } from "../../services/context.tsx";
+import { claimFailure, type FailureCopy } from "../../view/claim.ts";
 
 export type ShellAction = "add-organization" | "claim-admin" | "sign-out";
 
-export type ShellFailure = { title: string; body: string };
+export type ShellFailure = FailureCopy;
 
-const failures: Readonly<Record<ShellAction, ShellFailure>> = {
-  "add-organization": {
-    title: "Unable to start the install on GitHub",
-    body: "Try Add an organization again.",
-  },
-  "claim-admin": {
-    title: "Unable to claim the Admin role",
-    body: "GitHub must list you as an owner. Check again after an owner adds you.",
-  },
-  "sign-out": {
-    title: "Unable to sign out",
-    body: "Try Sign out again.",
-  },
+const addFailure: ShellFailure = {
+  title: "Unable to start the install on GitHub",
+  body: "Try Add an organization again.",
+};
+
+const signOutFailure: ShellFailure = {
+  title: "Unable to sign out",
+  body: "Try Sign out again.",
 };
 
 export function useShellActions(workspaceId: string) {
@@ -33,15 +29,15 @@ export function useShellActions(workspaceId: string) {
   const [failure, setFailure] = useState<ShellFailure | null>(null);
 
   const run = useCallback(
-    async (action: ShellAction, work: () => Promise<boolean>) => {
+    async (action: ShellAction, work: () => Promise<ShellFailure | null>) => {
       if (running.current !== null) return;
       running.current = action;
       setBusy(action);
       setFailure(null);
-      const done = await work();
+      const next = await work();
       running.current = null;
       setBusy(null);
-      if (!done) setFailure(failures[action]);
+      setFailure(next);
     },
     [],
   );
@@ -52,10 +48,10 @@ export function useShellActions(workspaceId: string) {
         const result = await services.session.mutate(() =>
           services.endpoints.addOrganization(workspaceId),
         );
-        if (!result.ok) return false;
+        if (!result.ok) return addFailure;
         services.markInstallStarted();
         services.navigator.leave(result.value.url);
-        return true;
+        return null;
       }),
     [run, services, workspaceId],
   );
@@ -64,8 +60,9 @@ export function useShellActions(workspaceId: string) {
     () =>
       run("claim-admin", async () => {
         const result = await services.session.claimAdmin(workspaceId);
-        if (result.ok) services.navigator.go(workspaceHomeHref(workspaceId));
-        return result.ok;
+        if (!result.ok) return claimFailure(result.failure);
+        services.navigator.go(workspaceHomeHref(workspaceId));
+        return null;
       }),
     [run, services, workspaceId],
   );
@@ -74,8 +71,9 @@ export function useShellActions(workspaceId: string) {
     () =>
       run("sign-out", async () => {
         const result = await services.session.signOut();
-        if (result.ok) services.navigator.leave(pages.signIn);
-        return result.ok;
+        if (!result.ok) return signOutFailure;
+        services.navigator.leave(pages.signIn);
+        return null;
       }),
     [run, services],
   );

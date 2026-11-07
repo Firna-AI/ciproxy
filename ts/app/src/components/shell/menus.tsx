@@ -74,13 +74,14 @@ export function WorkspaceSwitch({
       entries={entries}
       accessibilityLabel="Workspaces"
       align="start"
-      style={styles.anchor}
+      style={styles.switchAnchor}
       minWidth={280}
     >
       <Button
         tone="plain"
         accessibilityLabel={`Workspace ${workspace.name}. Switch workspace`}
         content={trigger}
+        style={styles.switchButton}
       />
     </DropdownMenu>
   );
@@ -150,7 +151,7 @@ export function AccountMenu({
       header={header}
       accessibilityLabel="Account"
       align="end"
-      style={styles.anchor}
+      style={styles.accountAnchor}
       minWidth={280}
     >
       <Button
@@ -171,8 +172,13 @@ export function AccountMenu({
   );
 }
 
+// A long workspace name shrinks the switch, never the account: the switch,
+// its button, and its trigger may shrink, and the name ends with an ellipsis.
+// The accessible name of the switch keeps the whole name.
 const styles = StyleSheet.create({
-  anchor: { alignSelf: "center", minWidth: 0 },
+  switchAnchor: { alignSelf: "center", flexShrink: 1, minWidth: 0 },
+  switchButton: { flexShrink: 1, minWidth: 0, maxWidth: "100%" },
+  accountAnchor: { alignSelf: "center", flexShrink: 0 },
   header: {
     gap: 10,
     paddingVertical: 12,

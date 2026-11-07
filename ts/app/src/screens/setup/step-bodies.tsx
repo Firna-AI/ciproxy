@@ -8,6 +8,7 @@ import { colors, radii, statusColors } from "@ciproxy/tokens";
 
 import { ActionButton, ActionLink } from "../../components/actions.tsx";
 import { CodeBlock } from "../../components/code-block.tsx";
+import { afterText } from "../../components/copy-state.ts";
 import { AlertIcon, DoneIcon } from "../../components/icons.tsx";
 import { Notice } from "../../components/notice.tsx";
 import { WaitingLine } from "../../components/page-state.tsx";
@@ -124,7 +125,11 @@ export function JobStep({
       <Text style={text.small}>
         Change runs-on in one workflow file, then push the change.
       </Text>
-      <CodeBlock label={workflowFile} lines={runsOnDiff} />
+      <CodeBlock
+        label={workflowFile}
+        lines={runsOnDiff}
+        copy={{ text: afterText(runsOnDiff), subject: "the workflow change" }}
+      />
       <WaitingLine>
         {job.kind === "moving"
           ? job.text

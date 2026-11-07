@@ -20,9 +20,13 @@ const origin = process.env.CIPROXY_HARNESS_URL ?? "http://127.0.0.1:4340";
 const output = resolve(
   process.env.CIPROXY_SMOKE_OUTPUT ?? ".context/ciproxy-mvp-m19/browser-smoke",
 );
-const selected = process.argv
-  .find((value) => value.startsWith("--case="))
-  ?.slice(7);
+const selected = new Set(
+  process.argv
+    .filter((value) => value.startsWith("--case="))
+    .flatMap((value) => value.slice(7).split(",")),
+);
+const includesCase = (name: string): boolean =>
+  selected.size === 0 || selected.has(name);
 const results: {
   name: string;
   width: number;
@@ -68,18 +72,30 @@ async function run(
                 "setup-load-failure",
                 "command-load-failure",
                 "command-revoke-failure",
+                "session-refresh-no-role",
+                "session-refresh-workspace",
+                "claim-failure-no-role",
+                "claim-failure-workspace",
               ].includes(name)
             ? 503
-            : null;
+            : name === "claim-failure-csrf"
+              ? 403
+              : null;
       if (
         message.type() === "error" &&
         !(
-          expectedStatus !== null &&
-          message
-            .text()
-            .startsWith(
-              `Failed to load resource: the server responded with a status of ${expectedStatus}`,
-            )
+          (name === "claim-network-failure" &&
+            message
+              .text()
+              .startsWith(
+                "Failed to load resource: net::ERR_EMPTY_RESPONSE",
+              )) ||
+          (expectedStatus !== null &&
+            message
+              .text()
+              .startsWith(
+                `Failed to load resource: the server responded with a status of ${expectedStatus}`,
+              ))
         )
       )
         errors.push("console-error");
@@ -133,11 +149,31 @@ async function run(
 try {
   for (const width of [1440, 720, 390]) {
     for (const item of smokeCases) {
-      if (selected !== undefined && selected !== item.name) continue;
-      const init =
+      if (!includesCase(item.name)) continue;
+      const storage =
         item.name === "auth-expired"
-          ? `localStorage.setItem(${JSON.stringify(storageKeys.signInEnds)}, "2026-11-06T11:00:00Z")`
-          : undefined;
+          ? {
+              ...item.storage,
+              [storageKeys.signInEnds]: "2026-11-06T11:00:00Z",
+            }
+          : item.storage;
+      const entries =
+        storage === undefined
+          ? undefined
+          : Object.entries(storage)
+              .map(([key, value]) => {
+                const area =
+                  key === storageKeys.installStarted
+                    ? "sessionStorage"
+                    : "localStorage";
+                return `${area}.setItem(${JSON.stringify(key)}, ${JSON.stringify(value)})`;
+              })
+              .join(";\n");
+      // Seed this context once. A document reload must keep product updates.
+      const init =
+        entries === undefined
+          ? undefined
+          : `if (sessionStorage.getItem("ciproxy.fixture-seeded") !== "1") {\n${entries};\nsessionStorage.setItem("ciproxy.fixture-seeded", "1");\n}`;
       await run(
         item.name,
         width,
@@ -156,24 +192,24 @@ try {
             path: resolve(output, `${item.name}-${width}-initial.png`),
             fullPage: true,
           });
-          await exerciseCase(page, context, item, origin);
+          await exerciseCase(page, context, item, origin, width);
         },
         init,
       );
     }
     for (const mode of ["link", "programmatic", "history"] as const) {
-      if (selected !== undefined && selected !== `build-${mode}`) continue;
+      if (!includesCase(`build-${mode}`)) continue;
       await run(`build-${mode}`, width, (page) =>
         buildNavigation(page, origin, mode),
       );
     }
     for (const journey of ["add", "switch", "sign-out"] as const) {
-      if (selected !== undefined && selected !== `shell-${journey}`) continue;
+      if (!includesCase(`shell-${journey}`)) continue;
       await run(`shell-${journey}`, width, (page) =>
         shellJourney(page, origin, journey),
       );
     }
-    if (selected === undefined || selected === "copy-failure") {
+    if (includesCase("copy-failure")) {
       // Arrange a denied clipboard. A user can deny this browser permission.
       await run(
         "copy-failure",
@@ -182,7 +218,7 @@ try {
         'Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async () => { throw new Error("Denied") } } })',
       );
     }
-    if (selected === undefined || selected === "static-reloads")
+    if (includesCase("static-reloads"))
       await run("static-reloads", width, (page) => staticReloads(page, origin));
   }
 } finally {

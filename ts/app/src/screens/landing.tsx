@@ -1,14 +1,16 @@
 // The landing at `/`. It reads the session and opens the page that the
 // server state asks for. `/?workspace=<id>` opens that workspace: Setup for
 // an Admin until it is done, Jobs otherwise. The API sends every sign-in and
-// install return here.
+// install return here. The landing stores an install as handled only when it
+// opens the final destination of its claim. An open install stays new, also
+// after the return page, so the next landing still opens its workspace.
 
 import { useEffect } from "react";
 import { useLocalSearchParams } from "expo-router";
 
 import type { WorkspaceView } from "../api/schema.ts";
 import { SessionWaiting } from "../components/page-state.tsx";
-import { sessionLanding, workspaceLanding } from "../routing/landing.ts";
+import { landingDecision, workspaceLanding } from "../routing/landing.ts";
 import { idParam, workspaceHref } from "../routing/pages.ts";
 import { useServices } from "../services/context.tsx";
 import { useSession } from "../services/hooks.ts";
@@ -23,9 +25,13 @@ export function LandingScreen() {
     if (snapshot.status !== "signed-in") return;
     const session = snapshot.session;
     let cancelled = false;
+    /** What the browser keeps once the landing opens its page. */
+    let remember: string | null = null;
+    let installOpen = false;
     const go = (href: string) => {
       if (cancelled) return;
-      services.clearInstallStarted();
+      if (!installOpen) services.clearInstallStarted();
+      if (remember !== null) services.rememberInstallation(remember);
       services.navigator.go(href, { replace: true });
     };
     const open = async (workspace: WorkspaceView) => {
@@ -49,10 +55,14 @@ export function LandingScreen() {
     if (chosen !== undefined) {
       void open(chosen);
     } else {
-      const landing = sessionLanding(session, {
+      const decision = landingDecision(session, {
         installStarted: services.installStarted(),
         preferredWorkspaceId: requested ?? services.lastWorkspace(),
+        handledInstallationId: services.handledInstallation(),
       });
+      remember = decision.remember;
+      installOpen = decision.installOpen;
+      const { landing } = decision;
       if ("href" in landing) go(landing.href);
       else void open(landing.workspace);
     }

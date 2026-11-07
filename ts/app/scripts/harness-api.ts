@@ -80,6 +80,11 @@ export async function serveApi(
     return;
   }
   if (path === "/api/session") {
+    state.sessionReads += 1;
+    if (current.name.startsWith("session-refresh-") && state.sessionReads > 1) {
+      send(503, problem("unavailable", "The access check is unavailable."));
+      return;
+    }
     send(200, current.session);
     return;
   }
@@ -139,6 +144,24 @@ export async function serveApi(
     return;
   }
   const action = workspace[2];
+  if (action === "claim-admin" && method === "POST") {
+    if (current.name === "claim-network-failure") {
+      state.facts.push({ method, path, status: 0, kind: "api" });
+      request.socket.destroy();
+      return;
+    }
+    if (current.name.startsWith("claim-failure-")) {
+      const csrf = current.name === "claim-failure-csrf";
+      send(
+        csrf ? 403 : 503,
+        problem(
+          csrf ? "access_denied" : "unavailable",
+          "The claim did not finish.",
+        ),
+      );
+      return;
+    }
+  }
   if (action === "claim-admin" && method === "POST" && member.can_claim_admin) {
     member.role = "admin";
     member.can_claim_admin = false;
@@ -179,6 +202,7 @@ export async function serveApi(
       200,
       installCommand({
         id: `fixture-install-${state.issued}`,
+        command: `printf 'fixture-only install command ${state.issued}'`,
         expires_at:
           current.name === "command-expired"
             ? "2026-11-06T11:59:00Z"

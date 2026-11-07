@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import type { ApiFailure } from "../src/api/client.ts";
 import type { WorkspaceRole, WorkspaceView } from "../src/api/schema.ts";
 import { sessionLanding, workspaceLanding } from "../src/routing/landing.ts";
 import { workspaceAccess } from "../src/routing/workspace.ts";
 import { workspacePages } from "../src/routing/pages.ts";
+import { claimFailure } from "../src/view/claim.ts";
 import {
   appRemovedPage,
   checkAgainTarget,
@@ -219,4 +221,29 @@ test("access actions use server URLs and the exact claim permission", () => {
   );
   assert.match(removed.title, /northstar-labs/);
   assert.match(removed.notice?.title ?? "", /6 December/);
+});
+
+test("claim failures give recovery without inventing an ownership cause", () => {
+  assert.deepEqual(claimFailure({ kind: "network" }), {
+    title: "Unable to claim the Admin role",
+    body: "Check the connection, then try again.",
+  });
+  const refused: ApiFailure[] = [
+    {
+      kind: "problem",
+      status: 403,
+      problem: { code: "access_denied", message: "The CSRF token changed." },
+    },
+    {
+      kind: "problem",
+      status: 503,
+      problem: { code: "unavailable", message: "GitHub did not answer." },
+    },
+  ];
+  for (const failure of refused) {
+    assert.deepEqual(claimFailure(failure), {
+      title: "Unable to claim the Admin role",
+      body: "ciproxy could not complete the claim. Try again.",
+    });
+  }
 });

@@ -1,7 +1,8 @@
 // The return page of an install on GitHub. It shows each link of the person
 // that still needs something, and keeps a link that the person acted on here
 // until it ends, so the outcome shows. Two links stay independent: each has
-// its own pick, request, and failure.
+// its own pick, request, and failure. A link to another page of the app is
+// the person's exit, which ends the continuation of the current install.
 
 import { Fragment, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
@@ -10,6 +11,7 @@ import { colors } from "@ciproxy/tokens";
 
 import { AuthShell } from "../../components/auth-shell.tsx";
 import { SessionWaiting } from "../../components/page-state.tsx";
+import { verifiedInstallation } from "../../routing/continuation.ts";
 import { pages } from "../../routing/pages.ts";
 import { useServices } from "../../services/context.tsx";
 import { useRedirect, useSession, useValue } from "../../services/hooks.ts";
@@ -55,9 +57,17 @@ export function AddOrganizationScreen() {
     if ("leave" in target) services.navigator.leave(target.leave);
     else void store.checkAgain();
   };
+  // Leaving for a page of the app ends the continuation of the install: the
+  // landing no longer opens its workspace in place of the chosen page.
+  const exit = () => {
+    const installationId = verifiedInstallation(session);
+    if (installationId !== null) services.rememberInstallation(installationId);
+    services.clearInstallStarted();
+  };
   const handlers = {
     busy: links.checking ? ("check-again" as const) : null,
     onCheckAgain: checkAgain,
+    onExit: exit,
   };
   const sections = links.entries.map((entry) => ({
     key: entry.link.id,

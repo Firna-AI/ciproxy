@@ -77,7 +77,10 @@ export function DesktopShell({
                     shape="square"
                     decorative
                   />
-                  <Text style={[text.body, text.strong]} numberOfLines={1}>
+                  <Text
+                    style={[text.body, text.strong, styles.name]}
+                    numberOfLines={1}
+                  >
                     {workspace.name}
                   </Text>
                   <SwitchIcon size={14} color={navColors.icon} />
@@ -166,7 +169,14 @@ const styles = StyleSheet.create({
     minWidth: 0,
     flexShrink: 1,
   },
-  switch: { flexDirection: "row", alignItems: "center", gap: 8, minWidth: 0 },
+  switch: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  name: { flexShrink: 1 },
   slash: { color: colors.border2, fontSize: 20, fontWeight: "300" },
   scroll: { flex: 1 },
   main: { gap: 20, paddingTop: 28, paddingHorizontal: 40, paddingBottom: 48 },

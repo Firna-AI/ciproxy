@@ -1203,13 +1203,17 @@ The Expo app under `ts/app` builds each screen and state of its mockup, with
 `@firna/ui`, `@ciproxy/tokens`, and the generated types. Each UI milestone
 smoke-tests its pages at 1440, 720, and 390 pixels.
 
-- [x] Build the shell, sign-in, the App install, Setup without its Boat
+- [ ] Build the shell, sign-in, the App install, Setup without its Boat
       step, the page for a member with no role, and the page of a removed
       App.
       Branch: `conductor/mvp-m19-ui`.
       Implementation call, 6 November 2026: keep static page routes and
       carry opaque workspace IDs in query parameters, so the existing
       static hosting serves a reload of each page.
+      The screens and known returns are built. The remaining late-approval
+      return waits for the API to name the exact claim or installation
+      resolved by a plain sign-in. The app cannot infer it from claim
+      history, time, or the remembered workspace.
 - [x] Reload a dashboard tab that is older than the API. My call: the API
       gives its build with each response, and the dashboard reloads at the
       next page change after the build changes. Reason: an old tab must not

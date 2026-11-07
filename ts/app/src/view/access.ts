@@ -169,10 +169,14 @@ export function appRemovedPage(
   };
 }
 
+/**
+ * The ended access. The API says only that an earlier role or request
+ * ended, with no cause and no workspace, so the page names neither.
+ */
 export function accessEndedPage(session: SessionView): AuthPageModel {
   return {
     title: "Your access ended",
-    lead: "GitHub no longer lists you in the organizations of your workspace. An owner can add you again on GitHub.",
+    lead: "Your role or your request for access ended. Ask an Admin of your workspace for access, then check again.",
     notice: null,
     list: null,
     actions: [

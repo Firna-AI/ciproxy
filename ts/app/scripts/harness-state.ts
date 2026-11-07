@@ -24,6 +24,7 @@ export type HarnessState = {
   facts: RequestFact[];
   issued: number;
   revoked: number;
+  sessionReads: number;
 };
 
 export function createHarnessState(): HarnessState {
@@ -33,6 +34,7 @@ export function createHarnessState(): HarnessState {
     facts: [],
     issued: 0,
     revoked: 0,
+    sessionReads: 0,
   };
 }
 
@@ -51,6 +53,7 @@ export function updateHarness(state: HarnessState, value: unknown): boolean {
       state.facts = [];
       state.issued = 0;
       state.revoked = 0;
+      state.sessionReads = 0;
       state.build = "fixture-build-a";
     }
   }

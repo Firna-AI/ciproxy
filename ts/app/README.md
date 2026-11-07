@@ -96,7 +96,7 @@ CIPROXY_PLAYWRIGHT_PATH=/absolute/path/playwright-core/index.mjs \
   node ts/app/scripts/browser-smoke.ts
 ```
 
-- `--case=NAME` runs one case, such as `sign-in` or `build-history`. A name
+- `--case=NAME` runs one case or a comma-separated list of cases. A name
   that matches no case fails the run.
 - `CIPROXY_CHROME_PATH` sets the browser, by default `/usr/bin/google-chrome`.
 - `CIPROXY_HARNESS_URL` sets the harness, by default `http://127.0.0.1:4340`.

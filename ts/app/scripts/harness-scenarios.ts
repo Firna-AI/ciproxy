@@ -13,6 +13,7 @@ import {
   workspaceId,
 } from "./fixtures-core.ts";
 import { job, machine, setup } from "./fixtures-setup.ts";
+import { applyReviewScenario } from "./harness-review-scenarios.ts";
 
 export const scenarios = [
   "signed-out",
@@ -52,6 +53,23 @@ export const scenarios = [
   "command-load-failure",
   "command-revoke-failure",
   "command-expired",
+  "root-install-completed",
+  "root-install-viewer",
+  "root-install-github",
+  "root-install-handled",
+  "root-install-pending",
+  "root-explicit-workspace",
+  "root-removed-old-claim",
+  "root-removed-old-outcome",
+  "root-reinstall-open",
+  "root-access-recovery",
+  "session-refresh-no-role",
+  "session-refresh-workspace",
+  "claim-failure-no-role",
+  "claim-failure-workspace",
+  "claim-failure-csrf",
+  "claim-network-failure",
+  "workspace-long",
 ] as const;
 
 export type ScenarioName = (typeof scenarios)[number];
@@ -213,5 +231,6 @@ export function recordedScenario(name: ScenarioName): Scenario {
       completed_at: "2026-11-06T12:07:22Z",
     });
   }
+  applyReviewScenario(data);
   return data;
 }

@@ -52,6 +52,9 @@ export type AppServices = {
   clearInstallStarted(): void;
   rememberWorkspace(workspaceId: string): void;
   lastWorkspace(): string | null;
+  /** The last verified installation that the landing handled, if stored. */
+  handledInstallation(): string | null;
+  rememberInstallation(installationId: string): void;
 };
 
 function cached<T>(create: (key: string) => T): (key: string) => T {
@@ -113,5 +116,9 @@ export function createAppServices(env: AppEnvironment): AppServices {
       env.local.set(storageKeys.lastWorkspace, workspaceId);
     },
     lastWorkspace: () => env.local.get(storageKeys.lastWorkspace),
+    handledInstallation: () => env.local.get(storageKeys.handledInstallation),
+    rememberInstallation(installationId) {
+      env.local.set(storageKeys.handledInstallation, installationId);
+    },
   };
 }

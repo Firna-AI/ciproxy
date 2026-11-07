@@ -1,6 +1,7 @@
 // The signed-in frame of every workspace page. It picks the desktop, rail,
-// or phone frame by the window, and puts the banner of the organization soft
-// limit and a failed menu action above the page.
+// or phone frame by the window, and puts the notice of a failed session
+// check, the banner of the organization soft limit, and a failed menu action
+// above the page.
 
 import type { ReactNode } from "react";
 import { Link } from "expo-router";
@@ -19,6 +20,7 @@ import {
 } from "../../view/shell.ts";
 import { ActionLink } from "../actions.tsx";
 import { Notice } from "../notice.tsx";
+import { SessionRefreshNotice } from "../session-notice.tsx";
 import { text } from "../text.ts";
 import { useViewport } from "../viewport.ts";
 import { DesktopShell } from "./desktop-shell.tsx";
@@ -80,6 +82,7 @@ export function AppShell({
     actions,
     children: (
       <>
+        <SessionRefreshNotice />
         <Banner workspace={workspace} role={role} />
         {actions.failure ? (
           <Notice tone="danger" title={actions.failure.title}>

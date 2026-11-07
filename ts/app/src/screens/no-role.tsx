@@ -2,7 +2,7 @@
 // workspace. It names the Admins, checks again, and lets an owner claim the
 // Admin role. Links lead to the other workspaces of the person.
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 
@@ -14,6 +14,7 @@ import { workspaceHomeHref } from "../routing/pages.ts";
 import { useServices } from "../services/context.tsx";
 import { useCheckAgain } from "../services/hooks.ts";
 import { noRolePage } from "../view/access.ts";
+import { claimFailure, type FailureCopy } from "../view/claim.ts";
 import type { PageAction } from "../view/page-model.ts";
 
 export function NoRoleScreen({
@@ -25,46 +26,44 @@ export function NoRoleScreen({
 }) {
   const services = useServices();
   const checkAgain = useCheckAgain();
+  const running = useRef(false);
   const [busy, setBusy] = useState<PageAction["kind"] | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [failure, setFailure] = useState<FailureCopy | null>(null);
   const others = session.workspaces.filter((item) => item.id !== workspace.id);
 
+  // One action at a time. A failed session check shows in the frame; a
+  // failed claim shows here, with no cause that the API does not give.
   const run = async (
     kind: PageAction["kind"],
-    work: () => Promise<boolean>,
+    work: () => Promise<FailureCopy | null>,
   ) => {
-    if (busy !== null) return;
+    if (running.current) return;
+    running.current = true;
     setBusy(kind);
-    setFailed(false);
-    const done = await work();
+    setFailure(null);
+    const next = await work();
+    running.current = false;
     setBusy(null);
-    if (!done) setFailed(true);
+    setFailure(next);
   };
 
   return (
     <AuthPage
       model={noRolePage(session, workspace)}
-      failure={
-        failed
-          ? {
-              title: "Unable to claim the Admin role",
-              body: "GitHub must list you as an owner. Check again after an owner adds you.",
-            }
-          : null
-      }
+      failure={failure}
       handlers={{
         busy,
         onCheckAgain: () =>
           void run("check-again", async () => {
             await checkAgain(session);
-            return true;
+            return null;
           }),
         onClaim: (workspaceId) =>
           void run("claim-admin", async () => {
             const result = await services.session.claimAdmin(workspaceId);
-            if (result.ok)
-              services.navigator.go(workspaceHomeHref(workspaceId));
-            return result.ok;
+            if (!result.ok) return claimFailure(result.failure);
+            services.navigator.go(workspaceHomeHref(workspaceId));
+            return null;
           }),
       }}
     >

@@ -1,5 +1,6 @@
 // The signed-out frame: the brand above one centred card on the page grey,
-// and a full-width white column on a phone.
+// and a full-width white column on a phone. The card starts with the notice
+// of a failed session check, when a check failed.
 
 import type { ReactNode } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
@@ -7,6 +8,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { colors, radii } from "@ciproxy/tokens";
 
 import { Brand } from "./brand.tsx";
+import { SessionRefreshNotice } from "./session-notice.tsx";
 import { text } from "./text.ts";
 import { useViewport } from "./viewport.ts";
 
@@ -26,7 +28,10 @@ export function AuthShell({
       <View style={mobile ? null : styles.brand}>
         <Brand />
       </View>
-      <View style={[styles.card, mobile && styles.cardMobile]}>{children}</View>
+      <View style={[styles.card, mobile && styles.cardMobile]}>
+        <SessionRefreshNotice />
+        {children}
+      </View>
       {footer ? (
         <Text
           style={[text.caption, styles.footer, mobile && styles.footerMobile]}
