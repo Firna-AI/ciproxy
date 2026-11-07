@@ -36,25 +36,27 @@ pub(super) fn respond(control: &Control, path: &str, page: &str) -> Option<Respo
         if control.fail_user_installations.load(Ordering::SeqCst) {
             return Some(StatusCode::SERVICE_UNAVAILABLE.into_response());
         }
-        let mut installations = if page == "1" {
+        let mut installations = {
             (10000..10100).map(|id|json!({"id":id,"account":{"id":id+20000,"login":"other-access","type":"Organization"}})).collect::<Vec<_>>()
-        } else {
-            vec![
-                json!({"id":101,"account":{"id":100,"login":"customer","type":"Organization"}}),
-                json!({"id":1066,"account":{"id":106,"login":"not-registered","type":"Organization"}}),
-                json!({"id":700,"account":{"id":7,"login":"person-7","type":"User"}}),
-                json!({"id":702,"account":{"id":7,"login":"not-member","type":"Organization"}}),
-                json!({"id":703,"account":{"id":8,"login":"person-8","type":"User"}}),
-                json!({"id":704,"account":{"id":7,"login":"wrong-kind","type":"User"}}),
-                json!({"id":705,"account":{"id":200,"login":"wrong-account","type":"Organization"}}),
-            ]
         };
-        if page != "1" {
-            installations.extend(control.extra_installations.lock().unwrap().iter().map(|(id,account,login)|json!({"id":id,"account":{"id":account,"login":login,"type":"Organization"}})));
-        }
+        installations.extend([
+            json!({"id":101,"account":{"id":100,"login":"customer","type":"Organization"}}),
+            json!({"id":1066,"account":{"id":106,"login":"not-registered","type":"Organization"}}),
+            json!({"id":700,"account":{"id":7,"login":"person-7","type":"User"}}),
+            json!({"id":702,"account":{"id":7,"login":"not-member","type":"Organization"}}),
+            json!({"id":703,"account":{"id":8,"login":"person-8","type":"User"}}),
+            json!({"id":704,"account":{"id":7,"login":"wrong-kind","type":"User"}}),
+            json!({"id":705,"account":{"id":200,"login":"wrong-account","type":"Organization"}}),
+        ]);
+        installations.extend(control.extra_installations.lock().unwrap().iter().map(|(id,account,login)|json!({"id":id,"account":{"id":account,"login":login,"type":"Organization"}})));
         if control.hide_added_installation.load(Ordering::SeqCst) {
             installations.retain(|installation| installation["id"] != 1066);
         }
+        let installations = installations
+            .into_iter()
+            .skip((page.parse::<usize>().unwrap() - 1) * 100)
+            .take(100)
+            .collect::<Vec<_>>();
         return Some(Json(json!({"installations":installations})).into_response());
     }
     if let Some(id) = path

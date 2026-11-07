@@ -12,6 +12,7 @@ use ciproxy_store_interface::organizations::AppState;
 
 use super::authentication::digest;
 use super::flow::Purpose;
+use super::link_continuation::ProofResults;
 use super::pending::BrowserState;
 use super::{AccessService, InstallContext, LoginSuccess};
 
@@ -113,8 +114,19 @@ impl AccessService {
             }
             _ => None,
         };
-        self.prove_links(&profile, &grant, &memberships, target, github)
+        let mut proof_results = ProofResults::default();
+        self.prove_links(
+            &profile,
+            &grant,
+            &memberships,
+            target,
+            github,
+            &mut proof_results,
+        )
+        .await?;
+        self.prove_completed_links(&profile, &grant, &memberships, &mut proof_results)
             .await?;
+        let installation_continuation = proof_results.into_claims();
         let github_id = profile.id;
         let organization_ids = memberships
             .iter()
@@ -189,11 +201,7 @@ impl AccessService {
             credentials: self.cipher.seal(id, grant.encode()?).await?,
             checked_at: now,
         };
-        let retained = query(self.store.clone(), move |store| {
-            store.establish_dashboard_session(&user, &memberships, &session)
-        })
-        .await?;
-        let browser = BrowserState {
+        let mut browser = BrowserState {
             install_context,
             user_id: id,
             session_id,
@@ -203,13 +211,28 @@ impl AccessService {
             secret: token.expose_secret().to_owned(),
             csrf: csrf.expose_secret().to_owned(),
             expires_at,
-            had_access: retained || prior.is_some_and(|browser| browser.had_access),
+            had_access: prior.is_some_and(|browser| browser.had_access),
             removed_organization,
             setup,
         };
         let cookie = self.browser_cookie(&browser).await?;
+        let retained_cookie = if browser.had_access {
+            cookie.clone()
+        } else {
+            browser.had_access = true;
+            self.browser_cookie(&browser).await?
+        };
+        let retained = query(self.store.clone(), move |store| {
+            store.establish_dashboard_session(
+                &user,
+                &memberships,
+                &session,
+                &installation_continuation,
+            )
+        })
+        .await?;
         Ok(LoginSuccess {
-            cookie,
+            cookie: if retained { retained_cookie } else { cookie },
             csrf,
             expires_at,
         })

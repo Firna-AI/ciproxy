@@ -1,5 +1,6 @@
 //! Dashboard identity, access, and history-preserving management persistence.
 
+mod continuations;
 mod identity;
 mod machines;
 mod resources;
@@ -47,8 +48,12 @@ impl DashboardStore for PgStore {
         user: &User,
         memberships: &[Membership],
         session: &Session,
+        installation_continuation: &[Uuid],
     ) -> Result<bool> {
-        sessions::establish(self, user, memberships, session)
+        sessions::establish(self, user, memberships, session, installation_continuation)
+    }
+    fn dashboard_continuation(&self, session_id: Uuid, at: DateTime<Utc>) -> Result<Vec<Uuid>> {
+        continuations::read(self, session_id, at)
     }
     fn dashboard_memberships(&self, id: Uuid) -> Result<Vec<Membership>> {
         identity::memberships(self, id)

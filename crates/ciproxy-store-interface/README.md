@@ -167,6 +167,9 @@ Gateway token issuance and registration serialize with workspace removal.
 
 The dashboard area stores verified GitHub memberships, workspace roles,
 access requests, opaque session digests, and encrypted OAuth grants.
+Session establishment atomically replaces exact authorization claim IDs under
+the existing browser session ID. This token-free continuation expires with the
+sign-in and retains no person or OAuth grant for browser-only sign-ins.
 A person record stays only with a role or an open request. Intentional
 organization removal keeps a separate durable marker and no owner-removal
 retention deadline. Retired labels preserve history while active names

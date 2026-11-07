@@ -1702,6 +1702,12 @@ export interface components {
             expires_at: string;
             /** @description Install entry point when no workspace is available. */
             install_url: string;
+            /**
+             * @description Exact claim IDs proved or completed by the latest successful GitHub authorization.
+             *     All IDs refer to organization_links. No order selects a continuation.
+             *     Reloads keep this list. A successful authorization replaces it, even when empty.
+             */
+            installation_continuation: string[];
             /** @description Current GitHub login. */
             login: string;
             /** @description Current requester-owned installation recovery and workspace choices. */
