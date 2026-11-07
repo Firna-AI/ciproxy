@@ -3844,34 +3844,37 @@ above.
 - **Recommendation:** A for the MVP. Milestone 15 recommended B.
 - **Action:** ask the user, because A changes a protocol promise.
 
-### 90. Each control-plane update needs the user's Mac
+### 90. Each control-plane update needs a manual image step
 
-- **Severity:** Medium. **Effort:** Medium.
+- **Severity:** Low. **Effort:** Small.
 - **Source:** Implementation, the runtime of the main preview.
 - **Category:** Process.
 - **Location:** `.github/workflows/deploy-main-preview.yml`, and the
   `CONTROL_PLANE_IMAGE` row of `deploy/setup.md`.
 - **Background:** The deploy workflow does not build the control-plane
-  image. The orchestrator builds it with Cloud Build. Then the GitHub
-  variable `CONTROL_PLANE_IMAGE` changes, and a deploy runs. The GitHub
-  token of the orchestrator's sandbox cannot set environment variables.
-- **Problem:** After each merge, the preview keeps the old control plane
-  until the user sets the variable from the Mac.
-- **Impact if no action:** Each backend merge waits for one manual step
-  before its live checks.
+  image. The orchestrator builds it with Cloud Build in about 5 minutes,
+  sets the GitHub variable `CONTROL_PLANE_IMAGE`, and starts a deploy. On
+  7 November 2026 the user signed the sandbox in to GitHub, so the
+  orchestrator sets the variable without the user's Mac.
+- **Problem:** The preview runs merged backend code only after the
+  orchestrator does this step.
+- **Impact if no action:** A forgotten step leaves the preview behind the
+  primary branch.
 - **Root question:** How does the preview get the control plane of each
-  merged commit with no manual step?
+  merged commit?
 - **Options:**
-  - **A.** Keep the manual path. Effort: Small.
-  - **B.** Give the sandbox a GitHub login that can set the environment
-    variables. Effort: Small.
+  - **A.** Keep the manual path through the user's Mac. Effort: Small.
+  - **B.** Keep the manual path through the sandbox GitHub login, which
+    the user set up on 7 November 2026. Effort: Small.
   - **C.** The preview deploy builds the image of its own commit, pushes it,
-    and deploys it by digest. Production deploys the tested digest.
-    Effort: Medium.
+    and deploys it by digest. Production deploys the tested digest. CI
+    gets the right to push images. Effort: Medium.
 - **Left out:** A moving image tag that the deploy reads. C is better on
   every point.
 - **Wider fix:** C.
-- **Recommendation:** C. The preview then always runs the merged code.
+- **Recommendation:** B for the MVP, with C as a launch follow-up item. B
+  needs no more work now, and the launch pipeline of Milestone 27 can
+  build C with the production promotion.
 - **Action:** ask the user, because C gives CI a new right to push images.
 
 ### 91. The workspace picker lacks the plan and organization count
