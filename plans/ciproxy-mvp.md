@@ -1145,6 +1145,11 @@ Implementation calls, 6 November 2026:
       explicit deferred result. Keep broader registration retention in
       `plans/follow-ups/boat-registration-retention.md` for after merge.
       Branch: `conductor/mvp-m15-overflow`.
+- [x] Apply owner review round 2 finding 1 A. Test successful recovery of
+      a saved post-create Boat delivery through a recreated runtime tick.
+      Keep identities, one create request, and one counted cost bound.
+      Prove failure when runtime recovery admits only Unsent deliveries.
+      Branch: `conductor/mvp-m15-overflow`.
 - [ ] Orchestrator: Configure the optional Boat deployment secret as
       `deploy/runtime.md#boat-shared-snapshot` describes.
       Set it to the shared Milestone 10 snapshot.

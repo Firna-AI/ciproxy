@@ -19,6 +19,7 @@ mod overflow_ports;
 mod overflow_registration_removal_tests;
 mod overflow_reinstall_tests;
 mod overflow_replacement_tests;
+mod overflow_restart_tests;
 mod overflow_retirement_tests;
 mod overflow_service;
 mod overflow_support;

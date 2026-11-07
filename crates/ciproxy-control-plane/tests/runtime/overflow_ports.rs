@@ -31,9 +31,11 @@ pub(super) struct Ports {
     pub(super) reject: AtomicBool,
     pub(super) trial: AtomicBool,
     pub(super) pending: AtomicBool,
+    pub(super) recovered: Mutex<Option<BackendSandbox>>,
     pub(super) delete_fail: AtomicBool,
     pub(super) creates: Mutex<Vec<BackendCreateSandboxRequest>>,
     pub(super) launches: AtomicUsize,
+    pub(super) launch_targets: Mutex<Vec<(ProviderRef, Uuid)>>,
     pub(super) deletes: AtomicUsize,
     pub(super) inputs: Mutex<Vec<serde_json::Value>>,
     ids: AtomicU64,
@@ -49,9 +51,11 @@ impl Ports {
             reject: AtomicBool::new(false),
             trial: AtomicBool::new(false),
             pending: AtomicBool::new(false),
+            recovered: Mutex::new(None),
             delete_fail: AtomicBool::new(false),
             creates: Mutex::new(Vec::new()),
             launches: AtomicUsize::new(0),
+            launch_targets: Mutex::new(Vec::new()),
             deletes: AtomicUsize::new(0),
             inputs: Mutex::new(Vec::new()),
             ids: AtomicU64::new(1000),
@@ -61,6 +65,7 @@ impl Ports {
     pub(super) fn backend(self: &Arc<Self>) -> Capabilities {
         let account = self.clone();
         let create = self.clone();
+        let recover = self.clone();
         let files = self.clone();
         let launch = self.clone();
         let delete = self.clone();
@@ -101,7 +106,9 @@ impl Ports {
                     })),
                 SandboxLifecycleMock::recover_sandbox_create
                     .some_call(matching!(_))
-                    .returns(Ok(None)),
+                    .answers_arc(Arc::new(move |_, _| {
+                        Ok(recover.recovered.lock().unwrap().clone())
+                    })),
                 SandboxLifecycleMock::list_managed_sandboxes
                     .some_call(matching!(_))
                     .returns(Ok(Vec::new())),
@@ -151,7 +158,12 @@ impl Ports {
                     .returns(Ok(())),
                 GuestLauncherMock::launch
                     .some_call(matching!(_, _))
-                    .answers_arc(Arc::new(move |_, _, _| {
+                    .answers_arc(Arc::new(move |_, sandbox, delivery| {
+                        launch
+                            .launch_targets
+                            .lock()
+                            .unwrap()
+                            .push((sandbox, delivery));
                         launch.launches.fetch_add(1, Ordering::SeqCst);
                         Ok(())
                     })),
