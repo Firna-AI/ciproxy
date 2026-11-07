@@ -25,7 +25,10 @@ async fn composed_paid_review_uses_stripe_previews_and_recurring_anchor() {
             item.current_period_end = at("2027-03-31T12:00:00Z").timestamp();
         }
     }
-    dashboard.save(&dashboard.paid());
+    let mut stored = dashboard.paid();
+    stored.paid_period_start = Some(at("2027-01-31T12:00:00Z"));
+    stored.paid_period_end = Some(at("2027-02-28T12:00:00Z"));
+    dashboard.save(&stored);
     previews(&dashboard.fake, true, 31900, UPGRADE);
     let review = json(
         dashboard
@@ -46,6 +49,17 @@ async fn composed_paid_review_uses_stripe_previews_and_recurring_anchor() {
     assert_eq!(review["billing_day"], 31);
     assert_eq!(review["period_end"], "2027-03-31T12:00:00Z");
     assert_eq!(review["prorated"], true);
+    assert_eq!(
+        dashboard
+            .fixture
+            .database
+            .store
+            .billing(dashboard.fixture.workspace)
+            .unwrap()
+            .state
+            .paid_period_end,
+        Some(at("2027-02-28T12:00:00Z"))
+    );
     let mut changed = dashboard.fake.state.lock().unwrap().subscription.clone();
     changed
         .items

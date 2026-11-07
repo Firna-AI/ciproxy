@@ -203,7 +203,9 @@ day. A short month's period start does not identify that anchor day. The
 existing `BillingService` implements this boundary with authoritative Stripe
 invoice previews. Its separate `BillingApi::review` supplies Free Checkout
 reviews. A caller without the paid adapter gets `unavailable` for paid review.
-The response uses the preview's monthly total and today's charge.
+The paid response uses the quote's monthly total, today's charge, and period
+end. It keeps that current Stripe period even when stored renewal state lags.
+Free Checkout keeps its existing review and period behavior.
 
 The control plane uses this composition and loads the Stripe signing secret.
 Register `/hooks/stripe` in Stripe on the dashboard host. Run the checks in

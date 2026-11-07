@@ -73,16 +73,20 @@ pub(crate) async fn review(
     let access = billing_views::access(workspace, context.role);
     let pages = services(pages)?;
     let prorated = context.record.state.tier != ciproxy_store_interface::billing::state::Tier::Free;
-    let review = if prorated {
+    let (review, period) = if prorated {
         let provider = pages.paid_review.clone().ok_or(Error::Unavailable)?;
         let at = context.at;
-        billing_call::result(
+        let quote = billing_call::result(
             tokio::task::spawn_blocking(move || provider.review(access, selected, at))
                 .await
                 .internal()?,
-        )?
+        )?;
+        (quote.amounts, quote.period)
     } else {
-        billing_call::call(pages, move |billing| billing.review(access, selected)).await?
+        (
+            billing_call::call(pages, move |billing| billing.review(access, selected)).await?,
+            context.period,
+        )
     };
     let mut choice = page_context::offer(plan_choice(billing_views::plan(
         selected.tier,
@@ -94,7 +98,7 @@ pub(crate) async fn review(
         today_cents: Cents(i128::from(review.today_cents)),
         billing_day: review.billing_day,
         prorated,
-        period_end: context.period.ends_at,
+        period_end: period.ends_at,
         banner: page_context::banner(&mut context)?,
     }))
 }

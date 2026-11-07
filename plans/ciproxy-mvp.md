@@ -1346,6 +1346,11 @@ These routes serve the other pages of the dashboard.
       adapter after this workspace merges. Keep accounting and availability
       outside physical fit, and preserve the accounting-gap regression.
       Branch: `conductor/m18-composition-pages-stripe-hook-paid-review`.
+- [x] Apply owner review round 1, finding 2, option A. Return the current
+      Stripe period with the paid quote, and use it in the review response.
+      Add the real-PgStore delayed-renewal regression. Keep finding 1
+      unchanged until the user answers item 95.
+      Branch: `conductor/m18-composition-pages-stripe-hook-paid-review`.
 - [ ] Orchestrator: run the
       [live page checks](../crates/ciproxy-api/scripts/README.md#jobs-savings-and-billing)
       after the runtime and Stripe test workspace are ready. Set

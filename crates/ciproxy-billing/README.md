@@ -29,6 +29,9 @@ They apply confirmed coverage through the same reconciliation method.
 Paid changes preserve the Stripe period and prorate the difference.
 `PaidReview` quotes an exact paid selection at the supplied observation time.
 It holds the workspace billing lock and verifies the subscription owner.
+Its `PaidQuote` keeps the amounts and current Stripe period together.
+The quote reads both period bounds from that same subscription snapshot.
+It leaves the stored period unchanged while renewal delivery is late.
 The HTTP adapter previews that item replacement with Stripe's proration flags.
 It also requests a recurring preview for the new monthly total.
 An upgrade uses the immediate preview's amount due for today's charge.

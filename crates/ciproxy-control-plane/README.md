@@ -49,6 +49,7 @@ API maintenance runs at startup and then every minute. A failed run logs a
 warning and runs again.
 The page routes share the same billing, metering, and overflow services.
 Paid-plan review uses Stripe's invoice previews through the billing service.
+It uses the current quoted Stripe period when stored renewal state is late.
 An independent worker retries durable last-organization cancellations at
 startup and each minute. GitHub maintenance failures do not delay that worker.
 Billing and PostgreSQL calls run on blocking workers.

@@ -6,10 +6,11 @@ use std::sync::atomic::Ordering;
 use axum::http::StatusCode;
 use ciproxy_api::pages::PageServices;
 use ciproxy_billing::catalog::{CheckoutReview, PriceCode};
-use ciproxy_billing::service::paid_review::PaidReviewMock;
+use ciproxy_billing::service::paid_review::{PaidQuote, PaidReviewMock};
 use ciproxy_store_interface::billing::commands::{BillingCommand, CommandKind};
 use ciproxy_store_interface::billing::state::{AddOns, Selection, Tier};
 use ciproxy_store_interface::dashboard::records::Role;
+use ciproxy_store_interface::metering::history::Period;
 use serde_json::json;
 use unimock::{MockFn, Unimock, matching};
 use uuid::Uuid;
@@ -26,8 +27,8 @@ async fn m18_paid_review_requires_authoritative_quote_and_uses_its_anchor_day() 
     *pages.fixture.runtime.0.lock().unwrap() = at("2027-03-06T12:00:00Z");
     let billing = pages.fixture.login(7, Some(Role::Billing)).await;
     let mut state = pages.state(Tier::Team);
-    state.paid_period_start = Some(at("2027-02-28T12:00:00Z"));
-    state.paid_period_end = Some(at("2027-03-31T12:00:00Z"));
+    state.paid_period_start = Some(at("2027-01-31T12:00:00Z"));
+    state.paid_period_end = Some(at("2027-02-28T12:00:00Z"));
     pages.save(&state);
     assert_eq!(
         pages
@@ -61,10 +62,16 @@ async fn m18_paid_review_requires_authoritative_quote_and_uses_its_anchor_day() 
                     assert_eq!(access.role, ciproxy_billing::access::Role::Billing);
                     assert_eq!(selected.tier, Tier::Business);
                     assert_eq!(time, at("2027-03-06T12:00:00Z"));
-                    Ok(CheckoutReview {
-                        monthly_cents: 28900,
-                        today_cents: 21000,
-                        billing_day: 31,
+                    Ok(PaidQuote {
+                        amounts: CheckoutReview {
+                            monthly_cents: 28900,
+                            today_cents: 21000,
+                            billing_day: 31,
+                        },
+                        period: Period {
+                            starts_at: at("2027-02-28T12:00:00Z"),
+                            ends_at: at("2027-03-31T12:00:00Z"),
+                        },
                     })
                 })),
         ))),

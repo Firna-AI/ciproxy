@@ -2,6 +2,7 @@
 
 use chrono::{DateTime, Utc};
 use ciproxy_store_interface::billing::state::{Selection, Tier};
+use ciproxy_store_interface::metering::history::Period;
 use unimock::unimock;
 
 use crate::access::BillingAccess;
@@ -9,18 +10,27 @@ use crate::catalog::CheckoutReview;
 use crate::error::{Error, Result, ResultExt};
 
 use super::runtime::BillingService;
-use super::transition::{selection, terminal};
+use super::transition::{period, selection, terminal};
+
+/// Paid amounts and current period from one owned Stripe subscription observation.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PaidQuote {
+    /// Previewed monthly total, today's charge, and recurring billing day.
+    pub amounts: CheckoutReview,
+    /// The current Stripe billing period used by this preview.
+    pub period: Period,
+}
 
 /// Stripe invoice previews for an exact paid selection and observation time.
 #[unimock(api = PaidReviewMock)]
 pub trait PaidReview: Send + Sync {
-    /// Quote the monthly amount, today's charge, and recurring UTC anchor day.
+    /// Quote the paid amounts and the current Stripe billing period together.
     fn review(
         &self,
         access: BillingAccess,
         selection: Selection,
         at: DateTime<Utc>,
-    ) -> Result<CheckoutReview>;
+    ) -> Result<PaidQuote>;
 }
 
 impl PaidReview for BillingService {
@@ -29,7 +39,7 @@ impl PaidReview for BillingService {
         access: BillingAccess,
         wanted: Selection,
         at: DateTime<Utc>,
-    ) -> Result<CheckoutReview> {
+    ) -> Result<PaidQuote> {
         let workspace = access.require_payer()?;
         if wanted.tier == Tier::Free {
             return Err(Error::PaidTierRequired);
@@ -54,6 +64,9 @@ impl PaidReview for BillingService {
             return Err(Error::CurrentTier);
         }
         let upgrade = confirmed.tier == Tier::Team && wanted.tier == Tier::Business;
-        self.stripe.preview(&current, wanted, at, upgrade)
+        Ok(PaidQuote {
+            period: period(&current)?,
+            amounts: self.stripe.preview(&current, wanted, at, upgrade)?,
+        })
     }
 }

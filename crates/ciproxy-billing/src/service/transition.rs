@@ -5,6 +5,7 @@ use ciproxy_store_interface::billing::renewals::Renewal;
 use ciproxy_store_interface::billing::state::{
     AddOns, BillingState, Selection, SubscriptionState, Tier,
 };
+use ciproxy_store_interface::metering::history::Period;
 
 use crate::catalog::PriceCode;
 use crate::error::{Error, Result};
@@ -102,17 +103,11 @@ pub(super) fn confirmed(
         return Err(Error::StripeState);
     }
     let selected = selection(current)?;
-    let base = current.items.data.first().ok_or(Error::StripeState)?;
-    if current.items.data.iter().any(|item| {
-        item.current_period_start != base.current_period_start
-            || item.current_period_end != base.current_period_end
-    }) {
-        return Err(Error::StripeState);
-    }
+    let period = period(current)?;
     state.tier = selected.tier;
     state.add_ons = selected.add_ons;
-    state.paid_period_start = Some(timestamp(base.current_period_start)?);
-    state.paid_period_end = Some(timestamp(base.current_period_end)?);
+    state.paid_period_start = Some(period.starts_at);
+    state.paid_period_end = Some(period.ends_at);
     state.cancel_at = current.cancel_at.map(timestamp).transpose()?.or({
         if current.cancel_at_period_end {
             state.paid_period_end
@@ -133,6 +128,21 @@ pub(super) fn confirmed(
         state.next_retry_at = None;
     }
     Ok(state)
+}
+
+/// Read the common period of all subscription items in UTC.
+pub(super) fn period(current: &Subscription) -> Result<Period> {
+    let base = current.items.data.first().ok_or(Error::StripeState)?;
+    if current.items.data.iter().any(|item| {
+        item.current_period_start != base.current_period_start
+            || item.current_period_end != base.current_period_end
+    }) {
+        return Err(Error::StripeState);
+    }
+    Ok(Period {
+        starts_at: timestamp(base.current_period_start)?,
+        ends_at: timestamp(base.current_period_end)?,
+    })
 }
 
 fn timestamp(seconds: i64) -> Result<DateTime<Utc>> {
