@@ -3763,3 +3763,61 @@ above.
   - **D.** A runner patch that stops taking jobs. Effort: Large.
 - **Recommendation:** A for the MVP. Milestone 15 recommended B.
 - **Action:** ask the user, because A changes a protocol promise.
+
+### 90. Each control-plane update needs the user's Mac
+
+- **Severity:** Medium. **Effort:** Medium.
+- **Source:** Implementation, the runtime of the main preview.
+- **Category:** Process.
+- **Location:** `.github/workflows/deploy-main-preview.yml`, and the
+  `CONTROL_PLANE_IMAGE` row of `deploy/setup.md`.
+- **Background:** The deploy workflow does not build the control-plane
+  image. The orchestrator builds it with Cloud Build. Then the GitHub
+  variable `CONTROL_PLANE_IMAGE` changes, and a deploy runs. The GitHub
+  token of the orchestrator's sandbox cannot set environment variables.
+- **Problem:** After each merge, the preview keeps the old control plane
+  until the user sets the variable from the Mac.
+- **Impact if no action:** Each backend merge waits for one manual step
+  before its live checks.
+- **Root question:** How does the preview get the control plane of each
+  merged commit with no manual step?
+- **Options:**
+  - **A.** Keep the manual path. Effort: Small.
+  - **B.** Give the sandbox a GitHub login that can set the environment
+    variables. Effort: Small.
+  - **C.** The preview deploy builds the image of its own commit, pushes it,
+    and deploys it by digest. Production deploys the tested digest.
+    Effort: Medium.
+- **Left out:** A moving image tag that the deploy reads. C is better on
+  every point.
+- **Wider fix:** C.
+- **Recommendation:** C. The preview then always runs the merged code.
+- **Action:** ask the user, because C gives CI a new right to push images.
+
+### 91. The workspace picker lacks the plan and organization count
+
+- **Severity:** Medium. **Effort:** Medium.
+- **Source:** Review, Milestone 19, pull request #36, round 2, its finding 2.
+- **Category:** Mockup.
+- **Location:** `ts/app/src/view/add-organization.ts:56`, and
+  `docs/mockups/src/screens/settings/choose-workspace.tsx:51`.
+- **Background:** After an install, a person with several Admin workspaces
+  picks one. The approved mockup shows the tier and the organization count
+  of each workspace.
+- **Problem:** The built picker shows only the name and an optional upgrade
+  warning. The API summary `EligibleWorkspace` has neither fact.
+- **Impact if no action:** The person cannot compare the plans and the
+  organization counts before the choice.
+- **Root question:** What does the picker show before the person confirms?
+- **Options:**
+  - **A.** Keep the reduced picker, and update the mockup. Effort: Small.
+  - **B.** Add the tier and the count to `EligibleWorkspace`, regenerate the
+    types, and show them as the mockup does. Effort: Medium.
+  - **C.** Read the plan and the organization summaries in separate
+    requests, with their own loading and error states. Effort: Medium.
+- **Left out:** Deriving them from `requires_upgrade`. It gives neither
+  fact.
+- **Wider fix:** None.
+- **Recommendation:** B. One generated contract supplies the approved facts.
+- **Action:** ask the user, because the user decides which side of a mockup
+  and product mismatch is right.
