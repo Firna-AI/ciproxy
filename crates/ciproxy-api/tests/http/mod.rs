@@ -76,5 +76,6 @@ mod m18_server_tests;
 mod m18_stripe;
 mod m18_support;
 mod m18_usage_tests;
+mod pending_result_tests;
 mod session_failure_tests;
 mod signed_association_tests;

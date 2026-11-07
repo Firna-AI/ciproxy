@@ -1,10 +1,9 @@
-//! Exact results collected where setup proof, open proof, or Direct completion occurs.
-
-use std::collections::BTreeSet;
+//! Authorization proof and completion record durable pending results in one collector.
 
 use ciproxy_github::app::webhook::AccountKind;
 use ciproxy_store_interface::dashboard::records::Membership;
 use ciproxy_store_interface::installation_links::InstallationClaim;
+use ciproxy_store_interface::installation_results::InstallationResultDelivery;
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -12,40 +11,37 @@ use crate::identity::{Grant, Profile};
 
 use super::AccessService;
 
-/// One authorization's exact results, excluding previously proved completed claims.
+/// Select durable authorization collection independently from dashboard proof refresh.
 #[derive(Default)]
 pub(super) struct ProofResults {
-    claims: BTreeSet<Uuid>,
+    delivery: InstallationResultDelivery,
 }
 
 impl ProofResults {
-    /// Keep successful proof or completion unless the claim was already proved and completed.
-    pub(super) fn record(&mut self, previous: Option<&InstallationClaim>, id: Uuid) {
-        if previous.is_none_or(|claim| !claim.user_verified || claim.organization_id.is_none()) {
-            self.claims.insert(id);
+    /// Retain first and open results until a successful authorization saves them.
+    pub(super) fn authorization() -> Self {
+        Self {
+            delivery: InstallationResultDelivery::Pending,
         }
     }
 
-    /// Return every recorded canonical ID once in stable order.
-    pub(super) fn into_claims(self) -> Vec<Uuid> {
-        self.claims.into_iter().collect()
+    /// Dashboard operations do not create authorization results.
+    pub(super) fn delivery(&self) -> InstallationResultDelivery {
+        self.delivery
     }
 }
 
 impl AccessService {
-    /// Preserve the before-state and record the canonical ID returned by the store.
+    /// Save proof and its pending canonical result in the same transaction.
     pub(super) async fn save_claim_proof(
         &self,
         mut claim: InstallationClaim,
-        previous: Option<&InstallationClaim>,
         attempt: Option<Uuid>,
-        results: &mut ProofResults,
+        results: &ProofResults,
     ) -> Result<InstallationClaim> {
         claim.user_verified = true;
         claim.verified_at = Some(self.runtime.now());
-        let saved = self.save_claim(claim, attempt).await?;
-        results.record(previous, saved.id);
-        Ok(saved)
+        self.save_claim(claim, attempt, results.delivery()).await
     }
 
     /// Record first own-user proof without changing completed Direct authority.
@@ -54,7 +50,7 @@ impl AccessService {
         profile: &Profile,
         grant: &Grant,
         memberships: &[Membership],
-        results: &mut ProofResults,
+        results: &ProofResults,
     ) -> Result<()> {
         for claim in self.owned_claims(profile.id).await? {
             if !claim.direct
@@ -80,9 +76,7 @@ impl AccessService {
             {
                 continue;
             }
-            let previous = claim.clone();
-            self.save_claim_proof(claim, Some(&previous), None, results)
-                .await?;
+            self.save_claim_proof(claim, None, results).await?;
         }
         Ok(())
     }

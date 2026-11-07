@@ -21,7 +21,8 @@ pub enum WorkspaceRole {
 /// The fixed-duration dashboard sign-in and accessible workspaces.
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct SessionView {
-    /// Exact claim IDs proved or completed by the latest successful GitHub authorization.
+    /// Exact claim IDs from the latest successful GitHub authorization.
+    /// Includes proved or completed results recovered from a failed authorization.
     /// All IDs refer to organization_links. No order selects a continuation.
     /// Reloads keep this list. A successful authorization replaces it, even when empty.
     pub installation_continuation: Vec<Uuid>,

@@ -8,6 +8,7 @@ use crate::dashboard::records::{
     Session, Takeout, User,
 };
 use crate::error::Result;
+use crate::installation_results::PendingInstallationResult;
 use crate::labels::Label;
 use crate::metering::history::MachineCost;
 use crate::scale_sets::ScaleSet;
@@ -29,12 +30,13 @@ pub trait DashboardStore: Send + Sync {
     fn save_dashboard_credentials(&self, user_id: Uuid, credentials: &[u8]) -> Result<()>;
     /// Commit identity, memberships, requests, session, and exact continuation together.
     /// Keep token-free continuation even when no person or private session remains.
+    /// Consume only the saved pending revisions for this exact GitHub requester.
     fn establish_dashboard_session(
         &self,
         user: &User,
         memberships: &[Membership],
         session: &Session,
-        installation_continuation: &[Uuid],
+        installation_results: &[PendingInstallationResult],
     ) -> Result<bool>;
     /// Read exact latest authorization claims before this browser's fixed expiry.
     fn dashboard_continuation(&self, session_id: Uuid, at: DateTime<Utc>) -> Result<Vec<Uuid>>;

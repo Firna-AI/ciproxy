@@ -7,8 +7,8 @@ The [store crate](../../README.md) applies their forward migrations.
 Attempts retain a state digest, requester identity, and explicit Direct/Add
 evidence. Signed association joins the original requester and that person's own
 pending or exact Add evidence under the installation transaction lock.
-It replaces provisional other-user proof. It clears that user's offers and
-target.
+It replaces provisional other-user proof. It clears that user's offers,
+target, and pending results.
 The first signed association fixes Direct or Add. Replay and later browser proof
 preserve that flow. Only signed association can replace provisional ownership.
 Offers require both original-person proof and the signed event. Workspace
@@ -18,7 +18,13 @@ Claim records hold no profile or credential. They do not keep a dashboard
 person, session, or grant alive. An unlinked claim loses a deleted target
 reference while preserving exact Add
 provenance for safe recovery. Normal organization/workspace retention deletes
-linked claims, their offers, and bound install attempts with that registration.
+linked claims, their offers and pending results, and bound install attempts
+with that registration.
+
+Pending results hold only the claim ID, the exact requester ID, and a sequence
+revision. A `Pending` claim save writes one in the claim transaction. Reads
+return only rows whose claim still names that requester. Session establishment
+deletes only the revisions that it read, so a later write survives.
 
 Activation records distinguish admitted authority, billing hold, and current
 Admin approval. Existing registrations are explicitly backfilled. Trusted
@@ -41,6 +47,7 @@ cargo test --package ciproxy-api --test http_tests link_
 ```
 
 - `claims.rs` saves token-free proof and preserves signed ownership and flow.
+- `results.rs` records, reads, and consumes revisioned pending results.
 - `association.rs` owns the locked signed identity and flow transaction.
 - `offers.rs` stores authorized destinations and conditional choice.
 - `activation.rs` commits independent admission and exact execution authority.

@@ -5,6 +5,7 @@ use std::collections::BTreeSet;
 use ciproxy_api::runtime::Runtime;
 use ciproxy_github::app::webhook::InstallationAction;
 use ciproxy_store_interface::installation_links::InstallationClaim;
+use ciproxy_store_interface::installation_results::InstallationResultDelivery;
 use serde_json::{Value, json};
 use url::Url;
 use uuid::Uuid;
@@ -62,7 +63,7 @@ async fn completed_direct_setup_names_its_first_proof_and_every_other_result_wit
         fixture
             .database
             .store
-            .save_installation_claim(&history, None)
+            .save_installation_claim(&history, None, InstallationResultDelivery::Untracked)
             .unwrap();
         let initial = session(&fixture, &prior).await;
         let url = Url::parse(initial["install_url"].as_str().unwrap()).unwrap();

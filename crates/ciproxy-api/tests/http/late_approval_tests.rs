@@ -9,6 +9,7 @@ use ciproxy_github::app::InstallationOutcome;
 use ciproxy_github::app::webhook::InstallationAction;
 use ciproxy_store_interface::dashboard::records::Role;
 use ciproxy_store_interface::installation_links::InstallationClaim;
+use ciproxy_store_interface::installation_results::InstallationResultDelivery;
 use serde_json::{Value, json};
 use url::Url;
 use uuid::Uuid;
@@ -35,7 +36,7 @@ fn historical_claim(fixture: &Fixture) -> Uuid {
     fixture
         .database
         .store
-        .save_installation_claim(&claim, None)
+        .save_installation_claim(&claim, None, InstallationResultDelivery::Untracked)
         .unwrap()
         .id
 }

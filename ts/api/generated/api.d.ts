@@ -1703,7 +1703,8 @@ export interface components {
             /** @description Install entry point when no workspace is available. */
             install_url: string;
             /**
-             * @description Exact claim IDs proved or completed by the latest successful GitHub authorization.
+             * @description Exact claim IDs from the latest successful GitHub authorization.
+             *     Includes proved or completed results recovered from a failed authorization.
              *     All IDs refer to organization_links. No order selects a continuation.
              *     Reloads keep this list. A successful authorization replaces it, even when empty.
              */

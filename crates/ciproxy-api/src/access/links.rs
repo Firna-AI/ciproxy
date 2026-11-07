@@ -6,6 +6,7 @@ use ciproxy_store_interface::dashboard::records::{Membership, Role};
 use ciproxy_store_interface::installation_links::{
     InstallationAttempt, InstallationClaim, InstallationRecovery,
 };
+use ciproxy_store_interface::installation_results::InstallationResultDelivery;
 use ciproxy_store_interface::organizations::AppState;
 use ciproxy_store_interface::store::Store;
 use uuid::Uuid;
@@ -39,9 +40,10 @@ impl AccessService {
         &self,
         claim: InstallationClaim,
         attempt: Option<Uuid>,
+        result: InstallationResultDelivery,
     ) -> Result<InstallationClaim> {
         query(self.store.clone(), move |store| {
-            store.save_installation_claim(&claim, attempt)
+            store.save_installation_claim(&claim, attempt, result)
         })
         .await
     }
@@ -81,7 +83,7 @@ impl AccessService {
         memberships: &[Membership],
         setup: Option<(&SetupTarget, Option<&str>)>,
         github: &dyn GitHubApp,
-        results: &mut ProofResults,
+        results: &ProofResults,
     ) -> Result<()> {
         if let Some((target, state)) = setup {
             let attempt = match state {
@@ -96,10 +98,9 @@ impl AccessService {
             }
             let installation = target.installation_id;
             let person = profile.id;
-            let (previous, relevant) = query(self.store.clone(), move |store| {
-                let previous = store.claim_for_installation(installation)?;
-                let relevant = previous.is_some() || store.has_pending_add(person)?;
-                Ok((previous, relevant))
+            let relevant = query(self.store.clone(), move |store| {
+                Ok(store.claim_for_installation(installation)?.is_some()
+                    || store.has_pending_add(person)?)
             })
             .await?;
             if attempt.is_some() || relevant {
@@ -116,13 +117,8 @@ impl AccessService {
                     organization_id: None,
                     verified_at: None,
                 };
-                self.save_claim_proof(
-                    claim,
-                    previous.as_ref(),
-                    attempt.map(|attempt| attempt.id),
-                    results,
-                )
-                .await?;
+                self.save_claim_proof(claim, attempt.map(|attempt| attempt.id), results)
+                    .await?;
             }
         }
         for mut claim in self.owned_claims(profile.id).await? {
@@ -130,8 +126,10 @@ impl AccessService {
                 continue;
             }
             if claim.recovery() == InstallationRecovery::Direct {
+                if results.delivery() == InstallationResultDelivery::Pending {
+                    claim = self.save_claim(claim, None, results.delivery()).await?;
+                }
                 github.resolve_installation_link(claim.id).await.api()?;
-                results.record(Some(&claim), claim.id);
                 continue;
             }
             let Some(actual) = self
@@ -141,7 +139,8 @@ impl AccessService {
             else {
                 claim.user_verified = false;
                 claim.verified_at = Some(self.runtime.now());
-                self.save_claim(claim, None).await?;
+                self.save_claim(claim, None, InstallationResultDelivery::Untracked)
+                    .await?;
                 continue;
             };
             if actual.id != claim.installation_id
@@ -153,10 +152,7 @@ impl AccessService {
             {
                 return Err(Error::Forbidden);
             }
-            let previous = claim.clone();
-            let claim = self
-                .save_claim_proof(claim, Some(&previous), None, results)
-                .await?;
+            let claim = self.save_claim_proof(claim, None, results).await?;
             if matches!(
                 claim.recovery(),
                 InstallationRecovery::DirectAwaitingEvent | InstallationRecovery::AddAwaitingEvent
@@ -210,7 +206,7 @@ impl AccessService {
                 &memberships,
                 None,
                 github,
-                &mut ProofResults::default(),
+                &ProofResults::default(),
             )
             .await?;
         }

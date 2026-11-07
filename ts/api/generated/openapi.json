@@ -14457,7 +14457,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Exact claim IDs proved or completed by the latest successful GitHub authorization.\nAll IDs refer to organization_links. No order selects a continuation.\nReloads keep this list. A successful authorization replaces it, even when empty."
+            "description": "Exact claim IDs from the latest successful GitHub authorization.\nIncludes proved or completed results recovered from a failed authorization.\nAll IDs refer to organization_links. No order selects a continuation.\nReloads keep this list. A successful authorization replaces it, even when empty."
           },
           "login": {
             "type": "string",

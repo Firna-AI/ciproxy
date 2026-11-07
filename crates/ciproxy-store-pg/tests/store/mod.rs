@@ -3,6 +3,7 @@
 mod boat_tests;
 mod cleanup_tests;
 mod dashboard_continuation_tests;
+mod dashboard_pending_tests;
 mod gateway_support;
 mod gateway_tests;
 mod github;

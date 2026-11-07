@@ -49,8 +49,9 @@ the Admins, in place of each workspace page.
   sign-in to `/api/auth/github/callback` and an install to `/api/github/setup`.
   The API checks each return, then opens `/`, or `/sign-in?reason=github` on
   a failure. The app takes no installation ID from a URL.
-- The session names the exact claims that the latest GitHub sign-in proved
-  or completed, such as an install that an owner approved later. When one
+- The session names the exact claims from the latest successful GitHub
+  sign-in, including results kept after a failed authorization. These
+  include installs that an owner approved later. When one
   named claim ended, `/` opens its workspace before a remembered one. When
   several ended, `/` opens the return page, which shows each outcome. A
   named claim that still waits adds no route, so the removed-App and

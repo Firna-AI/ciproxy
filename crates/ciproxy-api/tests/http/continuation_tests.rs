@@ -5,6 +5,7 @@ use std::collections::BTreeSet;
 use axum::http::StatusCode;
 use chrono::Duration;
 use ciproxy_store_interface::installation_links::InstallationClaim;
+use ciproxy_store_interface::installation_results::InstallationResultDelivery;
 use serde_json::{Value, json};
 use uuid::Uuid;
 
@@ -59,7 +60,7 @@ async fn hundred_open_claims_keep_exact_continuation_with_bounded_cookies_and_fi
         fixture
             .database
             .store
-            .save_installation_claim(&claim, None)
+            .save_installation_claim(&claim, None, InstallationResultDelivery::Untracked)
             .unwrap();
     }
     let current = browser(

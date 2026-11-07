@@ -1307,6 +1307,21 @@ smoke-tests its pages at 1440, 720, and 390 pixels.
       and keep previously proved completed claims out. Give the app action
       wrappers content-based sizing by default, so full names stay visible.
       Keep Firna unchanged and preserve its minimum size for short labels.
+      Owner review round 2, 7 November 2026: fix its finding 1 with B, so a
+      failed sign-in cannot consume an undelivered install result. Store
+      pending results apart from proof status. Save each result in the
+      transaction of its proof. Consume only the exact read results in the
+      transaction that saves the session and continuation. A failed cookie
+      preparation or continuation save keeps them for the next successful
+      authorization, and keeps the earlier sign-in and business records.
+      Refresh and workspace choice add none. Keep the wire field, bounded
+      cookies, fixed continuation expiry, and the exclusion of delivered
+      history. Its finding 2 stays open as item 91, with no option applied.
+      Implementation call, 7 November 2026: add the pending table to the
+      unmerged migration `202611071200_dashboard_continuations`, not to a new
+      migration. Reason: it ran only in disposable test databases and is not
+      on the target branch, so the `databases` skill does not freeze it. No
+      merged migration changes.
 - [x] Reload a dashboard tab that is older than the API. My call: the API
       gives its build with each response, and the dashboard reloads at the
       next page change after the build changes. Reason: an old tab must not

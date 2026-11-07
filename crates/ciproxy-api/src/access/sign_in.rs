@@ -114,19 +114,18 @@ impl AccessService {
             }
             _ => None,
         };
-        let mut proof_results = ProofResults::default();
+        let proof_results = ProofResults::authorization();
         self.prove_links(
             &profile,
             &grant,
             &memberships,
             target,
             github,
-            &mut proof_results,
+            &proof_results,
         )
         .await?;
-        self.prove_completed_links(&profile, &grant, &memberships, &mut proof_results)
+        self.prove_completed_links(&profile, &grant, &memberships, &proof_results)
             .await?;
-        let installation_continuation = proof_results.into_claims();
         let github_id = profile.id;
         let organization_ids = memberships
             .iter()
@@ -155,6 +154,10 @@ impl AccessService {
         .await?;
         let _identity_lease = query(self.store.clone(), move |store| {
             store.lock_github_organization(github_id)
+        })
+        .await?;
+        let installation_results = query(self.store.clone(), move |store| {
+            store.pending_installation_results(github_id)
         })
         .await?;
         let previous = query(self.store.clone(), move |store| {
@@ -223,12 +226,7 @@ impl AccessService {
             self.browser_cookie(&browser).await?
         };
         let retained = query(self.store.clone(), move |store| {
-            store.establish_dashboard_session(
-                &user,
-                &memberships,
-                &session,
-                &installation_continuation,
-            )
+            store.establish_dashboard_session(&user, &memberships, &session, &installation_results)
         })
         .await?;
         Ok(LoginSuccess {

@@ -5,6 +5,7 @@ mod association;
 mod attempts;
 mod claims;
 mod offers;
+pub(crate) mod results;
 pub(crate) mod retention;
 mod transaction;
 
@@ -12,6 +13,9 @@ use ciproxy_store_interface::error::Result;
 use ciproxy_store_interface::installation_association::SignedInstallation;
 use ciproxy_store_interface::installation_links::{
     InstallationAttempt, InstallationClaim, InstallationLinkStore, OrganizationActivation,
+};
+use ciproxy_store_interface::installation_results::{
+    InstallationResultDelivery, PendingInstallationResult,
 };
 use uuid::Uuid;
 
@@ -54,8 +58,15 @@ impl InstallationLinkStore for PgStore {
         &self,
         claim: &InstallationClaim,
         attempt: Option<Uuid>,
+        result: InstallationResultDelivery,
     ) -> Result<InstallationClaim> {
-        claims::save(self, claim, attempt)
+        claims::save(self, claim, attempt, result)
+    }
+    fn pending_installation_results(
+        &self,
+        requester: i64,
+    ) -> Result<Vec<PendingInstallationResult>> {
+        results::read(self, requester)
     }
     fn installation_claim(&self, id: Uuid) -> Result<Option<InstallationClaim>> {
         claims::find(self, id)

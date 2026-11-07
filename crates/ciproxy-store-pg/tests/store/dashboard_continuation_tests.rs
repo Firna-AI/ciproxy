@@ -2,48 +2,13 @@
 
 use chrono::{DateTime, Duration, Utc};
 use ciproxy_schema::dashboard::dashboard_continuations;
-use ciproxy_store_interface::dashboard::records::{Membership, Session, User};
 use ciproxy_store_interface::error::Error;
 use diesel::connection::SimpleConnection;
 use diesel::prelude::*;
 use uuid::Uuid;
 
 use super::support::Database;
-
-struct SignIn {
-    user: User,
-    memberships: Vec<Membership>,
-    session: Session,
-}
-
-fn sign_in(database: &Database) -> SignIn {
-    let workspace = database.workspace();
-    let organization = database.organization(&workspace);
-    let now = "2026-11-07T12:00:00Z".parse().unwrap();
-    let user = User {
-        id: Uuid::new_v4(),
-        github_id: 7,
-        login: "person-7".to_owned(),
-        avatar_url: "https://github.example/avatar".to_owned(),
-        credentials: vec![11],
-        checked_at: now,
-    };
-    let session = Session {
-        id: Uuid::new_v4(),
-        user_id: user.id,
-        digest: vec![12],
-        csrf_digest: vec![13],
-        expires_at: now + Duration::days(30),
-    };
-    SignIn {
-        user,
-        memberships: vec![Membership {
-            github_id: organization.github_id,
-            owner: false,
-        }],
-        session,
-    }
-}
+use super::support::installation_results::{SignIn, pending_result, sign_in};
 
 #[test]
 fn continuation_survives_person_pruning_and_expires_at_the_fixed_boundary() {
@@ -53,11 +18,12 @@ fn continuation_survives_person_pruning_and_expires_at_the_fixed_boundary() {
         memberships,
         session,
     } = sign_in(&database);
-    let claim = Uuid::new_v4();
+    let claim = pending_result(&database, 1066).id;
+    let results = database.store.pending_installation_results(7).unwrap();
     assert!(
         database
             .store
-            .establish_dashboard_session(&user, &memberships, &session, &[claim])
+            .establish_dashboard_session(&user, &memberships, &session, &results)
             .unwrap()
     );
     database.store.save_dashboard_user(&user, &[]).unwrap();
@@ -114,12 +80,26 @@ fn failed_continuation_write_rolls_back_identity_and_session_rotation() {
         memberships,
         mut session,
     } = sign_in(&database);
-    let claim = Uuid::new_v4();
+    let claim = pending_result(&database, 1066).id;
+    let results = database.store.pending_installation_results(7).unwrap();
     assert!(
         database
             .store
-            .establish_dashboard_session(&user, &memberships, &session, &[claim])
+            .establish_dashboard_session(&user, &memberships, &session, &results)
             .unwrap()
+    );
+    assert_eq!(
+        database.store.pending_installation_results(7).unwrap(),
+        vec![]
+    );
+    let pending = pending_result(&database, 2066).id;
+    let results = database.store.pending_installation_results(7).unwrap();
+    assert_eq!(
+        results
+            .iter()
+            .map(|result| result.claim_id)
+            .collect::<Vec<_>>(),
+        vec![pending]
     );
     database
         .connection
@@ -135,9 +115,10 @@ fn failed_continuation_write_rolls_back_identity_and_session_rotation() {
     user.checked_at += Duration::minutes(1);
     session.digest = vec![22];
     session.csrf_digest = vec![23];
-    let failure = database
-        .store
-        .establish_dashboard_session(&user, &memberships, &session, &[]);
+    let failure =
+        database
+            .store
+            .establish_dashboard_session(&user, &memberships, &session, &results);
     assert!(matches!(failure, Err(Error::Internal(_))));
     let saved_user = database.store.dashboard_user(user.id).unwrap().unwrap();
     assert_eq!(saved_user.credentials, vec![11]);
@@ -165,5 +146,30 @@ fn failed_continuation_write_rolls_back_identity_and_session_rotation() {
             .dashboard_continuation(session.id, user.checked_at)
             .unwrap(),
         vec![claim]
+    );
+    assert_eq!(
+        database.store.pending_installation_results(7).unwrap(),
+        results
+    );
+    database
+        .connection
+        .batch_execute("DROP TRIGGER fail_continuation ON dashboard_continuations")
+        .unwrap();
+    assert!(
+        database
+            .store
+            .establish_dashboard_session(&user, &memberships, &session, &results)
+            .unwrap()
+    );
+    assert_eq!(
+        database.store.pending_installation_results(7).unwrap(),
+        vec![]
+    );
+    assert_eq!(
+        database
+            .store
+            .dashboard_continuation(session.id, user.checked_at)
+            .unwrap(),
+        vec![pending]
     );
 }
