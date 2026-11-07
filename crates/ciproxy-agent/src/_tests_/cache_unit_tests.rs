@@ -2,6 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 
+use sha2::{Digest, Sha256};
 use unimock::{MockFn, Unimock, matching};
 
 use crate::cache_network::RULES;
@@ -92,6 +93,18 @@ fn installed_cache_service_uses_a_private_identity_data_mount_and_credential() {
     assert!(loader.contains("if [ \"${1:-}\" = start ]; then"));
     assert!(loader.contains("install -d -o root -g ciproxy-cache -m 0710 /run/ciproxy-cache-auth"));
     assert!(loader.contains("install -T -o root -g ciproxy-cache -m 0640"));
+    let prefix = "Environment=CIPROXY_CACHE_UNIT_SHA256=";
+    let body: String = unit
+        .split_inclusive('\n')
+        .filter(|line| !line.starts_with(prefix))
+        .collect();
+    let expected = format!("{prefix}{}", hex::encode(Sha256::digest(body.as_bytes())));
+    assert_eq!(
+        unit.lines()
+            .filter(|line| line.starts_with(prefix))
+            .collect::<Vec<_>>(),
+        vec![expected.as_str()]
+    );
 }
 
 fn installed_files() -> Vec<(String, Vec<u8>)> {

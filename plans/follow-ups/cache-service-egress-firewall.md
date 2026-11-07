@@ -63,6 +63,11 @@ The root-owned loader reads `/etc/resolv.conf` before each start.
 It applies the complete nftables change in one transaction.
 Systemd runs it before direct starts, boot starts, and automatic restarts.
 A failed policy load keeps the cache listener stopped.
+Install and repair also check the main process's unit fingerprint.
+The SHA-256 fingerprint excludes its own environment line in the unit.
+Missing, stale, unreadable, and invalid proof requires protected activation
+before the loader moves data, independently of the published file.
+The check keeps process environment bytes local and never records them.
 
 Design calls on 7 November 2026:
 
@@ -77,6 +82,9 @@ Design calls on 7 November 2026:
   binary under the new user before downloading a release. Continue release
   repair if that protected start fails. A failed download must not leave
   the old service running as root.
+- On 7 November 2026, make activation depend on both file comparison and
+  proof from the running process. This covers interrupted publication
+  without restarting a healthy current unit on every hourly repair.
 - Reclaim both cache layouts before acknowledging released bytes.
   An interrupted data move can leave archives in either directory.
 - Keep the inactive system account after uninstall. This avoids UID reuse.
@@ -149,7 +157,8 @@ The proof must cover:
   after the installed policy replaces a temporary test exception.
 - DNS over UDP and TCP to each configured resolver as the cache UID.
 - Public upstream HTTPS, private token access through systemd, unchanged
-  root control permissions, and distinct real VMs with a cache hit.
+  root control permissions, current process fingerprint, and distinct real
+  VMs with a cache hit.
 - Inbound interface protection, direct start with the agent stopped and
   policy absent, automatic restart, and a listener closed on policy error.
 - A successful real GitHub cache restore while firewall setup prevents the

@@ -1,22 +1,15 @@
 //! Install the released host cache executable and its mount-bound systemd unit.
 
-use std::path::Path;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use ciproxy_protocol::secret::Secret;
-use cli_updater::{BinaryInstaller, TarGzBinaryInstaller, UpdateCheck, UpdateRequest, Updater};
+use cli_updater::{UpdateCheck, UpdateRequest, UpgradeOutcome};
 
+use crate::cache_install::{CacheInstallFiles, CacheRelease};
 use crate::cache_network::CacheStart;
 use crate::cache_unit::CacheUnit;
-use crate::error::{ErrorResultExt, Result};
-use crate::persistence::{atomic_private_write, private_directory};
+use crate::error::Result;
 use crate::process::{Commands, arguments};
-use crate::release_client::SecureReleases;
-use crate::updates::CheckedInstaller;
-
-const BINARY: &str = "/usr/local/bin/ciproxy-cache-sidecar";
-const VERSION: &str = "/var/lib/ciproxy/cache-sidecar-version";
 
 #[async_trait]
 pub(crate) trait CacheService: Send + Sync {
@@ -25,7 +18,8 @@ pub(crate) trait CacheService: Send + Sync {
 
 pub(crate) struct ReleasedCache {
     pub(crate) commands: Arc<dyn Commands>,
-    pub(crate) release_server: String,
+    pub(crate) files: Arc<dyn CacheInstallFiles>,
+    pub(crate) release: Arc<dyn CacheRelease>,
     pub(crate) starter: Arc<dyn CacheStart>,
     pub(crate) unit: Arc<dyn CacheUnit>,
 }
@@ -33,22 +27,15 @@ pub(crate) struct ReleasedCache {
 #[async_trait]
 impl CacheService for ReleasedCache {
     async fn install(&self) -> Result<()> {
-        private_directory(Path::new("/var/lib/ciproxy"))?;
-        let token_path = Path::new("/var/lib/ciproxy/cache-admin-token");
-        if !token_path.exists() {
-            let mut bytes = [0u8; 32];
-            getrandom::fill(&mut bytes)
-                .context("create machine cache administration credential")?;
-            let token = Secret::new(hex::encode(bytes));
-            atomic_private_write(token_path, token.expose_secret().as_bytes())?;
-        }
-        let old_version = std::fs::read_to_string(VERSION).unwrap_or_else(|_| "0.0.0".to_owned());
+        let installed = self.files.prepare()?;
         let unit_changed = self.unit.changed();
         self.unit.install()?;
         self.commands
             .run("systemctl", &arguments(&["daemon-reload"]), &[])
             .await?;
-        if unit_changed {
+        let running_protected = self.running_protected().await;
+        let activation_required = unit_changed || !running_protected;
+        if activation_required {
             self.commands
                 .run(
                     "systemctl",
@@ -58,46 +45,68 @@ impl CacheService for ReleasedCache {
                 .await?;
         }
         self.starter.repair().await?;
-        if unit_changed
-            && Path::new(BINARY).exists()
+        if activation_required
+            && installed.binary_exists
             && let Err(error) = self.starter.start(true).await
         {
             tracing::warn!(%error, "protected cache start unavailable; checked release repair continues");
         }
-        let restart = old_version.trim() != env!("CARGO_PKG_VERSION")
-            || !Path::new(BINARY).exists()
-            || unit_changed;
+        let restart = installed.version.trim() != env!("CARGO_PKG_VERSION")
+            || !installed.binary_exists
+            || activation_required;
         if restart {
-            if !Path::new(BINARY).exists() {
-                atomic_private_write(Path::new(BINARY), &[])?;
+            if !installed.binary_exists {
+                self.files.stage_binary()?;
             }
-            let updater = Updater::new(
-                Arc::new(
-                    SecureReleases::new(self.release_server.clone())
-                        .context("configure cache release client")?,
-                ),
-                Arc::new(CheckedInstaller {
-                    installer: Arc::new(TarGzBinaryInstaller::new())
-                        as Arc<dyn BinaryInstaller + Send + Sync>,
-                }),
-            );
-            let installed = updater
+            let outcome = self
+                .release
                 .upgrade(UpdateRequest {
                     check: UpdateCheck {
                         binary: "ciproxy-cache-sidecar".to_owned(),
-                        current_version: old_version.trim().to_owned(),
+                        current_version: installed.version.trim().to_owned(),
                         target: "x86_64-unknown-linux-gnu".to_owned(),
                     },
-                    current_exe: BINARY.into(),
+                    current_exe: installed.binary,
                     force: true,
                 })
-                .await
-                .context("install released machine cache")?;
-            if let cli_updater::UpgradeOutcome::Installed(asset) = installed {
-                atomic_private_write(Path::new(VERSION), asset.latest.version.as_bytes())?;
+                .await?;
+            if let UpgradeOutcome::Installed(asset) = outcome {
+                self.files.record_version(&asset.latest.version)?;
             }
         }
         self.starter.start(restart).await?;
         Ok(())
     }
 }
+
+impl ReleasedCache {
+    async fn running_protected(&self) -> bool {
+        let Ok(pid) = self
+            .commands
+            .run(
+                "systemctl",
+                &arguments(&[
+                    "show",
+                    "--property=MainPID",
+                    "--value",
+                    "ciproxy-cache.service",
+                ]),
+                &[],
+            )
+            .await
+        else {
+            return false;
+        };
+        let Ok(pid) = std::str::from_utf8(&pid) else {
+            return false;
+        };
+        let Ok(pid) = pid.trim().parse::<u32>() else {
+            return false;
+        };
+        pid != 0 && self.unit.running_matches(pid)
+    }
+}
+
+#[cfg(test)]
+#[path = "_tests_/cache_service_tests.rs"]
+mod cache_service_tests;

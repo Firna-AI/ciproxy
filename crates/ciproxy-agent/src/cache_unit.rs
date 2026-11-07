@@ -3,6 +3,8 @@
 use std::path::Path;
 use std::sync::Arc;
 
+use sha2::{Digest, Sha256};
+
 use crate::cache_network::RULES;
 use crate::error::{ErrorResultExt, Result};
 use crate::persistence::atomic_private_write;
@@ -15,6 +17,7 @@ pub(crate) const FIREWALL_PATH: &str = "/etc/ciproxy-cache-firewall";
 pub(crate) const RUNTIME_TOKEN_PATH: &str = "/run/ciproxy-cache-auth/admin-token";
 const DATA_PATH: &str = "/var/lib/ciproxy/area/cache/data";
 const FIREWALL: &str = include_str!("../scripts/cache-firewall.sh");
+const FINGERPRINT: &str = "CIPROXY_CACHE_UNIT_SHA256";
 pub(crate) const UNIT: &str = r#"[Unit]
 Description=ciproxy machine cache
 Requires=var-lib-ciproxy-area.mount
@@ -44,12 +47,16 @@ WantedBy=multi-user.target
 pub(crate) trait CacheUnit: Send + Sync {
     fn changed(&self) -> bool;
     fn install(&self) -> Result<()>;
+    /// Check the actual main process against the current unit fingerprint.
+    fn running_matches(&self, pid: u32) -> bool;
 }
 
 #[cfg_attr(test, unimock::unimock(api = CacheUnitFilesMock))]
 pub(crate) trait CacheUnitFiles: Send + Sync {
     fn read(&self, path: &str) -> Result<Option<String>>;
     fn write(&self, path: &str, contents: &[u8]) -> Result<()>;
+    /// Keep process environment bytes local and return false for unknown proof.
+    fn process_matches(&self, pid: u32, fingerprint: &str) -> bool;
 }
 
 pub(crate) struct InstalledCacheUnit {
@@ -59,6 +66,10 @@ pub(crate) struct InstalledCacheUnit {
 pub(crate) struct LinuxCacheUnitFiles;
 
 impl CacheUnit for InstalledCacheUnit {
+    fn running_matches(&self, pid: u32) -> bool {
+        self.files.process_matches(pid, &fingerprint())
+    }
+
     fn changed(&self) -> bool {
         !self
             .files
@@ -74,6 +85,21 @@ impl CacheUnit for InstalledCacheUnit {
 }
 
 impl CacheUnitFiles for LinuxCacheUnitFiles {
+    fn process_matches(&self, pid: u32, fingerprint: &str) -> bool {
+        let Ok(environment) = std::fs::read(format!("/proc/{pid}/environ")) else {
+            return false;
+        };
+        if !environment.ends_with(&[0]) {
+            return false;
+        }
+        let key = format!("{FINGERPRINT}=");
+        let expected = format!("{key}{fingerprint}");
+        let mut values = environment
+            .split(|byte| *byte == 0)
+            .filter(|value| value.starts_with(key.as_bytes()));
+        values.next() == Some(expected.as_bytes()) && values.next().is_none()
+    }
+
     fn read(&self, path: &str) -> Result<Option<String>> {
         match std::fs::read_to_string(path) {
             Ok(contents) => Ok(Some(contents)),
@@ -92,6 +118,17 @@ impl CacheUnitFiles for LinuxCacheUnitFiles {
 mod cache_unit_tests;
 
 fn definition() -> String {
+    body().replace(
+        "[Service]\n",
+        &format!("[Service]\nEnvironment={FINGERPRINT}={}\n", fingerprint()),
+    )
+}
+
+fn fingerprint() -> String {
+    hex::encode(Sha256::digest(body().as_bytes()))
+}
+
+fn body() -> String {
     UNIT.replace("{firewall_path}", FIREWALL_PATH)
         .replace("{data_path}", DATA_PATH)
         .replace("{runtime_token_path}", RUNTIME_TOKEN_PATH)

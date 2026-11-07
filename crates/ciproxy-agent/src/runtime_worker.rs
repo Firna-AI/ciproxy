@@ -8,34 +8,39 @@ use tokio::sync::{Notify, mpsc};
 
 use crate::boundaries::GuestEvent;
 use crate::controller::Agent;
+use crate::error::Result;
 
 pub(crate) enum Work {
     Control(Box<ControlMessage>),
     Guest(GuestEvent),
+    Reconcile,
+}
+
+/// Every finished operation wakes the daemon, including errors and no-reply work.
+pub(crate) struct Completion {
+    /// The operation's optional wire reply or local failure.
+    pub(crate) result: Result<Option<AgentMessage>>,
 }
 
 pub(crate) async fn control_worker(
     agent: Arc<dyn Agent>,
     mut commands: mpsc::Receiver<Work>,
-    outgoing: mpsc::Sender<AgentMessage>,
+    completions: mpsc::Sender<Completion>,
     reconciliation: Arc<Notify>,
 ) {
     loop {
         let work = tokio::select! {
             work = commands.recv() => match work { Some(work) => work, None => return },
-            _ = reconciliation.notified() => {
-                if let Err(error) = agent.reconcile().await { tracing::warn!(error = %error, "machine reconciliation failed"); }
-                continue;
-            }
+            _ = reconciliation.notified() => Work::Reconcile,
         };
         let result = match work {
+            Work::Reconcile => agent.reconcile().await.map(|_| None),
             Work::Control(message) if matches!(*message, ControlMessage::FetchImage { .. }) => {
                 let agent = agent.clone();
-                let outgoing = outgoing.clone();
+                let completions = completions.clone();
                 tokio::spawn(async move {
-                    if let Ok(Some(reply)) = agent.control(*message).await {
-                        let _ = outgoing.send(reply).await;
-                    }
+                    let result = agent.control(*message).await;
+                    let _ = completions.send(Completion { result }).await;
                 });
                 continue;
             }
@@ -56,14 +61,8 @@ pub(crate) async fn control_worker(
                 }
             }
         };
-        match result {
-            Ok(Some(message)) => {
-                if outgoing.send(message).await.is_err() {
-                    return;
-                }
-            }
-            Ok(None) => {}
-            Err(error) => tracing::warn!(error = %error, "control message failed"),
+        if completions.send(Completion { result }).await.is_err() {
+            return;
         }
     }
 }

@@ -1,5 +1,6 @@
 """Private-file access and probes against the installed machine cache."""
 
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -63,6 +64,17 @@ class InstalledCache:
         pid = int(command("systemctl", "show", "-p", "MainPID", "--value",
                           "ciproxy-cache.service").stdout)
         require(pid > 0, "The installed cache service is not running")
+        prefix = b"Environment=CIPROXY_CACHE_UNIT_SHA256="
+        unit = Path("/etc/systemd/system/ciproxy-cache.service").read_bytes().splitlines(keepends=True)
+        body = b"".join(line for line in unit if not line.startswith(prefix))
+        expected = hashlib.sha256(body).hexdigest().encode()
+        require([line[len(prefix):].rstrip(b"\n") for line in unit if line.startswith(prefix)] == [expected],
+                "The installed cache unit has an invalid fingerprint")
+        environment = Path(f"/proc/{pid}/environ").read_bytes()
+        key = b"CIPROXY_CACHE_UNIT_SHA256="
+        require(environment.endswith(b"\0") and
+                [value[len(key):] for value in environment.split(b"\0") if value.startswith(key)] == [expected],
+                "The running cache does not prove the installed unit fingerprint")
         status = dict(line.split(":", 1) for line in Path(f"/proc/{pid}/status")
                       .read_text().splitlines() if ":" in line)
         require(set(status["Uid"].split()) == {str(self.account.pw_uid)},

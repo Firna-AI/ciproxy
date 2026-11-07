@@ -17,6 +17,7 @@ use crate::area::AreaFiles;
 use crate::area_files::LinuxAreaFiles;
 use crate::boundaries::{Cache, Connection, Host, Service, Store, Vms};
 use crate::cache::HttpCache;
+use crate::cache_install::{CheckedCacheRelease, LinuxCacheInstallFiles};
 use crate::cache_network::GuardedCacheStart;
 use crate::cache_service::{CacheService, ReleasedCache};
 use crate::cache_unit::{InstalledCacheUnit, LinuxCacheUnitFiles};
@@ -182,8 +183,11 @@ async fn execute(action: Action) -> Result<()> {
                     commands: commands.clone(),
                 }),
                 commands: commands.clone(),
-                release_server: std::env::var("CIPROXY_RELEASE_SERVER_URL")
-                    .unwrap_or_else(|_| "https://get.ciproxy.dev".to_owned()),
+                files: Arc::new(LinuxCacheInstallFiles),
+                release: Arc::new(CheckedCacheRelease {
+                    release_server: std::env::var("CIPROXY_RELEASE_SERVER_URL")
+                        .unwrap_or_else(|_| "https://get.ciproxy.dev".to_owned()),
+                }),
             });
             if let Err(error) = cache_service.install().await {
                 tracing::warn!(%error, "machine cache install unavailable; GitHub fallback remains available");
@@ -200,11 +204,11 @@ async fn execute(action: Action) -> Result<()> {
             println!("ciproxy agent installed");
         }
         Action::Run => {
-            preparation.verify().await?;
-            images.recover()?;
-            if removing && agent.finished().await {
+            if agent.finish_removed_startup().await? {
                 return Ok(());
             }
+            preparation.verify().await?;
+            images.recover()?;
             let identity = identity.ok_or(Error::NotInstalled)?;
             let delay = Arc::new(TokioDelay);
             let daemon: Arc<dyn Daemon> = Arc::new(AgentDaemon {

@@ -91,8 +91,15 @@ The loader reads the current resolvers and applies the rules in one nftables
 transaction. A failed load keeps the listener stopped.
 Install and hourly repair create the system user and restore these files.
 They apply the policy before they download a release.
-A changed existing unit stops before it moves cache data into the child.
-It tries to start under the new user before the release download.
+Install and repair check the actual cache process before they move data.
+The unit supplies a SHA-256 fingerprint through its process environment.
+The fingerprint covers the unit definition without its own line.
+The agent checks the main process, independently of the published file.
+A missing, stale, unreadable, or invalid proof requires protected activation.
+The agent stops that process before the loader can move its files.
+It tries to start under the protected unit before the release download.
+This also repairs an installation interrupted after file publication.
+An active process with the current proof keeps running during hourly repair.
 If that protected start fails, checked release repair continues.
 A failed download cannot leave that old service running as root.
 Uninstall stops the service before it removes both private files and rules.

@@ -47,6 +47,9 @@ A skipped check never counts as live success.
 ## What the script checks
 
 The script calls the installed administration and job listeners.
+It checks the running process's unit fingerprint before each inspection.
+It hashes the installed unit without its fingerprint line independently.
+It compares only that fingerprint and never records the process environment.
 It registers temporary sessions with empty tokens and public probe data.
 It sends their upstream requests through the actual cache process.
 It never prints a token, response body, or private input.

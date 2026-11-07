@@ -244,10 +244,12 @@ The [host guide](host-preparation.md#ext4-and-kvm-smoke) gives the ext4 check.
 
 - [src/application.rs](src/application.rs) composes the Linux adapters.
 - [src/controller.rs](src/controller.rs) defines durable machine control.
-- [src/runtime.rs](src/runtime.rs) owns daemon inputs and task lifetimes.
+  `Agent::finish_removed_startup` checks local cleanup without a credential.
+- [src/runtime.rs](src/runtime.rs) owns daemon inputs and completion events.
 - [src/connection.rs](src/connection.rs) separates connection failures from
   credential rejection after Hello on the current socket.
-- [src/runtime_reports.rs](src/runtime_reports.rs) schedules independent reports.
+- [src/runtime_reports.rs](src/runtime_reports.rs) schedules independent
+  reports.
 - [src/mode.rs](src/mode.rs) owns terminal runtime mode transitions.
 - [src/vms.rs](src/vms.rs) owns separate jailed VM units.
 - [src/network.rs](src/network.rs) allocates host-free network indices and
@@ -267,6 +269,8 @@ The [host guide](host-preparation.md#ext4-and-kvm-smoke) gives the ext4 check.
   cache and Docker resources once the host has the trusted job facts.
 - [src/cache_unit.rs](src/cache_unit.rs) writes the cache service unit and
   its private listener rules.
+- [src/cache_install.rs](src/cache_install.rs) owns private install files
+  and checked cache release work after protected activation.
 - [src/docker.rs](src/docker.rs) owns Docker leases, attachment, and release.
 - [src/docker_recovery.rs](src/docker_recovery.rs) discards safely closed
   failed attachments and keeps their byte reservations through job exit.

@@ -15,7 +15,7 @@ use crate::error::{Error, ErrorResultExt, Result};
 use crate::gateway::Gateway;
 use crate::maintenance::Maintenance;
 use crate::runtime_reports::reporting;
-use crate::runtime_worker::{Work, control_worker};
+use crate::runtime_worker::{Completion, Work, control_worker};
 use crate::state::Identity;
 
 #[async_trait]
@@ -38,7 +38,7 @@ pub(crate) struct AgentDaemon {
 }
 
 struct LoopChannels {
-    outgoing: mpsc::Receiver<AgentMessage>,
+    completions: mpsc::Receiver<Completion>,
     work: mpsc::Sender<Work>,
     connected: watch::Sender<bool>,
 }
@@ -54,7 +54,7 @@ impl Daemon for AgentDaemon {
     ) -> Result<()> {
         self.agent.restore().await?;
         self.agent.control_connection(false).await?;
-        let (outgoing, receive) = mpsc::channel(128);
+        let (completions, receive) = mpsc::channel(128);
         let (work, commands) = mpsc::channel(128);
         let reconciliation = Arc::new(Notify::new());
         let (connected, _) = watch::channel(false);
@@ -62,7 +62,7 @@ impl Daemon for AgentDaemon {
         tasks.spawn(control_worker(
             self.agent.clone(),
             commands,
-            outgoing,
+            completions,
             reconciliation.clone(),
         ));
         let maintenance = self.maintenance.clone();
@@ -77,7 +77,7 @@ impl Daemon for AgentDaemon {
             reconciliation,
         );
         let input = LoopChannels {
-            outgoing: receive,
+            completions: receive,
             work,
             connected,
         };
@@ -163,8 +163,15 @@ impl AgentDaemon {
                     if let Some(work) = pending_work.take() { permit.send(work); }
                     None
                 }
-                message = channels.outgoing.recv() => {
-                    match message { Some(message) => Some(message), None => break Err(Error::Disconnected) }
+                completion = channels.completions.recv() => {
+                    match completion {
+                        Some(Completion { result: Ok(reply) }) => reply,
+                        Some(Completion { result: Err(error) }) => {
+                            tracing::warn!(%error, "agent work failed");
+                            None
+                        }
+                        None => break Err(Error::Disconnected),
+                    }
                 }
                 event = removal.recv(), if removal_open => {
                     match event { Some(()) => { self.agent.remove().await?; removing = true; }, None => removal_open = false }
@@ -193,3 +200,7 @@ impl AgentDaemon {
 #[cfg(test)]
 #[path = "_tests_/runtime_tests.rs"]
 mod runtime_tests;
+
+#[cfg(test)]
+#[path = "_tests_/runtime_removal_tests.rs"]
+mod runtime_removal_tests;

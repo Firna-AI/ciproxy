@@ -20,6 +20,8 @@ use crate::state::{MachineState, Mode};
 #[cfg_attr(test, unimock::unimock(api = AgentMock))]
 #[async_trait]
 pub(crate) trait Agent: Send + Sync {
+    /// Finish checked local cleanup for an empty Removed startup.
+    async fn finish_removed_startup(&self) -> Result<bool>;
     /// Retry owned network cleanup without reading the workload area.
     async fn cleanup_networks(&self) -> Result<()>;
     async fn control_connection(&self, connected: bool) -> Result<()>;
@@ -58,6 +60,18 @@ pub(crate) struct Controller {
 
 #[async_trait]
 impl Agent for Controller {
+    async fn finish_removed_startup(&self) -> Result<bool> {
+        let removed_empty = {
+            let state = self.state.lock().await;
+            state.mode == Mode::Removed && state.runners.is_empty()
+        };
+        if !removed_empty {
+            return Ok(false);
+        }
+        self.cleanup_networks().await?;
+        Ok(self.finished().await)
+    }
+
     async fn cleanup_networks(&self) -> Result<()> {
         self.retry_network_cleanup().await
     }
@@ -185,3 +199,7 @@ mod docker_policy_tests;
 #[cfg(test)]
 #[path = "_tests_/configuration_state_tests.rs"]
 mod configuration_state_tests;
+
+#[cfg(test)]
+#[path = "_tests_/startup_removal_tests.rs"]
+mod startup_removal_tests;
