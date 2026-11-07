@@ -4,9 +4,10 @@ use std::sync::{Arc, Mutex};
 
 use unimock::{Clause, MockFn, Unimock, matching};
 
-use crate::boundaries::{ImagesMock, ServiceMock, StoreMock};
+use crate::boundaries::ImagesMock;
 use crate::controller::AgentMock;
 use crate::host_preparation::{FinalUninstall, PreparationMock};
+use crate::terminal_completion::CompletionAction;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) enum Event {
@@ -14,9 +15,7 @@ pub(super) enum Event {
     Recover,
     Restore,
     Drain,
-    Area,
-    Service,
-    State,
+    Complete,
 }
 
 pub(super) fn uninstall(mock: Arc<Unimock>) -> FinalUninstall {
@@ -31,31 +30,12 @@ pub(super) fn uninstall(mock: Arc<Unimock>) -> FinalUninstall {
 }
 
 pub(super) fn cleanup(events: Arc<Mutex<Vec<Event>>>) -> impl Clause {
-    let area = events.clone();
-    let service = events.clone();
-    (
-        AgentMock::cleanup_networks
-            .some_call(matching!())
-            .returns(Ok(())),
-        PreparationMock::remove
-            .some_call(matching!())
-            .answers_arc(Arc::new(move |_| {
-                area.lock().unwrap().push(Event::Area);
-                Ok(())
-            })),
-        ServiceMock::uninstall
-            .some_call(matching!())
-            .answers_arc(Arc::new(move |_| {
-                service.lock().unwrap().push(Event::Service);
-                Ok(())
-            })),
-        StoreMock::clear
-            .some_call(matching!())
-            .answers_arc(Arc::new(move |_| {
-                events.lock().unwrap().push(Event::State);
-                Ok(())
-            })),
-    )
+    AgentMock::complete_removal
+        .some_call(matching!(CompletionAction::Uninstall(_)))
+        .answers_arc(Arc::new(move |_, _| {
+            events.lock().unwrap().push(Event::Complete);
+            Ok(true)
+        }))
 }
 
 pub(super) fn runtime(events: Arc<Mutex<Vec<Event>>>) -> impl Clause {
@@ -82,7 +62,7 @@ pub(super) fn runtime(events: Arc<Mutex<Vec<Event>>>) -> impl Clause {
                 Ok(())
             })),
         AgentMock::remove
-            .some_call(matching!())
+            .each_call(matching!())
             .answers_arc(Arc::new(move |_| {
                 events.lock().unwrap().push(Event::Drain);
                 Ok(())

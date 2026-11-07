@@ -14,6 +14,7 @@ use crate::network::LinuxNetwork;
 use crate::network_barriers::HeldDeletion;
 use crate::network_fixtures::{HostNetworks, commands, restored, runtime, saving};
 use crate::state::{MachineState, Mode};
+use crate::terminal_completion::CompletionAction;
 
 #[tokio::test]
 async fn reports_and_terminal_removal_progress_while_network_deletion_waits() {
@@ -74,7 +75,9 @@ async fn reports_and_terminal_removal_progress_while_network_deletion_waits() {
         agent.state.lock().await.pending_networks,
         Default::default()
     );
-    assert!(!agent.finished().await);
+    let complete = agent.complete_removal(CompletionAction::Stop);
+    pin_mut!(complete);
+    assert!(poll!(complete.as_mut()).is_pending());
     inspection_release.send(()).unwrap();
     assert!(poll!(reconcile.as_mut()).is_pending());
     ready.await.unwrap();
@@ -82,9 +85,9 @@ async fn reports_and_terminal_removal_progress_while_network_deletion_waits() {
     pin_mut!(report);
     assert!(matches!(poll!(report.as_mut()), Poll::Ready(Ok(_))));
     assert_eq!(agent.state.lock().await.pending_networks, [1].into());
-    assert!(!agent.finished().await);
+    assert!(poll!(complete.as_mut()).is_pending());
     release.send(()).unwrap();
     reconcile.await.unwrap();
     assert_eq!(restored(&saved).mode, Mode::Removed);
-    assert!(agent.finished().await);
+    assert!(complete.await.unwrap());
 }

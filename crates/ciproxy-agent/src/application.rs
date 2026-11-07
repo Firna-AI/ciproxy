@@ -44,6 +44,7 @@ use crate::network::LinuxNetwork;
 use crate::persistence::FileStore;
 use crate::process::{Commands, LinuxCommands};
 use crate::runtime::{AgentDaemon, Daemon};
+use crate::startup::{AgentStartup, Startup, StartupState};
 use crate::state::Mode;
 use crate::storage_sizing::{DEFAULT_IMAGE_BYTES, setting};
 use crate::system_service::SystemService;
@@ -152,7 +153,6 @@ async fn execute(action: Action) -> Result<()> {
     let agent: Arc<dyn Agent> = Arc::new(Controller {
         allocation: Mutex::new(()),
         network_cleanup: Mutex::new(()),
-        network_inventory_valid: AtomicBool::new(false),
         control_connected: AtomicBool::new(false),
         state: Mutex::new(state),
         store: store.clone(),
@@ -204,12 +204,14 @@ async fn execute(action: Action) -> Result<()> {
             println!("ciproxy agent installed");
         }
         Action::Run => {
-            if agent.finish_removed_startup().await? {
+            let startup: Arc<dyn Startup> = Arc::new(AgentStartup {
+                agent: agent.clone(),
+                preparation,
+                images,
+            });
+            let StartupState::Run(identity) = startup.prepare(identity, removing).await? else {
                 return Ok(());
-            }
-            preparation.verify().await?;
-            images.recover()?;
-            let identity = identity.ok_or(Error::NotInstalled)?;
+            };
             let delay = Arc::new(TokioDelay);
             let daemon: Arc<dyn Daemon> = Arc::new(AgentDaemon {
                 agent: agent.clone(),
@@ -243,9 +245,6 @@ async fn execute(action: Action) -> Result<()> {
             input.abort();
             let _ = input.await;
             result?;
-            let mut state = store.load()?;
-            state.identity = None;
-            store.save(&state)?;
         }
         Action::Uninstall => {
             let uninstall: Arc<dyn Uninstall> = Arc::new(FinalUninstall {
@@ -261,7 +260,14 @@ async fn execute(action: Action) -> Result<()> {
                 return Ok(());
             }
             let mut timer = interval(Duration::from_secs(REPORT_INTERVAL_SECONDS));
-            while !agent.finished().await {
+            loop {
+                match uninstall.finish().await {
+                    Ok(()) => break,
+                    Err(Error::Draining) => {}
+                    Err(error) => {
+                        tracing::warn!(%error, "Uninstall cleanup will retry automatically. Stop this command before running uninstall again.")
+                    }
+                }
                 let result = tokio::select! {
                     event = guest_rx.recv() => {
                         let event = event.ok_or(Error::Disconnected)?;
@@ -276,7 +282,6 @@ async fn execute(action: Action) -> Result<()> {
                     tracing::warn!(error = %error, "uninstall is waiting for job and VM cleanup");
                 }
             }
-            uninstall.finish().await?;
             println!("ciproxy agent uninstalled");
         }
     }

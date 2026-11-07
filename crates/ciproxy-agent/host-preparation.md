@@ -160,7 +160,7 @@ With a recorded VM, uninstall verifies the area before image recovery and
 VM restoration. It then starts removal and waits for running jobs.
 Guest detach waits for bridge tasks to release their handles.
 Final cleanup checks that every owned VM has finished.
-After draining, it purges image contents before guarded area removal.
+Only checked area deletion removes image contents during final cleanup.
 Guarded removal records removal intent and stops the mount.
 It verifies that the mount is gone before it deletes the backing file.
 It preserves the backing file while another loop device still uses it.
@@ -170,6 +170,8 @@ It preserves unowned runtime directories and files.
 An unmount or ownership failure preserves the backing file and identity.
 Unknown network inspection or remaining owned resources also preserve them.
 It gives a repair action instead of forcing deletion.
+Final cleanup retries automatically while this uninstall command runs.
+Stop this command before you start another uninstall.
 The small control directory and lock files can remain after uninstall.
 Distribution packages remain installed because other programs can use them.
 

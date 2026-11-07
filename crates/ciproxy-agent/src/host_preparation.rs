@@ -12,6 +12,7 @@ use crate::error::{Error, Result};
 use crate::host_packages::Packages;
 use crate::host_system::repair;
 use crate::host_tools::Tools;
+use crate::terminal_completion::{CompletionAction, UninstallCleanup};
 
 #[cfg_attr(test, unimock::unimock(api = PreparationMock))]
 #[async_trait]
@@ -124,10 +125,8 @@ impl Uninstall for FinalUninstall {
         uninstall_inventory(self.files.as_ref())?;
         let state = self.store.load()?;
         if state.runners.is_empty() {
-            self.agent.cleanup_networks().await?;
-            self.preparation.remove().await?;
-            self.service.uninstall()?;
-            self.store.clear()?;
+            self.agent.remove().await?;
+            self.complete().await?;
             return Ok(UninstallState::Complete);
         }
         self.preparation.verify().await?;
@@ -138,13 +137,24 @@ impl Uninstall for FinalUninstall {
     }
 
     async fn finish(&self) -> Result<()> {
-        if !self.agent.finished().await {
-            return Err(Error::Draining);
+        self.complete().await
+    }
+}
+
+impl FinalUninstall {
+    async fn complete(&self) -> Result<()> {
+        if self
+            .agent
+            .complete_removal(CompletionAction::Uninstall(UninstallCleanup {
+                preparation: self.preparation.clone(),
+                service: self.service.clone(),
+            }))
+            .await?
+        {
+            Ok(())
+        } else {
+            Err(Error::Draining)
         }
-        self.images.purge()?;
-        self.preparation.remove().await?;
-        self.service.uninstall()?;
-        self.store.clear()
     }
 }
 
@@ -167,3 +177,7 @@ mod uninstall_fixtures;
 #[cfg(test)]
 #[path = "_tests_/host_preparation_tests.rs"]
 mod host_preparation_tests;
+
+#[cfg(test)]
+#[path = "_tests_/terminal_uninstall_tests.rs"]
+mod terminal_uninstall_tests;

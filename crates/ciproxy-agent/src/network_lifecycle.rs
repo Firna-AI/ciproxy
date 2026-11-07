@@ -1,7 +1,5 @@
 //! One lifecycle owner keeps active and pending network indices unavailable.
 
-use std::sync::atomic::Ordering;
-
 use ciproxy_protocol::runners::RunnerState;
 
 use crate::controller::Controller;
@@ -43,7 +41,6 @@ impl Controller {
     /// Adopt reserved-name orphans and release indices only after checked cleanup.
     pub(crate) async fn retry_network_cleanup(&self) -> Result<()> {
         let _cleanup = self.network_cleanup.lock().await;
-        self.network_inventory_valid.store(false, Ordering::Release);
         let owned = self.vms.networks().await?;
         let pending = {
             let mut state = self.state.lock().await;
@@ -59,7 +56,6 @@ impl Controller {
             }
             state.pending_networks.clone()
         };
-        self.network_inventory_valid.store(true, Ordering::Release);
         let mut failure = None;
         for index in pending {
             if let Err(error) = self.vms.remove_network(index).await {
