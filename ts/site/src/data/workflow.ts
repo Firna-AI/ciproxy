@@ -1,7 +1,8 @@
 // The setup that the landing page shows: the permissions of the GitHub App,
 // the install command of an own machine, and the workflow change that moves
-// a job to ciproxy. "GitHub App permissions" in docs/protocol/security.md
-// states the permissions.
+// a job to ciproxy. The docs show the same change inside its whole job.
+// "GitHub App permissions" in docs/protocol/security.md states the
+// permissions.
 
 /** A permission that the ciproxy GitHub App asks for. */
 export type AppPermission = { name: string; access: string };
@@ -44,3 +45,27 @@ export function afterChange(diff: readonly string[]): string {
     .map((line) => line.slice(2))
     .join("\n");
 }
+
+/** The steps of the job of the example, after its runs-on line. */
+export const jobSteps: readonly string[] = [
+  "      steps:",
+  "        - uses: actions/checkout@v4",
+  "        - run: cargo test --workspace",
+];
+
+/** The runs-on change inside its whole job, as the docs show it. */
+const runsOnJobLines: readonly string[] = [...runsOnDiff, ...jobSteps];
+
+/**
+ * The props of CodeBlock for the docs: the page shows the change, and Copy
+ * gives the whole job after the change, so that the copied YAML is valid.
+ */
+export const runsOnJob: {
+  label: string;
+  lines: readonly string[];
+  copy: string;
+} = {
+  label: workflowFile,
+  lines: runsOnJobLines,
+  copy: afterChange(runsOnJobLines),
+};

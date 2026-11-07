@@ -3,19 +3,16 @@ title: Move your workflows
 description: Change one line in each job to run it on ciproxy.
 ---
 
+import { jsx } from "astro/jsx-runtime";
+
+import CodeBlock from "../../../../components/marketing/CodeBlock.astro";
+import { runsOnJob } from "../../../../data/workflow.ts";
+
 ## Change runs-on
 
 Replace `ubuntu-latest` in the `runs-on` line of a job with a ciproxy label:
 
-```diff lang="yaml" title=".github/workflows/ci.yml"
- jobs:
-   test:
--    runs-on: ubuntu-latest
-+    runs-on: ciproxy
-     steps:
-       - uses: actions/checkout@v4
-       - run: cargo test --workspace
-```
+{jsx(CodeBlock, runsOnJob)}
 
 The label picks the size of the VM. Every workspace starts with the labels
 `ciproxy`, `ciproxy-4vcpu`, and `ciproxy-8vcpu`.

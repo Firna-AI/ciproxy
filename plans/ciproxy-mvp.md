@@ -1445,6 +1445,10 @@ require and the product does.
       the Starlight components, because the existing Markdown check accepts
       them. The gate configuration stays unchanged.
       Branch: `conductor/m24-launch-docs-pages`.
+- [x] Fix the copied workflow examples in Quickstart and Move your
+      workflows with `CodeBlock` and `afterChange`. Parse both copied jobs
+      as YAML in the site regression tests. Owner review round 1, finding 1.
+      Branch: `conductor/m24-launch-docs-pages`.
 - [x] Smoke-test all 14 pages at 1440, 720, and 390 pixels. Check mobile
       navigation, search, page links, anchors, light mode, and aside borders.
       Branch: `conductor/m24-launch-docs-pages`.

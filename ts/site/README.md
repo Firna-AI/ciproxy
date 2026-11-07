@@ -87,6 +87,12 @@ Rules for the docs pages:
   tier features come from `src/data/tiers.ts`. The VM disk of a default job
   and the image budget come from `src/data/hardware.ts`, because they change
   with the image.
+- A code example that shows a change, but copies the code after it, uses
+  `CodeBlock` through `jsx()`, with its distinct `copy` text. The Quickstart
+  and Move your workflows show the runs-on change with `runsOnJob` of
+  `src/data/workflow.ts`, and Copy gives the whole job after the change.
+  `CodeBlock` carries `not-content`, so the Starlight article styles stay
+  out of it.
 - A link between docs pages uses its absolute address, such as
   `/docs/reference/labels/`, so that the gate does not read it as a file.
 - One fact has one page, and the other pages link to it. The full example
@@ -114,7 +120,11 @@ The typecheck uses `astro check` with the strict TypeScript configuration.
 ESLint uses the Astro plugin and recommended TypeScript rules.
 Prettier uses the Astro plugin.
 The tests under `_tests_` run on the Node test runner. They cover the choice
-of the cheapest plan and the calculation of the cost claim.
+of the cheapest plan, the calculation of the cost claim, and the Copy text of
+the runs-on examples of the docs. That last test builds the site with
+`astro build` into a temporary folder and reads the Copy text of each example
+from the built pages. `_tests_/built-site.ts`
+holds that build and the reader of the Copy text.
 The claim keeps hardware slots separate from concurrent default jobs.
 It subtracts the 140 GB image budget before the host and job disk split.
 Each default job reserves its VM disk: the current image with the 20 GB of

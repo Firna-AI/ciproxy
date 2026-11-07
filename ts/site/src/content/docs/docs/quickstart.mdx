@@ -7,6 +7,8 @@ import { CardGrid, LinkCard } from "@astrojs/starlight/components";
 import { jsx } from "astro/jsx-runtime";
 
 import StepsList from "../../../components/docs/StepsList.astro";
+import CodeBlock from "../../../components/marketing/CodeBlock.astro";
+import { runsOnJob } from "../../../data/workflow.ts";
 
 export const components = { ol: StepsList };
 
@@ -73,15 +75,7 @@ with KVM, 4 cores, 16 GB of memory, and 250 GB of disk or more.
 
    In a workflow file, change the `runs-on` line of a job:
 
-   ```diff lang="yaml" title=".github/workflows/ci.yml"
-    jobs:
-      test:
-   -    runs-on: ubuntu-latest
-   +    runs-on: ciproxy
-        steps:
-          - uses: actions/checkout@v4
-          - run: cargo test --workspace
-   ```
+   {jsx(CodeBlock, runsOnJob)}
 
 5. ### Push the change
 
