@@ -2,7 +2,7 @@
 
 use chrono::DateTime;
 use ciproxy_github::persistence::session::ListenerTarget;
-use ciproxy_overflow::api::{Retirement, StartOutcome, StartRequest};
+use ciproxy_overflow::api::{StartOutcome, StartRequest};
 use ciproxy_overflow::view::OverflowView;
 use ciproxy_protocol::identifiers::OrganizationId;
 use ciproxy_protocol::secret::Secret;
@@ -57,24 +57,11 @@ impl MachineRuntime {
                 .iter()
                 .find(|record| record.delivery_id == intent.delivery_id);
             if record.is_none_or(|record| record.ends_at.is_some()) {
-                let Some(authority) = &self.boat_retirement else {
-                    continue;
-                };
-                if matches!(
-                    authority.remove(workspace, intent).await,
-                    Ok(Retirement::Removed)
-                ) {
-                    let store = self.store.clone();
-                    let runner = intent.runner_id;
-                    if !matches!(
-                        tokio::task::spawn_blocking(
-                            move || store.remove_boat_runner_intent(workspace, runner)
-                        )
-                        .await,
-                        Ok(Ok(()))
-                    ) {
-                        tracing::warn!("Boat registration cleanup will retry");
-                    }
+                if let Err(error) = self
+                    .retire_boat_registration(workspace, intent, record)
+                    .await
+                {
+                    tracing::warn!(%error,"Boat registration cleanup will retry");
                 }
             } else if let Some(record) = record {
                 if !matches!(record.phase, StartPhase::Running | StartPhase::Deleting)

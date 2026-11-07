@@ -86,6 +86,8 @@ finish. Other runtime work then gets up to five more seconds.
 The [runner guide](runners.md) gives routing, reservations, report
 confirmation, stop replay, retirement authority, and the removal and
 take-out policies.
+Take-out checks saved retirement for both own-machine and Boat reservations
+before the API removes GitHub access.
 
 ### Boat overflow
 
@@ -243,6 +245,10 @@ GitHub, and database access, so they stay operator work.
   App removal cause.
 - [src/takeout.rs](src/takeout.rs) accepts a take-out only when each
   reservation of its organization has an answer.
+- [src/reservations.rs](src/reservations.rs) gives one saved retirement
+  result for machine commands, Boat registrations, deliveries, and runners.
+- [src/boat_retirement.rs](src/boat_retirement.rs) shares durable Boat
+  registration cleanup between take-out and ordinary recovery.
 - [src/accounting.rs](src/accounting.rs) runs coalesced accounting passes
   outside runner operations.
 - [src/events.rs](src/events.rs) binds authenticated observations to runners.

@@ -31,6 +31,7 @@ pub(super) struct Ports {
     pub(super) reject: AtomicBool,
     pub(super) trial: AtomicBool,
     pub(super) pending: AtomicBool,
+    pub(super) delete_fail: AtomicBool,
     pub(super) creates: Mutex<Vec<BackendCreateSandboxRequest>>,
     pub(super) launches: AtomicUsize,
     pub(super) deletes: AtomicUsize,
@@ -48,6 +49,7 @@ impl Ports {
             reject: AtomicBool::new(false),
             trial: AtomicBool::new(false),
             pending: AtomicBool::new(false),
+            delete_fail: AtomicBool::new(false),
             creates: Mutex::new(Vec::new()),
             launches: AtomicUsize::new(0),
             deletes: AtomicUsize::new(0),
@@ -115,6 +117,11 @@ impl Ports {
                     .some_call(matching!(_))
                     .answers_arc(Arc::new(move |_, _| {
                         delete.deletes.fetch_add(1, Ordering::SeqCst);
+                        if delete.delete_fail.load(Ordering::SeqCst) {
+                            return Err(sandbox_interface::Error::BackendUnavailable {
+                                backend_id: "boat".to_owned(),
+                            });
+                        }
                         Ok(())
                     })),
                 BoatAccountApiMock::usage

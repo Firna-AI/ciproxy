@@ -1125,6 +1125,19 @@ Implementation calls, 6 November 2026:
       `plans/follow-ups/immutable-scheduler-bindings.md`.
       Include the existing own-machine name-matching problem.
       Branch: `conductor/mvp-m15-overflow`.
+- [x] Apply owner review finding 1 C. Give both runner destinations one
+      retirement result. Keep take-out pending until every saved own-machine
+      and Boat reservation has retirement or running-job proof.
+      My calls, 7 November 2026: reuse the lifecycle acceptance barrier,
+      saved provider deletion, Busy writes, and registration-intent removal.
+      Count the union of Boat intents, deliveries, and stored runners.
+      Require a current busy answer beside the saved result, because an
+      old Busy row cannot prove that a failed GitHub call is safe.
+      Branch: `conductor/mvp-m15-overflow`.
+- [x] Apply owner review finding 2 A. Test reinstall and Boat reconnect
+      with the real store. Prove early deletion of old idle supply while
+      running work stays. Prove failure with a permanent removal hold.
+      Branch: `conductor/mvp-m15-overflow`.
 - [ ] Orchestrator: Forward `BOAT_SHARED_SNAPSHOT` through
       `deploy/scripts/deploy.py` and both deployment workflows.
       Set it to the shared Milestone 10 snapshot.

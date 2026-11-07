@@ -4,8 +4,6 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicI64, AtomicUsize, Ordering};
 
 use chrono::{DateTime, Utc};
-use ciproxy_agent::root_sizing::RootSizing;
-use ciproxy_control_plane::boat_authority::BoatRunnerAuthority;
 use ciproxy_control_plane::runtime::MachineRuntime;
 use ciproxy_gateway::gateway::MachineGatewayMock;
 use ciproxy_gateway::types::Delivery;
@@ -13,8 +11,7 @@ use ciproxy_github::registrations::{
     RegistrationRetirement, RunnerRegistrations, RunnerRegistrationsMock,
 };
 use ciproxy_github::scale_sets::JitRegistration;
-use ciproxy_overflow::api::{Overflow, OverflowConfig};
-use ciproxy_overflow::service::{OverflowDependencies, OverflowService};
+use ciproxy_overflow::api::Overflow;
 use ciproxy_protocol::agent::ControlMessage;
 use ciproxy_protocol::identifiers::JobId;
 use ciproxy_protocol::resources::Slots;
@@ -25,7 +22,8 @@ use ciproxy_store_interface::runners;
 use unimock::{MockFn, Unimock, matching};
 use uuid::Uuid;
 
-use super::overflow_ports::{Factory, Ports};
+use super::overflow_ports::Ports;
+use super::overflow_service::{authority, service};
 use super::support::{Fixture, at};
 
 pub(super) struct Harness {
@@ -121,27 +119,7 @@ impl Harness {
             ))
             .no_verify_in_drop(),
         );
-        let service: Arc<dyn Overflow> = Arc::new(OverflowService::new(
-            OverflowConfig {
-                deployment: "runtime-integration".to_owned(),
-                shared_snapshot: "shared-image".to_owned(),
-                root_sizing: RootSizing::default(),
-                exit_report_url: Secret::new("https://app.ciproxy.example/hooks/boat/runner-exit"),
-            },
-            OverflowDependencies {
-                store: fixture.store.clone(),
-                cipher: ports.clone(),
-                factory: Arc::new(Factory(ports.clone())),
-                runners: Arc::new(BoatRunnerAuthority {
-                    store: fixture.store.clone(),
-                    registrations: registrations.clone(),
-                    root_sizing: RootSizing::default(),
-                    clock: ports.clone(),
-                }),
-                clock: ports.clone(),
-                tokens: ports.clone(),
-            },
-        ));
+        let service = service(&fixture, &ports, registrations.clone());
         service
             .connect(
                 fixture.workspace,
@@ -177,12 +155,7 @@ impl Harness {
             Arc::new(Unimock::new(())),
         );
         runtime.overflow = Some(service.clone());
-        runtime.boat_retirement = Some(Arc::new(BoatRunnerAuthority {
-            store: fixture.store.clone(),
-            registrations: registrations.clone(),
-            root_sizing: RootSizing::default(),
-            clock: ports.clone(),
-        }));
+        runtime.boat_retirement = Some(authority(&fixture, &ports, registrations));
         Self {
             fixture,
             ports,
@@ -192,6 +165,14 @@ impl Harness {
             remove_app_on_retire,
             own_starts,
         }
+    }
+
+    pub(super) fn use_registrations(&mut self, registrations: Arc<dyn RunnerRegistrations>) {
+        self.service = service(&self.fixture, &self.ports, registrations.clone());
+        self.runtime.overflow = Some(self.service.clone());
+        self.runtime.boat_retirement =
+            Some(authority(&self.fixture, &self.ports, registrations.clone()));
+        self.runtime.registrations = registrations;
     }
 
     pub(super) fn queued(&self) -> GithubJob {

@@ -13,6 +13,9 @@ use ciproxy_overflow::view::OverflowView;
 use ciproxy_scaler::actions::Action;
 use ciproxy_store_interface::boat_runtime::BoatRunnerIntent;
 use ciproxy_store_interface::github::DemandPhase;
+use ciproxy_store_interface::organizations::AppState;
+use ciproxy_store_interface::overflow::record::StartPhase;
+use ciproxy_store_interface::runners::RunnerState;
 use ciproxy_store_interface::store::Store;
 use uuid::Uuid;
 
@@ -28,10 +31,10 @@ pub struct BoatRunnerAuthority {
     pub registrations: Arc<dyn RunnerRegistrations>,
 }
 
-/// Registration cleanup shared by startup recovery and overflow maintenance.
+/// GitHub retirement shared by startup recovery, take-out, and overflow maintenance.
 #[async_trait]
 pub trait BoatRegistrationRetirement: Send + Sync {
-    /// Retire a registration after no provider delivery can use its JIT response.
+    /// Obtain live GitHub removal or Busy proof. Callers enforce delivery safety.
     async fn remove(&self, workspace_id: Uuid, intent: &BoatRunnerIntent) -> Result<Retirement>;
 }
 
@@ -71,13 +74,18 @@ impl RunnerAuthority for BoatRunnerAuthority {
                 intent.runner_id == runner_id && intent.organization_id == organization_id
             })
             .ok_or(Error::OwnershipUnknown)?;
-        if input.jobs.iter().any(|job| {
-            job.organization_id == organization_id
-                && job.scale_set_id == intent.scale_set_id
-                && job.phase == DemandPhase::Started
-                && job.runner_github_id.is_some()
-                && job.runner_github_id == intent.github_id
-        }) {
+        let takeout = input.organizations.iter().any(|organization| {
+            organization.id == organization_id && organization.app_state == AppState::Removed
+        });
+        if !takeout
+            && input.jobs.iter().any(|job| {
+                job.organization_id == organization_id
+                    && job.scale_set_id == intent.scale_set_id
+                    && job.phase == DemandPhase::Started
+                    && job.runner_github_id.is_some()
+                    && job.runner_github_id == intent.github_id
+            })
+        {
             return Ok(Retirement::RunningJob);
         }
         let view = OverflowView::from_snapshot(input.overflow.clone(), self.clock.now())?;
@@ -101,7 +109,7 @@ impl RunnerAuthority for BoatRunnerAuthority {
             ciproxy_scaler::decision::decide(&snapshot).iter().any(|action|
             matches!(action, Action::DeleteSandbox {sandbox_id,..} if *sandbox_id == sandbox.id))
         });
-        if !retire {
+        if !takeout && !retire {
             return Ok(Retirement::WaitingDemand);
         }
         let retirement = self.remove(workspace_id, intent).await?;
@@ -140,8 +148,24 @@ impl BoatRegistrationRetirement for BoatRunnerAuthority {
             Ok(RegistrationRetirement::Busy { id }) => {
                 let store = self.store.clone();
                 let runner = intent.runner_id;
+                let organization = intent.organization_id;
                 match tokio::task::spawn_blocking(move || {
-                    store.register_boat_runner(workspace_id, runner, id)
+                    store.register_boat_runner(workspace_id, runner, id)?;
+                    let input = store.boat_runtime_snapshot(workspace_id)?;
+                    if input.starts.iter().any(|record| {
+                        record.runner_id == runner
+                            && record.phase == StartPhase::Running
+                            && record.ends_at.is_none()
+                    }) {
+                        store.update_runner(
+                            workspace_id,
+                            organization,
+                            runner,
+                            RunnerState::Busy,
+                            Some(id),
+                        )?;
+                    }
+                    Ok::<_, ciproxy_store_interface::error::Error>(())
                 })
                 .await
                 {

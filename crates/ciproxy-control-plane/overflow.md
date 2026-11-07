@@ -69,6 +69,9 @@ overflow service.
 - Idle retirement keeps a runner that a running job or waiting demand needs.
   Otherwise GitHub removes the registration first. A busy answer keeps the
   sandbox.
+- Take-out retires idle Boat supply before the API removes GitHub access.
+  It waits for saved retirement or a current busy answer for every saved
+  reservation. A saved provider deletion can finish after acceptance.
 - After an owner removes the App, launched sandboxes stay until their
   runner exits or their saved lifetime ends. Missing job facts do not prove
   that a sandbox is idle. The runtime checks saved owner removal before and
@@ -80,6 +83,9 @@ overflow service.
   lifetime and spend limit bound its cost, as
   [Removing the App](../../docs/protocol/app-removal.md#removing-the-app)
   explains.
+- A new installation clears saved owner removal. Old idle sandboxes can
+  then retire through their retained key before Boat connects again.
+  Running jobs keep their old delivery and key after a new connection.
 - Old idle supply cannot cover a replacement label with the same name.
   Retired labels and removed bindings cannot start an undispatched delivery.
 - When Boat or its cost data fails, accepted Boat supply stays reserved and

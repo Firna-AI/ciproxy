@@ -117,9 +117,20 @@ A 403, a token-route 404, or another lookup error grants no authority.
 Only the reservations of that organization enter the callback.
 Busy jobs, saved stops, and stopped reservations stay protected.
 Each other live reservation needs positive retirement or a busy answer.
+Acceptance includes own-machine commands, Boat registration intents, Boat
+deliveries, and materialized Boat runners. A Boat delivery that can still
+launch keeps take-out pending. This includes an ambiguous dispatched start.
+A retained running Boat delivery needs a current GitHub busy answer and a
+saved `Busy` state. Old job facts alone grant no take-out answer.
+A retired idle Boat delivery needs saved provider deletion and removal of
+its registration intent. Registration-only reservations also need positive
+GitHub retirement before their intent is removed.
+The API removes scale sets and the App only after this callback accepts.
 One failed runner does not stop the others, but an unanswered reservation
 makes the callback return an error.
 A delivery failure after a saved stop does not reject the event. Recovery
 resends that stop with its command ID and issue time, with no GitHub call.
+A provider deletion failure after Boat retirement also permits acceptance.
+Cleanup retries its saved `Deleting` phase without another GitHub removal.
 A completed take-out marker never permits a stop. An unknown older idle
 state keeps its capacity.
