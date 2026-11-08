@@ -1089,6 +1089,10 @@ UTC RFC 3339, and IDs as strings. Reason: JavaScript loses 64-bit numbers.
       Code status, 6 November 2026: the control plane mounts the router and
       runs API maintenance at startup and every minute. The authenticated
       live probes of the next TODO have not run.
+- [x] Apply item 98 A to the security protocol and GitHub crate guide.
+      State the four App permissions and the Members read requirement
+      for the owner and member checks through the person's sign-in.
+      Branch: `conductor/items-94-b-and-98-a-boat-wallets-and-members-permission`.
 - [ ] Orchestrator: run the live API, repeated-authorization, and GitHub
       install-binding probes in `crates/ciproxy-api/scripts/README.md`.
       Read credentials through `CIPROXY_API_CREDENTIALS_FILE`. Record no
@@ -1173,6 +1177,15 @@ Implementation calls, 6 November 2026:
       Pull request #37 built it. The main preview holds version 1, the
       share code of snapshot `2026-11-06-7484d1b`, which is also the release
       of its `JOB_IMAGE_MANIFEST_PATH`. Production gets its version at launch.
+- [x] Apply item 94 B to the Boat key check and connection API.
+      Return named personal and organization wallets and the likely
+      selection. Prove both key kinds through HTTP with a real PgStore.
+      Update the overflow protocol and regenerate the API types.
+      My call, 8 November 2026: preselect Boat's active wallet, then
+      its first offered wallet. Reason: Boat supplies the likely wallet.
+      Read the wallets without choosing one, so organization keys work.
+      The key check saves no key.
+      Branch: `conductor/items-94-b-and-98-a-boat-wallets-and-members-permission`.
 - [ ] Orchestrator: Run the three live scenarios with the private credential
       file, as `crates/ciproxy-control-plane/overflow.md` describes.
 

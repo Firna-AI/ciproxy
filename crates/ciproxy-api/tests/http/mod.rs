@@ -78,4 +78,5 @@ mod overflow_ports;
 mod overflow_spend_tests;
 mod overflow_support;
 mod overflow_tests;
+mod overflow_wallet_tests;
 mod signed_association_tests;

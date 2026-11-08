@@ -11,9 +11,27 @@ use crate::access::Principal;
 use crate::error::{Error, Result};
 use crate::state::{ApiState, query};
 use crate::wire::access::{Success, WorkspacePath};
-use crate::wire::overflow::{BoatConnection, OverflowPolicy, OverflowSettings};
+use crate::wire::overflow::{
+    BoatConnection, BoatKeyCheck, BoatWallets, OverflowPolicy, OverflowSettings,
+};
 
 use super::overflow_views;
+
+/// Check a Boat key and list its billing wallets.
+#[utoipa::path(operation_id="overflow_wallets", post, path="/workspaces/{workspace_id}/overflow/wallets", params(WorkspacePath), request_body=BoatKeyCheck, responses((status=200,body=BoatWallets)), security(("session"=[])))]
+pub(crate) async fn wallets(
+    State(state): State<ApiState>,
+    Extension(principal): Extension<Arc<Principal>>,
+    Path(path): Path<WorkspacePath>,
+    Json(body): Json<BoatKeyCheck>,
+) -> Result<Json<BoatWallets>> {
+    state
+        .access
+        .require_role(&principal, path.workspace_id, true)
+        .await?;
+    let wallets = overflow_views::result(service(&state)?.wallets(body.api_key).await)?;
+    Ok(Json(overflow_views::wallets(wallets)))
+}
 
 #[utoipa::path(operation_id="overflow_settings", get, path="/workspaces/{workspace_id}/overflow", params(WorkspacePath), responses((status=200,body=OverflowSettings)), security(("session"=[])))]
 pub(crate) async fn settings(

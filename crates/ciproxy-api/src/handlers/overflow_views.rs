@@ -2,6 +2,7 @@
 
 use chrono::Datelike;
 use ciproxy_overflow::error::Error;
+use ciproxy_overflow::provider::KeyWallets;
 use ciproxy_store_interface::settings::OverflowWait;
 use rust_decimal::{Decimal, RoundingStrategy};
 use uuid::Uuid;
@@ -9,7 +10,23 @@ use uuid::Uuid;
 use crate::error;
 use crate::state::{ApiState, query};
 use crate::wire::money::Cents;
-use crate::wire::overflow::{BoatAccountView, BoatSpendView, OverflowSettings};
+use crate::wire::overflow::{
+    BoatAccountView, BoatSpendView, BoatWallet, BoatWallets, OverflowSettings,
+};
+
+pub(super) fn wallets(value: KeyWallets) -> BoatWallets {
+    BoatWallets {
+        wallets: value
+            .wallets
+            .into_iter()
+            .map(|wallet| BoatWallet {
+                wallet: wallet.wallet,
+                name: wallet.name,
+            })
+            .collect(),
+        selected_wallet: value.selected_wallet,
+    }
+}
 
 pub(super) fn limit(cents: Cents) -> error::Result<i64> {
     if cents.0 <= 0 {

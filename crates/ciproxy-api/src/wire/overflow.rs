@@ -7,6 +7,32 @@ use utoipa::ToSchema;
 
 use crate::wire::money::Cents;
 
+/// One-use key check before the customer selects a Boat wallet.
+#[derive(Deserialize, ToSchema)]
+pub struct BoatKeyCheck {
+    /// The customer's Boat key. Wallet discovery does not save it.
+    #[schema(value_type=String, write_only=true)]
+    pub api_key: Secret,
+}
+
+/// A named billing wallet that the checked key can use.
+#[derive(Serialize, ToSchema)]
+pub struct BoatWallet {
+    /// Explicit personal selector or stable Boat organization identity.
+    pub wallet: String,
+    /// The verified personal account or organization name.
+    pub name: String,
+}
+
+/// Safe key-check result with the likely wallet selected.
+#[derive(Serialize, ToSchema)]
+pub struct BoatWallets {
+    /// All wallets accessible to the key.
+    pub wallets: Vec<BoatWallet>,
+    /// Boat's active wallet, or the first offered wallet when none is active.
+    pub selected_wallet: String,
+}
+
 /// Key verification and a required monthly limit for every Boat connection.
 #[derive(Deserialize, ToSchema)]
 pub struct BoatConnection {
