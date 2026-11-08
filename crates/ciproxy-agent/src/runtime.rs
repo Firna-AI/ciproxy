@@ -22,7 +22,7 @@ use crate::state::Identity;
 pub(crate) trait Daemon: Send + Sync {
     async fn run(
         &self,
-        identity: Identity,
+        identity: Option<Identity>,
         guests: mpsc::Receiver<GuestEvent>,
         removing: bool,
         removal: mpsc::Receiver<()>,
@@ -47,11 +47,14 @@ struct LoopChannels {
 impl Daemon for AgentDaemon {
     async fn run(
         &self,
-        identity: Identity,
+        identity: Option<Identity>,
         guests: mpsc::Receiver<GuestEvent>,
         removing: bool,
         removal: mpsc::Receiver<()>,
     ) -> Result<()> {
+        if !removing && identity.is_none() {
+            return Err(Error::NotInstalled);
+        }
         self.agent.restore().await?;
         self.agent.control_connection(false).await?;
         let (completions, receive) = mpsc::channel(128);
@@ -93,7 +96,7 @@ impl Daemon for AgentDaemon {
 impl AgentDaemon {
     async fn run_loop(
         &self,
-        identity: Identity,
+        identity: Option<Identity>,
         mut guests: mpsc::Receiver<GuestEvent>,
         mut removing: bool,
         mut removal: mpsc::Receiver<()>,
@@ -105,11 +108,17 @@ impl AgentDaemon {
         let mut connecting = false;
         let mut removal_open = true;
         let mut pending_work = None;
+        let mut completion_requested = true;
+        let mut terminal_complete = false;
         let mut available = false;
         let mut pending_remove: Option<CommandId> = None;
         let result = loop {
-            if pending_remove.is_none() && self.agent.finished().await {
+            if pending_remove.is_none() && terminal_complete {
                 break Ok(());
+            }
+            if pending_work.is_none() && completion_requested {
+                pending_work = Some(Work::Complete);
+                completion_requested = false;
             }
             let connected = *connection_state.borrow_and_update();
             if connected != available {
@@ -118,7 +127,7 @@ impl AgentDaemon {
             }
             if !connected && !removing && !connecting {
                 let gateway = self.gateway.clone();
-                let identity = identity.clone();
+                let identity = identity.clone().ok_or(Error::NotInstalled)?;
                 let result = reconnected.clone();
                 reconnections.spawn(async move {
                     let _ = result.send(gateway.reconnect(&identity).await).await;
@@ -130,7 +139,7 @@ impl AgentDaemon {
                     connecting = false;
                     match result {
                         Some(Ok(())) => { channels.connected.send_replace(true); }
-                        Some(Err(Error::Revoked)) => { removing = true; channels.connected.send_replace(false); }
+                        Some(Err(Error::Revoked)) => { removing = true; completion_requested = true; channels.connected.send_replace(false); }
                         Some(Err(error)) => break Err(error),
                         None => break Err(Error::Disconnected),
                     }
@@ -145,6 +154,7 @@ impl AgentDaemon {
                         Ok(ControlEvent::CredentialRejected) => {
                             self.agent.remove().await?;
                             removing = true;
+                            completion_requested = true;
                             channels.connected.send_replace(false);
                         }
                         Err(error) => {
@@ -165,8 +175,12 @@ impl AgentDaemon {
                 }
                 completion = channels.completions.recv() => {
                     match completion {
-                        Some(Completion { result: Ok(reply) }) => reply,
-                        Some(Completion { result: Err(error) }) => {
+                        Some(Completion::Work(Ok(reply))) => reply.map(|reply| *reply),
+                        Some(Completion::Terminal(Ok(complete))) => {
+                            terminal_complete = complete;
+                            None
+                        }
+                        Some(Completion::Work(Err(error)) | Completion::Terminal(Err(error))) => {
                             tracing::warn!(%error, "agent work failed");
                             None
                         }
@@ -174,7 +188,7 @@ impl AgentDaemon {
                     }
                 }
                 event = removal.recv(), if removal_open => {
-                    match event { Some(()) => { self.agent.remove().await?; removing = true; }, None => removal_open = false }
+                    match event { Some(()) => { self.agent.remove().await?; removing = true; completion_requested = true; }, None => removal_open = false }
                     None
                 }
                 _ = connection_state.changed() => { None }
@@ -204,3 +218,7 @@ mod runtime_tests;
 #[cfg(test)]
 #[path = "_tests_/runtime_removal_tests.rs"]
 mod runtime_removal_tests;
+
+#[cfg(test)]
+#[path = "_tests_/terminal_runtime_tests.rs"]
+mod terminal_runtime_tests;

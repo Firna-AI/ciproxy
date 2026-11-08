@@ -14,6 +14,7 @@ use crate::boundaries::GuestProvenance;
 use crate::connection_types::{ConnectionResult, ControlEvent};
 use crate::controller::Agent;
 use crate::error::Result;
+use crate::terminal_completion::CompletionAction;
 
 pub(crate) struct WaitingAgent {
     pub(crate) operation: WaitingOperation,
@@ -39,11 +40,8 @@ impl WaitingAgent {
 
 #[async_trait]
 impl Agent for WaitingAgent {
-    async fn finish_removed_startup(&self) -> Result<bool> {
-        self.delegate.finish_removed_startup().await
-    }
-    async fn cleanup_networks(&self) -> Result<()> {
-        self.delegate.cleanup_networks().await
+    async fn complete_removal(&self, action: CompletionAction) -> Result<bool> {
+        self.delegate.complete_removal(action).await
     }
     async fn control_connection(&self, connected: bool) -> Result<()> {
         self.delegate.control_connection(connected).await
@@ -85,9 +83,6 @@ impl Agent for WaitingAgent {
     }
     async fn remove(&self) -> Result<()> {
         self.delegate.remove().await
-    }
-    async fn finished(&self) -> bool {
-        self.delegate.finished().await
     }
 }
 

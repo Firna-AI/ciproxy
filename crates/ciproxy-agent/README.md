@@ -108,6 +108,10 @@ Allocation skips active, pending, and occupied host indices.
 An overlapping address blocks allocation without granting cleanup ownership.
 Reconciliation checks cleanup results and retains ownership until absence
 is confirmed. Remove and uninstall wait for that cleanup.
+One Controller operation owns terminal completion for startup, the daemon,
+and uninstall. It removes the saved identity only after checked cleanup.
+Uninstall also finishes area, runtime tools, and service cleanup first.
+Removed startup can finish saved jobs without a machine credential.
 
 ### Host requirements
 
@@ -205,46 +209,42 @@ Do not create or edit credential state by hand.
 ```sh
 cargo test --package ciproxy-agent
 cargo fmt --all -- --check
-cargo clippy --package ciproxy-agent --all-targets -- -D warnings
+cargo clippy --package ciproxy-agent --features filesystem-regression \
+  --all-targets -- -D warnings
 cargo build --package ciproxy-agent
 ```
 
 Unit tests use Unimock and deterministic barriers.
 They use no host filesystem, subprocess, network, or real timer.
+The clippy command also compiles the opt-in filesystem regression targets.
+It needs no root access and does not run those targets.
+The default gate does not compile them because it leaves their feature off.
+Run this command after changing these files or their dependencies:
+
+- `tests/root_disk_regression.rs` uses path includes for `src/error.rs`,
+  `src/process.rs`, and `src/vm_root.rs`.
+- `tests/storage_regression.rs` uses path includes for `src/budget_file.rs`,
+  `src/error.rs`, `src/host_system.rs`, `src/image_space.rs`,
+  `src/sparse_copy.rs`, and `src/storage_sizing.rs`.
+
+Path includes compile separate copies of the production modules.
+Keep each target's module list aligned when a production dependency moves.
+The default Docker regression target also uses path includes.
+The gate compiles that target because it needs no feature.
 Real VM and GitHub checks use separate smoke scripts.
 The [real root regression](image-budget.md#disposable-root-growth-regression)
 checks free bytes as runner UID 1001 on two image sizes.
-Docker lease integration tests call the real adapter in temporary folders.
-They mock cache administration and most host commands.
-The corruption case runs real `e2fsck` on temporary files.
-These tests need `e2fsprogs`, without root access:
-
-```sh
-cargo test --package ciproxy-agent --test docker_regression docker_regressions
-```
-
-Build and package the GNU binary for glibc 2.17 or later:
-
-```sh
-python3 -m pip install cargo-zigbuild
-cargo zigbuild --locked --release --package ciproxy-agent --target x86_64-unknown-linux-gnu.2.17
-scripts/cli-release.sh verify-glibc target/x86_64-unknown-linux-gnu/release/ciproxy-agent 2.17
-scripts/cli-release.sh package ciproxy-agent 0.1.0 x86_64-unknown-linux-gnu target/x86_64-unknown-linux-gnu/release/ciproxy-agent .context/agent-release
-```
-
-Use the version from the agent manifest.
-Packaging produces the `.tar.gz` archive and its `.sha256` companion.
-
-### KVM and GitHub smoke checks
-
-The [smoke guide](smoke-checks.md) gives the Docker, warm, and restart checks.
-The [host guide](host-preparation.md#ext4-and-kvm-smoke) gives the ext4 check.
+The [development guide](development.md) gives Docker integration checks,
+KVM and GitHub smoke checks, and release packaging commands.
 
 ### Key Code
 
 - [src/application.rs](src/application.rs) composes the Linux adapters.
+- [src/startup.rs](src/startup.rs) checks local completion before workload
+  recovery and permits a removed machine to drain without a credential.
 - [src/controller.rs](src/controller.rs) defines durable machine control.
-  `Agent::finish_removed_startup` checks local cleanup without a credential.
+  `Agent::complete_removal` checks networks and finalizes local cleanup and
+  identity without a credential.
 - [src/runtime.rs](src/runtime.rs) owns daemon inputs and completion events.
 - [src/connection.rs](src/connection.rs) separates connection failures from
   credential rejection after Hello on the current socket.

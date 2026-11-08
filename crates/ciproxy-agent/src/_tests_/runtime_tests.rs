@@ -39,9 +39,9 @@ async fn daemon_reports_every_wait_beyond_queue_capacity_while_control_stays_pen
             .each_call(matching!(_))
             .answers(&|_, _| Ok(())),
         AgentMock::restore.some_call(matching!()).returns(Ok(())),
-        AgentMock::finished
-            .each_call(matching!())
-            .answers_arc(Arc::new(move |_| is_finished.load(Ordering::SeqCst))),
+        AgentMock::complete_removal
+            .each_call(matching!(_))
+            .answers_arc(Arc::new(move |_, _| Ok(is_finished.load(Ordering::SeqCst)))),
         AgentMock::remove
             .some_call(matching!())
             .answers_arc(Arc::new(move |_| {
@@ -113,7 +113,7 @@ async fn daemon_reports_every_wait_beyond_queue_capacity_while_control_stays_pen
     };
     let (_guests, guest_events) = mpsc::channel(1);
     let (remove, removal) = mpsc::channel(1);
-    let run = unconstrained(daemon.run(identity(), guest_events, false, removal));
+    let run = unconstrained(daemon.run(Some(identity()), guest_events, false, removal));
     pin_mut!(run);
     assert!(matches!(poll!(run.as_mut()), Poll::Pending));
     gateway_ready.recv().await.unwrap();
@@ -158,9 +158,9 @@ async fn daemon_removes_a_rejected_connected_machine_without_another_handshake()
             .each_call(matching!(_))
             .answers(&|_, _| Ok(())),
         AgentMock::restore.some_call(matching!()).returns(Ok(())),
-        AgentMock::finished
-            .each_call(matching!())
-            .answers_arc(Arc::new(move |_| is_finished.load(Ordering::SeqCst))),
+        AgentMock::complete_removal
+            .each_call(matching!(_))
+            .answers_arc(Arc::new(move |_, _| Ok(is_finished.load(Ordering::SeqCst)))),
         AgentMock::remove
             .some_call(matching!())
             .answers_arc(Arc::new(move |_| {
@@ -203,7 +203,7 @@ async fn daemon_removes_a_rejected_connected_machine_without_another_handshake()
     };
     let (_guests, guest_events) = mpsc::channel(1);
     let (_remove, removal) = mpsc::channel(1);
-    let run = unconstrained(daemon.run(identity(), guest_events, false, removal));
+    let run = unconstrained(daemon.run(Some(identity()), guest_events, false, removal));
     pin_mut!(run);
     assert!(matches!(poll!(run.as_mut()), Poll::Pending));
     gateway_ready.recv().await.unwrap();

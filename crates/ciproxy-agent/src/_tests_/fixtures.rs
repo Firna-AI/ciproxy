@@ -118,7 +118,6 @@ pub(super) fn controller(state: MachineState, mock: Unimock) -> Controller {
     Controller {
         allocation: Mutex::new(()),
         network_cleanup: Mutex::new(()),
-        network_inventory_valid: AtomicBool::new(false),
         control_connected: AtomicBool::new(true),
         state: Mutex::new(state),
         store: mock.clone(),

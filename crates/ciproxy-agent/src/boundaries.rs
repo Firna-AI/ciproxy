@@ -55,7 +55,6 @@ pub(crate) trait Images: Send + Sync {
     fn report(&self) -> Result<ImageReport>;
     fn recover(&self) -> Result<()>;
     fn hold_newest(&self) -> Result<Arc<dyn ImageLease>>;
-    fn purge(&self) -> Result<()>;
     async fn fetch(&self, image: &ImageDownload) -> Result<()>;
 }
 
