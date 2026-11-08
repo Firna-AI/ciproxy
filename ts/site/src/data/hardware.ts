@@ -18,8 +18,11 @@ const gigabyte = 1_000_000_000;
  */
 const defaultJobDiskBytes = 80_899_612_672;
 
+/** That VM disk in whole GB, to the nearest, for a sentence of the docs. */
+export const defaultJobDiskGb = Math.round(defaultJobDiskBytes / gigabyte);
+
 /** Two full images, a download, and image support have a separate budget. */
-const imageBudgetGb = 140;
+export const imageBudgetGb = 140;
 
 /**
  * Jobs get three quarters of the threads, the memory, and the disk after the

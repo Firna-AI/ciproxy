@@ -1,0 +1,99 @@
+---
+title: Plans and starts
+description: What each plan includes, and how ciproxy counts your starts.
+---
+
+import { formatCount, formatMoney, unbroken } from "../../../../data/format.ts";
+import {
+  addOnPrices,
+  organizationsText,
+  tiers,
+} from "../../../../data/tiers.ts";
+
+Each plan includes a number of starts each month, and a number of your own
+machines. Every workspace starts on {tiers.free.name}.
+
+## The plans
+
+|                      | {tiers.free.name}                  | {tiers.team.name}                  | {tiers.business.name}                  |
+| -------------------- | ---------------------------------- | ---------------------------------- | -------------------------------------- |
+| Price per month      | {formatMoney(tiers.free.price)}    | {formatMoney(tiers.team.price)}    | {formatMoney(tiers.business.price)}    |
+| Starts per month     | {formatCount(tiers.free.starts)}   | {formatCount(tiers.team.starts)}   | {formatCount(tiers.business.starts)}   |
+| Own machines         | {formatCount(tiers.free.machines)} | {formatCount(tiers.team.machines)} | {formatCount(tiers.business.machines)} |
+| GitHub organizations | {organizationsText(tiers.free)}    | {organizationsText(tiers.team)}    | {organizationsText(tiers.business)}    |
+| Job history          | {unbroken(tiers.free.history)}     | {unbroken(tiers.team.history)}     | {unbroken(tiers.business.history)}     |
+
+- Prices are in US dollars, and do not include tax. ciproxy collects no tax.
+- No plan includes the Boat cost of overflow. Boat bills you for it.
+- [Pricing](/pricing/) compares the features of the plans, and marks the
+  features that come later.
+
+## Add-ons
+
+{tiers.team.name} and {tiers.business.name} can add, each month:
+
+- {formatCount(addOnPrices.startsBlock)} more starts for
+  {formatMoney(addOnPrices.startsPrice)}.
+- One more machine for {formatMoney(addOnPrices.machinePrice)}.
+
+Set the add-ons in the checkout, or on **Plan and usage**. A change takes
+effect at once, and Stripe prorates it for the rest of the period.
+
+## What counts as a start
+
+A start is one job that a ciproxy runner takes, on your machines or on
+Boat, whatever its result.
+
+- A job counts at the moment that a runner takes it.
+- A job that runs again is a new start.
+- A warm runner that takes no job is not a start.
+- A Boat runner that takes no job is not a start.
+- A job that no runner takes is not a start, for example a job that someone
+  cancels while it waits.
+- The starts of a workspace count the jobs of all its organizations.
+
+The page of each job says "Counts as 1 start".
+
+## Periods
+
+- A paid plan counts the starts over its Stripe billing period, for example
+  4 November to 3 December.
+- {tiers.free.name} counts the starts over periods of one month from the day
+  that the workspace starts on {tiers.free.name}. In a month without that
+  day, the period starts on the last day of the month.
+- The days and the dates of every period are in UTC.
+- A move from {tiers.free.name} to a paid plan starts a new period when
+  Stripe confirms the payment. A move between paid plans keeps the period.
+
+## Soft limits
+
+The starts and the machines of your plan, with its add-ons, are soft
+limits. On {tiers.free.name}, the one organization is a soft limit too.
+
+- A soft limit never stops a job, and never keeps a job from starting.
+- Jobs keep running on every machine, also above the machines of your plan.
+- Above a soft limit, every page shows a banner with the plan that covers
+  your use. While a payment fails, the banner of the failed payment shows in
+  its place.
+- Passing a soft limit adds no charge.
+- A new organization above the organizations of your plan joins inactive.
+  Its jobs get no ciproxy runner while it is inactive. **Settings**, under
+  **Organizations**, says why it waits.
+
+## Change your plan
+
+An Admin or a person with the Billing role changes the plan on the **Plans**
+page.
+
+- A move from {tiers.free.name} to a paid plan goes through Stripe
+  Checkout, which takes cards. ciproxy changes the plan when Stripe confirms
+  the payment.
+- A move from {tiers.team.name} to {tiers.business.name} needs no checkout.
+  Stripe charges the prorated difference to the saved card at once, and the
+  plan changes when the charge succeeds. When the charge fails, the
+  workspace keeps its plan, and the page offers to try again or to update
+  the card.
+- **Move to Free** takes effect at the end of the paid period. Jobs keep
+  running, also above the soft limits of {tiers.free.name}.
+- **Invoices and card** on **Plan and usage** opens the Stripe customer
+  portal, where you see the invoices and change the card.
