@@ -1186,6 +1186,11 @@ Implementation calls, 6 November 2026:
       Read the wallets without choosing one, so organization keys work.
       The key check saves no key.
       Branch: `conductor/items-94-b-and-98-a-boat-wallets-and-members-permission`.
+- [x] Apply review finding 1 E for the wallet key check.
+      Prove active-wallet selection and its first-wallet fallback at
+      the Boat boundary. Keep the existing personal and organization
+      HTTP scenarios.
+      Branch: `conductor/items-94-b-and-98-a-boat-wallets-and-members-permission`.
 - [ ] Orchestrator: Run the three live scenarios with the private credential
       file, as `crates/ciproxy-control-plane/overflow.md` describes.
 
