@@ -4,6 +4,7 @@ import { storageKeys } from "../src/state/storage.ts";
 import { exerciseCase, copyFailure } from "./browser-actions.ts";
 import { createBoatRuns } from "./browser-boat.ts";
 import { createOverflowRuns } from "./browser-boat-overflow.ts";
+import { createBoatAccountRuns } from "./browser-boat-account.ts";
 import { buildNavigation } from "./browser-build.ts";
 import { smokeCases, type SmokeCase } from "./browser-cases.ts";
 import type { BrowserContext, Page } from "./browser-driver.ts";
@@ -72,6 +73,7 @@ export function createSmokeRegistry(
     ...createLateApprovalRuns(origin),
     ...createBoatRuns(origin),
     ...createOverflowRuns(origin),
+    ...createBoatAccountRuns(origin),
     ...(["link", "programmatic", "history"] as const).map((mode): SmokeRun => ({
       name: `build-${mode}`,
       check: (page) => buildNavigation(page, origin, mode),

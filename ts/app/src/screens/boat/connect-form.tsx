@@ -47,7 +47,7 @@ export function BoatFields({
         autoCapitalize="none"
         autoCorrect={false}
         spellCheck={false}
-        editable={!form.busy}
+        editable={!form.busy && !form.locked}
       />
       <Input
         label="Monthly spend limit, US dollars"
@@ -65,7 +65,7 @@ export function BoatFields({
         }
         error={form.limitError}
         invalid={form.limitError !== null}
-        editable={!form.busy}
+        editable={!form.busy && !form.locked}
       />
     </>
   );
@@ -96,6 +96,7 @@ export function ConnectFormView({
           label="Connect Boat"
           tone="primary"
           busy={form.busy}
+          disabled={form.locked}
           onPress={() => void form.submit()}
         />
         {actions}

@@ -11,7 +11,7 @@ export const invalidKey = defineScreen({
   slug: "invalid-key",
   title: "Boat rejected the key",
   description:
-    "Boat did not accept the key, so ciproxy saved nothing. The field error says how to get a complete key; the spend limit keeps its value.",
+    "Check key found that Boat did not accept the key, so no wallet shows and ciproxy saved nothing. The field error says how to get a complete key; the spend limit keeps its value.",
   relatedDocs: docs,
   address,
   render: (_props, context) => (
@@ -23,7 +23,7 @@ export const connectFailed = defineScreen({
   slug: "connect-failed",
   title: "The connection did not finish",
   description:
-    "ciproxy could not reach Boat, so nothing changed. Both fields keep their values, the key masked, and Connect Boat tries again.",
+    "After the key check and the wallet choice, ciproxy could not reach Boat, so nothing changed. The fields and the picked wallet keep their values, the key masked, and Connect Boat tries again.",
   relatedDocs: docs,
   address,
   render: (_props, context) => (

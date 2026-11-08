@@ -23,6 +23,7 @@ export const boatScenarios = [
   "overflow-save-failure",
   "overflow-connect-failure",
   "overflow-refresh-after-connect",
+  "overflow-change-key-held",
 ] as const;
 
 export type BoatFixture = {
@@ -34,6 +35,9 @@ export type BoatFixture = {
   nextReadFails: boolean;
   connectFails: boolean;
   saveFails: boolean;
+  /** A connection waits until the browser check releases it. */
+  holdConnection: boolean;
+  release: (() => void) | null;
   /** The field names of the last connection body, never its values. */
   connectionFields: string[] | null;
 };
@@ -46,6 +50,8 @@ export function defaultBoat(): BoatFixture {
     nextReadFails: false,
     connectFails: false,
     saveFails: false,
+    holdConnection: false,
+    release: null,
     connectionFields: null,
   };
 }
@@ -97,6 +103,7 @@ function settingsFor(name: BoatScenario): OverflowSettings {
     case "overflow-connected":
     case "overflow-load-failure":
     case "overflow-save-failure":
+    case "overflow-change-key-held":
       return overflowSettings();
   }
 }
@@ -110,6 +117,7 @@ export function applyBoatScenario(data: Scenario): void {
   boat.connectFails = name === "overflow-connect-failure";
   boat.saveFails = name === "overflow-save-failure";
   boat.failReadAfterChange = name === "overflow-refresh-after-connect";
+  boat.holdConnection = name === "overflow-change-key-held";
   if (name.startsWith("boat-setup")) {
     data.machines = [machine()];
     data.setup.machines = 1;

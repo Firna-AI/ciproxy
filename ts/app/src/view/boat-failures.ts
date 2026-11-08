@@ -65,6 +65,12 @@ export function limitSaveProblem(failure: ApiFailure): FieldProblem {
   };
 }
 
+/** A save that the store did not send: the page must read the settings. */
+export const unsentSave: FailureCopy = {
+  title: "Unable to save the change",
+  body: "Reload the page, then try again.",
+};
+
 /** A change of the switch or the wait that did not finish. */
 export function policySaveFailure(failure: ApiFailure): FailureCopy {
   return {

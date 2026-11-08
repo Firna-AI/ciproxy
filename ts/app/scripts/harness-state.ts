@@ -62,5 +62,10 @@ export function updateHarness(state: HarnessState, value: unknown): boolean {
     /^fixture-build-[a-z]+$/.test(value.build)
   )
     state.build = value.build;
+  if (value.release === true) {
+    const release = state.scenario.boat.release;
+    state.scenario.boat.release = null;
+    release?.();
+  }
   return true;
 }

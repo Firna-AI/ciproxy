@@ -86,6 +86,7 @@ export function BoatStep({ state }: { state: OnboardingState }) {
   }
   const rejected = state === "boat-rejected";
   const typed = state !== "boat";
+  const checked = state === "boat-wallet" || state === "boat-connect-failed";
   return (
     <div className="stack">
       {rejected ? (
@@ -103,7 +104,7 @@ export function BoatStep({ state }: { state: OnboardingState }) {
       )}
       <BoatFields
         invalid={state === "boat-invalid"}
-        filled={state === "boat-connect-failed"}
+        wallets={checked}
         reconnect={rejected}
         limit={typed ? boat.spendLimit : undefined}
       />
@@ -113,8 +114,11 @@ export function BoatStep({ state }: { state: OnboardingState }) {
         </Notice>
       ) : null}
       <div className="row-wrap">
-        <LinkAction to={paths.firstJob} tone="primary">
-          Connect Boat
+        <LinkAction
+          to={checked ? paths.firstJob : paths.connectBoatWallet}
+          tone="primary"
+        >
+          {checked ? "Connect Boat" : "Check key"}
         </LinkAction>
         <SkipAction />
       </div>

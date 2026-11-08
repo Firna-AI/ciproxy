@@ -2,27 +2,29 @@
 // spend limit. Every connection asks for both, in setup and in Settings, so a
 // limit applies from the first job on Boat. A connection after Boat rejected
 // the key, and a change of the key, ask for a new key, and the limit starts
-// with the saved limit. A typed key shows masked.
+// with the saved limit. A typed key shows masked. After the key check, the
+// wallet choice shows between the key and the limit.
 
 import { typedKey } from "../fixtures/boat-form.ts";
+import { BoatWallets } from "./boat-wallets.tsx";
 import { TextField } from "./fields.tsx";
 
 export function BoatFields({
   invalid = false,
-  filled = false,
+  wallets = false,
   limit,
   reconnect = false,
 }: {
   /** Boat did not accept the key. */
   invalid?: boolean;
-  /** The person typed a key, which shows masked. */
-  filled?: boolean;
+  /** The key check passed, so the wallets of the key show. */
+  wallets?: boolean;
   /** The limit in the field, in US dollars: typed, or the saved limit. */
   limit?: number;
   /** A new key for a saved connection, so the limit is the saved limit. */
   reconnect?: boolean;
 }) {
-  const typed = invalid || filled;
+  const typed = invalid || wallets;
   return (
     <>
       <TextField
@@ -41,6 +43,7 @@ export function BoatFields({
         }
         secret={typed}
       />
+      {wallets ? <BoatWallets /> : null}
       <TextField
         label="Monthly spend limit, US dollars"
         placeholder="For example, 200"

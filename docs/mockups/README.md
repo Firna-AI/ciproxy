@@ -195,7 +195,14 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
 - `src/components/boat-fields.tsx`: the Boat key and the monthly spend limit,
   which every connection of Boat asks for, in setup and in Settings. A typed
   key shows masked. `src/fixtures/boat-form.ts` holds what the person typed:
-  a key that is not real, and a limit that did not save.
+  a key that is not real, and a limit that did not save. Each connection
+  checks the key first with Check key. The wallet choice then shows between
+  the key and the limit, and Connect Boat connects.
+- `src/components/boat-wallets.tsx`: the wallet choice of a connection. It
+  lists the personal wallet and each Boat organization wallet that the key
+  can use, with the likely wallet picked. The person can pick another wallet
+  before Connect Boat. `src/fixtures/boat-wallets.ts` holds the wallets that
+  the key of Cal Moore can use.
 - `src/components/boat-spend.tsx`: the Boat spend of the month against the
   monthly limit, on Settings under Overflow and on the Machines page. As the
   [overflow doc](../protocol/overflow.md#spend-limit) asks, it shows the costs

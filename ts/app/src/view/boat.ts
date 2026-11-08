@@ -32,6 +32,36 @@ export function waitOptions(saved: number): WaitOption[] {
     .map((seconds) => ({ label: waitLabel(seconds), value: String(seconds) }));
 }
 
+/** The actions of an account: every account can disconnect. */
+type AccountActions<ChangeKey extends boolean> = {
+  disconnect: true;
+  /** Only an accepted key changes; a rejected key reconnects in the form. */
+  changeKey: ChangeKey;
+};
+
+/** The Boat panel of Settings under Overflow, by account and key state. */
+export type BoatPanelModel =
+  | { kind: "none" }
+  | { kind: "accepted"; name: string; actions: AccountActions<true> }
+  | { kind: "rejected"; name: string; actions: AccountActions<false> };
+
+export function boatPanelModel(settings: OverflowSettings): BoatPanelModel {
+  const account = settings.account ?? null;
+  if (account === null) return { kind: "none" };
+  if (account.rejected_at) {
+    return {
+      kind: "rejected",
+      name: account.name,
+      actions: { disconnect: true, changeKey: false },
+    };
+  }
+  return {
+    kind: "accepted",
+    name: account.name,
+    actions: { disconnect: true, changeKey: true },
+  };
+}
+
 /** The account that works now: connected, and its key not rejected. */
 export function activeAccount(
   settings: OverflowSettings,

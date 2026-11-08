@@ -15,6 +15,7 @@ import { ActionButton } from "../../components/actions.tsx";
 import { Notice } from "../../components/notice.tsx";
 import { text } from "../../components/text.ts";
 import { viewportFor } from "../../components/viewport.ts";
+import { useValue } from "../../services/hooks.ts";
 import type { OverflowStore } from "../../state/overflow.ts";
 import { disconnectFailure } from "../../view/boat-failures.ts";
 import type { FailureCopy } from "../../view/claim.ts";
@@ -33,6 +34,7 @@ export function DisconnectDialog({
       ? "bottom-sheet"
       : "center";
   const [busy, setBusy] = useState(false);
+  const locked = useValue(store.pending) && !busy;
   const [failure, setFailure] = useState<FailureCopy | null>(null);
   const running = useRef(false);
   const cancel = useRef<View>(null);
@@ -70,6 +72,7 @@ export function DisconnectDialog({
             label="Disconnect"
             tone="danger"
             busy={busy}
+            disabled={locked}
             onPress={() => void disconnect()}
           />
         </View>

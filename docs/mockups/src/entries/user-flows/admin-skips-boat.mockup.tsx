@@ -28,6 +28,12 @@ export const adminSkipsBoat = defineUseCase({
         "Settings under Overflow asks for the key and the monthly spend limit, as setup does.",
     },
     {
+      screenPath: paths.overflowWalletConnect,
+      title: "Choose the wallet",
+      description:
+        "Check key lists the wallets of the key, with the likely one picked. Connect Boat connects.",
+    },
+    {
       screenPath: paths.overflow,
       title: "Boat is connected",
       description:

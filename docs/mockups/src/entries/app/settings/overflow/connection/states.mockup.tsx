@@ -12,7 +12,7 @@ export const notConnected = defineScreen({
   slug: "not-connected",
   title: "Boat is not connected",
   description:
-    "An organization that skipped the Boat step of setup. Connecting Boat here asks for the key and the monthly spend limit, as setup does, so a limit applies from the first job on Boat. After a disconnect, the limit field starts with the saved limit.",
+    "An organization that skipped the Boat step of setup. Connecting Boat here asks for the key and the monthly spend limit, as setup does, so a limit applies from the first job on Boat. Check key lists the wallets of the key first. After a disconnect, the limit field starts with the saved limit.",
   relatedDocs: docs,
   address,
   useCasePaths: [paths.flowSkipBoat, paths.flowChangeBoatKey],
@@ -25,7 +25,7 @@ export const boatRejected = defineScreen({
   slug: "boat-rejected",
   title: "Boat rejected the key",
   description:
-    "Boat stopped accepting the API key on 12 November. Jobs run on own machines only until a new key connects. The reconnect asks for the new key and the spend limit, and the limit starts with the saved $200.",
+    "Boat stopped accepting the API key on 12 November. Jobs run on own machines only until a new key connects. The reconnect asks for the new key and the spend limit, and the limit starts with the saved $200. The account keeps Disconnect beside Check key, and it opens the same dialog.",
   relatedDocs: docs,
   address,
   render: (_props, context) => (
@@ -37,7 +37,7 @@ export const changeKey = defineScreen({
   slug: "change-key",
   title: "Change the key",
   description:
-    "Change key opens a new connection, which asks for the new key and the spend limit, with the saved $200. New Boat jobs start with the new key, and the jobs that run on Boat finish with the current key.",
+    "Change key opens a new connection, which asks for the new key and the spend limit, with the saved $200. Check key lists the wallets of the new key. New Boat jobs start with the new key, and the jobs that run on Boat finish with the current key.",
   relatedDocs: docs,
   address,
   useCasePaths: [paths.flowChangeBoatKey],
@@ -50,7 +50,7 @@ export const disconnect = defineScreen({
   slug: "disconnect",
   title: "Disconnect Boat",
   description:
-    "Disconnect asks first. ciproxy then starts no new Boat jobs, the jobs that run on Boat finish, and ciproxy deletes the key when the last of their sandboxes ends.",
+    "Disconnect asks first. ciproxy then starts no new Boat jobs, the jobs that run on Boat finish, and ciproxy deletes the key when the last of their sandboxes ends. An account whose key Boat rejected gets the same dialog.",
   relatedDocs: docs,
   address,
   useCasePaths: [paths.flowChangeBoatKey],

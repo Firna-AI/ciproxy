@@ -37,6 +37,9 @@ export const overflowStates = [
   "unknown-costs",
   "spend-unavailable",
   "save-failed",
+  "wallet-connect",
+  "wallet-reconnect",
+  "wallet-change-key",
 ] as const;
 export type OverflowState = (typeof overflowStates)[number];
 
@@ -96,6 +99,7 @@ function PageNotice({ state }: { state: OverflowState }) {
         </Notice>
       );
     case "boat-rejected":
+    case "wallet-reconnect":
       return (
         <Notice
           tone="danger"
@@ -118,7 +122,9 @@ function PageNotice({ state }: { state: OverflowState }) {
 
 function BoatPanel({ state }: { state: OverflowState }) {
   if (state === "boat-rejected") return <ReconnectBoatPanel />;
+  if (state === "wallet-reconnect") return <ReconnectBoatPanel checked />;
   if (state === "change-key") return <ChangeKeyPanel />;
+  if (state === "wallet-change-key") return <ChangeKeyPanel checked />;
   return <AccountPanel />;
 }
 
@@ -129,13 +135,17 @@ export function OverflowScreen({
   viewport: Viewport;
   state: OverflowState;
 }) {
-  if (state === "not-connected" || state === "unavailable") {
+  if (
+    state === "not-connected" ||
+    state === "wallet-connect" ||
+    state === "unavailable"
+  ) {
     return (
       <SettingsFrame viewport={viewport} active={paths.overflow}>
         {state === "unavailable" ? (
           <BoatUnavailablePanel />
         ) : (
-          <ConnectBoatPanel />
+          <ConnectBoatPanel checked={state === "wallet-connect"} />
         )}
       </SettingsFrame>
     );
@@ -149,7 +159,7 @@ export function OverflowScreen({
       <PageNotice state={state} />
       <BoatPanel state={state} />
       <WaitPanel />
-      {state === "boat-rejected" ? null : (
+      {state === "boat-rejected" || state === "wallet-reconnect" ? null : (
         <SpendLimitPanel state={spendState(state)} />
       )}
     </SettingsFrame>

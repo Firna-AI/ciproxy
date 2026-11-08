@@ -1,46 +1,72 @@
 // The Boat panel of Settings under Overflow: the connected account with
 // Change key and Disconnect, and the form of each connection. Every
-// connection asks for the key and the monthly spend limit, as setup does. A
-// change of the key and a reconnect after Boat rejected the key start the
-// limit with the saved limit. Disconnect asks first, and says that running
-// Boat jobs finish.
+// connection asks for the key and the monthly spend limit, as setup does. The
+// key check comes first: it lists the wallets of the key with the likely
+// wallet picked, and Connect Boat then connects. A change of the key and a
+// reconnect after Boat rejected the key start the limit with the saved
+// limit. Every account keeps Disconnect, also after Boat rejected its key.
+// Disconnect asks first, and says that running Boat jobs finish.
 
 import { CloudOff } from "lucide-react";
 
-import { Action, LinkAction } from "../../components/actions.tsx";
+import { LinkAction } from "../../components/actions.tsx";
 import { BoatFields } from "../../components/boat-fields.tsx";
 import { Dialog } from "../../components/dialog.tsx";
 import { StateBlock } from "../../components/feedback.tsx";
 import { Panel } from "../../components/page.tsx";
-import { paths } from "../../components/paths.ts";
+import { paths, type CataloguePath } from "../../components/paths.ts";
 import { boat } from "../../fixtures/machines.ts";
 
 const intro =
   "When your machines are busy, ciproxy starts jobs in your own Boat account. Boat bills you by the second.";
 
+/** Check key before the key check, and Connect Boat after it. */
+function Submit({ checked, to }: { checked: boolean; to: CataloguePath }) {
+  return (
+    <LinkAction to={to} tone="primary">
+      {checked ? "Connect Boat" : "Check key"}
+    </LinkAction>
+  );
+}
+
 /** Boat is not connected yet, for example after Skip for now in setup. */
-export function ConnectBoatPanel() {
+export function ConnectBoatPanel({ checked = false }: { checked?: boolean }) {
   return (
     <Panel title="Boat">
       <div className="stack settings-form">
         <p className="small">{intro}</p>
-        <BoatFields />
+        <BoatFields
+          wallets={checked}
+          limit={checked ? boat.spendLimit : undefined}
+        />
         <div className="row">
-          <Action tone="primary">Connect Boat</Action>
+          <Submit
+            checked={checked}
+            to={checked ? paths.overflow : paths.overflowWalletConnect}
+          />
         </div>
       </div>
     </Panel>
   );
 }
 
-/** A new key after Boat rejected the saved one, with the saved limit. */
-export function ReconnectBoatPanel() {
+/**
+ * A new key after Boat rejected the saved one, with the saved limit. The
+ * account keeps Disconnect, which opens the same dialog.
+ */
+export function ReconnectBoatPanel({ checked = false }: { checked?: boolean }) {
   return (
     <Panel title="Boat">
       <div className="stack settings-form">
-        <BoatFields reconnect limit={boat.spendLimit} />
-        <div className="row">
-          <Action tone="primary">Connect Boat</Action>
+        <BoatFields reconnect wallets={checked} limit={boat.spendLimit} />
+        <div className="row-wrap">
+          <Submit
+            checked={checked}
+            to={checked ? paths.overflow : paths.overflowWalletReconnect}
+          />
+          <LinkAction to={paths.overflowDisconnect} tone="danger">
+            Disconnect
+          </LinkAction>
         </div>
       </div>
     </Panel>
@@ -48,7 +74,7 @@ export function ReconnectBoatPanel() {
 }
 
 /** Change key: a new connection, which asks for the limit again. */
-export function ChangeKeyPanel() {
+export function ChangeKeyPanel({ checked = false }: { checked?: boolean }) {
   return (
     <Panel title="Boat">
       <div className="stack settings-form">
@@ -56,11 +82,12 @@ export function ChangeKeyPanel() {
           New jobs start with the new key. Jobs that run on Boat now finish with
           the current key.
         </p>
-        <BoatFields reconnect limit={boat.spendLimit} />
+        <BoatFields reconnect wallets={checked} limit={boat.spendLimit} />
         <div className="row-wrap">
-          <LinkAction to={paths.overflow} tone="primary">
-            Connect Boat
-          </LinkAction>
+          <Submit
+            checked={checked}
+            to={checked ? paths.overflow : paths.overflowWalletChangeKey}
+          />
           <LinkAction to={paths.overflow} tone="ghost">
             Cancel
           </LinkAction>

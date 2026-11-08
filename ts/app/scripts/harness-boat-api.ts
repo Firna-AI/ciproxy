@@ -83,6 +83,11 @@ export async function serveBoat(
   }
   if (method !== "POST") return false;
   const body = await read(request);
+  if (boat.holdConnection) {
+    await new Promise<void>((done) => {
+      boat.release = done;
+    });
+  }
   boat.connectionFields = fields(body) ? Object.keys(body).sort() : [];
   if (!fields(body) || !positiveCents(body.spend_limit_cents)) {
     send(400, problem("invalid_request", "Check the request."));

@@ -1485,6 +1485,18 @@ Each screen follows its mockup, as Milestone 19 says.
       shows the reached flag and the API resume date. The mockup keeps its
       reached-on date until the user chooses the final notice.
       Verification evidence: `.context/ciproxy-mvp-m22/`.
+- [x] Fix review findings 2 and 3: share pending Boat changes in the store,
+      build policy writes from intended edits and current settings, and
+      keep Disconnect available after key rejection. Update the mockup
+      before the app, and add the regression cases.
+      Branch: `conductor/m22-boat-ui`.
+- [ ] Apply the owner's answer B to item 94, 8 November 2026: after the key
+      check, list each wallet the key can use, with the likely one selected.
+      Let the customer change it before saving. Each Boat organization has
+      its own wallet. Add the mockups first. Use one choice component in
+      Setup and Settings, and use the generated key-check types after the
+      API workspace merges. That workspace owns the protocol update.
+      Branch: `conductor/m22-boat-ui`.
 - [ ] Orchestrator: run `node ts/app/scripts/boat-live-smoke.ts` against the
       preview API. Set `CIPROXY_BOAT_CREDENTIALS_FILE` to the path of a private
       Admin credential file outside the repository. The script reads the

@@ -44,7 +44,12 @@ export type Page = {
   url(): string;
   getByRole(
     role: string,
-    options?: { name?: string | RegExp; exact?: boolean; checked?: boolean },
+    options?: {
+      name?: string | RegExp;
+      exact?: boolean;
+      checked?: boolean;
+      disabled?: boolean;
+    },
   ): Locator;
   getByText(text: string | RegExp, options?: { exact?: boolean }): Locator;
   getByLabel(text: string | RegExp, options?: { exact?: boolean }): Locator;

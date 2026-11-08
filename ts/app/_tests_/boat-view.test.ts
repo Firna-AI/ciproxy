@@ -4,6 +4,7 @@ import test from "node:test";
 import type { ApiFailure } from "../src/api/client.ts";
 import type { ProblemCode } from "../src/api/schema.ts";
 import {
+  boatPanelModel,
   boatProgress,
   connectedSummary,
   overflowNotice,
@@ -15,7 +16,11 @@ import {
   keyRefused,
   limitSaveProblem,
 } from "../src/view/boat-failures.ts";
-import { boatSpend, overflowSettings } from "../scripts/fixtures-boat.ts";
+import {
+  boatSpend,
+  notConnected,
+  overflowSettings,
+} from "../scripts/fixtures-boat.ts";
 
 // A zone west of UTC shows a date that a local-time format would move.
 process.env.TZ = "America/Los_Angeles";
@@ -181,5 +186,19 @@ test("a refused key belongs to the key field, a refused limit to the limit field
   assert.deepEqual(limitSaveProblem(problem(503, "unavailable")), {
     field: null,
     copy: { title: "Unable to save the limit", body: "Try Save again." },
+  });
+});
+
+test("every Boat account has Disconnect, and only an accepted key has Change key", () => {
+  assert.deepEqual(boatPanelModel(notConnected()), { kind: "none" });
+  assert.deepEqual(boatPanelModel(overflowSettings()), {
+    kind: "accepted",
+    name: "northstar",
+    actions: { disconnect: true, changeKey: true },
+  });
+  assert.deepEqual(boatPanelModel(rejected("2026-11-12T20:00:00Z")), {
+    kind: "rejected",
+    name: "northstar",
+    actions: { disconnect: true, changeKey: false },
   });
 });

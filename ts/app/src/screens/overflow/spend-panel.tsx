@@ -84,7 +84,7 @@ export function SpendPanel({
           inputMode="decimal"
           error={fieldError}
           invalid={fieldError !== null}
-          editable={editor.saving === null}
+          editable={!editor.locked}
         />
         {figures === null ? (
           <SpendUnavailable onRetry={onRetry} />
@@ -101,7 +101,7 @@ export function SpendPanel({
             label="Save"
             tone="primary"
             busy={editor.saving === "limit"}
-            disabled={editor.saving === "wait"}
+            disabled={editor.locked && editor.saving !== "limit"}
             onPress={save}
           />
         </View>

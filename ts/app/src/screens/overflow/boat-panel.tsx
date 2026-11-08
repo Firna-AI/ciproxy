@@ -1,10 +1,12 @@
-// The Boat panel of Settings under Overflow: the connected account with
-// Change key and Disconnect, or the form of a connection. Every connection
-// asks for the key and the monthly limit. A reconnect after Boat rejected
-// the key, and a change of the key, start the limit with the saved limit.
-// The panel shows the account name and never the key.
+// The Boat panel of Settings under Overflow, from the panel model: the form
+// of a first connection, the connected account with Change key and
+// Disconnect, or the reconnect form of a rejected key with Disconnect. Every
+// connection asks for the key and the monthly limit. A reconnect and a
+// change of the key start the limit with the saved limit. Every action and
+// Cancel wait while any Boat change of the workspace runs. The panel shows
+// the account name and never the key.
 
-import { useState, type RefObject } from "react";
+import { useState, type ReactNode, type RefObject } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { ActionButton } from "../../components/actions.tsx";
@@ -12,7 +14,9 @@ import { Panel } from "../../components/panel.tsx";
 import { text } from "../../components/text.ts";
 import { useViewport } from "../../components/viewport.ts";
 import type { OverflowSettings } from "../../api/schema.ts";
+import { useValue } from "../../services/hooks.ts";
 import type { OverflowStore } from "../../state/overflow.ts";
+import { boatPanelModel } from "../../view/boat.ts";
 import { ConnectFormView } from "../boat/connect-form.tsx";
 import { useConnectForm } from "../boat/use-connect-form.ts";
 
@@ -28,30 +32,28 @@ function Connection(props: {
   reconnect: boolean;
   autoFocus?: boolean;
   onConnected: () => void;
-  onCancel?: () => void;
+  /** The actions after Connect Boat, such as Cancel or Disconnect. */
+  actions?: ReactNode;
 }) {
   const form = useConnectForm(props.store, props.savedLimit, props.onConnected);
-  const { onCancel } = props;
   return (
     <ConnectFormView
       form={form}
       reconnect={props.reconnect}
       autoFocus={props.autoFocus}
-      actions={
-        onCancel ? (
-          <ActionButton label="Cancel" tone="ghost" onPress={onCancel} />
-        ) : null
-      }
+      actions={props.actions}
     />
   );
 }
 
 function Account({
   name,
+  locked,
   onChangeKey,
   onDisconnect,
 }: {
   name: string;
+  locked: boolean;
   onChangeKey: () => void;
   onDisconnect: () => void;
 }) {
@@ -67,11 +69,17 @@ function Account({
         </Text>
       </View>
       <View style={styles.row}>
-        <ActionButton label="Change key" size="sm" onPress={onChangeKey} />
+        <ActionButton
+          label="Change key"
+          size="sm"
+          disabled={locked}
+          onPress={onChangeKey}
+        />
         <ActionButton
           label="Disconnect"
           size="sm"
           tone="danger"
+          disabled={locked}
           onPress={onDisconnect}
         />
       </View>
@@ -94,14 +102,15 @@ export function BoatPanel({
   onDisconnect: () => void;
 }) {
   const [changing, setChanging] = useState(false);
-  const account = settings.account ?? null;
+  const locked = useValue(store.pending);
+  const model = boatPanelModel(settings);
   const savedLimit = settings.spend_limit_cents ?? null;
   const done = () => {
     setChanging(false);
     onChanged();
   };
-  let body;
-  if (account === null) {
+  let body: ReactNode;
+  if (model.kind === "none") {
     body = (
       <>
         <Text style={text.small}>{intro}</Text>
@@ -113,13 +122,23 @@ export function BoatPanel({
         />
       </>
     );
-  } else if (account.rejected_at) {
+  } else if (model.kind === "rejected") {
     body = (
       <Connection
         store={store}
         savedLimit={savedLimit}
         reconnect
         onConnected={onChanged}
+        actions={
+          model.actions.disconnect ? (
+            <ActionButton
+              label="Disconnect"
+              tone="danger"
+              disabled={locked}
+              onPress={onDisconnect}
+            />
+          ) : null
+        }
       />
     );
   } else if (changing) {
@@ -132,14 +151,22 @@ export function BoatPanel({
           reconnect
           autoFocus
           onConnected={done}
-          onCancel={done}
+          actions={
+            <ActionButton
+              label="Cancel"
+              tone="ghost"
+              disabled={locked}
+              onPress={done}
+            />
+          }
         />
       </>
     );
   } else {
     body = (
       <Account
-        name={account.name}
+        name={model.name}
+        locked={locked}
         onChangeKey={() => setChanging(true)}
         onDisconnect={onDisconnect}
       />

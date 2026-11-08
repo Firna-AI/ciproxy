@@ -1,6 +1,6 @@
 // When jobs start on Boat: the overflow switch and the wait before a job
 // starts on Boat, with the five waits of job-routing.md. Both save at once,
-// one save at a time.
+// and both wait while any Boat change of the workspace runs.
 
 import { useId } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -22,7 +22,7 @@ export function WaitPanel({
   editor: PolicyEditor;
 }) {
   const labelId = useId();
-  const busy = editor.saving !== null;
+  const busy = editor.locked;
   const { shown } = editor;
   return (
     <Panel title="When jobs start on Boat">

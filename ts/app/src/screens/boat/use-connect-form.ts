@@ -1,11 +1,14 @@
 // The form of one Boat connection: the key and the monthly limit. It checks
 // both before it sends, keeps a refused key with its field error, and drops
 // the key as soon as the API accepted it. One connection runs at a time, so
-// a second press cannot send the key twice. The limit starts with the saved
-// limit, so a reconnect keeps it unless the person changes it.
+// a second press cannot send the key twice. While another Boat change of the
+// workspace runs, the form waits for the pending mark of the store. The
+// limit starts with the saved limit, so a reconnect keeps it unless the
+// person changes it.
 
 import { useCallback, useRef, useState } from "react";
 
+import { useValue } from "../../services/hooks.ts";
 import type { OverflowStore } from "../../state/overflow.ts";
 import {
   connectProblem,
@@ -25,7 +28,10 @@ export type ConnectForm = {
   keyError: string | null;
   limitError: string | null;
   failure: FailureCopy | null;
+  /** This form's connection runs. */
   busy: boolean;
+  /** Another Boat change of the workspace runs, so the form waits. */
+  locked: boolean;
   submit(): Promise<void>;
 };
 
@@ -35,6 +41,7 @@ export function useConnectForm(
   onConnected?: () => void,
 ): ConnectForm {
   const saved = savedLimitCents === null ? "" : dollarsText(savedLimitCents);
+  const pending = useValue(store.pending);
   const [apiKey, setApiKey] = useState("");
   const [limit, setLimit] = useState(saved);
   const [keyError, setKeyError] = useState<string | null>(null);
@@ -85,6 +92,7 @@ export function useConnectForm(
     limitError,
     failure,
     busy,
+    locked: pending && !busy,
     submit,
   };
 }
