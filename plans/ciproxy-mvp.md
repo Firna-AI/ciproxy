@@ -4894,6 +4894,14 @@ request #39.
 
 ### 114. The release channel change waits for a merge
 
+**Answer, 8 November 2026:** A, given before a correction. Each push to
+`main` of `futex-ai/cli-release` also publishes the release server image
+to `ghcr.io/futex-ai/cli-release-server` as `latest`, `main`, and
+`sha-<commit>`. The last push was on 5 June 2026, because later `main`
+runs failed at Clippy. A merge creates no GitHub release, tag, or crate,
+because `release_always` and `publish` are false. The merges wait for the
+user to confirm A with this correction.
+
 - **Severity:** High. **Effort:** Small.
 - **Source:** Implementation, plan item 103, option B, 8 November 2026.
 - **Category:** Process.
@@ -4925,8 +4933,8 @@ request #39.
     Merge the argument pull request when its review finds no problem.
     Publish no release. ciproxy then pins the merged commit. Effort: Small.
   - **B.** Do A, and also merge the release pull request that the release
-    automation opens. This publishes the shared crates and the server
-    image of `cli-release` for every product that uses it. Effort: Small.
+    automation opens. This creates a draft GitHub release and its tag.
+    Effort: Small.
   - **C.** Leave both pull requests open, and pin the reviewed head
     `55eae44`. The pin then names a commit outside `main`. Effort: Small.
 - **Left out:** Closing #7 and marking each test release as a full release,
