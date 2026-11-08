@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use unimock::{MockFn, Unimock, matching};
 
-use crate::boundaries::Cache;
+use crate::boundaries::{Cache, VmsMock};
 use crate::cache::HttpCache;
 use crate::cache_admin::{AdministrationMock, CacheFilesMock, Credential};
 use crate::cache_authority::CacheAuthority;
@@ -178,11 +178,14 @@ async fn periodic_reconciliation_failure_recovers_service_without_reclaiming_ent
     let cache = Arc::new(HttpCache::with_boundaries(mock.clone(), mock.clone(), mock));
     let mut agent = crate::fixtures::controller(
         crate::state::MachineState::default(),
-        Unimock::new(
+        Unimock::new((
             crate::boundaries::HostMock::hardware
                 .some_call(matching!())
                 .returns(Ok(crate::fixtures::hardware())),
-        ),
+            VmsMock::networks
+                .some_call(matching!())
+                .returns(Ok(Vec::new())),
+        )),
     );
     agent.cache = cache.clone();
     crate::controller::Agent::reconcile(&agent).await.unwrap();

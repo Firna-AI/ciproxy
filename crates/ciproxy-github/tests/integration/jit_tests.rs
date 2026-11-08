@@ -6,9 +6,10 @@ use std::sync::atomic::AtomicI64;
 use ciproxy_github::error::Error;
 use ciproxy_github::persistence::StoreAdapter;
 use ciproxy_github::registrations::{
-    RegistrationRetirement, RegistrationService, RunnerRegistrations,
+    RegistrationRequest, RegistrationRetirement, RegistrationService, RunnerRegistrations,
 };
 use ciproxy_github::scale_sets::ScaleSetFactory;
+use ciproxy_store_interface::scale_sets::RegistrationTarget;
 use reqwest::Method;
 use secrecy::ExposeSecret;
 use serde_json::json;
@@ -27,8 +28,15 @@ async fn jit_http_registers_one_runner_and_removal_accepts_missing_but_preserves
         store: Arc::new(StoreAdapter::new(database.store.clone(), runtime)),
         scale_sets: Arc::new(Factory(server.origin.clone())),
     };
-    let registration = service.create(target, "runner-71").await.unwrap();
+    let context = service.store.context(target).await.unwrap();
+    let request = RegistrationRequest {
+        workspace_id: target.workspace_id,
+        target: RegistrationTarget::from(&context.scale_set),
+    };
+    let registration = service.create(request, "runner-71").await.unwrap();
     assert_eq!(registration.runner_id, 71);
+    assert_eq!(registration.target.github_id, 53);
+    assert_eq!(registration.target.scale_set_id, target.scale_set_id);
     assert_eq!(
         registration.configuration.expose_secret(),
         "test-one-use-configuration"
@@ -70,7 +78,7 @@ async fn jit_http_registers_one_runner_and_removal_accepts_missing_but_preserves
         );
         assert!(
             matches!(
-                service.create(target, "still-busy").await,
+                service.create(request, "still-busy").await,
                 Err(Error::Internal(_))
             ),
             "{route}: auth failure must not claim the scale set is missing"

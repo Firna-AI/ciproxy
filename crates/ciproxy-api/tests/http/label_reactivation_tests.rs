@@ -205,7 +205,7 @@ async fn reactivates(action: InstallationAction) {
             .lock()
             .unwrap()
             .get(&(format!("ciproxy-retired-{}", old_set.id.simple()), 97)),
-        Some(&old_set.github_id)
+        None
     );
     let retained = fixture
         .database
@@ -214,7 +214,11 @@ async fn reactivates(action: InstallationAction) {
         .unwrap()
         .unwrap();
     assert_eq!(retained.scale_set, old_set);
-    assert_eq!(retained.state, ScaleSetState::Draining);
+    assert_eq!(
+        retained.state,
+        ScaleSetState::Removed,
+        "activation must complete the same idle retirement as label cleanup"
+    );
     assert_eq!(
         fixture
             .database

@@ -3,6 +3,7 @@
 use ciproxy_schema::github::github_jobs;
 use ciproxy_schema::labels::labels;
 use ciproxy_schema::organizations::organizations;
+use ciproxy_schema::scale_sets::scale_sets;
 use ciproxy_schema::settings::settings;
 use ciproxy_store_interface::error::{Result, ResultExt};
 use ciproxy_store_interface::own_runners::RoutingSnapshot;
@@ -15,6 +16,7 @@ use crate::labels::LabelRow;
 use crate::machine_reads::load_snapshots;
 use crate::organization_rows::OrganizationRow;
 use crate::own_runners::load;
+use crate::scale_sets::ScaleSetRow;
 use crate::settings::SettingsRow;
 
 pub(crate) fn snapshot(
@@ -57,6 +59,17 @@ pub(crate) fn snapshot(
             .store()?
             .into_record()?;
         Ok(RoutingSnapshot {
+            scale_sets: scale_sets::table
+                .filter(scale_sets::workspace_id.eq(workspace_id))
+                .filter(scale_sets::remote_removed_at.is_null())
+                .filter(scale_sets::label_id.eq_any(labels.iter().map(|label| label.id)))
+                .order(scale_sets::id)
+                .select(ScaleSetRow::as_select())
+                .load::<ScaleSetRow>(connection)
+                .store()?
+                .into_iter()
+                .map(Into::into)
+                .collect(),
             overflow: crate::overflow::rows::load(connection, workspace_id)?,
             boat_intents: crate::boat_runtime::load(connection, workspace_id)?,
             workspace_id,

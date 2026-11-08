@@ -12,6 +12,7 @@ use ciproxy_protocol::secret::Secret;
 use ciproxy_scaler::actions::{Action, Destination};
 use ciproxy_scaler::boat::BoatSizeId;
 use ciproxy_scaler::decision::decide;
+use ciproxy_scaler::registration::RegistrationTarget;
 use ciproxy_scaler::snapshot::{Destinations, Label, NothingFits, Snapshot, WaitingJob};
 use sandbox_interface::SandboxAccountCapacityMock;
 use unimock::{MockFn, Unimock, matching};
@@ -114,6 +115,12 @@ async fn catalog_refreshes_at_five_minutes_and_drives_cheapest_or_largest_choice
     let view = harness.service.view(id(1)).await.unwrap();
     assert_eq!(view.state.sizes.len(), 4);
     let label_name = LabelName("ciproxy".to_owned());
+    let target = RegistrationTarget {
+        organization_id: OrganizationId("github-org-42".to_owned()),
+        label_id: id(4).to_string(),
+        scale_set_id: id(5).to_string(),
+        github_id: 53,
+    };
     let mut snapshot = Snapshot {
         workspace_id: WorkspaceId(id(1).to_string()),
         root_sizing: RootSizing {
@@ -123,6 +130,7 @@ async fn catalog_refreshes_at_five_minutes_and_drives_cheapest_or_largest_choice
         control_plane_available: true,
         organizations: vec![OrganizationId("github-org-42".to_owned())],
         labels: vec![Label {
+            targets: vec![target.clone()],
             name: label_name.clone(),
             size: VmSize {
                 vcpu: 2,
@@ -136,8 +144,7 @@ async fn catalog_refreshes_at_five_minutes_and_drives_cheapest_or_largest_choice
             nothing_fits: NothingFits::Wait,
         }],
         queue: vec![WaitingJob {
-            organization_id: OrganizationId("github-org-42".to_owned()),
-            label: label_name,
+            target,
             queued_at: std::time::Duration::ZERO,
         }],
         machines: Vec::new(),

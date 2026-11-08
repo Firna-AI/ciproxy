@@ -1,21 +1,36 @@
 //! Installation and repository persistence used by the App service.
 
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use ciproxy_store_interface::installation_association::SignedInstallation;
 use ciproxy_store_interface::installation_links::{InstallationClaim, OrganizationActivation};
 use ciproxy_store_interface::labels::Label;
 use ciproxy_store_interface::organizations::{AppState, Organization};
-use ciproxy_store_interface::scale_sets::ScaleSet;
+use ciproxy_store_interface::scale_sets::{ScaleSet, ScaleSetBinding};
 use uuid::Uuid;
 
 use crate::error::Result;
 
+use super::session::{ListenerTarget, SessionLease, SessionStore};
 use super::{StoreAdapter, query};
 
 /// Store operations used only by App installation orchestration.
 #[cfg_attr(test, unimock::unimock(api = InstallationStoreMock))]
 #[async_trait]
 pub trait InstallationStore: Send + Sync {
+    /// Read current and retained registrations for workspace label reconciliation.
+    async fn organizations(&self, workspace_id: Uuid) -> Result<Vec<Organization>>;
+    /// Read the exact binding's retirement and completion state.
+    async fn binding(&self, target: ListenerTarget) -> Result<Option<ScaleSetBinding>>;
+    /// Own the listener session before deleting a retired remote resource.
+    async fn lock_binding(&self, target: ListenerTarget) -> Result<Option<Box<dyn SessionLease>>>;
+    /// Confirm cleanup without deleting the binding or its job history.
+    async fn complete_binding(
+        &self,
+        workspace_id: Uuid,
+        set: ScaleSet,
+        at: DateTime<Utc>,
+    ) -> Result<()>;
     /// Read separate local admission for retained links.
     async fn activation(&self, organization: &Organization) -> Result<OrganizationActivation>;
     /// Read an exact requester-owned claim.
@@ -42,6 +57,36 @@ pub trait InstallationStore: Send + Sync {
 
 #[async_trait]
 impl InstallationStore for StoreAdapter {
+    async fn organizations(&self, workspace_id: Uuid) -> Result<Vec<Organization>> {
+        query(self.store.clone(), move |store| {
+            store.organizations(workspace_id)
+        })
+        .await
+    }
+    async fn binding(&self, target: ListenerTarget) -> Result<Option<ScaleSetBinding>> {
+        query(self.store.clone(), move |store| {
+            store.scale_set_binding(
+                target.workspace_id,
+                target.organization_id,
+                target.scale_set_id,
+            )
+        })
+        .await
+    }
+    async fn lock_binding(&self, target: ListenerTarget) -> Result<Option<Box<dyn SessionLease>>> {
+        SessionStore::lock(self, target).await
+    }
+    async fn complete_binding(
+        &self,
+        workspace_id: Uuid,
+        set: ScaleSet,
+        at: DateTime<Utc>,
+    ) -> Result<()> {
+        query(self.store.clone(), move |store| {
+            store.complete_scale_set_removal(workspace_id, &set, at)
+        })
+        .await
+    }
     async fn activation(&self, organization: &Organization) -> Result<OrganizationActivation> {
         let organization = organization.clone();
         query(self.store.clone(), move |store| {

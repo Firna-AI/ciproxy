@@ -5,14 +5,87 @@ use std::sync::{Arc, Mutex};
 use unimock::{MockFn, Unimock, matching};
 
 use crate::area::{AreaFilesMock, DiskAreaMock};
-use crate::boundaries::{ImagesMock, ServiceMock, StoreMock};
-use crate::controller::AgentMock;
+use crate::area_types::Phase;
+use crate::boundaries::{ServiceMock, StoreMock, VmsMock};
 use crate::error::{Error, ErrorResultExt};
+use crate::fixtures::{controller, vm};
+use crate::host_fixtures::inventory;
 use crate::host_packages::PackagesMock;
 use crate::host_preparation::{
-    FinalUninstall, HostPreparation, Preparation, PreparationMock, Uninstall,
+    FinalUninstall, HostPreparation, Preparation, PreparationMock, Uninstall, UninstallState,
 };
 use crate::host_tools::ToolsMock;
+use crate::state::{MachineState, Mode};
+
+use super::uninstall_fixtures::{Event, cleanup, runtime, uninstall};
+
+#[tokio::test]
+async fn uninstall_cleans_an_empty_creating_machine_and_verifies_a_recorded_vm_before_drain() {
+    let mut current = inventory();
+    current.record.as_mut().unwrap().phase = Phase::Creating;
+    let state = MachineState {
+        runners: vec![vm("running", true)],
+        ..MachineState::default()
+    };
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let mock = Arc::new(Unimock::new((
+        AreaFilesMock::inspect.stub(|each| {
+            each.call(matching!())
+                .answers_arc(Arc::new(move |_| Ok(current.clone())))
+                .once()
+                .then()
+                .answers(&|_| Ok(inventory()));
+        }),
+        StoreMock::load.stub(|each| {
+            each.call(matching!())
+                .answers(&|_| Ok(MachineState::default()))
+                .once()
+                .then()
+                .answers_arc(Arc::new(move |_| Ok(state.clone())));
+        }),
+        runtime(events.clone()),
+        cleanup(events.clone()),
+    )));
+    let service = uninstall(mock.clone());
+    let result = service.start().await;
+    assert_eq!(
+        *events.lock().unwrap(),
+        vec![Event::Drain, Event::Complete],
+        "an empty Creating machine must reach guarded removal without runtime checks"
+    );
+    assert_eq!(result.unwrap(), UninstallState::Complete);
+    let result = service.start().await;
+    assert_eq!(
+        *events.lock().unwrap(),
+        vec![
+            Event::Drain,
+            Event::Complete,
+            Event::Verify,
+            Event::Recover,
+            Event::Restore,
+            Event::Drain,
+        ],
+        "a recorded VM must verify before recovery, restoration, and drain"
+    );
+    assert_eq!(result.unwrap(), UninstallState::Draining);
+}
+
+#[tokio::test]
+async fn uninstall_keeps_the_area_ownership_repair_message_when_inspection_fails() {
+    let failure = Err::<(), _>(std::io::Error::from(std::io::ErrorKind::PermissionDenied))
+        .context("fixture ownership inspection denied")
+        .unwrap_err();
+    let mock = Arc::new(Unimock::new(
+        AreaFilesMock::inspect
+            .some_call(matching!())
+            .returns(Err(failure)),
+    ));
+    let error = uninstall(mock).start().await.unwrap_err();
+    assert_eq!(
+        error.to_string(),
+        "[agent/host] area ownership record: Restore area.json and its matching backing file from backup. Then rerun uninstall."
+    );
+}
 
 #[tokio::test]
 async fn preparation_secures_control_before_packages_tools_and_the_area() {
@@ -70,18 +143,10 @@ async fn preparation_secures_control_before_packages_tools_and_the_area() {
 async fn final_uninstall_waits_for_jobs_then_preserves_identity_until_cleanup_succeeds() {
     for jobs_finished in [false, true] {
         let events = Arc::new(Mutex::new(Vec::new()));
-        let purged = events.clone();
         let removed = events.clone();
         let uninstalled = events.clone();
         let cleared = events.clone();
         let callbacks = (
-            ImagesMock::purge
-                .some_call(matching!())
-                .answers_arc(Arc::new(move |_| {
-                    purged.lock().unwrap().push("purge");
-                    Ok(())
-                }))
-                .at_least_times(0),
             PreparationMock::remove
                 .some_call(matching!())
                 .answers_arc(Arc::new(move |_| {
@@ -104,25 +169,39 @@ async fn final_uninstall_waits_for_jobs_then_preserves_identity_until_cleanup_su
                 }))
                 .at_least_times(0),
         );
-        let finished = AgentMock::finished
+        let network = VmsMock::networks
             .some_call(matching!())
-            .returns(jobs_finished);
+            .answers(&|_| Ok(Vec::new()))
+            .at_least_times(0);
         let mock = Arc::new(if jobs_finished {
-            Unimock::new((finished, callbacks))
+            Unimock::new((network, callbacks))
         } else {
-            Unimock::new(finished)
+            Unimock::new(())
         });
+        let agent = controller(
+            MachineState {
+                mode: Mode::Removed,
+                runners: if jobs_finished {
+                    vec![]
+                } else {
+                    vec![vm("job", true)]
+                },
+                ..MachineState::default()
+            },
+            mock.as_ref().clone(),
+        );
         let result = FinalUninstall {
+            files: mock.clone(),
             images: mock.clone(),
             preparation: mock.clone(),
             service: mock.clone(),
             store: mock.clone(),
-            agent: mock.clone(),
+            agent: Arc::new(agent),
         }
         .finish()
         .await;
         let expected = if jobs_finished {
-            vec!["purge", "area", "service", "identity"]
+            vec!["area", "service", "identity"]
         } else {
             vec![]
         };

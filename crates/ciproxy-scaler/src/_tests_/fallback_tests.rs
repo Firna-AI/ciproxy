@@ -132,6 +132,7 @@ fn image_floor_blocks_largest_boat_fallback_and_retires_its_idle_runner() {
     assert_eq!(
         actions[1],
         Action::StartRunner(StartRunner {
+            target: state.labels[1].targets[0].clone(),
             organization_id: state.organizations[0].clone(),
             label: state.labels[1].name.clone(),
             requested_size: state.labels[1].size,
@@ -192,6 +193,7 @@ fn an_idle_boat_runner_keeps_its_saved_root_while_new_starts_use_the_current_ima
     assert_eq!(
         decide(&state),
         vec![Action::StartRunner(StartRunner {
+            target: state.labels[0].targets[0].clone(),
             organization_id: state.organizations[0].clone(),
             label: state.labels[0].name.clone(),
             requested_size: requested,

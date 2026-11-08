@@ -31,6 +31,10 @@ pub(crate) struct LinuxVms {
 
 #[async_trait]
 impl Vms for LinuxVms {
+    async fn networks(&self) -> Result<Vec<u16>> {
+        self.network.owned().await
+    }
+
     async fn configuration_lost(&self, vm: &VmRecord) -> Result<bool> {
         self.guests.configuration_lost(vm).await
     }
@@ -40,10 +44,8 @@ impl Vms for LinuxVms {
     async fn swap_docker(&self, vm: &VmRecord) -> Result<()> {
         self.switch_docker(vm, "/docker-job.ext4").await
     }
-    fn allocate(&self, report: RunnerReport, used: &[VmRecord]) -> Result<VmRecord> {
-        let network_index = (1..16_383)
-            .find(|index| !used.iter().any(|vm| vm.network_index == *index))
-            .ok_or(Error::Capacity)?;
+    async fn allocate(&self, report: RunnerReport, used: &[u16]) -> Result<VmRecord> {
+        let network_index = self.network.allocate(used).await?;
         Ok(VmRecord {
             preparation: crate::state::PreparationState::Waiting,
             cache_authority: CacheAuthority::Waiting,
@@ -52,6 +54,10 @@ impl Vms for LinuxVms {
             network_index,
             report,
         })
+    }
+
+    async fn remove_network(&self, index: u16) -> Result<()> {
+        self.network.remove(index).await
     }
 
     async fn start(&self, vm: &VmRecord, config: AgentToGuest) -> Result<()> {
@@ -84,7 +90,6 @@ impl Vms for LinuxVms {
                 .run("systemctl", &arguments(&["stop", &unit]), &[])
                 .await?;
         }
-        self.network.remove(vm).await?;
         self.files.remove(vm)?;
         Ok(())
     }

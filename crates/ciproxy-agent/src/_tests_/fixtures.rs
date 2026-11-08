@@ -116,6 +116,8 @@ pub(super) fn report_dependencies_for(hardware: HardwareReport) -> impl Clause {
 pub(super) fn controller(state: MachineState, mock: Unimock) -> Controller {
     let mock = Arc::new(mock);
     Controller {
+        allocation: Mutex::new(()),
+        network_cleanup: Mutex::new(()),
         control_connected: AtomicBool::new(true),
         state: Mutex::new(state),
         store: mock.clone(),

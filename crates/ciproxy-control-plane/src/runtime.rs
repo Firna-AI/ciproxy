@@ -111,6 +111,19 @@ impl MachineRuntime {
             .internal()
     }
 
+    /// Keep required local cleanup independent of optional provider work.
+    async fn purge_boat_registration_metadata(&self, workspace_id: Uuid) -> Result<()> {
+        let store = self.store.clone();
+        let at = self.clock.now();
+        tokio::task::spawn_blocking(move || {
+            store.purge_terminal_boat_runner_intents(workspace_id, at)
+        })
+        .await
+        .internal()?
+        .internal()?;
+        Ok(())
+    }
+
     /// Load current admission while retaining every organization's completion context.
     pub(crate) async fn runnable_organizations(
         &self,
@@ -150,6 +163,10 @@ impl MachineRuntime {
         else {
             return Ok(());
         };
+        lease.check_connection().internal()?;
+        if let Err(error) = self.purge_boat_registration_metadata(workspace_id).await {
+            tracing::warn!(%workspace_id,%error,"Boat registration metadata cleanup will retry");
+        }
         let mut input = self.load(workspace_id).await?;
         self.reconcile_reports(&input).await?;
         input = self.load(workspace_id).await?;

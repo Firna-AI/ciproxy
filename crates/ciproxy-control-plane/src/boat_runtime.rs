@@ -1,7 +1,7 @@
 //! Wire pure Boat actions to the existing durable overflow executor.
 
 use chrono::DateTime;
-use ciproxy_github::persistence::session::ListenerTarget;
+use ciproxy_github::registrations::RegistrationRequest;
 use ciproxy_overflow::api::{StartOutcome, StartRequest};
 use ciproxy_overflow::view::OverflowView;
 use ciproxy_protocol::identifiers::OrganizationId;
@@ -11,6 +11,7 @@ use ciproxy_scaler::snapshot::Snapshot;
 use ciproxy_store_interface::boat_runtime::BoatRunnerIntent;
 use ciproxy_store_interface::overflow::record::{StartPhase, StartRecord};
 use ciproxy_store_interface::own_runners::RoutingSnapshot;
+use ciproxy_store_interface::scale_sets::RegistrationTarget;
 use secrecy::ExposeSecret;
 use uuid::Uuid;
 
@@ -23,7 +24,7 @@ impl MachineRuntime {
         let Some(overflow) = &self.overflow else {
             return;
         };
-        if let Err(error) = overflow.cleanup(input.workspace_id).await {
+        if let Err(error) = self.cleanup_boat(input.workspace_id).await {
             tracing::warn!(%error, "Boat cleanup will retry");
         }
         let workspace = input.workspace_id;
@@ -58,7 +59,7 @@ impl MachineRuntime {
                 .find(|record| record.delivery_id == intent.delivery_id);
             if record.is_none_or(|record| record.ends_at.is_some()) {
                 if let Err(error) = self
-                    .retire_boat_registration(workspace, intent, record, &current.organizations)
+                    .retire_boat_registration(workspace, intent, record)
                     .await
                 {
                     tracing::warn!(%error,"Boat registration cleanup will retry");
@@ -100,13 +101,7 @@ impl MachineRuntime {
                 Err(error) => tracing::warn!(%error, "Boat accounting prevents new starts"),
             }
         }
-        boat_snapshot::append(
-            snapshot,
-            &intents,
-            &view.starts,
-            &current.jobs,
-            &current.labels,
-        );
+        boat_snapshot::append(snapshot, &intents, &view.starts, &current.jobs);
     }
 
     pub(crate) async fn cleanup_boat(&self, workspace: Uuid) -> Result<()> {
@@ -122,7 +117,7 @@ impl MachineRuntime {
         mut action: StartRunner,
     ) -> Result<()> {
         let overflow = self.overflow.as_ref().ok_or(Error::StateChanged)?;
-        let organization: Uuid = action.organization_id.0.parse().internal()?;
+        let organization: Uuid = action.target.organization_id.0.parse().internal()?;
         let github_organization = input
             .organizations
             .iter()
@@ -133,19 +128,21 @@ impl MachineRuntime {
         let label = input
             .labels
             .iter()
-            .find(|label| label.name == action.label.0)
+            .find(|label| label.id.to_string() == action.target.label_id)
             .ok_or(Error::StateChanged)?;
         let workspace = input.workspace_id;
-        let store = self.store.clone();
-        let sets = tokio::task::spawn_blocking(move || store.scale_sets(workspace, organization))
-            .await
-            .internal()?
-            .internal()?;
-        let set = sets
+        let set = input
+            .scale_sets
             .iter()
-            .find(|set| set.label_id == label.id)
+            .find(|set| {
+                set.id.to_string() == action.target.scale_set_id
+                    && set.organization_id == organization
+                    && set.label_id == label.id
+                    && set.github_id == action.target.github_id
+            })
             .ok_or(Error::StateChanged)?;
         let intent = BoatRunnerIntent {
+            registration_scale_set_id: None,
             delivery_id: self.clock.uuid(),
             runner_id: self.clock.uuid(),
             organization_id: organization,
@@ -176,10 +173,9 @@ impl MachineRuntime {
         let registration = self
             .registrations
             .create(
-                ListenerTarget {
+                RegistrationRequest {
                     workspace_id: workspace,
-                    organization_id: organization,
-                    scale_set_id: set.id,
+                    target: RegistrationTarget::from(set),
                 },
                 &format!("ciproxy-{}", intent.runner_id),
             )
@@ -188,8 +184,9 @@ impl MachineRuntime {
         let store = self.store.clone();
         let runner = intent.runner_id;
         let github_id = registration.runner_id;
+        let target = registration.target;
         tokio::task::spawn_blocking(move || {
-            store.register_boat_runner(workspace, runner, github_id)
+            store.save_boat_registration(workspace, runner, target, github_id)
         })
         .await
         .internal()?

@@ -104,7 +104,9 @@ async fn stop_discards_disks_even_when_the_owned_unit_already_exited() {
         NetworkMock::remove.some_call(matching!(_)).returns(Ok(())),
         VmFilesMock::remove.some_call(matching!(_)).returns(Ok(())),
     ));
-    runtime(mock).stop(&vm("finished", true)).await.unwrap();
+    let runtime = runtime(mock);
+    runtime.stop(&vm("finished", true)).await.unwrap();
+    runtime.remove_network(1).await.unwrap();
 }
 
 #[tokio::test]
@@ -175,4 +177,5 @@ async fn a_pending_new_pin_preserves_existing_vm_restore_and_stop() {
     start.await.unwrap();
     assert_eq!(disks.load(Ordering::SeqCst), 1);
     assert!(complete.load(Ordering::SeqCst));
+    runtime.remove_network(1).await.unwrap();
 }

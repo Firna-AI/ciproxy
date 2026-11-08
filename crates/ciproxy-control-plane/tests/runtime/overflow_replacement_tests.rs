@@ -12,13 +12,15 @@ use super::support::at;
 
 #[tokio::test]
 async fn replacement_label_gets_new_supply_for_ready_starting_and_running_old_bindings() {
-    for (scenario, creating, running, deleted, ended) in [
-        ("ready", false, false, 1, Some(at())),
-        ("starting", true, false, 0, None),
-        ("running", false, true, 0, None),
+    for (scenario, creating, running, legacy, deleted, ended) in [
+        ("ready", false, false, false, 1, Some(at())),
+        ("starting", true, false, false, 0, None),
+        ("running", false, true, false, 0, None),
+        ("legacy-ready", false, false, true, 1, Some(at())),
+        ("legacy-running", false, true, true, 0, None),
     ] {
-        let harness = Harness::new(false, false).await;
-        let store = &harness.fixture.store;
+        let mut harness = Harness::new(false, false).await;
+        let store = harness.fixture.store.clone();
         let workspace = harness.fixture.workspace;
         let organization = harness.fixture.organization;
         let mut label = store.labels(workspace).unwrap().remove(0);
@@ -42,6 +44,9 @@ async fn replacement_label_gets_new_supply_for_ready_starting_and_running_old_bi
             .unwrap()
             .starts
             .remove(0);
+        if legacy {
+            harness.fixture.forget_registration_target(old.runner_id);
+        }
         if running {
             old_job.phase = DemandPhase::Started;
             old_job.started_at = Some(at());
@@ -71,6 +76,21 @@ async fn replacement_label_gets_new_supply_for_ready_starting_and_running_old_bi
             .find(|record| record.delivery_id == old.delivery_id)
             .unwrap();
         assert_eq!(old.ends_at, ended, "{scenario}");
+        let target = if creating {
+            store
+                .boat_runner_intents(workspace)
+                .unwrap()
+                .into_iter()
+                .find(|intent| intent.runner_id == old.runner_id)
+                .unwrap()
+                .registration_scale_set_id
+        } else {
+            store
+                .runner_registration_target(workspace, organization, old.runner_id)
+                .unwrap()
+                .map(|target| target.github_id)
+        };
+        assert_eq!(target, if legacy { None } else { Some(60) }, "{scenario}");
         assert_eq!(
             starts
                 .iter()

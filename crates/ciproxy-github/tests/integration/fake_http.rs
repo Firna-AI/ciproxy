@@ -232,15 +232,5 @@ async fn handle(
     if path.ends_with("/runner-groups") && method == Method::GET {
         return Json(json!({"runner_groups":[]})).into_response();
     }
-    if path.ends_with("/runner-groups") && method == Method::POST {
-        return (
-            StatusCode::CREATED,
-            Json(json!({"id":47,"name":"ciproxy-test","inherited":false})),
-        )
-            .into_response();
-    }
-    if path.ends_with("/runner-groups/47/repositories") && method == Method::PUT {
-        return StatusCode::NO_CONTENT.into_response();
-    }
     StatusCode::NOT_FOUND.into_response()
 }

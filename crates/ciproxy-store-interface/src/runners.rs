@@ -1,9 +1,10 @@
 //! Runner placement, resource snapshots, and lifecycle records.
 
+use ciproxy_protocol::resources::VmSize;
 use uuid::Uuid;
 
 use crate::error::Result;
-use ciproxy_protocol::resources::VmSize;
+use crate::scale_sets::RegistrationTarget;
 
 /// The stored lifecycle state of a runner.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, strum::EnumString, strum::IntoStaticStr)]
@@ -65,6 +66,21 @@ pub struct Runner {
 
 /// Tenant-scoped runner records used by later lifecycle services.
 pub trait RunnerStore: Send + Sync {
+    /// Save the response's exact target and runner ID without a later binding read.
+    fn save_runner_registration(
+        &self,
+        workspace_id: Uuid,
+        runner_id: Uuid,
+        target: RegistrationTarget,
+        github_id: i64,
+    ) -> Result<()>;
+    /// Read captured registration identity. Older uncaptured runners return None.
+    fn runner_registration_target(
+        &self,
+        workspace_id: Uuid,
+        organization_id: Uuid,
+        runner_id: Uuid,
+    ) -> Result<Option<RegistrationTarget>>;
     /// Reconcile byte-precise actual resources without changing original placement.
     fn update_runner_size(
         &self,

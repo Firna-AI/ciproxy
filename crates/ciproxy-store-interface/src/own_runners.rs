@@ -11,11 +11,14 @@ use crate::labels::Label;
 use crate::organizations::Organization;
 use crate::overflow::store::OverflowSnapshot;
 use crate::runners::{Runner, RunnerState};
+use crate::scale_sets::ScaleSet;
 use crate::settings::Settings;
 
 /// One credential-free command paired with its immutable runner placement.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OwnRunner {
+    /// Exact remote registration target, absent for older unrecorded runners.
+    pub registration_scale_set_id: Option<i64>,
     /// Original label request in byte units, retained across settings changes.
     pub requested_size: crate::vm_size::VmSize,
     /// Exact logical slots held by this VM, including non-contiguous sets.
@@ -97,6 +100,8 @@ pub trait OwnRunnerStore: Send + Sync {
 
 /// Coherent persisted input to one workspace's pure routing calculation.
 pub struct RoutingSnapshot {
+    /// Active saved bindings from the same committed view as labels and demand.
+    pub scale_sets: Vec<ScaleSet>,
     /// Boat account and delivery facts from this same committed snapshot.
     pub overflow: OverflowSnapshot,
     /// Registration identities saved before GitHub JIT requests.

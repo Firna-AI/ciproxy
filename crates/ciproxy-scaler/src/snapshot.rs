@@ -10,6 +10,7 @@ use ciproxy_protocol::images::ImageMetadata;
 use ciproxy_protocol::resources::{Slots, VmSize};
 
 use crate::boat::{BoatAccount, Sandbox};
+use crate::registration::RegistrationTarget;
 
 /// One workspace's routing inputs, including all starts still in flight.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -41,6 +42,8 @@ pub struct Snapshot {
 /// Routing settings shared by all organizations of one workspace.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Label {
+    /// Saved active bindings that can serve this label in each organization.
+    pub targets: Vec<RegistrationTarget>,
     /// GitHub scale set label.
     pub name: LabelName,
     /// Current label dimensions, with disk measured as free job bytes.
@@ -72,10 +75,8 @@ pub enum NothingFits {
 /// Unassigned demand, which the scaler never pins to a particular runner.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct WaitingJob {
-    /// Organization whose label has waiting demand.
-    pub organization_id: OrganizationId,
-    /// Label whose current dimensions are requested.
-    pub label: LabelName,
+    /// Saved binding that owns this waiting demand.
+    pub target: RegistrationTarget,
     /// Time when GitHub assigned the waiting job to the scale set.
     pub queued_at: Duration,
 }
@@ -122,6 +123,8 @@ impl Machine {
 /// A live or retiring runner whose original size stays fixed.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Runner {
+    /// Captured registration identity. Older unrecorded targets stay unknown.
+    pub target: Option<RegistrationTarget>,
     /// Identity allocated when the caller applied its start intent.
     pub id: RunnerId,
     /// Organization whose registration owns this runner.
