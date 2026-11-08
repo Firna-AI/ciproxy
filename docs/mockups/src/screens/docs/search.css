@@ -63,6 +63,12 @@
   font-size: 15px;
 }
 
+.ds-field button:focus-visible,
+.ds-hit:focus-visible {
+  outline: 2px solid var(--c-ink);
+  outline-offset: -2px;
+}
+
 .ds-count {
   padding: 12px 16px 4px;
 }
@@ -140,4 +146,8 @@
   padding: 10px 16px;
   border-top: 1px solid var(--c-border);
   background: var(--c-bg);
+}
+
+.ds-keys .site-kbd {
+  display: inline-flex;
 }
