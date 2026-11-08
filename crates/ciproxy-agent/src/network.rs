@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::layout::jail_uid;
 use crate::network_rules::{namespace_rules, root_rules};
 use crate::process::{Commands, arguments};
@@ -13,8 +13,13 @@ use crate::state::VmRecord;
 #[cfg_attr(test, unimock::unimock(api = NetworkMock))]
 #[async_trait]
 pub(crate) trait Network: Send + Sync {
+    /// Find indices from the agent's reserved host resource names.
+    async fn owned(&self) -> Result<Vec<u16>>;
+    /// Select an index absent from durable ownership and host resources.
+    async fn allocate(&self, used: &[u16]) -> Result<u16>;
     async fn create(&self, vm: &VmRecord) -> Result<()>;
-    async fn remove(&self, vm: &VmRecord) -> Result<()>;
+    /// Remove only this index's named resources and confirm their absence.
+    async fn remove(&self, index: u16) -> Result<()>;
 }
 
 pub(crate) struct LinuxNetwork {
@@ -23,6 +28,17 @@ pub(crate) struct LinuxNetwork {
 
 #[async_trait]
 impl Network for LinuxNetwork {
+    async fn owned(&self) -> Result<Vec<u16>> {
+        Ok(self.inventory().await?.owned())
+    }
+
+    async fn allocate(&self, used: &[u16]) -> Result<u16> {
+        let inventory = self.inventory().await?;
+        (1..16_383)
+            .find(|index| !used.contains(index) && !inventory.occupied(*index))
+            .ok_or(Error::Capacity)
+    }
+
     async fn create(&self, vm: &VmRecord) -> Result<()> {
         let id = network_name(vm.network_index);
         let peer = format!("{id}p");
@@ -100,16 +116,42 @@ impl Network for LinuxNetwork {
         Ok(())
     }
 
-    async fn remove(&self, vm: &VmRecord) -> Result<()> {
-        let id = network_name(vm.network_index);
-        for (program, args) in [
-            ("ip", arguments(&["netns", "delete", &id])),
-            ("ip", arguments(&["link", "delete", &id])),
-            ("nft", arguments(&["delete", "table", "inet", &id])),
+    async fn remove(&self, index: u16) -> Result<()> {
+        let id = network_name(index);
+        let peer = format!("{id}p");
+        let inventory = self.inventory().await?;
+        let mut failure = None;
+        for (present, program, args) in [
+            (
+                inventory.namespaces.contains(&id),
+                "ip",
+                arguments(&["netns", "delete", &id]),
+            ),
+            (
+                inventory.links.contains(&id),
+                "ip",
+                arguments(&["link", "delete", &id]),
+            ),
+            (
+                inventory.links.contains(&peer),
+                "ip",
+                arguments(&["link", "delete", &peer]),
+            ),
+            (
+                inventory.tables.contains(&id),
+                "nft",
+                arguments(&["delete", "table", "inet", &id]),
+            ),
         ] {
-            if let Err(error) = self.commands.run(program, &args, &[]).await {
-                tracing::warn!(error = %error, "VM stopped; network resource already absent or cleanup failed");
+            if present && let Err(error) = self.commands.run(program, &args, &[]).await {
+                tracing::warn!(%error, index, "network deletion failed; checking remaining resources");
+                if failure.is_none() {
+                    failure = Some(error);
+                }
             }
+        }
+        if self.inventory().await?.resources(index) {
+            return Err(failure.unwrap_or(Error::NetworkCleanup { index }));
         }
         Ok(())
     }

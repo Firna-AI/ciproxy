@@ -55,8 +55,9 @@ async fn failed_retirement_does_not_block_an_active_organizations_start() {
             .returns(Err(ciproxy_github::error::Error::AccessUnavailable(403))),
         RunnerRegistrationsMock::create
             .some_call(matching!(_, _))
-            .answers(&|_, _, _| {
-                Ok(ciproxy_github::scale_sets::JitRegistration {
+            .answers(&|_, request, _| {
+                Ok(ciproxy_github::registrations::RegisteredRunner {
+                    target: request.target,
                     runner_id: 94,
                     configuration: "jit-fixture".into(),
                 })

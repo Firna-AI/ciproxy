@@ -9,6 +9,7 @@ use ciproxy_protocol::identifiers::{
 };
 use ciproxy_protocol::resources::{GIGABYTE, Resources, VmSize};
 use ciproxy_scaler::boat::{BoatAccount, MonthlySpend};
+use ciproxy_scaler::registration::RegistrationTarget;
 use ciproxy_scaler::snapshot::{
     Destinations, Label, Machine, NothingFits, Runner, RunnerState, Snapshot, WaitingJob,
 };
@@ -67,6 +68,19 @@ pub(crate) fn build(
             .labels
             .iter()
             .map(|label| Label {
+                targets: input
+                    .scale_sets
+                    .iter()
+                    .filter(|set| set.label_id == label.id)
+                    .map(|set| {
+                        registration_target(
+                            set.organization_id,
+                            set.label_id,
+                            set.id,
+                            set.github_id,
+                        )
+                    })
+                    .collect(),
                 name: LabelName(label.name.clone()),
                 size: size(label.size),
                 destinations: Destinations {
@@ -86,9 +100,18 @@ pub(crate) fn build(
             .filter(|job| runnable.contains(&job.organization_id))
             .filter_map(|job| {
                 let label = input.labels.iter().find(|label| label.id == job.label_id)?;
+                let set = input.scale_sets.iter().find(|set| {
+                    set.id == job.scale_set_id
+                        && set.label_id == label.id
+                        && set.organization_id == job.organization_id
+                })?;
                 Some(WaitingJob {
-                    organization_id: OrganizationId(job.organization_id.to_string()),
-                    label: LabelName(label.name.clone()),
+                    target: registration_target(
+                        set.organization_id,
+                        set.label_id,
+                        set.id,
+                        set.github_id,
+                    ),
                     queued_at: instant(job.assigned_at?),
                 })
             })
@@ -143,10 +166,24 @@ fn machine_input(
         capacity: resources.slots, disk_budget_bytes: resources.job_disk_bytes,
         warm_count: count, warm_allocation: allocate(count, history),
         runners: input.runners.iter().filter(|intent| intent.runner.state != runners::RunnerState::Stopped && matches!(intent.runner.place, RunnerPlace::Machine { machine_id, .. } if machine_id == machine.machine.id)).map(|intent| {
-            let running_job = input.jobs.iter().find(|job| job.phase == DemandPhase::Started && job.runner_github_id == intent.runner.github_id && job.organization_id == intent.runner.organization_id);
+            let running_job = input.jobs.iter().find(|job| job.phase == DemandPhase::Started && job.runner_github_id == intent.runner.github_id && job.organization_id == intent.runner.organization_id && job.scale_set_id == intent.runner.scale_set_id);
             let state = if let Some(job) = running_job { RunnerState::Running(JobId(job.id.to_string())) } else { match intent.runner.state { runners::RunnerState::Starting => RunnerState::Starting, runners::RunnerState::Ready => RunnerState::Ready, runners::RunnerState::Busy => RunnerState::Running(JobId(intent.runner.id.to_string())), runners::RunnerState::Stopping => RunnerState::Retiring, runners::RunnerState::Stopped => RunnerState::Exited } };
-            Runner { id: RunnerId(intent.runner.id.to_string()), organization_id: OrganizationId(intent.runner.organization_id.to_string()), label: LabelName(intent.label_name.clone()), requested_size: size(intent.requested_size), size: intent.runner.size, state }
+            Runner { target: intent.registration_scale_set_id.map(|github_id| registration_target(intent.runner.organization_id, intent.runner.label_id, intent.runner.scale_set_id, github_id)), id: RunnerId(intent.runner.id.to_string()), organization_id: OrganizationId(intent.runner.organization_id.to_string()), label: LabelName(intent.label_name.clone()), requested_size: size(intent.requested_size), size: intent.runner.size, state }
         }).collect(),
+    }
+}
+
+pub(crate) fn registration_target(
+    organization: Uuid,
+    label: Uuid,
+    binding: Uuid,
+    github_id: i64,
+) -> RegistrationTarget {
+    RegistrationTarget {
+        organization_id: OrganizationId(organization.to_string()),
+        label_id: label.to_string(),
+        scale_set_id: binding.to_string(),
+        github_id,
     }
 }
 

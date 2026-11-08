@@ -46,6 +46,7 @@ pub(super) fn populate(fixture: &mut Fixture) -> (Organization, OwnRunner, OwnRu
         fixture.intent.runner.scale_set_id,
         1,
         49,
+        44,
     );
     let mut started = job(fixture);
     started.runner_github_id = Some(49);
@@ -53,7 +54,7 @@ pub(super) fn populate(fixture: &mut Fixture) -> (Organization, OwnRunner, OwnRu
         .store
         .save_github_job(fixture.workspace, &started, at())
         .unwrap();
-    let ready = additional(fixture, sibling.id, set.id, 2, 48);
+    let ready = additional(fixture, sibling.id, set.id, 2, 48, 92);
     let mut queued = job(fixture);
     queued.id = Uuid::new_v4();
     queued.phase = DemandPhase::Assigned;
@@ -77,8 +78,10 @@ fn additional(
     set: Uuid,
     slot: u64,
     github: i64,
+    registration_scale_set_id: i64,
 ) -> OwnRunner {
     let mut runner = fixture.intent.clone();
+    runner.registration_scale_set_id = Some(registration_scale_set_id);
     runner.runner.id = Uuid::new_v4();
     runner.runner.organization_id = organization;
     runner.runner.scale_set_id = set;

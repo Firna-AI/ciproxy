@@ -20,8 +20,11 @@ pub fn decide(snapshot: &Snapshot) -> Vec<Action> {
     retire_obsolete(snapshot, &mut plan);
     let mut uncovered = Vec::new();
     for job in &snapshot.queue {
-        if snapshot.organizations.contains(&job.organization_id)
-            && snapshot.labels.iter().any(|label| label.name == job.label)
+        if snapshot.organizations.contains(&job.target.organization_id)
+            && snapshot
+                .labels
+                .iter()
+                .any(|label| label.targets.contains(&job.target))
             && !claim_existing(snapshot, &mut plan, job)
         {
             uncovered.push(job);
@@ -29,7 +32,11 @@ pub fn decide(snapshot: &Snapshot) -> Vec<Action> {
     }
     let mut pending = Vec::new();
     for job in uncovered {
-        let Some(label) = snapshot.labels.iter().find(|label| label.name == job.label) else {
+        let Some(label) = snapshot
+            .labels
+            .iter()
+            .find(|label| label.targets.contains(&job.target))
+        else {
             continue;
         };
         if !place_own(snapshot, &mut plan, job, label)

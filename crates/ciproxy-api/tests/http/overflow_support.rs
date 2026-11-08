@@ -11,6 +11,7 @@ use ciproxy_protocol::resources::VmSize;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_scaler::actions::{Destination, StartReason, StartRunner};
 use ciproxy_scaler::boat::BoatSizeId;
+use ciproxy_scaler::registration::RegistrationTarget;
 use unimock::Unimock;
 use uuid::Uuid;
 
@@ -65,6 +66,12 @@ pub(super) async fn start(fixture: &Fixture) {
                 label_id: label.id,
                 scale_set_id: set.id,
                 action: StartRunner {
+                    target: RegistrationTarget {
+                        organization_id: OrganizationId(fixture.organization.id.to_string()),
+                        label_id: label.id.to_string(),
+                        scale_set_id: set.id.to_string(),
+                        github_id: set.github_id,
+                    },
                     organization_id: OrganizationId(fixture.organization.id.to_string()),
                     label: LabelName(label.name),
                     requested_size: VmSize {

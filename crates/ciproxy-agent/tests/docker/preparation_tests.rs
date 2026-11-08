@@ -26,6 +26,7 @@ async fn writer_lease_excludes_another_writer_until_release() {
             repository,
             writer: true,
             bytes: 8192,
+            phase: docker_files::AttachmentPhase::Offered,
         },
     )
     .unwrap();
@@ -106,4 +107,5 @@ async fn disposable_copy_uses_valid_reflink_options_and_releases_failed_reservat
     );
     assert!(!adapter.reserved(&vm).unwrap());
     assert_eq!(adapter.report().unwrap().leased_bytes, 0);
+    assert_eq!(fs::read(&base).unwrap(), b"base");
 }

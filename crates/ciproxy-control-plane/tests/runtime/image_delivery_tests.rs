@@ -51,8 +51,9 @@ async fn bootstrap_fetches_once_per_connection_before_registering_without_a_sele
     let registrations = Arc::new(Unimock::new(
         RunnerRegistrationsMock::create
             .some_call(matching!(_, _))
-            .answers(&|_, _, _| {
-                Ok(ciproxy_github::scale_sets::JitRegistration {
+            .answers(&|_, request, _| {
+                Ok(ciproxy_github::registrations::RegisteredRunner {
+                    target: request.target,
                     runner_id: 48,
                     configuration: "jit-fixture".into(),
                 })

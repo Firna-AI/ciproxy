@@ -246,6 +246,12 @@ stay in `europe-west1`.
       condition claim. Reason: valid jobs then keep the same trust limits.
       Evidence: `.context/ciproxy-mvp/fix-round-1-report.md`.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+- [ ] Build and publish the control-plane image in the deploy workflow, as
+      item 90 = G says. A build job builds it on the runner with no cloud
+      credentials. A publish job pushes it by digest with workload
+      identity. The preview deploys that digest, and production takes over
+      the same digest from the preview's saved inputs. A push that does not
+      change the control-plane sources reuses the image of their hash.
 
 ## Milestone 6: GitHub App and scale sets
 
@@ -294,9 +300,15 @@ each label. The scale set spike confirms it.
       when GitHub omits the finish time. Replay keeps that observation.
       Branch:
       `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
-- [ ] Read the ref, the event, and the head repository of each run with
+- [x] Read the ref, the event, and the head repository of each run with
       the "Actions" read permission, and forward them to the agent, as item
       32 says.
+      Closed 7 November 2026: the user answered items 54 = E and 55 = A on
+      5 November 2026. The full ref now comes from the checked runtime token
+      in the machine cache, which Milestone 11 built, and an unknown ref
+      fails closed. The agent gets the event and the head repository in
+      `JobFacts` from `crates/ciproxy-github/src/assignments.rs`. The text
+      below is the history of the API research.
       Raw API metadata is implemented. Full-ref forwarding stays blocked.
       Orchestrator: run `ref_metadata_probe.py` and `push_ref_probe.py`
       from `crates/ciproxy-github/scripts/`. Inspect supplied PR and
@@ -305,11 +317,8 @@ each label. The scale set spike confirms it.
       refs for all five cases with the approved existing fixtures.
       The orchestrator verified all five cases with cleanup. A top-level
       workflow ref distinguishes branch and tag pushes. A reusable
-      workflow ref names the called file. Owner items 54 and 55 stay open.
-      The crate README gives the environment and arguments.
-      Ask the user to choose the full-ref source and unknown-ref policy.
-      Then update the protocol and wire contracts in their owning scope,
-      and complete forwarding. No ref is guessed on this branch.
+      workflow ref names the called file. The crate README gives the
+      environment and arguments. No ref is guessed on this branch.
       Branch:
       `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
 - [x] Link each installation to the workspace of the Admin who started it,
@@ -1405,6 +1414,32 @@ smoke-tests its pages at 1440, 720, and 390 pixels.
       Branch: `conductor/mvp-m19-ui`.
       Verification evidence: `.context/ciproxy-mvp-m19/`.
 
+Owner review round 2 answers, 8 November 2026: the user chose A for item
+91 and A for item 92. Both answers keep the product behaviour. The app, the
+API, and the generated types stay unchanged. Only the two approved mockups
+change to match the app.
+
+- Item 91, the workspace picker of "Add an organization": each row shows
+  the workspace name and, when needed, the upgrade warning. The picker
+  mockup drops the tier and the organization count.
+- Item 92, the workspace switch: each row keeps the role, or "No role yet".
+  The switch mockup shows the role in place of the tier and the count.
+- Neither list needs the optional shared plan summary now. At the user's
+  explicit request, this branch deletes the three settled follow-up items
+  `workspace-picker-plan-facts.md`, `workspace-switch-plan-facts.md`, and
+  `workspace-list-plan-facts.md` under `plans/follow-ups/`.
+
+Item 98 answer, 8 November 2026: the user chose A. The GitHub App gets the
+organization permission "Members: read". The App then has four permissions.
+A sign-in reads the organization memberships of the person with it.
+
+- The install mockup and the install page of the app list the four
+  permissions. Both explain "Members: read" as "see who belongs to your
+  organization, so that ciproxy can give roles".
+- For item 98, this branch changes only that list and this record. The
+  backend change and the protocol docs for the membership read are outside
+  this branch.
+
 ## Milestone 20: Dashboard UI: Machines and Settings
 
 Tags: ui
@@ -1519,8 +1554,9 @@ the remaining Docker disk recovery work for Team and Business at launch.
 Several organizations come with the workspace of item 48 in Milestones 6,
 14, and 20.
 
-- [ ] Discard a disk that fails to mount. My call: a rebuild loses only
+- [x] Discard a disk that fails to mount. My call: a rebuild loses only
       time.
+      Branch: `conductor/m25-docker-disk-recovery`.
 
 ## Milestone 26: Dashboard UI: tier features
 
@@ -1905,6 +1941,39 @@ Answers of 5 November 2026:
   socket error go. A reconnect before the first handoff still means only
   GitHub's cache. There is no guessed time limit; GitHub's job time limit is
   the backstop. Rejected: A and C.
+- Item 99, A, 8 November 2026: the live machine check publishes a
+  pre-release of the agent on `Firna-AI/ciproxy`, creates two private test
+  repositories in Firna-AI, and limits the workspace to the test
+  repositories. Rejected: B and C.
+- Item 94, B, 8 November 2026: the Boat form lets the customer choose the
+  personal wallet or an organization wallet of the key, with the likely one
+  preselected. Rejected: A, because organization accounts must work, and C.
+- Item 95, B, 8 November 2026: each paid review stores its quote on the
+  server. The payment names its quote, and retries keep its proration time.
+  An unknown or outdated quote is refused, and the page asks for a new
+  review. Rejected: A and C.
+- Item 98, A, 8 November 2026: the App gets "Members: read", so that a
+  sign-in can read the person's organization memberships. The App now has
+  four permissions. Rejected: B, C, and D.
+- Items 91 and 92, A, 8 November 2026: the workspace picker shows the
+  name and the upgrade warning, and the workspace switch shows the role.
+  The mockups change to match. Rejected: B to E of item 91, and B to D of
+  item 92.
+- Item 93, C, 8 November 2026: the protocol, the install mockup, the
+  dashboard, and the docs state the supported hosts: x64 Linux with
+  systemd and cgroup v2, on Debian, Ubuntu, Fedora, RHEL, Rocky Linux, or
+  AlmaLinux. Wider support is the follow-up item
+  `follow-ups/installer-more-linux-hosts.md`. Rejected: A and B.
+- Item 96, A, 8 November 2026: the shared docs grid styles match the
+  mockups. Rejected: B and C.
+- Item 97, G, 8 November 2026: render with comrak, as a follow-up item that
+  blocks nothing. Until then, fix a link test that breaks by hand.
+- Item 90, G, 7 November 2026: the deploy workflow builds the
+  control-plane image as `mokly-ai/mokly-cloud` does. A build job with no
+  cloud credentials builds it, a publish job pushes it by digest, and the
+  preview and then production deploy that digest. A push that keeps the
+  control-plane sources reuses their image. Rejected: A and B, because the
+  user wants no manual step, and C, D, E, and F.
 - Item 89, A, 7 November 2026: after an App removal, idle Boat sandboxes
   are not retired early. They end at their lifetime limit, six hours or two
   on a trial, and running jobs finish. The user asked to review B later:
@@ -3912,37 +3981,54 @@ above.
 - **Recommendation:** A for the MVP. Milestone 15 recommended B.
 - **Action:** ask the user, because A changes a protocol promise.
 
-### 90. Each control-plane update needs the user's Mac
+### 90. The preview has no automatic control-plane build
 
-- **Severity:** Medium. **Effort:** Medium.
+**Answer, 7 November 2026:** G. The user ruled out A and B: "it defo
+should not be manual".
+
+- **Severity:** Low. **Effort:** Medium.
 - **Source:** Implementation, the runtime of the main preview.
 - **Category:** Process.
-- **Location:** `.github/workflows/deploy-main-preview.yml`, and the
-  `CONTROL_PLANE_IMAGE` row of `deploy/setup.md`.
+- **Location:** `.github/workflows/deploy-main-preview.yml`,
+  `.github/workflows/deploy-production.yml`, `deploy/scripts/deploy.py`,
+  and the `CONTROL_PLANE_IMAGE` row of `deploy/setup.md`.
 - **Background:** The deploy workflow does not build the control-plane
-  image. The orchestrator builds it with Cloud Build. Then the GitHub
-  variable `CONTROL_PLANE_IMAGE` changes, and a deploy runs. The GitHub
-  token of the orchestrator's sandbox cannot set environment variables.
-- **Problem:** After each merge, the preview keeps the old control plane
-  until the user sets the variable from the Mac.
-- **Impact if no action:** Each backend merge waits for one manual step
-  before its live checks.
+  image. It deploys the image that the GitHub variable
+  `CONTROL_PLANE_IMAGE` names, and the orchestrator builds and sets it by
+  hand.
+- **Problem:** No automatic step builds the image of a merged commit.
+- **Impact if no action:** The preview runs older backend code than the
+  primary branch until someone builds by hand.
 - **Root question:** How does the preview get the control plane of each
   merged commit with no manual step?
 - **Options:**
-  - **A.** Keep the manual path. Effort: Small.
-  - **B.** Give the sandbox a GitHub login that can set the environment
-    variables. Effort: Small.
-  - **C.** The preview deploy builds the image of its own commit, pushes it,
-    and deploys it by digest. Production deploys the tested digest.
-    Effort: Medium.
-- **Left out:** A moving image tag that the deploy reads. C is better on
-  every point.
-- **Wider fix:** C.
-- **Recommendation:** C. The preview then always runs the merged code.
-- **Action:** ask the user, because C gives CI a new right to push images.
+  - **A.** Keep the manual path through the user's Mac. Effort: Small.
+  - **B.** Keep the manual path through the sandbox GitHub login.
+    Effort: Small.
+  - **C.** The deploy workflow sends a missing build to Cloud Build and
+    deploys its digest. Effort: Medium.
+  - **D.** A separate GitHub workflow builds and pushes on each push, and
+    the deploy starts when it ends. Effort: Medium.
+  - **E.** A Cloud Build trigger in GCP builds on each push, and the deploy
+    waits for the image of its commit. Effort: Medium.
+  - **F.** An image updater in the cluster deploys each new image.
+    Effort: Large.
+  - **G.** As Mokly does: a build job with no cloud credentials, a publish
+    job that pushes by digest, and deploys of that digest, with a reuse of
+    the image of unchanged sources. Effort: Medium.
+- **Left out:** Google Cloud Deploy, because it replaces the GitHub
+  promotion for the same result. A moving tag, because it loses the fixed
+  digest.
+- **Wider fix:** G.
+- **Recommendation:** G. It is the pattern of Mokly, and its build step
+  holds no cloud credentials.
+- **Action:** ask the user, because G gives a CI job the right to push
+  images.
 
 ### 91. The workspace picker lacks the plan and organization count
+
+**Answer, 8 November 2026:** A. Keep the shorter picker, and update the
+mockup.
 
 - **Severity:** Medium. **Effort:** Medium.
 - **Source:** Review, Milestone 19, pull request #36, round 2, its finding 2.
@@ -3963,9 +4049,403 @@ above.
     types, and show them as the mockup does. Effort: Medium.
   - **C.** Read the plan and the organization summaries in separate
     requests, with their own loading and error states. Effort: Medium.
+  - **D.** Add both facts to the workspace summaries of the session.
+    Effort: Medium.
+  - **E.** Share one workspace summary and one formatter between the
+    picker and the workspace switch of item 92. Effort: Medium.
 - **Left out:** Deriving them from `requires_upgrade`. It gives neither
-  fact.
-- **Wider fix:** None.
+  fact. Stored counts, because they can become stale.
+- **Wider fix:** E, if item 92 also shows the facts.
+- **Related:** Item 92 has the same gap in the workspace switch. E serves
+  both. B does not wait for item 92.
 - **Recommendation:** B. One generated contract supplies the approved facts.
 - **Action:** ask the user, because the user decides which side of a mockup
   and product mismatch is right.
+
+### 92. The workspace switch shows roles, not plan facts
+
+**Answer, 8 November 2026:** A. Keep the role, and update the mockup.
+
+- **Severity:** Low. **Effort:** Medium.
+- **Source:** Review, Milestone 19, pull request #36, the check of round 2,
+  finding 2.
+- **Category:** Mockup.
+- **Location:** `ts/app/src/view/shell.ts:96`, and
+  `ts/app/src/components/shell/menus.tsx:47`.
+- **Background:** The workspace switch is the dashboard menu that opens
+  another workspace. Its approved mockup shows the tier and the
+  organization count of each workspace. The built switch shows the role of
+  the person in each workspace.
+- **Problem:** The session summary supplies neither the tier nor the count.
+- **Impact if no action:** The switch differs from the approved mockup.
+- **Root question:** What does each row of the switch show?
+- **Options:**
+  - **A.** Keep the role, and update the mockup. Effort: Small.
+  - **B.** Show the tier and the count for each workspace where the person
+    has a role. Keep "No role yet" for the others. Effort: Medium.
+  - **C.** Show the tier and the count on every row, also without a role.
+    Effort: Medium.
+  - **D.** Show the role, the tier, and the count together. Effort: Medium.
+- **Left out:** The limit flag of the summary. It gives neither fact.
+- **Wider fix:** E of item 91.
+- **Related:** Item 91, the same gap in the picker. This answer does not
+  block B of item 91.
+- **Recommendation:** B. It follows the mockup and keeps the current text
+  for a person with no role.
+- **Action:** ask the user, because the user decides which side of a mockup
+  and product mismatch is right.
+
+### 93. The installer supports fewer hosts than the docs say
+
+**Answer, 8 November 2026:** C, and D as a follow-up item:
+`follow-ups/installer-more-linux-hosts.md`.
+
+- **Severity:** Medium. **Effort:** Medium.
+- **Source:** Implementation, Milestone 24, pull request #40, its item 1.
+- **Category:** Docs or spec.
+- **Location:** `docs/protocol/agent.md:74`, and
+  `crates/ciproxy-agent/src/host_packages.rs:39`.
+- **Background:** The protocol and the install note of the dashboard give an
+  x64 Linux hardware minimum. The installer also needs systemd and cgroup
+  v2. It accepts only Debian, Ubuntu, Fedora, RHEL, Rocky Linux, and
+  AlmaLinux.
+- **Problem:** The protocol and the dashboard mockup do not state these
+  limits.
+- **Impact if no action:** A customer can prepare a machine that meets the
+  stated list, and then the installer refuses it.
+- **Root question:** Which hosts does ciproxy promise to support?
+- **Options:**
+  - **A.** Keep the hardware list, and rely on the repair messages of the
+    installer. Effort: Small.
+  - **B.** State the current support in the docs only. Effort: Small.
+  - **C.** State these limits in the protocol, the mockup, the dashboard,
+    and the docs. Effort: Medium.
+  - **D.** Broaden the installer, then document the wider support.
+    Effort: Large.
+- **Left out:** None.
+- **Wider fix:** C.
+- **Recommendation:** C. Customers learn the real requirements before they
+  prepare a machine.
+- **Action:** ask the user, because C changes an approved requirement and
+  the install note.
+
+### 94. The Boat setup cannot connect an organization key
+
+**Answer, 8 November 2026:** B. The user requires personal and organization
+accounts. After the key check, the form lists the wallets that the key can
+use, personal and each organization, and preselects the likely one. Each
+Boat organization has its own wallet. A is dropped, because it supports
+personal accounts only.
+
+- **Severity:** Medium. **Likelihood:** Common. **Effort:** Medium.
+- **Source:** Implementation, Milestone 24, pull request #40, its item 2.
+- **Category:** Product bug.
+- **Location:** `crates/ciproxy-api/src/wire/overflow.rs:16`, and
+  `crates/ciproxy-overflow/src/boat/account.rs:46`.
+- **Background:** A wallet is the personal Boat account or the Boat
+  organization that pays for sandboxes. ciproxy sends it with each Boat
+  request. The planned Boat form asks for a key and a spend limit. The API
+  also accepts a wallet, and it uses the personal wallet when none comes.
+- **Problem:** A key of a Boat organization then fails with HTTP 503 and
+  "Try again". A retry does not help.
+- **Impact if no action:** A customer whose Boat account is an organization
+  cannot connect Boat from the dashboard.
+- **Root question:** Which Boat accounts can the dashboard connect?
+- **Options:**
+  - **A.** Support personal accounts only. State the rule, and give an
+    organization key a clear error. Effort: Small.
+  - **B.** Add a choice of personal or organization to the form, the
+    protocol, the mockup, and the docs. Effort: Medium.
+  - **C.** Use the organization of the key when the form sends no wallet,
+    and keep an explicit wallet of the API. A key that can reach several
+    wallets still uses the personal one. Effort: Medium.
+- **Left out:** Removing the wallet of the API. It loses a working
+  capability and still needs the rule and the error of A.
+- **Wider fix:** None.
+- **Recommendation:** C. It connects both kinds of account with no new form
+  field. Pull request #40 recommended A as the smallest change.
+- **Action:** ask the user, because no requirement says which Boat accounts
+  ciproxy supports.
+
+### 95. A paid change can charge another amount than its review
+
+**Answer, 8 November 2026:** B.
+
+- **Severity:** High. **Likelihood:** Common. **Effort:** Medium.
+- **Source:** Review, Milestone 18, pull request #39, round 1, its finding 1.
+- **Category:** Product bug.
+- **Location:** `crates/ciproxy-billing/src/stripe/http/preview.rs:64`, and
+  `crates/ciproxy-billing/src/stripe/forms.rs:40`.
+- **Background:** Proration is Stripe's charge for the rest of the current
+  billing period after a plan change. A move between paid plans first
+  shows a review with Stripe's preview of that charge, computed at a fixed
+  proration time. The payment then builds a separate Stripe request.
+- **Problem:** The payment request does not send the proration time of the
+  review, so Stripe computes the charge at the time of payment. Stripe
+  documents that the same time must be sent to match the preview.
+- **Impact if no action:** The charge can differ from the reviewed amount.
+  Across a renewal, the difference can be large.
+- **Root question:** How does a paid change keep the charge that the
+  customer reviewed?
+- **Options:**
+  - **A.** Return a signed quote with the review, and send it back with the
+    payment. The server checks its signature and age, and gives its
+    proration time to Stripe. Effort: Medium.
+  - **B.** Store each quote on the server. The payment names its quote, and
+    each retry keeps the same proration time. The server refuses an unknown
+    or outdated quote. Effort: Medium.
+  - **C.** Preview again at payment. When the amount changed, ask the
+    customer to confirm again. Effort: Medium.
+- **Left out:** Changing nothing, because it fails the review requirement.
+  A proration time from the browser without a check, because a customer
+  could choose a cheaper time.
+- **Wider fix:** B.
+- **Recommendation:** B. A stored quote best keeps the payment and its
+  retries the same as the review.
+- **Action:** ask the user, because each option adds a new refusal or a new
+  confirmation for an outdated quote.
+
+### 96. The docs navigation grids differ from the mockups
+
+**Answer, 8 November 2026:** A.
+
+- **Severity:** Low. **Effort:** Small.
+- **Source:** Review, Milestone 24, pull request #40, round 1, its finding 2.
+- **Category:** Mockup.
+- **Location:** `ts/site/src/content/docs/docs/index.mdx:38`, and
+  `ts/site/src/content/docs/docs/quickstart.mdx:93`.
+- **Background:** The docs mockups show the navigation cards in two columns
+  at 720 and 1440 pixels, and in one column at 390 pixels.
+- **Problem:** At 720 pixels, Overview and Quickstart stack their cards in
+  one column. Overview also stretches its Next link across the article,
+  where the mockup puts it in the right half.
+- **Impact if no action:** The pages stay usable, but they differ from the
+  mockups, and the tablet pages get longer.
+- **Root question:** How does the docs navigation use the available width?
+- **Options:**
+  - **A.** Set the shared grid styles to match the mockups. Effort: Small.
+  - **B.** Keep the current layout, and update the mockups. Effort: Small.
+  - **C.** Choose the columns from the article width, and revise the
+    mockups around that rule. Effort: Medium.
+- **Left out:** A change on each page, because it repeats the layout rules.
+- **Wider fix:** A.
+- **Recommendation:** A. Shared styles keep the approved mockups.
+- **Action:** ask the user, because the user decides which side of a mockup
+  and product mismatch is right.
+
+### 97. The gate's Markdown link check differs from GitHub
+
+**Answer, 8 November 2026:** G, as a follow-up item that blocks nothing:
+`follow-ups/markdown-heading-ids-comrak.md`. Until then, fix a link test
+that breaks by hand.
+
+- **Severity:** Medium. **Effort:** Large.
+- **Source:** Implementation, pull request #45, the follow-up item
+  `follow-ups/markdown-heading-ids-comrak.md`.
+- **Category:** Repository rule.
+- **Location:** `xtask/src/markdown/parser.rs`.
+- **Background:** The Markdown phase of the gate finds broken links in the
+  docs and plans. Its own parser computes the link target of each heading.
+  The follow-up item chose comrak, a Rust parser of GitHub's Markdown. The
+  orchestrator told the branch to add no new refusal without the user.
+- **Problem:** An exact match with GitHub refuses some links that pass
+  today. A direct switch to comrak also refuses valid `#softbreak` and
+  `#hardbreak` links.
+- **Impact if no action:** Valid links can fail the gate, and some broken
+  links can pass it.
+- **Root question:** How does the gate find the same link targets as
+  GitHub?
+- **Options:**
+  - **A.** Repair the current parser by hand. Effort: Medium.
+  - **B.** Switch directly to comrak, which fails valid-link tests.
+    Effort: Medium.
+  - **C.** Use a Node link checker, which also refuses missing images.
+    Effort: Medium.
+  - **D.** Fix comrak upstream first, then switch. Effort: Large.
+  - **E.** Fix the known gaps of the current parser. Some gaps stay.
+    Effort: Small.
+  - **F.** Keep both parsers, and accept a link that either accepts.
+    Effort: Medium.
+  - **G.** Render each page with comrak, and take the heading targets from
+    the HTML. It changes `Cargo.lock`, so it waits for pull request #39.
+    Effort: Large.
+- **Left out:** A live GitHub call, because the gate then needs the
+  network. A check of today's documents only, because known defects stay.
+- **Wider fix:** G.
+- **Recommendation:** G. One rendering model gives GitHub's targets for
+  every kind of heading.
+- **Action:** ask the user, because G refuses some links that pass today,
+  and a new refusal in the gate needs the user.
+
+### 98. Sign-in removes the Admin role of a new install
+
+**Answer, 8 November 2026:** A. The App gets the organization permission
+"Members: read", and the protocol and the docs list four permissions. This
+replaces the three permissions of item 54 = E and the security rule that
+the owner check uses no App permission. An added option D, roles without
+GitHub membership, is rejected.
+
+- **Severity:** High. **Likelihood:** Common. **Effort:** Small.
+- **Source:** Implementation, the first live install on the main preview,
+  8 November 2026.
+- **Category:** Product bug.
+- **Location:** `crates/ciproxy-api/src/identity/http.rs:208`, and
+  `crates/ciproxy-store-pg/src/dashboard/identity.rs:92`.
+- **Background:** A direct install creates a workspace and makes its
+  requester the first Admin. Each sign-in reads the person's organization
+  memberships with `GET /user/memberships/orgs`. It deletes each role in a
+  workspace whose organizations are not in that list. The App has three
+  permissions: Actions read, Metadata read, and organization self-hosted
+  runners write. GitHub lists the organization membership endpoints under
+  the "Members" permission for GitHub App user tokens.
+- **Problem:** On the preview, the install of Firna-AI created the workspace
+  and the Admin role. Each later sign-in removed the role, so the user sees
+  no workspace. The membership list returned no Firna-AI.
+- **Impact if no action:** No customer can use the dashboard after an
+  install.
+- **Root question:** How does sign-in learn which organizations a person
+  owns or belongs to?
+- **Options:**
+  - **A.** Add the organization permission "Members: read" to the App, and
+    list four permissions in the protocol and the docs. Each install then
+    asks for it. Effort: Small.
+  - **B.** Keep three permissions. Base roles on the installations that
+    the person's token can see, and drop the owner checks of items 82 and
+    83. Effort: Large.
+  - **C.** Keep three permissions. Read the memberships through a second,
+    OAuth sign-in with the `read:org` scope. Effort: Medium.
+- **Left out:** Keeping a role whose organization the membership list
+  omits, because a person who left the organization would keep access.
+- **Wider fix:** A.
+- **Recommendation:** A. It is a common, read-only permission, and the role
+  model stays as the user approved it.
+- **Action:** ask the user, because A changes the App's three permissions,
+  which item 54 = E keeps.
+
+### 99. The live machine check needs a public agent release
+
+**Answer, 8 November 2026:** A.
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
+- **Category:** Process.
+- **Location:** `deploy/helm/release-values.yaml:4`, and
+  `crates/ciproxy-agent/smoke-checks.md`.
+- **Background:** The live check installs the agent on the test host the
+  way a customer does, from the preview's release server. That server
+  serves releases of the public repository `Firna-AI/ciproxy`, which has no
+  release yet. The check also needs a second allowed private repository and
+  a private repository that the runner group excludes.
+- **Problem:** The check cannot run without an agent release and the test
+  repositories.
+- **Impact if no action:** The own-machine path stays unproven on real
+  hardware before launch.
+- **Root question:** Where does the live check get its agent release and its
+  test repositories?
+- **Options:**
+  - **A.** Publish a pre-release of the agent on `Firna-AI/ciproxy`, create
+    two private test repositories in Firna-AI, and limit the workspace to
+    the test repositories. Effort: Small.
+  - **B.** Point the preview's release server at a private repository with
+    the release, and create the same test repositories. Effort: Medium.
+  - **C.** Copy the agent to the test host by hand, and skip the install
+    path of the check. Effort: Small.
+- **Left out:** Using the real private repositories of Firna-AI, because a
+  test must not run jobs in them.
+- **Wider fix:** None.
+- **Recommendation:** A. The agent is open source, so a public pre-release
+  is safe, and the check then proves the customer's install path.
+- **Action:** ask the user, because A publishes a release and creates
+  repositories in the user's organization.
+
+### 100. The protected image workflow needs a home before launch
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Review, pull request #47, round 1, finding 1, and its fix.
+- **Category:** Security.
+- **Location:** `deploy/image-workflow-bootstrap.md` and
+  `deploy/terraform/bootstrap/main.tf` on the branch of pull request #47.
+- **Background:** The fix of finding 1 lets only one reusable workflow get
+  the image-publishing credentials. The npm and Cargo scripts of other
+  deploy jobs cannot. The fix pins that workflow to the protected `main`
+  branch, which today holds only `README.md`.
+- **Problem:** Until `main` holds the whole repository, every preview
+  deploy fails to start.
+- **Impact if no action:** #47 cannot merge, and the preview keeps its
+  manual image step.
+- **Root question:** Where does the protected image workflow live until
+  launch?
+- **Options:**
+  - **A.** Land the whole repository on `main` now, through a reviewed pull
+    request that passes the gate, and pin the workflow there.
+    Effort: Medium.
+  - **B.** Pin the workflow to the primary branch until launch. Other jobs
+    still cannot get the credentials. Only a change of the workflow file on
+    the primary branch can. Move the pin to `main` at launch.
+    Effort: Small.
+  - **C.** Protect the primary branch with a ruleset that requires pull
+    requests and the gate, and pin the workflow to it. Each merge then
+    goes through a pull request. Effort: Medium.
+- **Left out:** No pin, because the npm scripts of a deploy job could then
+  publish images.
+- **Wider fix:** A.
+- **Recommendation:** B. Previews stay automatic, the npm path stays
+  closed, and the code reaches `main` with the launch anyway.
+- **Action:** ask the user, because A changes `main`, and B and C change
+  the trust of the deploy.
+
+### 101. The Machines and Settings mockups need facts the API lacks
+
+- **Severity:** Medium. **Effort:** Large.
+- **Source:** Implementation, Milestone 20, pull request #50, its item 1.
+- **Category:** Mockup.
+- **Location:** `ts/api/generated/api.d.ts`, and the Milestone 20 mockups.
+- **Background:** The approved Machines and Settings mockups show agent
+  update status, Docker disk counts, disk limits, job links, label
+  placement, and organization and member details.
+- **Problem:** The page responses of the API do not give these facts.
+- **Impact if no action:** The screens cannot show every approved state.
+- **Root question:** How do the screens get these facts?
+- **Options:**
+  - **A.** Reduce the screens, and update the mockups and the affected
+    requirements. Effort: Medium.
+  - **B.** Extend the existing page responses, and regenerate the types.
+    Effort: Large.
+  - **C.** Add separate metadata endpoints, with their own requests and
+    failure states. Effort: Large.
+  - **D.** Use existing routes where possible, and add the rest. This adds
+    job polling and GitHub reads to the browser. Effort: Large.
+  - **E.** Keep the facts that the protocol requires, and remove the other
+    mockup details. Effort: Large.
+- **Left out:** Guesses in the browser, because they cannot establish the
+  facts.
+- **Wider fix:** None.
+- **Recommendation:** B. One contract supplies the approved facts, with no
+  extra GitHub reads in the browser.
+- **Action:** ask the user, because the choice is API work or a change of
+  the approved design.
+
+### 102. The warm runner control has two meanings
+
+- **Severity:** Low. **Effort:** Small.
+- **Source:** Implementation, Milestone 20, pull request #50, its item 2.
+- **Category:** Mockup.
+- **Location:** `docs/mockups/src/screens/machines/machine-detail.tsx:134`.
+- **Background:** A warm runner waits on a machine for a job. The machine
+  keeps a saved number of them. Draining keeps that saved number.
+- **Problem:** The mockup shows zero in the control of a draining or
+  offline machine. The API keeps the saved number, such as two.
+- **Impact if no action:** The control differs from the mockup, and an edit
+  from a shown zero could overwrite the saved number.
+- **Root question:** What does the warm runner control show?
+- **Options:**
+  - **A.** Show the saved number in every state, and update the mockup.
+    Effort: Small.
+  - **B.** Hide the control in those states, and show the ready count when
+    known. Effort: Small.
+  - **C.** Show the saved number and a separate ready count. Effort: Small.
+- **Left out:** None.
+- **Wider fix:** None.
+- **Recommendation:** A. The control then edits the real saved number.
+- **Action:** ask the user, because the approved mockup and the product
+  differ.

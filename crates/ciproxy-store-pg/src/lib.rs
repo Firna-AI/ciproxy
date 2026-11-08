@@ -4,6 +4,7 @@
 
 mod billing;
 mod boat;
+mod boat_registration_ownership;
 mod boat_runtime;
 mod connection;
 mod dashboard;

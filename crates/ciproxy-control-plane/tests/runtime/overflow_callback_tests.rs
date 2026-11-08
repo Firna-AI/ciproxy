@@ -12,6 +12,7 @@ use ciproxy_protocol::resources::VmSize;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_scaler::actions::{Destination, StartReason, StartRunner};
 use ciproxy_scaler::boat::BoatSizeId;
+use ciproxy_scaler::registration::RegistrationTarget;
 use ciproxy_store_interface::scale_sets::ScaleSet;
 use ciproxy_store_interface::workspaces::Workspace;
 use tower::ServiceExt;
@@ -76,6 +77,12 @@ async fn callback_tokens_cannot_end_a_runner_in_another_workspace() {
                 label_id: label.id,
                 scale_set_id: set.id,
                 action: StartRunner {
+                    target: RegistrationTarget {
+                        organization_id: OrganizationId(organization.id.to_string()),
+                        label_id: label.id.to_string(),
+                        scale_set_id: set.id.to_string(),
+                        github_id: set.github_id,
+                    },
                     organization_id: OrganizationId("90".to_owned()),
                     label: LabelName(label.name),
                     requested_size: VmSize {

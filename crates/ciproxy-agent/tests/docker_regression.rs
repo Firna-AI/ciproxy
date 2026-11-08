@@ -19,6 +19,8 @@ mod docker;
 mod docker_files;
 #[path = "../src/docker_prepare.rs"]
 mod docker_prepare;
+#[path = "../src/docker_recovery.rs"]
+mod docker_recovery;
 #[path = "docker/mod.rs"]
 mod docker_regressions;
 #[path = "../src/error.rs"]

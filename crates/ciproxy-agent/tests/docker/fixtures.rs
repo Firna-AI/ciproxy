@@ -133,6 +133,15 @@ pub(super) fn scope() -> JobScope {
     }
 }
 
+pub(super) fn active_lease(repository: String, writer: bool) -> docker_files::Lease {
+    docker_files::Lease {
+        repository,
+        writer,
+        bytes: 8192,
+        phase: docker_files::AttachmentPhase::Offered,
+    }
+}
+
 pub(super) fn metadata(id: &str, root_disk_bytes: u64) -> ImageMetadata {
     ImageMetadata {
         image_id: ImageId(id.to_owned()),

@@ -44,7 +44,8 @@ impl Controller {
                 .runners
                 .iter()
                 .filter(|vm| {
-                    !matches!(vm.report.state, RunnerState::Running { .. })
+                    !state.failed_starts.contains(&vm.local_id)
+                        && !matches!(vm.report.state, RunnerState::Running { .. })
                         && (state.mode == Mode::Removed || vm.report.state == RunnerState::Stopping)
                 })
                 .cloned()

@@ -136,14 +136,12 @@
   using different admission rules.
 - **Previous examples:** Commit `a337aaf`, "fix(github): preserve activation
   after label replacement", repaired retained activation after label
-  replacement. `plans/follow-ups/label-binding-reconciliation.md` records
-  the related reconciliation problem.
-- **Related:** `plans/follow-ups/label-binding-reconciliation.md` has the
-  same code. Its option B moves binding creation and retirement for label
-  changes, resume, and reinstall into one GitHub reconciliation service.
-  That service is a wider home for the policy of B here. The options do not
-  conflict, and neither fix waits for the other. The fix that lands second
-  uses the policy or the service of the first.
+  replacement. The [binding guide](../../crates/ciproxy-github/scale-sets.md)
+  describes the shared reconciliation service for that area.
+- **Related:** `crates/ciproxy-github/src/app/bindings.rs` owns binding
+  creation and retirement for label changes, resume, and reinstall. The
+  admission policy of B can use that service. This item still changes the
+  effective admission policy that `install` and `synchronize` apply.
 - **Recommendation:** B. One admission policy best protects the codebase.
 - **Action:** fix after merge, apply B, because this unusual
   retained-reinstall case repairs itself on the next repository refresh.

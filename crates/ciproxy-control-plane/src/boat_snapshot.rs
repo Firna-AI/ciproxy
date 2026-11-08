@@ -6,15 +6,15 @@ use ciproxy_scaler::boat::{BoatRunner, Sandbox, SandboxId};
 use ciproxy_scaler::snapshot::{Runner, RunnerState, Snapshot};
 use ciproxy_store_interface::boat_runtime::BoatRunnerIntent;
 use ciproxy_store_interface::github::{DemandPhase, GithubJob};
-use ciproxy_store_interface::labels::Label;
 use ciproxy_store_interface::overflow::record::{StartPhase, StartRecord};
+
+use crate::snapshot::registration_target;
 
 pub(crate) fn append(
     snapshot: &mut Snapshot,
     intents: &[BoatRunnerIntent],
     records: &[StartRecord],
     jobs: &[GithubJob],
-    labels: &[Label],
 ) {
     for intent in intents {
         let record = records
@@ -37,9 +37,6 @@ pub(crate) fn append(
                 && job.runner_github_id.is_some()
                 && job.runner_github_id == intent.github_id
         });
-        if running.is_none() && !labels.iter().any(|label| label.id == intent.label_id) {
-            continue;
-        }
         let state = if let Some(job) = running {
             RunnerState::Running(JobId(job.id.to_string()))
         } else if completed {
@@ -80,6 +77,14 @@ pub(crate) fn append(
                         record.required_root_disk_bytes
                     }),
                 runner: Runner {
+                    target: intent.registration_scale_set_id.map(|github_id| {
+                        registration_target(
+                            intent.organization_id,
+                            intent.label_id,
+                            intent.scale_set_id,
+                            github_id,
+                        )
+                    }),
                     id: RunnerId(intent.runner_id.to_string()),
                     organization_id: OrganizationId(intent.organization_id.to_string()),
                     label: LabelName(intent.label_name.clone()),

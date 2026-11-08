@@ -6,6 +6,7 @@ use async_trait::async_trait;
 use ciproxy_github::runtime::Runtime;
 use ciproxy_github::timing::JobTiming;
 use ciproxy_metering::service::Metering;
+use ciproxy_store_interface::error::Result;
 use ciproxy_store_interface::store::Store;
 use tokio::sync::{Mutex, Notify, watch};
 use uuid::Uuid;
@@ -64,12 +65,17 @@ impl AccountingWorker {
         match refreshed {
             Ok(Ok(outcome)) if outcome.stale_jobs == 0 && outcome.stale_sandboxes == 0 => {
                 let store = self.store.clone();
-                match tokio::task::spawn_blocking(move || store.purge_github_jobs(workspace_id, at))
-                    .await
+                match tokio::task::spawn_blocking(move || -> Result<()> {
+                    store.purge_github_jobs(workspace_id, at)?;
+                    store.purge_removed_organizations(workspace_id, at)?;
+                    store.purge_expired_workspace(workspace_id, at)?;
+                    Ok(())
+                })
+                .await
                 {
                     Ok(Ok(_)) => {}
                     result => {
-                        tracing::warn!(%workspace_id,?result,"accounted raw job retention will retry")
+                        tracing::warn!(%workspace_id,?result,"accounted data retention will retry")
                     }
                 }
             }

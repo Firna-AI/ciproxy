@@ -1,5 +1,6 @@
 //! GitHub App installation, requester linkage, and lifecycle orchestration.
 
+mod bindings;
 mod coordination;
 mod delivery;
 mod installation;
@@ -13,6 +14,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
 use ciproxy_store_interface::installation_links::InstallationClaim;
+use ciproxy_store_interface::labels::Label;
 use ciproxy_store_interface::organizations::{Organization, RepositoryAccess};
 use uuid::Uuid;
 
@@ -92,6 +94,10 @@ pub enum InstallationOutcome {
 #[unimock::unimock(api=GitHubAppMock)]
 #[async_trait]
 pub trait GitHubApp: Send + Sync {
+    /// Check a new label with GitHub through the common binding reconciler.
+    async fn prepare_label(&self, workspace_id: Uuid, label: Label) -> Result<()>;
+    /// Reconcile active label bindings and retired completion resources.
+    async fn reconcile_labels(&self, workspace_id: Uuid) -> Result<()>;
     /// Resolve one saved exact requester claim without inferring a target.
     async fn resolve_installation_link(&self, claim_id: Uuid) -> Result<InstallationOutcome>;
     /// Retry billing-eligible activation while preserving explicit Admin holds.
@@ -136,6 +142,12 @@ pub struct AppService {
 
 #[async_trait]
 impl GitHubApp for AppService {
+    async fn prepare_label(&self, workspace_id: Uuid, label: Label) -> Result<()> {
+        self.validate_label(workspace_id, label).await
+    }
+    async fn reconcile_labels(&self, workspace_id: Uuid) -> Result<()> {
+        self.reconcile_workspace_labels(workspace_id).await
+    }
     async fn resolve_installation_link(&self, id: Uuid) -> Result<InstallationOutcome> {
         self.resolve_link(id).await
     }

@@ -1,6 +1,6 @@
 //! Admission exercises occupied slots, job disk, cache reclaim, and drain.
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use ciproxy_protocol::agent::{AgentMessage, CommandFailure, CommandOutcome, ControlMessage};
 use ciproxy_protocol::identifiers::CommandId;
@@ -79,22 +79,33 @@ async fn admission_refuses_slot_only_or_disk_only_exhaustion_and_drain() {
 
 #[tokio::test]
 async fn a_fitting_vm_reclaims_cache_before_preparation_at_each_resource_boundary() {
-    for (disk_gb, image_gb, count, expected_count, expected_budget) in [
-        (250, 140, 0, 1, 1_600_387_328),
-        (512, 140, 2, 3, 36_301_161_984),
-        (1000, 140, 5, 6, 159_602_323_968),
-        (250, 130, 0, 1, 9_100_387_328),
+    for (disk_gb, image_gb, count, pending, expected_used, expected_count, expected_budget) in [
+        (250, 140, 0, vec![], vec![], 1, 1_600_387_328),
+        (512, 140, 2, vec![], vec![1, 2], 3, 36_301_161_984),
+        (
+            1000,
+            140,
+            5,
+            vec![],
+            vec![1, 2, 3, 4, 5],
+            6,
+            159_602_323_968,
+        ),
+        (250, 130, 0, vec![], vec![], 1, 9_100_387_328),
+        (512, 140, 2, vec![7], vec![1, 2, 7], 3, 36_301_161_984),
     ] {
         let mut hardware = hardware();
         hardware.disks[0].capacity_bytes = disk_gb * GIGABYTE;
         hardware.disks[0].free_bytes = 0;
+        let used = Arc::new(Mutex::new(Vec::new()));
+        let captured = used.clone();
         let mock = Unimock::new((
             report_dependencies_for(hardware),
             start_image(),
             VmsMock::allocate
                 .some_call(matching!(_, _))
-                .answers_arc(Arc::new(move |_, report, used| {
-                    assert_eq!(used.len(), count);
+                .answers_arc(Arc::new(move |_, report, indices| {
+                    *captured.lock().unwrap() = indices.to_vec();
                     Ok(VmRecord {
                         cache_authority: CacheAuthority::Waiting,
                         job_facts: None,
@@ -114,6 +125,7 @@ async fn a_fitting_vm_reclaims_cache_before_preparation_at_each_resource_boundar
         let mut agent = controller(
             MachineState {
                 runners: held(count),
+                pending_networks: pending.into_iter().collect(),
                 ..MachineState::default()
             },
             mock,
@@ -124,6 +136,7 @@ async fn a_fitting_vm_reclaims_cache_before_preparation_at_each_resource_boundar
             runner.slot_indices = vec![count as u64];
         }
         assert_eq!(agent.control(command).await.unwrap(), applied());
+        assert_eq!(*used.lock().unwrap(), expected_used);
         assert_eq!(agent.state.lock().await.runners.len(), expected_count);
     }
 }
@@ -133,6 +146,9 @@ async fn reconciliation_uses_the_same_held_disk_budget() {
     let mut hardware = hardware();
     hardware.disks[0].capacity_bytes = 250 * GIGABYTE;
     let mock = Unimock::new((
+        VmsMock::networks
+            .some_call(matching!())
+            .returns(Ok(Vec::new())),
         HostMock::hardware
             .some_call(matching!())
             .returns(Ok(hardware)),

@@ -6,6 +6,12 @@ use thiserror::Error;
 #[derive(Debug, Error, internal_error::ErrorContract)]
 /// Typed handled failures and a redacted internal fallback.
 pub enum Error {
+    /// An owned VM network still has host resources after cleanup.
+    #[error("[agent/network] network index {index} still has owned resources")]
+    NetworkCleanup {
+        /// Index whose cleanup must retry.
+        index: u16,
+    },
     /// Run this command as root on x64 Linux.
     #[error("[agent] run this command as root on x64 Linux")]
     HostUnsupported,
@@ -55,6 +61,9 @@ pub enum Error {
     /// The machine cache service is unavailable.
     #[error("[agent] the machine cache service is unavailable")]
     CacheUnavailable,
+    /// The Docker filesystem failed its offline check.
+    #[error("[agent/docker] the Docker filesystem failed its offline check")]
+    DockerFilesystem,
     /// The image checksum or byte count does not match.
     #[error("[agent] the image checksum or byte count does not match")]
     ImageVerification,

@@ -7,7 +7,32 @@ use crate::boat::SandboxId;
 use crate::decision::decide;
 use crate::snapshot::RunnerState;
 
-use super::fixtures::{allocated, large, queued, runner, sandbox, snapshot};
+use super::fixtures::{allocated, large, own, queued, runner, sandbox, small, snapshot};
+
+#[test]
+fn unknown_idle_targets_retire_without_covering_waiting_demand() {
+    let mut state = snapshot();
+    state.queue = vec![queued("a", "ciproxy", 0)];
+    let mut unknown = runner("own-unknown", "a", "ciproxy", RunnerState::Ready);
+    unknown.target = None;
+    state.machines[0].runners = vec![unknown.clone()];
+    unknown.id = RunnerId("boat-unknown".into());
+    state.sandboxes = vec![sandbox("boat-unknown", Some(unknown))];
+    assert_eq!(
+        decide(&state),
+        vec![
+            Action::StopRunner {
+                runner_id: RunnerId("own-unknown".into()),
+                reason: StopReason::LabelChanged
+            },
+            Action::DeleteSandbox {
+                sandbox_id: SandboxId("boat-unknown".into()),
+                reason: StopReason::LabelChanged
+            },
+            own("a", "ciproxy", small()),
+        ]
+    );
+}
 
 #[test]
 fn ready_boat_supply_is_kept_before_starting_supply_in_either_order() {

@@ -9,6 +9,7 @@ use ciproxy_store_interface::billing::state::BillingState;
 use ciproxy_store_interface::billing::store::{BillingRecord, BillingSession};
 use ciproxy_store_interface::error::{Error, Result, ResultExt};
 use diesel::prelude::*;
+use diesel::sql_types::BigInt;
 use uuid::Uuid;
 
 use crate::error::QueryResultExt;
@@ -18,6 +19,19 @@ use super::{renewals, rows};
 pub(super) struct Session {
     pub(super) connection: PgConnection,
     pub(super) workspace_id: Uuid,
+    pub(super) lock_key: i64,
+}
+
+impl Drop for Session {
+    /// Release the lock before closing the dedicated connection.
+    ///
+    /// Drop cannot return unlock errors. Connection teardown remains the
+    /// fallback when PostgreSQL cannot process the explicit release.
+    fn drop(&mut self) {
+        let _ = diesel::sql_query("SELECT pg_advisory_unlock($1)")
+            .bind::<BigInt, _>(self.lock_key)
+            .execute(&mut self.connection);
+    }
 }
 
 impl BillingSession for Session {

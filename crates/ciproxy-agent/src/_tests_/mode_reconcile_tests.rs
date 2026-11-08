@@ -12,11 +12,12 @@ use futures_util::{pin_mut, poll};
 use tokio::sync::{Mutex, oneshot};
 use unimock::{MockFn, Unimock, matching};
 
-use crate::boundaries::{Cache, CacheMock, HostMock, StoreMock};
+use crate::boundaries::{Cache, CacheMock, HostMock, StoreMock, VmsMock};
 use crate::controller::Agent;
 use crate::error::Result;
 use crate::fixtures::{controller, hardware};
 use crate::state::{MachineState, Mode, VmRecord};
+use crate::terminal_completion::CompletionAction;
 
 struct WaitingCache {
     delegate: Arc<dyn Cache>,
@@ -60,6 +61,9 @@ impl Cache for WaitingCache {
 #[tokio::test]
 async fn removal_during_a_delayed_reconciliation_stays_terminal() {
     let mock = Unimock::new((
+        VmsMock::networks
+            .each_call(matching!())
+            .answers(&|_| Ok(Vec::new())),
         HostMock::hardware
             .some_call(matching!())
             .returns(Ok(hardware())),
@@ -89,5 +93,10 @@ async fn removal_during_a_delayed_reconciliation_stays_terminal() {
     release.send(()).unwrap();
     reconcile.await.unwrap();
     assert_eq!(agent.state.lock().await.mode, Mode::Removed);
-    assert!(agent.finished().await);
+    assert!(
+        agent
+            .complete_removal(CompletionAction::Stop)
+            .await
+            .unwrap()
+    );
 }

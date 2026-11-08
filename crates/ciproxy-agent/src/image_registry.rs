@@ -125,18 +125,6 @@ impl ImageRegistry {
         Ok(())
     }
 
-    pub(crate) fn purge(&self) -> Result<()> {
-        let mut state = self.state();
-        if !state.active || !state.held.is_empty() || !state.pending.is_empty() {
-            return Err(Error::ImageOwnership);
-        }
-        state.catalog = Some(ImageReport {
-            available: Vec::new(),
-            newest: None,
-        });
-        self.reclaim(&mut state)
-    }
-
     fn reclaim(&self, state: &mut RegistryState) -> Result<()> {
         let mut keep = state.held.keys().cloned().collect::<Vec<_>>();
         if let Some(image_id) = state
