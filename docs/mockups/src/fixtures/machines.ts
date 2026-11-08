@@ -1,6 +1,7 @@
 // Own machines of mokly-ai: three Hetzner AX42 machines, and in some scenes a
-// fourth, the mini PC office-mini-1, whose disk holds fewer jobs than its
-// slots. A slot holds one job VM of the smallest size; a larger VM size takes
+// fourth: the mini PC office-mini-1, whose disk holds fewer jobs than its
+// slots, or the office PC office-pc-1, whose memory leaves no room for a
+// slot. A slot holds one job VM of the smallest size; a larger VM size takes
 // several slots. A machine without KVM connects with no slots, so it cannot
 // run jobs.
 
@@ -10,6 +11,7 @@ import {
   jobDiskBytes,
   machineSlots,
   miniPc,
+  oldPc,
   type Hardware,
 } from "./hardware.ts";
 import { defaultLabelSize } from "./sizes.ts";
@@ -116,6 +118,24 @@ const withoutKvm: Machine = {
   kvm: false,
 };
 
+/**
+ * office-pc-1, an older office PC that joined on 18 November. KVM works, but
+ * its memory leaves no room for one slot, so it connects with no slots.
+ */
+export const officePc: Machine = {
+  name: "office-pc-1",
+  hardware: oldPc,
+  status: "no-slots",
+  slots: [],
+  kvm: true,
+  warmTarget: defaultWarmRunners,
+  cacheUsedGb: 0,
+  cacheSizeGb: cacheSpaceGb(oldPc, 0),
+  freeDiskGb: 183,
+  dockerDisks: { repositories: 0, sizeGb: 0 },
+  lastSeen: "3s ago",
+};
+
 /** The moments that the machine screens show. */
 export const machineScenes = {
   /** Wednesday 18 November, 14:32: a busy afternoon. */
@@ -130,6 +150,17 @@ export const machineScenes = {
   noKvm: [machine(1, 5, 1), machine(2, 6, 0), withoutKvm],
   /** hetzner-ax42-1 finishes its jobs and takes no new ones. */
   draining: [machine(1, 3, 0, "draining"), machine(2, 6, 0), machine(3, 5, 1)],
+  /**
+   * The connection of hetzner-ax42-1 dropped 25 seconds ago, before ciproxy
+   * marks it offline, and an Admin drained it.
+   */
+  drainSaved: [
+    { ...machine(1, 3, 0, "draining"), lastSeen: "25s ago" },
+    machine(2, 6, 0),
+    machine(3, 5, 1),
+  ],
+  /** office-pc-1 joined as a fourth machine, with no room for a slot. */
+  tooSmall: [machine(1, 5, 1), machine(2, 6, 0), machine(3, 4, 2), officePc],
   /** office-mini-1 joined as a fourth machine; Team includes three. */
   fourMachines: [
     machine(1, 5, 1),

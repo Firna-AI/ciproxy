@@ -46,15 +46,27 @@ function useSetupProgress(workspaceId: string | null): SetupProgress | null {
 
 export function WorkspacePageView({
   page,
+  visitKey = "",
+  banner,
   children,
 }: {
   page: WorkspacePage;
+  /**
+   * The part of the query that makes a new visit of the page, such as a tab.
+   * Each new visit checks the session again, as a page change does.
+   */
+  visitKey?: string;
+  /**
+   * A banner of the page that takes the place of the soft-limit banner of
+   * the shell. Undefined keeps the soft-limit banner.
+   */
+  banner?: (context: WorkspaceContext) => ReactNode;
   children: (context: WorkspaceContext) => ReactNode;
 }) {
   const services = useServices();
   const params = useLocalSearchParams<{ workspace?: string | string[] }>();
   const workspaceId = idParam(params.workspace);
-  const snapshot = useSession(`${page}:${workspaceId ?? ""}`);
+  const snapshot = useSession(`${page}:${workspaceId ?? ""}:${visitKey}`);
   const access =
     snapshot.status === "signed-in"
       ? workspaceAccess(snapshot.session, workspaceId, page)
@@ -95,6 +107,7 @@ export function WorkspacePageView({
       role={context.role}
       page={page}
       setup={progress}
+      banner={banner?.(context)}
     >
       {children(context)}
     </AppShell>

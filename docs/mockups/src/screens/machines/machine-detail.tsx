@@ -1,8 +1,10 @@
 // One own machine: its slots and warm runners, health, cache, and the monthly
 // cost that the savings report uses. A machine without KVM connects with no
-// slots, so it cannot run jobs, and the page names the fix. A machine whose
-// disk holds fewer jobs than its slots says so, as design call 34 says. Every
-// role sees the machine; only an Admin drains, removes, or changes it.
+// slots, so it cannot run jobs, and the page names the fix. A machine without
+// room for a slot says why too. A machine whose disk holds fewer jobs than
+// its slots says so, as design call 34 says. After Clear cache, or a drain
+// that waits for the machine to connect again, a notice says so. Every role
+// sees the machine; only an Admin drains, removes, or changes it.
 
 import { Pencil } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -38,6 +40,9 @@ export const machineStates = [
   "no-slots",
   "disk-limit",
   "clear-cache",
+  "clear-requested",
+  "saved-offline",
+  "no-room",
 ] as const;
 export type MachineState = (typeof machineStates)[number];
 
@@ -49,6 +54,9 @@ const machineIn: Record<MachineState, [MachineScene, number]> = {
   "no-slots": ["noKvm", 2],
   "disk-limit": ["fourMachines", 3],
   "clear-cache": ["steady", 0],
+  "clear-requested": ["steady", 0],
+  "saved-offline": ["drainSaved", 0],
+  "no-room": ["tooSmall", 3],
 };
 
 function machineOf(state: MachineState): Machine {
@@ -60,8 +68,12 @@ function machineOf(state: MachineState): Machine {
 
 function HeaderActions({ state }: { state: MachineState }) {
   if (state === "offline") return <Action tone="danger">Remove machine</Action>;
-  if (state === "draining") return <Action>Stop draining</Action>;
-  if (state === "no-slots") return <Action tone="danger">Remove</Action>;
+  if (state === "draining" || state === "saved-offline") {
+    return <Action>Stop draining</Action>;
+  }
+  if (state === "no-slots" || state === "no-room") {
+    return <Action tone="danger">Remove</Action>;
+  }
   return (
     <>
       <Action>Drain</Action>
@@ -91,7 +103,7 @@ export function MachineDetailScreen({
       active="machines"
       role={role}
       banner={
-        state === "disk-limit"
+        state === "disk-limit" || state === "no-room"
           ? usageBanner("over-machines", "other", canPay(role))
           : undefined
       }

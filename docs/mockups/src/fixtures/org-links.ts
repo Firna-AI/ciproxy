@@ -15,7 +15,14 @@
 // ends before ciproxy finishes the link, so mokly-studio joins on 8 December
 // with two holds, which ciproxy records when it finishes the link. The move
 // to Team on 11 December clears only the plan hold.
+//
+// Each organization of the Organizations tab is linked or removed. A linked
+// one belongs to the workspace and counts for the rule that keeps the last
+// organization, also while it is inactive. In the what-if of 20 November in
+// access.ts, an owner removes the App from mokly-labs on GitHub, so the tab
+// keeps it as removed for 30 days, beside mokly-ai.
 
+import { labsRemoval } from "./access.ts";
 import { unbroken } from "./format.ts";
 import { secondAdmin, type Member } from "./members.ts";
 import { workspace, type Organization, type WorkspaceChoice } from "./org.ts";
@@ -81,9 +88,31 @@ export const studioOrg = {
 export type OrganizationHold =
   { kind: "plan" } | { kind: "admin"; addedBy: Member };
 
+/**
+ * An organization in the Organizations tab, in one of two states. A linked
+ * organization belongs to the workspace: active, or inactive while it has a
+ * hold. A removed one left the workspace when an owner removed the App on
+ * GitHub, and the tab keeps it for 30 days, with the day before which a new
+ * install keeps its job history. The state decides the row, its actions, and
+ * whether it counts for the rule of the last organization.
+ */
+export type WorkspaceOrganization = LinkedOrganization | RemovedOrganization;
+
 /** An organization of the workspace, inactive while it has a hold. */
 export type LinkedOrganization = OrganizationAccess & {
+  state: "linked";
   holds?: readonly OrganizationHold[];
+};
+
+/**
+ * An organization whose owner removed the App on GitHub. ciproxy has no
+ * GitHub access left to it, so its row has no repositories and no Take out.
+ */
+export type RemovedOrganization = {
+  state: "removed";
+  organization: Organization;
+  /** The day before which a new install keeps its job history. */
+  installBefore: string;
 };
 
 const planHold: OrganizationHold = { kind: "plan" };
@@ -100,18 +129,60 @@ const adminHold: OrganizationHold = { kind: "admin", addedBy: formerAdmin };
 export const studioLinks: Readonly<
   Record<"plan" | "both" | "admin" | "active", LinkedOrganization>
 > = {
-  plan: { organization: studioOrg, holds: [planHold] },
-  both: { organization: studioOrg, holds: [planHold, adminHold] },
-  admin: { organization: studioOrg, holds: [adminHold] },
-  active: { organization: studioOrg },
+  plan: { state: "linked", organization: studioOrg, holds: [planHold] },
+  both: {
+    state: "linked",
+    organization: studioOrg,
+    holds: [planHold, adminHold],
+  },
+  admin: { state: "linked", organization: studioOrg, holds: [adminHold] },
+  active: { state: "linked", organization: studioOrg },
 };
+
+/** The two organizations of November, both linked and active. */
+export const linkedOrganizations: readonly LinkedOrganization[] =
+  organizationAccess.map((access) => ({ ...access, state: "linked" }));
 
 /** The organizations of mokly-ai in December: the two of November, then one. */
 export function withStudio(
   link: LinkedOrganization,
 ): readonly LinkedOrganization[] {
-  return [...organizationAccess, link];
+  return [...linkedOrganizations, link];
+}
+
+/** mokly-labs after an owner removed the App on GitHub on 20 November. */
+export const removedLabs: RemovedOrganization = {
+  state: "removed",
+  organization: labsRemoval.organization,
+  installBefore: labsRemoval.installBefore,
+};
+
+/** mokly-ai still linked, beside the removed mokly-labs. */
+export const afterLabsRemoval: readonly WorkspaceOrganization[] = [
+  ...linkedOrganizations.filter(
+    (link) => link.organization.login !== labsRemoval.organization.login,
+  ),
+  removedLabs,
+];
+
+/**
+ * The organizations that the rule of the last organization counts: each
+ * linked one, also an inactive or a suspended one. A removed organization
+ * left the workspace, so it does not count.
+ */
+export function linkedCount(list: readonly WorkspaceOrganization[]): number {
+  return list.filter((row) => row.state === "linked").length;
+}
+
+/** Take out shows on a linked organization while another linked one stays. */
+export function canTakeOut(
+  row: WorkspaceOrganization,
+  list: readonly WorkspaceOrganization[],
+): boolean {
+  return row.state === "linked" && linkedCount(list) > 1;
 }
 
 /** The organizations that mokly-ai holds from 8 December, inactive ones too. */
-export const decemberOrganizationCount = withStudio(studioLinks.active).length;
+export const decemberOrganizationCount = linkedCount(
+  withStudio(studioLinks.active),
+);

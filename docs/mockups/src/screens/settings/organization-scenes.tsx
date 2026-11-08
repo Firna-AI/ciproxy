@@ -2,7 +2,9 @@
 // organizations, the banner of every page, and the open dialog. The December
 // states add mokly-studio: it joins inactive on Free, it also waits for an
 // Admin when the person who added it is no Admin now, and it runs once both
-// holds clear. The other organizations keep running in every state.
+// holds clear. In the removed state, an owner removed the App from mokly-labs
+// on GitHub, and mokly-ai stays as the last linked organization. The other
+// organizations keep running in every state.
 
 import type { ReactNode } from "react";
 
@@ -10,12 +12,14 @@ import { inactiveBanner } from "../../components/inactive-banner.tsx";
 import { paths, type CataloguePath } from "../../components/paths.ts";
 import { usageBanner } from "../../components/usage-banner.tsx";
 import {
+  afterLabsRemoval,
+  linkedOrganizations,
   studioLinks,
   withStudio,
   type LinkedOrganization,
+  type WorkspaceOrganization,
 } from "../../fixtures/org-links.ts";
 import type { TierKey } from "../../fixtures/org.ts";
-import { organizationAccess } from "../../fixtures/settings.ts";
 import {
   RenameWorkspaceDialog,
   TakeOutDialog,
@@ -28,6 +32,7 @@ export const organizationsStates = [
   "free-over",
   "one-on-team",
   "take-out",
+  "removed",
   "rename",
   "inactive-plan",
   "both-holds",
@@ -39,7 +44,7 @@ export type OrganizationsState = (typeof organizationsStates)[number];
 
 export type OrganizationsScene = {
   tier: TierKey;
-  list: readonly LinkedOrganization[];
+  list: readonly WorkspaceOrganization[];
   /** The banner of every page, such as a passed soft limit. */
   banner?: ReactNode;
   /** A dialog over the page. */
@@ -49,7 +54,7 @@ export type OrganizationsScene = {
 };
 
 /** The first organization alone, before mokly-labs joins. */
-const firstOnly = organizationAccess.slice(0, 1);
+const firstOnly = linkedOrganizations.slice(0, 1);
 
 /** mokly-studio with its holds, and the banner that says why. */
 function held(
@@ -70,13 +75,13 @@ export function organizationsScene(
 ): OrganizationsScene {
   switch (state) {
     case "team":
-      return { tier: "team", list: organizationAccess };
+      return { tier: "team", list: linkedOrganizations };
     case "free":
       return { tier: "free", list: firstOnly };
     case "free-over":
       return {
         tier: "free",
-        list: organizationAccess,
+        list: linkedOrganizations,
         banner: usageBanner("free-organizations", "other"),
       };
     case "one-on-team":
@@ -84,13 +89,15 @@ export function organizationsScene(
     case "take-out":
       return {
         tier: "team",
-        list: organizationAccess,
+        list: linkedOrganizations,
         overlay: <TakeOutDialog />,
       };
+    case "removed":
+      return { tier: "team", list: afterLabsRemoval };
     case "rename":
       return {
         tier: "team",
-        list: organizationAccess,
+        list: linkedOrganizations,
         overlay: <RenameWorkspaceDialog />,
       };
     case "inactive-plan":

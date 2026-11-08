@@ -44,6 +44,7 @@ export type Page = {
     options?: { name?: string | RegExp; exact?: boolean },
   ): Locator;
   getByText(text: string | RegExp, options?: { exact?: boolean }): Locator;
+  getByLabel(text: string | RegExp, options?: { exact?: boolean }): Locator;
   getByTestId(id: string): Locator;
   keyboard: { press(key: string): Promise<void> };
   screenshot(options: { path: string; fullPage: boolean }): Promise<unknown>;

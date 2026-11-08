@@ -7,7 +7,10 @@
 // Free includes one organization, and Team and Business several. On Free, Add
 // an organization stays: the new one joins inactive until Team, as the answer
 // D to item 83 says. A workspace that keeps more after a move to Free shows
-// the banner of that soft limit. The last organization has no Take out.
+// the banner of that soft limit. The last linked organization has no Take
+// out. An organization whose owner removed the App on GitHub stays in the tab
+// for 30 days, as removed, with the day before which a new install keeps its
+// job history.
 
 import { Plus } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";

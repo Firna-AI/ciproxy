@@ -69,7 +69,7 @@ export function readOrganization(value: unknown): OrganizationView {
   };
 }
 
-function fit(value: unknown): LabelFit {
+export function readLabelFit(value: unknown): LabelFit {
   const fields = object(value, "label fit");
   return {
     eligible_machines: integer(fields.eligible_machines),
@@ -94,10 +94,10 @@ function labelInput(value: unknown): LabelInput {
   };
 }
 
-function label(value: unknown): LabelView {
+export function readLabel(value: unknown): LabelView {
   const fields = object(value, "label view");
   return {
-    fit: fit(fields.fit),
+    fit: readLabelFit(fields.fit),
     id: string(fields.id),
     label: labelInput(fields.label),
   };
@@ -124,7 +124,7 @@ export const parseSetup = parser((value): SetupView => {
   return {
     current_image_disk_bytes: decimal(fields.current_image_disk_bytes),
     first_job: optional(fields.first_job, job),
-    labels: array(fields.labels, label),
+    labels: array(fields.labels, readLabel),
     machines: integer(fields.machines),
     organizations: array(fields.organizations, readOrganization),
     waiting_for_machine: boolean(fields.waiting_for_machine),

@@ -63,6 +63,9 @@ export const paths = {
   machineNoSlots: "app/machines/machine/states/no-slots",
   machineDiskLimit: "app/machines/machine/states/disk-limit",
   machineClearCache: "app/machines/machine/states/clear-cache",
+  machineClearRequested: "app/machines/machine/changes/clear-requested",
+  machineSavedOffline: "app/machines/machine/changes/saved-offline",
+  machineNoRoom: "app/machines/machine/hardware/no-room",
   addMachine: "app/machines/add",
   addMachineConnected: "app/machines/add/connected",
   addMachineRevoked: "app/machines/add/revoked",
@@ -123,6 +126,7 @@ export const paths = {
   organizationsFreeOver: "app/settings/organizations/states/free-over",
   organizationsOne: "app/settings/organizations/states/one-organization",
   takeOut: "app/settings/organizations/states/take-out",
+  organizationsRemoved: "app/settings/organizations/states/removed",
   addOrganization: "app/settings/organizations/add",
   addApproved: "app/settings/organizations/add/approved",
   addRequestWait: "app/settings/organizations/add/request-wait",
@@ -154,6 +158,7 @@ export const paths = {
   flowApprovedLater: "user-flows/owner-approves-later",
   flowFreeAddsOrganization: "user-flows/free-adds-organization",
   flowTurnOnOrganization: "user-flows/admin-turns-on-organization",
+  flowRemovedOrganization: "user-flows/removed-organization-returns",
 } as const;
 
 export type CataloguePath = (typeof paths)[keyof typeof paths];

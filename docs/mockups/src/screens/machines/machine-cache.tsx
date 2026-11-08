@@ -69,7 +69,7 @@ export function ClearCacheDialog({ machine }: { machine: Machine }) {
           <LinkAction to={paths.machine} tone="ghost">
             Cancel
           </LinkAction>
-          <LinkAction to={paths.machine} tone="danger">
+          <LinkAction to={paths.machineClearRequested} tone="danger">
             Clear cache
           </LinkAction>
         </>

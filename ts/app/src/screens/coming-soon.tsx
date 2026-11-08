@@ -1,5 +1,5 @@
-// The pages of the shell that later releases fill: Jobs, Machines, Savings,
-// Plan and usage, and Settings. Each shows its title and an honest state,
+// The pages of the shell that later releases fill: Jobs, Savings, and
+// Plan and usage. Each shows its title and an honest state,
 // with no sample data, and leads an Admin back to Setup while it is open.
 
 import { Link } from "expo-router";

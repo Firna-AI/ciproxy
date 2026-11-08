@@ -1413,8 +1413,38 @@ Depends on: 14, 19
 
 Each screen follows its mockup, as Milestone 19 says.
 
-- [ ] Build Machines, and Settings with the members and roles but without
-      Overflow.
+- [ ] Orchestrator: finish the blocked Machines and Settings states after
+      the missing API facts and warm-runner control are settled. Keep
+      Overflow with Milestone 22.
+      Branch: `conductor/m20-machines-and-settings-ui`.
+      Verification evidence: `.context/ciproxy-mvp-m20/verification.md`.
+  - [x] Build Machines, the machine page, and Add machine from the generated
+        API responses, with the roles, controls, and recoverable failures.
+        Branch: `conductor/m20-machines-and-settings-ui`.
+  - [x] Build Labels, Organizations, repository access, Members, and Roles.
+        Keep absent API facts unavailable until the API owner supplies them.
+        Branch: `conductor/m20-machines-and-settings-ui`.
+  - [x] Fix the removed-organization mockup follow-up with option B. Use
+        one linked/removed model, the retained deadline, and linked counts.
+        Branch: `conductor/m20-machines-and-settings-ui`.
+  - [x] Smoke-test the app and changed mockups at 1440, 720, and 390 pixels.
+        Branch: `conductor/m20-machines-and-settings-ui`.
+  - [x] Run the complete gate with `DATABASE_URL` set.
+        Branch: `conductor/m20-machines-and-settings-ui`.
+  - [ ] Commit, push, review, fix the confirmed findings, and open a ready
+        pull request into `conductor/mvp-m19-ui`.
+        Branch: `conductor/m20-machines-and-settings-ui`.
+  - [ ] Orchestrator: run `node ts/app/scripts/m20-live-smoke.ts` with
+        `CIPROXY_DASHBOARD_CREDENTIALS_FILE` set to a private credential
+        file outside the repository, and `CIPROXY_PLAYWRIGHT_PATH` set.
+        Branch: `conductor/m20-machines-and-settings-ui`.
+  - [ ] Orchestrator: integrate the Milestone 21 banners and Plans route.
+        Check the over-machine limit and payment priority on these pages.
+        Branch: `conductor/m20-machines-and-settings-ui`.
+  - [ ] Orchestrator: after #36 merges, merge
+        `calummoore/ci-proxy-load-balancer`, regenerate the API files, and
+        retarget this pull request. Run the gate on that merged tree.
+        Branch: `conductor/m20-machines-and-settings-ui`.
 
 ## Milestone 21: Dashboard UI: Jobs, Savings, and billing
 

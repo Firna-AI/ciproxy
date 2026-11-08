@@ -3,7 +3,11 @@
 // workspace. A full-document navigation drops them all, so nothing private
 // outlives a sign-out.
 
-import { createApiClient, type Transport } from "../api/client.ts";
+import {
+  createApiClient,
+  type ApiClient,
+  type Transport,
+} from "../api/client.ts";
 import { createEndpoints, type Endpoints } from "../api/endpoints.ts";
 import { createBuildGate, type BuildGate } from "../state/build-gate.ts";
 import {
@@ -40,6 +44,7 @@ export type AppServices = {
   readonly env: AppEnvironment;
   readonly gate: BuildGate;
   readonly navigator: Navigator;
+  readonly client: ApiClient;
   readonly endpoints: Endpoints;
   readonly session: SessionStore;
   setup(workspaceId: string): SetupStore;
@@ -89,6 +94,7 @@ export function createAppServices(env: AppEnvironment): AppServices {
     env,
     gate,
     navigator,
+    client,
     endpoints,
     session: sessionStore,
     setup: cached((workspaceId) =>

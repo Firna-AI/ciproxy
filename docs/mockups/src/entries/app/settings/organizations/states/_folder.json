@@ -1,4 +1,4 @@
 {
   "title": "Organization states",
-  "order": ["free", "free-over", "one-organization", "take-out"]
+  "order": ["free", "free-over", "one-organization", "take-out", "removed"]
 }

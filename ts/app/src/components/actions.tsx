@@ -21,6 +21,7 @@ type ButtonStyles = ReturnType<typeof createButtonStyles>;
 
 type Common = {
   label: string;
+  accessibilityLabel?: string;
   tone?: Tone;
   size?: Size;
   icon?: IconComponent;
@@ -58,6 +59,7 @@ const wrappingLinkLabel: CSSProperties = {
 
 export function ActionButton({
   label,
+  accessibilityLabel,
   tone = "secondary",
   size = "md",
   icon,
@@ -65,7 +67,12 @@ export function ActionButton({
   busy,
   disabled,
   onPress,
-}: Common & { busy?: boolean; disabled?: boolean; onPress: () => void }) {
+}: Omit<Common, "tone"> & {
+  tone?: Tone | "danger";
+  busy?: boolean;
+  disabled?: boolean;
+  onPress: () => void;
+}) {
   const theme = useSharedUiTheme();
   const box = useMemo(
     () => growingBox(createButtonStyles(theme, size)),
@@ -73,6 +80,7 @@ export function ActionButton({
   );
   return (
     <Button
+      accessibilityLabel={accessibilityLabel}
       tone={tone}
       size={size}
       icon={icon}
@@ -136,6 +144,7 @@ function linkStyle(
 /** A link that looks like a button. */
 export function ActionLink({
   label,
+  accessibilityLabel,
   href,
   tone = "secondary",
   size = "md",
@@ -173,7 +182,7 @@ export function ActionLink({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={onClick}
-      aria-label={hideLabel ? label : undefined}
+      aria-label={accessibilityLabel ?? (hideLabel ? label : undefined)}
       title={hideLabel ? label : undefined}
       style={{
         ...linkStyle(styles, tone, hovered, block),
