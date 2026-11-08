@@ -2,7 +2,7 @@
 
 - **Severity:** Low. **Effort:** Medium. **Confidence:** High.
   **Harder later:** No.
-- **Kind:** Needs decision.
+- **Kind:** Fix after merge.
 - **Added:** 2026-11-08, from `conductor/m21-jobs-savings-and-billing-ui`,
   the handoff of the Jobs pages. Extended on 2026-11-08 with the short
   resource of a label, from finding 14 of the second review round of that
@@ -24,8 +24,8 @@
   `crates/ciproxy-overflow/src/service/start.rs:173`,
   `crates/ciproxy-overflow/src/service/provider_preparation.rs:56`, and
   `crates/ciproxy-github/src/installation_state.rs:82`.
-- **Reason:** The choice decides which side of a mockup and product
-  mismatch is right, and that choice belongs to the user.
+- **Reason:** D changes the start record, the API, the app, and the
+  mockups, so a separate workspace builds it after pull request #53 merges.
 
 - **Terms:**
   - **Known-data scene:** a mockup scene of the fixture story, which shows
@@ -275,20 +275,19 @@
 - **Previous examples:** Until 8 November 2026, the product notice of a
   label that nothing fits claimed a short vCPU and memory from
   `nothing_fits` alone. The current copy names the full request instead.
+  On 8 November 2026, the user kept the product words of the billing
+  banners and dropped the offers of the places from the label dialog.
 - **Related:**
   - `plans/follow-ups/job-routing-reason-writer.md` A saves each placement
     fact where it becomes known, also the kind of the size choice at the
     preparation. D of this item saves the same fact, so both changes
     should share one stored field. Neither item waits for the other.
-  - `plans/follow-ups/billing-banner-facts.md` asks the same question for
-    the billing banners. The two answers do not depend on each other.
   - `plans/follow-ups/job-cache-cause.md` adds the cause of a direct GitHub
     cache use as another fact of this item when its C lands, with its B as
     part of the API option. This decision does not wait for it.
-  - `plans/follow-ups/label-dialog-fit-offers.md` asks for offers in the
-    label dialog, and G and its B can share one API field. The Boat fit of
-    `plans/follow-ups/label-boat-fit-boundary.md` is required and no offer,
-    so keep its field apart. Neither decision waits for the other.
+  - `plans/follow-ups/label-boat-fit-boundary.md` adds the required Boat
+    fit of saved and draft labels. A Boat fit is no offer, so keep its
+    field apart from any offer field. Neither item waits for the other.
 - **Recommendation:** D. Only the fallback changes what a person
   understands about a job that ran, and the size choice at the preparation
   is the true source of that fact. For a waiting label, the current-contract
@@ -296,5 +295,6 @@
   change with Edit label. When the user also wants the fourth fact, G is
   the safer add-on than F, because each number of G is a fact of one place,
   and F first needs its four rules. The first pass recommended C.
-- **Action:** ask the user, because the choice decides which side of a
-  mockup and product mismatch is right.
+- **User answer, 2026-11-08:** D. Rejected: A, B, C, E, F, and G.
+- **Action:** fix after merge, apply D, because it is backend work for a
+  separate workspace, outside the UI branch.

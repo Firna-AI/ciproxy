@@ -10,12 +10,10 @@ import type { ReactNode } from "react";
 
 import { paths, type CataloguePath } from "../../components/paths.ts";
 import {
-  organizationsBanner,
   usageBanner,
   type BannerPage,
   type BillingPages,
 } from "../../components/usage-banner.tsx";
-import { decemberOrganizationCount } from "../../fixtures/org-links.ts";
 import { usageScenes, type UsageScene } from "../../fixtures/usage.ts";
 
 /** The use of 8 December, with mokly-studio inactive. */
@@ -38,14 +36,7 @@ export function sceneBanner(
   page: BannerPage,
   canPay: boolean,
 ): ReactNode {
-  if (scene !== "inactive-organization") {
-    return usageBanner(scene, page, canPay);
-  }
-  return organizationsBanner({
-    count: decemberOrganizationCount,
-    usage: inactiveUse,
-    pages: inactivePages,
-    page,
-    canPay,
-  });
+  return scene === "inactive-organization"
+    ? usageBanner(scene, page, canPay, inactivePages)
+    : usageBanner(scene, page, canPay);
 }

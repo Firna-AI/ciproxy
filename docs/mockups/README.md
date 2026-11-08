@@ -86,14 +86,14 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
 - The overflow flow and the Savings report share one day: `releaseDay` of
   `live-jobs.ts`, the release of 18 November. The report covers the 30 UTC
   days that end on it, and its range and day labels come from it.
-- The known-data scenes of the story show each page with every fact. Beside
-  them, a `current-contract` folder shows the same moments with only the facts
-  that the API gives. In Jobs, it names no person or date of a suspension, no
+- The known-data scenes of the story show each page with every fact, but a
+  banner names only the facts that the API gives. Beside them, a
+  `current-contract` folder shows the same moments with only the facts that
+  the API gives. In Jobs, it names no person or date of a suspension, no
   reason of a Boat refusal, no total of the day, no tier name, no routing
   reason, no fit of a Boat size, and no resource that is short for a label
   that nothing fits. In Savings, it names no tier and no machine count. In
-  billing, it names no plan or passed limit in a banner, no day on which a
-  paid plan ended, no unit prices of the add-ons, no receipt address, and
+  billing, it names no unit prices of the add-ons, no receipt address, and
   no workspace in a Stripe return. Its `pending` folder shows
   Continue payment for a payment whose Stripe page the tab saved. Its
   `checkout` folder shows a paid review, an unavailable price, and a refused
@@ -275,8 +275,9 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   nobody set or that is known in part, a missing comparison price, a negative
   saving on a quiet day, a refresh, and ranges with no jobs.
 - `src/fixtures/current-api.ts`: the offer of the API for each usage moment,
-  and the moments that pass a limit, for the billing pages of the current API.
-  `src/components/api-banner.tsx` words their banner as the API does.
+  and the moments that pass a limit, for the banners and the billing pages of
+  the current API. `src/components/api-banner.tsx` words every banner as the
+  API does, also the banner of a known moment.
 - `src/screens/billing/api-notices.tsx`, `api-add-ons.tsx`, `api-review.tsx`,
   `api-outcome.tsx`, and `api-return.tsx`: the notices, the add-ons, the
   review, the unknown results, and the return of the billing pages of the

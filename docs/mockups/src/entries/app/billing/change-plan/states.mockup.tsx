@@ -49,7 +49,7 @@ export const freeOrganizations = defineScreen({
   slug: "free-organizations",
   title: "On Free with two organizations",
   description:
-    "On 4 December, the day after Team ended, mokly-ai is on Free and keeps both its organizations, mokly-ai and mokly-labs. Their jobs keep running on all three machines. Free includes one organization, so the banner of every page says so and offers Team, which covers the use. At the pace of the first day, the starts pass the 2,000 of Free on 9 December, so the page also shows that notice.",
+    "On 4 December, the day after Team ended, mokly-ai is on Free and keeps both its organizations, mokly-ai and mokly-labs. Their jobs keep running on all three machines. Free includes one organization, so the banner of every page says that mokly-ai passed a limit of its plan and offers Team, which covers the use. At the pace of the first day, the starts pass the 2,000 of Free on 9 December, so the page also shows that notice.",
   rationale:
     "A workspace that holds more than one organization when it moves to Free keeps them all, and on Free the number of organizations is a soft limit, with the banner and the offer, as for the machine count. The Organizations tab shows the same banner.",
   relatedDocs: relatedMvp("workspaces", "metering", "billing"),
@@ -64,7 +64,7 @@ export const inactiveOrganization = defineScreen({
   slug: "inactive-organization",
   title: "On Free with an inactive organization",
   description:
-    "On 8 December, mokly-ai is still on Free with mokly-ai and mokly-labs, and mokly-studio joins inactive. The banner counts all three organizations and says that jobs keep running in the two active ones, on all three machines. At the pace of the first five days, 1,900 starts, the starts pass the 2,000 of Free on 9 December, so the page shows that notice too. The banner, the notice, and Compare plans open the Plans of that day, and the Plan and usage link of the inactive organization opens this page.",
+    "On 8 December, mokly-ai is still on Free with mokly-ai and mokly-labs, and mokly-studio joins inactive. The banner says that mokly-ai passed a limit of its plan and offers Team. At the pace of the first five days, 1,900 starts, the starts pass the 2,000 of Free on 9 December, so the page shows that notice too. The banner, the notice, and Compare plans open the Plans of that day, and the Plan and usage link of the inactive organization opens this page.",
   rationale:
     "The answer D to item 83: every linked organization counts on Free, also an inactive one. The links of 8 December keep the third organization, so the 4 December page and the September Plans stay as they are.",
   relatedDocs: relatedMvp("workspaces", "metering", "billing"),

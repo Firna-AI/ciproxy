@@ -29,8 +29,9 @@
     `refused` flag.
   - **Draft label:** a label in the label dialog before the save, which
     the preview reads.
-  - **Offer:** the largest job that one place takes. Two open decisions
-    ask whether pages name offers. An offer is not a placement.
+  - **Offer:** the largest job that one place takes. On 8 November 2026,
+    the user left offers out of the label dialog and of the notice of a
+    waiting label that nothing fits. An offer is not a placement.
 - **Background:**
   - `docs/protocol/labels.md:127-128` says that the dialog, the label list,
     and the live queue show where the jobs of each label run now: own
@@ -146,8 +147,9 @@
     wait.
   - A protocol change that drops Boat and wait from the label list and the
     dialog, because `docs/protocol/labels.md:127-128` stays in force.
-  - The offers of the places, because they are an optional extra that two
-    open decisions own, and they do not say where the jobs run.
+  - The offers of the places, because they are an optional extra that the
+    user left out on 8 November 2026, and they do not say where the jobs
+    run.
   - A refusal at save of a label that nothing fits, because
     `docs/protocol/labels.md:129-132` rejects it.
 - **Wider fix:** A. One owner computation of the Boat fit then serves the
@@ -157,15 +159,15 @@
   label, at `crates/ciproxy-api/src/wire/job_fit.rs:33-58`, but the saved
   and draft responses did not.
 - **Related:**
-  - `plans/follow-ups/label-dialog-fit-offers.md` asks whether the dialog
-    also names the offers of the places. That item is optional, and this
-    item is required. The Boat fit says whether Boat runs the jobs, and an
+  - On 8 November 2026, the user kept the label dialog on its fit counts
+    and placement, and its mockup dropped the offers of the places. This
+    item stays required, because the dialog still needs the Boat fit to
+    show its placement. The Boat fit says whether Boat runs the jobs, and an
     offer says the largest job that a place takes, so the two need separate
-    fields. This item does not wait for that decision.
-  - `plans/follow-ups/jobs-notice-facts.md` G adds offers to the live
-    queue, which already has the Boat fit. Keep the offer fields of G apart
-    from the Boat fit of this item. This item does not wait for that
-    decision.
+    fields.
+  - `plans/follow-ups/jobs-notice-facts.md` keeps the kind of the Boat size
+    choice of each start. On 8 November 2026, the user chose that option,
+    not the offers of its option G. Neither item waits for the other.
 - **Recommendation:** A. One response then gives each label its placement
   from the computation that the live queue already uses, with no second
   request and no rule in the app. B keeps the saved-label types as they

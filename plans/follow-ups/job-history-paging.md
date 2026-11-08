@@ -2,7 +2,7 @@
 
 - **Severity:** Medium. **Likelihood:** Rare. **Effort:** Medium.
   **Confidence:** Medium. **Harder later:** No.
-- **Kind:** Needs decision.
+- **Kind:** Fix after merge.
 - **Added:** 2026-11-08, from `conductor/m21-jobs-savings-and-billing-ui`,
   the handoff of the Jobs pages.
 - **Source:** Implementation.
@@ -15,9 +15,8 @@
   `crates/ciproxy-store-pg/src/job_views.rs:100`,
   `ts/app/src/view/jobs-history.ts:20`, and
   `docs/mockups/src/screens/jobs/jobs-history.tsx:85`.
-- **Reason:** The choice decides whether History shows pages and a total of
-  the day, as the known-data mockup does, and nobody measured the cost of
-  one full list yet.
+- **Reason:** B changes the store, the API, the app, and the mockups, so a
+  separate workspace builds it after pull request #53 merges.
 
 - **Terms:**
   - **History:** the tab of Jobs that lists finished jobs within the job
@@ -127,6 +126,13 @@
 - **Recommendation:** B. The code already shows that the store read, the
   response, and the rendered list grow with the window, and B bounds all
   three without the count of C. The first pass recommended A.
-- **Action:** ask the user, because the choice decides which side of a
-  mockup and product mismatch is right: the known-data footer shows pages
-  and a total of the day, and the product shows one full list.
+- **User answer, 2026-11-08:** B. Rejected: A, C, D, and E.
+  - History gets keyset pages without a total. The store query applies the
+    filters, the order, and the limit, with bounded inner reads within the
+    plan window.
+  - The same change gives the live queue and the job page narrow store
+    reads, of the unfinished jobs and of one exact job.
+  - The mockups follow B. The History footer gives the count of the rows
+    that the page has, with "Show more", and no total of the day.
+- **Action:** fix after merge, apply B, because it is store, API, and app
+  work for a separate workspace, outside the UI branch.

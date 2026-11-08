@@ -96,7 +96,8 @@
     - Add the cause as another fact to
       `plans/follow-ups/jobs-notice-facts.md`, with B as part of its API
       option. The user then chooses there between the known-data scene
-      and the current-contract copy. That decision stays open.
+      and the current-contract copy. This cache-cause choice keeps the
+      accepted Boat size-choice kind unchanged.
     - Effort: Medium.
 - **Left out:**
   - A cause inferred from absent counts, because the restart case makes it
@@ -121,8 +122,9 @@
 - **Related:**
   - `plans/follow-ups/job-cache-report-writer.md` adds the hosted writer of
     these facts. This item must land before that writer.
-  - `plans/follow-ups/jobs-notice-facts.md` gets the cause as another fact
-    when C lands. Its decision and its Action stay open.
+  - `plans/follow-ups/jobs-notice-facts.md` records the accepted Boat
+    size-choice kind of 8 November 2026. C adds the separate cache-cause
+    question when it lands, and keeps that accepted choice unchanged.
 - **Recommendation:** C. It keeps the mockups and the product on the facts
   that the API gives, without deciding the richer API question. The first
   pass recommended A.

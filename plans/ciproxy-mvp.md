@@ -1494,6 +1494,34 @@ Each screen follows its mockup, as Milestone 19 says.
       Source: pull request #34, fix round 1, 7 November 2026.
       Branch: `conductor/m21-jobs-savings-and-billing-ui`.
 
+User answers, 8 November 2026, to the four open decisions of this branch.
+Two change the mockups in this branch. Two are backend work for separate
+workspaces after pull request #53 merges.
+
+- Item 110, B: History gets keyset pages without a total. The store query
+  applies the filters, the order, and the limit, with bounded inner reads
+  within the plan window. The same change narrows the reads of the live queue
+  and of the job page to the unfinished jobs and to one exact job. A
+  separate workspace builds it after pull request #53 merges, from
+  `follow-ups/job-history-paging.md`. Rejected: A, C, D, and E.
+- Item 111, A: the banners keep the words of the product. This branch
+  changes the known-data banners of the mockups to those words, and
+  deletes the settled follow-up item `follow-ups/billing-banner-facts.md`.
+  Rejected: B, typed banner facts in the API, and C, a second read of Plan
+  and usage beside the banner.
+- Item 112, D: the overflow service saves the kind of the Boat size choice
+  at the preparation, next to the size that ran. The job page words the
+  caption of that size from it. The Jobs pages keep the current words for
+  a suspension, a Boat refusal, and a label that nothing fits. A separate
+  backend workspace builds it after pull request #53 merges, from
+  `follow-ups/jobs-notice-facts.md`. Rejected: A, B, C, E, F, and G.
+- Item 113, A: the label dialog keeps its fit counts and placement. This
+  branch drops the largest-job figures of the machines and of the largest
+  Boat size from its mockup, and deletes the settled follow-up item
+  `follow-ups/label-dialog-fit-offers.md`. Rejected: B, typed offers in
+  the API. The required Boat fit of saved and draft labels stays in
+  `follow-ups/label-boat-fit-boundary.md`.
+
 ## Milestone 21a: Review mockup states
 
 Tags: mockup

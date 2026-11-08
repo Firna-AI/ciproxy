@@ -25,7 +25,7 @@ export const freeKeepsOrganizations = defineUseCase({
       screenPath: paths.freeOrganizations,
       title: "On Free with two organizations",
       description:
-        "Free includes one organization, so the banner says that jobs keep running in both and offers Team. The pace of the starts passes Free on 9 December.",
+        "Free includes one organization, so the banner says that mokly-ai passed a limit of its plan and offers Team. The pace of the starts passes Free on 9 December.",
     },
     {
       screenPath: paths.organizationsFreeOver,

@@ -1,23 +1,20 @@
 // The line of the label dialog that says, before the save, where jobs of the
 // size run: how many fit on one machine at a time, that no machine fits the
 // size, or that no machine and no Boat size fits it. When the machines fit
-// different numbers, the line gives a range, as design call 41 says.
+// different numbers, the line gives a range, as design call 41 says. It names
+// the full request of the size with "fits", as the live queue does, and not
+// the largest job that a machine or a Boat size takes, which the API does not
+// give.
 
 import { Notice } from "../../components/feedback.tsx";
-import { ax42, machineSlots, slotSize } from "../../fixtures/hardware.ts";
 import type { Machine } from "../../fixtures/machines.ts";
 import {
   fitsOwnMachine,
   jobsPerMachine,
   type Label,
 } from "../../fixtures/settings.ts";
-import { fitsBoat, largestBoatSize, sizePhrase } from "../../fixtures/sizes.ts";
-
-/** The part of one Hetzner AX42 that jobs can use. */
-const machineOffer = sizePhrase({
-  vcpu: machineSlots(ax42) * slotSize.vcpu,
-  memoryGb: machineSlots(ax42) * slotSize.memoryGb,
-});
+import { fitsBoat } from "../../fixtures/sizes.ts";
+import { requestPhrase } from "../jobs/place-fact-notices.tsx";
 
 /** "1 job", "3 jobs", or "1 to 3 jobs". */
 function jobsText(fewest: number, most: number): string {
@@ -43,19 +40,18 @@ export function FitNote({
   }
   if (fitsBoat(label)) {
     return (
-      <Notice tone="warning" title={`No machine fits ${sizePhrase(label)}`}>
-        Jobs with this label run on Boat. Your machines offer {machineOffer}{" "}
-        each.
+      <Notice
+        tone="warning"
+        title={`No machine of yours fits a job of ${requestPhrase(label)}`}
+      >
+        Jobs with this label run on Boat.
       </Notice>
     );
   }
   return (
     <Notice
       tone="warning"
-      title={`No machine and no Boat size fits ${sizePhrase(label)}`}
-    >
-      Your machines offer {machineOffer} each, and the largest Boat size offers{" "}
-      {sizePhrase(largestBoatSize)}.
-    </Notice>
+      title={`No machine of yours and no Boat size fits a job of ${requestPhrase(label)}`}
+    />
   );
 }
