@@ -47,6 +47,15 @@ selected image.
 A machine without a report has zero slots and unknown disk capacity.
 API maintenance runs at startup and then every minute. A failed run logs a
 warning and runs again.
+The page routes share the same billing, metering, and overflow services.
+Paid-plan review uses Stripe's invoice previews through the billing service.
+It uses the current quoted Stripe period when stored renewal state is late.
+An independent worker retries durable last-organization cancellations and
+pending paid-move payment work at startup and each minute. GitHub maintenance
+failures do not delay that worker. Billing raises paid-move operator events
+through `HostedBillingAlerts`: error-level tracing events with the
+`ciproxy_billing::operator` target. They promise no email or page.
+Billing and PostgreSQL calls run on blocking workers.
 
 This one release supplies the image facts of the process. The agents'
 image download, the API's image disk size, the scaler fallback, and Boat
@@ -61,6 +70,7 @@ release file gives each field.
 | --------------------------- | --------------------------------------------------------- |
 | `/agent/`                   | The agent WebSocket.                                      |
 | `/hooks/github`             | GitHub App webhooks, up to GitHub's 25 MiB payload limit. |
+| `/hooks/stripe`             | Raw signed Stripe billing webhooks.                       |
 | `/hooks/boat/runner-exit`   | Boat sandbox exit reports, while Boat is configured.      |
 | `/api`                      | The dashboard API.                                        |
 | `/api/auth/github/callback` | The GitHub sign-in callback.                              |
@@ -72,6 +82,8 @@ Register `PUBLIC_URL/hooks/github` as the App webhook URL.
 [The API guide](../ciproxy-api/README.md#quick-start) gives the other App
 registration settings. No route has an alias.
 The API owns sign-in, membership, setup, and workspace management.
+It also serves Jobs, Savings, Plan and usage, Plans, Checkout, and the shared
+page banner. Stripe deliveries use the host root and need no browser cookie.
 An Admin can add an organization to an existing workspace. The original
 requester proves installation access and chooses an eligible workspace.
 Local billing or Admin holds keep that organization inactive.
@@ -102,41 +114,8 @@ their cleanup, also after the last organization leaves.
 
 ### GitHub workers
 
-Each reconciliation pass also starts a scale-set listener for each label of
-an admitted organization with an active App installation. It stops the
-listeners of
-bindings that are gone. A deleted label keeps its listener while it has
-unfinished jobs or a pending delivery. That listener acquires no new jobs.
-An inactive organization gets no new runner or warm capacity. Its idle runners
-use GitHub-first retirement. Received jobs keep their trusted preparation and
-completion listeners through the final acknowledgement. Active sibling
-organizations keep their runners and demand.
-
-GitHub does not automatically retry failed webhooks.
-A separate worker scans all pages of retained App delivery history each
-minute. It groups retries by delivery GUID and uses the latest attempt.
-It requests redelivery only for relevant events whose latest attempt failed.
-The App's durable lifecycle outbox handles failures after local persistence.
-A separate startup and five-minute poll refreshes current installation
-authority and repository snapshots. It needs no optional event subscriptions.
-
-One supervised accounting worker does job timing repair, the metering
-refresh, and the raw job purge, in that order.
-The ten-second tick and listener job delivery only signal it.
-Pending signals merge into one pass, and passes never overlap.
-Readiness, runner operations, and workspace leases never wait for it.
-An error or a panic in one workspace does not stop the next workspace.
-The supervisor restarts the worker when it ends. Shutdown cancels it with
-the other short-grace runtime work.
-
-The runtime installs the mandatory gateway log guard.
-`RUST_LOG` changes other verbosity without exposing serialized frames.
-
-The [runner guide](runners.md#removal-and-take-out) gives the removal and
-take-out policies.
-The user selected spare-disk reservations for sticky Docker attachments.
-Active reservations count against root admission until those jobs finish.
-Live KVM and authenticated GitHub checks remain operator work.
+The [GitHub worker guide](github-workers.md) gives the scale-set listeners,
+webhook redelivery, the accounting worker, and the log guard.
 
 ## Quick Start
 
@@ -182,6 +161,18 @@ and `JOB_IMAGE_MANIFEST_PATH`.
 from a Secret Manager secret, as
 [Boat setup](../../deploy/runtime.md#boat-shared-snapshot) says.
 The runtime uses mounted private key, webhook, OAuth, session, and CDN keys.
+Billing reads `stripe-secret-key` and `stripe-webhook-secret` from the same
+secret directory. Startup constructs the blocking Stripe client on a blocking
+worker.
+The trusted configuration supplies Linux x64 comparison price lists dated
+7 November 2026. Blacksmith rates come from its
+[pricing page](https://www.blacksmith.sh/pricing), with dimensions from its
+[instance guide](https://docs.blacksmith.sh/blacksmith-runners/overview).
+GitHub rates come from its [runner prices][github-prices].
+Its [larger runner guide][github-sizes] gives the dimensions.
+
+[github-prices]: https://docs.github.com/en/billing/reference/actions-runner-pricing
+[github-sizes]: https://docs.github.com/en/actions/reference/runners/larger-runners
 Artifact delivery gets a fresh Cloud CDN signature each time.
 `IMAGE_URL_PREFIX` selects the existing CDN /images origin.
 Signed image clients use HTTP/1 explicitly. This keeps their transport
@@ -229,6 +220,15 @@ GitHub, and database access, so they stay operator work.
   maintenance, and bounded shutdown.
 - [src/startup_api.rs](src/startup_api.rs) builds the access service, the
   hosted services that use it, and then the dashboard API and maintenance.
+- [src/startup_billing.rs](src/startup_billing.rs) loads billing secrets,
+  constructs the Stripe client outside the async runtime worker, and supplies
+  `HostedBillingAlerts`.
+- [src/pages.rs](src/pages.rs) shares billing, paid previews, metering,
+  overflow, and the overflow runtime's exact Boat root sizing.
+- [src/billing.rs](src/billing.rs) retries durable App-removal cancellations
+  and pending payment work.
+- [src/comparison_prices.rs](src/comparison_prices.rs) holds the dated USD
+  comparison catalogs supplied by trusted process configuration.
 - [src/capacity.rs](src/capacity.rs) gives the API each machine's capacity.
 - [src/composition.rs](src/composition.rs) constructs shared hosted adapters.
 - [src/config.rs](src/config.rs) resolves runtime and image configuration.
@@ -275,6 +275,8 @@ GitHub, and database access, so they stay operator work.
 - [scripts/overflow-smoke.py](scripts/overflow-smoke.py) runs the live Boat
   checks.
 - [tests/runtime](tests/runtime) checks durable runtime behavior.
+- [tests/dashboard](tests/dashboard) checks the production page composition
+  through a bound HTTP server and real PostgreSQL, with a local Stripe peer.
 
 ### Related Docs
 

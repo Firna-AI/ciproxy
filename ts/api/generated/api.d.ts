@@ -934,6 +934,7 @@ export interface components {
             period_end: string;
             /** @description Paid changes use Stripe's prorated saved-card charge. */
             prorated: boolean;
+            quote?: components["schemas"]["PaidQuoteReference"] | null;
             /** @description Initial Checkout payment in integer US cents. */
             today_cents: components["schemas"]["Cents"];
         };
@@ -1520,6 +1521,27 @@ export interface components {
         PageBannerView: {
             banner?: components["schemas"]["PageBanner"] | null;
         };
+        /** @description A paid change uses only the quote selected during review. */
+        PaidChangePayment: {
+            /**
+             * Format: uuid
+             * @description Authoritative quote identity. Selection and amounts stay on the server.
+             */
+            quote_id: string;
+        };
+        /** @description The server-owned quote which permits one paid change. */
+        PaidQuoteReference: {
+            /**
+             * Format: date-time
+             * @description Exclusive deadline for starting its payment.
+             */
+            expires_at: string;
+            /**
+             * Format: uuid
+             * @description Opaque workspace-owned quote identifier.
+             */
+            id: string;
+        };
         /** @description Recoverable Checkout and paid-change outcomes. */
         PaymentOutcome: {
             /** @enum {string} */
@@ -1703,7 +1725,7 @@ export interface components {
          * @description Closed set of machine-readable dashboard failures.
          * @enum {string}
          */
-        ProblemCode: "boat_key_rejected" | "sign_in_required" | "access_denied" | "not_found" | "conflict" | "invalid_request" | "github_label_refused" | "unavailable" | "internal" | "method_not_allowed";
+        ProblemCode: "boat_key_rejected" | "sign_in_required" | "access_denied" | "not_found" | "conflict" | "review_required" | "invalid_request" | "github_label_refused" | "unavailable" | "internal" | "method_not_allowed";
         /** @description Organization removal metadata verified through this person's GitHub membership. */
         RemovedOrganization: {
             /**
@@ -3896,7 +3918,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PlanSelection"];
+                "application/json": components["schemas"]["PaidChangePayment"];
             };
         };
         responses: {

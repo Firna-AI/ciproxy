@@ -9,6 +9,7 @@ use chrono::{DateTime, Utc};
 use ciproxy_api::capacity::{Capacity, MachineCapacity, MachineCapacityMock};
 use ciproxy_api::pages::{PageServices, router_with_pages, stripe_router};
 use ciproxy_api::runtime::Runtime;
+use ciproxy_billing::alerts::HostedBillingAlerts;
 use ciproxy_billing::service::runtime::{BillingService, Redirects};
 use ciproxy_billing::stripe::api::StripeApi;
 use ciproxy_billing::webhook::SigningSecret;
@@ -54,6 +55,7 @@ impl Pages {
             fixture.database.store.clone(),
             stripe,
             fixture.runtime.clone(),
+            Arc::new(HostedBillingAlerts),
             SigningSecret::new("whsec_m18_offline_only".into()),
             Redirects {
                 success_url:

@@ -53,7 +53,7 @@ fn only_last_removal_cancels_and_a_pending_upgrade_cannot_block_it() {
         .record_app_removal(workspace(), first.id, at())
         .unwrap();
     service.reconcile_removal(workspace()).unwrap();
-    assert_eq!(fake.posts("/v1/subscriptions/sub_recorded").len(), 0);
+    assert_eq!(fake.subscription_mutations().len(), 0);
     {
         let mut session = database
             .store
@@ -68,6 +68,7 @@ fn only_last_removal_cancels_and_a_pending_upgrade_cannot_block_it() {
                 kind: CommandKind::Change {
                     selection: wanted(Tier::Business, 2, 1),
                     upgrade: true,
+                    quote: None,
                 },
             })
             .unwrap();
@@ -108,10 +109,7 @@ fn only_last_removal_cancels_and_a_pending_upgrade_cannot_block_it() {
         Some("2026-12-04T12:00:00Z".parse().unwrap())
     );
     assert_eq!(
-        field(
-            &fake.posts("/v1/subscriptions/sub_recorded")[0],
-            "cancel_at_period_end"
-        ),
+        field(&fake.subscription_mutations()[0], "cancel_at_period_end"),
         "true"
     );
 }

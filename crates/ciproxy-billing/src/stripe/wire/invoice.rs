@@ -1,10 +1,19 @@
 //! Current Stripe invoice and cancellation states.
 
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 /// Current invoice information used for payment and retry banners.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Invoice {
+    /// Invoice currency, absent only from legacy provider projections.
+    pub currency: Option<String>,
+    /// Final amount due, absent only from legacy provider fixtures.
+    pub amount_due: Option<u64>,
+    /// Amount paid, required before an unpaid restoration is safe.
+    pub amount_paid: Option<u64>,
+    /// Immutable subscription metadata copied when this invoice was created.
+    pub parent: Option<InvoiceParent>,
     /// The current invoice identifier.
     pub id: String,
     /// The invoice creation date in Unix seconds.
@@ -96,8 +105,6 @@ pub struct RetrievedInvoice {
     pub invoice: Invoice,
     /// The customer that owes the invoice.
     pub customer: String,
-    /// The subscription parent, absent for unrelated invoices.
-    pub parent: Option<InvoiceParent>,
 }
 
 /// The typed parent of a subscription invoice.
@@ -112,12 +119,24 @@ pub struct InvoiceParent {
 pub struct SubscriptionDetails {
     /// The stable Stripe subscription identifier.
     pub subscription: String,
+    /// Immutable paid-change correlation, independent of later subscription edits.
+    pub metadata: Option<PaymentMetadata>,
+}
+
+/// Dedicated server-owned paid-change identifiers copied into invoices.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct PaymentMetadata {
+    /// Stored review identifier.
+    pub ciproxy_quote_id: Option<Uuid>,
+    /// Durable payment command identifier.
+    pub ciproxy_payment_id: Option<Uuid>,
 }
 
 impl RetrievedInvoice {
     /// Return the subscription identifier without losing typed invoice state.
     pub fn subscription_id(&self) -> Option<&str> {
-        self.parent
+        self.invoice
+            .parent
             .as_ref()?
             .subscription_details
             .as_ref()

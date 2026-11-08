@@ -3,6 +3,7 @@
 #![warn(unreachable_pub)]
 
 pub mod access;
+pub mod alerts;
 pub mod catalog;
 pub mod clock;
 pub mod error;

@@ -3,6 +3,7 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
+use uuid::Uuid;
 
 use super::money::Cents;
 use super::pages::PageBanner;
@@ -156,6 +157,8 @@ pub struct PlansPage {
 /// Checkout review before any payment begins.
 #[derive(Serialize, ToSchema)]
 pub struct CheckoutReviewPage {
+    /// Authoritative paid review, absent for an initial Free Checkout.
+    pub quote: Option<PaidQuoteReference>,
     /// Selected plan, capacities, and monthly total.
     pub choice: PlanOffer,
     /// Initial Checkout payment in integer US cents.
@@ -168,6 +171,22 @@ pub struct CheckoutReviewPage {
     pub period_end: DateTime<Utc>,
     /// One page banner.
     pub banner: Option<PageBanner>,
+}
+
+/// The server-owned quote which permits one paid change.
+#[derive(Serialize, ToSchema)]
+pub struct PaidQuoteReference {
+    /// Opaque workspace-owned quote identifier.
+    pub id: Uuid,
+    /// Exclusive deadline for starting its payment.
+    pub expires_at: DateTime<Utc>,
+}
+
+/// A paid change uses only the quote selected during review.
+#[derive(Deserialize, ToSchema)]
+pub struct PaidChangePayment {
+    /// Authoritative quote identity. Selection and amounts stay on the server.
+    pub quote_id: Uuid,
 }
 
 /// A Stripe Checkout return supplied only to the authorized payer.

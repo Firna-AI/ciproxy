@@ -30,6 +30,8 @@ pub enum ProblemCode {
     NotFound,
     /// Saved state conflicts with the operation.
     Conflict,
+    /// The paid quote cannot start another payment.
+    ReviewRequired,
     /// The request cannot represent this operation.
     InvalidRequest,
     /// GitHub refused the requested label name.
@@ -60,6 +62,9 @@ pub enum Error {
     /// The operation conflicts with the saved workspace state.
     #[error("[api] operation conflicts with the workspace state")]
     Conflict,
+    /// The payer must review a new quote before starting payment.
+    #[error("[api] review the paid change again")]
+    ReviewRequired,
     /// The request cannot represent the documented resource.
     #[error("[api] request is invalid")]
     InvalidInput,
@@ -91,6 +96,7 @@ impl IntoResponse for Error {
             Self::Forbidden => (StatusCode::FORBIDDEN, ProblemCode::AccessDenied),
             Self::NotFound => (StatusCode::NOT_FOUND, ProblemCode::NotFound),
             Self::Conflict => (StatusCode::CONFLICT, ProblemCode::Conflict),
+            Self::ReviewRequired => (StatusCode::CONFLICT, ProblemCode::ReviewRequired),
             Self::InvalidInput => (StatusCode::BAD_REQUEST, ProblemCode::InvalidRequest),
             Self::LabelRefused { .. } => (
                 StatusCode::UNPROCESSABLE_ENTITY,
@@ -107,6 +113,7 @@ impl IntoResponse for Error {
             Self::Forbidden => "This request is not permitted.".to_owned(),
             Self::NotFound => "This resource was not found.".to_owned(),
             Self::Conflict => "This action conflicts with the current workspace state.".to_owned(),
+            Self::ReviewRequired => "Review this paid change again before you pay.".to_owned(),
             Self::InvalidInput => "Check the request and try again.".to_owned(),
             Self::LabelRefused { message } => message,
             Self::Unavailable => "The action could not finish. Try again.".to_owned(),

@@ -88,10 +88,17 @@ def run():
         query = urlencode({"tier": selection["tier"], **selection["add_ons"]})
         save_result(config, request(config, "GET", "/checkout/review?" + query))
         return
+    if action == "change":
+        quote_id = config.get("quote_id")
+        if quote_id is None:
+            review = json.loads(outside_repository(config["private_result_file"]).read_text())
+            quote_id = review["quote"]["id"]
+        outcome = request(config, "POST", "/billing/change", {"quote_id": quote_id})
+        save_result(config, {"quote": {"id": quote_id}, "outcome": outcome})
+        return
     commands = {
         "checkout": ("POST", "/checkout", config.get("selection")),
         "return": ("POST", "/checkout/return", {"session_id": config.get("checkout_session_id")}),
-        "change": ("POST", "/billing/change", config.get("selection")),
         "addons": ("PUT", "/billing/add-ons", config.get("add_ons")),
         "portal": ("POST", "/billing/portal", None),
         "free": ("POST", "/billing/move-to-free", None),

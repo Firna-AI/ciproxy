@@ -1,8 +1,8 @@
-//! Paid item changes and durable period-end cancellation.
+//! Paid item changes with authoritative quotes and durable Stripe retries.
 
 use ciproxy_store_interface::billing::commands::{BillingCommand, CommandKind};
+use ciproxy_store_interface::billing::quotes::StoredQuote;
 use ciproxy_store_interface::billing::state::{AddOns, Selection, Tier};
-use ciproxy_store_interface::billing::store::BillingSession;
 use uuid::Uuid;
 
 use crate::access::BillingAccess;
@@ -10,31 +10,21 @@ use crate::error::{Error, Result, ResultExt};
 use crate::stripe::wire::invoice::{BillingReason, InvoiceStatus};
 
 use super::completion::{Completion, classify};
+use super::payment_work::{money_held, new_work};
+use super::quote_source::source;
 use super::runtime::BillingService;
 use super::transition::{selection, terminal};
 use super::view::ChangeOutcome;
 
 #[derive(Clone, Copy)]
 enum ChangeIntent {
-    Tier(Selection),
+    Quote(Uuid),
     AddOns(AddOns),
 }
 
-impl ChangeIntent {
-    fn resolve(self, confirmed_tier: Tier) -> Selection {
-        match self {
-            Self::Tier(selection) => selection,
-            Self::AddOns(add_ons) => Selection {
-                tier: confirmed_tier,
-                add_ons,
-            },
-        }
-    }
-}
-
 impl BillingService {
-    pub(super) fn change(&self, access: BillingAccess, wanted: Selection) -> Result<ChangeOutcome> {
-        self.change_items(access, ChangeIntent::Tier(wanted))
+    pub(super) fn change(&self, access: BillingAccess, quote_id: Uuid) -> Result<ChangeOutcome> {
+        self.change_items(access, ChangeIntent::Quote(quote_id))
     }
 
     pub(super) fn change_add_ons(
@@ -47,21 +37,31 @@ impl BillingService {
 
     fn change_items(&self, access: BillingAccess, intent: ChangeIntent) -> Result<ChangeOutcome> {
         let workspace = access.require_payer()?;
-        if matches!(
-            intent,
-            ChangeIntent::Tier(Selection {
-                tier: Tier::Free,
-                ..
-            })
-        ) {
-            return Err(Error::PaidTierRequired);
-        }
         let mut session = self.lock(workspace)?;
         let mut record = session.record().internal()?;
+        let quote = match intent {
+            ChangeIntent::Quote(id) => {
+                let quote = session.quote(id).internal()?.ok_or(Error::ReviewRequired)?;
+                if let Some(id) = quote.command_id {
+                    if !record
+                        .command
+                        .as_ref()
+                        .is_some_and(|command| command.id == id && owns_quote(command, &quote))
+                    {
+                        return Err(Error::ReviewRequired);
+                    }
+                } else if self.clock.now() >= quote.expires_at {
+                    return Err(Error::ReviewRequired);
+                }
+                Some(quote)
+            }
+            ChangeIntent::AddOns(_) => None,
+        };
         if record.state.tier == Tier::Free {
-            return Err(match intent {
-                ChangeIntent::Tier(_) => Error::SubscriptionRequired,
-                ChangeIntent::AddOns(_) => Error::PaidTierRequired,
+            return Err(if quote.is_some() {
+                Error::ReviewRequired
+            } else {
+                Error::PaidTierRequired
             });
         }
         let current = self.current_subscription(&mut *session, &record.state)?;
@@ -83,20 +83,37 @@ impl BillingService {
                 self.clock.now(),
             )
             .internal()?;
+        self.observe_payments(&mut *session, &current);
         if terminal(&current) {
-            return Err(Error::SubscriptionRequired);
-        }
-        let wanted = intent.resolve(baseline.tier);
-        let original_retry = record
-            .command
-            .as_ref()
-            .is_some_and(|command| match command.kind {
-                CommandKind::Change { selection, .. } => {
-                    selection == wanted && progress == Some(Completion::Applied)
-                }
-                CommandKind::Cancel | CommandKind::Checkout { .. } => false,
+            return Err(if quote.is_some() {
+                Error::ReviewRequired
+            } else {
+                Error::SubscriptionRequired
             });
-        if original_retry {
+        }
+        let wanted = match intent {
+            ChangeIntent::Quote(_) => quote.as_ref().ok_or(Error::ReviewRequired)?.selection,
+            ChangeIntent::AddOns(add_ons) => Selection {
+                tier: baseline.tier,
+                add_ons,
+            },
+        };
+        if quote
+            .as_ref()
+            .is_some_and(|quote| quote.command_id.is_some())
+        {
+            if progress == Some(Completion::Applied) {
+                return Ok(ChangeOutcome::Applied(baseline));
+            }
+            if progress.is_some_and(Completion::finished) {
+                return Err(Error::ReviewRequired);
+            }
+        } else if quote.is_none()
+            && record.command.as_ref().is_some_and(|command| {
+                matches!(command.kind, CommandKind::Change {selection, ..} if selection == wanted)
+                    && progress == Some(Completion::Applied)
+            })
+        {
             return Ok(ChangeOutcome::Applied(baseline));
         }
         let mut command = match record
@@ -104,15 +121,33 @@ impl BillingService {
             .as_ref()
             .filter(|_| !progress.is_some_and(Completion::finished))
         {
-            Some(command) if matches!(command.kind, CommandKind::Change { selection, .. } if selection == wanted) => {
+            Some(command)
+                if match &quote {
+                    Some(quote) => owns_quote(command, quote),
+                    None => {
+                        matches!(command.kind, CommandKind::Change {selection, quote: None, ..} if selection == wanted)
+                    }
+                } =>
+            {
                 command.clone()
             }
             Some(_) => return Err(Error::PaymentConfirming),
             None => {
+                if quote.is_some() && record.removal_cancel_requested {
+                    return Err(Error::PaymentConfirming);
+                }
                 if current.pending_update.is_some() {
                     return Err(Error::PaymentConfirming);
                 }
-                if selection(&current)? == wanted {
+                if let Some(quote) = &quote {
+                    if session.payments().internal()?.iter().any(money_held) {
+                        return Err(Error::PaymentConfirming);
+                    }
+                    if quote.source != source(&current)? || self.clock.now() >= quote.expires_at {
+                        return Err(Error::ReviewRequired);
+                    }
+                    self.validate_offset(quote)?;
+                } else if selection(&current)? == wanted {
                     return Err(Error::CurrentTier);
                 }
                 let command = BillingCommand {
@@ -121,20 +156,45 @@ impl BillingService {
                     payment_expires_at: None,
                     kind: CommandKind::Change {
                         selection: wanted,
-                        upgrade: baseline.tier == Tier::Team && wanted.tier == Tier::Business,
+                        upgrade: quote.as_ref().map_or(
+                            baseline.tier == Tier::Team && wanted.tier == Tier::Business,
+                            |quote| quote.upgrade,
+                        ),
+                        quote: quote.as_ref().map(|quote| quote.payment.clone()),
                     },
                 };
-                session.save_command(&command).internal()?;
+                if let Some(quote) = &quote {
+                    if !session
+                        .consume_quote(
+                            quote.payment.id,
+                            &command,
+                            &new_work(workspace, quote, &command),
+                        )
+                        .internal()?
+                    {
+                        return Err(Error::ReviewRequired);
+                    }
+                } else {
+                    session.save_command(&command).internal()?;
+                }
                 command
             }
         };
         let current = if selection(&current)? == wanted || current.pending_update.is_some() {
             current
         } else {
-            match self.stripe.change(&current, wanted, &command) {
+            let send = match &quote {
+                Some(quote) => self.prepare_payment(&mut *session, quote, &command, &current)?,
+                None => true,
+            };
+            match if send {
+                self.stripe.change(&current, wanted, &command)
+            } else {
+                self.current_subscription(&mut *session, &baseline)
+            } {
                 Ok(current) => current,
                 Err(error) => {
-                    self.release_rejected(&mut *session, &error)?;
+                    self.payment_failure(&mut *session, &command, &error)?;
                     return Err(error);
                 }
             }
@@ -152,6 +212,7 @@ impl BillingService {
                 self.clock.now(),
             )
             .internal()?;
+        self.observe_payments(&mut *session, &current);
         if progress == Completion::Ended {
             return Err(Error::SubscriptionRequired);
         }
@@ -168,95 +229,8 @@ impl BillingService {
                 .and_then(|invoice| invoice.hosted_invoice_url),
         })
     }
+}
 
-    pub(super) fn move_to_free(&self, access: BillingAccess) -> Result<()> {
-        let workspace = access.require_payer()?;
-        let mut session = self.lock(workspace)?;
-        self.cancel_subscription(&mut *session, false)
-    }
-
-    pub(super) fn reconcile_removal(&self, workspace: Uuid) -> Result<()> {
-        let mut session = self.lock(workspace)?;
-        self.cancel_removed(&mut *session)
-    }
-
-    pub(super) fn cancel_removed(&self, session: &mut dyn BillingSession) -> Result<()> {
-        let record = session.record().internal()?;
-        if !record.removal_cancel_requested {
-            return Ok(());
-        }
-        if record.state.tier == Tier::Free {
-            let pending_checkout = record
-                .command
-                .as_ref()
-                .is_some_and(|command| matches!(command.kind, CommandKind::Checkout { .. }));
-            if !pending_checkout {
-                session
-                    .commit(None, None, false, true, self.clock.now())
-                    .internal()?;
-            }
-            return Ok(());
-        }
-        self.cancel_subscription(session, true)
-    }
-
-    fn cancel_subscription(&self, session: &mut dyn BillingSession, removal: bool) -> Result<()> {
-        let mut record = session.record().internal()?;
-        let current = self.current_subscription(session, &record.state)?;
-        let (current, baseline) =
-            self.reconcile_subscription(session, &record.state, current, None)?;
-        if let Some(command) = record.command.as_mut() {
-            self.capture_pending_expiry(session, &baseline, command, &current)?;
-        }
-        let completed = record
-            .command
-            .as_ref()
-            .is_some_and(|command| classify(command, &current, self.clock.now()).finished());
-        session
-            .commit(
-                Some(&baseline),
-                None,
-                completed,
-                removal && (terminal(&current) || current.cancel_at_period_end),
-                self.clock.now(),
-            )
-            .internal()?;
-        if terminal(&current) || current.cancel_at_period_end {
-            return Ok(());
-        }
-        let mut command = match record.command.as_ref().filter(|_| !completed) {
-            Some(command) if matches!(command.kind, CommandKind::Cancel) => command.clone(),
-            Some(command) if matches!(command.kind, CommandKind::Checkout { .. }) => {
-                return Err(Error::PaymentConfirming);
-            }
-            _ => {
-                let command = BillingCommand {
-                    id: self.clock.command_id(),
-                    started_at: self.clock.now(),
-                    payment_expires_at: None,
-                    kind: CommandKind::Cancel,
-                };
-                session.save_command(&command).internal()?;
-                command
-            }
-        };
-        let current = match self.stripe.cancel(&current.id, command.id) {
-            Ok(current) => current,
-            Err(error) => {
-                self.release_rejected(session, &error)?;
-                return Err(error);
-            }
-        };
-        let (current, state) = self.reconcile_subscription(session, &baseline, current, None)?;
-        self.capture_pending_expiry(session, &state, &mut command, &current)?;
-        session
-            .commit(
-                Some(&state),
-                None,
-                classify(&command, &current, self.clock.now()).finished(),
-                removal,
-                self.clock.now(),
-            )
-            .internal()
-    }
+fn owns_quote(command: &BillingCommand, quote: &StoredQuote) -> bool {
+    matches!(&command.kind, CommandKind::Change {quote: Some(payment), ..} if payment.id == quote.payment.id)
 }

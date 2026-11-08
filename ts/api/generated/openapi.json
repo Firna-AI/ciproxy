@@ -3105,7 +3105,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PlanSelection"
+                "$ref": "#/components/schemas/PaidChangePayment"
               }
             }
           },
@@ -13952,6 +13952,17 @@
             "type": "boolean",
             "description": "Paid changes use Stripe's prorated saved-card charge."
           },
+          "quote": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PaidQuoteReference",
+                "description": "Authoritative paid review, absent for an initial Free Checkout."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "today_cents": {
             "$ref": "#/components/schemas/Cents",
             "description": "Initial Checkout payment in integer US cents."
@@ -15441,6 +15452,40 @@
           }
         }
       },
+      "PaidChangePayment": {
+        "type": "object",
+        "description": "A paid change uses only the quote selected during review.",
+        "required": [
+          "quote_id"
+        ],
+        "properties": {
+          "quote_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Authoritative quote identity. Selection and amounts stay on the server."
+          }
+        }
+      },
+      "PaidQuoteReference": {
+        "type": "object",
+        "description": "The server-owned quote which permits one paid change.",
+        "required": [
+          "id",
+          "expires_at"
+        ],
+        "properties": {
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Exclusive deadline for starting its payment."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Opaque workspace-owned quote identifier."
+          }
+        }
+      },
       "PaymentOutcome": {
         "oneOf": [
           {
@@ -15905,6 +15950,7 @@
           "access_denied",
           "not_found",
           "conflict",
+          "review_required",
           "invalid_request",
           "github_label_refused",
           "unavailable",

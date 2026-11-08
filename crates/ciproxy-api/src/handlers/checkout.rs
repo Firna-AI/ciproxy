@@ -13,8 +13,8 @@ use crate::pages::PageServices;
 use crate::state::ApiState;
 use crate::wire::access::{Success, WorkspacePath};
 use crate::wire::billing::{
-    CheckoutReturn, CheckoutReturnPage, CheckoutReviewPage, CheckoutReviewQuery, PaymentOutcome,
-    PlanAddOns, PlanSelection, PlanTier, PortalLink,
+    CheckoutReturn, CheckoutReturnPage, CheckoutReviewPage, CheckoutReviewQuery, PaidChangePayment,
+    PaidQuoteReference, PaymentOutcome, PlanAddOns, PlanSelection, PlanTier, PortalLink,
 };
 use crate::wire::money::Cents;
 
@@ -73,27 +73,41 @@ pub(crate) async fn review(
     let access = billing_views::access(workspace, context.role);
     let pages = services(pages)?;
     let prorated = context.record.state.tier != ciproxy_store_interface::billing::state::Tier::Free;
-    let review = if prorated {
+    let (review, period, quote) = if prorated {
         let provider = pages.paid_review.clone().ok_or(Error::Unavailable)?;
         let at = context.at;
-        billing_call::result(
+        let quote = billing_call::result(
             tokio::task::spawn_blocking(move || provider.review(access, selected, at))
                 .await
                 .internal()?,
-        )?
+        )?;
+        (
+            quote.amounts,
+            quote.period,
+            Some(PaidQuoteReference {
+                id: quote.id,
+                expires_at: quote.expires_at,
+            }),
+        )
     } else {
-        billing_call::call(pages, move |billing| billing.review(access, selected)).await?
+        (
+            billing_call::call(pages, move |billing| billing.review(access, selected)).await?,
+            context.period,
+            None,
+        )
     };
-    let choice = page_context::offer(plan_choice(billing_views::plan(
+    let mut choice = page_context::offer(plan_choice(billing_views::plan(
         selected.tier,
         selected.add_ons,
     )))?;
+    choice.monthly_cents = Cents(i128::from(review.monthly_cents));
     Ok(Json(CheckoutReviewPage {
+        quote,
         choice,
         today_cents: Cents(i128::from(review.today_cents)),
         billing_day: review.billing_day,
         prorated,
-        period_end: context.period.ends_at,
+        period_end: period.ends_at,
         banner: page_context::banner(&mut context)?,
     }))
 }
@@ -139,22 +153,19 @@ pub(crate) async fn returned(
     }))
 }
 
-#[utoipa::path(operation_id="billing_change",post,path="/workspaces/{workspace_id}/billing/change",params(WorkspacePath),request_body=PlanSelection,responses((status=200,body=PaymentOutcome)),security(("session"=[])))]
+#[utoipa::path(operation_id="billing_change",post,path="/workspaces/{workspace_id}/billing/change",params(WorkspacePath),request_body=PaidChangePayment,responses((status=200,body=PaymentOutcome)),security(("session"=[])))]
 pub(crate) async fn change(
     State(state): State<ApiState>,
     Extension(principal): Extension<Arc<Principal>>,
     pages: Option<Extension<Arc<PageServices>>>,
     Path(path): Path<WorkspacePath>,
-    Json(input): Json<PlanSelection>,
+    Json(input): Json<PaidChangePayment>,
 ) -> Result<Json<PaymentOutcome>> {
     let (workspace, context) = context(&state, &principal, path).await?;
     let access = billing_views::access(workspace, context.role);
-    if input.tier == billing_views::tier(context.record.state.tier) {
-        return Err(Error::Conflict);
-    }
     Ok(Json(billing_views::change(
         billing_call::call(services(pages)?, move |billing| {
-            billing.change(access, billing_views::stored(input))
+            billing.change(access, input.quote_id)
         })
         .await?,
     )))
