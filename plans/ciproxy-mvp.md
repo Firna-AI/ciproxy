@@ -1979,6 +1979,20 @@ Answers of 5 November 2026:
   socket error go. A reconnect before the first handoff still means only
   GitHub's cache. There is no guessed time limit; GitHub's job time limit is
   the backstop. Rejected: A and C.
+- Item 108, C with D, 8 November 2026: the paid change sends the same
+  pending credit that the preview counted, Stripe computes the amount, and
+  an alert compares each invoice with its quote. A third fix round of pull
+  request #39 builds it. Rejected: A, B, E, and F.
+- Item 109, C, 8 November 2026: the spend limit notice names the budget
+  month and the day Boat resumes, as Jobs does. Rejected: A and B.
+- Item 110, B, 8 November 2026: History loads pages without a total, and
+  the database applies the filters, the order, and a limit. Each read stays
+  bounded, also the live queue. Rejected: A, C, D, and E.
+- Item 111, A, 8 November 2026: the banners keep today's wording, and the
+  mockups change to it. Rejected: B and C.
+- Item 112, D, 8 November 2026: ciproxy saves the actual size choice when a
+  job starts, and Jobs explains what ran from it. Rejected: the other
+  options.
 - Item 103, A now and B in parallel, 8 November 2026: the agent release is
   a full release, so installs and updates take it. A pre-release channel
   for the preview release server follows, so that a test release reaches no
@@ -4649,6 +4663,9 @@ is now a full release, and the preview release server serves it.
 
 ### 108. Pending credits can change the quoted charge
 
+**Answer, 8 November 2026:** C with D, as a third fix round of pull request
+#39.
+
 - **Severity:** High. **Likelihood:** Common. **Effort:** Medium.
 - **Source:** Review, pull request #39, after its second fix round.
 - **Category:** Product bug.
@@ -4681,6 +4698,8 @@ is now a full release, and the preview release server serves it.
 
 ### 109. The spend limit notice lacks the day it was reached
 
+**Answer, 8 November 2026:** C.
+
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Implementation, Milestone 22, pull request #51.
 - **Category:** Mockup.
@@ -4702,6 +4721,8 @@ is now a full release, and the preview release server serves it.
 - **Action:** ask the user, because the approved mockup changes.
 
 ### 110. History returns every matching job in one response
+
+**Answer, 8 November 2026:** B.
 
 - **Severity:** Medium. **Likelihood:** Rare. **Effort:** Medium.
 - **Source:** Implementation, Milestone 21, pull request #53, its item 16.
@@ -4731,6 +4752,8 @@ is now a full release, and the preview release server serves it.
 
 ### 111. The banners lack the plan and the passed limit
 
+**Answer, 8 November 2026:** A.
+
 - **Severity:** Low. **Effort:** Medium.
 - **Source:** Implementation, Milestone 21, pull request #53, its item 17.
 - **Category:** Mockup.
@@ -4752,6 +4775,8 @@ is now a full release, and the preview release server serves it.
 - **Action:** ask the user, because the approved mockups change.
 
 ### 112. Jobs notices need facts that the API lacks
+
+**Answer, 8 November 2026:** D.
 
 - **Severity:** Low. **Effort:** Medium.
 - **Source:** Implementation, Milestone 21, pull request #53, its item 18.
