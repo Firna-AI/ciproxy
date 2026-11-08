@@ -868,6 +868,30 @@ Live KVM and authenticated job checks remain with the orchestrator.
       The current restart script covers a running job. Add the interrupted
       startup case before claiming its live proof.
       Branch: `conductor/ciproxy-mvp-milestone-13-e2e`.
+      Live run of 8 November 2026 on the 500 GiB test host: 0 passed,
+      4 failed, 13 skipped. No real job started. Evidence:
+      `.context/ciproxy-mvp/own-smoke-live-2026-11-08/`.
+  - [ ] Forward the install arguments to the installed agent, as design
+        call 30 says. The installer of `futex-ai/cli-release` downloads
+        the agent and exits with status 0, but never runs
+        `install --token`. A new pull request there builds the step. Its
+        merge waits for the user's answer to item 114.
+  - [ ] Give the guest a working network. Guests get no DNS answer, so the
+        runner cannot reach GitHub. The agent gives a fixed address and
+        gateway on the kernel command line, and the image also runs DHCP
+        on `eth0`. Prove the cause on the test host first. My call, 8
+        November 2026: the agent's boot arguments stay the one source of
+        the guest address and gateway. Then publish a new image release.
+  - [ ] Release a guest that never received its registration. After an
+        agent restart before delivery, the VM stayed Stopping for 600
+        seconds. My call, 8 November 2026: the agent retires a proven
+        unconfigured guest itself, with the GitHub retirement checks and
+        the running-job protection kept. Reason: the host must not depend
+        on a guest that has no registration.
+  - [ ] Finish the first XFS area setup in one install call. A fresh host
+        needed a second install after four growth passes. My call, 8
+        November 2026: the install finishes the measured growth itself.
+  - [ ] Run every scenario again, with the firewall proof and its reboot.
 
 Owner review of pull request #31, round 1, 6 November 2026: the user chose
 fix now for findings 1 to 8 and fix after the merge for finding 9.
@@ -4887,14 +4911,18 @@ request #39.
   ciproxy builds the server image from the pinned revision, so it needs no
   published `cli-release` release.
 - **Problem:** The change is not on `main`, so ciproxy has no merged
-  revision to pin.
+  revision to pin. The live run of 8 November 2026 also found that the
+  installer never runs the agent with the install arguments. A third pull
+  request there builds design call 30.
 - **Impact if no action:** After launch, a test release of the agent
   reaches every customer machine, because both environments follow full
-  releases only.
-- **Root question:** How does ciproxy get the reviewed channel change into
-  its release server image?
+  releases only. The install command also reports success without an
+  installed machine.
+- **Root question:** How does ciproxy get the reviewed release server
+  changes into its release server image?
 - **Options:**
   - **A.** Merge #6, then update #7 and merge it when its checks pass.
+    Merge the argument pull request when its review finds no problem.
     Publish no release. ciproxy then pins the merged commit. Effort: Small.
   - **B.** Do A, and also merge the release pull request that the release
     automation opens. This publishes the shared crates and the server
