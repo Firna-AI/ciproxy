@@ -1843,6 +1843,16 @@ Answers of 5 November 2026:
   socket error go. A reconnect before the first handoff still means only
   GitHub's cache. There is no guessed time limit; GitHub's job time limit is
   the backstop. Rejected: A and C.
+- Item 94, B, 8 November 2026: the Boat form lets the customer choose the
+  personal wallet or an organization wallet of the key, with the likely one
+  preselected. Rejected: A, because organization accounts must work, and C.
+- Item 95, B, 8 November 2026: each paid review stores its quote on the
+  server. The payment names its quote, and retries keep its proration time.
+  An unknown or outdated quote is refused, and the page asks for a new
+  review. Rejected: A and C.
+- Item 98, A, 8 November 2026: the App gets "Members: read", so that a
+  sign-in can read the person's organization memberships. The App now has
+  four permissions. Rejected: B, C, and D.
 - Items 91 and 92, A, 8 November 2026: the workspace picker shows the
   name and the upgrade warning, and the workspace switch shows the role.
   The mockups change to match. Rejected: B to E of item 91, and B to D of
@@ -4019,6 +4029,12 @@ mockup.
 
 ### 94. The Boat setup cannot connect an organization key
 
+**Answer, 8 November 2026:** B. The user requires personal and organization
+accounts. After the key check, the form lists the wallets that the key can
+use, personal and each organization, and preselects the likely one. Each
+Boat organization has its own wallet. A is dropped, because it supports
+personal accounts only.
+
 - **Severity:** Medium. **Likelihood:** Common. **Effort:** Medium.
 - **Source:** Implementation, Milestone 24, pull request #40, its item 2.
 - **Category:** Product bug.
@@ -4050,6 +4066,8 @@ mockup.
   ciproxy supports.
 
 ### 95. A paid change can charge another amount than its review
+
+**Answer, 8 November 2026:** B.
 
 - **Severity:** High. **Likelihood:** Common. **Effort:** Medium.
 - **Source:** Review, Milestone 18, pull request #39, round 1, its finding 1.
@@ -4158,6 +4176,12 @@ that breaks by hand.
   and a new refusal in the gate needs the user.
 
 ### 98. Sign-in removes the Admin role of a new install
+
+**Answer, 8 November 2026:** A. The App gets the organization permission
+"Members: read", and the protocol and the docs list four permissions. This
+replaces the three permissions of item 54 = E and the security rule that
+the owner check uses no App permission. An added option D, roles without
+GitHub membership, is rejected.
 
 - **Severity:** High. **Likelihood:** Common. **Effort:** Small.
 - **Source:** Implementation, the first live install on the main preview,
