@@ -28,6 +28,7 @@ fn observation_saves_scoped_identity_state_and_first_confirmation_atomically() {
     initial.state = RunnerState::Starting;
     initial.github_id = None;
     let held = OwnRunner {
+        registration_scale_set_id: None,
         requested_size: label.size,
         slot_indices: vec![0],
         runner: initial,

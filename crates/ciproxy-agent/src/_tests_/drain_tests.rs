@@ -13,6 +13,7 @@ use crate::controller::Agent;
 use crate::fixtures::github_decision_sent;
 use crate::fixtures::{applied, controller, vm};
 use crate::state::{MachineState, Mode};
+use crate::terminal_completion::CompletionAction;
 
 #[tokio::test]
 async fn drain_waits_for_confirmed_stop_and_keeps_jobs_until_resume() {
@@ -84,7 +85,12 @@ async fn drain_waits_for_confirmed_stop_and_keeps_jobs_until_resume() {
         applied()
     );
     assert_eq!(agent.state.lock().await.mode, Mode::Removed);
-    assert!(!agent.finished().await);
+    assert!(
+        !agent
+            .complete_removal(CompletionAction::Stop)
+            .await
+            .unwrap()
+    );
     assert_eq!(
         agent
             .control(ControlMessage::Resume {
@@ -104,6 +110,8 @@ async fn drain_waits_for_confirmed_stop_and_keeps_jobs_until_resume() {
 #[tokio::test]
 async fn a_late_job_started_survives_pending_removal_until_runner_exit() {
     let mock = Unimock::new((
+        VmsMock::networks.some_call(matching!()).returns(Ok(Vec::new())),
+        VmsMock::remove_network.some_call(matching!(1)).returns(Ok(())),
         StoreMock::save.each_call(matching!(_)).answers(&|_, _| Ok(())),
         VmsMock::request_stop.some_call(matching!(_)).returns(Ok(())),
         VmsMock::stop.some_call(matching!((record) if record.report.state == RunnerState::Running { job_id: JobId("raced-job".to_owned()) })).returns(Ok(())),
@@ -121,7 +129,12 @@ async fn a_late_job_started_survives_pending_removal_until_runner_exit() {
         agent.state.lock().await.runners[0].report.state,
         RunnerState::Stopping
     );
-    assert!(!agent.finished().await);
+    assert!(
+        !agent
+            .complete_removal(CompletionAction::Stop)
+            .await
+            .unwrap()
+    );
     assert_eq!(
         agent
             .guest(
@@ -146,7 +159,12 @@ async fn a_late_job_started_survives_pending_removal_until_runner_exit() {
             job_id: JobId("raced-job".to_owned())
         }
     );
-    assert!(!agent.finished().await);
+    assert!(
+        !agent
+            .complete_removal(CompletionAction::Stop)
+            .await
+            .unwrap()
+    );
     agent
         .guest(
             GuestProvenance::InitialConfiguration,
@@ -158,5 +176,11 @@ async fn a_late_job_started_survives_pending_removal_until_runner_exit() {
         )
         .await
         .unwrap();
-    assert!(agent.finished().await);
+    assert_eq!(agent.state.lock().await.pending_networks, [1].into());
+    assert!(
+        agent
+            .complete_removal(CompletionAction::Stop)
+            .await
+            .unwrap()
+    );
 }

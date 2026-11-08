@@ -218,6 +218,10 @@ This doc states the cache rules for jobs on
 - When the spare disk has no room for the reservation, or the disk cannot
   attach, the job runs without its Docker disk.
 - Docker then keeps its data on the root disk of the job VM.
+- ciproxy discards a repository Docker disk that fails to mount.
+- The next trusted writer builds a fresh disk.
+- **Decision:** discard the failed disk instead of repairing it for reuse,
+  because rebuilding disposable Docker data loses only time.
 - So a machine whose disk limits its jobs gets few or no Docker disks.
 - **Decision:** an attached Docker disk reserves its data plus the free disk
   of its label. Rejected: a Docker budget, because the 250 GB minimum then

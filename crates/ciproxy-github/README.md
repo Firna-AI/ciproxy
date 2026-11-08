@@ -112,6 +112,11 @@ The [scale-set guide](scale-sets.md) gives repository refresh, the
 managed runner groups, scale-set creation and reconcile, and label
 replacement.
 
+Runner group sync creates or updates the managed name and private-access
+policy. It sets selected repositories through the separate repository
+access endpoint after either operation. The create and update bodies omit
+repository IDs, so repeated syncs use GitHub's supported update fields.
+
 ### Durable demand and registrations
 
 Scale-set `jobId` is a UUID. It is separate from the numeric Actions job
@@ -158,6 +163,8 @@ They cannot claim runner deletion or trigger scale-set replacement.
 The runtime also retries failed webhook deliveries.
 
 `RunnerRegistrations` creates one secret JIT configuration for one runner.
+Its `RegisteredRunner` response retains the exact registration context.
+Callers save that target before they deliver the JIT configuration.
 Send it only to the selected runner. Use the runner's environment variable
 `ACTIONS_RUNNER_INPUT_JITCONFIG`, not a command argument.
 Removal accepts an already absent registration. A busy result tells the
@@ -234,6 +241,8 @@ commands, fixture contracts, and cleanup for the live probes.
 - [src/scale_sets](src/scale_sets) adapts the SDK and raw message polling.
 - [src/registrations.rs](src/registrations.rs) creates and removes JIT
   registrations with explicit busy outcomes.
+- [src/app/bindings.rs](src/app/bindings.rs) reconciles label creation and
+  retirement for API changes, maintenance, resume, and reinstall.
 - [src/assignments.rs](src/assignments.rs) combines saved API metadata,
   scale-message identity, and JIT identity into the agent assignment.
 - [src/persistence](src/persistence) keeps blocking store calls outside the

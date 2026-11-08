@@ -10,6 +10,7 @@ use ciproxy_protocol::resources::VmSize;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_scaler::actions::{Destination, StartReason, StartRunner};
 use ciproxy_scaler::boat::BoatSizeId;
+use ciproxy_scaler::registration::RegistrationTarget;
 use ciproxy_store_interface::boat::BoatAccount;
 use ciproxy_store_interface::overflow::account::{AccountState, SizeOffer};
 use ciproxy_store_interface::overflow::known::KnownSandbox;
@@ -80,6 +81,12 @@ pub(super) fn request() -> StartRequest {
         label_id: id(4),
         scale_set_id: id(5),
         action: StartRunner {
+            target: RegistrationTarget {
+                organization_id: OrganizationId(id(3).to_string()),
+                label_id: id(4).to_string(),
+                scale_set_id: id(5).to_string(),
+                github_id: 53,
+            },
             organization_id: OrganizationId("github-org-42".to_owned()),
             label: LabelName("ciproxy".to_owned()),
             requested_size: VmSize {

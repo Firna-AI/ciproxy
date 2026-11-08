@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the official cache client through local executables on a GitHub runner."""
+"""Run the official cache client through local executables on a stock runner."""
 
 import argparse
 import json
@@ -15,7 +15,7 @@ from runtime import ROOT, Processes, start_cache
 
 
 def original(name):
-    value = os.environ.get("Z" + name[1:]) or os.environ.get(name)
+    value = os.environ.get(name)
     if not value:
         raise RuntimeError(f"missing original runner value for {name}")
     return value

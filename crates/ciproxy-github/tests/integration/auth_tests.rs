@@ -59,6 +59,43 @@ async fn installation_tokens_rotate_and_group_payload_restricts_selected_private
             .unwrap(),
         47
     );
+    for saved_id in [Some(47), None] {
+        let group = rest
+            .restrict_runner_group(19, "customer", "ciproxy-test", &[23], saved_id)
+            .await;
+        assert!(
+            matches!(group, Ok(47)),
+            "runner group sync failed: {group:?}"
+        );
+        assert_eq!(
+            *server
+                .state
+                .resource
+                .selected_repository_ids
+                .lock()
+                .unwrap(),
+            vec![23]
+        );
+    }
+    assert_eq!(
+        rest.restrict_runner_group(19, "customer", "ciproxy-test", &[], Some(47))
+            .await
+            .unwrap(),
+        47
+    );
+    assert_eq!(
+        *server
+            .state
+            .resource
+            .selected_repository_ids
+            .lock()
+            .unwrap(),
+        Vec::<i64>::new()
+    );
+    assert_eq!(
+        server.state.resource.group_creates.load(Ordering::SeqCst),
+        1
+    );
     let requests = server.state.requests.lock().unwrap();
     let token_requests: Vec<_> = requests
         .iter()
@@ -74,11 +111,22 @@ async fn installation_tokens_rotate_and_group_payload_restricts_selected_private
         .unwrap();
     assert_eq!(
         created.2,
-        json!({"name":"ciproxy-test","visibility":"selected","allows_public_repositories":false,"selected_repository_ids":[23]})
+        json!({"name":"ciproxy-test","visibility":"selected","allows_public_repositories":false})
     );
     let selected = requests
         .iter()
         .find(|(method, path, _)| *method == Method::PUT && path.ends_with("47/repositories"))
         .unwrap();
     assert_eq!(selected.2, json!({"selected_repository_ids":[23]}));
+    let updates: Vec<_> = requests
+        .iter()
+        .filter(|(method, path, _)| *method == Method::PATCH && path.ends_with("runner-groups/47"))
+        .collect();
+    assert_eq!(updates.len(), 3);
+    for update in updates {
+        assert_eq!(
+            update.2,
+            json!({"name":"ciproxy-test","visibility":"selected","allows_public_repositories":false})
+        );
+    }
 }

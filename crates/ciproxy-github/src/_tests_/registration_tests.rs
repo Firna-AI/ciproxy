@@ -8,7 +8,9 @@ use unimock::{MockFn, Unimock, matching};
 
 use crate::error::Error;
 use crate::persistence::session::SessionStoreMock;
-use crate::registrations::{RegistrationRetirement, RegistrationService, RunnerRegistrations};
+use crate::registrations::{
+    RegistrationRequest, RegistrationRetirement, RegistrationService, RunnerRegistrations,
+};
 use crate::scale_sets::{JitRegistration, ScaleSetApi, ScaleSetApiMock, ScaleSetFactoryMock};
 
 use super::support::{context, target};
@@ -36,7 +38,16 @@ async fn one_runner_registration_is_secret_and_busy_removal_keeps_job() {
         store: mock.clone(),
         scale_sets: mock,
     };
-    let registration = service.create(target(), "runner-71").await.unwrap();
+    let registration = service
+        .create(
+            RegistrationRequest {
+                workspace_id: target().workspace_id,
+                target: (&context().scale_set).into(),
+            },
+            "runner-71",
+        )
+        .await
+        .unwrap();
     assert_eq!(registration.runner_id, 71);
     assert_eq!(registration.configuration.expose_secret(), "one-use-jit");
     assert!(!format!("{registration:?}").contains("one-use-jit"));

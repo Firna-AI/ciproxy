@@ -243,6 +243,7 @@ fn failures_never_retire_or_retry_running_jobs() {
         "rejected-key",
         "spend-limit",
         "label-removed",
+        "target-unknown",
     ] {
         let mut state = snapshot();
         state.machines[0].runners = vec![running("machine-busy")];
@@ -254,6 +255,10 @@ fn failures_never_retire_or_retry_running_jobs() {
             "rejected-key" => state.boat.refusals = vec![Refusal::RejectedKey],
             "spend-limit" => state.boat.spend.spent = 100,
             "label-removed" => state.labels.clear(),
+            "target-unknown" => {
+                state.machines[0].runners[0].target = None;
+                state.sandboxes[0].runner.as_mut().unwrap().runner.target = None;
+            }
             _ => unreachable!(),
         }
         assert_eq!(decide(&state), vec![], "{case}");

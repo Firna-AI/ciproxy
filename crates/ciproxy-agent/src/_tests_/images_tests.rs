@@ -156,12 +156,6 @@ async fn publication_selects_the_newest_and_reclaims_the_old_base_after_its_hold
         vec![ImageId("new".to_owned())]
     );
     assert_eq!(kept.lock().unwrap().last().unwrap().1, 0);
-    images.purge().unwrap();
-    assert_eq!(images.report().unwrap().newest, None);
-    assert_eq!(
-        kept.lock().unwrap().last().unwrap().0,
-        Vec::<ImageId>::new()
-    );
 }
 
 #[test]

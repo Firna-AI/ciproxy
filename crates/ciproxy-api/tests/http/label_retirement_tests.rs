@@ -11,7 +11,7 @@ use ciproxy_github::listener::{DurableListener, ListenerOptions, ScaleSetListene
 use ciproxy_github::persistence::StoreAdapter;
 use ciproxy_github::persistence::session::{ListenerTarget, SessionStore};
 use ciproxy_github::registrations::{
-    RegistrationRetirement, RegistrationService, RunnerRegistrations,
+    RegistrationRequest, RegistrationRetirement, RegistrationService, RunnerRegistrations,
 };
 use ciproxy_store_interface::dashboard::records::Role;
 use ciproxy_store_interface::github::DemandPhase;
@@ -127,7 +127,15 @@ async fn keeps_completion(restarted: bool) {
         scale_sets: fixture.state.scale_sets.clone(),
     };
     assert!(matches!(
-        registrations.create(target, "new-runner").await,
+        registrations
+            .create(
+                RegistrationRequest {
+                    workspace_id: target.workspace_id,
+                    target: (&set).into()
+                },
+                "new-runner"
+            )
+            .await,
         Err(Error::OrganizationInactive)
     ));
     assert_eq!(

@@ -101,6 +101,7 @@ impl MachineRuntime {
         if protected_ready {
             return Ok(());
         }
+        let input = self.load(workspace_id).await?;
         for job in &input.jobs {
             self.route_job(&input, job).await?;
         }

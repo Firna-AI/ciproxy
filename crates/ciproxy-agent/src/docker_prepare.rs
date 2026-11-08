@@ -69,9 +69,18 @@ impl LinuxDockers {
             }
         }
         if !fresh {
-            self.commands
+            match self
+                .commands
                 .check_filesystem(&path.to_string_lossy())
-                .await?;
+                .await
+            {
+                Ok(()) => {}
+                Err(Error::DockerFilesystem) => {
+                    self.discard_invalid_source(vm, &lease).await?;
+                    return Err(Error::DockerFilesystem);
+                }
+                Err(error) => return Err(error),
+            }
         }
         if fs::metadata(path)
             .context("measure prepared Docker filesystem")?

@@ -7,6 +7,7 @@ use async_trait::async_trait;
 use ciproxy_protocol::agent::{AgentMessage, ControlMessage};
 use ciproxy_protocol::guest::GuestToAgent;
 use ciproxy_protocol::reports::MachineReport;
+use ciproxy_protocol::runners::RunnerState;
 use tokio::sync::Mutex;
 
 use crate::boundaries::{Cache, GuestProvenance, Host, Images, Store, Vms};
@@ -15,10 +16,13 @@ use crate::docker::DockerDisks;
 use crate::error::{Error, Result};
 use crate::mode::ModeAction;
 use crate::state::{MachineState, Mode};
+use crate::terminal_completion::{CompletionAction, UninstallCleanup};
 
 #[cfg_attr(test, unimock::unimock(api = AgentMock))]
 #[async_trait]
 pub(crate) trait Agent: Send + Sync {
+    /// Check terminal networks and finish local cleanup before forgetting identity.
+    async fn complete_removal(&self, action: CompletionAction) -> Result<bool>;
     async fn control_connection(&self, connected: bool) -> Result<()>;
     async fn configuration_lost(&self, runner_id: &str) -> Result<()>;
     async fn restore(&self) -> Result<()>;
@@ -32,10 +36,13 @@ pub(crate) trait Agent: Send + Sync {
         message: GuestToAgent,
     ) -> Result<Option<AgentMessage>>;
     async fn remove(&self) -> Result<()>;
-    async fn finished(&self) -> bool;
 }
 
 pub(crate) struct Controller {
+    /// Serialize admission while host inventory runs outside the state lock.
+    pub(crate) allocation: Mutex<()>,
+    /// Prevent overlapping cleanup attempts from deleting a reused index.
+    pub(crate) network_cleanup: Mutex<()>,
     pub(crate) control_connected: AtomicBool,
     pub(crate) state: Mutex<MachineState>,
     pub(crate) store: Arc<dyn Store>,
@@ -49,6 +56,36 @@ pub(crate) struct Controller {
 
 #[async_trait]
 impl Agent for Controller {
+    async fn complete_removal(&self, action: CompletionAction) -> Result<bool> {
+        let removed_empty = {
+            let state = self.state.lock().await;
+            state.mode == Mode::Removed && state.runners.is_empty()
+        };
+        if !removed_empty {
+            return Ok(false);
+        }
+        self.retry_network_cleanup().await?;
+        let uninstall = matches!(action, CompletionAction::Uninstall(_));
+        if let CompletionAction::Uninstall(UninstallCleanup {
+            preparation,
+            service,
+        }) = action
+        {
+            preparation.remove().await?;
+            service.uninstall()?;
+        }
+        let mut state = self.state.lock().await;
+        let mut next = state.clone();
+        next.identity = None;
+        if uninstall {
+            self.store.clear()?;
+        } else if next != *state {
+            self.store.save(&next)?;
+        }
+        *state = next;
+        Ok(true)
+    }
+
     async fn control_connection(&self, connected: bool) -> Result<()> {
         self.control_connected.store(connected, Ordering::Release);
         if !connected {
@@ -73,7 +110,18 @@ impl Agent for Controller {
         let hardware = self.host.hardware()?;
         let owned = self.state.lock().await.runners.clone();
         for vm in owned {
+            if self.state.lock().await.failed_starts.contains(&vm.local_id)
+                && !matches!(vm.report.state, RunnerState::Running { .. })
+            {
+                if let Err(error) = self.retire(&vm).await {
+                    tracing::warn!(%error, "failed-start VM cleanup remains pending");
+                }
+                continue;
+            }
             self.vms.restore(&vm).await?;
+            if let Err(error) = self.recover_docker(&vm).await {
+                tracing::warn!(%error, "pending Docker recovery will retry");
+            }
         }
         let budget = {
             let state = self.state.lock().await;
@@ -84,13 +132,22 @@ impl Agent for Controller {
         if let Err(error) = self.cache.refresh_budget(self.cache_budget(budget)?).await {
             tracing::warn!(error = %error, "cache budget unavailable; keep jobs running");
         }
-        self.enforce_mode().await
+        self.enforce_mode().await?;
+        self.retry_network_cleanup().await
     }
 
     async fn restore(&self) -> Result<()> {
         let runners = self.state.lock().await.runners.clone();
         for vm in runners {
+            if self.state.lock().await.failed_starts.contains(&vm.local_id)
+                && !matches!(vm.report.state, RunnerState::Running { .. })
+            {
+                continue;
+            }
             self.vms.restore(&vm).await?;
+            if let Err(error) = self.recover_docker(&vm).await {
+                tracing::warn!(%error, "pending Docker recovery will retry");
+            }
         }
         self.enforce_mode().await
     }
@@ -114,11 +171,6 @@ impl Agent for Controller {
 
     async fn remove(&self) -> Result<()> {
         self.change_mode(ModeAction::Remove).await
-    }
-
-    async fn finished(&self) -> bool {
-        let state = self.state.lock().await;
-        state.mode == Mode::Removed && state.runners.is_empty()
     }
 }
 
@@ -149,3 +201,7 @@ mod docker_policy_tests;
 #[cfg(test)]
 #[path = "_tests_/configuration_state_tests.rs"]
 mod configuration_state_tests;
+
+#[cfg(test)]
+#[path = "_tests_/startup_removal_tests.rs"]
+mod startup_removal_tests;

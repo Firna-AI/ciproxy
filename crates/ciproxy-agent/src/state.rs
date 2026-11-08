@@ -1,5 +1,7 @@
 //! Root-only durable identity and VM ownership. Registrations never enter state.
 
+use std::collections::BTreeSet;
+
 use ciproxy_protocol::cache::DockerBudget;
 use ciproxy_protocol::guest::JobPreparation;
 use ciproxy_protocol::identifiers::{MachineId, WorkspaceId};
@@ -53,6 +55,12 @@ pub struct VmRecord {
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 /// The root-only state committed before publishing lifecycle changes.
 pub struct MachineState {
+    /// Failed starts retry VM and disk cleanup before releasing their record.
+    #[serde(default)]
+    pub(crate) failed_starts: BTreeSet<String>,
+    /// Completed VMs release slots while their network indices remain owned.
+    #[serde(default)]
+    pub(crate) pending_networks: BTreeSet<u16>,
     /// Latest hosted spare-disk policy, persisted before any Docker attachment.
     pub(crate) docker_budget: Option<DockerBudget>,
     pub(crate) identity: Option<Identity>,

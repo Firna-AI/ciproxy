@@ -6,6 +6,7 @@ use ciproxy_protocol::identifiers::{LabelName, MachineId, OrganizationId, Runner
 use ciproxy_protocol::resources::VmSize;
 
 use crate::boat::{BoatSizeId, SandboxId};
+use crate::registration::RegistrationTarget;
 
 /// One requested change, with no external work performed by the scaler.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -31,6 +32,8 @@ pub enum Action {
 /// A runner belongs to an organization and label, never a job or repository.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct StartRunner {
+    /// Saved exact binding selected for this start.
+    pub target: RegistrationTarget,
     /// Organization whose scale set will register the runner.
     pub organization_id: OrganizationId,
     /// Label of the runner's scale set.
