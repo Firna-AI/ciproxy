@@ -203,5 +203,9 @@ mod docker_policy_tests;
 mod configuration_state_tests;
 
 #[cfg(test)]
+#[path = "_tests_/unconfigured_retirement_tests.rs"]
+mod unconfigured_retirement_tests;
+
+#[cfg(test)]
 #[path = "_tests_/startup_removal_tests.rs"]
 mod startup_removal_tests;

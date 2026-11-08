@@ -94,6 +94,7 @@ mod persistence;
 mod process;
 mod release_client;
 mod reporting;
+mod retirement;
 mod runtime;
 mod runtime_reports;
 mod runtime_worker;

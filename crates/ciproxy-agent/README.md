@@ -175,6 +175,10 @@ A duplicate delivery starts no second runner.
 The guest Hello carries `configuration_received`. A runner report sets
 `configuration_lost` only when that value is false and this agent process
 holds no pending JIT. An in-flight delivery is therefore not lost.
+After an authorized stop, the agent directly retires a guest with a proven
+lost registration. It ends the VM and returns its capacity without a guest
+notice. Running jobs remain protected. A confirmed registration keeps the
+guest shutdown path.
 
 The [cache and Docker guide](cache-and-docker.md) gives the runner handoff,
 the machine cache service and its listener rules, cache budgets and
@@ -252,6 +256,8 @@ KVM and GitHub smoke checks, and release packaging commands.
   reports.
 - [src/mode.rs](src/mode.rs) owns terminal runtime mode transitions.
 - [src/vms.rs](src/vms.rs) owns separate jailed VM units.
+- [src/retirement.rs](src/retirement.rs) ends proven unconfigured VMs and
+  keeps configured guests on their guarded shutdown path.
 - [src/network.rs](src/network.rs) allocates host-free network indices and
   verifies that cleanup removed their resources.
 - [src/network_lifecycle.rs](src/network_lifecycle.rs) keeps active and
@@ -287,6 +293,7 @@ KVM and GitHub smoke checks, and release packaging commands.
   uninstall entry points. `Uninstall::start` selects direct guarded cleanup
   or VM recovery and drain. `Uninstall::finish` removes the drained area.
 - [src/area.rs](src/area.rs) owns area preparation, repair, and removal.
+  Fresh creation completes measured growth in one install call.
 - [scripts/](scripts/) contains smoke checks and network regression tests.
 
 ### Related Docs

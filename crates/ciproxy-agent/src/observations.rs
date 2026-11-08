@@ -11,7 +11,7 @@ use crate::boundaries::GuestProvenance;
 use crate::cache_authority::CacheAuthority;
 use crate::controller::Controller;
 use crate::error::{Error, Result};
-use crate::state::{Mode, VmRecord};
+use crate::state::Mode;
 
 impl Controller {
     pub(crate) async fn record_configuration(&self, runner_id: &str, lost: bool) -> Result<()> {
@@ -178,41 +178,6 @@ impl Controller {
             }
         };
         Ok(Some(response))
-    }
-
-    pub(crate) async fn request_idle_stop(&self, vm: &VmRecord) -> Result<()> {
-        if matches!(vm.report.state, RunnerState::Running { .. }) {
-            return Ok(());
-        }
-        self.vms.request_stop(vm).await?;
-        let mut state = self.state.lock().await;
-        let mut next = state.clone();
-        if let Some(record) = next
-            .runners
-            .iter_mut()
-            .find(|record| record.local_id == vm.local_id)
-            && !matches!(
-                record.report.state,
-                RunnerState::Running { .. } | RunnerState::Stopping
-            )
-        {
-            record.report.state = RunnerState::Stopping;
-            self.store.save(&next)?;
-            *state = next;
-        }
-        Ok(())
-    }
-
-    pub(crate) async fn retire(&self, vm: &VmRecord) -> Result<()> {
-        self.vms.stop(vm).await?;
-        if let Some(dockers) = &self.dockers {
-            if dockers.pending(vm)? {
-                dockers.discard(vm).await?;
-            }
-            dockers.release(vm)?;
-        }
-        self.cache.release(vm).await?;
-        self.finish_vm_cleanup(vm).await
     }
 }
 

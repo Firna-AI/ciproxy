@@ -101,7 +101,7 @@ impl DiskArea for PersistentArea {
         self.files.directories()?;
         let mut available = self.mounts.available()?;
         if record.phase == Phase::Creating {
-            for _ in 0..4 {
+            loop {
                 let sizing = AreaSizing {
                     host: record.source_capacity,
                     images: record.image_budget,
@@ -119,10 +119,6 @@ impl DiskArea for PersistentArea {
                 self.files.record(&record)?;
                 available = self.mounts.available()?;
             }
-            return Err(repair(
-                "XFS sizing",
-                "Rerun install to finish the owned area growth. Preserve the backing file.",
-            ));
         }
         self.files.record(&record)
     }
@@ -265,3 +261,7 @@ mod area_cleanup_tests;
 #[cfg(test)]
 #[path = "_tests_/area_budget_tests.rs"]
 mod area_budget_tests;
+
+#[cfg(test)]
+#[path = "_tests_/area_growth_tests.rs"]
+mod area_growth_tests;
