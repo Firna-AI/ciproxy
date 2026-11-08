@@ -1479,7 +1479,7 @@ Each screen follows its mockup, as Milestone 19 says.
   - [ ] Orchestrator: integrate the Milestone 21 banners and Plans route.
         Check the over-machine limit and payment priority on these pages.
         Branch: `conductor/m20-machines-and-settings-ui`.
-  - [ ] Orchestrator: after #36 merges, merge
+  - [x] Orchestrator: after #36 merges, merge
         `calummoore/ci-proxy-load-balancer`, regenerate the API files, and
         retarget this pull request. Run the gate on that merged tree.
         Branch: `conductor/m20-machines-and-settings-ui`.
