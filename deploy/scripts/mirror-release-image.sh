@@ -9,8 +9,8 @@ case "${environment}" in
   production) project_id=ciproxy ;;
   *) echo "Unknown environment: ${environment}" >&2; exit 1 ;;
 esac
-revision=30513bd1a6e1
-full_revision=30513bd1a6e15d8e9c1b18f2ed92d1d4dfa11786
+revision=53a1dd342622
+full_revision=53a1dd3426226a9d25defb4a899d3c9a430a3941
 source_image="ghcr.io/futex-ai/cli-release-server:sha-${revision}"
 repository="us-central1-docker.pkg.dev/${project_id}/ciproxy-shared-runtime/cli-release-server"
 destination="${repository}:upstream-${revision}"

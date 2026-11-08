@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apache-2.0. Archive contract from futex-ai/cli-release at 30513bd1a6e1.
+# Apache-2.0. Archive contract from futex-ai/cli-release at 53a1dd342622.
 set -euo pipefail
 
 fail() { printf 'error: %s\n' "$1" >&2; exit 64; }

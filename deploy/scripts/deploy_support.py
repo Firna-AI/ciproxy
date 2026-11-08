@@ -71,7 +71,7 @@ def neg_zones(service, expected_name, expected_zones, namespace="ciproxy-main-pr
     raise RuntimeError(f"GKE did not publish all configured NEG zones for Service {service}.")
 
 
-def helm_values(config, image_digest, runtime_enabled, control_image):
+def helm_values(config, image_digest, runtime_enabled, control_image, environment):
     release = {
         "affinity": {
             "nodeAffinity": {
@@ -86,9 +86,10 @@ def helm_values(config, image_digest, runtime_enabled, control_image):
         },
         "image": {
             "repository": config["runtime_repository"] + "/cli-release-server",
-            "tag": "upstream-30513bd1a6e1@" + image_digest,
+            "tag": "upstream-53a1dd342622@" + image_digest,
         },
         "config": {
+            "releaseChannel": "prerelease" if environment == "main-preview" else "stable",
             "publicReleaseServerUrl": "https://" + config["hosts"]["releases"],
             "installHosts": [config["hosts"]["releases"]],
         },

@@ -96,6 +96,16 @@ bash deploy/scripts/mirror-release-image.sh "$DEPLOY_ENV"
 The operator GitHub account needs read access to `futex-ai/cli-release`.
 Optional `published` mode uses its published image and needs `read:packages`.
 Both environments can use the same immutable digest.
+The pinned upstream revision is
+`53a1dd3426226a9d25defb4a899d3c9a430a3941`. Its installer runs the installed
+binary with the script arguments through `exec`.
+
+After merging a source-pin update, the operator mirrors that revision and
+sets `RELEASE_SERVER_IMAGE_DIGEST` in each selected GitHub environment.
+An old digest still selects the old image bytes. Redeploy with fresh plans,
+then complete the [release-server checks](release-server.md#verify-a-rollout).
+Deploy selects `prerelease` for `main-preview` and `stable` for `production`.
+Production never follows pre-releases. No GitHub variable selects the channel.
 
 ## 4. Set GitHub variables
 
@@ -116,18 +126,18 @@ apply. Never copy preview's central apply identities into production.
 Preview also receives the four image identity variables described in
 [image setup](control-plane-images.md#install-the-repository-grants).
 
-| Variable                      | Initial value                                                                                                                                                   |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ALERT_EMAIL`                 | This environment's alert address.                                                                                                                               |
-| `RELEASE_SERVER_IMAGE_DIGEST` | The mirrored `sha256:` digest from [image setup](#3-push-the-release-image).                                                                                    |
-| `PUBLIC_UPTIME_ENABLED`       | `false` until [HTTPS verification](#10-enable-uptime-alerts).                                                                                                   |
-| `CONTROL_PLANE_RUNTIME_READY` | `false` until [runtime setup](runtime.md) is complete.                                                                                                          |
-| `CONTROL_PLANE_ROLLBACK_IMAGE` | Unset. Set a shared-registry digest in preview only for [an explicit rollback](control-plane-images.md#roll-back-and-resume).                                    |
-| `CDN_SIGNING_KEY_NAME`        | **Unset** until [registration](#9-register-the-cdn-signing-key) prints the real key name.                                                                       |
-| `CIPROXY_APP_ID`              | This environment's public GitHub App ID. Set it before enabling the runtime.                                                                                    |
-| `CIPROXY_APP_CLIENT_ID`       | This environment's public GitHub App OAuth client ID. Its secret stays in the mounted `github-oauth-secret` file.                                               |
-| `CIPROXY_APP_SLUG`            | This environment's GitHub App URL slug. The runtime uses it to build the installation URL.                                                                      |
-| `JOB_IMAGE_MANIFEST_PATH`     | One immutable release path relative to `IMAGE_URL_PREFIX`, such as `<release>/manifest.json`. The manifest and sibling `downloads.json` supply all image facts. |
+| Variable                       | Initial value                                                                                                                                                   |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ALERT_EMAIL`                  | This environment's alert address.                                                                                                                               |
+| `RELEASE_SERVER_IMAGE_DIGEST`  | The mirrored `sha256:` digest from [image setup](#3-push-the-release-image).                                                                                    |
+| `PUBLIC_UPTIME_ENABLED`        | `false` until [HTTPS verification](#10-enable-uptime-alerts).                                                                                                   |
+| `CONTROL_PLANE_RUNTIME_READY`  | `false` until [runtime setup](runtime.md) is complete.                                                                                                          |
+| `CONTROL_PLANE_ROLLBACK_IMAGE` | Unset. Set a shared-registry digest in preview only for [an explicit rollback](control-plane-images.md#roll-back-and-resume).                                   |
+| `CDN_SIGNING_KEY_NAME`         | **Unset** until [registration](#9-register-the-cdn-signing-key) prints the real key name.                                                                       |
+| `CIPROXY_APP_ID`               | This environment's public GitHub App ID. Set it before enabling the runtime.                                                                                    |
+| `CIPROXY_APP_CLIENT_ID`        | This environment's public GitHub App OAuth client ID. Its secret stays in the mounted `github-oauth-secret` file.                                               |
+| `CIPROXY_APP_SLUG`             | This environment's GitHub App URL slug. The runtime uses it to build the installation URL.                                                                      |
+| `JOB_IMAGE_MANIFEST_PATH`      | One immutable release path relative to `IMAGE_URL_PREFIX`, such as `<release>/manifest.json`. The manifest and sibling `downloads.json` supply all image facts. |
 
 These four runtime settings are public variables in each GitHub environment.
 Deploy maps `CIPROXY_APP_ID` to the pod variable `GITHUB_APP_ID`.
