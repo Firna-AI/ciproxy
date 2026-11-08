@@ -4500,3 +4500,126 @@ GitHub membership, is rejected.
 - **Recommendation:** A. The control then edits the real saved number.
 - **Action:** ask the user, because the approved mockup and the product
   differ.
+
+### 103. The preview release server ignores the agent pre-release
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
+- **Category:** Product bug.
+- **Location:** the pinned `cli-release-server`, `github/releases.rs:21`.
+- **Background:** Item 99 = A published the agent as the GitHub pre-release
+  `ciproxy-agent-v0.1.0`. The release server asks GitHub for the latest
+  release, and GitHub leaves pre-releases out of that answer.
+- **Problem:** The release server finds no release, so the install fails.
+- **Impact if no action:** The live check cannot install the agent.
+- **Root question:** How does the preview install the agent release?
+- **Options:**
+  - **A.** Mark `ciproxy-agent-v0.1.0` as a normal release. It then shows as
+    the latest release of the public repository. Effort: Small.
+  - **B.** Add a pre-release channel or a pinned tag to the release server of
+    `futex-ai/cli-release`, and a new pinned server image. Effort: Medium.
+- **Left out:** A copy by hand, because it skips the customer install path.
+- **Wider fix:** B.
+- **Recommendation:** A. It is one change on GitHub, and no customer uses the
+  release server before launch.
+- **Action:** ask the user, because A changes the pre-release choice of item
+  99.
+
+### 104. The test host disk is below the install minimum
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
+- **Category:** Process.
+- **Location:** the host `ciproxy-spike-2` in the GCP project
+  `internal-498318`.
+- **Background:** The install needs at least 250 GB on the agent's file
+  system. Each default job VM takes about 81 GB. The host has a 200 GiB
+  boot disk, which also holds the image build outputs.
+- **Problem:** The installer refuses the host.
+- **Impact if no action:** No live machine check can run.
+- **Root question:** Where does the test host get its job disk?
+- **Options:**
+  - **A.** Grow the boot disk to 500 GiB, and delete build outputs that can
+    be rebuilt. A disk cannot shrink again. Effort: Small.
+  - **B.** Attach a separate 500 GiB data disk at `/var/lib/ciproxy`.
+    Effort: Medium.
+- **Left out:** A smaller image reserve, because it changes an approved
+  default.
+- **Wider fix:** None.
+- **Recommendation:** A. The host is deleted after the tests, so the
+  growth costs about USD 30 a month only while the tests run.
+- **Action:** ask the user, because the host is in another project, and
+  both options add storage cost.
+
+### 105. The sandbox GitHub login cannot write workflow files
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
+- **Category:** Process.
+- **Location:** `~/.local/bin/gh-user` of the orchestrator sandbox.
+- **Background:** The live check needs its workflow file on each test
+  branch. GitHub needs the `workflow` scope to write a workflow file.
+- **Problem:** The sandbox login has `repo` and `read:org` only, so GitHub
+  refuses the writes.
+- **Impact if no action:** The check cannot start its jobs.
+- **Root question:** Which credential writes the workflow files?
+- **Options:**
+  - **A.** Sign the sandbox in again with the `workflow` scope. Effort:
+    Small.
+  - **B.** Create a fine-grained token for the test repositories only, with
+    Contents and Workflows write. Effort: Small.
+  - **C.** The user pushes the prepared files. Effort: Small.
+- **Left out:** None.
+- **Wider fix:** None.
+- **Recommendation:** A. One more GitHub approval, and the sandbox does the
+  rest.
+- **Action:** ask the user, because only the user can grant the scope.
+
+### 106. The Docker disk checks need a paid workspace
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
+- **Category:** Process.
+- **Location:** the billing tier of the test workspace "Firna-AI".
+- **Background:** Docker disks are a Team and Business feature. The test
+  workspace is on Free.
+- **Problem:** The Docker disk check and both Docker recovery checks of
+  Milestone 25 cannot run.
+- **Impact if no action:** These cases stay unproven before launch.
+- **Root question:** How does the live check prove the paid features?
+- **Options:**
+  - **A.** Upgrade the test workspace to Team with a Stripe test-mode
+    checkout, after pull request #39 serves Checkout. Effort: Small.
+  - **B.** Keep Free, and leave these cases unproven. Effort: Small.
+- **Left out:** A tier set by hand in the database, because it skips the
+  billing path.
+- **Wider fix:** None.
+- **Recommendation:** A. The test-mode checkout is also a Milestone 21
+  check.
+- **Action:** ask the user, because A changes the plan of a workspace.
+
+### 107. The cache firewall proof takes over the metadata route
+
+- **Severity:** Medium. **Effort:** Medium.
+- **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
+- **Category:** Test.
+- **Location:** `crates/ciproxy-agent/scripts/cache_egress_network.py:79`.
+- **Background:** The proof adds its own route to the cloud metadata
+  address. Its guide says that the proof fails when the host already has
+  that route. A GCP host has it, with a lower priority than the proof's
+  route.
+- **Problem:** On a GCP host, the proof can divert the host's real metadata
+  and DNS traffic.
+- **Impact if no action:** The proof cannot run safely on the GCP test
+  host.
+- **Root question:** How does the proof check the metadata block on a cloud
+  host?
+- **Options:**
+  - **A.** Change the proof so that it keeps the provider's route and DNS,
+    and still checks the firewall. Effort: Medium.
+  - **B.** Run the proof on another host without that route. Effort: Medium.
+- **Left out:** Skipping the metadata check, because it weakens the proof.
+- **Wider fix:** A.
+- **Recommendation:** A. It works on the hosts that customers use.
+- **Action:** ask the user, because A changes a proof fixture of the
+  security fix, and B needs another machine.
