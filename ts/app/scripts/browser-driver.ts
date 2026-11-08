@@ -54,6 +54,7 @@ export type Page = {
   getByText(text: string | RegExp, options?: { exact?: boolean }): Locator;
   getByLabel(text: string | RegExp, options?: { exact?: boolean }): Locator;
   waitForFunction<A>(check: (arg: A) => boolean, arg: A): Promise<unknown>;
+  evaluate<A, R>(read: (arg: A) => R, arg: A): Promise<R>;
   getByTestId(id: string): Locator;
   keyboard: { press(key: string): Promise<void> };
   screenshot(options: { path: string; fullPage: boolean }): Promise<unknown>;

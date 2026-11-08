@@ -30,8 +30,8 @@ test("a wait save after an accepted key change waits for its read, then keeps th
   const store = app.overflow(workspaceId);
   await store.ensure();
   const connecting = store.connect({
-    apiKey: "replacement-key",
-    limitCents: "10000",
+    api_key: "replacement-key",
+    spend_limit_cents: "10000",
     wallet: "personal",
   });
   await settled();
@@ -88,8 +88,8 @@ test("a page visit during a change reads only after the change and its read", as
   const store = app.overflow(workspaceId);
   await store.ensure();
   const connecting = store.connect({
-    apiKey: "key",
-    limitCents: "10000",
+    api_key: "key",
+    spend_limit_cents: "10000",
     wallet: "personal",
   });
   const visiting = store.load();

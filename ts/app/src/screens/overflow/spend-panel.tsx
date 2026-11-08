@@ -1,10 +1,12 @@
 // The monthly spend limit, with the spend of the month: the costs that Boat
 // confirmed and the costs that it has not confirmed yet, apart. When the API
 // could not read the spend, the panel says so, and the limit still applies
-// and can change. A failed save keeps the typed limit in the field. A new
-// saved limit replaces the field in place, so focus stays on Save.
+// and can change. Until the person types, the field shows the latest saved
+// limit. A typed limit stays until its own save is accepted, also when the
+// saved limit changes, and a failed save keeps it. The field changes in
+// place, so focus stays on Save.
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Input } from "@firna/ui/input";
 
@@ -20,6 +22,7 @@ import { spendFigures } from "../../view/boat.ts";
 import { limitInvalid } from "../../view/boat-failures.ts";
 import { dollarsText, parseDollars } from "../../view/money.ts";
 import { SpendFiguresView } from "../boat/spend-figures.tsx";
+import { useSavedDraft } from "../boat/use-saved-draft.ts";
 import type { PolicyEditor } from "./use-policy.ts";
 
 function SpendUnavailable({ onRetry }: { onRetry: () => void }) {
@@ -49,38 +52,34 @@ export function SpendPanel({
   /** Read the settings again, for a spend that could not be read. */
   onRetry: () => void;
 }) {
-  const saved = dollarsText(limitCents);
-  const [limit, setLimit] = useState(saved);
+  const limit = useSavedDraft(dollarsText(limitCents));
   const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    setLimit(saved);
-    setError(null);
-  }, [saved]);
   const figures = spendFigures(settings);
   const problem = editor.limitProblem;
   const fieldError =
     error ??
     (problem !== null && problem.field !== null ? problem.message : null);
-  const save = () => {
-    const amount = parseDollars(limit);
+  const save = async () => {
+    const amount = parseDollars(limit.text);
     if (!amount.ok) {
       setError(limitInvalid);
       return;
     }
     setError(null);
-    void editor.save("limit", { spend_limit_cents: amount.cents });
+    const change = { spend_limit_cents: amount.cents };
+    limit.settle(await editor.save("limit", change));
   };
   return (
     <Panel title="Monthly spend limit">
       <View style={styles.form}>
         <Input
           label="Limit, US dollars"
-          value={limit}
+          value={limit.text}
           onChangeText={(value) => {
-            setLimit(value);
+            limit.edit(value);
             setError(null);
           }}
-          onSubmitEditing={save}
+          onSubmitEditing={() => void save()}
           inputMode="decimal"
           error={fieldError}
           invalid={fieldError !== null}
@@ -102,7 +101,7 @@ export function SpendPanel({
             tone="primary"
             busy={editor.saving === "limit"}
             disabled={editor.locked && editor.saving !== "limit"}
-            onPress={save}
+            onPress={() => void save()}
           />
         </View>
       </View>

@@ -1,11 +1,17 @@
 // The Boat journeys of the browser smoke: real forms and changes against
 // the fixture API, the focus after each change, and the navigation between
-// Setup, Settings, and Settings under Overflow. The rules behind the copy
-// and the state are Node tests.
+// Setup, Settings, and Settings under Overflow. The Setup connection also
+// checks that the typed key stays masked and private. The rules behind the
+// copy and the state are Node tests.
 import assert from "node:assert/strict";
 
 import { overflowHref, workspaceHref } from "../src/routing/pages.ts";
 import { keyRefused } from "../src/view/boat-failures.ts";
+import {
+  assertKeyMasked,
+  assertKeyPrivate,
+  watchKeyLines,
+} from "./browser-boat-privacy.ts";
 import type { Page } from "./browser-driver.ts";
 import {
   control,
@@ -45,8 +51,8 @@ export async function fieldFocused(page: Page, label: string): Promise<void> {
   }, label);
 }
 
-/** Type the key and the limit, then press Check key. */
-export async function checkKey(
+/** Type the key, and the limit unless it is null. */
+async function typeKey(
   page: Page,
   keyLabel: string,
   key: string,
@@ -58,6 +64,16 @@ export async function checkKey(
       .getByLabel("Monthly spend limit, US dollars", { exact: true })
       .fill(limit);
   }
+}
+
+/** Type the key and the limit, then press Check key. */
+export async function checkKey(
+  page: Page,
+  keyLabel: string,
+  key: string,
+  limit: string | null,
+): Promise<void> {
+  await typeKey(page, keyLabel, key, limit);
   await page.getByRole("button", { name: "Check key", exact: true }).click();
 }
 
@@ -107,11 +123,16 @@ export async function harnessRecord(
 }
 
 async function setupConnect(page: Page, origin: string, width: number) {
+  const keyLines = watchKeyLines(page);
+  const keyField = "Boat API key";
   await control(origin, { scenario: "boat-setup" });
   await page.goto(origin + setupPath, { waitUntil: "domcontentloaded" });
-  await visible(page.getByLabel("Boat API key", { exact: true }));
+  await visible(page.getByLabel(keyField, { exact: true }));
   await viewportControls(page, width);
-  await checkKey(page, "Boat API key", refusedBoatKey, "200");
+  await typeKey(page, keyField, refusedBoatKey, "200");
+  await assertKeyMasked(page, keyField, "before the key check");
+  await assertKeyPrivate(page, keyLines, "before the key check");
+  await page.getByRole("button", { name: "Check key", exact: true }).click();
   await visible(page.getByText(keyRefused, { exact: true }));
   assert.equal(
     await page
@@ -120,7 +141,15 @@ async function setupConnect(page: Page, origin: string, width: number) {
     "200",
     "A refused key keeps the typed limit",
   );
-  await fillConnection(page, "Boat API key", fixtureBoatKey, null);
+  await assertKeyMasked(page, keyField, "after the refused key");
+  await assertKeyPrivate(page, keyLines, "after the refused key");
+  await checkKey(page, keyField, fixtureBoatKey, null);
+  await visible(
+    page.getByRole("radiogroup", { name: "Wallet that Boat bills" }),
+  );
+  await assertKeyMasked(page, keyField, "before Connect Boat");
+  await assertKeyPrivate(page, keyLines, "before Connect Boat");
+  await page.getByRole("button", { name: "Connect Boat", exact: true }).click();
   await visible(
     page.getByText(
       "Connected to the Boat account northstar · spend limit $200 a month",
@@ -129,6 +158,7 @@ async function setupConnect(page: Page, origin: string, width: number) {
   );
   await focusedOn(page, "Run the first job");
   assert.equal(await page.getByLabel("Boat API key").count(), 0);
+  await assertKeyPrivate(page, keyLines, "after the connection");
   assert.deepEqual(await checks(origin), [422, 200]);
   assert.deepEqual(await connections(origin), [200]);
   assert.deepEqual(await harnessRecord(origin, "boatConnectionFields"), [

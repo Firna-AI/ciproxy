@@ -14,7 +14,7 @@
 
 import type { ApiFailure, ApiResult } from "../api/client.ts";
 import type {
-  BoatKeyInput,
+  BoatConnectionWithWallet,
   OverflowEndpoints,
 } from "../api/overflow-endpoints.ts";
 import type {
@@ -51,12 +51,12 @@ export type OverflowStore = {
   /** Check a key and list its wallets. The check saves nothing. */
   checkKey(apiKey: string): Promise<ApiResult<BoatWallets>>;
   /**
-   * Connect a key with a limit. A refused change saves nothing.
+   * Connect a key with a limit and a wallet. A refused change saves nothing.
    * `onAccepted` runs once the API accepted the key, before the new read, so
    * the form can drop the key at once.
    */
   connect(
-    input: BoatKeyInput,
+    request: BoatConnectionWithWallet,
     onAccepted?: () => void,
   ): Promise<ApiResult<Success>>;
   disconnect(): Promise<ApiResult<Success>>;
@@ -170,11 +170,11 @@ export function createOverflowStore(options: {
     },
     checkKey: (apiKey) =>
       queue(() => mutate(() => endpoints.checkBoatKey(workspaceId, apiKey))),
-    connect: (input, onAccepted) =>
+    connect: (request, onAccepted) =>
       queue(() =>
         send(
           "connected",
-          () => endpoints.connectBoat(workspaceId, input),
+          () => endpoints.connectBoat(workspaceId, request),
           onAccepted,
         ),
       ),

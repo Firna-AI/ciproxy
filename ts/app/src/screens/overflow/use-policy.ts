@@ -29,7 +29,8 @@ export type PolicyEditor = {
   locked: boolean;
   waitFailure: FailureCopy | null;
   limitProblem: FieldProblem | null;
-  save(source: PolicySource, edit: PolicyEdit): Promise<void>;
+  /** Save an edit. True when the API accepted it. */
+  save(source: PolicySource, edit: PolicyEdit): Promise<boolean>;
 };
 
 export function usePolicy(
@@ -46,7 +47,7 @@ export function usePolicy(
 
   const save = useCallback(
     async (source: PolicySource, change: PolicyEdit) => {
-      if (running.current) return;
+      if (running.current) return false;
       running.current = true;
       setEdit(change);
       setSaving(source);
@@ -56,7 +57,7 @@ export function usePolicy(
       running.current = false;
       setEdit(null);
       setSaving(null);
-      if (result !== null && result.ok) return;
+      if (result !== null && result.ok) return true;
       if (source === "wait") {
         setWaitFailure(
           result === null ? unsentSave : policySaveFailure(result.failure),
@@ -68,6 +69,7 @@ export function usePolicy(
             : limitSaveProblem(result.failure),
         );
       }
+      return false;
     },
     [store],
   );

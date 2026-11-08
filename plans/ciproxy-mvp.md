@@ -1548,6 +1548,14 @@ Each screen follows its mockup, as Milestone 19 says.
       Setup and Settings, and use the generated key-check types after the
       API workspace merges. That workspace owns the protocol update.
       Branch: `conductor/m22-boat-ui`.
+- [x] Apply the owner's review round 1 at `09dad16`: finding 1 B uses one
+      saved-value and draft helper in both limit forms. Finding 2 A adds
+      privacy checks to one browser connection journey. Finding 3 A uses
+      the generated connection request with a required wallet and removes
+      its handwritten copy and converter. Prove the budget and masking
+      regressions fail before the fixes. The user approved B/A/A on
+      8 November 2026.
+      Branch: `conductor/m22-boat-ui`.
 - [ ] Orchestrator: run `node ts/app/scripts/boat-live-smoke.ts` against the
       preview API. Set `CIPROXY_BOAT_CREDENTIALS_FILE` to the path of a private
       Admin credential file outside the repository. The script reads the

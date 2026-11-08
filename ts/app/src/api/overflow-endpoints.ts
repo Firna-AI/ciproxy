@@ -1,7 +1,7 @@
-// The Boat routes of Setup and Settings under Overflow. The key check and
-// the connection body are built here and nowhere else. The key check saves
+// The Boat routes of Setup and Settings under Overflow. The key check saves
 // nothing: it sends only the key and returns the wallets that the key can
-// use. The connection sends the key, the limit, and the chosen wallet.
+// use. A connection sends the generated request of its caller as it is: the
+// key, the limit, and the chosen wallet.
 
 import type { ApiClient } from "./client.ts";
 import { workspacePath } from "./endpoints.ts";
@@ -9,21 +9,13 @@ import { parseBoatWallets, parseOverflowSettings } from "./parse-overflow.ts";
 import { parseSuccess } from "./parse-session.ts";
 import type { BoatConnection, BoatKeyCheck, OverflowPolicy } from "./schema.ts";
 
-/** What a connection sends: a key, a limit in US cents, and a wallet. */
-export type BoatKeyInput = {
-  apiKey: string;
-  limitCents: string;
-  /** The wallet identity that the key check offered and the person chose. */
-  wallet: string;
-};
-
-export function boatConnection(input: BoatKeyInput): BoatConnection {
-  return {
-    api_key: input.apiKey,
-    spend_limit_cents: input.limitCents,
-    wallet: input.wallet,
-  };
-}
+/**
+ * A connection request that names its wallet. The API connects the personal
+ * wallet when a request names none, so each connection sends the wallet that
+ * the customer chose.
+ */
+export type BoatConnectionWithWallet = BoatConnection &
+  Required<Pick<BoatConnection, "wallet">>;
 
 export function createOverflowEndpoints(client: ApiClient) {
   const overflow = (workspaceId: string) =>
@@ -44,13 +36,8 @@ export function createOverflowEndpoints(client: ApiClient) {
         check,
       );
     },
-    connectBoat: (workspaceId: string, input: BoatKeyInput) =>
-      client.change(
-        "POST",
-        connection(workspaceId),
-        parseSuccess,
-        boatConnection(input),
-      ),
+    connectBoat: (workspaceId: string, request: BoatConnectionWithWallet) =>
+      client.change("POST", connection(workspaceId), parseSuccess, request),
     disconnectBoat: (workspaceId: string) =>
       client.change("DELETE", connection(workspaceId), parseSuccess),
   };

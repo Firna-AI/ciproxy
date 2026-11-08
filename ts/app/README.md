@@ -201,16 +201,24 @@ a policy save, or a disconnect works.
 - `src/screens/overflow` is Settings under Overflow, below the
   [Settings tabs](src/components/settings-tabs.tsx). `src/screens/boat`
   holds the one Boat connection form of Setup and of this page, which masks
-  the key. Its `use-connect-form.ts` runs the two phases, and
-  `wallet-choice.tsx` lists the wallets. The folder also holds the spend
-  figures, which show the confirmed and the unconfirmed costs apart.
+  the key. Its `use-connect-form.ts` runs the two phases and builds the
+  connection request, and `wallet-choice.tsx` lists the wallets. The folder
+  also holds the spend figures, which show the confirmed and the unconfirmed
+  costs apart.
+- [src/screens/boat/use-saved-draft.ts](src/screens/boat/use-saved-draft.ts)
+  holds the value of both limit fields: in the connection form, and in the
+  limit panel of Settings under Overflow. Its rules are in
+  [src/state/saved-draft.ts](src/state/saved-draft.ts). A field shows the
+  latest saved limit until the person types. The typed limit stays until
+  an accepted save of its own form.
 - [src/state/overflow.ts](src/state/overflow.ts) holds the Boat settings of
   a workspace, and runs each read, key check, and change one at a time. It
   never keeps the key. [src/state/key-check.ts](src/state/key-check.ts)
   holds the wallets of the latest key check of a form, so an older answer
   never applies.
   [src/api/overflow-endpoints.ts](src/api/overflow-endpoints.ts) builds the
-  key check and the one connection request.
+  key check. It sends the generated connection request as it is, with a
+  required wallet.
   [src/state/boat-skip.ts](src/state/boat-skip.ts) keeps Skip for now in the
   tab.
 - [src/view/boat.ts](src/view/boat.ts) turns the Boat settings into what the

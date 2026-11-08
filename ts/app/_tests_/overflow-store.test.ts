@@ -65,7 +65,11 @@ test("a connection sends the key, the limit, and the chosen wallet with the CSRF
   const store = app.overflow(workspaceId);
   let callsAtAccept = -1;
   const result = await store.connect(
-    { apiKey: "typed-key", limitCents: "20000", wallet: "boat-org-1002" },
+    {
+      api_key: "typed-key",
+      spend_limit_cents: "20000",
+      wallet: "boat-org-1002",
+    },
     () => {
       callsAtAccept = calls.length;
     },
@@ -100,8 +104,8 @@ test("an accepted change whose read fails is never sent again: Try again only re
   );
   const store = app.overflow(workspaceId);
   const result = await store.connect({
-    apiKey: "k",
-    limitCents: "100",
+    api_key: "k",
+    spend_limit_cents: "100",
     wallet: "personal",
   });
   assert.equal(result.ok, true);
@@ -134,8 +138,12 @@ test("a refused connection saves nothing and reads nothing", async () => {
   const store = app.overflow(workspaceId);
   await store.ensure();
   let accepted = false;
-  const input = { apiKey: "k", limitCents: "100", wallet: "personal" };
-  const result = await store.connect(input, () => {
+  const request = {
+    api_key: "k",
+    spend_limit_cents: "100",
+    wallet: "personal",
+  };
+  const result = await store.connect(request, () => {
     accepted = true;
   });
   assert.deepEqual(result, {

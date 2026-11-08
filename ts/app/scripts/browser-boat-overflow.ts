@@ -1,6 +1,7 @@
 // The journeys of Settings under Overflow: the switch, the wait, and the
 // limit save at once and stay after a reload; a connection, a reconnect, a
-// change of key, and a disconnect move focus to the Boat panel; failed
+// change of key, and a disconnect move focus to the Boat panel; a change of
+// key keeps a limit that the limit panel saved while it was open; failed
 // changes keep the typed values; an accepted connection is never sent again.
 import assert from "node:assert/strict";
 
@@ -105,10 +106,16 @@ async function changeKey(page: Page, origin: string) {
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await focusedOn(page, "Boat");
   await change.click();
+  // The limit panel saves a lower limit while the key change stays open.
+  await page.getByLabel("Limit, US dollars", { exact: true }).fill("100");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await visible(page.getByText("Limit $100", { exact: true }));
   await fillConnection(page, "New Boat API key", fixtureBoatKey, null);
   await visible(page.getByText(connected, { exact: true }));
   await focusedOn(page, "Boat");
   assert.deepEqual(await connections(origin), [200]);
+  // The key change left its limit untouched, so the newer saved limit stays.
+  assert.equal(await page.getByText(/^Limit \$/).textContent(), "Limit $100");
 }
 
 async function disconnect(page: Page, origin: string, width: number) {

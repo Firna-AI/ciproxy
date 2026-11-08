@@ -1,11 +1,14 @@
 // The form of one Boat connection: Check key first, then the wallet choice
 // and Connect Boat. The key check saves nothing and lists the wallets of the
 // key, with the likely wallet picked. A key edit drops the wallets, and the
-// answer of an older check never applies. Connect Boat sends the checked key,
-// the limit, and the chosen wallet, and the form drops the key as soon as
-// the API accepted it. One change runs at a time, and while another Boat
-// change of the workspace runs, the form waits for the pending mark of the
-// store. The limit starts with the saved limit, so a reconnect keeps it.
+// answer of an older check never applies. Connect Boat sends the generated
+// request with the checked key, the limit, and the chosen wallet, and the
+// form drops the key as soon as the API accepted it. One change runs at a
+// time, and while another Boat change of the workspace runs, the form waits
+// for the pending mark of the store. Until the person types a limit, the
+// field shows the latest saved limit, so a reconnect or a key change sends
+// the newest saved limit. A typed limit stays until the API accepts the
+// connection.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -30,6 +33,7 @@ import {
 import { walletOptions, type WalletOption } from "../../view/boat.ts";
 import type { FailureCopy } from "../../view/claim.ts";
 import { dollarsText, parseDollars } from "../../view/money.ts";
+import { useSavedDraft } from "./use-saved-draft.ts";
 
 export type ConnectForm = {
   apiKey: string;
@@ -63,7 +67,11 @@ export function useConnectForm(
   const saved = savedLimitCents === null ? "" : dollarsText(savedLimitCents);
   const pending = useValue(store.pending);
   const [apiKey, setApiKey] = useState("");
-  const [limit, setLimit] = useState(saved);
+  const {
+    text: limitText,
+    edit: editLimit,
+    settle: settleLimit,
+  } = useSavedDraft(saved);
   const [check, setCheck] = useState<KeyCheck>(uncheckedKey);
   const latest = useRef(check);
   const [keyError, setKeyError] = useState<string | null>(null);
@@ -107,17 +115,22 @@ export function useConnectForm(
 
   const connect = useCallback(
     async (key: string, checked: CheckedKey) => {
-      const amount = parseDollars(limit);
+      const amount = parseDollars(limitText);
       setLimitError(amount.ok ? null : limitInvalid);
       setWalletError(checked.chosen === null ? walletMissing : null);
       if (!amount.ok || checked.chosen === null) return;
       const result = await store.connect(
-        { apiKey: key, limitCents: amount.cents, wallet: checked.chosen },
+        {
+          api_key: key,
+          spend_limit_cents: amount.cents,
+          wallet: checked.chosen,
+        },
         () => {
           setApiKey("");
           update(nextAttempt(latest.current));
         },
       );
+      settleLimit(result.ok);
       if (result.ok) {
         onConnected?.();
         return;
@@ -126,7 +139,7 @@ export function useConnectForm(
       if (problem.field === "key") update(nextAttempt(latest.current));
       show(problem);
     },
-    [limit, onConnected, show, store, update],
+    [limitText, onConnected, settleLimit, show, store, update],
   );
 
   const submit = useCallback(async () => {
@@ -155,12 +168,12 @@ export function useConnectForm(
       setWalletError(null);
       update(nextAttempt(latest.current));
     },
-    limit,
+    limit: limitText,
     setLimit(value) {
-      setLimit(value);
+      editLimit(value);
       setLimitError(null);
     },
-    savedLimit: saved !== "" && limit === saved,
+    savedLimit: saved !== "" && limitText === saved,
     wallets:
       check.checked === null ? null : walletOptions(check.checked.wallets),
     wallet: check.checked?.chosen ?? null,
