@@ -5,6 +5,9 @@
 // its slots says so, as design call 34 says. After Clear cache, or a drain
 // that waits for the machine to connect again, a notice says so. Every role
 // sees the machine; only an Admin drains, removes, or changes it.
+// The warm runner count is the saved count in every state, also while the
+// machine drains, is offline, or has no slots; the slots show the warm
+// runners that are ready.
 
 import { Pencil } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -43,6 +46,7 @@ export const machineStates = [
   "clear-requested",
   "saved-offline",
   "no-room",
+  "agent-behind",
 ] as const;
 export type MachineState = (typeof machineStates)[number];
 
@@ -57,6 +61,7 @@ const machineIn: Record<MachineState, [MachineScene, number]> = {
   "clear-requested": ["steady", 0],
   "saved-offline": ["drainSaved", 0],
   "no-room": ["tooSmall", 3],
+  "agent-behind": ["agentBehind", 0],
 };
 
 function machineOf(state: MachineState): Machine {
@@ -115,7 +120,9 @@ export function MachineDetailScreen({
         subtitle={dotJoin(hardware.cpu, hardwareSize(hardware), hardware.disk)}
         actions={admin ? <HeaderActions state={state} /> : undefined}
       />
-      {state === "healthy" || state === "clear-cache" ? null : (
+      {state === "healthy" ||
+      state === "clear-cache" ||
+      state === "agent-behind" ? null : (
         <MachineNotice state={state} machine={machine} admin={admin} />
       )}
       <div className="grid-2">
@@ -133,7 +140,7 @@ export function MachineDetailScreen({
             )}
             <Quantity
               label="Warm runners"
-              value={machine.status === "healthy" ? machine.warmTarget : 0}
+              value={machine.warmTarget}
               caption="Ready for the next job when a slot is free"
               readOnly={!admin}
             />

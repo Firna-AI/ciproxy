@@ -55,6 +55,7 @@ export function LabelForm({
   nameError,
   sizeErrors,
   fit,
+  largestBoat,
   onChange,
 }: {
   draft: LabelDraft;
@@ -66,6 +67,8 @@ export function LabelForm({
   sizeErrors: Partial<Record<SizeField, string>>;
   /** The line that says where jobs of the size run. */
   fit: ReactNode;
+  /** The text of "Run on the largest Boat size", with that size. */
+  largestBoat: string;
   onChange: (next: LabelDraft) => void;
 }) {
   return (
@@ -129,7 +132,7 @@ export function LabelForm({
         />
         <RadioCard
           title="Run on the largest Boat size"
-          body="Jobs run on the largest size of your Boat account, also when it is smaller than the label."
+          body={largestBoat}
           checked={draft.whenNothingFits === "largest_boat"}
           onPress={() =>
             onChange({ ...draft, whenNothingFits: "largest_boat" })

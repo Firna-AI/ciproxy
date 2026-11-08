@@ -188,27 +188,3 @@ export function elsewhereText(
   if (boat) return elsewhereCopy.boat(subject);
   return elsewhereCopy.wait(subject);
 }
-
-/**
- * The jobs of the label ciproxy that the machine runs at a time, by its slots
- * and its disk, as the API computes them; null while the capacity is not
- * known. The API does not say which of the two sets the number, so the page
- * shows the number with no cause.
- */
-export function concurrentJobs(machine: MachineView): number | null {
-  const status = machineStatus(machine);
-  if (status === "offline" || status === "no-slots") return null;
-  const jobs = machine.concurrent_default_jobs ?? null;
-  if (!machine.capacity_known || jobs === null) return null;
-  return Number(jobs);
-}
-
-/** "16 threads · 64 GB · KVM ready · 6 slots": what a new machine reported. */
-export function connectedFacts(machine: MachineView): string {
-  return dotJoin(
-    unbroken(`${machine.threads} threads`),
-    unbroken(`${gigabytes(machine.memory_bytes)} GB`),
-    unbroken("KVM ready"),
-    slotCopy.unreported(machine.slots),
-  );
-}

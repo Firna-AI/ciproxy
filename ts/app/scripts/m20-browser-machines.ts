@@ -7,12 +7,12 @@ import {
   machineFailure,
 } from "./m20-browser-machine-actions.ts";
 import {
-  capture,
   m20Control,
   machinesUrl,
   open,
   type M20Case,
 } from "./m20-browser-fixture.ts";
+import { machineStates, slotJobLinks } from "./m20-browser-machine-states.ts";
 import { machineIds } from "./m20-fixtures-machines.ts";
 
 export function machineCases(origin: string, output: string): M20Case[] {
@@ -26,6 +26,7 @@ export function machineCases(origin: string, output: string): M20Case[] {
         await visible(
           page.getByRole("heading", { name: "forge-01", exact: true }),
         );
+        await slotJobLinks(page);
         await page.reload({ waitUntil: "domcontentloaded" });
         await visible(
           page.getByRole("heading", { name: "forge-01", exact: true }),
@@ -39,24 +40,7 @@ export function machineCases(origin: string, output: string): M20Case[] {
     {
       name: "machine-health-layout",
       async check(page, _context, width) {
-        const states = [
-          [machineIds.offline, "forge-offline"],
-          [machineIds.noKvm, "lab-no-kvm"],
-          [machineIds.noSlots, "lab-no-slots"],
-          [machineIds.diskLimited, "office-mini-1"],
-          [machineIds.unknownCapacity, "forge-preparing"],
-          [machineIds.draining, "forge-draining"],
-        ] as const;
-        await m20Control(origin, "machines");
-        for (const [id, hostname] of states) {
-          await page.goto(machinesUrl(origin, id), {
-            waitUntil: "domcontentloaded",
-          });
-          await visible(
-            page.getByRole("heading", { name: hostname, exact: true }),
-          );
-          await capture(page, width, output, hostname);
-        }
+        await machineStates(page, origin, width, output);
       },
     },
     {

@@ -11,11 +11,25 @@ import { workspaceId } from "../scripts/fixtures-core.ts";
 import { member, membersView } from "./settings-support.ts";
 
 test("a person with no role is a request, and the signed-in person has no Remove", () => {
+  const organizations = [
+    { id: "40000000-0000-4000-8000-000000000001", login: "mokly-ai" },
+    { id: "40000000-0000-4000-8000-000000000002", login: "mokly-labs" },
+  ];
   const model = membersModel(
     membersView([
-      member("101", "mira", "admin", "2026-09-01T09:00:00Z"),
-      member("105", "rowan", null, "2026-11-18T10:00:00Z"),
-      member("103", "nora", "billing", "2026-10-01T23:30:00Z"),
+      member("101", "mira", "admin", "2026-09-01T09:00:00Z", {
+        name: "Mira Chen",
+      }),
+      member("105", "rowan", null, "2026-11-18T10:00:00Z", {
+        name: "Rowan Hale",
+        request_organizations: organizations,
+      }),
+      member("103", "nora", "billing", "2026-10-01T23:30:00Z", {
+        granted_at: "2026-10-03T08:00:00Z",
+      }),
+      member("104", "ellis", "viewer", "2026-10-02T09:00:00Z", {
+        granted_at: null,
+      }),
       member("106", null, null, "2026-11-19T08:00:00Z"),
     ]),
     "mira",
@@ -23,13 +37,27 @@ test("a person with no role is a request, and the signed-in person has no Remove
   );
   assert.deepEqual(model, {
     requests: [
-      { id: "105", name: "rowan", asked: "Asked on 18 November" },
-      { id: "106", name: "GitHub user 106", asked: "Asked on 19 November" },
+      {
+        id: "105",
+        name: "Rowan Hale",
+        caption: "rowan",
+        initials: "RH",
+        asked: "Asked on 18 November\u00a0· member of mokly-ai and mokly-labs",
+      },
+      {
+        id: "106",
+        name: "GitHub user 106",
+        caption: null,
+        initials: "?",
+        asked: "Asked on 19 November",
+      },
     ],
     members: [
       {
         id: "101",
-        name: "mira",
+        name: "Mira Chen",
+        caption: "mira",
+        initials: "MC",
         you: true,
         role: "admin",
         since: "1 September",
@@ -37,9 +65,20 @@ test("a person with no role is a request, and the signed-in person has no Remove
       {
         id: "103",
         name: "nora",
+        caption: null,
+        initials: "N",
         you: false,
         role: "billing",
-        since: "1 October",
+        since: "3 October",
+      },
+      {
+        id: "104",
+        name: "ellis",
+        caption: null,
+        initials: "E",
+        you: false,
+        role: "viewer",
+        since: null,
       },
     ],
   });

@@ -65,13 +65,15 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   own period, which begins on the day the tier begins. Cal Moore installs the
   GitHub App, so he is the first Admin. `members.ts` names the person of each
   role, the owner with the Billing role, and a second Admin.
-- Some screens are what-ifs of November, in `access.ts` and `machines.ts`: a
-  fourth machine, the mini PC office-mini-1, whose disk holds fewer jobs than
-  its slots; Tom Becker suspends or removes the GitHub App; an owner of
-  mokly-labs removes the App from mokly-labs alone; and Jonas Weber leaves
-  the organizations on GitHub. `hardware.ts` holds the slot rule and
-  the disk rule, in which each running job holds its VM disk: the current
-  image with the free disk of its label, as `vm-disk.ts` gives it.
+- Some screens are what-ifs of November, in `access.ts`, `machines.ts`, and
+  `settings.ts`: a fourth machine, the mini PC office-mini-1, whose disk
+  holds fewer jobs than its slots; the agent of hetzner-ax42-1 one release
+  behind the newest; Tom Becker suspends or removes the GitHub App; an owner
+  of mokly-labs removes the App from mokly-labs alone; Jonas Weber leaves
+  the organizations on GitHub; and a setup that skipped Boat, so the labels
+  run on the machines only. `hardware.ts` holds the slot rule and the disk
+  rule, in which each running job holds its VM disk: the current image with
+  the free disk of its label, as `vm-disk.ts` gives it.
 - The return of Add an organization and the inactive organizations are
   what-ifs in `org-links.ts`. In the main story, Cal Moore is an Admin of one
   workspace, so the return links mokly-labs at once. On 2 November, he is also

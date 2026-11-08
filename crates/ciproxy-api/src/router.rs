@@ -6,10 +6,11 @@ use axum::extract::{MatchedPath, Request, State};
 use axum::http::{HeaderMap, HeaderValue, Method, StatusCode, header};
 use axum::middleware::{Next, from_fn_with_state};
 use axum::response::{IntoResponse, Response};
-use axum::{Json, Router};
+use axum::{Extension, Json, Router};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
+use crate::agent_releases::{AgentReleaseClient, AgentReleases};
 use crate::error::{Error, Problem, ProblemCode};
 use crate::handlers::{
     auth, billing_pages, checkout, github_setup, jobs, labels, links, machines, members,
@@ -76,9 +77,16 @@ pub(crate) fn routes() -> OpenApiRouter<ApiState> {
 
 /// Build the complete dashboard router. Mount it under /api at the host root.
 pub fn router(state: ApiState) -> Router {
+    let releases = Arc::new(AgentReleaseClient::new(state.config.download_url.clone()));
+    router_with_agent_releases(state, releases)
+}
+
+/// Build the same router with an explicitly supplied trusted release collaborator.
+pub fn router_with_agent_releases(state: ApiState, releases: Arc<dyn AgentReleases>) -> Router {
     let (router, _) = routes().split_for_parts();
     router
         .fallback(|| async { Error::NotFound })
+        .layer(Extension(releases))
         .layer(from_fn_with_state(state.clone(), protect))
         .with_state(state)
 }

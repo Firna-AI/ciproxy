@@ -1,24 +1,20 @@
-// The machine page: the actions of an Admin for each state, the notice that
-// says why a machine runs no jobs or takes no new ones, and its slots. Every
-// value comes from the MachineView of GET machines. The health, cache, and
-// cost panels are in machines-panels.ts.
+// The machine page: the actions of an Admin for each state, and the notice
+// that says why a machine runs no jobs, takes no new ones, or runs fewer jobs
+// than its slots. Every value comes from the MachineView of GET machines. The
+// slots are in machines-slots.ts, and the health, cache, and cost panels in
+// machines-panels.ts.
 
-import type {
-  MachineCommand,
-  OverflowSettings,
-} from "../api/machine-schema.ts";
-import type { MachineView, SlotState } from "../api/schema.ts";
+import type { MachineCommand } from "../api/machine-schema.ts";
+import type { MachineView } from "../api/schema.ts";
 import type { NoticeTone } from "./page-model.ts";
-import { detailCopy, noticeCopy, slotCopy } from "./machines-copy.ts";
+import { detailCopy, noticeCopy } from "./machines-copy.ts";
 import { dotJoin, gigabytes } from "./machines-format.ts";
+import { diskLimit } from "./machines-capacity.ts";
 import {
-  concurrentJobs,
   contactSince,
   countRunners,
-  elsewhereText,
   hardwareText,
   machineStatus,
-  slotEntries,
 } from "./machines.ts";
 
 /**
@@ -74,7 +70,7 @@ export function headerActions(machine: MachineView): HeaderAction[] {
 }
 
 export type MachineNotice = {
-  key: "offline" | "no-kvm" | "no-slots" | "draining";
+  key: "offline" | "no-kvm" | "no-slots" | "draining" | "disk-limit";
   tone: NoticeTone;
   title: string;
   body: string;
@@ -122,75 +118,29 @@ function statusNotice(machine: MachineView, now: number): MachineNotice | null {
         body: noticeCopy.draining(jobsRunning(machine)),
         fix: false,
       };
-    case "healthy":
-      return null;
+    case "healthy": {
+      const limit = diskLimit(machine);
+      return limit === null
+        ? null
+        : {
+            key: "disk-limit",
+            tone: "warning",
+            title: noticeCopy.diskLimitTitle(host, limit.jobs),
+            body: noticeCopy.diskLimit(limit.vmDisk, limit.jobDisk),
+            fix: false,
+          };
+    }
   }
 }
 
 /**
- * The notice that leads the page: offline, no KVM, no room for a slot, or a
- * drain. A machine whose disk holds fewer jobs than its slots gets no notice
- * yet, because the API does not say whether the disk or the slots set its
- * number of jobs; the slots panel shows that number.
+ * The notice that leads the page: offline, no KVM, no room for a slot, a
+ * drain, or a disk that holds fewer jobs of ciproxy than the slots, when the
+ * API says that the disk sets that number. Each state shows one notice.
  */
 export function machineNotice(
   machine: MachineView,
   now: number,
 ): MachineNotice | null {
   return statusNotice(machine, now);
-}
-
-export type SlotRow = {
-  key: string;
-  label: string;
-  state: SlotState;
-  text: string;
-};
-
-export type SlotsModel =
-  | { kind: "message"; text: string }
-  | {
-      kind: "slots";
-      states: SlotState[];
-      rows: SlotRow[];
-      caption: string;
-      /** The jobs of ciproxy that run at a time, when the API knows it. */
-      fits: string | null;
-    };
-
-const slotText: Readonly<Record<SlotState, string>> = {
-  job: slotCopy.job,
-  warm: slotCopy.warm,
-  free: slotCopy.free,
-};
-
-export function slotsModel(
-  machine: MachineView,
-  machines: readonly MachineView[],
-  summary: OverflowSettings | null,
-): SlotsModel {
-  const status = machineStatus(machine);
-  if (status === "offline")
-    return { kind: "message", text: slotCopy.offlineBody };
-  if (status === "no-slots") {
-    const elsewhere = elsewhereText(machine, machines, summary);
-    return { kind: "message", text: slotCopy.noSlotsBody(elsewhere) };
-  }
-  const entries = slotEntries(machine);
-  if (entries.length === 0) {
-    return { kind: "message", text: slotCopy.unreportedBody };
-  }
-  const jobs = concurrentJobs(machine);
-  return {
-    kind: "slots",
-    states: entries.map((slot) => slot.state),
-    rows: entries.map((slot) => ({
-      key: slot.index,
-      label: slotCopy.row(Number(slot.index) + 1),
-      state: slot.state,
-      text: slotText[slot.state],
-    })),
-    caption: slotCopy.size(machine.slots),
-    fits: jobs === null ? null : slotCopy.fits(jobs),
-  };
 }

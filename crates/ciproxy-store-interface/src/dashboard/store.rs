@@ -3,6 +3,7 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
+use crate::dashboard::facts::{MemberProfile, OrganizationFacts};
 use crate::dashboard::records::{
     AdminClaim, CurrentCostClock, CurrentMachineCost, LoginState, Member, Membership, Role,
     Session, Takeout, User,
@@ -37,6 +38,7 @@ pub trait DashboardStore: Send + Sync {
         memberships: &[Membership],
         session: &Session,
         installation_results: &[PendingInstallationResult],
+        profile_name: Option<&str>,
     ) -> Result<bool>;
     /// Read exact latest authorization claims before this browser's fixed expiry.
     fn dashboard_continuation(&self, session_id: Uuid, at: DateTime<Utc>) -> Result<Vec<Uuid>>;
@@ -94,6 +96,14 @@ pub trait DashboardStore: Send + Sync {
     fn pending_organization_takeouts(&self) -> Result<Vec<Takeout>>;
     /// Confirm remote cleanup of the exact removed installation.
     fn complete_organization_takeout(&self, takeout: &Takeout) -> Result<()>;
+    /// Read retained public profile facts for a proved exact GitHub identity.
+    fn dashboard_member_profile(&self, github_user_id: i64) -> Result<Option<MemberProfile>>;
+    /// Read nullable registration and complete repository observation provenance.
+    fn dashboard_organization_facts(
+        &self,
+        workspace_id: Uuid,
+        organization_id: Uuid,
+    ) -> Result<OrganizationFacts>;
     /// Read machine cost intervals for machine details.
     fn dashboard_machine_costs(&self, workspace_id: Uuid) -> Result<Vec<MachineCost>>;
     /// Change only the warm target of an active machine, without cost history.

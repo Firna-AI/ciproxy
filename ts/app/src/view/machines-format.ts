@@ -24,6 +24,11 @@ export function formatCount(value: number): string {
   return grouped.format(value);
 }
 
+/** An exact decimal-string count, grouped: "9007199254740993" -> "9,007,…". */
+export function formatExactCount(count: string): string {
+  return grouped.format(BigInt(count));
+}
+
 /** A byte count in whole decimal gigabytes, without the unit: "1,024". */
 export function gigabytes(bytes: string): string {
   return formatCount(Math.round(Number(bytes) / 1e9));
@@ -95,6 +100,22 @@ export function formatSince(iso: string, now: number): string {
   if (span < hour) return unit(Math.floor(span / minute), "minute");
   if (span < day) return unit(Math.floor(span / hour), "hour");
   return unit(Math.floor(span / day), "day");
+}
+
+/**
+ * "52s", "2m 05s", "1h 04m": how long a job has run, from the exact seconds
+ * of the API, whole seconds only.
+ */
+export function formatRuntime(exactSeconds: string): string {
+  const total = Math.floor(Number(exactSeconds));
+  const pad = (value: number) => String(value).padStart(2, "0");
+  if (total < 60) return `${total}s`;
+  if (total < 3600) {
+    return unbroken(`${Math.floor(total / 60)}m ${pad(total % 60)}s`);
+  }
+  return unbroken(
+    `${Math.floor(total / 3600)}h ${pad(Math.floor(total / 60) % 60)}m`,
+  );
 }
 
 /** The overflow wait as Settings names it: "At once", "1 minute". */

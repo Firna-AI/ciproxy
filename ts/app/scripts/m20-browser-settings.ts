@@ -10,6 +10,11 @@ import {
   type M20Case,
 } from "./m20-browser-fixture.ts";
 import { fixtureMembers } from "./m20-fixtures-settings.ts";
+import {
+  labelFacts,
+  memberFacts,
+  organizationFacts,
+} from "./m20-browser-settings-facts.ts";
 import { labelCases } from "./m20-browser-labels.ts";
 import { organizationCases } from "./m20-browser-organizations.ts";
 
@@ -22,6 +27,7 @@ export function settingsCases(origin: string, output: string): M20Case[] {
         await visible(
           page.getByRole("button", { name: "Add label", exact: true }),
         );
+        await labelFacts(page, width);
         await capture(page, width, output, "settings-labels");
         await page
           .getByRole("link", { name: "Organizations", exact: true })
@@ -30,22 +36,24 @@ export function settingsCases(origin: string, output: string): M20Case[] {
         await visible(
           page.getByRole("button", { name: "Rename", exact: true }),
         );
+        await organizationFacts(page);
         await capture(page, width, output, "settings-organizations");
         await page.getByRole("link", { name: /^Members/ }).click();
         await page.waitForURL(settingsUrl(origin, "members"));
         await visible(
           page.getByRole("button", {
-            name: "Give access to rowan",
+            name: "Give access to Rowan Hale",
             exact: true,
           }),
         );
         await page.reload({ waitUntil: "domcontentloaded" });
         await visible(
           page.getByRole("button", {
-            name: "Give access to rowan",
+            name: "Give access to Rowan Hale",
             exact: true,
           }),
         );
+        await memberFacts(page, width);
         await capture(page, width, output, "settings-members");
         await page.goBack({ waitUntil: "domcontentloaded" });
         await visible(
@@ -63,11 +71,14 @@ export function settingsCases(origin: string, output: string): M20Case[] {
           settingsUrl(origin, "members"),
           "Settings",
         );
-        await selectRole(page, "rowan", "admin");
+        await selectRole(page, "Rowan Hale", "admin");
         await page
-          .getByRole("button", { name: "Give access to rowan", exact: true })
+          .getByRole("button", {
+            name: "Give access to Rowan Hale",
+            exact: true,
+          })
           .click();
-        const title = "Give rowan the Admin role?";
+        const title = "Give Rowan Hale the Admin role?";
         const dialog = page.getByRole("dialog", { name: title, exact: true });
         await visible(dialog);
         await visible(
@@ -77,9 +88,12 @@ export function settingsCases(origin: string, output: string): M20Case[] {
         );
         await capture(page, width, output, "member-admin-trust-dialog-open");
         await dialogCancel(page, title);
-        await selectRole(page, "rowan", "admin");
+        await selectRole(page, "Rowan Hale", "admin");
         await page
-          .getByRole("button", { name: "Give access to rowan", exact: true })
+          .getByRole("button", {
+            name: "Give access to Rowan Hale",
+            exact: true,
+          })
           .click();
         await visible(dialog);
         await within(dialog)
@@ -87,10 +101,13 @@ export function settingsCases(origin: string, output: string): M20Case[] {
           .click();
         await dialog.waitFor({ state: "hidden" });
         await page
-          .getByRole("button", { name: "Give access to rowan", exact: true })
+          .getByRole("button", {
+            name: "Give access to Rowan Hale",
+            exact: true,
+          })
           .waitFor({ state: "hidden" });
         await visible(
-          page.getByRole("button", { name: "Remove rowan", exact: true }),
+          page.getByRole("button", { name: "Remove Rowan Hale", exact: true }),
         );
       },
     },
@@ -137,7 +154,7 @@ export function settingsCases(origin: string, output: string): M20Case[] {
           .click();
         await visible(
           page.getByRole("button", {
-            name: "Give access to rowan",
+            name: "Give access to Rowan Hale",
             exact: true,
           }),
         );

@@ -1,6 +1,6 @@
 // The GitHub organizations of the workspace: a table on a wide window and
-// cards on a phone. A linked row shows its repository access, Repositories,
-// and Take out while another linked organization stays. An inactive row says
+// cards on a phone. A linked row shows the day it joined, its repository
+// access, Repositories, and Take out while another linked organization stays. An inactive row says
 // why under its name, with the action that clears its hold. A removed row
 // shows the deadline of a new install that keeps its job history, and
 // Install again.
@@ -45,6 +45,9 @@ function OrganizationName({ row }: { row: OrganizationRow }) {
       />
       <View style={styles.personText}>
         <Text style={[text.small, text.strong]}>{row.login}</Text>
+        {row.since === null ? null : (
+          <Text style={text.caption}>{row.since}</Text>
+        )}
         {row.status ? (
           <View style={styles.status}>
             <StatusLabel tone={row.status.tone}>{row.status.text}</StatusLabel>

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { concurrentJobs, joinedFits } from "../src/view/machines-capacity.ts";
 import {
-  concurrentJobs,
   elsewhereText,
   machineFigures,
   machineStatus,
@@ -143,6 +143,15 @@ test("the jobs of ciproxy at a time show only when the API knows them", () => {
   );
   assert.equal(concurrentJobs(machine({ offline: true })), null);
   assert.equal(concurrentJobs(machine({ kvm: false })), null);
+  assert.equal(
+    joinedFits(machine({ concurrent_default_jobs: "6", disk_limited: false })),
+    `6${nbsp}jobs of ciproxy fit at a time.`,
+  );
+  assert.equal(
+    joinedFits(machine({ concurrent_default_jobs: "3", disk_limited: true })),
+    `Its disk holds 3${nbsp}jobs of ciproxy at a time.`,
+  );
+  assert.equal(joinedFits(machine({ concurrent_default_jobs: null })), null);
 });
 
 test("each page of Machines has a static path, with the IDs in the query", () => {

@@ -20,6 +20,15 @@ export function formatDeadline(iso: string, timeZone?: string): string {
   }).format(new Date(iso));
 }
 
+/** "1 September": a day in the time zone of the browser. */
+export function formatDay(iso: string, timeZone?: string): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "long",
+    timeZone,
+  }).format(new Date(iso));
+}
+
 /** "6m 12s", "45s", or "1h 4m": the time between two instants. */
 export function formatDuration(
   startIso: string,

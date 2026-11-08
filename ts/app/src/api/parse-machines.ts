@@ -1,4 +1,5 @@
 // Readers for the machines of a workspace and the one-hour install command.
+// A busy slot carries the dashboard job that the API matched to it, or null.
 
 import {
   array,
@@ -12,6 +13,7 @@ import {
   string,
   time,
 } from "./parse-core.ts";
+import { readJob } from "./parse-jobs.ts";
 import type {
   CacheView,
   DiskView,
@@ -28,6 +30,7 @@ function cache(value: unknown): CacheView {
   return {
     capacity_bytes: decimal(fields.capacity_bytes),
     docker_disk_bytes: decimal(fields.docker_disk_bytes),
+    docker_repositories: decimal(fields.docker_repositories),
     hits_last_7_days: decimal(fields.hits_last_7_days),
     restores_last_7_days: decimal(fields.restores_last_7_days),
     used_bytes: decimal(fields.used_bytes),
@@ -47,6 +50,7 @@ function slot(value: unknown): SlotView {
   const fields = object(value, "slot");
   return {
     index: decimal(fields.index),
+    job: optional(fields.job, readJob),
     job_id: optional(fields.job_id, string),
     runner_id: optional(fields.runner_id, string),
     state: slotState(fields.state),
@@ -56,17 +60,23 @@ function slot(value: unknown): SlotView {
 function machine(value: unknown): MachineView {
   const fields = object(value, "machine");
   return {
+    agent_up_to_date: optional(fields.agent_up_to_date, boolean),
     agent_version: string(fields.agent_version),
     cache: optional(fields.cache, cache),
     capacity_known: boolean(fields.capacity_known),
     concurrent_default_jobs: optional(fields.concurrent_default_jobs, decimal),
+    default_jobs_by_slots: optional(fields.default_jobs_by_slots, decimal),
+    default_root_disk_bytes: optional(fields.default_root_disk_bytes, decimal),
+    disk_limited: optional(fields.disk_limited, boolean),
     disks: array(fields.disks, disk),
     draining: boolean(fields.draining),
     health_old: boolean(fields.health_old),
     hostname: string(fields.hostname),
     id: string(fields.id),
+    job_disk_bytes: optional(fields.job_disk_bytes, decimal),
     kvm: boolean(fields.kvm),
     last_contact_at: optional(fields.last_contact_at, time),
+    latest_agent_version: optional(fields.latest_agent_version, string),
     memory_bytes: decimal(fields.memory_bytes),
     monthly_cost_cents: optional(fields.monthly_cost_cents, decimal),
     occupancy: array(fields.occupancy, slot),

@@ -1,7 +1,8 @@
-// The members of the Members tab: each with the role picker, the day of the
-// role, and Remove, which the row of the signed-in person does not offer. A
-// table on a wide window and cards on a phone. The role picker and the name
-// also serve the requests for access.
+// The members of the Members tab: each with the name from GitHub and the
+// login under it, the role picker, the day of the role, and Remove, which the
+// row of the signed-in person does not offer. A table on a wide window and
+// cards on a phone. The role picker and the name also serve the requests for
+// access.
 
 import { StyleSheet, Text, View } from "react-native";
 import { Avatar } from "@firna/ui/avatar";
@@ -14,8 +15,11 @@ import { colors } from "@ciproxy/tokens";
 import type { WorkspaceRole } from "../../api/schema.ts";
 import { ActionButton } from "../../components/actions.tsx";
 import { text } from "../../components/text.ts";
-import { initial } from "../../view/format.ts";
-import { roleOptions, type MemberRow } from "../../view/settings-members.ts";
+import {
+  roleOptions,
+  type MemberRow,
+  type Person,
+} from "../../view/settings-members.ts";
 
 function isRole(value: string): value is WorkspaceRole {
   return roleOptions.some((option) => option.value === value);
@@ -49,23 +53,32 @@ export function RolePicker({
   );
 }
 
-export function PersonName({ name, you }: { name: string; you: boolean }) {
+export function PersonName({ person, you }: { person: Person; you: boolean }) {
   return (
     <View style={styles.person}>
-      <Avatar
-        label={initial(name)}
-        accessibilityLabel={name}
-        size={28}
-        tone="soft"
-      />
-      <Text style={[text.small, text.strong, styles.name]}>{name}</Text>
-      {you ? (
-        <Badge tone="neutral" variant="outline" size="sm">
-          You
-        </Badge>
-      ) : null}
+      <Avatar label={person.initials} size={28} tone="soft" decorative />
+      <View style={styles.personText}>
+        <View style={styles.nameRow}>
+          <Text style={[text.small, text.strong, styles.name]}>
+            {person.name}
+          </Text>
+          {you ? (
+            <Badge tone="neutral" variant="outline" size="sm">
+              You
+            </Badge>
+          ) : null}
+        </View>
+        {person.caption === null ? null : (
+          <Text style={text.caption}>{person.caption}</Text>
+        )}
+      </View>
     </View>
   );
+}
+
+/** The day of the role, or that it is not known for an older grant. */
+function sinceText(row: MemberRow): string {
+  return row.since ?? "Not known";
 }
 
 export type MemberHandlers = {
@@ -145,10 +158,10 @@ export function MemberList({
         rowKey={(row) => row.id}
         cell={(row, key) => {
           if (key === "member")
-            return <PersonName name={row.name} you={row.you} />;
+            return <PersonName person={row} you={row.you} />;
           if (key === "role") return <Picker row={row} handlers={handlers} />;
           if (key === "since")
-            return <Text style={text.caption}>{row.since}</Text>;
+            return <Text style={text.caption}>{sinceText(row)}</Text>;
           return <Remove row={row} handlers={handlers} />;
         }}
       />
@@ -163,11 +176,15 @@ export function MemberList({
           style={[styles.card, index === 0 && styles.first]}
         >
           <View style={styles.spread}>
-            <PersonName name={row.name} you={row.you} />
+            <PersonName person={row} you={row.you} />
             <Picker row={row} handlers={handlers} />
           </View>
           <View style={styles.spread}>
-            <Text style={text.caption}>Since {row.since}</Text>
+            <Text style={text.caption}>
+              {row.since === null
+                ? "Day of the role not known"
+                : `Since ${row.since}`}
+            </Text>
             <Remove row={row} handlers={handlers} />
           </View>
         </View>
@@ -177,8 +194,15 @@ export function MemberList({
 }
 
 const styles = StyleSheet.create({
-  picker: { minWidth: 120 },
+  picker: { width: 132 },
   person: { flexDirection: "row", alignItems: "center", gap: 10, minWidth: 0 },
+  personText: { flexShrink: 1, gap: 2, minWidth: 0 },
+  nameRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 8,
+  },
   name: { flexShrink: 1 },
   card: {
     gap: 10,

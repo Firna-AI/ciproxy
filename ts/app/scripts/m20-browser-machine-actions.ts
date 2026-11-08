@@ -123,6 +123,10 @@ export async function addMachine(
   await m20Control(origin, "add-machine-connected", false);
   await page.clock.runFor(5001);
   await visible(page.getByText("forge-01 connected", { exact: true }));
+  await visible(page.getByText("office-mini-1 connected", { exact: true }));
+  await visible(
+    page.getByText(/^Its disk holds 3\sjobs of ciproxy at a time\.$/),
+  );
   await capture(page, width, output, "add-machine-connected");
   await page.getByRole("link", { name: "Open Machines", exact: true }).click();
   await page.waitForURL(machinesUrl(origin));

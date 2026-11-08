@@ -225,8 +225,15 @@ impl AccessService {
             browser.had_access = true;
             self.browser_cookie(&browser).await?
         };
+        let profile_name = profile.name;
         let retained = query(self.store.clone(), move |store| {
-            store.establish_dashboard_session(&user, &memberships, &session, &installation_results)
+            store.establish_dashboard_session(
+                &user,
+                &memberships,
+                &session,
+                &installation_results,
+                profile_name.as_deref(),
+            )
         })
         .await?;
         Ok(LoginSuccess {

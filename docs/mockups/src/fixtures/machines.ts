@@ -27,6 +27,11 @@ export type Machine = {
   slots: readonly SlotState[];
   /** The machine can start a VM for each job. */
   kvm: boolean;
+  /**
+   * The saved warm runner count, which an Admin sets on the machine page. It
+   * stays while the machine drains, is offline, or has no slots. The warm
+   * slots are the warm runners that are ready.
+   */
   warmTarget: number;
   cacheUsedGb: number;
   /** The disk of the machine cache now: the job disk that no job VM holds. */
@@ -40,13 +45,15 @@ export type Machine = {
   /** The repositories with a Docker disk on the machine, and their space. */
   dockerDisks: { repositories: number; sizeGb: number };
   lastSeen: string;
+  /** The agent release that the machine reported last. */
+  agentVersion: string;
 };
 
 /** The warm runners that each machine keeps unless the customer changes it. */
 export const defaultWarmRunners = 2;
 
-/** The agent version of every machine, which is the newest. */
-export const agentVersion = "0.4.2";
+/** The newest agent release, which every machine runs unless a what-if says. */
+export const latestAgentVersion = "0.4.2";
 
 /**
  * The job disk that the job VMs leave to the machine cache, which shares it
@@ -88,6 +95,7 @@ function machine(
       sizeGb: [96, 58, 61][index - 1] ?? 0,
     },
     lastSeen: status === "offline" ? "14m ago" : "3s ago",
+    agentVersion: latestAgentVersion,
   };
 }
 
@@ -108,6 +116,7 @@ export const officeMini: Machine = {
   freeDiskGb: 362,
   dockerDisks: { repositories: 0, sizeGb: 0 },
   lastSeen: "3s ago",
+  agentVersion: latestAgentVersion,
 };
 
 /** hetzner-ax42-3 after a firmware update turned virtualization off. */
@@ -134,7 +143,11 @@ export const officePc: Machine = {
   freeDiskGb: 183,
   dockerDisks: { repositories: 0, sizeGb: 0 },
   lastSeen: "3s ago",
+  agentVersion: latestAgentVersion,
 };
+
+/** hetzner-ax42-1 while its agent still reports the release before 0.4.2. */
+const agentBehindAx42: Machine = { ...machine(1, 5, 1), agentVersion: "0.4.1" };
 
 /** The moments that the machine screens show. */
 export const machineScenes = {
@@ -161,6 +174,11 @@ export const machineScenes = {
   ],
   /** office-pc-1 joined as a fourth machine, with no room for a slot. */
   tooSmall: [machine(1, 5, 1), machine(2, 6, 0), machine(3, 4, 2), officePc],
+  /**
+   * Wednesday 18 November, 14:32: release 0.4.2 is out, and the agent of
+   * hetzner-ax42-1 still reports 0.4.1.
+   */
+  agentBehind: [agentBehindAx42, machine(2, 6, 0), machine(3, 4, 2)],
   /** office-mini-1 joined as a fourth machine; Team includes three. */
   fourMachines: [
     machine(1, 5, 1),

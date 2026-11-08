@@ -1491,11 +1491,26 @@ Depends on: 14, 19
 
 Each screen follows its mockup, as Milestone 19 says.
 
-- [ ] Orchestrator: finish the blocked Machines and Settings states after
-      the missing API facts and warm-runner control are settled. Keep
-      Overflow with Milestone 22.
+Answers, 8 November 2026: the user chose B for item 101 and A for item
+102. Item 101 extends the existing page responses with the approved
+machine, job, label, organization, and member facts. The scope now includes
+`ciproxy-api`, `ciproxy-store-interface`, and `ciproxy-store-pg`, with real
+`PgStore` HTTP tests. A needed migration uses version `202611090000` or
+later. Rust owns the response types, and the generator updates TypeScript.
+
+Item 102 keeps the saved warm runner number in the control in every
+machine state. The mockup changes to that rule. The ready runner count
+remains a separate observed fact. PR #39 keeps ownership of the API files
+`checkout.rs`, `job_fit.rs`, `jobs_live.rs`, and `pages.rs`. Milestone 21
+keeps ownership of the Jobs pages.
+
+- [ ] Complete the remaining Machines and Settings states through
+      Milestones 20a and 20b. Keep Overflow with Milestone 22.
       Branch: `conductor/m20-machines-and-settings-ui`.
       Verification evidence: `.context/ciproxy-mvp-m20/verification.md`.
+  - [x] Apply item 102 = A to the approved machine mockups. Show the saved
+        warm runner number in every state.
+        Branch: `conductor/m20-machines-and-settings-ui`.
   - [x] Build Machines, the machine page, and Add machine from the generated
         API responses, with the roles, controls, and recoverable failures.
         Branch: `conductor/m20-machines-and-settings-ui`.
@@ -1519,13 +1534,85 @@ Each screen follows its mockup, as Milestone 19 says.
         `CIPROXY_DASHBOARD_CREDENTIALS_FILE` set to a private credential
         file outside the repository, and `CIPROXY_PLAYWRIGHT_PATH` set.
         Branch: `conductor/m20-machines-and-settings-ui`.
-  - [ ] Orchestrator: integrate the Milestone 21 banners and Plans route.
-        Check the over-machine limit and payment priority on these pages.
+  - [ ] Orchestrator: integrate the Milestone 21 banners, Plans route, and
+        job detail destination. Check the over-machine limit and payment
+        priority on these pages, and follow each canonical slot job link.
         Branch: `conductor/m20-machines-and-settings-ui`.
   - [x] Orchestrator: after #36 merges, merge
         `calummoore/ci-proxy-load-balancer`, regenerate the API files, and
         retarget this pull request. Run the gate on that merged tree.
         Branch: `conductor/m20-machines-and-settings-ui`.
+
+## Milestone 20m: Dashboard fact mockups
+
+Tags: mockup
+
+Depends on: 19
+
+- [x] Align the slot job links and the agent update state with item 101.
+      Add the disconnected Boat label state found during UI integration.
+      Keep the approved initials and removed-organization layout.
+      Branch: `conductor/m20-machines-and-settings-ui`.
+
+## Milestone 20a: Machines and Settings page facts
+
+Depends on: 14, 19
+
+Item 101 = B adds the missing backend facts before the UI uses them.
+The `non-ui implementor` owns this work on the Milestone 20 branch.
+
+Implementation calls, 8 November 2026: the API router supplies the release
+metadata reader from its configured download host. This keeps production
+reads wired without changes to the hosted composition of PR #39. Boat fit
+uses the existing overflow service and trusted image root sizing. Missing
+legacy metadata stays unavailable. A member's grant date is separate from
+the request date, and an unchanged grant keeps its existing date.
+
+The label response separates a known disconnected Boat account from a
+failed or missing observation. Known machine placement stays available
+before Boat connects. An absent catalog makes no claim about size fit.
+
+- [x] Extend the existing page responses with agent update status, Docker
+      disk counts, disk limits, stable job links, label placement and fit,
+      and the organization and member details of the approved mockups.
+      Preserve real sources, unavailable legacy facts, and workspace scope.
+      Branch: `conductor/m20-machines-and-settings-ui`.
+- [x] Add the store queries and durable metadata that these facts need.
+      Keep trusted timestamps and exact job identities. Use only forward
+      migrations from `202611090000` upward when a migration is needed.
+      Branch: `conductor/m20-machines-and-settings-ui`.
+- [x] Test the page responses and their access rules over HTTP with a real
+      `PgStore`. Prove that the new tests fail for the missing behaviour.
+      Branch: `conductor/m20-machines-and-settings-ui`.
+- [x] Regenerate the API types and update the affected crate READMEs.
+      Keep the four PR #39 files unchanged.
+      Branch: `conductor/m20-machines-and-settings-ui`.
+
+## Milestone 20b: Dashboard UI: complete the approved facts
+
+Tags: ui
+
+Depends on: 20m, 20a
+
+The `ui implementor` renders the approved facts from the generated types.
+The existing Machines and Settings screens keep their controls and flows.
+
+- [x] Render every machine fact and job link in the approved states,
+      including offline, draining, limited hardware, and recovery.
+      Branch: `conductor/m20-machines-and-settings-ui`.
+- [x] Render label placement, fit, allocation, and counts, and organization
+      and member details in every approved Settings state.
+      Branch: `conductor/m20-machines-and-settings-ui`.
+- [x] Extend the typed fixtures and behaviour checks for the new facts.
+      Keep assertion-failure proofs and repeat evidence under `.context/`.
+      Branch: `conductor/m20-machines-and-settings-ui`.
+- [x] Run the mockup check and smoke-test the app at 1440, 720, and 390
+      pixels. Run the complete gate with `DATABASE_URL` set.
+      Branch: `conductor/m20-machines-and-settings-ui`.
+- [ ] Commit, push, review the new work, fix confirmed findings, and update
+      ready PR #50 against `calummoore/ci-proxy-load-balancer`. Do not merge
+      the pull request. Keep the wider MVP plan for the other milestones.
+      Branch: `conductor/m20-machines-and-settings-ui`.
 
 ## Milestone 21: Dashboard UI: Jobs, Savings, and billing
 
@@ -4569,6 +4656,10 @@ GitHub membership, is rejected.
 
 **Answer, 8 November 2026:** B.
 
+The existing page responses gain the approved facts.
+Milestones 20a and 20b record the backend and UI work on the Milestone 20
+branch, with the expanded scope and real `PgStore` HTTP tests.
+
 - **Severity:** Medium. **Effort:** Large.
 - **Source:** Implementation, Milestone 20, pull request #50, its item 1.
 - **Category:** Mockup.
@@ -4601,6 +4692,9 @@ GitHub membership, is rejected.
 ### 102. The warm runner control has two meanings
 
 **Answer, 8 November 2026:** A.
+
+The saved number appears in every state, and the approved mockup changes
+to it. Milestone 20 records the work.
 
 - **Severity:** Low. **Effort:** Small.
 - **Source:** Implementation, Milestone 20, pull request #50, its item 2.

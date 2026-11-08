@@ -1,7 +1,10 @@
-// The slots of one machine, each with the job it runs or its warm runner. A
-// long job context wraps to a second line rather than being cut off. A free
-// slot whose job the disk cannot hold says so.
+// The slots of one machine, each with the job it runs or its warm runner. The
+// name of a job opens its job page. A long job context wraps to a second line
+// rather than being cut off. A free slot whose job the disk cannot hold says
+// so.
 
+import { TextLink } from "../../components/actions.tsx";
+import { paths } from "../../components/paths.ts";
 import type { SlotState } from "../../fixtures/machines.ts";
 import { ax42OneSlotJobs } from "../../fixtures/slots.ts";
 
@@ -24,7 +27,7 @@ export function MachineSlots({
             <span className="caption slot-number">Slot {i + 1}</span>
             {job ? (
               <span className="slot-job">
-                <span className="strong">{job.name}</span>
+                <TextLink to={paths.job}>{job.name}</TextLink>
                 <span className="caption">{job.context}</span>
               </span>
             ) : (

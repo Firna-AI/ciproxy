@@ -85,3 +85,11 @@ mod overflow_wallet_tests;
 mod pending_result_tests;
 mod session_failure_tests;
 mod signed_association_tests;
+
+mod m20_machine_tests;
+mod m20_release_peer;
+
+mod m20_member_tests;
+mod m20_organization_tests;
+
+mod m20_label_tests;

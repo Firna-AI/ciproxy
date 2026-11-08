@@ -1,6 +1,6 @@
-// One request for access on the Members tab: the person and the day of the
-// request, the role picker with Viewer picked first, Give access, and
-// Decline.
+// One request for access on the Members tab: the person, the day of the
+// request with the organizations that the person was a member of then, the
+// role picker with Viewer picked first, Give access, and Decline.
 
 import { StyleSheet, Text, View } from "react-native";
 
@@ -30,7 +30,7 @@ export function RequestItem({
   return (
     <View style={styles.request}>
       <View style={styles.requestText}>
-        <PersonName name={row.name} you={false} />
+        <PersonName person={row} you={false} />
         <Text style={text.caption}>{row.asked}</Text>
       </View>
       <View style={styles.requestActions}>

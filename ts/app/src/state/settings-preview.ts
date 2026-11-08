@@ -36,8 +36,9 @@ export type LabelPreview = {
 export const previewDelay = 300;
 
 /**
- * The parts of a label that its machine fit depends on: the size and the
- * switch "Your machines". A change of another part needs no new fit.
+ * The parts of a label that its fit depends on: the size, the switches "Your
+ * machines" and "Boat", and "When nothing fits", which decide the Boat fit
+ * and where the jobs run. A change of the name needs no new fit.
  */
 export function fitKey(input: LabelInput): string {
   return [
@@ -45,6 +46,8 @@ export function fitKey(input: LabelInput): string {
     input.memory_gb,
     input.disk_gb,
     input.allow_machines,
+    input.allow_boat,
+    input.when_nothing_fits,
   ].join("/");
 }
 

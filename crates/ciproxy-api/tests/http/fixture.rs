@@ -8,8 +8,9 @@ use axum::body::Body;
 use axum::http::{Request, Response, StatusCode, header};
 use chrono::Duration;
 use ciproxy_api::access::AccessService;
+use ciproxy_api::agent_releases::AgentReleases;
 use ciproxy_api::crypto::AeadCredentialCipher;
-use ciproxy_api::router::router;
+use ciproxy_api::router::router_with_agent_releases;
 use ciproxy_api::runtime::Runtime;
 use ciproxy_api::state::{ApiConfig, ApiState};
 use ciproxy_gateway::boundary::SystemEntropy;
@@ -32,7 +33,7 @@ use uuid::Uuid;
 use super::database::Database;
 use super::fixture_io::{CallbackOutcome, callback, cookie, oauth_state};
 use super::ports::{Factory, Identity, Remote};
-use super::runtime_inputs::{Events, Inputs};
+use super::runtime_inputs::{Events, Inputs, Releases};
 
 pub(super) struct Browser {
     pub(super) cookie: String,
@@ -40,6 +41,7 @@ pub(super) struct Browser {
 }
 
 pub(super) struct Fixture {
+    pub(super) releases: Arc<dyn AgentReleases>,
     pub(super) access: Arc<AccessService>,
     pub(super) database: Database,
     pub(super) state: ApiState,
@@ -175,6 +177,7 @@ impl Fixture {
             .unwrap();
         remote.sets.lock().unwrap().insert((label.name, 47), 501);
         Self {
+            releases: Arc::new(Releases),
             access,
             database,
             state,
@@ -212,7 +215,10 @@ impl Fixture {
         } else {
             request.body(Body::empty()).unwrap()
         };
-        let response = router(self.state.clone()).oneshot(request).await.unwrap();
+        let response = router_with_agent_releases(self.state.clone(), self.releases.clone())
+            .oneshot(request)
+            .await
+            .unwrap();
         assert_eq!(
             response.headers().get("x-ciproxy-build").unwrap(),
             "http-test-build"
@@ -265,7 +271,7 @@ impl Fixture {
             .body(Body::empty())
             .unwrap();
         let response = callback(
-            router(self.state.clone()),
+            router_with_agent_releases(self.state.clone(), self.releases.clone()),
             request,
             CallbackOutcome::Accepted,
         )

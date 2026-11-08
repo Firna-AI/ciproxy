@@ -25,6 +25,34 @@ async function addLabelDialog(
   return within(dialog);
 }
 
+/**
+ * Without a Boat account, the labels keep the fit of the machines: the list
+ * says Your machines only, and the dialog says that Boat is not connected,
+ * never that a Boat size does not fit.
+ */
+async function labelsWithoutBoat(page: Page, origin: string): Promise<void> {
+  await open(
+    page,
+    origin,
+    "overflow-unconnected",
+    settingsUrl(origin),
+    "Settings",
+  );
+  const [placement] = await page
+    .getByText("Your machines only", { exact: true })
+    .all();
+  assert.ok(placement, "a label without Boat runs on the machines only");
+  await visible(placement);
+  await page
+    .getByRole("button", { name: "Edit ciproxy-8vcpu", exact: true })
+    .click();
+  const dialog = within(
+    page.getByRole("dialog", { name: "Edit ciproxy-8vcpu", exact: true }),
+  );
+  await visible(dialog.getByText(/ Boat is not connected\.$/));
+  assert.equal(await dialog.getByText(/no Boat size fits/i).count(), 0);
+}
+
 export function labelCases(origin: string, output: string): M20Case[] {
   return [
     {
@@ -95,6 +123,17 @@ export function labelCases(origin: string, output: string): M20Case[] {
       async check(page, _context, width) {
         const dialog = await addLabelDialog(page, origin, "label-no-fit");
         await visible(dialog.getByRole("radio", { name: "Wait", exact: true }));
+        // The preview asks after its pause, which the fixture clock runs.
+        await page.clock.runFor(301);
+        await visible(
+          dialog.getByText(
+            /^No machine and no Boat size fits 64\svCPU and 256\sGB$/,
+          ),
+        );
+        await visible(
+          dialog.getByText(/^Jobs run on 16\svCPU and 32\sGB, the largest/),
+        );
+        await visible(dialog.getByText(/each VM has a disk of 261\sGB\.$/));
         await capture(page, width, output, "label-no-fit-dialog");
       },
     },
@@ -115,6 +154,8 @@ export function labelCases(origin: string, output: string): M20Case[] {
           page.getByRole("dialog", { name: "Edit ciproxy-8vcpu", exact: true }),
         );
         await capture(page, width, output, "label-partial-fit-dialog");
+        await labelsWithoutBoat(page, origin);
+        await capture(page, width, output, "label-no-boat-dialog");
       },
     },
     {

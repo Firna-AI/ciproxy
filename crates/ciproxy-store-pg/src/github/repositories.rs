@@ -54,6 +54,13 @@ pub(super) fn replace_on(
             ))
             .execute(connection)?;
     }
+    diesel::update(
+        organizations::table
+            .find(organization_id)
+            .filter(organizations::workspace_id.eq(workspace_id)),
+    )
+    .set(organizations::repositories_observed_at.eq(diesel::dsl::now))
+    .execute(connection)?;
     QueryResult::Ok(())
 }
 

@@ -13,18 +13,28 @@ use crate::state::{ApiState, query};
 use crate::wire::access::{Success, WorkspacePath};
 use crate::wire::settings::{LabelFit, LabelInput, LabelPath, LabelView};
 
-use super::label_views;
+use super::{label_facts::Facts, label_views};
+use crate::pages::PageServices;
 
-pub(super) async fn read(state: &ApiState, workspace: Uuid) -> Result<Vec<LabelView>> {
+pub(super) async fn read(
+    state: &ApiState,
+    workspace: Uuid,
+    pages: Option<&PageServices>,
+) -> Result<Vec<LabelView>> {
     let labels = query(state.store.clone(), move |store| store.labels(workspace)).await?;
     let gateway = state.gateway.clone();
     let machines = tokio::task::spawn_blocking(move || gateway.machines(workspace))
         .await
         .internal()?
         .api()?;
+    let facts = Facts::read(state, workspace, pages).await?;
     Ok(labels
         .into_iter()
-        .map(|label| label_views::label(label, &machines, state.capacity.as_ref()))
+        .map(|label| {
+            let mut view = label_views::label(label, &machines, state.capacity.as_ref());
+            facts.enrich(&mut view);
+            view
+        })
         .collect())
 }
 
@@ -33,12 +43,20 @@ pub(crate) async fn list(
     State(state): State<ApiState>,
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<WorkspacePath>,
+    pages: Option<Extension<Arc<PageServices>>>,
 ) -> Result<Json<Vec<LabelView>>> {
     let workspace_id = state
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
-    Ok(Json(read(&state, workspace_id).await?))
+    Ok(Json(
+        read(
+            &state,
+            workspace_id,
+            pages.as_ref().map(|pages| pages.0.as_ref()),
+        )
+        .await?,
+    ))
 }
 
 #[utoipa::path(operation_id = "labels_preview", post, path = "/workspaces/{workspace_id}/labels/preview", params(WorkspacePath), request_body = LabelInput, responses((status = 200, body = LabelFit)), security(("session" = [])))]
@@ -46,6 +64,7 @@ pub(crate) async fn preview(
     State(state): State<ApiState>,
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<WorkspacePath>,
+    pages: Option<Extension<Arc<PageServices>>>,
     Json(input): Json<LabelInput>,
 ) -> Result<Json<LabelFit>> {
     let workspace_id = state
@@ -53,16 +72,20 @@ pub(crate) async fn preview(
         .require_role(&principal, path.workspace_id, true)
         .await?;
     label_views::stored(state.runtime.identifier(), input.clone())?;
+    let facts = Facts::read(
+        &state,
+        workspace_id,
+        pages.as_ref().map(|pages| pages.0.as_ref()),
+    )
+    .await?;
     let gateway = state.gateway;
     let machines = tokio::task::spawn_blocking(move || gateway.machines(workspace_id))
         .await
         .internal()?
         .api()?;
-    Ok(Json(label_views::fit(
-        &input,
-        &machines,
-        state.capacity.as_ref(),
-    )))
+    let mut fit = label_views::fit(&input, &machines, state.capacity.as_ref());
+    facts.preview(&input, &mut fit);
+    Ok(Json(fit))
 }
 
 #[utoipa::path(operation_id = "labels_create", post, path = "/workspaces/{workspace_id}/labels", params(WorkspacePath), request_body = LabelInput, responses((status = 200, body = LabelView)), security(("session" = [])))]
@@ -70,6 +93,7 @@ pub(crate) async fn create(
     State(state): State<ApiState>,
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<WorkspacePath>,
+    pages: Option<Extension<Arc<PageServices>>>,
     Json(input): Json<LabelInput>,
 ) -> Result<Json<LabelView>> {
     let workspace_id = state
@@ -91,11 +115,15 @@ pub(crate) async fn create(
     .await?;
     state.github.reconcile_labels(workspace_id).await.api()?;
     Ok(Json(
-        read(&state, workspace_id)
-            .await?
-            .into_iter()
-            .find(|saved| saved.id == label.id.to_string())
-            .ok_or(Error::NotFound)?,
+        read(
+            &state,
+            workspace_id,
+            pages.as_ref().map(|pages| pages.0.as_ref()),
+        )
+        .await?
+        .into_iter()
+        .find(|saved| saved.id == label.id.to_string())
+        .ok_or(Error::NotFound)?,
     ))
 }
 
@@ -104,6 +132,7 @@ pub(crate) async fn update(
     State(state): State<ApiState>,
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<LabelPath>,
+    pages: Option<Extension<Arc<PageServices>>>,
     Json(input): Json<LabelInput>,
 ) -> Result<Json<LabelView>> {
     let workspace_id = state
@@ -124,11 +153,15 @@ pub(crate) async fn update(
     })
     .await?;
     Ok(Json(
-        read(&state, workspace_id)
-            .await?
-            .into_iter()
-            .find(|saved| saved.id == path.label_id.to_string())
-            .ok_or(Error::NotFound)?,
+        read(
+            &state,
+            workspace_id,
+            pages.as_ref().map(|pages| pages.0.as_ref()),
+        )
+        .await?
+        .into_iter()
+        .find(|saved| saved.id == path.label_id.to_string())
+        .ok_or(Error::NotFound)?,
     ))
 }
 

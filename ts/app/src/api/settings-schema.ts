@@ -6,6 +6,7 @@ import type { components } from "../../../api/index.ts";
 
 type Schemas = components["schemas"];
 
+export type MemberOrganization = Schemas["MemberOrganization"];
 export type MemberView = Schemas["MemberView"];
 export type MembersView = Schemas["MembersView"];
 export type RepositoryView = Schemas["RepositoryView"];

@@ -9,6 +9,7 @@ use ciproxy_store_interface::runners::RunnerPlace;
 
 use crate::access::Principal;
 use crate::error::{Error, Result};
+use crate::pages::PageServices;
 use crate::state::{ApiState, query};
 use crate::wire::access::{Success, WorkspacePath};
 use crate::wire::settings::{
@@ -22,6 +23,7 @@ pub(crate) async fn setup(
     State(state): State<ApiState>,
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<WorkspacePath>,
+    pages: Option<Extension<Arc<PageServices>>>,
 ) -> Result<Json<SetupView>> {
     let workspace_id = state
         .access
@@ -88,7 +90,12 @@ pub(crate) async fn setup(
         organizations,
         machines,
         waiting_for_machine: machines == 0,
-        labels: labels::read(&state, workspace_id).await?,
+        labels: labels::read(
+            &state,
+            workspace_id,
+            pages.as_ref().map(|pages| pages.0.as_ref()),
+        )
+        .await?,
     }))
 }
 
@@ -97,6 +104,7 @@ pub(crate) async fn settings(
     State(state): State<ApiState>,
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<WorkspacePath>,
+    pages: Option<Extension<Arc<PageServices>>>,
 ) -> Result<Json<SettingsView>> {
     let workspace_id = state
         .access
@@ -118,7 +126,12 @@ pub(crate) async fn settings(
     Ok(Json(SettingsView {
         name: workspace.name,
         organizations,
-        labels: labels::read(&state, workspace_id).await?,
+        labels: labels::read(
+            &state,
+            workspace_id,
+            pages.as_ref().map(|pages| pages.0.as_ref()),
+        )
+        .await?,
         open_requests: requests.try_into().unwrap_or(u32::MAX),
         can_add_organization: true,
     }))

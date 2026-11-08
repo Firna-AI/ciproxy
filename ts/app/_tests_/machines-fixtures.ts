@@ -12,7 +12,13 @@ export function slot(
   runner: string | null = state === "free" ? null : `runner-${index}`,
   job: string | null = state === "job" ? `job-${index}` : null,
 ): SlotView {
-  return { index: String(index), state, runner_id: runner, job_id: job };
+  return {
+    index: String(index),
+    state,
+    runner_id: runner,
+    job_id: job,
+    job: null,
+  };
 }
 
 export function cache(
@@ -23,6 +29,7 @@ export function cache(
   return {
     capacity_bytes: "191000000000",
     docker_disk_bytes: "96000000000",
+    docker_repositories: "3",
     hits_last_7_days: hits,
     restores_last_7_days: restores,
     used_bytes: "83000000000",

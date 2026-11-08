@@ -1,11 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  headerActions,
-  machineNotice,
-  slotsModel,
-} from "../src/view/machines-detail.ts";
+import { headerActions, machineNotice } from "../src/view/machines-detail.ts";
 import {
   cacheModel,
   canClearCache,
@@ -13,7 +9,7 @@ import {
   healthModel,
 } from "../src/view/machines-panels.ts";
 import { machine } from "../scripts/fixtures-setup.ts";
-import { cache, nbsp, slot, summary } from "./machines-fixtures.ts";
+import { cache, nbsp, slot } from "./machines-fixtures.ts";
 
 const now = Date.parse("2026-11-18T14:32:00Z");
 const lostAt = "2026-11-18T14:18:00Z";
@@ -58,6 +54,31 @@ test("the notice says why a machine takes no jobs, with the fix where one exists
     ["no-slots", "tiny has no slots", false],
   );
   assert.equal(machineNotice(machine({}), now), null);
+  const limited = {
+    hostname: "office-mini-1",
+    concurrent_default_jobs: "3",
+    default_root_disk_bytes: "81000000000",
+    job_disk_bytes: "279000000000",
+    disk_limited: true,
+  };
+  const disk = machineNotice(machine(limited), now);
+  assert.deepEqual(
+    [disk?.key, disk?.tone, disk?.title, disk?.body],
+    [
+      "disk-limit",
+      "warning",
+      `Disk limits office-mini-1 to 3${nbsp}jobs of ciproxy at a time`,
+      `With the current image, a job of ciproxy holds 81${nbsp}GB of disk. The machine has 279${nbsp}GB for jobs after the VM images and the host reserve. Add disk to run more jobs at once.`,
+    ],
+  );
+  assert.equal(
+    machineNotice(machine({ ...limited, disk_limited: false }), now),
+    null,
+  );
+  assert.equal(
+    machineNotice(machine({ ...limited, disk_limited: null }), now),
+    null,
+  );
 });
 
 test("a drain counts each running job once, also a job of several slots", () => {
@@ -80,54 +101,6 @@ test("a drain counts each running job once, also a job of several slots", () => 
   );
 });
 
-test("each slot row keeps its reported index, in index order", () => {
-  const model = slotsModel(
-    machine({
-      slots: 6,
-      concurrent_default_jobs: "3",
-      occupancy: [slot(4, "warm"), slot(0, "job"), slot(2, "free")],
-    }),
-    [],
-    null,
-  );
-  assert.deepEqual(
-    model.kind === "slots"
-      ? model.rows.map((row) => [row.label, row.text])
-      : null,
-    [
-      ["Slot 1", "Running a job"],
-      ["Slot 3", "Free"],
-      ["Slot 5", "Warm runner, ready"],
-    ],
-  );
-  assert.equal(
-    model.kind === "slots" ? model.fits : null,
-    `3${nbsp}jobs of ciproxy fit at a time.`,
-  );
-  const one = slotsModel(
-    machine({ occupancy: [slot(0, "free")], concurrent_default_jobs: "1" }),
-    [],
-    null,
-  );
-  assert.equal(
-    one.kind === "slots" ? one.fits : null,
-    `1${nbsp}job of ciproxy fits at a time.`,
-  );
-});
-
-test("a machine without slots says where its jobs go instead", () => {
-  const lab = machine({ id: "lab", kvm: false });
-  const other = machine({ id: "other" });
-  assert.deepEqual(slotsModel(lab, [lab, other], summary()), {
-    kind: "message",
-    text: "No slots. Jobs run on your other machines and on Boat.",
-  });
-  assert.deepEqual(slotsModel(machine({ offline: true }), [], null), {
-    kind: "message",
-    text: "Slots show again when the machine is back.",
-  });
-});
-
 test("health marks the values of the last contact as old while offline", () => {
   const old = healthModel(
     machine({
@@ -135,6 +108,8 @@ test("health marks the values of the last contact as old while offline", () => {
       health_old: true,
       last_contact_at: lostAt,
       agent_version: "0.4.2",
+      latest_agent_version: "0.4.3",
+      agent_up_to_date: false,
       disks: [
         {
           path: "/",
@@ -173,6 +148,56 @@ test("health marks the values of the last contact as old while offline", () => {
     ],
   );
   assert.equal(missing.note, null);
+  const lastKvm = healthModel(
+    machine({ offline: true, health_old: true, kvm: false, disks: [] }),
+    now,
+  ).rows[1];
+  assert.deepEqual(
+    [lastKvm?.label, lastKvm?.value, lastKvm?.tone, lastKvm?.old],
+    ["KVM", "Not available", "idle", true],
+    "a failed KVM check of the last contact is old while offline",
+  );
+});
+
+test("the agent claims the newest release only from a fresh report that matches it", () => {
+  const agent = (overrides: Parameters<typeof machine>[0]) => {
+    const row = healthModel(machine(overrides), now).rows.at(-1);
+    return [row?.label, row?.value, row?.tone];
+  };
+  assert.deepEqual(
+    agent({
+      agent_version: "0.4.2",
+      latest_agent_version: "0.4.2",
+      agent_up_to_date: true,
+    }),
+    ["Agent", `0.4.2${nbsp}· up to date`, "ok"],
+  );
+  assert.deepEqual(
+    agent({
+      agent_version: "0.4.1",
+      latest_agent_version: "0.4.2",
+      agent_up_to_date: false,
+    }),
+    ["Agent", `0.4.1${nbsp}· 0.4.2${nbsp}available`, "warn"],
+  );
+  assert.deepEqual(
+    agent({
+      agent_version: "0.4.2",
+      latest_agent_version: null,
+      agent_up_to_date: null,
+    }),
+    ["Agent", "0.4.2", "idle"],
+  );
+  assert.deepEqual(
+    agent({
+      agent_version: "0.4.2",
+      latest_agent_version: "0.4.2",
+      agent_up_to_date: true,
+      offline: true,
+      health_old: true,
+    }),
+    ["Agent", "0.4.2", "idle"],
+  );
 });
 
 test("the cache shows its reported use, and only an Admin clears an online cache", () => {
@@ -180,7 +205,24 @@ test("the cache shows its reported use, and only an Admin clears an online cache
   const model = cacheModel(reported);
   assert.deepEqual(
     model.reported ? [model.value, model.hits, model.docker] : null,
-    ["83 of 191 GB", "91%", `96${nbsp}GB`],
+    ["83 of 191 GB", "91%", `3${nbsp}repositories${nbsp}· 96${nbsp}GB`],
+  );
+  const one = cacheModel(
+    machine({ cache: cache("0", "0", { docker_repositories: "1" }) }),
+  );
+  assert.equal(
+    one.reported ? one.docker : null,
+    `1${nbsp}repository${nbsp}· 96${nbsp}GB`,
+  );
+  const many = cacheModel(
+    machine({
+      cache: cache("0", "0", { docker_repositories: "9007199254740993" }),
+    }),
+  );
+  assert.equal(
+    many.reported ? many.docker : null,
+    `9,007,199,254,740,993${nbsp}repositories${nbsp}· 96${nbsp}GB`,
+    "a count past the safe integers of JavaScript stays exact",
   );
   assert.equal(canClearCache(reported, true), true);
   assert.equal(canClearCache(reported, false), false);

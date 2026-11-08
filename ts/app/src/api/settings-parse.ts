@@ -1,7 +1,7 @@
 // Readers for the Settings routes: the settings of a workspace, its labels
-// and their fit, the members and the requests for access, and the
-// repositories of one organization. Each reader narrows an unknown response
-// body to its generated type, or rejects the whole body.
+// and their fit, the members with their profiles and the requests for access,
+// and the repositories of one organization. Each reader narrows an unknown
+// response body to its generated type, or rejects the whole body.
 
 import {
   array,
@@ -16,17 +16,29 @@ import {
 import { workspaceRole } from "./parse-session.ts";
 import { readLabel, readLabelFit, readOrganization } from "./parse-setup.ts";
 import type {
+  MemberOrganization,
   MemberView,
   MembersView,
   RepositoryView,
   SettingsView,
 } from "./settings-schema.ts";
 
+function memberOrganization(value: unknown): MemberOrganization {
+  const fields = object(value, "request organization");
+  return { id: string(fields.id), login: string(fields.login) };
+}
+
 function readMember(value: unknown): MemberView {
   const fields = object(value, "member");
   return {
+    avatar_url: optional(fields.avatar_url, string),
+    granted_at: optional(fields.granted_at, time),
     id: string(fields.id),
     login: optional(fields.login, string),
+    name: optional(fields.name, string),
+    request_organizations: optional(fields.request_organizations, (list) =>
+      array(list, memberOrganization),
+    ),
     requested_at: time(fields.requested_at),
     role: optional(fields.role, workspaceRole),
   };

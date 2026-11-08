@@ -1,6 +1,7 @@
 // The labels of the organization: a table on desktop and cards on mobile,
 // each with its size, where its jobs run now, and its jobs of 30 days. As in
-// the machine table, the size is a caption under the name.
+// the machine table, the size is a caption under the name. Without a Boat
+// account, the labels that fit a machine run on the machines only.
 
 import { Pencil } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -31,14 +32,18 @@ const columns: readonly Column[] = [
 
 const placementText: Record<Placement, string> = {
   "machines-then-boat": "Your machines, then Boat",
+  "machines-only": "Your machines only",
   "boat-only": "Boat only",
   waits: "Waits: nothing fits",
 };
 
-/** The labels whose dialog has a screen of its own. */
+/** The labels whose dialog has a screen of its own, with and without Boat. */
 const editPaths: Readonly<Record<string, CataloguePath>> = {
   "ciproxy-8vcpu": paths.editLabel,
   [nothingFitsLabel.name]: paths.nothingFits,
+};
+const editPathsNoBoat: Readonly<Record<string, CataloguePath>> = {
+  "ciproxy-8vcpu": paths.editLabelNoBoat,
 };
 
 function LabelName({ label }: { label: Label }) {
@@ -60,8 +65,8 @@ function LabelCell({ label }: { label: Label }) {
   );
 }
 
-function Placed({ label }: { label: Label }) {
-  const placement = placementOf(label);
+function Placed({ label, boat }: { label: Label; boat: boolean }) {
+  const placement = placementOf(label, boat);
   return placement === "waits" ? (
     <DotLabel tone="warn">{placementText.waits}</DotLabel>
   ) : (
@@ -69,8 +74,8 @@ function Placed({ label }: { label: Label }) {
   );
 }
 
-function EditLabel({ label }: { label: Label }) {
-  const to = editPaths[label.name];
+function EditLabel({ label, boat }: { label: Label; boat: boolean }) {
+  const to = (boat ? editPaths : editPathsNoBoat)[label.name];
   return to ? (
     <LinkAction to={to} size="sm" icon={Pencil}>
       Edit
@@ -82,16 +87,16 @@ function EditLabel({ label }: { label: Label }) {
   );
 }
 
-function cell(label: Label, key: string) {
+function cell(label: Label, key: string, boat: boolean) {
   switch (key) {
     case "label":
       return <LabelCell label={label} />;
     case "where":
-      return <Placed label={label} />;
+      return <Placed label={label} boat={boat} />;
     case "jobs":
       return <span className="num">{formatCount(label.jobs)}</span>;
     default:
-      return <EditLabel label={label} />;
+      return <EditLabel label={label} boat={boat} />;
   }
 }
 
@@ -99,10 +104,13 @@ export function LabelList({
   viewport,
   labels,
   loading,
+  boat = true,
 }: {
   viewport: Viewport;
   labels: readonly Label[];
   loading: boolean;
+  /** The workspace has a Boat account. */
+  boat?: boolean;
 }) {
   if (viewport === "desktop") {
     return (
@@ -110,7 +118,7 @@ export function LabelList({
         columns={columns}
         rows={loading ? [] : labels}
         rowKey={(label) => label.name}
-        cell={cell}
+        cell={(label, key) => cell(label, key, boat)}
         loading={loading}
         loadingRowCount={3}
       />
@@ -125,13 +133,13 @@ export function LabelList({
             <LabelName label={label} />
             <span className="small">{sizeText(label)}</span>
             <span className="small">
-              <Placed label={label} />
+              <Placed label={label} boat={boat} />
             </span>
             <span className="caption">
               {formatCount(label.jobs)} jobs in 30 days
             </span>
           </span>
-          <EditLabel label={label} />
+          <EditLabel label={label} boat={boat} />
         </li>
       ))}
     </ul>

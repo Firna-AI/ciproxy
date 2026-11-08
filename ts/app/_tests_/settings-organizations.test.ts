@@ -49,6 +49,7 @@ test("a removed organization shows the deadline of a new install that keeps its 
   assert.deepEqual(row, {
     id: "40000000-0000-4000-8000-000000000002",
     login: "mokly-labs",
+    since: null,
     state: "removed",
     status: {
       text: "App removed",
@@ -66,17 +67,22 @@ test("a removed organization shows the deadline of a new install that keeps its 
   });
 });
 
-test("an inactive row names each hold and offers the action that clears it", () => {
+test("an inactive row names each hold and the person who added it, and offers the action that clears it", () => {
+  const anonymous = held(4, "mokly-lab-2", ["admin_approval"], workspaceId);
   const [plan, admin] = organizationRows([
     held(3, "mokly-studio", ["billing_upgrade", "admin_approval"], workspaceId),
-    held(4, "mokly-lab-2", ["admin_approval"], workspaceId),
+    {
+      ...anonymous,
+      added_by: null,
+      activation: { ...anonymous.activation, added_by: null },
+    },
   ]);
   assert.deepEqual(plan?.status, {
     text: "Inactive",
     tone: "warn",
     lines: [
       "Free includes 1 organization",
-      "The person who added it is no longer an Admin",
+      "Ana Souza, who added it, is no longer an Admin",
     ],
   });
   assert.deepEqual(
@@ -97,20 +103,45 @@ test("an inactive row names each hold and offers the action that clears it", () 
   });
 });
 
-test("the repository access of a row reads the policy of its organization", () => {
-  const rows = organizationRows([
-    linked(1, "mokly-ai", { access: { mode: "all_private" } }),
-    linked(2, "mokly-labs", {
-      access: { mode: "selected", ids: ["1", "2", "3"] },
-    }),
-    linked(3, "mokly-one", { access: { mode: "selected", ids: ["1"] } }),
-  ]);
-  assert.deepEqual(
-    rows.map((row) => row.access),
+test("a row shows the day it joined and counts the private repositories of the latest snapshot", () => {
+  const counts = (privateCount: string, allowed: string) => ({
+    visible: "20",
+    private: privateCount,
+    allowed_private: allowed,
+    observed_at: "2026-11-06T12:00:00Z",
+  });
+  const all = { mode: "all_private" } as const;
+  const picked = { mode: "selected" as const, ids: ["1", "2", "3"] };
+  const rows = organizationRows(
     [
-      "All private repositories",
-      "3 selected repositories",
-      "1 selected repository",
+      linked(1, "mokly-ai", { access: all, repositories: counts("14", "14") }),
+      linked(2, "mokly-labs", {
+        access: picked,
+        repositories: counts("5", "2"),
+      }),
+      linked(3, "mokly-one", {
+        access: picked,
+        repositories: counts("1", "1"),
+      }),
+      linked(4, "mokly-docs", { access: all, repositories: counts("0", "0") }),
+      linked(5, "mokly-new", {
+        access: all,
+        repositories: null,
+        joined_at: null,
+      }),
+      linked(6, "mokly-old", { access: picked, repositories: null }),
+    ],
+    "UTC",
+  );
+  assert.deepEqual(
+    rows.map((row) => [row.since, row.access]),
+    [
+      ["Since 1 September", "All 14 private repositories"],
+      ["Since 1 September", "2 of 5 private repositories"],
+      ["Since 1 September", "1 of 1 private repository"],
+      ["Since 1 September", "No private repositories"],
+      [null, "All private repositories"],
+      ["Since 1 September", "Selected private repositories"],
     ],
   );
 });
@@ -127,7 +158,7 @@ test("the banner names the inactive organization, its reasons, and the ones that
   ]);
   assert.deepEqual(banner, {
     title: "mokly-studio is inactive",
-    body: "Free includes 1 organization, and the person who added mokly-studio is no longer an Admin. It starts its jobs on Team, after an Admin turns it on. Jobs keep running in mokly-ai and mokly-labs.",
+    body: "Free includes 1 organization, and Ana Souza, who added mokly-studio, is no longer an Admin. It starts its jobs on Team, after an Admin turns it on. Jobs keep running in mokly-ai and mokly-labs.",
     chooseTeam: `/billing?workspace=${workspaceId}`,
     turnOn: null,
   });
@@ -138,7 +169,7 @@ test("the banner names the inactive organization, its reasons, and the ones that
     ]),
     {
       title: "mokly-studio is inactive",
-      body: "The person who added mokly-studio is no longer an Admin. It starts its jobs after an Admin turns it on. Jobs keep running in mokly-ai.",
+      body: "Ana Souza, who added mokly-studio, is no longer an Admin. It starts its jobs after an Admin turns it on. Jobs keep running in mokly-ai.",
       chooseTeam: null,
       turnOn: {
         id: "40000000-0000-4000-8000-000000000003",
@@ -147,21 +178,56 @@ test("the banner names the inactive organization, its reasons, and the ones that
     },
   );
   assert.equal(inactiveBanner([linked(1, "mokly-ai")]), null);
+  const both = held(
+    3,
+    "mokly-studio",
+    ["billing_upgrade", "admin_approval"],
+    workspaceId,
+  );
+  assert.equal(
+    inactiveBanner([
+      {
+        ...both,
+        added_by: null,
+        activation: { ...both.activation, added_by: null },
+      },
+    ])?.body,
+    "Free includes 1 organization, and the person who added mokly-studio is no longer an Admin. It starts its jobs on Team, after an Admin turns it on.",
+  );
 });
 
-test("Turn on names the person who added the organization by the API's ID", () => {
+test("Turn on names the person who added the organization, and the day it joined", () => {
   const organization = held(3, "mokly-studio", ["admin_approval"], workspaceId);
-  assert.equal(
-    addedByText(organization),
-    "GitHub user 4783921 added mokly-studio and is no longer an Admin.",
-  );
-  assert.equal(
-    addedByText({
-      ...organization,
-      activation: { ...organization.activation, added_by: null },
-    }),
-    "The person who added mokly-studio is no longer an Admin.",
-  );
+  const profile = organization.added_by ?? null;
+  assert.ok(profile);
+  const cases = [
+    [
+      organization,
+      "Ana Souza added mokly-studio on 1 September and is no longer an Admin.",
+    ],
+    [
+      { ...organization, added_by: { ...profile, name: null } },
+      "anasouza added mokly-studio on 1 September and is no longer an Admin.",
+    ],
+    [
+      { ...organization, added_by: null },
+      "GitHub user 4783921 added mokly-studio on 1 September and is no longer an Admin.",
+    ],
+    [
+      { ...organization, joined_at: null },
+      "Ana Souza added mokly-studio and is no longer an Admin.",
+    ],
+    [
+      {
+        ...organization,
+        added_by: null,
+        activation: { ...organization.activation, added_by: null },
+      },
+      "The person who added mokly-studio is no longer an Admin.",
+    ],
+  ] as const;
+  for (const [view, text] of cases)
+    assert.equal(addedByText(view, "UTC"), text);
 });
 
 test("a refused take-out of the last organization says why", () => {

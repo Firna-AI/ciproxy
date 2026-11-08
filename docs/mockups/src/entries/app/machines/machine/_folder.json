@@ -1,1 +1,1 @@
-{ "order": ["states", "changes", "hardware"] }
+{ "order": ["states", "changes", "hardware", "health"] }

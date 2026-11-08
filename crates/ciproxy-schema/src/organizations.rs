@@ -12,5 +12,7 @@ diesel::table! {
         allowed_repository_ids -> Array<Int8>,
         removed_at -> Nullable<Timestamptz>,
         delete_after -> Nullable<Timestamptz>,
+        joined_at -> Nullable<Timestamptz>,
+        repositories_observed_at -> Nullable<Timestamptz>,
     }
 }

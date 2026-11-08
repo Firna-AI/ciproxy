@@ -1,48 +1,42 @@
 // The slots of one machine, each with its job or its warm runner, and the
-// warm runner count that an Admin sets with two buttons. Each press saves the
-// new count at once; while it saves, the count shows the new value and the
-// buttons wait. Other roles see the count without the buttons.
+// warm runner count. A busy slot names its job, with the repository and how
+// long it has run, and the name opens the page of that job. A slot whose job
+// the API could not match says only that it runs a job.
 
-import type { IconComponentProps } from "@firna/ui";
-import { Button } from "@firna/ui/button";
 import { StyleSheet, Text, View } from "react-native";
 
 import { colors } from "@ciproxy/tokens";
 
 import type { MachineView } from "../../api/schema.ts";
 import { Panel, TextLink } from "../../components/feature-parts.tsx";
-import { PlusIcon } from "../../components/icons.tsx";
 import { text } from "../../components/text.ts";
+import type { WarmControl } from "../../view/machines-controls.ts";
 import { detailCopy } from "../../view/machines-copy.ts";
-import type { SlotsModel } from "../../view/machines-detail.ts";
+import type { SlotJob, SlotsModel } from "../../view/machines-slots.ts";
 import { slotCaption } from "../../view/machines.ts";
 import { markRadius, SlotStrip, slotFill } from "./machine-figures.tsx";
+import { WarmRunners } from "./machine-warm.tsx";
 
-function MinusIcon({
-  color,
-  size = 16,
-  strokeWidth = 1.75,
-}: IconComponentProps) {
+function JobText({ job, href }: { job: SlotJob; href: string }) {
   return (
-    <svg
-      aria-hidden="true"
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color ?? "currentColor"}
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-    >
-      <path d="M5 12h14" />
-    </svg>
+    <>
+      <View style={styles.job}>
+        <TextLink href={href} label={job.name} />
+        <Text style={text.caption}>{job.context}</Text>
+      </View>
+      {job.duration === null ? null : (
+        <Text style={[text.small, styles.duration]}>{job.duration}</Text>
+      )}
+    </>
   );
 }
 
 function SlotList({
   model,
+  jobHref,
 }: {
   model: Extract<SlotsModel, { kind: "slots" }>;
+  jobHref: (jobId: string) => string;
 }) {
   return (
     <View role="list">
@@ -56,65 +50,21 @@ function SlotList({
             style={[styles.slot, { backgroundColor: slotFill[row.state] }]}
           />
           <Text style={[text.caption, styles.slotNumber]}>{row.label}</Text>
-          <Text
-            style={[
-              text.small,
-              row.state === "job" ? styles.ink : styles.muted,
-            ]}
-          >
-            {row.text}
-          </Text>
+          {row.job === null ? (
+            <Text
+              style={[
+                text.small,
+                styles.text,
+                row.state === "job" ? styles.ink : styles.muted,
+              ]}
+            >
+              {row.text}
+            </Text>
+          ) : (
+            <JobText job={row.job} href={jobHref(row.job.id)} />
+          )}
         </View>
       ))}
-    </View>
-  );
-}
-
-export type WarmControl = {
-  /** The count to show: the saved one, or the one that is saving. */
-  value: number;
-  saving: boolean;
-  /** Null for a person who cannot change the count. */
-  onChange: ((count: number) => void) | null;
-};
-
-function WarmRunners({ control }: { control: WarmControl }) {
-  const { value, saving, onChange } = control;
-  return (
-    <View style={styles.quantity}>
-      <View style={styles.quantityText}>
-        <Text style={[text.body, text.strong]}>{detailCopy.warmRunners}</Text>
-        <Text style={text.caption}>{detailCopy.warmCaption}</Text>
-      </View>
-      {onChange === null ? (
-        <Text style={[text.body, styles.value]}>{value}</Text>
-      ) : (
-        <View style={styles.stepper}>
-          <Button
-            tone="secondary"
-            size="sm"
-            shape="square"
-            icon={MinusIcon}
-            accessibilityLabel={detailCopy.fewer}
-            disabled={saving || value <= 0}
-            onPress={
-              saving || value <= 0 ? undefined : () => onChange(value - 1)
-            }
-          />
-          <Text style={[text.body, styles.value]} role="status">
-            {value}
-          </Text>
-          <Button
-            tone="secondary"
-            size="sm"
-            shape="square"
-            icon={PlusIcon}
-            accessibilityLabel={detailCopy.more}
-            disabled={saving}
-            onPress={saving ? undefined : () => onChange(value + 1)}
-          />
-        </View>
-      )}
     </View>
   );
 }
@@ -123,11 +73,14 @@ export function SlotsPanel({
   machine,
   model,
   jobsHref,
+  jobHref,
   warm,
 }: {
   machine: MachineView;
   model: SlotsModel;
   jobsHref: string;
+  /** The page of one dashboard job, by its canonical identity. */
+  jobHref: (jobId: string) => string;
   warm: WarmControl;
 }) {
   return (
@@ -140,7 +93,7 @@ export function SlotsPanel({
       ) : (
         <>
           <SlotStrip states={model.states} label={slotCaption(machine)} />
-          <SlotList model={model} />
+          <SlotList model={model} jobHref={jobHref} />
           <Text style={text.caption}>{model.caption}</Text>
           {model.fits ? <Text style={text.caption}>{model.fits}</Text> : null}
         </>
@@ -160,19 +113,16 @@ const styles = StyleSheet.create({
   divider: { borderTopWidth: 1, borderTopColor: colors.border },
   slot: { width: 14, height: 6, borderRadius: markRadius },
   slotNumber: { minWidth: 48 },
-  ink: { color: colors.ink, flexShrink: 1 },
-  muted: { color: colors.muted, flexShrink: 1 },
-  quantity: {
+  text: { flex: 1, minWidth: 0 },
+  job: {
+    flex: 1,
     flexDirection: "row",
     flexWrap: "wrap",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+    alignItems: "baseline",
+    columnGap: 8,
+    minWidth: 0,
   },
-  quantityText: { flexGrow: 1, flexShrink: 1, flexBasis: 180, gap: 2 },
-  stepper: { flexDirection: "row", alignItems: "center", gap: 10 },
-  value: { minWidth: 20, textAlign: "center", fontVariant: ["tabular-nums"] },
+  duration: { color: colors.ink, fontVariant: ["tabular-nums"] },
+  ink: { color: colors.ink },
+  muted: { color: colors.muted },
 });

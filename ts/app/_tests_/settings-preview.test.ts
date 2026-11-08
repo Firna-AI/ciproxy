@@ -92,3 +92,37 @@ test("a draft with no valid size and a closed dialog ask for nothing", async () 
   assert.equal(asked.length, 1);
   assert.equal(preview.state.get().shown, null);
 });
+
+test("a change of the Boat switch or of When nothing fits asks again, and a new name does not", async () => {
+  const { preview, schedule, asked, answers } = previewWith();
+  const saved = labelInput();
+  preview.request(saved);
+  schedule.fire();
+  answers[0]?.resolve({ ok: true, value: fit() });
+  await settled();
+  preview.request({ ...saved, name: "renamed-draft" });
+  assert.equal(schedule.pending(), 0, "a new name reuses the shown fit");
+  preview.request({ ...saved, allow_boat: false });
+  schedule.fire();
+  preview.request({ ...saved, when_nothing_fits: "largest_boat" });
+  schedule.fire();
+  assert.deepEqual(
+    asked.map((input) => [input.allow_boat, input.when_nothing_fits]),
+    [
+      [true, "wait"],
+      [false, "wait"],
+      [true, "largest_boat"],
+    ],
+  );
+  const fallback = fit({ placement: "boat_only" });
+  answers[2]?.resolve({ ok: true, value: fallback });
+  await settled();
+  assert.deepEqual(preview.state.get(), {
+    shown: {
+      input: { ...saved, when_nothing_fits: "largest_boat" },
+      fit: fallback,
+    },
+    pending: false,
+    failure: null,
+  });
+});

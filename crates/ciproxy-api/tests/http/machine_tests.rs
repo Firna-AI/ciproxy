@@ -72,6 +72,10 @@ async fn admin_controls_machine_and_clear_cache_targets_only_its_machine_entries
     assert_eq!(list.as_array().unwrap().len(), 1);
     let view = json(fixture.request(Some(&admin), "GET", &path, None).await).await;
     assert_eq!(view["concurrent_default_jobs"], "2");
+    assert_eq!(view["default_jobs_by_slots"], "6");
+    assert_eq!(view["default_root_disk_bytes"], "80000000000");
+    assert_eq!(view["disk_limited"], true);
+    assert_eq!(view["cache"]["docker_repositories"], "2");
     assert_eq!(view["cache"]["hits_last_7_days"], "8");
     assert_eq!(view["cache"]["docker_disk_bytes"], "900");
     assert_eq!(view["occupancy"][0]["state"], "free");

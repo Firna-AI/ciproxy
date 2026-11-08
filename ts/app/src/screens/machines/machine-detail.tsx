@@ -9,7 +9,6 @@ import { useEffect, useState } from "react";
 import { Link } from "expo-router";
 import { StyleSheet, View } from "react-native";
 
-import type { MachineView } from "../../api/schema.ts";
 import { ActionLink } from "../../components/actions.tsx";
 import {
   FeatureHeader,
@@ -25,68 +24,32 @@ import {
 import { useViewport } from "../../components/viewport.ts";
 import { useServices } from "../../services/context.tsx";
 import { useValue } from "../../services/hooks.ts";
-import type {
-  ChangeSnapshot,
-  MachineChangeStore,
-} from "../../state/machines-changes.ts";
 import { overflowSummary } from "../../state/machines-overflow.ts";
 import { machinesServices } from "../../state/machines-services.ts";
 import { machinesPollInterval } from "../../state/machines.ts";
+import {
+  costEdit,
+  isCommand,
+  warmControl,
+} from "../../view/machines-controls.ts";
 import { detailCopy, listCopy, statusWords } from "../../view/machines-copy.ts";
-import { machineSubtitle, slotsModel } from "../../view/machines-detail.ts";
+import { machineSubtitle } from "../../view/machines-detail.ts";
 import { canClearCache } from "../../view/machines-panels.ts";
-import { jobHistoryHref, machinesHref } from "../../view/machines-routes.ts";
+import {
+  jobHistoryHref,
+  machinesHref,
+  slotJobHref,
+} from "../../view/machines-routes.ts";
+import { slotsModel } from "../../view/machines-slots.ts";
 import { machineStatus } from "../../view/machines.ts";
 import type { WorkspaceContext } from "../workspace-page.tsx";
 import { CachePanel, ClearCacheDialog } from "./machine-cache.tsx";
-import { CostPanel, type CostEdit } from "./machine-cost.tsx";
+import { CostPanel } from "./machine-cost.tsx";
 import { HealthPanel } from "./machine-health.tsx";
 import { HeaderActions, MachineNotices } from "./machine-notices.tsx";
-import { SlotsPanel, type WarmControl } from "./machine-slots.tsx";
+import { SlotsPanel } from "./machine-slots.tsx";
 import { statusTones } from "./machine-status.ts";
 import { MachinesRefreshNotice } from "./machines-refresh.tsx";
-
-function isCommand(change: ChangeSnapshot, command: string): boolean {
-  return (
-    change.status !== "idle" &&
-    change.change.kind === "command" &&
-    change.change.command === command
-  );
-}
-
-function warmControl(
-  machine: MachineView,
-  change: ChangeSnapshot,
-  changes: MachineChangeStore,
-  admin: boolean,
-): WarmControl {
-  const pending =
-    change.status === "busy" && change.change.kind === "warm-runners"
-      ? change.change.count
-      : null;
-  return {
-    value: pending ?? machine.warm_runners,
-    saving: change.status === "busy",
-    onChange: admin
-      ? (count) => void changes.run({ kind: "warm-runners", count })
-      : null,
-  };
-}
-
-function costEdit(
-  change: ChangeSnapshot,
-  changes: MachineChangeStore,
-): CostEdit {
-  return {
-    busy: change.status === "busy" && change.change.kind === "cost",
-    failure:
-      change.status === "failed" && change.change.kind === "cost"
-        ? change.failure
-        : null,
-    save: (cents) => changes.run({ kind: "cost", cents }),
-    reset: () => changes.dismiss(),
-  };
-}
 
 export function MachineDetail({
   context,
@@ -215,6 +178,7 @@ export function MachineDetail({
               overflowSummary(overflow),
             )}
             jobsHref={jobHistoryHref(workspaceId)}
+            jobHref={(jobId) => slotJobHref(workspaceId, jobId)}
             warm={warmControl(machine, change, changes, admin)}
           />
         </View>

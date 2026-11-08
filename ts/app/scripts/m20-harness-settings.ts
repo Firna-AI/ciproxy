@@ -3,30 +3,30 @@ import type { IncomingMessage } from "node:http";
 import type { components } from "../../api/index.ts";
 import { readJson } from "./harness-api.ts";
 import { fields, problem, success } from "./harness-state.ts";
-import { fixtureFit } from "./m20-fixtures-settings.ts";
+import {
+  fixtureFit,
+  nothingFits,
+  switchedFit,
+  withoutBoat,
+} from "./m20-fixtures-labels.ts";
 import { labelInput } from "./m20-harness-input.ts";
 import type { FixtureReply, M20State } from "./m20-harness-state.ts";
 
 type Schemas = components["schemas"];
 
-function preview(state: M20State): Schemas["LabelFit"] {
+/** The fit of a draft: the fit of the scenario, with the switches of it. */
+function preview(
+  state: M20State,
+  input: Schemas["LabelInput"],
+): Schemas["LabelFit"] {
+  const root = String((60 + input.disk_gb + 1) * 1_000_000_000);
   if (state.scenario === "label-no-fit")
-    return {
-      eligible_machines: 2,
-      fitting_machines: 0,
-      minimum_jobs: null,
-      maximum_jobs: null,
-      unavailable_machines: 0,
-      no_machine_fits: true,
-    };
+    return switchedFit(nothingFits(root), input);
   if (state.scenario === "label-partial-fit")
-    return {
-      ...fixtureFit(),
-      fitting_machines: 1,
-      minimum_jobs: "1",
-      maximum_jobs: "1",
-    };
-  return fixtureFit();
+    return switchedFit(fixtureFit(root, ["1", "0"]), input);
+  if (state.scenario === "overflow-unconnected")
+    return switchedFit(withoutBoat(fixtureFit(root)), input);
+  return switchedFit(fixtureFit(root), input);
 }
 
 export async function settingsReply(
@@ -82,7 +82,7 @@ export async function settingsReply(
       body: problem("invalid_request", "Enter the label size."),
     };
   if (id === "preview" && method === "POST")
-    return { status: 200, body: preview(state) };
+    return { status: 200, body: preview(state, input) };
   if (state.scenario === "label-refused" && method === "POST")
     return {
       status: 422,
@@ -98,7 +98,7 @@ export async function settingsReply(
     };
   if (found !== undefined) {
     found.label = input;
-    found.fit = preview(state);
+    found.fit = preview(state, input);
     return { status: 200, body: found };
   }
   if (id !== undefined || method !== "POST") return undefined;
@@ -106,7 +106,10 @@ export async function settingsReply(
   const body: Schemas["LabelView"] = {
     id: `60000000-0000-4000-8000-${String(state.labelSequence).padStart(12, "0")}`,
     label: input,
-    fit: preview(state),
+    fit: preview(state, input),
+    jobs_last_30_days: "0",
+    job_count_since: "2026-10-07T12:00:00Z",
+    job_count_until: "2026-11-06T12:00:00Z",
   };
   state.labels.push(body);
   return { status: 200, body };

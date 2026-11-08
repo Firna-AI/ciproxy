@@ -1,9 +1,13 @@
 import type { components } from "../../api/index.ts";
 import { session, workspace } from "./fixtures-core.ts";
 import { fields, type RequestFact } from "./harness-state.ts";
-import { fixtureMachines } from "./m20-fixtures-machines.ts";
+import { fixtureMachines, machineIds } from "./m20-fixtures-machines.ts";
 import {
   fixtureLabels,
+  nothingFits,
+  withoutBoat,
+} from "./m20-fixtures-labels.ts";
+import {
   fixtureMembers,
   fixtureOrganizations,
   fixtureRepositories,
@@ -16,6 +20,7 @@ export const m20Scenarios = [
   "machines",
   "machines-empty",
   "machines-long-name",
+  "machine-agent-behind",
   "overflow-unconnected",
   "overflow-summary-failure",
   "machines-load-failure",
@@ -101,18 +106,22 @@ export function createM20State(scenario: M20Scenario = "machines"): M20State {
     for (const machine of state.machines) machine.concurrent_default_jobs = "0";
     for (const label of state.labels) {
       label.label = { ...label.label, vcpus: 64, memory_gb: 256, disk_gb: 200 };
-      label.fit = {
-        eligible_machines: 2,
-        fitting_machines: 0,
-        minimum_jobs: null,
-        maximum_jobs: null,
-        unavailable_machines: 0,
-        no_machine_fits: true,
-      };
+      label.fit = nothingFits("266000000000");
     }
   }
+  if (scenario === "overflow-unconnected")
+    for (const label of state.labels) label.fit = withoutBoat(label.fit);
   if (scenario === "add-machine-connected")
-    state.machines = state.machines.slice(0, 1);
+    state.machines = state.machines.filter(
+      (item) =>
+        item.id === machineIds.primary || item.id === machineIds.diskLimited,
+    );
+  // forge-01 reports the release before the newest; the slots stay as they are.
+  const forge = state.machines.find((item) => item.id === machineIds.primary);
+  if (scenario === "machine-agent-behind" && forge) {
+    forge.agent_version = "0.4.1";
+    forge.agent_up_to_date = false;
+  }
   if (scenario === "machines-long-name" && state.machines[0])
     state.machines[0].hostname =
       "northstar-continuous-integration-machine-with-a-long-host-name-01";

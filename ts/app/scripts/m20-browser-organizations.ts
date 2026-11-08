@@ -174,6 +174,11 @@ export function organizationCases(origin: string, output: string): M20Case[] {
             exact: true,
           }),
         );
+        await visible(
+          page.getByText("Ana Souza, who added it, is no longer an Admin", {
+            exact: true,
+          }),
+        );
       },
     },
     {
@@ -197,6 +202,12 @@ export function organizationCases(origin: string, output: string): M20Case[] {
           exact: true,
         });
         await visible(dialog);
+        await visible(
+          within(dialog).getByText(
+            "Ana Souza added northstar-research on 5 November and is no longer an Admin.",
+            { exact: true },
+          ),
+        );
         await capture(page, width, output, "organization-enable-dialog-open");
         await within(dialog)
           .getByRole("button", { name: "Turn on", exact: true })

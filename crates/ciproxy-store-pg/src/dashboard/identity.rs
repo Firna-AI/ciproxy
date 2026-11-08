@@ -118,7 +118,7 @@ pub(super) fn requests_on(
     user_id: Uuid,
     at: DateTime<Utc>,
 ) -> QueryResult<()> {
-    diesel::sql_query("INSERT INTO dashboard_roles (workspace_id, github_user_id, requested_at) SELECT DISTINCT o.workspace_id, u.github_id, $2 FROM dashboard_users u JOIN dashboard_memberships m ON m.user_id = u.id JOIN organizations o ON o.github_id = m.github_id AND o.app_state <> 'removed' WHERE u.id = $1 ON CONFLICT DO NOTHING")
+    diesel::sql_query("INSERT INTO dashboard_roles (workspace_id, github_user_id, requested_at, request_organizations) SELECT o.workspace_id, u.github_id, $2, jsonb_agg(jsonb_build_object('id',o.id,'login',o.login) ORDER BY o.id) FROM dashboard_users u JOIN dashboard_memberships m ON m.user_id = u.id JOIN organizations o ON o.github_id = m.github_id AND o.app_state <> 'removed' WHERE u.id = $1 GROUP BY o.workspace_id,u.github_id ON CONFLICT DO NOTHING")
         .bind::<sql_types::Uuid, _>(user_id).bind::<Timestamptz, _>(at).execute(connection)?;
     Ok(())
 }

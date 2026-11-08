@@ -72,24 +72,43 @@ or unknown tab opens Labels.
 - Add a machine shows the install command of Setup after its first read of
   the machines. A machine that was not in that read is new, and the page
   shows what its agent reported.
-- The API has no field yet for three facts of the mockups. The machine page
-  shows the agent version, but not whether it is up to date. It shows the
-  space of the Docker disks, but not their count of repositories. It shows
-  how many jobs of the label `ciproxy` fit at a time, but not that the disk
-  sets that limit.
+- The machine page shows the saved warm runner count in every state, also
+  while the machine drains, is offline, or has no slots. The slots show the
+  warm runners that are ready.
+- A busy slot names the job that the API matched to it, with its repository,
+  its pull request or branch, and how long it has run. The name links to
+  `/job?workspace=<id>&job=<id>` with the dashboard ID of the job, a page
+  that the Jobs pages own. A job that the API could not match links nowhere,
+  and the job ID of a machine report never makes a link.
+- The agent version says whether it is the newest release only from a fresh
+  report, and only when ciproxy could read the newest release. Cache shows
+  the space of the Docker disks and their count of repositories.
+- When the API says that the disk holds fewer jobs of `ciproxy` than the
+  slots, the page names the limit, the VM disk of one such job, and the disk
+  for jobs, and the free slots beyond the limit say that they have no disk
+  for a job. Add a machine shows the same limit for a machine that joins.
 
 ### Settings
 
 - Settings is for Admins, and another role goes to Jobs. Each tab reads the
   settings of the workspace, so Members shows the count of open requests for
   access on each tab.
-- Labels lists each label with its size and the routing that it allows.
-  While the person types a size in Add label or Edit, the dialog shows how
-  many jobs of that size each machine runs at a time, from
-  `POST /workspaces/{id}/labels/preview`. The preview gives no Boat fit, so
-  the dialog does not say whether a Boat size fits. A label keeps its name.
-  Each label but `ciproxy` has Delete label. When GitHub refuses a new name,
-  the dialog shows why.
+- Labels lists each label with its size, where its jobs run now, and the
+  jobs of the last 30 days, as the API gives them. A count that the API does
+  not know says so.
+- Without a Boat account, the jobs of a label run on the machines only, and
+  the dialog keeps the fit of the machines and says that Boat is not
+  connected. It never says that a Boat size does not fit before the Boat
+  catalog says so. When the API knows the fit of the machines but not the
+  Boat fit, the list and the dialog give the fit of the machines and say
+  that the Boat fit is not known yet.
+- While the person types a size or changes a switch in Add label or Edit,
+  the dialog asks `POST /workspaces/{id}/labels/preview` again. It shows the
+  VM disk of one job, how many jobs each machine runs at a time, and the Boat
+  size that runs them, or the offers of the machines and the largest Boat
+  size when nothing fits. "Run on the largest Boat size" names that size.
+- A label keeps its name. Each label but `ciproxy` has Delete label. When
+  GitHub refuses a new name, the dialog shows why.
 - Organizations shows the workspace name with Rename, Add an organization,
   and each organization of the workspace. A linked organization has its
   repository access, Take out, and the action that clears a hold: Choose
@@ -107,8 +126,13 @@ or unknown tab opens Labels.
   access, declines a request, changes a role, and removes a member. The row
   of the signed-in person has no Remove. Before a person gets the Admin role,
   a dialog shows the trust notice of the API.
-- The API has no field yet for the day on which an organization joined or
-  the display name of a member, so the tabs show neither.
+- An organization row shows the day it joined and the counts of private
+  repositories of its latest complete repository snapshot. An inactive row,
+  its banner, and Turn on name the person who added the organization.
+- Members shows the name and the login of each person, the day of each
+  role, and for each request its day and the organizations that the person
+  was a member of then. A day, a name, or a count that the API does not
+  know stays out, or the row says that it is not known.
 
 ## The API
 
@@ -271,7 +295,10 @@ with no machine or no linked organization skips the checks that need one.
   the query. The [settings store](src/state/settings-store.ts) holds the
   settings of a workspace. A change that succeeds reads them and the session
   again.
-- [src/api/client.ts](src/api/client.ts) is the one HTTP client.
+- [src/api/client.ts](src/api/client.ts) is the one HTTP client. The
+  readers in `src/api/parse-*.ts` narrow each response body to its generated
+  type; [src/api/parse-jobs.ts](src/api/parse-jobs.ts) reads one dashboard
+  job, as a busy slot names it.
   [src/api/machine-endpoints.ts](src/api/machine-endpoints.ts) and
   [src/api/settings-endpoints.ts](src/api/settings-endpoints.ts) hold the
   routes of Machines and Settings on it.

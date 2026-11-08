@@ -2,12 +2,14 @@
 
 use std::sync::Arc;
 
+use axum::Extension;
 use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, Response, header};
 use chrono::{DateTime, Utc};
 use ciproxy_api::capacity::{Capacity, MachineCapacity, MachineCapacityMock};
-use ciproxy_api::pages::{PageServices, router_with_pages, stripe_router};
+use ciproxy_api::pages::{PageServices, stripe_router};
+use ciproxy_api::router::router_with_agent_releases;
 use ciproxy_api::runtime::Runtime;
 use ciproxy_billing::service::runtime::{BillingService, Redirects};
 use ciproxy_billing::stripe::api::StripeApi;
@@ -78,7 +80,11 @@ impl Pages {
         Router::new()
             .nest(
                 "/api",
-                router_with_pages(self.fixture.state.clone(), self.services.clone()),
+                router_with_agent_releases(
+                    self.fixture.state.clone(),
+                    self.fixture.releases.clone(),
+                )
+                .layer(Extension(self.services.clone())),
             )
             .merge(stripe_router(
                 self.fixture.state.clone(),

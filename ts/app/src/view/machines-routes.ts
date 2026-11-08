@@ -36,3 +36,13 @@ export function overflowSettingsHref(workspaceId: string): string {
 export function jobHistoryHref(workspaceId: string): string {
   return workspaceHref("jobs", workspaceId);
 }
+
+/**
+ * The page of one dashboard job, which the Jobs pages own: `/job` with the
+ * workspace and the canonical job ID that the API matched to a busy slot.
+ * The job ID of a machine report never makes a link.
+ */
+export function slotJobHref(workspaceId: string, jobId: string): string {
+  const query = new URLSearchParams({ workspace: workspaceId, job: jobId });
+  return `/job?${query.toString()}`;
+}

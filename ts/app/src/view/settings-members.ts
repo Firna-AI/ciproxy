@@ -1,14 +1,17 @@
 // The Members tab: the people with a role, and the requests for access that
-// wait for an Admin. A person with no role yet is a request. An Admin gives
-// a role, changes one, or removes a person. Before a person gets the Admin
-// role, a dialog shows the trust notice of the API, because an Admin
-// controls the runners of every organization of the workspace.
+// wait for an Admin. A person with no role yet is a request. Each person
+// shows the name from GitHub with the login under it. A member shows the day
+// of the role, and a request the day it asked and the organizations of the
+// workspace that the person was a member of then. An Admin gives a role,
+// changes one, or removes a person. Before a person gets the Admin role, a
+// dialog shows the trust notice of the API, because an Admin controls the
+// runners of every organization of the workspace.
 
 import type { ApiFailure } from "../api/client.ts";
 import type { WorkspaceRole } from "../api/schema.ts";
 import type { MemberView, MembersView } from "../api/settings-schema.ts";
 import type { FailureCopy } from "./claim.ts";
-import { roleNames } from "./format.ts";
+import { formatDay, joinWords, roleNames } from "./format.ts";
 
 /** The roles in the order of the role picker, with what each may do. */
 export const roleOrder: readonly WorkspaceRole[] = [
@@ -33,29 +36,62 @@ export const roleOptions = roleOrder.map((role) => ({
 /** The role that a request gets unless the Admin picks another. */
 export const requestRole: WorkspaceRole = "viewer";
 
-/** "1 September", a day in the time zone of the browser. */
-export function formatDay(iso: string, timeZone?: string): string {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "long",
-    timeZone,
-  }).format(new Date(iso));
-}
-
-/** The name of a person: the login, or the GitHub ID before a sign-in. */
+/**
+ * The name of a person: the name from GitHub, else the login, else the
+ * GitHub ID before a sign-in.
+ */
 export function personName(member: MemberView): string {
-  return member.login ?? `GitHub user ${member.id}`;
+  return member.name ?? member.login ?? `GitHub user ${member.id}`;
 }
 
-export type MemberRow = {
+/** The login under a name, when the row shows a name in its place. */
+function personCaption(member: MemberView): string | null {
+  const login = member.login ?? null;
+  return (member.name ?? null) === null ? null : login;
+}
+
+/**
+ * The letters of an avatar: "CM" for the name Cal Moore, "M" for the login
+ * mira, and "?" for a person known only by ID.
+ */
+function personInitials(member: MemberView): string {
+  const name = member.name ?? null;
+  if (name !== null) {
+    const words = name
+      .trim()
+      .split(/\s+/)
+      .filter((word) => word !== "");
+    const letters = words.length > 1 ? [words[0], words.at(-1)] : words;
+    const initials = letters.map((word) => word?.[0]?.toUpperCase() ?? "");
+    if (initials.join("") !== "") return initials.join("");
+  }
+  return (member.login?.trim()[0] ?? "?").toUpperCase();
+}
+
+export type Person = {
   id: string;
   name: string;
-  you: boolean;
-  role: WorkspaceRole;
-  since: string;
+  caption: string | null;
+  initials: string;
 };
 
-export type RequestRow = { id: string; name: string; asked: string };
+export type MemberRow = Person & {
+  you: boolean;
+  role: WorkspaceRole;
+  /** "1 September": the day of the role, or null when not known. */
+  since: string | null;
+};
+
+export type RequestRow = Person & { asked: string };
+
+/** "Asked on 18 November · member of mokly-ai": the request and its context. */
+function askedText(member: MemberView, timeZone?: string): string {
+  const asked = `Asked on ${formatDay(member.requested_at, timeZone)}`;
+  const organizations = member.request_organizations ?? [];
+  if (organizations.length === 0) return asked;
+  const logins = organizations.map((organization) => organization.login);
+  return `${asked}\u00a0· member of ${joinWords(logins, "and")}`;
+}
 
 export type MembersModel = {
   requests: RequestRow[];
@@ -71,18 +107,22 @@ export function membersModel(
   const requests: RequestRow[] = [];
   const members: MemberRow[] = [];
   for (const member of view.members) {
-    const name = personName(member);
-    const day = formatDay(member.requested_at, timeZone);
+    const person = {
+      id: member.id,
+      name: personName(member),
+      caption: personCaption(member),
+      initials: personInitials(member),
+    };
     const role = member.role ?? null;
     if (role === null) {
-      requests.push({ id: member.id, name, asked: `Asked on ${day}` });
+      requests.push({ ...person, asked: askedText(member, timeZone) });
     } else {
+      const granted = member.granted_at ?? null;
       members.push({
-        id: member.id,
-        name,
+        ...person,
         you: member.login === login,
         role,
-        since: day,
+        since: granted === null ? null : formatDay(granted, timeZone),
       });
     }
   }

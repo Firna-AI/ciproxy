@@ -1,15 +1,17 @@
-// The fit line of the label dialog. It shows the fit of the size in the
-// fields once the API answers for that size; until then it says that it
-// checks, so the line never shows the fit of an older size.
+// The fit of the label dialog: the VM disk of a job of the size, and the line
+// that says where jobs of the size run. Both show once the API answers for
+// the size and the switches in the fields; until then the dialog says that
+// it checks, so it never shows the fit of an older draft.
 
-import { Text } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { Notice } from "../../components/notice.tsx";
 import { WaitingLine } from "../../components/page-state.tsx";
 import { text } from "../../components/text.ts";
 import { fitKey, type PreviewSnapshot } from "../../state/settings-preview.ts";
 import type { DraftCheck } from "../../view/settings-label-form.ts";
-import { fitLine } from "../../view/settings-labels.ts";
+import { fitLine } from "../../view/settings-label-fit.ts";
+import { vmDiskLine } from "../../view/settings-label-sizes.ts";
 
 export function LabelFitLine({
   check,
@@ -31,17 +33,22 @@ export function LabelFitLine({
     }
     return <WaitingLine>Checking how many jobs of this size fit…</WaitingLine>;
   }
+  const disk = vmDiskLine(shown.fit);
   const line = fitLine(check.input, shown.fit);
-  if (line.kind === "warning") {
-    return (
-      <Notice tone="warning" title={line.title}>
-        {line.body}
-      </Notice>
-    );
-  }
   return (
-    <Text role="status" style={text.caption}>
-      {line.text}
-    </Text>
+    <View style={styles.fit}>
+      {disk === null ? null : <Text style={text.caption}>{disk}</Text>}
+      {line.kind === "warning" ? (
+        <Notice tone="warning" title={line.title}>
+          {line.body}
+        </Notice>
+      ) : (
+        <Text role="status" style={text.caption}>
+          {line.text}
+        </Text>
+      )}
+    </View>
   );
 }
+
+const styles = StyleSheet.create({ fit: { gap: 12 } });

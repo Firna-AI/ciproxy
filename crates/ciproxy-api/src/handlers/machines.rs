@@ -4,11 +4,13 @@ use std::sync::Arc;
 
 use axum::extract::{Path, State};
 use axum::{Extension, Json};
+use chrono::Duration;
 use ciproxy_gateway::types::{Delivery, MachineAction};
 use ciproxy_protocol::resources::{GIGABYTE, VmSize};
 use ciproxy_store_interface::dashboard::records::CurrentMachineCost;
 
 use crate::access::Principal;
+use crate::agent_releases::AgentReleases;
 use crate::error::{Error, ErrorResultExt, Result, ServiceResultExt};
 use crate::runtime::CostClock;
 use crate::state::{ApiState, query};
@@ -18,22 +20,27 @@ use crate::wire::machines::{
     MachinePath, MachineView, TokenPath, WarmRunnerTarget,
 };
 
-use super::machine_views;
+use super::{jobs, machine_views};
 
 #[utoipa::path(operation_id = "machines_list", get, path = "/workspaces/{workspace_id}/machines", params(WorkspacePath), responses((status = 200, body = [MachineView])), security(("session" = [])))]
 pub(crate) async fn list(
     State(state): State<ApiState>,
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<WorkspacePath>,
+    Extension(releases): Extension<Arc<dyn AgentReleases>>,
 ) -> Result<Json<Vec<MachineView>>> {
     let workspace_id = state
         .access
         .require_role(&principal, path.workspace_id, false)
         .await?;
-    Ok(Json(read(&state, workspace_id).await?))
+    Ok(Json(read(&state, workspace_id, releases.as_ref()).await?))
 }
 
-pub(super) async fn read(state: &ApiState, workspace: uuid::Uuid) -> Result<Vec<MachineView>> {
+pub(super) async fn read(
+    state: &ApiState,
+    workspace: uuid::Uuid,
+    releases: &dyn AgentReleases,
+) -> Result<Vec<MachineView>> {
     let gateway = state.gateway.clone();
     let values = tokio::task::spawn_blocking(move || gateway.machines(workspace))
         .await
@@ -43,6 +50,17 @@ pub(super) async fn read(state: &ApiState, workspace: uuid::Uuid) -> Result<Vec<
         store.dashboard_machine_costs(workspace)
     })
     .await?;
+    let at = state.runtime.now();
+    let jobs = query(state.store.clone(), move |store| {
+        store.dashboard_jobs(
+            workspace,
+            at - Duration::days(i64::from(jobs::history_days(
+                store.billing(workspace)?.state.tier,
+            ))),
+        )
+    })
+    .await?;
+    let latest = releases.latest().await.ok();
     let labels = query(state.store.clone(), move |store| store.labels(workspace)).await?;
     let default_size = labels
         .into_iter()
@@ -60,13 +78,21 @@ pub(super) async fn read(state: &ApiState, workspace: uuid::Uuid) -> Result<Vec<
         .into_iter()
         .map(|value| {
             let capacity = state.capacity.capacity(&value.snapshot);
-            let default_size = default_size.and_then(|size| {
-                state
+            let default_size = default_size.map(|requested| machine_views::DefaultSize {
+                requested,
+                root_bytes: state
                     .capacity
-                    .required_root_bytes(&value.snapshot, size.disk_bytes)
-                    .map(|disk_bytes| VmSize { disk_bytes, ..size })
+                    .required_root_bytes(&value.snapshot, requested.disk_bytes),
             });
-            machine_views::machine(value, &costs, state.runtime.now(), default_size, capacity)
+            machine_views::machine(
+                value,
+                &costs,
+                at,
+                default_size,
+                capacity,
+                &jobs,
+                latest.as_deref(),
+            )
         })
         .collect())
 }
@@ -76,6 +102,7 @@ pub(crate) async fn detail(
     State(state): State<ApiState>,
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<MachinePath>,
+    Extension(releases): Extension<Arc<dyn AgentReleases>>,
 ) -> Result<Json<MachineView>> {
     let workspace_id = state
         .access
@@ -83,7 +110,7 @@ pub(crate) async fn detail(
         .await?;
     let id = path.machine_id.to_string();
     Ok(Json(
-        read(&state, workspace_id)
+        read(&state, workspace_id, releases.as_ref())
             .await?
             .into_iter()
             .find(|machine| machine.id == id)

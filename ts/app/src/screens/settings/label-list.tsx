@@ -1,8 +1,7 @@
 // The labels of the workspace: a table on a wide window and cards on a
-// phone, each with its name, its size under the name, where its jobs can
-// run, and Edit. The Boat part is the switch of the label, because the API
-// gives no Boat fit. The default label carries a tag, because it is the one
-// label that stays.
+// phone, each with its name, its size under the name, where its jobs run
+// now, the jobs of the last 30 days, and Edit. The default label carries a
+// tag, because it is the one label that stays.
 
 import { StyleSheet, Text, View } from "react-native";
 import { Badge } from "@firna/ui/badge";
@@ -13,11 +12,12 @@ import { colors } from "@ciproxy/tokens";
 import { ActionButton } from "../../components/actions.tsx";
 import { StatusLabel } from "../../components/feature-parts.tsx";
 import { text } from "../../components/text.ts";
-import type { LabelRow } from "../../view/settings-labels.ts";
+import { jobsCaption, type LabelRow } from "../../view/settings-labels.ts";
 
 const columns: TableColumn[] = [
   { key: "label", label: "Label", flex: 3 },
   { key: "where", label: "Where jobs run", flex: 2 },
+  { key: "jobs", label: "Jobs, 30 days", width: 128, align: "right" },
   { key: "edit", label: "", width: 96, align: "right" },
 ];
 
@@ -42,9 +42,9 @@ function Where({ row }: { row: LabelRow }) {
       ) : (
         <Text style={text.small}>{row.where.text}</Text>
       )}
-      {row.where.boat ? (
-        <Text style={text.caption}>{row.where.boat}</Text>
-      ) : null}
+      {row.where.note === null ? null : (
+        <Text style={text.caption}>{row.where.note}</Text>
+      )}
     </View>
   );
 }
@@ -96,6 +96,13 @@ export function LabelList({
             );
           }
           if (key === "where") return <Where row={row} />;
+          if (key === "jobs") {
+            return (
+              <Text style={[text.small, styles.count]}>
+                {row.jobs ?? "Not known yet"}
+              </Text>
+            );
+          }
           return <Edit row={row} onEdit={onEdit} />;
         }}
       />
@@ -113,6 +120,7 @@ export function LabelList({
             <LabelName row={row} />
             <Text style={text.small}>{row.size}</Text>
             <Where row={row} />
+            <Text style={text.caption}>{jobsCaption(row.jobs)}</Text>
           </View>
           <Edit row={row} onEdit={onEdit} />
         </View>
@@ -124,6 +132,7 @@ export function LabelList({
 const styles = StyleSheet.create({
   cell: { gap: 2, paddingVertical: 6, minWidth: 0 },
   where: { gap: 2, paddingVertical: 6, minWidth: 0 },
+  count: { fontVariant: ["tabular-nums"] },
   nameRow: {
     flexDirection: "row",
     flexWrap: "wrap",

@@ -15,7 +15,7 @@ use crate::error::QueryResultExt;
 use super::rows::MemberRow;
 
 pub(super) fn members(store: &PgStore, workspace: Uuid) -> Result<Vec<Member>> {
-    diesel::sql_query("SELECT r.github_user_id, u.login, r.role, r.requested_at FROM dashboard_roles r LEFT JOIN dashboard_users u ON u.github_id = r.github_user_id WHERE r.workspace_id = $1 ORDER BY r.requested_at, r.github_user_id")
+    diesel::sql_query("SELECT r.github_user_id, u.login, u.name, u.avatar_url, r.role, r.requested_at, r.granted_at, r.request_organizations FROM dashboard_roles r LEFT JOIN dashboard_users u ON u.github_id = r.github_user_id WHERE r.workspace_id = $1 ORDER BY r.requested_at, r.github_user_id")
         .bind::<sql_types::Uuid, _>(workspace).load::<MemberRow>(&mut *store.connection()?).store()?
         .into_iter().map(MemberRow::into_record).collect()
 }
@@ -44,8 +44,8 @@ pub(super) fn first_admin(
             .bind::<sql_types::Uuid,_>(workspace).execute(connection)?;
         if inserted == 0 { return QueryResult::Ok(()); }
         diesel::insert_into(dashboard_roles::table).values((dashboard_roles::workspace_id.eq(workspace),dashboard_roles::github_user_id.eq(github_id),
-            dashboard_roles::role.eq("admin"),dashboard_roles::requested_at.eq(at)))
-            .on_conflict((dashboard_roles::workspace_id,dashboard_roles::github_user_id)).do_update().set(dashboard_roles::role.eq("admin"))
+            dashboard_roles::role.eq("admin"),dashboard_roles::requested_at.eq(at),dashboard_roles::granted_at.eq(at)))
+            .on_conflict((dashboard_roles::workspace_id,dashboard_roles::github_user_id)).do_update().set((dashboard_roles::role.eq("admin"), dashboard_roles::granted_at.eq(diesel::dsl::sql::<sql_types::Nullable<sql_types::Timestamptz>>("CASE WHEN dashboard_roles.role IS DISTINCT FROM 'admin' THEN ").bind::<sql_types::Timestamptz,_>(at).sql(" ELSE dashboard_roles.granted_at END"))))
             .execute(connection)?;
         Ok(())
     }).store()
@@ -81,13 +81,25 @@ pub(super) fn save(
             dashboard_roles::github_user_id.eq(github_id),
             dashboard_roles::role.eq(value),
             dashboard_roles::requested_at.eq(at),
+            dashboard_roles::granted_at.eq(at),
         ))
         .on_conflict((
             dashboard_roles::workspace_id,
             dashboard_roles::github_user_id,
         ))
         .do_update()
-        .set(dashboard_roles::role.eq(value))
+        .set((
+            dashboard_roles::role.eq(value),
+            dashboard_roles::granted_at.eq(diesel::dsl::sql::<
+                sql_types::Nullable<sql_types::Timestamptz>,
+            >(
+                "CASE WHEN dashboard_roles.role IS DISTINCT FROM "
+            )
+            .bind::<sql_types::Text, _>(value)
+            .sql(" THEN ")
+            .bind::<sql_types::Timestamptz, _>(at)
+            .sql(" ELSE dashboard_roles.granted_at END")),
+        ))
         .execute(&mut *store.connection()?)
         .store()?;
     Ok(())
@@ -121,9 +133,9 @@ pub(super) fn claim(
         let github_id = dashboard_users::table.find(user).select(dashboard_users::github_id).first::<i64>(connection)?;
         diesel::insert_into(dashboard_roles::table).values((
             dashboard_roles::workspace_id.eq(workspace), dashboard_roles::github_user_id.eq(github_id),
-            dashboard_roles::role.eq("admin"), dashboard_roles::requested_at.eq(at),
+            dashboard_roles::role.eq("admin"), dashboard_roles::requested_at.eq(at), dashboard_roles::granted_at.eq(at),
         )).on_conflict((dashboard_roles::workspace_id, dashboard_roles::github_user_id)).do_update()
-            .set(dashboard_roles::role.eq("admin")).execute(connection)?;
+            .set((dashboard_roles::role.eq("admin"), dashboard_roles::granted_at.eq(diesel::dsl::sql::<sql_types::Nullable<sql_types::Timestamptz>>("CASE WHEN dashboard_roles.role IS DISTINCT FROM 'admin' THEN ").bind::<sql_types::Timestamptz,_>(at).sql(" ELSE dashboard_roles.granted_at END")))).execute(connection)?;
         Ok(true)
     }).store()
 }

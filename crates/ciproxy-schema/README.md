@@ -144,6 +144,12 @@ fn migrate(
 The PostgreSQL store factory applies pending migrations when it connects.
 The factory serializes migration runs with a database session lock.
 
+Dashboard fact metadata remains nullable for legacy records. New organization
+registrations record their first database observation. Reinstall preserves it.
+Complete repository snapshots record their observation separately. Dashboard
+roles retain initial request organizations and current grant dates. Optional
+public names remain with the existing retained dashboard identity.
+
 ## Development
 
 Run commands from the repository root:

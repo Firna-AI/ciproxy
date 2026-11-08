@@ -2,7 +2,8 @@
 // reads the machines first, and shows the command only after that read, so a
 // machine that installs fast still shows as new. Each visit opens with a
 // usable command; a revoke during the visit keeps its notice. Then it waits
-// for a machine that joins, and shows what the agent reported. A machine
+// for a machine that joins, and shows what the agent reported, with the jobs
+// of ciproxy that its disk holds when the disk sets that number. A machine
 // without KVM gets the notice with the fix. A failed read after the baseline
 // keeps the command, the baseline, and the last machines, and shows the
 // shared refresh warning with Try again; the next good read, from Try again
@@ -35,10 +36,9 @@ import {
   detailCopy,
   listCopy,
   noticeCopy,
-  slotCopy,
 } from "../../view/machines-copy.ts";
 import { machinesHref } from "../../view/machines-routes.ts";
-import { concurrentJobs, connectedFacts } from "../../view/machines.ts";
+import { connectedFacts, joinedFits } from "../../view/machines-capacity.ts";
 import { InstallCommandView } from "../setup/install-command.tsx";
 import type { WorkspaceContext } from "../workspace-page.tsx";
 import { MachinesRefreshNotice } from "./machines-refresh.tsx";
@@ -51,7 +51,7 @@ function Joined({ machine }: { machine: MachineView }) {
       </Notice>
     );
   }
-  const jobs = concurrentJobs(machine);
+  const fits = joinedFits(machine);
   return (
     <View style={styles.joined} role="status">
       <DoneIcon size={18} color={statusColors.ok} />
@@ -60,9 +60,7 @@ function Joined({ machine }: { machine: MachineView }) {
           {addCopy.connected(machine.hostname)}
         </Text>
         <Text style={text.caption}>{connectedFacts(machine)}</Text>
-        {jobs === null ? null : (
-          <Text style={text.caption}>{slotCopy.fits(jobs)}</Text>
-        )}
+        {fits === null ? null : <Text style={text.caption}>{fits}</Text>}
       </View>
     </View>
   );

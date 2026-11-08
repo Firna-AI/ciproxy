@@ -6,7 +6,7 @@
 
 import type { OrganizationView } from "../api/schema.ts";
 import { workspaceHref } from "../routing/pages.ts";
-import { holdReasons } from "./settings-organizations.ts";
+import { holdReason } from "./settings-organizations.ts";
 
 /** An organization that runs its jobs now: active, admitted, with no hold. */
 function running(organization: OrganizationView): boolean {
@@ -64,11 +64,7 @@ export function inactiveBanner(
   const plan = reasons.includes("billing_upgrade");
   const admin = reasons.includes("admin_approval");
   const why = reasons
-    .map((reason) =>
-      reason === "admin_approval"
-        ? `the person who added ${first.login} is no longer an Admin`
-        : holdReasons[reason],
-    )
+    .map((reason, index) => holdReason(first, reason, first.login, index === 0))
     .join(", and ");
   const start =
     plan && admin
@@ -78,7 +74,7 @@ export function inactiveBanner(
         : "It starts its jobs after an Admin turns it on.";
   return {
     title: `${first.login} is inactive`,
-    body: `${why.charAt(0).toUpperCase()}${why.slice(1)}. ${start}${keep}`,
+    body: `${why}. ${start}${keep}`,
     chooseTeam,
     turnOn: first.activation.can_enable
       ? { id: first.id, login: first.login }

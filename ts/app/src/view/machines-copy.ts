@@ -3,7 +3,7 @@
 // take their text from here, so one change of a word changes every place
 // that shows it. Values arrive formatted.
 
-import { dotJoin, unbroken } from "./machines-format.ts";
+import { dotJoin, formatExactCount, unbroken } from "./machines-format.ts";
 
 const count = (value: number, one: string, many: string) =>
   unbroken(`${value} ${value === 1 ? one : many}`);
@@ -56,6 +56,7 @@ export const slotCopy = {
   job: "Running a job",
   warm: "Warm runner, ready",
   free: "Free",
+  freeNoDisk: "Free, no disk for a job",
   size: (slots: number) =>
     `${count(slots, "slot", "slots")} of ${unbroken("2 vCPU")} and ${unbroken("8 GB")}. A larger VM size takes several slots.`,
   fits: (jobs: number) =>
@@ -114,6 +115,12 @@ export const noticeCopy = {
   noSlotsTitle: (host: string) => `${host} has no slots`,
   noSlots:
     "Its threads and memory leave no room for a job after the host reserve. Use a machine with more threads and memory.",
+  diskLimitTitle: (host: string, jobs: number) =>
+    `Disk limits ${host} to ${count(jobs, "job", "jobs")} of ciproxy at a time`,
+  diskLimit: (vmDisk: string | null, jobDisk: string | null) =>
+    vmDisk === null || jobDisk === null
+      ? "Add disk to run more jobs at once."
+      : `With the current image, a job of ciproxy holds ${unbroken(`${vmDisk} GB`)} of disk. The machine has ${unbroken(`${jobDisk} GB`)} for jobs after the VM images and the host reserve. Add disk to run more jobs at once.`,
   savedOffline: (host: string) =>
     `${host} gets the change when it connects again.`,
   savedTitle: "Saved",
@@ -142,6 +149,9 @@ export const healthCopy = {
   diskFree: (free: string) => `${unbroken(`${free} GB`)} free`,
   noReport: "No report yet",
   agent: "Agent",
+  upToDate: (version: string) => dotJoin(version, "up to date"),
+  behind: (version: string, latest: string) =>
+    dotJoin(version, unbroken(`${latest} available`)),
   oldValues: (since: string | null) =>
     since === null
       ? "KVM, disk, and agent show the values of the last contact."
@@ -155,7 +165,13 @@ export const cacheCopy = {
   used: (used: string, capacity: string) => `${used} of ${capacity} GB`,
   hits: "Cache hits, 7 days",
   docker: "Docker disks",
-  dockerSize: (size: string) => unbroken(`${size} GB`),
+  dockerUse: (repositories: string, size: string) =>
+    dotJoin(
+      unbroken(
+        `${formatExactCount(repositories)} ${repositories === "1" ? "repository" : "repositories"}`,
+      ),
+      unbroken(`${size} GB`),
+    ),
   unreported: "Cache use shows after the machine reports it.",
   noReport: "No report yet",
   dialogTitle: (host: string) => `Clear the cache of ${host}?`,
@@ -209,4 +225,6 @@ export const addCopy = {
     `Run this command on the new machine. It installs the ciproxy agent and connects the machine to ${workspace}.`,
   waiting: "Waiting for the machine to connect…",
   connected: (host: string) => `${host} connected`,
+  diskHolds: (jobs: number) =>
+    `Its disk holds ${count(jobs, "job", "jobs")} of ciproxy at a time.`,
 } as const;

@@ -104,6 +104,13 @@ WITH demands AS (
       (body->>'started_at')::timestamptz,(body->>'queued_at')::timestamptz)>=$2
 )
 SELECT v.body || jsonb_build_object(
+  'runner_id',r.id,
+  'reported_ids',ARRAY(SELECT DISTINCT d.job_id FROM demands d
+    WHERE d.organization_id=v.organization_id AND
+      (d.id=(v.body->>'id')::uuid OR
+        ((d.body->>'runner_github_id')::bigint=r.github_id
+        AND (d.body->>'scale_set_id')::uuid=r.scale_set_id
+        AND (d.body->>'actions_job_id')::bigint=(v.body->>'actions_job_id')::bigint))),
   'organization_id',v.organization_id,'organization',o.login,'label',l.name,
   'requested_size',CASE
     WHEN v.body->>'state'='queued' THEN jsonb_build_object(

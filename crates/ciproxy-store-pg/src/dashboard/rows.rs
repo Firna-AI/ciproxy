@@ -2,10 +2,11 @@
 
 use chrono::{DateTime, Utc};
 use ciproxy_schema::dashboard::{dashboard_login_states, dashboard_sessions, dashboard_users};
+use ciproxy_store_interface::dashboard::facts::MemberOrganization;
 use ciproxy_store_interface::dashboard::records::{LoginState, Member, Session, User};
 use ciproxy_store_interface::error::{Result, ResultExt};
 use diesel::prelude::*;
-use diesel::sql_types::{BigInt, Nullable, Text, Timestamptz};
+use diesel::sql_types::{BigInt, Jsonb, Nullable, Text, Timestamptz};
 use uuid::Uuid;
 
 #[derive(Queryable, Selectable)]
@@ -81,6 +82,14 @@ pub(super) struct MemberRow {
     #[diesel(sql_type = Nullable<Text>)]
     pub(super) login: Option<String>,
     #[diesel(sql_type = Nullable<Text>)]
+    pub(super) name: Option<String>,
+    #[diesel(sql_type = Nullable<Text>)]
+    pub(super) avatar_url: Option<String>,
+    #[diesel(sql_type = Nullable<Timestamptz>)]
+    pub(super) granted_at: Option<DateTime<Utc>>,
+    #[diesel(sql_type = Nullable<Jsonb>)]
+    pub(super) request_organizations: Option<serde_json::Value>,
+    #[diesel(sql_type = Nullable<Text>)]
     pub(super) role: Option<String>,
     #[diesel(sql_type = Timestamptz)]
     pub(super) requested_at: DateTime<Utc>,
@@ -91,6 +100,13 @@ impl MemberRow {
         Ok(Member {
             github_user_id: self.github_user_id,
             login: self.login,
+            name: self.name,
+            avatar_url: self.avatar_url,
+            granted_at: self.granted_at,
+            request_organizations: self
+                .request_organizations
+                .map(|value| serde_json::from_value::<Vec<MemberOrganization>>(value).internal())
+                .transpose()?,
             role: self.role.map(|role| role.parse().internal()).transpose()?,
             requested_at: self.requested_at,
         })

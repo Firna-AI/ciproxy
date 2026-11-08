@@ -8,25 +8,15 @@ import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Input } from "@firna/ui/input";
 
-import type { ApiFailure } from "../../api/client.ts";
 import type { MachineView } from "../../api/schema.ts";
 import { ActionButton } from "../../components/actions.tsx";
 import { Panel } from "../../components/feature-parts.tsx";
 import { text } from "../../components/text.ts";
+import type { CostEdit } from "../../view/machines-controls.ts";
 import { costCopy } from "../../view/machines-copy.ts";
 import { parseDollars } from "../../view/machines-format.ts";
 import { failureText } from "../../view/machines-outcome.ts";
 import { costModel } from "../../view/machines-panels.ts";
-
-export type CostEdit = {
-  busy: boolean;
-  /** The failure of the last save, while the form is open. */
-  failure: ApiFailure | null;
-  /** Saves the cents; resolves to whether the save succeeded. */
-  save: (cents: string) => Promise<boolean>;
-  /** Called when the form opens or closes, to clear an old failure. */
-  reset: () => void;
-};
 
 function CostForm({
   initial,

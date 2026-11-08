@@ -24,6 +24,7 @@ import {
   type LabelDraft,
   type SizeField,
 } from "../../view/settings-label-form.ts";
+import { largestBoatBody } from "../../view/settings-label-sizes.ts";
 import { canDelete } from "../../view/settings-labels.ts";
 import { LabelFitLine } from "./label-fit.tsx";
 import { LabelForm } from "./label-form.tsx";
@@ -113,6 +114,9 @@ export function LabelDialog({
     );
   };
 
+  // The largest Boat size belongs to the account, so any answered fit names it.
+  const boatFit =
+    previewState.shown?.fit ?? saved?.fit ?? labels[0]?.fit ?? null;
   const title = saved === null ? "Add a label" : `Edit ${saved.label.name}`;
   const footer = (
     <View style={styles.footer}>
@@ -164,6 +168,7 @@ export function LabelDialog({
           nameError={nameError}
           sizeErrors={sizeErrors}
           fit={<LabelFitLine check={check} preview={previewState} />}
+          largestBoat={largestBoatBody(boatFit)}
           onChange={change}
         />
       </View>

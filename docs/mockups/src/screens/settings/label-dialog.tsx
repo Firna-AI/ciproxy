@@ -37,7 +37,8 @@ export type LabelDialogMode =
   | "no-machine-fits"
   | "nothing-fits"
   | "mixed-machines"
-  | "refused-name";
+  | "refused-name"
+  | "no-boat";
 
 type DialogCopy = {
   label: Label;
@@ -49,6 +50,8 @@ type DialogCopy = {
   machines: readonly Machine[];
   /** The refusal of the name, when the GitHub label rules refuse it. */
   nameError?: string;
+  /** The workspace has no Boat account, so no Boat size is known. */
+  noBoat?: boolean;
 };
 
 const steady = machineScenes.steady;
@@ -90,6 +93,13 @@ const dialogs: Record<LabelDialogMode, DialogCopy> = {
     list: paths.settings,
     machines: steady,
     nameError: `A label name cannot have spaces. Use ${refusedLabel.name.replaceAll(" ", "-")} instead.`,
+  },
+  "no-boat": {
+    label: labelNamed("ciproxy-8vcpu"),
+    edits: true,
+    list: paths.labelsNoBoat,
+    machines: steady,
+    noBoat: true,
   },
 };
 
@@ -171,7 +181,11 @@ export function LabelDialog({ mode }: { mode: LabelDialogMode }) {
           {diskText(vmDiskBytes(label))}.
         </p>
       </div>
-      <FitNote label={label} machines={copy.machines} />
+      <FitNote
+        label={label}
+        machines={copy.machines}
+        boat={copy.noBoat !== true}
+      />
       <Toggle label="Your machines" caption="Jobs start here first" />
       <Toggle
         label="Boat"
@@ -186,7 +200,11 @@ export function LabelDialog({ mode }: { mode: LabelDialogMode }) {
         />
         <RadioCard
           title="Run on the largest Boat size"
-          body={`Jobs run on ${sizePhrase(largestBoatSize)}, the largest size of your Boat account.`}
+          body={
+            copy.noBoat
+              ? "Jobs run on the largest size of your Boat account, also when it is smaller than the label."
+              : `Jobs run on ${sizePhrase(largestBoatSize)}, the largest size of your Boat account.`
+          }
           checked={label.whenNothingFits === "largest-boat-size"}
           onPress={noop}
         />

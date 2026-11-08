@@ -23,7 +23,7 @@ fn continuation_survives_person_pruning_and_expires_at_the_fixed_boundary() {
     assert!(
         database
             .store
-            .establish_dashboard_session(&user, &memberships, &session, &results)
+            .establish_dashboard_session(&user, &memberships, &session, &results, None)
             .unwrap()
     );
     database.store.save_dashboard_user(&user, &[]).unwrap();
@@ -85,7 +85,7 @@ fn failed_continuation_write_rolls_back_identity_and_session_rotation() {
     assert!(
         database
             .store
-            .establish_dashboard_session(&user, &memberships, &session, &results)
+            .establish_dashboard_session(&user, &memberships, &session, &results, None)
             .unwrap()
     );
     assert_eq!(
@@ -118,7 +118,7 @@ fn failed_continuation_write_rolls_back_identity_and_session_rotation() {
     let failure =
         database
             .store
-            .establish_dashboard_session(&user, &memberships, &session, &results);
+            .establish_dashboard_session(&user, &memberships, &session, &results, None);
     assert!(matches!(failure, Err(Error::Internal(_))));
     let saved_user = database.store.dashboard_user(user.id).unwrap().unwrap();
     assert_eq!(saved_user.credentials, vec![11]);
@@ -158,7 +158,7 @@ fn failed_continuation_write_rolls_back_identity_and_session_rotation() {
     assert!(
         database
             .store
-            .establish_dashboard_session(&user, &memberships, &session, &results)
+            .establish_dashboard_session(&user, &memberships, &session, &results, None)
             .unwrap()
     );
     assert_eq!(

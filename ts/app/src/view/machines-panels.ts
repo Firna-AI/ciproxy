@@ -14,7 +14,7 @@ import {
 } from "./machines-format.ts";
 import { cacheHitsText, contactSince } from "./machines.ts";
 
-export type HealthTone = "ok" | "err" | "idle";
+export type HealthTone = "ok" | "warn" | "err" | "idle";
 
 export type HealthRow = {
   key: string;
@@ -60,8 +60,8 @@ export function healthModel(machine: MachineView, now: number): HealthModel {
           key: "kvm",
           label: healthCopy.kvm,
           value: healthCopy.kvmMissing,
-          tone: "err",
-          old: false,
+          tone: old ? "idle" : "err",
+          old,
         },
     ...(disks.length > 0
       ? disks
@@ -71,17 +71,43 @@ export function healthModel(machine: MachineView, now: number): HealthModel {
             tone: "idle" as const,
           },
         ]),
-    machine.agent_version === ""
-      ? {
-          ...fresh(healthCopy.noReport, "agent", healthCopy.agent),
-          tone: "idle",
-        }
-      : fresh(machine.agent_version, "agent", healthCopy.agent),
+    agentRow(machine, fresh),
   ];
   return {
     rows,
     note: old ? healthCopy.oldValues(contactSince(machine, now)) : null,
   };
+}
+
+/**
+ * The agent version, and whether it is the newest release, as the API
+ * compares them. An old report claims nothing, because the agent can have
+ * updated since; a release that ciproxy could not read claims nothing too.
+ */
+function agentRow(
+  machine: MachineView,
+  fresh: (value: string, key: string, label: string) => HealthRow,
+): HealthRow {
+  const version = machine.agent_version;
+  if (version === "") {
+    return {
+      ...fresh(healthCopy.noReport, "agent", healthCopy.agent),
+      tone: "idle",
+    };
+  }
+  if (machine.health_old) return fresh(version, "agent", healthCopy.agent);
+  const latest = machine.latest_agent_version ?? null;
+  const current = machine.agent_up_to_date ?? null;
+  if (current === true) {
+    return fresh(healthCopy.upToDate(version), "agent", healthCopy.agent);
+  }
+  if (current === false && latest !== null) {
+    return {
+      ...fresh(healthCopy.behind(version, latest), "agent", healthCopy.agent),
+      tone: "warn",
+    };
+  }
+  return { ...fresh(version, "agent", healthCopy.agent), tone: "idle" };
 }
 
 export type CacheModel =
@@ -108,7 +134,10 @@ export function cacheModel(machine: MachineView): CacheModel {
     ),
     used: gigabytes(cache.used_bytes),
     hits: cacheHitsText([machine]),
-    docker: cacheCopy.dockerSize(gigabytes(cache.docker_disk_bytes)),
+    docker: cacheCopy.dockerUse(
+      cache.docker_repositories,
+      gigabytes(cache.docker_disk_bytes),
+    ),
   };
 }
 

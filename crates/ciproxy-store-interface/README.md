@@ -257,6 +257,20 @@ Call its check_connection method before continued use after a connection
 error or during listener health checks.
 Stop the listener when this query fails.
 
+## Dashboard fact provenance
+
+Dashboard queries expose nullable registration and complete repository
+observation times. Member projections include retained public profile facts,
+initial request organizations, and the actual grant time of the current role.
+A repeated save of the same role preserves that time. Legacy records keep
+unknown metadata empty. Session establishment captures an optional GitHub
+public name atomically with the retained identity.
+
+The canonical job projection retains the exact runner identity and proved
+report aliases. Callers can join a machine slot without treating a report job
+UUID as a numeric Actions job. Label summaries use retained label identities
+and the same canonical projection, independently of visible history limits.
+
 ## Development
 
 Run commands from the repository root:
