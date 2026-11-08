@@ -139,14 +139,8 @@ The gateway authenticates Hello before Welcome.
 An authenticated policy close with `[gateway] authentication failed`
 revokes the local machine. Other failures reconnect and preserve its VMs.
 
-The hosted runtime stores runner placement, GitHub IDs, and command IDs.
-It removes an idle GitHub registration before StopRunner.
-Drain disables admission while that removal runs.
-A busy removal result preserves the job VM.
-Remove and local uninstall still use immediate idle shutdown.
-A job assigned before the guest's trusted handoff can race that direct path.
-The user selected immediate stop for that unobserved-job window.
-An App removal applies the same exception to that organization only.
+The [registration and retirement guide](registration-and-retirement.md)
+covers one-use delivery, reconnect proof, and authorized idle stops.
 
 The agent verifies the release byte count and SHA-256 before extraction.
 The released `.tar.zst` bundle contains the root, kernel, and five metadata
@@ -163,18 +157,6 @@ A matching retry keeps its original request, image, and allocation.
 Image reports list exact metadata and identify the newest local release.
 These are required new formats. No old-format adapter is supplied.
 A dormant drive slot permits a later checked Docker disk switch.
-The guest and agent use vsock port 5252.
-The agent configures a runner only for a guest Hello of handoff format 2.
-The guest repeats Hello and its current assignment after reconnect.
-A late readiness event cannot replace an assigned job.
-Registrations and runtime credentials stay in memory.
-The agent keeps each JIT configuration in memory until the guest confirms
-receipt through `RunnerConfigured` or its reconnect Hello. Before that
-confirmation, reconnect sends the configuration again.
-A duplicate delivery starts no second runner.
-The guest Hello carries `configuration_received`. A runner report sets
-`configuration_lost` only when that value is false and this agent process
-holds no pending JIT. An in-flight delivery is therefore not lost.
 
 The [cache and Docker guide](cache-and-docker.md) gives the runner handoff,
 the machine cache service and its listener rules, cache budgets and
@@ -252,6 +234,10 @@ KVM and GitHub smoke checks, and release packaging commands.
   reports.
 - [src/mode.rs](src/mode.rs) owns terminal runtime mode transitions.
 - [src/vms.rs](src/vms.rs) owns separate jailed VM units.
+- [src/retirement.rs](src/retirement.rs) ends proven unconfigured VMs and
+  keeps configured guests on their guarded shutdown path.
+- [src/registration.rs](src/registration.rs) shares delivery and retirement
+  claims and checks each retry against current VM state.
 - [src/network.rs](src/network.rs) allocates host-free network indices and
   verifies that cleanup removed their resources.
 - [src/network_lifecycle.rs](src/network_lifecycle.rs) keeps active and
@@ -287,6 +273,7 @@ KVM and GitHub smoke checks, and release packaging commands.
   uninstall entry points. `Uninstall::start` selects direct guarded cleanup
   or VM recovery and drain. `Uninstall::finish` removes the drained area.
 - [src/area.rs](src/area.rs) owns area preparation, repair, and removal.
+  Fresh creation completes measured growth in one install call.
 - [scripts/](scripts/) contains smoke checks and network regression tests.
 
 ### Related Docs

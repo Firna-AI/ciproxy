@@ -10,7 +10,8 @@ use crate::boat::BoatChannel;
 use crate::boundary::{Channel, Power};
 use crate::error::Result;
 use crate::guest_setup::LinuxGuestSetup;
-use crate::process::{LinuxPower, LinuxRunner, NamespacePower};
+use crate::power::{LinuxPower, LinuxShutdownCommand, NamespacePower};
+use crate::process::LinuxRunner;
 use crate::service::{Guest, Supervisor};
 use crate::vsock::VsockChannel;
 
@@ -62,7 +63,9 @@ impl Application for LinuxApplication {
         let (channel, power): (Box<dyn Channel>, Box<dyn Power>) = match cli.mode {
             Mode::Vsock { port } => (
                 Box::new(VsockChannel::accept(port).await?),
-                Box::new(LinuxPower),
+                Box::new(LinuxPower {
+                    command: Box::new(LinuxShutdownCommand),
+                }),
             ),
             Mode::Boat { registration_file } => (
                 Box::new(BoatChannel::from_file(&registration_file)?),

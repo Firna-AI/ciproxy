@@ -888,9 +888,17 @@ Live KVM and authenticated job checks remain with the orchestrator.
         unconfigured guest itself, with the GitHub retirement checks and
         the running-job protection kept. Reason: the host must not depend
         on a guest that has no registration.
+        Code fix: agent-owned retirement and guest reset. Live proof stays
+        with the orchestrator after the merge. The guest reset ships in
+        the next image release.
+        Branch:
+        `conductor/fix-agent-live-defects-unconfigured-stop-xfs-first-install`.
   - [ ] Finish the first XFS area setup in one install call. A fresh host
         needed a second install after four growth passes. My call, 8
         November 2026: the install finishes the measured growth itself.
+        Code fix: continue measured growth in the same install call.
+        Branch:
+        `conductor/fix-agent-live-defects-unconfigured-stop-xfs-first-install`.
   - [ ] Run every scenario again, with the firewall proof and its reboot.
 
 Owner review of pull request #31, round 1, 6 November 2026: the user chose

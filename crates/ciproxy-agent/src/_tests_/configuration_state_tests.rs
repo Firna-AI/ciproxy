@@ -1,9 +1,11 @@
 //! Confirmed startup loss survives reports and clears for a fresh pending delivery.
 
+use ciproxy_protocol::guest::{GuestToAgent, HANDOFF_PROTOCOL_VERSION};
 use ciproxy_protocol::runners::RunnerState;
+use ciproxy_protocol::version::ProtocolVersion;
 use unimock::{MockFn, Unimock, matching};
 
-use crate::boundaries::{StoreMock, VmsMock};
+use crate::boundaries::{GuestProvenance, StoreMock, VmsMock};
 use crate::controller::Agent;
 use crate::fixtures::{controller, report_dependencies, vm};
 use crate::state::MachineState;
@@ -44,6 +46,24 @@ async fn configuration_loss_is_durable_and_queued_observations_use_current_bridg
     let restored = controller(saved, Unimock::new(report_dependencies()));
     assert!(restored.report().await.unwrap().runners[0].configuration_lost);
     agent.configuration_lost("runner-1").await.unwrap();
+    assert!(
+        agent.state.lock().await.runners[0]
+            .report
+            .configuration_lost
+    );
+    agent
+        .guest(
+            GuestProvenance::Recovery,
+            "runner-1",
+            GuestToAgent::Hello {
+                protocol_version: ProtocolVersion::CURRENT,
+                handoff_protocol_version: HANDOFF_PROTOCOL_VERSION,
+                image_id: vm("runner-1", false).report.image_id,
+                configuration_received: true,
+            },
+        )
+        .await
+        .unwrap();
     assert!(
         !agent.state.lock().await.runners[0]
             .report

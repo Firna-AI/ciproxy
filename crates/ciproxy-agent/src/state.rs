@@ -1,6 +1,6 @@
 //! Root-only durable identity and VM ownership. Registrations never enter state.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use ciproxy_protocol::cache::DockerBudget;
 use ciproxy_protocol::guest::JobPreparation;
@@ -52,9 +52,18 @@ pub struct VmRecord {
     pub(crate) report: RunnerReport,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum RegistrationClaim {
+    Delivery,
+    Retirement,
+}
+
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 /// The root-only state committed before publishing lifecycle changes.
 pub struct MachineState {
+    /// In-flight owners share the state lock but never survive a process restart.
+    #[serde(skip)]
+    pub(crate) registration_claims: BTreeMap<String, RegistrationClaim>,
     /// Failed starts retry VM and disk cleanup before releasing their record.
     #[serde(default)]
     pub(crate) failed_starts: BTreeSet<String>,

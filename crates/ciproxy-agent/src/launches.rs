@@ -4,13 +4,13 @@ use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_protocol::guest::AgentToGuest;
 use ciproxy_protocol::reports::DrainState;
 use ciproxy_protocol::runners::{RunnerReport, RunnerSpec, RunnerState};
-use ciproxy_protocol::version::ProtocolVersion;
 
 use crate::capacity::machine_resources;
 use crate::controller::Controller;
 use crate::error::{Error, Result};
+use crate::registration::{RegistrationAction, configure};
 use crate::slot_allocation::choose;
-use crate::state::{Mode, VmRecord};
+use crate::state::{Mode, RegistrationClaim, VmRecord};
 
 impl Controller {
     pub(crate) async fn start(&self, runner: RunnerSpec) -> Result<()> {
@@ -113,28 +113,19 @@ impl Controller {
         self.launch(vm, configure(runner)).await
     }
 
-    async fn retry_start(&self, vm: VmRecord, runner: RunnerSpec) -> Result<()> {
-        if vm.report.organization_id != runner.organization_id
-            || vm.report.label != runner.label
-            || vm.report.requested_size != runner.size
-            || runner.slot_indices != vm.report.slot_indices
-        {
-            return Err(Error::RunnerMismatch);
-        }
-        match vm.report.state {
-            RunnerState::Starting => {
-                let message = configure(runner);
-                self.record_configuration(&vm.report.runner_id.0, false)
-                    .await?;
-                self.vms.send(&vm, &message).await
-            }
-            RunnerState::Warm | RunnerState::Running { .. } => Ok(()),
-            RunnerState::Stopping => Err(Error::RunnerMismatch),
-        }
-    }
-
     async fn launch(&self, vm: VmRecord, config: AgentToGuest) -> Result<()> {
-        match self.vms.start(&vm, config).await {
+        let vm = match self
+            .claim_registration(&vm, RegistrationClaim::Delivery)
+            .await?
+        {
+            RegistrationAction::Claimed(vm) => vm,
+            RegistrationAction::Preserve => return Ok(()),
+            RegistrationAction::GuestShutdown(_) => return Err(Error::RunnerMismatch),
+        };
+        let result = self.vms.start(&vm, config).await;
+        self.release_registration(&vm, RegistrationClaim::Delivery)
+            .await;
+        match result {
             Ok(()) => Ok(()),
             Err(error) => {
                 if let Err(cleanup_error) = self.vms.stop(&vm).await {
@@ -151,12 +142,6 @@ impl Controller {
     }
 }
 
-fn configure(runner: RunnerSpec) -> AgentToGuest {
-    AgentToGuest::ConfigureRunner {
-        protocol_version: ProtocolVersion::CURRENT,
-        runner_id: runner.runner_id,
-        organization_id: runner.organization_id,
-        registration: runner.registration,
-        cache: None,
-    }
-}
+#[cfg(test)]
+#[path = "_tests_/registration_claim_tests.rs"]
+mod registration_claim_tests;

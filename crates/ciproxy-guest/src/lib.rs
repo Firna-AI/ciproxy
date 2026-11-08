@@ -11,6 +11,7 @@ pub mod service;
 
 mod boat;
 mod cli;
+mod power;
 mod preparation;
 mod process;
 mod proxy;
