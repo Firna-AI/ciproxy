@@ -4,9 +4,9 @@ use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use ciproxy_control_plane::runtime::OwnMachines;
+use ciproxy_github::registrations::RegisteredRunner;
 use ciproxy_github::registrations::{RegistrationRetirement, RunnerRegistrationsMock};
 use ciproxy_github::runtime::RuntimeMock;
-use ciproxy_github::scale_sets::JitRegistration;
 use ciproxy_protocol::agent::{ControlMessage, JobPreparationOutcome};
 use ciproxy_protocol::identifiers::{OrganizationId, RunnerId};
 use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
@@ -42,8 +42,9 @@ async fn inactive_organization_retires_only_idle_work_and_routes_received_jobs_w
             .answers(&|_, _, _, saved| Ok(RegistrationRetirement::Removed { id: saved.unwrap() })),
         RunnerRegistrationsMock::create
             .each_call(matching!(_, _))
-            .answers_arc(Arc::new(move |_, _, _| {
-                Ok(JitRegistration {
+            .answers_arc(Arc::new(move |_, request, _| {
+                Ok(RegisteredRunner {
+                    target: request.target,
                     runner_id: next.fetch_add(1, Ordering::SeqCst),
                     configuration: "fixture".into(),
                 })

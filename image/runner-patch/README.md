@@ -1,9 +1,9 @@
 # Runner cache patch
 
 This Apache-2.0 patch sends the cache calls of an own-machine job through
-the [cache sidecar](../../crates/ciproxy-cache-sidecar/README.md). It keeps
-the runner's managed string table and PE offsets in place. Boat runs the
-original runner and does not use this directory.
+the [cache sidecar](../../crates/ciproxy-cache-sidecar/README.md). The image
+installs a Worker built from the pinned runner source. Boat runs the
+original runner and does not use the source hook.
 
 ## Build the trusted assignment hook
 
@@ -55,10 +55,6 @@ Proxy configuration goes through stdin and stays in memory.
 The source hook stays inactive in Boat mode.
 Boat uses the original GitHub cache endpoints.
 No workflow hook or workflow edit is needed for ordinary cache use.
-
-The byte-string patch and shell wrapper remain available for the isolated
-M11 compatibility smoke below. Image provisioning uses the source hook.
-They are not a source of trusted credentials or cache permissions.
 
 ## Host decision check
 
@@ -137,9 +133,10 @@ signed blob endpoints, and `/_fixture/state`, `/_fixture/options`,
 
 ## Authenticated GitHub smoke
 
-Run inside an assigned GitHub Actions runner with its original
-`ZCTIONS_CACHE_URL`, `ZCTIONS_RESULTS_URL`, and `ACTIONS_RUNTIME_TOKEN`.
-An unpatched runner can supply the original `ACTIONS_*` URLs instead.
+Run inside an assigned stock GitHub Actions runner with its original
+`ACTIONS_CACHE_URL`, `ACTIONS_RESULTS_URL`, and `ACTIONS_RUNTIME_TOKEN`.
+With the source hook active, steps see the proxy URL instead of the original
+cache and results URLs.
 Use a default-branch job with trusted read and write permission. Supply
 the agent's trusted `Registration` JSON for that same job. Do not build
 the facts from a job's environment. Install the official cache SDK in a
@@ -152,8 +149,8 @@ python3 image/runner-patch/smoke/live-check.py \
 ```
 
 The script uses the original runtime credentials for that assignment.
-The trusted runner handoff or a parent Node action must supply that
-environment. Do not print the token or put it on a command argument.
+A parent Node action must supply that environment.
+Do not print the token or put it on a command argument.
 The script checks the host's returned scope against the assigned default
 branch before the SDK writes anything.
 It starts both local executables and runs the official SDK with a unique
@@ -175,8 +172,6 @@ printing credentials or signature bytes.
 
 - [Runner action environment](https://github.com/actions/runner/blob/v2.338.2/src/Runner.Worker/Handlers/NodeScriptActionHandler.cs)
   supplies the original runtime values.
-- [Runner job hook](https://github.com/actions/runner/blob/v2.338.2/src/Runner.Worker/JobHookProvider.cs)
-  processes `GITHUB_ENV` before action steps.
 - [Cache v1 client](https://github.com/actions/toolkit/blob/main/packages/cache/src/internal/cacheHttpClient.ts)
   defines reservation, ranged PATCH, and commit calls.
 - [Cache v2 schema](https://github.com/actions/toolkit/blob/main/packages/cache/src/generated/results/api/v1/cache.ts)

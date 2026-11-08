@@ -20,6 +20,7 @@ fn retired_label_is_excluded_from_new_routing_and_reservation_without_losing_his
     let store = &database.store;
     store.create_machine(workspace.id, &machine).unwrap();
     let held = OwnRunner {
+        registration_scale_set_id: None,
         requested_size: retired.size,
         slot_indices: vec![0],
         runner: runner(
@@ -85,6 +86,7 @@ fn command_results_keep_first_confirmation_separate_from_applied_delivery() {
     let store = &database.store;
     store.create_machine(workspace.id, &machine).unwrap();
     let held = OwnRunner {
+        registration_scale_set_id: None,
         requested_size: label.size,
         slot_indices: vec![0],
         runner: runner(

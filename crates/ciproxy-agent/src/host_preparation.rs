@@ -1,16 +1,18 @@
-//! Install preparation and final cleanup have explicit mockable entry points.
+//! Host preparation and uninstall routing have explicit mockable entry points.
 
 use std::sync::Arc;
 
 use async_trait::async_trait;
 
 use crate::area::{AreaFiles, DiskArea};
+use crate::area_types::Inventory;
 use crate::boundaries::{Images, Service, Store};
 use crate::controller::Agent;
 use crate::error::{Error, Result};
 use crate::host_packages::Packages;
 use crate::host_system::repair;
 use crate::host_tools::Tools;
+use crate::terminal_completion::{CompletionAction, UninstallCleanup};
 
 #[cfg_attr(test, unimock::unimock(api = PreparationMock))]
 #[async_trait]
@@ -93,10 +95,23 @@ pub(crate) fn stage_error(error: Error, component: &'static str, action: &'stati
 
 #[async_trait]
 pub(crate) trait Uninstall: Send + Sync {
+    /// Remove an empty machine or prepare its recorded VMs for draining.
+    async fn start(&self) -> Result<UninstallState>;
+    /// Remove the area and identity only after every recorded VM finishes.
     async fn finish(&self) -> Result<()>;
 }
 
+/// Cleanup completes immediately without VMs or waits for their drain loop.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum UninstallState {
+    /// Guarded cleanup removed the empty machine.
+    Complete,
+    /// The caller must drain recorded VMs and then finish cleanup.
+    Draining,
+}
+
 pub(crate) struct FinalUninstall {
+    pub(crate) files: Arc<dyn AreaFiles>,
     pub(crate) images: Arc<dyn Images>,
     pub(crate) preparation: Arc<dyn Preparation>,
     pub(crate) service: Arc<dyn Service>,
@@ -106,17 +121,63 @@ pub(crate) struct FinalUninstall {
 
 #[async_trait]
 impl Uninstall for FinalUninstall {
-    async fn finish(&self) -> Result<()> {
-        if !self.agent.finished().await {
-            return Err(Error::Draining);
+    async fn start(&self) -> Result<UninstallState> {
+        uninstall_inventory(self.files.as_ref())?;
+        let state = self.store.load()?;
+        if state.runners.is_empty() {
+            self.agent.remove().await?;
+            self.complete().await?;
+            return Ok(UninstallState::Complete);
         }
-        self.images.purge()?;
-        self.preparation.remove().await?;
-        self.service.uninstall()?;
-        self.store.clear()
+        self.preparation.verify().await?;
+        self.images.recover()?;
+        self.agent.restore().await?;
+        self.agent.remove().await?;
+        Ok(UninstallState::Draining)
+    }
+
+    async fn finish(&self) -> Result<()> {
+        self.complete().await
+    }
+}
+
+impl FinalUninstall {
+    async fn complete(&self) -> Result<()> {
+        if self
+            .agent
+            .complete_removal(CompletionAction::Uninstall(UninstallCleanup {
+                preparation: self.preparation.clone(),
+                service: self.service.clone(),
+            }))
+            .await?
+        {
+            Ok(())
+        } else {
+            Err(Error::Draining)
+        }
+    }
+}
+
+/// Keep ownership repair instructions consistent before and during uninstall.
+pub(crate) fn uninstall_inventory(files: &dyn AreaFiles) -> Result<Inventory> {
+    match files.inspect() {
+        Ok(inventory) => Ok(inventory),
+        Err(error) => Err(stage_error(
+            error,
+            "area ownership record",
+            "Restore area.json and its matching backing file from backup. Then rerun uninstall.",
+        )),
     }
 }
 
 #[cfg(test)]
+#[path = "_tests_/uninstall_fixtures.rs"]
+mod uninstall_fixtures;
+
+#[cfg(test)]
 #[path = "_tests_/host_preparation_tests.rs"]
 mod host_preparation_tests;
+
+#[cfg(test)]
+#[path = "_tests_/terminal_uninstall_tests.rs"]
+mod terminal_uninstall_tests;

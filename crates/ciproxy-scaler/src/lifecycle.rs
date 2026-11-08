@@ -81,8 +81,7 @@ pub(crate) fn claim_existing(snapshot: &Snapshot, plan: &mut Plan, job: &Waiting
 
 fn claim(plan: &mut Plan, runner: &Runner, job: &WaitingJob) -> bool {
     idle(runner)
-        && runner.organization_id == job.organization_id
-        && runner.label == job.label
+        && runner.target.as_ref() == Some(&job.target)
         && !plan.retiring.contains(&runner.id)
         && plan.claimed.insert(runner.id.clone())
 }

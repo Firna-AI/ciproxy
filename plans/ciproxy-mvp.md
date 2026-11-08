@@ -246,6 +246,12 @@ stay in `europe-west1`.
       condition claim. Reason: valid jobs then keep the same trust limits.
       Evidence: `.context/ciproxy-mvp/fix-round-1-report.md`.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+- [ ] Build and publish the control-plane image in the deploy workflow, as
+      item 90 = G says. A build job builds it on the runner with no cloud
+      credentials. A publish job pushes it by digest with workload
+      identity. The preview deploys that digest, and production takes over
+      the same digest from the preview's saved inputs. A push that does not
+      change the control-plane sources reuses the image of their hash.
 
 ## Milestone 6: GitHub App and scale sets
 
@@ -294,9 +300,15 @@ each label. The scale set spike confirms it.
       when GitHub omits the finish time. Replay keeps that observation.
       Branch:
       `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
-- [ ] Read the ref, the event, and the head repository of each run with
+- [x] Read the ref, the event, and the head repository of each run with
       the "Actions" read permission, and forward them to the agent, as item
       32 says.
+      Closed 7 November 2026: the user answered items 54 = E and 55 = A on
+      5 November 2026. The full ref now comes from the checked runtime token
+      in the machine cache, which Milestone 11 built, and an unknown ref
+      fails closed. The agent gets the event and the head repository in
+      `JobFacts` from `crates/ciproxy-github/src/assignments.rs`. The text
+      below is the history of the API research.
       Raw API metadata is implemented. Full-ref forwarding stays blocked.
       Orchestrator: run `ref_metadata_probe.py` and `push_ref_probe.py`
       from `crates/ciproxy-github/scripts/`. Inspect supplied PR and
@@ -305,11 +317,8 @@ each label. The scale set spike confirms it.
       refs for all five cases with the approved existing fixtures.
       The orchestrator verified all five cases with cleanup. A top-level
       workflow ref distinguishes branch and tag pushes. A reusable
-      workflow ref names the called file. Owner items 54 and 55 stay open.
-      The crate README gives the environment and arguments.
-      Ask the user to choose the full-ref source and unknown-ref policy.
-      Then update the protocol and wire contracts in their owning scope,
-      and complete forwarding. No ref is guessed on this branch.
+      workflow ref names the called file. The crate README gives the
+      environment and arguments. No ref is guessed on this branch.
       Branch:
       `conductor/ciproxy-mvp-milestone-6-github-app-and-scale-sets`.
 - [x] Link each installation to the workspace of the Admin who started it,
@@ -1458,8 +1467,9 @@ the remaining Docker disk recovery work for Team and Business at launch.
 Several organizations come with the workspace of item 48 in Milestones 6,
 14, and 20.
 
-- [ ] Discard a disk that fails to mount. My call: a rebuild loses only
+- [x] Discard a disk that fails to mount. My call: a rebuild loses only
       time.
+      Branch: `conductor/m25-docker-disk-recovery`.
 
 ## Milestone 26: Dashboard UI: tier features
 
@@ -1844,6 +1854,35 @@ Answers of 5 November 2026:
   socket error go. A reconnect before the first handoff still means only
   GitHub's cache. There is no guessed time limit; GitHub's job time limit is
   the backstop. Rejected: A and C.
+- Item 94, B, 8 November 2026: the Boat form lets the customer choose the
+  personal wallet or an organization wallet of the key, with the likely one
+  preselected. Rejected: A, because organization accounts must work, and C.
+- Item 95, B, 8 November 2026: each paid review stores its quote on the
+  server. The payment names its quote, and retries keep its proration time.
+  An unknown or outdated quote is refused, and the page asks for a new
+  review. Rejected: A and C.
+- Item 98, A, 8 November 2026: the App gets "Members: read", so that a
+  sign-in can read the person's organization memberships. The App now has
+  four permissions. Rejected: B, C, and D.
+- Items 91 and 92, A, 8 November 2026: the workspace picker shows the
+  name and the upgrade warning, and the workspace switch shows the role.
+  The mockups change to match. Rejected: B to E of item 91, and B to D of
+  item 92.
+- Item 93, C, 8 November 2026: the protocol, the install mockup, the
+  dashboard, and the docs state the supported hosts: x64 Linux with
+  systemd and cgroup v2, on Debian, Ubuntu, Fedora, RHEL, Rocky Linux, or
+  AlmaLinux. Wider support is the follow-up item
+  `follow-ups/installer-more-linux-hosts.md`. Rejected: A and B.
+- Item 96, A, 8 November 2026: the shared docs grid styles match the
+  mockups. Rejected: B and C.
+- Item 97, G, 8 November 2026: render with comrak, as a follow-up item that
+  blocks nothing. Until then, fix a link test that breaks by hand.
+- Item 90, G, 7 November 2026: the deploy workflow builds the
+  control-plane image as `mokly-ai/mokly-cloud` does. A build job with no
+  cloud credentials builds it, a publish job pushes it by digest, and the
+  preview and then production deploy that digest. A push that keeps the
+  control-plane sources reuses their image. Rejected: A and B, because the
+  user wants no manual step, and C, D, E, and F.
 - Item 89, A, 7 November 2026: after an App removal, idle Boat sandboxes
   are not retired early. They end at their lifetime limit, six hours or two
   on a trial, and running jobs finish. The user asked to review B later:
@@ -3851,37 +3890,54 @@ above.
 - **Recommendation:** A for the MVP. Milestone 15 recommended B.
 - **Action:** ask the user, because A changes a protocol promise.
 
-### 90. Each control-plane update needs the user's Mac
+### 90. The preview has no automatic control-plane build
 
-- **Severity:** Medium. **Effort:** Medium.
+**Answer, 7 November 2026:** G. The user ruled out A and B: "it defo
+should not be manual".
+
+- **Severity:** Low. **Effort:** Medium.
 - **Source:** Implementation, the runtime of the main preview.
 - **Category:** Process.
-- **Location:** `.github/workflows/deploy-main-preview.yml`, and the
-  `CONTROL_PLANE_IMAGE` row of `deploy/setup.md`.
+- **Location:** `.github/workflows/deploy-main-preview.yml`,
+  `.github/workflows/deploy-production.yml`, `deploy/scripts/deploy.py`,
+  and the `CONTROL_PLANE_IMAGE` row of `deploy/setup.md`.
 - **Background:** The deploy workflow does not build the control-plane
-  image. The orchestrator builds it with Cloud Build. Then the GitHub
-  variable `CONTROL_PLANE_IMAGE` changes, and a deploy runs. The GitHub
-  token of the orchestrator's sandbox cannot set environment variables.
-- **Problem:** After each merge, the preview keeps the old control plane
-  until the user sets the variable from the Mac.
-- **Impact if no action:** Each backend merge waits for one manual step
-  before its live checks.
+  image. It deploys the image that the GitHub variable
+  `CONTROL_PLANE_IMAGE` names, and the orchestrator builds and sets it by
+  hand.
+- **Problem:** No automatic step builds the image of a merged commit.
+- **Impact if no action:** The preview runs older backend code than the
+  primary branch until someone builds by hand.
 - **Root question:** How does the preview get the control plane of each
   merged commit with no manual step?
 - **Options:**
-  - **A.** Keep the manual path. Effort: Small.
-  - **B.** Give the sandbox a GitHub login that can set the environment
-    variables. Effort: Small.
-  - **C.** The preview deploy builds the image of its own commit, pushes it,
-    and deploys it by digest. Production deploys the tested digest.
-    Effort: Medium.
-- **Left out:** A moving image tag that the deploy reads. C is better on
-  every point.
-- **Wider fix:** C.
-- **Recommendation:** C. The preview then always runs the merged code.
-- **Action:** ask the user, because C gives CI a new right to push images.
+  - **A.** Keep the manual path through the user's Mac. Effort: Small.
+  - **B.** Keep the manual path through the sandbox GitHub login.
+    Effort: Small.
+  - **C.** The deploy workflow sends a missing build to Cloud Build and
+    deploys its digest. Effort: Medium.
+  - **D.** A separate GitHub workflow builds and pushes on each push, and
+    the deploy starts when it ends. Effort: Medium.
+  - **E.** A Cloud Build trigger in GCP builds on each push, and the deploy
+    waits for the image of its commit. Effort: Medium.
+  - **F.** An image updater in the cluster deploys each new image.
+    Effort: Large.
+  - **G.** As Mokly does: a build job with no cloud credentials, a publish
+    job that pushes by digest, and deploys of that digest, with a reuse of
+    the image of unchanged sources. Effort: Medium.
+- **Left out:** Google Cloud Deploy, because it replaces the GitHub
+  promotion for the same result. A moving tag, because it loses the fixed
+  digest.
+- **Wider fix:** G.
+- **Recommendation:** G. It is the pattern of Mokly, and its build step
+  holds no cloud credentials.
+- **Action:** ask the user, because G gives a CI job the right to push
+  images.
 
 ### 91. The workspace picker lacks the plan and organization count
+
+**Answer, 8 November 2026:** A. Keep the shorter picker, and update the
+mockup.
 
 - **Severity:** Medium. **Effort:** Medium.
 - **Source:** Review, Milestone 19, pull request #36, round 2, its finding 2.
@@ -3917,6 +3973,8 @@ above.
 
 ### 92. The workspace switch shows roles, not plan facts
 
+**Answer, 8 November 2026:** A. Keep the role, and update the mockup.
+
 - **Severity:** Low. **Effort:** Medium.
 - **Source:** Review, Milestone 19, pull request #36, the check of round 2,
   finding 2.
@@ -3947,6 +4005,9 @@ above.
   and product mismatch is right.
 
 ### 93. The installer supports fewer hosts than the docs say
+
+**Answer, 8 November 2026:** C, and D as a follow-up item:
+`follow-ups/installer-more-linux-hosts.md`.
 
 - **Severity:** Medium. **Effort:** Medium.
 - **Source:** Implementation, Milestone 24, pull request #40, its item 1.
@@ -3979,6 +4040,12 @@ above.
 
 ### 94. The Boat setup cannot connect an organization key
 
+**Answer, 8 November 2026:** B. The user requires personal and organization
+accounts. After the key check, the form lists the wallets that the key can
+use, personal and each organization, and preselects the likely one. Each
+Boat organization has its own wallet. A is dropped, because it supports
+personal accounts only.
+
 - **Severity:** Medium. **Likelihood:** Common. **Effort:** Medium.
 - **Source:** Implementation, Milestone 24, pull request #40, its item 2.
 - **Category:** Product bug.
@@ -4010,6 +4077,8 @@ above.
   ciproxy supports.
 
 ### 95. A paid change can charge another amount than its review
+
+**Answer, 8 November 2026:** B.
 
 - **Severity:** High. **Likelihood:** Common. **Effort:** Medium.
 - **Source:** Review, Milestone 18, pull request #39, round 1, its finding 1.
@@ -4047,6 +4116,8 @@ above.
 
 ### 96. The docs navigation grids differ from the mockups
 
+**Answer, 8 November 2026:** A.
+
 - **Severity:** Low. **Effort:** Small.
 - **Source:** Review, Milestone 24, pull request #40, round 1, its finding 2.
 - **Category:** Mockup.
@@ -4070,3 +4141,92 @@ above.
 - **Recommendation:** A. Shared styles keep the approved mockups.
 - **Action:** ask the user, because the user decides which side of a mockup
   and product mismatch is right.
+
+### 97. The gate's Markdown link check differs from GitHub
+
+**Answer, 8 November 2026:** G, as a follow-up item that blocks nothing:
+`follow-ups/markdown-heading-ids-comrak.md`. Until then, fix a link test
+that breaks by hand.
+
+- **Severity:** Medium. **Effort:** Large.
+- **Source:** Implementation, pull request #45, the follow-up item
+  `follow-ups/markdown-heading-ids-comrak.md`.
+- **Category:** Repository rule.
+- **Location:** `xtask/src/markdown/parser.rs`.
+- **Background:** The Markdown phase of the gate finds broken links in the
+  docs and plans. Its own parser computes the link target of each heading.
+  The follow-up item chose comrak, a Rust parser of GitHub's Markdown. The
+  orchestrator told the branch to add no new refusal without the user.
+- **Problem:** An exact match with GitHub refuses some links that pass
+  today. A direct switch to comrak also refuses valid `#softbreak` and
+  `#hardbreak` links.
+- **Impact if no action:** Valid links can fail the gate, and some broken
+  links can pass it.
+- **Root question:** How does the gate find the same link targets as
+  GitHub?
+- **Options:**
+  - **A.** Repair the current parser by hand. Effort: Medium.
+  - **B.** Switch directly to comrak, which fails valid-link tests.
+    Effort: Medium.
+  - **C.** Use a Node link checker, which also refuses missing images.
+    Effort: Medium.
+  - **D.** Fix comrak upstream first, then switch. Effort: Large.
+  - **E.** Fix the known gaps of the current parser. Some gaps stay.
+    Effort: Small.
+  - **F.** Keep both parsers, and accept a link that either accepts.
+    Effort: Medium.
+  - **G.** Render each page with comrak, and take the heading targets from
+    the HTML. It changes `Cargo.lock`, so it waits for pull request #39.
+    Effort: Large.
+- **Left out:** A live GitHub call, because the gate then needs the
+  network. A check of today's documents only, because known defects stay.
+- **Wider fix:** G.
+- **Recommendation:** G. One rendering model gives GitHub's targets for
+  every kind of heading.
+- **Action:** ask the user, because G refuses some links that pass today,
+  and a new refusal in the gate needs the user.
+
+### 98. Sign-in removes the Admin role of a new install
+
+**Answer, 8 November 2026:** A. The App gets the organization permission
+"Members: read", and the protocol and the docs list four permissions. This
+replaces the three permissions of item 54 = E and the security rule that
+the owner check uses no App permission. An added option D, roles without
+GitHub membership, is rejected.
+
+- **Severity:** High. **Likelihood:** Common. **Effort:** Small.
+- **Source:** Implementation, the first live install on the main preview,
+  8 November 2026.
+- **Category:** Product bug.
+- **Location:** `crates/ciproxy-api/src/identity/http.rs:208`, and
+  `crates/ciproxy-store-pg/src/dashboard/identity.rs:92`.
+- **Background:** A direct install creates a workspace and makes its
+  requester the first Admin. Each sign-in reads the person's organization
+  memberships with `GET /user/memberships/orgs`. It deletes each role in a
+  workspace whose organizations are not in that list. The App has three
+  permissions: Actions read, Metadata read, and organization self-hosted
+  runners write. GitHub lists the organization membership endpoints under
+  the "Members" permission for GitHub App user tokens.
+- **Problem:** On the preview, the install of Firna-AI created the workspace
+  and the Admin role. Each later sign-in removed the role, so the user sees
+  no workspace. The membership list returned no Firna-AI.
+- **Impact if no action:** No customer can use the dashboard after an
+  install.
+- **Root question:** How does sign-in learn which organizations a person
+  owns or belongs to?
+- **Options:**
+  - **A.** Add the organization permission "Members: read" to the App, and
+    list four permissions in the protocol and the docs. Each install then
+    asks for it. Effort: Small.
+  - **B.** Keep three permissions. Base roles on the installations that
+    the person's token can see, and drop the owner checks of items 82 and
+    83. Effort: Large.
+  - **C.** Keep three permissions. Read the memberships through a second,
+    OAuth sign-in with the `read:org` scope. Effort: Medium.
+- **Left out:** Keeping a role whose organization the membership list
+  omits, because a person who left the organization would keep access.
+- **Wider fix:** A.
+- **Recommendation:** A. It is a common, read-only permission, and the role
+  model stays as the user approved it.
+- **Action:** ask the user, because A changes the App's three permissions,
+  which item 54 = E keeps.

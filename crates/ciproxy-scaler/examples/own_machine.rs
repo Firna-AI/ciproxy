@@ -8,6 +8,7 @@ use ciproxy_protocol::resources::{GIGABYTE, Slots, VmSize};
 use ciproxy_scaler::actions::{Action, Destination, StartReason, StartRunner};
 use ciproxy_scaler::boat::{BoatAccount, MonthlySpend};
 use ciproxy_scaler::decision::decide;
+use ciproxy_scaler::registration::RegistrationTarget;
 use ciproxy_scaler::snapshot::{Destinations, Label, Machine, NothingFits, Snapshot, WaitingJob};
 
 fn main() {
@@ -16,6 +17,12 @@ fn main() {
         memory_bytes: 8 * GIGABYTE,
         disk_bytes: 20 * GIGABYTE,
     };
+    let target = RegistrationTarget {
+        organization_id: OrganizationId("example-org".into()),
+        label_id: "example-label".into(),
+        scale_set_id: "example-binding".into(),
+        github_id: 53,
+    };
     let snapshot = Snapshot {
         root_sizing: RootSizing::default(),
         workspace_id: WorkspaceId("example-workspace".into()),
@@ -23,6 +30,7 @@ fn main() {
         control_plane_available: true,
         organizations: vec![OrganizationId("example-org".into())],
         labels: vec![Label {
+            targets: vec![target.clone()],
             name: LabelName("ciproxy".into()),
             size,
             destinations: Destinations {
@@ -32,8 +40,7 @@ fn main() {
             nothing_fits: NothingFits::Wait,
         }],
         queue: vec![WaitingJob {
-            organization_id: OrganizationId("example-org".into()),
-            label: LabelName("ciproxy".into()),
+            target: target.clone(),
             queued_at: Duration::from_secs(100),
         }],
         machines: vec![Machine {
@@ -65,6 +72,7 @@ fn main() {
     assert_eq!(
         actions,
         vec![Action::StartRunner(StartRunner {
+            target,
             organization_id: OrganizationId("example-org".into()),
             label: LabelName("ciproxy".into()),
             requested_size: size,

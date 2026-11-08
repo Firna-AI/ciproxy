@@ -70,6 +70,12 @@ async fn root_preparation_failures_clean_up_the_new_vm_and_release_its_reservati
         let root = failure.clone();
         let refreshing = events.clone();
         let mock = Unimock::new((
+            VmsMock::networks
+                .some_call(matching!())
+                .returns(Ok(Vec::new())),
+            VmsMock::remove_network
+                .some_call(matching!(2))
+                .returns(Ok(())),
             report_dependencies_for(machine),
             start_image(),
             VmsMock::allocate
@@ -149,8 +155,11 @@ async fn root_preparation_failures_clean_up_the_new_vm_and_release_its_reservati
             expected_trace(stage, &image, &copy, 163_373_842_432),
             "{stage:?}"
         );
-        assert_eq!(*agent.state.lock().await, initial, "{stage:?}");
+        let mut cleanup_pending = initial.clone();
+        cleanup_pending.pending_networks.insert(2);
+        assert_eq!(*agent.state.lock().await, cleanup_pending, "{stage:?}");
         agent.reconcile().await.unwrap();
+        assert_eq!(*agent.state.lock().await, initial, "{stage:?}");
         let report = agent.report().await.unwrap();
         assert_eq!(
             report.runners,
@@ -173,9 +182,10 @@ async fn root_preparation_failures_clean_up_the_new_vm_and_release_its_reservati
                 Event::Budget(34_726_544_896),
                 Event::Started(allocated.clone()),
                 Event::Cleanup(allocated),
-                Event::Saved(initial.clone()),
+                Event::Saved(cleanup_pending),
                 Event::Restored(initial.runners[0].clone()),
                 Event::Budget(198_100_387_328),
+                Event::Saved(initial.clone()),
             ],
             "{stage:?}"
         );

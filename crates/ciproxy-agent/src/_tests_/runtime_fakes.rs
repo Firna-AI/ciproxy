@@ -14,16 +14,35 @@ use crate::boundaries::GuestProvenance;
 use crate::connection_types::{ConnectionResult, ControlEvent};
 use crate::controller::Agent;
 use crate::error::Result;
+use crate::terminal_completion::CompletionAction;
 
 pub(crate) struct WaitingAgent {
+    pub(crate) operation: WaitingOperation,
     pub(crate) delegate: Arc<dyn Agent>,
     pub(crate) started: mpsc::UnboundedSender<()>,
     pub(crate) barrier: Mutex<Option<oneshot::Receiver<()>>>,
     pub(crate) completed: Arc<AtomicBool>,
 }
 
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub(crate) enum WaitingOperation {
+    Control,
+    Reconcile,
+}
+
+impl WaitingAgent {
+    async fn wait(&self) {
+        self.started.send(()).unwrap();
+        let barrier = self.barrier.lock().await.take().unwrap();
+        barrier.await.unwrap();
+    }
+}
+
 #[async_trait]
 impl Agent for WaitingAgent {
+    async fn complete_removal(&self, action: CompletionAction) -> Result<bool> {
+        self.delegate.complete_removal(action).await
+    }
     async fn control_connection(&self, connected: bool) -> Result<()> {
         self.delegate.control_connection(connected).await
     }
@@ -34,17 +53,24 @@ impl Agent for WaitingAgent {
         self.delegate.restore().await
     }
     async fn reconcile(&self) -> Result<()> {
-        self.delegate.reconcile().await
+        if self.operation == WaitingOperation::Reconcile {
+            self.wait().await;
+        }
+        let result = self.delegate.reconcile().await;
+        if self.operation == WaitingOperation::Reconcile {
+            self.completed.store(true, Ordering::SeqCst);
+        }
+        result
     }
     async fn report(&self) -> Result<MachineReport> {
         self.delegate.report().await
     }
     async fn control(&self, message: ControlMessage) -> Result<Option<AgentMessage>> {
         let result = self.delegate.control(message).await;
-        self.started.send(()).unwrap();
-        let barrier = self.barrier.lock().await.take().unwrap();
-        barrier.await.unwrap();
-        self.completed.store(true, Ordering::SeqCst);
+        if self.operation == WaitingOperation::Control {
+            self.wait().await;
+            self.completed.store(true, Ordering::SeqCst);
+        }
         result
     }
     async fn guest(
@@ -57,9 +83,6 @@ impl Agent for WaitingAgent {
     }
     async fn remove(&self) -> Result<()> {
         self.delegate.remove().await
-    }
-    async fn finished(&self) -> bool {
-        self.delegate.finished().await
     }
 }
 

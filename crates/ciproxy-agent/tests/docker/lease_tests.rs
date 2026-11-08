@@ -19,6 +19,7 @@ fn interrupted_writer_cleanup_releases_reservation() {
             repository: "repository".to_owned(),
             writer: true,
             bytes: 8192,
+            phase: docker_files::AttachmentPhase::Offered,
         },
     )
     .unwrap();
@@ -41,6 +42,7 @@ fn cleanup_failure_keeps_reservation_until_file_removal_succeeds() {
             repository: "repository".to_owned(),
             writer: false,
             bytes: 8192,
+            phase: docker_files::AttachmentPhase::Offered,
         },
     )
     .unwrap();
@@ -67,6 +69,7 @@ fn release_does_not_decode_another_vm_lease() {
             repository: "repository".to_owned(),
             writer: false,
             bytes: 8192,
+            phase: docker_files::AttachmentPhase::Offered,
         },
     )
     .unwrap();
@@ -101,6 +104,7 @@ fn pending_lease_does_not_hold_capacity(bytes: &[u8]) {
             repository: "repository".to_owned(),
             writer: true,
             bytes: 8192,
+            phase: docker_files::AttachmentPhase::Offered,
         },
     )
     .unwrap();

@@ -166,6 +166,7 @@ fn mixed_image_releases_use_each_machines_root_for_starts_and_warm_capacity() {
     state.machines.push(older);
     state.queue = vec![queued("a", "ciproxy", 0); 2];
     let expected = StartRunner {
+        target: state.labels[0].targets[0].clone(),
         organization_id: OrganizationId("a".into()),
         label: state.labels[0].name.clone(),
         requested_size: small(),

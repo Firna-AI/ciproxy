@@ -7,10 +7,10 @@ use chrono::{DateTime, Utc};
 use ciproxy_control_plane::runtime::MachineRuntime;
 use ciproxy_gateway::gateway::MachineGatewayMock;
 use ciproxy_gateway::types::Delivery;
+use ciproxy_github::registrations::RegisteredRunner;
 use ciproxy_github::registrations::{
     RegistrationRetirement, RunnerRegistrations, RunnerRegistrationsMock,
 };
-use ciproxy_github::scale_sets::JitRegistration;
 use ciproxy_overflow::api::Overflow;
 use ciproxy_protocol::agent::ControlMessage;
 use ciproxy_protocol::identifiers::JobId;
@@ -96,8 +96,9 @@ impl Harness {
             Unimock::new((
                 RunnerRegistrationsMock::create
                     .some_call(matching!(_, _))
-                    .answers_arc(Arc::new(move |_, _, _| {
-                        Ok(JitRegistration {
+                    .answers_arc(Arc::new(move |_, request, _| {
+                        Ok(RegisteredRunner {
+                            target: request.target,
                             runner_id: ids.fetch_add(1, Ordering::SeqCst),
                             configuration: "fake-jit".into(),
                         })

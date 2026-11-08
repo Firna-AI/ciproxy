@@ -1,5 +1,6 @@
 //! Prepare checked local resources only after the host owns trusted job facts.
 
+use ciproxy_protocol::cache::DockerDiskAttachment;
 use ciproxy_protocol::guest::{AgentToGuest, JobDecision};
 use ciproxy_protocol::jobs::JobFacts;
 use ciproxy_protocol::runners::RunnerState;
@@ -7,6 +8,7 @@ use ciproxy_protocol::runners::RunnerState;
 use crate::cache_authority::CacheAuthority;
 use crate::capacity::machine_resources;
 use crate::controller::Controller;
+use crate::docker::DockerDisks;
 use crate::error::{Error, Result};
 use crate::state::VmRecord;
 
@@ -63,13 +65,7 @@ impl Controller {
                             .prepare(vm, &facts, &scope, data_bytes, spare, free_pool)
                             .await
                         {
-                            Ok(Some(disk)) => match self.vms.swap_docker(vm).await {
-                                Ok(()) => Some(disk),
-                                Err(error) => {
-                                    tracing::warn!(%error, "Docker drive unavailable; use root disk");
-                                    None
-                                }
-                            },
+                            Ok(Some(disk)) => self.attach_docker(vm, dockers.as_ref(), disk).await,
                             Ok(None) => None,
                             Err(error) => {
                                 tracing::warn!(%error, "Docker cache unavailable; use root disk");
@@ -95,4 +91,40 @@ impl Controller {
             }
         }
     }
+
+    async fn attach_docker(
+        &self,
+        vm: &VmRecord,
+        dockers: &dyn DockerDisks,
+        disk: DockerDiskAttachment,
+    ) -> Option<DockerDiskAttachment> {
+        let result = match self.vms.swap_docker(vm).await {
+            Ok(()) => dockers.offered(vm),
+            Err(error) => Err(error),
+        };
+        if let Err(error) = result {
+            tracing::warn!(%error, "Docker drive unavailable; use root disk");
+            if let Err(error) = dockers.failed(vm) {
+                tracing::warn!(%error, "Docker drive failure record unavailable; keep its lease");
+            } else if let Err(error) = self.recover_docker(vm).await {
+                tracing::warn!(%error, "Docker drive cleanup will retry");
+            }
+            return None;
+        }
+        Some(disk)
+    }
+
+    pub(crate) async fn recover_docker(&self, vm: &VmRecord) -> Result<()> {
+        if let Some(dockers) = &self.dockers
+            && dockers.pending(vm)?
+        {
+            self.vms.clear_docker(vm).await?;
+            dockers.discard(vm).await?;
+        }
+        Ok(())
+    }
 }
+
+#[cfg(test)]
+#[path = "_tests_/docker_switch_tests.rs"]
+mod docker_switch_tests;

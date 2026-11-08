@@ -150,23 +150,39 @@ For an old installation with top-level `images` or `jailer` data:
 ## Uninstall
 
 Uninstall stops the agent service and lets independent VM jobs finish.
+With no recorded VM, it goes directly to guarded area removal.
+It first retries pending network cleanup and finds reserved-name orphans.
+It needs no runtime verification, image recovery, or registration.
+This path accepts an interrupted Creating area, an unmounted Ready area,
+or an area whose reflink check fails.
+It permits a never-formatted file only with matching Creating ownership.
+With a recorded VM, uninstall verifies the area before image recovery and
+VM restoration. It then starts removal and waits for running jobs.
 Guest detach waits for bridge tasks to release their handles.
 Final cleanup checks that every owned VM has finished.
-It purges image contents, records removal intent, and stops the mount.
+Only checked area deletion removes image contents during final cleanup.
+Guarded removal records removal intent and stops the mount.
 It verifies that the mount is gone before it deletes the backing file.
 It preserves the backing file while another loop device still uses it.
 It removes the owned mount unit, runtime versions, agent service, and state.
 Runtime cleanup uses owner markers and needs no current pin or valid hash.
 It preserves unowned runtime directories and files.
 An unmount or ownership failure preserves the backing file and identity.
+Unknown network inspection or remaining owned resources also preserve them.
 It gives a repair action instead of forcing deletion.
+Final cleanup retries automatically while this uninstall command runs.
+Stop this command before you start another uninstall.
 The small control directory and lock files can remain after uninstall.
 Distribution packages remain installed because other programs can use them.
 
 ## Cache integration
 
-Install starts `ciproxy-cache.service` with `area/cache` as its data path.
+Install starts `ciproxy-cache.service` with `area/cache/data` as its data path.
 The unit requires the area mount and stops before that mount.
+The `ciproxy-cache` account runs the cache service.
+A private mount exposes the cache data child to that account.
+The parent cache directory stays root-owned with mode `0700`.
+A private runtime credential copy keeps the control directory root-only.
 The agent uses authenticated HTTP administration on `127.0.0.1:8229`.
 Checked-scope Docker attachments reserve only hosted spare disk.
 The [crate guide](README.md#gateway-image-and-cache-integration) gives the
