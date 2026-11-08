@@ -2012,6 +2012,33 @@ Answers of 5 November 2026:
   socket error go. A reconnect before the first handoff still means only
   GitHub's cache. There is no guessed time limit; GitHub's job time limit is
   the backstop. Rejected: A and C.
+- Item 113, A, 8 November 2026: the label dialog keeps the fit counts and
+  the placement, and the mockup drops the largest-job figures. Rejected: B.
+- Item 108, C with D, 8 November 2026: the paid change sends the same
+  pending credit that the preview counted, Stripe computes the amount, and
+  an alert compares each invoice with its quote. A third fix round of pull
+  request #39 builds it. Rejected: A, B, E, and F.
+- Item 109, C, 8 November 2026: the spend limit notice names the budget
+  month and the day Boat resumes, as Jobs does. Rejected: A and B.
+- Item 110, B, 8 November 2026: History loads pages without a total, and
+  the database applies the filters, the order, and a limit. Each read stays
+  bounded, also the live queue. Rejected: A, C, D, and E.
+- Item 111, A, 8 November 2026: the banners keep today's wording, and the
+  mockups change to it. Rejected: B and C.
+- Item 112, D, 8 November 2026: ciproxy saves the actual size choice when a
+  job starts, and Jobs explains what ran from it. Rejected: the other
+  options.
+- Item 103, A now and B in parallel, 8 November 2026: the agent release is
+  a full release, so installs and updates take it. A pre-release channel
+  for the preview release server follows, so that a test release reaches no
+  customer. Rejected: no channel at launch.
+- Item 107, A, 8 November 2026: the cache firewall proof keeps the cloud
+  provider's metadata route and DNS, and checks the block against the real
+  metadata server. Rejected: B.
+- Items 104, 105, and 106, A, 8 November 2026: grow the test host disk to
+  500 GiB, sign the sandbox in to GitHub with the `workflow` scope, and
+  upgrade the test workspace to Team with a Stripe test-mode checkout after
+  pull request #39 merges.
 - Item 99, A, 8 November 2026: the live machine check publishes a
   pre-release of the agent on `Firna-AI/ciproxy`, creates two private test
   repositories in Firna-AI, and limits the workspace to the test
@@ -4533,3 +4560,306 @@ GitHub membership, is rejected.
 - **Recommendation:** A. The control then edits the real saved number.
 - **Action:** ask the user, because the approved mockup and the product
   differ.
+
+### 103. The preview release server ignores the agent pre-release
+
+**Answer, 8 November 2026:** A now, and B as a follow-up item in parallel:
+`follow-ups/release-server-prerelease-channel.md`. `ciproxy-agent-v0.1.0`
+is now a full release, and the preview release server serves it.
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
+- **Category:** Product bug.
+- **Location:** the pinned `cli-release-server`, `github/releases.rs:21`.
+- **Background:** Item 99 = A published the agent as the GitHub pre-release
+  `ciproxy-agent-v0.1.0`. The release server asks GitHub for the latest
+  release, and GitHub leaves pre-releases out of that answer.
+- **Problem:** The release server finds no release, so the install fails.
+- **Impact if no action:** The live check cannot install the agent.
+- **Root question:** How does the preview install the agent release?
+- **Options:**
+  - **A.** Mark `ciproxy-agent-v0.1.0` as a normal release. It then shows as
+    the latest release of the public repository. Effort: Small.
+  - **B.** Add a pre-release channel or a pinned tag to the release server of
+    `futex-ai/cli-release`, and a new pinned server image. Effort: Medium.
+- **Left out:** A copy by hand, because it skips the customer install path.
+- **Wider fix:** B.
+- **Recommendation:** A. It is one change on GitHub, and no customer uses the
+  release server before launch.
+- **Action:** ask the user, because A changes the pre-release choice of item
+  99.
+
+### 104. The test host disk is below the install minimum
+
+**Answer, 8 November 2026:** A.
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
+- **Category:** Process.
+- **Location:** the host `ciproxy-spike-2` in the GCP project
+  `internal-498318`.
+- **Background:** The install needs at least 250 GB on the agent's file
+  system. Each default job VM takes about 81 GB. The host has a 200 GiB
+  boot disk, which also holds the image build outputs.
+- **Problem:** The installer refuses the host.
+- **Impact if no action:** No live machine check can run.
+- **Root question:** Where does the test host get its job disk?
+- **Options:**
+  - **A.** Grow the boot disk to 500 GiB, and delete build outputs that can
+    be rebuilt. A disk cannot shrink again. Effort: Small.
+  - **B.** Attach a separate 500 GiB data disk at `/var/lib/ciproxy`.
+    Effort: Medium.
+- **Left out:** A smaller image reserve, because it changes an approved
+  default.
+- **Wider fix:** None.
+- **Recommendation:** A. The host is deleted after the tests, so the
+  growth costs about USD 30 a month only while the tests run.
+- **Action:** ask the user, because the host is in another project, and
+  both options add storage cost.
+
+### 105. The sandbox GitHub login cannot write workflow files
+
+**Answer, 8 November 2026:** A.
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
+- **Category:** Process.
+- **Location:** `~/.local/bin/gh-user` of the orchestrator sandbox.
+- **Background:** The live check needs its workflow file on each test
+  branch. GitHub needs the `workflow` scope to write a workflow file.
+- **Problem:** The sandbox login has `repo` and `read:org` only, so GitHub
+  refuses the writes.
+- **Impact if no action:** The check cannot start its jobs.
+- **Root question:** Which credential writes the workflow files?
+- **Options:**
+  - **A.** Sign the sandbox in again with the `workflow` scope. Effort:
+    Small.
+  - **B.** Create a fine-grained token for the test repositories only, with
+    Contents and Workflows write. Effort: Small.
+  - **C.** The user pushes the prepared files. Effort: Small.
+- **Left out:** None.
+- **Wider fix:** None.
+- **Recommendation:** A. One more GitHub approval, and the sandbox does the
+  rest.
+- **Action:** ask the user, because only the user can grant the scope.
+
+### 106. The Docker disk checks need a paid workspace
+
+**Answer, 8 November 2026:** A, after pull request #39 serves Checkout.
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
+- **Category:** Process.
+- **Location:** the billing tier of the test workspace "Firna-AI".
+- **Background:** Docker disks are a Team and Business feature. The test
+  workspace is on Free.
+- **Problem:** The Docker disk check and both Docker recovery checks of
+  Milestone 25 cannot run.
+- **Impact if no action:** These cases stay unproven before launch.
+- **Root question:** How does the live check prove the paid features?
+- **Options:**
+  - **A.** Upgrade the test workspace to Team with a Stripe test-mode
+    checkout, after pull request #39 serves Checkout. Effort: Small.
+  - **B.** Keep Free, and leave these cases unproven. Effort: Small.
+- **Left out:** A tier set by hand in the database, because it skips the
+  billing path.
+- **Wider fix:** None.
+- **Recommendation:** A. The test-mode checkout is also a Milestone 21
+  check.
+- **Action:** ask the user, because A changes the plan of a workspace.
+
+### 107. The cache firewall proof takes over the metadata route
+
+**Answer, 8 November 2026:** A.
+
+- **Severity:** Medium. **Effort:** Medium.
+- **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
+- **Category:** Test.
+- **Location:** `crates/ciproxy-agent/scripts/cache_egress_network.py:79`.
+- **Background:** The proof adds its own route to the cloud metadata
+  address. Its guide says that the proof fails when the host already has
+  that route. A GCP host has it, with a lower priority than the proof's
+  route.
+- **Problem:** On a GCP host, the proof can divert the host's real metadata
+  and DNS traffic.
+- **Impact if no action:** The proof cannot run safely on the GCP test
+  host.
+- **Root question:** How does the proof check the metadata block on a cloud
+  host?
+- **Options:**
+  - **A.** Change the proof so that it keeps the provider's route and DNS,
+    and still checks the firewall. Effort: Medium.
+  - **B.** Run the proof on another host without that route. Effort: Medium.
+- **Left out:** Skipping the metadata check, because it weakens the proof.
+- **Wider fix:** A.
+- **Recommendation:** A. It works on the hosts that customers use.
+- **Action:** ask the user, because A changes a proof fixture of the
+  security fix, and B needs another machine.
+
+### 108. Pending credits can change the quoted charge
+
+**Answer, 8 November 2026:** C with D, as a third fix round of the pull
+request #39.
+
+- **Severity:** High. **Likelihood:** Common. **Effort:** Medium.
+- **Source:** Review, pull request #39, after its second fix round.
+- **Category:** Product bug.
+- **Location:** `crates/ciproxy-billing/src/stripe/http/preview.rs:77`.
+- **Background:** An add-on change, such as a machine removal, can leave a
+  pending credit in Stripe. Stripe's preview counts it, but the payment of
+  an upgrade does not.
+- **Problem:** A review can show USD 115, and the payment can charge
+  USD 125. Two reviewers confirmed this from Stripe's documentation. No
+  live payment reproduced it.
+- **Impact if no action:** A charge can exceed the reviewed amount.
+- **Root question:** How does the review match Stripe's upgrade charge?
+- **Options:**
+  - **A.** Take the pending items out of the preview. Effort: Medium.
+  - **B.** Compute today's charge from Stripe's lines and the customer
+    balance. Effort: Medium.
+  - **C.** Send the same offset in the paid change, and let Stripe compute
+    the amount. Effort: Medium.
+  - **D.** Compare the invoice with the quote after payment, and alert on a
+    difference. It only adds to a fix. Effort: Small.
+  - **E.** Invoice pending items before the upgrade. Effort: Medium.
+  - **F.** Invoice add-on changes at once. Effort: Large.
+- **Left out:** Payment modes that apply the plan before payment, because
+  they break the bank confirmation flow.
+- **Wider fix:** D.
+- **Recommendation:** C with D. Stripe keeps computing the amounts, and an
+  alert catches a later mismatch.
+- **Action:** ask the user, because the two fix rounds of #39 are used, and
+  the finding is critical.
+
+### 109. The spend limit notice lacks the day it was reached
+
+**Answer, 8 November 2026:** C.
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation, Milestone 22, pull request #51.
+- **Category:** Mockup.
+- **Location:** `docs/mockups/src/screens/settings/overflow.tsx:95`.
+- **Background:** The approved mockup of the spend limit notice gives the
+  day the limit was reached and the day Boat resumes.
+- **Problem:** The API gives no day when the limit was reached.
+- **Impact if no action:** The product and the mockup differ.
+- **Root question:** Which days does the notice show?
+- **Options:**
+  - **A.** Only the resume day, and update the mockup. Effort: Small.
+  - **B.** Store the day the limit was reached, and show it. Effort: Large.
+  - **C.** The budget month and the resume day, as Jobs shows them, and
+    update the mockup. Effort: Small.
+- **Left out:** The browser's clock, because it names the visit, not the
+  event.
+- **Wider fix:** None.
+- **Recommendation:** C. It matches Jobs with data that the API has.
+- **Action:** ask the user, because the approved mockup changes.
+
+### 110. History returns every matching job in one response
+
+**Answer, 8 November 2026:** B.
+
+- **Severity:** Medium. **Likelihood:** Rare. **Effort:** Medium.
+- **Source:** Implementation, Milestone 21, pull request #53, its item 16.
+- **Category:** Performance.
+- **Location:** `crates/ciproxy-api/src/handlers/jobs.rs:32`, and
+  `crates/ciproxy-store-pg/src/job_views.rs:35`.
+- **Background:** Each read of History, of the live queue, and of a job page
+  builds every retained job of the workspace before any filter. A job is
+  retained for 90 days. The live queue reads again every 5 seconds. The
+  approved mockup shows pages and a total.
+- **Problem:** A large workspace can make these reads slow.
+- **Impact if no action:** Slow Jobs pages on large workspaces.
+- **Root question:** How does History deliver the jobs of a large plan
+  window?
+- **Options:**
+  - **A.** Measure first at Business volume, and change only when slow.
+    Effort: Medium.
+  - **B.** Pages without a total: the store applies the filters, the order,
+    and a limit, and "Show more" loads the next page. Effort: Medium.
+  - **C.** Pages with a total, as the mockup shows. Effort: Medium.
+  - **D.** One full list, with the filters in the store. Effort: Medium.
+  - **E.** A capped list, with a hint to narrow the filter. Effort: Medium.
+- **Left out:** None.
+- **Wider fix:** B.
+- **Recommendation:** B. Each read stays bounded, also the live queue.
+- **Action:** ask the user, because the approved mockup's total changes.
+
+### 111. The banners lack the plan and the passed limit
+
+**Answer, 8 November 2026:** A.
+
+- **Severity:** Low. **Effort:** Medium.
+- **Source:** Implementation, Milestone 21, pull request #53, its item 17.
+- **Category:** Mockup.
+- **Location:** `crates/ciproxy-api/src/wire/pages.rs:36`.
+- **Background:** The approved banners name the plan, the passed limit, and
+  the day a plan ended. The banner response gives fewer facts.
+- **Problem:** The product banners are true, but less precise.
+- **Impact if no action:** The product and the mockups differ.
+- **Root question:** What does each banner name about its cause?
+- **Options:**
+  - **A.** Use today's wording, and update the mockups. Effort: Small.
+  - **B.** Add typed facts to the banner response, and update the
+    protocol. Effort: Medium.
+  - **C.** Read Plan and usage beside the banner. Effort: Medium.
+- **Left out:** A day computed from the banner's end time, because a month
+  end can give a wrong day.
+- **Wider fix:** None.
+- **Recommendation:** B. One response keeps every page consistent.
+- **Action:** ask the user, because the approved mockups change.
+
+### 112. Jobs notices need facts that the API lacks
+
+**Answer, 8 November 2026:** D.
+
+- **Severity:** Low. **Effort:** Medium.
+- **Source:** Implementation, Milestone 21, pull request #53, its item 18.
+- **Category:** Mockup.
+- **Location:** `plans/follow-ups/jobs-notice-facts.md` on the #53 branch.
+- **Background:** The approved Jobs examples name suspension details,
+  refusal reasons, the actual Boat size, and resource shortages.
+- **Problem:** The API gives fewer facts.
+- **Impact if no action:** The product and the examples differ.
+- **Root question:** What must Jobs explain about why a job waits or where
+  it ran?
+- **Options:**
+  - **A.** Use today's wording, and update the examples. Effort: Small.
+  - **B.** Add suspension, refusal, and run-size facts. Effort: Large.
+  - **C.** Save the scaler's first reason. Effort: Medium.
+  - **D.** Save the actual size choice when a job starts. Effort: Medium.
+  - **E.** D, and typed reasons for temporary refusals. Effort: Large.
+  - **F.** Add shortage facts for each kind of place. Effort: Medium.
+  - **G.** Show the largest job that each kind of place can run.
+    Effort: Medium.
+- **Left out:** Fit computed in the browser, because it can differ from the
+  backend rules.
+- **Wider fix:** None.
+- **Recommendation:** D. It records what really ran.
+- **Action:** ask the user, because the approved examples change.
+
+### 113. The label dialog lacks the largest-job figures
+
+**Answer, 8 November 2026:** A.
+
+- **Severity:** Low. **Effort:** Small.
+- **Source:** Review, Milestone 21, pull request #53, its item 19.
+- **Category:** Mockup.
+- **Location:** `plans/follow-ups/label-dialog-fit-offers.md` on the #53
+  branch.
+- **Background:** The approved label dialog shows the largest job that own
+  machines and Boat can run. The API does not give those figures.
+- **Problem:** The product cannot show them.
+- **Impact if no action:** Only that extra text differs.
+- **Root question:** What does the dialog say about the capacity for a
+  label?
+- **Options:**
+  - **A.** Keep the fit counts and the placement, and remove the extra
+    text from the mockup. Effort: Small.
+  - **B.** Add the figures to the API, shared with option G of item 112.
+    Effort: Medium.
+- **Left out:** Figures computed in the browser, for the reason of item 112.
+- **Wider fix:** None.
+- **Recommendation:** A. The protocol requires only the counts and the
+  placement.
+- **Action:** ask the user, because the approved mockup changes.
