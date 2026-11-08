@@ -1,0 +1,89 @@
+---
+title: Quickstart
+description: Run your first GitHub Actions job on your own machine.
+---
+
+import { CardGrid, LinkCard } from "@astrojs/starlight/components";
+import { jsx } from "astro/jsx-runtime";
+
+import StepsList from "../../../components/docs/StepsList.astro";
+import CodeBlock from "../../../components/marketing/CodeBlock.astro";
+import { runsOnJob } from "../../../data/workflow.ts";
+
+export const components = { ol: StepsList };
+
+export const nextStepsCards = [
+  {
+    title: "Labels and VM sizes",
+    description: "Give each job the VM size that it needs.",
+    href: "/docs/reference/labels/",
+  },
+  {
+    title: "Move your workflows",
+    description:
+      "The repositories that use ciproxy, and the software of a job.",
+    href: "/docs/guides/move-your-workflows/",
+  },
+  {
+    title: "How ciproxy works",
+    description: "Warm runners, slots, overflow, and the cache.",
+    href: "/docs/how-ciproxy-works/",
+  },
+];
+
+## Before you start
+
+:::note[You need]
+A GitHub organization with private repositories, and an x64 Linux machine
+with systemd, cgroup v2, KVM, 4 cores, 16 GB of memory, and 250 GB of disk
+or more. [Add a machine](/docs/guides/add-a-machine/#what-the-machine-needs)
+lists the supported distributions.
+:::
+
+## Set up ciproxy
+
+1. ### Sign in and install the GitHub App
+
+   [Sign in to ciproxy](https://app.ciproxy.dev/sign-in) with GitHub. Then
+   install the ciproxy GitHub App on your organization, and pick the
+   repositories that may use it. If you are not an owner of the
+   organization, GitHub sends your request to its owners.
+
+   The person who installs the App becomes the first Admin of the new
+   workspace. When an owner approves the request of a member, the member
+   who asked becomes the first Admin.
+
+2. ### Add a machine
+
+   In ciproxy, Setup shows the install command. You also find it in
+   **Machines**, under **Add machine**. Run the command on your Linux
+   machine:
+
+   ```sh title="Terminal"
+   curl -fsSL https://get.ciproxy.dev | sudo sh -s -- install --token <install token>
+   ```
+
+   The command holds a token for your workspace, which works for one hour.
+   When the machine connects, ciproxy shows it with its slots.
+
+3. ### Connect Boat
+
+   To start jobs on Boat when your machines are full, connect your Boat
+   account in Setup, or in **Settings** under **Overflow**. Give an API key
+   of your Boat account and a monthly spend limit. You can connect Boat
+   later.
+
+4. ### Change runs-on
+
+   In a workflow file, change the `runs-on` line of a job:
+
+   {jsx(CodeBlock, runsOnJob)}
+
+5. ### Push the change
+
+   Push to GitHub. The job runs on your machine, at once when a warm runner
+   is ready. **Jobs** in ciproxy shows where it ran, and how long it waited.
+
+## Next steps
+
+{jsx(CardGrid, { children: nextStepsCards.map((card) => jsx(LinkCard, card)) })}

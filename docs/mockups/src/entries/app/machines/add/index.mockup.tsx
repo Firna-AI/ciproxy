@@ -13,7 +13,7 @@ export const addMachine = defineScreen({
   description:
     "The same install command as in setup, for another machine. The page waits for the machine to connect. Revoke token ends the token before its hour ends.",
   rationale:
-    "Design call 30: the command stays one line. The install script of get.ciproxy.dev installs the agent, then runs it with the arguments after the two dashes: install and the token.",
+    "Design call 30: the command stays one line. The install script of get.ciproxy.dev installs the agent, then runs it with the arguments after the two dashes: install and the token. The answer C to item 93: the note under the command names the hosts that the installer supports, so a person learns them before preparing a machine.",
   relatedDocs: relatedMvp("agent", "security", "metering"),
   address: orgAddress("machines/new"),
   propSchema: stateSchema(addMachineStates),

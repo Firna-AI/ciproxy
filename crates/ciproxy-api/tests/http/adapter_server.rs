@@ -118,6 +118,8 @@ async fn handle(
         if let Some(ids) = &*data.control.membership_ids.lock().unwrap() {
             return Json(
                 ids.iter()
+                    .skip((page.parse::<usize>().unwrap() - 1) * 100)
+                    .take(100)
                     .map(|id| json!({"state":"active","role":"member","organization":{"id":id}}))
                     .collect::<Vec<_>>(),
             )

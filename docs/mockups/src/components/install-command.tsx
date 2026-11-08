@@ -39,8 +39,10 @@ export function InstallCommand({
       <div className="install-note">
         <p className="caption">
           The token adds any number of machines for one hour. A machine needs
-          x64 Linux with KVM, {unbroken("4 cores")}, {unbroken("16 GB")} of
-          memory, and {unbroken("250 GB")} of disk or more.
+          x64 Linux with systemd, {unbroken("cgroup v2")}, and KVM, on Debian,
+          Ubuntu, Fedora, RHEL, Rocky Linux, or AlmaLinux. It also needs{" "}
+          {unbroken("4 cores")}, {unbroken("16 GB")} of memory, and{" "}
+          {unbroken("250 GB")} of disk or more.
         </p>
         {revokeTo ? (
           <LinkAction to={revokeTo} size="sm" tone="ghost">

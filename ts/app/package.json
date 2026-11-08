@@ -9,6 +9,7 @@
     "export": "expo export --platform web",
     "typecheck": "tsc --noEmit --project tsconfig.json",
     "lint": "eslint . --max-warnings 0",
+    "test": "node --test \"_tests_/**/*.test.ts\"",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

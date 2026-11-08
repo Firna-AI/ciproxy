@@ -77,6 +77,13 @@ runs on own machines.
 - The host keeps 27.5 GB, so the job disk is 82.5 GB.
 - [Worked examples](job-routing-examples.md) shows the default job fit with
   the current image root.
+- An own machine also needs systemd and cgroup v2.
+- Its Linux distribution is Debian, Ubuntu, Fedora, RHEL, Rocky Linux, or
+  AlmaLinux.
+- **Decision:** own machines need systemd, cgroup v2, and one of these
+  distributions. Rejected: a promise of any x64 Linux host that meets the
+  hardware minimum, because customers must know these limits before they
+  set up a machine.
 - Next to the command, the dashboard says how long the install token works
   and what the machine needs.
 - Until the machine connects, the dashboard shows that it waits for the

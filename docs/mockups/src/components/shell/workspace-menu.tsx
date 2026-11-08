@@ -1,17 +1,12 @@
 // The menu of the workspace switch in the top bar: the workspaces of the
-// signed-in person, each with its tier and its organizations, and the install
+// signed-in person, each with the role of the person there, and the install
 // on another organization, which makes a new workspace.
 
 import { Check, Plus } from "lucide-react";
 import { Avatar } from "@firna/ui/avatar";
 
-import { dotJoin } from "../../fixtures/format.ts";
-import {
-  organizationsText,
-  workspace,
-  workspaceChoices,
-} from "../../fixtures/org.ts";
-import { tiers } from "../../fixtures/tiers.ts";
+import { roles } from "../../fixtures/members.ts";
+import { workspace, workspaceChoices } from "../../fixtures/org.ts";
 import "./workspace-menu.css";
 
 export function WorkspaceMenu() {
@@ -32,12 +27,7 @@ export function WorkspaceMenu() {
             />
             <span className="workspace-menu-text">
               <span className="strong">{choice.name}</span>
-              <span className="caption">
-                {dotJoin(
-                  tiers[choice.tier].name,
-                  organizationsText(choice.organizations),
-                )}
-              </span>
+              <span className="caption">{roles[choice.role].name}</span>
             </span>
             {choice.name === workspace.name ? (
               <Check size={16} className="workspace-menu-check" />

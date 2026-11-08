@@ -92,8 +92,27 @@ requires organization membership or exact personal ownership. Only then can
 sign-in persistence run. Verified Add claims can then choose their workspace.
 GET `/session` returns typed setup and installation-link outcomes without
 frontend installation-ID forwarding.
+Its `installation_continuation` lists the exact claim IDs from the latest
+successful GitHub authorization. They are the claims that it proved or
+completed, and the results that a failed authorization left pending. Match
+every ID to `organization_links`. The store keeps this list under the existing
+browser session ID until its fixed expiry, also when no person record remains.
+The cookie and OAuth binding contain no claim list.
+Each successful authorization replaces it, including an empty result.
+Previously proved completed claims add no new result. A signed Direct install
+completed before sign-in appears after its first successful own-user
+installation proof. Setup proof counts as that first proof. Repeated proof of
+an open claim keeps its ID in the result. Proof from GET `/installation-links`
+or a workspace choice adds no result.
+This metadata grants no access.
 Failed proof preserves business records and the existing sign-in. A matching
 identity keeps its original expiry.
+An authorization saves each result as pending, in the same store transaction
+as its claim. The next successful authorization of the same GitHub user lists
+it. The earlier sign-in does not show it.
+Cookie preparation finishes before the store atomically saves the continuation,
+consumes its pending results, and rotates a retained session. A failed
+preparation or write preserves the previous session and the pending results.
 
 The superseded `/api/auth/callback` route and session-query bridge are gone.
 
