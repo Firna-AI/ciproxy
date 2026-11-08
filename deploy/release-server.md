@@ -88,6 +88,10 @@ curl -fsS "https://$RELEASE_HOST/releases/latest/ciproxy-agent/x86_64-unknown-li
 
 With a newer matching pre-release available, preview must select it.
 Production must still select the latest full release.
-On a test machine, run the dashboard's install command.
+On a preview test machine, set `CIPROXY_AGENT_URL` with the
+[root-shell staging procedure](../crates/ciproxy-agent/host-preparation.md#ext4-and-kvm-smoke).
+The current dashboard command supplies no preview endpoint override.
+Run the installer in that root shell so a fresh `sudo` does not remove the
+setting. Production uses the default agent endpoint.
 Confirm that the installer starts `ciproxy-agent install --token` and
 registers the machine. Keep the token and the command arguments out of logs.

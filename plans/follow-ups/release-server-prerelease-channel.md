@@ -38,6 +38,10 @@
      Prove that preview selects a matching pre-release while production
      stays on full releases. Run the install command on a test machine.
      Confirm that the agent receives the install arguments and registers.
+     For preview, keep `CIPROXY_AGENT_URL` set in the root shell that runs
+     the installer, as `crates/ciproxy-agent/host-preparation.md` describes.
+     The dashboard command's missing override is separate work in
+     `plans/follow-ups/preview-install-agent-endpoint.md`.
      Keep all token values out of logs.
 - **Impact if no action:** The old image keeps serving full releases only.
   Its installer downloads the agent but does not start `install --token`.
