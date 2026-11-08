@@ -2036,6 +2036,9 @@ Answers of 5 November 2026:
   number in every state, and the mockup changes to it. Rejected: B and C.
 - Item 113, A, 8 November 2026: the label dialog keeps the fit counts and
   the placement, and the mockup drops the largest-job figures. Rejected: B.
+- Item 114, A, 8 November 2026: merge the release server changes of
+  `futex-ai/cli-release`, with the image push of each merge, and publish
+  no release. ciproxy pins the merged commit. Rejected: B and C.
 - Item 108, C with D, 8 November 2026: the paid change sends the same
   pending credit that the preview counted, Stripe computes the amount, and
   an alert compares each invoice with its quote. A third fix round of pull
@@ -4900,7 +4903,8 @@ to `ghcr.io/futex-ai/cli-release-server` as `latest`, `main`, and
 `sha-<commit>`. The last push was on 5 June 2026, because later `main`
 runs failed at Clippy. A merge creates no GitHub release, tag, or crate,
 because `release_always` and `publish` are false. The merges wait for the
-user to confirm A with this correction.
+user to confirm A with this correction. The user confirmed A with it on
+8 November 2026.
 
 - **Severity:** High. **Effort:** Small.
 - **Source:** Implementation, plan item 103, option B, 8 November 2026.
