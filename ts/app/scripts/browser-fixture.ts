@@ -6,7 +6,13 @@ import type { ScenarioName } from "./harness-scenarios.ts";
 
 export async function control(
   origin: string,
-  value: { scenario?: ScenarioName; build?: string; reset?: boolean },
+  value: {
+    scenario?: ScenarioName;
+    build?: string;
+    reset?: boolean;
+    /** Answer a held Boat connection. */
+    release?: boolean;
+  },
 ): Promise<void> {
   const result = await fetch(`${origin}/__fixture/control`, {
     method: "POST",

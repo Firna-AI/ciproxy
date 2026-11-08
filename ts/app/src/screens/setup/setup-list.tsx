@@ -1,15 +1,20 @@
-// The steps of Setup as a list: a marker with the number or a check, the
-// title, and the open body or the line of a closed step. A finished first
-// job keeps its body open, with the outcome and Open Jobs.
+// The steps of Setup as a list: a marker with the number, a check, or the
+// dash of a skipped step, the title, and the open body or the line of a
+// closed step. A finished or running first job keeps its body open. After a
+// skip or a connection of Boat, focus moves to the first job.
 
+import { useRef } from "react";
+import { Link } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 
 import { colors, fonts, radii } from "@ciproxy/tokens";
 
-import { CheckIcon } from "../../components/icons.tsx";
+import { CheckIcon, MinusIcon } from "../../components/icons.tsx";
 import { text } from "../../components/text.ts";
+import { overflowHref } from "../../routing/pages.ts";
 import type { SetupModel, SetupStep } from "../../view/setup-steps.ts";
 import type { WorkspaceContext } from "../workspace-page.tsx";
+import { BoatStep } from "./boat-step.tsx";
 import { JobStep, MachineStep } from "./step-bodies.tsx";
 
 function Marker({ step, index }: { step: SetupStep; index: number }) {
@@ -23,6 +28,8 @@ function Marker({ step, index }: { step: SetupStep; index: number }) {
     >
       {step.status === "done" ? (
         <CheckIcon size={14} strokeWidth={2.5} color={colors.ink} />
+      ) : step.status === "skipped" ? (
+        <MinusIcon size={14} strokeWidth={2.5} color={colors.muted} />
       ) : (
         <Text
           style={[
@@ -37,12 +44,66 @@ function Marker({ step, index }: { step: SetupStep; index: number }) {
   );
 }
 
+/** The line of a skipped Boat step, which leads to Settings under Overflow. */
+function SkippedLine({ workspaceId }: { workspaceId: string }) {
+  const href = overflowHref(workspaceId);
+  return (
+    <Text style={text.small}>
+      Skipped for now. Connect Boat in{" "}
+      <Link href={href} style={styles.link}>
+        Settings under Overflow
+      </Link>
+      .
+    </Text>
+  );
+}
+
+function StepBody(props: {
+  step: SetupStep;
+  model: SetupModel;
+  context: WorkspaceContext;
+  onContinue: (() => void) | null;
+  onBoatResolved: () => void;
+}) {
+  const { step, model, context } = props;
+  const workspaceId = context.workspace.id;
+  if (step.status === "active" && step.key === "machine") {
+    return (
+      <MachineStep
+        model={model}
+        workspaceId={workspaceId}
+        workspaceName={context.workspace.name}
+        onContinue={props.onContinue}
+      />
+    );
+  }
+  if (step.status === "active" && step.key === "boat") {
+    return (
+      <BoatStep
+        workspaceId={workspaceId}
+        login={context.session.login}
+        onResolved={props.onBoatResolved}
+      />
+    );
+  }
+  if (step.status === "skipped")
+    return <SkippedLine workspaceId={workspaceId} />;
+  if (
+    step.key === "job" &&
+    (step.status === "active" || model.job.kind === "finished")
+  ) {
+    return <JobStep model={model} workspaceId={workspaceId} />;
+  }
+  return <Text style={text.small}>{step.summary}</Text>;
+}
+
 export function Steps(props: {
   model: SetupModel;
   context: WorkspaceContext;
   onContinue: (() => void) | null;
 }) {
   const { model, context, onContinue } = props;
+  const jobTitle = useRef<View>(null);
   return (
     <View style={styles.steps} role="list">
       {model.steps.map((step, index) => (
@@ -57,26 +118,28 @@ export function Steps(props: {
         >
           <Marker step={step} index={index} />
           <View style={styles.content}>
-            <Text
-              role="heading"
-              aria-level={2}
-              style={[styles.title, step.status === "todo" && styles.titleTodo]}
+            <View
+              ref={step.key === "job" ? jobTitle : undefined}
+              tabIndex={step.key === "job" ? -1 : undefined}
             >
-              {step.title}
-            </Text>
-            {step.status === "active" && step.key === "machine" ? (
-              <MachineStep
-                model={model}
-                workspaceId={context.workspace.id}
-                workspaceName={context.workspace.name}
-                onContinue={onContinue}
-              />
-            ) : step.key === "job" &&
-              (step.status === "active" || model.job.kind === "finished") ? (
-              <JobStep model={model} workspaceId={context.workspace.id} />
-            ) : (
-              <Text style={text.small}>{step.summary}</Text>
-            )}
+              <Text
+                role="heading"
+                aria-level={2}
+                style={[
+                  styles.title,
+                  step.status === "todo" && styles.titleTodo,
+                ]}
+              >
+                {step.title}
+              </Text>
+            </View>
+            <StepBody
+              step={step}
+              model={model}
+              context={context}
+              onContinue={onContinue}
+              onBoatResolved={() => jobTitle.current?.focus()}
+            />
           </View>
         </View>
       ))}
@@ -124,4 +187,5 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   titleTodo: { color: colors.ink2 },
+  link: { color: colors.ink, textDecorationLine: "underline" },
 });

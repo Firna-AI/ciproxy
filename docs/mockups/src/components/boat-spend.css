@@ -1,0 +1,74 @@
+/* The Boat spend against its limit: a thin bar with the confirmed costs and
+   the costs that Boat has not confirmed yet, and a key for each part. */
+
+.boat-spend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.spend-bar {
+  display: flex;
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--r-pill);
+  background: var(--c-primary-soft);
+}
+
+.boat-spend-warning .spend-bar {
+  background: var(--c-amber-soft);
+}
+
+.spend-confirmed {
+  background: var(--c-primary);
+}
+
+.boat-spend-warning .spend-confirmed,
+.boat-spend-warning .spend-key-confirmed {
+  background: var(--c-amber);
+}
+
+.spend-unconfirmed {
+  background: var(--c-faint);
+}
+
+.spend-parts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+}
+
+.spend-part {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.spend-part dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--c-ink2);
+}
+
+.spend-part dd {
+  margin: 0;
+  color: var(--c-ink);
+}
+
+.spend-key {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-sm);
+}
+
+.spend-key-confirmed {
+  background: var(--c-primary);
+}
+
+.spend-key-unconfirmed {
+  background: var(--c-faint);
+}

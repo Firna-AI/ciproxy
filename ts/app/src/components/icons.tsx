@@ -133,3 +133,10 @@ export const CopyIcon = icon(
     <path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" />
   </>,
 );
+
+export const MinusIcon = icon("Minus", <path d="M5 12h14" />);
+
+export const CloudOffIcon = icon(
+  "CloudOff",
+  <path d="M3 3l18 18M8.5 6.2A6 6 0 0 1 17.7 10H18a4 4 0 0 1 2.7 7M16 18H7a5 5 0 0 1-1.9-9.6" />,
+);

@@ -1,7 +1,9 @@
-// The three steps of Setup without its Boat step: the GitHub App, a machine,
-// and the first job. Every fact comes from the API: the organizations, the
-// machines that joined, and the first job with its phase and its result. A
-// job counts as passed only when GitHub reports success.
+// The four steps of Setup: the GitHub App, a machine, Boat, and the first
+// job. Every fact comes from the API: the organizations, the machines that
+// joined, the Boat account, and the first job with its phase and its result.
+// A job counts as passed only when GitHub reports success. The Boat step can
+// be skipped, and it never holds Setup open: Setup is complete when the
+// first job finished, because the API keeps no record of a skip.
 
 import type { MachineView, SetupJob, SetupView } from "../api/schema.ts";
 import {
@@ -11,10 +13,10 @@ import {
   joinWords,
 } from "./format.ts";
 
-export type StepStatus = "done" | "active" | "todo";
+export type StepStatus = "done" | "active" | "todo" | "skipped";
 
 export type SetupStep = {
-  key: "github" | "machine" | "job";
+  key: "github" | "machine" | "boat" | "job";
   title: string;
   status: StepStatus;
   /** The line of a closed step: what it did, or what it asks for. */
@@ -26,6 +28,14 @@ export type ConnectedMachine = {
   facts: string;
   /** Set when the disk holds fewer jobs of ciproxy than the slots. */
   diskNote: string | null;
+};
+
+/** What Setup knows of Boat: the line of a connected account, or a skip. */
+export type BoatProgress = {
+  /** Set while a Boat account with an accepted key is connected. */
+  connected: string | null;
+  /** Skip for now in this tab, which counts only while Boat is not connected. */
+  skipped: boolean;
 };
 
 export type FirstJob =
@@ -120,14 +130,34 @@ function jobSummary(job: FirstJob): string {
   return job.passed ? "Your first job passed." : "Your first job finished.";
 }
 
+function boatStatus(boat: BoatProgress, machineDone: boolean): StepStatus {
+  if (boat.connected !== null) return "done";
+  if (boat.skipped) return "skipped";
+  return machineDone ? "active" : "todo";
+}
+
+/** Setup is complete when the first job finished, with or without Boat. */
+export function setupComplete(
+  setup: SetupView,
+  machines: readonly MachineView[],
+): boolean {
+  return (
+    setup.organizations.some((item) => item.state === "active") &&
+    machines.some((machine) => machine.kvm) &&
+    firstJob(setup.first_job).kind === "finished"
+  );
+}
+
 /**
  * The model of Setup. `holdMachine` keeps the machine step open after a
- * machine joined while the page was open, until the person continues.
+ * machine joined while the page was open, until the person continues. The
+ * first job opens after the Boat step, or at once when a job already runs.
  */
 export function setupModel(
   setup: SetupView,
   machines: readonly MachineView[],
   holdMachine: boolean,
+  boat: BoatProgress,
 ): SetupModel {
   const active = setup.organizations.filter((item) => item.state === "active");
   const suspended = setup.organizations
@@ -139,7 +169,9 @@ export function setupModel(
   const githubDone = active.length > 0;
   const machineDone = ready !== undefined && !holdMachine;
   const jobDone = job.kind === "finished";
-  const machineStatus: StepStatus = machineDone ? "done" : "active";
+  const boatStep = boatStatus(boat, machineDone);
+  const jobOpen =
+    machineDone && (boatStep !== "active" || job.kind === "moving");
   const steps: SetupStep[] = [
     {
       key: "github",
@@ -155,24 +187,33 @@ export function setupModel(
     {
       key: "machine",
       title: "Add a machine",
-      status: machineStatus,
+      status: machineDone ? "done" : "active",
       summary: ready
         ? `${ready.hostname} · ${countText(ready.slots, "slot", "slots")}`
         : "Run one command on a Linux machine.",
     },
     {
+      key: "boat",
+      title: "Connect Boat for overflow",
+      status: boatStep,
+      summary:
+        boat.connected ??
+        (boat.skipped
+          ? "Skipped for now."
+          : "Jobs start on Boat when your machines are busy."),
+    },
+    {
       key: "job",
       title: "Run the first job",
-      status: jobDone ? "done" : machineDone ? "active" : "todo",
+      status: jobDone ? "done" : jobOpen ? "active" : "todo",
       summary: jobSummary(job),
     },
   ];
-  const done = steps.filter((step) => step.status === "done").length;
   return {
     steps,
-    done,
+    done: steps.filter((step) => step.status === "done").length,
     total: steps.length,
-    complete: done === steps.length,
+    complete: githubDone && machineDone && jobDone,
     connected: ready === undefined ? null : connectedMachine(ready),
     noKvm,
     suspended,

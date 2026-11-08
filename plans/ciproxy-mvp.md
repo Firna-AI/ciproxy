@@ -1603,8 +1603,50 @@ Depends on: 15, 19
 
 Each screen follows its mockup, as Milestone 19 says.
 
-- [ ] Build the Boat step of Setup, and Settings under Overflow, with their
+- [x] Build the Boat step of Setup, and Settings under Overflow, with their
       states.
+      Branch: `conductor/m22-boat-ui`.
+      Implementation calls, 8 November 2026: keep Skip for now in the tab,
+      for one workspace and one person. A finished first job completes
+      Setup with or without Boat. Build the connection body in one place,
+      with the account choice still open under item 94.
+      API gap: no field gives the day the spend reached the limit. The app
+      shows the reached flag and the API resume date. The mockup keeps its
+      reached-on date until the user chooses the final notice.
+      Verification evidence: `.context/ciproxy-mvp-m22/`.
+- [x] Fix review findings 2 and 3: share pending Boat changes in the store,
+      build policy writes from intended edits and current settings, and
+      keep Disconnect available after key rejection. Update the mockup
+      before the app, and add the regression cases.
+      Branch: `conductor/m22-boat-ui`.
+- [x] Apply the user's answer C to item 109, 8 November 2026, for review
+      finding 1: the spend limit notice names the budget month and the day
+      Boat resumes, as the Jobs page does, from data that the API has. Update
+      the approved Overflow mockup first, then the notice. Run their browser
+      checks at 1440, 720, and 390 pixels. This answer settles the API gap
+      that the first TODO records: the notice needs no day on which the
+      spend reached the limit.
+      Branch: `conductor/m22-boat-ui`.
+- [x] Apply the owner's answer B to item 94, 8 November 2026: after the key
+      check, list each wallet the key can use, with the likely one selected.
+      Let the customer change it before saving. Each Boat organization has
+      its own wallet. Add the mockups first. Use one choice component in
+      Setup and Settings, and use the generated key-check types after the
+      API workspace merges. That workspace owns the protocol update.
+      Branch: `conductor/m22-boat-ui`.
+- [x] Apply the owner's review round 1 at `09dad16`: finding 1 B uses one
+      saved-value and draft helper in both limit forms. Finding 2 A adds
+      privacy checks to one browser connection journey. Finding 3 A uses
+      the generated connection request with a required wallet and removes
+      its handwritten copy and converter. Prove the budget and masking
+      regressions fail before the fixes. The user approved B/A/A on
+      8 November 2026.
+      Branch: `conductor/m22-boat-ui`.
+- [ ] Orchestrator: run `node ts/app/scripts/boat-live-smoke.ts` against the
+      preview API. Set `CIPROXY_BOAT_CREDENTIALS_FILE` to the path of a private
+      Admin credential file outside the repository. The script reads the
+      session and Overflow settings. It changes no key, policy, or job.
+      Branch: `conductor/m22-boat-ui`.
 
 ## Milestone 23: Site: marketing pages and the docs look
 

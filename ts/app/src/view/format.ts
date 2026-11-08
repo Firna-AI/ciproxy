@@ -20,6 +20,17 @@ export function formatDeadline(iso: string, timeZone?: string): string {
   }).format(new Date(iso));
 }
 
+/** "12 November": the day of an instant, kept on one line. */
+export function formatDay(iso: string, timeZone?: string): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "long",
+    timeZone,
+  })
+    .format(new Date(iso))
+    .replace(" ", "\u00a0");
+}
+
 /** "6m 12s", "45s", or "1h 4m": the time between two instants. */
 export function formatDuration(
   startIso: string,
