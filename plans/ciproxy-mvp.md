@@ -1843,6 +1843,10 @@ Answers of 5 November 2026:
   socket error go. A reconnect before the first handoff still means only
   GitHub's cache. There is no guessed time limit; GitHub's job time limit is
   the backstop. Rejected: A and C.
+- Item 99, A, 8 November 2026: the live machine check publishes a
+  pre-release of the agent on `Firna-AI/ciproxy`, creates two private test
+  repositories in Firna-AI, and limits the workspace to the test
+  repositories. Rejected: B and C.
 - Item 94, B, 8 November 2026: the Boat form lets the customer choose the
   personal wallet or an organization wallet of the key, with the likely one
   preselected. Rejected: A, because organization accounts must work, and C.
@@ -4221,6 +4225,8 @@ GitHub membership, is rejected.
   which item 54 = E keeps.
 
 ### 99. The live machine check needs a public agent release
+
+**Answer, 8 November 2026:** A.
 
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
