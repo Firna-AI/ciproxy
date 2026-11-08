@@ -68,4 +68,6 @@ export const storageKeys = {
   handledInstallation: "ciproxy.installation",
   /** The claim IDs of the last ended continuation that the browser handled. */
   handledContinuation: "ciproxy.continuation",
+  /** With ":<workspace ID>": who skipped the Boat step of Setup in this tab. */
+  boatSkipped: "ciproxy.boat-skipped",
 } as const;

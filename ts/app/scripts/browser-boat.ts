@@ -1,0 +1,166 @@
+// The Boat journeys of the browser smoke: real forms and changes against
+// the fixture API, the focus after each change, and the navigation between
+// Setup, Settings, and Settings under Overflow. The rules behind the copy
+// and the state are Node tests.
+import assert from "node:assert/strict";
+
+import { overflowHref, workspaceHref } from "../src/routing/pages.ts";
+import { keyRefused } from "../src/view/boat-failures.ts";
+import type { Page } from "./browser-driver.ts";
+import {
+  control,
+  facts,
+  viewportControls,
+  visible,
+} from "./browser-fixture.ts";
+import type { SmokeRun } from "./browser-registry.ts";
+import { fixtureBoatKey, refusedBoatKey } from "./fixtures-boat.ts";
+import { workspaceId } from "./fixtures-core.ts";
+import { fields } from "./harness-state.ts";
+
+export const setupPath = workspaceHref("setup", workspaceId);
+export const overflowPath = overflowHref(workspaceId);
+
+/** The HTTP failure that each Boat journey causes on purpose. */
+export const boatExpectedStatus: ReadonlyMap<string, number> = new Map([
+  ["boat-setup-connect", 422],
+  ["overflow-save-failure", 503],
+  ["overflow-connect-failure", 503],
+  ["overflow-refresh-after-connect", 503],
+]);
+
+/** Wait until focus rests on the element with exactly this text. */
+export async function focusedOn(page: Page, name: string): Promise<void> {
+  await page.waitForFunction(
+    (text) => document.activeElement?.textContent?.trim() === text,
+    name,
+  );
+}
+
+/** Wait until focus rests in the field with this visible label. */
+export async function fieldFocused(page: Page, label: string): Promise<void> {
+  await page.waitForFunction((text) => {
+    const id = document.activeElement?.getAttribute("aria-labelledby");
+    return id ? document.getElementById(id)?.textContent === text : false;
+  }, label);
+}
+
+export async function fillConnection(
+  page: Page,
+  keyLabel: string,
+  key: string,
+  limit: string | null,
+): Promise<void> {
+  await page.getByLabel(keyLabel, { exact: true }).fill(key);
+  if (limit !== null) {
+    await page
+      .getByLabel("Monthly spend limit, US dollars", { exact: true })
+      .fill(limit);
+  }
+  await page.getByRole("button", { name: "Connect Boat", exact: true }).click();
+}
+
+/** The status of each connection request, in order. */
+export async function connections(origin: string): Promise<number[]> {
+  return (await facts(origin))
+    .filter(
+      (fact) =>
+        fact.method === "POST" && fact.path.endsWith("/overflow/connection"),
+    )
+    .map((fact) => fact.status);
+}
+
+/** The field names of the last connection body that the harness saw. */
+async function connectionFields(origin: string): Promise<unknown> {
+  const value: unknown = await (
+    await fetch(`${origin}/__fixture/state`)
+  ).json();
+  return fields(value) ? value.boatConnectionFields : undefined;
+}
+
+async function setupConnect(page: Page, origin: string, width: number) {
+  await control(origin, { scenario: "boat-setup" });
+  await page.goto(origin + setupPath, { waitUntil: "domcontentloaded" });
+  await visible(page.getByLabel("Boat API key", { exact: true }));
+  await viewportControls(page, width);
+  await fillConnection(page, "Boat API key", refusedBoatKey, "200");
+  await visible(page.getByText(keyRefused, { exact: true }));
+  assert.equal(
+    await page
+      .getByLabel("Monthly spend limit, US dollars", { exact: true })
+      .inputValue(),
+    "200",
+    "A refused key keeps the typed limit",
+  );
+  await fillConnection(page, "Boat API key", fixtureBoatKey, null);
+  await visible(
+    page.getByText(
+      "Connected to the Boat account northstar · spend limit $200 a month",
+      { exact: true },
+    ),
+  );
+  await focusedOn(page, "Run the first job");
+  assert.equal(await page.getByLabel("Boat API key").count(), 0);
+  assert.deepEqual(await connections(origin), [422, 200]);
+  assert.deepEqual(await connectionFields(origin), [
+    "api_key",
+    "spend_limit_cents",
+  ]);
+}
+
+async function setupSkip(page: Page, origin: string) {
+  await control(origin, { scenario: "boat-setup" });
+  await page.goto(origin + setupPath, { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "Skip for now", exact: true }).click();
+  const link = page.getByRole("link", {
+    name: "Settings under Overflow",
+    exact: true,
+  });
+  await visible(link);
+  await focusedOn(page, "Run the first job");
+  await visible(
+    page.getByText("Waiting for a job with runs-on: ciproxy…", { exact: true }),
+  );
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await visible(link);
+  assert.equal(await page.getByLabel("Boat API key").count(), 0);
+  await link.click();
+  await page.waitForURL(/\/settings\/overflow\?workspace=/);
+  await visible(page.getByLabel("Boat API key", { exact: true }));
+  assert.deepEqual(await connections(origin), []);
+}
+
+async function settingsTabs(page: Page, origin: string, width: number) {
+  await control(origin, { scenario: "admin" });
+  await page.goto(origin + workspaceHref("settings", workspaceId), {
+    waitUntil: "domcontentloaded",
+  });
+  await visible(page.getByText("This page is coming soon", { exact: true }));
+  await viewportControls(page, width);
+  await page.getByRole("link", { name: "Overflow", exact: true }).click();
+  await page.waitForURL(/\/settings\/overflow\?workspace=/);
+  await visible(page.getByLabel("Boat API key", { exact: true }));
+  assert.equal(
+    await page
+      .getByRole("link", { name: "Overflow", exact: true })
+      .getAttribute("aria-current"),
+    "page",
+  );
+  await page.getByRole("link", { name: "Labels", exact: true }).click();
+  await visible(page.getByText("This page is coming soon", { exact: true }));
+  assert.equal(new URL(page.url()).pathname, "/settings");
+}
+
+export function createBoatRuns(origin: string): readonly SmokeRun[] {
+  return [
+    {
+      name: "boat-setup-connect",
+      check: (page, _context, width) => setupConnect(page, origin, width),
+    },
+    { name: "boat-setup-skip", check: (page) => setupSkip(page, origin) },
+    {
+      name: "settings-tabs",
+      check: (page, _context, width) => settingsTabs(page, origin, width),
+    },
+  ];
+}

@@ -7,6 +7,7 @@ import { CircleCheck } from "lucide-react";
 
 import { Action, LinkAction } from "../../components/actions.tsx";
 import { BoatFields } from "../../components/boat-fields.tsx";
+import { Notice } from "../../components/feedback.tsx";
 import { CodeBlock } from "../../components/figures.tsx";
 import {
   ConnectedMachine,
@@ -50,24 +51,72 @@ export function MachineStep({ state }: { state: OnboardingState }) {
   );
 }
 
-export function BoatStep({ invalid }: { invalid: boolean }) {
+function SkipAction() {
+  return (
+    <LinkAction to={paths.firstJobAfterSkip} tone="ghost">
+      Skip for now
+    </LinkAction>
+  );
+}
+
+/** The Boat step when no form can work: Boat is off or did not load. */
+function BoatStepBlocked({ state }: { state: OnboardingState }) {
+  const failed = state === "boat-load-failed";
   return (
     <div className="stack">
-      <p className="small">
-        When your machines are busy, ciproxy starts jobs in your own Boat
-        account. Boat bills you by the second.
-      </p>
+      <Notice
+        tone={failed ? "danger" : "info"}
+        title={failed ? "Unable to load Boat" : "Boat is unavailable right now"}
+      >
+        {failed
+          ? "Check the connection, then try again."
+          : "Connect Boat later in Settings under Overflow. Jobs run on your machines."}
+      </Notice>
+      <div className="row-wrap">
+        {failed ? <Action tone="primary">Try again</Action> : null}
+        <SkipAction />
+      </div>
+    </div>
+  );
+}
+
+export function BoatStep({ state }: { state: OnboardingState }) {
+  if (state === "boat-unavailable" || state === "boat-load-failed") {
+    return <BoatStepBlocked state={state} />;
+  }
+  const rejected = state === "boat-rejected";
+  const typed = state !== "boat";
+  return (
+    <div className="stack">
+      {rejected ? (
+        <Notice
+          tone="danger"
+          title={`Boat rejected the API key on ${boat.keyRejectedOn}`}
+        >
+          Jobs run on your machines only until you connect Boat with a new key.
+        </Notice>
+      ) : (
+        <p className="small">
+          When your machines are busy, ciproxy starts jobs in your own Boat
+          account. Boat bills you by the second.
+        </p>
+      )}
       <BoatFields
-        invalid={invalid}
-        limit={invalid ? boat.spendLimit : undefined}
+        invalid={state === "boat-invalid"}
+        filled={state === "boat-connect-failed"}
+        reconnect={rejected}
+        limit={typed ? boat.spendLimit : undefined}
       />
+      {state === "boat-connect-failed" ? (
+        <Notice tone="danger" title="Unable to connect Boat">
+          Check the connection, then try Connect Boat again.
+        </Notice>
+      ) : null}
       <div className="row-wrap">
         <LinkAction to={paths.firstJob} tone="primary">
           Connect Boat
         </LinkAction>
-        <LinkAction to={paths.firstJob} tone="ghost">
-          Skip for now
-        </LinkAction>
+        <SkipAction />
       </div>
     </div>
   );

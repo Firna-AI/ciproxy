@@ -18,7 +18,7 @@ function segment(id: string): string {
   return encodeURIComponent(id);
 }
 
-function workspacePath(workspaceId: string, rest: string): string {
+export function workspacePath(workspaceId: string, rest: string): string {
   return `/workspaces/${segment(workspaceId)}${rest}`;
 }
 

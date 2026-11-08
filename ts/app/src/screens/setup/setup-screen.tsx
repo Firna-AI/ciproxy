@@ -1,7 +1,8 @@
-// Setup without its Boat step: the GitHub App, a machine, and the first
-// job. The page reads Setup again while it waits, and a failed read keeps the
-// last state with Try again. A machine that joins while the page is open
-// keeps its step open, with the machine, until the person continues.
+// Setup: the GitHub App, a machine, Boat, and the first job. The page reads
+// Setup again while it waits, and a failed read keeps the last state with
+// Try again. A machine that joins while the page is open keeps its step
+// open, with the machine, until the person continues. The Boat step reads
+// the Boat settings of the workspace, and its skip lasts for the tab.
 
 import { useEffect, useState } from "react";
 
@@ -14,6 +15,7 @@ import {
 } from "../../components/page-state.tsx";
 import { useServices } from "../../services/context.tsx";
 import { useValue } from "../../services/hooks.ts";
+import { boatProgress } from "../../view/boat.ts";
 import { setupModel } from "../../view/setup-steps.ts";
 import {
   WorkspacePageView,
@@ -25,6 +27,8 @@ function Setup({ context }: { context: WorkspaceContext }) {
   const services = useServices();
   const store = services.setup(context.workspace.id);
   const snapshot = useValue(store.state);
+  const overflow = useValue(services.overflow(context.workspace.id).state);
+  const skippedBy = useValue(services.boatSkip(context.workspace.id).state);
   const [sawWaiting, setSawWaiting] = useState(false);
   const [continued, setContinued] = useState(false);
   useEffect(() => {
@@ -56,7 +60,12 @@ function Setup({ context }: { context: WorkspaceContext }) {
     );
   }
   const hold = sawWaiting && !waiting && !continued;
-  const model = setupModel(snapshot.setup, snapshot.machines, hold);
+  const model = setupModel(
+    snapshot.setup,
+    snapshot.machines,
+    hold,
+    boatProgress(overflow, skippedBy, context.session.login),
+  );
   return (
     <>
       <PageHeader

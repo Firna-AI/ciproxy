@@ -13,6 +13,12 @@ import {
   workspaceId,
 } from "./fixtures-core.ts";
 import { job, machine, setup } from "./fixtures-setup.ts";
+import {
+  applyBoatScenario,
+  boatScenarios,
+  defaultBoat,
+  type BoatFixture,
+} from "./harness-boat.ts";
 import { applyLateApprovalScenario } from "./harness-late-approval.ts";
 import { applyReviewScenario } from "./harness-review-scenarios.ts";
 
@@ -78,6 +84,7 @@ export const scenarios = [
   "late-add-wait",
   "late-add-completed",
   "late-multiple-completed",
+  ...boatScenarios,
 ] as const;
 
 export type ScenarioName = (typeof scenarios)[number];
@@ -97,6 +104,8 @@ export type Scenario = {
   revokeFails: boolean;
   linkedOutcome?: OrganizationLinkView;
   signInOutcome?: ScenarioName;
+  /** The Boat settings and their failures. */
+  boat: BoatFixture;
 };
 
 function linkFor(name: ScenarioName): OrganizationLinkView {
@@ -151,6 +160,7 @@ export function recordedScenario(name: ScenarioName): Scenario {
     setupFails: name === "setup-load-failure",
     commandFails: name === "command-load-failure",
     revokeFails: name === "command-revoke-failure",
+    boat: defaultBoat(),
   };
   const current = workspace();
   const other = workspace({ id: otherWorkspaceId, name: "Orbit", role: null });
@@ -242,5 +252,6 @@ export function recordedScenario(name: ScenarioName): Scenario {
   }
   applyReviewScenario(data);
   applyLateApprovalScenario(data);
+  applyBoatScenario(data);
   return data;
 }

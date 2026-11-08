@@ -17,9 +17,11 @@ import { idParam, type WorkspacePage } from "../routing/pages.ts";
 import { workspaceAccess } from "../routing/workspace.ts";
 import { useServices } from "../services/context.tsx";
 import { useRedirect, useSession, useValue } from "../services/hooks.ts";
+import type { OverflowSnapshot } from "../state/overflow.ts";
 import { createStore } from "../state/store.ts";
 import type { SetupSnapshot } from "../state/setup.ts";
-import { setupModel } from "../view/setup-steps.ts";
+import { boatProgress } from "../view/boat.ts";
+import { setupComplete, setupModel } from "../view/setup-steps.ts";
 import type { SetupProgress } from "../view/shell.ts";
 import { NoRoleScreen } from "./no-role.tsx";
 
@@ -30,17 +32,40 @@ export type WorkspaceContext = {
 };
 
 const noSetup = createStore<SetupSnapshot>({ status: "loading" });
+const noOverflow = createStore<OverflowSnapshot>({ status: "loading" });
+const noSkip = createStore<string | null>(null);
 
-/** The progress of Setup for the navigation of an Admin. */
-function useSetupProgress(workspaceId: string | null): SetupProgress | null {
+/**
+ * The progress of Setup for the navigation of an Admin. The Boat settings
+ * load only while Setup is open, because only its count needs them.
+ */
+function useSetupProgress(
+  workspaceId: string | null,
+  login: string | null,
+): SetupProgress | null {
   const services = useServices();
   const store = workspaceId === null ? null : services.setup(workspaceId);
+  const overflow = workspaceId === null ? null : services.overflow(workspaceId);
+  const skip = workspaceId === null ? null : services.boatSkip(workspaceId);
   const snapshot = useValue(store?.state ?? noSetup);
+  const boat = useValue(overflow?.state ?? noOverflow);
+  const skippedBy = useValue(skip?.state ?? noSkip);
+  const open =
+    snapshot.status === "ready" &&
+    !setupComplete(snapshot.setup, snapshot.machines);
   useEffect(() => {
     void store?.ensure();
   }, [store]);
+  useEffect(() => {
+    if (open) void overflow?.ensure();
+  }, [open, overflow]);
   if (snapshot.status !== "ready") return null;
-  const model = setupModel(snapshot.setup, snapshot.machines, false);
+  const model = setupModel(
+    snapshot.setup,
+    snapshot.machines,
+    false,
+    boatProgress(boat, skippedBy, login ?? ""),
+  );
   return { done: model.done, total: model.total, complete: model.complete };
 }
 
@@ -69,7 +94,10 @@ export function WorkspacePageView({
     access?.kind === "member" && access.role === "admin"
       ? access.workspace.id
       : null;
-  const progress = useSetupProgress(adminId);
+  const progress = useSetupProgress(
+    adminId,
+    snapshot.status === "signed-in" ? snapshot.session.login : null,
+  );
 
   if (
     snapshot.status !== "signed-in" ||

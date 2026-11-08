@@ -11,6 +11,8 @@ export type Locator = {
     timeout?: number;
   }): Promise<void>;
   click(): Promise<void>;
+  fill(value: string): Promise<void>;
+  inputValue(): Promise<string>;
   focus(): Promise<void>;
   press(key: string): Promise<void>;
   getAttribute(name: string): Promise<string | null>;
@@ -32,6 +34,7 @@ export type Page = {
     options?: { waitUntil: "domcontentloaded" },
   ): Promise<unknown>;
   reload(options?: { waitUntil: "domcontentloaded" }): Promise<unknown>;
+  setViewportSize(size: { width: number; height: number }): Promise<void>;
   goBack(options?: { waitUntil: "domcontentloaded" }): Promise<unknown>;
   waitForURL(url: string | RegExp): Promise<void>;
   waitForResponse(url: RegExp): Promise<{
@@ -41,9 +44,11 @@ export type Page = {
   url(): string;
   getByRole(
     role: string,
-    options?: { name?: string | RegExp; exact?: boolean },
+    options?: { name?: string | RegExp; exact?: boolean; checked?: boolean },
   ): Locator;
   getByText(text: string | RegExp, options?: { exact?: boolean }): Locator;
+  getByLabel(text: string | RegExp, options?: { exact?: boolean }): Locator;
+  waitForFunction<A>(check: (arg: A) => boolean, arg: A): Promise<unknown>;
   getByTestId(id: string): Locator;
   keyboard: { press(key: string): Promise<void> };
   screenshot(options: { path: string; fullPage: boolean }): Promise<unknown>;

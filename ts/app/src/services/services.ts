@@ -1,10 +1,12 @@
 // The services of one document: one API client, one build gate, one
-// navigator, one session, and one Setup and install-command store for each
-// workspace. A full-document navigation drops them all, so nothing private
-// outlives a sign-out.
+// navigator, one session, and one Setup, install-command, overflow, and
+// Boat-skip store for each workspace. A full-document navigation drops them
+// all, so nothing private outlives a sign-out.
 
 import { createApiClient, type Transport } from "../api/client.ts";
 import { createEndpoints, type Endpoints } from "../api/endpoints.ts";
+import { createOverflowEndpoints } from "../api/overflow-endpoints.ts";
+import { createBoatSkipStore, type BoatSkipStore } from "../state/boat-skip.ts";
 import { createBuildGate, type BuildGate } from "../state/build-gate.ts";
 import {
   createInstallCommandStore,
@@ -16,6 +18,7 @@ import {
   type Navigator,
   type PageRouter,
 } from "../state/navigation.ts";
+import { createOverflowStore, type OverflowStore } from "../state/overflow.ts";
 import type { Timers, Visibility } from "../state/poller.ts";
 import { createSessionStore, type SessionStore } from "../state/session.ts";
 import { createSetupStore, type SetupStore } from "../state/setup.ts";
@@ -44,6 +47,10 @@ export type AppServices = {
   readonly session: SessionStore;
   setup(workspaceId: string): SetupStore;
   installCommand(workspaceId: string): InstallCommandStore;
+  /** The Boat settings of Setup and Settings under Overflow. */
+  overflow(workspaceId: string): OverflowStore;
+  /** Skip for now on the Boat step of Setup, in this tab. */
+  boatSkip(workspaceId: string): BoatSkipStore;
   /** Remember that this tab follows an install link to GitHub. */
   markInstallStarted(): void;
   /** Whether this tab came back from an install that it started. */
@@ -81,6 +88,7 @@ export function createAppServices(env: AppEnvironment): AppServices {
     reload: () => env.location.reload(),
   });
   const endpoints = createEndpoints(client);
+  const overflowEndpoints = createOverflowEndpoints(client);
   const sessionStore = createSessionStore(() => endpoints, env.local, env.now);
   session = sessionStore;
   const navigator = createNavigator(gate, env.location, env.router);
@@ -107,6 +115,17 @@ export function createAppServices(env: AppEnvironment): AppServices {
         mutate: sessionStore.mutate,
         now: env.now,
       }),
+    ),
+    overflow: cached((workspaceId) =>
+      createOverflowStore({
+        endpoints: overflowEndpoints,
+        workspaceId,
+        report: sessionStore.report,
+        mutate: sessionStore.mutate,
+      }),
+    ),
+    boatSkip: cached((workspaceId) =>
+      createBoatSkipStore(env.tab, workspaceId),
     ),
     markInstallStarted() {
       env.tab.set(storageKeys.installStarted, "1");

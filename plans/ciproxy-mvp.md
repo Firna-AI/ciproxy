@@ -1439,8 +1439,22 @@ Depends on: 15, 19
 
 Each screen follows its mockup, as Milestone 19 says.
 
-- [ ] Build the Boat step of Setup, and Settings under Overflow, with their
+- [x] Build the Boat step of Setup, and Settings under Overflow, with their
       states.
+      Branch: `conductor/m22-boat-ui`.
+      Implementation calls, 8 November 2026: keep Skip for now in the tab,
+      for one workspace and one person. A finished first job completes
+      Setup with or without Boat. Build the connection body in one place,
+      with the account choice still open under item 94.
+      API gap: no field gives the day the spend reached the limit. The app
+      shows the reached flag and the API resume date. The mockup keeps its
+      reached-on date until the user chooses the final notice.
+      Verification evidence: `.context/ciproxy-mvp-m22/`.
+- [ ] Orchestrator: run `node ts/app/scripts/boat-live-smoke.ts` against the
+      preview API. Set `CIPROXY_BOAT_CREDENTIALS_FILE` to the path of a private
+      Admin credential file outside the repository. The script reads the
+      session and Overflow settings. It changes no key, policy, or job.
+      Branch: `conductor/m22-boat-ui`.
 
 ## Milestone 23: Site: marketing pages and the docs look
 

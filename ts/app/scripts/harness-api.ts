@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { InstallLink, WorkspaceChoice } from "../src/api/schema.ts";
 import { activation } from "./fixtures-core.ts";
 import { installCommand } from "./fixtures-setup.ts";
+import { serveBoat } from "./harness-boat-api.ts";
 import { recordedScenario } from "./harness-scenarios.ts";
 import {
   fields,
@@ -183,6 +184,11 @@ export async function serveApi(
     } satisfies InstallLink);
     return;
   }
+  if (
+    action !== undefined &&
+    (await serveBoat(request, action, current.boat, readJson, send))
+  )
+    return;
   if (action === "setup" && method === "GET") {
     send(
       current.setupFails ? 503 : 200,

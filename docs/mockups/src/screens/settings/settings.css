@@ -125,3 +125,15 @@
 .mockup-mobile .org-actions-stack {
   align-items: flex-start;
 }
+
+/* The spend of the month when ciproxy cannot read it from Boat. */
+.spend-missing {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.spend-missing .stack-tight {
+  flex: 1;
+  min-width: 0;
+}

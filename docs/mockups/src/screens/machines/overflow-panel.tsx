@@ -1,14 +1,16 @@
 // The Boat account that takes overflow: where jobs go when the own machines
-// are busy, and the spend of the month against its limit. Only an Admin gets
-// the link to the overflow settings.
+// are busy, and the spend of the month against its limit, with the confirmed
+// and the unconfirmed costs apart. Only an Admin gets the link to the
+// overflow settings.
 
 import { Cloud } from "lucide-react";
 
 import { TextLink } from "../../components/actions.tsx";
-import { Meter } from "../../components/figures.tsx";
+import { BoatSpendFigures } from "../../components/boat-spend.tsx";
 import { Panel } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
-import { dotJoin, formatMoney, unbroken } from "../../fixtures/format.ts";
+import { spendScenes } from "../../fixtures/boat-spend.ts";
+import { dotJoin, unbroken } from "../../fixtures/format.ts";
 import { boat } from "../../fixtures/machines.ts";
 
 export function OverflowPanel({ settings }: { settings: boolean }) {
@@ -35,11 +37,10 @@ export function OverflowPanel({ settings }: { settings: boolean }) {
           </p>
         </div>
         <div className="overflow-meter">
-          <Meter
-            label="Spent this month"
-            used={boat.spentThisMonth}
-            max={boat.spendLimit}
-            value={`${formatMoney(boat.spentThisMonth)} of ${formatMoney(boat.spendLimit)}`}
+          <BoatSpendFigures
+            spend={spendScenes.steady}
+            limit={boat.spendLimit}
+            compact
           />
         </div>
       </div>

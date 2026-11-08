@@ -3,9 +3,13 @@
 The private ciproxy dashboard, built with Expo Router and React Native Web.
 It targets web only and has no open licence.
 A person signs in with GitHub, installs the ciproxy GitHub App, adds
-organizations to a workspace, and follows Setup without its Boat step.
-Jobs, Machines, Savings, Plan and usage, and Settings show a coming-soon
-state until later work fills them.
+organizations to a workspace, and follows Setup. Its Boat step connects the
+Boat account of the customer, which takes jobs when the machines of the
+workspace are busy. On Settings under Overflow, an Admin connects Boat,
+changes its key, or disconnects it. The same page sets the overflow switch,
+the wait, and the monthly spend limit, and shows the spend of the month.
+Jobs, Machines, Savings, Plan and usage, and the Labels tab of Settings show
+a coming-soon state until later work fills them.
 
 The screens follow the [mockups](../../docs/mockups/README.md).
 Controls come from `@firna/ui` first, then from `src/components`.
@@ -28,12 +32,17 @@ The static export holds one HTML file for each route.
 | `/personal-account`                          | An install on a personal account                     |
 | `/app-removed`                               | The App left the last organization of the workspace  |
 | `/access-ended`                              | GitHub no longer lists the person                    |
-| `/setup`                                     | For Admins: the App, a machine, and the first job    |
+| `/setup`                                     | For Admins: the App, a machine, Boat, the first job  |
 | `/jobs`, `/machines`, `/savings`, `/billing` | Coming soon, in the shell                            |
-| `/settings`                                  | For Admins: coming soon, in the shell                |
+| `/settings`                                  | For Admins: Settings tabs, with Labels coming soon   |
+| `/settings/overflow`                         | For Admins: Boat, the overflow wait, the spend limit |
 
 A workspace page names its workspace by its opaque ID in `?workspace=<id>`.
 `/?workspace=<id>` opens Setup for an Admin until it is done, else Jobs.
+Setup is done after the App, a machine, and the first job, with or without
+Boat. After Skip for now, the Boat step links to Settings under Overflow.
+The API keeps no record of a skip, so it lasts only for the tab, the
+workspace, and the person who skipped.
 `?reason=github` or `?reason=ended` on `/sign-in` adds a notice.
 The shell holds the navigation, the workspace switch, the account menu, and
 Add an organization for Admins. A person with no role sees a page that names
@@ -60,6 +69,12 @@ the Admins, in place of each workspace page.
 - Each API response names its build in the `x-ciproxy-build` header. After a
   new build, the next page change loads a new document, also through the
   back and forward buttons. Until then, the page keeps its input.
+- Setup and Settings under Overflow read the Boat settings of a workspace
+  through one store. A change that the API accepted is never sent again.
+  When the read after it fails, the page offers only Try again, which reads.
+- A Boat connection sends only the key and the monthly limit. The form
+  drops the key once the API accepts it. The pages show the account name
+  and never the key.
 
 ## Development
 
@@ -115,12 +130,13 @@ CIPROXY_PLAYWRIGHT_PATH=/absolute/path/playwright-core/index.mjs \
   `results.json`, and a trace of each failed case. By default, it is
   `.context/ciproxy-mvp-m19/browser-smoke` under the current directory.
 
-## Live check
+## Live checks
 
-The live check uses the sign-in of an Admin on a deployed dashboard. It reads
-the session, Setup, and the machines, and checks the build header. It creates
-one install command and revokes it at once. Then it reloads the Jobs page at
-each width. It prints only the name and the result of each check.
+The dashboard live check uses the sign-in of an Admin on a deployed
+dashboard. It reads the session, Setup, and the machines, and checks the
+build header. It creates one install command and revokes it at once. Then it
+reloads the Jobs page at each width. It prints only the name and the result
+of each check.
 
 The credential file holds a live sign-in. Keep it outside the repository,
 and never share its values. It is a JSON object with four strings:
@@ -138,6 +154,31 @@ CIPROXY_PLAYWRIGHT_PATH=/absolute/path/playwright-core/index.mjs \
 
 Without the credential variable, it prints `SKIP` and exits with status 2.
 
+### Boat settings
+
+The Boat live check reads the Boat settings of a deployed dashboard with the
+sign-in of an Admin. It sends two GET requests: `/api/session`, and the
+Overflow settings of the workspace. It checks the Admin role, the current
+CSRF token, the response types, and one build header across both requests.
+It changes no account, key, policy, or job. It needs no Boat key and no
+browser.
+
+Its credential file follows the rules above, with the same four strings:
+`base_url`, `workspace_id`, `session_cookie`, and `csrf_token`. The
+`csrf_token` must be the current token of the sign-in.
+
+```sh
+CIPROXY_BOAT_CREDENTIALS_FILE=/absolute/path/outside/repo/boat.json \
+  node ts/app/scripts/boat-live-smoke.ts
+```
+
+`--help` prints the usage and reads no file. Without the credential
+variable, the check prints `SKIP` and exits with status 2. A failed check
+exits with status 1. A credential file that the check cannot read or parse
+is a failed check. The check prints only fixed check names, results, and
+counts. A pass does not prove that a connection, a key change, a policy
+save, or a disconnect works.
+
 ## Key Code
 
 - [src/app/_layout.tsx](src/app/_layout.tsx) sets the Firna theme, loads the
@@ -149,7 +190,22 @@ Without the credential variable, it prints `SKIP` and exits with status 2.
   workspace page in the [shell](src/components/shell/app-shell.tsx), or the
   page for no role.
 - [src/screens/setup/setup-screen.tsx](src/screens/setup/setup-screen.tsx) is
-  Setup. `src/screens/add-organization` is the workspace choice.
+  Setup, with its Boat step in `boat-step.tsx`.
+  `src/screens/add-organization` is the workspace choice.
+- `src/screens/overflow` is Settings under Overflow, below the
+  [Settings tabs](src/components/settings-tabs.tsx). `src/screens/boat`
+  holds the Boat connection form of Setup and of this page, which masks the
+  key. It also holds the spend figures, which show the confirmed and the
+  unconfirmed costs apart.
+- [src/state/overflow.ts](src/state/overflow.ts) holds the Boat settings of
+  a workspace and never keeps the key.
+  [src/api/overflow-endpoints.ts](src/api/overflow-endpoints.ts) builds the
+  one connection request. [src/state/boat-skip.ts](src/state/boat-skip.ts)
+  keeps Skip for now in the tab.
+- [src/view/boat.ts](src/view/boat.ts) turns the Boat settings into what the
+  pages show. A reached limit comes only from the API flag.
+  [src/view/money.ts](src/view/money.ts) formats the decimal-string cents of
+  the API, and reads a typed dollar limit with integer arithmetic.
 - [src/api/client.ts](src/api/client.ts) is the one HTTP client.
 - [src/state/navigation.ts](src/state/navigation.ts) reloads on a new build.
 - [app.json](app.json) limits Expo to web and enables static export.
@@ -160,5 +216,8 @@ Without the credential variable, it prints `SKIP` and exits with status 2.
 - [Sign-in and access](../../docs/protocol/security.md#sign-in-and-access),
   [Add an organization](../../docs/protocol/workspaces.md#add-an-organization),
   and [Removing the App](../../docs/protocol/app-removal.md#removing-the-app).
+- [Overflow](../../docs/protocol/overflow.md), with the Boat account and the
+  spend limit, and
+  [the overflow wait](../../docs/protocol/job-routing.md#the-overflow-wait).
 - [ciproxy-api](../../crates/ciproxy-api/README.md) registers the GitHub URLs,
   and the [deployment](../../deploy/README.md#environments) serves `/api`.

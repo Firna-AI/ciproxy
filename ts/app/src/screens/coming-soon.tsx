@@ -1,25 +1,26 @@
 // The pages of the shell that later releases fill: Jobs, Machines, Savings,
 // Plan and usage, and Settings. Each shows its title and an honest state,
 // with no sample data, and leads an Admin back to Setup while it is open.
+// Settings shows its tabs, so Settings under Overflow stays one click away.
 
 import { Link } from "expo-router";
 
 import { ActionLink } from "../components/actions.tsx";
 import { InfoIcon } from "../components/icons.tsx";
 import { PageHeader, StateBlock } from "../components/page-state.tsx";
+import { SettingsTabs } from "../components/settings-tabs.tsx";
 import { workspaceHref, type WorkspacePage } from "../routing/pages.ts";
 import { useValue } from "../services/hooks.ts";
 import { useServices } from "../services/context.tsx";
 import { pageTitles } from "../view/shell.ts";
-import { setupModel } from "../view/setup-steps.ts";
+import { setupComplete } from "../view/setup-steps.ts";
 import { WorkspacePageView, type WorkspaceContext } from "./workspace-page.tsx";
 
 function SetupAction({ workspaceId }: { workspaceId: string }) {
   const services = useServices();
   const snapshot = useValue(services.setup(workspaceId).state);
   if (snapshot.status !== "ready") return null;
-  if (setupModel(snapshot.setup, snapshot.machines, false).complete)
-    return null;
+  if (setupComplete(snapshot.setup, snapshot.machines)) return null;
   const href = workspaceHref("setup", workspaceId);
   return (
     <Link href={href} asChild>
@@ -38,6 +39,9 @@ function ComingSoon({
   return (
     <>
       <PageHeader title={pageTitles[page]} />
+      {page === "settings" ? (
+        <SettingsTabs workspaceId={context.workspace.id} active="labels" />
+      ) : null}
       <StateBlock
         icon={InfoIcon}
         title="This page is coming soon"

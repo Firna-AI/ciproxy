@@ -1,0 +1,10 @@
+{
+  "title": "Boat step states",
+  "order": [
+    "invalid-key",
+    "connect-failed",
+    "rejected",
+    "unavailable",
+    "load-failed"
+  ]
+}

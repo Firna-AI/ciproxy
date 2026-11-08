@@ -1,11 +1,14 @@
 // Setup of a new organization: install the GitHub App, add a machine with one
 // command, connect Boat, and run the first job. One screen; the state picks
-// the open step.
+// the open step. The Boat step can be skipped: it then shows a dash and a
+// link to Settings under Overflow, and it does not count as done.
 
-import { Check } from "lucide-react";
+import { Check, Minus } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
 
+import { TextLink } from "../../components/actions.tsx";
 import { PageHeader } from "../../components/page.tsx";
+import { paths } from "../../components/paths.ts";
 import { AppShell } from "../../components/shell/app-shell.tsx";
 import { dotJoin, monthly } from "../../fixtures/format.ts";
 import { boat } from "../../fixtures/machines.ts";
@@ -19,6 +22,11 @@ export const onboardingStates = [
   "machine-no-kvm",
   "boat",
   "boat-invalid",
+  "boat-connect-failed",
+  "boat-rejected",
+  "boat-unavailable",
+  "boat-load-failed",
+  "boat-skipped",
   "first-job-waiting",
   "first-job-passed",
 ] as const;
@@ -26,7 +34,7 @@ export const onboardingStates = [
 export type OnboardingState = (typeof onboardingStates)[number];
 
 type StepKey = "github" | "machine" | "boat" | "job";
-type StepStatus = "done" | "active" | "todo";
+type StepStatus = "done" | "active" | "todo" | "skipped";
 
 const steps: readonly {
   key: StepKey;
@@ -69,6 +77,11 @@ const openStep: Record<OnboardingState, StepKey> = {
   "machine-no-kvm": "machine",
   boat: "boat",
   "boat-invalid": "boat",
+  "boat-connect-failed": "boat",
+  "boat-rejected": "boat",
+  "boat-unavailable": "boat",
+  "boat-load-failed": "boat",
+  "boat-skipped": "job",
   "first-job-waiting": "job",
   "first-job-passed": "job",
 };
@@ -76,6 +89,7 @@ const openStep: Record<OnboardingState, StepKey> = {
 function statusOf(state: OnboardingState, key: StepKey): StepStatus {
   const order: StepKey[] = ["github", "machine", "boat", "job"];
   const open = openStep[state];
+  if (state === "boat-skipped" && key === "boat") return "skipped";
   if (state === "first-job-passed") return "done";
   if (open === key) return "active";
   return order.indexOf(key) < order.indexOf(open) ? "done" : "todo";
@@ -112,6 +126,8 @@ export function OnboardingScreen({
               <span className="setup-marker" aria-hidden="true">
                 {status === "done" ? (
                   <Check size={14} strokeWidth={2.5} />
+                ) : status === "skipped" ? (
+                  <Minus size={14} strokeWidth={2.5} />
                 ) : (
                   index + 1
                 )}
@@ -120,6 +136,8 @@ export function OnboardingScreen({
                 <h2 className="setup-title">{step.title}</h2>
                 {open ? (
                   <StepBody state={state} step={step.key} />
+                ) : status === "skipped" ? (
+                  <SkippedLine />
                 ) : (
                   <p className="muted small">
                     {status === "done" ? step.done : step.todo}
@@ -134,12 +152,25 @@ export function OnboardingScreen({
   );
 }
 
+/** The line of a skipped Boat step, which leads to Settings under Overflow. */
+function SkippedLine() {
+  return (
+    <p className="muted small">
+      Skipped for now. Connect Boat in{" "}
+      <TextLink to={paths.overflowNotConnected}>
+        Settings under Overflow
+      </TextLink>
+      .
+    </p>
+  );
+}
+
 function StepBody({ state, step }: { state: OnboardingState; step: StepKey }) {
   switch (step) {
     case "machine":
       return <MachineStep state={state} />;
     case "boat":
-      return <BoatStep invalid={state === "boat-invalid"} />;
+      return <BoatStep state={state} />;
     case "job":
       return <FirstJobStep passed={state === "first-job-passed"} />;
     case "github":
