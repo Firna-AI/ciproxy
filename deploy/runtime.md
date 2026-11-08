@@ -58,9 +58,10 @@ runtime steps below. The CDN key keeps its separate 16-byte format.
 
 ## Turn on the runtime
 
-Build and publish the
-[control-plane image](../crates/ciproxy-control-plane/container.md) before
-enabling it. The `deploy/helm/ciproxy` chart supplies this interface:
+Complete [automatic image setup](control-plane-images.md) before enabling
+the runtime. Preview builds or reuses its image on each accepted push.
+Production promotes the same saved digest. The `deploy/helm/ciproxy` chart
+supplies this interface:
 
 | Part              | What the image must do                                                                                                                                                                                                                                                                                                                                                                        |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -91,8 +92,8 @@ off, the chart renders no control plane, so the selector has no effect.
 
 Then do these steps:
 
-1. Push the image to the shared repository `ciproxy-shared-runtime`.
-   The GKE nodes pull only from there.
+1. Confirm that preview published or reused its image in
+   `ciproxy-shared-runtime`. The GKE nodes pull only from there.
 2. Add a version to each of the six other secrets `ciproxy-<env>-<file>` of
    the table, from a private file.
    [Key registration](setup.md#9-register-the-cdn-signing-key) already gave
@@ -108,7 +109,7 @@ Then do these steps:
 3. [Prepare the database](#prepare-the-database) for startup migrations.
 4. Check that `CDN_SIGNING_KEY_NAME` holds the name from key registration. Set
    the [runtime variables](setup.md#4-set-github-variables), including
-   `CONTROL_PLANE_IMAGE` and `CONTROL_PLANE_RUNTIME_READY=true`, in the
+   `CONTROL_PLANE_RUNTIME_READY=true`, in the
    GitHub environment. Then deploy, and check the rollout with
    `kubectl rollout status deployment/control-plane --namespace="$NAMESPACE"`.
 

@@ -108,8 +108,9 @@ gcloud compute backend-buckets delete-signed-url-key "ciproxy-$DEPLOY_ENV-images
 
 After that, do not roll the control plane back to a Helm revision or a
 ReplicaSet that uses the old name, because its URLs would fail. To run an
-older application image, set `CONTROL_PLANE_IMAGE` to that image, keep the
-current `CDN_SIGNING_KEY_NAME`, and deploy.
+older application image, use the
+[explicit image rollback](control-plane-images.md#roll-back-and-resume).
+Keep the current `CDN_SIGNING_KEY_NAME`, and deploy.
 
 ## Rotate a runtime secret
 
