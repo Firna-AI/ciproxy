@@ -44,8 +44,10 @@ export function QuickstartScreen({ viewport }: { viewport: Viewport }) {
         <DocsH2 id="before-you-start">Before you start</DocsH2>
         <Notice tone="info" title="You need">
           A GitHub organization with private repositories, and an x64 Linux
-          machine with KVM, {unbroken("4 cores")}, {unbroken("16 GB")} of
-          memory, and {unbroken("250 GB")} of disk or more.
+          machine with systemd, {unbroken("cgroup v2")}, KVM,{" "}
+          {unbroken("4 cores")}, {unbroken("16 GB")} of memory, and{" "}
+          {unbroken("250 GB")} of disk or more. Add a machine lists the
+          supported distributions.
         </Notice>
         <DocsH2 id="set-up">Set up ciproxy</DocsH2>
         <Steps>

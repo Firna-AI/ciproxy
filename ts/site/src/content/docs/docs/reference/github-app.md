@@ -1,6 +1,6 @@
 ---
 title: GitHub App permissions
-description: The ciproxy GitHub App asks for three permissions, and no other.
+description: The ciproxy GitHub App asks for four permissions, and no other.
 ---
 
 ciproxy works on GitHub as the ciproxy GitHub App. The App lets ciproxy
@@ -8,11 +8,12 @@ start runners for the jobs of your organization.
 
 ## Permissions
 
-| Permission          | Access         | What ciproxy uses it for                                                     |
-| ------------------- | -------------- | ---------------------------------------------------------------------------- |
-| Self-hosted runners | Read and write | To start a runner for each job                                               |
-| Metadata            | Read           | To list your repositories                                                    |
-| Actions             | Read           | To read the event and the head repository of the run of each job from GitHub |
+| Permission          | Access         | What ciproxy uses it for                                                               |
+| ------------------- | -------------- | -------------------------------------------------------------------------------------- |
+| Self-hosted runners | Read and write | To start a runner for each job                                                         |
+| Metadata            | Read           | To list your repositories                                                              |
+| Actions             | Read           | To read the event and the head repository of the run of each job from GitHub           |
+| Members             | Read           | To read your organization memberships when you sign in, so that ciproxy can give roles |
 
 The App asks for no other permission. It does not ask for "Contents", and
 the control plane of ciproxy never reads the code of your repositories.

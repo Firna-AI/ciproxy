@@ -1458,6 +1458,24 @@ require and the product does.
       workflows with `CodeBlock` and `afterChange`. Parse both copied jobs
       as YAML in the site regression tests. Owner review round 1, finding 1.
       Branch: `conductor/m24-launch-docs-pages`.
+- [x] Apply item 93 = C to the agent host requirement, the approved
+      install mockup, and the docs. State the supported Linux hosts with
+      systemd and cgroup v2. The Milestone 20 workspace owns the dashboard
+      note. Wider host support stays in its follow-up item.
+      My call, 8 November 2026: Add a machine owns the distribution list,
+      and the other docs pages link to it, so the list has one home.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Apply item 96 = A in the shared docs grid styles. Show two columns
+      at 720 and 1440 pixels and one at 390 pixels. Put the Overview Next
+      link in the right half on the two-column layout.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Apply item 98 = A to GitHub App permissions and the marketing
+      permission texts. List Members read as the fourth permission, for
+      organization memberships and roles at sign-in.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Apply item 94 = B to Connect Boat. Explain the personal or
+      organization wallet choice, with the likely wallet preselected.
+      Branch: `conductor/m24-launch-docs-pages`.
 - [x] Smoke-test all 14 pages at 1440, 720, and 390 pixels. Check mobile
       navigation, search, page links, anchors, light mode, and aside borders.
       Branch: `conductor/m24-launch-docs-pages`.
@@ -1473,8 +1491,9 @@ require and the product does.
         routing, and steps in a job container.
   - [ ] Add a machine: check Admin access, token expiry and revoke,
         registration, hardware, slots, no KVM, disk fit, and repeat install.
-  - [ ] Connect Boat: check the key, account name, spend limit, wait,
-        rejected key, key change, and disconnect.
+  - [ ] Connect Boat: check the key, wallet choices and preselection,
+        account name, spend limit, wait, rejected key, key change, and
+        disconnect.
   - [ ] Move your workflows: check repository access, the `runs-on` change,
         cache actions, and the Docker image example.
   - [ ] Set a spend limit: check confirmed and pending spend, blocked new
@@ -1485,8 +1504,9 @@ require and the product does.
         slots, fit, names, deletion, and both "When nothing fits" choices.
   - [ ] Agent install options: check command help, host preparation, the
         systemd service, repeat install, outbound access, and updates.
-  - [ ] GitHub App permissions: check the three permissions, private
-        repository access, personal accounts, suspension, and removal.
+  - [ ] GitHub App permissions: check the four permissions, sign-in
+        memberships and roles, private repository access, personal accounts,
+        suspension, and removal.
   - [ ] Plans and starts: check prices, starts, machine counts, history,
         add-ons, period dates, soft limits, and the payment controls.
   - [ ] Job isolation: check fresh VMs, cache scopes, Docker disks, public

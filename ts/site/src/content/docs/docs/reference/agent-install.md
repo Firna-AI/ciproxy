@@ -20,6 +20,10 @@ Only an Admin of the workspace sees it.
 
 ## What install does
 
+- It checks the Linux distribution, systemd, and cgroup v2 of the machine,
+  as [Add a machine](/docs/guides/add-a-machine/#what-the-machine-needs)
+  lists them. When a check fails, it stops before it registers the machine,
+  and it says what to fix.
 - It prepares Firecracker, its jailer, and the host tools that the VMs
   need.
 - It prepares the disk area of the agent: one XFS file with reflinks, on any

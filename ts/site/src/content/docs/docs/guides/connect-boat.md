@@ -3,9 +3,11 @@ title: Connect Boat
 description: Start jobs in your own Boat account when your machines are busy.
 ---
 
-Boat runs your overflow jobs in sandboxes in your own Boat account, and Boat
-bills you for them. No ciproxy plan includes the Boat cost. One Boat account
-serves every organization of your workspace.
+Boat runs your overflow jobs in sandboxes in your own Boat account. A wallet
+pays for the sandboxes: your personal wallet, or the wallet of a Boat
+organization. Each Boat organization has its own wallet. You choose the
+wallet when you connect Boat. It pays for the Boat jobs of every GitHub
+organization of your workspace. No ciproxy plan includes the Boat cost.
 
 ## Connect your Boat account
 
@@ -14,9 +16,13 @@ Only an Admin connects Boat.
 1. Create an API key in your Boat account.
 2. In ciproxy, open **Settings**, then **Overflow**. Setup has the same
    step, and you can skip it there.
-3. Paste the API key, and enter a monthly spend limit in US dollars.
-4. Select **Connect Boat**. ciproxy checks the key with Boat before it saves
-   it.
+3. Paste the API key. ciproxy checks the key with Boat.
+4. Choose the wallet that pays for the sandboxes. After the key check, the
+   form lists the wallets that the key can use, and selects the most likely
+   one.
+5. Enter a monthly spend limit in US dollars.
+6. Select **Connect Boat**. ciproxy saves the key, the wallet, and the spend
+   limit.
 
 After the save, ciproxy shows the name of your Boat account, and never the
 key. When Boat does not accept the key, ciproxy saves nothing, and the key

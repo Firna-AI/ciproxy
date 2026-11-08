@@ -2,7 +2,8 @@
 // the install command of an own machine, and the workflow change that moves
 // a job to ciproxy. The docs show the same change inside its whole job.
 // "GitHub App permissions" in docs/protocol/security.md states the
-// permissions.
+// permissions. The landing page counts them from this list. Its security
+// section and the docs page "GitHub App permissions" describe each one.
 
 /** A permission that the ciproxy GitHub App asks for. */
 export type AppPermission = { name: string; access: string };
@@ -11,6 +12,7 @@ export const appPermissions: readonly AppPermission[] = [
   { name: "Self-hosted runners", access: "read and write" },
   { name: "Metadata", access: "read" },
   { name: "Actions", access: "read" },
+  { name: "Members", access: "read" },
 ];
 
 /**

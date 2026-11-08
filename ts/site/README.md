@@ -97,7 +97,8 @@ Rules for the docs pages:
   `/docs/reference/labels/`, so that the gate does not read it as a file.
 - One fact has one page, and the other pages link to it. The full example
   of a job container is under "Run steps in another image" of Move your
-  workflows.
+  workflows. The list of supported Linux distributions is under "What the
+  machine needs" of Add a machine.
 
 ## Development
 
