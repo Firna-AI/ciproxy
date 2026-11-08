@@ -28,6 +28,8 @@ release-token delivery path and needs no secret version while Boat is off.
 - [Image workflow trust](image-workflow-bootstrap.md) gives the prelaunch
   trust root of the image identities, its activation, and its launch move.
 - [Operations](operations.md) gives images, runtime setup, and rotation.
+- [Release server](release-server.md) gives the source pin, release channels,
+  archive contract, and rollout checks.
 
 ## Environments
 
@@ -63,9 +65,12 @@ asset caching requires `FORCE_CACHE_ALL`; object metadata alone does not
 enable it. [Static delivery](static-delivery.md) gives paths and lifetimes.
 
 The release server uses upstream commit
-`30513bd1a6e15d8e9c1b18f2ed92d1d4dfa11786`. Its vendored chart has
+`53a1dd3426226a9d25defb4a899d3c9a430a3941`. Its vendored chart has
 [provenance](helm/cli-release-server/PROVENANCE.json). Both environments
 pull from `us-central1-docker.pkg.dev/ciproxy/ciproxy-shared-runtime`.
+Main preview uses the `prerelease` channel. Production uses `stable` and
+never follows pre-releases. Deploy sets each channel in its rendered Helm
+values. See [release channels](release-server.md#release-channels).
 
 The release server and control plane use `us-central1-a`,
 `us-central1-b`, and `us-central1-c`. GKE prepares their NEGs in these

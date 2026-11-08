@@ -871,11 +871,20 @@ Live KVM and authenticated job checks remain with the orchestrator.
       Live run of 8 November 2026 on the 500 GiB test host: 0 passed,
       4 failed, 13 skipped. No real job started. Evidence:
       `.context/ciproxy-mvp/own-smoke-live-2026-11-08/`.
-  - [ ] Forward the install arguments to the installed agent, as design
-        call 30 says. The installer of `futex-ai/cli-release` downloads
-        the agent and exits with status 0, but never runs
-        `install --token`. A new pull request there builds the step. Its
-        merge waits for the user's answer to item 114.
+  - [x] Forward the install arguments to the installed agent, as design
+        call 30 says. Upstream pull request #8 now uses `exec` to run the
+        installed binary with those arguments. ciproxy pins the merged
+        revision `53a1dd3426226a9d25defb4a899d3c9a430a3941` and its chart.
+        The orchestrator rollout below owns the live proof.
+  - [ ] Orchestrator: after this change merges, mirror the pinned release
+        server image, record its digest, set `RELEASE_SERVER_IMAGE_DIGEST`
+        in the selected GitHub environments, and redeploy with fresh plans.
+        Check the live image, `prerelease` in main preview, and `stable` in
+        production. Prove that production does not follow pre-releases.
+        Confirm that the one-line install command runs `install --token`
+        and registers the test machine. The
+        [release-server rollout](follow-ups/release-server-prerelease-channel.md)
+        records this operator work.
   - [ ] Give the guest a working network. Guests get no DNS answer, so the
         runner cannot reach GitHub. The agent gives a fixed address and
         gateway on the kernel command line, and the image also runs DHCP
@@ -5089,6 +5098,13 @@ runs failed at Clippy. A merge creates no GitHub release, tag, or crate,
 because `release_always` and `publish` are false. The merges wait for the
 user to confirm A with this correction. The user confirmed A with it on
 8 November 2026.
+
+**Implementation, 8 November 2026:** Upstream pull requests #6, #7, and #8
+merged into `main` at `53a1dd3426226a9d25defb4a899d3c9a430a3941`.
+The ciproxy pin, chart, environment channels, and archive revision reference
+now use that revision. The image mirror, digest settings, and live check
+remain with the orchestrator in Milestone 13 and
+`follow-ups/release-server-prerelease-channel.md`.
 
 - **Severity:** High. **Effort:** Small.
 - **Source:** Implementation, plan item 103, option B, 8 November 2026.

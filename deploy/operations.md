@@ -72,6 +72,9 @@ exists. It gives the image interface, secrets, and rollout steps.
 
 ## Rotate the release token
 
+For a source-pin or channel update, use the
+[release-server rollout checks](release-server.md#verify-a-rollout).
+
 1. Add a new token version, as in
    [token storage](setup.md#6-store-the-release-token).
 2. Deploy. The deploy copies the new version into the Kubernetes Secret.

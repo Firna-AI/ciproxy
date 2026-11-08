@@ -57,7 +57,7 @@ def main():
     sync_release_secret(config)
     boat_revision = sync_boat_secret(config)
 
-    release, ciproxy = helm_values(config, digest, runtime_enabled, control_image)
+    release, ciproxy = helm_values(config, digest, runtime_enabled, control_image, environment)
     ciproxy["controlPlane"]["boatSharedSnapshotRevision"] = boat_revision
     ciproxy["controlPlane"]["cdnSigningKeyName"] = os.environ.get("CDN_SIGNING_KEY_NAME", "")
     ciproxy["controlPlane"]["env"] = [

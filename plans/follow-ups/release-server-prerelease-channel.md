@@ -1,42 +1,54 @@
-# The release server has no pre-release channel
+# Deploy the release channel and installer handoff
 
-- **Severity:** High. **Effort:** Medium.
+- **Severity:** High. **Effort:** Small.
   **Confidence:** High. **Harder later:** Yes.
-- **Kind:** Fix after merge.
+- **Kind:** Post-merge task.
 - **Added:** 2026-11-08, from plan item 103, option B, which the user asked
   to build in parallel.
-- **Source:** Implementation, the Milestone 13 live check.
-- **Category:** Product bug.
-- **Location:** `futex-ai/cli-release`,
-  `crates/cli-release-server/src/github/releases.rs:21`, and
-  `deploy/scripts/mirror-release-image.sh` with the release values of
-  `deploy/helm/`.
-- **Reason:** Item 103 = A made the first agent release a full release.
-  Before the first customer update, a test release must reach the preview
-  only.
+- **Location:** `deploy/scripts/mirror-release-image.sh`,
+  `deploy/scripts/deploy_support.py`, and `deploy/release-server.md`.
+- **Reason:** The code is complete, but the operator must mirror its image,
+  set the digest, and verify the deployed change after the merge.
 
 - **Terms:**
   - **Full release:** a GitHub release that is not marked as a pre-release.
-  - **Agent update:** the agent on each machine updates itself from the
-    release server.
-- **Background:** The installer and the agent update ask the release server
-  for the latest release. The server asks GitHub for its latest release,
-  which is the newest full release. The preview and production read the
-  same repository, `Firna-AI/ciproxy`.
-- **Problem:** A release that is published to test it on the preview also
-  reaches every customer machine.
-- **Impact if no action:** After launch, an untested agent can reach every
-  customer at once.
-- **Root question:** How does the preview get test releases that production
-  does not?
-- **Options:**
-  - **A.** Add a channel setting to the release server. The preview follows
-    the newest release, pre-releases included. Production follows full
-    releases only. Mirror the new server image, and set the channel in the
-    release values of each environment. Effort: Medium.
-- **Left out:** A separate repository for preview releases, because the
-  same tags would then live in two places.
-- **Wider fix:** A.
-- **Recommendation:** A.
-- **Action:** fix after merge, apply A, because the user asked for it in
-  parallel with the live check.
+  - **Release channel:** the server setting that selects the release for
+    installs and agent updates.
+- **Background:** The installer and agent updates ask the release server
+  for the latest release. Preview and production read `Firna-AI/ciproxy`.
+  The first agent release became a full release to unblock the live check.
+  The user chose a separate preview channel on 8 November 2026.
+  The user also confirmed the merged-source approach on that date, without
+  publishing an upstream release.
+
+  The upstream Clippy fix, release channel, and installer handoff changes
+  merged into `futex-ai/cli-release` on 8 November 2026.
+  The merged revision is `53a1dd3426226a9d25defb4a899d3c9a430a3941`.
+  The ciproxy code pins that revision and its exact chart files.
+  It renders `prerelease` for `main-preview` and `stable` for `production`.
+  The archive contract is unchanged.
+  The new installer runs the installed binary with its arguments through
+  `exec`, which enables the one-line `install --token` command.
+- **Task:** The orchestrator completes one operator rollout after merge:
+  1. Mirror the pinned server image with
+     `deploy/scripts/mirror-release-image.sh`, as `deploy/setup.md` describes.
+  2. Record the returned digest. Set `RELEASE_SERVER_IMAGE_DIGEST` in each
+     selected GitHub environment, then redeploy with fresh plans.
+  3. Use `deploy/release-server.md` to check the live image and channel.
+     Prove that preview selects a matching pre-release while production
+     stays on full releases. Run the install command on a test machine.
+     Confirm that the agent receives the install arguments and registers.
+     For preview, keep `CIPROXY_AGENT_URL` set in the root shell that runs
+     the installer, as `crates/ciproxy-agent/host-preparation.md` describes.
+     The dashboard command's missing override is separate work in
+     `plans/follow-ups/preview-install-agent-endpoint.md`.
+     Keep all token values out of logs.
+- **Impact if no action:** The old image keeps serving full releases only.
+  Its installer downloads the agent but does not start `install --token`.
+  Publishing a test agent as a full release can reach every customer.
+- **Needs:** The merged ciproxy change, operator image and GitHub access,
+  access to the deployed environments, and a test machine for registration.
+- **Done when:** The selected environments run the mirrored revision.
+  Main preview follows `prerelease`, and production follows `stable`.
+  A newer matching pre-release cannot become production's latest release.
+  The one-line install command registers the test machine.
