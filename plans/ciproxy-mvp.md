@@ -4219,3 +4219,37 @@ GitHub membership, is rejected.
   model stays as the user approved it.
 - **Action:** ask the user, because A changes the App's three permissions,
   which item 54 = E keeps.
+
+### 99. The live machine check needs a public agent release
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
+- **Category:** Process.
+- **Location:** `deploy/helm/release-values.yaml:4`, and
+  `crates/ciproxy-agent/smoke-checks.md`.
+- **Background:** The live check installs the agent on the test host the
+  way a customer does, from the preview's release server. That server
+  serves releases of the public repository `Firna-AI/ciproxy`, which has no
+  release yet. The check also needs a second allowed private repository and
+  a private repository that the runner group excludes.
+- **Problem:** The check cannot run without an agent release and the test
+  repositories.
+- **Impact if no action:** The own-machine path stays unproven on real
+  hardware before launch.
+- **Root question:** Where does the live check get its agent release and its
+  test repositories?
+- **Options:**
+  - **A.** Publish a pre-release of the agent on `Firna-AI/ciproxy`, create
+    two private test repositories in Firna-AI, and limit the workspace to
+    the test repositories. Effort: Small.
+  - **B.** Point the preview's release server at a private repository with
+    the release, and create the same test repositories. Effort: Medium.
+  - **C.** Copy the agent to the test host by hand, and skip the install
+    path of the check. Effort: Small.
+- **Left out:** Using the real private repositories of Firna-AI, because a
+  test must not run jobs in them.
+- **Wider fix:** None.
+- **Recommendation:** A. The agent is open source, so a public pre-release
+  is safe, and the check then proves the customer's install path.
+- **Action:** ask the user, because A publishes a release and creates
+  repositories in the user's organization.
