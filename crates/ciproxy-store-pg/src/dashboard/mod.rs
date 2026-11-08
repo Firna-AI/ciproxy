@@ -17,7 +17,6 @@ use ciproxy_store_interface::dashboard::records::{
 use ciproxy_store_interface::dashboard::store::DashboardStore;
 use ciproxy_store_interface::error::Result;
 use ciproxy_store_interface::installation_results::PendingInstallationResult;
-use ciproxy_store_interface::labels::Label;
 use ciproxy_store_interface::metering::history::MachineCost;
 use ciproxy_store_interface::scale_sets::ScaleSet;
 use ciproxy_store_interface::workspaces::Workspace;
@@ -143,8 +142,5 @@ impl DashboardStore for PgStore {
     }
     fn retired_label_workspaces(&self) -> Result<Vec<Uuid>> {
         resources::retired_workspaces(self)
-    }
-    fn retired_dashboard_labels(&self, id: Uuid) -> Result<Vec<Label>> {
-        resources::retired(self, id)
     }
 }

@@ -31,6 +31,8 @@ Admin approval. Existing registrations are explicitly backfilled. Trusted
 normal insertion initializes admission in its transaction. Missing metadata
 cannot authorize a runner. Linked inactive organizations count against the
 tier. Retained reinstalls preserve their policy rows.
+The shared activation predicate controls preparation and registration.
+Retained admission takes precedence over a fresh Add's initial holds.
 
 Registration locks the workspace before counting organizations and writing
 policy, resources, claim completion, and lifecycle output together. Billing

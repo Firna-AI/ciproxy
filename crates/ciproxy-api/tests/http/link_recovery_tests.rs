@@ -3,10 +3,9 @@
 use ciproxy_github::app::InstallationOutcome;
 use ciproxy_github::app::webhook::InstallationAction;
 use ciproxy_store_interface::dashboard::records::Role;
-use url::Url;
 
 use super::fixture_io::{CallbackOutcome, json};
-use super::link_support::{begin, claims, event, memberships, pending, returned, scenario};
+use super::link_support::{self, begin, claims, event, memberships, pending, returned, scenario};
 use super::setup_support::{browser, configure, finish};
 
 #[tokio::test]
@@ -106,14 +105,7 @@ async fn lost_add_return_recovers_without_state_and_direct_callback_before_event
     );
 
     let (fixture, _server, admin, added) = scenario().await;
-    let session = json(fixture.request(Some(&admin), "GET", "/session", None).await).await;
-    let url = Url::parse(session["install_url"].as_str().unwrap()).unwrap();
-    let state = url
-        .query_pairs()
-        .find(|(key, _)| key == "state")
-        .unwrap()
-        .1
-        .into_owned();
+    let state = link_support::start(&fixture, &admin).await;
     returned(&fixture, &state, CallbackOutcome::Accepted)
         .await
         .unwrap();

@@ -46,10 +46,7 @@ pub(super) async fn install_link(
     })
 }
 
-pub(super) async fn continuation_link(
-    state: &ApiState,
-    principal: &Principal,
-) -> Result<InstallLink> {
+async fn continuation_link(state: &ApiState, principal: &Principal) -> Result<InstallLink> {
     let direct = match &principal.install_context {
         Some(InstallContext::Attempt(id)) => {
             let id = *id;
@@ -78,6 +75,14 @@ pub(super) async fn continuation_link(
         None => true,
     };
     install_link(state, principal.github_id(), direct).await
+}
+
+#[utoipa::path(operation_id="installation_links_start",post,path="/installation-links/start",responses((status=200,body=InstallLink)),security(("session"=[])))]
+pub(crate) async fn start(
+    State(state): State<ApiState>,
+    Extension(principal): Extension<Arc<Principal>>,
+) -> Result<Json<InstallLink>> {
+    Ok(Json(continuation_link(&state, &principal).await?))
 }
 
 #[utoipa::path(operation_id="organizations_add",post,path="/workspaces/{workspace_id}/organizations/add",params(WorkspacePath),responses((status=200,body=InstallLink)),security(("session"=[])))]

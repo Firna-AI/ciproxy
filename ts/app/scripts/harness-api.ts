@@ -97,6 +97,13 @@ export async function serveApi(
     send(200, success);
     return;
   }
+  if (path === "/api/installation-links/start" && method === "POST") {
+    send(200, {
+      attempt_id: "fixture-attempt",
+      url: "/__fixture/github/install?attempt=fixture-attempt",
+    } satisfies InstallLink);
+    return;
+  }
   if (path === "/api/installation-links" && method === "GET") {
     send(200, current.session.organization_links);
     return;

@@ -37,6 +37,7 @@ export function MobileShell(props: ShellFrameProps) {
           session={session}
           workspace={workspace}
           onAddOrganization={actions.addOrganization}
+          onInstall={actions.install}
           trigger={
             <View style={styles.switch}>
               <BrandMark size={18} />
