@@ -78,16 +78,18 @@ impl WorkspaceCheck<'_> {
             (path.ends_with(".md") || path.ends_with(".mdx"))
                 && path.rsplit('/').next() != Some("CLAUDE.md")
         })?;
-        let violations = links::violations(&documents, &paths);
-        for violation in &violations {
-            eprintln!(
-                "{}:{}: {:?}: {}",
-                violation.source, violation.line, violation.problem, violation.destination
-            );
+        let (failures, warnings): (Vec<_>, Vec<_>) = links::violations(&documents, &paths)
+            .into_iter()
+            .partition(|violation| violation.problem.fails_check());
+        for violation in &warnings {
+            eprintln!("warning: {violation}");
         }
-        if !violations.is_empty() {
+        for violation in &failures {
+            eprintln!("{violation}");
+        }
+        if !failures.is_empty() {
             return Err(Error::MarkdownLinks {
-                count: violations.len(),
+                count: failures.len(),
             });
         }
         let maintained = documents
@@ -95,7 +97,11 @@ impl WorkspaceCheck<'_> {
             .filter(|(path, _)| files::maintained(path))
             .map(|(path, _)| path)
             .collect::<Vec<_>>();
-        eprintln!("Local links passed for {} documents", maintained.len());
+        eprintln!(
+            "Local links passed for {} documents, with {} heading warnings",
+            maintained.len(),
+            warnings.len()
+        );
         let mut command = CommandSpec::new(
             "npm",
             &[

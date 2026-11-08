@@ -1534,15 +1534,86 @@ Depends on: 13, 15, 23
 Each page of the docs sidebar mockup states only what the protocol docs
 require and the product does.
 
-- [ ] Start here: Overview, Quickstart, and How ciproxy works.
-- [ ] Guides: Add a machine, Connect Boat, Move your workflows, Set a spend
+- [x] Start here: Overview, Quickstart, and How ciproxy works.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Guides: Add a machine, Connect Boat, Move your workflows, Set a spend
       limit, and Remove a machine.
-- [ ] Reference: Labels and VM sizes, Agent install options, GitHub App
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Reference: Labels and VM sizes, Agent install options, GitHub App
       permissions, and Plans and starts.
-- [ ] Say on the docs page of the job image that a job can run its steps
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Say on the docs page of the job image that a job can run its steps
       in any Docker image with the `container:` key, as item 78 = C says.
-- [ ] Security: Job isolation, and The agent connection. Check each page
-      against the product on the test host.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Security: Job isolation, and The agent connection.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Show the mockup's steps, cards, and default-label badge. My call,
+      7 November 2026: use Astro's MDX component map and expressions with
+      the Starlight components, because the existing Markdown check accepts
+      them. The gate configuration stays unchanged.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Fix the copied workflow examples in Quickstart and Move your
+      workflows with `CodeBlock` and `afterChange`. Parse both copied jobs
+      as YAML in the site regression tests. Owner review round 1, finding 1.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Apply item 93 = C to the agent host requirement, the approved
+      install mockup, and the docs. State the supported Linux hosts with
+      systemd and cgroup v2. The Milestone 20 workspace owns the dashboard
+      note. Wider host support stays in its follow-up item.
+      My call, 8 November 2026: Add a machine owns the distribution list,
+      and the other docs pages link to it, so the list has one home.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Apply item 96 = A in the shared docs grid styles. Show two columns
+      at 720 and 1440 pixels and one at 390 pixels. Put the Overview Next
+      link in the right half on the two-column layout.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Apply item 98 = A to GitHub App permissions and the marketing
+      permission texts. List Members read as the fourth permission, for
+      organization memberships and roles at sign-in.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Apply item 94 = B to Connect Boat. Explain the personal or
+      organization wallet choice, with the likely wallet preselected.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Smoke-test all 14 pages at 1440, 720, and 390 pixels. Check mobile
+      navigation, search, page links, anchors, light mode, and aside borders.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [ ] Orchestrator: check each page against the running product at
+      `https://br-main.preview.app.ciproxy.dev`, after the dashboard
+      workspaces deliver their screens. Use a disposable private repository,
+      a KVM test machine, and a Boat test account.
+  - [ ] Overview: confirm the Free plan, an own-machine start, Boat after
+        the default wait, and a machine-cache restore.
+  - [ ] Quickstart: follow sign-in, App install, machine registration, and
+        the first job with the documented command and workflow change.
+  - [ ] How ciproxy works: check warm runners, drain, cache clearing, Boat
+        routing, and steps in a job container.
+  - [ ] Add a machine: check Admin access, token expiry and revoke,
+        registration, hardware, slots, no KVM, disk fit, and repeat install.
+  - [ ] Connect Boat: check the key, wallet choices and preselection,
+        account name, spend limit, wait, rejected key, key change, and
+        disconnect.
+  - [ ] Move your workflows: check repository access, the `runs-on` change,
+        cache actions, and the Docker image example.
+  - [ ] Set a spend limit: check confirmed and pending spend, blocked new
+        Boat starts, running jobs, and a sufficient increase of the limit.
+  - [ ] Remove a machine: check drain, resume, removal while offline,
+        credential revocation, the machine count, and local uninstall.
+  - [ ] Labels and VM sizes: check default and custom labels, free disk,
+        slots, fit, names, deletion, and both "When nothing fits" choices.
+  - [ ] Agent install options: check command help, host preparation, the
+        systemd service, repeat install, outbound access, and updates.
+  - [ ] GitHub App permissions: check the four permissions, sign-in
+        memberships and roles, private repository access, personal accounts,
+        suspension, and removal.
+  - [ ] Plans and starts: check prices, starts, machine counts, history,
+        add-ons, period dates, soft limits, and the payment controls.
+  - [ ] Job isolation: check fresh VMs, cache scopes, Docker disks, public
+        internet access, and blocked private, host, and metadata access.
+  - [ ] The agent connection: check WSS, reports, offline detection,
+        reconnect, continuing jobs, credential protection, and agent version.
+
+The source map, browser evidence, and detailed live checklist are under
+`.context/ciproxy-mvp/` in the delegated workspace.
 
 ## Milestone 25: Tier features: backend
 
@@ -4235,11 +4306,20 @@ personal accounts only.
 
 ### 97. The gate's Markdown link check differs from GitHub
 
+**Answer, 7 November 2026:** I. The user wrote "we should not be blocking
+for this - that is totally silly", and then chose I. A link to a missing
+file still fails the gate. A fragment that matches no heading only warns.
+My call, 7 November 2026: markdownlint's MD051 rule, which checks fragments
+within one file, also only warns. Reason: answer I covers each anchor check
+of the gate. This replaces the choice of 4 November 2026 to keep MD051
+unchanged.
+
 **Answer, 8 November 2026:** G, as a follow-up item that blocks nothing:
 `follow-ups/markdown-heading-ids-comrak.md`. Until then, fix a link test
-that breaks by hand.
+that breaks by hand. So I applies now, through pull request #49, and G
+stays the follow-up item.
 
-- **Severity:** Medium. **Effort:** Large.
+- **Severity:** Low. **Effort:** Small.
 - **Source:** Implementation, pull request #45, the follow-up item
   `follow-ups/markdown-heading-ids-comrak.md`.
 - **Category:** Repository rule.
@@ -4247,7 +4327,8 @@ that breaks by hand.
 - **Background:** The Markdown phase of the gate finds broken links in the
   docs and plans. Its own parser computes the link target of each heading.
   The follow-up item chose comrak, a Rust parser of GitHub's Markdown. The
-  orchestrator told the branch to add no new refusal without the user.
+  orchestrator told the branch to add no new refusal without the user. All
+  1,106 links of 113 documents got the same result from both parsers.
 - **Problem:** An exact match with GitHub refuses some links that pass
   today. A direct switch to comrak also refuses valid `#softbreak` and
   `#hardbreak` links.
@@ -4269,6 +4350,9 @@ that breaks by hand.
   - **G.** Render each page with comrak, and take the heading targets from
     the HTML. It changes `Cargo.lock`, so it waits for pull request #39.
     Effort: Large.
+  - **H.** Change nothing, and delete the follow-up item. Effort: Small.
+  - **I.** Keep the check for missing files, but only warn when a fragment
+    matches no heading. Effort: Small.
 - **Left out:** A live GitHub call, because the gate then needs the
   network. A check of today's documents only, because known defects stay.
 - **Wider fix:** G.

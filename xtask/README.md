@@ -44,12 +44,16 @@ Markdown checks cover `AGENTS.md`, all `README.md` files, `docs/`, `plans/`,
 and the Markdown content of `ts/site/`.
 They skip `CLAUDE.md`, dependencies, build output, and `.context/`.
 Local links resolve from the source file and use GitHub heading IDs.
+A link to a missing file fails the phase.
+A fragment that matches no heading prints a warning, and the phase passes,
+because rare heading styles get another ID on GitHub.
 A `?plain=1` link with `#L5`, `#L5-L9`, or `#L5C2-L9C4` is a line link.
 Line links need no heading.
 The `#top` fragment needs no heading, also without `?plain=1`.
 It matches without regard to ASCII case.
 URLs with a scheme and site-root routes are outside the local link check.
 The lint uses default rules with MD013 disabled for code blocks and tables.
+MD051, the rule for fragments within one file, reports warnings only.
 
 ## Quick Start
 
