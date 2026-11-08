@@ -1434,7 +1434,7 @@ Each screen follows its mockup, as Milestone 19 says.
         Branch: `conductor/m20-machines-and-settings-ui`.
   - [x] Run the complete gate with `DATABASE_URL` set.
         Branch: `conductor/m20-machines-and-settings-ui`.
-  - [ ] Commit, push, review, fix the confirmed findings, and open a ready
+  - [x] Commit, push, review, fix the confirmed findings, and open a ready
         pull request into `conductor/mvp-m19-ui`.
         Branch: `conductor/m20-machines-and-settings-ui`.
   - [ ] Orchestrator: run `node ts/app/scripts/m20-live-smoke.ts` with
