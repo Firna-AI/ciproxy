@@ -1621,6 +1621,10 @@ The repository is public from item 70 = E, and the site links to it.
       approves. They state the limits of "Data retention" in `security.md`.
 - [ ] Register the production App and the Stripe live mode, which need the
       accounts of the user.
+- [ ] After the launch merge, move the reusable image workflow call and both
+      image identity bindings from the primary branch to protected `main`,
+      as item 100 = B says. Update the claim check and tests. The operator
+      applies bootstrap before production starts.
 - [ ] Deploy production. Smoke-test a first job, an overflow, and a live
       checkout that the user approves.
 - [ ] Check that the open parts build alone, and check the licence of the
@@ -1980,6 +1984,11 @@ Answers of 5 November 2026:
   socket error go. A reconnect before the first handoff still means only
   GitHub's cache. There is no guessed time limit; GitHub's job time limit is
   the backstop. Rejected: A and C.
+- Item 100, B, 8 November 2026: the reusable image workflow and both image
+  identity bindings use the primary branch until launch. Other jobs cannot
+  get those credentials. Milestone 27 moves the binding to protected `main`
+  after the launch merge. Rejected: a full-tree `main` bootstrap now, and a
+  new primary-branch ruleset.
 - Item 113, A, 8 November 2026: the label dialog keeps the fit counts and
   the placement, and the mockup drops the largest-job figures. Rejected: B.
 - Item 108, C with D, 8 November 2026: the paid change sends the same

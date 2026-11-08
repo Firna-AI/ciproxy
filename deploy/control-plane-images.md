@@ -15,12 +15,14 @@ the run. A
 missing manifest starts a build. A denied request, missing repository, or
 unavailable registry stops the run. Those errors never count as a cache miss.
 
-The caller uses the reusable image workflow at protected `main`. Both
-image identities require that exact `job_workflow_ref`. An ordinary caller
+Until launch, the caller uses the reusable image workflow on the primary
+branch. Both image identities require that exact `job_workflow_ref`.
+[Image workflow trust](image-workflow-bootstrap.md) gives the claim, its
+activation, and its move to protected `main` at launch. An ordinary caller
 job cannot obtain either image identity, including the npm workload job.
 The reusable workflow reads its own `job_workflow_sha` from GitHub OIDC
 before checking out any repository. It prints no token or claim payload.
-Every image job checks out tools at that immutable protected revision.
+Every image job checks out tools at that immutable trusted revision.
 The source checkout separately names the exact push commit. Trusted scripts
 run outside that source checkout. The build runner has only
 `contents: read`. It has no cloud identity, environment, or OIDC permission.
@@ -60,7 +62,7 @@ The source hash covers the paths, modes, and bytes of the selected tracked
 files. It covers `.dockerignore`, the Dockerfile, root Cargo inputs,
 toolchain, crate manifests, Rust sources, build scripts, migrations, and
 copied task-runner sources. It also covers the target platform and trusted
-build scripts, installer pins, and protected workflow configuration.
+build scripts, installer pins, and reusable workflow configuration.
 Production promotion code and caller workflow changes do not change this
 hash.
 
@@ -86,27 +88,13 @@ success or failure. Commands suppress registry authentication payloads.
 
 ## Install the repository grants
 
-Install [the protected workflow](image-workflow-bootstrap.md)
-before activating image federation. There is no caller-branch fallback.
-Use the operator account and a reviewed checkout of this deployment code.
-Complete [initial bootstrap and shared core](runtime-identity.md) first.
-Initial bootstrap works before the repository exists. It defaults
-`control_plane_registry_ready` to false. After shared core creates the
-repository, the operator enables its image grants:
-
-```sh
-gcloud auth application-default login
-gcloud auth application-default set-quota-project ciproxy
-gcloud artifacts repositories describe ciproxy-shared-runtime \
-  --location=us-central1 --project=ciproxy
-bash deploy/scripts/bootstrap.sh main-preview --existing-state --image-registry
-```
-
-Review the Terraform apply before accepting it. This is the same upgrade
-command for an existing deployment. It reads remote bootstrap outputs and
-preserves the production phase and captured runtime account UIDs. Later
-operator retries and protected-main CI plans preserve the registry flag.
-The primary preview branch cannot apply bootstrap.
+[Activation](image-workflow-bootstrap.md#activate-the-primary-binding)
+gives the exact operator steps. An operator bootstrap installs these
+grants and binds both image providers to the trusted workflow. Activation
+then sets the image variables. There is no caller-branch fallback. Initial
+bootstrap works before the repository exists. It defaults
+`control_plane_registry_ready` to false. Activation enables the image
+grants after shared core creates the repository.
 
 Bootstrap creates these accounts and grants:
 
@@ -124,37 +112,20 @@ needed. Preview-accessible shared apply has no repository policy writer.
 
 Both image providers require repository ID `1442045837`, owner ID
 `307519338`, environment `main-preview`, event `push`, and the exact preview
-caller workflow. They also require this constant reusable-workflow claim:
-
-```text
-Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/main
-```
-
-This claim stays on `main` when the caller uses the primary branch. The
-providers map `attribute.job_workflow_ref` from the signed token. Their
-repository roles remain unchanged. They accept primary and `main` callers.
-They remain available
-after launch because preview must publish before production can promote.
+caller workflow. They also require the one reusable-workflow claim that
+[image workflow trust](image-workflow-bootstrap.md) gives, whatever the
+caller's branch. The providers map `attribute.job_workflow_ref` from the
+signed token. Their repository roles remain unchanged. They accept primary
+and `main` callers. They remain available after launch because preview
+must publish before production can promote.
 The build runner receives none of these grants. Production receives no
 image publisher. Existing node image-reader rights remain unchanged.
 These image roles contain no image deletion or IAM policy permission.
 Google lists the required Docker upload/download permissions in its
 [Artifact Registry audit reference][docker-iam].
 
-Create the `main-preview` GitHub environment as
-[setup](setup.md#4-set-github-variables) directs. Then set its four new public
-GitHub variables:
-
-```sh
-terraform -chdir=deploy/terraform/bootstrap output -json github_environment_variables \
-  | jq -r '."main-preview" | to_entries[] | select(.key | startswith("GCP_IMAGE_")) | [.key, .value] | @tsv' \
-  | while IFS=$'\t' read -r name value; do
-      gh variable set "$name" --repo=Firna-AI/ciproxy \
-        --env=main-preview --body="$value"
-    done
-```
-
-The names are `GCP_IMAGE_LOOKUP_WIF_PROVIDER`,
+Activation sets four public GitHub variables in the `main-preview`
+environment: `GCP_IMAGE_LOOKUP_WIF_PROVIDER`,
 `GCP_IMAGE_LOOKUP_SERVICE_ACCOUNT`, `GCP_IMAGE_PUBLISH_WIF_PROVIDER`, and
 `GCP_IMAGE_PUBLISH_SERVICE_ACCOUNT`. Do not set them in production.
 
@@ -177,15 +148,11 @@ for environment in main-preview production; do
 done
 ```
 
-Leave `CONTROL_PLANE_ROLLBACK_IMAGE` unset for normal operation. Select a
-push run containing this workflow version, then rerun all jobs:
+## Check the image run
 
-```sh
-gh run list --repo=Firna-AI/ciproxy --workflow=deploy-main-preview.yml \
-  --branch=calummoore/ci-proxy-load-balancer
-gh run rerun RUN_ID --repo=Firna-AI/ciproxy
-```
-
+Leave `CONTROL_PLANE_ROLLBACK_IMAGE` unset for normal operation. Inspect
+the [activation rerun](image-workflow-bootstrap.md#activate-the-primary-binding)
+or a later accepted preview push.
 Check the selected digest in the image job output. An enabled rollout saves
 its deployed image only after Helm and all NEG waits pass. A disabled
 preview saves an empty image. Check the completed

@@ -25,6 +25,8 @@ release-token delivery path and needs no secret version while Boat is off.
 - [Promotion](promotion.md) gives saved plans, approvals, and recovery.
 - [Control-plane images](control-plane-images.md) gives automatic image
   publication, source reuse, promotion, operator grants, and rollback.
+- [Image workflow trust](image-workflow-bootstrap.md) gives the prelaunch
+  trust root of the image identities, its activation, and its launch move.
 - [Operations](operations.md) gives images, runtime setup, and rotation.
 
 ## Environments
@@ -129,7 +131,7 @@ writes. The operator drains preview before the launch handoff.
 | `scripts/terraform.py`, `scripts/terraform_roots.py` | Saved-plan promotion and shared root/backend metadata.                                                                |
 | `scripts/terraform_policy.py`                        | Exact destructive approval checks.                                                                                    |
 | `scripts/workload_snapshot.py`                       | Inputs from a ready rollout, bound to its commit and run attempt.                                                     |
-| `scripts/control_plane_image.py`                     | Protected source hashing, credentialless build, registry reuse, and digest-bound archive publication.                 |
+| `scripts/control_plane_image.py`                     | Exact source hashing, credentialless build, registry reuse, and digest-bound archive publication.                     |
 | `scripts/image_promotion.py`                         | Select the image deployed by the exact successful upstream preview rollout.                                           |
 | `scripts/deploy.py`                                  | Own-namespace Helm, static publishing, NEG readiness, and CDN invalidation.                                           |
 | `scripts/boat_secret.py`                             | Optional Boat snapshot delivery over standard input and its public rollout revision.                                  |

@@ -20,7 +20,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@main
+    uses: Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@calummoore/ci-proxy-load-balancer
   workloads:
     needs: [infrastructure, image]
     if: >-

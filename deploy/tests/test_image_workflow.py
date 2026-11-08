@@ -20,34 +20,40 @@ class ImageWorkflowTests(unittest.TestCase):
         cls.documents = security.workflows()
         cls.providers = security.providers()
 
-    def test_only_protected_image_jobs_satisfy_real_provider_conditions(self):
+    def test_only_primary_reusable_image_jobs_satisfy_real_provider_conditions(self):
         workload = self.documents["deploy-main-preview.yml"]["jobs"]["workloads"]
         ordinary = security.claims(workload)
+        self.assertNotIn("job_workflow_ref", ordinary)
+        self.assertEqual(set(self.providers), {"image_lookup", "image_publish"})
         for name, provider in self.providers.items():
-            with self.subTest(identity=name):
+            with self.subTest(identity=name, scenario="ordinary workload"):
                 self.assertFalse(security.admits(provider, ordinary))
-                forged = dict(ordinary, job_workflow_ref=security.PROTECTED.replace("refs/heads/main", ordinary["ref"]))
-                self.assertFalse(security.admits(provider, forged))
                 self.assertEqual(provider["attribute_mapping"]["attribute.job_workflow_ref"], "assertion.job_workflow_ref")
+            for scenario, reference in security.UNTRUSTED.items():
+                with self.subTest(identity=name, scenario=scenario):
+                    self.assertFalse(security.admits(provider, dict(ordinary, job_workflow_ref=reference)))
         privileged = security.image_jobs(self.documents)
         self.assertEqual(len(privileged), 2)
-        for _, job, origin, _ in privileged:
-            for provider in self.providers.values():
-                self.assertTrue(security.admits(provider, security.claims(job, origin)))
+        for job_name, job, _, _ in privileged:
+            for name, provider in self.providers.items():
+                with self.subTest(identity=name, job=job_name, scenario="trusted primary workflow"):
+                    self.assertTrue(security.admits(provider, security.claims(job, security.TRUSTED)))
         build = next(item for item in security.jobs(self.documents) if any(
             "control_plane_image.py build" in step.get("run", "") for step in item[1].get("steps", [])))
         permissions = build[1].get("permissions", build[3])
         self.assertEqual(permissions, {"contents": "read"})
         self.assertNotIn("environment", build[1])
-        for provider in self.providers.values():
-            self.assertFalse(security.admits(provider, security.claims(build[1], build[2]),
-                                              oidc=permissions.get("id-token") == "write"))
+        for name, provider in self.providers.items():
+            with self.subTest(identity=name, scenario="source build without OIDC"):
+                self.assertFalse(security.admits(provider, security.claims(build[1], build[2]),
+                                                  oidc=permissions.get("id-token") == "write"))
 
-    def test_protected_tools_use_the_reusable_jobs_own_revision_without_token_output(self):
+    def test_primary_tools_use_the_reusable_jobs_own_revision_without_token_output(self):
         privileged = security.image_jobs(self.documents)
         self.assertEqual(len(privileged), 2)
-        for _, _, origin, _ in privileged:
-            self.assertEqual(origin, security.PROTECTED)
+        for name, _, origin, _ in privileged:
+            with self.subTest(job=name, scenario="preview calls primary workflow"):
+                self.assertEqual(origin, security.TRUSTED)
         for _, job, _, _ in privileged:
             for executable in job.get("steps", []):
                 command = executable.get("run", "")
@@ -60,32 +66,39 @@ class ImageWorkflowTests(unittest.TestCase):
         step = lookup["steps"][0]
         lines = step["run"].splitlines()
         code = "\n".join(lines[1:-1])
-        scratch = security.ROOT / ".context/control-plane-image/fix-round-1/tests"
+        scratch = security.ROOT / ".context/control-plane-image/item-100-primary/tests"
         scratch.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(dir=scratch) as directory:
-            output = Path(directory) / "output"
             environment = {"ACTIONS_ID_TOKEN_REQUEST_URL": "https://fixture.invalid/id?request=1",
                            "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "fixture-request-credential",
-                           "GITHUB_OUTPUT": str(output), "GITHUB_SHA": security.SOURCE_SHA}
-            for reference, status in ((security.PROTECTED, 0), (security.PROTECTED.replace("main", "unprotected"), 1)):
-                payload = base64.urlsafe_b64encode(json.dumps({"job_workflow_ref": reference,
-                                                             "job_workflow_sha": security.TOOLS_SHA}).encode()).decode()
-                token = "fixture." + payload + ".fixture-signature"
-                response = io.BytesIO(json.dumps({"value": token}).encode())
-                stdout, stderr = io.StringIO(), io.StringIO()
-                with patch.dict(os.environ, environment), patch("urllib.request.urlopen", return_value=response):
-                    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-                        try:
-                            exec(compile(code, "<protected workflow first step>", "exec"), {})
-                            actual = 0
-                        except SystemExit as error:
-                            actual = error.code
-                self.assertEqual(actual, status)
-                self.assertEqual(stdout.getvalue(), "")
-                self.assertNotIn(token, stdout.getvalue() + stderr.getvalue() + output.read_text())
-                self.assertNotIn(payload, stdout.getvalue() + stderr.getvalue() + output.read_text())
-                self.assertNotIn("fixture-request-credential", stdout.getvalue() + stderr.getvalue())
-            self.assertEqual(output.read_text(), "tools_sha=" + security.TOOLS_SHA + "\n")
+                           "GITHUB_SHA": security.SOURCE_SHA}
+            scenarios = [("trusted primary workflow", security.TRUSTED, security.TOOLS_SHA, 0)]
+            scenarios.extend((scenario, reference, security.TOOLS_SHA, 1)
+                             for scenario, reference in security.UNTRUSTED.items())
+            scenarios.append(("invalid tools revision", security.TRUSTED, "not-a-commit", 1))
+            for index, (scenario, reference, revision, status) in enumerate(scenarios):
+                with self.subTest(scenario=scenario):
+                    output = Path(directory) / str(index)
+                    environment["GITHUB_OUTPUT"] = str(output)
+                    payload = base64.urlsafe_b64encode(json.dumps({"job_workflow_ref": reference,
+                                                                 "job_workflow_sha": revision}).encode()).decode()
+                    token = "fixture." + payload + ".fixture-signature"
+                    response = io.BytesIO(json.dumps({"value": token}).encode())
+                    stdout, stderr = io.StringIO(), io.StringIO()
+                    with patch.dict(os.environ, environment), patch("urllib.request.urlopen", return_value=response):
+                        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                            try:
+                                exec(compile(code, "<trusted workflow first step>", "exec"), {})
+                                actual = 0
+                            except SystemExit as error:
+                                actual = error.code
+                    emitted = output.read_text() if output.exists() else ""
+                    self.assertEqual(actual, status)
+                    self.assertEqual(emitted, "tools_sha=" + security.TOOLS_SHA + "\n" if status == 0 else "")
+                    self.assertEqual(stdout.getvalue(), "")
+                    self.assertNotIn(token, stdout.getvalue() + stderr.getvalue() + emitted)
+                    self.assertNotIn(payload, stdout.getvalue() + stderr.getvalue() + emitted)
+                    self.assertNotIn("fixture-request-credential", stdout.getvalue() + stderr.getvalue())
         for _, job, _, _ in security.jobs(self.documents):
             checkouts = [step for step in job.get("steps", []) if step.get("uses", "").startswith("actions/checkout@")]
             if not any("control_plane_image.py" in step.get("run", "") for step in job.get("steps", [])):

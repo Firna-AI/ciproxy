@@ -11,7 +11,12 @@ import tempfile
 from deploy.tests.promotion_support import ROOT
 
 
-PROTECTED = "Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/main"
+TRUSTED = "Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/calummoore/ci-proxy-load-balancer"
+UNTRUSTED = {
+    "former main binding": "Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/main",
+    "unrelated reusable workflow": "Firna-AI/ciproxy/.github/workflows/other.yml@refs/heads/calummoore/ci-proxy-load-balancer",
+    "unrelated reusable branch": "Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/untrusted",
+}
 SOURCE_SHA = "c" * 40
 TOOLS_SHA = "b" * 40
 
@@ -26,7 +31,7 @@ def workflows(root=None):
 
 def providers(root=None):
     root = root or ROOT
-    scratch = ROOT / ".context/control-plane-image/fix-round-1/tests"
+    scratch = ROOT / ".context/control-plane-image/item-100-primary/tests"
     scratch.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=scratch) as temporary:
         directory = Path(temporary)
@@ -75,7 +80,7 @@ def jobs(documents):
     caller = "Firna-AI/ciproxy/.github/workflows/deploy-main-preview.yml@refs/heads/calummoore/ci-proxy-load-balancer"
     for name, job in entry["jobs"].items():
         if job.get("uses", "").startswith("Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@"):
-            reference = job["uses"].replace("@main", "@refs/heads/main")
+            reference = job["uses"].replace("@", "@refs/heads/", 1)
             called = documents.get("deploy-control-plane-image.yml", {})
             for child, configuration in called.get("jobs", {}).items():
                 result.append((child, configuration, reference, called.get("permissions", {})))

@@ -40,7 +40,7 @@ locals {
   plan_accounts  = toset(["shared_plan", "shared_plan_production"])
   retired        = toset(["shared_plan", "shared_preview", "trust_preview"])
   apply_workflow = "Firna-AI/ciproxy/.github/workflows/deploy-apply.yml@"
-  image_workflow = "Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/main"
+  image_workflow = "Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/calummoore/ci-proxy-load-balancer"
 }
 resource "google_service_account" "ci" {
   for_each   = local.access

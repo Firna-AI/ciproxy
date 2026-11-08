@@ -3,7 +3,7 @@ on:
   workflow_call:
     outputs:
       image:
-        description: Immutable image selected by protected image jobs
+        description: Immutable image selected by trusted image jobs
         value: ${{ jobs.publish.outputs.image }}
 permissions:
   contents: read
@@ -19,7 +19,7 @@ jobs:
       source_hash: ${{ steps.inputs.outputs.source_hash }}
       image: ${{ steps.lookup.outputs.image }}
     steps:
-      - name: Read this protected workflow revision before checkout
+      - name: Read this trusted workflow revision before checkout
         id: workflow
         run: |
           python3 - <<'PY'
@@ -39,17 +39,17 @@ jobs:
                   token = json.load(response)["value"]
               payload = token.split(".")[1]
               claims = json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
-              expected = "Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/main"
+              expected = "Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/calummoore/ci-proxy-load-balancer"
               revision = claims.get("job_workflow_sha", "")
               if claims.get("job_workflow_ref") != expected or not re.fullmatch("[0-9a-f]{40}", revision):
                   raise ValueError("Untrusted image workflow revision")
               with open(os.environ["GITHUB_OUTPUT"], "a") as output:
                   output.write("tools_sha=" + revision + "\n")
           except Exception:
-              print("Cannot read the protected image workflow revision.", file=sys.stderr)
+              print("Cannot read the trusted image workflow revision.", file=sys.stderr)
               raise SystemExit(1)
           PY
-      - name: Checkout this protected workflow's tools
+      - name: Checkout this trusted workflow's tools
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           repository: Firna-AI/ciproxy
@@ -95,7 +95,7 @@ jobs:
       digest: ${{ steps.image.outputs.digest }}
       artifact_id: ${{ steps.archive.outputs.artifact-id }}
     steps:
-      - name: Checkout this protected workflow's tools
+      - name: Checkout this trusted workflow's tools
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           repository: Firna-AI/ciproxy
@@ -143,7 +143,7 @@ jobs:
     outputs:
       image: ${{ steps.image.outputs.image }}
     steps:
-      - name: Checkout this protected workflow's tools
+      - name: Checkout this trusted workflow's tools
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           repository: Firna-AI/ciproxy
