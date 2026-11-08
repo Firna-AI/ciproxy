@@ -6,6 +6,7 @@
 import { useEffect, type ReactNode } from "react";
 import { useLocalSearchParams } from "expo-router";
 
+import type { BannerScope } from "../api/banner.ts";
 import type {
   SessionView,
   WorkspaceRole,
@@ -46,9 +47,12 @@ function useSetupProgress(workspaceId: string | null): SetupProgress | null {
 
 export function WorkspacePageView({
   page,
+  bannerScope = "page",
   children,
 }: {
   page: WorkspacePage;
+  /** The scope of the one banner; the Organizations tab sets its own. */
+  bannerScope?: BannerScope;
   children: (context: WorkspaceContext) => ReactNode;
 }) {
   const services = useServices();
@@ -95,6 +99,7 @@ export function WorkspacePageView({
       role={context.role}
       page={page}
       setup={progress}
+      bannerScope={bannerScope}
     >
       {children(context)}
     </AppShell>

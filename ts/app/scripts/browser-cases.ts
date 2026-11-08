@@ -106,7 +106,7 @@ export const smokeCases: readonly SmokeCase[] = [
     scenario: "soft-limit",
     path: jobs,
     heading: "Jobs",
-    text: "Free includes 1 organization",
+    text: "Northstar passed a limit of its plan",
   },
   {
     name: "links-picker",

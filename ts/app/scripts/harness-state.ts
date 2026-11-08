@@ -1,5 +1,11 @@
 import type { Problem, ProblemCode, Success } from "../src/api/schema.ts";
 import {
+  applyPagesControl,
+  parsePagesControl,
+} from "./harness-pages-controls.ts";
+import { releasePages } from "./harness-pages-state.ts";
+import type { CapturedBody } from "./harness-pages-facts.ts";
+import {
   scenarioName,
   recordedScenario,
   type Scenario,
@@ -10,6 +16,8 @@ export type RequestFact = {
   path: string;
   status: number;
   kind: "api" | "document" | "navigation";
+  query?: Record<string, string[]>;
+  body?: CapturedBody;
 };
 
 export function problem(code: ProblemCode, message: string): Problem {
@@ -45,9 +53,13 @@ export function fields(value: unknown): value is Record<string, unknown> {
 /** Local harness controls are separate from the product's generated API. */
 export function updateHarness(state: HarnessState, value: unknown): boolean {
   if (!fields(value)) return false;
+  const pages =
+    value.pages === undefined ? undefined : parsePagesControl(value.pages);
+  if (value.pages !== undefined && pages === undefined) return false;
   if (value.scenario !== undefined) {
     const name = scenarioName(value.scenario);
     if (name === undefined) return false;
+    releasePages(state.scenario.pages);
     state.scenario = recordedScenario(name);
     if (value.reset !== false) {
       state.facts = [];
@@ -56,6 +68,12 @@ export function updateHarness(state: HarnessState, value: unknown): boolean {
       state.sessionReads = 0;
       state.build = "fixture-build-a";
     }
+  }
+  if (pages !== undefined) {
+    applyPagesControl(state.scenario.pages, pages);
+    const member = state.scenario.session.workspaces[0];
+    if (pages.role !== undefined && member !== undefined)
+      member.role = pages.role;
   }
   if (
     typeof value.build === "string" &&

@@ -59,3 +59,20 @@ export const freeOrganizations = defineScreen({
     <PlanUsageScreen viewport={context.viewport} state="free-organizations" />
   ),
 });
+
+export const inactiveOrganization = defineScreen({
+  slug: "inactive-organization",
+  title: "On Free with an inactive organization",
+  description:
+    "On 8 December, mokly-ai is still on Free with mokly-ai and mokly-labs, and mokly-studio joins inactive. The banner counts all three organizations and says that jobs keep running in the two active ones, on all three machines. At the pace of the first five days, 1,900 starts, the starts pass the 2,000 of Free on 9 December, so the page shows that notice too. The banner, the notice, and Compare plans open the Plans of that day, and the Plan and usage link of the inactive organization opens this page.",
+  rationale:
+    "The answer D to item 83: every linked organization counts on Free, also an inactive one. The links of 8 December keep the third organization, so the 4 December page and the September Plans stay as they are.",
+  relatedDocs: relatedMvp("workspaces", "metering", "billing"),
+  address: orgAddress("billing"),
+  render: (_props, context) => (
+    <PlanUsageScreen
+      viewport={context.viewport}
+      state="inactive-organization"
+    />
+  ),
+});

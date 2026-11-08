@@ -5,6 +5,8 @@
 // of the soft-limit banner of the organizations, because Team clears both. At
 // a failed payment, the payment banner takes the place of this one, as it does
 // of every soft-limit banner. The row of the organization says the same why.
+// Its billing links open the pages of the day on which it joined, so that
+// they keep its organizations.
 
 import type { ReactNode } from "react";
 
@@ -18,8 +20,8 @@ import { tiers } from "../fixtures/tiers.ts";
 import { usageScenes } from "../fixtures/usage.ts";
 import { Action, LinkAction } from "./actions.tsx";
 import { Notice } from "./feedback.tsx";
-import { paths, type CataloguePath } from "./paths.ts";
-import { ChooseTeam } from "./usage-banner.tsx";
+import type { CataloguePath } from "./paths.ts";
+import { ChooseTeam, type BillingPages } from "./usage-banner.tsx";
 
 /**
  * Why a hold applies, in the words of the row and of the banner. The row
@@ -55,18 +57,20 @@ function TurnOn({ to }: { to?: CataloguePath }) {
 }
 
 /**
- * The banner of an organization with holds; none for an active one. Turn on
- * opens its dialog at `turnOn`.
+ * The banner of an organization with holds; none for an active one. Plan and
+ * usage and Choose Team open `pages`, and Turn on opens its dialog at
+ * `turnOn`.
  */
 export function inactiveBanner(
   link: LinkedOrganization,
+  pages: BillingPages,
   turnOn?: CataloguePath,
 ): ReactNode {
   const holds = link.holds ?? [];
   if (holds.length === 0) return undefined;
   const plan = holds.some((hold) => hold.kind === "plan");
   const admin = holds.some((hold) => hold.kind === "admin");
-  const machines = usageScenes["free-organizations"].machines;
+  const machines = usageScenes["inactive-organization"].machines;
   const login = link.organization.login;
   const why = holds.map((hold) => holdReason(hold, login)).join(", and ");
   return (
@@ -74,15 +78,7 @@ export function inactiveBanner(
       tone="warning"
       title={`${login} is inactive`}
       actions={
-        plan ? (
-          <ChooseTeam
-            page="other"
-            usage={paths.freeOrganizations}
-            plans={paths.plansInactive}
-          />
-        ) : (
-          <TurnOn to={turnOn} />
-        )
+        plan ? <ChooseTeam page="other" {...pages} /> : <TurnOn to={turnOn} />
       }
     >
       {why}. {startText(plan, admin)} Jobs keep running in{" "}

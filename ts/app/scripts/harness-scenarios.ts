@@ -15,8 +15,14 @@ import {
 import { job, machine, setup } from "./fixtures-setup.ts";
 import { applyLateApprovalScenario } from "./harness-late-approval.ts";
 import { applyReviewScenario } from "./harness-review-scenarios.ts";
+import { applyPageScenario, pageScenarios } from "./harness-pages-scenarios.ts";
+import {
+  createPagesFixture,
+  type PagesFixtureState,
+} from "./harness-pages-state.ts";
 
 export const scenarios = [
+  ...pageScenarios,
   "signed-out",
   "install",
   "install-pending",
@@ -95,6 +101,7 @@ export type Scenario = {
   setupFails: boolean;
   commandFails: boolean;
   revokeFails: boolean;
+  pages: PagesFixtureState;
   linkedOutcome?: OrganizationLinkView;
   signInOutcome?: ScenarioName;
 };
@@ -151,6 +158,7 @@ export function recordedScenario(name: ScenarioName): Scenario {
     setupFails: name === "setup-load-failure",
     commandFails: name === "command-load-failure",
     revokeFails: name === "command-revoke-failure",
+    pages: createPagesFixture(),
   };
   const current = workspace();
   const other = workspace({ id: otherWorkspaceId, name: "Orbit", role: null });
@@ -242,5 +250,6 @@ export function recordedScenario(name: ScenarioName): Scenario {
   }
   applyReviewScenario(data);
   applyLateApprovalScenario(data);
+  applyPageScenario(data);
   return data;
 }

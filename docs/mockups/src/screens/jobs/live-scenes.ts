@@ -12,6 +12,7 @@ import {
 import { countSlots, machineScenes } from "../../fixtures/machines.ts";
 import type { TierKey } from "../../fixtures/org.ts";
 import { boatRefused, nothingFits } from "../../fixtures/waiting-jobs.ts";
+import { factScenes, factStates } from "./live-fact-scenes.ts";
 
 export const liveStates = [
   "steady",
@@ -24,6 +25,9 @@ export const liveStates = [
   "app-suspended",
   "loading",
   "error",
+  ...factStates,
+  "suspended-current",
+  "refused-current",
 ] as const;
 
 export type LiveState = (typeof liveStates)[number];
@@ -40,6 +44,8 @@ export type LiveScene = {
   waitingJobs: readonly Job[];
   /** ciproxy cannot see the jobs that wait, as while the App is suspended. */
   waitingUnknown?: true;
+  /** ciproxy does not know the free own slots, as while a report is missing. */
+  slotsUnknown?: true;
 };
 
 const steadySlots = machineScenes.steady;
@@ -69,6 +75,31 @@ const steady: LiveScene = {
   warm: countSlots(steadySlots, "warm"),
   runningJobs: steadyRunning,
   waitingJobs: [],
+};
+
+const appSuspended: LiveScene = {
+  tier: "team",
+  running: suspendedRunning.length,
+  waiting: 0,
+  ownBusy: countWhere(suspendedRunning, "own"),
+  ownSlots: steadySlotCount,
+  onBoat: countWhere(suspendedRunning, "boat"),
+  warm: 0,
+  runningJobs: suspendedRunning,
+  waitingJobs: [],
+  waitingUnknown: true,
+};
+
+const boatRefusedScene: LiveScene = {
+  tier: "team",
+  running: 54,
+  waiting: 9,
+  ownBusy: 18,
+  ownSlots: 18,
+  onBoat: 36,
+  warm: 0,
+  runningJobs: boatRefused.running,
+  waitingJobs: boatRefused.waiting,
 };
 
 export const liveScenes: Readonly<Record<LiveState, LiveScene>> = {
@@ -117,17 +148,7 @@ export const liveScenes: Readonly<Record<LiveState, LiveScene>> = {
     runningJobs: [],
     waitingJobs: [],
   },
-  "boat-refused": {
-    tier: "team",
-    running: 54,
-    waiting: 9,
-    ownBusy: 18,
-    ownSlots: 18,
-    onBoat: 36,
-    warm: 0,
-    runningJobs: boatRefused.running,
-    waitingJobs: boatRefused.waiting,
-  },
+  "boat-refused": boatRefusedScene,
   "nothing-fits": {
     ...steady,
     running: 19,
@@ -135,18 +156,10 @@ export const liveScenes: Readonly<Record<LiveState, LiveScene>> = {
     onBoat: 4,
     waitingJobs: nothingFits.waiting,
   },
-  "app-suspended": {
-    tier: "team",
-    running: suspendedRunning.length,
-    waiting: 0,
-    ownBusy: countWhere(suspendedRunning, "own"),
-    ownSlots: steadySlotCount,
-    onBoat: countWhere(suspendedRunning, "boat"),
-    warm: 0,
-    runningJobs: suspendedRunning,
-    waitingJobs: [],
-    waitingUnknown: true,
-  },
+  "app-suspended": appSuspended,
   loading: steady,
   error: steady,
+  ...factScenes,
+  "suspended-current": appSuspended,
+  "refused-current": boatRefusedScene,
 };

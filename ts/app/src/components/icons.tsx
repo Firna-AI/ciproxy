@@ -133,3 +133,28 @@ export const CopyIcon = icon(
     <path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" />
   </>,
 );
+
+export const SearchIcon = icon(
+  "Search",
+  <>
+    <circle cx="11" cy="11" r="7" />
+    <path d="M20 20l-3.5-3.5" />
+  </>,
+);
+
+export const ChevronDownIcon = icon("ChevronDown", <path d="M6 9l6 6 6-6" />);
+
+/** Boat, where overflow jobs run: a cloud. */
+export const BoatIcon = icon(
+  "Boat",
+  <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9z" />,
+);
+
+/** Ready capacity, such as warm runners that start the next job at once. */
+export const BoltIcon = icon("Bolt", <path d="M13 2L4 14h8l-1 8 9-12h-8z" />);
+
+/** No place, such as a job that no runner took. */
+export const DashedCircleIcon = icon(
+  "DashedCircle",
+  <circle cx="12" cy="12" r="8" strokeDasharray="3 3" />,
+);

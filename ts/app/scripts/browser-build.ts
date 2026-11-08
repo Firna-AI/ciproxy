@@ -18,7 +18,7 @@ export async function buildNavigation(
   await page.goto(`${origin}/jobs?workspace=${workspaceId}`, {
     waitUntil: "domcontentloaded",
   });
-  await page.getByRole("link", { name: "Continue setup", exact: true }).click();
+  await page.getByRole("link", { name: /^(Set up|Finish setup)/ }).click();
   await visible(page.getByTestId("install-command"));
   const current = page.url();
   await control(origin, { build: "fixture-build-b" });

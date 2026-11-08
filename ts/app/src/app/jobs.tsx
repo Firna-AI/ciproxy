@@ -1,7 +1,7 @@
-// A page of the shell that a later release fills.
+// Jobs: the live queue and the history of finished jobs.
 
-import { ComingSoonScreen } from "../screens/coming-soon.tsx";
+import { JobsScreen } from "../screens/jobs/jobs-screen.tsx";
 
 export default function Jobs() {
-  return <ComingSoonScreen page="jobs" />;
+  return <JobsScreen />;
 }

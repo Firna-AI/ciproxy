@@ -1,0 +1,10 @@
+{
+  "title": "Report states",
+  "order": [
+    "negative",
+    "missing-price",
+    "partial-costs",
+    "unknown-costs",
+    "updating"
+  ]
+}

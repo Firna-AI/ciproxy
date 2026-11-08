@@ -1,0 +1,4 @@
+{
+  "title": "Checkout review",
+  "order": ["review", "unpriced", "paid-review", "quote-refused"]
+}

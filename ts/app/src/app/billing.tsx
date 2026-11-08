@@ -1,7 +1,7 @@
-// A page of the shell that a later release fills.
+// Plan and usage of a workspace.
 
-import { ComingSoonScreen } from "../screens/coming-soon.tsx";
+import { PlanUsageScreen } from "../screens/billing/plan-usage-screen.tsx";
 
 export default function Billing() {
-  return <ComingSoonScreen page="billing" />;
+  return <PlanUsageScreen />;
 }

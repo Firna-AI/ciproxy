@@ -94,7 +94,8 @@ function labelInput(value: unknown): LabelInput {
   };
 }
 
-function label(value: unknown): LabelView {
+/** A label with its size, its places, and its own-machine fit. */
+export function readLabel(value: unknown): LabelView {
   const fields = object(value, "label view");
   return {
     fit: fit(fields.fit),
@@ -124,7 +125,7 @@ export const parseSetup = parser((value): SetupView => {
   return {
     current_image_disk_bytes: decimal(fields.current_image_disk_bytes),
     first_job: optional(fields.first_job, job),
-    labels: array(fields.labels, label),
+    labels: array(fields.labels, readLabel),
     machines: integer(fields.machines),
     organizations: array(fields.organizations, readOrganization),
     waiting_for_machine: boolean(fields.waiting_for_machine),

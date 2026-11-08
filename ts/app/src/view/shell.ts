@@ -1,6 +1,6 @@
 // The frame of a workspace page: the navigation for the role, the workspace
-// switch, the account menu, and the banner of the organization soft limit.
-// Settings and Add an organization are for Admins, on every tier.
+// switch, and the account menu. Settings and Add an organization are for
+// Admins, on every tier.
 
 import type {
   SessionView,
@@ -120,31 +120,5 @@ export function accountMenu(
     roleName: roleNames[role],
     workspaceName: workspace.name,
     canClaim: workspace.can_claim_admin && role !== "admin",
-  };
-}
-
-export type Banner = {
-  title: string;
-  body: string;
-  /** A link to Plan and usage for a person who pays, or who to ask. */
-  action: { label: string; href: string } | { ask: string };
-};
-
-/** The banner of every page while the workspace passes the Free limit. */
-export function organizationBanner(
-  workspace: WorkspaceView,
-  role: WorkspaceRole,
-): Banner | null {
-  if (!workspace.organization_limit_exceeded) return null;
-  return {
-    title: "Free includes 1 organization",
-    body: "Jobs keep running in every active organization of this workspace. Team runs several organizations on the same machines.",
-    action:
-      role === "viewer"
-        ? { ask: "Ask an Admin or a Billing person" }
-        : {
-            label: "Plan and usage",
-            href: workspaceHref("billing", workspace.id),
-          },
   };
 }

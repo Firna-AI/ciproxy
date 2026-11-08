@@ -16,6 +16,7 @@ import {
 } from "../../fixtures/org-links.ts";
 import type { TierKey } from "../../fixtures/org.ts";
 import { organizationAccess } from "../../fixtures/settings.ts";
+import { inactivePages } from "../billing/billing-scenes.tsx";
 import {
   RenameWorkspaceDialog,
   TakeOutDialog,
@@ -60,7 +61,7 @@ function held(
   return {
     tier,
     list: withStudio(link),
-    banner: inactiveBanner(link, turnOn),
+    banner: inactiveBanner(link, inactivePages, turnOn),
     turnOn,
   };
 }

@@ -1459,12 +1459,38 @@ Depends on: 18, 19
 
 Each screen follows its mockup, as Milestone 19 says.
 
-- [ ] Build Jobs, Savings, Plan and usage, Plans, Checkout, and the banners.
+- [x] Build Jobs, Savings, Plan and usage, Plans, Checkout, and the banners
+      against the current generated API contract.
+      Branch: `conductor/m21-jobs-savings-and-billing-ui`.
+- [ ] Orchestrator integration step: after pull request #39 merges,
+      regenerate the API files and connect the stored paid-review quote
+      to the one payment request module. Map `409 review_required` to a
+      fresh billing read and a new review, with an explicit payment click.
+      Preserve the quote of an unfinished payment retry. Test the refusal
+      and the current, pending, and failed billing-read states before merge.
+      Branch: `conductor/m21-jobs-savings-and-billing-ui`.
+      User answer, 8 November 2026: paid reviews store their quote on the
+      server. The payment names the quote. Unknown, used, or outdated
+      quotes are refused, and the page asks the customer to review again.
+      Add the refusal mockup first. Use the generated quote types after
+      pull request #39 merges. Keep the request in the one payment module
+      until then. The accepted answer is B of item 95 on the primary
+      branch, which owns the API and its pending-payment status contract.
 - [ ] Run one checkout in the Stripe test mode.
-- [ ] Show an unknown request on Jobs. The API returns null vCPUs, memory,
+      Orchestrator live step: set `CIPROXY_DASHBOARD_CREDENTIALS_FILE` to
+      a private JSON file outside the repository. After the page API and
+      Stripe test workspace are ready, run
+      `node ts/app/scripts/live-pages-smoke.ts --step=read`, then
+      `--step=checkout`. Complete the hosted test payment from the private
+      result file, then run `--step=return` for that exact saved session.
+      The [script guide](../ts/app/scripts/README.md#page-live-check) gives
+      the configuration. No credentials are available in this workspace.
+      Branch: `conductor/m21-jobs-savings-and-billing-ui`.
+- [x] Show an unknown request on Jobs. The API returns null vCPUs, memory,
       and free disk for a running or finished job whose request was not
       saved. Add that state to the Jobs mockups first.
       Source: pull request #34, fix round 1, 7 November 2026.
+      Branch: `conductor/m21-jobs-savings-and-billing-ui`.
 
 ## Milestone 22: Dashboard UI: Boat
 

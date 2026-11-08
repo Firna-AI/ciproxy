@@ -5,10 +5,12 @@
 // from 18 December, when Stripe ended Team after failed payments. A move
 // between paid tiers keeps the period, and a move to Free waits for its end.
 // After a move to Free in November, Free begins on 4 December, and mokly-ai
-// keeps both of its organizations.
+// keeps both of its organizations. On 8 December, mokly-studio joins inactive
+// as a third organization, as org-links.ts says.
 
 import { dateRange, unbroken } from "./format.ts";
 import type { TierKey } from "./org.ts";
+import { addOnPrices, tiers } from "./tiers.ts";
 
 export type UsageScene =
   | "steady"
@@ -21,7 +23,8 @@ export type UsageScene =
   | "payment-failed-over-limit"
   | "moved-to-free"
   | "free-scheduled"
-  | "free-organizations";
+  | "free-organizations"
+  | "inactive-organization";
 
 export type Usage = {
   tier: TierKey;
@@ -60,6 +63,19 @@ const free = {
   extraMachines: 0,
 } as const;
 
+/**
+ * Free from 4 December, after the move to Free of November. At the pace of
+ * its first day, 380 starts a day, the starts pass the 2,000 of Free on 9
+ * December, the sixth day of the 31.
+ */
+const freeFromDecember = {
+  ...free,
+  period: dateRange("4 December", "3 January"),
+  projected: 11_780,
+  passesOn: unbroken("9 December"),
+  machines: 3,
+} as const;
+
 /** Stripe could not charge the card for the December period. */
 const paymentFailed: Usage = {
   ...team,
@@ -86,12 +102,16 @@ export const usageScenes: Readonly<Record<UsageScene, Usage>> = {
   "payment-failed": paymentFailed,
   /** The payment failed while office-mini-1 runs as a fourth machine. */
   "payment-failed-over-limit": { ...paymentFailed, machines: 4 },
+  /**
+   * The first day of Free after failed payments: at 420 starts a day, the
+   * starts pass the 2,000 of Free on 22 December, the fifth day of the 31.
+   */
   "moved-to-free": {
     ...free,
     period: dateRange("18 December", "17 January"),
     starts: 420,
-    projected: 13_400,
-    passesOn: unbroken("23 December"),
+    projected: 13_020,
+    passesOn: unbroken("22 December"),
     machines: 3,
   },
   "free-scheduled": {
@@ -103,15 +123,30 @@ export const usageScenes: Readonly<Record<UsageScene, Usage>> = {
     ends: teamPeriodEnd,
   },
   /** The first day of Free after Move to Free, with both organizations. */
-  "free-organizations": {
-    ...free,
-    period: dateRange("4 December", "3 January"),
-    starts: 380,
-    projected: 11_780,
-    passesOn: unbroken("9 December"),
-    machines: 3,
-  },
+  "free-organizations": { ...freeFromDecember, starts: 380 },
+  /** 8 December, the fifth day of that Free period, at the same pace. */
+  "inactive-organization": { ...freeFromDecember, starts: 1_900 },
 };
+
+/** The included starts and own machines of a use: its tier and add-ons. */
+export function included(usage: Usage): { starts: number; machines: number } {
+  const tier = tiers[usage.tier];
+  return {
+    starts: tier.starts + usage.extraStarts * addOnPrices.startsBlock,
+    machines: tier.machines + usage.extraMachines,
+  };
+}
+
+/**
+ * The day on which the starts pass the included starts at the current pace,
+ * while the starts are below them and the expected starts above them. After
+ * the starts pass the included starts, no forecast applies.
+ */
+export function paceCrossing(usage: Usage): string | undefined {
+  const { starts } = included(usage);
+  const before = usage.starts < starts && usage.projected > starts;
+  return before ? usage.passesOn : undefined;
+}
 
 /** The first day of Free after the move to Free of the November period. */
 export const freeFrom = unbroken("4 December");

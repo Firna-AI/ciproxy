@@ -2,27 +2,37 @@
 // starts passes the tier before the period ends, or a paid tier ends after a
 // move to Free. Limits are soft, so each notice says that jobs keep running
 // and offers what covers the use. The banners of a passed limit or a failed
-// payment show on every page (components/usage-banner.tsx).
+// payment show on every page (components/usage-banner.tsx). On Free, the use
+// decides the pace notice: every moment whose starts are below the included
+// starts and whose expected starts pass them shows it, below any banner.
 
 import type { ReactNode } from "react";
 import { ExternalLink } from "lucide-react";
 
 import { Action, LinkAction } from "../../components/actions.tsx";
 import { Notice } from "../../components/feedback.tsx";
-import { paths } from "../../components/paths.ts";
+import type { CataloguePath } from "../../components/paths.ts";
 import { AskPayer } from "../../components/role-actions.tsx";
 import { formatCount, monthly } from "../../fixtures/format.ts";
 import { workspace } from "../../fixtures/org.ts";
 import { addOnPrices, startsText, tiers } from "../../fixtures/tiers.ts";
-import { freeFrom, type Usage, type UsageScene } from "../../fixtures/usage.ts";
+import {
+  freeFrom,
+  paceCrossing,
+  type Usage,
+  type UsageScene,
+} from "../../fixtures/usage.ts";
 
 export function usageNotice(
   scene: UsageScene,
   usage: Usage,
   canPay: boolean,
+  /** The Plans screen of the moment, which Compare plans opens. */
+  plans: CataloguePath,
 ): ReactNode {
   const block = formatCount(addOnPrices.startsBlock);
   const act = (actions: ReactNode) => (canPay ? actions : <AskPayer />);
+  const freePassesOn = usage.tier === "free" ? paceCrossing(usage) : undefined;
   if (scene === "near-limit") {
     return (
       <Notice
@@ -39,13 +49,13 @@ export function usageNotice(
       </Notice>
     );
   }
-  if ((scene === "free" || scene === "free-organizations") && usage.passesOn) {
+  if (freePassesOn) {
     return (
       <Notice
         tone="warning"
-        title={`At this pace, ${workspace.name} passes the ${formatCount(tiers.free.starts)} starts of Free on ${usage.passesOn}`}
+        title={`At this pace, ${workspace.name} passes the ${formatCount(tiers.free.starts)} starts of Free on ${freePassesOn}`}
         actions={act(
-          <LinkAction to={paths.plans} tone="primary" size="sm">
+          <LinkAction to={plans} tone="primary" size="sm">
             Compare plans
           </LinkAction>,
         )}

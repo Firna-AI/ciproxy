@@ -1,1 +1,15 @@
-{ "order": ["live", "waiting", "history", "job", "roles", "loading-error"] }
+{
+  "order": [
+    "live",
+    "waiting",
+    "history",
+    "job",
+    "unknown-request",
+    "job-states",
+    "wait-facts",
+    "queue-facts",
+    "current-contract",
+    "roles",
+    "loading-error"
+  ]
+}

@@ -1,6 +1,7 @@
 // One tier on the Plans page: the price, the limits, the action, and what the
 // tier includes or adds, with "Coming later" under a feature that ships
 // later. A person who cannot pay reads who can choose in place of the action.
+// While a payment waits, the action stays off.
 
 import { Action, LinkAction } from "../../components/actions.tsx";
 import type { CataloguePath } from "../../components/paths.ts";
@@ -23,10 +24,14 @@ export type TierCardProps = {
   to: CataloguePath | undefined;
   /** An Admin or a Billing person chooses; a Viewer reads who can. */
   canPay: boolean;
+  /** A payment waits, so no tier can be chosen until it ends. */
+  waiting?: boolean;
+  /** The card names the prices of the add-ons. The current API gives none. */
+  unitPrices?: boolean;
 };
 
 export function TierCard(props: TierCardProps) {
-  const { tier, current, covers } = props;
+  const { tier, current, covers, unitPrices = true } = props;
   const list = tierFeatures(tier);
   return (
     <section className={`tier-card${covers ? " is-recommended" : ""}`}>
@@ -52,7 +57,7 @@ export function TierCard(props: TierCardProps) {
         <p className="caption">{list.lead}</p>
         <TierFeatureList items={list.items} size="sm" />
       </div>
-      {tier.addOns ? (
+      {tier.addOns && unitPrices ? (
         <p className="caption tier-addons">
           Add {startsText(addOnPrices.startsBlock)} for{" "}
           {monthly(addOnPrices.startsPrice)}, or an extra own machine for{" "}
@@ -63,7 +68,14 @@ export function TierCard(props: TierCardProps) {
   );
 }
 
-function TierAction({ tier, current, covers, to, canPay }: TierCardProps) {
+function TierAction({
+  tier,
+  current,
+  covers,
+  to,
+  canPay,
+  waiting,
+}: TierCardProps) {
   if (current) {
     return (
       <Action block disabled>
@@ -74,6 +86,13 @@ function TierAction({ tier, current, covers, to, canPay }: TierCardProps) {
   if (!canPay) return <AskPayer />;
   const label = tier.key === "free" ? "Move to Free" : `Choose ${tier.name}`;
   const tone = covers ? "primary" : "secondary";
+  if (waiting) {
+    return (
+      <Action tone={tone} block disabled>
+        {label}
+      </Action>
+    );
+  }
   return to ? (
     <LinkAction to={to} tone={tone} block>
       {label}

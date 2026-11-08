@@ -1,12 +1,14 @@
 // The return from Stripe Checkout: while ciproxy confirms the payment, a
 // payment that Stripe still confirms after the wait, the confirmed plan, and
 // the return after a payment that did not finish. Checkout takes cards only,
-// and the page never asks for a second payment, as design call 38 says.
+// and the page never asks for a second payment, as design call 38 says. The
+// states of api-return.tsx show what the current API answers.
 
 import { CircleCheck, Clock, CreditCard } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
 
 import { LinkAction } from "../../components/actions.tsx";
+import { apiBanner } from "../../components/api-banner.tsx";
 import { Busy, StateBlock } from "../../components/feedback.tsx";
 import { Meter } from "../../components/figures.tsx";
 import { Panel } from "../../components/page.tsx";
@@ -16,6 +18,12 @@ import { formatCount } from "../../fixtures/format.ts";
 import { workspace } from "../../fixtures/org.ts";
 import { ownMachines, startsText, tiers } from "../../fixtures/tiers.ts";
 import { firstTeamPeriod } from "../../fixtures/usage.ts";
+import {
+  ApiResultBody,
+  isApiResult,
+  ReturnWithoutWorkspace,
+  type ApiResultState,
+} from "./api-return.tsx";
 import "./billing.css";
 
 export const resultStates = [
@@ -31,17 +39,31 @@ export function CheckoutResultScreen({
   state,
 }: {
   viewport: Viewport;
-  state: ResultState;
+  state: ResultState | ApiResultState | "no-workspace";
 }) {
+  if (state === "no-workspace") {
+    return <ReturnWithoutWorkspace viewport={viewport} />;
+  }
+  const confirmed = state === "confirmed" || state === "api-confirmed";
+  // Until Stripe confirms, the use of 4 September passes the Free limit.
+  const banner =
+    isApiResult(state) && !confirmed
+      ? apiBanner({ scene: "free-over", plans: paths.plans })
+      : undefined;
   return (
     <AppShell
       viewport={viewport}
-      tier={state === "confirmed" ? "team" : "free"}
+      tier={confirmed ? "team" : "free"}
       active="billing"
+      banner={banner}
     >
       <Panel>
         <div className="result">
-          <ResultBody state={state} />
+          {isApiResult(state) ? (
+            <ApiResultBody state={state} />
+          ) : (
+            <ResultBody state={state} />
+          )}
         </div>
       </Panel>
     </AppShell>

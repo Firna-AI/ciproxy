@@ -8,10 +8,11 @@
 
 import { Action, LinkAction } from "../../components/actions.tsx";
 import { holdReason } from "../../components/inactive-banner.tsx";
-import { paths, type CataloguePath } from "../../components/paths.ts";
+import type { CataloguePath } from "../../components/paths.ts";
 import { DotLabel } from "../../components/status.tsx";
 import type { OrganizationHold } from "../../fixtures/org-links.ts";
 import { tiers } from "../../fixtures/tiers.ts";
+import { inactivePages } from "../billing/billing-scenes.tsx";
 
 export function InactiveStatus({
   holds,
@@ -43,7 +44,7 @@ export function HoldActions({
   return (
     <span className="row org-actions">
       {plan ? (
-        <LinkAction to={paths.plansInactive} size="sm">
+        <LinkAction to={inactivePages.plans} size="sm">
           {`Choose ${tiers.team.name}`}
         </LinkAction>
       ) : null}

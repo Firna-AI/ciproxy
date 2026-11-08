@@ -57,7 +57,9 @@ export const movedToFree = defineScreen({
   slug: "moved-to-free",
   title: "Moved to Free after failed payments",
   description:
-    "Stripe ended the subscription after its retries on 18 December, so mokly-ai is on Free from that day, and the Free period counts only the starts since then. Its 3 own machines pass the Free limit; jobs keep running and the banner offers a plan.",
+    "Stripe ended the subscription after its retries on 18 December, so mokly-ai is on Free from that day, and the Free period counts only the starts since then. Its 3 own machines pass the Free limit; jobs keep running and the banner offers a plan. At the pace of that first day, 420 starts, the starts pass the 2,000 of Free on 22 December, so the pace notice and its offer show below the banner.",
+  rationale:
+    "The use decides the pace notice of Free, as metering.md says: the starts are below the included starts, and the expected starts pass them. The banner of the ended tier stays the one banner of the page.",
   relatedDocs: related("billing", "security"),
   address,
   render: (_props, context) => (

@@ -6,6 +6,7 @@
     "change-plan",
     "checkout",
     "checkout-return",
+    "current-contract",
     "loading-error"
   ]
 }

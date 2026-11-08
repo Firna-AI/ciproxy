@@ -1,10 +1,14 @@
 // The parts of the ciproxy cost: own machines, Boat overflow, and the plan. A
-// money column, so every amount shows cents.
+// money column, so every amount shows cents. A cost that is known only in
+// part shows its known part as "At least", a machine cost that nobody set
+// says Not set, and the total of an incomplete report says Incomplete.
 
 import { DataTable, type Column } from "../../components/data-table.tsx";
 import { formatCount, formatMoneyCents } from "../../fixtures/format.ts";
-import { savings, yourCost } from "../../fixtures/savings.ts";
-import { ownMachines } from "../../fixtures/tiers.ts";
+import {
+  totalCost,
+  type ReportFigures,
+} from "../../fixtures/savings-states.ts";
 
 type CostRow = {
   key: string;
@@ -15,36 +19,44 @@ type CostRow = {
   total?: boolean;
 };
 
-function rows(missing: boolean): CostRow[] {
-  const { starts, minutes, cost } = savings;
+function partCost(cost: number | null, partial: boolean | undefined): string {
+  if (cost === null) return "Not set";
+  return partial
+    ? `At least ${formatMoneyCents(cost)}`
+    : formatMoneyCents(cost);
+}
+
+function rows(figures: ReportFigures): CostRow[] {
+  const { starts, minutes } = figures;
+  const total = totalCost(figures);
   return [
     {
       key: "own",
-      label: ownMachines(3),
+      label: figures.ownLabel,
       jobs: formatCount(starts.own),
       minutes: formatCount(minutes.own),
-      cost: missing ? "Not set" : formatMoneyCents(cost.own),
+      cost: partCost(figures.ownCost, figures.ownPartial),
     },
     {
       key: "boat",
       label: "Boat overflow",
       jobs: formatCount(starts.boat),
       minutes: formatCount(minutes.boat),
-      cost: formatMoneyCents(cost.boat),
+      cost: formatMoneyCents(figures.boatCost),
     },
     {
       key: "plan",
-      label: "ciproxy Team",
+      label: figures.planLabel,
       jobs: "",
       minutes: "",
-      cost: formatMoneyCents(cost.plan),
+      cost: partCost(figures.planCost, figures.planPartial),
     },
     {
       key: "total",
       label: "Total",
       jobs: formatCount(starts.own + starts.boat),
       minutes: formatCount(minutes.own + minutes.boat),
-      cost: missing ? "Incomplete" : formatMoneyCents(yourCost),
+      cost: total === null ? "Incomplete" : formatMoneyCents(total),
       total: true,
     },
   ];
@@ -70,11 +82,11 @@ const columns: readonly Column[] = [
   { key: "cost", label: "Cost", flex: 2, align: "right" },
 ];
 
-export function CostTable({ missing }: { missing: boolean }) {
+export function CostTable({ figures }: { figures: ReportFigures }) {
   return (
     <DataTable
       columns={columns}
-      rows={rows(missing)}
+      rows={rows(figures)}
       rowKey={(row) => row.key}
       cell={(row, key) => (
         <span className={row.total ? "cost-total" : undefined}>

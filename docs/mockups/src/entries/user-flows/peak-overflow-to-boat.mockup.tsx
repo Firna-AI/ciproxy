@@ -2,9 +2,10 @@ import { defineUseCase } from "@mokly/mokly";
 
 import { paths } from "../../components/paths.ts";
 import { related } from "../../components/related-docs.ts";
-import { formatMoney } from "../../fixtures/format.ts";
+import { formatDay, formatMoney } from "../../fixtures/format.ts";
+import { releaseDay } from "../../fixtures/live-jobs.ts";
 import { boat, countSlots, machineScenes } from "../../fixtures/machines.ts";
-import { savings, yourCost } from "../../fixtures/savings.ts";
+import { savings, savingsPeriod, yourCost } from "../../fixtures/savings.ts";
 import { liveScenes } from "../../screens/jobs/live-scenes.ts";
 
 const steady = machineScenes.steady;
@@ -17,8 +18,7 @@ const savedOnBlacksmith = savings.alternatives.blacksmith - yourCost;
 
 export const peakOverflowToBoat = defineUseCase({
   title: "A peak in which jobs overflow to Boat",
-  description:
-    "mokly-ai on Team with three own machines. A release on 18 November fills every own slot; ciproxy starts runners on Boat for the jobs that wait, and the savings report shows what the overflow cost.",
+  description: `mokly-ai on Team with three own machines. A release on ${formatDay(releaseDay)} fills every own slot; ciproxy starts runners on Boat for the jobs that wait, and the savings report of the last 30 days, which end that day, shows what the overflow cost.`,
   relatedDocs: related("jobRouting", "overflow", "metering"),
   steps: [
     {
@@ -46,7 +46,7 @@ export const peakOverflowToBoat = defineUseCase({
     {
       screenPath: paths.savings,
       title: "What the overflow cost",
-      description: `Boat took ${boatShare}% of the starts. With the own machines and Team, the report shows ${formatMoney(yourCost)} for the last 30 days, ${formatMoney(savedOnBlacksmith)} less than the same jobs on Blacksmith.`,
+      description: `The last 30 days, ${savingsPeriod}, include the release. Boat took ${boatShare}% of the starts. With the own machines and Team, the report shows ${formatMoney(yourCost)}, ${formatMoney(savedOnBlacksmith)} less than the same jobs on Blacksmith.`,
     },
     {
       screenPath: paths.overflow,

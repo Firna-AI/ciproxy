@@ -6,7 +6,8 @@
 // organizations after a move to Free sees the banner and the offer. On Plan
 // and usage itself, the link to that page drops out, and an add-on action
 // saves in place. A person who cannot pay sees the same banner with words in
-// place of its actions.
+// place of its actions. The banner of the organizations takes the pages of
+// its moment, so that its links keep the organizations of that moment.
 
 import type { ReactNode } from "react";
 import { ExternalLink } from "lucide-react";
@@ -22,6 +23,7 @@ import {
 import {
   paymentDates,
   usageScenes,
+  type Usage,
   type UsageScene,
 } from "../fixtures/usage.ts";
 import { Action, LinkAction } from "./actions.tsx";
@@ -31,6 +33,9 @@ import { AskPayer } from "./role-actions.tsx";
 
 /** The page that shows the banner: Plan and usage, or any other page. */
 export type BannerPage = "billing" | "other";
+
+/** The Plan and usage and the Plans screens of one moment of the story. */
+export type BillingPages = { usage: CataloguePath; plans: CataloguePath };
 
 /** An add-on action: in place on Plan and usage, a link from other pages. */
 function AddOnAction({
@@ -79,6 +84,38 @@ export function ChooseTeam({
   );
 }
 
+/**
+ * The banner of more organizations than Free includes. It counts every
+ * linked organization, also an inactive one, and names those that run.
+ */
+export function organizationsBanner({
+  count,
+  usage,
+  pages,
+  page,
+  canPay = true,
+}: {
+  count: number;
+  usage: Usage;
+  pages: BillingPages;
+  page: BannerPage;
+  canPay?: boolean;
+}): ReactNode {
+  const { free, team } = tiers;
+  return (
+    <Notice
+      tone="warning"
+      title={`${count} organizations on Free, which includes ${free.organizations ?? 1}`}
+      actions={canPay ? <ChooseTeam page={page} {...pages} /> : <AskPayer />}
+    >
+      Jobs keep running in {organizationList("and")}, on all {usage.machines}{" "}
+      machines. Team covers your use for {monthly(team.price)}: several
+      organizations, {startsText(team.starts)} a month, and{" "}
+      {ownMachines(team.machines)}.
+    </Notice>
+  );
+}
+
 export function usageBanner(
   scene: UsageScene,
   page: BannerPage,
@@ -100,20 +137,13 @@ export function usageBanner(
         </Notice>
       );
     case "free-organizations":
-      return (
-        <Notice
-          tone="warning"
-          title={`${organizations.length} organizations on Free, which includes ${free.organizations ?? 1}`}
-          actions={act(
-            <ChooseTeam page={page} usage={paths.freeOrganizations} />,
-          )}
-        >
-          Jobs keep running in {organizationList("and")}, on all{" "}
-          {usage.machines} machines. Team covers your use for{" "}
-          {monthly(team.price)}: several organizations,{" "}
-          {startsText(team.starts)} a month, and {ownMachines(team.machines)}.
-        </Notice>
-      );
+      return organizationsBanner({
+        count: organizations.length,
+        usage,
+        pages: { usage: paths.freeOrganizations, plans: paths.plans },
+        page,
+        canPay,
+      });
     case "over-starts":
       return (
         <Notice

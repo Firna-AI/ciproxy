@@ -19,6 +19,7 @@ import { nothingFitsLabel } from "../../fixtures/settings.ts";
 import { sizePhrase } from "../../fixtures/sizes.ts";
 import { appSuspension } from "../../fixtures/access.ts";
 import { boatRefused } from "../../fixtures/waiting-jobs.ts";
+import { factNotice } from "./live-fact-notices.tsx";
 import type { LiveScene, LiveState } from "./live-scenes.ts";
 
 export function liveNotice(
@@ -99,6 +100,6 @@ export function liveNotice(
         </Notice>
       );
     default:
-      return null;
+      return factNotice(state, scene, role);
   }
 }

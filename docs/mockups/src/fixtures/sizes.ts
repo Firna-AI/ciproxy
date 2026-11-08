@@ -6,7 +6,7 @@
 // on a Boat plan that can start xlarge.
 
 import { dotJoin, unbroken } from "./format.ts";
-import { gigabyte, holdsImage, vmDiskBytes } from "./vm-disk.ts";
+import { diskText, gigabyte, holdsImage, vmDiskBytes } from "./vm-disk.ts";
 
 /** The vCPU, memory, and free disk that a label gives each job. */
 export type Size = { vcpu: number; memoryGb: number; freeDiskGb: number };
@@ -23,6 +23,21 @@ export function sizeText(size: Size): string {
     unbroken(`${size.vcpu} vCPU`),
     unbroken(`${size.memoryGb} GB`),
     unbroken(`${size.freeDiskGb} GB free disk`),
+  );
+}
+
+/**
+ * The VM that ran a job on an own machine, as its runner reported it: its
+ * vCPU, its memory, and its VM disk, the image with the free disk.
+ */
+export type JobVm = { vcpu: number; memoryGb: number; vmDiskBytes: number };
+
+/** "2 vCPU · 8 GB · 81 GB VM disk", the VM that ran a job. */
+export function vmSizeText(vm: JobVm): string {
+  return dotJoin(
+    unbroken(`${vm.vcpu} vCPU`),
+    unbroken(`${vm.memoryGb} GB`),
+    unbroken(`${diskText(vm.vmDiskBytes)} VM disk`),
   );
 }
 
@@ -58,6 +73,13 @@ export const boatSizes: readonly BoatSize[] = [
   { name: "large", vcpu: 8, memoryGb: 16, diskGb: 111 },
   { name: "xlarge", vcpu: 16, memoryGb: 32, diskGb: 251 },
 ];
+
+/** The Boat size with this name, such as the size that ran a job. */
+export function boatSizeNamed(name: string): BoatSize {
+  const size = boatSizes.find((entry) => entry.name === name);
+  if (!size) throw new Error(`No Boat size ${name}`);
+  return size;
+}
 
 export const largestBoatSize: BoatSize = boatSizes.reduce((largest, size) =>
   size.vcpu > largest.vcpu ? size : largest,

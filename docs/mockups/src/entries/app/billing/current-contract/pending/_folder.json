@@ -1,0 +1,10 @@
+{
+  "title": "A payment that waits",
+  "order": [
+    "continue",
+    "plans-continue",
+    "bank-continue",
+    "confirming",
+    "plans-confirming"
+  ]
+}

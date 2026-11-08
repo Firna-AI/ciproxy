@@ -32,7 +32,7 @@ export const plans = defineScreen({
       slug: "inactive-organization",
       title: "Plans, with an inactive organization",
       description:
-        "mokly-ai on Free in December. It holds mokly-ai, mokly-labs, and mokly-studio, which is inactive, and three own machines, and Free includes one organization. Team carries the Covers your use badge and clears the plan hold. The catalogue has no checkout of December, so Choose Team opens no screen here, and the flows say that the payment happens on Stripe.",
+        "mokly-ai on Free on 8 December. It holds mokly-ai, mokly-labs, and mokly-studio, which is inactive, and three own machines, and Free includes one organization. Team carries the Covers your use badge and clears the plan hold. The breadcrumb opens Plan and usage of the same day. The catalogue has no checkout of December, so Choose Team opens no screen here, and the flows say that the payment happens on Stripe.",
       rationale:
         "The answer D to item 83: the move to Team turns on an organization that waits only for the plan. Every linked organization counts, also an inactive one.",
       props: { state: "inactive-organization" },

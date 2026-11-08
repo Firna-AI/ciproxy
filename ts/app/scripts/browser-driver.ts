@@ -13,6 +13,15 @@ export type Locator = {
   click(): Promise<void>;
   focus(): Promise<void>;
   press(key: string): Promise<void>;
+  fill(value: string): Promise<void>;
+  inputValue(): Promise<string>;
+  selectOption(value: string | { label: string }): Promise<string[]>;
+  getByRole(
+    role: string,
+    options?: { name?: string | RegExp; exact?: boolean },
+  ): Locator;
+  getByLabel(text: string | RegExp, options?: { exact?: boolean }): Locator;
+  getByText(text: string | RegExp, options?: { exact?: boolean }): Locator;
   getAttribute(name: string): Promise<string | null>;
   textContent(): Promise<string | null>;
   count(): Promise<number>;
@@ -26,6 +35,20 @@ export type Locator = {
   } | null>;
 };
 
+export type BrowserResponse = {
+  url(): string;
+  status(): number;
+  headers(): Record<string, string>;
+  finished(): Promise<unknown>;
+  request(): BrowserRequest;
+};
+
+export type BrowserRequest = {
+  url(): string;
+  method(): string;
+  postDataJSON(): unknown;
+};
+
 export type Page = {
   goto(
     url: string,
@@ -34,16 +57,23 @@ export type Page = {
   reload(options?: { waitUntil: "domcontentloaded" }): Promise<unknown>;
   goBack(options?: { waitUntil: "domcontentloaded" }): Promise<unknown>;
   waitForURL(url: string | RegExp): Promise<void>;
-  waitForResponse(url: RegExp): Promise<{
-    headers(): Record<string, string>;
-    finished(): Promise<unknown>;
-  }>;
+  waitForResponse(
+    url: RegExp | ((response: BrowserResponse) => boolean),
+  ): Promise<BrowserResponse>;
+  waitForRequest(url: RegExp): Promise<BrowserRequest>;
+  waitForEvent(event: "popup"): Promise<Page>;
+  close(): Promise<void>;
   url(): string;
   getByRole(
     role: string,
     options?: { name?: string | RegExp; exact?: boolean },
   ): Locator;
   getByText(text: string | RegExp, options?: { exact?: boolean }): Locator;
+  getByLabel(text: string | RegExp, options?: { exact?: boolean }): Locator;
+  getByPlaceholder(
+    text: string | RegExp,
+    options?: { exact?: boolean },
+  ): Locator;
   getByTestId(id: string): Locator;
   keyboard: { press(key: string): Promise<void> };
   screenshot(options: { path: string; fullPage: boolean }): Promise<unknown>;
@@ -59,10 +89,22 @@ export type Page = {
   clock: {
     install(options: { time: Date }): Promise<void>;
     runFor(milliseconds: number): Promise<void>;
+    pauseAt(time: Date): Promise<void>;
   };
 };
 
 export type BrowserContext = {
+  setDefaultTimeout(milliseconds: number): void;
+  route(
+    url: string,
+    handler: (route: {
+      fulfill(options: {
+        status: number;
+        contentType: string;
+        body: string;
+      }): Promise<void>;
+    }) => Promise<void>,
+  ): Promise<void>;
   tracing: {
     start(options: {
       screenshots: boolean;
