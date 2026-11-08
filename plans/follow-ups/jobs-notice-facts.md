@@ -85,7 +85,8 @@
   - The product shows only the facts of the API: "The GitHub App is
     suspended on `<organization>`" with "Open GitHub", "Boat refused new
     sandboxes" with the retry time and no action, and "Boat bills this
-    size." This copy is in `ts/app/src/view/jobs-notices.ts` and
+    size." This copy is in `ts/app/src/view/jobs-notices.ts`,
+    `ts/app/src/view/jobs-boat-notices.ts`, and
     `ts/app/src/view/jobs-detail.ts`, and the current-contract scenes show
     it. Each sentence is true.
 - **Problem:** The known-data scenes and the product disagree on these three

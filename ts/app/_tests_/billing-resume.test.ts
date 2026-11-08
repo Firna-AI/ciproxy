@@ -12,35 +12,36 @@ import {
   createCheckoutReturn,
   createPagePayment,
 } from "../src/state/billing-flows.ts";
-import { workspaceId } from "../scripts/fixtures-core.ts";
+import { session, workspaceId } from "../scripts/fixtures-core.ts";
 import {
   bannerView,
   offer,
   pendingUsagePage,
   review,
   selection,
+  signedInWith,
   teamOffer,
   unavailable,
   usagePage,
 } from "./billing-support.ts";
-import {
-  appWith,
-  response,
-  settled,
-  transportQueue,
-  type Reply,
-} from "./support.ts";
+import { response, settled, transportQueue, type Reply } from "./support.ts";
 
 const checkoutUrl = "https://checkout.stripe.test/c/pay/cs_test_open";
 const bankUrl = "https://invoice.stripe.test/i/in_test_bank";
 
-/** The same tab after a reload: new services over the same tab storage. */
-function reload(app: AppServices, ...replies: Reply[]) {
-  const queue = transportQueue(...replies);
-  return {
-    app: createAppServices({ ...app.env, transport: queue.transport }),
-    calls: queue.calls,
-  };
+/**
+ * The same tab after a reload: new services over the same tab storage, which
+ * read the session of a payer again. `calls` leaves that session read out.
+ */
+async function reload(app: AppServices, ...replies: Reply[]) {
+  const queue = transportQueue(response(session()), ...replies);
+  const services = createAppServices({
+    ...app.env,
+    transport: queue.transport,
+  });
+  await services.session.ensure();
+  queue.calls.splice(0, queue.calls.length);
+  return { app: services, calls: queue.calls };
 }
 
 async function offered(app: AppServices) {
@@ -61,7 +62,8 @@ function teamUsage() {
 }
 
 test("a cancelled Checkout continues after a reload with no second payment request", async () => {
-  const first = appWith(
+  const first = await signedInWith(
+    "admin",
     response(usagePage()),
     response({ state: "open", url: checkoutUrl } satisfies PaymentOutcome),
   );
@@ -72,7 +74,7 @@ test("a cancelled Checkout continues after a reload with no second payment reque
   });
   assert.deepEqual(first.documents, [checkoutUrl]);
   // Stripe's cancel URL brings the person back; the tab reloads.
-  const back = reload(first.app, response(pendingUsagePage()));
+  const back = await reload(first.app, response(pendingUsagePage()));
   assert.deepEqual(await offered(back.app), {
     url: checkoutUrl,
     kind: "checkout",
@@ -90,7 +92,8 @@ test("a cancelled Checkout continues after a reload with no second payment reque
 test("a bank confirmation continues after a reload", async () => {
   const pending = pendingUsagePage();
   pending.status.selection = selection("team");
-  const first = appWith(
+  const first = await signedInWith(
+    "admin",
     response(teamUsage()),
     response({
       state: "payment_required",
@@ -109,13 +112,14 @@ test("a bank confirmation continues after a reload", async () => {
     first.calls[1]?.url,
     `/api/workspaces/${workspaceId}/billing/change`,
   );
-  const back = reload(first.app, response(pending));
+  const back = await reload(first.app, response(pending));
   assert.deepEqual(await offered(back.app), { url: bankUrl, kind: "bank" });
   assert.equal(back.calls.length, 1);
 });
 
 test("a failed refresh offers no saved payment", async () => {
-  const first = appWith(
+  const first = await signedInWith(
+    "admin",
     response(usagePage()),
     response({ state: "open", url: checkoutUrl } satisfies PaymentOutcome),
   );
@@ -124,7 +128,7 @@ test("a failed refresh offers no saved payment", async () => {
     kind: "plan",
     review: review(),
   });
-  const back = reload(
+  const back = await reload(
     first.app,
     response(pendingUsagePage()),
     response(unavailable, 503),
@@ -134,7 +138,8 @@ test("a failed refresh offers no saved payment", async () => {
 });
 
 test("a confirmed return ends the saved payment, also when the read after it fails", async () => {
-  const first = appWith(
+  const first = await signedInWith(
+    "admin",
     response(usagePage()),
     response({ state: "open", url: checkoutUrl } satisfies PaymentOutcome),
   );
@@ -143,7 +148,7 @@ test("a confirmed return ends the saved payment, also when the read after it fai
     kind: "plan",
     review: review(),
   });
-  const done = reload(
+  const done = await reload(
     first.app,
     response({ outcome: { state: "confirmed" }, banner: null }),
     response(unavailable, 503),
@@ -159,7 +164,8 @@ test("a confirmed return ends the saved payment, also when the read after it fai
 });
 
 test("a read with no pending payment ends the saved payment", async () => {
-  const first = appWith(
+  const first = await signedInWith(
+    "admin",
     response(usagePage()),
     response({ state: "open", url: checkoutUrl } satisfies PaymentOutcome),
   );
@@ -168,7 +174,7 @@ test("a read with no pending payment ends the saved payment", async () => {
     kind: "plan",
     review: review(),
   });
-  const back = reload(
+  const back = await reload(
     first.app,
     response(usagePage()),
     response(pendingUsagePage()),
@@ -178,7 +184,8 @@ test("a read with no pending payment ends the saved payment", async () => {
 });
 
 test("a person who cannot pay is offered no saved payment", async () => {
-  const first = appWith(
+  const first = await signedInWith(
+    "admin",
     response(usagePage()),
     response({ state: "open", url: checkoutUrl } satisfies PaymentOutcome),
   );
@@ -190,6 +197,6 @@ test("a person who cannot pay is offered no saved payment", async () => {
   // The role of the person in this tab ends; the saved URL stays in the tab.
   const viewer = pendingUsagePage();
   viewer.status.can_pay = false;
-  const back = reload(first.app, response(viewer));
+  const back = await reload(first.app, response(viewer));
   assert.equal(await offered(back.app), null);
 });

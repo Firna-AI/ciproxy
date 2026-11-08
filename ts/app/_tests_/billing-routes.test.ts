@@ -9,13 +9,14 @@ import {
 } from "../src/state/billing-flows.ts";
 import { checkoutQuery, stripeReturnHref } from "../src/view/billing-routes.ts";
 import { otherWorkspaceId, workspaceId } from "../scripts/fixtures-core.ts";
-import { review, usagePage } from "./billing-support.ts";
+import { review, signedInWith, usagePage } from "./billing-support.ts";
 import { appWith, response } from "./support.ts";
 
 const stripeUrl = "https://checkout.stripe.test/c/pay/cs_test_a";
 
 test("normal workspace navigation cannot retarget a payment return", async () => {
-  const { app, documents } = appWith(
+  const { app, documents } = await signedInWith(
+    "admin",
     response(usagePage()),
     response({ state: "open", url: stripeUrl } satisfies PaymentOutcome),
   );

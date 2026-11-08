@@ -15,6 +15,8 @@ import type {
   PlanUsagePage,
   PlansPage,
 } from "../api/billing-types.ts";
+import type { WorkspaceRole } from "../api/schema.ts";
+import { workspaceAccess } from "../routing/workspace.ts";
 import type { AppServices } from "../services/services.ts";
 import { createBannerStore, type BannerStore } from "./billing-banner.ts";
 import { ownedCache } from "./billing-cache.ts";
@@ -116,20 +118,53 @@ export async function billingSettled(
 }
 
 /**
- * Whether a new payment may start: the latest read of Plan and usage
- * succeeded and shows no payment or operation that the server waits for. A
- * failed latest read leaves the state unknown, so no payment starts from the
- * page before it.
+ * Why a new payment can or cannot start. `open` needs a payer role in the
+ * latest session read, a fresh and successful Plan and usage read, the API
+ * permission to pay, and no payment or operation that the server waits for.
  */
-export function paymentMayStart(
+export type PaymentGate =
+  | "open"
+  /** The first Plan and usage read of this page still runs. */
+  | "loading"
+  /** The latest Plan and usage read failed, so the state is not known. */
+  | "unknown"
+  /** A payment or a billing operation waits on the server. */
+  | "waiting"
+  /** The session role or the API does not let this person pay. */
+  | "not-payer";
+
+/** An Admin or a Billing person pays; a Viewer and no role do not. */
+export function payerRole(role: WorkspaceRole | null): boolean {
+  return role === "admin" || role === "billing";
+}
+
+/** The role of this person in the workspace, from the latest session read. */
+function sessionRole(
   services: AppServices,
   workspaceId: string,
-): boolean {
+): WorkspaceRole | null {
+  const snapshot = services.session.state.get();
+  if (snapshot.status !== "signed-in") return null;
+  const access = workspaceAccess(snapshot.session, workspaceId, "billing");
+  return access.kind === "member" ? access.role : null;
+}
+
+/**
+ * The one payment gate of a workspace, which the Checkout summary, Save
+ * add-ons, and the payment store read. A failed read leaves the state
+ * unknown, so no payment starts from the page before it.
+ */
+export function paymentGate(
+  services: AppServices,
+  workspaceId: string,
+): PaymentGate {
+  if (!payerRole(sessionRole(services, workspaceId))) return "not-payer";
   const usage = usageStore(services, workspaceId).state.get();
-  return (
-    usage.status === "ready" &&
-    usage.refreshFailure === null &&
-    usage.page.status.can_pay &&
-    !statusWaits(usage.page.status)
-  );
+  if (usage.status === "loading") return "loading";
+  if (usage.status === "failed" || usage.refreshFailure !== null) {
+    return "unknown";
+  }
+  if (!usage.page.status.can_pay) return "not-payer";
+  if (statusWaits(usage.page.status)) return "waiting";
+  return "open";
 }

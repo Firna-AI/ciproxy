@@ -1,6 +1,7 @@
 // What follows a payment on the page that sent it, from the server's outcome:
-// a confirmed plan, a wait for Stripe, a bank confirmation, a failed card, or
-// a request that failed. Its buttons continue the same payment, open the
+// a confirmed plan, a wait for Stripe, a payment to finish on its Stripe
+// page, a failed card, a refusal, or a result that the page did not get. Its
+// buttons continue the same payment, read Plan and usage again, open the
 // Stripe page that the server named, or open the billing portal.
 
 import { View, StyleSheet } from "react-native";
@@ -18,14 +19,26 @@ import type {
 function ResultAction({
   action,
   onRetry,
+  onReload,
   onPortal,
   busy,
 }: {
   action: OutcomeAction;
   onRetry: () => void;
+  onReload: () => void;
   onPortal: () => void;
   busy: boolean;
 }) {
+  if (action.kind === "reload") {
+    return (
+      <ActionButton
+        label={action.label}
+        size="sm"
+        busy={busy}
+        onPress={onReload}
+      />
+    );
+  }
   if (action.kind === "retry") {
     return (
       <ActionButton
@@ -69,13 +82,16 @@ function ResultAction({
 export function PaymentResult({
   model,
   onRetry,
+  onReload,
   onPortal,
   busy,
 }: {
   model: OutcomeModel;
   onRetry: () => void;
+  /** Read Plan and usage again, after that read failed. */
+  onReload: () => void;
   onPortal: () => void;
-  /** A retry is on its way. */
+  /** A retry, or the read after the outcome, is on its way. */
   busy: boolean;
 }) {
   const actions = model.actions.map((action) => (
@@ -83,6 +99,7 @@ export function PaymentResult({
       key={action.label}
       action={action}
       onRetry={onRetry}
+      onReload={onReload}
       onPortal={onPortal}
       busy={busy}
     />

@@ -5,8 +5,10 @@ import type { SavingsPage } from "../src/api/savings-types.ts";
 import { costRows, savingsNotices } from "../src/view/savings-costs.ts";
 import {
   costBars,
+  priceListNote,
   savingsHero,
   savingsSubtitle,
+  startsSeries,
 } from "../src/view/savings-report.ts";
 import { savingsReport } from "../scripts/fixtures-savings.ts";
 
@@ -63,12 +65,17 @@ test("a missing machine cost hides the savings figure but keeps the known costs"
   });
   assert.equal(savingsHero(page), null);
   assert.deepEqual(
-    costRows(page).map((row) => [row.key, plain(row.cost)]),
+    costRows(page).map((row) => [
+      row.key,
+      row.jobs,
+      row.minutes,
+      plain(row.cost),
+    ]),
     [
-      ["machines", "At least $105.42"],
-      ["boat", "$10.00"],
-      ["plan", "$47.74"],
-      ["total", "Incomplete"],
+      ["machines", "102", "498", "At least $105.42"],
+      ["boat", "7", "41", "$10.00"],
+      ["plan", "", "", "$47.74"],
+      ["total", "109", "539", "Incomplete"],
     ],
   );
   assert.deepEqual(
@@ -128,4 +135,45 @@ test("the report names its range with the last included UTC day", () => {
     until: "2026-11-02",
   });
   assert.equal(plain(savingsSubtitle(oneDay)), "This month · 1 November");
+});
+
+test("the daily chart keeps own and Boat starts apart, and the note names each price list once in date order", () => {
+  const page = report({
+    ...quietDay,
+    days: [
+      {
+        day: "2026-11-03",
+        machines: { starts: "40", minutes: "190" },
+        boat: { starts: "3", minutes: "18" },
+      },
+      {
+        day: "2026-11-04",
+        machines: { starts: "62", minutes: "308" },
+        boat: { starts: "4", minutes: "23" },
+      },
+    ],
+  });
+  assert.deepEqual(startsSeries(page), {
+    days: ["3", "4"],
+    machines: [40, 62],
+    boat: [3, 4],
+  });
+  const lists = (dates: [string, string]) =>
+    plain(
+      priceListNote(
+        report({
+          comparisons: quietDay.comparisons.map((item, index) => ({
+            ...item,
+            price_list_date: dates[index] ?? item.price_list_date,
+          })),
+        }),
+      ),
+    );
+  assert.deepEqual(
+    [lists(["2026-11-04", "2026-11-04"]), lists(["2026-11-11", "2026-11-04"])],
+    [
+      "Blacksmith and GitHub-hosted costs use their list prices per minute for the same VM sizes, from the price lists of 4 November 2026.",
+      "Blacksmith and GitHub-hosted costs use their list prices per minute for the same VM sizes, from the price lists of 4 November 2026 and 11 November 2026.",
+    ],
+  );
 });

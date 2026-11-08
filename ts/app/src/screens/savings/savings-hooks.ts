@@ -1,6 +1,8 @@
 // The hook that connects the Savings screen to its store. The mounted page
-// creates its own store for its workspace, reads the range of the address,
-// and stops reading again when it closes.
+// creates its own store for its workspace, opens its lifetime before the
+// first read, and reads the range of the address. The cleanup of that
+// lifetime runs when the page closes, so a read that answers later starts
+// no new refresh.
 
 import { useEffect, useMemo } from "react";
 
@@ -24,10 +26,11 @@ export function useSavings(workspaceId: string, range: SavingsRange) {
       visibility: services.env.visibility,
     });
   }, [services, workspaceId]);
+  // The lifetime opens first, so its cleanup exists before any read answers.
+  useEffect(() => store.open(), [store]);
   useEffect(() => {
     void store.select(range);
   }, [store, range]);
-  useEffect(() => () => store.stop(), [store]);
   const snapshot: SavingsSnapshot = useValue(store.state);
   return { snapshot, retry: () => void store.select(range) };
 }

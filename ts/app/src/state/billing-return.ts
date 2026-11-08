@@ -113,6 +113,9 @@ export function createReturnStore(options: {
     },
     retry() {
       if (state.get().status !== "failed") return;
+      // The failed cycle ended by itself and kept its tab watcher; release
+      // it before a new cycle registers its own.
+      poller.stop();
       const count = attempts();
       state.set({
         status: "confirming",

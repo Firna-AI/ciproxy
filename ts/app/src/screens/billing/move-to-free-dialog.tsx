@@ -2,6 +2,10 @@
 // period, then the workspace is on Free, and jobs keep running on every own
 // machine. The dialog is a sheet on a phone. Keep closes it; Move to Free
 // asks the API, then Plan and usage shows the day on which the plan ends.
+// When the page did not get the result, the dialog says so and points to
+// Plan and usage. It never says then that the plan stayed as it was. Its
+// dismiss button then says Close, not Keep, because Move to Free may have
+// taken effect.
 
 import { StyleSheet, Text, View } from "react-native";
 import { WebModalFrame } from "@firna/ui/modal";
@@ -19,6 +23,7 @@ import {
   machinesText,
   tierNames,
 } from "../../view/billing-format.ts";
+import { moveToFreeFailure } from "../../view/billing-uncertain.ts";
 
 export function MoveToFreeDialog({
   page,
@@ -38,6 +43,14 @@ export function MoveToFreeDialog({
   const current = tierNames[usage.status.selection.tier];
   const free = page.plans.find((card) => card.plan.selection.tier === "free");
   const working = state.status === "working";
+  const failure =
+    state.status === "failed"
+      ? moveToFreeFailure(
+          state.failure,
+          current,
+          lastDayText(usage.status.period_end),
+        )
+      : null;
   return (
     <WebModalFrame
       visible
@@ -49,13 +62,13 @@ export function MoveToFreeDialog({
       footer={
         <View style={styles.footer}>
           <ActionButton
-            label={`Keep ${current}`}
+            label={failure?.dismissLabel ?? `Keep ${current}`}
             tone="ghost"
             disabled={working}
             onPress={onClose}
           />
           <ActionButton
-            label="Move to Free"
+            label={failure?.retryLabel ?? "Move to Free"}
             tone="primary"
             busy={working}
             onPress={onConfirm}
@@ -70,9 +83,9 @@ export function MoveToFreeDialog({
         <Text style={text.small}>
           {`Jobs keep running on all ${machinesText(usage.machines)}.`}
         </Text>
-        {state.status === "failed" ? (
-          <Notice tone="danger" title="Move to Free did not finish">
-            Your plan stays as it was. Try again.
+        {failure ? (
+          <Notice tone={failure.tone} title={failure.title}>
+            {failure.body}
           </Notice>
         ) : null}
       </View>

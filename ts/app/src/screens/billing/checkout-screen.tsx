@@ -1,10 +1,12 @@
 // The review of one exact plan choice before a payment. The person sets the
 // add-on quantities; the API prices each choice, and the button pays for the
 // review on the page only. From Free, the payment goes on to Stripe Checkout;
-// between paid plans, Stripe charges the card on file at once. Only an Admin
-// or a Billing person reviews; a Viewer reads who can.
+// between paid plans, Stripe charges the card on file at once. When a payment
+// cannot start, the summary says why, from the one payment gate, and its Try
+// again reads Plan and usage again. Only an Admin or a Billing person
+// reviews; a Viewer reads who can.
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { StyleSheet, View, useWindowDimensions } from "react-native";
 import { Link, useLocalSearchParams } from "expo-router";
 
@@ -18,25 +20,27 @@ import { Panel } from "../../components/panel.tsx";
 import { useMounted } from "../../components/viewport.ts";
 import { useServices } from "../../services/context.tsx";
 import { useValue } from "../../services/hooks.ts";
-import { paymentMayStart, usageStore } from "../../state/billing.ts";
+import { paymentGate, usageStore } from "../../state/billing.ts";
 import {
+  checkoutReload,
   createPagePayment,
   createPortalAction,
   createReview,
 } from "../../state/billing-flows.ts";
 import { paymentBusy } from "../../state/billing-payment.ts";
 import { reviewedChoice } from "../../state/billing-review.ts";
-import {
-  reviewFailure,
-  reviewModel,
-  reviewTitle,
-} from "../../view/billing-checkout.ts";
+import { checkoutSummary } from "../../view/billing-checkout-summary.ts";
+import { reviewTitle } from "../../view/billing-checkout.ts";
 import { askPayer } from "../../view/billing-format.ts";
 import { outcomeModel } from "../../view/billing-outcome.ts";
-import { checkoutQuery, plansHref } from "../../view/billing-routes.ts";
+import {
+  billingHref,
+  checkoutQuery,
+  plansHref,
+} from "../../view/billing-routes.ts";
 import type { WorkspaceContext } from "../workspace-page.tsx";
 import { BillingRoute } from "./billing-route.tsx";
-import { CheckoutSummary, type SummaryState } from "./checkout-summary.tsx";
+import { CheckoutSummary } from "./checkout-summary.tsx";
 import { PaymentResult } from "./payment-result.tsx";
 
 /** The review shows two columns on a window wider than this, as the mockup. */
@@ -77,27 +81,26 @@ function Review({
   );
   const snapshot = useValue(review.state);
   const paying = useValue(payment.state);
+  const [reloading, setReloading] = useState(false);
   useEffect(() => {
     void usage.load();
     void review.ensure();
   }, [usage, review]);
-  const shown = reviewedChoice(snapshot);
   const busy = paymentBusy(paying);
-  const page = usageState.status === "ready" ? usageState.page : null;
-  const summary: SummaryState =
-    shown !== null
-      ? {
-          kind: "ready",
-          model: reviewModel(shown, workspace.name),
-          prorated: shown.prorated,
-        }
-      : snapshot.review.status === "failed"
-        ? {
-            kind: "failed",
-            ...reviewFailure(snapshot.review.failure, page, wanted.tier),
-          }
-        : { kind: "loading" };
-  const outcome = outcomeModel(paying, workspace);
+  // The one gate that the payment store also checks before it sends.
+  const summary = checkoutSummary({
+    review: snapshot,
+    gate: paymentGate(services, workspace.id),
+    usage: usageState.status === "ready" ? usageState.page : null,
+    workspace: workspace.name,
+  });
+  const outcome = outcomeModel(paying, workspace, usageState);
+  const reload = () => {
+    setReloading(true);
+    void checkoutReload(services, workspace.id, review).finally(() =>
+      setReloading(false),
+    );
+  };
   const edit = (addOns: PlanSelection["add_ons"]) => {
     payment.reset();
     void review.edit(addOns);
@@ -139,24 +142,25 @@ function Review({
           <CheckoutSummary
             state={summary}
             plansHref={plans}
-            canSubmit={
-              shown !== null &&
-              paying.status === "idle" &&
-              paymentMayStart(services, workspace.id)
-            }
+            usageHref={billingHref(workspace.id)}
+            canSubmit={summary.kind === "ready" && paying.status === "idle"}
             submitting={busy}
+            reloading={reloading}
             onSubmit={() => {
-              if (shown !== null) {
+              const shown = reviewedChoice(snapshot);
+              if (summary.kind === "ready" && shown !== null) {
                 void payment.submit({ kind: "plan", review: shown });
               }
             }}
-            onRetry={() => void review.retry()}
+            onRetryReview={() => void review.retry()}
+            onReload={reload}
           />
           {outcome ? (
             <PaymentResult
               model={outcome}
-              busy={busy}
+              busy={busy || reloading}
               onRetry={() => void payment.retry()}
+              onReload={reload}
               onPortal={() => void portal.run()}
             />
           ) : null}

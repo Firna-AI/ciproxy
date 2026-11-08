@@ -1,3 +1,11 @@
 {
-  "order": ["add-ons", "pending", "checkout", "checkout-return", "payments"]
+  "order": [
+    "add-ons",
+    "pending",
+    "checkout",
+    "payment-gate",
+    "unknown-results",
+    "checkout-return",
+    "payments"
+  ]
 }

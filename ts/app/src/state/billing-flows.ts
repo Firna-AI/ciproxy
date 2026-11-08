@@ -30,7 +30,8 @@ import { createReviewStore, type ReviewStore } from "./billing-review.ts";
 import {
   billingEndpoints,
   billingSettled,
-  paymentMayStart,
+  paymentGate,
+  usageStore,
 } from "./billing.ts";
 
 export function createPagePayment(
@@ -47,7 +48,7 @@ export function createPagePayment(
       return result;
     },
     mutate: services.session.mutate,
-    canStart: () => paymentMayStart(services, workspaceId),
+    canStart: () => paymentGate(services, workspaceId) === "open",
     leave: (url) => {
       savePaymentContext(tab, "checkout", workspaceId);
       services.navigator.leave(url);
@@ -163,4 +164,20 @@ export function stripeReturnTarget(
   query: Readonly<Record<string, string | readonly string[] | undefined>>,
 ): string | null {
   return stripeReturnHref(path, query, paymentContext(services.env.tab, kind));
+}
+
+/**
+ * Try again of Checkout after a failed Plan and usage read: read it again,
+ * and the review too when that read failed. Nothing pays here.
+ */
+export async function checkoutReload(
+  services: AppServices,
+  workspaceId: string,
+  review: ReviewStore,
+): Promise<void> {
+  const reviewFailed = review.state.get().review.status === "failed";
+  await Promise.all([
+    usageStore(services, workspaceId).load(),
+    reviewFailed ? review.retry() : null,
+  ]);
 }

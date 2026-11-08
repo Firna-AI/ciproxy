@@ -59,6 +59,7 @@ export function AddOnsPanel({
   outcome,
   onSave,
   onRetry,
+  onReload,
   onPortal,
 }: {
   page: PlanUsagePage;
@@ -70,6 +71,8 @@ export function AddOnsPanel({
   outcome: OutcomeModel | null;
   onSave: () => void;
   onRetry: () => void;
+  /** Read Plan and usage again, after that read failed. */
+  onReload: () => void;
   onPortal: () => void;
 }) {
   const { tier } = page.status.selection;
@@ -132,6 +135,7 @@ export function AddOnsPanel({
             model={outcome}
             busy={saving}
             onRetry={onRetry}
+            onReload={onReload}
             onPortal={onPortal}
           />
         ) : null}

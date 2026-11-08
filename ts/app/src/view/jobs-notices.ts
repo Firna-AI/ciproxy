@@ -1,13 +1,16 @@
 // The notices of the live queue: each reason why jobs wait that the API
-// reports. A notice names only the facts that the API gives. An action that
-// changes a setting goes to a caller that the API says may manage it, and
-// everyone else reads "Ask an Admin". A link to GitHub is for everyone,
-// because GitHub decides who may act there.
+// reports. A notice names only the facts that the API gives, and each notice
+// about a waiting label reads the same place of that label, so no notice
+// promises a Boat start that the facts do not confirm. An action that changes
+// a setting goes to a caller that the API says may manage it, and everyone
+// else reads "Ask an Admin". A link to GitHub is for everyone, because GitHub
+// decides who may act there.
 
-import type { JobsLivePage, WaitingLabelFit } from "../api/jobs-types.ts";
+import type { JobsLivePage } from "../api/jobs-types.ts";
 import type { NoticeTone } from "./page-model.ts";
-import { addUtcDays, formatCents, formatUtcDate } from "./exact-format.ts";
-import { formatGigabytes, formatTime } from "./format.ts";
+import { formatGigabytes } from "./format.ts";
+import { boatNotices } from "./jobs-boat-notices.ts";
+import { boatTiming, labelPlaces, type LabelPlace } from "./jobs-places.ts";
 
 export type NoticeAction =
   | { kind: "go"; label: string; href: string }
@@ -24,26 +27,39 @@ export type LiveNotice = {
 
 const askAdmin: NoticeAction = { kind: "ask", text: "Ask an Admin" };
 
-const monthName = new Intl.DateTimeFormat("en-GB", {
-  month: "long",
-  timeZone: "UTC",
-});
+/**
+ * The action of a setting: its link for a caller who may manage it, and
+ * "Ask an Admin" for everyone else.
+ */
+function manager(page: JobsLivePage, settings: string) {
+  return (label: string): NoticeAction =>
+    page.can_manage ? { kind: "go", label, href: settings } : askAdmin;
+}
 
 function jobs(count: number | bigint): string {
   return BigInt(count) === 1n ? "1 job" : `${count} jobs`;
 }
 
-/** "when it has waited 30 seconds", or "at once": the saved overflow wait. */
-function waitText(seconds: number): string {
+/**
+ * "when it has waited 30 seconds", "when they have waited 30 seconds", or "at
+ * once": the saved overflow wait, for one job or for several.
+ */
+function waitText(seconds: number, several = false): string {
   if (seconds === 0) return "at once";
+  const waited = several ? "when they have waited" : "when it has waited";
   if (seconds % 60 === 0) {
     const minutes = seconds / 60;
-    return `when it has waited ${minutes} ${minutes === 1 ? "minute" : "minutes"}`;
+    return `${waited} ${minutes} ${minutes === 1 ? "minute" : "minutes"}`;
   }
-  return `when it has waited ${seconds} seconds`;
+  return `${waited} ${seconds} seconds`;
 }
 
-function labelNotices(fit: WaitingLabelFit, settings: string): LiveNotice[] {
+function sumJobs(places: readonly LabelPlace[]): number {
+  return places.reduce((sum, place) => sum + place.jobs, 0);
+}
+
+function labelNotices(place: LabelPlace, settings: string): LiveNotice[] {
+  const { fit } = place;
   const count = BigInt(fit.waiting_jobs);
   const verb = count === 1n ? "waits" : "wait";
   const action: NoticeAction | null = fit.can_edit
@@ -73,8 +89,8 @@ function labelNotices(fit: WaitingLabelFit, settings: string): LiveNotice[] {
       action: null,
     });
   }
-  if (fit.boat.state === "largest_fallback") {
-    const boat = `Boat ${fit.boat.size_name}, with ${fit.boat.size.vcpus} vCPU and ${formatGigabytes(fit.boat.size.memory_bytes)}`;
+  if (place.boat.kind === "starts" && place.boat.largest) {
+    const boat = `Boat ${place.boat.sizeName}, with ${place.boat.size.vcpus} vCPU and ${formatGigabytes(place.boat.size.memory_bytes)}`;
     notices.push({
       key: `largest-${fit.label_id}`,
       tone: "info",
@@ -88,98 +104,85 @@ function labelNotices(fit: WaitingLabelFit, settings: string): LiveNotice[] {
   return notices;
 }
 
-function boatNotices(page: JobsLivePage, settings: string): LiveNotice[] {
-  const overflow = page.overflow ?? null;
-  if (overflow === null) return [];
-  const manage = (label: string): NoticeAction =>
-    page.can_manage ? { kind: "go", label, href: settings } : askAdmin;
-  const notices: LiveNotice[] = [];
-  if (overflow.limit_reached === true) {
-    const until = overflow.next_month.slice(0, 10);
-    const month = monthName.format(new Date(addUtcDays(until, -1)));
-    const limit = overflow.limit_cents ?? null;
-    notices.push({
-      key: "spend-limit",
-      tone: "warning",
-      title: limit
-        ? `Boat reached its ${formatCents(limit)} limit for ${month}`
-        : `Boat reached its spend limit for ${month}`,
-      body: `Jobs run on your machines only, and wait there for a free slot. Boat takes jobs again on ${formatUtcDate(until)}.`,
-      action: manage("Raise the limit"),
-    });
+/**
+ * What Boat does for the jobs that wait for a free slot: it starts each one,
+ * or some of them, after the overflow wait, or the Boat costs hold every
+ * start. A label that Boat does not start now gets no Boat sentence.
+ */
+function slotBoat(
+  page: JobsLivePage,
+  forSlot: readonly LabelPlace[],
+  slot: number,
+): string[] {
+  const afterWait = sumJobs(
+    forSlot.filter((place) => boatTiming(place) === "after-wait"),
+  );
+  const wait = page.overflow_wait_seconds;
+  if (afterWait === slot) return [`Each one starts on Boat ${waitText(wait)}.`];
+  if (afterWait > 0) {
+    const verb = afterWait === 1 ? "starts" : "start";
+    return [
+      `${afterWait} of them ${verb} on Boat ${waitText(wait, afterWait > 1)}.`,
+    ];
   }
-  if (overflow.key_rejected) {
-    notices.push({
-      key: "boat-key",
-      tone: "warning",
-      title: "Boat rejected the key",
-      body: "Jobs run on your machines only, and wait there for a free slot, until a new key is connected.",
-      action: manage("Connect a new key"),
-    });
+  if (forSlot.some((place) => place.boat.kind === "uncounted")) {
+    return ["Boat starts no new sandbox until ciproxy can count its costs."];
   }
-  if (overflow.billing_required) {
-    notices.push({
-      key: "boat-billing",
-      tone: "warning",
-      title: "Boat needs billing on your Boat account",
-      body: "Boat starts no new sandboxes until its billing is set up. Jobs run on your machines only, and wait there for a free slot.",
-      action: null,
-    });
-  }
-  const refused =
-    (overflow.retry_at ?? null) !== null ||
-    overflow.refused_sizes.length > 0 ||
-    page.waiting_labels.some(
-      (fit) => "refused" in fit.boat && fit.boat.refused,
-    );
-  if (refused) {
-    const retry = overflow.retry_at ?? null;
-    notices.push({
-      key: "boat-refused",
-      tone: "warning",
-      title: "Boat refused new sandboxes",
-      body: retry
-        ? `Waiting jobs take the first free slot on your machines, and ciproxy tries Boat again at ${formatTime(retry)}.`
-        : "Waiting jobs take the first free slot on your machines, and ciproxy tries Boat again.",
-      action: null,
-    });
-  }
-  return notices;
+  return [];
 }
 
-function fullNotice(page: JobsLivePage, settings: string, boat: boolean) {
+/**
+ * The notice of a full queue. It counts the jobs that wait for a free own
+ * slot, and promises Boat only to the jobs of a label that Boat starts now:
+ * after the overflow wait, or at once when no own machine runs the label.
+ */
+function fullNotice(
+  page: JobsLivePage,
+  places: readonly LabelPlace[],
+  settings: string,
+  boat: boolean,
+): LiveNotice | null {
   const used = page.own_slots_used ?? null;
   const total = page.own_slots_total ?? null;
-  const waiting = page.waiting.length;
-  if (waiting === 0 || used === null || total === null) return null;
+  if (used === null || total === null) return null;
   if (BigInt(total) === 0n || BigInt(used) < BigInt(total)) return null;
-  const manage = (label: string): NoticeAction =>
-    page.can_manage ? { kind: "go", label, href: settings } : askAdmin;
-  const lead = `${jobs(waiting)} ${waiting === 1 ? "waits" : "wait"} for a free slot.`;
-  const notice = (body: string, action: NoticeAction | null): LiveNotice => ({
+  const forSlot = places.filter((place) => place.own === "fits");
+  const slot = sumJobs(forSlot);
+  const atOnce = sumJobs(
+    places.filter((place) => boatTiming(place) === "at-once"),
+  );
+  if (slot === 0 && atOnce === 0) return null;
+  const manage = manager(page, settings);
+  const lead = `${jobs(slot)} ${slot === 1 ? "waits" : "wait"} for a free slot.`;
+  const notice = (
+    sentences: readonly string[],
+    action: NoticeAction | null,
+  ): LiveNotice => ({
     key: "machines-full",
     tone: "info",
     title: "Your machines are full",
-    body: `${lead} ${body}`,
+    body: sentences.join(" "),
     action,
   });
   if (!page.overflow_enabled) {
     return notice(
-      "Boat overflow is off, so each one starts when a slot is free.",
+      [lead, "Boat overflow is off, so each one starts when a slot is free."],
       manage("Turn on Boat"),
     );
   }
   if (page.overflow && !page.overflow.connected) {
     return notice(
-      "Boat is not connected, so each one starts when a slot is free.",
+      [lead, "Boat is not connected, so each one starts when a slot is free."],
       manage("Connect Boat"),
     );
   }
   if (boat) return null;
-  return notice(
-    `Each one starts on Boat ${waitText(page.overflow_wait_seconds)}.`,
-    null,
-  );
+  const sentences = slot > 0 ? [lead, ...slotBoat(page, forSlot, slot)] : [];
+  if (atOnce > 0) {
+    const verb = atOnce === 1 ? "starts" : "start";
+    sentences.push(`${jobs(atOnce)} ${verb} on Boat at once.`);
+  }
+  return notice(sentences, null);
 }
 
 export function liveNotices(
@@ -211,12 +214,17 @@ export function liveNotices(
           },
         },
   );
-  const boat = boatNotices(page, settingsHref);
+  const places = labelPlaces(page);
+  const overflow = page.overflow ?? null;
+  const boat =
+    overflow === null
+      ? []
+      : boatNotices(overflow, places, manager(page, settingsHref));
   notices.push(...boat);
-  for (const fit of page.waiting_labels) {
-    notices.push(...labelNotices(fit, settingsHref));
+  for (const place of places) {
+    notices.push(...labelNotices(place, settingsHref));
   }
-  const full = fullNotice(page, settingsHref, boat.length > 0);
+  const full = fullNotice(page, places, settingsHref, boat.length > 0);
   if (full) notices.push(full);
   return notices;
 }

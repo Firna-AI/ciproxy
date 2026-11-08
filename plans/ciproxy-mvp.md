@@ -1492,6 +1492,39 @@ Each screen follows its mockup, as Milestone 19 says.
       Source: pull request #34, fix round 1, 7 November 2026.
       Branch: `conductor/m21-jobs-savings-and-billing-ui`.
 
+## Milestone 21a: Review mockup states
+
+Tags: mockup
+
+Depends on: 18, 19
+
+- [x] Add the current-contract queue destinations, uncertain billing
+      outcomes, and failed billing-read recovery before their product
+      fixes. Keep the known-data scenes and both viewport variants.
+      Branch: `conductor/m21-jobs-savings-and-billing-ui`.
+
+## Milestone 21b: Review fixes for dashboard pages
+
+Tags: ui
+
+Depends on: 21a
+
+- [x] Correct the queue notices, Savings page lifetime, uncertain billing
+      outcomes, Checkout recovery, period dates, and live return results.
+      Keep each payment request in its existing boundary module.
+      Branch: `conductor/m21-jobs-savings-and-billing-ui`.
+- [ ] Check the changed screens at 1440, 720, and 390 pixels. Run the
+      complete gate with the store database, commit, push, and re-review.
+      Branch: `conductor/m21-jobs-savings-and-billing-ui`.
+
+Review outcome, 8 November 2026: use confirmed current facts after an
+uncertain payment result. Share the reason that prevents a payment between
+the screen and the store. Preserve half-open UTC ranges for dates and
+timestamps. Defer the rare cache-cause, portal-feedback, saved-payment
+lifetime, and remaining cached-role defects. Defer the shared poller
+lifetime because it reaches existing stores outside this UI change.
+Review records: `.context/reviews/conductor/m21-jobs-savings-and-billing-ui/`.
+
 ## Milestone 22: Dashboard UI: Boat
 
 Tags: ui

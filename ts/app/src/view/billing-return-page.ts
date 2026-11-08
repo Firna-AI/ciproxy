@@ -119,22 +119,27 @@ function settled(
         ],
       );
     case "payment_required":
-      return result(
-        "plain",
-        "Your bank needs to confirm this payment",
-        "Your plan stays as it was until Stripe confirms the payment.",
-        outcome.payment_url
-          ? [
+      return outcome.payment_url
+        ? result(
+            "plain",
+            "Your payment is not finished",
+            "Finish it on its Stripe page. Your plan changes when Stripe confirms the payment.",
+            [
               {
                 kind: "stripe",
-                label: "Confirm the payment",
+                label: "Open the Stripe page",
                 href: outcome.payment_url,
                 newTab: true,
               },
               usageLink,
-            ]
-          : [usageLink],
-      );
+            ],
+          )
+        : result(
+            "plain",
+            "Your payment is not finished",
+            "Your plan changes when Stripe confirms the payment.",
+            [usageLink],
+          );
   }
 }
 

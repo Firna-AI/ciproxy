@@ -9,6 +9,7 @@ import { capabilityRuns } from "./browser-pages-capabilities.ts";
 import { billingJourneys } from "./browser-pages-billing-journeys.ts";
 import { bannerJourneys } from "./browser-pages-banner-journeys.ts";
 import { billingErrorRuns } from "./browser-pages-error-journeys.ts";
+import { checkoutRecoveryRuns } from "./browser-pages-checkout-recovery.ts";
 
 export function createPagesRegistry(
   origin: string,
@@ -18,12 +19,13 @@ export function createPagesRegistry(
     ...jobsScreenRuns(origin),
     ...savingsScreenRuns(origin),
     ...billingScreenRuns(origin),
-    ...loadingRuns(origin),
+    ...loadingRuns(origin, output),
     ...dataJourneys(origin, output),
     ...paymentJourneys(origin, output),
     ...capabilityRuns(origin, output),
     ...billingJourneys(origin, output),
     ...bannerJourneys(origin, output),
     ...billingErrorRuns(origin, output),
+    ...checkoutRecoveryRuns(origin, output),
   ];
 }

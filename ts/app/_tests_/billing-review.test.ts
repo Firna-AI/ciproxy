@@ -13,6 +13,7 @@ import {
   createReviewStore,
   reviewedChoice,
 } from "../src/state/billing-review.ts";
+import { reviewModel } from "../src/view/billing-checkout.ts";
 import { workspaceId } from "../scripts/fixtures-core.ts";
 import {
   offer,
@@ -105,4 +106,34 @@ test("each submission sends the reviewed or quoted choice to its route", async (
     ["POST", "/billing/change", selection("team", 1)],
     ["PUT", "/billing/add-ons", { start_blocks: 1, machines: 0 }],
   ]);
+});
+
+test("a paid review shows today's charge apart from the monthly total, with the day of later charges", () => {
+  // Business with 2 blocks of starts and 1 extra own machine. The API gives
+  // a prorated charge for today that differs from the monthly total, and a
+  // period that ends at midnight on the billing day.
+  const paid = review(
+    offer(selection("business", 2, 1), "33900", "170000", "11"),
+    {
+      today_cents: "21037",
+      billing_day: 17,
+      prorated: true,
+      period_end: "2026-12-17T00:00:00Z",
+    },
+  );
+  const model = reviewModel(paid, "mokly-ai");
+  assert.deepEqual(
+    model.rows.map((row) => [row.label, row.value]),
+    [
+      ["Plan", "Business"],
+      ["Extra starts", "2 blocks of starts"],
+      ["Extra own machines", "1 extra own machine"],
+      ["Total a month", "$339\u00a0a\u00a0month"],
+      ["Charged today", "$210.37"],
+    ],
+  );
+  assert.match(
+    model.note,
+    /card on file \$210\.37 for the rest of this period, which ends on 16\u00a0December, then \$339 on the 17th of each month\./,
+  );
 });

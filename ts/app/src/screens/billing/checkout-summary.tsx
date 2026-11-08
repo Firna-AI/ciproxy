@@ -1,7 +1,8 @@
 // The summary of a review: the priced choice, the monthly total, what Stripe
 // charges today, and the button that pays for exactly this review. While a
-// new review loads or after it failed, the summary shows that state and no
-// button, so nothing can pay for a choice that the page does not show.
+// read runs, the summary says which. When a payment cannot start, it says why
+// and offers what recovers it, with no button that pays, so nothing can pay
+// for a choice that the page does not show.
 
 import { StyleSheet, Text, View } from "react-native";
 import { Link } from "expo-router";
@@ -12,27 +13,66 @@ import { ExternalIcon } from "../../components/icons.tsx";
 import { Panel } from "../../components/panel.tsx";
 import { WaitingLine } from "../../components/page-state.tsx";
 import { text } from "../../components/text.ts";
-import type { ReviewModel } from "../../view/billing-checkout.ts";
+import type {
+  SummaryAction,
+  SummaryState,
+} from "../../view/billing-checkout-summary.ts";
 
-export type SummaryState =
-  | { kind: "loading" }
-  | { kind: "failed"; title: string; body: string; retry: boolean }
-  | { kind: "ready"; model: ReviewModel; prorated: boolean };
+function Recover({
+  action,
+  usageHref,
+  reloading,
+  onRetryReview,
+  onReload,
+}: {
+  action: SummaryAction;
+  usageHref: string;
+  reloading: boolean;
+  onRetryReview: () => void;
+  onReload: () => void;
+}) {
+  if (action.kind === "reload") {
+    return (
+      <ActionButton
+        label={action.label}
+        tone="primary"
+        block
+        busy={reloading}
+        onPress={onReload}
+      />
+    );
+  }
+  if (action.kind === "usage") {
+    return (
+      <Link href={usageHref} asChild>
+        <ActionLink label={action.label} href={usageHref} block />
+      </Link>
+    );
+  }
+  return <ActionButton label={action.label} block onPress={onRetryReview} />;
+}
 
 export function CheckoutSummary({
   state,
   plansHref,
+  usageHref,
   canSubmit,
   submitting,
+  reloading,
   onSubmit,
-  onRetry,
+  onRetryReview,
+  onReload,
 }: {
   state: SummaryState;
   plansHref: string;
+  usageHref: string;
   canSubmit: boolean;
   submitting: boolean;
+  /** Try again of a failed Plan and usage read is on its way. */
+  reloading: boolean;
   onSubmit: () => void;
-  onRetry: () => void;
+  onRetryReview: () => void;
+  onReload: () => void;
 }) {
   const back = (
     <Link href={plansHref} asChild>
@@ -43,13 +83,13 @@ export function CheckoutSummary({
     return (
       <Panel title="Summary">
         <View style={styles.stack}>
-          <WaitingLine>Pricing this choice</WaitingLine>
+          <WaitingLine>{state.text}</WaitingLine>
           {back}
         </View>
       </Panel>
     );
   }
-  if (state.kind === "failed") {
+  if (state.kind === "blocked") {
     return (
       <Panel title="Summary">
         <View style={styles.stack}>
@@ -57,8 +97,14 @@ export function CheckoutSummary({
             <Text style={[text.body, text.strong]}>{state.title}</Text>
             <Text style={text.small}>{state.body}</Text>
           </View>
-          {state.retry ? (
-            <ActionButton label="Try again" block onPress={onRetry} />
+          {state.action ? (
+            <Recover
+              action={state.action}
+              usageHref={usageHref}
+              reloading={reloading}
+              onRetryReview={onRetryReview}
+              onReload={onReload}
+            />
           ) : null}
           {back}
         </View>

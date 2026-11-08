@@ -6,13 +6,14 @@ import {
 import { jobHref, jobsHref } from "../src/view/jobs-links.ts";
 import { savingsHref } from "../src/view/savings-report.ts";
 import { control, visible } from "./browser-fixture.ts";
+import { absent, capturePage } from "./browser-pages-helpers.ts";
 import { baseSelection } from "./fixtures-billing.ts";
 import { workspaceId } from "./fixtures-core.ts";
 import { fixtureJobIds } from "./fixtures-jobs.ts";
 import type { PageRoute } from "./harness-pages-state.ts";
 import type { PagesSmokeRun } from "./browser-pages-runtime.ts";
 
-export function loadingRuns(origin: string): PagesSmokeRun[] {
+export function loadingRuns(origin: string, output: string): PagesSmokeRun[] {
   const cases: {
     name: string;
     route: PageRoute;
@@ -68,7 +69,12 @@ export function loadingRuns(origin: string): PagesSmokeRun[] {
     async check(page, _context, width) {
       await control(origin, {
         scenario: "m21-usage-paid",
-        pages: { held: [item.route] },
+        pages: {
+          held:
+            item.name === "review-loading"
+              ? ["billing", item.route]
+              : [item.route],
+        },
       });
       const route =
         item.route === "jobs/detail"
@@ -77,13 +83,27 @@ export function loadingRuns(origin: string): PagesSmokeRun[] {
       const pending = page.waitForRequest(
         new RegExp(`/api/workspaces/[^/]+/${route}(?:\\?|$)`),
       );
+      const checking =
+        item.name === "review-loading"
+          ? page.waitForRequest(/\/billing$/)
+          : undefined;
       await page.goto(origin + item.path, { waitUntil: "domcontentloaded" });
       await pending;
       await visible(
         page.getByRole("heading", { name: item.heading, exact: true }),
       );
-      if (item.name === "review-loading")
+      if (item.name === "review-loading") {
+        await checking;
+        await visible(page.getByText("Checking your plan", { exact: true }));
+        await absent(
+          page.getByRole("button", { name: "Move to Business", exact: true }),
+        );
+        await capturePage(page, output, "review-loading-checking", width);
+        const checked = page.waitForResponse(/\/billing$/);
+        await control(origin, { pages: { held: [item.route] } });
+        await (await checked).finished();
         await visible(page.getByText("Pricing this choice", { exact: true }));
+      }
       if (item.name === "history-loading" && width !== 390)
         await visible(page.getByText("Finished", { exact: true }));
     },

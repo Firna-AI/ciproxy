@@ -20,7 +20,6 @@ import {
   formatUtcDate,
   formatUtcRange,
   formatWhole,
-  utcDayOf,
 } from "./exact-format.ts";
 
 export type MeterModel = {
@@ -129,7 +128,8 @@ function endNotice(page: PlanUsagePage, workspace: string): UsageNotice[] {
 /**
  * The notice of a payment or an operation that the server waits for. A
  * payment that this tab can continue names its Stripe page: an open Checkout
- * or a bank confirmation.
+ * or the page of an unpaid invoice. An unpaid invoice does not tell why
+ * Stripe took no payment, so the notice names no bank.
  */
 export type PendingNotice = Extract<UsageNotice, { kind: "confirming" }>;
 
@@ -148,8 +148,8 @@ export function pendingNotice(
   if (status.payment_pending && resume?.kind === "bank") {
     return {
       kind: "confirming",
-      title: "Your bank needs to confirm this payment",
-      body: "Your plan stays as it was until Stripe confirms the payment. Jobs keep running.",
+      title: "Your payment is not finished",
+      body: "Finish it on its Stripe page. Your plan changes when Stripe confirms the payment, and jobs keep running.",
       resume,
     };
   }
@@ -209,10 +209,7 @@ export function usageModel(
   const pending = pendingNotice(status, resume);
   return {
     plan: planModel(page),
-    period: formatUtcRange(
-      utcDayOf(Date.parse(status.period_start)),
-      utcDayOf(Date.parse(status.period_end)),
-    ),
+    period: formatUtcRange(status.period_start, status.period_end),
     starts: startsMeter(page),
     machines: machinesMeter(page),
     organizations: isZero(page.organizations_over)

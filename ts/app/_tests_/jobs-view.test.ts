@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { JobsLivePage } from "../src/api/jobs-types.ts";
 import {
   jobDetailModel,
   noRunnerReason,
@@ -9,7 +8,6 @@ import {
 } from "../src/view/jobs-detail.ts";
 import { filtersOf, historyQuery, jobsHref } from "../src/view/jobs-links.ts";
 import { liveModel } from "../src/view/jobs-live.ts";
-import { liveNotices } from "../src/view/jobs-notices.ts";
 import { fixtureJob } from "../scripts/fixtures-jobs.ts";
 import { liveJobs } from "../scripts/fixtures-jobs-live.ts";
 
@@ -147,61 +145,6 @@ test("live figures keep unknown slots and a hidden waiting count apart from zero
   assert.deepEqual(labels(unknown.figures).slice(1, 2), [
     ["Own slots in use", "Unknown"],
   ]);
-});
-
-test("wait notices follow the flags of the API, and an unknown fit claims no fit", () => {
-  const base = liveJobs("live", "viewer", null);
-  const waiting = base.waiting_labels[0];
-  assert.notEqual(waiting, undefined);
-  const page: JobsLivePage = {
-    ...base,
-    can_manage: false,
-    visibility: [
-      {
-        organization: "northstar-labs",
-        suspended: true,
-        removed: false,
-        github_url:
-          "https://github.com/organizations/northstar-labs/settings/installations/7",
-      },
-    ],
-    waiting_labels: waiting
-      ? [
-          {
-            ...waiting,
-            label_id: "a",
-            nothing_fits: true,
-            can_edit: false,
-            ask_admin: true,
-          },
-          {
-            ...waiting,
-            label_id: "b",
-            nothing_fits: null,
-            can_edit: true,
-            ask_admin: false,
-          },
-        ]
-      : [],
-  };
-  const notices = liveNotices(page, "/settings?workspace=w");
-  assert.deepEqual(
-    notices.map((notice) => [notice.key, notice.tone, notice.action]),
-    [
-      [
-        "suspended-northstar-labs",
-        "warning",
-        {
-          kind: "leave",
-          label: "Open GitHub",
-          href: "https://github.com/organizations/northstar-labs/settings/installations/7",
-        },
-      ],
-      ["fits-a", "warning", { kind: "ask", text: "Ask an Admin" }],
-      ["fit-unknown-b", "info", null],
-    ],
-  );
-  assert.equal(notices[2]?.body.includes("No machine and no Boat size"), false);
 });
 
 test("History filters round-trip through the address and ask the API from the UTC date", () => {

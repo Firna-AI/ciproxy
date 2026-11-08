@@ -15,7 +15,7 @@ import { plansHref } from "../../view/billing-routes.ts";
 import type { OpenPayment } from "../../state/billing-open-payment.ts";
 import type { UsageNotice } from "../../view/billing-usage.ts";
 
-/** Continue a payment on its own Stripe page; a bank page opens a tab. */
+/** Continue a payment on its own Stripe page; an invoice page opens a tab. */
 export function ContinuePayment({ resume }: { resume: OpenPayment }) {
   return (
     <ActionLink

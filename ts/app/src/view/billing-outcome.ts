@@ -1,19 +1,30 @@
-// What a page shows after a payment, from the server's outcome only: a plan
-// that Stripe confirmed, a payment that Stripe still confirms, a bank that
-// asks to confirm, a card that failed, or a request that did not reach the
-// server. Retry sends the same reviewed choice again, which continues the
-// same payment on the server.
+// What a page shows after a payment, from the server's outcome: a plan that
+// Stripe confirmed, a payment that Stripe still confirms, a payment to finish
+// on its Stripe page, a card that failed, or a refusal. When the page did not
+// get the result, it says only what the Plan and usage read after it proves:
+// the submitted choice is the current plan, or a payment or a billing change
+// waits. Otherwise the result stays unknown. Retry sends the same choice
+// again, which continues the same payment on the server.
 
+import type { PlanUsagePage } from "../api/billing-types.ts";
 import { failureStatus } from "../api/client.ts";
-import { submittedSelection } from "../api/billing-payment.ts";
+import {
+  sameSelection,
+  submittedSelection,
+  type PaymentSubmission,
+} from "../api/billing-payment.ts";
+import { statusWaits, type PageSnapshot } from "../state/billing-page.ts";
 import type { PaymentSnapshot } from "../state/billing-payment.ts";
 import { askPayer, selectionText } from "./billing-format.ts";
 import { billingHref, plansHref } from "./billing-routes.ts";
+import { uncertainFailure, unknownPayment } from "./billing-uncertain.ts";
 import type { NoticeTone } from "./page-model.ts";
 
 export type OutcomeAction =
   | { kind: "link"; label: string; href: string; newTab: boolean }
   | { kind: "retry"; label: string }
+  /** Read Plan and usage again, after that read failed. */
+  | { kind: "reload"; label: string }
   | { kind: "portal"; label: string };
 
 export type OutcomeModel = {
@@ -35,6 +46,8 @@ const link = (label: string, href: string, newTab = false): OutcomeAction => ({
 export function outcomeModel(
   snapshot: PaymentSnapshot,
   workspace: { id: string; name: string },
+  /** The latest Plan and usage snapshot of the workspace. */
+  current: PageSnapshot<PlanUsagePage>,
 ): OutcomeModel | null {
   if (snapshot.status === "idle" || snapshot.status === "submitting") {
     return null;
@@ -42,14 +55,8 @@ export function outcomeModel(
   const usage = link("Open plan and usage", billingHref(workspace.id));
   if (snapshot.status === "failed") {
     const status = failureStatus(snapshot.failure);
-    if (status === 409) {
-      return {
-        done: false,
-        tone: "warning",
-        title: "A payment or a billing change is in progress",
-        body: "Plan and usage shows it until it ends. Jobs keep running.",
-        actions: [usage],
-      };
+    if (uncertainFailure(snapshot.failure)) {
+      return uncertainModel(snapshot, current, usage);
     }
     if (status === 403) {
       return {
@@ -63,10 +70,7 @@ export function outcomeModel(
     return {
       done: false,
       tone: "danger",
-      title:
-        status === null
-          ? "Unable to reach ciproxy"
-          : "The payment did not start",
+      title: "The payment did not start",
       body: "Your plan stays as it was, and jobs keep running. Try again.",
       actions: [{ kind: "retry", label: "Try again" }],
     };
@@ -120,10 +124,10 @@ export function outcomeModel(
         ? {
             done: false,
             tone: "warning",
-            title: "Your bank needs to confirm this payment",
-            body: "Confirm it on the Stripe page. Your plan stays as it was until Stripe confirms the payment.",
+            title: "Your payment is not finished",
+            body: "Finish it on its Stripe page. Your plan changes when Stripe confirms the payment.",
             actions: [
-              link("Confirm the payment", outcome.payment_url, true),
+              link("Open the Stripe page", outcome.payment_url, true),
               { kind: "retry", label: "Check again" },
             ],
           }
@@ -138,4 +142,50 @@ export function outcomeModel(
             ],
           };
   }
+}
+
+/**
+ * A failed payment that proves no result. While the read after it runs, or
+ * when that read failed, the result is unknown. A fresh read proves either
+ * the submitted choice as the current plan, or a payment or a billing change
+ * that waits. Anything else leaves the result unknown.
+ */
+function uncertainModel(
+  snapshot: { submission: PaymentSubmission; reading: boolean },
+  current: PageSnapshot<PlanUsagePage>,
+  usage: OutcomeAction,
+): OutcomeModel {
+  const unknown = (again: OutcomeAction): OutcomeModel => ({
+    done: false,
+    tone: "warning",
+    ...unknownPayment,
+    actions: [usage, again],
+  });
+  const retry: OutcomeAction = { kind: "retry", label: "Try again" };
+  if (snapshot.reading) return unknown(retry);
+  if (current.status !== "ready" || current.refreshFailure !== null) {
+    return unknown({ kind: "reload", label: "Try again" });
+  }
+  const { status } = current.page;
+  if (
+    sameSelection(status.selection, submittedSelection(snapshot.submission))
+  ) {
+    return {
+      done: false,
+      tone: "info",
+      title: `${selectionText(status.selection)} is your current plan`,
+      body: "Plan and usage shows it.",
+      actions: [usage],
+    };
+  }
+  if (statusWaits(status)) {
+    return {
+      done: false,
+      tone: "warning",
+      title: "A payment or a billing change is in progress",
+      body: "Plan and usage shows it until it ends. Jobs keep running.",
+      actions: [usage],
+    };
+  }
+  return unknown(retry);
 }

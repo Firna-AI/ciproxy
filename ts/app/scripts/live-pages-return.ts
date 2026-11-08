@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { createBillingEndpoints } from "../src/api/billing.ts";
 import { sameSelection } from "../src/api/billing-payment.ts";
-import type { ApiClient } from "../src/api/client.ts";
+import { failureStatus, type ApiClient } from "../src/api/client.ts";
 import { apiValue, type LiveChecks } from "./live-pages-checks.ts";
 import type { LivePagesCredentials } from "./live-pages-config.ts";
 import { readPrivateJson, writePrivateJson } from "./live-pages-private.ts";
@@ -40,12 +40,16 @@ export async function checkLiveReturn(
     assert.equal(saved.return_url, privateReturnUrl(config, checkout));
   });
   const billing = createBillingEndpoints(api);
-  const returned = await checks.check(
-    "exact-session Checkout return",
-    async () =>
-      apiValue(
-        await billing.checkoutReturn(config.workspace_id, checkout.session_id),
-      ),
+  const answer = await billing.checkoutReturn(
+    config.workspace_id,
+    checkout.session_id,
+  );
+  if (!answer.ok && failureStatus(answer.failure) === 409) {
+    checks.pending("Checkout return reconciliation busy");
+    return;
+  }
+  const returned = await checks.check("exact-session Checkout return", () =>
+    apiValue(answer),
   );
   const after = await checks.check(
     "current plan after Checkout return",
@@ -62,20 +66,35 @@ export async function checkLiveReturn(
   await checks.check("private Checkout result updated", () =>
     writePrivateJson(path, record, false),
   );
-  if (returned.outcome.state !== "confirmed") {
-    checks.pending("Checkout payment confirmation");
-    return;
+  const outcome = returned.outcome;
+  switch (outcome.state) {
+    case "confirmed":
+      await checks.check("confirmed reviewed plan and add-ons", () => {
+        assert.equal(
+          sameSelection(after.status.selection, saved.review.choice.selection),
+          true,
+        );
+        assert.equal(
+          after.current.monthly_cents,
+          saved.review.choice.monthly_cents,
+        );
+        assert.equal(after.status.subscription, "active");
+        assert.equal(after.status.payment_pending, false);
+      });
+      return;
+    case "confirming":
+      checks.pending("Checkout payment confirmation");
+      return;
+    case "open":
+      checks.pending("Checkout payment needs completion");
+      return;
+    case "unfinished":
+      checks.fail("Checkout expired without payment");
+      return;
+    case "payment_required":
+      checks.fail("Unexpected Checkout payment-required outcome");
+      return;
   }
-  await checks.check("confirmed reviewed plan and add-ons", () => {
-    assert.equal(
-      sameSelection(after.status.selection, saved.review.choice.selection),
-      true,
-    );
-    assert.equal(
-      after.current.monthly_cents,
-      saved.review.choice.monthly_cents,
-    );
-    assert.equal(after.status.subscription, "active");
-    assert.equal(after.status.payment_pending, false);
-  });
+  const handled: never = outcome;
+  return handled;
 }

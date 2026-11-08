@@ -151,7 +151,7 @@ export function billingScreenRuns(origin: string) {
       name: "return-payment-required",
       scenario: "m21-payment-required",
       path: returned,
-      heading: "Your bank needs to confirm this payment",
+      heading: "Your payment is not finished",
     },
     {
       name: "return-error",

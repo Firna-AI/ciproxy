@@ -18,8 +18,7 @@
 
 - **Terms:**
   - **Open payment:** a Stripe Checkout that the person has not finished,
-    or a paid change that waits for a bank confirmation on the hosted
-    invoice page.
+    or a paid change that waits on the hosted invoice page of Stripe.
   - **Pending:** `payment_pending` of `PlanStatus` is true, because a
     Checkout or a payment command is open, at
     `crates/ciproxy-api/src/handlers/page_context.rs:177`.
@@ -74,8 +73,8 @@
   neither continue nor replace the open payment.
 - **Impact if no action:** A payer who left an unfinished Checkout on
   another device cannot pay from the dashboard until the provider session
-  expires. A bank confirmation that opens in a lost tab cannot be found
-  again from the dashboard. Jobs keep running, because the limits are
+  expires. The Stripe page of a paid change that opened in a lost tab cannot
+  be found again from the dashboard. Jobs keep running, because the limits are
   soft.
 - **Root question:** How does any payer, in any browser, continue the exact
   open payment of a workspace?
@@ -102,12 +101,16 @@
   - A dashboard that ends an open session at Stripe, because it could end
     a payment that the person completes on another device.
   - A shorter Checkout expiry through `expires_at`, because it cannot
-    continue the exact open Checkout or a bank confirmation. It only ends
-    the wait sooner.
-- **Wider fix:** B. One server answer covers Checkout and bank
-  confirmation in every browser.
+    continue the exact open Checkout or the Stripe page of a paid change. It
+    only ends the wait sooner.
+- **Wider fix:** B. One server answer covers Checkout and the Stripe page of
+  a paid change in every browser.
 - **Previous examples:** The same-tab case, which this branch fixed with
   the tab record of `ts/app/src/state/billing-open-payment.ts`.
+- **Related:** `plans/follow-ups/saved-payment-lifetime.md` keeps the link
+  that this tab received until its payment ends, so an older read cannot
+  remove it. This item covers another browser that has no link. Neither
+  item waits for the other.
 - **Recommendation:** B. It gives the exact open payment from the server,
   for both kinds, with no payment request and no provider URL in every
   page read.

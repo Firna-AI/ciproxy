@@ -41,9 +41,9 @@ export const plansResume = defineScreen({
 
 export const bankResume = defineScreen({
   slug: "bank-continue",
-  title: "Continue a bank confirmation after a reload",
+  title: "Continue a payment on its Stripe page after a reload",
   description:
-    "In mid-November the payer saved 1 block of starts, and the bank asked to confirm the payment. After a reload, the API still says that a payment waits. This tab saved the Stripe page of the bank, so Continue payment opens it in a new tab. The add-ons cannot change until the payment ends.",
+    "In mid-November the payer saved 1 block of starts, and the payment waited on the Stripe page of its unpaid invoice. After a reload, the API still says that a payment waits. This tab saved that Stripe page, so Continue payment opens it in a new tab. The add-ons cannot change until the payment ends.",
   rationale,
   relatedDocs: related("billing", "security"),
   address: orgAddress("billing"),
@@ -51,7 +51,7 @@ export const bankResume = defineScreen({
     <PlanUsageScreen
       viewport={context.viewport}
       state="over-starts"
-      api={{ plans: paths.plansOnTeam, pending: "bank" }}
+      api={{ plans: paths.plansOnTeam, pending: "invoice" }}
     />
   ),
 });

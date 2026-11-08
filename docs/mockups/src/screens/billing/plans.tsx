@@ -8,7 +8,8 @@
 // open no screen. As the current API gives it, while a payment waits on Free
 // in September, the page says so, with Continue payment when this tab saved
 // the Stripe page, and no tier can be chosen until the payment ends. The API
-// gives no add-on prices, so those cards name none.
+// gives no add-on prices, so those cards name none. When the page did not
+// get the result of Move to Free, its dialog says so.
 
 import type { Viewport } from "@mokly/mokly";
 
@@ -34,6 +35,7 @@ export const plansStates = [
   "from-free",
   "on-team",
   "move-to-free",
+  "move-to-free-unknown",
   "inactive-organization",
   "pending-checkout",
   "pending-confirming",
@@ -73,6 +75,7 @@ const context: Record<PlansState, PlansContext> = {
   },
   "on-team": onTeam,
   "move-to-free": onTeam,
+  "move-to-free-unknown": onTeam,
   "inactive-organization": {
     current: "free",
     covers: "team",
@@ -159,6 +162,7 @@ export function PlansScreen({
       </div>
       <p className="caption">{pending ? softLimits.api : softLimits.known}</p>
       {state === "move-to-free" ? <MoveToFreeDialog /> : null}
+      {state === "move-to-free-unknown" ? <MoveToFreeDialog unknown /> : null}
     </AppShell>
   );
 }

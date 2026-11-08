@@ -96,11 +96,16 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   address, and no workspace in a Stripe return. Its `pending` folder shows
   Continue payment for a payment whose Stripe page the tab saved. Its
   `checkout` folder shows a paid review, an unavailable price, and a refused
-  review that asks the person to review the change again.
-- The Jobs folders `wait-facts`, `queue-facts`, and `job-states` and the
-  Savings folder `report-states` show the states that come from facts of the
-  API, such as an unknown fit, a job that no runner took, a negative saving,
-  and a missing comparison price.
+  review that asks the person to review the change again. Its `payment-gate`
+  folder shows why a payment cannot start, and `unknown-results` shows a
+  payment or a Move to Free whose result the page did not get. A payment
+  that waits on its Stripe page names that page, not a bank.
+- The Jobs folders `wait-facts`, `queue-facts`, `place-facts`, and
+  `job-states` and the Savings folder `report-states` show the states that
+  come from facts of the API, such as an unknown fit, a job that no runner
+  took, a negative saving, and a missing comparison price. `place-facts`
+  shows where the waiting jobs of each label can start, also of a label
+  that only Boat runs.
 - A screen takes the role of the signed-in person. The shell shows the person
   of the role, and Settings only to an Admin. In place of an action that the
   role does not allow, the screen shows the words of
@@ -259,7 +264,8 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
 - `src/fixtures/wait-facts.ts`: the waiting jobs of a label whose fit is
   unknown and of a label that starts on the largest Boat size.
   `src/screens/jobs/live-fact-scenes.ts` and `live-fact-notices.tsx` build
-  these moments of the live queue and their notices.
+  these moments of the live queue and their notices, and the moments of
+  `place-facts` with the waiting jobs of a label that only Boat runs.
 - `src/fixtures/savings-states.ts`: the figures of each Savings state,
   changed from the known report only where the state needs it: a cost that
   nobody set or that is known in part, a missing comparison price, a negative
@@ -268,8 +274,9 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   and the moments that pass a limit, for the billing pages of the current API.
   `src/components/api-banner.tsx` words their banner as the API does.
 - `src/screens/billing/api-notices.tsx`, `api-add-ons.tsx`, `api-review.tsx`,
-  and `api-return.tsx`: the notices, the add-ons, the review, and the return
-  of the billing pages of the current API.
+  `api-outcome.tsx`, and `api-return.tsx`: the notices, the add-ons, the
+  review, the unknown results, and the return of the billing pages of the
+  current API.
 - `src/components/state-schema.ts`: the closed prop schema of a screen whose
   states differ by one `state` prop.
 - `src/screens/`: one component per screen, by area.

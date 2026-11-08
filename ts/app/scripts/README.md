@@ -154,8 +154,17 @@ node ts/app/scripts/live-pages-smoke.ts --step=return
   through the payment module of the app.
 - Then complete the Stripe test payment by hand in a browser.
 - `--step=return` checks the exact saved Checkout session, then checks that
-  the plan matches the reviewed choice. While Stripe still confirms, it
-  prints `PENDING` and exits with status 2. Run it again later.
+  the plan matches the reviewed choice after confirmation. A `confirming`
+  outcome prints `PENDING Checkout payment confirmation` and exits 2.
+  Run it again later. An `open` outcome instead prints
+  `PENDING Checkout payment needs completion`. Complete the hosted payment
+  first. A busy 409 answer prints
+  `PENDING Checkout return reconciliation busy`. Run return again later.
+- An `unfinished` outcome prints `FAIL Checkout expired without payment`
+  and exits 1. Start a fresh Checkout with a new `result_path`, because the
+  existing file reserves the old payment. A `payment_required` return also
+  fails: the Checkout return does not produce that paid-change outcome.
+  Other HTTP failures remain failures. A 403 does not prove expiry.
 
 The page check also reads three optional fields of the credential file:
 
@@ -174,7 +183,7 @@ The Stripe address and the session ID go only to the result file, which the
 check writes for its owner alone. Never copy them into a log or a message.
 The check exits with status 0 when every check passed, 1 when a check or the
 file failed, and 2 when the credentials are absent, a check was skipped, or
-the payment still confirms.
+the payment still confirms, remains open, or reconciliation is busy.
 
 ## Key Code
 

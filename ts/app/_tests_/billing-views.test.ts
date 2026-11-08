@@ -134,8 +134,16 @@ test("add-ons save only a choice that the API priced", () => {
 
 test("a payment outcome offers the way to recover that the server allows", () => {
   const submission = { kind: "plan", review: review() } as const;
+  // A fresh Plan and usage read that shows Free and nothing that waits.
+  const current = {
+    status: "ready",
+    page: usagePage(),
+    refreshFailure: null,
+  } as const;
   const settled = (outcome: PaymentSnapshot & { status: "settled" }) =>
-    outcomeModel(outcome, workspace)?.actions.map((action) => action.kind);
+    outcomeModel(outcome, workspace, current)?.actions.map(
+      (action) => action.kind,
+    );
   const bank = settled({
     status: "settled",
     submission,
@@ -163,10 +171,13 @@ test("a payment outcome offers the way to recover that the server allows", () =>
         },
       },
       workspace,
+      current,
     )?.actions.map((action) => action.kind);
-  assert.deepEqual(failed(409), ["link"]);
+  // A plain 409 and a 503 prove no result, and the fresh read shows neither
+  // the choice nor a wait: the result stays unknown, with Try again.
+  assert.deepEqual(failed(409), ["link", "retry"]);
   assert.deepEqual(failed(403), []);
-  assert.deepEqual(failed(503), ["retry"]);
+  assert.deepEqual(failed(503), ["link", "retry"]);
 });
 
 test("Plan and usage forecasts only before the limit and names the end of a plan", () => {
@@ -195,5 +206,57 @@ test("Plan and usage forecasts only before the limit and names the end of a plan
   assert.match(
     ending.notices[1]?.title ?? "",
     /^Team ends on 30\u00a0November$/,
+  );
+  // A period ends at its exclusive end: a noon end includes its own date, and
+  // a midnight end does not.
+  const period = (start: string, end: string) => {
+    const page = usagePage();
+    page.status.period_start = start;
+    page.status.period_end = end;
+    return usageModel(page, "mokly-ai").period;
+  };
+  assert.equal(
+    period("2026-11-06T12:00:00Z", "2026-12-06T12:00:00Z"),
+    "6\u00a0November\u00a0– 6\u00a0December",
+  );
+  assert.equal(
+    period("2026-11-04T00:00:00Z", "2026-12-04T00:00:00Z"),
+    "4\u00a0November\u00a0– 3\u00a0December",
+  );
+  // An active paid plan below its starts and over its machines: each value
+  // shows its own field, with the renewal and the crossing dates.
+  const active = usagePage({
+    current: offer(selection("team", 1, 1), "7900", "35000", "4"),
+    offer: offer(selection("team", 2, 2), "10900", "45000", "5"),
+    starts: "8640",
+    machines: "5",
+    machines_over: "1",
+    expected_starts: "38750",
+    crossing_day: "2026-11-27",
+  });
+  active.status.selection = selection("team", 1, 1);
+  active.status.subscription = "active";
+  active.status.period_start = "2026-11-04T10:30:00Z";
+  active.status.period_end = "2026-12-04T10:30:00Z";
+  const shown = usageModel(active, "mokly-ai");
+  assert.deepEqual(
+    [
+      shown.plan.price,
+      shown.starts.value,
+      shown.starts.detail,
+      shown.machines.value,
+      shown.machines.detail,
+    ],
+    [
+      "$79\u00a0a\u00a0month\u00a0· renews on 4\u00a0December",
+      "8,640 of 35,000",
+      "About 38,750 by the end of the period at this pace.",
+      "5 of 4",
+      "1 over. Every machine runs jobs.",
+    ],
+  );
+  assert.equal(
+    shown.notices.find((notice) => notice.kind === "pace")?.title,
+    "At this pace, mokly-ai passes the 35,000 starts of Team on 27\u00a0November",
   );
 });

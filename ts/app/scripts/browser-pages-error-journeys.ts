@@ -4,7 +4,7 @@ import {
   plansHref,
 } from "../src/view/billing-routes.ts";
 import { control, visible } from "./browser-fixture.ts";
-import { capturePage } from "./browser-pages-helpers.ts";
+import { absent, capturePage } from "./browser-pages-helpers.ts";
 import { baseSelection } from "./fixtures-billing.ts";
 import { workspaceId } from "./fixtures-core.ts";
 import type { PagesSmokeRun } from "./browser-pages-runtime.ts";
@@ -36,7 +36,7 @@ export function billingErrorRuns(
     {
       name: "move-to-free-error-state",
       expectedHttpStatuses: [503],
-      async check(page) {
+      async check(page, _context, width) {
         await control(origin, { scenario: "m21-move-to-free-error" });
         await page.goto(origin + plansHref(workspaceId), {
           waitUntil: "domcontentloaded",
@@ -53,13 +53,38 @@ export function billingErrorRuns(
           .getByRole("button", { name: "Move to Free", exact: true })
           .click();
         await visible(
-          dialog.getByText("Move to Free did not finish", { exact: true }),
+          dialog.getByText("Unable to confirm Move to Free", { exact: true }),
+        );
+        await visible(
+          dialog.getByText(
+            "ciproxy did not get the result. Plan and usage shows whether Team ends on 3 December.",
+            { exact: true },
+          ),
+        );
+        await absent(
+          dialog.getByText("Your plan stays as it was. Try again.", {
+            exact: true,
+          }),
+        );
+        await visible(
+          dialog.getByRole("button", { name: "Try again", exact: true }),
+        );
+        await capturePage(page, output, "move-to-free-unknown-result", width);
+        await control(origin, { pages: { failures: [] } });
+        await dialog
+          .getByRole("button", { name: "Try again", exact: true })
+          .click();
+        await visible(
+          page.getByRole("heading", { name: "This period", exact: true }),
+        );
+        await visible(
+          page.getByText("Team ends on 3 December", { exact: true }),
         );
       },
     },
     ...(
       [
-        ["payment-request-error", "open", "The payment did not start"],
+        ["payment-request-error", "open", "Unable to confirm this payment"],
         ["payment-unfinished-state", "unfinished", "Your plan did not change"],
         [
           "payment-confirming-state",
@@ -87,7 +112,27 @@ export function billingErrorRuns(
           .getByRole("button", { name: "Continue to payment", exact: true })
           .click();
         await visible(page.getByText(title, { exact: true }));
-        await capturePage(page, output, name, width);
+        if (name === "payment-request-error") {
+          await visible(
+            page.getByText(
+              "ciproxy did not get the result. Plan and usage shows the current plan. Jobs keep running.",
+              { exact: true },
+            ),
+          );
+          await absent(page.getByText(/Your plan stays as it was/));
+          await capturePage(
+            page,
+            output,
+            "payment-request-unknown-result",
+            width,
+          );
+          await page
+            .getByRole("link", { name: "Open plan and usage", exact: true })
+            .click();
+          await visible(
+            page.getByRole("heading", { name: "This period", exact: true }),
+          );
+        } else await capturePage(page, output, name, width);
       },
     })),
     {

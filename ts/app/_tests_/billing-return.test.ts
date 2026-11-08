@@ -12,6 +12,7 @@ import {
   returnPollInterval,
 } from "../src/state/billing-return.ts";
 import { conflict, unavailable } from "./billing-support.ts";
+import type { Visibility } from "../src/state/poller.ts";
 import { deferred, manualSchedule, settled } from "./support.ts";
 
 type Reply =
@@ -31,8 +32,28 @@ function refused(
   } satisfies ApiResult<CheckoutReturnPage>;
 }
 
+/** The tab watchers of `visibility` that nothing removed yet. */
+function countWatchers(visibility: Visibility) {
+  let active = 0;
+  const counted: Visibility = {
+    hidden: () => visibility.hidden(),
+    watch(listener) {
+      active += 1;
+      const remove = visibility.watch(listener);
+      let removed = false;
+      return () => {
+        if (!removed) active -= 1;
+        removed = true;
+        remove();
+      };
+    },
+  };
+  return { visibility: counted, active: () => active };
+}
+
 function returnWith(...replies: Reply[]) {
   const schedule = manualSchedule();
+  const watchers = countWatchers(schedule.visibility);
   let checks = 0;
   let reads = 0;
   const store = createReturnStore({
@@ -45,12 +66,18 @@ function returnWith(...replies: Reply[]) {
     },
     mutate: (run) => run(),
     timers: schedule.timers,
-    visibility: schedule.visibility,
+    visibility: watchers.visibility,
     settled: async () => {
       reads += 1;
     },
   });
-  return { store, schedule, checks: () => checks, reads: () => reads };
+  return {
+    store,
+    schedule,
+    checks: () => checks,
+    reads: () => reads,
+    watchers: watchers.active,
+  };
 }
 
 test("a return page that closes stops checking, also with a check on its way", async () => {
@@ -119,4 +146,26 @@ test("a failed check stops, shows the failure, and Try again checks the same ses
     outcome: { state: "unfinished" },
   });
   assert.equal(checks(), 2);
+});
+
+test("Try again after a failed check keeps one tab watcher, and leaving removes it", async () => {
+  const held = deferred<ApiResult<CheckoutReturnPage>>();
+  const { store, schedule, watchers } = returnWith(
+    answer({ state: "confirming" }),
+    refused(503, unavailable),
+    held.promise,
+  );
+  store.start();
+  await settled();
+  assert.equal(watchers(), 1);
+  // The check on the interval fails, and the cycle ends by itself.
+  schedule.fire();
+  await settled();
+  assert.equal(store.state.get().status, "failed");
+  store.retry();
+  held.resolve(answer({ state: "confirming" }));
+  await settled();
+  assert.equal(watchers(), 1);
+  store.stop();
+  assert.equal(watchers(), 0);
 });

@@ -146,13 +146,25 @@ export function formatUtcDate(day: string, withYear = false): string {
   return unbroken(format.format(new Date(dayTime(day))));
 }
 
+/** The instant of a UTC date, which counts as its midnight, or of a time. */
+function instantOf(value: string): number {
+  if (utcDay.test(value)) return dayTime(value);
+  const time = Date.parse(value);
+  if (Number.isNaN(time)) throw new Error(`Not a UTC date or time: ${value}`);
+  return time;
+}
+
 /**
- * A range from its first included date to its first excluded date, shown
- * with its last included date: ("2026-10-09", "2026-11-08") ->
- * "9 October – 7 November". A range of one date shows that date.
+ * A half-open range from its first value to its exclusive end, each a UTC
+ * date or a time. It shows the date of the first instant and the date one
+ * millisecond before the end, the last included instant. A date counts as
+ * its midnight, so ("2026-10-09", "2026-11-08") -> "9 October – 7 November",
+ * and ("2026-11-06T12:00:00Z", "2026-12-06T12:00:00Z") -> "6 November – 6
+ * December". A range within one date shows that date.
  */
 export function formatUtcRange(from: string, until: string): string {
-  const last = addUtcDays(until, -1);
-  if (last <= from) return formatUtcDate(from);
-  return `${formatUtcDate(from)}${nbsp}– ${formatUtcDate(last)}`;
+  const first = utcDayOf(instantOf(from));
+  const last = utcDayOf(instantOf(until) - 1);
+  if (last <= first) return formatUtcDate(first);
+  return `${formatUtcDate(first)}${nbsp}– ${formatUtcDate(last)}`;
 }

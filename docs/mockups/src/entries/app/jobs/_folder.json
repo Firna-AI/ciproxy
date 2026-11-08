@@ -8,6 +8,7 @@
     "job-states",
     "wait-facts",
     "queue-facts",
+    "place-facts",
     "current-contract",
     "roles",
     "loading-error"

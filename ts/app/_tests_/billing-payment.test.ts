@@ -13,10 +13,11 @@ import {
   offer,
   review,
   selection,
+  signedInWith,
   unavailable,
   usagePage,
 } from "./billing-support.ts";
-import { appWith, deferred, response, settled } from "./support.ts";
+import { deferred, response, settled } from "./support.ts";
 
 const team: PaymentSubmission = { kind: "plan", review: review() };
 const business: PaymentSubmission = {
@@ -62,7 +63,8 @@ test("one payment runs until the server state after it is read again", async () 
 });
 
 test("a failed read after a payment keeps new payments closed", async () => {
-  const { app, calls } = appWith(
+  const { app, calls } = await signedInWith(
+    "admin",
     response(usagePage()),
     response({ state: "confirmed" } satisfies PaymentOutcome),
     response(unavailable, 503),

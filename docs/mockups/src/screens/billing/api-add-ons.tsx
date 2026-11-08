@@ -2,14 +2,11 @@
 // prices two choices on this page: the saved add-ons, and the add-ons that
 // cover the use. Any other quantity has no price, so its total is not
 // available and Save add-ons stays off. Use the add-ons that cover your use
-// sets the offer. After Save add-ons, the panel shows what Stripe answered:
-// a bank that asks to confirm the payment, or a card that failed. While that
-// payment waits, nothing else saves.
-
-import { ExternalLink } from "lucide-react";
+// sets the offer. After Save add-ons, the panel shows what followed: a
+// payment to finish on its Stripe page, a card that failed, or a result that
+// the page did not get. While that payment waits, nothing else saves.
 
 import { Action } from "../../components/actions.tsx";
-import { Notice } from "../../components/feedback.tsx";
 import { Quantity } from "../../components/figures.tsx";
 import { Panel } from "../../components/page.tsx";
 import {
@@ -17,15 +14,17 @@ import {
   apiOffer,
   choiceCapacity,
   choiceMonthly,
+  choiceName,
   sameCount,
   type AddOnCount,
   type ApiOffer,
 } from "../../fixtures/current-api.ts";
 import { tiers } from "../../fixtures/tiers.ts";
 import { usageScenes, type UsageScene } from "../../fixtures/usage.ts";
+import { ApiOutcomeNotice, type ApiOutcome } from "./api-outcome.tsx";
 
-/** What Stripe answered to Save add-ons. */
-export type AddOnsOutcome = "bank" | "card";
+/** What followed Save add-ons. */
+export type AddOnsOutcome = Extract<ApiOutcome, "invoice" | "card" | "unknown">;
 
 function quoteText(saved: ApiOffer, offer: ApiOffer, shown: AddOnCount) {
   if (sameCount(shown, saved.addOns)) {
@@ -45,45 +44,6 @@ function quoteText(saved: ApiOffer, offer: ApiOffer, shown: AddOnCount) {
     detail:
       "Plan and usage prices the saved add-ons and the add-ons that cover your use.",
   };
-}
-
-function OutcomeNotice({ outcome }: { outcome: AddOnsOutcome }) {
-  if (outcome === "bank") {
-    return (
-      <Notice
-        tone="warning"
-        title="Your bank needs to confirm this payment"
-        actions={
-          <>
-            <Action tone="primary" size="sm" icon={ExternalLink}>
-              Confirm the payment
-            </Action>
-            <Action size="sm">Check again</Action>
-          </>
-        }
-      >
-        Confirm it on the Stripe page. Your plan stays as it was until Stripe
-        confirms the payment.
-      </Notice>
-    );
-  }
-  return (
-    <Notice
-      tone="danger"
-      title="Stripe could not charge your card"
-      actions={
-        <>
-          <Action tone="primary" size="sm" icon={ExternalLink}>
-            Update card
-          </Action>
-          <Action size="sm">Try again</Action>
-        </>
-      }
-    >
-      Your plan stays as it was, and jobs keep running. Update the card, then
-      try again.
-    </Notice>
-  );
 }
 
 export function ApiAddOns({
@@ -148,7 +108,9 @@ export function ApiAddOns({
             </Action>
           </span>
         </div>
-        {outcome ? <OutcomeNotice outcome={outcome} /> : null}
+        {outcome ? (
+          <ApiOutcomeNotice outcome={outcome} choice={choiceName(offer)} />
+        ) : null}
       </div>
     </Panel>
   );

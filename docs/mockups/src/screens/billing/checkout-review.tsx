@@ -6,6 +6,8 @@
 // current API gives: no unit prices or line amounts. A move between paid
 // tiers shows its priced review, a review that the API cannot price, or a
 // review whose quote the API refused at payment, which asks for a new review.
+// A payment that cannot start says why, and a payment whose result the page
+// did not get shows only what the Plan and usage read after it proves.
 
 import { ExternalLink } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -31,6 +33,7 @@ import {
   tiers,
 } from "../../fixtures/tiers.ts";
 import { businessMove, proratedCharge } from "../../fixtures/usage.ts";
+import { ApiOutcomeNotice, type ApiOutcome } from "./api-outcome.tsx";
 import { ApiSummary, type ApiSummaryState } from "./api-review.tsx";
 import "./billing.css";
 
@@ -77,8 +80,24 @@ function ChargeNote({ move }: { move: ReviewMove }) {
   );
 }
 
-/** A review as the current API gives it, or refuses it at payment. */
-export type ReviewApi = "priced" | "unpriced" | "refused";
+/**
+ * A review as the current API gives it, or refuses it at payment, or the
+ * reason of the payment gate that keeps it from paying.
+ */
+export type ReviewApi =
+  | "priced"
+  | "unpriced"
+  | "refused"
+  | "status-failed"
+  | "checking"
+  | "waiting"
+  | "not-payer";
+
+/** What the Plan and usage read after a payment with no result proves. */
+export type ReviewOutcome = Extract<
+  ApiOutcome,
+  "unknown" | "current" | "waits"
+>;
 
 /** The summary of a move: Checkout from Free, or a move between paid tiers. */
 function summaryState(move: ReviewMove, api: ReviewApi): ApiSummaryState {
@@ -90,18 +109,32 @@ export function CheckoutReviewScreen({
   viewport,
   move,
   api,
+  outcome,
 }: {
   viewport: Viewport;
   move: ReviewMove;
   /** The review as the current API prices it, cannot, or refuses it. */
   api?: ReviewApi;
+  /** The result of a payment of the priced review that the page did not get. */
+  outcome?: ReviewOutcome;
 }) {
   const review = reviews[move];
   const { tier } = review;
+  const summary = api ? (
+    <ApiSummary
+      tier={tier}
+      today={review.today}
+      state={summaryState(move, api)}
+      back={review.back}
+      payOff={outcome !== undefined}
+    />
+  ) : (
+    <KnownSummary move={move} />
+  );
   return (
     <AppShell
       viewport={viewport}
-      tier={review.from}
+      tier={outcome === "current" ? tier.key : review.from}
       active="billing"
       banner={
         api ? apiBanner({ scene: review.scene, plans: review.back }) : undefined
@@ -140,15 +173,13 @@ export function CheckoutReviewScreen({
             />
           </div>
         </Panel>
-        {api ? (
-          <ApiSummary
-            tier={tier}
-            today={review.today}
-            state={summaryState(move, api)}
-            back={review.back}
-          />
+        {outcome ? (
+          <div className="stack">
+            {summary}
+            <ApiOutcomeNotice outcome={outcome} choice={tier.name} />
+          </div>
         ) : (
-          <KnownSummary move={move} />
+          summary
         )}
       </div>
     </AppShell>

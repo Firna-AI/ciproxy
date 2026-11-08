@@ -11,7 +11,7 @@ import { PageHeader, ReadFailure } from "../../components/page-state.tsx";
 import { ActionButton } from "../../components/actions.tsx";
 import { useServices } from "../../services/context.tsx";
 import { useValue } from "../../services/hooks.ts";
-import { paymentMayStart, usageStore } from "../../state/billing.ts";
+import { paymentGate, usageStore } from "../../state/billing.ts";
 import {
   continuablePayment,
   createPagePayment,
@@ -120,11 +120,12 @@ function UsageBody({
         page={page}
         edited={edited}
         onEdit={setEdited}
-        canSave={!busy && paymentMayStart(services, workspace.id)}
+        canSave={!busy && paymentGate(services, workspace.id) === "open"}
         saving={busy}
-        outcome={outcomeModel(paymentState, workspace)}
+        outcome={outcomeModel(paymentState, workspace, usageState)}
         onSave={save}
         onRetry={() => void payment.retry()}
+        onReload={() => void usageStore(services, workspace.id).load()}
         onPortal={openPortal}
       />
     </>

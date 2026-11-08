@@ -9,6 +9,24 @@ import type {
   PlanSelection,
   PlanUsagePage,
 } from "../src/api/billing-types.ts";
+import type { WorkspaceRole } from "../src/api/schema.ts";
+import { session, workspace } from "../scripts/fixtures-core.ts";
+import { appWith, response, type Reply } from "./support.ts";
+
+/**
+ * Services whose session gives the fixture person `role` in the fixture
+ * workspace, then the replies. The session read is setup, so `calls` lists
+ * only the requests after it.
+ */
+export async function signedInWith(role: WorkspaceRole, ...replies: Reply[]) {
+  const made = appWith(
+    response(session({ workspaces: [workspace({ role })] })),
+    ...replies,
+  );
+  await made.app.session.ensure();
+  made.calls.splice(0, made.calls.length);
+  return made;
+}
 
 export function selection(
   tier: PlanSelection["tier"],

@@ -85,6 +85,13 @@ the API allows the caller. Everyone else reads who can act, such as
   failed refresh keeps the last queue and says so. A figure that the API
   leaves out says "Unknown", never 0. A waiting job shows its label, not a
   machine, because GitHub gives it to whichever runner is idle first.
+- The notices of the queue promise a place only from the facts of each
+  waiting label. A full queue counts the jobs whose label fits your
+  machines. It promises Boat after the overflow wait only to the labels that
+  Boat starts now, and Boat at once to a label that no own machine runs.
+  While the Boat costs have no safe count, it promises no Boat start. While
+  Boat takes no new job, a notice says that only the jobs whose label fits
+  your machines wait there for a free slot.
 - History asks for the finished jobs from the first UTC date of the chosen
   window, and shows every job that the API returns, newest first. The API
   gives no total, so the footer counts the jobs of the list and names the
@@ -96,7 +103,9 @@ the API allows the caller. Everyone else reads who can act, such as
 - Savings shows the costs that the API gives. The savings figure shows only
   when every cost is known, and a negative saving says "more than". A cost
   that the API knows only in part reads "At least". While the API says that
-  its refresh raced another one, the page reads again every 2 seconds.
+  its refresh raced another one, the page reads again every 2 seconds, but
+  only while it is open. A read that answers after the page closed starts
+  no new read.
 - Prices, totals, offers, charges, and dates come from the API. The app
   computes no price.
 - Plan and usage saves add-ons only at a quantity that the API prices: the
@@ -108,9 +117,28 @@ the API allows the caller. Everyone else reads who can act, such as
   payment pending until Stripe ends the session.
 - While a payment is pending, Plan and usage and Plans offer a person who
   may pay "Continue payment" with the exact Stripe address that this tab
-  received from the API, for a Checkout or for a bank confirmation. Another
-  tab or browser has no such address, so its page only says that Stripe
-  confirms the payment.
+  received from the API, for a Checkout or for the Stripe page of a paid
+  change. Another tab or browser has no such address, so its page only says
+  that Stripe confirms the payment.
+- A payment that waits on its Stripe page says "Your payment is not
+  finished", with "Open the Stripe page" and "Check again". It names the
+  Stripe page, not a bank, because the API does not say why Stripe waits.
+- One payment gate decides whether a payment may start: a payer role in the
+  latest session read, a successful latest Plan and usage response, the API
+  permission, and no payment or billing change that waits. When the gate is
+  closed, Checkout says why: a failed Plan and usage read with Try again,
+  before the words of a refused review; a person who cannot pay; a payment
+  or a billing change in progress, with "Open plan and usage"; or "Checking
+  your plan".
+- A payment or a Move to Free whose result the page did not get, such as no
+  answer, a server error, or a plain conflict, says only what the next Plan
+  and usage read proves. A payment says "Unable to confirm this payment",
+  with "Open plan and usage" and Try again, until that read shows the choice
+  as the current plan or a payment in progress. The dialog of an unconfirmed
+  Move to Free closes with "Close", because the cancellation may have taken
+  effect. A refusal that the server names keeps its own words.
+- Plan and usage shows each UTC date of the billing period, also its last
+  date when the period ends during that day.
 - The review shows the charge that the API gives. When the API cannot price a
   change, the review says so, and no payment starts.
 - Every payment request goes through one module. It sends the reviewed or
@@ -216,6 +244,11 @@ credential file, the steps of the page check, and its private result file.
   Checkout pages.
 - [src/view/jobs-links.ts](src/view/jobs-links.ts) builds the Jobs addresses
   and the History query.
+  [src/view/jobs-places.ts](src/view/jobs-places.ts) gives where the waiting
+  jobs of each label can start, which every notice of the queue reads.
+- [src/state/savings.ts](src/state/savings.ts) reads the Savings report. Its
+  `open()` holds the page lifetime, so the report reads again only while the
+  page is open.
 - [src/state/billing.ts](src/state/billing.ts) creates the billing stores of
   a workspace, and
   [src/api/billing-payment.ts](src/api/billing-payment.ts) sends every payment

@@ -166,14 +166,14 @@ export function paymentJourneys(
           .getByRole("button", { name: "Move to Business", exact: true })
           .click();
         await visible(
-          page.getByText("Your bank needs to confirm this payment", {
+          page.getByText("Your payment is not finished", {
             exact: true,
           }),
         );
         await capturePage(page, output, "paid-change-bank-confirmation", width);
         const opened = page.waitForEvent("popup");
         await page
-          .getByRole("link", { name: "Confirm the payment", exact: true })
+          .getByRole("link", { name: "Open the Stripe page", exact: true })
           .click();
         const payment = await opened;
         await visible(

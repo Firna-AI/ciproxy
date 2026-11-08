@@ -60,16 +60,22 @@ export const pace = defineScreen({
 
 export const bank = defineScreen({
   slug: "bank",
-  title: "The bank asks to confirm the payment",
+  title: "A payment to finish on its Stripe page",
   description:
-    "Save add-ons sent the offer, and Stripe answered that the bank must confirm the payment. Confirm the payment opens the Stripe page in a new tab, and Check again asks ciproxy again. Save add-ons stays off while the payment waits, and the page shows no second notice of it.",
+    "Save add-ons sent the offer, and the API answered that a payment is required, with the Stripe page of its unpaid invoice. Open the Stripe page opens it in a new tab, and Check again asks ciproxy again. Save add-ons stays off while the payment waits, and the page shows no second notice of it.",
+  rationale:
+    "An unpaid invoice does not tell why Stripe took no payment, so the page does not say that a bank asks to confirm it.",
   relatedDocs: related("billing", "security"),
   address,
   render: (_props, context) => (
     <PlanUsageScreen
       viewport={context.viewport}
       state="over-starts"
-      api={{ plans: paths.plansOnTeam, edited: offerAddOns, outcome: "bank" }}
+      api={{
+        plans: paths.plansOnTeam,
+        edited: offerAddOns,
+        outcome: "invoice",
+      }}
     />
   ),
 });

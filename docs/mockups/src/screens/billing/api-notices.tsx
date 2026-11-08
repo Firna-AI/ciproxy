@@ -26,19 +26,19 @@ import {
 } from "../../fixtures/usage.ts";
 
 /**
- * A payment that waits: an open Checkout or a bank confirmation whose Stripe
+ * A payment that waits: an open Checkout or an unpaid invoice whose Stripe
  * page this tab saved, or a payment that Stripe confirms.
  */
-export type PendingPayment = "checkout" | "bank" | "confirming";
+export type PendingPayment = "checkout" | "invoice" | "confirming";
 
 const pendingWords: Record<PendingPayment, { title: string; body: string }> = {
   checkout: {
     title: "Your payment is not finished",
     body: "Stripe took no payment yet. Your plan changes when Stripe confirms the payment, and jobs keep running.",
   },
-  bank: {
-    title: "Your bank needs to confirm this payment",
-    body: "Your plan stays as it was until Stripe confirms the payment. Jobs keep running.",
+  invoice: {
+    title: "Your payment is not finished",
+    body: "Finish it on its Stripe page. Your plan changes when Stripe confirms the payment, and jobs keep running.",
   },
   confirming: {
     title: "Stripe is confirming a payment",
@@ -50,8 +50,8 @@ const pendingWords: Record<PendingPayment, { title: string; body: string }> = {
 const plansWaitBody =
   "You can choose a plan again when it ends. This page updates by itself, and jobs keep running.";
 
-/** Continue payment: Checkout in this tab, the bank page in a new tab. */
-function ContinuePayment({ pending }: { pending: "checkout" | "bank" }) {
+/** Continue payment: Checkout in this tab, an invoice page in a new tab. */
+function ContinuePayment({ pending }: { pending: "checkout" | "invoice" }) {
   return pending === "checkout" ? (
     <LinkAction
       to={paths.checkoutStripe}

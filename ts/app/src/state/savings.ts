@@ -1,6 +1,8 @@
 // The savings report of one workspace for one UTC range. While the API says
 // that its refresh raced another one, the store reads again on an interval
-// until the report is complete. A failed read keeps the shown report of the
+// until the report is complete, but only while its page is open. The page
+// opens that lifetime when it mounts, so a read that answers after the page
+// closed starts no new cycle. A failed read keeps the shown report of the
 // same range with the failure. Only the newest read can change the view, so
 // a late answer of an older range never replaces a newer one.
 
@@ -21,10 +23,17 @@ export type SavingsSnapshot =
 
 export type SavingsStore = {
   readonly state: Store<SavingsSnapshot>;
-  /** Show this range: read it now, and again until it is complete. */
+  /**
+   * Show this range: read it now. While the page is open, an incomplete
+   * report reads again until it is complete.
+   */
   select(range: SavingsRange): Promise<void>;
-  /** Stop reading again, such as when the page closes. */
-  stop(): void;
+  /**
+   * Open the page: from now until the returned close, an incomplete report
+   * reads again on the interval. The page opens it when it mounts and closes
+   * it when it closes. A read that answers after the close starts nothing.
+   */
+  open(): () => void;
 };
 
 export const savingsRefreshInterval = 2_000;
@@ -84,11 +93,23 @@ export function createSavingsStore(options: {
     options.visibility,
   );
 
+  /** The open pages. Only an open page reads again. */
+  let openers = 0;
+
+  /**
+   * Read again while a page is open and the shown report is incomplete. It
+   * stops the previous cycle first, because the poller keeps its tab watcher
+   * after a cycle ends, and a new start would replace it.
+   */
+  const follow = () => {
+    poller.stop();
+    if (openers > 0 && refreshing()) poller.start();
+  };
+
   return {
     state,
     async select(next) {
-      // End the previous refresh cycle first. The poller keeps its tab
-      // watcher after a cycle ends, and a new start would replace it.
+      // End the refresh of the previous range at once.
       poller.stop();
       range = next;
       const current = state.get();
@@ -96,10 +117,18 @@ export function createSavingsStore(options: {
         state.set({ status: "loading", range: next });
       }
       await load();
-      if (refreshing()) poller.start();
+      follow();
     },
-    stop() {
-      poller.stop();
+    open() {
+      openers += 1;
+      let open = true;
+      follow();
+      return () => {
+        if (!open) return;
+        open = false;
+        openers -= 1;
+        if (openers === 0) poller.stop();
+      };
     },
   };
 }

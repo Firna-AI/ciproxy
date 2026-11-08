@@ -46,7 +46,7 @@
     `current` and for an `offer` that keeps the plan.
 - **Problem:** A payer who edits the add-ons to any other quantity sees
   "Monthly total not available", at `ts/app/src/view/billing-addons.ts:47`.
-  Save stays disabled, at `ts/app/src/screens/billing/add-ons-panel.tsx:125`.
+  Save stays disabled, at `ts/app/src/screens/billing/add-ons-panel.tsx:128`.
   The same-plan offer is the only change that a payer can save.
 - **Impact if no action:** A payer cannot lower the add-ons, or raise them
   to a quantity other than the offer, from Plan and usage. The protocol
