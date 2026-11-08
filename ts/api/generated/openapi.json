@@ -15814,6 +15814,7 @@
         "type": "object",
         "description": "The fixed-duration dashboard sign-in and accessible workspaces.",
         "required": [
+          "installation_continuation",
           "organization_links",
           "state",
           "csrf_token",
@@ -15837,6 +15838,14 @@
           "install_url": {
             "type": "string",
             "description": "Install entry point when no workspace is available."
+          },
+          "installation_continuation": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Exact claim IDs from the latest successful GitHub authorization.\nIncludes proved or completed results recovered from a failed authorization.\nAll IDs refer to organization_links. No order selects a continuation.\nReloads keep this list. A successful authorization replaces it, even when empty."
           },
           "login": {
             "type": "string",

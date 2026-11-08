@@ -8,7 +8,7 @@ use diesel::prelude::*;
 use crate::connection::PgStore;
 use crate::error::QueryResultExt;
 
-use super::{attempts, claims, transaction};
+use super::{attempts, claims, results, transaction};
 
 pub(super) fn signed(store: &PgStore, signed: &SignedInstallation) -> Result<InstallationClaim> {
     transaction::run(&mut *store.connection()?, |connection| {
@@ -25,6 +25,7 @@ pub(super) fn signed(store: &PgStore, signed: &SignedInstallation) -> Result<Ins
             .is_some_and(|claim| claim.requester_id != signed.requester_id && !claim.event_seen);
         let claim = signed.associate(existing, has_add)?;
         if replace {
+            results::replace_requester_on(connection, claim.id).store()?;
             diesel::sql_query("DELETE FROM installation_workspace_offers WHERE claim_id=$1")
                 .bind::<diesel::sql_types::Uuid, _>(claim.id)
                 .execute(connection)

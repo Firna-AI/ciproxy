@@ -1367,13 +1367,78 @@ The Expo app under `ts/app` builds each screen and state of its mockup, with
 `@firna/ui`, `@ciproxy/tokens`, and the generated types. Each UI milestone
 smoke-tests its pages at 1440, 720, and 390 pixels.
 
-- [ ] Build the shell, sign-in, the App install, Setup without its Boat
+- [x] Build the shell, sign-in, the App install, Setup without its Boat
       step, the page for a member with no role, and the page of a removed
       App.
-- [ ] Reload a dashboard tab that is older than the API. My call: the API
+      Branch: `conductor/mvp-m19-ui`.
+      Implementation call, 6 November 2026: keep static page routes and
+      carry opaque workspace IDs in query parameters, so the existing
+      static hosting serves a reload of each page.
+      Orchestrator call, 7 November 2026: include the exact API continuation
+      field, its HTTP test on a real store, and regenerated types.
+      Implementation call, 7 November 2026: join the claim IDs from the
+      latest GitHub authorization to their link results. Handle each ended
+      continuation once. Show every result when several claims end,
+      because claim order and the remembered workspace choose nothing.
+      Orchestrator call, 7 November 2026: fix PR #36 finding 8 with B.
+      Keep continuation data in the store, so claim counts cannot enlarge
+      the sign-in cookie. Include its schema, migration, and store support.
+      Implementation call, 7 November 2026: key a companion record by the
+      session ID already in the cookie. The private session row depends on
+      a retained person and does not exist for browser-only sign-ins.
+      The companion keeps those results without a new cookie reference.
+      Owner review round 1, 7 November 2026: use one proof-result collector
+      for setup and sign-in. Record canonical IDs at proof or completion,
+      and keep previously proved completed claims out. Give the app action
+      wrappers content-based sizing by default, so full names stay visible.
+      Keep Firna unchanged and preserve its minimum size for short labels.
+      Owner review round 2, 7 November 2026: fix its finding 1 with B, so a
+      failed sign-in cannot consume an undelivered install result. Store
+      pending results apart from proof status. Save each result in the
+      transaction of its proof. Consume only the exact read results in the
+      transaction that saves the session and continuation. A failed cookie
+      preparation or continuation save keeps them for the next successful
+      authorization, and keeps the earlier sign-in and business records.
+      Refresh and workspace choice add none. Keep the wire field, bounded
+      cookies, fixed continuation expiry, and the exclusion of delivered
+      history. Its finding 2 stays open as item 91, with no option applied.
+      Implementation call, 7 November 2026: add the pending table to the
+      unmerged migration `202611071200_dashboard_continuations`, not to a new
+      migration. Reason: it ran only in disposable test databases and is not
+      on the target branch, so the `databases` skill does not freeze it. No
+      merged migration changes.
+- [x] Reload a dashboard tab that is older than the API. My call: the API
       gives its build with each response, and the dashboard reloads at the
       next page change after the build changes. Reason: an old tab must not
       call a newer API with old types, and a page change loses no input.
+      Branch: `conductor/mvp-m19-ui`.
+      Verification evidence: `.context/ciproxy-mvp-m19/`.
+
+Owner review round 2 answers, 8 November 2026: the user chose A for item
+91 and A for item 92. Both answers keep the product behaviour. The app, the
+API, and the generated types stay unchanged. Only the two approved mockups
+change to match the app.
+
+- Item 91, the workspace picker of "Add an organization": each row shows
+  the workspace name and, when needed, the upgrade warning. The picker
+  mockup drops the tier and the organization count.
+- Item 92, the workspace switch: each row keeps the role, or "No role yet".
+  The switch mockup shows the role in place of the tier and the count.
+- Neither list needs the optional shared plan summary now. At the user's
+  explicit request, this branch deletes the three settled follow-up items
+  `workspace-picker-plan-facts.md`, `workspace-switch-plan-facts.md`, and
+  `workspace-list-plan-facts.md` under `plans/follow-ups/`.
+
+Item 98 answer, 8 November 2026: the user chose A. The GitHub App gets the
+organization permission "Members: read". The App then has four permissions.
+A sign-in reads the organization memberships of the person with it.
+
+- The install mockup and the install page of the app list the four
+  permissions. Both explain "Members: read" as "see who belongs to your
+  organization, so that ciproxy can give roles".
+- For item 98, this branch changes only that list and this record. The
+  backend change and the protocol docs for the membership read are outside
+  this branch.
 
 ## Milestone 20: Dashboard UI: Machines and Settings
 

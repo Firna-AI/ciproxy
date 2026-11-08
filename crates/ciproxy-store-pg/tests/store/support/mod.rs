@@ -1,6 +1,7 @@
 //! Per-test PostgreSQL databases and public API fixtures.
 
 pub(super) mod installation_claim;
+pub(super) mod installation_results;
 
 use std::env;
 use std::sync::Arc;

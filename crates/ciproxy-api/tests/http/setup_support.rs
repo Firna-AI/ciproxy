@@ -6,7 +6,7 @@ use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, Response, StatusCode, header};
 use ciproxy_api::access::AccessService;
-use ciproxy_api::crypto::AeadCredentialCipher;
+use ciproxy_api::crypto::{AeadCredentialCipher, CredentialCipher};
 use ciproxy_api::identity::http::{GithubOAuthClient, OAuthConfig};
 use ciproxy_api::installations::GithubInstallationAdmin;
 use ciproxy_api::router::router;
@@ -30,6 +30,18 @@ impl AppJwt for Signer {
 }
 
 pub(super) fn configure(fixture: &mut Fixture, server: &Server) {
+    configure_with_cipher(
+        fixture,
+        server,
+        Arc::new(AeadCredentialCipher::new(&[17; 32])),
+    );
+}
+
+pub(super) fn configure_with_cipher(
+    fixture: &mut Fixture,
+    server: &Server,
+    cipher: Arc<dyn CredentialCipher>,
+) {
     let http = Client::builder().redirect(Policy::none()).build().unwrap();
     let identity = Arc::new(GithubOAuthClient::new(
         http.clone(),
@@ -45,7 +57,7 @@ pub(super) fn configure(fixture: &mut Fixture, server: &Server) {
     let access = Arc::new(AccessService::new(
         fixture.database.store.clone(),
         identity,
-        Arc::new(AeadCredentialCipher::new(&[17; 32])),
+        cipher,
         fixture.runtime.clone(),
     ));
     fixture.state.access = access.clone();

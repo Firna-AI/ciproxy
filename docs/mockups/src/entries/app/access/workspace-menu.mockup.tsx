@@ -8,7 +8,7 @@ export const workspaceMenu = defineScreen({
   slug: "workspace-menu",
   title: "Switch workspaces",
   description:
-    "The switch of the top bar opens the workspaces of Cal Moore: mokly-ai on Team with its two organizations, and tidepool on Free, where he is a Viewer. Install on another organization makes a new workspace.",
+    "The switch of the top bar opens the workspaces of Cal Moore, and each row shows the role there: Admin of mokly-ai, and Viewer of tidepool. Install on another organization makes a new workspace.",
   rationale:
     "The answer to item 48: the switch of the top bar switches workspaces, not organizations, because a workspace holds the jobs, the machines, and the plan of all its organizations.",
   relatedDocs: relatedMvp("workspaces", "security"),

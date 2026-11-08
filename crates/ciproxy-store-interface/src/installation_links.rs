@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 use crate::error::Result;
 use crate::installation_association::SignedInstallation;
+use crate::installation_results::{InstallationResultDelivery, PendingInstallationResult};
 
 /// One explicit browser entry into GitHub installation.
 #[derive(Clone, Debug)]
@@ -132,12 +133,18 @@ pub trait InstallationLinkStore: Send + Sync {
     fn has_pending_add(&self, requester_id: i64) -> Result<bool>;
     /// Preserve exact Add provenance even if later claim bookkeeping disappears.
     fn has_add_installation(&self, requester_id: i64, installation_id: i64) -> Result<bool>;
-    /// Save fresh user proof without replacing signed ownership or flow.
+    /// Save proof and optional pending first/open result without replacing signed ownership or flow.
     fn save_installation_claim(
         &self,
         claim: &InstallationClaim,
         attempt: Option<Uuid>,
+        result: InstallationResultDelivery,
     ) -> Result<InstallationClaim>;
+    /// Read the exact requester's undelivered authorization results in stable claim order.
+    fn pending_installation_results(
+        &self,
+        requester_id: i64,
+    ) -> Result<Vec<PendingInstallationResult>>;
     /// Read one exact claim.
     fn installation_claim(&self, id: Uuid) -> Result<Option<InstallationClaim>>;
     /// Read an exact installation association.

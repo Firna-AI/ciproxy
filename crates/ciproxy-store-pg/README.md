@@ -154,6 +154,15 @@ and Boat accounting reads.
 
 The dashboard area stores verified GitHub memberships, workspace roles,
 access requests, opaque session digests, and encrypted OAuth grants.
+Session establishment commits the exact claim continuation, the consumption of
+its pending results, and session rotation together. The continuation uses the
+existing browser session ID and fixed expiry.
+It survives person pruning without a person reference, profile, or OAuth grant.
+Authentication expiry cleanup deletes expired continuations.
+A claim save writes its pending result in the same transaction. Consumption
+deletes only the exact revisions that the session read, so a later write
+survives. A pending result stays until a successful session consumes it or its
+claim is deleted.
 A person record stays only with a role or an open request. Intentional
 organization removal keeps a separate durable marker and no owner-removal
 retention deadline. Retired labels preserve history while active names
@@ -230,8 +239,8 @@ CI starts the database for the existing workspace test phase.
 
 ### Key Code
 
-- [Installation queries](src/installation_links/README.md) retain exact claims
-  and local execution admission.
+- [Installation queries](src/installation_links/README.md) retain exact claims,
+  pending authorization results, and local execution admission.
 - [src/dashboard](src/dashboard) owns dashboard identity and access queries.
 - [src/own_runners.rs](src/own_runners.rs) stores exact execution intents.
 - [src/own_observation.rs](src/own_observation.rs) saves one scoped runner

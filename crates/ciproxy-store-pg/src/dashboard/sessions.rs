@@ -4,11 +4,13 @@ use chrono::{DateTime, Utc};
 use ciproxy_schema::dashboard::{dashboard_login_states, dashboard_sessions};
 use ciproxy_store_interface::dashboard::records::{LoginState, Membership, Session, User};
 use ciproxy_store_interface::error::Result;
+use ciproxy_store_interface::installation_results::PendingInstallationResult;
 use diesel::prelude::*;
 use uuid::Uuid;
 
 use crate::connection::PgStore;
 use crate::error::QueryResultExt;
+use crate::installation_links::results;
 
 use super::rows::{LoginRow, SessionRow};
 
@@ -68,6 +70,7 @@ pub(super) fn establish(
     user: &User,
     memberships: &[Membership],
     session: &Session,
+    installation_results: &[PendingInstallationResult],
 ) -> Result<bool> {
     store
         .connection()?
@@ -79,11 +82,16 @@ pub(super) fn establish(
                 .find(user.id)
                 .count()
                 .get_result::<i64>(connection)?;
-            if exists == 0 {
-                return QueryResult::Ok(false);
+            if exists != 0 {
+                save_on(connection, session)?;
             }
-            save_on(connection, session)?;
-            Ok(true)
+            let claim_ids = installation_results
+                .iter()
+                .map(|result| result.claim_id)
+                .collect::<Vec<_>>();
+            super::continuations::save_on(connection, session, &claim_ids)?;
+            results::consume_on(connection, user.github_id, installation_results)?;
+            Ok(exists != 0)
         })
         .store()
 }
@@ -110,6 +118,7 @@ pub(super) fn expire(store: &PgStore, at: DateTime<Utc>) -> Result<()> {
     store
         .connection()?
         .transaction(|connection| {
+            super::continuations::expire_on(connection, at)?;
             diesel::delete(dashboard_sessions::table.filter(dashboard_sessions::expires_at.le(at)))
                 .execute(connection)?;
             diesel::delete(

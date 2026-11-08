@@ -5,6 +5,7 @@ pub(crate) mod authentication;
 mod flow;
 mod install_authority;
 mod link_choice;
+mod link_continuation;
 mod link_identity;
 mod links;
 mod pending;

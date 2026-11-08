@@ -1,5 +1,6 @@
 //! Dashboard identity, access, and history-preserving management persistence.
 
+mod continuations;
 mod identity;
 mod machines;
 mod resources;
@@ -15,6 +16,7 @@ use ciproxy_store_interface::dashboard::records::{
 };
 use ciproxy_store_interface::dashboard::store::DashboardStore;
 use ciproxy_store_interface::error::Result;
+use ciproxy_store_interface::installation_results::PendingInstallationResult;
 use ciproxy_store_interface::labels::Label;
 use ciproxy_store_interface::metering::history::MachineCost;
 use ciproxy_store_interface::scale_sets::ScaleSet;
@@ -47,8 +49,12 @@ impl DashboardStore for PgStore {
         user: &User,
         memberships: &[Membership],
         session: &Session,
+        installation_results: &[PendingInstallationResult],
     ) -> Result<bool> {
-        sessions::establish(self, user, memberships, session)
+        sessions::establish(self, user, memberships, session, installation_results)
+    }
+    fn dashboard_continuation(&self, session_id: Uuid, at: DateTime<Utc>) -> Result<Vec<Uuid>> {
+        continuations::read(self, session_id, at)
     }
     fn dashboard_memberships(&self, id: Uuid) -> Result<Vec<Membership>> {
         identity::memberships(self, id)

@@ -2,6 +2,7 @@
 
 use ciproxy_store_interface::installation_association::SignedInstallation;
 use ciproxy_store_interface::installation_links::{InstallationAttempt, InstallationRecovery};
+use ciproxy_store_interface::installation_results::InstallationResultDelivery;
 use uuid::Uuid;
 
 use super::super::support::{Database, at};
@@ -36,7 +37,11 @@ fn signed_direct_flow_survives_later_add_proof_and_replay_before_registration() 
     claim.verified_at = Some(at());
     let proof = database
         .store
-        .save_installation_claim(&claim, Some(attempt.id))
+        .save_installation_claim(
+            &claim,
+            Some(attempt.id),
+            InstallationResultDelivery::Untracked,
+        )
         .unwrap();
     assert_eq!(
         proof.recovery(),
