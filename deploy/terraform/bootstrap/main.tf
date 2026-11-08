@@ -23,6 +23,8 @@ locals {
       shared_production      = { environment = "production", access = "shared-apply", main_only = true }
       trust_preview          = { environment = "main-preview", access = "trust-apply", main_only = true }
       trust_production       = { environment = "production", access = "trust-apply", main_only = true }
+      image_lookup           = { environment = "main-preview", access = "image-lookup", main_only = false }
+      image_publish          = { environment = "main-preview", access = "image-publish", main_only = false }
     }
   )
   account_ids = {
@@ -32,10 +34,13 @@ locals {
     shared_production      = "ciproxy-shared-prod-apply"
     trust_preview          = "ciproxy-trust-preview-apply"
     trust_production       = "ciproxy-trust-prod-apply"
+    image_lookup           = "ciproxy-image-lookup"
+    image_publish          = "ciproxy-image-publish"
   }
   plan_accounts  = toset(["shared_plan", "shared_plan_production"])
   retired        = toset(["shared_plan", "shared_preview", "trust_preview"])
   apply_workflow = "Firna-AI/ciproxy/.github/workflows/deploy-apply.yml@"
+  image_workflow = "Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/calummoore/ci-proxy-load-balancer"
 }
 resource "google_service_account" "ci" {
   for_each   = local.access
@@ -66,7 +71,7 @@ resource "google_iam_workload_identity_pool_provider" "github" {
     "attribute.ref"                 = "assertion.ref"
     "attribute.event_name"          = "assertion.event_name"
     "attribute.workflow_ref"        = "assertion.workflow_ref"
-  }, endswith(each.value.access, "apply") ? { "attribute.job_workflow_ref" = "assertion.job_workflow_ref" } : {})
+  }, endswith(each.value.access, "apply") || startswith(each.value.access, "image-") ? { "attribute.job_workflow_ref" = "assertion.job_workflow_ref" } : {})
   attribute_condition = join(" && ", concat([
     "assertion.repository_id == '1442045837'",
     "assertion.repository_owner_id == '307519338'",
@@ -76,6 +81,8 @@ resource "google_iam_workload_identity_pool_provider" "github" {
     each.value.main_only || each.value.environment == "production" ? "assertion.ref == 'refs/heads/main'" : "assertion.ref in ['refs/heads/calummoore/ci-proxy-load-balancer', 'refs/heads/main']",
     ], endswith(each.value.access, "apply") ? [
     "assertion.job_workflow_ref == '${local.apply_workflow}' + assertion.ref",
+    ] : [], startswith(each.value.access, "image-") ? [
+    "assertion.job_workflow_ref == '${local.image_workflow}'",
   ] : []))
   disabled = var.production_enabled && contains(local.retired, each.key)
   oidc { issuer_uri = "https://token.actions.githubusercontent.com" }
@@ -103,7 +110,7 @@ resource "google_project_iam_member" "nodes" {
 }
 output "production_enabled" { value = var.production_enabled }
 output "github_environment_variables" {
-  value = { for env in local.environments : env => {
+  value = { for env in local.environments : env => merge({
     GCP_WIF_PROVIDER                 = google_iam_workload_identity_pool_provider.github["${env}-deploy"].name
     GCP_DEPLOY_SERVICE_ACCOUNT       = google_service_account.ci["${env}-deploy"].email
     GCP_PLAN_WIF_PROVIDER            = google_iam_workload_identity_pool_provider.github["${env}-plan"].name
@@ -116,5 +123,10 @@ output "github_environment_variables" {
     GCP_SHARED_APPLY_SERVICE_ACCOUNT = google_service_account.ci[env == "production" ? "shared_production" : "shared_preview"].email
     GCP_TRUST_APPLY_WIF_PROVIDER     = google_iam_workload_identity_pool_provider.github[env == "production" ? "trust_production" : "trust_preview"].name
     GCP_TRUST_APPLY_SERVICE_ACCOUNT  = google_service_account.ci[env == "production" ? "trust_production" : "trust_preview"].email
-  } }
+    }, env == "main-preview" ? {
+    GCP_IMAGE_LOOKUP_WIF_PROVIDER     = google_iam_workload_identity_pool_provider.github["image_lookup"].name
+    GCP_IMAGE_LOOKUP_SERVICE_ACCOUNT  = google_service_account.ci["image_lookup"].email
+    GCP_IMAGE_PUBLISH_WIF_PROVIDER    = google_iam_workload_identity_pool_provider.github["image_publish"].name
+    GCP_IMAGE_PUBLISH_SERVICE_ACCOUNT = google_service_account.ci["image_publish"].email
+  } : {}) }
 }

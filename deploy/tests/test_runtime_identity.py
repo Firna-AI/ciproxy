@@ -37,13 +37,16 @@ class RuntimeIdentityTests(PromotionCase):
             result = self.cli("bootstrap.sh", *arguments)
             self.assertEqual(result.returncode, 0, result.stderr)
             saved = self.root / ".context/deploy/ciproxy/runtime-uids.tfvars.json"
-            self.assertEqual(json.loads(saved.read_text()), {"runtime_service_account_uids": expected})
+            self.assertEqual(json.loads(saved.read_text()), {
+                "runtime_service_account_uids": expected, "control_plane_registry_ready": False,
+            })
         self.trusted("production")
         result = self.cli("terraform.py", "plan", "production", "bootstrap")
         self.assertEqual(result.returncode, 0, result.stderr)
         inputs = self.root / ".context/plans/production/bootstrap/inputs.tfvars.json"
         self.assertEqual(json.loads(inputs.read_text()), {
             "project_id": "ciproxy", "production_enabled": True, "runtime_service_account_uids": expected,
+            "control_plane_registry_ready": False,
         })
         result = self.cli("terraform.py", "apply", "production", "bootstrap")
         self.assertEqual(result.returncode, 0, result.stderr)

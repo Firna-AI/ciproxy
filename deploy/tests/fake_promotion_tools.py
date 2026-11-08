@@ -49,10 +49,16 @@ elif tool == "terraform":
         Path(os.environ["FAKE_REMOTE_STATES"]).with_name("launched.json").write_text("true")
     if action == "apply" and "variables" in record and "runtime_service_account_uids" in record["variables"]:
         Path(os.environ["FAKE_REMOTE_STATES"]).with_name("runtime-uids.json").write_text(json.dumps(record["variables"]["runtime_service_account_uids"]))
+    if action == "apply" and "variables" in record and "control_plane_registry_ready" in record["variables"]:
+        Path(os.environ["FAKE_REMOTE_STATES"]).with_name("image-registry.json").write_text(json.dumps(record["variables"]["control_plane_registry_ready"]))
     if action == "output" and args[-1] == "-json":
         state = Path(os.environ["FAKE_REMOTE_STATES"]).with_name("launched.json")
         uids = state.with_name("runtime-uids.json")
-        print(json.dumps({"production_enabled": {"value": state.exists()}, "runtime_service_account_uids": {"value": json.loads(uids.read_text()) if uids.exists() else {}}}))
+        registry = state.with_name("image-registry.json")
+        values = {"production_enabled": {"value": state.exists()}, "runtime_service_account_uids": {"value": json.loads(uids.read_text()) if uids.exists() else {}}}
+        if registry.exists():
+            values["control_plane_registry_ready"] = {"value": json.loads(registry.read_text())}
+        print(json.dumps(values))
         sys.exit(0)
     if action == "init":
         bucket = next((arg.split("=", 2)[2] for arg in args

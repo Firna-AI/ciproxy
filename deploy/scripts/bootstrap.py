@@ -14,7 +14,7 @@ def run(*arguments):
     subprocess.run(arguments, check=True)
 
 
-def bootstrap(environment, existing_state=False, runtime_uids=None):
+def bootstrap(environment, existing_state=False, runtime_uids=None, image_registry=False):
     project = ENVIRONMENTS[environment]
     repository = Path.cwd()
     scratch = repository / ".context/deploy" / project
@@ -59,7 +59,11 @@ def bootstrap(environment, existing_state=False, runtime_uids=None):
     if runtime_uids:
         uids.update(json.loads(runtime_uids.read_text())["runtime_service_account_uids"])
     inputs = scratch / "runtime-uids.tfvars.json"
-    inputs.write_text(json.dumps({"runtime_service_account_uids": uids}, indent=2) + "\n")
+    inputs.write_text(json.dumps({
+        "runtime_service_account_uids": uids,
+        "control_plane_registry_ready": image_registry or outputs.get(
+            "control_plane_registry_ready", {}).get("value", False),
+    }, indent=2) + "\n")
     # A preview setup after launch must NEVER enable retired accounts/providers.
     production_enabled = environment == "production" or previous
     run("terraform", f"-chdir={root}", "apply", f"-var=project_id={project}",
@@ -89,5 +93,7 @@ if __name__ == "__main__":
                         help="Use existing project state without another local seed apply.")
     parser.add_argument("--runtime-uids", type=Path,
                         help="Operator-captured UID map. Merge into protected bootstrap inputs.")
+    parser.add_argument("--image-registry", action="store_true",
+                        help="Install image repository grants after shared core creation.")
     args = parser.parse_args()
-    bootstrap(args.environment, args.existing_state, args.runtime_uids)
+    bootstrap(args.environment, args.existing_state, args.runtime_uids, args.image_registry)

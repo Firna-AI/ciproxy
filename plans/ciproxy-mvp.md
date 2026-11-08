@@ -246,12 +246,13 @@ stay in `europe-west1`.
       condition claim. Reason: valid jobs then keep the same trust limits.
       Evidence: `.context/ciproxy-mvp/fix-round-1-report.md`.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
-- [ ] Build and publish the control-plane image in the deploy workflow, as
+- [x] Build and publish the control-plane image in the deploy workflow, as
       item 90 = G says. A build job builds it on the runner with no cloud
       credentials. A publish job pushes it by digest with workload
       identity. The preview deploys that digest, and production takes over
       the same digest from the preview's saved inputs. A push that does not
       change the control-plane sources reuses the image of their hash.
+      Branch: `conductor/item-90-g-control-plane-image-in-the-deploy`.
 
 ## Milestone 6: GitHub App and scale sets
 
