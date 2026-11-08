@@ -91,10 +91,9 @@ GitHub permissions, keys, isolation, and job data.
 - Such a member sees only a page that asks an Admin for access.
 - An Admin sees each request for access, and can give the person a role.
 - **Decision:** a member asks for access by signing in, and an Admin grants
-  a role. Rejected: a list of the members of the GitHub organization,
-  because the GitHub App would then need the "Members" permission. Reason:
-  the App keeps to the narrow permissions of
-  [GitHub App permissions](#github-app-permissions).
+  a role. Rejected: a list of all members of the GitHub organization.
+  Reason: the person's own sign-in proves membership without a full member
+  list.
 - The Members tab of Settings shows the number of open requests for
   access.
 - The page that asks for access names the Admins of the workspace, so that
@@ -107,9 +106,9 @@ GitHub permissions, keys, isolation, and job data.
   organization of the workspace.
 - An owner with the Billing or the Viewer role claims the Admin role from
   the account menu.
-- ciproxy checks that a person is an owner with the GitHub sign-in of that
-  person, from the list of that person's own organization memberships, not
-  with a permission of the GitHub App.
+- Membership and owner checks use the person's own GitHub App sign-in.
+- The App has "Members", read, configured for these checks of the person's
+  own organization memberships.
 - **Decision:** an owner claims the Admin role when the workspace has no
   Admin, or when the person owns every organization of it. Rejected: a
   claim by every owner of any organization, because an owner of a later
@@ -122,6 +121,12 @@ GitHub permissions, keys, isolation, and job data.
 - The ciproxy GitHub App asks for "Self-hosted runners", read and write, to
   start a runner for each job.
 - The app asks for "Metadata", read, to list the repositories.
+- The app asks for "Members", read, to check the person's own organization
+  memberships and ownership with that person's App user token.
+- **Decision:** the App asks for "Members", read. Rejected: a separate
+  OAuth sign-in with `read:org`, and roles based only on visible
+  installations. Reason: one sign-in proves current membership and
+  ownership, which the workspace roles require.
 - The app asks for "Actions", read, to read the event and the head
   repository of the run of each job from the GitHub API.
 - ciproxy needs these facts for
@@ -136,7 +141,7 @@ GitHub permissions, keys, isolation, and job data.
   [Trusted write-back](cache.md#trusted-write-back) says.
 - A failed check selects the unknown-ref rules of
   [Cache scopes](cache.md#cache-scopes), without failing the job.
-- **Decision:** the App keeps all three permissions. The API supplies the
+- **Decision:** the App uses these four permissions. The API supplies the
   event and head repository, and the checked token supplies the full ref.
   Rejected: the API alone, because its branch name can also name a tag.
   Rejected: a hook or an organization webhook, because the checked token

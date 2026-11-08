@@ -4,7 +4,8 @@ use rust_decimal::Decimal;
 use serde_json::json;
 
 use crate::tls::facts::{identity, limits};
-use crate::tls::server::{Server, step};
+use crate::tls::peer::step;
+use crate::tls::server::Server;
 
 #[tokio::test]
 async fn account_uses_the_highest_bracket_and_only_falls_back_without_brackets() {

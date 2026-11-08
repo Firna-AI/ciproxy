@@ -86,6 +86,7 @@ def trust_resource(root, resource):
             "google_project_iam_custom_role", "google_project_iam_member",
             "google_storage_bucket_iam_member", "google_tags_tag_key", "google_tags_tag_value",
             "google_tags_tag_value_iam_member",
+            "google_artifact_registry_repository_iam_member",
         }
     else:
         return False

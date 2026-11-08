@@ -43,18 +43,28 @@ impl BoatReads {
         path: &str,
         query: &[(&str, String)],
     ) -> Result<Option<T>> {
+        self.read(path, query, Some(&self.wallet)).await
+    }
+
+    pub(super) async fn unscoped_get<T: DeserializeOwned>(&self, path: &str) -> Result<Option<T>> {
+        self.read(path, &[], None).await
+    }
+
+    async fn read<T: DeserializeOwned>(
+        &self,
+        path: &str,
+        query: &[(&str, String)],
+        wallet: Option<&str>,
+    ) -> Result<Option<T>> {
         let mut url = Url::parse(&format!("{}{path}", self.base)).internal()?;
         for (key, value) in query {
             url.query_pairs_mut().append_pair(key, value);
         }
-        let mut response = self
-            .client
-            .get(url)
-            .bearer_auth(self.key.expose_secret())
-            .header("X-Boat-Org", &self.wallet)
-            .send()
-            .await
-            .internal()?;
+        let mut request = self.client.get(url).bearer_auth(self.key.expose_secret());
+        if let Some(wallet) = wallet {
+            request = request.header("X-Boat-Org", wallet);
+        }
+        let mut response = request.send().await.internal()?;
         match response.status().as_u16() {
             200 => {}
             401 | 403 => return Err(Error::RejectedKey),

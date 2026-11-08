@@ -12,6 +12,7 @@ use unimock::unimock;
 use uuid::Uuid;
 
 use crate::error::Result;
+use crate::provider::KeyWallets;
 use crate::view::OverflowView;
 
 /// Deployment-owned image and callback configuration.
@@ -106,6 +107,8 @@ pub trait RunnerAuthority: Send + Sync {
 /// All impure overflow entry points, consumed through dyn by the control plane.
 #[async_trait]
 pub trait Overflow: Send + Sync {
+    /// Verify a key and offer its named wallets without saving the key.
+    async fn wallets(&self, key: Secret) -> Result<KeyWallets>;
     /// Grant a pending connection before verification and encryption.
     /// Return ConnectionNotPermitted after last-App removal invalidates that grant.
     async fn connect(

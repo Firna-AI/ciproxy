@@ -31,6 +31,26 @@ pub(super) struct Wallets {
 pub(super) struct Wallet {
     pub(super) id: String,
     pub(super) name: String,
+    #[serde(rename = "type")]
+    pub(super) kind: WalletKind,
+    pub(super) active: bool,
+}
+
+#[derive(Deserialize)]
+pub(super) enum WalletKind {
+    #[serde(rename = "personal")]
+    Personal,
+    #[serde(rename = "org")]
+    Organization,
+}
+
+impl Wallet {
+    pub(super) fn selector(&self) -> &str {
+        match self.kind {
+            WalletKind::Personal => "personal",
+            WalletKind::Organization => &self.id,
+        }
+    }
 }
 
 #[derive(Deserialize)]

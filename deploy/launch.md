@@ -14,6 +14,7 @@ automatic.
 4. Stop new preview pushes. Drain all running and queued prelaunch jobs.
 5. Back up current remote state through the operator's normal process.
 6. Select project `ciproxy` with application default credentials.
+7. Complete the [image workflow trust move][image-trust] to protected `main`.
 
 Do not overlap operator cutover with a preview apply. The workflows keep
 separate concurrency groups so production cannot cancel a pending preview.
@@ -187,3 +188,5 @@ Preview-only NEG failure can fail that stage without undoing production.
 
 No migration is needed. No previous deployment has applied in either
 project. Spike/test machines stay in `internal-498318`.
+
+[image-trust]: image-workflow-bootstrap.md#move-the-binding-to-main-at-launch
