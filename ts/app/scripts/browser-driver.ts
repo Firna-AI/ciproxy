@@ -40,6 +40,7 @@ export type BrowserResponse = {
   status(): number;
   headers(): Record<string, string>;
   finished(): Promise<unknown>;
+  json(): Promise<unknown>;
   request(): BrowserRequest;
 };
 

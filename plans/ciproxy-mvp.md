@@ -1468,6 +1468,8 @@ Each screen follows its mockup, as Milestone 19 says.
       fresh billing read and a new review, with an explicit payment click.
       Preserve the quote of an unfinished payment retry. Test the refusal
       and the current, pending, and failed billing-read states before merge.
+      Align the runtime success URL with the app's `/checkout-return`
+      route, with the exact session and workspace.
       Branch: `conductor/m21-jobs-savings-and-billing-ui`.
       User answer, 8 November 2026: paid reviews store their quote on the
       server. The payment names the quote. Unknown, used, or outdated
@@ -1513,7 +1515,7 @@ Depends on: 21a
       outcomes, Checkout recovery, period dates, and live return results.
       Keep each payment request in its existing boundary module.
       Branch: `conductor/m21-jobs-savings-and-billing-ui`.
-- [ ] Check the changed screens at 1440, 720, and 390 pixels. Run the
+- [x] Check the changed screens at 1440, 720, and 390 pixels. Run the
       complete gate with the store database, commit, push, and re-review.
       Branch: `conductor/m21-jobs-savings-and-billing-ui`.
 
@@ -1524,6 +1526,32 @@ timestamps. Defer the rare cache-cause, portal-feedback, saved-payment
 lifetime, and remaining cached-role defects. Defer the shared poller
 lifetime because it reaches existing stores outside this UI change.
 Review records: `.context/reviews/conductor/m21-jobs-savings-and-billing-ui/`.
+
+## Milestone 21c: Queue review mockup corrections
+
+Tags: mockup
+
+Depends on: 21b
+
+- [x] Add API-facts scenes for permitted places, complete resource
+      requests, and current provider holds before their second-round fixes.
+      Keep the known-data scenes and the open Jobs facts choice.
+      Branch: `conductor/m21-jobs-savings-and-billing-ui`.
+
+## Milestone 21d: Queue review corrections
+
+Tags: ui
+
+Depends on: 21c
+
+- [x] Use the browser read time for retry deadlines. Keep size refusals
+      per label. Explain fit from permission, availability, and the full
+      request, without guessing which resource is short.
+      Branch: `conductor/m21-jobs-savings-and-billing-ui`.
+- [x] Check the affected flows at 1440, 720, and 390 pixels. Run the
+      complete gate with the store database, commit, and push. Stop after
+      this second fix round, as the review skill requires.
+      Branch: `conductor/m21-jobs-savings-and-billing-ui`.
 
 ## Milestone 22: Dashboard UI: Boat
 

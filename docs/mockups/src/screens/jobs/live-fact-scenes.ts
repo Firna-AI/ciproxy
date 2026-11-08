@@ -2,7 +2,8 @@
 // the API: an unknown fit with unknown own slots, the largest Boat size, Boat
 // unable to take jobs, a full queue with a label that only Boat runs, a full
 // queue while Boat costs are not counted, the Boat limit while a label that
-// only Boat runs waits, a removed organization, and a quiet queue with no
+// only Boat runs waits, a refused Boat size of one label, a label that no
+// permitted place fits, a removed organization, and a quiet queue with no
 // warm runners. Each list shows every job that the API sends, so no row says
 // "N more". A full queue lists one running job in each own slot.
 
@@ -14,6 +15,7 @@ import {
 } from "../../fixtures/live-jobs.ts";
 import { machineScenes } from "../../fixtures/machines.ts";
 import { boatOnlyLabel } from "../../fixtures/settings.ts";
+import { nothingFits } from "../../fixtures/waiting-jobs.ts";
 import { largestBoat, unknownFit } from "../../fixtures/wait-facts.ts";
 import type { LiveScene } from "./live-scenes.ts";
 
@@ -27,6 +29,9 @@ export const factStates = [
   "boat-at-once",
   "spend-uncounted",
   "limit-boat-only",
+  "size-refused",
+  "nothing-fits-request",
+  "boat-forbidden",
   "app-removed",
   "quiet-no-warm",
 ] as const;
@@ -188,6 +193,9 @@ export const factScenes: Readonly<Record<FactState, LiveScene>> = {
   "boat-at-once": withBoatOnly,
   "spend-uncounted": full,
   "limit-boat-only": withBoatOnly,
+  "size-refused": withBoatOnly,
+  "nothing-fits-request": scene(steadyRunning, nothingFits.waiting),
+  "boat-forbidden": scene(steadyRunning, nothingFits.waiting),
   "app-removed": scene(ownOrganizationJobs, [], { warm: 2 }),
   "quiet-no-warm": scene([], []),
 };

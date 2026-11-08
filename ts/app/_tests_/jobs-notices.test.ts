@@ -2,14 +2,23 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type {
-  BoatLabelFit,
   JobOverflow,
   JobsLivePage,
   WaitingLabelFit,
 } from "../src/api/jobs-types.ts";
 import { liveNotices } from "../src/view/jobs-notices.ts";
-import { fixtureJob } from "../scripts/fixtures-jobs.ts";
 import { liveJobs } from "../scripts/fixtures-jobs-live.ts";
+import {
+  connectedBoat,
+  fitting,
+  largest,
+  queue,
+  readAt,
+  waitingLabel,
+} from "./jobs-notices-support.ts";
+
+// The retry time of a Boat refusal shows in the time zone of the browser.
+process.env.TZ = "UTC";
 
 test("wait notices follow the flags of the API, and an unknown fit claims no fit", () => {
   const base = liveJobs("live", "viewer", null);
@@ -46,7 +55,7 @@ test("wait notices follow the flags of the API, and an unknown fit claims no fit
         ]
       : [],
   };
-  const notices = liveNotices(page, "/settings?workspace=w");
+  const notices = liveNotices(page, "/settings?workspace=w", readAt);
   assert.deepEqual(
     notices.map((notice) => [notice.key, notice.tone, notice.action]),
     [
@@ -66,93 +75,8 @@ test("wait notices follow the flags of the API, and an unknown fit claims no fit
   assert.equal(notices[2]?.body.includes("No machine and no Boat size"), false);
 });
 
-/** A waiting label whose own machines fit or not, with its Boat fit. */
-function waitingLabel(
-  name: string,
-  jobs: number,
-  own: "fits" | "none",
-  boat: BoatLabelFit,
-): WaitingLabelFit {
-  return {
-    label_id: `label-${name}`,
-    label_name: name,
-    waiting_jobs: String(jobs),
-    can_edit: true,
-    ask_admin: false,
-    nothing_fits: false,
-    current: {
-      id: `label-${name}`,
-      label: {
-        name,
-        vcpus: 8,
-        memory_gb: 16,
-        disk_gb: 60,
-        allow_boat: boat.state !== "disabled",
-        allow_machines: true,
-        when_nothing_fits:
-          boat.state === "largest_fallback" ? "largest_boat" : "wait",
-      },
-      fit: {
-        eligible_machines: 3,
-        fitting_machines: own === "fits" ? 3 : 0,
-        no_machine_fits: own === "none",
-        unavailable_machines: 0,
-        minimum_jobs: own === "fits" ? "2" : null,
-        maximum_jobs: own === "fits" ? "2" : null,
-      },
-    },
-    boat,
-  };
-}
-
-const connectedBoat: JobOverflow = {
-  connected: true,
-  key_rejected: false,
-  billing_required: false,
-  retry_at: null,
-  limit_cents: "10000",
-  counted_cents: "1200",
-  limit_reached: false,
-  measured_complete: true,
-  next_month: "2026-12-01T00:00:00Z",
-  refused_sizes: [],
-};
-
-/** The live queue with every own slot in use and these waiting labels. */
-function fullQueue(
-  labels: WaitingLabelFit[],
-  overflow: JobOverflow,
-): JobsLivePage {
-  const base = liveJobs("live", "admin", null);
-  const count = labels.reduce((sum, fit) => sum + Number(fit.waiting_jobs), 0);
-  const job = fixtureJob({ status: "queued", location: null });
-  return {
-    ...base,
-    own_slots_total: "6",
-    own_slots_used: "6",
-    waiting: Array.from({ length: count }, (_, i) => ({
-      ...job,
-      id: `waiting-${i}`,
-    })),
-    waiting_count: String(count),
-    waiting_labels: labels,
-    overflow,
-  };
-}
-
-const fitting: BoatLabelFit = {
-  state: "fitting",
-  size: { vcpus: 8, memory_bytes: "16000000000", disk_bytes: "120000000000" },
-  size_name: "large",
-  refused: false,
-};
-
-const largest: BoatLabelFit = {
-  state: "largest_fallback",
-  size: { vcpus: 16, memory_bytes: "64000000000", disk_bytes: "240000000000" },
-  size_name: "xlarge",
-  refused: false,
-};
+const boatEveryOne =
+  "3 jobs wait for a free slot. Each one starts on Boat when it has waited 30 seconds.";
 
 const placeCases: {
   name: string;
@@ -212,7 +136,7 @@ const placeCases: {
     notices: [
       [
         "spend-limit",
-        "Jobs whose label fits your machines wait there for a free slot. Boat takes jobs again on 1\u00a0December.",
+        "Jobs whose label fits your machines wait there for a free slot. Boat takes jobs again on 1 December.",
       ],
     ],
   },
@@ -230,6 +154,68 @@ const placeCases: {
       ],
     ],
   },
+  {
+    name: "a retry time that passed before the read",
+    labels: [waitingLabel("ciproxy", 3, "fits", fitting)],
+    overflow: { ...connectedBoat, retry_at: "2026-11-06T11:59:00Z" },
+    notices: [["machines-full", boatEveryOne]],
+  },
+  {
+    name: "a retry time equal to the read",
+    labels: [waitingLabel("ciproxy", 3, "fits", fitting)],
+    overflow: { ...connectedBoat, retry_at: "2026-11-06T12:00:00Z" },
+    notices: [["machines-full", boatEveryOne]],
+  },
+  {
+    name: "a retry time after the read",
+    labels: [waitingLabel("ciproxy", 3, "fits", fitting)],
+    overflow: { ...connectedBoat, retry_at: "2026-11-06T12:01:00Z" },
+    notices: [
+      [
+        "boat-refused",
+        "Waiting jobs take the first free slot on your machines, and ciproxy tries Boat again at 12:01.",
+      ],
+    ],
+  },
+  {
+    name: "a refused size that no waiting label uses",
+    labels: [waitingLabel("ciproxy", 3, "fits", fitting)],
+    overflow: { ...connectedBoat, refused_sizes: ["xlarge"] },
+    notices: [["machines-full", boatEveryOne]],
+  },
+  {
+    name: "a refused size of a label that only Boat runs",
+    labels: [
+      waitingLabel("ciproxy", 3, "fits", fitting),
+      waitingLabel("ciproxy-16vcpu", 2, "none", { ...fitting, refused: true }),
+    ],
+    overflow: { ...connectedBoat, refused_sizes: ["large"] },
+    notices: [
+      [
+        "size-refused-label-ciproxy-16vcpu",
+        "Its jobs wait, and ciproxy tries Boat again.",
+      ],
+      ["machines-full", boatEveryOne],
+    ],
+  },
+  {
+    name: "a refused size of a label that fits own machines",
+    labels: [
+      waitingLabel("ciproxy", 3, "fits", fitting),
+      waitingLabel("ciproxy-8vcpu", 2, "fits", { ...fitting, refused: true }),
+    ],
+    overflow: { ...connectedBoat, refused_sizes: ["large"] },
+    notices: [
+      [
+        "size-refused-label-ciproxy-8vcpu",
+        "Its jobs take the first free slot on your machines, and ciproxy tries Boat again.",
+      ],
+      [
+        "machines-full",
+        "5 jobs wait for a free slot. 3 of them start on Boat when they have waited 30 seconds.",
+      ],
+    ],
+  },
 ];
 
 test("the live queue promises a free slot or a Boat start only from the confirmed facts of each waiting label", () => {
@@ -237,10 +223,32 @@ test("the live queue promises a free slot or a Boat start only from the confirme
     placeCases.map((item) => [
       item.name,
       liveNotices(
-        fullQueue(item.labels, item.overflow),
+        queue(item.labels, item.overflow),
         "/settings?workspace=w",
+        readAt,
       ).map((notice) => [notice.key, notice.body]),
     ]),
     placeCases.map((item) => [item.name, item.notices]),
+  );
+});
+
+test("an idle queue shows a Boat refusal only while its retry time is after the read", () => {
+  const idle = (retry: string) =>
+    liveNotices(
+      queue([], { ...connectedBoat, retry_at: retry }, 2),
+      "/settings?workspace=w",
+      readAt,
+    ).map((notice) => [notice.key, notice.body]);
+  assert.deepEqual(
+    [idle("2026-11-06T11:58:00Z"), idle("2026-11-06T12:05:00Z")],
+    [
+      [],
+      [
+        [
+          "boat-refused",
+          "Waiting jobs take the first free slot on your machines, and ciproxy tries Boat again at 12:05.",
+        ],
+      ],
+    ],
   );
 });

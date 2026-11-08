@@ -113,6 +113,11 @@
     outside the control.
   - `plans/follow-ups/saved-payment-lifetime.md` orders the removal of the
     same saved link. B gates only the display and adds no removal.
+  - `plans/follow-ups/stripe-return-workspace.md`, same code: its B and C
+    change the Continue payment controls that B of this item changes. If
+    one of them lands, land it with B of this item, so that one
+    continuation value carries both the payer permission and the
+    workspace. Its recommended A changes none of these files.
 - **Recommendation:** B. One effective permission keeps each API
   restriction and the saved URL, with no wait for a person whose role did
   not change. D covers more cases, but it delays every payer action on

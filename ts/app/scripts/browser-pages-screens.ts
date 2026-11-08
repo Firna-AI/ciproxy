@@ -15,6 +15,7 @@ export type PageScreen = {
   pages?: PagesControl;
   statuses?: readonly number[];
   check?: (page: Page) => Promise<void>;
+  layoutCheck?: (page: Page, width: number) => Promise<void>;
   init?: string;
   response?: { path: string; method: string };
 };
@@ -27,7 +28,7 @@ export function screenRuns(
     name: screen.name,
     expectedHttpStatuses: screen.statuses,
     init: screen.init,
-    async check(page) {
+    async check(page, _context, width) {
       await control(origin, { scenario: screen.scenario, pages: screen.pages });
       const open = async () => {
         await page.goto(origin + screen.path, {
@@ -60,6 +61,7 @@ export function screenRuns(
           }),
         );
       await screen.check?.(page);
+      await screen.layoutCheck?.(page, width);
     },
   }));
 }

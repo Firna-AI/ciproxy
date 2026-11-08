@@ -49,3 +49,17 @@ export const limitBoatOnly = defineScreen({
     <JobsLiveScreen viewport={context.viewport} state="limit-boat-only" />
   ),
 });
+
+export const sizeRefused = defineScreen({
+  slug: "size-refused",
+  title: "Boat refused the size of one label",
+  description:
+    "Every own slot runs a job. Boat refused the size that fits ciproxy-16vcpu, so its two jobs wait, and the notice says so for that label only. The six jobs of ciproxy still start on Boat when they have waited 30 seconds. A refused size that no waiting label uses shows no notice.",
+  rationale:
+    "The API marks a refused size on the fit of each label. A refusal holds only that label, so the other labels keep their Boat start.",
+  relatedDocs: related("overflow", "jobRouting"),
+  address,
+  render: (_props, context) => (
+    <JobsLiveScreen viewport={context.viewport} state="size-refused" />
+  ),
+});

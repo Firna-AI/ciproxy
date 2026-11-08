@@ -9,6 +9,7 @@
     "wait-facts",
     "queue-facts",
     "place-facts",
+    "fit-facts",
     "current-contract",
     "roles",
     "loading-error"

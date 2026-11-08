@@ -1,4 +1,9 @@
 {
   "title": "Where waiting labels start",
-  "order": ["boat-at-once", "spend-uncounted", "limit-boat-only"]
+  "order": [
+    "boat-at-once",
+    "spend-uncounted",
+    "limit-boat-only",
+    "size-refused"
+  ]
 }

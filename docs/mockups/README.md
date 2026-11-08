@@ -90,22 +90,25 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   them, a `current-contract` folder shows the same moments with only the facts
   that the API gives. In Jobs, it names no person or date of a suspension, no
   reason of a Boat refusal, no total of the day, no tier name, no routing
-  reason, and no fit of a Boat size. In Savings, it names no tier and no
-  machine count. In billing, it names no plan or passed limit in a banner, no
-  day on which a paid plan ended, no unit prices of the add-ons, no receipt
-  address, and no workspace in a Stripe return. Its `pending` folder shows
+  reason, no fit of a Boat size, and no resource that is short for a label
+  that nothing fits. In Savings, it names no tier and no machine count. In
+  billing, it names no plan or passed limit in a banner, no day on which a
+  paid plan ended, no unit prices of the add-ons, no receipt address, and
+  no workspace in a Stripe return. Its `pending` folder shows
   Continue payment for a payment whose Stripe page the tab saved. Its
   `checkout` folder shows a paid review, an unavailable price, and a refused
   review that asks the person to review the change again. Its `payment-gate`
   folder shows why a payment cannot start, and `unknown-results` shows a
   payment or a Move to Free whose result the page did not get. A payment
   that waits on its Stripe page names that page, not a bank.
-- The Jobs folders `wait-facts`, `queue-facts`, `place-facts`, and
-  `job-states` and the Savings folder `report-states` show the states that
-  come from facts of the API, such as an unknown fit, a job that no runner
-  took, a negative saving, and a missing comparison price. `place-facts`
-  shows where the waiting jobs of each label can start, also of a label
-  that only Boat runs.
+- The Jobs folders `wait-facts`, `queue-facts`, `place-facts`, `fit-facts`,
+  and `job-states` and the Savings folder `report-states` show the states
+  that come from facts of the API, such as an unknown fit, a job that no
+  runner took, a negative saving, and a missing comparison price.
+  `place-facts` shows where the waiting jobs of each label can start, also
+  of a label that only Boat runs and of a label whose Boat size Boat
+  refused. `fit-facts` shows a label that no permitted place fits, with its
+  full request, and a label that does not run on Boat.
 - A screen takes the role of the signed-in person. The shell shows the person
   of the role, and Settings only to an Admin. In place of an action that the
   role does not allow, the screen shows the words of
@@ -265,7 +268,8 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   unknown and of a label that starts on the largest Boat size.
   `src/screens/jobs/live-fact-scenes.ts` and `live-fact-notices.tsx` build
   these moments of the live queue and their notices, and the moments of
-  `place-facts` with the waiting jobs of a label that only Boat runs.
+  `place-facts` and `fit-facts`. `place-fact-notices.tsx` words the notices
+  of a refused Boat size and of a label that no permitted place fits.
 - `src/fixtures/savings-states.ts`: the figures of each Savings state,
   changed from the known report only where the state needs it: a cost that
   nobody set or that is known in part, a missing comparison price, a negative

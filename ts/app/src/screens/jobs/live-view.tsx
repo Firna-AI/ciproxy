@@ -38,6 +38,7 @@ export function LiveView({ workspaceId }: { workspaceId: string }) {
   const notices = liveNotices(
     snapshot.page,
     workspaceHref("settings", workspaceId),
+    snapshot.readAt,
   );
   return (
     <>

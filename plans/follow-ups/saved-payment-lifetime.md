@@ -99,6 +99,11 @@
   - `plans/follow-ups/billing-cached-role.md` gates who sees the same saved
     link. A role change gates only the display, and it must not remove the
     link.
+  - `plans/follow-ups/stripe-return-workspace.md`, same code: its C
+    replaces the `leave` of `createPagePayment`, beside the `send` that A
+    changes. A continuation there saves only the tab context, never a link
+    record, so the order of A stays correct. Its recommended A changes
+    none of these files, and neither item waits for the other.
 - **Recommendation:** A. A generation with the record covers both stores and
   every writer, with no extra read and no change of the stored format.
 - **Action:** fix after merge, apply A, because the defect needs an unusual

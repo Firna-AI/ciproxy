@@ -1,15 +1,17 @@
 // The notices of a Boat hold: the spend limit, a rejected key, billing on the
-// Boat account, and a refusal. While Boat takes no new job, a waiting job can
-// start only on an own machine that runs its label. So a notice says that
-// every waiting job waits for a free own slot only when each waiting label
-// fits the own machines. Otherwise it says so only of the jobs whose label
-// fits them, and it promises the other jobs no place.
+// Boat account, and a refusal with a retry time that is after the read. While
+// Boat takes no new job, a waiting job can start only on an own machine that
+// runs its label. So a notice says that every waiting job waits for a free
+// own slot only when each waiting label fits the own machines. Otherwise it
+// says so only of the jobs whose label fits them, and it promises the other
+// jobs no place. A refused Boat size holds only the labels that use it, so it
+// raises no notice here.
 
 import type { JobOverflow } from "../api/jobs-types.ts";
 import { addUtcDays, formatCents, formatUtcDate } from "./exact-format.ts";
 import { formatTime } from "./format.ts";
 import type { LiveNotice, NoticeAction } from "./jobs-notices.ts";
-import type { LabelPlace } from "./jobs-places.ts";
+import type { BoatHold, LabelPlace } from "./jobs-places.ts";
 
 const monthName = new Intl.DateTimeFormat("en-GB", {
   month: "long",
@@ -32,6 +34,7 @@ function holdWords(places: readonly LabelPlace[]) {
 
 export function boatNotices(
   overflow: JobOverflow,
+  hold: BoatHold,
   places: readonly LabelPlace[],
   manage: (label: string) => NoticeAction,
 ): LiveNotice[] {
@@ -69,19 +72,12 @@ export function boatNotices(
       action: null,
     });
   }
-  const refused =
-    (overflow.retry_at ?? null) !== null ||
-    overflow.refused_sizes.length > 0 ||
-    places.some(({ fit }) => "refused" in fit.boat && fit.boat.refused);
-  if (refused) {
-    const retry = overflow.retry_at ?? null;
+  if (hold.retryUntil !== null) {
     notices.push({
       key: "boat-refused",
       tone: "warning",
       title: "Boat refused new sandboxes",
-      body: retry
-        ? `${words.take}, and ciproxy tries Boat again at ${formatTime(retry)}.`
-        : `${words.take}, and ciproxy tries Boat again.`,
+      body: `${words.take}, and ciproxy tries Boat again at ${formatTime(hold.retryUntil)}.`,
       action: null,
     });
   }

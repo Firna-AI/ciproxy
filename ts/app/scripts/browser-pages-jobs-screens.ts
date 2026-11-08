@@ -1,9 +1,17 @@
+import assert from "node:assert/strict";
+
+import { workspaceHref } from "../src/routing/pages.ts";
 import { jobHref, jobsHref } from "../src/view/jobs-links.ts";
+import { insideViewport, visible } from "./browser-fixture.ts";
 import { workspaceId } from "./fixtures-core.ts";
 import { fixtureJobIds } from "./fixtures-jobs.ts";
 import { screenRuns, type PageScreen } from "./browser-pages-screens.ts";
 import type { Page } from "./browser-driver.ts";
-import { insideRegion, separateRegions } from "./browser-pages-helpers.ts";
+import {
+  absent,
+  insideRegion,
+  separateRegions,
+} from "./browser-pages-helpers.ts";
 
 export async function visibleJobDetails(
   page: Page,
@@ -47,6 +55,24 @@ export function jobsScreenRuns(origin: string) {
       scenario: "m21-jobs-nothing-fits",
       path: live,
       text: "1 job with the label ciproxy-large waits",
+      async layoutCheck(page, width) {
+        await insideViewport(
+          page.getByText(
+            "No machine of yours and no Boat size fits a job of 128 vCPU, 256 GB of memory, and 1000 GB of free disk. Change the label, or let it run on the largest Boat size.",
+            { exact: true },
+          ),
+          width,
+        );
+        const edit = page.getByRole("link", {
+          name: "Edit label",
+          exact: true,
+        });
+        await visible(edit);
+        assert.equal(
+          await edit.getAttribute("href"),
+          workspaceHref("settings", workspaceId),
+        );
+      },
     },
     {
       name: "jobs-fit-unknown",
@@ -65,6 +91,18 @@ export function jobsScreenRuns(origin: string) {
       scenario: "m21-jobs-boat-refused",
       path: live,
       text: "Boat refused new sandboxes",
+      async layoutCheck(page, width) {
+        await insideViewport(
+          page.getByText(
+            "Waiting jobs take the first free slot on your machines, and ciproxy tries Boat again at 13:00.",
+            { exact: true },
+          ),
+          width,
+        );
+        await absent(
+          page.getByRole("link", { name: "Edit label", exact: true }),
+        );
+      },
     },
     {
       name: "jobs-overflow-unknown",

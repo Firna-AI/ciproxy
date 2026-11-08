@@ -92,6 +92,13 @@ the API allows the caller. Everyone else reads who can act, such as
   While the Boat costs have no safe count, it promises no Boat start. While
   Boat takes no new job, a notice says that only the jobs whose label fits
   your machines wait there for a free slot.
+- A saved Boat retry time holds new Boat starts only while it is after the
+  browser time of the read, because the API gives no response time. A
+  refused Boat size holds only the labels that use it. A label that no
+  permitted place fits names its full request and each place that it
+  forbids or that takes no jobs. It never names one short resource, because
+  the API does not say which one is. It offers the largest Boat size only
+  while the label allows Boat and waits when nothing fits.
 - History asks for the finished jobs from the first UTC date of the chosen
   window, and shows every job that the API returns, newest first. The API
   gives no total, so the footer counts the jobs of the list and names the
@@ -245,7 +252,10 @@ credential file, the steps of the page check, and its private result file.
 - [src/view/jobs-links.ts](src/view/jobs-links.ts) builds the Jobs addresses
   and the History query.
   [src/view/jobs-places.ts](src/view/jobs-places.ts) gives where the waiting
-  jobs of each label can start, which every notice of the queue reads.
+  jobs of each label can start, and the one hold of Boat at the time of the
+  read, which every notice of the queue reads.
+  [src/view/jobs-label-notices.ts](src/view/jobs-label-notices.ts) words the
+  notices of each waiting label from those facts.
 - [src/state/savings.ts](src/state/savings.ts) reads the Savings report. Its
   `open()` holds the page lifetime, so the report reads again only while the
   page is open.

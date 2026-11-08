@@ -28,7 +28,7 @@ export const largestBoat = defineScreen({
   description:
     "Friday 27 November: ciproxy-32vcpu now runs on the largest Boat size when nothing fits. Two load tests wait for their sandbox, and the notice says where the jobs of the label run.",
   rationale:
-    "labels.md: the live queue shows where the jobs of each label run now. The largest size can be smaller than the label, so the notice names both.",
+    "labels.md: the live queue shows where the jobs of each label run now. The largest size can be smaller than the label, so the notice names both. It names the full request with fits, and no resource that is short, because the API does not say which one is.",
   relatedDocs: related("labels", "overflow", "jobRouting"),
   address,
   render: (_props, context) => (

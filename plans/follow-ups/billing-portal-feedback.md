@@ -101,10 +101,16 @@
   result on any surface that uses it.
 - **Previous examples:** The workspace banner and the Plan panel already
   show their portal failures. No earlier defect of this class was found.
-- **Related:** `plans/follow-ups/billing-cached-role.md` gives the
-  effective payer permission that decides whether each portal button
-  shows. B takes that permission outside the shared control, so apply B
-  with that fix or after it.
+- **Related:**
+  - `plans/follow-ups/billing-cached-role.md` gives the effective payer
+    permission that decides whether each portal button shows. B takes that
+    permission outside the shared control, so apply B with that fix or
+    after it.
+  - `plans/follow-ups/stripe-return-workspace.md`, same component: its C
+    routes the open-Checkout link of `ResultAction` through one shared
+    exit helper. If both dashboard fixes land, the portal control of B can
+    use that helper. Its recommended A changes none of these files, and
+    neither item waits for the other.
 - **Recommendation:** B. One portal control owns progress and failure on
   every surface. D is the direct option if a later split is needed.
 - **Action:** fix after merge, apply B, because Update card without a Stripe

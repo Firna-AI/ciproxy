@@ -8,9 +8,14 @@
 
 import type { JobsLivePage } from "../api/jobs-types.ts";
 import type { NoticeTone } from "./page-model.ts";
-import { formatGigabytes } from "./format.ts";
 import { boatNotices } from "./jobs-boat-notices.ts";
-import { boatTiming, labelPlaces, type LabelPlace } from "./jobs-places.ts";
+import { jobsText, labelNotices } from "./jobs-label-notices.ts";
+import {
+  boatHold,
+  boatTiming,
+  labelPlaces,
+  type LabelPlace,
+} from "./jobs-places.ts";
 
 export type NoticeAction =
   | { kind: "go"; label: string; href: string }
@@ -36,8 +41,15 @@ function manager(page: JobsLivePage, settings: string) {
     page.can_manage ? { kind: "go", label, href: settings } : askAdmin;
 }
 
-function jobs(count: number | bigint): string {
-  return BigInt(count) === 1n ? "1 job" : `${count} jobs`;
+/**
+ * The way forward of a label notice, as the API allows it: Edit label for a
+ * caller who may edit the label, "Ask an Admin" when the API says so, or none.
+ */
+function recovery(place: LabelPlace, settings: string): NoticeAction | null {
+  if (place.fit.can_edit) {
+    return { kind: "go", label: "Edit label", href: settings };
+  }
+  return place.fit.ask_admin ? askAdmin : null;
 }
 
 /**
@@ -56,52 +68,6 @@ function waitText(seconds: number, several = false): string {
 
 function sumJobs(places: readonly LabelPlace[]): number {
   return places.reduce((sum, place) => sum + place.jobs, 0);
-}
-
-function labelNotices(place: LabelPlace, settings: string): LiveNotice[] {
-  const { fit } = place;
-  const count = BigInt(fit.waiting_jobs);
-  const verb = count === 1n ? "waits" : "wait";
-  const action: NoticeAction | null = fit.can_edit
-    ? { kind: "go", label: "Edit label", href: settings }
-    : fit.ask_admin
-      ? askAdmin
-      : null;
-  const size = fit.current?.label ?? null;
-  const asked = size ? `${size.vcpus} vCPU and ${size.memory_gb} GB` : null;
-  const notices: LiveNotice[] = [];
-  if (fit.nothing_fits === true) {
-    notices.push({
-      key: `fits-${fit.label_id}`,
-      tone: "warning",
-      title: `${jobs(count)} with the label ${fit.label_name} ${verb}`,
-      body: asked
-        ? `No machine and no Boat size has ${asked}. Change the label, or let it run on the largest Boat size.`
-        : "No machine and no Boat size fits this label.",
-      action,
-    });
-  } else if (fit.nothing_fits === null || fit.nothing_fits === undefined) {
-    notices.push({
-      key: `fit-unknown-${fit.label_id}`,
-      tone: "info",
-      title: `${jobs(count)} with the label ${fit.label_name} ${verb}`,
-      body: "Some machine or Boat facts are not available now, so ciproxy cannot tell where this label fits. The jobs start as soon as a machine or Boat can run them.",
-      action: null,
-    });
-  }
-  if (place.boat.kind === "starts" && place.boat.largest) {
-    const boat = `Boat ${place.boat.sizeName}, with ${place.boat.size.vcpus} vCPU and ${formatGigabytes(place.boat.size.memory_bytes)}`;
-    notices.push({
-      key: `largest-${fit.label_id}`,
-      tone: "info",
-      title: `Jobs with the label ${fit.label_name} start on the largest Boat size`,
-      body: asked
-        ? `No machine and no Boat size has ${asked}, so ciproxy starts them on ${boat}.`
-        : `ciproxy starts them on ${boat}.`,
-      action,
-    });
-  }
-  return notices;
 }
 
 /**
@@ -153,7 +119,7 @@ function fullNotice(
   );
   if (slot === 0 && atOnce === 0) return null;
   const manage = manager(page, settings);
-  const lead = `${jobs(slot)} ${slot === 1 ? "waits" : "wait"} for a free slot.`;
+  const lead = `${jobsText(slot)} ${slot === 1 ? "waits" : "wait"} for a free slot.`;
   const notice = (
     sentences: readonly string[],
     action: NoticeAction | null,
@@ -180,14 +146,19 @@ function fullNotice(
   const sentences = slot > 0 ? [lead, ...slotBoat(page, forSlot, slot)] : [];
   if (atOnce > 0) {
     const verb = atOnce === 1 ? "starts" : "start";
-    sentences.push(`${jobs(atOnce)} ${verb} on Boat at once.`);
+    sentences.push(`${jobsText(atOnce)} ${verb} on Boat at once.`);
   }
   return notice(sentences, null);
 }
 
+/**
+ * The notices of a live queue that the browser read at `readAt`. The read time
+ * decides whether a saved retry time of Boat still holds new starts.
+ */
 export function liveNotices(
   page: JobsLivePage,
   settingsHref: string,
+  readAt: number,
 ): LiveNotice[] {
   const notices: LiveNotice[] = page.visibility.map((item) =>
     item.suspended
@@ -214,15 +185,16 @@ export function liveNotices(
           },
         },
   );
-  const places = labelPlaces(page);
+  const hold = boatHold(page, readAt);
+  const places = labelPlaces(page, hold);
   const overflow = page.overflow ?? null;
   const boat =
     overflow === null
       ? []
-      : boatNotices(overflow, places, manager(page, settingsHref));
+      : boatNotices(overflow, hold, places, manager(page, settingsHref));
   notices.push(...boat);
   for (const place of places) {
-    notices.push(...labelNotices(place, settingsHref));
+    notices.push(...labelNotices(place, recovery(place, settingsHref)));
   }
   const full = fullNotice(page, places, settingsHref, boat.length > 0);
   if (full) notices.push(full);

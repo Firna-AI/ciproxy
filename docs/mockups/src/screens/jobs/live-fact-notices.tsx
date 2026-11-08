@@ -5,8 +5,9 @@
 // account address. A full queue promises Boat only to the jobs of a label
 // that Boat can start now, at once when no own machine runs the label, and a
 // Boat hold promises a free own slot only to the jobs whose label fits the
-// own machines. A setting that only an Admin changes gets its action for an
-// Admin and Ask an Admin for everyone else.
+// own machines. A label that starts on the largest Boat size names its full
+// request, and never the resource that is short. A setting that only an Admin
+// changes gets its action for an Admin and Ask an Admin for everyone else.
 
 import type { ReactNode } from "react";
 import { ExternalLink } from "lucide-react";
@@ -24,6 +25,7 @@ import { boatSizeNamed, sizePhrase } from "../../fixtures/sizes.ts";
 import { boatRefused } from "../../fixtures/waiting-jobs.ts";
 import { largestBoat, unknownFit } from "../../fixtures/wait-facts.ts";
 import type { LiveScene, LiveState } from "./live-scenes.ts";
+import { placeFactNotice, requestPhrase } from "./place-fact-notices.tsx";
 
 function adminLink(role: Role, to: CataloguePath, label: string): ReactNode {
   if (role !== "admin") return <AskAdmin />;
@@ -63,9 +65,9 @@ export function factNotice(
           title={`Jobs with the label ${largestBoat.label.name} start on the largest Boat size`}
           actions={adminLink(role, paths.nothingFits, "Edit label")}
         >
-          No machine and no Boat size has {sizePhrase(largestBoat.label)}, so
-          ciproxy starts them on Boat {largest.name}, with {sizePhrase(largest)}
-          .
+          No machine of yours and no Boat size fits a job of{" "}
+          {requestPhrase(largestBoat.label)}, so ciproxy starts them on Boat{" "}
+          {largest.name}, with {sizePhrase(largest)}.
         </Notice>
       );
     case "boat-key":
@@ -185,6 +187,6 @@ export function factNotice(
         </Notice>
       );
     default:
-      return null;
+      return placeFactNotice(state, scene, role);
   }
 }

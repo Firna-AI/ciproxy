@@ -93,7 +93,7 @@
     - Name the missing cause in the rationale of the Jobs current-contract
       entry and in `docs/mockups/README.md`.
     - Keep the known-data `fallback` scene unchanged.
-    - Add the cause as a fourth fact to
+    - Add the cause as another fact to
       `plans/follow-ups/jobs-notice-facts.md`, with B as part of its API
       option. The user then chooses there between the known-data scene
       and the current-contract copy. That decision stays open.
@@ -121,7 +121,7 @@
 - **Related:**
   - `plans/follow-ups/job-cache-report-writer.md` adds the hosted writer of
     these facts. This item must land before that writer.
-  - `plans/follow-ups/jobs-notice-facts.md` gets the cause as a fourth fact
+  - `plans/follow-ups/jobs-notice-facts.md` gets the cause as another fact
     when C lands. Its decision and its Action stay open.
 - **Recommendation:** C. It keeps the mockups and the product on the facts
   that the API gives, without deciding the richer API question. The first

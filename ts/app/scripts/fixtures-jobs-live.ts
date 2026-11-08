@@ -1,5 +1,9 @@
 import type { components } from "../../api/index.ts";
 import {
+  fixtureTemporaryRetryAt,
+  fullQueueJobs,
+} from "./fixtures-jobs-polling.ts";
+import {
   fixtureJob,
   fixtureJobIds,
   fixtureLabelId,
@@ -15,6 +19,7 @@ export const jobsModes = [
   "unknown-request",
   "spend-limit",
   "boat-refused",
+  "temporary-retry",
   "overflow-unknown",
 ] as const;
 export type JobsMode = (typeof jobsModes)[number];
@@ -29,6 +34,7 @@ export function liveJobs(
   const unknown = mode === "unknown-waiting";
   const noFit = mode === "nothing-fits";
   const unknownFit = mode === "unknown-fit";
+  const temporaryRetry = mode === "temporary-retry";
   const label = {
     name: noFit ? "ciproxy-large" : "ciproxy",
     vcpus: noFit ? 128 : 4,
@@ -65,31 +71,39 @@ export function liveJobs(
     overflow_enabled: true,
     overflow_wait_seconds: 30,
     own_slots_total: unknownFit ? null : "6",
-    own_slots_used: unknownFit ? null : quiet ? "0" : "1",
+    own_slots_used: unknownFit
+      ? null
+      : quiet
+        ? "0"
+        : temporaryRetry
+          ? "6"
+          : "1",
     warm_runners: quiet ? "2" : "0",
     running: quiet
       ? []
-      : [
-          fixtureJob({
-            id: fixtureJobIds.running,
-            status: "running",
-            result: null,
-            started_at: "2026-11-06T11:59:10Z",
-            queued_at: "2026-11-06T11:59:10Z",
-            completed_at: null,
-            runtime_seconds: "50",
-            ...(mode === "unknown-request"
-              ? {
-                  label: {
-                    name: "ciproxy-old",
-                    vcpus: null,
-                    memory_gb: null,
-                    disk_gb: null,
-                  },
-                }
-              : {}),
-          }),
-        ],
+      : temporaryRetry
+        ? fullQueueJobs()
+        : [
+            fixtureJob({
+              id: fixtureJobIds.running,
+              status: "running",
+              result: null,
+              started_at: "2026-11-06T11:59:10Z",
+              queued_at: "2026-11-06T11:59:10Z",
+              completed_at: null,
+              runtime_seconds: "50",
+              ...(mode === "unknown-request"
+                ? {
+                    label: {
+                      name: "ciproxy-old",
+                      vcpus: null,
+                      memory_gb: null,
+                      disk_gb: null,
+                    },
+                  }
+                : {}),
+            }),
+          ],
     waiting,
     waiting_count: unknown ? null : String(waiting.length),
     visibility: unknown
@@ -110,6 +124,7 @@ export function liveJobs(
       unknownFit ||
       mode === "spend-limit" ||
       mode === "boat-refused" ||
+      temporaryRetry ||
       mode === "overflow-unknown"
         ? []
         : [
@@ -176,7 +191,12 @@ export function liveJobs(
             measured_complete: true,
             next_month: "2026-12-01T00:00:00Z",
             refused_sizes: mode === "boat-refused" ? ["4vcpu-8gb"] : [],
-            retry_at: mode === "boat-refused" ? "2026-11-06T13:00:00Z" : null,
+            retry_at:
+              mode === "boat-refused"
+                ? "2026-11-06T13:00:00Z"
+                : temporaryRetry
+                  ? fixtureTemporaryRetryAt
+                  : null,
           },
   } satisfies components["schemas"]["JobsLivePage"];
 }
