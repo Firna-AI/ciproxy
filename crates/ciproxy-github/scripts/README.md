@@ -5,7 +5,8 @@ Keep the App JSON outside tracked files. It has `id` and `pem` fields.
 The `id` accepts a number or a string. The `pem` holds the private key.
 Authenticate `gh` separately as an operator who can create fixture refs
 and workflows, cancel their runs, and read the organization plan.
-The App keeps its three permissions. Tokens never go on command arguments.
+Installation tokens keep their three permissions. The App also has
+"Members: read" for sign-in. Tokens never go on command arguments.
 
 ```sh
 export CIPROXY_GITHUB_APP_PATH=/absolute/path/to/app.json

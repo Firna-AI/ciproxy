@@ -8,7 +8,8 @@ use rust_decimal::Decimal;
 use serde_json::{Value, json};
 
 use crate::tls::facts::{identity, limits};
-use crate::tls::server::{Server, step};
+use crate::tls::peer::step;
+use crate::tls::server::Server;
 
 use super::authority_support::{DisableAt, Provider};
 use super::fixtures::{at, id, request};

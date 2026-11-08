@@ -18,8 +18,12 @@ Save job updates before acknowledging their messages.
 The App uses these permissions only:
 
 - Organization self-hosted runners: write.
+- Organization Members: read.
 - Repository Metadata: read.
 - Repository Actions: read.
+
+The dashboard uses Members through the person's App user token.
+Installation tokens request the three runner and repository permissions.
 
 The REST adapter reads repository metadata and workflow-run metadata.
 It never reads code, logs, or artifact contents.

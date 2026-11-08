@@ -1089,6 +1089,10 @@ UTC RFC 3339, and IDs as strings. Reason: JavaScript loses 64-bit numbers.
       Code status, 6 November 2026: the control plane mounts the router and
       runs API maintenance at startup and every minute. The authenticated
       live probes of the next TODO have not run.
+- [x] Apply item 98 A to the security protocol and GitHub crate guide.
+      State the four App permissions and the Members read requirement
+      for the owner and member checks through the person's sign-in.
+      Branch: `conductor/items-94-b-and-98-a-boat-wallets-and-members-permission`.
 - [ ] Orchestrator: run the live API, repeated-authorization, and GitHub
       install-binding probes in `crates/ciproxy-api/scripts/README.md`.
       Read credentials through `CIPROXY_API_CREDENTIALS_FILE`. Record no
@@ -1173,6 +1177,20 @@ Implementation calls, 6 November 2026:
       Pull request #37 built it. The main preview holds version 1, the
       share code of snapshot `2026-11-06-7484d1b`, which is also the release
       of its `JOB_IMAGE_MANIFEST_PATH`. Production gets its version at launch.
+- [x] Apply item 94 B to the Boat key check and connection API.
+      Return named personal and organization wallets and the likely
+      selection. Prove both key kinds through HTTP with a real PgStore.
+      Update the overflow protocol and regenerate the API types.
+      My call, 8 November 2026: preselect Boat's active wallet, then
+      its first offered wallet. Reason: Boat supplies the likely wallet.
+      Read the wallets without choosing one, so organization keys work.
+      The key check saves no key.
+      Branch: `conductor/items-94-b-and-98-a-boat-wallets-and-members-permission`.
+- [x] Apply review finding 1 E for the wallet key check.
+      Prove active-wallet selection and its first-wallet fallback at
+      the Boat boundary. Keep the existing personal and organization
+      HTTP scenarios.
+      Branch: `conductor/items-94-b-and-98-a-boat-wallets-and-members-permission`.
 - [ ] Orchestrator: Run the three live scenarios with the private credential
       file, as `crates/ciproxy-control-plane/overflow.md` describes.
 
@@ -1667,6 +1685,10 @@ The repository is public from item 70 = E, and the site links to it.
       would lower the claim to about 54%.
 - [ ] Publish the site. Then make the GitHub App public.
 
+- [ ] Move the image-publishing credentials of item 100 = B from the
+      reusable image workflow on the primary branch to the one on protected
+      `main`, after the launch merge puts the repository on `main`.
+
 ## Milestone 28: Verification, commit, review, and pull request
 
 Depends on: every other milestone
@@ -2013,6 +2035,14 @@ Answers of 5 November 2026:
   socket error go. A reconnect before the first handoff still means only
   GitHub's cache. There is no guessed time limit; GitHub's job time limit is
   the backstop. Rejected: A and C.
+- Item 100, B, 8 November 2026: the image-publishing credentials bind to
+  the reusable image workflow on the primary branch until launch, and move
+  to protected `main` at launch. Rejected: A and C.
+- Item 101, B, 8 November 2026: the Machines and Settings page responses
+  gain the facts of the approved mockups, with regenerated types. Rejected:
+  A, C, D, and E.
+- Item 102, A, 8 November 2026: the warm runner control shows the saved
+  number in every state, and the mockup changes to it. Rejected: B and C.
 - Item 113, A, 8 November 2026: the label dialog keeps the fit counts and
   the placement, and the mockup drops the largest-job figures. Rejected: B.
 - Item 108, C with D, 8 November 2026: the paid change sends the same
@@ -4472,6 +4502,8 @@ GitHub membership, is rejected.
 
 ### 100. The protected image workflow needs a home before launch
 
+**Answer, 8 November 2026:** B. Move the binding to `main` at launch.
+
 - **Severity:** High. **Effort:** Small.
 - **Source:** Review, pull request #47, round 1, finding 1, and its fix.
 - **Category:** Security.
@@ -4508,6 +4540,8 @@ GitHub membership, is rejected.
 
 ### 101. The Machines and Settings mockups need facts the API lacks
 
+**Answer, 8 November 2026:** B.
+
 - **Severity:** Medium. **Effort:** Large.
 - **Source:** Implementation, Milestone 20, pull request #50, its item 1.
 - **Category:** Mockup.
@@ -4538,6 +4572,8 @@ GitHub membership, is rejected.
   the approved design.
 
 ### 102. The warm runner control has two meanings
+
+**Answer, 8 November 2026:** A.
 
 - **Severity:** Low. **Effort:** Small.
 - **Source:** Implementation, Milestone 20, pull request #50, its item 2.

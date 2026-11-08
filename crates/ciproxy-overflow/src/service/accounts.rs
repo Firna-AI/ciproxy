@@ -13,7 +13,7 @@ use crate::catalog;
 use crate::crypto::{KeyContext, SecretPurpose};
 use crate::error::{Error, Result, ResultExt};
 use crate::maintenance::MaintenanceCapabilities;
-use crate::provider::Capabilities;
+use crate::provider::{Capabilities, KeyWallets};
 use crate::secrets::SecretBytes;
 use crate::session::Session;
 use crate::view::OverflowView;
@@ -22,6 +22,15 @@ use super::OverflowService;
 
 #[async_trait]
 impl Overflow for OverflowService {
+    async fn wallets(&self, key: Secret) -> Result<KeyWallets> {
+        self.dependencies
+            .factory
+            .backend(&key, "personal")?
+            .account
+            .wallets()
+            .await
+    }
+
     async fn connect(
         &self,
         workspace_id: Uuid,

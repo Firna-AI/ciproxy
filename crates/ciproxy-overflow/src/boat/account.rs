@@ -6,10 +6,10 @@ use rust_decimal::Decimal;
 use sandbox_interface::ProviderRef;
 
 use crate::error::{Error, Result};
-use crate::provider::{AccountFacts, BoatAccountApi, RuntimeUsage};
+use crate::provider::{AccountFacts, AccountWallet, BoatAccountApi, KeyWallets, RuntimeUsage};
 
 use super::http::{BoatReads, valid_sandbox};
-use super::wire::{Identity, Limits, Usage, Wallets};
+use super::wire::{Identity, Limits, Usage, WalletKind, Wallets};
 
 pub(super) struct AccountApi {
     pub(super) reads: BoatReads,
@@ -17,6 +17,51 @@ pub(super) struct AccountApi {
 
 #[async_trait]
 impl BoatAccountApi for AccountApi {
+    async fn wallets(&self) -> Result<KeyWallets> {
+        let identity: Identity = self
+            .reads
+            .unscoped_get("/me")
+            .await?
+            .ok_or(Error::InvalidProviderData)?;
+        let wallets: Wallets = self
+            .reads
+            .unscoped_get("/orgs")
+            .await?
+            .ok_or(Error::InvalidProviderData)?;
+        if !identity.ok || identity.kind != "user.info" || !wallets.ok || wallets.kind != "org.list"
+        {
+            return Err(Error::InvalidProviderData);
+        }
+        let selected_wallet = wallets
+            .orgs
+            .iter()
+            .find(|wallet| wallet.active)
+            .or_else(|| wallets.orgs.first())
+            .ok_or(Error::InvalidProviderData)?
+            .selector()
+            .to_owned();
+        let personal_name = identity
+            .user
+            .display_name
+            .filter(|name| !name.trim().is_empty())
+            .unwrap_or(identity.user.login);
+        let wallets = wallets
+            .orgs
+            .into_iter()
+            .map(|wallet| AccountWallet {
+                wallet: wallet.selector().to_owned(),
+                name: match wallet.kind {
+                    WalletKind::Personal => personal_name.clone(),
+                    WalletKind::Organization => wallet.name,
+                },
+            })
+            .collect();
+        Ok(KeyWallets {
+            wallets,
+            selected_wallet,
+        })
+    }
+
     async fn account(&self) -> Result<AccountFacts> {
         let identity: Identity = self
             .reads
