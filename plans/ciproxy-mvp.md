@@ -4866,3 +4866,44 @@ request #39.
 - **Recommendation:** A. The protocol requires only the counts and the
   placement.
 - **Action:** ask the user, because the approved mockup changes.
+
+### 114. The release channel change waits for a merge
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Implementation, plan item 103, option B, 8 November 2026.
+- **Category:** Process.
+- **Location:** `futex-ai/cli-release` pull requests #6 and #7, and
+  `deploy/scripts/mirror-release-image.sh`.
+- **Terms:**
+  - **Release channel:** the new `CLI_RELEASE_CHANNEL` setting of the
+    release server. `stable` serves full releases only, and `prerelease`
+    also serves pre-releases.
+  - **Pinned revision:** the `cli-release` commit that
+    `mirror-release-image.sh` builds into the release server image.
+- **Background:** Pull request #7 adds the release channel. Its review
+  found no problem, and every check passed except one Clippy error. That
+  error also fails on `main`, and the user's pull request #6 fixes it.
+  ciproxy builds the server image from the pinned revision, so it needs no
+  published `cli-release` release.
+- **Problem:** The change is not on `main`, so ciproxy has no merged
+  revision to pin.
+- **Impact if no action:** After launch, a test release of the agent
+  reaches every customer machine, because both environments follow full
+  releases only.
+- **Root question:** How does ciproxy get the reviewed channel change into
+  its release server image?
+- **Options:**
+  - **A.** Merge #6, then update #7 and merge it when its checks pass.
+    Publish no release. ciproxy then pins the merged commit. Effort: Small.
+  - **B.** Do A, and also merge the release pull request that the release
+    automation opens. This publishes the shared crates and the server
+    image of `cli-release` for every product that uses it. Effort: Small.
+  - **C.** Leave both pull requests open, and pin the reviewed head
+    `55eae44`. The pin then names a commit outside `main`. Effort: Small.
+- **Left out:** Closing #7 and marking each test release as a full release,
+  because that fails the goal after launch.
+- **Wider fix:** None. The channel is the wider fix of item 103.
+- **Recommendation:** A. It puts the reviewed change on `main`, and ciproxy
+  needs no release.
+- **Action:** ask the user, because the user approves each merge and each
+  release in `futex-ai/cli-release`.
