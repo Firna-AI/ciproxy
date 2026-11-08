@@ -1843,6 +1843,19 @@ Answers of 5 November 2026:
   socket error go. A reconnect before the first handoff still means only
   GitHub's cache. There is no guessed time limit; GitHub's job time limit is
   the backstop. Rejected: A and C.
+- Items 91 and 92, A, 8 November 2026: the workspace picker shows the
+  name and the upgrade warning, and the workspace switch shows the role.
+  The mockups change to match. Rejected: B to E of item 91, and B to D of
+  item 92.
+- Item 93, C, 8 November 2026: the protocol, the install mockup, the
+  dashboard, and the docs state the supported hosts: x64 Linux with
+  systemd and cgroup v2, on Debian, Ubuntu, Fedora, RHEL, Rocky Linux, or
+  AlmaLinux. Wider support is the follow-up item
+  `follow-ups/installer-more-linux-hosts.md`. Rejected: A and B.
+- Item 96, A, 8 November 2026: the shared docs grid styles match the
+  mockups. Rejected: B and C.
+- Item 97, G, 8 November 2026: render with comrak, as a follow-up item that
+  blocks nothing. Until then, fix a link test that breaks by hand.
 - Item 90, G, 7 November 2026: the deploy workflow builds the
   control-plane image as `mokly-ai/mokly-cloud` does. A build job with no
   cloud credentials builds it, a publish job pushes it by digest, and the
@@ -3902,6 +3915,9 @@ should not be manual".
 
 ### 91. The workspace picker lacks the plan and organization count
 
+**Answer, 8 November 2026:** A. Keep the shorter picker, and update the
+mockup.
+
 - **Severity:** Medium. **Effort:** Medium.
 - **Source:** Review, Milestone 19, pull request #36, round 2, its finding 2.
 - **Category:** Mockup.
@@ -3936,6 +3952,8 @@ should not be manual".
 
 ### 92. The workspace switch shows roles, not plan facts
 
+**Answer, 8 November 2026:** A. Keep the role, and update the mockup.
+
 - **Severity:** Low. **Effort:** Medium.
 - **Source:** Review, Milestone 19, pull request #36, the check of round 2,
   finding 2.
@@ -3966,6 +3984,9 @@ should not be manual".
   and product mismatch is right.
 
 ### 93. The installer supports fewer hosts than the docs say
+
+**Answer, 8 November 2026:** C, and D as a follow-up item:
+`follow-ups/installer-more-linux-hosts.md`.
 
 - **Severity:** Medium. **Effort:** Medium.
 - **Source:** Implementation, Milestone 24, pull request #40, its item 1.
@@ -4066,6 +4087,8 @@ should not be manual".
 
 ### 96. The docs navigation grids differ from the mockups
 
+**Answer, 8 November 2026:** A.
+
 - **Severity:** Low. **Effort:** Small.
 - **Source:** Review, Milestone 24, pull request #40, round 1, its finding 2.
 - **Category:** Mockup.
@@ -4091,6 +4114,10 @@ should not be manual".
   and product mismatch is right.
 
 ### 97. The gate's Markdown link check differs from GitHub
+
+**Answer, 8 November 2026:** G, as a follow-up item that blocks nothing:
+`follow-ups/markdown-heading-ids-comrak.md`. Until then, fix a link test
+that breaks by hand.
 
 - **Severity:** Medium. **Effort:** Large.
 - **Source:** Implementation, pull request #45, the follow-up item
