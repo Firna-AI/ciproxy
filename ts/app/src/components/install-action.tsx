@@ -33,8 +33,7 @@ export function InstallAction({
         tone={action.tone}
         size={size}
         block={block}
-        onClick={(event) => {
-          event.preventDefault();
+        onActivate={() => {
           if (running.current) return;
           running.current = true;
           setFailed(false);

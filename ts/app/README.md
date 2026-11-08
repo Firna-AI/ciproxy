@@ -12,6 +12,8 @@ Controls come from `@firna/ui` first, then from `src/components`.
 Action buttons and link buttons come from
 [src/components/actions.tsx](src/components/actions.tsx). They grow with their
 label, so a long name in a label shows in full at each width.
+An install link uses the optional `onActivate` callback for a plain click.
+Modified clicks keep the browser's navigation to the stable install page.
 Colours, fonts, and radii come from the [token package](../tokens/README.md).
 The icons and the brand mark are inline SVG elements.
 
@@ -61,6 +63,7 @@ the Admins, in place of each workspace page.
   Each install action calls POST `/api/installation-links/start`, then opens
   its returned GitHub URL. The start preserves the session's install purpose.
   Add an organization uses its existing workspace action.
+  A plain install action also works after the page observes a newer API build.
 - The account menu reads `can_claim_admin` directly from the session.
   The API returns false for a person who already has the Admin role.
 - Each API response names its build in the `x-ciproxy-build` header. After a

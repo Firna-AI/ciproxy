@@ -1487,6 +1487,12 @@ Installation follow-up outcomes, 8 November 2026:
 - My call, 8 November 2026: put the pure activation predicate on
   `OrganizationActivation`. The GitHub service and registration query then
   consume the same retained-admission rule.
+- Post-push review, 8 November 2026: apply B for the install link's native
+  navigation. Give `ActionLink` an opt-in plain-activation callback. Only
+  that callback marks the link as an action for the build-change handler.
+  Keep other links and their raw `onClick` handling unchanged. A modified
+  click opens the stable install page and creates no attempt. A plain
+  activation saves its attempt, also after observing a new API build.
 
 ## Milestone 20: Dashboard UI: Machines and Settings
 
