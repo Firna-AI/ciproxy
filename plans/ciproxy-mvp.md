@@ -1651,6 +1651,10 @@ The repository is public from item 70 = E, and the site links to it.
       would lower the claim to about 54%.
 - [ ] Publish the site. Then make the GitHub App public.
 
+- [ ] Move the image-publishing credentials of item 100 = B from the
+      reusable image workflow on the primary branch to the one on protected
+      `main`, after the launch merge puts the repository on `main`.
+
 ## Milestone 28: Verification, commit, review, and pull request
 
 Depends on: every other milestone
@@ -1997,6 +2001,14 @@ Answers of 5 November 2026:
   socket error go. A reconnect before the first handoff still means only
   GitHub's cache. There is no guessed time limit; GitHub's job time limit is
   the backstop. Rejected: A and C.
+- Item 100, B, 8 November 2026: the image-publishing credentials bind to
+  the reusable image workflow on the primary branch until launch, and move
+  to protected `main` at launch. Rejected: A and C.
+- Item 101, B, 8 November 2026: the Machines and Settings page responses
+  gain the facts of the approved mockups, with regenerated types. Rejected:
+  A, C, D, and E.
+- Item 102, A, 8 November 2026: the warm runner control shows the saved
+  number in every state, and the mockup changes to it. Rejected: B and C.
 - Item 113, A, 8 November 2026: the label dialog keeps the fit counts and
   the placement, and the mockup drops the largest-job figures. Rejected: B.
 - Item 108, C with D, 8 November 2026: the paid change sends the same
@@ -4456,6 +4468,8 @@ GitHub membership, is rejected.
 
 ### 100. The protected image workflow needs a home before launch
 
+**Answer, 8 November 2026:** B. Move the binding to `main` at launch.
+
 - **Severity:** High. **Effort:** Small.
 - **Source:** Review, pull request #47, round 1, finding 1, and its fix.
 - **Category:** Security.
@@ -4492,6 +4506,8 @@ GitHub membership, is rejected.
 
 ### 101. The Machines and Settings mockups need facts the API lacks
 
+**Answer, 8 November 2026:** B.
+
 - **Severity:** Medium. **Effort:** Large.
 - **Source:** Implementation, Milestone 20, pull request #50, its item 1.
 - **Category:** Mockup.
@@ -4522,6 +4538,8 @@ GitHub membership, is rejected.
   the approved design.
 
 ### 102. The warm runner control has two meanings
+
+**Answer, 8 November 2026:** A.
 
 - **Severity:** Low. **Effort:** Small.
 - **Source:** Implementation, Milestone 20, pull request #50, its item 2.
