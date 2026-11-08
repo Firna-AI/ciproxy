@@ -20,6 +20,7 @@ use ciproxy_store_interface::github_timing::JobTimes;
 use ciproxy_store_interface::organizations::Organization;
 use ciproxy_store_interface::store::Store;
 use secrecy::{ExposeSecret, SecretString};
+use uuid::Uuid;
 
 pub(super) struct Identity {
     pub(super) id: AtomicI64,
@@ -78,6 +79,7 @@ pub(super) struct Remote {
     pub(super) next_id: AtomicI64,
     pub(super) events: Mutex<Vec<String>>,
     pub(super) lifecycle_events: Mutex<Vec<LifecycleEvent>>,
+    pub(super) active_bindings: Mutex<HashMap<i64, Vec<Uuid>>>,
     pub(super) fail_uninstall: AtomicBool,
     pub(super) fail_delete: AtomicBool,
     pub(super) fail_ensure: AtomicBool,
@@ -210,6 +212,19 @@ impl LifecycleOutput for Remote {
     async fn changed(&self, event: LifecycleEvent) -> ciproxy_github::error::Result<()> {
         if self.fail_lifecycle.swap(false, Ordering::SeqCst) {
             return Err(ciproxy_github::error::Error::AccessUnavailable(503));
+        }
+        if let LifecycleEvent::Active(organization) = &event {
+            let labels = self
+                .store
+                .scale_sets(organization.workspace_id, organization.id)
+                .unwrap()
+                .into_iter()
+                .map(|set| set.label_id)
+                .collect();
+            self.active_bindings
+                .lock()
+                .unwrap()
+                .insert(organization.installation_id, labels);
         }
         self.lifecycle_events.lock().unwrap().push(event.clone());
         self.events.lock().unwrap().push(format!(

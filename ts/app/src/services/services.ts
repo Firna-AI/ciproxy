@@ -6,9 +6,11 @@
 import {
   createApiClient,
   type ApiClient,
+  type ApiResult,
   type Transport,
 } from "../api/client.ts";
 import { createEndpoints, type Endpoints } from "../api/endpoints.ts";
+import type { InstallLink } from "../api/schema.ts";
 import { createBuildGate, type BuildGate } from "../state/build-gate.ts";
 import {
   createInstallCommandStore,
@@ -49,6 +51,8 @@ export type AppServices = {
   readonly session: SessionStore;
   setup(workspaceId: string): SetupStore;
   installCommand(workspaceId: string): InstallCommandStore;
+  /** Save installation evidence before leaving for GitHub. */
+  startInstallation(): Promise<ApiResult<InstallLink>>;
   /** Remember that this tab follows an install link to GitHub. */
   markInstallStarted(): void;
   /** Whether this tab came back from an install that it started. */
@@ -114,6 +118,16 @@ export function createAppServices(env: AppEnvironment): AppServices {
         now: env.now,
       }),
     ),
+    async startInstallation() {
+      const result = await sessionStore.mutate(() =>
+        endpoints.startInstallation(),
+      );
+      if (result.ok) {
+        env.tab.set(storageKeys.installStarted, "1");
+        navigator.leave(result.value.url);
+      }
+      return result;
+    },
     markInstallStarted() {
       env.tab.set(storageKeys.installStarted, "1");
     },

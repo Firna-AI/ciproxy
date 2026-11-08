@@ -124,6 +124,8 @@ verified state, removal, and notification insertion. Prepared repository
 snapshots and scale-set bindings commit with activation. Removal captures
 credential revocation, the last-organization result, and the required
 removal cause in the same commit.
+Registration uses the same admission predicate as GitHub preparation.
+Retained admission takes precedence over the initial holds of a new Add.
 Outbox events keep immutable metadata snapshots and sequence order. They
 have no cascading workspace or organization reference. Pending cleanup
 survives row reuse and retention purge. Confirmation deletes an accepted
@@ -167,6 +169,8 @@ A person record stays only with a role or an open request. Intentional
 organization removal keeps a separate durable marker and no owner-removal
 retention deadline. Retired labels preserve history while active names
 remain unique.
+Maintenance discovers workspaces with unfinished retired bindings, then
+reads each organization's bindings for cleanup.
 
 Credential-only rotation writes preserve membership freshness. Current-cost
 writes read the supplied clock after locking the workspace and machine rows.

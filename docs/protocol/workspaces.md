@@ -67,6 +67,15 @@ workspace and takes one out, and when an organization is inactive.
 
 ## Add an organization
 
+- Reading the sign-in state creates no installation entry.
+- Its installation link opens the dashboard install page.
+- Each install starts through an explicit action that checks the Origin and
+  the CSRF token of the sign-in.
+- An Add saves durable evidence of its purpose before GitHub opens.
+- Installation entries have no age limit.
+- **Decision:** create an installation entry only when a person starts an
+  install. Rejected: creating an entry on each sign-in state read, because
+  normal dashboard reads can then leave permanent unused entries.
 - A person installs the ciproxy GitHub App on an organization on GitHub.
 - On GitHub, the person picks the organization and its repositories.
 - A member who is not an owner can ask for the install, and GitHub sends the

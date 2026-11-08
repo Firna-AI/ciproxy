@@ -6,14 +6,12 @@ use ciproxy_schema::labels::labels;
 use ciproxy_schema::scale_sets::scale_sets;
 use ciproxy_schema::workspaces::workspaces;
 use ciproxy_store_interface::error::{Error, Result};
-use ciproxy_store_interface::labels::Label;
 use ciproxy_store_interface::scale_sets::ScaleSet;
 use diesel::prelude::*;
 use uuid::Uuid;
 
 use crate::connection::PgStore;
 use crate::error::{QueryResultExt, require_record};
-use crate::labels::LabelRow;
 
 pub(super) fn rename(store: &PgStore, workspace: Uuid, name: &str) -> Result<()> {
     require_record(
@@ -53,25 +51,6 @@ pub(super) fn retire(
         .execute(&mut *store.connection()?)
         .store()?,
     )
-}
-
-pub(super) fn retired(store: &PgStore, workspace: Uuid) -> Result<Vec<Label>> {
-    labels::table
-        .filter(labels::workspace_id.eq(workspace))
-        .filter(labels::deleted_at.is_not_null())
-        .filter(
-            labels::id.eq_any(
-                scale_sets::table
-                    .filter(scale_sets::remote_removed_at.is_null())
-                    .select(scale_sets::label_id),
-            ),
-        )
-        .select(LabelRow::as_select())
-        .load(&mut *store.connection()?)
-        .store()?
-        .into_iter()
-        .map(LabelRow::into_record)
-        .collect()
 }
 
 pub(super) fn sets(store: &PgStore, workspace: Uuid, organization: Uuid) -> Result<Vec<ScaleSet>> {

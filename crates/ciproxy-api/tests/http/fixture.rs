@@ -86,6 +86,7 @@ impl Fixture {
             next_id: AtomicI64::new(1000),
             events: Mutex::new(Vec::new()),
             lifecycle_events: Mutex::new(Vec::new()),
+            active_bindings: Mutex::new(HashMap::new()),
             fail_uninstall: AtomicBool::new(false),
             fail_delete: AtomicBool::new(false),
             fail_ensure: AtomicBool::new(false),

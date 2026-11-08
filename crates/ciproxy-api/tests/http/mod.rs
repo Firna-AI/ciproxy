@@ -54,6 +54,7 @@ mod setup_personal_tests;
 
 mod continuation_tests;
 mod direct_recovery_tests;
+mod install_start_tests;
 mod late_approval_tests;
 mod link_final_tests;
 mod m18_access_tests;
@@ -83,6 +84,7 @@ mod overflow_support;
 mod overflow_tests;
 mod overflow_wallet_tests;
 mod pending_result_tests;
+mod retained_add_tests;
 mod session_failure_tests;
 mod signed_association_tests;
 

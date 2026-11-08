@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Verify an operator's live dashboard session without printing secret data."""
 
+from __future__ import annotations
+
 import json
 import os
 from pathlib import Path

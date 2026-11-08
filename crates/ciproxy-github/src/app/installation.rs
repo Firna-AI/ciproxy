@@ -159,21 +159,9 @@ impl AppService {
         let local = if previous.is_some() {
             self.store.activation(&organization).await?
         } else {
-            Default::default()
+            decision.initial_activation()
         };
-        let held = local.billing_hold
-            || local.admin_approval_hold
-            || matches!(
-                decision,
-                InstallationDecision::Target {
-                    admin_approved: false,
-                    ..
-                } | InstallationDecision::Target {
-                    billing_hold: true,
-                    ..
-                }
-            );
-        let target = if organization.app_state == AppState::Active && held {
+        let target = if organization.app_state == AppState::Active && !local.permits_activation() {
             GithubLifecycleTarget::Inactive
         } else if organization.app_state == AppState::Active {
             let labels = if workspace.is_some() {

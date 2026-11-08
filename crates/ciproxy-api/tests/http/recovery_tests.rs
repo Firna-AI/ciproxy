@@ -11,6 +11,28 @@ use super::fixture::Fixture;
 use super::fixture_io::json;
 
 #[tokio::test]
+async fn session_offers_owner_recovery_only_before_the_person_has_admin() {
+    let fixture = Fixture::new();
+    fixture.identity.memberships.lock().unwrap().insert(
+        7,
+        vec![Membership {
+            github_id: 100,
+            owner: true,
+        }],
+    );
+    let owner = fixture.login(7, Some(Role::Viewer)).await;
+    let session = json(fixture.request(Some(&owner), "GET", "/session", None).await).await;
+    assert_eq!(session["workspaces"][0]["can_claim_admin"], true);
+    let claimed = fixture
+        .request(Some(&owner), "POST", &fixture.path("/claim-admin"), None)
+        .await;
+    assert_eq!(claimed.status(), StatusCode::OK);
+    let session = json(fixture.request(Some(&owner), "GET", "/session", None).await).await;
+    assert_eq!(session["workspaces"][0]["role"], "admin");
+    assert_eq!(session["workspaces"][0]["can_claim_admin"], false);
+}
+
+#[tokio::test]
 async fn owner_claim_rechecks_idle_admin_before_recovery_and_requires_ownership() {
     let fixture = Fixture::new();
     let _admin = fixture.login(7, Some(Role::Admin)).await;
