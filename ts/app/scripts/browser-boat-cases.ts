@@ -50,7 +50,7 @@ export const boatCases: readonly SmokeCase[] = [
     scenario: "overflow-limit-reached",
     path: overflow,
     heading: "Settings",
-    text: "Boat spend reached the $200 limit",
+    text: "Boat spend reached the $200 limit for November",
   },
   {
     name: "overflow-unknown-costs",

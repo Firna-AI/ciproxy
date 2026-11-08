@@ -1490,6 +1490,14 @@ Each screen follows its mockup, as Milestone 19 says.
       keep Disconnect available after key rejection. Update the mockup
       before the app, and add the regression cases.
       Branch: `conductor/m22-boat-ui`.
+- [x] Apply the user's answer C to item 109, 8 November 2026, for review
+      finding 1: the spend limit notice names the budget month and the day
+      Boat resumes, as the Jobs page does, from data that the API has. Update
+      the approved Overflow mockup first, then the notice. Run their browser
+      checks at 1440, 720, and 390 pixels. This answer settles the API gap
+      that the first TODO records: the notice needs no day on which the
+      spend reached the limit.
+      Branch: `conductor/m22-boat-ui`.
 - [ ] Apply the owner's answer B to item 94, 8 November 2026: after the key
       check, list each wallet the key can use, with the likely one selected.
       Let the customer change it before saving. Each Boat organization has

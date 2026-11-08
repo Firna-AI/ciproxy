@@ -92,7 +92,7 @@ function PageNotice({ state }: { state: OverflowState }) {
       return (
         <Notice
           tone="warning"
-          title={`Boat spend reached the ${formatMoney(boat.spendLimit)} limit on ${boat.limitReachedOn}`}
+          title={`Boat spend reached the ${formatMoney(boat.spendLimit)} limit for ${boat.budgetMonth}`}
         >
           Jobs run on your machines only, and wait there for a free slot. Boat
           takes jobs again on {boat.nextMonth}, or when you raise the limit.

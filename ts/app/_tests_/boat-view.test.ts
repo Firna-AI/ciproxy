@@ -66,7 +66,7 @@ test("the spend shows confirmed and unconfirmed parts, and only the API flag rea
   assert.equal(spendFigures(overflowSettings({ spend: null })), null);
 });
 
-test("the page notice names a rejected key, a reached limit with the UTC resume day, or unknown costs", () => {
+test("the page notice names a rejected key, a reached limit with its UTC budget month and resume day, or unknown costs", () => {
   assert.equal(overflowNotice(overflowSettings()), null);
   assert.deepEqual(overflowNotice(rejected("2026-11-12T20:00:00Z")), {
     tone: "danger",
@@ -78,9 +78,17 @@ test("the page notice names a rejected key, a reached limit with the UTC resume 
   });
   assert.deepEqual(overflowNotice(reached), {
     tone: "warning",
-    title: "Boat spend reached the $200 limit",
+    title: "Boat spend reached the $200 limit for November",
     body: "Jobs run on your machines only, and wait there for a free slot. Boat takes jobs again on 1\u00a0December, or when you raise the limit.",
   });
+  assert.deepEqual(
+    overflowNotice({ ...reached, next_month_at: "2027-01-01T00:00:00Z" }),
+    {
+      tone: "warning",
+      title: "Boat spend reached the $200 limit for December",
+      body: "Jobs run on your machines only, and wait there for a free slot. Boat takes jobs again on 1\u00a0January, or when you raise the limit.",
+    },
+  );
   assert.equal(
     overflowNotice({
       ...rejected("2026-11-12T20:00:00Z"),

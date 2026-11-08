@@ -1,7 +1,8 @@
 // What Setup and Settings under Overflow show of Boat. Every fact comes from
 // the API: the account name, the rejection time, the spend parts, whether
-// the limit is reached, and the first day of the next month in UTC. A
-// reached limit comes only from the API flag, never from rounded amounts.
+// the limit is reached, and the first day of the next month in UTC, with the
+// budget month before it. A reached limit comes only from the API flag,
+// never from rounded amounts.
 
 import type { BoatAccountView, OverflowSettings } from "../api/schema.ts";
 import type { OverflowSnapshot } from "../state/overflow.ts";
@@ -106,6 +107,16 @@ export function spendFigures(settings: OverflowSettings): SpendFigures | null {
   };
 }
 
+/** "November": the UTC month before `nextMonthAt`, whose budget counts. */
+function budgetMonth(nextMonthAt: string): string {
+  const next = new Date(nextMonthAt);
+  const month = Date.UTC(next.getUTCFullYear(), next.getUTCMonth() - 1, 1);
+  return new Intl.DateTimeFormat("en-GB", {
+    month: "long",
+    timeZone: "UTC",
+  }).format(month);
+}
+
 /** The one notice of the page: a rejected key, a reached limit, or costs. */
 export function overflowNotice(settings: OverflowSettings): NoticeModel | null {
   const rejected = settings.account?.rejected_at ?? null;
@@ -115,7 +126,7 @@ export function overflowNotice(settings: OverflowSettings): NoticeModel | null {
   if (spend?.limit_reached === true && limit !== null) {
     return {
       tone: "warning",
-      title: `Boat spend reached the ${formatCents(limit)} limit`,
+      title: `Boat spend reached the ${formatCents(limit)} limit for ${budgetMonth(settings.next_month_at)}`,
       body: `Jobs run on your machines only, and wait there for a free slot. Boat takes jobs again on ${formatDay(settings.next_month_at, "UTC")}, or when you raise the limit.`,
     };
   }
