@@ -109,6 +109,13 @@ pub struct OrganizationActivation {
     pub added_by: Option<i64>,
 }
 
+impl OrganizationActivation {
+    /// Preserve admitted authority, or require both initial holds to be clear.
+    pub fn permits_activation(self) -> bool {
+        self.admitted || (!self.billing_hold && !self.admin_approval_hold)
+    }
+}
+
 /// Atomic association and admission queries.
 pub trait InstallationLinkStore: Send + Sync {
     /// Atomically bind signed ownership and flow from the original requester's facts.

@@ -100,6 +100,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/installation-links/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["installation_links_start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/installation-links/{claim_id}": {
         parameters: {
             query?: never;
@@ -676,6 +692,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workspaces/{workspace_id}/overflow/wallets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check a Boat key and list its billing wallets. */
+        post: operations["overflow_wallets"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workspaces/{workspace_id}/plans": {
         parameters: {
             query?: never;
@@ -794,6 +827,11 @@ export interface components {
             /** @description Boat wallet identity. Personal is the default when no organization is selected. */
             wallet?: string;
         };
+        /** @description One-use key check before the customer selects a Boat wallet. */
+        BoatKeyCheck: {
+            /** @description The customer's Boat key. Wallet discovery does not save it. */
+            api_key: string;
+        };
         /** @description Boat resources under the label policy, without claiming a start is available. */
         BoatLabelFit: {
             /** @enum {string} */
@@ -839,6 +877,20 @@ export interface components {
              */
             unconfirmed_cents: components["schemas"]["Cents"];
         };
+        /** @description A named billing wallet that the checked key can use. */
+        BoatWallet: {
+            /** @description The verified personal account or organization name. */
+            name: string;
+            /** @description Explicit personal selector or stable Boat organization identity. */
+            wallet: string;
+        };
+        /** @description Safe key-check result with the likely wallet selected. */
+        BoatWallets: {
+            /** @description Boat's active wallet, or the first offered wallet when none is active. */
+            selected_wallet: string;
+            /** @description All wallets accessible to the key. */
+            wallets: components["schemas"]["BoatWallet"][];
+        };
         /** @description Machine-cache metadata. Clear cache acts only on this machine's entries. */
         CacheView: {
             /** @description Machine-cache capacity bytes, as a decimal string. */
@@ -882,6 +934,7 @@ export interface components {
             period_end: string;
             /** @description Paid changes use Stripe's prorated saved-card charge. */
             prorated: boolean;
+            quote?: components["schemas"]["PaidQuoteReference"] | null;
             /** @description Initial Checkout payment in integer US cents. */
             today_cents: components["schemas"]["Cents"];
         };
@@ -1468,6 +1521,27 @@ export interface components {
         PageBannerView: {
             banner?: components["schemas"]["PageBanner"] | null;
         };
+        /** @description A paid change uses only the quote selected during review. */
+        PaidChangePayment: {
+            /**
+             * Format: uuid
+             * @description Authoritative quote identity. Selection and amounts stay on the server.
+             */
+            quote_id: string;
+        };
+        /** @description The server-owned quote which permits one paid change. */
+        PaidQuoteReference: {
+            /**
+             * Format: date-time
+             * @description Exclusive deadline for starting its payment.
+             */
+            expires_at: string;
+            /**
+             * Format: uuid
+             * @description Opaque workspace-owned quote identifier.
+             */
+            id: string;
+        };
         /** @description Recoverable Checkout and paid-change outcomes. */
         PaymentOutcome: {
             /** @enum {string} */
@@ -1651,7 +1725,7 @@ export interface components {
          * @description Closed set of machine-readable dashboard failures.
          * @enum {string}
          */
-        ProblemCode: "boat_key_rejected" | "sign_in_required" | "access_denied" | "not_found" | "conflict" | "invalid_request" | "github_label_refused" | "unavailable" | "internal" | "method_not_allowed";
+        ProblemCode: "boat_key_rejected" | "sign_in_required" | "access_denied" | "not_found" | "conflict" | "review_required" | "invalid_request" | "github_label_refused" | "unavailable" | "internal" | "method_not_allowed";
         /** @description Organization removal metadata verified through this person's GitHub membership. */
         RemovedOrganization: {
             /**
@@ -1820,7 +1894,7 @@ export interface components {
              * @description Exclusive fixed sign-in expiry.
              */
             expires_at: string;
-            /** @description Install entry point when no workspace is available. */
+            /** @description Stable dashboard install page. Reading it creates no installation attempt. */
             install_url: string;
             /**
              * @description Exact claim IDs from the latest successful GitHub authorization.
@@ -2869,6 +2943,142 @@ export interface operations {
             };
         };
     };
+    installation_links_start: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Exact configured dashboard origin. */
+                Origin: string;
+                /** @description The session's CSRF token returned by the session endpoint. */
+                "x-ciproxy-csrf": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstallLink"];
+                };
+            };
+            /** @description Malformed request */
+            400: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sign-in absent, expired, or revoked */
+            401: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Workspace role, origin, or CSRF token refused */
+            403: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Resource absent in this workspace */
+            404: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method not allowed */
+            405: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflicting resource state */
+            409: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Request body is too large */
+            413: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unsupported content type */
+            415: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description GitHub label refusal or malformed body */
+            422: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal operation failed */
+            500: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Temporary upstream or agent failure */
+            503: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     installation_links_detail: {
         parameters: {
             query?: never;
@@ -3708,7 +3918,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PlanSelection"];
+                "application/json": components["schemas"]["PaidChangePayment"];
             };
         };
         responses: {
@@ -8615,6 +8825,149 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OverflowSettings"];
+                };
+            };
+            /** @description Malformed request */
+            400: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sign-in absent, expired, or revoked */
+            401: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Workspace role, origin, or CSRF token refused */
+            403: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Resource absent in this workspace */
+            404: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Method not allowed */
+            405: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflicting resource state */
+            409: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Request body is too large */
+            413: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unsupported content type */
+            415: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description GitHub label refusal or malformed body */
+            422: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal operation failed */
+            500: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Temporary upstream or agent failure */
+            503: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    overflow_wallets: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Exact configured dashboard origin. */
+                Origin: string;
+                /** @description The session's CSRF token returned by the session endpoint. */
+                "x-ciproxy-csrf": string;
+            };
+            path: {
+                /** @description Stable workspace identity. */
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BoatKeyCheck"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    "x-ciproxy-build"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BoatWallets"];
                 };
             };
             /** @description Malformed request */

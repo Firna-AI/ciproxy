@@ -10,7 +10,9 @@ export type Locator = {
     state?: "visible" | "hidden" | "attached";
     timeout?: number;
   }): Promise<void>;
-  click(): Promise<void>;
+  click(options?: {
+    modifiers: ("Control" | "Meta" | "Shift" | "Alt")[];
+  }): Promise<void>;
   focus(): Promise<void>;
   press(key: string): Promise<void>;
   fill(value: string): Promise<void>;
@@ -106,6 +108,7 @@ export type BrowserContext = {
       }): Promise<void>;
     }) => Promise<void>,
   ): Promise<void>;
+  waitForEvent(event: "page"): Promise<Page>;
   tracing: {
     start(options: {
       screenshots: boolean;

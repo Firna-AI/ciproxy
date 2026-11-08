@@ -6,25 +6,17 @@ use ciproxy_github::app::InstallationOutcome;
 use ciproxy_github::app::webhook::InstallationAction;
 use ciproxy_store_interface::dashboard::records::Role;
 use ciproxy_store_interface::organizations::AppState;
-use url::Url;
 use uuid::Uuid;
 
-use super::fixture_io::{CallbackOutcome, json};
-use super::link_support::{event, returned, scenario};
+use super::fixture_io::CallbackOutcome;
+use super::link_support::{self, event, returned, scenario};
 
 #[tokio::test]
 async fn signed_direct_requester_keeps_new_workspace_after_another_members_return() {
     let (fixture, server, _admin, added) = scenario().await;
     server.control.person.store(8, Ordering::SeqCst);
     let other = fixture.login(8, Some(Role::Admin)).await;
-    let session = json(fixture.request(Some(&other), "GET", "/session", None).await).await;
-    let url = Url::parse(session["install_url"].as_str().unwrap()).unwrap();
-    let state = url
-        .query_pairs()
-        .find(|(key, _)| key == "state")
-        .unwrap()
-        .1
-        .into_owned();
+    let state = link_support::start(&fixture, &other).await;
     returned(&fixture, &state, CallbackOutcome::Accepted)
         .await
         .unwrap();

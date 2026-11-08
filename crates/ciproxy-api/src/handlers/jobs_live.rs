@@ -135,7 +135,6 @@ pub(super) async fn page(
         capacity: state.capacity.as_ref(),
         overflow: overflow_view.as_ref(),
         sizing,
-        at: context.at,
         admin: context.role == Role::Admin,
     });
     let waiting: Vec<_> = waiting_jobs

@@ -18,8 +18,12 @@ Save job updates before acknowledging their messages.
 The App uses these permissions only:
 
 - Organization self-hosted runners: write.
+- Organization Members: read.
 - Repository Metadata: read.
 - Repository Actions: read.
+
+The dashboard uses Members through the person's App user token.
+Installation tokens request the three runner and repository permissions.
 
 The REST adapter reads repository metadata and workflow-run metadata.
 It never reads code, logs, or artifact contents.
@@ -89,6 +93,11 @@ commits. Preparation failure commits no new activation or event. A replay
 preserves label edits and does not recreate deleted labels.
 A retained reinstall reuses its workspace for 30 days, unless an Admin
 explicitly chose another workspace. It restores no revoked credential.
+A retained admission controls both installation and synchronization.
+An admitted organization prepares its current bindings before registration
+publishes Active, including when it returns through Add. A retained inactive
+organization keeps its holds. Only a new registration uses the Add decision's
+initial approval and billing holds.
 A personal install returns organizations-only setup data and a removal
 link. It creates no workspace or runner resource.
 
@@ -243,6 +252,8 @@ commands, fixture contracts, and cleanup for the live probes.
   registrations with explicit busy outcomes.
 - [src/app/bindings.rs](src/app/bindings.rs) reconciles label creation and
   retirement for API changes, maintenance, resume, and reinstall.
+- [src/app/admission.rs](src/app/admission.rs) maps initial installation
+  approval to the shared activation policy when no retained policy exists.
 - [src/assignments.rs](src/assignments.rs) combines saved API metadata,
   scale-message identity, and JIT identity into the agent assignment.
 - [src/persistence](src/persistence) keeps blocking store calls outside the

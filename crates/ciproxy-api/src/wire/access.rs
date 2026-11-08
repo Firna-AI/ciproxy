@@ -48,7 +48,7 @@ pub struct SessionView {
     pub pending_install_requests: Vec<PendingInstallation>,
     /// Most recent owner removal among the memberships verified at authorization.
     pub removed_organization: Option<RemovedOrganization>,
-    /// Install entry point when no workspace is available.
+    /// Stable dashboard install page. Reading it creates no installation attempt.
     pub install_url: String,
 }
 

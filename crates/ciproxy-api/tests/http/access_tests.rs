@@ -173,6 +173,18 @@ async fn roles_gate_settings_and_mutations_and_members_ask_for_access() {
                 .status(),
             StatusCode::FORBIDDEN
         );
+        assert_eq!(
+            fixture
+                .request(
+                    Some(&pending),
+                    "POST",
+                    &fixture.path("/overflow/wallets"),
+                    Some(json!({"api_key":"fixture-key"})),
+                )
+                .await
+                .status(),
+            StatusCode::FORBIDDEN
+        );
     }
     let request = Request::builder()
         .method("PUT")
@@ -188,41 +200,50 @@ async fn roles_gate_settings_and_mutations_and_members_ask_for_access() {
     assert_eq!(denied.status(), StatusCode::FORBIDDEN);
     assert_eq!(json(denied).await["code"], "access_denied");
     let wrong_origin = format!("{}.attacker.example", fixture.state.config.public_origin);
-    for (case, origin, csrf) in [
-        ("missing-origin", None, Some(admin.csrf.as_str())),
+    for (method, suffix, body) in [
+        ("PUT", "/settings", json!({"name":"Intruder"})),
         (
-            "missing-csrf",
-            Some(fixture.state.config.public_origin.as_str()),
-            None,
-        ),
-        (
-            "wrong-origin",
-            Some(wrong_origin.as_str()),
-            Some(admin.csrf.as_str()),
-        ),
-        (
-            "other-sign-in-csrf",
-            Some(fixture.state.config.public_origin.as_str()),
-            Some(pending.csrf.as_str()),
+            "POST",
+            "/overflow/wallets",
+            json!({"api_key":"fixture-key"}),
         ),
     ] {
-        let mut request = Request::builder()
-            .method("PUT")
-            .uri(fixture.path("/settings"))
-            .header(header::COOKIE, format!("__Host-ciproxy={}", admin.cookie))
-            .header(header::CONTENT_TYPE, "application/json");
-        if let Some(origin) = origin {
-            request = request.header(header::ORIGIN, origin);
+        for (case, origin, csrf) in [
+            ("missing-origin", None, Some(admin.csrf.as_str())),
+            (
+                "missing-csrf",
+                Some(fixture.state.config.public_origin.as_str()),
+                None,
+            ),
+            (
+                "wrong-origin",
+                Some(wrong_origin.as_str()),
+                Some(admin.csrf.as_str()),
+            ),
+            (
+                "other-sign-in-csrf",
+                Some(fixture.state.config.public_origin.as_str()),
+                Some(pending.csrf.as_str()),
+            ),
+        ] {
+            let mut request = Request::builder()
+                .method(method)
+                .uri(fixture.path(suffix))
+                .header(header::COOKIE, format!("__Host-ciproxy={}", admin.cookie))
+                .header(header::CONTENT_TYPE, "application/json");
+            if let Some(origin) = origin {
+                request = request.header(header::ORIGIN, origin);
+            }
+            if let Some(csrf) = csrf {
+                request = request.header("x-ciproxy-csrf", csrf);
+            }
+            let response = router(fixture.state.clone())
+                .oneshot(request.body(Body::from(body.to_string())).unwrap())
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::FORBIDDEN, "{case}");
+            assert_eq!(json(response).await["code"], "access_denied", "{case}");
         }
-        if let Some(csrf) = csrf {
-            request = request.header("x-ciproxy-csrf", csrf);
-        }
-        let response = router(fixture.state.clone())
-            .oneshot(request.body(Body::from("{\"name\":\"Intruder\"}")).unwrap())
-            .await
-            .unwrap();
-        assert_eq!(response.status(), StatusCode::FORBIDDEN, "{case}");
-        assert_eq!(json(response).await["code"], "access_denied", "{case}");
     }
     assert_eq!(
         fixture

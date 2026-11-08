@@ -81,8 +81,6 @@ export type WorkspaceMenu = {
   choices: readonly WorkspaceChoiceItem[];
   /** Add an organization to the current workspace: Admins only. */
   canAddOrganization: boolean;
-  /** The install on another organization, which the API names. */
-  installUrl: string;
 };
 
 export function workspaceMenu(
@@ -98,7 +96,6 @@ export function workspaceMenu(
       href: workspaceHomeHref(workspace.id),
     })),
     canAddOrganization: current.role === "admin",
-    installUrl: session.install_url,
   };
 }
 
@@ -119,6 +116,6 @@ export function accountMenu(
     login: session.login,
     roleName: roleNames[role],
     workspaceName: workspace.name,
-    canClaim: workspace.can_claim_admin && role !== "admin",
+    canClaim: workspace.can_claim_admin,
   };
 }

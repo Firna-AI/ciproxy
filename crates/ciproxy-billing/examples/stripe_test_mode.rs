@@ -6,15 +6,19 @@ use std::fs;
 use std::process::ExitCode;
 use std::sync::Arc;
 
+use chrono::Utc;
 use ciproxy_billing::access::{BillingAccess, Role};
+use ciproxy_billing::alerts::HostedBillingAlerts;
 use ciproxy_billing::clock::SystemClock;
 use ciproxy_billing::error;
 use ciproxy_billing::service::api::BillingApi;
+use ciproxy_billing::service::paid_review::PaidReview;
 use ciproxy_billing::service::runtime::{BillingService, Redirects};
 use ciproxy_billing::service::view::{ChangeOutcome, CheckoutOutcome};
 use ciproxy_billing::stripe::api::StripeApi;
 use ciproxy_billing::stripe::http::client::HttpStripe;
 use ciproxy_billing::webhook::SigningSecret;
+use ciproxy_store_interface::billing::commands::CommandKind;
 use ciproxy_store_interface::billing::state::{AddOns, Selection, Tier};
 use ciproxy_store_interface::store::StoreFactory;
 use ciproxy_store_interface::workspaces::Workspace;
@@ -68,10 +72,11 @@ fn run() -> Result<(), Box<dyn Error>> {
     };
     let origin = env::var("CIPROXY_STRIPE_TEST_RETURN_ORIGIN")
         .unwrap_or_else(|_| "https://example.com".into());
-    let billing: &dyn BillingApi = &BillingService::new(
+    let service = BillingService::new(
         store.clone(),
         provider,
         Arc::new(SystemClock),
+        Arc::new(HostedBillingAlerts),
         SigningSecret::new(secret),
         Redirects {
             success_url: format!("{origin}/billing/return?session_id={{CHECKOUT_SESSION_ID}}"),
@@ -79,6 +84,7 @@ fn run() -> Result<(), Box<dyn Error>> {
             portal_return_url: format!("{origin}/billing"),
         },
     );
+    let billing: &dyn BillingApi = &service;
     let selected = Selection {
         tier: Tier::Team,
         add_ons: AddOns {
@@ -103,13 +109,27 @@ fn run() -> Result<(), Box<dyn Error>> {
             show_checkout(billing.reconcile_checkout(access, &session)?);
         }
         "upgrade" => {
-            let result = billing.change(
-                access,
-                Selection {
-                    tier: Tier::Business,
-                    ..selected
+            let quote_id = match store.billing(workspace)?.command {
+                Some(command) => match command.kind {
+                    CommandKind::Change {
+                        quote: Some(quote), ..
+                    } => quote.id,
+                    _ => return Err("another billing command is in progress".into()),
                 },
-            )?;
+                None => {
+                    PaidReview::review(
+                        &service,
+                        access,
+                        Selection {
+                            tier: Tier::Business,
+                            ..selected
+                        },
+                        Utc::now(),
+                    )?
+                    .id
+                }
+            };
+            let result = billing.change(access, quote_id)?;
             show_change(result);
         }
         "addons" => show_change(billing.change_add_ons(access, AddOns::default())?),

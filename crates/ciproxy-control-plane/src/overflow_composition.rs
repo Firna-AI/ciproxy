@@ -22,6 +22,7 @@ use crate::error::{ErrorResultExt, Result};
 pub(crate) struct OverflowRuntime {
     pub(crate) service: Arc<dyn Overflow>,
     pub(crate) retirement: Arc<dyn BoatRegistrationRetirement>,
+    pub(crate) root_sizing: RootSizing,
 }
 
 pub(crate) fn compose(
@@ -31,6 +32,9 @@ pub(crate) fn compose(
 ) -> Result<Option<OverflowRuntime>> {
     let Some(snapshot) = &config.boat_shared_snapshot else {
         return Ok(None);
+    };
+    let root_sizing = RootSizing {
+        image_root_bytes: config.image_disk_bytes,
     };
     let transport = Arc::new(
         CloudKmsRest::new(
@@ -42,18 +46,14 @@ pub(crate) fn compose(
     let retirement = Arc::new(BoatRunnerAuthority {
         store: store.clone(),
         registrations,
-        root_sizing: RootSizing {
-            image_root_bytes: config.image_disk_bytes,
-        },
+        root_sizing,
         clock: Arc::new(SystemRuntime),
     });
     let service = Arc::new(OverflowService::new(
         OverflowConfig {
             deployment: config.public_url.trim_end_matches('/').to_owned(),
             shared_snapshot: snapshot.clone(),
-            root_sizing: RootSizing {
-                image_root_bytes: config.image_disk_bytes,
-            },
+            root_sizing,
             exit_report_url: Secret::new(format!(
                 "{}/hooks/boat/runner-exit",
                 config.public_url.trim_end_matches('/')
@@ -71,5 +71,6 @@ pub(crate) fn compose(
     Ok(Some(OverflowRuntime {
         service,
         retirement,
+        root_sizing,
     }))
 }

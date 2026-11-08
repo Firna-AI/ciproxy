@@ -6,6 +6,14 @@
 export const icons = {
   "arrow-left": '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
   "arrow-right": '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+  "arrow-up": '<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
+  "arrow-down": '<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>',
+  "corner-down-left":
+    '<path d="M20 4v7a4 4 0 0 1-4 4H4"/><path d="m9 10-5 5 5 5"/>',
+  "file-text":
+    '<path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
+  search: '<path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/>',
+  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
   box: '<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
   check: '<path d="M20 6 9 17l-5-5"/>',
   clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',

@@ -44,14 +44,14 @@ impl PriceCode {
     }
 }
 
-/// Monthly amount and initial payment shown before Checkout.
+/// Monthly total, today's charge, and recurring day in a billing review.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CheckoutReview {
     /// The monthly amount in USD cents, with no tax.
     pub monthly_cents: u64,
-    /// The initial payment, also in USD cents.
+    /// The amount payable today, in USD cents.
     pub today_cents: u64,
-    /// The expected monthly billing day in UTC.
+    /// The recurring monthly billing day in UTC.
     pub billing_day: u32,
 }
 

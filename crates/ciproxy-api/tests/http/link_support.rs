@@ -71,7 +71,18 @@ pub(super) async fn begin(fixture: &Fixture, browser: &Browser) -> String {
         )
         .await;
     assert_eq!(response.status(), StatusCode::OK);
-    let link = json(response).await;
+    install_state(json(response).await)
+}
+
+pub(super) async fn start(fixture: &Fixture, browser: &Browser) -> String {
+    let response = fixture
+        .request(Some(browser), "POST", "/installation-links/start", None)
+        .await;
+    assert_eq!(response.status(), StatusCode::OK);
+    install_state(json(response).await)
+}
+
+fn install_state(link: Value) -> String {
     let url = Url::parse(link["url"].as_str().unwrap()).unwrap();
     assert!(url.path().ends_with("/installations/new"));
     assert_eq!(

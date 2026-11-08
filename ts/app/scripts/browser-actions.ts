@@ -230,7 +230,7 @@ export async function exerciseCase(
       await page
         .getByRole("link", { name: "Install on GitHub", exact: true })
         .getAttribute("href"),
-      "/__fixture/github/install",
+      "/install",
     );
   }
   if (item.name === "personal") {

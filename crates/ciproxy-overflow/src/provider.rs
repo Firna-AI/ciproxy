@@ -13,6 +13,24 @@ use uuid::Uuid;
 use crate::error::Result;
 use crate::maintenance::{GuestInspection, MaintenanceCapabilities};
 
+/// A verified billing wallet available to the submitted Boat key.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AccountWallet {
+    /// Explicit personal selector or stable Boat organization identity.
+    pub wallet: String,
+    /// Verified personal account or organization name.
+    pub name: String,
+}
+
+/// Accessible billing wallets and Boat's likely selection for a checked key.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct KeyWallets {
+    /// Each wallet that Boat permits the key to use.
+    pub wallets: Vec<AccountWallet>,
+    /// Boat's active wallet, or the first available wallet when none is active.
+    pub selected_wallet: String,
+}
+
 /// Account facts that the shared capability intentionally does not model.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AccountFacts {
@@ -45,6 +63,8 @@ pub struct RuntimeUsage {
 #[unimock(api = BoatAccountApiMock)]
 #[async_trait]
 pub trait BoatAccountApi: Send + Sync {
+    /// Check the key's accessible wallets without selecting a billing scope.
+    async fn wallets(&self) -> Result<KeyWallets>;
     /// Validate the key and wallet, without reserving or starting a sandbox.
     async fn account(&self) -> Result<AccountFacts>;
     /// Read only one sandbox's usage. Confirmed absence returns None.

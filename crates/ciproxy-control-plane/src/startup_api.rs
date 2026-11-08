@@ -14,18 +14,22 @@ use ciproxy_api::state::{ApiConfig, ApiState};
 use ciproxy_store_interface::store::Store;
 use reqwest::{Client, Url, redirect};
 
+use crate::billing::BillingMaintenance;
 use crate::capacity::ReportedCapacity;
 use crate::composition::Hosted;
 use crate::config::Config;
 use crate::error::{ErrorResultExt, Result};
+use crate::pages::{PageComposition, PageConfig};
+use crate::startup_billing;
 
 pub(crate) struct ApiComposition {
     pub(crate) hosted: Arc<Hosted>,
     pub(crate) router: Router,
     pub(crate) maintenance: Arc<dyn ApiMaintenance>,
+    pub(crate) cancellations: Arc<dyn BillingMaintenance>,
 }
 
-pub(crate) fn compose(config: &Config, store: Arc<dyn Store>) -> Result<ApiComposition> {
+pub(crate) async fn compose(config: &Config, store: Arc<dyn Store>) -> Result<ApiComposition> {
     let runtime = Arc::new(SystemRuntime);
     let http = Client::builder()
         .redirect(redirect::Policy::none())
@@ -72,7 +76,7 @@ pub(crate) fn compose(config: &Config, store: Arc<dyn Store>) -> Result<ApiCompo
             image_disk_bytes: config.image_disk_bytes,
             build: config.build_id.clone(),
         },
-        store,
+        store: store.clone(),
         access,
         gateway: hosted.gateway.clone(),
         github: hosted.app.clone(),
@@ -85,10 +89,21 @@ pub(crate) fn compose(config: &Config, store: Arc<dyn Store>) -> Result<ApiCompo
         capacity: Arc::new(ReportedCapacity),
         runtime,
     };
-    let router = hosted.router(ciproxy_api::router::router(state.clone()));
+    let pages = PageComposition::new(
+        store.clone(),
+        startup_billing::compose(config, store).await?,
+        hosted.metering.clone(),
+        hosted.overflow.clone(),
+        PageConfig {
+            price_lists: config.comparison_prices.clone(),
+            boat_root_sizing: hosted.boat_root_sizing,
+        },
+    );
+    let router = hosted.router(state.clone(), pages.services);
     Ok(ApiComposition {
         hosted,
         router,
         maintenance: Arc::new(Maintenance { state }),
+        cancellations: pages.cancellations,
     })
 }

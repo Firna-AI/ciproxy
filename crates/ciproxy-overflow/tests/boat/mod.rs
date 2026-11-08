@@ -4,3 +4,4 @@ mod boundary_tests;
 mod fees_tests;
 mod inspection_tests;
 mod support;
+mod wallets_tests;

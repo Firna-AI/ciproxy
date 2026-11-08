@@ -287,7 +287,7 @@ KVM and GitHub smoke checks, and release packaging commands.
   uninstall entry points. `Uninstall::start` selects direct guarded cleanup
   or VM recovery and drain. `Uninstall::finish` removes the drained area.
 - [src/area.rs](src/area.rs) owns area preparation, repair, and removal.
-- [scripts/](scripts/) contains real KVM and GitHub smoke checks.
+- [scripts/](scripts/) contains smoke checks and network regression tests.
 
 ### Related Docs
 

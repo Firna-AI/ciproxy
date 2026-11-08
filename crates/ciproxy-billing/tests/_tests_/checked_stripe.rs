@@ -2,9 +2,11 @@
 
 use std::sync::Arc;
 
+use chrono::{DateTime, Utc};
 use ciproxy_billing::error::Result;
-use ciproxy_billing::stripe::api::StripeApi;
+use ciproxy_billing::stripe::api::{PaidPreview, StripeApi};
 use ciproxy_billing::stripe::wire::invoice::RetrievedInvoice;
+use ciproxy_billing::stripe::wire::pending::InvoiceItem;
 use ciproxy_billing::stripe::wire::types::{CheckoutSession, Subscription};
 use ciproxy_store_interface::billing::commands::BillingCommand;
 use ciproxy_store_interface::billing::state::Selection;
@@ -18,6 +20,46 @@ pub(super) struct CheckedStripe {
 }
 
 impl StripeApi for CheckedStripe {
+    fn pending_items(&self, customer: &str) -> Result<Vec<InvoiceItem>> {
+        let result = self.provider.pending_items(customer);
+        self.probe.check();
+        result
+    }
+    fn customer_balance(&self, customer: &str) -> Result<i64> {
+        let result = self.provider.customer_balance(customer);
+        self.probe.check();
+        result
+    }
+    fn invoice_item(&self, id: &str) -> Result<Option<InvoiceItem>> {
+        let result = self.provider.invoice_item(id);
+        self.probe.check();
+        result
+    }
+    fn delete_invoice_item(&self, id: &str) -> Result<()> {
+        let result = self.provider.delete_invoice_item(id);
+        self.probe.check();
+        result
+    }
+    fn mark_payment(&self, subscription: &str, quote: Uuid, command: Uuid) -> Result<()> {
+        let result = self.provider.mark_payment(subscription, quote, command);
+        self.probe.check();
+        result
+    }
+    fn payment_invoices(
+        &self,
+        customer: &str,
+        subscription: &str,
+    ) -> Result<Vec<RetrievedInvoice>> {
+        let result = self.provider.payment_invoices(customer, subscription);
+        self.probe.check();
+        result
+    }
+    fn restore_balance(&self, customer: &str, command: Uuid, amount: i64) -> Result<String> {
+        let result = self.provider.restore_balance(customer, command, amount);
+        self.probe.check();
+        result
+    }
+
     fn provision(&self) -> Result<()> {
         let result = self.provider.provision();
         self.probe.check();
@@ -60,6 +102,18 @@ impl StripeApi for CheckedStripe {
         command: &BillingCommand,
     ) -> Result<Subscription> {
         let result = self.provider.change(current, selection, command);
+        self.probe.check();
+        result
+    }
+
+    fn preview(
+        &self,
+        current: &Subscription,
+        selection: Selection,
+        at: DateTime<Utc>,
+        upgrade: bool,
+    ) -> Result<PaidPreview> {
+        let result = self.provider.preview(current, selection, at, upgrade);
         self.probe.check();
         result
     }

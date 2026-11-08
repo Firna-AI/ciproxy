@@ -9,8 +9,7 @@
   Final link cleanup remains open.
 - **Source:** Review.
 - **Category:** Docs or spec.
-- **Location:** `plans/ciproxy-mvp.md:884`, this follow-up item, and
-  `plans/follow-ups/unused-retired-label-query.md:55`.
+- **Location:** `plans/ciproxy-mvp.md:884` and this follow-up item.
 - **Reason:** The user reserved `plans/ciproxy-mvp.md` for the concurrent
   work of pull requests #36, #39, and #40. Its link prevents this item's
   deletion until that work settles.
@@ -202,9 +201,9 @@ Option B remains unapproved. This closure adds no new decision.
    GitHub permalink to this item at a commit where it exists. Base commit
    `54816e311b24d241010efcb1f6141bc2524dad1e` preserves the original finding
    and approved A. Keep the historical wording unchanged.
-3. Replace the plain history reference in `unused-retired-label-query.md`
-   with that same retained history link. Search all docs, plans, and READMEs
-   for other references before deletion. Keep any live source-hook links.
+3. The settled retired-label query item was deleted on 2026-11-08, so its
+   plain history reference needs no update. Search all docs, plans, and
+   READMEs for other references before deletion. Keep live source-hook links.
 4. Confirm the applied code and regression remain. Record the four removals
    and the user's approval in the cleanup commit or PR. Keep the current
    implementation's complete-gate result with its orchestrator.

@@ -80,7 +80,7 @@ impl AppService {
         let local = self.store.activation(&organization).await?;
         let target = if current.suspended {
             GithubLifecycleTarget::Suspended
-        } else if local.billing_hold || local.admin_approval_hold {
+        } else if !local.permits_activation() {
             GithubLifecycleTarget::Inactive
         } else {
             GithubLifecycleTarget::Active(

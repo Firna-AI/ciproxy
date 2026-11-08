@@ -1,18 +1,58 @@
 """Disposable listeners prove blocked cache requests against reachable targets."""
 
 from contextlib import contextmanager
+import http.client
 import http.server
+import ipaddress
+import json
 from pathlib import Path
 import selectors
 import socket
 import subprocess
 import sys
 import threading
+import urllib.error
 import uuid
 
 sys.dont_write_bytecode = True
 
 from cache_egress_host import command, request, require
+
+
+def routes(family):
+    return json.loads(command("ip", "-j", "-" + family, "route", "show", "table", "all").stdout)
+
+
+def unused_probe_ranges(link_local):
+    ipv4 = ["10.254.253.0/30", "93.184.215.254/32"]
+    if link_local:
+        ipv4.append("169.254.253.2/32")
+    for family, ranges in [("4", ipv4),
+                           ("6", ["2001:db8:cf::/64"])]:
+        for route in routes(family):
+            destination = route.get("dst", "default")
+            if destination == "default":
+                continue
+            existing = ipaddress.ip_network(destination, strict=False)
+            require(not any(existing.overlaps(ipaddress.ip_network(probe)) for probe in ranges),
+                    "A disposable probe range already has a host route")
+
+
+def provider_metadata(cache):
+    url = "http://169.254.169.254/"
+    try:
+        status, _ = request(url, method="HEAD", timeout=5)
+    except (OSError, urllib.error.URLError, http.client.HTTPException):
+        address = ipaddress.ip_address("169.254.169.254")
+        for route in routes("4"):
+            destination = route.get("dst", "default")
+            if destination != "default":
+                require(address not in ipaddress.ip_network(destination, strict=False),
+                        "The control UID cannot reach the provider metadata server")
+        return False
+    require(100 <= status < 600, "The control UID received no metadata HTTP response")
+    cache.blocked(url)
+    return True
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
@@ -59,7 +99,8 @@ def host_listener(family):
 
 
 @contextmanager
-def namespace():
+def namespace(link_local=True):
+    unused_probe_ranges(link_local)
     tag = uuid.uuid4().hex[:12]
     name, host, peer = "cache-egress-" + tag, "cpe" + tag, "cep" + tag
     created = False
@@ -71,17 +112,21 @@ def namespace():
         command("ip", "link", "set", peer, "netns", name)
         for address in ["10.254.253.1/30", "93.184.215.254/32", "2001:db8:cf::1/64"]:
             command("ip", "addr", "add", address, "dev", host, *(["nodad"] if ":" in address else []))
-        for address in ["10.254.253.2/30", "169.254.169.254/32", "2001:db8:cf::2/64"]:
+        addresses = ["10.254.253.2/30", "2001:db8:cf::2/64"]
+        if link_local:
+            addresses.append("169.254.253.2/32")
+        for address in addresses:
             command("ip", "-n", name, "addr", "add", address, "dev", peer, *(["nodad"] if ":" in address else []))
         command("ip", "link", "set", host, "up")
         command("ip", "-n", name, "link", "set", peer, "up")
         command("ip", "-n", name, "link", "set", "lo", "up")
-        command("ip", "route", "add", "169.254.169.254/32", "via", "10.254.253.2", "dev", host)
-        routed = True
+        if link_local:
+            command("ip", "route", "add", "169.254.253.2/32", "via", "10.254.253.2", "dev", host)
+            routed = True
         yield name
     finally:
         if routed:
-            command("ip", "route", "delete", "169.254.169.254/32", "via", "10.254.253.2", "dev", host, check=False)
+            command("ip", "route", "delete", "169.254.253.2/32", "via", "10.254.253.2", "dev", host, check=False)
         if created:
             command("ip", "link", "delete", host, check=False)
             command("ip", "netns", "delete", name, check=False)
@@ -164,10 +209,11 @@ def probes(cache):
     with host_listener("4") as port:
         for host in ["127.0.0.1", "[::ffff:127.0.0.1]"]:
             blocked_target(cache, f"http://{host}:{port}/")
-        with namespace() as name:
+        metadata = provider_metadata(cache)
+        with namespace(link_local=not metadata) as name:
             blocked_target(cache, f"http://93.184.215.254:{port}/")
             with peer_listener(name, "4") as peer_port:
-                for host in ["10.254.253.2", "169.254.169.254"]:
+                for host in ["10.254.253.2"] + ([] if metadata else ["169.254.253.2"]):
                     blocked_target(cache, f"http://{host}:{peer_port}/")
                 established_probe(cache, peer_port)
             with peer_listener(name, "6") as peer_port:
@@ -183,7 +229,8 @@ def probes(cache):
     cache.forward("https://example.com", 200)
     dns = cache.dns()
     cache.admin("/report")
-    return {"blocked_targets": 7, "established_original_blocked": True,
+    return {"blocked_targets": 7, "provider_metadata": metadata,
+            "established_original_blocked": True,
             "ingress_blocked": True, "public_https": True,
             "dns_requests": dns, "admin_reply": True}
 

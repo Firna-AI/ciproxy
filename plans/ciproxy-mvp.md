@@ -246,12 +246,13 @@ stay in `europe-west1`.
       condition claim. Reason: valid jobs then keep the same trust limits.
       Evidence: `.context/ciproxy-mvp/fix-round-1-report.md`.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
-- [ ] Build and publish the control-plane image in the deploy workflow, as
+- [x] Build and publish the control-plane image in the deploy workflow, as
       item 90 = G says. A build job builds it on the runner with no cloud
       credentials. A publish job pushes it by digest with workload
       identity. The preview deploys that digest, and production takes over
       the same digest from the preview's saved inputs. A push that does not
       change the control-plane sources reuses the image of their hash.
+      Branch: `conductor/item-90-g-control-plane-image-in-the-deploy`.
 
 ## Milestone 6: GitHub App and scale sets
 
@@ -867,6 +868,30 @@ Live KVM and authenticated job checks remain with the orchestrator.
       The current restart script covers a running job. Add the interrupted
       startup case before claiming its live proof.
       Branch: `conductor/ciproxy-mvp-milestone-13-e2e`.
+      Live run of 8 November 2026 on the 500 GiB test host: 0 passed,
+      4 failed, 13 skipped. No real job started. Evidence:
+      `.context/ciproxy-mvp/own-smoke-live-2026-11-08/`.
+  - [ ] Forward the install arguments to the installed agent, as design
+        call 30 says. The installer of `futex-ai/cli-release` downloads
+        the agent and exits with status 0, but never runs
+        `install --token`. A new pull request there builds the step. Its
+        merge waits for the user's answer to item 114.
+  - [ ] Give the guest a working network. Guests get no DNS answer, so the
+        runner cannot reach GitHub. The agent gives a fixed address and
+        gateway on the kernel command line, and the image also runs DHCP
+        on `eth0`. Prove the cause on the test host first. My call, 8
+        November 2026: the agent's boot arguments stay the one source of
+        the guest address and gateway. Then publish a new image release.
+  - [ ] Release a guest that never received its registration. After an
+        agent restart before delivery, the VM stayed Stopping for 600
+        seconds. My call, 8 November 2026: the agent retires a proven
+        unconfigured guest itself, with the GitHub retirement checks and
+        the running-job protection kept. Reason: the host must not depend
+        on a guest that has no registration.
+  - [ ] Finish the first XFS area setup in one install call. A fresh host
+        needed a second install after four growth passes. My call, 8
+        November 2026: the install finishes the measured growth itself.
+  - [ ] Run every scenario again, with the firewall proof and its reboot.
 
 Owner review of pull request #31, round 1, 6 November 2026: the user chose
 fix now for findings 1 to 8 and fix after the merge for finding 9.
@@ -1089,6 +1114,10 @@ UTC RFC 3339, and IDs as strings. Reason: JavaScript loses 64-bit numbers.
       Code status, 6 November 2026: the control plane mounts the router and
       runs API maintenance at startup and every minute. The authenticated
       live probes of the next TODO have not run.
+- [x] Apply item 98 A to the security protocol and GitHub crate guide.
+      State the four App permissions and the Members read requirement
+      for the owner and member checks through the person's sign-in.
+      Branch: `conductor/items-94-b-and-98-a-boat-wallets-and-members-permission`.
 - [ ] Orchestrator: run the live API, repeated-authorization, and GitHub
       install-binding probes in `crates/ciproxy-api/scripts/README.md`.
       Read credentials through `CIPROXY_API_CREDENTIALS_FILE`. Record no
@@ -1173,6 +1202,20 @@ Implementation calls, 6 November 2026:
       Pull request #37 built it. The main preview holds version 1, the
       share code of snapshot `2026-11-06-7484d1b`, which is also the release
       of its `JOB_IMAGE_MANIFEST_PATH`. Production gets its version at launch.
+- [x] Apply item 94 B to the Boat key check and connection API.
+      Return named personal and organization wallets and the likely
+      selection. Prove both key kinds through HTTP with a real PgStore.
+      Update the overflow protocol and regenerate the API types.
+      My call, 8 November 2026: preselect Boat's active wallet, then
+      its first offered wallet. Reason: Boat supplies the likely wallet.
+      Read the wallets without choosing one, so organization keys work.
+      The key check saves no key.
+      Branch: `conductor/items-94-b-and-98-a-boat-wallets-and-members-permission`.
+- [x] Apply review finding 1 E for the wallet key check.
+      Prove active-wallet selection and its first-wallet fallback at
+      the Boat boundary. Keep the existing personal and organization
+      HTTP scenarios.
+      Branch: `conductor/items-94-b-and-98-a-boat-wallets-and-members-permission`.
 - [ ] Orchestrator: Run the three live scenarios with the private credential
       file, as `crates/ciproxy-control-plane/overflow.md` describes.
 
@@ -1306,19 +1349,25 @@ These routes serve the other pages of the dashboard.
         Add HTTP regressions and repeat the new or changed tests ten times.
         Branch: `conductor/mvp-m18-api`.
         Evidence: `.context/ciproxy-mvp/m18/review-fix-round1/`.
-- [ ] Orchestrator: compose `PageServices` in the control plane. Mount
+- [x] Orchestrator: compose `PageServices` in the control plane. Mount
       `router_with_pages` under `/api` and `stripe_router` at the dashboard
       host root for `/hooks/stripe`. Supply the existing billing, metering,
       and overflow services and dated USD comparison price lists. Supply
       the exact Boat `RootSizing` already used by the overflow runtime.
       Poll `billing_cancellations` and call `reconcile_removal` on blocking
       workers so durable last-organization cancellations complete.
-      Branch: `calummoore/ci-proxy-load-balancer`.
-- [ ] Orchestrator: implement and inject `PaidReview` with an authoritative
+      Implementation calls, 7 November 2026: supply the verified dated
+      comparison lists as trusted configuration defaults. Run billing
+      cancellation recovery independently of GitHub maintenance.
+      Branch: `conductor/m18-composition-pages-stripe-hook-paid-review`.
+- [x] Orchestrator: implement and inject `PaidReview` with an authoritative
       Stripe invoice preview for a move between paid plans. The existing
       billing review gives the full monthly price as today's charge. The
       API keeps paid review unavailable until the preview exists.
-      Branch: `calummoore/ci-proxy-load-balancer`.
+      Implementation calls, 7 November 2026: keep `PaidReview` in billing.
+      Use the same selected items for immediate and recurring previews.
+      Read the recurring day from Stripe's anchor, not the period start.
+      Branch: `conductor/m18-composition-pages-stripe-hook-paid-review`.
 - [x] Fix the billing parser for signed Stripe events that it ignores.
       Use a typed parser and add the billing-level unit regression.
       Keep the HTTP regression for real `data.object` payloads.
@@ -1344,11 +1393,56 @@ These routes serve the other pages of the dashboard.
       the store projection and nullable values at the existing wire paths.
       Reason: preserve one complete request and the current field names.
       Evidence: `.context/ciproxy-mvp/m18/owner-fix-round1/report.md`.
-- [ ] Orchestrator: expose the overflow owner's resource-only catalog
+- [x] Orchestrator: expose the overflow owner's resource-only catalog
       accessor of review finding 6. Replace the private fit-conversion
       adapter after this workspace merges. Keep accounting and availability
       outside physical fit, and preserve the accounting-gap regression.
-      Branch: `calummoore/ci-proxy-load-balancer`.
+      Branch: `conductor/m18-composition-pages-stripe-hook-paid-review`.
+- [x] Apply owner review round 1, finding 2, option A. Return the current
+      Stripe period with the paid quote, and use it in the review response.
+      Add the real-PgStore delayed-renewal regression. Keep finding 1
+      unchanged until the user answers item 95.
+      Branch: `conductor/m18-composition-pages-stripe-hook-paid-review`.
+- [x] Apply owner review round 1, finding 1, as item 95, option B. The user
+      chose B on 8 November 2026. This is owner fix round 2.
+      Store each paid review as a workspace quote: the exact selection, the
+      amounts, the current period, and a whole-second proration time. The
+      paid change sends only the quote ID. One transaction consumes the
+      quote and saves its command under the billing lock, before Stripe.
+      Retries keep the proration time and the idempotency key, also after
+      the quote expires. Refuse an unknown, foreign, expired, or outdated
+      quote, or one whose payment ended, with HTTP 409 and
+      `review_required`. Keep add-on writes, Free Checkout, and the
+      delayed-renewal regression of finding 2.
+      Update the generated types, the billing protocol, and the READMEs.
+      Branch: `conductor/m18-composition-pages-stripe-hook-paid-review`.
+      Implementation call, 8 November 2026, the orchestrator's: a new
+      payment can use a quote for 30 minutes, and only before the quoted
+      period ends. Reason: Stripe matches its preview only with the same
+      proration time, and takes only a time inside the current period. A
+      short limit keeps that time close to the payment. Stripe sets no
+      such duration.
+      Evidence: `.context/ciproxy-mvp/m18-composition/owner-fix-round2/`.
+- [x] Apply the fix round 2 re-review, finding 3, as item 108, C with D.
+      The user chose C with D on 8 November 2026 and approved this third
+      fix round. This is owner fix round 3.
+      The payment of a move up carries the earlier pending credits and
+      charges that its stored review counted. Stripe computes the charge
+      from them, so it matches the review. Keep the stored proration time,
+      the observed period, and the quote and retry rules. Each earlier item
+      reaches the customer once, and an unpaid move returns its value for a
+      later invoice. After each paid move, compare the owned Stripe invoice
+      with the quote. Record a difference and report a safe error event for
+      the ciproxy team. A difference never refuses or rolls back the payment
+      or the new tier. Update the billing protocol and the READMEs.
+      Branch: `conductor/m18-composition-pages-stripe-hook-paid-review`.
+      Implementation calls, 8 November 2026, the orchestrator's: the
+      transfer journals keep the existing workspace retention and go with
+      its purge, with no outbox-style exception. Reason: `app-removal.md`
+      deletes workspace data after 30 days, and the user approved no new
+      retention rule. The difference event goes to the existing hosted error
+      stream, with no email or pager delivery.
+      Evidence: `.context/ciproxy-mvp/m18-composition/owner-fix-round3/`.
 - [ ] Orchestrator: run the
       [live page checks](../crates/ciproxy-api/scripts/README.md#jobs-savings-and-billing)
       after the runtime and Stripe test workspace are ready. Set
@@ -1439,6 +1533,41 @@ A sign-in reads the organization memberships of the person with it.
 - For item 98, this branch changes only that list and this record. The
   backend change and the protocol docs for the membership read are outside
   this branch.
+
+Installation follow-up outcomes, 8 November 2026:
+
+- `session-installation-attempt-growth.md`, B: session reads return a stable
+  navigation link and create no attempt. An Origin- and CSRF-protected POST
+  saves the attempt before returning its GitHub URL. Keep durable Add
+  evidence, continuation purposes, late approvals, and no age limit.
+  Rejected: reusing read-created attempts, signed Direct state alone,
+  sharing one open attempt, and adding an expiry.
+- `retained-add-reinstall-admission.md`, B: use one effective admission
+  policy for installation, synchronization, and registration. Retained
+  admission overrides a new Add's initial holds. Prepare current bindings
+  before publishing Active. Retained inactive organizations keep their
+  holds. Rejected: a local preparation patch, separate readiness storage,
+  and preparation for every held installation.
+- `unused-retired-label-query.md`, A: delete the unused trait method,
+  PostgreSQL method, helper, and imports. Keep retired data and the
+  workspace discovery query that maintenance uses.
+- Admin recovery flag: return false for an existing Admin. Remove the
+  dashboard's extra role check, because the API owns this capability.
+- Python compatibility: defer annotation evaluation in `live_smoke.py`.
+  Check the other crate and deployment scripts for evaluated union types.
+  Keep the documented Python 3.9 minimum without another runtime dependency.
+- My call, 8 November 2026: use the existing `/install` page as the stable
+  navigation link. Use POST `/installation-links/start` for the explicit
+  start, so the existing browser guard protects it.
+- My call, 8 November 2026: put the pure activation predicate on
+  `OrganizationActivation`. The GitHub service and registration query then
+  consume the same retained-admission rule.
+- Post-push review, 8 November 2026: apply B for the install link's native
+  navigation. Give `ActionLink` an opt-in plain-activation callback. Only
+  that callback marks the link as an action for the build-change handler.
+  Keep other links and their raw `onClick` handling unchanged. A modified
+  click opens the stable install page and creates no attempt. A plain
+  activation saves its attempt, also after observing a new API build.
 
 ## Milestone 20: Dashboard UI: Machines and Settings
 
@@ -1658,6 +1787,42 @@ Depends on: 1
 - [x] Smoke-test each page at 1440, 720, and 390 pixels.
       Branch: `conductor/ciproxy-mvp-milestone-23-site`.
 
+Docs search follow-up choices, 8 November 2026:
+
+- The user approved B for `site-search-keyboard-selection`: a Starlight
+  override uses the Pagefind API and owns selection, keyboard controls,
+  focus, and hints. It keeps the real index and normal links. The rejected
+  alternative kept Tab alone and omitted the keyboard hints.
+- The user approved B for `site-search-heading-count`: the same heading
+  collection supplies the count and the grouped rows. The rejected
+  alternative kept Pagefind's page count.
+- The user approved the task of `site-search-clear-control-mockup`: show
+  Clear beside the active query at desktop and phone widths. Keep Clear
+  distinct from Cancel and Escape, which close the dialog.
+- My call: arrow selection wraps through the displayed heading results.
+  Reason: each direction always reaches another result when several match.
+- My call: the input uses a combobox with a grid of normal links. Its
+  active descendant names the page and heading. Reason: selection stays
+  announced while Tab and pointer actions retain normal link behaviour.
+- Settled on this branch: all three follow-up fixes now match the approved
+  search controls. Their files are removed. The choices above remain as
+  the dated record. The MVP plan stays because its other work is open.
+  Branch: `conductor/follow-ups-docs-search-keyboard-count-clear-control`.
+
+Verification evidence: `.context/site-search/verification.md`.
+
+Docs search review fix, 8 November 2026:
+
+- The user chose A for owner review round 1, finding 1: remove the saved
+  focus target and explicit focus restoration. The HTML dialog owns focus
+  restoration. Normal fragment links keep keyboard navigation at the
+  opened heading. Escape and Cancel still return to the search button.
+- Add a browser regression for `runs-on` from `/docs/`, Up, Enter, and Tab.
+  Keep the existing tests. My call: use the Node test runner with a fresh
+  production build and local server, so the test exercises the real index.
+
+Verification evidence: `.context/site-search/fix-round-1/verification.md`.
+
 ## Milestone 24: Site: the 14 launch docs pages
 
 Depends on: 13, 15, 23
@@ -1796,6 +1961,10 @@ The repository is public from item 70 = E, and the site links to it.
       date. Reason: GitHub only postponed a charge of $0.002 a minute, which
       would lower the claim to about 54%.
 - [ ] Publish the site. Then make the GitHub App public.
+
+- [ ] Move the image-publishing credentials of item 100 = B from the
+      reusable image workflow on the primary branch to the one on protected
+      `main`, after the launch merge puts the repository on `main`.
 
 ## Milestone 28: Verification, commit, review, and pull request
 
@@ -2143,6 +2312,44 @@ Answers of 5 November 2026:
   socket error go. A reconnect before the first handoff still means only
   GitHub's cache. There is no guessed time limit; GitHub's job time limit is
   the backstop. Rejected: A and C.
+- Item 100, B, 8 November 2026: the image-publishing credentials bind to
+  the reusable image workflow on the primary branch until launch, and move
+  to protected `main` at launch. Rejected: A and C.
+- Item 101, B, 8 November 2026: the Machines and Settings page responses
+  gain the facts of the approved mockups, with regenerated types. Rejected:
+  A, C, D, and E.
+- Item 102, A, 8 November 2026: the warm runner control shows the saved
+  number in every state, and the mockup changes to it. Rejected: B and C.
+- Item 113, A, 8 November 2026: the label dialog keeps the fit counts and
+  the placement, and the mockup drops the largest-job figures. Rejected: B.
+- Item 114, A, 8 November 2026: merge the release server changes of
+  `futex-ai/cli-release`, with the image push of each merge, and publish
+  no release. ciproxy pins the merged commit. Rejected: B and C.
+- Item 108, C with D, 8 November 2026: the paid change sends the same
+  pending credit that the preview counted, Stripe computes the amount, and
+  an alert compares each invoice with its quote. A third fix round of pull
+  request #39 builds it. Rejected: A, B, E, and F.
+- Item 109, C, 8 November 2026: the spend limit notice names the budget
+  month and the day Boat resumes, as Jobs does. Rejected: A and B.
+- Item 110, B, 8 November 2026: History loads pages without a total, and
+  the database applies the filters, the order, and a limit. Each read stays
+  bounded, also the live queue. Rejected: A, C, D, and E.
+- Item 111, A, 8 November 2026: the banners keep today's wording, and the
+  mockups change to it. Rejected: B and C.
+- Item 112, D, 8 November 2026: ciproxy saves the actual size choice when a
+  job starts, and Jobs explains what ran from it. Rejected: the other
+  options.
+- Item 103, A now and B in parallel, 8 November 2026: the agent release is
+  a full release, so installs and updates take it. A pre-release channel
+  for the preview release server follows, so that a test release reaches no
+  customer. Rejected: no channel at launch.
+- Item 107, A, 8 November 2026: the cache firewall proof keeps the cloud
+  provider's metadata route and DNS, and checks the block against the real
+  metadata server. Rejected: B.
+- Items 104, 105, and 106, A, 8 November 2026: grow the test host disk to
+  500 GiB, sign the sandbox in to GitHub with the `workflow` scope, and
+  upgrade the test workspace to Team with a Stripe test-mode checkout after
+  pull request #39 merges.
 - Item 99, A, 8 November 2026: the live machine check publishes a
   pre-release of the agent on `Firna-AI/ciproxy`, creates two private test
   repositories in Firna-AI, and limits the workspace to the test
@@ -4575,6 +4782,8 @@ GitHub membership, is rejected.
 
 ### 100. The protected image workflow needs a home before launch
 
+**Answer, 8 November 2026:** B. Move the binding to `main` at launch.
+
 - **Severity:** High. **Effort:** Small.
 - **Source:** Review, pull request #47, round 1, finding 1, and its fix.
 - **Category:** Security.
@@ -4611,6 +4820,8 @@ GitHub membership, is rejected.
 
 ### 101. The Machines and Settings mockups need facts the API lacks
 
+**Answer, 8 November 2026:** B.
+
 - **Severity:** Medium. **Effort:** Large.
 - **Source:** Implementation, Milestone 20, pull request #50, its item 1.
 - **Category:** Mockup.
@@ -4642,6 +4853,8 @@ GitHub membership, is rejected.
 
 ### 102. The warm runner control has two meanings
 
+**Answer, 8 November 2026:** A.
+
 - **Severity:** Low. **Effort:** Small.
 - **Source:** Implementation, Milestone 20, pull request #50, its item 2.
 - **Category:** Mockup.
@@ -4667,6 +4880,10 @@ GitHub membership, is rejected.
 
 ### 103. The preview release server ignores the agent pre-release
 
+**Answer, 8 November 2026:** A now, and B as a follow-up item in parallel:
+`follow-ups/release-server-prerelease-channel.md`. `ciproxy-agent-v0.1.0`
+is now a full release, and the preview release server serves it.
+
 - **Severity:** High. **Effort:** Small.
 - **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
 - **Category:** Product bug.
@@ -4690,6 +4907,8 @@ GitHub membership, is rejected.
   99.
 
 ### 104. The test host disk is below the install minimum
+
+**Answer, 8 November 2026:** A.
 
 - **Severity:** High. **Effort:** Small.
 - **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
@@ -4717,6 +4936,8 @@ GitHub membership, is rejected.
 
 ### 105. The sandbox GitHub login cannot write workflow files
 
+**Answer, 8 November 2026:** A.
+
 - **Severity:** High. **Effort:** Small.
 - **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
 - **Category:** Process.
@@ -4741,6 +4962,8 @@ GitHub membership, is rejected.
 
 ### 106. The Docker disk checks need a paid workspace
 
+**Answer, 8 November 2026:** A, after pull request #39 serves Checkout.
+
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
 - **Category:** Process.
@@ -4763,6 +4986,8 @@ GitHub membership, is rejected.
 - **Action:** ask the user, because A changes the plan of a workspace.
 
 ### 107. The cache firewall proof takes over the metadata route
+
+**Answer, 8 November 2026:** A.
 
 - **Severity:** Medium. **Effort:** Medium.
 - **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
@@ -4787,3 +5012,225 @@ GitHub membership, is rejected.
 - **Recommendation:** A. It works on the hosts that customers use.
 - **Action:** ask the user, because A changes a proof fixture of the
   security fix, and B needs another machine.
+
+### 108. Pending credits can change the quoted charge
+
+**Answer, 8 November 2026:** C with D, as a third fix round of the pull
+request #39.
+
+- **Severity:** High. **Likelihood:** Common. **Effort:** Medium.
+- **Source:** Review, pull request #39, after its second fix round.
+- **Category:** Product bug.
+- **Location:** `crates/ciproxy-billing/src/stripe/http/preview.rs:77`.
+- **Background:** An add-on change, such as a machine removal, can leave a
+  pending credit in Stripe. Stripe's preview counts it, but the payment of
+  an upgrade does not.
+- **Problem:** A review can show USD 115, and the payment can charge
+  USD 125. Two reviewers confirmed this from Stripe's documentation. No
+  live payment reproduced it.
+- **Impact if no action:** A charge can exceed the reviewed amount.
+- **Root question:** How does the review match Stripe's upgrade charge?
+- **Options:**
+  - **A.** Take the pending items out of the preview. Effort: Medium.
+  - **B.** Compute today's charge from Stripe's lines and the customer
+    balance. Effort: Medium.
+  - **C.** Send the same offset in the paid change, and let Stripe compute
+    the amount. Effort: Medium.
+  - **D.** Compare the invoice with the quote after payment, and alert on a
+    difference. It only adds to a fix. Effort: Small.
+  - **E.** Invoice pending items before the upgrade. Effort: Medium.
+  - **F.** Invoice add-on changes at once. Effort: Large.
+- **Left out:** Payment modes that apply the plan before payment, because
+  they break the bank confirmation flow.
+- **Wider fix:** D.
+- **Recommendation:** C with D. Stripe keeps computing the amounts, and an
+  alert catches a later mismatch.
+- **Action:** ask the user, because the two fix rounds of #39 are used, and
+  the finding is critical.
+
+### 109. The spend limit notice lacks the day it was reached
+
+**Answer, 8 November 2026:** C.
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation, Milestone 22, pull request #51.
+- **Category:** Mockup.
+- **Location:** `docs/mockups/src/screens/settings/overflow.tsx:95`.
+- **Background:** The approved mockup of the spend limit notice gives the
+  day the limit was reached and the day Boat resumes.
+- **Problem:** The API gives no day when the limit was reached.
+- **Impact if no action:** The product and the mockup differ.
+- **Root question:** Which days does the notice show?
+- **Options:**
+  - **A.** Only the resume day, and update the mockup. Effort: Small.
+  - **B.** Store the day the limit was reached, and show it. Effort: Large.
+  - **C.** The budget month and the resume day, as Jobs shows them, and
+    update the mockup. Effort: Small.
+- **Left out:** The browser's clock, because it names the visit, not the
+  event.
+- **Wider fix:** None.
+- **Recommendation:** C. It matches Jobs with data that the API has.
+- **Action:** ask the user, because the approved mockup changes.
+
+### 110. History returns every matching job in one response
+
+**Answer, 8 November 2026:** B.
+
+- **Severity:** Medium. **Likelihood:** Rare. **Effort:** Medium.
+- **Source:** Implementation, Milestone 21, pull request #53, its item 16.
+- **Category:** Performance.
+- **Location:** `crates/ciproxy-api/src/handlers/jobs.rs:32`, and
+  `crates/ciproxy-store-pg/src/job_views.rs:35`.
+- **Background:** Each read of History, of the live queue, and of a job page
+  builds every retained job of the workspace before any filter. A job is
+  retained for 90 days. The live queue reads again every 5 seconds. The
+  approved mockup shows pages and a total.
+- **Problem:** A large workspace can make these reads slow.
+- **Impact if no action:** Slow Jobs pages on large workspaces.
+- **Root question:** How does History deliver the jobs of a large plan
+  window?
+- **Options:**
+  - **A.** Measure first at Business volume, and change only when slow.
+    Effort: Medium.
+  - **B.** Pages without a total: the store applies the filters, the order,
+    and a limit, and "Show more" loads the next page. Effort: Medium.
+  - **C.** Pages with a total, as the mockup shows. Effort: Medium.
+  - **D.** One full list, with the filters in the store. Effort: Medium.
+  - **E.** A capped list, with a hint to narrow the filter. Effort: Medium.
+- **Left out:** None.
+- **Wider fix:** B.
+- **Recommendation:** B. Each read stays bounded, also the live queue.
+- **Action:** ask the user, because the approved mockup's total changes.
+
+### 111. The banners lack the plan and the passed limit
+
+**Answer, 8 November 2026:** A.
+
+- **Severity:** Low. **Effort:** Medium.
+- **Source:** Implementation, Milestone 21, pull request #53, its item 17.
+- **Category:** Mockup.
+- **Location:** `crates/ciproxy-api/src/wire/pages.rs:36`.
+- **Background:** The approved banners name the plan, the passed limit, and
+  the day a plan ended. The banner response gives fewer facts.
+- **Problem:** The product banners are true, but less precise.
+- **Impact if no action:** The product and the mockups differ.
+- **Root question:** What does each banner name about its cause?
+- **Options:**
+  - **A.** Use today's wording, and update the mockups. Effort: Small.
+  - **B.** Add typed facts to the banner response, and update the
+    protocol. Effort: Medium.
+  - **C.** Read Plan and usage beside the banner. Effort: Medium.
+- **Left out:** A day computed from the banner's end time, because a month
+  end can give a wrong day.
+- **Wider fix:** None.
+- **Recommendation:** B. One response keeps every page consistent.
+- **Action:** ask the user, because the approved mockups change.
+
+### 112. Jobs notices need facts that the API lacks
+
+**Answer, 8 November 2026:** D.
+
+- **Severity:** Low. **Effort:** Medium.
+- **Source:** Implementation, Milestone 21, pull request #53, its item 18.
+- **Category:** Mockup.
+- **Location:** `plans/follow-ups/jobs-notice-facts.md` on the #53 branch.
+- **Background:** The approved Jobs examples name suspension details,
+  refusal reasons, the actual Boat size, and resource shortages.
+- **Problem:** The API gives fewer facts.
+- **Impact if no action:** The product and the examples differ.
+- **Root question:** What must Jobs explain about why a job waits or where
+  it ran?
+- **Options:**
+  - **A.** Use today's wording, and update the examples. Effort: Small.
+  - **B.** Add suspension, refusal, and run-size facts. Effort: Large.
+  - **C.** Save the scaler's first reason. Effort: Medium.
+  - **D.** Save the actual size choice when a job starts. Effort: Medium.
+  - **E.** D, and typed reasons for temporary refusals. Effort: Large.
+  - **F.** Add shortage facts for each kind of place. Effort: Medium.
+  - **G.** Show the largest job that each kind of place can run.
+    Effort: Medium.
+- **Left out:** Fit computed in the browser, because it can differ from the
+  backend rules.
+- **Wider fix:** None.
+- **Recommendation:** D. It records what really ran.
+- **Action:** ask the user, because the approved examples change.
+
+### 113. The label dialog lacks the largest-job figures
+
+**Answer, 8 November 2026:** A.
+
+- **Severity:** Low. **Effort:** Small.
+- **Source:** Review, Milestone 21, pull request #53, its item 19.
+- **Category:** Mockup.
+- **Location:** `plans/follow-ups/label-dialog-fit-offers.md` on the #53
+  branch.
+- **Background:** The approved label dialog shows the largest job that own
+  machines and Boat can run. The API does not give those figures.
+- **Problem:** The product cannot show them.
+- **Impact if no action:** Only that extra text differs.
+- **Root question:** What does the dialog say about the capacity for a
+  label?
+- **Options:**
+  - **A.** Keep the fit counts and the placement, and remove the extra
+    text from the mockup. Effort: Small.
+  - **B.** Add the figures to the API, shared with option G of item 112.
+    Effort: Medium.
+- **Left out:** Figures computed in the browser, for the reason of item 112.
+- **Wider fix:** None.
+- **Recommendation:** A. The protocol requires only the counts and the
+  placement.
+- **Action:** ask the user, because the approved mockup changes.
+
+### 114. The release channel change waits for a merge
+
+**Answer, 8 November 2026:** A, given before a correction. Each push to
+`main` of `futex-ai/cli-release` also publishes the release server image
+to `ghcr.io/futex-ai/cli-release-server` as `latest`, `main`, and
+`sha-<commit>`. The last push was on 5 June 2026, because later `main`
+runs failed at Clippy. A merge creates no GitHub release, tag, or crate,
+because `release_always` and `publish` are false. The merges wait for the
+user to confirm A with this correction. The user confirmed A with it on
+8 November 2026.
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Implementation, plan item 103, option B, 8 November 2026.
+- **Category:** Process.
+- **Location:** `futex-ai/cli-release` pull requests #6 and #7, and
+  `deploy/scripts/mirror-release-image.sh`.
+- **Terms:**
+  - **Release channel:** the new `CLI_RELEASE_CHANNEL` setting of the
+    release server. `stable` serves full releases only, and `prerelease`
+    also serves pre-releases.
+  - **Pinned revision:** the `cli-release` commit that
+    `mirror-release-image.sh` builds into the release server image.
+- **Background:** Pull request #7 adds the release channel. Its review
+  found no problem, and every check passed except one Clippy error. That
+  error also fails on `main`, and the user's pull request #6 fixes it.
+  ciproxy builds the server image from the pinned revision, so it needs no
+  published `cli-release` release.
+- **Problem:** The change is not on `main`, so ciproxy has no merged
+  revision to pin. The live run of 8 November 2026 also found that the
+  installer never runs the agent with the install arguments. A third pull
+  request there builds design call 30.
+- **Impact if no action:** After launch, a test release of the agent
+  reaches every customer machine, because both environments follow full
+  releases only. The install command also reports success without an
+  installed machine.
+- **Root question:** How does ciproxy get the reviewed release server
+  changes into its release server image?
+- **Options:**
+  - **A.** Merge #6, then update #7 and merge it when its checks pass.
+    Merge the argument pull request when its review finds no problem.
+    Publish no release. ciproxy then pins the merged commit. Effort: Small.
+  - **B.** Do A, and also merge the release pull request that the release
+    automation opens. This creates a draft GitHub release and its tag.
+    Effort: Small.
+  - **C.** Leave both pull requests open, and pin the reviewed head
+    `55eae44`. The pin then names a commit outside `main`. Effort: Small.
+- **Left out:** Closing #7 and marking each test release as a full release,
+  because that fails the goal after launch.
+- **Wider fix:** None. The channel is the wider fix of item 103.
+- **Recommendation:** A. It puts the reviewed change on `main`, and ciproxy
+  needs no release.
+- **Action:** ask the user, because the user approves each merge and each
+  release in `futex-ai/cli-release`.

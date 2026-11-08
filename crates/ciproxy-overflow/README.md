@@ -27,6 +27,9 @@ The dependency revision is
 `BoatFactory` constructs the pinned lifecycle, capacity, and file capabilities.
 All capabilities use the same explicit personal or organization wallet.
 Account reads supply the verified name, trial state, and start-fee bound.
+Key checks list accessible wallets and Boat's likely selection without saving
+the key. An organization key offers its own wallet. Account keys can choose
+their personal wallet or an organization wallet.
 The service refreshes eligible sizes every five minutes.
 The scaler uses their dimensions and exact hourly prices to choose the
 cheapest fitting size or the label's explicit largest-size fallback.
@@ -176,8 +179,8 @@ Consume the result as `Arc<dyn Overflow>`.
 
 Call the public boundary in this order:
 
-1. Call `connect` with a key, its new version ID, the wallet, and a positive
-   spend limit.
+1. Call `wallets` to check a key and offer its named wallets. Call `connect`
+   with the key, its new version ID, the chosen wallet, and a positive limit.
 2. Call `view` for the current catalog and spend.
 3. Call `OverflowView::scaler_account` with the snapshot's UTC clock origin.
 4. Build a consistent scaler snapshot and run its placement decision.
@@ -250,7 +253,8 @@ These commands contact Boat or Cloud KMS and can incur charges.
   pending connection grants.
 - [src/maintenance.rs](src/maintenance.rs) restricts retained-key capabilities.
 - [src/view.rs](src/view.rs) supplies safe scaler and cost facts, also from
-  durable facts alone.
+  durable facts alone. Its `OverflowView::resource_catalog` accessor supplies
+  physical fit without accounting or temporary start refusals.
 - [src/boat](src/boat) composes the pinned adapter and fixed image launcher.
 - [src/kms](src/kms) implements real Cloud KMS encryption and runtime OAuth.
 - [tests/boat](tests/boat) tests the production HTTPS boundaries.

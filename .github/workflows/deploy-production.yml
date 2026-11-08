@@ -35,7 +35,6 @@ jobs:
       PUBLIC_UPTIME_ENABLED: ${{ vars.PUBLIC_UPTIME_ENABLED }}
       RELEASE_SERVER_IMAGE_DIGEST: ${{ vars.RELEASE_SERVER_IMAGE_DIGEST }}
       CONTROL_PLANE_RUNTIME_READY: ${{ vars.CONTROL_PLANE_RUNTIME_READY }}
-      CONTROL_PLANE_IMAGE: ${{ vars.CONTROL_PLANE_IMAGE }}
       CDN_SIGNING_KEY_NAME: ${{ vars.CDN_SIGNING_KEY_NAME }}
       CIPROXY_APP_ID: ${{ vars.CIPROXY_APP_ID }}
       CIPROXY_APP_CLIENT_ID: ${{ vars.CIPROXY_APP_CLIENT_ID }}
@@ -50,6 +49,19 @@ jobs:
           persist-credentials: false
       - name: Check the trusted deployment event
         run: python3 deploy/scripts/promotion_event.py production "$CIPROXY_SOURCE_SHA"
+      - name: Select the exact successful preview evidence
+        id: preview
+        run: python3 deploy/scripts/image_promotion.py preview-evidence
+      - name: Download that preview workload artifact
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: ${{ steps.preview.outputs.evidence_name }}
+          run-id: ${{ steps.preview.outputs.evidence_run }}
+          github-token: ${{ github.token }}
+          path: .context/deploy/main-preview
+      - name: Select the image from the bound preview inputs
+        id: image
+        run: python3 deploy/scripts/image_promotion.py promote
       - name: Set up Node
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
@@ -80,6 +92,8 @@ jobs:
       - name: Set up Helm
         run: bash deploy/scripts/install-helm.sh
       - name: Deploy own namespace and static buckets, then wait for NEGs
+        env:
+          CONTROL_PLANE_IMAGE: ${{ steps.image.outputs.image }}
         run: python3 deploy/scripts/deploy.py production
       - name: Save the completed workload inputs
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

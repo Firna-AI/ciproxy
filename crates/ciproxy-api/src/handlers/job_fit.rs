@@ -2,18 +2,16 @@
 
 use std::collections::BTreeMap;
 
-use chrono::{DateTime, Utc};
 use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_gateway::types::MachineView;
-use ciproxy_overflow::view::{OverflowView, Spend};
+use ciproxy_overflow::catalog::ResourceCatalog;
+use ciproxy_overflow::view::OverflowView;
 use ciproxy_protocol::resources::{GIGABYTE, VmSize};
-use ciproxy_scaler::boat::{BoatSize, BoatSizeId};
 use ciproxy_scaler::size_policy::{BoatChoice, select_boat_size};
 use ciproxy_scaler::snapshot::NothingFits;
 use ciproxy_store_interface::job_views::DashboardJob;
 use ciproxy_store_interface::jobs::JobState;
 use ciproxy_store_interface::labels::{Label, WhenNothingFits};
-use rust_decimal::Decimal;
 use uuid::Uuid;
 
 use crate::capacity::MachineCapacity;
@@ -29,7 +27,6 @@ pub(super) struct FitInput<'a> {
     pub capacity: &'a dyn MachineCapacity,
     pub overflow: Option<&'a OverflowView>,
     pub sizing: Option<RootSizing>,
-    pub at: DateTime<Utc>,
     pub admin: bool,
 }
 
@@ -41,7 +38,6 @@ pub(super) fn labels(input: FitInput<'_>) -> Vec<WaitingLabelFit> {
         capacity,
         overflow,
         sizing,
-        at,
         admin,
     } = input;
     let mut waiting: BTreeMap<Uuid, (String, u64)> = BTreeMap::new();
@@ -51,7 +47,7 @@ pub(super) fn labels(input: FitInput<'_>) -> Vec<WaitingLabelFit> {
             .or_insert((job.label.clone(), 0));
         entry.1 += 1;
     }
-    let catalog = physical_catalog(overflow, at);
+    let catalog = overflow.and_then(|view| view.resource_catalog().ok().flatten());
     waiting
         .into_iter()
         .map(|(id, (name, count))| {
@@ -100,34 +96,6 @@ pub(super) fn labels(input: FitInput<'_>) -> Vec<WaitingLabelFit> {
             }
         })
         .collect()
-}
-
-struct ResourceCatalog {
-    sizes: Vec<BoatSize>,
-    largest_size: Option<BoatSizeId>,
-}
-
-/// Temporary refusals and financial gaps do not change physical resource fit.
-fn physical_catalog(overflow: Option<&OverflowView>, at: DateTime<Utc>) -> Option<ResourceCatalog> {
-    let overflow = overflow?;
-    overflow.account.as_ref()?;
-    overflow.state.checked_at?;
-    let mut physical = overflow.clone();
-    physical.state.refused_sizes.clear();
-    physical.spend = Spend {
-        confirmed_usd: Decimal::ZERO,
-        pending_usd: Decimal::ZERO,
-        settled_bound_usd: Decimal::ZERO,
-        unbounded_starts: Vec::new(),
-        unknown_start_charges: Vec::new(),
-        unmeasured_runtime: Vec::new(),
-    };
-    physical.limit_usd = None;
-    let catalog = physical.scaler_account(at).ok()?;
-    Some(ResourceCatalog {
-        sizes: catalog.sizes,
-        largest_size: catalog.largest_size,
-    })
 }
 
 fn boat_fit(

@@ -61,6 +61,7 @@ impl BillingService {
                 self.clock.now(),
             )
             .internal()?;
+        self.observe_payments(&mut *session, &current);
         if record.removal_cancel_requested {
             self.cancel_removed(&mut *session)?;
         }

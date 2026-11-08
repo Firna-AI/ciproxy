@@ -88,8 +88,8 @@ against a tier.
   the add-ons, pay, or open the customer portal with its invoices.
 - [Roles](security.md#roles) defines these roles.
 - **Decision:** the roles of ciproxy decide who pays. Rejected: the billing
-  managers of the GitHub organization, because the GitHub App would then
-  need the "Members" permission.
+  managers of the GitHub organization. The App's four permissions include
+  "Members", read, for membership checks. ciproxy roles grant billing access.
 - A person who cannot pay still sees the banners of a failed payment, and
   the [offer](metering.md#the-use-and-the-offer) at a soft limit.
 - In place of the action of a banner or an offer, that person sees the
@@ -173,6 +173,11 @@ against a tier.
 - The Plans page also marks the tier that covers the use, as
   [Soft limits](metering.md#soft-limits) states.
 
+### The quote of a paid move
+
+- [Paid moves](billing-paid-moves.md) states the review, the quote, the
+  payment, and the invoice check of a move between paid tiers.
+
 ## Subscription states
 
 - A subscription is active, payment failed, or ended.
@@ -219,6 +224,8 @@ against a tier.
 
 - [Architecture](../architecture.md#data-flow): the data flow of a checkout
   and of a failed payment.
+- [Paid moves](billing-paid-moves.md): the quote, the payment, and the
+  invoice check of a move between paid tiers.
 - [Workspaces](workspaces.md#organizations-of-a-workspace): the
   organizations that a workspace on each tier can hold.
 - [Metering](metering.md#soft-limits): the starts, the periods, the machine

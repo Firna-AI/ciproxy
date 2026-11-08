@@ -11,6 +11,8 @@ edges separate.
 | `ciproxy-<env>-plan` | Read only its snapshot prefix and list workspace object names. Create/delete only its exact `foundation/default.tflock`. Read the two prelaunch account statuses. No state writes or secret values. |
 | `ciproxy-<env>-apply` | Write only its own `foundation/` snapshot prefix. Read its record and prelaunch status. No project admin or Kubernetes object permissions. |
 | `ciproxy-<env>-deploy` | Publish public content to its own private static buckets. Read its own release token and optional Boat share code. Connect to the cluster. Operate only its namespace through Kubernetes RBAC. Invalidate only its tagged URL map. Read global operation completion. |
+| `ciproxy-image-lookup` | Read the shared runtime repository only through the trusted reusable image workflow: on the primary branch until launch, then on protected `main`. |
+| `ciproxy-image-publish` | Read and upload shared runtime images only through that trusted reusable image workflow. No deletion or IAM policy rights. |
 | `ciproxy-shared-plan`, `ciproxy-shared-prod-plan` | Central metadata/state reads and exact central lock writes. No state writes or secret values. No Kubernetes object reads. Separate caller trust for preview and production. Preview central plan retires at launch. |
 | `ciproxy-shared-preview-apply` | Core updates and preview resources before launch. Exact shared-cluster get/update only. No cluster create/delete or node actAs. No production state writes or project IAM administration. Runtime policy writes name preview only. Permanently disabled at launch. |
 | `ciproxy-shared-prod-apply` | Central cloud resources after launch. Production workflow on protected `main` only. Production/preview central state writes. Broader cloud roles than prelaunch shared apply. |
@@ -42,6 +44,22 @@ platform infrastructure, not an environment deploy/runtime identity.
 Prelaunch registry lifecycle has create/get/update/delete and no IAM
 setter. It cannot install a persistent registry admin on another account.
 Only protected production shared apply has node `actAs`, on that one account.
+Separate image lookup/publish accounts use repository-bound custom roles.
+Protected-main trust accounts maintain only that repository's IAM policy
+through `ciproxyImageRepositoryPolicy`. The build runner has no cloud role.
+[Image setup](control-plane-images.md#install-the-repository-grants) lists
+every permission.
+Both image providers also require one exact reusable workflow claim. The
+claim stays independent of the caller's branch. Until launch, it names the
+image workflow on the primary branch. That branch has no ruleset. It is the
+prelaunch trust root of both image identities. An ordinary npm
+workload job cannot obtain either identity. The reusable workflow reads its
+own `job_workflow_sha` from GitHub OIDC before checkout and pins all tools
+to it. Build has no OIDC permission or GitHub environment. Publish accepts
+only the build job's artifact ID and matching canonical image digest.
+[Image workflow trust](image-workflow-bootstrap.md) gives the claim, the
+operator activation, and the move to protected `main` at launch. Preview
+needs no change on `main`. There is no caller-ref fallback.
 The operator creates the first Autopilot core. Prelaunch has no cluster
 create/delete and cannot replace it with another cluster. Both phase owners
 have cluster get/update only under the exact regional cluster condition.
@@ -165,6 +183,9 @@ environment, event, branch, and exact caller workflow ref.
 - Production accepts only its `workflow_run` caller on `main`.
 - Every apply provider also requires the exact
   `deploy-apply.yml@<ref>` reusable job claim.
+- Both image providers require the exact reusable job claim of
+  [the image workflow](image-workflow-bootstrap.md). Until launch, it names
+  the primary branch.
 - Apply scripts check the trusted event, source checkout, saved-plan
   commit, run, attempt, configuration digest, and binary digest.
 

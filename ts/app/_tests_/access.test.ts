@@ -119,7 +119,7 @@ test("shell permissions follow roles while workspace switching includes no-role 
   for (const role of roles) {
     const current = workspace({
       role,
-      can_claim_admin: true,
+      can_claim_admin: role !== "admin",
       organization_limit_exceeded: true,
     });
     const navigation = navItems(workspaceId, role, {
@@ -139,7 +139,10 @@ test("shell permissions follow roles while workspace switching includes no-role 
       workspaceMenu(data, current).canAddOrganization,
       role === "admin",
     );
-    assert.equal(accountMenu(data, current, role).canClaim, role !== "admin");
+    assert.equal(
+      accountMenu(data, current, role).canClaim,
+      current.can_claim_admin,
+    );
   }
   assert.deepEqual(
     workspaceMenu(data, workspace()).choices.map((choice) => [
@@ -156,14 +159,14 @@ test("shell permissions follow roles while workspace switching includes no-role 
 test("access actions use server URLs and the exact claim permission", () => {
   const data = session({
     state: "install_required",
-    install_url: "https://github.com/apps/test/installations/new?state=fixture",
+    install_url: "/install",
     reauthorization_url: "/api/auth/github?proof=fixture",
   });
   assert.deepEqual(checkAgainTarget(data), {
     leave: "/api/auth/github?proof=fixture",
   });
   assert.deepEqual(checkAgainTarget(session()), { refresh: true });
-  assert.equal(installPage(data).actions[0]?.kind, "leave");
+  assert.equal(installPage(data).actions[0]?.kind, "install");
   const remove = personalAccountPage(
     data,
     "https://github.com/settings/installations/exact",

@@ -45,6 +45,7 @@ const problemCode = oneOf<ProblemCode>({
   access_denied: true,
   not_found: true,
   conflict: true,
+  review_required: true,
   invalid_request: true,
   github_label_refused: true,
   unavailable: true,

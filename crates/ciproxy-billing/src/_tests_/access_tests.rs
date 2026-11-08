@@ -8,6 +8,7 @@ use unimock::{MockFn, Unimock, matching};
 use uuid::Uuid;
 
 use crate::access::{BillingAccess, Role};
+use crate::alerts::HostedBillingAlerts;
 use crate::clock::ClockMock;
 use crate::error::Error;
 use crate::service::api::BillingApi;
@@ -19,6 +20,7 @@ fn service(clock: Unimock) -> Box<dyn BillingApi> {
         Arc::new(Unimock::new(())),
         Arc::new(Unimock::new(())),
         Arc::new(clock),
+        Arc::new(HostedBillingAlerts),
         SigningSecret::new("secret".into()),
         Redirects {
             success_url: "https://app.example/success".into(),
@@ -52,7 +54,7 @@ fn viewers_cannot_choose_pay_change_cancel_or_open_invoices() {
         Err(Error::Forbidden)
     ));
     assert!(matches!(
-        service.change(access, selection),
+        service.change(access, Uuid::nil()),
         Err(Error::Forbidden)
     ));
     assert!(matches!(

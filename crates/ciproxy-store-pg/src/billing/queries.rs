@@ -1,6 +1,6 @@
 //! Billing queries and dedicated PostgreSQL session locks.
 
-use ciproxy_schema::billing::billing_accounts;
+use ciproxy_schema::billing::{billing_accounts, billing_payments};
 use ciproxy_store_interface::billing::store::{BillingRecord, BillingSession, BillingStore};
 use ciproxy_store_interface::error::{Result, ResultExt};
 use diesel::prelude::*;
@@ -20,6 +20,15 @@ struct LockResult {
 }
 
 impl BillingStore for PgStore {
+    fn billing_payment_workspaces(&self) -> Result<Vec<Uuid>> {
+        billing_payments::table
+            .filter(billing_payments::pending.eq(true))
+            .select(billing_payments::workspace_id)
+            .distinct()
+            .load(&mut *self.connection()?)
+            .store()
+    }
+
     fn billing(&self, workspace_id: Uuid) -> Result<BillingRecord> {
         rows::read(&mut *self.connection()?, workspace_id)
     }

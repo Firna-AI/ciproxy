@@ -7,6 +7,7 @@ use reqwest::blocking::{Client, Response};
 use reqwest::redirect::Policy;
 use url::Url;
 
+use super::rejection::validation;
 use crate::error::{Error, Result, ResultExt};
 
 /// Stripe API version shared by the HTTP client and webhook endpoint.
@@ -82,19 +83,19 @@ impl HttpStripe {
         &self,
         path: &str,
         form: &[(String, String)],
-        key: &str,
+        key: Option<&str>,
     ) -> Result<Response> {
         let url = self.base_url.join(path).internal()?;
-        response(
-            self.client
-                .delete(url)
-                .bearer_auth(&self.secret_key)
-                .header("Stripe-Version", API_VERSION)
-                .header("Idempotency-Key", key)
-                .form(form)
-                .send(),
-            true,
-        )
+        let mut request = self
+            .client
+            .delete(url)
+            .bearer_auth(&self.secret_key)
+            .header("Stripe-Version", API_VERSION)
+            .form(form);
+        if let Some(key) = key {
+            request = request.header("Idempotency-Key", key);
+        }
+        response(request.send(), true)
     }
 }
 
@@ -108,6 +109,9 @@ fn response(
     };
     let status = response.status().as_u16();
     if mutation && response.status().is_client_error() && status != 409 && status != 429 {
+        if let Some(proof) = validation(response, status) {
+            return Err(Error::StripeValidationRejected { proof });
+        }
         return Err(Error::StripeRejected { status });
     }
     if !response.status().is_success() {

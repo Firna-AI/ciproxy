@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use ciproxy_billing::access::{BillingAccess, Role};
+use ciproxy_billing::alerts::HostedBillingAlerts;
 use ciproxy_billing::clock::{Clock, ClockMock, SystemClock};
 use ciproxy_billing::service::api::BillingApi;
 use ciproxy_billing::service::runtime::{BillingService, Redirects};
@@ -92,6 +93,7 @@ fn compose(database: &Database, fake: &Fake, clock: Arc<dyn Clock>) -> Box<dyn B
             probe: fake.probe(),
         }),
         clock,
+        Arc::new(HostedBillingAlerts),
         SigningSecret::new("whsec_offline_only".into()),
         Redirects {
             success_url: "https://app.example/return?session_id={CHECKOUT_SESSION_ID}".into(),
