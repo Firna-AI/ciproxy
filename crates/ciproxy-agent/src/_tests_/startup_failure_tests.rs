@@ -199,7 +199,11 @@ async fn failed_cache_reclaim_releases_the_reservation_before_retrying_the_vm() 
         start_image(),
         VmsMock::allocate
             .each_call(matching!(_, _))
-            .answers(&|_, _, _| Ok(vm("runner-1", false))),
+            .answers(&|_, report, _| {
+                let mut allocated = vm("runner-1", false);
+                allocated.report = report;
+                Ok(allocated)
+            }),
         StoreMock::save
             .each_call(matching!(_))
             .answers(&|_, _| Ok(())),

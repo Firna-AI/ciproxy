@@ -92,6 +92,7 @@ mod network_start_failure_tests;
 mod observations;
 mod persistence;
 mod process;
+mod registration;
 mod release_client;
 mod reporting;
 mod retirement;

@@ -45,9 +45,13 @@ async fn unresponsive_unconfigured_guest_releases_capacity_for_a_replacement() {
         StoreMock::save
             .each_call(matching!(_))
             .answers(&|_, _| Ok(())),
-        VmsMock::configuration_lost
-            .some_call(matching!(_))
-            .returns(Ok(true)),
+        VmsMock::configuration_lost.stub(|each| {
+            each.call(matching!(_))
+                .answers(&|_, _| Ok(true))
+                .once()
+                .then()
+                .answers(&|_, _| Ok(false));
+        }),
         VmsMock::request_stop
             .each_call(matching!(_))
             .answers(&|_, _| Ok(())),
@@ -177,6 +181,9 @@ async fn a_confirmed_registration_keeps_guest_shutdown_after_a_loss_report() {
         VmsMock::request_stop
             .some_call(matching!(_))
             .returns(Ok(())),
+        VmsMock::configuration_lost
+            .some_call(matching!(_))
+            .returns(Ok(false)),
     ));
     let agent = controller(
         MachineState {

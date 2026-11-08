@@ -104,7 +104,10 @@ impl Agent for Controller {
             .cloned()
             .ok_or(Error::GuestMismatch)?;
         let lost = self.vms.configuration_lost(&vm).await?;
-        self.record_configuration(runner_id, lost).await
+        if lost {
+            self.record_configuration(runner_id, true).await?;
+        }
+        Ok(())
     }
     async fn reconcile(&self) -> Result<()> {
         let hardware = self.host.hardware()?;

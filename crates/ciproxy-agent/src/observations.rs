@@ -11,18 +11,31 @@ use crate::boundaries::GuestProvenance;
 use crate::cache_authority::CacheAuthority;
 use crate::controller::Controller;
 use crate::error::{Error, Result};
-use crate::state::Mode;
+use crate::state::{Mode, RegistrationClaim};
 
 impl Controller {
     pub(crate) async fn record_configuration(&self, runner_id: &str, lost: bool) -> Result<()> {
         let mut state = self.state.lock().await;
+        if lost
+            && state.runners.iter().any(|vm| {
+                vm.report.runner_id.0 == runner_id
+                    && state.registration_claims.get(&vm.local_id)
+                        == Some(&RegistrationClaim::Delivery)
+            })
+        {
+            return Ok(());
+        }
         let mut next = state.clone();
         if let Some(vm) = next
             .runners
             .iter_mut()
             .find(|vm| vm.report.runner_id.0 == runner_id)
             && vm.report.configuration_lost != lost
-            && (!lost || vm.report.state == RunnerState::Starting)
+            && (!lost
+                || matches!(
+                    vm.report.state,
+                    RunnerState::Starting | RunnerState::Stopping
+                ))
         {
             vm.report.configuration_lost = lost;
             self.store.save(&next)?;
