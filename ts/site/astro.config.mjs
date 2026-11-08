@@ -85,8 +85,58 @@ export default defineConfig({
           return theme;
         },
       },
+      // The sidebar of the docs mockup, in its order. The previous and next
+      // links of each page follow this order.
       sidebar: [
-        { label: "Start here", items: [{ label: "Overview", link: "/docs/" }] },
+        {
+          label: "Start here",
+          items: [
+            { label: "Overview", slug: "docs" },
+            { label: "Quickstart", slug: "docs/quickstart" },
+            { label: "How ciproxy works", slug: "docs/how-ciproxy-works" },
+          ],
+        },
+        {
+          label: "Guides",
+          items: [
+            { label: "Add a machine", slug: "docs/guides/add-a-machine" },
+            { label: "Connect Boat", slug: "docs/guides/connect-boat" },
+            {
+              label: "Move your workflows",
+              slug: "docs/guides/move-your-workflows",
+            },
+            {
+              label: "Set a spend limit",
+              slug: "docs/guides/set-a-spend-limit",
+            },
+            { label: "Remove a machine", slug: "docs/guides/remove-a-machine" },
+          ],
+        },
+        {
+          label: "Reference",
+          items: [
+            { label: "Labels and VM sizes", slug: "docs/reference/labels" },
+            {
+              label: "Agent install options",
+              slug: "docs/reference/agent-install",
+            },
+            {
+              label: "GitHub App permissions",
+              slug: "docs/reference/github-app",
+            },
+            { label: "Plans and starts", slug: "docs/reference/plans" },
+          ],
+        },
+        {
+          label: "Security",
+          items: [
+            { label: "Job isolation", slug: "docs/security/job-isolation" },
+            {
+              label: "The agent connection",
+              slug: "docs/security/agent-connection",
+            },
+          ],
+        },
       ],
     }),
   ],

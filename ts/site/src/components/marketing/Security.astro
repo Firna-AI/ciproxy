@@ -2,6 +2,7 @@
 // The security section of the landing page: where code and secrets run, and
 // the four guarantees behind it.
 
+import { appPermissions } from "../../data/workflow.ts";
 import type { IconName } from "../icon/icons.ts";
 import Icon from "../icon/Icon.astro";
 import Section from "./Section.astro";
@@ -23,8 +24,8 @@ const points: readonly Point[] = [
   },
   {
     icon: "key-round",
-    title: "Three GitHub permissions",
-    text: "The GitHub App manages self-hosted runners, lists your repositories, and reads the branch and the event of each run.",
+    title: `${appPermissions.length} GitHub permissions`,
+    text: "The GitHub App manages self-hosted runners, lists your repositories, reads the event and the head repository of each workflow run, and checks your organization memberships to give roles.",
   },
   {
     icon: "database-zap",

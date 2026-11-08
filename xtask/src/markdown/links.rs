@@ -1,23 +1,45 @@
 //! Pure validation of relative files and GitHub heading fragments.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::fmt;
 
 use super::files::maintained;
 use super::parser::{heading_anchors, link_destinations};
 use super::target::{destination_parts, ignored_destination, percent_decode, resolve_target_path};
 
+/// A local link that the check cannot resolve.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Problem {
     MissingFile,
     MissingFragment,
 }
 
+impl Problem {
+    /// Whether the problem fails the Markdown phase. A fragment that names no
+    /// heading only warns, because rare heading styles get another ID on
+    /// GitHub than in this check.
+    pub(crate) fn fails_check(self) -> bool {
+        self == Self::MissingFile
+    }
+}
+
+/// One unresolved link, with the line of the document that holds it.
 #[derive(Debug, Eq, PartialEq)]
 pub(crate) struct Violation {
     pub(crate) source: String,
     pub(crate) destination: String,
     pub(crate) line: usize,
     pub(crate) problem: Problem,
+}
+
+impl fmt::Display for Violation {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            formatter,
+            "{}:{}: {:?}: {}",
+            self.source, self.line, self.problem, self.destination
+        )
+    }
 }
 
 pub(crate) fn violations(
