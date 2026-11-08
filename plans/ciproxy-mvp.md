@@ -4646,3 +4646,158 @@ is now a full release, and the preview release server serves it.
 - **Recommendation:** A. It works on the hosts that customers use.
 - **Action:** ask the user, because A changes a proof fixture of the
   security fix, and B needs another machine.
+
+### 108. Pending credits can change the quoted charge
+
+- **Severity:** High. **Likelihood:** Common. **Effort:** Medium.
+- **Source:** Review, pull request #39, after its second fix round.
+- **Category:** Product bug.
+- **Location:** `crates/ciproxy-billing/src/stripe/http/preview.rs:77`.
+- **Background:** An add-on change, such as a machine removal, can leave a
+  pending credit in Stripe. Stripe's preview counts it, but the payment of
+  an upgrade does not.
+- **Problem:** A review can show USD 115, and the payment can charge
+  USD 125. Two reviewers confirmed this from Stripe's documentation. No
+  live payment reproduced it.
+- **Impact if no action:** A charge can exceed the reviewed amount.
+- **Root question:** How does the review match Stripe's upgrade charge?
+- **Options:**
+  - **A.** Take the pending items out of the preview. Effort: Medium.
+  - **B.** Compute today's charge from Stripe's lines and the customer
+    balance. Effort: Medium.
+  - **C.** Send the same offset in the paid change, and let Stripe compute
+    the amount. Effort: Medium.
+  - **D.** Compare the invoice with the quote after payment, and alert on a
+    difference. It only adds to a fix. Effort: Small.
+  - **E.** Invoice pending items before the upgrade. Effort: Medium.
+  - **F.** Invoice add-on changes at once. Effort: Large.
+- **Left out:** Payment modes that apply the plan before payment, because
+  they break the bank confirmation flow.
+- **Wider fix:** D.
+- **Recommendation:** C with D. Stripe keeps computing the amounts, and an
+  alert catches a later mismatch.
+- **Action:** ask the user, because the two fix rounds of #39 are used, and
+  the finding is critical.
+
+### 109. The spend limit notice lacks the day it was reached
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation, Milestone 22, pull request #51.
+- **Category:** Mockup.
+- **Location:** `docs/mockups/src/screens/settings/overflow.tsx:95`.
+- **Background:** The approved mockup of the spend limit notice gives the
+  day the limit was reached and the day Boat resumes.
+- **Problem:** The API gives no day when the limit was reached.
+- **Impact if no action:** The product and the mockup differ.
+- **Root question:** Which days does the notice show?
+- **Options:**
+  - **A.** Only the resume day, and update the mockup. Effort: Small.
+  - **B.** Store the day the limit was reached, and show it. Effort: Large.
+  - **C.** The budget month and the resume day, as Jobs shows them, and
+    update the mockup. Effort: Small.
+- **Left out:** The browser's clock, because it names the visit, not the
+  event.
+- **Wider fix:** None.
+- **Recommendation:** C. It matches Jobs with data that the API has.
+- **Action:** ask the user, because the approved mockup changes.
+
+### 110. History returns every matching job in one response
+
+- **Severity:** Medium. **Likelihood:** Rare. **Effort:** Medium.
+- **Source:** Implementation, Milestone 21, pull request #53, its item 16.
+- **Category:** Performance.
+- **Location:** `crates/ciproxy-api/src/handlers/jobs.rs:32`, and
+  `crates/ciproxy-store-pg/src/job_views.rs:35`.
+- **Background:** Each read of History, of the live queue, and of a job page
+  builds every retained job of the workspace before any filter. A job is
+  retained for 90 days. The live queue reads again every 5 seconds. The
+  approved mockup shows pages and a total.
+- **Problem:** A large workspace can make these reads slow.
+- **Impact if no action:** Slow Jobs pages on large workspaces.
+- **Root question:** How does History deliver the jobs of a large plan
+  window?
+- **Options:**
+  - **A.** Measure first at Business volume, and change only when slow.
+    Effort: Medium.
+  - **B.** Pages without a total: the store applies the filters, the order,
+    and a limit, and "Show more" loads the next page. Effort: Medium.
+  - **C.** Pages with a total, as the mockup shows. Effort: Medium.
+  - **D.** One full list, with the filters in the store. Effort: Medium.
+  - **E.** A capped list, with a hint to narrow the filter. Effort: Medium.
+- **Left out:** None.
+- **Wider fix:** B.
+- **Recommendation:** B. Each read stays bounded, also the live queue.
+- **Action:** ask the user, because the approved mockup's total changes.
+
+### 111. The banners lack the plan and the passed limit
+
+- **Severity:** Low. **Effort:** Medium.
+- **Source:** Implementation, Milestone 21, pull request #53, its item 17.
+- **Category:** Mockup.
+- **Location:** `crates/ciproxy-api/src/wire/pages.rs:36`.
+- **Background:** The approved banners name the plan, the passed limit, and
+  the day a plan ended. The banner response gives fewer facts.
+- **Problem:** The product banners are true, but less precise.
+- **Impact if no action:** The product and the mockups differ.
+- **Root question:** What does each banner name about its cause?
+- **Options:**
+  - **A.** Use today's wording, and update the mockups. Effort: Small.
+  - **B.** Add typed facts to the banner response, and update the
+    protocol. Effort: Medium.
+  - **C.** Read Plan and usage beside the banner. Effort: Medium.
+- **Left out:** A day computed from the banner's end time, because a month
+  end can give a wrong day.
+- **Wider fix:** None.
+- **Recommendation:** B. One response keeps every page consistent.
+- **Action:** ask the user, because the approved mockups change.
+
+### 112. Jobs notices need facts that the API lacks
+
+- **Severity:** Low. **Effort:** Medium.
+- **Source:** Implementation, Milestone 21, pull request #53, its item 18.
+- **Category:** Mockup.
+- **Location:** `plans/follow-ups/jobs-notice-facts.md` on the #53 branch.
+- **Background:** The approved Jobs examples name suspension details,
+  refusal reasons, the actual Boat size, and resource shortages.
+- **Problem:** The API gives fewer facts.
+- **Impact if no action:** The product and the examples differ.
+- **Root question:** What must Jobs explain about why a job waits or where
+  it ran?
+- **Options:**
+  - **A.** Use today's wording, and update the examples. Effort: Small.
+  - **B.** Add suspension, refusal, and run-size facts. Effort: Large.
+  - **C.** Save the scaler's first reason. Effort: Medium.
+  - **D.** Save the actual size choice when a job starts. Effort: Medium.
+  - **E.** D, and typed reasons for temporary refusals. Effort: Large.
+  - **F.** Add shortage facts for each kind of place. Effort: Medium.
+  - **G.** Show the largest job that each kind of place can run.
+    Effort: Medium.
+- **Left out:** Fit computed in the browser, because it can differ from the
+  backend rules.
+- **Wider fix:** None.
+- **Recommendation:** D. It records what really ran.
+- **Action:** ask the user, because the approved examples change.
+
+### 113. The label dialog lacks the largest-job figures
+
+- **Severity:** Low. **Effort:** Small.
+- **Source:** Review, Milestone 21, pull request #53, its item 19.
+- **Category:** Mockup.
+- **Location:** `plans/follow-ups/label-dialog-fit-offers.md` on the #53
+  branch.
+- **Background:** The approved label dialog shows the largest job that own
+  machines and Boat can run. The API does not give those figures.
+- **Problem:** The product cannot show them.
+- **Impact if no action:** Only that extra text differs.
+- **Root question:** What does the dialog say about the capacity for a
+  label?
+- **Options:**
+  - **A.** Keep the fit counts and the placement, and remove the extra
+    text from the mockup. Effort: Small.
+  - **B.** Add the figures to the API, shared with option G of item 112.
+    Effort: Medium.
+- **Left out:** Figures computed in the browser, for the reason of item 112.
+- **Wider fix:** None.
+- **Recommendation:** A. The protocol requires only the counts and the
+  placement.
+- **Action:** ask the user, because the approved mockup changes.
