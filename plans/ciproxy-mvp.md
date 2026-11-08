@@ -1537,6 +1537,18 @@ Docs search follow-up choices, 8 November 2026:
 
 Verification evidence: `.context/site-search/verification.md`.
 
+Docs search review fix, 8 November 2026:
+
+- The user chose A for owner review round 1, finding 1: remove the saved
+  focus target and explicit focus restoration. The HTML dialog owns focus
+  restoration. Normal fragment links keep keyboard navigation at the
+  opened heading. Escape and Cancel still return to the search button.
+- Add a browser regression for `runs-on` from `/docs/`, Up, Enter, and Tab.
+  Keep the existing tests. My call: use the Node test runner with a fresh
+  production build and local server, so the test exercises the real index.
+
+Verification evidence: `.context/site-search/fix-round-1/verification.md`.
+
 ## Milestone 24: Site: the 14 launch docs pages
 
 Depends on: 13, 15, 23

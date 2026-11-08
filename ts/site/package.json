@@ -9,6 +9,7 @@
     "typecheck": "astro check",
     "lint": "eslint . --max-warnings 0",
     "test": "node --test _tests_/*.test.ts",
+    "test:browser": "node --test _tests_/browser/*.test.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
@@ -24,6 +25,7 @@
     "@types/node": "^24.19.2",
     "eslint": "^10.14.0",
     "eslint-plugin-astro": "^3.2.1",
+    "playwright-core": "^1.65.0",
     "prettier": "^3.9.10",
     "prettier-plugin-astro": "^1.1.2",
     "typescript": "~6.0.3",

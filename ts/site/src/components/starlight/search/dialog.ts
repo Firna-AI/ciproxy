@@ -15,7 +15,6 @@ export class DocsSearch extends HTMLElement {
     const closeButton = element<HTMLButtonElement>(this, "[data-close-modal]");
     const clearButton = element<HTMLButtonElement>(this, ".ds-clear");
     const input = element<HTMLInputElement>(this, "input");
-    let returnFocus: HTMLElement = openButton;
     const view = new SearchView(
       this,
       (index) => model.select(index),
@@ -37,10 +36,6 @@ export class DocsSearch extends HTMLElement {
 
     const open = () => {
       if (dialog.open) return;
-      returnFocus =
-        document.activeElement instanceof HTMLElement
-          ? document.activeElement
-          : openButton;
       dialog.showModal();
       openButton.setAttribute("aria-expanded", "true");
       document.body.setAttribute("data-search-modal-open", "");
@@ -56,7 +51,6 @@ export class DocsSearch extends HTMLElement {
       () => {
         document.body.removeAttribute("data-search-modal-open");
         openButton.setAttribute("aria-expanded", "false");
-        returnFocus.focus();
       },
       { signal },
     );

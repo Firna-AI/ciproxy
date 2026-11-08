@@ -45,6 +45,8 @@ The look is Graphite:
   by page and counts the heading results that it shows. Up and Down select
   a result, and Enter opens it. Tab, click, and middle click use normal
   links. Clear empties the query. Escape and Cancel close the dialog.
+  Dismissal returns focus to the search button. Opening a heading on the
+  current page continues keyboard navigation at that heading.
   The input keeps focus during arrow selection and announces the active
   heading to screen readers. Search needs JavaScript and a production
   build, which generates the Pagefind index.
@@ -116,6 +118,7 @@ npm --prefix ts run site:dev -- --host 0.0.0.0
 npm --prefix ts run site:typecheck
 npm --prefix ts run site:lint
 npm --prefix ts --workspace @ciproxy/site run test
+npm --prefix ts --workspace @ciproxy/site run test:browser
 npm --prefix ts run site:build
 npm --prefix ts --workspace @ciproxy/site run format
 ```
@@ -129,6 +132,12 @@ The tests under `_tests_` run on the Node test runner. They cover the choice
 of the cheapest plan, the calculation of the cost claim, search selection
 and heading counts, and the Copy text of the runs-on examples of the docs.
 The search tests also cover query changes during unfinished searches.
+The browser tests under `_tests_/browser/` use the same Node test runner
+with `playwright-core`. They need Google Chrome installed. They build and
+serve a fresh production site with its real search index. They check focus
+after same-page result navigation and after Escape and Cancel dismissals.
+Run site builds and test commands one at a time. Astro shares its `.astro/`
+prerender directory.
 The Copy test builds the site with
 `astro build` into a temporary folder and reads the Copy text of each example
 from the built pages. `_tests_/built-site.ts`
