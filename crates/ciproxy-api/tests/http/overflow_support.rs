@@ -5,6 +5,7 @@ use std::sync::Arc;
 use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_api::runtime::Runtime;
 use ciproxy_overflow::api::{OverflowConfig, StartRequest};
+use ciproxy_overflow::provider::BackendFactory;
 use ciproxy_overflow::service::{OverflowDependencies, OverflowService};
 use ciproxy_protocol::identifiers::{LabelName, OrganizationId};
 use ciproxy_protocol::resources::VmSize;
@@ -20,6 +21,17 @@ use super::overflow_ports::{Factory, Ports};
 
 pub(super) fn service(fixture: &mut Fixture) -> Arc<Ports> {
     let ports = Ports::new();
+    attach(fixture, ports.clone(), Arc::new(Factory(ports.clone())));
+    ports
+}
+
+pub(super) fn with_factory(fixture: &mut Fixture, factory: Arc<dyn BackendFactory>) -> Arc<Ports> {
+    let ports = Ports::new();
+    attach(fixture, ports.clone(), factory);
+    ports
+}
+
+fn attach(fixture: &mut Fixture, ports: Arc<Ports>, factory: Arc<dyn BackendFactory>) {
     *ports.now.lock().unwrap() = fixture.runtime.now();
     fixture.state.overflow = Some(Arc::new(OverflowService::new(
         OverflowConfig {
@@ -33,13 +45,12 @@ pub(super) fn service(fixture: &mut Fixture) -> Arc<Ports> {
         OverflowDependencies {
             store: fixture.database.store.clone(),
             cipher: ports.clone(),
-            factory: Arc::new(Factory(ports.clone())),
+            factory,
             runners: Arc::new(Unimock::new(())),
             clock: ports.clone(),
             tokens: ports.clone(),
         },
     )));
-    ports
 }
 
 pub(super) async fn start(fixture: &Fixture) {

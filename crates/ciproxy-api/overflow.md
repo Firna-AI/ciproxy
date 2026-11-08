@@ -7,6 +7,8 @@ Set `ApiState.overflow` to the runtime's shared `Arc<dyn Overflow>`. Use
   Boat step of Setup and of Settings under Overflow.
 - GET `/workspaces/{workspace_id}/overflow/summary` gives the same data to
   each current workspace role, for the Machines page.
+- POST `/workspaces/{workspace_id}/overflow/wallets` checks `api_key` and
+  returns the named `wallets` and `selected_wallet`. It saves no key.
 - POST `/workspaces/{workspace_id}/overflow/connection` connects a key or
   replaces it. It needs `api_key` and a `spend_limit_cents` above zero.
   `wallet` is `personal` by default.
@@ -17,6 +19,14 @@ Set `ApiState.overflow` to the runtime's shared `Arc<dyn Overflow>`. Use
 Only an Admin can change Boat data. The waits are 0, 15, 30, 60, and 120
 seconds. Boat checks each key before ciproxy saves it. A key that Boat
 refuses returns HTTP 422 with `boat_key_rejected`, and the saved key stays.
+
+Only an Admin can check the wallets of a key. Each choice gives its stable
+`wallet` and its `name`. The personal wallet uses `personal` as its identity.
+Each Boat organization uses its own Boat ID. The selected wallet follows
+Boat's active choice, or the first offered wallet when no choice is active.
+An organization key offers its own organization. An account key offers its
+personal wallet and the organizations that Boat lets it use. The dashboard
+sends the chosen `wallet` with the connection request.
 
 Key replacement and disconnect let running Boat jobs finish. Disconnect
 keeps the saved limit for the next connection. Setup skips Boat when it
