@@ -6,9 +6,9 @@ use ciproxy_store_interface::billing::state::Selection;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::catalog::{CheckoutReview, PriceCode};
+use crate::catalog::PriceCode;
 use crate::error::{Error, Result, ResultExt};
-use crate::stripe::api::StripeApi;
+use crate::stripe::api::{PaidPreview, StripeApi};
 use crate::stripe::forms;
 use crate::stripe::wire::invoice::RetrievedInvoice;
 use crate::stripe::wire::types::{CheckoutSession, Subscription};
@@ -75,11 +75,16 @@ impl StripeApi for HttpStripe {
         selection: Selection,
         command: &BillingCommand,
     ) -> Result<Subscription> {
-        let CommandKind::Change { upgrade, .. } = command.kind else {
+        let CommandKind::Change {
+            upgrade, ref quote, ..
+        } = command.kind
+        else {
             return Err(Error::StripeState);
         };
-        let prices = self.prices(selection)?;
-        let form = forms::replacement(current, selection, &prices, upgrade)?;
+        let form = match quote {
+            Some(quote) => forms::reviewed(quote, upgrade, false),
+            None => forms::replacement(current, selection, &self.prices(selection)?, upgrade)?,
+        };
         let key = format!("ciproxy:change:{}", command.id);
         self.post(
             &format!("/v1/subscriptions/{}", current.id),
@@ -95,7 +100,7 @@ impl StripeApi for HttpStripe {
         selection: Selection,
         at: DateTime<Utc>,
         upgrade: bool,
-    ) -> Result<CheckoutReview> {
+    ) -> Result<PaidPreview> {
         self.preview_change(current, selection, at, upgrade)
     }
 

@@ -80,7 +80,8 @@ async fn composed_paid_review_uses_stripe_previews_and_recurring_anchor() {
                 ItemChange::Remove("si_machine"),
                 ItemChange::Add("price_business", 1),
             ],
-        ),
+        )
+        .at(1804334400),
         SubscriptionOutcome::respond(changed.clone()),
     );
     let response = json(
@@ -89,7 +90,7 @@ async fn composed_paid_review_uses_stripe_previews_and_recurring_anchor() {
                 Some(&payer),
                 Method::POST,
                 "/billing/change",
-                Some(json!({"tier":"business","add_ons":{"start_blocks":3,"machines":0}})),
+                Some(json!({"quote_id":review["quote"]["id"]})),
             )
             .await,
         StatusCode::OK,

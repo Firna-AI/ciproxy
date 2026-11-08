@@ -4,6 +4,7 @@ use chrono::{DateTime, Utc};
 use ciproxy_schema::billing::{billing_accounts, billing_events};
 use ciproxy_schema::workspaces::workspaces;
 use ciproxy_store_interface::billing::commands::{BillingCommand, CheckoutProgress};
+use ciproxy_store_interface::billing::quotes::StoredQuote;
 use ciproxy_store_interface::billing::renewals::Renewal;
 use ciproxy_store_interface::billing::state::BillingState;
 use ciproxy_store_interface::billing::store::{BillingRecord, BillingSession};
@@ -14,7 +15,7 @@ use uuid::Uuid;
 
 use crate::error::QueryResultExt;
 
-use super::{renewals, rows};
+use super::{quotes, renewals, rows};
 
 pub(super) struct Session {
     pub(super) connection: PgConnection,
@@ -35,6 +36,18 @@ impl Drop for Session {
 }
 
 impl BillingSession for Session {
+    fn quote(&mut self, quote_id: Uuid) -> Result<Option<StoredQuote>> {
+        quotes::read(&mut self.connection, self.workspace_id, quote_id)
+    }
+
+    fn save_quote(&mut self, quote: &StoredQuote) -> Result<()> {
+        quotes::save(&mut self.connection, self.workspace_id, quote)
+    }
+
+    fn consume_quote(&mut self, quote_id: Uuid, command: &BillingCommand) -> Result<bool> {
+        quotes::consume(&mut self.connection, self.workspace_id, quote_id, command)
+    }
+
     fn renewals(&mut self, subscription_id: &str) -> Result<Vec<Renewal>> {
         renewals::read(&mut self.connection, self.workspace_id, subscription_id)
     }

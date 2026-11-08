@@ -132,6 +132,10 @@ event. Pending-organization discovery supports replay after restart.
 Billing uses a separate live session lock per workspace.
 Its subscription-ID query uses the retained unique billing-account identity.
 Each command persists before an external Stripe call.
+Paid quotes use a workspace-scoped table with their expiry and command.
+Consumption locks the workspace row, marks an unused quote, and saves its
+command in one transaction.
+Saving a quote deletes expired workspace quotes while no command is pending.
 The shared read model exposes confirmed coverage and UTC period anchors.
 A transaction commits event receipts, state, and command completion together.
 A failed state write rolls its receipt back.
@@ -239,6 +243,8 @@ CI starts the database for the existing workspace test phase.
 - [src/routing_snapshot.rs](src/routing_snapshot.rs) reads coherent routing.
 
 - [src/billing/session.rs](src/billing/session.rs) commits billing state.
+- [src/billing/quotes.rs](src/billing/quotes.rs) reads, saves, and consumes
+  paid quotes.
 - [src/billing/renewals.rs](src/billing/renewals.rs) stores owned renewal
   outcomes.
 - [src/factory.rs](src/factory.rs) opens stores and applies migrations.

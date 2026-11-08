@@ -121,6 +121,20 @@ fn get(state: &mut State, request: &Request, path: &str) -> (u16, String) {
 fn post(state: &mut State, request: &Request, path: &str) -> (u16, String) {
     match path {
         "/v1/invoices/create_preview" => {
+            if let Some(proration) = &state.proration {
+                let amount = if request.value("preview_mode") == Some("recurring") {
+                    31900
+                } else {
+                    proration.amount(request, "subscription_details[proration_date]")
+                };
+                return (
+                    200,
+                    json!({"currency":"usd", "customer":state.subscription.customer,
+                    "parent":{"subscription_details":{"subscription":state.subscription.id}},
+                    "amount_due":amount, "total":amount})
+                    .to_string(),
+                );
+            }
             let Some((mut expected, reply)) = state.previews.pop_front() else {
                 state.failure("unexpected invoice preview request".into());
                 return (500, "{}".into());
@@ -177,6 +191,11 @@ fn post(state: &mut State, request: &Request, path: &str) -> (u16, String) {
         path if path == format!("/v1/subscriptions/{}", state.subscription.id) => {
             match state.subscription_post(request) {
                 Some(SubscriptionOutcome::Respond(subscription)) => {
+                    if let Some(proration) = &mut state.proration {
+                        proration
+                            .charges
+                            .push(proration.amount(request, "proration_date"));
+                    }
                     state.subscription = *subscription;
                     if state.raw_reads.contains_key(path) {
                         state.raw_reads.insert(

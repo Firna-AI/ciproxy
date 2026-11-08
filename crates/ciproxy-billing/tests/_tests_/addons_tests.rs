@@ -30,6 +30,7 @@ fn addon_save_keeps_the_reconciled_business_tier_and_scheduled_period_end() {
                 kind: CommandKind::Change {
                     selection: wanted(Tier::Business, 2, 1),
                     upgrade: true,
+                    quote: None,
                 },
             })
             .unwrap();

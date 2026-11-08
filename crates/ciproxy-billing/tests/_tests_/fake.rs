@@ -10,7 +10,7 @@ use serde_json::Value;
 use tiny_http::{Response, Server};
 use url::form_urlencoded;
 
-use super::fake_requests::Request;
+use super::fake_requests::{Proration, Request};
 use super::fake_routes::handle;
 use super::fake_subscriptions::{SubscriptionExchange, SubscriptionOutcome, SubscriptionRequest};
 
@@ -22,6 +22,7 @@ pub(super) struct State {
     pub(super) raw_read_sequences: BTreeMap<String, VecDeque<Value>>,
     pub(super) requests: Vec<Request>,
     pub(super) previews: VecDeque<(Vec<(String, String)>, Value)>,
+    pub(super) proration: Option<Proration>,
     pub(super) lose_next_post: bool,
     pub(super) lose_next_delete: bool,
     pub(super) reject_next_checkout: Option<u16>,
@@ -104,6 +105,7 @@ impl Fake {
             raw_read_sequences: BTreeMap::new(),
             requests: Vec::new(),
             previews: VecDeque::new(),
+            proration: None,
             lose_next_post: false,
             lose_next_delete: false,
             reject_next_checkout: None,

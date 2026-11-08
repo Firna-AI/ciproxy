@@ -50,6 +50,10 @@ One forward migration preserves legacy pending stops as eligible per-event
 decisions and retains the latest collection-change time.
 Their workspace ownership and subscription index keep queries scoped.
 The last organization removal keeps a durable cancellation request.
+The `202611082200_billing_quotes` migration adds paid quotes.
+Each row keeps one workspace quote as JSON, its expiry, and its command.
+Workspace deletion removes its rows.
+A quote holds Stripe object IDs and amounts, with no key or card data.
 Dashboard tables own verified memberships, roles, and access requests.
 Workspace deletion cascades through its retained records after 30 days.
 
@@ -160,7 +164,8 @@ Each migration has an up.sql and a down.sql.
 - [src/dashboard.rs](src/dashboard.rs) defines dashboard authentication tables.
 - [src/own_runners.rs](src/own_runners.rs) defines execution command state.
 
-- [src/billing.rs](src/billing.rs) defines billing accounts and event receipts.
+- [src/billing.rs](src/billing.rs) defines billing accounts, quotes, and
+  event receipts.
 
 - [build.rs](build.rs) tracks migration directory changes for Cargo.
 - [src/migrations.rs](src/migrations.rs) exports the embedded migrations.

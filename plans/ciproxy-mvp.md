@@ -1360,6 +1360,26 @@ These routes serve the other pages of the dashboard.
       Add the real-PgStore delayed-renewal regression. Keep finding 1
       unchanged until the user answers item 95.
       Branch: `conductor/m18-composition-pages-stripe-hook-paid-review`.
+- [x] Apply owner review round 1, finding 1, as item 95, option B. The user
+      chose B on 8 November 2026. This is owner fix round 2.
+      Store each paid review as a workspace quote: the exact selection, the
+      amounts, the current period, and a whole-second proration time. The
+      paid change sends only the quote ID. One transaction consumes the
+      quote and saves its command under the billing lock, before Stripe.
+      Retries keep the proration time and the idempotency key, also after
+      the quote expires. Refuse an unknown, foreign, expired, or outdated
+      quote, or one whose payment ended, with HTTP 409 and
+      `review_required`. Keep add-on writes, Free Checkout, and the
+      delayed-renewal regression of finding 2.
+      Update the generated types, the billing protocol, and the READMEs.
+      Branch: `conductor/m18-composition-pages-stripe-hook-paid-review`.
+      Implementation call, 8 November 2026, the orchestrator's: a new
+      payment can use a quote for 30 minutes, and only before the quoted
+      period ends. Reason: Stripe matches its preview only with the same
+      proration time, and takes only a time inside the current period. A
+      short limit keeps that time close to the payment. Stripe sets no
+      such duration.
+      Evidence: `.context/ciproxy-mvp/m18-composition/owner-fix-round2/`.
 - [ ] Orchestrator: run the
       [live page checks](../crates/ciproxy-api/scripts/README.md#jobs-savings-and-billing)
       after the runtime and Stripe test workspace are ready. Set

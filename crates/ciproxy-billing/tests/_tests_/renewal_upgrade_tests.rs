@@ -10,8 +10,9 @@ use super::database::Database;
 use super::fake::Fake;
 use super::fake_subscriptions::SubscriptionOutcome;
 use super::fixture::{
-    access, at, read_service, seed_paid, service, signature, state, subscription, wanted, workspace,
+    access, at, read_service, seed_paid, service, signature, state, subscription, workspace,
 };
+use super::quote_fixture::quote;
 use super::subscription_requests::business_upgrade;
 
 #[test]
@@ -71,13 +72,13 @@ fn renewal_and_upgrade(delayed: bool, after_upgrade: SubscriptionState) {
         let mut remote = fake.state.lock().unwrap();
         remote.invoices[0].next_payment_attempt = Some(1794139200);
         remote.expect_subscription(
-            business_upgrade(),
+            business_upgrade().at(1793793600),
             SubscriptionOutcome::respond(current.clone()),
         );
     }
     assert_eq!(
         billing
-            .change(access(), wanted(Tier::Business, 2, 1))
+            .change(access(), quote(&database, &fake, super::fixture::at()))
             .unwrap(),
         ChangeOutcome::PaymentRequired {
             payment_url: Some("https://invoice.stripe.test/upgrade".into())

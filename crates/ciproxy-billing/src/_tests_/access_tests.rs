@@ -52,7 +52,7 @@ fn viewers_cannot_choose_pay_change_cancel_or_open_invoices() {
         Err(Error::Forbidden)
     ));
     assert!(matches!(
-        service.change(access, selection),
+        service.change(access, Uuid::nil()),
         Err(Error::Forbidden)
     ));
     assert!(matches!(

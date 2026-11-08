@@ -12,6 +12,7 @@ use super::fixture::{
     access, at, command, read_service, seed_paid, service, signature, state, subscription, wanted,
     workspace,
 };
+use super::quote_fixture::quote;
 
 fn prepare(cancel: bool) -> (Database, Fake) {
     let database = Database::new(workspace());
@@ -39,6 +40,7 @@ fn prepare(cancel: bool) -> (Database, Fake) {
                 CommandKind::Change {
                     selection: wanted(Tier::Business, 2, 1),
                     upgrade: true,
+                    quote: None,
                 }
             },
         })
@@ -93,13 +95,13 @@ fn direct_paid_reconciliation_commits_terminal_state_before_any_mutation() {
             billing.move_to_free(access())
         } else {
             billing
-                .change(access(), wanted(Tier::Business, 2, 1))
+                .change(access(), quote(&database, &fake, super::fixture::at()))
                 .map(|_| ())
         };
         assert_eq!(
             result
                 .err()
-                .map(|error| matches!(error, Error::SubscriptionRequired)),
+                .map(|error| matches!(error, Error::ReviewRequired)),
             if cancel { None } else { Some(true) }
         );
         assert_eq!(

@@ -3,9 +3,8 @@
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
-use ciproxy_billing::catalog::CheckoutReview;
 use ciproxy_billing::error::Result;
-use ciproxy_billing::stripe::api::StripeApi;
+use ciproxy_billing::stripe::api::{PaidPreview, StripeApi};
 use ciproxy_billing::stripe::wire::invoice::RetrievedInvoice;
 use ciproxy_billing::stripe::wire::types::{CheckoutSession, Subscription};
 use ciproxy_store_interface::billing::commands::BillingCommand;
@@ -72,7 +71,7 @@ impl StripeApi for CheckedStripe {
         selection: Selection,
         at: DateTime<Utc>,
         upgrade: bool,
-    ) -> Result<CheckoutReview> {
+    ) -> Result<PaidPreview> {
         let result = self.provider.preview(current, selection, at, upgrade);
         self.probe.check();
         result

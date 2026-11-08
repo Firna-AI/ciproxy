@@ -29,8 +29,8 @@ impl BillingApi for BillingService {
     fn reconcile_checkout(&self, access: BillingAccess, id: &str) -> Result<CheckoutOutcome> {
         self.reconcile_checkout(access, id)
     }
-    fn change(&self, access: BillingAccess, selection: Selection) -> Result<ChangeOutcome> {
-        self.change(access, selection)
+    fn change(&self, access: BillingAccess, quote_id: Uuid) -> Result<ChangeOutcome> {
+        self.change(access, quote_id)
     }
     fn change_add_ons(&self, access: BillingAccess, add_ons: AddOns) -> Result<ChangeOutcome> {
         self.change_add_ons(access, add_ons)

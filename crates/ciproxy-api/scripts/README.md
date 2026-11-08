@@ -106,8 +106,8 @@ python3 crates/ciproxy-api/scripts/live_pages.py review
 
 For review, add `selection` with `tier` and `add_ons`. The add-ons hold
 `start_blocks` and `machines`. Add `private_result_file` outside the repository.
-The script writes payment and portal results there with mode 600. It prints
-only route names and pass/fail status.
+The script writes review, payment, and portal results there with mode 600. It
+prints only route names and pass/fail status.
 For a paid change, compare the monthly total and today's charge with Stripe's
 invoice preview. Check the recurring day for an anchor on day 29 to 31 after
 a shorter month. A downgrade can have a negative later credit and no charge
@@ -120,8 +120,14 @@ returned
 confirms the payment. Run it while confirmation waits too. Confirm that Plans
 offers no second checkout. Repeat with an unfinished checkout.
 
-`change` sends `selection`. `addons` sends a separate `add_ons` value. `portal`
-opens invoices and card management. `free` schedules the end of the paid plan.
+Run `review` before `change`, and start `change` before the quote's
+`expires_at`. `change` sends only a quote ID: `quote_id` from the private
+credential file, or else `quote.id` from the private result file. A 200
+response saves that ID with its outcome in the result file. A failed request
+leaves the file as it was. So a repeated `change` retries the same quote, for
+example after `payment_required` or HTTP 503.
+`addons` sends a separate `add_ons` value. `portal` opens invoices and card
+management. `free` schedules the end of the paid plan.
 Each command changes only this explicit test workspace. Confirm the proration,
 payment-required state, original period dates, and portal cancel/undo behavior.
 

@@ -98,17 +98,8 @@ The metering refresh can then complete its retention pass.
 Savings snapshots return `AccountingIncomplete` for gaps in their requested
 date range. They never publish a missing cost as zero or as outage time.
 
-BillingStore adds the confirmed tier, add-ons, paid bounds, and Free anchor.
-It exposes retry and ended-banner dates without changing job execution.
-BillingSession owns exclusive command and event reconciliation.
-It retains each owned renewal outcome separately from the billing banner.
-Each renewal retains whether the provider attempted its payment.
-Verified automatic collection stops remain available after a service restart.
-Each stop event retains its eligible, superseded, or completed decision.
-The subscription-ID lookup resolves a billing workspace before provider reads.
-State and event receipts commit atomically.
-App removal stores a durable billing cancellation request.
-Services consume these boundaries through dyn.
+The [billing store guide](src/billing/README.md) describes BillingStore and
+BillingSession: state, commands, quotes, renewals, receipts, and cancellations.
 
 OverflowStore adds exclusive workspace sessions for Boat execution.
 Pending connections use fresh store-issued grants before external work.
@@ -270,6 +261,8 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 
 - [src/store.rs](src/store.rs) defines Store and its connection factory.
 - [src/billing/store.rs](src/billing/store.rs) owns durable billing sessions.
+- [src/billing/quotes.rs](src/billing/quotes.rs) defines stored paid quotes
+  and their reviewed Stripe item replacements.
 - [src/billing/renewals.rs](src/billing/renewals.rs) defines durable renewal
   outcomes and verified automatic collection stops.
 - [src/billing/collection.rs](src/billing/collection.rs) defines per-event

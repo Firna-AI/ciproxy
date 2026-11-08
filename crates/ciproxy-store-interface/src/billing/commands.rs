@@ -4,6 +4,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::billing::quotes::QuotePayment;
 use crate::billing::state::Selection;
 
 /// An exact retryable Stripe mutation with a server-owned identifier.
@@ -37,6 +38,9 @@ pub enum CommandKind {
         selection: Selection,
         /// Whether payment must succeed before Stripe applies the change.
         upgrade: bool,
+        /// Reviewed inputs for a paid tier change, absent for quantity-only changes.
+        #[serde(default)]
+        quote: Option<QuotePayment>,
     },
     /// End the paid subscription at its existing period end.
     Cancel,

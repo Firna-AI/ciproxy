@@ -30,6 +30,10 @@ mod runtime_inputs;
 
 mod cancellation_tests;
 mod composition_tests;
+mod paid_quote_refusal_tests;
+mod paid_quote_tests;
 mod paid_review_tests;
 mod preview_support;
+mod quote_support;
 mod support;
+mod support_host;

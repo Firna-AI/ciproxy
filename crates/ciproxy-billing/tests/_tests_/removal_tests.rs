@@ -68,6 +68,7 @@ fn only_last_removal_cancels_and_a_pending_upgrade_cannot_block_it() {
                 kind: CommandKind::Change {
                     selection: wanted(Tier::Business, 2, 1),
                     upgrade: true,
+                    quote: None,
                 },
             })
             .unwrap();

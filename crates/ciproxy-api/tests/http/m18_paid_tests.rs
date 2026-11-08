@@ -16,6 +16,7 @@ use unimock::{MockFn, Unimock, matching};
 use uuid::Uuid;
 
 use super::fixture_io;
+use super::m18_quote::quote;
 use super::m18_stripe::{Scenario, Stripe};
 use super::m18_support::{Pages, at};
 
@@ -63,6 +64,8 @@ async fn m18_paid_review_requires_authoritative_quote_and_uses_its_anchor_day() 
                     assert_eq!(selected.tier, Tier::Business);
                     assert_eq!(time, at("2027-03-06T12:00:00Z"));
                     Ok(PaidQuote {
+                        id: Uuid::nil(),
+                        expires_at: at("2027-03-06T12:30:00Z"),
                         amounts: CheckoutReview {
                             monthly_cents: 28900,
                             today_cents: 21000,
@@ -137,12 +140,13 @@ async fn m18_paid_actions_preserve_period_wait_for_upgrade_payment_and_open_port
     assert_eq!(state.paid_period_start, Some(at("2026-11-01T00:00:00Z")));
     assert_eq!(state.paid_period_end, Some(at("2026-12-01T00:00:00Z")));
     stripe.payment_required.store(true, Ordering::SeqCst);
+    let quote_id = quote(&pages, &stripe);
     let upgrade = pages
         .request(
             Some(&billing),
             "POST",
             "/billing/change",
-            Some(json!({"tier":"business","add_ons":{"start_blocks":0,"machines":0}})),
+            Some(json!({"quote_id":quote_id})),
         )
         .await;
     assert_eq!(upgrade.status(), StatusCode::OK);
@@ -212,6 +216,7 @@ async fn m18_addon_save_preserves_the_reconciled_stripe_tier_after_a_stale_upgra
                         add_ons: AddOns::default(),
                     },
                     upgrade: true,
+                    quote: None,
                 },
             })
             .unwrap();

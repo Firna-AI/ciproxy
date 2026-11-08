@@ -2,6 +2,7 @@
 
 use chrono::{DateTime, Utc};
 use ciproxy_store_interface::billing::commands::BillingCommand;
+use ciproxy_store_interface::billing::quotes::ChangeItem;
 use ciproxy_store_interface::billing::state::Selection;
 use unimock::unimock;
 use uuid::Uuid;
@@ -11,6 +12,15 @@ use crate::error::Result;
 
 use super::wire::invoice::RetrievedInvoice;
 use super::wire::types::{CheckoutSession, Subscription};
+
+/// Authoritative amounts and the exact provider items used by both previews.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PaidPreview {
+    /// Reviewed immediate and recurring amounts.
+    pub amounts: CheckoutReview,
+    /// Exact item replacements, including resolved catalog price identities.
+    pub items: Vec<ChangeItem>,
+}
 
 /// The provider operations used by billing orchestration.
 #[unimock(api = StripeApiMock)]
@@ -37,7 +47,7 @@ pub trait StripeApi: Send + Sync {
         selection: Selection,
         at: DateTime<Utc>,
         upgrade: bool,
-    ) -> Result<CheckoutReview>;
+    ) -> Result<PaidPreview>;
     /// Replace paid items with proration and payment-gated upgrades.
     fn change(
         &self,

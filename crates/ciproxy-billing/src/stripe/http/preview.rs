@@ -1,11 +1,14 @@
 //! Invoice previews for the immediate change and its future monthly amount.
 
 use chrono::{DateTime, Datelike, Utc};
+use ciproxy_store_interface::billing::quotes::QuotePayment;
 use ciproxy_store_interface::billing::state::Selection;
 use serde::Deserialize;
+use uuid::Uuid;
 
 use crate::catalog::CheckoutReview;
 use crate::error::{Error, Result, ResultExt};
+use crate::stripe::api::PaidPreview;
 use crate::stripe::forms;
 use crate::stripe::wire::invoice::InvoiceParent;
 use crate::stripe::wire::types::Subscription;
@@ -46,43 +49,35 @@ impl HttpStripe {
         selection: Selection,
         at: DateTime<Utc>,
         upgrade: bool,
-    ) -> Result<CheckoutReview> {
+    ) -> Result<PaidPreview> {
         let billing_day = anchor_day(current)?;
         let prices = self.prices(selection)?;
+        let quote = QuotePayment {
+            id: Uuid::nil(),
+            proration_at: at,
+            items: forms::changes(current, selection, &prices)?,
+        };
         let mut form = vec![
             ("customer".into(), current.customer.clone()),
             ("subscription".into(), current.id.clone()),
         ];
-        form.extend(forms::items(
-            current,
-            selection,
-            &prices,
-            "subscription_details[items]",
-        )?);
         let mut immediate = form.clone();
-        immediate.extend([
-            ("preview_mode".into(), "next".into()),
-            (
-                "subscription_details[proration_date]".into(),
-                at.timestamp().to_string(),
-            ),
-            (
-                "subscription_details[proration_behavior]".into(),
-                if upgrade {
-                    "always_invoice"
-                } else {
-                    "create_prorations"
-                }
-                .into(),
-            ),
-        ]);
+        immediate.push(("preview_mode".into(), "next".into()));
+        immediate.extend(forms::reviewed(&quote, upgrade, true));
         let next = self.preview_invoice(&immediate, current)?;
+        form.extend(forms::item_fields(
+            &quote.items,
+            "subscription_details[items]",
+        ));
         form.push(("preview_mode".into(), "recurring".into()));
         let recurring = self.preview_invoice(&form, current)?;
-        Ok(CheckoutReview {
-            monthly_cents: recurring.total.try_into().internal()?,
-            today_cents: if upgrade { next.amount_due } else { 0 },
-            billing_day,
+        Ok(PaidPreview {
+            amounts: CheckoutReview {
+                monthly_cents: recurring.total.try_into().internal()?,
+                today_cents: if upgrade { next.amount_due } else { 0 },
+                billing_day,
+            },
+            items: quote.items,
         })
     }
 

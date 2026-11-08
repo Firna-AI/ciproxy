@@ -9,9 +9,8 @@ use super::database::Database;
 use super::expiry_support::{lost_upgrade, pending, started};
 use super::fake::Fake;
 use super::fake_subscriptions::{SubscriptionOutcome, SubscriptionRequest};
-use super::fixture::{
-    access, read_service, seed_paid, service, state, subscription, wanted, workspace,
-};
+use super::fixture::{access, read_service, seed_paid, service, state, subscription, workspace};
+use super::quote_fixture::quote;
 use super::subscription_requests::business_upgrade;
 
 #[test]
@@ -46,7 +45,7 @@ fn current_pending_update_survives_age_then_applied_selection_wins_over_age() {
     );
     assert_eq!(
         billing
-            .change(access(), wanted(Tier::Business, 2, 1))
+            .change(access(), quote(&database, &fake, started()))
             .unwrap(),
         ChangeOutcome::PaymentRequired {
             payment_url: Some("https://invoice.stripe.test/upgrade".into())
@@ -57,7 +56,7 @@ fn current_pending_update_survives_age_then_applied_selection_wins_over_age() {
     applied.items.data[0].price.id = "price_business".into();
     fake.state.lock().unwrap().subscription = applied;
     assert!(matches!(
-        billing.change(access(), wanted(Tier::Business, 2, 1)),
+        billing.change(access(), quote(&database, &fake, started())),
         Ok(ChangeOutcome::Applied(_))
     ));
     assert_eq!(state(&database).tier, Tier::Business);
@@ -71,9 +70,12 @@ fn canceling_a_pending_upgrade_keeps_other_selections_out_of_its_payment_context
     seed_paid(&database);
     let fake = Fake::new(subscription());
     let billing = service(&database, &fake, started());
-    fake.expect_subscription(business_upgrade(), SubscriptionOutcome::respond(pending()));
+    fake.expect_subscription(
+        business_upgrade().at(1796382000),
+        SubscriptionOutcome::respond(pending()),
+    );
     assert!(matches!(
-        billing.change(access(), wanted(Tier::Business, 2, 1)),
+        billing.change(access(), quote(&database, &fake, started())),
         Ok(ChangeOutcome::PaymentRequired { .. })
     ));
     let mut canceling = pending();

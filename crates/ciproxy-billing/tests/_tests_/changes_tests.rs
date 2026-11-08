@@ -9,7 +9,8 @@ use ciproxy_store_interface::billing::state::{AddOns, SubscriptionState, Tier};
 use super::database::Database;
 use super::fake::{Fake, field};
 use super::fake_subscriptions::{SubscriptionOutcome, SubscriptionRequest};
-use super::fixture::{access, at, seed_paid, service, state, subscription, wanted, workspace};
+use super::fixture::{access, at, seed_paid, service, state, subscription, workspace};
+use super::quote_fixture::quote;
 use super::subscription_requests::{
     add_one_start_block, business_upgrade, rejected_large_selection, remove_all_addons,
     remove_remaining_machine, remove_starts,
@@ -21,6 +22,7 @@ fn upgrade_waits_for_payment_then_applies_and_expired_payment_can_retry() {
     seed_paid(&database);
     let fake = Fake::new(subscription());
     let service = service(&database, &fake, at());
+    let quote_id = quote(&database, &fake, at());
     let mut pending = subscription();
     pending.pending_update = Some(PendingUpdate {
         expires_at: 1793793700,
@@ -28,11 +30,12 @@ fn upgrade_waits_for_payment_then_applies_and_expired_payment_can_retry() {
     let invoice = pending.latest_invoice.as_mut().unwrap();
     invoice.billing_reason = BillingReason::SubscriptionUpdate;
     invoice.status = InvoiceStatus::Open;
-    fake.expect_subscription(business_upgrade(), SubscriptionOutcome::respond(pending));
+    fake.expect_subscription(
+        business_upgrade().at(1793793600),
+        SubscriptionOutcome::respond(pending),
+    );
     assert_eq!(
-        service
-            .change(access(), wanted(Tier::Business, 2, 1))
-            .unwrap(),
+        service.change(access(), quote_id).unwrap(),
         ChangeOutcome::PaymentRequired {
             payment_url: Some("https://invoice.stripe.test/pay".into())
         }
@@ -49,9 +52,7 @@ fn upgrade_waits_for_payment_then_applies_and_expired_payment_can_retry() {
     assert_eq!(field(&post[0], "proration_behavior"), "always_invoice");
     assert_eq!(field(&post[0], "payment_behavior"), "pending_if_incomplete");
     assert_eq!(
-        service
-            .change(access(), wanted(Tier::Business, 2, 1))
-            .unwrap(),
+        service.change(access(), quote_id).unwrap(),
         ChangeOutcome::PaymentRequired {
             payment_url: Some("https://invoice.stripe.test/pay".into())
         }
@@ -67,11 +68,17 @@ fn upgrade_waits_for_payment_then_applies_and_expired_payment_can_retry() {
     {
         let mut remote = fake.state.lock().unwrap();
         remote.subscription = expired;
-        remote.expect_subscription(business_upgrade(), SubscriptionOutcome::respond(business));
+        remote.expect_subscription(
+            business_upgrade().at(1793880000),
+            SubscriptionOutcome::respond(business),
+        );
     }
-    let outcome = retry
-        .change(access(), wanted(Tier::Business, 2, 1))
-        .unwrap();
+    assert!(matches!(
+        retry.change(access(), quote_id),
+        Err(Error::ReviewRequired)
+    ));
+    let fresh_quote = quote(&database, &fake, expired_at);
+    let outcome = retry.change(access(), fresh_quote).unwrap();
     assert!(matches!(outcome, ChangeOutcome::Applied(_)));
     assert_eq!(state(&database).tier, Tier::Business);
     assert_eq!(state(&database).paid_period_start, Some(at()));
@@ -269,9 +276,12 @@ fn successful_pending_upgrade_after_deadline_syncs_without_second_charge() {
     pending.pending_update = Some(PendingUpdate {
         expires_at: 1793793700,
     });
-    fake.expect_subscription(business_upgrade(), SubscriptionOutcome::respond(pending));
+    fake.expect_subscription(
+        business_upgrade().at(1793793600),
+        SubscriptionOutcome::respond(pending),
+    );
     assert!(matches!(
-        billing.change(access(), wanted(Tier::Business, 2, 1)),
+        billing.change(access(), quote(&database, &fake, super::fixture::at())),
         Ok(ChangeOutcome::PaymentRequired { .. })
     ));
     let mut paid = subscription();
@@ -280,7 +290,7 @@ fn successful_pending_upgrade_after_deadline_syncs_without_second_charge() {
     fake.state.lock().unwrap().subscription = paid;
     let later =
         super::fixture::read_service(&database, &fake, "2026-11-05T12:00:00Z".parse().unwrap());
-    let outcome = later.change(access(), wanted(Tier::Business, 2, 1));
+    let outcome = later.change(access(), quote(&database, &fake, super::fixture::at()));
     assert!(matches!(outcome, Ok(ChangeOutcome::Applied(_))));
     assert_eq!(state(&database).tier, Tier::Business);
     assert_eq!(fake.posts("/v1/subscriptions/sub_recorded").len(), 1);

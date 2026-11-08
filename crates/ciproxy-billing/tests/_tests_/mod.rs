@@ -21,6 +21,7 @@ mod live_replay_tests;
 mod locked_observation_tests;
 mod ownership_tests;
 mod pending_context_tests;
+mod quote_fixture;
 mod removal_tests;
 mod renewal_ownership_tests;
 mod renewal_upgrade_tests;

@@ -1,9 +1,7 @@
 //! Bound production routes with real access, billing, metering, and persistence.
 
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
 
-use axum::Router;
 use axum::http::StatusCode;
 use chrono::{DateTime, Utc};
 use ciproxy_api::runtime::Runtime;
@@ -11,7 +9,6 @@ use ciproxy_billing::clock::Clock;
 use ciproxy_billing::service::runtime::Redirects;
 use ciproxy_billing::stripe::wire::types::Subscription;
 use ciproxy_billing::webhook::SigningSecret;
-use ciproxy_control_plane::http::dashboard_router;
 use ciproxy_control_plane::pages::{PageComposition, PageConfig, StripeSettings};
 use ciproxy_metering::report::catalog::{Alternative, PriceList, SizePrice};
 use ciproxy_metering::service::StoredMetering;
@@ -24,14 +21,12 @@ use reqwest::{Client, Method, Response};
 use rust_decimal::Decimal;
 use serde_json::Value;
 use sha2::Sha256;
-use tokio::net::TcpListener;
-use tokio::task::JoinHandle;
-use unimock::Unimock;
 use uuid::Uuid;
 
 use super::fake::Fake;
 use super::fixture::{Browser, Fixture};
 use super::runtime_inputs::Inputs;
+use super::support_host::{Server, host};
 
 pub(super) struct Dashboard {
     pub(super) fixture: Fixture,
@@ -43,6 +38,19 @@ pub(super) struct Dashboard {
 }
 
 impl Dashboard {
+    pub(super) async fn restart(&mut self) {
+        self.server.0.abort();
+        let _ = (&mut self.server.0).await;
+        let pages = composition(&self.fixture, &self.fake).await;
+        let previous = std::mem::replace(&mut self.pages, pages);
+        tokio::task::spawn_blocking(move || drop(previous))
+            .await
+            .unwrap();
+        let (origin, server) = host(&self.fixture, &self.pages).await;
+        self.origin = origin;
+        self.server = server;
+    }
+
     pub(super) async fn close(mut self) {
         self.server.0.abort();
         let _ = (&mut self.server.0).await;
@@ -76,22 +84,13 @@ impl Dashboard {
         subscription.billing_cycle_anchor = Some(at("2026-10-31T12:00:00Z").timestamp());
         let fake = Fake::new(subscription);
         let pages = composition(&fixture, &fake).await;
-        let application = dashboard_router(
-            Router::new(),
-            fixture.state.clone(),
-            pages.services.clone(),
-            Arc::new(Unimock::new(())),
-            Arc::new(AtomicBool::new(true)),
-        );
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let origin = format!("http://{}", listener.local_addr().unwrap());
-        let server = tokio::spawn(async move { axum::serve(listener, application).await.unwrap() });
+        let (origin, server) = host(&fixture, &pages).await;
         Self {
             fixture,
             pages,
             fake,
             origin,
-            server: Server(server),
+            server,
             client: Client::builder().no_proxy().build().unwrap(),
         }
     }
@@ -191,14 +190,6 @@ impl Dashboard {
             .insert_job(self.fixture.workspace, &job)
             .unwrap();
         job.id
-    }
-}
-
-struct Server(JoinHandle<()>);
-
-impl Drop for Server {
-    fn drop(&mut self) {
-        self.0.abort();
     }
 }
 

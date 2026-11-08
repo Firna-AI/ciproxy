@@ -25,6 +25,9 @@ pub enum Error {
     /// The requested tier is already the current tier.
     #[error("[billing/service] tier is already current")]
     CurrentTier,
+    /// The quote cannot start this payment. The payer must review again.
+    #[error("[billing/service] a new paid review is required")]
+    ReviewRequired,
     /// Paid billing requires an existing paid subscription.
     #[error("[billing/service] paid subscription required")]
     SubscriptionRequired,

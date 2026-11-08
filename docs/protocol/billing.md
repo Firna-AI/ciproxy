@@ -173,6 +173,30 @@ against a tier.
 - The Plans page also marks the tier that covers the use, as
   [Soft limits](metering.md#soft-limits) states.
 
+### The quote of a paid move
+
+- The review of a move between paid tiers gives the new monthly total, the
+  prorated charge of today, and the day of each later charge.
+- ciproxy stores each such review as a quote with its selection, amounts,
+  current period, and proration time.
+- The proration time is the time of the review.
+- The move names its quote, and ciproxy takes the selection and the
+  proration time from that quote, not from the browser.
+- Stripe prorates the move as of that time, so the charge matches the review.
+- A quote starts at most one move.
+- A new move can start from a quote for 30 minutes after the review, and
+  only before the period ends.
+- Each retry of the move keeps its proration time, also after a restart or
+  after those 30 minutes.
+- ciproxy refuses to start a move from an unknown or expired quote, the
+  quote of another workspace, or a quote whose move ended.
+- ciproxy also refuses to start it when the subscription, its tier and
+  add-ons, its billing day, or its period changed after the review.
+- The page then asks the customer to review the move again.
+- **Decision:** ciproxy stores each quote. Rejected: a signed quote that the
+  browser sends back, and a new preview with a second confirmation. Reason:
+  a stored quote best keeps the move and its retries the same as the review.
+
 ## Subscription states
 
 - A subscription is active, payment failed, or ended.

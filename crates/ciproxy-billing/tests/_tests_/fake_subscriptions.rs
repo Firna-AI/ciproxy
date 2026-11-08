@@ -19,6 +19,7 @@ pub(super) enum ChangeMode {
 
 #[derive(Clone, Debug)]
 pub(super) enum SubscriptionRequest {
+    Reviewed(Box<SubscriptionRequest>, i64),
     Change(ChangeMode, Vec<ItemChange>),
     CancelAtPeriodEnd,
     CancelImmediately(String),
@@ -92,9 +93,19 @@ impl SubscriptionExchange {
 }
 
 impl SubscriptionRequest {
+    pub(super) fn at(self, at: i64) -> Self {
+        Self::Reviewed(Box::new(self), at)
+    }
+
     fn fields(&self) -> Vec<(String, String)> {
+        if let Self::Reviewed(request, at) = self {
+            let mut fields = request.fields();
+            fields.push(("proration_date".into(), at.to_string()));
+            return fields;
+        }
         let (mode, items) = match self {
             Self::Change(mode, items) => (mode, items),
+            Self::Reviewed(_, _) => unreachable!(),
             Self::CancelAtPeriodEnd => return vec![("cancel_at_period_end".into(), "true".into())],
             Self::CancelImmediately(_) => {
                 return vec![

@@ -7,7 +7,8 @@ use ciproxy_store_interface::billing::state::{AddOns, SubscriptionState, Tier};
 
 use super::expiry_support::{event, lost_upgrade, renewal, started};
 use super::fake_subscriptions::SubscriptionOutcome;
-use super::fixture::{access, read_service, service, signature, state, wanted, workspace};
+use super::fixture::{access, read_service, service, signature, state, workspace};
+use super::quote_fixture::quote;
 use super::subscription_requests::{business_upgrade, remove_all_addons};
 
 #[derive(Debug)]
@@ -135,10 +136,13 @@ fn unobserved_upgrade_releases_at_one_day_without_showing_the_renewal_payment_pa
         .command
         .unwrap();
     assert_eq!(saved.payment_expires_at, None);
-    fake.expect_subscription(business_upgrade(), SubscriptionOutcome::respond(renewal()));
+    fake.expect_subscription(
+        business_upgrade().at(1796382000),
+        SubscriptionOutcome::respond(renewal()),
+    );
     assert_eq!(
         reader
-            .change(access(), wanted(Tier::Business, 2, 1))
+            .change(access(), quote(&database, &fake, started()))
             .unwrap(),
         ChangeOutcome::PaymentRequired { payment_url: None }
     );
