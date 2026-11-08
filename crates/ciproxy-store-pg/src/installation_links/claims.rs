@@ -2,11 +2,12 @@
 
 use ciproxy_store_interface::error::{Error, Result, ResultExt};
 use ciproxy_store_interface::installation_links::InstallationClaim;
+use ciproxy_store_interface::installation_results::InstallationResultDelivery;
 use diesel::prelude::*;
 use diesel::sql_types::{BigInt, Bool, Nullable, Text, Timestamptz};
 use uuid::Uuid;
 
-use super::{attempts, transaction};
+use super::{attempts, results, transaction};
 use crate::connection::PgStore;
 use crate::error::{QueryResultExt, require_record};
 
@@ -61,11 +62,16 @@ pub(super) fn save(
     store: &PgStore,
     incoming: &InstallationClaim,
     attempt: Option<Uuid>,
+    result: InstallationResultDelivery,
 ) -> Result<InstallationClaim> {
     let mut connection = store.connection()?;
     transaction::run(&mut connection, |connection| {
         lock(connection, incoming.installation_id)?;
         let existing = locked(connection, incoming.installation_id)?;
+        let pending = result == InstallationResultDelivery::Pending
+            && existing
+                .as_ref()
+                .is_none_or(|claim| !claim.user_verified || claim.organization_id.is_none());
         let mut claim = incoming.clone();
         let mut signed_mode = None;
         if let Some(existing) = existing {
@@ -101,6 +107,9 @@ pub(super) fn save(
             claim.direct = false;
         }
         write(connection, &claim)?;
+        if pending {
+            results::record_on(connection, claim.id, claim.requester_id).store()?;
+        }
         Ok(claim)
     })
 }

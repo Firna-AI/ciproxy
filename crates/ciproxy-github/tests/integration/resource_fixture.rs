@@ -11,6 +11,7 @@ use ciproxy_store_interface::billing::state::Tier;
 use ciproxy_store_interface::dashboard::records::{Membership, User};
 use ciproxy_store_interface::installation_association::SignedInstallation;
 use ciproxy_store_interface::installation_links::InstallationAttempt;
+use ciproxy_store_interface::installation_results::InstallationResultDelivery;
 use ciproxy_store_interface::organizations::Organization;
 use ciproxy_store_interface::organizations::{AppState, RepositoryAccess};
 use ciproxy_store_interface::store::Store;
@@ -86,7 +87,11 @@ pub(super) fn seed_installation_choice(
     claim.user_verified = true;
     claim.verified_at = Some(at());
     let claim = store
-        .save_installation_claim(&claim, Some(attempt.id))
+        .save_installation_claim(
+            &claim,
+            Some(attempt.id),
+            InstallationResultDelivery::Untracked,
+        )
         .unwrap();
     store
         .offer_installation_workspaces(claim.id, requester, &[workspace])

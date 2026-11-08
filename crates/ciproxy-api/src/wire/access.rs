@@ -4,6 +4,7 @@ use crate::access::workspace::WorkspaceId;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
+use uuid::Uuid;
 
 /// Stable workspace role on the HTTP boundary.
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, ToSchema)]
@@ -20,6 +21,11 @@ pub enum WorkspaceRole {
 /// The fixed-duration dashboard sign-in and accessible workspaces.
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct SessionView {
+    /// Exact claim IDs from the latest successful GitHub authorization.
+    /// Includes proved or completed results recovered from a failed authorization.
+    /// All IDs refer to organization_links. No order selects a continuation.
+    /// Reloads keep this list. A successful authorization replaces it, even when empty.
+    pub installation_continuation: Vec<Uuid>,
     /// Current requester-owned installation recovery and workspace choices.
     pub organization_links: Vec<super::links::OrganizationLinkView>,
     /// Signed-in access state for install, access, and left pages.

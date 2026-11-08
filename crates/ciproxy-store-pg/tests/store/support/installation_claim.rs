@@ -1,6 +1,7 @@
 //! Linked token-free installation fixtures for existing retention scenarios.
 
 use ciproxy_store_interface::installation_links::{InstallationAttempt, InstallationClaim};
+use ciproxy_store_interface::installation_results::InstallationResultDelivery;
 use ciproxy_store_interface::organizations::Organization;
 use ciproxy_store_interface::store::Store;
 use uuid::Uuid;
@@ -32,7 +33,11 @@ pub(in crate::store) fn linked(store: &dyn Store, organization: &Organization) -
         verified_at: Some(at()),
     };
     store
-        .save_installation_claim(&claim, Some(attempt.id))
+        .save_installation_claim(
+            &claim,
+            Some(attempt.id),
+            InstallationResultDelivery::Untracked,
+        )
         .unwrap();
     store
         .offer_installation_workspaces(id, 7, &[organization.workspace_id])

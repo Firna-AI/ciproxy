@@ -10,6 +10,7 @@ use ciproxy_api::router::router;
 use ciproxy_api::runtime::Runtime;
 use ciproxy_store_interface::dashboard::records::Role;
 use ciproxy_store_interface::installation_links::InstallationClaim;
+use ciproxy_store_interface::installation_results::InstallationResultDelivery;
 use serde_json::json;
 use tower::ServiceExt;
 use uuid::Uuid;
@@ -136,7 +137,7 @@ async fn oauth_is_browser_bound_one_use_and_sessions_end_at_thirty_days() {
     fixture
         .database
         .store
-        .save_installation_claim(&claim, None)
+        .save_installation_claim(&claim, None, InstallationResultDelivery::Untracked)
         .unwrap();
     fixture
         .database

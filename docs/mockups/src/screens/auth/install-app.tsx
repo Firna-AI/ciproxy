@@ -1,5 +1,5 @@
 // Install the ciproxy GitHub App on an organization. GitHub owns the choice of
-// organization and repositories; ciproxy shows the three permissions that the
+// organization and repositories; ciproxy shows the permissions that the
 // app asks for. A member who is not an owner asks the owners on GitHub; when
 // one approves, the member who asked becomes the first Admin in ciproxy.
 

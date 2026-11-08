@@ -2,6 +2,7 @@
 
 use ciproxy_github::app::GitHubApp;
 use ciproxy_github::app::webhook::AccountKind;
+use ciproxy_store_interface::installation_results::InstallationResultDelivery;
 use uuid::Uuid;
 
 use crate::error::{Error, Result, ServiceResultExt};
@@ -59,7 +60,8 @@ impl AccessService {
         }
         claim.user_verified = true;
         claim.verified_at = Some(self.runtime.now());
-        self.save_claim(claim, None).await?;
+        self.save_claim(claim, None, InstallationResultDelivery::Untracked)
+            .await?;
         match query(self.store.clone(), move |store| {
             store.choose_installation_workspace(id, person, workspace)
         })
