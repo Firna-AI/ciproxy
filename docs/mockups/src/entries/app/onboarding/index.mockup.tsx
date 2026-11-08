@@ -10,7 +10,7 @@ export const onboarding = defineScreen({
   description:
     "The first page after the GitHub App is installed. Setup has four steps; here the second is open, with the one install command, and the page waits for the machine to connect.",
   rationale:
-    "One command installs the agent and connects the machine, so a person copies one line and needs no other step on the machine. Design call 30: the install script of get.ciproxy.dev installs the agent, then runs it with the arguments after the two dashes, so the agent runs install with the token.",
+    "One command installs the agent and connects the machine, so a person copies one line and needs no other step on the machine. Design call 30: the install script of get.ciproxy.dev installs the agent, then runs it with the arguments after the two dashes, so the agent runs install with the token. The answer C to item 93: the note under the command names the hosts that the installer supports, so a person learns them before preparing a machine.",
   relatedDocs: relatedMvp("agent", "security"),
   address: orgAddress("setup"),
   useCasePaths: [paths.flowFirstGreenJob],

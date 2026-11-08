@@ -6,6 +6,7 @@ use ciproxy_store_interface::dashboard::records::{Membership, Role};
 use ciproxy_store_interface::installation_links::{
     InstallationAttempt, InstallationClaim, InstallationRecovery,
 };
+use ciproxy_store_interface::installation_results::InstallationResultDelivery;
 use ciproxy_store_interface::organizations::AppState;
 use ciproxy_store_interface::store::Store;
 use uuid::Uuid;
@@ -15,6 +16,7 @@ use crate::identity::{Grant, Profile};
 use crate::state::query;
 
 use super::authentication::digest;
+use super::link_continuation::ProofResults;
 use super::setup::SetupTarget;
 use super::{AccessService, Principal};
 
@@ -38,9 +40,10 @@ impl AccessService {
         &self,
         claim: InstallationClaim,
         attempt: Option<Uuid>,
+        result: InstallationResultDelivery,
     ) -> Result<InstallationClaim> {
         query(self.store.clone(), move |store| {
-            store.save_installation_claim(&claim, attempt)
+            store.save_installation_claim(&claim, attempt, result)
         })
         .await
     }
@@ -80,6 +83,7 @@ impl AccessService {
         memberships: &[Membership],
         setup: Option<(&SetupTarget, Option<&str>)>,
         github: &dyn GitHubApp,
+        results: &ProofResults,
     ) -> Result<()> {
         if let Some((target, state)) = setup {
             let attempt = match state {
@@ -107,13 +111,13 @@ impl AccessService {
                     login: target.login.clone(),
                     requester_id: profile.id,
                     event_seen: false,
-                    user_verified: true,
+                    user_verified: false,
                     direct: attempt.as_ref().is_some_and(|attempt| attempt.direct),
                     workspace_id: None,
                     organization_id: None,
-                    verified_at: Some(self.runtime.now()),
+                    verified_at: None,
                 };
-                self.save_claim(claim, attempt.map(|attempt| attempt.id))
+                self.save_claim_proof(claim, attempt.map(|attempt| attempt.id), results)
                     .await?;
             }
         }
@@ -122,6 +126,9 @@ impl AccessService {
                 continue;
             }
             if claim.recovery() == InstallationRecovery::Direct {
+                if results.delivery() == InstallationResultDelivery::Pending {
+                    claim = self.save_claim(claim, None, results.delivery()).await?;
+                }
                 github.resolve_installation_link(claim.id).await.api()?;
                 continue;
             }
@@ -132,7 +139,8 @@ impl AccessService {
             else {
                 claim.user_verified = false;
                 claim.verified_at = Some(self.runtime.now());
-                self.save_claim(claim, None).await?;
+                self.save_claim(claim, None, InstallationResultDelivery::Untracked)
+                    .await?;
                 continue;
             };
             if actual.id != claim.installation_id
@@ -144,9 +152,7 @@ impl AccessService {
             {
                 return Err(Error::Forbidden);
             }
-            claim.user_verified = true;
-            claim.verified_at = Some(self.runtime.now());
-            let claim = self.save_claim(claim, None).await?;
+            let claim = self.save_claim_proof(claim, None, results).await?;
             if matches!(
                 claim.recovery(),
                 InstallationRecovery::DirectAwaitingEvent | InstallationRecovery::AddAwaitingEvent
@@ -194,8 +200,15 @@ impl AccessService {
             if profile.id != person {
                 return Err(Error::Forbidden);
             }
-            self.prove_links(&profile, &grant, &memberships, None, github)
-                .await?;
+            self.prove_links(
+                &profile,
+                &grant,
+                &memberships,
+                None,
+                github,
+                &ProofResults::default(),
+            )
+            .await?;
         }
         self.owned_claims(person).await
     }

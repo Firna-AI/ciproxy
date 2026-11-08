@@ -90,6 +90,8 @@ callback token. Workspace deletion removes its rows.
 
 The dashboard area stores verified GitHub memberships, workspace roles,
 access requests, opaque session digests, and encrypted OAuth grants.
+A separate token-free continuation stores exact claim IDs under the existing
+browser session ID until its fixed expiry. It has no person reference.
 A person record stays only with a role or an open request. Intentional
 organization removal keeps a separate durable marker and no owner-removal
 retention deadline. Retired labels preserve history while active names
@@ -99,6 +101,10 @@ retirement and confirmed removal preserve the binding and its job references.
 
 Installation-link tables retain state digests, exact signed requesters, fresh
 user association, and eligible workspace offers without tokens or profiles.
+A separate pending-result table keeps each undelivered authorization result.
+Its rows hold only the claim ID, the exact requester GitHub ID, and a
+database-issued revision. They have no person, session, token, or grant
+reference. Deletion of a claim deletes its pending results.
 Independent activation rows preserve admission and billing/Admin holds through
 retained reinstall. Existing organization metadata is explicitly backfilled.
 A claim survives deletion of its chosen workspace without becoming a direct
@@ -158,6 +164,8 @@ Each migration has an up.sql and a down.sql.
 - [src/boat_runner_intents.rs](src/boat_runner_intents.rs) defines the Boat
   registration identity table.
 - [src/dashboard.rs](src/dashboard.rs) defines dashboard authentication tables.
+- [src/installation_links.rs](src/installation_links.rs) defines installation
+  attempts, claims, offers, activation, and pending authorization results.
 - [src/own_runners.rs](src/own_runners.rs) defines execution command state.
 
 - [src/billing.rs](src/billing.rs) defines billing accounts and event receipts.

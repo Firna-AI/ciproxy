@@ -204,3 +204,10 @@ The user must resolve that conflict before this replacement can proceed.
 [github-links]: https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#section-links
 [comrak-options]: https://docs.rs/comrak/0.59.0/comrak/options/struct.Extension.html
 [comrak-text]: https://docs.rs/comrak/0.59.0/src/comrak/nodes.rs.html
+
+- **User answer, 2026-11-08:** item 97 = G, as a follow-up item that
+  blocks nothing. Until then, fix a link test that breaks by hand.
+  **Action:** fix after merge, apply G.
+- **Interim, 2026-11-08:** pull request #49 applies option I, which the user
+  chose on 7 November 2026: a fragment that matches no heading only warns,
+  and a link to a missing file still fails. G stays this follow-up item.

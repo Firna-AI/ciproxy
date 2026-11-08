@@ -28,6 +28,14 @@ diesel::table! {
 }
 
 diesel::table! {
+    installation_pending_results (claim_id, requester_id) {
+        claim_id -> Uuid,
+        requester_id -> Int8,
+        revision -> Int8,
+    }
+}
+
+diesel::table! {
     installation_workspace_offers (claim_id, workspace_id) {
         claim_id -> Uuid,
         workspace_id -> Uuid,

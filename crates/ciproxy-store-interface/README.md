@@ -172,6 +172,12 @@ Gateway token issuance and registration serialize with workspace removal.
 
 The dashboard area stores verified GitHub memberships, workspace roles,
 access requests, opaque session digests, and encrypted OAuth grants.
+Session establishment atomically replaces exact authorization claim IDs under
+the existing browser session ID and consumes their pending results. It
+consumes only the revisions that the caller read for that GitHub user, so a
+result saved again after the read stays pending. This token-free continuation
+expires with the sign-in and retains no person or OAuth grant for browser-only
+sign-ins.
 A person record stays only with a role or an open request. Intentional
 organization removal keeps a separate durable marker and no owner-removal
 retention deadline. Retired labels preserve history while active names
@@ -197,6 +203,10 @@ InstallationClaim derives one typed recovery state from those durable facts.
 Signed Direct events need no Add proof or choice. Provisional Direct callbacks
 still wait for the signed event. Add retains both proof and choice requirements.
 Its records retain no GitHub grant or profile and do not retain dashboard users.
+With `InstallationResultDelivery::Pending`, a claim save also saves a pending
+authorization result in its transaction, unless the claim was already proved
+and completed. `pending_installation_results` reads the claim IDs and
+store-issued revisions of one exact requester.
 OrganizationActivation stores separate billing and Admin holds. Missing metadata
 never authorizes execution. Existing organizations have explicit admitted data.
 New linked organizations count even while inactive. Removed ones do not count.
@@ -264,6 +274,8 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
   execution admission.
 - [src/installation_association.rs](src/installation_association.rs) owns the
   typed signed identity and deterministic association rules.
+- [src/installation_results.rs](src/installation_results.rs) defines pending
+  authorization results and their delivery mode.
 - [src/dashboard](src/dashboard) owns dashboard identity and access queries.
 - [src/own_runners.rs](src/own_runners.rs) owns exact execution records.
 - [src/boat_runtime.rs](src/boat_runtime.rs) owns Boat registration identities.

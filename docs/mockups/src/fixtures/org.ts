@@ -9,6 +9,7 @@
 // screens show the payment problems.
 
 import { unbroken } from "./format.ts";
+import type { Role } from "./members.ts";
 
 /** The dashboard host shown in the address bar of every screen. */
 export const host = "app.ciproxy.dev";
@@ -58,10 +59,24 @@ export type WorkspaceChoice = {
   organizations: number;
 };
 
-/** The workspaces of Cal Moore: mokly-ai, and tidepool, where he is a Viewer. */
-export const workspaceChoices: readonly WorkspaceChoice[] = [
-  { ...workspace, tier: "team", organizations: organizations.length },
-  { name: "tidepool", initial: "T", tier: "free", organizations: 1 },
+/** A workspace in the switch of the top bar, with the role of the person. */
+export type SwitchChoice = WorkspaceChoice & { role: Role };
+
+/** The workspaces of Cal Moore: Admin of mokly-ai, and Viewer of tidepool. */
+export const workspaceChoices: readonly SwitchChoice[] = [
+  {
+    ...workspace,
+    tier: "team",
+    organizations: organizations.length,
+    role: "admin",
+  },
+  {
+    name: "tidepool",
+    initial: "T",
+    tier: "free",
+    organizations: 1,
+    role: "viewer",
+  },
 ];
 
 /** "1 organization", "2 organizations". */

@@ -8,12 +8,12 @@ import { StyleSheet, View } from "react-native";
 
 import { colors } from "@ciproxy/tokens";
 
-function BrandMark() {
+export function BrandMark({ size = 20 }: { size?: number }) {
   return (
     <svg
       aria-hidden="true"
-      width={20}
-      height={20}
+      width={size}
+      height={size}
       viewBox="0 0 24 24"
       fill={colors.ink}
     >

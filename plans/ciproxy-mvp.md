@@ -1368,13 +1368,78 @@ The Expo app under `ts/app` builds each screen and state of its mockup, with
 `@firna/ui`, `@ciproxy/tokens`, and the generated types. Each UI milestone
 smoke-tests its pages at 1440, 720, and 390 pixels.
 
-- [ ] Build the shell, sign-in, the App install, Setup without its Boat
+- [x] Build the shell, sign-in, the App install, Setup without its Boat
       step, the page for a member with no role, and the page of a removed
       App.
-- [ ] Reload a dashboard tab that is older than the API. My call: the API
+      Branch: `conductor/mvp-m19-ui`.
+      Implementation call, 6 November 2026: keep static page routes and
+      carry opaque workspace IDs in query parameters, so the existing
+      static hosting serves a reload of each page.
+      Orchestrator call, 7 November 2026: include the exact API continuation
+      field, its HTTP test on a real store, and regenerated types.
+      Implementation call, 7 November 2026: join the claim IDs from the
+      latest GitHub authorization to their link results. Handle each ended
+      continuation once. Show every result when several claims end,
+      because claim order and the remembered workspace choose nothing.
+      Orchestrator call, 7 November 2026: fix PR #36 finding 8 with B.
+      Keep continuation data in the store, so claim counts cannot enlarge
+      the sign-in cookie. Include its schema, migration, and store support.
+      Implementation call, 7 November 2026: key a companion record by the
+      session ID already in the cookie. The private session row depends on
+      a retained person and does not exist for browser-only sign-ins.
+      The companion keeps those results without a new cookie reference.
+      Owner review round 1, 7 November 2026: use one proof-result collector
+      for setup and sign-in. Record canonical IDs at proof or completion,
+      and keep previously proved completed claims out. Give the app action
+      wrappers content-based sizing by default, so full names stay visible.
+      Keep Firna unchanged and preserve its minimum size for short labels.
+      Owner review round 2, 7 November 2026: fix its finding 1 with B, so a
+      failed sign-in cannot consume an undelivered install result. Store
+      pending results apart from proof status. Save each result in the
+      transaction of its proof. Consume only the exact read results in the
+      transaction that saves the session and continuation. A failed cookie
+      preparation or continuation save keeps them for the next successful
+      authorization, and keeps the earlier sign-in and business records.
+      Refresh and workspace choice add none. Keep the wire field, bounded
+      cookies, fixed continuation expiry, and the exclusion of delivered
+      history. Its finding 2 stays open as item 91, with no option applied.
+      Implementation call, 7 November 2026: add the pending table to the
+      unmerged migration `202611071200_dashboard_continuations`, not to a new
+      migration. Reason: it ran only in disposable test databases and is not
+      on the target branch, so the `databases` skill does not freeze it. No
+      merged migration changes.
+- [x] Reload a dashboard tab that is older than the API. My call: the API
       gives its build with each response, and the dashboard reloads at the
       next page change after the build changes. Reason: an old tab must not
       call a newer API with old types, and a page change loses no input.
+      Branch: `conductor/mvp-m19-ui`.
+      Verification evidence: `.context/ciproxy-mvp-m19/`.
+
+Owner review round 2 answers, 8 November 2026: the user chose A for item
+91 and A for item 92. Both answers keep the product behaviour. The app, the
+API, and the generated types stay unchanged. Only the two approved mockups
+change to match the app.
+
+- Item 91, the workspace picker of "Add an organization": each row shows
+  the workspace name and, when needed, the upgrade warning. The picker
+  mockup drops the tier and the organization count.
+- Item 92, the workspace switch: each row keeps the role, or "No role yet".
+  The switch mockup shows the role in place of the tier and the count.
+- Neither list needs the optional shared plan summary now. At the user's
+  explicit request, this branch deletes the three settled follow-up items
+  `workspace-picker-plan-facts.md`, `workspace-switch-plan-facts.md`, and
+  `workspace-list-plan-facts.md` under `plans/follow-ups/`.
+
+Item 98 answer, 8 November 2026: the user chose A. The GitHub App gets the
+organization permission "Members: read". The App then has four permissions.
+A sign-in reads the organization memberships of the person with it.
+
+- The install mockup and the install page of the app list the four
+  permissions. Both explain "Members: read" as "see who belongs to your
+  organization, so that ciproxy can give roles".
+- For item 98, this branch changes only that list and this record. The
+  backend change and the protocol docs for the membership read are outside
+  this branch.
 
 ## Milestone 20: Dashboard UI: Machines and Settings
 
@@ -1437,15 +1502,86 @@ Depends on: 13, 15, 23
 Each page of the docs sidebar mockup states only what the protocol docs
 require and the product does.
 
-- [ ] Start here: Overview, Quickstart, and How ciproxy works.
-- [ ] Guides: Add a machine, Connect Boat, Move your workflows, Set a spend
+- [x] Start here: Overview, Quickstart, and How ciproxy works.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Guides: Add a machine, Connect Boat, Move your workflows, Set a spend
       limit, and Remove a machine.
-- [ ] Reference: Labels and VM sizes, Agent install options, GitHub App
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Reference: Labels and VM sizes, Agent install options, GitHub App
       permissions, and Plans and starts.
-- [ ] Say on the docs page of the job image that a job can run its steps
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Say on the docs page of the job image that a job can run its steps
       in any Docker image with the `container:` key, as item 78 = C says.
-- [ ] Security: Job isolation, and The agent connection. Check each page
-      against the product on the test host.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Security: Job isolation, and The agent connection.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Show the mockup's steps, cards, and default-label badge. My call,
+      7 November 2026: use Astro's MDX component map and expressions with
+      the Starlight components, because the existing Markdown check accepts
+      them. The gate configuration stays unchanged.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Fix the copied workflow examples in Quickstart and Move your
+      workflows with `CodeBlock` and `afterChange`. Parse both copied jobs
+      as YAML in the site regression tests. Owner review round 1, finding 1.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Apply item 93 = C to the agent host requirement, the approved
+      install mockup, and the docs. State the supported Linux hosts with
+      systemd and cgroup v2. The Milestone 20 workspace owns the dashboard
+      note. Wider host support stays in its follow-up item.
+      My call, 8 November 2026: Add a machine owns the distribution list,
+      and the other docs pages link to it, so the list has one home.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Apply item 96 = A in the shared docs grid styles. Show two columns
+      at 720 and 1440 pixels and one at 390 pixels. Put the Overview Next
+      link in the right half on the two-column layout.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Apply item 98 = A to GitHub App permissions and the marketing
+      permission texts. List Members read as the fourth permission, for
+      organization memberships and roles at sign-in.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Apply item 94 = B to Connect Boat. Explain the personal or
+      organization wallet choice, with the likely wallet preselected.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [x] Smoke-test all 14 pages at 1440, 720, and 390 pixels. Check mobile
+      navigation, search, page links, anchors, light mode, and aside borders.
+      Branch: `conductor/m24-launch-docs-pages`.
+- [ ] Orchestrator: check each page against the running product at
+      `https://br-main.preview.app.ciproxy.dev`, after the dashboard
+      workspaces deliver their screens. Use a disposable private repository,
+      a KVM test machine, and a Boat test account.
+  - [ ] Overview: confirm the Free plan, an own-machine start, Boat after
+        the default wait, and a machine-cache restore.
+  - [ ] Quickstart: follow sign-in, App install, machine registration, and
+        the first job with the documented command and workflow change.
+  - [ ] How ciproxy works: check warm runners, drain, cache clearing, Boat
+        routing, and steps in a job container.
+  - [ ] Add a machine: check Admin access, token expiry and revoke,
+        registration, hardware, slots, no KVM, disk fit, and repeat install.
+  - [ ] Connect Boat: check the key, wallet choices and preselection,
+        account name, spend limit, wait, rejected key, key change, and
+        disconnect.
+  - [ ] Move your workflows: check repository access, the `runs-on` change,
+        cache actions, and the Docker image example.
+  - [ ] Set a spend limit: check confirmed and pending spend, blocked new
+        Boat starts, running jobs, and a sufficient increase of the limit.
+  - [ ] Remove a machine: check drain, resume, removal while offline,
+        credential revocation, the machine count, and local uninstall.
+  - [ ] Labels and VM sizes: check default and custom labels, free disk,
+        slots, fit, names, deletion, and both "When nothing fits" choices.
+  - [ ] Agent install options: check command help, host preparation, the
+        systemd service, repeat install, outbound access, and updates.
+  - [ ] GitHub App permissions: check the four permissions, sign-in
+        memberships and roles, private repository access, personal accounts,
+        suspension, and removal.
+  - [ ] Plans and starts: check prices, starts, machine counts, history,
+        add-ons, period dates, soft limits, and the payment controls.
+  - [ ] Job isolation: check fresh VMs, cache scopes, Docker disks, public
+        internet access, and blocked private, host, and metadata access.
+  - [ ] The agent connection: check WSS, reports, offline detection,
+        reconnect, continuing jobs, credential protection, and agent version.
+
+The source map, browser evidence, and detailed live checklist are under
+`.context/ciproxy-mvp/` in the delegated workspace.
 
 ## Milestone 25: Tier features: backend
 
@@ -1844,6 +1980,60 @@ Answers of 5 November 2026:
   socket error go. A reconnect before the first handoff still means only
   GitHub's cache. There is no guessed time limit; GitHub's job time limit is
   the backstop. Rejected: A and C.
+- Item 113, A, 8 November 2026: the label dialog keeps the fit counts and
+  the placement, and the mockup drops the largest-job figures. Rejected: B.
+- Item 108, C with D, 8 November 2026: the paid change sends the same
+  pending credit that the preview counted, Stripe computes the amount, and
+  an alert compares each invoice with its quote. A third fix round of pull
+  request #39 builds it. Rejected: A, B, E, and F.
+- Item 109, C, 8 November 2026: the spend limit notice names the budget
+  month and the day Boat resumes, as Jobs does. Rejected: A and B.
+- Item 110, B, 8 November 2026: History loads pages without a total, and
+  the database applies the filters, the order, and a limit. Each read stays
+  bounded, also the live queue. Rejected: A, C, D, and E.
+- Item 111, A, 8 November 2026: the banners keep today's wording, and the
+  mockups change to it. Rejected: B and C.
+- Item 112, D, 8 November 2026: ciproxy saves the actual size choice when a
+  job starts, and Jobs explains what ran from it. Rejected: the other
+  options.
+- Item 103, A now and B in parallel, 8 November 2026: the agent release is
+  a full release, so installs and updates take it. A pre-release channel
+  for the preview release server follows, so that a test release reaches no
+  customer. Rejected: no channel at launch.
+- Item 107, A, 8 November 2026: the cache firewall proof keeps the cloud
+  provider's metadata route and DNS, and checks the block against the real
+  metadata server. Rejected: B.
+- Items 104, 105, and 106, A, 8 November 2026: grow the test host disk to
+  500 GiB, sign the sandbox in to GitHub with the `workflow` scope, and
+  upgrade the test workspace to Team with a Stripe test-mode checkout after
+  pull request #39 merges.
+- Item 99, A, 8 November 2026: the live machine check publishes a
+  pre-release of the agent on `Firna-AI/ciproxy`, creates two private test
+  repositories in Firna-AI, and limits the workspace to the test
+  repositories. Rejected: B and C.
+- Item 94, B, 8 November 2026: the Boat form lets the customer choose the
+  personal wallet or an organization wallet of the key, with the likely one
+  preselected. Rejected: A, because organization accounts must work, and C.
+- Item 95, B, 8 November 2026: each paid review stores its quote on the
+  server. The payment names its quote, and retries keep its proration time.
+  An unknown or outdated quote is refused, and the page asks for a new
+  review. Rejected: A and C.
+- Item 98, A, 8 November 2026: the App gets "Members: read", so that a
+  sign-in can read the person's organization memberships. The App now has
+  four permissions. Rejected: B, C, and D.
+- Items 91 and 92, A, 8 November 2026: the workspace picker shows the
+  name and the upgrade warning, and the workspace switch shows the role.
+  The mockups change to match. Rejected: B to E of item 91, and B to D of
+  item 92.
+- Item 93, C, 8 November 2026: the protocol, the install mockup, the
+  dashboard, and the docs state the supported hosts: x64 Linux with
+  systemd and cgroup v2, on Debian, Ubuntu, Fedora, RHEL, Rocky Linux, or
+  AlmaLinux. Wider support is the follow-up item
+  `follow-ups/installer-more-linux-hosts.md`. Rejected: A and B.
+- Item 96, A, 8 November 2026: the shared docs grid styles match the
+  mockups. Rejected: B and C.
+- Item 97, G, 8 November 2026: render with comrak, as a follow-up item that
+  blocks nothing. Until then, fix a link test that breaks by hand.
 - Item 90, G, 7 November 2026: the deploy workflow builds the
   control-plane image as `mokly-ai/mokly-cloud` does. A build job with no
   cloud credentials builds it, a publish job pushes it by digest, and the
@@ -3903,6 +4093,9 @@ should not be manual".
 
 ### 91. The workspace picker lacks the plan and organization count
 
+**Answer, 8 November 2026:** A. Keep the shorter picker, and update the
+mockup.
+
 - **Severity:** Medium. **Effort:** Medium.
 - **Source:** Review, Milestone 19, pull request #36, round 2, its finding 2.
 - **Category:** Mockup.
@@ -3937,6 +4130,8 @@ should not be manual".
 
 ### 92. The workspace switch shows roles, not plan facts
 
+**Answer, 8 November 2026:** A. Keep the role, and update the mockup.
+
 - **Severity:** Low. **Effort:** Medium.
 - **Source:** Review, Milestone 19, pull request #36, the check of round 2,
   finding 2.
@@ -3967,6 +4162,9 @@ should not be manual".
   and product mismatch is right.
 
 ### 93. The installer supports fewer hosts than the docs say
+
+**Answer, 8 November 2026:** C, and D as a follow-up item:
+`follow-ups/installer-more-linux-hosts.md`.
 
 - **Severity:** Medium. **Effort:** Medium.
 - **Source:** Implementation, Milestone 24, pull request #40, its item 1.
@@ -3999,6 +4197,12 @@ should not be manual".
 
 ### 94. The Boat setup cannot connect an organization key
 
+**Answer, 8 November 2026:** B. The user requires personal and organization
+accounts. After the key check, the form lists the wallets that the key can
+use, personal and each organization, and preselects the likely one. Each
+Boat organization has its own wallet. A is dropped, because it supports
+personal accounts only.
+
 - **Severity:** Medium. **Likelihood:** Common. **Effort:** Medium.
 - **Source:** Implementation, Milestone 24, pull request #40, its item 2.
 - **Category:** Product bug.
@@ -4030,6 +4234,8 @@ should not be manual".
   ciproxy supports.
 
 ### 95. A paid change can charge another amount than its review
+
+**Answer, 8 November 2026:** B.
 
 - **Severity:** High. **Likelihood:** Common. **Effort:** Medium.
 - **Source:** Review, Milestone 18, pull request #39, round 1, its finding 1.
@@ -4067,6 +4273,8 @@ should not be manual".
 
 ### 96. The docs navigation grids differ from the mockups
 
+**Answer, 8 November 2026:** A.
+
 - **Severity:** Low. **Effort:** Small.
 - **Source:** Review, Milestone 24, pull request #40, round 1, its finding 2.
 - **Category:** Mockup.
@@ -4093,7 +4301,20 @@ should not be manual".
 
 ### 97. The gate's Markdown link check differs from GitHub
 
-- **Severity:** Medium. **Effort:** Large.
+**Answer, 7 November 2026:** I. The user wrote "we should not be blocking
+for this - that is totally silly", and then chose I. A link to a missing
+file still fails the gate. A fragment that matches no heading only warns.
+My call, 7 November 2026: markdownlint's MD051 rule, which checks fragments
+within one file, also only warns. Reason: answer I covers each anchor check
+of the gate. This replaces the choice of 4 November 2026 to keep MD051
+unchanged.
+
+**Answer, 8 November 2026:** G, as a follow-up item that blocks nothing:
+`follow-ups/markdown-heading-ids-comrak.md`. Until then, fix a link test
+that breaks by hand. So I applies now, through pull request #49, and G
+stays the follow-up item.
+
+- **Severity:** Low. **Effort:** Small.
 - **Source:** Implementation, pull request #45, the follow-up item
   `follow-ups/markdown-heading-ids-comrak.md`.
 - **Category:** Repository rule.
@@ -4101,7 +4322,8 @@ should not be manual".
 - **Background:** The Markdown phase of the gate finds broken links in the
   docs and plans. Its own parser computes the link target of each heading.
   The follow-up item chose comrak, a Rust parser of GitHub's Markdown. The
-  orchestrator told the branch to add no new refusal without the user.
+  orchestrator told the branch to add no new refusal without the user. All
+  1,106 links of 113 documents got the same result from both parsers.
 - **Problem:** An exact match with GitHub refuses some links that pass
   today. A direct switch to comrak also refuses valid `#softbreak` and
   `#hardbreak` links.
@@ -4123,6 +4345,9 @@ should not be manual".
   - **G.** Render each page with comrak, and take the heading targets from
     the HTML. It changes `Cargo.lock`, so it waits for pull request #39.
     Effort: Large.
+  - **H.** Change nothing, and delete the follow-up item. Effort: Small.
+  - **I.** Keep the check for missing files, but only warn when a fragment
+    matches no heading. Effort: Small.
 - **Left out:** A live GitHub call, because the gate then needs the
   network. A check of today's documents only, because known defects stay.
 - **Wider fix:** G.
@@ -4132,6 +4357,12 @@ should not be manual".
   and a new refusal in the gate needs the user.
 
 ### 98. Sign-in removes the Admin role of a new install
+
+**Answer, 8 November 2026:** A. The App gets the organization permission
+"Members: read", and the protocol and the docs list four permissions. This
+replaces the three permissions of item 54 = E and the security rule that
+the owner check uses no App permission. An added option D, roles without
+GitHub membership, is rejected.
 
 - **Severity:** High. **Likelihood:** Common. **Effort:** Small.
 - **Source:** Implementation, the first live install on the main preview,
@@ -4169,3 +4400,434 @@ should not be manual".
   model stays as the user approved it.
 - **Action:** ask the user, because A changes the App's three permissions,
   which item 54 = E keeps.
+
+### 99. The live machine check needs a public agent release
+
+**Answer, 8 November 2026:** A.
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
+- **Category:** Process.
+- **Location:** `deploy/helm/release-values.yaml:4`, and
+  `crates/ciproxy-agent/smoke-checks.md`.
+- **Background:** The live check installs the agent on the test host the
+  way a customer does, from the preview's release server. That server
+  serves releases of the public repository `Firna-AI/ciproxy`, which has no
+  release yet. The check also needs a second allowed private repository and
+  a private repository that the runner group excludes.
+- **Problem:** The check cannot run without an agent release and the test
+  repositories.
+- **Impact if no action:** The own-machine path stays unproven on real
+  hardware before launch.
+- **Root question:** Where does the live check get its agent release and its
+  test repositories?
+- **Options:**
+  - **A.** Publish a pre-release of the agent on `Firna-AI/ciproxy`, create
+    two private test repositories in Firna-AI, and limit the workspace to
+    the test repositories. Effort: Small.
+  - **B.** Point the preview's release server at a private repository with
+    the release, and create the same test repositories. Effort: Medium.
+  - **C.** Copy the agent to the test host by hand, and skip the install
+    path of the check. Effort: Small.
+- **Left out:** Using the real private repositories of Firna-AI, because a
+  test must not run jobs in them.
+- **Wider fix:** None.
+- **Recommendation:** A. The agent is open source, so a public pre-release
+  is safe, and the check then proves the customer's install path.
+- **Action:** ask the user, because A publishes a release and creates
+  repositories in the user's organization.
+
+### 100. The protected image workflow needs a home before launch
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Review, pull request #47, round 1, finding 1, and its fix.
+- **Category:** Security.
+- **Location:** `deploy/image-workflow-bootstrap.md` and
+  `deploy/terraform/bootstrap/main.tf` on the branch of pull request #47.
+- **Background:** The fix of finding 1 lets only one reusable workflow get
+  the image-publishing credentials. The npm and Cargo scripts of other
+  deploy jobs cannot. The fix pins that workflow to the protected `main`
+  branch, which today holds only `README.md`.
+- **Problem:** Until `main` holds the whole repository, every preview
+  deploy fails to start.
+- **Impact if no action:** #47 cannot merge, and the preview keeps its
+  manual image step.
+- **Root question:** Where does the protected image workflow live until
+  launch?
+- **Options:**
+  - **A.** Land the whole repository on `main` now, through a reviewed pull
+    request that passes the gate, and pin the workflow there.
+    Effort: Medium.
+  - **B.** Pin the workflow to the primary branch until launch. Other jobs
+    still cannot get the credentials. Only a change of the workflow file on
+    the primary branch can. Move the pin to `main` at launch.
+    Effort: Small.
+  - **C.** Protect the primary branch with a ruleset that requires pull
+    requests and the gate, and pin the workflow to it. Each merge then
+    goes through a pull request. Effort: Medium.
+- **Left out:** No pin, because the npm scripts of a deploy job could then
+  publish images.
+- **Wider fix:** A.
+- **Recommendation:** B. Previews stay automatic, the npm path stays
+  closed, and the code reaches `main` with the launch anyway.
+- **Action:** ask the user, because A changes `main`, and B and C change
+  the trust of the deploy.
+
+### 101. The Machines and Settings mockups need facts the API lacks
+
+- **Severity:** Medium. **Effort:** Large.
+- **Source:** Implementation, Milestone 20, pull request #50, its item 1.
+- **Category:** Mockup.
+- **Location:** `ts/api/generated/api.d.ts`, and the Milestone 20 mockups.
+- **Background:** The approved Machines and Settings mockups show agent
+  update status, Docker disk counts, disk limits, job links, label
+  placement, and organization and member details.
+- **Problem:** The page responses of the API do not give these facts.
+- **Impact if no action:** The screens cannot show every approved state.
+- **Root question:** How do the screens get these facts?
+- **Options:**
+  - **A.** Reduce the screens, and update the mockups and the affected
+    requirements. Effort: Medium.
+  - **B.** Extend the existing page responses, and regenerate the types.
+    Effort: Large.
+  - **C.** Add separate metadata endpoints, with their own requests and
+    failure states. Effort: Large.
+  - **D.** Use existing routes where possible, and add the rest. This adds
+    job polling and GitHub reads to the browser. Effort: Large.
+  - **E.** Keep the facts that the protocol requires, and remove the other
+    mockup details. Effort: Large.
+- **Left out:** Guesses in the browser, because they cannot establish the
+  facts.
+- **Wider fix:** None.
+- **Recommendation:** B. One contract supplies the approved facts, with no
+  extra GitHub reads in the browser.
+- **Action:** ask the user, because the choice is API work or a change of
+  the approved design.
+
+### 102. The warm runner control has two meanings
+
+- **Severity:** Low. **Effort:** Small.
+- **Source:** Implementation, Milestone 20, pull request #50, its item 2.
+- **Category:** Mockup.
+- **Location:** `docs/mockups/src/screens/machines/machine-detail.tsx:134`.
+- **Background:** A warm runner waits on a machine for a job. The machine
+  keeps a saved number of them. Draining keeps that saved number.
+- **Problem:** The mockup shows zero in the control of a draining or
+  offline machine. The API keeps the saved number, such as two.
+- **Impact if no action:** The control differs from the mockup, and an edit
+  from a shown zero could overwrite the saved number.
+- **Root question:** What does the warm runner control show?
+- **Options:**
+  - **A.** Show the saved number in every state, and update the mockup.
+    Effort: Small.
+  - **B.** Hide the control in those states, and show the ready count when
+    known. Effort: Small.
+  - **C.** Show the saved number and a separate ready count. Effort: Small.
+- **Left out:** None.
+- **Wider fix:** None.
+- **Recommendation:** A. The control then edits the real saved number.
+- **Action:** ask the user, because the approved mockup and the product
+  differ.
+
+### 103. The preview release server ignores the agent pre-release
+
+**Answer, 8 November 2026:** A now, and B as a follow-up item in parallel:
+`follow-ups/release-server-prerelease-channel.md`. `ciproxy-agent-v0.1.0`
+is now a full release, and the preview release server serves it.
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
+- **Category:** Product bug.
+- **Location:** the pinned `cli-release-server`, `github/releases.rs:21`.
+- **Background:** Item 99 = A published the agent as the GitHub pre-release
+  `ciproxy-agent-v0.1.0`. The release server asks GitHub for the latest
+  release, and GitHub leaves pre-releases out of that answer.
+- **Problem:** The release server finds no release, so the install fails.
+- **Impact if no action:** The live check cannot install the agent.
+- **Root question:** How does the preview install the agent release?
+- **Options:**
+  - **A.** Mark `ciproxy-agent-v0.1.0` as a normal release. It then shows as
+    the latest release of the public repository. Effort: Small.
+  - **B.** Add a pre-release channel or a pinned tag to the release server of
+    `futex-ai/cli-release`, and a new pinned server image. Effort: Medium.
+- **Left out:** A copy by hand, because it skips the customer install path.
+- **Wider fix:** B.
+- **Recommendation:** A. It is one change on GitHub, and no customer uses the
+  release server before launch.
+- **Action:** ask the user, because A changes the pre-release choice of item
+  99.
+
+### 104. The test host disk is below the install minimum
+
+**Answer, 8 November 2026:** A.
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
+- **Category:** Process.
+- **Location:** the host `ciproxy-spike-2` in the GCP project
+  `internal-498318`.
+- **Background:** The install needs at least 250 GB on the agent's file
+  system. Each default job VM takes about 81 GB. The host has a 200 GiB
+  boot disk, which also holds the image build outputs.
+- **Problem:** The installer refuses the host.
+- **Impact if no action:** No live machine check can run.
+- **Root question:** Where does the test host get its job disk?
+- **Options:**
+  - **A.** Grow the boot disk to 500 GiB, and delete build outputs that can
+    be rebuilt. A disk cannot shrink again. Effort: Small.
+  - **B.** Attach a separate 500 GiB data disk at `/var/lib/ciproxy`.
+    Effort: Medium.
+- **Left out:** A smaller image reserve, because it changes an approved
+  default.
+- **Wider fix:** None.
+- **Recommendation:** A. The host is deleted after the tests, so the
+  growth costs about USD 30 a month only while the tests run.
+- **Action:** ask the user, because the host is in another project, and
+  both options add storage cost.
+
+### 105. The sandbox GitHub login cannot write workflow files
+
+**Answer, 8 November 2026:** A.
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
+- **Category:** Process.
+- **Location:** `~/.local/bin/gh-user` of the orchestrator sandbox.
+- **Background:** The live check needs its workflow file on each test
+  branch. GitHub needs the `workflow` scope to write a workflow file.
+- **Problem:** The sandbox login has `repo` and `read:org` only, so GitHub
+  refuses the writes.
+- **Impact if no action:** The check cannot start its jobs.
+- **Root question:** Which credential writes the workflow files?
+- **Options:**
+  - **A.** Sign the sandbox in again with the `workflow` scope. Effort:
+    Small.
+  - **B.** Create a fine-grained token for the test repositories only, with
+    Contents and Workflows write. Effort: Small.
+  - **C.** The user pushes the prepared files. Effort: Small.
+- **Left out:** None.
+- **Wider fix:** None.
+- **Recommendation:** A. One more GitHub approval, and the sandbox does the
+  rest.
+- **Action:** ask the user, because only the user can grant the scope.
+
+### 106. The Docker disk checks need a paid workspace
+
+**Answer, 8 November 2026:** A, after pull request #39 serves Checkout.
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
+- **Category:** Process.
+- **Location:** the billing tier of the test workspace "Firna-AI".
+- **Background:** Docker disks are a Team and Business feature. The test
+  workspace is on Free.
+- **Problem:** The Docker disk check and both Docker recovery checks of
+  Milestone 25 cannot run.
+- **Impact if no action:** These cases stay unproven before launch.
+- **Root question:** How does the live check prove the paid features?
+- **Options:**
+  - **A.** Upgrade the test workspace to Team with a Stripe test-mode
+    checkout, after pull request #39 serves Checkout. Effort: Small.
+  - **B.** Keep Free, and leave these cases unproven. Effort: Small.
+- **Left out:** A tier set by hand in the database, because it skips the
+  billing path.
+- **Wider fix:** None.
+- **Recommendation:** A. The test-mode checkout is also a Milestone 21
+  check.
+- **Action:** ask the user, because A changes the plan of a workspace.
+
+### 107. The cache firewall proof takes over the metadata route
+
+**Answer, 8 November 2026:** A.
+
+- **Severity:** Medium. **Effort:** Medium.
+- **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
+- **Category:** Test.
+- **Location:** `crates/ciproxy-agent/scripts/cache_egress_network.py:79`.
+- **Background:** The proof adds its own route to the cloud metadata
+  address. Its guide says that the proof fails when the host already has
+  that route. A GCP host has it, with a lower priority than the proof's
+  route.
+- **Problem:** On a GCP host, the proof can divert the host's real metadata
+  and DNS traffic.
+- **Impact if no action:** The proof cannot run safely on the GCP test
+  host.
+- **Root question:** How does the proof check the metadata block on a cloud
+  host?
+- **Options:**
+  - **A.** Change the proof so that it keeps the provider's route and DNS,
+    and still checks the firewall. Effort: Medium.
+  - **B.** Run the proof on another host without that route. Effort: Medium.
+- **Left out:** Skipping the metadata check, because it weakens the proof.
+- **Wider fix:** A.
+- **Recommendation:** A. It works on the hosts that customers use.
+- **Action:** ask the user, because A changes a proof fixture of the
+  security fix, and B needs another machine.
+
+### 108. Pending credits can change the quoted charge
+
+**Answer, 8 November 2026:** C with D, as a third fix round of the pull
+request #39.
+
+- **Severity:** High. **Likelihood:** Common. **Effort:** Medium.
+- **Source:** Review, pull request #39, after its second fix round.
+- **Category:** Product bug.
+- **Location:** `crates/ciproxy-billing/src/stripe/http/preview.rs:77`.
+- **Background:** An add-on change, such as a machine removal, can leave a
+  pending credit in Stripe. Stripe's preview counts it, but the payment of
+  an upgrade does not.
+- **Problem:** A review can show USD 115, and the payment can charge
+  USD 125. Two reviewers confirmed this from Stripe's documentation. No
+  live payment reproduced it.
+- **Impact if no action:** A charge can exceed the reviewed amount.
+- **Root question:** How does the review match Stripe's upgrade charge?
+- **Options:**
+  - **A.** Take the pending items out of the preview. Effort: Medium.
+  - **B.** Compute today's charge from Stripe's lines and the customer
+    balance. Effort: Medium.
+  - **C.** Send the same offset in the paid change, and let Stripe compute
+    the amount. Effort: Medium.
+  - **D.** Compare the invoice with the quote after payment, and alert on a
+    difference. It only adds to a fix. Effort: Small.
+  - **E.** Invoice pending items before the upgrade. Effort: Medium.
+  - **F.** Invoice add-on changes at once. Effort: Large.
+- **Left out:** Payment modes that apply the plan before payment, because
+  they break the bank confirmation flow.
+- **Wider fix:** D.
+- **Recommendation:** C with D. Stripe keeps computing the amounts, and an
+  alert catches a later mismatch.
+- **Action:** ask the user, because the two fix rounds of #39 are used, and
+  the finding is critical.
+
+### 109. The spend limit notice lacks the day it was reached
+
+**Answer, 8 November 2026:** C.
+
+- **Severity:** Medium. **Effort:** Small.
+- **Source:** Implementation, Milestone 22, pull request #51.
+- **Category:** Mockup.
+- **Location:** `docs/mockups/src/screens/settings/overflow.tsx:95`.
+- **Background:** The approved mockup of the spend limit notice gives the
+  day the limit was reached and the day Boat resumes.
+- **Problem:** The API gives no day when the limit was reached.
+- **Impact if no action:** The product and the mockup differ.
+- **Root question:** Which days does the notice show?
+- **Options:**
+  - **A.** Only the resume day, and update the mockup. Effort: Small.
+  - **B.** Store the day the limit was reached, and show it. Effort: Large.
+  - **C.** The budget month and the resume day, as Jobs shows them, and
+    update the mockup. Effort: Small.
+- **Left out:** The browser's clock, because it names the visit, not the
+  event.
+- **Wider fix:** None.
+- **Recommendation:** C. It matches Jobs with data that the API has.
+- **Action:** ask the user, because the approved mockup changes.
+
+### 110. History returns every matching job in one response
+
+**Answer, 8 November 2026:** B.
+
+- **Severity:** Medium. **Likelihood:** Rare. **Effort:** Medium.
+- **Source:** Implementation, Milestone 21, pull request #53, its item 16.
+- **Category:** Performance.
+- **Location:** `crates/ciproxy-api/src/handlers/jobs.rs:32`, and
+  `crates/ciproxy-store-pg/src/job_views.rs:35`.
+- **Background:** Each read of History, of the live queue, and of a job page
+  builds every retained job of the workspace before any filter. A job is
+  retained for 90 days. The live queue reads again every 5 seconds. The
+  approved mockup shows pages and a total.
+- **Problem:** A large workspace can make these reads slow.
+- **Impact if no action:** Slow Jobs pages on large workspaces.
+- **Root question:** How does History deliver the jobs of a large plan
+  window?
+- **Options:**
+  - **A.** Measure first at Business volume, and change only when slow.
+    Effort: Medium.
+  - **B.** Pages without a total: the store applies the filters, the order,
+    and a limit, and "Show more" loads the next page. Effort: Medium.
+  - **C.** Pages with a total, as the mockup shows. Effort: Medium.
+  - **D.** One full list, with the filters in the store. Effort: Medium.
+  - **E.** A capped list, with a hint to narrow the filter. Effort: Medium.
+- **Left out:** None.
+- **Wider fix:** B.
+- **Recommendation:** B. Each read stays bounded, also the live queue.
+- **Action:** ask the user, because the approved mockup's total changes.
+
+### 111. The banners lack the plan and the passed limit
+
+**Answer, 8 November 2026:** A.
+
+- **Severity:** Low. **Effort:** Medium.
+- **Source:** Implementation, Milestone 21, pull request #53, its item 17.
+- **Category:** Mockup.
+- **Location:** `crates/ciproxy-api/src/wire/pages.rs:36`.
+- **Background:** The approved banners name the plan, the passed limit, and
+  the day a plan ended. The banner response gives fewer facts.
+- **Problem:** The product banners are true, but less precise.
+- **Impact if no action:** The product and the mockups differ.
+- **Root question:** What does each banner name about its cause?
+- **Options:**
+  - **A.** Use today's wording, and update the mockups. Effort: Small.
+  - **B.** Add typed facts to the banner response, and update the
+    protocol. Effort: Medium.
+  - **C.** Read Plan and usage beside the banner. Effort: Medium.
+- **Left out:** A day computed from the banner's end time, because a month
+  end can give a wrong day.
+- **Wider fix:** None.
+- **Recommendation:** B. One response keeps every page consistent.
+- **Action:** ask the user, because the approved mockups change.
+
+### 112. Jobs notices need facts that the API lacks
+
+**Answer, 8 November 2026:** D.
+
+- **Severity:** Low. **Effort:** Medium.
+- **Source:** Implementation, Milestone 21, pull request #53, its item 18.
+- **Category:** Mockup.
+- **Location:** `plans/follow-ups/jobs-notice-facts.md` on the #53 branch.
+- **Background:** The approved Jobs examples name suspension details,
+  refusal reasons, the actual Boat size, and resource shortages.
+- **Problem:** The API gives fewer facts.
+- **Impact if no action:** The product and the examples differ.
+- **Root question:** What must Jobs explain about why a job waits or where
+  it ran?
+- **Options:**
+  - **A.** Use today's wording, and update the examples. Effort: Small.
+  - **B.** Add suspension, refusal, and run-size facts. Effort: Large.
+  - **C.** Save the scaler's first reason. Effort: Medium.
+  - **D.** Save the actual size choice when a job starts. Effort: Medium.
+  - **E.** D, and typed reasons for temporary refusals. Effort: Large.
+  - **F.** Add shortage facts for each kind of place. Effort: Medium.
+  - **G.** Show the largest job that each kind of place can run.
+    Effort: Medium.
+- **Left out:** Fit computed in the browser, because it can differ from the
+  backend rules.
+- **Wider fix:** None.
+- **Recommendation:** D. It records what really ran.
+- **Action:** ask the user, because the approved examples change.
+
+### 113. The label dialog lacks the largest-job figures
+
+**Answer, 8 November 2026:** A.
+
+- **Severity:** Low. **Effort:** Small.
+- **Source:** Review, Milestone 21, pull request #53, its item 19.
+- **Category:** Mockup.
+- **Location:** `plans/follow-ups/label-dialog-fit-offers.md` on the #53
+  branch.
+- **Background:** The approved label dialog shows the largest job that own
+  machines and Boat can run. The API does not give those figures.
+- **Problem:** The product cannot show them.
+- **Impact if no action:** Only that extra text differs.
+- **Root question:** What does the dialog say about the capacity for a
+  label?
+- **Options:**
+  - **A.** Keep the fit counts and the placement, and remove the extra
+    text from the mockup. Effort: Small.
+  - **B.** Add the figures to the API, shared with option G of item 112.
+    Effort: Medium.
+- **Left out:** Figures computed in the browser, for the reason of item 112.
+- **Wider fix:** None.
+- **Recommendation:** A. The protocol requires only the counts and the
+  placement.
+- **Action:** ask the user, because the approved mockup changes.
