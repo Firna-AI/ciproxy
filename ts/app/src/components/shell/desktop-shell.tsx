@@ -69,6 +69,7 @@ export function DesktopShell({
               session={session}
               workspace={workspace}
               onAddOrganization={actions.addOrganization}
+              onInstall={actions.install}
               trigger={
                 <View style={styles.switch}>
                   <Avatar

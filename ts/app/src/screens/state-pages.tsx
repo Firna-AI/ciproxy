@@ -54,16 +54,7 @@ function StatePage({
 }
 
 export function InstallScreen() {
-  return (
-    <StatePage
-      page="install"
-      model={(session) =>
-        session.state === "install_required" || session.workspaces.length === 0
-          ? installPage(session)
-          : null
-      }
-    />
-  );
+  return <StatePage page="install" model={installPage} />;
 }
 
 export function PersonalAccountScreen() {

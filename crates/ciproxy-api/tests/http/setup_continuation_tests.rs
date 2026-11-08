@@ -7,12 +7,11 @@ use ciproxy_github::app::webhook::InstallationAction;
 use ciproxy_store_interface::installation_links::InstallationClaim;
 use ciproxy_store_interface::installation_results::InstallationResultDelivery;
 use serde_json::{Value, json};
-use url::Url;
 use uuid::Uuid;
 
 use super::fixture::{Browser, Fixture};
 use super::fixture_io::{CallbackOutcome, json};
-use super::link_support::{event, memberships, scenario};
+use super::link_support::{self, event, memberships, scenario};
 use super::setup_support::{browser, finish};
 
 async fn session(fixture: &Fixture, browser: &Browser) -> Value {
@@ -66,13 +65,7 @@ async fn completed_direct_setup_names_its_first_proof_and_every_other_result_wit
             .save_installation_claim(&history, None, InstallationResultDelivery::Untracked)
             .unwrap();
         let initial = session(&fixture, &prior).await;
-        let url = Url::parse(initial["install_url"].as_str().unwrap()).unwrap();
-        let state = url
-            .query_pairs()
-            .find(|(key, _)| key == "state")
-            .unwrap()
-            .1
-            .into_owned();
+        let state = link_support::start(&fixture, &prior).await;
         fixture
             .app
             .installation(event(&added, 7, InstallationAction::Created))

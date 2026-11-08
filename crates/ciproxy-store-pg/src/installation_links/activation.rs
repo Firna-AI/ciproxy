@@ -108,8 +108,7 @@ pub(crate) fn register(
 }
 
 pub(crate) fn permitted(connection: &mut PgConnection, organization: Uuid) -> QueryResult<bool> {
-    Ok(diesel::sql_query("SELECT EXISTS(SELECT 1 FROM organization_activation WHERE organization_id=$1 AND NOT billing_hold AND NOT admin_approval_hold) AS allowed")
-        .bind::<diesel::sql_types::Uuid,_>(organization).get_result::<Allowed>(connection)?.allowed)
+    Ok(snapshot(connection, organization)?.permits_activation())
 }
 
 pub(crate) fn admit(connection: &mut PgConnection, organization: Uuid) -> QueryResult<()> {

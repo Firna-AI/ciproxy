@@ -29,11 +29,13 @@ export function WorkspaceSwitch({
   session,
   workspace,
   onAddOrganization,
+  onInstall,
   trigger,
 }: {
   session: SessionView;
   workspace: WorkspaceView;
   onAddOrganization: () => void;
+  onInstall: () => void;
   /** The visible trigger: the name of the workspace with its mark. */
   trigger: ReactNode;
 }) {
@@ -64,10 +66,7 @@ export function WorkspaceSwitch({
     id: "install",
     label: "Install on another organization",
     type: "footer",
-    onPress: () => {
-      services.markInstallStarted();
-      services.navigator.leave(menu.installUrl);
-    },
+    onPress: onInstall,
   });
   return (
     <DropdownMenu

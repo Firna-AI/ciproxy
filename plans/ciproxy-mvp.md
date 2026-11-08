@@ -1483,6 +1483,41 @@ A sign-in reads the organization memberships of the person with it.
   backend change and the protocol docs for the membership read are outside
   this branch.
 
+Installation follow-up outcomes, 8 November 2026:
+
+- `session-installation-attempt-growth.md`, B: session reads return a stable
+  navigation link and create no attempt. An Origin- and CSRF-protected POST
+  saves the attempt before returning its GitHub URL. Keep durable Add
+  evidence, continuation purposes, late approvals, and no age limit.
+  Rejected: reusing read-created attempts, signed Direct state alone,
+  sharing one open attempt, and adding an expiry.
+- `retained-add-reinstall-admission.md`, B: use one effective admission
+  policy for installation, synchronization, and registration. Retained
+  admission overrides a new Add's initial holds. Prepare current bindings
+  before publishing Active. Retained inactive organizations keep their
+  holds. Rejected: a local preparation patch, separate readiness storage,
+  and preparation for every held installation.
+- `unused-retired-label-query.md`, A: delete the unused trait method,
+  PostgreSQL method, helper, and imports. Keep retired data and the
+  workspace discovery query that maintenance uses.
+- Admin recovery flag: return false for an existing Admin. Remove the
+  dashboard's extra role check, because the API owns this capability.
+- Python compatibility: defer annotation evaluation in `live_smoke.py`.
+  Check the other crate and deployment scripts for evaluated union types.
+  Keep the documented Python 3.9 minimum without another runtime dependency.
+- My call, 8 November 2026: use the existing `/install` page as the stable
+  navigation link. Use POST `/installation-links/start` for the explicit
+  start, so the existing browser guard protects it.
+- My call, 8 November 2026: put the pure activation predicate on
+  `OrganizationActivation`. The GitHub service and registration query then
+  consume the same retained-admission rule.
+- Post-push review, 8 November 2026: apply B for the install link's native
+  navigation. Give `ActionLink` an opt-in plain-activation callback. Only
+  that callback marks the link as an action for the build-change handler.
+  Keep other links and their raw `onClick` handling unchanged. A modified
+  click opens the stable install page and creates no attempt. A plain
+  activation saves its attempt, also after observing a new API build.
+
 ## Milestone 20: Dashboard UI: Machines and Settings
 
 Tags: ui
