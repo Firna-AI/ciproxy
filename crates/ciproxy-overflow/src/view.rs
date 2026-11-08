@@ -11,7 +11,7 @@ use ciproxy_store_interface::overflow::store::OverflowSnapshot;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
-use crate::catalog::{micros, scaler_sizes};
+use crate::catalog::{ResourceCatalog, micros, resources, scaler_sizes};
 use crate::error::{Error, Result};
 
 /// Current-month spend with missing provider facts kept explicit.
@@ -64,6 +64,14 @@ pub struct OverflowView {
 }
 
 impl OverflowView {
+    /// Return physical account fit without requiring costs or start availability.
+    pub fn resource_catalog(&self) -> Result<Option<ResourceCatalog>> {
+        if self.account.is_none() || self.state.checked_at.is_none() {
+            return Ok(None);
+        }
+        resources(&self.state).map(Some)
+    }
+
     /// Read durable supply and costs without external provider access.
     pub fn from_snapshot(snapshot: OverflowSnapshot, now: DateTime<Utc>) -> Result<Self> {
         let account = snapshot

@@ -107,7 +107,10 @@ impl BillingService {
         session: &mut dyn BillingSession,
         error: &Error,
     ) -> Result<()> {
-        if matches!(error, Error::StripeRejected { .. }) {
+        if matches!(
+            error,
+            Error::StripeRejected { .. } | Error::StripeValidationRejected { .. }
+        ) {
             session
                 .commit(None, None, true, false, self.clock.now())
                 .internal()?;

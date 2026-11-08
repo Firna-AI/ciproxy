@@ -1,5 +1,6 @@
 //! Typed recoverable billing failures with redacted internal diagnostics.
 
+use ciproxy_store_interface::billing::payments::ValidationRejection;
 use std::error;
 use std::fmt;
 use std::panic::Location;
@@ -25,6 +26,9 @@ pub enum Error {
     /// The requested tier is already the current tier.
     #[error("[billing/service] tier is already current")]
     CurrentTier,
+    /// The quote cannot start this payment. The payer must review again.
+    #[error("[billing/service] a new paid review is required")]
+    ReviewRequired,
     /// Paid billing requires an existing paid subscription.
     #[error("[billing/service] paid subscription required")]
     SubscriptionRequired,
@@ -40,11 +44,17 @@ pub enum Error {
         /// The HTTP status, without Stripe's response body.
         status: u16,
     },
-    /// Stripe definitively rejected a mutation before it could apply.
+    /// Stripe refused a mutation without typed parameter-validation proof.
     #[error("[billing/stripe] mutation rejected with HTTP {status}")]
     StripeRejected {
         /// The rejection status, without the provider response body.
         status: u16,
+    },
+    /// Parameter validation failed before Stripe began the mutation.
+    #[error("[billing/stripe] mutation failed parameter validation before execution")]
+    StripeValidationRejected {
+        /// Structured nonexecution proof without raw provider text.
+        proof: ValidationRejection,
     },
     /// A network call failed before a definite outcome was known.
     #[error("[billing/stripe] request outcome is unknown, retry reconciliation")]

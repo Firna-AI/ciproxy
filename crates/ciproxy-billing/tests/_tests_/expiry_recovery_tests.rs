@@ -7,8 +7,9 @@ use ciproxy_store_interface::billing::state::{AddOns, SubscriptionState, Tier};
 
 use super::expiry_support::{event, lost_upgrade, renewal, started};
 use super::fake_subscriptions::SubscriptionOutcome;
-use super::fixture::{access, read_service, service, signature, state, wanted, workspace};
-use super::subscription_requests::{business_upgrade, remove_all_addons};
+use super::fixture::{access, read_service, service, signature, state, workspace};
+use super::quote_fixture::quote;
+use super::subscription_requests::remove_all_addons;
 
 #[derive(Debug)]
 enum Observer {
@@ -106,7 +107,7 @@ fn every_observer_saves_lost_upgrade_expiry_before_a_renewal_replaces_latest_inv
             (state(&database).tier, state(&database).status),
             (Tier::Team, SubscriptionState::PaymentFailed)
         );
-        let requests = fake.posts("/v1/subscriptions/sub_recorded");
+        let requests = fake.subscription_mutations();
         assert_eq!(requests.len(), 2);
         assert_ne!(requests[0].key, requests[1].key);
     }
@@ -135,13 +136,10 @@ fn unobserved_upgrade_releases_at_one_day_without_showing_the_renewal_payment_pa
         .command
         .unwrap();
     assert_eq!(saved.payment_expires_at, None);
-    fake.expect_subscription(business_upgrade(), SubscriptionOutcome::respond(renewal()));
-    assert_eq!(
-        reader
-            .change(access(), wanted(Tier::Business, 2, 1))
-            .unwrap(),
-        ChangeOutcome::PaymentRequired { payment_url: None }
-    );
+    assert!(matches!(
+        reader.change(access(), quote(&database, &fake, started())),
+        Err(Error::PaymentConfirming)
+    ));
     assert_eq!(
         database
             .store
@@ -168,10 +166,9 @@ fn unobserved_upgrade_releases_at_one_day_without_showing_the_renewal_payment_pa
         Ok(ChangeOutcome::Applied(_))
     ));
     assert_eq!(database.store.billing(workspace()).unwrap().command, None);
-    let requests = fake.posts("/v1/subscriptions/sub_recorded");
-    assert_eq!(requests.len(), 3);
-    assert_eq!(requests[0].key, requests[1].key);
-    assert_ne!(requests[1].key, requests[2].key);
+    let requests = fake.subscription_mutations();
+    assert_eq!(requests.len(), 2);
+    assert_ne!(requests[0].key, requests[1].key);
     assert_eq!(
         state(&database).failed_invoice_id,
         Some("in_renewal".into())

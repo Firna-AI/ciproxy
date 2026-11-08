@@ -11,6 +11,7 @@ axum = { version = "0.8.9", features = ["ws"] }
 chrono = "0.4.45"
 ciproxy-agent = { workspace = true }
 ciproxy-api = { workspace = true }
+ciproxy-billing = { workspace = true }
 ciproxy-gateway = { workspace = true }
 ciproxy-github = { workspace = true }
 ciproxy-metering = { workspace = true }
@@ -22,6 +23,7 @@ ciproxy-store-pg = { workspace = true }
 internal-error = { workspace = true }
 clap = { version = "4.6.7", features = ["derive", "env"] }
 reqwest = "0.13.5"
+rust_decimal = "1.43.0"
 secrecy = "0.10.3"
 serde = "1.0.229"
 serde_json = "1.0.154"
@@ -35,9 +37,13 @@ sha1 = "0.11.0"
 base64 = "0.23.1"
 
 [dev-dependencies]
+hex = "0.4.3"
+http-body-util = "0.1.5"
+sha2 = "0.11.1"
+tiny_http = "0.12.0"
+url = "2.5.8"
 sandbox-interface = { workspace = true }
 sandbox-boat = { workspace = true }
 diesel = { version = "2.3.14", features = ["postgres"] }
-rust_decimal = "1.43.0"
 tower = { version = "0.5.3", features = ["util"] }
 unimock = "0.6.8"

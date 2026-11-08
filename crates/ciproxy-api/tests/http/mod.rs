@@ -72,6 +72,7 @@ mod m18_membership_tests;
 mod m18_mount_tests;
 mod m18_overflow_tests;
 mod m18_paid_tests;
+mod m18_quote;
 mod m18_savings_tests;
 mod m18_server_tests;
 mod m18_stripe;

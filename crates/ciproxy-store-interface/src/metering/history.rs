@@ -2,12 +2,13 @@
 
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::metering::totals::AccountedBoat;
 
 /// Half-open boundaries of one Free or Stripe billing period.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Period {
     /// The first instant counted in this period.
     pub starts_at: DateTime<Utc>,

@@ -61,7 +61,7 @@ impl ControlPlane for Production {
                 .await
                 .internal()?
                 .internal()?;
-            let composition = compose(&config, store)?;
+            let composition = compose(&config, store).await?;
             let listener = TcpListener::bind(config.http_bind).await.internal()?;
             Ok::<_, Error>((composition, listener))
         };
@@ -84,6 +84,21 @@ impl ControlPlane for Production {
                 })
                 .await
                 .internal()
+        }));
+        let mut billing_stop = stop.clone();
+        let mut billing = OwnedTask(tokio::spawn(async move {
+            let mut ticks = interval(Duration::from_secs(60));
+            ticks.set_missed_tick_behavior(MissedTickBehavior::Skip);
+            loop {
+                tokio::select! {
+                    _ = ticks.tick() => {
+                        if let Err(error) = composition.cancellations.reconcile().await {
+                            tracing::warn!(%error, "billing maintenance will retry");
+                        }
+                    },
+                    _ = billing_stop.changed() => return Ok(()),
+                }
+            }
         }));
         let mut maintenance_stop = stop;
         let mut maintenance = OwnedTask(tokio::spawn(async move {
@@ -109,6 +124,7 @@ impl ControlPlane for Production {
             result = &mut core.0 => result.internal()?,
             result = &mut http.0 => result.internal()?,
             result = &mut maintenance.0 => result.internal()?,
+            result = &mut billing.0 => result.internal()?,
             _ = terminate.recv() => Ok(()),
             result = tokio::signal::ctrl_c() => result.internal(),
         };
@@ -123,6 +139,9 @@ impl ControlPlane for Production {
             }
             if !maintenance.0.is_finished() {
                 let _ = (&mut maintenance.0).await;
+            }
+            if !billing.0.is_finished() {
+                let _ = (&mut billing.0).await;
             }
         })
         .await;

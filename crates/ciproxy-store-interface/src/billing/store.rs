@@ -5,6 +5,8 @@ use unimock::unimock;
 use uuid::Uuid;
 
 use crate::billing::commands::{BillingCommand, CheckoutProgress};
+use crate::billing::payments::PaymentWork;
+use crate::billing::quotes::StoredQuote;
 use crate::billing::renewals::Renewal;
 use crate::billing::state::BillingState;
 use crate::error::Result;
@@ -36,11 +38,30 @@ pub trait BillingStore: Send + Sync {
     fn try_lock_billing(&self, workspace_id: Uuid) -> Result<Option<Box<dyn BillingSession>>>;
     /// Find durable App-removal requests which still need Stripe work.
     fn billing_cancellations(&self) -> Result<Vec<Uuid>>;
+    /// Find workspaces with unfinished credit settlement or invoice checks.
+    fn billing_payment_workspaces(&self) -> Result<Vec<Uuid>>;
 }
 
 /// The exclusive billing session, kept alive across Stripe calls.
 #[unimock(api = BillingSessionMock)]
 pub trait BillingSession: Send {
+    /// Read a quote only within the locked workspace.
+    fn quote(&mut self, quote_id: Uuid) -> Result<Option<StoredQuote>>;
+    /// Save an authoritative review and prune expired reviews without ongoing work.
+    fn save_quote(&mut self, quote: &StoredQuote) -> Result<()>;
+    /// Consume one unused quote and persist its command in one transaction.
+    fn consume_quote(
+        &mut self,
+        quote_id: Uuid,
+        command: &BillingCommand,
+        work: &PaymentWork,
+    ) -> Result<bool>;
+    /// Read a payment journal in this workspace after its command ends.
+    fn payment(&mut self, command_id: Uuid) -> Result<Option<PaymentWork>>;
+    /// Read unfinished payment work in this workspace.
+    fn payments(&mut self) -> Result<Vec<PaymentWork>>;
+    /// Save financial recovery and diagnostic state without changing entitlement.
+    fn save_payment(&mut self, work: &PaymentWork) -> Result<()>;
     /// Read the workspace's latest billing state.
     fn record(&mut self) -> Result<BillingRecord>;
     /// Read every retained renewal outcome for one subscription.
