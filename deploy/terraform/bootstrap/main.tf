@@ -40,6 +40,7 @@ locals {
   plan_accounts  = toset(["shared_plan", "shared_plan_production"])
   retired        = toset(["shared_plan", "shared_preview", "trust_preview"])
   apply_workflow = "Firna-AI/ciproxy/.github/workflows/deploy-apply.yml@"
+  image_workflow = "Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/main"
 }
 resource "google_service_account" "ci" {
   for_each   = local.access
@@ -70,7 +71,7 @@ resource "google_iam_workload_identity_pool_provider" "github" {
     "attribute.ref"                 = "assertion.ref"
     "attribute.event_name"          = "assertion.event_name"
     "attribute.workflow_ref"        = "assertion.workflow_ref"
-  }, endswith(each.value.access, "apply") ? { "attribute.job_workflow_ref" = "assertion.job_workflow_ref" } : {})
+  }, endswith(each.value.access, "apply") || startswith(each.value.access, "image-") ? { "attribute.job_workflow_ref" = "assertion.job_workflow_ref" } : {})
   attribute_condition = join(" && ", concat([
     "assertion.repository_id == '1442045837'",
     "assertion.repository_owner_id == '307519338'",
@@ -80,6 +81,8 @@ resource "google_iam_workload_identity_pool_provider" "github" {
     each.value.main_only || each.value.environment == "production" ? "assertion.ref == 'refs/heads/main'" : "assertion.ref in ['refs/heads/calummoore/ci-proxy-load-balancer', 'refs/heads/main']",
     ], endswith(each.value.access, "apply") ? [
     "assertion.job_workflow_ref == '${local.apply_workflow}' + assertion.ref",
+    ] : [], startswith(each.value.access, "image-") ? [
+    "assertion.job_workflow_ref == '${local.image_workflow}'",
   ] : []))
   disabled = var.production_enabled && contains(local.retired, each.key)
   oidc { issuer_uri = "https://token.actions.githubusercontent.com" }

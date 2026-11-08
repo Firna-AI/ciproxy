@@ -2,7 +2,7 @@
 
 A completed workload run publishes `ready-inputs.json` as the immutable
 artifact `workload-<environment>-<attempt>`. It records the environment,
-checkout commit, workflow run, run attempt, immutable control-plane image,
+checkout commit, workflow run, run attempt, deployed control-plane image,
 runtime/uptime flags, alert
 addresses, and prepared zones. Publication follows Helm and all NEG waits.
 
@@ -13,7 +13,10 @@ For production's later preview promotion, it selects the successful
 The source checkout must match that run's `head_sha`.
 
 Production also uses this reader before its workload rollout. It selects
-the control-plane digest saved by that exact preview run and attempt.
+the control-plane digest saved after the enabled rollout of that exact
+preview run and attempt. A disabled preview records an empty image.
+Enabled production rejects that empty image through its runtime validation.
+Disabled production can still deploy static content and the release server.
 It cannot build or select a different production image. The additional
 image field remains in the workload artifact. The foundation record omits
 it from Terraform variables, so its existing schema stays unchanged.

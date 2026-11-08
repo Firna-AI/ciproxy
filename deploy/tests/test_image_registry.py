@@ -46,7 +46,8 @@ class ImageRegistryTests(ImageCase):
     def test_publish_pushes_digest_then_tags_and_cleans_credentials(self):
         archive = self.root / ".context/image.tar"
         archive.write_bytes(b"fixture-image")
-        result = self.image("publish", "--source-hash", "b" * 64, "--archive", str(archive))
+        result = self.image("publish", "--source-hash", "b" * 64, "--archive", str(archive),
+                            "--expected-digest", "sha256:" + "a" * 64)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, "image=" + IMAGE + "\n")
         calls = self.calls()
@@ -72,10 +73,22 @@ class ImageRegistryTests(ImageCase):
         for command in ("gcloud auth print-access-token", "crane auth login", "crane push " + str(archive)):
             with self.subTest(command=command.split()[0:2]):
                 self.env["IMAGE_FAIL_COMMAND"] = command
-                result = self.image("publish", "--source-hash", "b" * 64, "--archive", str(archive))
+                result = self.image("publish", "--source-hash", "b" * 64, "--archive", str(archive),
+                                    "--expected-digest", "sha256:" + "a" * 64)
                 self.assertEqual(result.returncode, 1)
                 self.assertEqual(result.stdout, "")
                 self.assertNotIn("fixture-token-not-a-secret", result.stderr)
                 for call in self.calls():
                     if call["config"]:
                         self.assertFalse(Path(call["config"]).exists())
+
+    def test_archive_substitution_fails_before_registry_access(self):
+        archive = self.root / ".context/substituted-image.tar"
+        archive.write_bytes(b"substituted-image")
+        result = self.image("publish", "--source-hash", "b" * 64, "--archive", str(archive),
+                            "--expected-digest", "sha256:" + "b" * 64)
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("differs from the build job's image digest", result.stderr)
+        self.assertEqual([call["tool"] for call in self.calls()], ["crane"])
+        self.assertEqual(self.calls()[0]["args"], ["digest", "--tarball", str(archive)])

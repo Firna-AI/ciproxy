@@ -10,13 +10,14 @@ from deploy.tests.promotion_support import PromotionCase
 class ImagePromotionTests(ImageCase):
     def test_production_uses_exact_preview_image_and_rejects_other_evidence(self):
         self.trusted("production")
-        path = self.snapshot("main-preview", run="5678", attempt="3", control_plane_image=IMAGE)
+        path = self.snapshot("main-preview", run="5678", attempt="3",
+                             control_plane_enabled=True, control_plane_image=IMAGE)
         self.env["CONTROL_PLANE_IMAGE"] = "ambient-stale-image"
         self.env["CONTROL_PLANE_ROLLBACK_IMAGE"] = "ambient-production-override"
-        selected = self.image("preview-evidence")
+        selected = self.cli("image_promotion.py", "preview-evidence")
         self.assertEqual(selected.returncode, 0, selected.stderr)
         self.assertEqual(selected.stdout, "evidence_name=workload-main-preview-3\nevidence_run=5678\n")
-        result = self.image("promote")
+        result = self.cli("image_promotion.py", "promote")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, "image=" + IMAGE + "\n")
         original = json.loads(path.read_text())
@@ -24,14 +25,14 @@ class ImagePromotionTests(ImageCase):
                              ("environment", "production")):
             with self.subTest(changed_field=field):
                 path.write_text(json.dumps(dict(original, **{field: value})))
-                rejected = self.image("promote")
+                rejected = self.cli("image_promotion.py", "promote")
                 self.assertEqual(rejected.returncode, 1)
                 self.assertEqual(rejected.stdout, "")
-        for image in ("", "other.invalid/image@sha256:" + "a" * 64, "moving:tag"):
+        for image in ("other.invalid/image@sha256:" + "a" * 64, "moving:tag"):
             changed = json.loads(json.dumps(original))
             changed["inputs"]["control_plane_image"] = image
             path.write_text(json.dumps(changed))
-            self.assertEqual(self.image("promote").returncode, 1)
+            self.assertEqual(self.cli("image_promotion.py", "promote").returncode, 1)
         self.assertEqual(self.calls(), [])
 
 
@@ -50,6 +51,38 @@ class ImageSnapshotTests(PromotionCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         variables = self.root / ".context/plans/main-preview/foundation/inputs.tfvars.json"
         self.assertNotIn("control_plane_image", json.loads(variables.read_text()))
+
+    def test_disabled_preview_records_no_image_and_only_static_production_can_follow(self):
+        log = install(self)
+        self.trusted()
+        self.env.update(ALERT_EMAIL="fixture@example.invalid", RELEASE_SERVER_IMAGE_DIGEST="sha256:" + "c" * 64,
+                        CONTROL_PLANE_RUNTIME_READY="false", CONTROL_PLANE_IMAGE=IMAGE)
+        deployed = self.cli("deploy.py", "main-preview")
+        self.assertEqual(deployed.returncode, 0, deployed.stderr)
+        snapshot = self.root / ".context/deploy/main-preview/ready-inputs.json"
+        record = json.loads(snapshot.read_text())
+        self.assertEqual(record["inputs"]["control_plane_image"], "")
+        self.assertFalse(record["inputs"]["control_plane_enabled"])
+        self.trusted("production")
+        event = json.loads(self.event.read_text())
+        event["workflow_run"].update(id=int(record["run"]), run_attempt=int(record["attempt"]))
+        self.event.write_text(json.dumps(event))
+        self.env["CONTROL_PLANE_IMAGE"] = "stale-production-override"
+        selected = self.cli("image_promotion.py", "promote")
+        self.assertEqual(selected.returncode, 0, selected.stderr)
+        self.assertEqual(selected.stdout, "image=\n")
+        self.assertIn("disabled preview runtime", selected.stderr)
+        self.env.update(CONTROL_PLANE_IMAGE="", CONTROL_PLANE_RUNTIME_READY="true")
+        log.write_text("")
+        rejected = self.cli("deploy.py", "production")
+        self.assertEqual(rejected.returncode, 1)
+        self.assertIn("A ready runtime requires CONTROL_PLANE_IMAGE pinned by SHA-256", rejected.stderr)
+        self.assertEqual(log.read_text(), "")
+        self.env["CONTROL_PLANE_RUNTIME_READY"] = "false"
+        static = self.cli("deploy.py", "production")
+        self.assertEqual(static.returncode, 0, static.stderr)
+        production = self.root / ".context/deploy/production/ready-inputs.json"
+        self.assertEqual(json.loads(production.read_text())["inputs"]["control_plane_image"], "")
 
     def test_image_registry_ready_persists_through_operator_and_ci_bootstrap(self):
         log = install(self)

@@ -88,9 +88,12 @@ finish as successful no-ops. Required apply jobs do not intentionally skip;
 privileged auth, artifact download, and Terraform run only for selected roots.
 
 Each successful workload rollout saves its own flags, alert addresses, and
-actual NEG zones. It also saves the immutable control-plane image. Preview
+actual NEG zones. An enabled rollout also saves its deployed control-plane
+image after readiness. A disabled runtime saves an empty image. Preview
 builds or reuses that image automatically. Production takes the digest from
-its exact successful upstream preview artifact. Its read-only plan account
+its exact successful upstream preview artifact. Enabled production requires
+an enabled preview rollout. Static-only production remains available.
+Its read-only plan account
 plans the `foundation` root.
 Its environment apply account writes that snapshot to its own `foundation/`
 state prefix.
@@ -126,7 +129,8 @@ writes. The operator drains preview before the launch handoff.
 | `scripts/terraform.py`, `scripts/terraform_roots.py` | Saved-plan promotion and shared root/backend metadata.                                                                |
 | `scripts/terraform_policy.py`                        | Exact destructive approval checks.                                                                                    |
 | `scripts/workload_snapshot.py`                       | Inputs from a ready rollout, bound to its commit and run attempt.                                                     |
-| `scripts/control_plane_image.py`                     | Exact source hashing, credentialless build, registry reuse/publication, and bound production image selection.         |
+| `scripts/control_plane_image.py`                     | Protected source hashing, credentialless build, registry reuse, and digest-bound archive publication.                 |
+| `scripts/image_promotion.py`                         | Select the image deployed by the exact successful upstream preview rollout.                                           |
 | `scripts/deploy.py`                                  | Own-namespace Helm, static publishing, NEG readiness, and CDN invalidation.                                           |
 | `scripts/boat_secret.py`                             | Optional Boat snapshot delivery over standard input and its public rollout revision.                                  |
 | `scripts/github-ruleset.sh`                          | Idempotent protected `main` ruleset setup.                                                                            |

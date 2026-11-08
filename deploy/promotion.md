@@ -40,9 +40,13 @@ Workloads read central outputs and deploy only their own namespace and
 static buckets. They wait for every configured NEG zone.
 
 A ready workload saves `ready-inputs.json`. It records the actual zones,
-runtime/uptime flags, immutable control-plane image, alert addresses, source
+runtime/uptime flags, deployed control-plane image, alert addresses, source
 commit, environment, workflow run, and run attempt. Production selects its
 image from that exact upstream preview evidence before deploying.
+Only an enabled rollout records an image after Helm and NEG readiness.
+A disabled preview records an empty image. Existing runtime validation
+rejects enabled production without that deployed image. Static-only
+production still works.
 [Image promotion and rollback](control-plane-images.md) gives the operator
 steps. The next read-only plan checks those bindings. The
 environment apply account writes the exact saved snapshot plan only to its

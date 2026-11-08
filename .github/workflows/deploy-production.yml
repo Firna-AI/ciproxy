@@ -51,7 +51,7 @@ jobs:
         run: python3 deploy/scripts/promotion_event.py production "$CIPROXY_SOURCE_SHA"
       - name: Select the exact successful preview evidence
         id: preview
-        run: python3 deploy/scripts/control_plane_image.py preview-evidence
+        run: python3 deploy/scripts/image_promotion.py preview-evidence
       - name: Download that preview workload artifact
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
         with:
@@ -61,7 +61,7 @@ jobs:
           path: .context/deploy/main-preview
       - name: Select the image from the bound preview inputs
         id: image
-        run: python3 deploy/scripts/control_plane_image.py promote
+        run: python3 deploy/scripts/image_promotion.py promote
       - name: Set up Node
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:

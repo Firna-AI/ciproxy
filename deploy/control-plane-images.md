@@ -1,8 +1,8 @@
 # Control-plane images
 
 Each accepted preview push builds or reuses the control-plane image.
-Preview deploys its immutable `@sha256:` reference. Production deploys the
-image recorded by the successful upstream preview workload. Production
+An enabled preview deploys its immutable `@sha256:` reference. Production
+uses the image recorded after that preview rollout succeeds. Production
 neither builds nor publishes an image. Runtime readiness remains a separate
 environment setting. Image publication does not enable the runtime.
 
@@ -15,20 +15,31 @@ the run. A
 missing manifest starts a build. A denied request, missing repository, or
 unavailable registry stops the run. Those errors never count as a cache miss.
 
-The source checkout names the exact push commit. Every image job uses the
-same immutable trusted tools commit from that accepted push. Trusted scripts
-run outside the separate source checkout. The build runner has only
+The caller uses the reusable image workflow at protected `main`. Both
+image identities require that exact `job_workflow_ref`. An ordinary caller
+job cannot obtain either image identity, including the npm workload job.
+The reusable workflow reads its own `job_workflow_sha` from GitHub OIDC
+before checking out any repository. It prints no token or claim payload.
+Every image job checks out tools at that immutable protected revision.
+The source checkout separately names the exact push commit. Trusted scripts
+run outside that source checkout. The build runner has only
 `contents: read`. It has no cloud identity, environment, or OIDC permission.
 Pinned BuildKit builds a Linux AMD64 Docker archive. The workflow artifact
-expires after one day. The separate publisher authenticates through WIF,
-reads the archive with pinned crane, pushes its digest, and adds the source
-tag. It never executes the archive or scripts from the source checkout.
+expires after one day. Build records its immutable artifact ID and the
+canonical image digest from `crane digest --tarball`. Publish downloads that
+exact artifact ID. It compares the archive's canonical digest with the
+build output before any registry write. An archive found only by name is
+not publication authority. The separate publisher uses WIF, pushes the
+digest, and adds the source tag. It never executes the archive or source
+scripts. Cached images skip both the build and publisher credentials.
 
 The source hash covers the paths, modes, and bytes of the selected tracked
 files. It covers `.dockerignore`, the Dockerfile, root Cargo inputs,
 toolchain, crate manifests, Rust sources, build scripts, migrations, and
 copied task-runner sources. It also covers the target platform and trusted
-build scripts, installer pins, and workflow configuration.
+build scripts, installer pins, and protected workflow configuration.
+Production promotion code and caller workflow changes do not change this
+hash.
 
 One selector supplies both hashing and the actual build context. It reads
 the ordered `.dockerignore` patterns. Positive patterns ending in `/` open
@@ -52,6 +63,8 @@ success or failure. Commands suppress registry authentication payloads.
 
 ## Install the repository grants
 
+Install [the protected workflow](image-workflow-bootstrap.md)
+before activating image federation. There is no caller-branch fallback.
 Use the operator account and a reviewed checkout of this deployment code.
 Complete [initial bootstrap and shared core](runtime-identity.md) first.
 Initial bootstrap works before the repository exists. It defaults
@@ -88,7 +101,16 @@ needed. Preview-accessible shared apply has no repository policy writer.
 
 Both image providers require repository ID `1442045837`, owner ID
 `307519338`, environment `main-preview`, event `push`, and the exact preview
-workflow. They accept the primary branch and `main`. They remain available
+caller workflow. They also require this constant reusable-workflow claim:
+
+```text
+Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/main
+```
+
+This claim stays on `main` when the caller uses the primary branch. The
+providers map `attribute.job_workflow_ref` from the signed token. Their
+repository roles remain unchanged. They accept primary and `main` callers.
+They remain available
 after launch because preview must publish before production can promote.
 The build runner receives none of these grants. Production receives no
 image publisher. Existing node image-reader rights remain unchanged.
@@ -141,11 +163,18 @@ gh run list --repo=Firna-AI/ciproxy --workflow=deploy-main-preview.yml \
 gh run rerun RUN_ID --repo=Firna-AI/ciproxy
 ```
 
-Check the selected digest in the image job output and the completed
+Check the selected digest in the image job output. An enabled rollout saves
+its deployed image only after Helm and all NEG waits pass. A disabled
+preview saves an empty image. Check the completed
 `workload-main-preview-<attempt>` artifact. Production downloads that
-exact upstream run and attempt. It rejects an absent image, another
-repository, a moving tag, or a mismatched evidence binding. An older
-preview artifact without the image field requires a fresh preview run.
+exact upstream run and attempt. It rejects another repository, a moving
+tag, or a mismatched evidence binding. An enabled
+production runtime rejects the empty image through its existing runtime
+validation. A disabled production runtime can still deploy static content
+and the release server. Enabling production requires a successful enabled
+preview rollout first. An older artifact without the image field requires
+a fresh enabled preview before enabled production can deploy. Static-only
+production can accept that empty or missing field.
 
 ## Roll back and resume
 
@@ -160,8 +189,9 @@ gh run rerun RUN_ID --repo=Firna-AI/ciproxy
 ```
 
 Lookup checks that this digest exists. Preview keeps current runtime
-settings and secret selectors while deploying that image. Its completed
-workload artifact records the rollback digest. After launch, use a preview
+settings and secret selectors while deploying that image. Enable the
+preview runtime and complete its rollout to record the rollback digest.
+After launch, use a preview
 push run on `main` to promote that same digest into production.
 Production ignores its own image and rollback variables.
 

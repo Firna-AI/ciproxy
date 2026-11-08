@@ -10,10 +10,11 @@ import subprocess
 DOCKERFILE = "crates/ciproxy-control-plane/Dockerfile"
 PLATFORM = "linux/amd64"
 BUILD_TOOLS = (
-    ".github/workflows/deploy-main-preview.yml",
+    ".github/workflows/deploy-control-plane-image.yml",
     "deploy/scripts/image_context.py",
     "deploy/scripts/control_plane_image.py",
     "deploy/scripts/image_registry.py",
+    "deploy/scripts/image_outputs.py",
     "deploy/scripts/install-image-tools.sh",
     "deploy/scripts/start-buildkit.sh",
 )

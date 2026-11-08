@@ -82,6 +82,8 @@ run "publish_is_repo_scoped_and_trusted_preview_only" {
       && strcontains(google_iam_workload_identity_pool_provider.github[key].attribute_condition, "assertion.event_name == 'push'")
       && strcontains(google_iam_workload_identity_pool_provider.github[key].attribute_condition, "deploy-main-preview.yml@' + assertion.ref")
       && strcontains(google_iam_workload_identity_pool_provider.github[key].attribute_condition, "assertion.ref in ['refs/heads/calummoore/ci-proxy-load-balancer', 'refs/heads/main']")
+      && strcontains(google_iam_workload_identity_pool_provider.github[key].attribute_condition, "assertion.job_workflow_ref == 'Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/main'")
+      && lookup(google_iam_workload_identity_pool_provider.github[key].attribute_mapping, "attribute.job_workflow_ref", "") == "assertion.job_workflow_ref"
       && google_service_account_iam_member.federation[key].role == "roles/iam.workloadIdentityUser"
       && endswith(google_service_account_iam_member.federation[key].member, "/attribute.access/${key}")
       && google_service_account_iam_member.federation[key].service_account_id == google_service_account.ci[key].name

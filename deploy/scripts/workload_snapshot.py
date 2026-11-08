@@ -21,7 +21,7 @@ def location(environment):
     return Path(".context/deploy") / environment / "ready-inputs.json"
 
 
-def save(environment, configuration, runtime_enabled):
+def save(environment, configuration, runtime_enabled, control_image):
     email = os.environ.get("ALERT_EMAIL", "").strip()
     if not email:
         raise ValueError("Set the GitHub environment variable ALERT_EMAIL.")
@@ -31,7 +31,7 @@ def save(environment, configuration, runtime_enabled):
         "control_plane_enabled": runtime_enabled,
         "enable_uptime_checks": os.environ.get("PUBLIC_UPTIME_ENABLED") == "true",
         "source_sha": binding(environment)["commit"],
-        "control_plane_image": os.environ.get("CONTROL_PLANE_IMAGE", ""),
+        "control_plane_image": control_image if runtime_enabled else "",
     }
     path = location(environment)
     path.parent.mkdir(parents=True, exist_ok=True)

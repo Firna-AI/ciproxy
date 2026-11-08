@@ -26,6 +26,11 @@ class ImageContextTests(ImageCase):
             path.write_text(path.read_text() + "excluded\n")
         self.commit()
         self.assertEqual(self.image_hash(), previous)
+        for name in ("deploy/scripts/image_promotion.py", ".github/workflows/deploy-main-preview.yml"):
+            path = self.root / name
+            path.write_text(path.read_text() + "\n")
+        self.commit()
+        self.assertEqual(self.image_hash(), previous)
         executable = self.root / "crates/runtime/build.rs"
         executable.chmod(0o755)
         self.commit()
@@ -52,6 +57,8 @@ class ImageContextTests(ImageCase):
         self.assertEqual(call["config_mode"], 0o700)
         self.assertFalse(Path(call["config"]).exists())
         self.assertEqual((self.root / ".context/image.tar").read_bytes(), b"built-image")
+        self.assertEqual(result.stdout, "digest=sha256:" + "a" * 64 + "\n")
+        self.assertEqual(self.calls()[-1]["args"], ["digest", "--tarball", ".context/image.tar"])
         (self.root / "crates/runtime/template.bin").write_text("changed template\n")
         self.commit()
         self.assertNotEqual(self.image_hash(), source_hash)

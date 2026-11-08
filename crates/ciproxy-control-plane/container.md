@@ -1,8 +1,10 @@
 # Build the control-plane container
 
 The deploy workflow builds and publishes this image automatically.
-It reuses unchanged source inputs. Preview deploys an immutable digest,
-and production promotes that exact digest from the saved preview workload.
+It reuses unchanged source inputs. An enabled preview deploys an immutable
+digest and records it after readiness. Enabled production promotes that
+deployed digest from the exact saved preview workload. A disabled preview
+records no deployed image. Static-only production can still proceed.
 [Image deployment](../../deploy/control-plane-images.md) gives identity
 setup, source reuse, and explicit rollback. The commands below support
 local builds and operator recovery.

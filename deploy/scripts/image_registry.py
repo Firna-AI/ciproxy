@@ -71,10 +71,18 @@ def lookup(source_hash, rollback):
         return REPOSITORY + "@" + value if value else ""
 
 
-def publish(source_hash, archive):
+def archive_digest(archive):
     value = require(call("crane", "digest", "--tarball", str(archive)),
                     "Cannot read the built image archive.")
-    reference = immutable(REPOSITORY + "@" + value)
+    immutable(REPOSITORY + "@" + value)
+    return value
+
+
+def publish(source_hash, archive, expected_digest):
+    value = archive_digest(archive)
+    if value != expected_digest:
+        raise ValueError("Image archive differs from the build job's image digest. Start a new run.")
+    reference = REPOSITORY + "@" + value
     with authenticated() as environment:
         existing = digest(REPOSITORY + ":source-" + source_hash, environment, missing=True)
         if existing:

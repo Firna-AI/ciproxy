@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build without cloud credentials, publish, or select a bound workload image."""
+"""Build without cloud credentials or publish an archive bound to its build."""
 
 import argparse
 import os
@@ -10,18 +10,8 @@ import sys
 import tempfile
 
 from image_context import DOCKERFILE, PLATFORM, materialize, source_context
-from image_registry import REPOSITORY, immutable, lookup, publish
-from promotion_event import check_checkout, validate
-from workload_snapshot import evidence, load
-
-
-def outputs(values):
-    for key, value in values.items():
-        print(f"{key}={value}")
-    if os.environ.get("GITHUB_OUTPUT"):
-        with open(os.environ["GITHUB_OUTPUT"], "a") as output:
-            for key, value in values.items():
-                output.write(f"{key}={value}\n")
+from image_outputs import outputs
+from image_registry import REPOSITORY, archive_digest, immutable, lookup, publish
 
 
 def build(args):
@@ -43,6 +33,7 @@ def build(args):
             "--opt", f"build-arg:BUILD_REVISION={args.revision}",
             "--output", f"type=docker,name={REPOSITORY}:source-{source_hash},dest={args.archive.resolve()}",
         ], check=True, env=environment)
+    outputs({"digest": archive_digest(args.archive)})
 
 
 def main():
@@ -63,34 +54,23 @@ def main():
         else:
             command.add_argument("--archive", type=Path)
             command.add_argument("--existing", default="")
-    commands.add_parser("preview-evidence")
-    commands.add_parser("promote")
+            command.add_argument("--expected-digest", default="")
     args = parser.parse_args()
     try:
         if hasattr(args, "source_hash") and not re.fullmatch("[0-9a-f]{64}", args.source_hash):
             raise ValueError("A SHA-256 source hash is required.")
         if args.command == "inputs":
             source_hash, _ = source_context(args.source, args.revision)
-            trusted = Path(__file__).resolve().parents[2]
-            tools = subprocess.check_output(["git", "-C", str(trusted), "rev-parse", "HEAD"], text=True).strip()
-            outputs({"source_hash": source_hash, "tools_sha": tools})
+            outputs({"source_hash": source_hash})
         elif args.command == "build":
             build(args)
         elif args.command == "lookup":
             outputs({"image": lookup(args.source_hash, args.rollback)})
         elif args.command == "publish":
-            if not args.existing and args.archive is None:
-                raise ValueError("A built archive is required for publication.")
-            outputs({"image": immutable(args.existing) if args.existing else publish(args.source_hash, args.archive)})
-        else:
-            source = os.environ.get("CIPROXY_SOURCE_SHA", "")
-            validate("production", source, os.environ)
-            check_checkout(source)
-            if args.command == "preview-evidence":
-                outputs(evidence("main-preview", "production"))
-            else:
-                inputs = load("main-preview", "production")
-                outputs({"image": immutable(inputs.get("control_plane_image", ""))})
+            if not args.existing and (args.archive is None or not args.expected_digest):
+                raise ValueError("A built archive and the build job's image digest are required.")
+            outputs({"image": immutable(args.existing) if args.existing else publish(
+                args.source_hash, args.archive, args.expected_digest)})
     except ValueError as error:
         print(f"Control-plane image: {error}", file=sys.stderr)
         return 1

@@ -92,7 +92,8 @@ class ImageCase(PromotionCase):
             "crates/runtime/private/operator.key": "fixture-private-input\n",
             "crates/runtime/.env": "FIXTURE=private\n",
             "docs/guide.md": "Public documentation.\n",
-            ".github/workflows/deploy-main-preview.yml": "name: Fixture build\n",
+            ".github/workflows/deploy-control-plane-image.yml": "name: Fixture protected build\n",
+            ".github/workflows/deploy-main-preview.yml": "name: Fixture caller\n",
         }
         for name, content in files.items():
             path = self.root / name
