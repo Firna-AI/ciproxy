@@ -15,8 +15,17 @@ jobs:
     with:
       environment: main-preview
       source: ${{ github.sha }}
-  workloads:
+  image:
     needs: infrastructure
+    permissions:
+      contents: read
+      id-token: write
+    uses: Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@calummoore/ci-proxy-load-balancer
+  workloads:
+    needs: [infrastructure, image]
+    if: >-
+      always() && needs.infrastructure.result == 'success' &&
+      needs.image.result == 'success'
     runs-on: ubuntu-24.04
     environment: main-preview
     env:
@@ -26,7 +35,7 @@ jobs:
       PUBLIC_UPTIME_ENABLED: ${{ vars.PUBLIC_UPTIME_ENABLED }}
       RELEASE_SERVER_IMAGE_DIGEST: ${{ vars.RELEASE_SERVER_IMAGE_DIGEST }}
       CONTROL_PLANE_RUNTIME_READY: ${{ vars.CONTROL_PLANE_RUNTIME_READY }}
-      CONTROL_PLANE_IMAGE: ${{ vars.CONTROL_PLANE_IMAGE }}
+      CONTROL_PLANE_IMAGE: ${{ needs.image.outputs.image }}
       CDN_SIGNING_KEY_NAME: ${{ vars.CDN_SIGNING_KEY_NAME }}
       CIPROXY_APP_ID: ${{ vars.CIPROXY_APP_ID }}
       CIPROXY_APP_CLIENT_ID: ${{ vars.CIPROXY_APP_CLIENT_ID }}

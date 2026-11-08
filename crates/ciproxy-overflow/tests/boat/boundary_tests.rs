@@ -9,7 +9,8 @@ use serde_json::json;
 use uuid::Uuid;
 
 use crate::tls::facts::{identity, limits};
-use crate::tls::server::{Server, step};
+use crate::tls::peer::step;
+use crate::tls::server::Server;
 
 use super::support::request;
 

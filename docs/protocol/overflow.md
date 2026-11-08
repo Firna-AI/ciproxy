@@ -23,7 +23,16 @@ backend must give ciproxy.
 - The customer connects Boat with an API key of its own Boat account.
 - The customer does this in Setup or in Settings under Overflow, in the
   [dashboard](../architecture.md#components).
-- One Boat account serves the jobs of every organization of the
+- After checking the key, the dashboard lists each wallet that the key can
+  use, with its name and the likely wallet selected.
+- A wallet is the personal Boat account or one Boat organization that pays
+  for sandboxes. Each Boat organization has its own wallet.
+- The customer chooses the wallet before connecting Boat.
+- An organization key offers its own organization wallet.
+- **Decision:** the customer chooses an accessible personal or organization
+  wallet. Rejected: personal accounts only, and always choosing the default
+  wallet. Reason: organization keys and keys with several wallets must work.
+- The selected Boat wallet serves the jobs of every organization of the
   [workspace](workspaces.md#terms).
 - The customer can skip the Boat step of Setup.
 - Without Boat, jobs run on own machines only, as

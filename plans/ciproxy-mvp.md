@@ -246,12 +246,13 @@ stay in `europe-west1`.
       condition claim. Reason: valid jobs then keep the same trust limits.
       Evidence: `.context/ciproxy-mvp/fix-round-1-report.md`.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
-- [ ] Build and publish the control-plane image in the deploy workflow, as
+- [x] Build and publish the control-plane image in the deploy workflow, as
       item 90 = G says. A build job builds it on the runner with no cloud
       credentials. A publish job pushes it by digest with workload
       identity. The preview deploys that digest, and production takes over
       the same digest from the preview's saved inputs. A push that does not
       change the control-plane sources reuses the image of their hash.
+      Branch: `conductor/item-90-g-control-plane-image-in-the-deploy`.
 
 ## Milestone 6: GitHub App and scale sets
 
@@ -867,6 +868,30 @@ Live KVM and authenticated job checks remain with the orchestrator.
       The current restart script covers a running job. Add the interrupted
       startup case before claiming its live proof.
       Branch: `conductor/ciproxy-mvp-milestone-13-e2e`.
+      Live run of 8 November 2026 on the 500 GiB test host: 0 passed,
+      4 failed, 13 skipped. No real job started. Evidence:
+      `.context/ciproxy-mvp/own-smoke-live-2026-11-08/`.
+  - [ ] Forward the install arguments to the installed agent, as design
+        call 30 says. The installer of `futex-ai/cli-release` downloads
+        the agent and exits with status 0, but never runs
+        `install --token`. A new pull request there builds the step. Its
+        merge waits for the user's answer to item 114.
+  - [ ] Give the guest a working network. Guests get no DNS answer, so the
+        runner cannot reach GitHub. The agent gives a fixed address and
+        gateway on the kernel command line, and the image also runs DHCP
+        on `eth0`. Prove the cause on the test host first. My call, 8
+        November 2026: the agent's boot arguments stay the one source of
+        the guest address and gateway. Then publish a new image release.
+  - [ ] Release a guest that never received its registration. After an
+        agent restart before delivery, the VM stayed Stopping for 600
+        seconds. My call, 8 November 2026: the agent retires a proven
+        unconfigured guest itself, with the GitHub retirement checks and
+        the running-job protection kept. Reason: the host must not depend
+        on a guest that has no registration.
+  - [ ] Finish the first XFS area setup in one install call. A fresh host
+        needed a second install after four growth passes. My call, 8
+        November 2026: the install finishes the measured growth itself.
+  - [ ] Run every scenario again, with the firewall proof and its reboot.
 
 Owner review of pull request #31, round 1, 6 November 2026: the user chose
 fix now for findings 1 to 8 and fix after the merge for finding 9.
@@ -1089,6 +1114,10 @@ UTC RFC 3339, and IDs as strings. Reason: JavaScript loses 64-bit numbers.
       Code status, 6 November 2026: the control plane mounts the router and
       runs API maintenance at startup and every minute. The authenticated
       live probes of the next TODO have not run.
+- [x] Apply item 98 A to the security protocol and GitHub crate guide.
+      State the four App permissions and the Members read requirement
+      for the owner and member checks through the person's sign-in.
+      Branch: `conductor/items-94-b-and-98-a-boat-wallets-and-members-permission`.
 - [ ] Orchestrator: run the live API, repeated-authorization, and GitHub
       install-binding probes in `crates/ciproxy-api/scripts/README.md`.
       Read credentials through `CIPROXY_API_CREDENTIALS_FILE`. Record no
@@ -1173,6 +1202,20 @@ Implementation calls, 6 November 2026:
       Pull request #37 built it. The main preview holds version 1, the
       share code of snapshot `2026-11-06-7484d1b`, which is also the release
       of its `JOB_IMAGE_MANIFEST_PATH`. Production gets its version at launch.
+- [x] Apply item 94 B to the Boat key check and connection API.
+      Return named personal and organization wallets and the likely
+      selection. Prove both key kinds through HTTP with a real PgStore.
+      Update the overflow protocol and regenerate the API types.
+      My call, 8 November 2026: preselect Boat's active wallet, then
+      its first offered wallet. Reason: Boat supplies the likely wallet.
+      Read the wallets without choosing one, so organization keys work.
+      The key check saves no key.
+      Branch: `conductor/items-94-b-and-98-a-boat-wallets-and-members-permission`.
+- [x] Apply review finding 1 E for the wallet key check.
+      Prove active-wallet selection and its first-wallet fallback at
+      the Boat boundary. Keep the existing personal and organization
+      HTTP scenarios.
+      Branch: `conductor/items-94-b-and-98-a-boat-wallets-and-members-permission`.
 - [ ] Orchestrator: Run the three live scenarios with the private credential
       file, as `crates/ciproxy-control-plane/overflow.md` describes.
 
@@ -1664,6 +1707,10 @@ The repository is public from item 70 = E, and the site links to it.
       would lower the claim to about 54%.
 - [ ] Publish the site. Then make the GitHub App public.
 
+- [ ] Move the image-publishing credentials of item 100 = B from the
+      reusable image workflow on the primary branch to the one on protected
+      `main`, after the launch merge puts the repository on `main`.
+
 ## Milestone 28: Verification, commit, review, and pull request
 
 Depends on: every other milestone
@@ -2010,6 +2057,33 @@ Answers of 5 November 2026:
   socket error go. A reconnect before the first handoff still means only
   GitHub's cache. There is no guessed time limit; GitHub's job time limit is
   the backstop. Rejected: A and C.
+- Item 100, B, 8 November 2026: the image-publishing credentials bind to
+  the reusable image workflow on the primary branch until launch, and move
+  to protected `main` at launch. Rejected: A and C.
+- Item 101, B, 8 November 2026: the Machines and Settings page responses
+  gain the facts of the approved mockups, with regenerated types. Rejected:
+  A, C, D, and E.
+- Item 102, A, 8 November 2026: the warm runner control shows the saved
+  number in every state, and the mockup changes to it. Rejected: B and C.
+- Item 113, A, 8 November 2026: the label dialog keeps the fit counts and
+  the placement, and the mockup drops the largest-job figures. Rejected: B.
+- Item 114, A, 8 November 2026: merge the release server changes of
+  `futex-ai/cli-release`, with the image push of each merge, and publish
+  no release. ciproxy pins the merged commit. Rejected: B and C.
+- Item 108, C with D, 8 November 2026: the paid change sends the same
+  pending credit that the preview counted, Stripe computes the amount, and
+  an alert compares each invoice with its quote. A third fix round of pull
+  request #39 builds it. Rejected: A, B, E, and F.
+- Item 109, C, 8 November 2026: the spend limit notice names the budget
+  month and the day Boat resumes, as Jobs does. Rejected: A and B.
+- Item 110, B, 8 November 2026: History loads pages without a total, and
+  the database applies the filters, the order, and a limit. Each read stays
+  bounded, also the live queue. Rejected: A, C, D, and E.
+- Item 111, A, 8 November 2026: the banners keep today's wording, and the
+  mockups change to it. Rejected: B and C.
+- Item 112, D, 8 November 2026: ciproxy saves the actual size choice when a
+  job starts, and Jobs explains what ran from it. Rejected: the other
+  options.
 - Item 103, A now and B in parallel, 8 November 2026: the agent release is
   a full release, so installs and updates take it. A pre-release channel
   for the preview release server follows, so that a test release reaches no
@@ -4453,6 +4527,8 @@ GitHub membership, is rejected.
 
 ### 100. The protected image workflow needs a home before launch
 
+**Answer, 8 November 2026:** B. Move the binding to `main` at launch.
+
 - **Severity:** High. **Effort:** Small.
 - **Source:** Review, pull request #47, round 1, finding 1, and its fix.
 - **Category:** Security.
@@ -4489,6 +4565,8 @@ GitHub membership, is rejected.
 
 ### 101. The Machines and Settings mockups need facts the API lacks
 
+**Answer, 8 November 2026:** B.
+
 - **Severity:** Medium. **Effort:** Large.
 - **Source:** Implementation, Milestone 20, pull request #50, its item 1.
 - **Category:** Mockup.
@@ -4519,6 +4597,8 @@ GitHub membership, is rejected.
   the approved design.
 
 ### 102. The warm runner control has two meanings
+
+**Answer, 8 November 2026:** A.
 
 - **Severity:** Low. **Effort:** Small.
 - **Source:** Implementation, Milestone 20, pull request #50, its item 2.
@@ -4680,6 +4760,9 @@ is now a full release, and the preview release server serves it.
 
 ### 108. Pending credits can change the quoted charge
 
+**Answer, 8 November 2026:** C with D, as a third fix round of the pull
+request #39.
+
 - **Severity:** High. **Likelihood:** Common. **Effort:** Medium.
 - **Source:** Review, pull request #39, after its second fix round.
 - **Category:** Product bug.
@@ -4712,6 +4795,8 @@ is now a full release, and the preview release server serves it.
 
 ### 109. The spend limit notice lacks the day it was reached
 
+**Answer, 8 November 2026:** C.
+
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Implementation, Milestone 22, pull request #51.
 - **Category:** Mockup.
@@ -4733,6 +4818,8 @@ is now a full release, and the preview release server serves it.
 - **Action:** ask the user, because the approved mockup changes.
 
 ### 110. History returns every matching job in one response
+
+**Answer, 8 November 2026:** B.
 
 - **Severity:** Medium. **Likelihood:** Rare. **Effort:** Medium.
 - **Source:** Implementation, Milestone 21, pull request #53, its item 16.
@@ -4762,6 +4849,8 @@ is now a full release, and the preview release server serves it.
 
 ### 111. The banners lack the plan and the passed limit
 
+**Answer, 8 November 2026:** A.
+
 - **Severity:** Low. **Effort:** Medium.
 - **Source:** Implementation, Milestone 21, pull request #53, its item 17.
 - **Category:** Mockup.
@@ -4783,6 +4872,8 @@ is now a full release, and the preview release server serves it.
 - **Action:** ask the user, because the approved mockups change.
 
 ### 112. Jobs notices need facts that the API lacks
+
+**Answer, 8 November 2026:** D.
 
 - **Severity:** Low. **Effort:** Medium.
 - **Source:** Implementation, Milestone 21, pull request #53, its item 18.
@@ -4811,6 +4902,8 @@ is now a full release, and the preview release server serves it.
 
 ### 113. The label dialog lacks the largest-job figures
 
+**Answer, 8 November 2026:** A.
+
 - **Severity:** Low. **Effort:** Small.
 - **Source:** Review, Milestone 21, pull request #53, its item 19.
 - **Category:** Mockup.
@@ -4832,3 +4925,57 @@ is now a full release, and the preview release server serves it.
 - **Recommendation:** A. The protocol requires only the counts and the
   placement.
 - **Action:** ask the user, because the approved mockup changes.
+
+### 114. The release channel change waits for a merge
+
+**Answer, 8 November 2026:** A, given before a correction. Each push to
+`main` of `futex-ai/cli-release` also publishes the release server image
+to `ghcr.io/futex-ai/cli-release-server` as `latest`, `main`, and
+`sha-<commit>`. The last push was on 5 June 2026, because later `main`
+runs failed at Clippy. A merge creates no GitHub release, tag, or crate,
+because `release_always` and `publish` are false. The merges wait for the
+user to confirm A with this correction. The user confirmed A with it on
+8 November 2026.
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Implementation, plan item 103, option B, 8 November 2026.
+- **Category:** Process.
+- **Location:** `futex-ai/cli-release` pull requests #6 and #7, and
+  `deploy/scripts/mirror-release-image.sh`.
+- **Terms:**
+  - **Release channel:** the new `CLI_RELEASE_CHANNEL` setting of the
+    release server. `stable` serves full releases only, and `prerelease`
+    also serves pre-releases.
+  - **Pinned revision:** the `cli-release` commit that
+    `mirror-release-image.sh` builds into the release server image.
+- **Background:** Pull request #7 adds the release channel. Its review
+  found no problem, and every check passed except one Clippy error. That
+  error also fails on `main`, and the user's pull request #6 fixes it.
+  ciproxy builds the server image from the pinned revision, so it needs no
+  published `cli-release` release.
+- **Problem:** The change is not on `main`, so ciproxy has no merged
+  revision to pin. The live run of 8 November 2026 also found that the
+  installer never runs the agent with the install arguments. A third pull
+  request there builds design call 30.
+- **Impact if no action:** After launch, a test release of the agent
+  reaches every customer machine, because both environments follow full
+  releases only. The install command also reports success without an
+  installed machine.
+- **Root question:** How does ciproxy get the reviewed release server
+  changes into its release server image?
+- **Options:**
+  - **A.** Merge #6, then update #7 and merge it when its checks pass.
+    Merge the argument pull request when its review finds no problem.
+    Publish no release. ciproxy then pins the merged commit. Effort: Small.
+  - **B.** Do A, and also merge the release pull request that the release
+    automation opens. This creates a draft GitHub release and its tag.
+    Effort: Small.
+  - **C.** Leave both pull requests open, and pin the reviewed head
+    `55eae44`. The pin then names a commit outside `main`. Effort: Small.
+- **Left out:** Closing #7 and marking each test release as a full release,
+  because that fails the goal after launch.
+- **Wider fix:** None. The channel is the wider fix of item 103.
+- **Recommendation:** A. It puts the reviewed change on `main`, and ciproxy
+  needs no release.
+- **Action:** ask the user, because the user approves each merge and each
+  release in `futex-ai/cli-release`.

@@ -49,3 +49,5 @@ hmac = "0.13.0"
 http-body-util = "0.1.5"
 tower = { version = "0.5.3", features = ["util"] }
 url = "2.5.8"
+rcgen = "0.14.10"
+tokio-rustls = "0.26.6"

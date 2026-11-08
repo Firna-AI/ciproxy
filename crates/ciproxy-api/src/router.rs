@@ -54,6 +54,7 @@ pub(crate) fn routes() -> OpenApiRouter<ApiState> {
         .routes(routes!(links::enable))
         .routes(routes!(overflow::settings))
         .routes(routes!(overflow::summary))
+        .routes(routes!(overflow::wallets))
         .routes(routes!(overflow::connect))
         .routes(routes!(overflow::disconnect))
         .routes(routes!(overflow::save))
