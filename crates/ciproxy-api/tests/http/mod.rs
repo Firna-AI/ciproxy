@@ -95,3 +95,5 @@ mod m20_member_tests;
 mod m20_organization_tests;
 
 mod m20_label_tests;
+
+mod m20_admission_tests;

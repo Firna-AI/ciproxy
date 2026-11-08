@@ -57,3 +57,43 @@ export async function memberFacts(page: Page, width: number): Promise<void> {
       : page.getByText("Not known", { exact: true }),
   );
 }
+
+/**
+ * On Free with one linked organization, the tab offers Team and says that a
+ * new organization waits for it. Add stays an action, and the only linked
+ * organization has no Take out.
+ */
+export async function freeOrganizationFacts(page: Page): Promise<void> {
+  await visible(
+    page.getByText("Run more organizations on Team", { exact: true }),
+  );
+  await visible(page.getByRole("link", { name: "Compare plans", exact: true }));
+  await visible(
+    page.getByText(
+      /its repositories\. On Free, it stays inactive until Team\.$/,
+    ),
+  );
+  const add = page.getByRole("button", {
+    name: "Add an organization",
+    exact: true,
+  });
+  await visible(add);
+  assert.equal(await add.isEnabled(), true, "Add stays an action on Free");
+  assert.equal(
+    await page
+      .getByRole("button", { name: "Take out northstar-labs", exact: true })
+      .count(),
+    0,
+  );
+}
+
+/** On Team, the tab offers no plan and names no hold for a new organization. */
+export async function teamOrganizationFacts(page: Page): Promise<void> {
+  assert.equal(
+    await page
+      .getByText("Run more organizations on Team", { exact: true })
+      .count(),
+    0,
+  );
+  assert.equal(await page.getByText(/stays inactive until Team/).count(), 0);
+}

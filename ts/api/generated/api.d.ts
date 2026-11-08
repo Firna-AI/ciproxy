@@ -2023,12 +2023,14 @@ export interface components {
         };
         /** @description Admin-only non-Boat Settings data. */
         SettingsView: {
-            /** @description Whether the current tier permits another organization. */
+            /** @description Whether the current Admin may start Add, including an inactive link. */
             can_add_organization: boolean;
             /** @description Active labels and their computed machine fit. */
             labels: components["schemas"]["LabelView"][];
             /** @description Workspace name editable by an Admin. */
             name: string;
+            /** @description Whether a new organization at the current linked count would need Team. */
+            new_organization_requires_upgrade: boolean;
             /**
              * Format: int32
              * @description Count displayed on the Members tab.

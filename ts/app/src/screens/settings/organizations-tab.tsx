@@ -2,8 +2,10 @@
 // organizations with their repository access. The workspace owns the plan,
 // the members, the machines, the labels, and the Boat account, and each
 // machine runs the jobs of every organization. Add an organization opens
-// GitHub; on Free, the new organization stays inactive until Team. The last
-// linked organization has no Take out.
+// GitHub for every Admin. When the API says that a new organization would
+// need Team, the caption says that it stays inactive until Team, and with one
+// linked organization a notice offers Team. The last linked organization has
+// no Take out.
 
 import { useState } from "react";
 import { Link } from "expo-router";
@@ -23,7 +25,7 @@ import { useValue } from "../../services/hooks.ts";
 import { settingsServices } from "../../state/settings-services.ts";
 import type { SettingsStore } from "../../state/settings-store.ts";
 import {
-  linkedCount,
+  freeGuidance,
   organizationRows,
   type OrganizationRow,
 } from "../../view/settings-organizations.ts";
@@ -103,17 +105,14 @@ function Organizations({
     opened?.kind === "turn-on"
       ? settings.organizations.find((item) => item.id === opened.row.id)
       : undefined;
-  const free =
-    !settings.can_add_organization &&
-    !context.workspace.organization_limit_exceeded &&
-    linkedCount(settings.organizations) === 1;
+  const guidance = freeGuidance(settings);
   return (
     <>
       <WorkspacePanel
         name={settings.name}
         onRename={() => setOpened({ kind: "rename" })}
       />
-      {free ? <FreeNotice workspaceId={workspaceId} /> : null}
+      {guidance.notice ? <FreeNotice workspaceId={workspaceId} /> : null}
       {shell.failure ? (
         <Notice tone="danger" title={shell.failure.title}>
           {shell.failure.body}
@@ -147,9 +146,7 @@ function Organizations({
       <Text style={text.caption}>
         Add an organization opens GitHub, where you pick the organization and
         its repositories.
-        {settings.can_add_organization
-          ? ""
-          : " On Free, it stays inactive until Team."}
+        {guidance.caption ? " On Free, it stays inactive until Team." : ""}
       </Text>
       {opened?.kind === "rename" ? (
         <RenameDialog

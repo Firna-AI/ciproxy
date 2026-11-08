@@ -12,6 +12,7 @@ import {
   fixtureOrganizations,
   fixtureRepositories,
   inactiveOrganization,
+  organizationIds,
 } from "./m20-fixtures-settings.ts";
 
 type Schemas = components["schemas"];
@@ -39,6 +40,7 @@ export const m20Scenarios = [
   "label-no-fit",
   "label-partial-fit",
   "organizations-single-with-removed",
+  "organizations-free",
   "organizations-inactive-admin",
   "organizations-inactive-both",
   "organizations-suspended",
@@ -64,6 +66,8 @@ export type M20State = {
   revoked: number;
   labelSequence: number;
   revokedTokens: Set<string>;
+  /** A new organization would need Team, as on Free. */
+  newOrganizationRequiresUpgrade: boolean;
 };
 
 export function createM20State(scenario: M20Scenario = "machines"): M20State {
@@ -84,6 +88,7 @@ export function createM20State(scenario: M20Scenario = "machines"): M20State {
     revoked: 0,
     labelSequence: 4,
     revokedTokens: new Set(),
+    newOrganizationRequiresUpgrade: false,
   };
   if (["viewer", "billing", "no-role"].includes(scenario))
     state.session.workspaces = [
@@ -131,6 +136,17 @@ export function createM20State(scenario: M20Scenario = "machines"): M20State {
     );
   if (scenario.startsWith("organizations-inactive"))
     state.organizations.push(inactiveOrganization(scenario.endsWith("both")));
+  // Free runs one organization, so a new one waits for Team; the hold of
+  // both reasons waits for Team too.
+  if (scenario === "organizations-free")
+    state.organizations = state.organizations.filter(
+      (item) => item.id === organizationIds.primary,
+    );
+  if (
+    scenario === "organizations-free" ||
+    scenario === "organizations-inactive-both"
+  )
+    state.newOrganizationRequiresUpgrade = true;
   for (const item of state.organizations)
     state.repositories[item.id] ??= fixtureRepositories(item.login);
   if (scenario === "organizations-suspended" && state.organizations[1])

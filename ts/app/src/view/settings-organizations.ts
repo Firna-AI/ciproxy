@@ -9,6 +9,7 @@
 
 import type { ApiFailure } from "../api/client.ts";
 import type { OrganizationView } from "../api/schema.ts";
+import type { SettingsView } from "../api/settings-schema.ts";
 import { workspaceHref } from "../routing/pages.ts";
 import type { FailureCopy } from "./claim.ts";
 import { formatDay, formatDeadline } from "./format.ts";
@@ -77,6 +78,32 @@ export function linkedCount(
   organizations: readonly OrganizationView[],
 ): number {
   return organizations.filter((item) => item.state !== "removed").length;
+}
+
+export type FreeGuidance = {
+  /** The notice that Free runs one organization, with Compare plans. */
+  notice: boolean;
+  /** The sentence that a new organization stays inactive until Team. */
+  caption: boolean;
+};
+
+/**
+ * The guidance of the tab about an organization added on Free. The API says
+ * whether a new organization would need Team. Then the caption says that it
+ * stays inactive until Team, and while one organization is linked, the
+ * notice offers Team. Add stays an action of every Admin.
+ */
+export function freeGuidance(
+  settings: Pick<
+    SettingsView,
+    "new_organization_requires_upgrade" | "organizations"
+  >,
+): FreeGuidance {
+  const upgrade = settings.new_organization_requires_upgrade;
+  return {
+    notice: upgrade && linkedCount(settings.organizations) === 1,
+    caption: upgrade,
+  };
 }
 
 function repositoriesWord(count: string): string {

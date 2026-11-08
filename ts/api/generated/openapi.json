@@ -16814,12 +16814,13 @@
           "organizations",
           "labels",
           "open_requests",
-          "can_add_organization"
+          "can_add_organization",
+          "new_organization_requires_upgrade"
         ],
         "properties": {
           "can_add_organization": {
             "type": "boolean",
-            "description": "Whether the current tier permits another organization."
+            "description": "Whether the current Admin may start Add, including an inactive link."
           },
           "labels": {
             "type": "array",
@@ -16831,6 +16832,10 @@
           "name": {
             "type": "string",
             "description": "Workspace name editable by an Admin."
+          },
+          "new_organization_requires_upgrade": {
+            "type": "boolean",
+            "description": "Whether a new organization at the current linked count would need Team."
           },
           "open_requests": {
             "type": "integer",

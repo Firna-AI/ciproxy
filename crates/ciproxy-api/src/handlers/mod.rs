@@ -20,6 +20,7 @@ mod machine_jobs;
 mod machine_views;
 pub(crate) mod machines;
 pub(crate) mod members;
+mod organization_admission;
 pub(crate) mod organizations;
 pub(crate) mod overflow;
 mod overflow_views;

@@ -60,6 +60,9 @@ export const parseSettings = parser((value): SettingsView => {
     can_add_organization: boolean(fields.can_add_organization),
     labels: array(fields.labels, readLabel),
     name: string(fields.name),
+    new_organization_requires_upgrade: boolean(
+      fields.new_organization_requires_upgrade,
+    ),
     open_requests: integer(fields.open_requests),
     organizations: array(fields.organizations, readOrganization),
   };

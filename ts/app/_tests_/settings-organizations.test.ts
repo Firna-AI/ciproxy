@@ -4,6 +4,7 @@ import test from "node:test";
 import { inactiveBanner } from "../src/view/settings-organization-banner.ts";
 import {
   addedByText,
+  freeGuidance,
   organizationFailure,
   organizationRows,
 } from "../src/view/settings-organizations.ts";
@@ -228,6 +229,36 @@ test("Turn on names the person who added the organization, and the day it joined
   ] as const;
   for (const [view, text] of cases)
     assert.equal(addedByText(view, "UTC"), text);
+});
+
+test("the Free guidance follows the admission fact of the API, and the notice needs one linked organization", () => {
+  const one = [linked(1, "mokly-ai")];
+  const two = [linked(1, "mokly-ai"), linked(2, "mokly-labs")];
+  const withRemoved = [
+    linked(1, "mokly-ai"),
+    removed(2, "mokly-old", "2026-12-20T10:00:00Z"),
+  ];
+  const guidance = (upgrade: boolean, organizations: typeof one) =>
+    freeGuidance({
+      new_organization_requires_upgrade: upgrade,
+      organizations,
+    });
+  assert.deepEqual(
+    [
+      guidance(true, one),
+      guidance(true, two),
+      guidance(true, withRemoved),
+      guidance(false, one),
+      guidance(false, two),
+    ],
+    [
+      { notice: true, caption: true },
+      { notice: false, caption: true },
+      { notice: true, caption: true },
+      { notice: false, caption: false },
+      { notice: false, caption: false },
+    ],
+  );
 });
 
 test("a refused take-out of the last organization says why", () => {

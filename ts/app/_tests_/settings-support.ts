@@ -150,6 +150,7 @@ export function settingsView(
 ): SettingsView {
   return {
     can_add_organization: true,
+    new_organization_requires_upgrade: false,
     labels: [
       label("60000000-0000-4000-8000-000000000001", { name: "ciproxy" }),
     ],

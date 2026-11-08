@@ -279,6 +279,12 @@ keeps exact costs and runtime throughout the calculations.
 
 ## Machines and Settings facts
 
+Settings keeps the Admin's permission to start Add in `can_add_organization`.
+`new_organization_requires_upgrade` predicts the hold for a new registration.
+It uses the actual stored tier and current non-removed organization count.
+Settings and the workspace choice share that prediction. Retained reinstalls
+continue to use their saved activation and admission authority.
+
 The machine routes fetch the newest supported Linux agent version from the
 configured release host. The router constructs a redirect-free HTTPS client.
 Release failure leaves update status unavailable. Offline health still marks

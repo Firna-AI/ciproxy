@@ -34,8 +34,10 @@ pub struct SettingsView {
     pub labels: Vec<LabelView>,
     /// Count displayed on the Members tab.
     pub open_requests: u32,
-    /// Whether the current tier permits another organization.
+    /// Whether the current Admin may start Add, including an inactive link.
     pub can_add_organization: bool,
+    /// Whether a new organization at the current linked count would need Team.
+    pub new_organization_requires_upgrade: bool,
 }
 
 /// A workspace rename request.

@@ -12,6 +12,10 @@ import {
   type M20Case,
 } from "./m20-browser-fixture.ts";
 import { organizationIds } from "./m20-fixtures-settings.ts";
+import {
+  freeOrganizationFacts,
+  teamOrganizationFacts,
+} from "./m20-browser-settings-facts.ts";
 
 export function organizationCases(origin: string, output: string): M20Case[] {
   return [
@@ -115,7 +119,7 @@ export function organizationCases(origin: string, output: string): M20Case[] {
     },
     {
       name: "organization-retention-layout",
-      async check(page) {
+      async check(page, _context, width) {
         await open(
           page,
           origin,
@@ -130,6 +134,16 @@ export function organizationCases(origin: string, output: string): M20Case[] {
             exact: true,
           }),
         );
+        await teamOrganizationFacts(page);
+        await open(
+          page,
+          origin,
+          "organizations-free",
+          settingsUrl(origin, "organizations"),
+          "Settings",
+        );
+        await freeOrganizationFacts(page);
+        await capture(page, width, output, "organizations-free");
       },
     },
     {

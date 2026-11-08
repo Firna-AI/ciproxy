@@ -42,6 +42,7 @@ export async function settingsReply(
       organizations: state.organizations,
       open_requests: state.members.open_requests,
       can_add_organization: true,
+      new_organization_requires_upgrade: state.newOrganizationRequiresUpgrade,
     };
     return { status: 200, body };
   }

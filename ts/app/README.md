@@ -115,6 +115,10 @@ or unknown tab opens Labels.
   and each organization of the workspace. A linked organization has its
   repository access, Take out, and the action that clears a hold: Choose
   Team or Turn on. The last linked organization has no Take out.
+- Add an organization is an action of every Admin on every tier. When the
+  settings say that a new organization would need Team, the caption under
+  the list says that it stays inactive until Team. With one linked
+  organization, a notice also offers Team with Compare plans.
 - The repository access of an organization is all its private repositories,
   or the selected ones. A public repository cannot be selected.
 - When an owner removes the App from one organization on GitHub, its row

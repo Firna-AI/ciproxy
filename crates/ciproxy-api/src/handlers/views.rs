@@ -88,8 +88,16 @@ pub(super) fn organizations(
     store: &dyn Store,
     workspace: Uuid,
 ) -> ciproxy_store_interface::error::Result<Vec<OrganizationView>> {
-    store
-        .organizations(workspace)?
+    organization_records(store, workspace, store.organizations(workspace)?)
+}
+
+/// Map the already-read registration snapshot without another organization read.
+pub(super) fn organization_records(
+    store: &dyn Store,
+    workspace: Uuid,
+    organizations: Vec<Organization>,
+) -> ciproxy_store_interface::error::Result<Vec<OrganizationView>> {
+    organizations
         .into_iter()
         .map(|value| {
             let local = store.organization_activation(workspace, value.id)?;

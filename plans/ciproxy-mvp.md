@@ -1539,8 +1539,8 @@ remains a separate observed fact. PR #39 keeps ownership of the API files
 `checkout.rs`, `job_fit.rs`, `jobs_live.rs`, and `pages.rs`. Milestone 21
 keeps ownership of the Jobs pages.
 
-- [ ] Complete the remaining Machines and Settings states through
-      Milestones 20a and 20b. Keep Overflow with Milestone 22.
+- [ ] Complete the remaining Machines and Settings states and the review
+      fixes below. Keep Overflow with Milestone 22.
       Branch: `conductor/m20-machines-and-settings-ui`.
       Verification evidence: `.context/ciproxy-mvp-m20/verification.md`.
   - [x] Apply item 102 = A to the approved machine mockups. Show the saved
@@ -1647,6 +1647,31 @@ The existing Machines and Settings screens keep their controls and flows.
 - [ ] Commit, push, review the new work, fix confirmed findings, and update
       ready PR #50 against `calummoore/ci-proxy-load-balancer`. Do not merge
       the pull request. Keep the wider MVP plan for the other milestones.
+      Branch: `conductor/m20-machines-and-settings-ui`.
+
+## Milestone 20c: Settings admission fact review fix
+
+Depends on: 20a
+
+- [x] Fix confirmed review finding 5 with option B. Supply the explicit
+      new-organization upgrade fact in Settings, with the existing shared
+      prediction. Preserve add permission and retained admission. Regenerate
+      types and test reachable states through HTTP with a real `PgStore`.
+      Branch: `conductor/m20-machines-and-settings-ui`.
+
+## Milestone 20d: Dashboard UI: Free organization guidance review fix
+
+Tags: ui
+
+Depends on: 20c
+
+- [x] Render the approved Free notice and explanation from the admission
+      fact. Keep Add available. Test the view and smoke-test the Free page
+      at 1440, 720, and 390 pixels. Finding 4 needs no source change.
+      Branch: `conductor/m20-machines-and-settings-ui`.
+- [ ] Run the combined gate, commit and push the finding 5 fix, then
+      re-review once. This is the second branch fix round. Keep the wider
+      plan, update PR #50, and report the final head without merging it.
       Branch: `conductor/m20-machines-and-settings-ui`.
 
 ## Milestone 21: Dashboard UI: Jobs, Savings, and billing
