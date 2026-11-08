@@ -1581,6 +1581,55 @@ Depends on: 21c
       this second fix round, as the review skill requires.
       Branch: `conductor/m21-jobs-savings-and-billing-ui`.
 
+## Milestone 21e: Owner review cleanup of mockup data
+
+Tags: mockup
+
+Depends on: 21d
+
+The owner authorized this named fix round on 8 November 2026. It does not
+reopen the earlier automatic review rounds. The accepted banner wording
+already settles owner finding 4 in commit `80ad02d`.
+
+- [x] Remove the unused ended-payment date left by the banner alignment.
+      Confirm that rendered mockups stay the same, and run the mockup check.
+      Branch: `conductor/m21-jobs-savings-and-billing-ui`.
+
+## Milestone 21f: Owner review fixes for dashboard state
+
+Tags: ui
+
+Depends on: 21e
+
+- [x] Apply owner finding 2 C: the shell uses the newest page response's
+      banner. Remove duplicate banner reads on pages that return it.
+      Preserve endpoint reads for pages without that response and the
+      Organizations scope. Prove the payment-polling regression first.
+      Branch: `conductor/m21-jobs-savings-and-billing-ui`.
+- [x] Apply owner finding 3 B: the shared Checkout return model receives
+      the current role and gives only an Admin the machine action. Preserve
+      every other action and its look. Prove both Billing cases first.
+      Branch: `conductor/m21-jobs-savings-and-billing-ui`.
+- [x] Apply owner finding 5 A: derive the explicit review query from its
+      generated operation and check its serialized keys against that type.
+      Keep the request and the existing URL assertions unchanged.
+      Branch: `conductor/m21-jobs-savings-and-billing-ui`.
+- [x] Run app tests, the mockup check, browser checks at 1440, 720, and 390
+      pixels, and the complete gate with the store database. Commit, push,
+      and update pull request #53. Do not merge it.
+      Branch: `conductor/m21-jobs-savings-and-billing-ui`.
+
+Owner finding 1 stays in the existing Milestone 21 integration TODO. Start
+it only after the owner's notice that pull request #39 merged into the
+primary branch. Then merge the primary, regenerate the API files, and use
+that finding's refusal and retry test list for the complete integration.
+
+Design calls, 8 November 2026: a failed native page read keeps the last
+banner, and its page shows the failure. It does not suppress a successful
+banner response from another read. Completed responses keep their read
+start order. A Checkout view that makes no native read keeps the endpoint
+fallback, so its banner remains available.
+
 ## Milestone 22: Dashboard UI: Boat
 
 Tags: ui

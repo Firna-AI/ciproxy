@@ -7,15 +7,14 @@
   the handoff of the Jobs pages. Extended on 2026-11-08 with the short
   resource of a label, from finding 14 of the second review round of that
   branch. A second options check on 2026-11-08 added the rules of F and
-  option G.
+  option G. The check of owner finding 4 of pull request #53 added the
+  mockup work of D on 2026-11-08.
 - **Source:** Implementation.
 - **Category:** Mockup.
-- **Location:** `docs/mockups/src/screens/jobs/live-notices.tsx:62`,
-  `docs/mockups/src/screens/jobs/live-notices.tsx:66`,
-  `docs/mockups/src/screens/jobs/live-notices.tsx:82`,
-  `docs/mockups/src/screens/jobs/live-notices.tsx:97`,
-  `docs/mockups/src/screens/jobs/job-detail.tsx:67`,
-  `crates/ciproxy-api/src/wire/jobs.rs:235`,
+- **Location:** `docs/mockups/src/screens/jobs/live-notices.tsx:62`, `:66`,
+  `:82`, and `:97`, `docs/mockups/src/screens/jobs/job-detail.tsx:67`,
+  `docs/mockups/src/entries/app/jobs/current-contract/states.mockup.tsx:10`,
+  `docs/mockups/README.md:89`, `crates/ciproxy-api/src/wire/jobs.rs:235`,
   `crates/ciproxy-api/src/wire/job_overflow.rs:11`,
   `crates/ciproxy-api/src/wire/job_fit.rs:23`,
   `crates/ciproxy-api/src/handlers/job_fit.rs:78`,
@@ -61,17 +60,15 @@
       `docs/mockups/src/fixtures/sizes.ts:45-47`. So the scene names a
       short resource only in this story, and it gives no rule for a cause.
   - Suspension: `JobVisibility` at `wire/jobs.rs:235` gives the
-    organization, `suspended`, `removed`, and a GitHub URL. The
-    installation lookup at
-    `crates/ciproxy-github/src/installation_state.rs:44-49` reads
+    organization, `suspended`, `removed`, and a GitHub URL. The installation
+    lookup at `crates/ciproxy-github/src/installation_state.rs:44-49` reads
     `suspended_at` from GitHub, and keeps only a flag at `:82`. The code
-    trusts that lookup over the order of the events, at `:15`. The
-    installation webhook also names a `sender`, the owner or member who
-    caused the event, by a numeric ID only, at
-    `crates/ciproxy-github/src/app/webhook.rs:63-67` and `:80`. A
-    suspension saves no person and no day. `docs/protocol/app-removal.md:98`
-    asks for a notice that names the organization and links to GitHub, and
-    the product meets it.
+    trusts that lookup over the order of the events, at `:15`. The installation
+    webhook also names a `sender`, the owner or member who caused the event,
+    by a numeric ID only, at `crates/ciproxy-github/src/app/webhook.rs:63-67`
+    and `:80`. A suspension saves no person and no day.
+    `docs/protocol/app-removal.md:98` asks for a notice that names the
+    organization and links to GitHub, and the product meets it.
   - `docs/protocol/security.md:253-254` keeps the record of a person only
     while the person has a role or an open request for access. The person
     who suspended the App can have no role in the workspace.
@@ -141,13 +138,10 @@
     place that the label forbids or that takes no jobs, as in "No machine
     of yours and no Boat size fits a job of 32 vCPU, 128 GB of memory, and
     200 GB of free disk." It never names a short resource. This copy is in
-    `ts/app/src/view/jobs-notices.ts`,
-    `ts/app/src/view/jobs-boat-notices.ts`,
-    `ts/app/src/view/jobs-label-notices.ts`, and
-    `ts/app/src/view/jobs-detail.ts`, and the current-contract scenes show
-    it. Each sentence is true.
-- **Problem:** The known-data scenes and the product disagree on these four
-  facts.
+    `jobs-notices.ts`, `jobs-boat-notices.ts`, `jobs-label-notices.ts`, and
+    `jobs-detail.ts` of `ts/app/src/view/`, and the current-contract scenes
+    show it. Each sentence is true.
+- **Problem:** The known-data scenes and the product disagree on four facts.
 - **Impact if no action:** The mockups keep two versions of these notices,
   and a person cannot see who suspended the App, why Boat refused, that a
   job ran on a smaller size than its label, or which resource of a waiting
@@ -170,8 +164,7 @@
     workspace, and `docs/protocol/security.md:253-254` keeps the record of
     a person only while a role or an open request exists. The work spans
     the GitHub installation state, the overflow state, the start record,
-    the wire, the generated types, the app, and the mockups. Effort:
-    Large.
+    the wire, the generated types, the app, and the mockups. Effort: Large.
   - **C.** Save only the `StartReason` of the Boat start, so the job page
     can name the largest-size fallback, and accept the current-contract
     copy for the other facts. Risk: the start reason is the intent of the
@@ -192,10 +185,9 @@
     next to `retry_at`, and word it in the live notice, such as a full
     start limit of the Boat plan, or no free Boat capacity. Show no "Open
     Boat" action, and leave out the person and the day of a suspension.
-    This drops the shared assumption that the facts go together:
-    each fact has its own source, cost, and risk. Cost: a field in the
-    stored overflow state, a wire field, and copy for five reasons.
-    Effort: Large.
+    This drops the shared assumption that the facts go together: each fact
+    has its own source, cost, and risk. Cost: a field in the stored overflow
+    state, a wire field, and copy for five reasons. Effort: Large.
   - **F.** Add the short resource to the API. For each waiting label that
     nothing fits, the API names the requested resources that the places do
     not cover: vCPU, memory, or free disk. The fit rules of the scaler give
@@ -210,20 +202,18 @@
       machine times 2 vCPU and 8 GB. The copy then says "takes a job of",
       not "has".
     - Keep the full-request copy when the set of a kind is empty, because
-      each resource has a place that covers it but no place covers all of
-      them.
+      each resource has a place that covers it but no place covers all of them.
 
     The live notice then names the short resource of each kind. F covers
-    the notice of a label with `nothing_fits`. The notice of the
-    largest-size fallback keeps its full request. Accept the
-    current-contract copy for the other three facts. F adds behaviour at
-    the boundary, so it needs a protocol line, a wire field, generated
-    types, the app, and the mockups. Risk: the cause names what must
-    change, not what fits, so a label can still fit nothing after a person
-    lowers the named resources. F does not depend on another option, so
-    the user can take it alone or with B, C, D, or E. Taken with C, D, or
-    E, F replaces their acceptance of the current-contract copy for the
-    short resource. Effort: Medium.
+    the notice of a label with `nothing_fits`. The notice of the largest-size
+    fallback keeps its full request. Accept the current-contract copy for the
+    other three facts. F adds behaviour at the boundary, so it needs a
+    protocol line, a wire field, generated types, the app, and the mockups.
+    Risk: the cause names what must change, not what fits, so a label can
+    still fit nothing after a person lowers the named resources. F does not
+    depend on another option, so the user can take it alone or with B, C, D,
+    or E. Taken with C, D, or E, F replaces their acceptance of the
+    current-contract copy for the short resource. Effort: Medium.
   - **G.** Add the offer of each place to the API. For each waiting label
     that nothing fits, the API names the largest job that one place of
     each permitted kind takes:
@@ -296,5 +286,15 @@
   the safer add-on than F, because each number of G is a fact of one place,
   and F first needs its four rules. The first pass recommended C.
 - **User answer, 2026-11-08:** D. Rejected: A, B, C, E, F, and G.
+- **Mockup work of D:** The known-data notices at `live-notices.tsx:62-66`,
+  `:82-83`, and `:97` take the current-contract copy, with no "Open Boat"
+  action. The caption at `job-detail.tsx:67` stays the target of the fit.
+  The rationale at `states.mockup.tsx:10` drops the person and the day of a
+  suspension, the reason of a Boat refusal, and the Boat account address
+  from the facts for which the known-data pages stay the target. It keeps
+  the total of the day, the tier name, and the routing reason, and it drops
+  the fit when the API gives its kind. `docs/mockups/README.md:89` says that
+  known-data scenes show every fact. Name these notices there beside the
+  banner, and drop the fit from its Jobs list too.
 - **Action:** fix after merge, apply D, because it is backend work for a
   separate workspace, outside the UI branch.

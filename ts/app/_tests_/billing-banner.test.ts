@@ -4,12 +4,20 @@ import test from "node:test";
 import type { ApiResult } from "../src/api/client.ts";
 import type { PageBanner, PageBannerView } from "../src/api/billing-types.ts";
 import { parsePageBannerView } from "../src/api/banner-reader.ts";
-import { bannerStore } from "../src/state/billing.ts";
+import { bannerStore, usageStore } from "../src/state/billing.ts";
 import { createBannerStore } from "../src/state/billing-banner.ts";
 import { bannerModel } from "../src/view/banner.ts";
 import { billingHref, billingPaths } from "../src/view/billing-routes.ts";
 import { workspaceId } from "../scripts/fixtures-core.ts";
-import { bannerView, teamOffer, unavailable } from "./billing-support.ts";
+import {
+  bannerView,
+  pendingUsagePage,
+  selection,
+  signedInWith,
+  teamOffer,
+  unavailable,
+  usagePage,
+} from "./billing-support.ts";
 import { appWith, deferred, response, settled } from "./support.ts";
 
 const workspace = { id: workspaceId, name: "mokly-ai" };
@@ -124,6 +132,10 @@ test("a page change reads the banner unless a read just ended", async () => {
     response(bannerView(failed)),
     response(unavailable, 503),
     response(bannerView(null)),
+    response(usagePage({ banner: failed })),
+    response(unavailable, 503),
+    response(unavailable, 503),
+    response(usagePage()),
   );
   const store = bannerStore(app, workspaceId);
   await store.visit();
@@ -141,6 +153,85 @@ test("a page change reads the banner unless a read just ended", async () => {
     banner: null,
     refreshFailure: null,
   });
+  const usage = usageStore(app, workspaceId);
+  await usage.load();
+  await usage.load();
+  assert.deepEqual(store.state.get(), {
+    status: "ready",
+    banner: failed,
+    refreshFailure: null,
+  });
+  await store.refresh();
+  const refreshFailed = store.state.get();
+  assert.equal(
+    refreshFailed.status === "ready" && refreshFailed.refreshFailure?.kind,
+    "problem",
+  );
+  await usage.load();
+  assert.deepEqual(store.state.get(), {
+    status: "ready",
+    banner: null,
+    refreshFailure: null,
+  });
+  for (const banner of [null, failed]) {
+    const native = bannerStore(appWith().app, workspaceId);
+    const first = deferred<ApiResult<PageBannerView>>();
+    const older = native.readPage(
+      () => first.promise,
+      (page) => page.banner,
+    );
+    await native.readPage<PageBannerView>(
+      async () => ({ ok: false, failure: { kind: "network" } }),
+      (page) => page.banner,
+    );
+    first.resolve({ ok: true, value: { banner } });
+    await older;
+    assert.deepEqual(native.state.get(), {
+      status: "ready",
+      banner,
+      refreshFailure: null,
+    });
+  }
+});
+
+test("a poll that ends a payment replaces the old banner without a page change", async () => {
+  const soft: PageBanner = {
+    kind: "soft_limit",
+    action: "choose_plan",
+    offer: teamOffer,
+  };
+  const pending = pendingUsagePage();
+  pending.banner = soft;
+  const confirmed = usagePage({ current: teamOffer, crossing_day: null });
+  confirmed.status.selection = selection("team");
+  confirmed.status.subscription = "active";
+  const { app, calls, schedule } = await signedInWith(
+    "admin",
+    response(bannerView(soft)),
+    response(pending),
+    response(confirmed),
+  );
+  const banner = bannerStore(app, workspaceId);
+  await banner.visit();
+  const usage = usageStore(app, workspaceId);
+  await usage.load();
+  const stop = usage.watch();
+  schedule.fire();
+  await settled();
+  stop();
+  assert.deepEqual(banner.state.get(), {
+    status: "ready",
+    banner: null,
+    refreshFailure: null,
+  });
+  assert.deepEqual(
+    calls.map((call) => `${call.init.method} ${call.url}`),
+    [
+      `GET /api/workspaces/${workspaceId}/banner`,
+      `GET /api/workspaces/${workspaceId}/billing`,
+      `GET /api/workspaces/${workspaceId}/billing`,
+    ],
+  );
 });
 
 test("a failed first read shows the failure, and a newer read wins over an older one", async () => {
@@ -173,6 +264,28 @@ test("a failed first read shows the failure, and a newer read wins over an older
     status: "failed",
     failure: { kind: "network" },
   });
+  for (const firstSource of ["page", "endpoint"] as const) {
+    const held = deferred<Response>();
+    const pageFirst = firstSource === "page";
+    const { app } = await signedInWith(
+      "admin",
+      held.promise,
+      response(pageFirst ? bannerView(null) : usagePage()),
+    );
+    const banner = bannerStore(app, workspaceId);
+    const usage = usageStore(app, workspaceId);
+    const older = pageFirst ? usage.load() : banner.refresh();
+    await (pageFirst ? banner.refresh() : usage.load());
+    held.resolve(
+      response(pageFirst ? usagePage({ banner: failed }) : bannerView(failed)),
+    );
+    await older;
+    assert.deepEqual(
+      banner.state.get(),
+      { status: "ready", banner: null, refreshFailure: null },
+      `The older ${firstSource} read must not replace the newer banner`,
+    );
+  }
 });
 
 test("the Organizations scope asks for its own banner", async () => {

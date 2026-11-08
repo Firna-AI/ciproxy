@@ -1,8 +1,8 @@
 // The billing stores of one workspace, built from the services of the
 // document: Plan and usage, Plans, and the banner of each scope, one of each
-// for each workspace. A read that shows no pending payment ends the open
-// payment that this tab saved for the workspace. billing-flows.ts builds the
-// stores of the pages that pay, review, or return.
+// for each workspace. Native page reads also publish the page banner. A read
+// that shows no pending payment ends the open payment that this tab saved.
+// billing-flows.ts builds the stores of the pages that pay, review, or return.
 
 import { createBannerEndpoint, type BannerScope } from "../api/banner.ts";
 import {
@@ -59,9 +59,13 @@ export function usageStore(
   return usageCache(services, workspaceId, () =>
     createPageStore({
       read: () =>
-        billingEndpoints(services)
-          .usage(workspaceId)
-          .then(forgetEnded(services, workspaceId, (page) => page.status)),
+        bannerStore(services, workspaceId).readPage(
+          () =>
+            billingEndpoints(services)
+              .usage(workspaceId)
+              .then(forgetEnded(services, workspaceId, (page) => page.status)),
+          (page) => page.banner,
+        ),
       report: services.session.report,
       waits: (page) => statusWaits(page.status),
       timers: services.env.timers,
@@ -77,11 +81,15 @@ export function plansStore(
   return plansCache(services, workspaceId, () =>
     createPageStore({
       read: () =>
-        billingEndpoints(services)
-          .plans(workspaceId)
-          .then(
-            forgetEnded(services, workspaceId, (page) => page.usage.status),
-          ),
+        bannerStore(services, workspaceId).readPage(
+          () =>
+            billingEndpoints(services)
+              .plans(workspaceId)
+              .then(
+                forgetEnded(services, workspaceId, (page) => page.usage.status),
+              ),
+          (page) => page.usage.banner,
+        ),
       report: services.session.report,
       waits: (page) => statusWaits(page.usage.status),
       timers: services.env.timers,
@@ -104,7 +112,7 @@ export function bannerStore(
   );
 }
 
-/** Read every shown billing value of the workspace again after a change. */
+/** Read the billing pages and their shared banner again after a change. */
 export async function billingSettled(
   services: AppServices,
   workspaceId: string,
@@ -113,7 +121,6 @@ export async function billingSettled(
   await Promise.all([
     usageStore(services, workspaceId).load(),
     plans.state.get().status === "loading" ? null : plans.load(),
-    bannerStore(services, workspaceId).refresh(),
   ]);
 }
 

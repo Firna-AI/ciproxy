@@ -2,10 +2,13 @@
 // exact session only. The page never says that a payment succeeded before
 // the server confirms it. After the confirmation, Plan and usage gives the
 // plan, its capacity, and its new period. A payment that did not finish, or
-// a Checkout that is still open, shows the warning look of the mockup.
+// a Checkout that is still open, shows the warning look of the mockup. After
+// a confirmed payment, only an Admin gets Add machines, because only an Admin
+// adds machines.
 
 import type { PaymentOutcome, PlanUsagePage } from "../api/billing-types.ts";
 import { failureStatus } from "../api/client.ts";
+import type { WorkspaceRole } from "../api/schema.ts";
 import { workspaceHref } from "../routing/pages.ts";
 import type { ReturnSnapshot } from "../state/billing-return.ts";
 import { askPayer, capacityText, tierNames } from "./billing-format.ts";
@@ -37,6 +40,7 @@ function settled(
   outcome: PaymentOutcome,
   usage: PlanUsagePage | null,
   workspace: Workspace,
+  role: WorkspaceRole,
 ): ReturnView {
   const usageLink: ReturnAction = {
     kind: "link",
@@ -69,18 +73,25 @@ function settled(
     case "confirmed": {
       const paid =
         usage !== null && usage.status.selection.tier !== "free" ? usage : null;
-      const machines: ReturnAction = {
-        kind: "link",
-        label: "Add machines",
-        href: workspaceHref("machines", workspace.id),
-        primary: true,
-      };
+      // Only an Admin adds machines, so Billing keeps only Plan and usage.
+      const next: readonly ReturnAction[] =
+        role === "admin"
+          ? [
+              {
+                kind: "link",
+                label: "Add machines",
+                href: workspaceHref("machines", workspace.id),
+                primary: true,
+              },
+              usageLink,
+            ]
+          : [usageLink];
       if (paid === null) {
         return result(
           "done",
           "Stripe confirmed your payment",
           "Plan and usage shows the new plan. Stripe emails the receipt.",
-          [machines, usageLink],
+          next,
         );
       }
       const model = usageModel(paid, workspace.name);
@@ -89,7 +100,7 @@ function settled(
         tone: "done",
         title: `${workspace.name} is on ${tierNames[paid.status.selection.tier]}`,
         body: `${capacityText(paid.current)}. Stripe emails the receipt.`,
-        actions: [machines, usageLink],
+        actions: next,
         meter: {
           model: { ...model.starts, label: "Starts this period" },
           detail: `The ${tierNames[paid.status.selection.tier]} period runs ${model.period}.`,
@@ -147,6 +158,8 @@ export function returnView(
   snapshot: ReturnSnapshot,
   usage: PlanUsagePage | null,
   workspace: Workspace,
+  /** The role of the latest session read. Only an Admin adds machines. */
+  role: WorkspaceRole,
 ): ReturnView {
   if (snapshot.status === "confirming") {
     return snapshot.still
@@ -188,5 +201,5 @@ export function returnView(
           meter: null,
         };
   }
-  return settled(snapshot.outcome, usage, workspace);
+  return settled(snapshot.outcome, usage, workspace, role);
 }

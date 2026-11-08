@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 
+import { apiPrefix } from "../src/api/client.ts";
+import { routePath } from "../src/api/route-path.ts";
 import {
   billingHref,
   checkoutHref,
   plansHref,
 } from "../src/view/billing-routes.ts";
 import { jobsHref } from "../src/view/jobs-links.ts";
-import { control, visible } from "./browser-fixture.ts";
+import { control, facts, visible } from "./browser-fixture.ts";
 import { absent, capturePage } from "./browser-pages-helpers.ts";
 import { visibleCostRows } from "./browser-pages-savings-screens.ts";
 import { baseSelection } from "./fixtures-billing.ts";
@@ -66,6 +68,22 @@ export function bannerJourneys(
           page.getByText("Northstar passed a limit of its plan", {
             exact: true,
           }),
+        );
+        await capturePage(page, output, "banner-priority-usage", width);
+        const bannerPath =
+          apiPrefix +
+          routePath("/workspaces/{workspace_id}/banner", {
+            workspace_id: workspaceId,
+          });
+        assert.deepEqual(
+          (await facts(origin)).filter(
+            (fact) =>
+              fact.kind === "api" &&
+              fact.method === "GET" &&
+              fact.path === bannerPath,
+          ),
+          [],
+          "Native Jobs, Savings, and Plan and usage visits must send no GET /banner.",
         );
       },
     },

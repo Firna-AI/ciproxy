@@ -5,13 +5,29 @@ import type { ApiResult } from "../src/api/client.ts";
 import type {
   CheckoutReturnPage,
   PaymentOutcome,
+  PlanUsagePage,
 } from "../src/api/billing-types.ts";
+import type { WorkspaceRole } from "../src/api/schema.ts";
+import { workspaceHref } from "../src/routing/pages.ts";
 import {
   confirmingAnswers,
   createReturnStore,
   returnPollInterval,
+  type ReturnSnapshot,
 } from "../src/state/billing-return.ts";
-import { conflict, unavailable } from "./billing-support.ts";
+import {
+  returnView,
+  type ReturnAction,
+} from "../src/view/billing-return-page.ts";
+import { billingHref } from "../src/view/billing-routes.ts";
+import { workspaceId } from "../scripts/fixtures-core.ts";
+import {
+  conflict,
+  selection,
+  teamOffer,
+  unavailable,
+  usagePage,
+} from "./billing-support.ts";
 import type { Visibility } from "../src/state/poller.ts";
 import { deferred, manualSchedule, settled } from "./support.ts";
 
@@ -168,4 +184,59 @@ test("Try again after a failed check keeps one tab watcher, and leaving removes 
   assert.equal(watchers(), 1);
   store.stop();
   assert.equal(watchers(), 0);
+});
+
+test("after a confirmed payment, only an Admin gets Add machines", () => {
+  const paidTeam = usagePage({ current: teamOffer, crossing_day: null });
+  paidTeam.status.selection = selection("team");
+  const workspace = { id: workspaceId, name: "mokly-ai" };
+  const confirmed: ReturnSnapshot = {
+    status: "settled",
+    outcome: { state: "confirmed" },
+  };
+  const openUsage: ReturnAction = {
+    kind: "link",
+    label: "Open plan and usage",
+    href: billingHref(workspaceId),
+    primary: false,
+  };
+  const addMachines: ReturnAction = {
+    kind: "link",
+    label: "Add machines",
+    href: workspaceHref("machines", workspaceId),
+    primary: true,
+  };
+  const cases: readonly {
+    name: string;
+    role: WorkspaceRole;
+    usage: PlanUsagePage | null;
+    actions: readonly ReturnAction[];
+  }[] = [
+    {
+      name: "Billing, paid Team",
+      role: "billing",
+      usage: paidTeam,
+      actions: [openUsage],
+    },
+    {
+      name: "Billing, no usage read",
+      role: "billing",
+      usage: null,
+      actions: [openUsage],
+    },
+    {
+      name: "Admin, paid Team",
+      role: "admin",
+      usage: paidTeam,
+      actions: [addMachines, openUsage],
+    },
+  ];
+  // One comparison of the whole table shows every row that differs.
+  assert.deepEqual(
+    cases.map(({ name, role, usage }) => {
+      const view = returnView(confirmed, usage, workspace, role);
+      return { name, actions: view.kind === "result" ? view.actions : null };
+    }),
+    cases.map(({ name, actions }) => ({ name, actions })),
+  );
 });

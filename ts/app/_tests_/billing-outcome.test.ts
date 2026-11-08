@@ -15,7 +15,6 @@ import { outcomeModel } from "../src/view/billing-outcome.ts";
 import { moveToFreeFailure } from "../src/view/billing-uncertain.ts";
 import { workspaceId } from "../scripts/fixtures-core.ts";
 import {
-  bannerView,
   conflict,
   offer,
   selection,
@@ -70,7 +69,6 @@ test("a lost answer after an applied choice says only what the next Plan and usa
     response(teamUsage()),
     new Error("connection lost"),
     held.promise,
-    response(bannerView()),
   );
   const usage = usageStore(app, workspaceId);
   await usage.load();
@@ -101,7 +99,6 @@ test("a lost answer after an applied choice says only what the next Plan and usa
       `GET /api/workspaces/${workspaceId}/billing`,
       `PUT /api/workspaces/${workspaceId}/billing/add-ons`,
       `GET /api/workspaces/${workspaceId}/billing`,
-      `GET /api/workspaces/${workspaceId}/banner`,
     ],
   );
 });
@@ -113,10 +110,8 @@ test("Try again after an applied choice shows the choice as current, not a payme
     new Error("connection lost"),
     // The read after the lost answer came before the change took effect.
     response(teamUsage()),
-    response(bannerView()),
     response(conflict, 409),
     response(teamUsage(1)),
-    response(bannerView()),
   );
   const usage = usageStore(app, workspaceId);
   await usage.load();

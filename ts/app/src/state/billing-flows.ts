@@ -28,6 +28,7 @@ import { createPaymentStore, type PaymentStore } from "./billing-payment.ts";
 import { createReturnStore, type ReturnStore } from "./billing-return.ts";
 import { createReviewStore, type ReviewStore } from "./billing-review.ts";
 import {
+  bannerStore,
   billingEndpoints,
   billingSettled,
   paymentGate,
@@ -65,7 +66,11 @@ export function createReview(
   return createReviewStore({
     initial,
     read: (wanted) =>
-      billingEndpoints(services).review(workspaceId, reviewRequest(wanted)),
+      bannerStore(services, workspaceId).readPage(
+        () =>
+          billingEndpoints(services).review(workspaceId, reviewRequest(wanted)),
+        (page) => page.banner,
+      ),
     report: services.session.report,
   });
 }
@@ -77,14 +82,18 @@ export function createCheckoutReturn(
 ): ReturnStore {
   const { tab } = services.env;
   const store: ReturnStore = createReturnStore({
-    reconcile: async () => {
-      const result = await billingEndpoints(services).checkoutReturn(
-        workspaceId,
-        sessionId,
-      );
-      if (result.ok) recordOutcome(tab, workspaceId, result.value.outcome);
-      return result;
-    },
+    reconcile: () =>
+      bannerStore(services, workspaceId).readPage(
+        async () => {
+          const result = await billingEndpoints(services).checkoutReturn(
+            workspaceId,
+            sessionId,
+          );
+          if (result.ok) recordOutcome(tab, workspaceId, result.value.outcome);
+          return result;
+        },
+        (page) => page.banner,
+      ),
     mutate: services.session.mutate,
     timers: services.env.timers,
     visibility: services.env.visibility,

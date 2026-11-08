@@ -1,8 +1,9 @@
-// The one banner of a workspace, as GET /banner gives it. Each page change
-// reads it again, unless a read just finished, and a billing change reads it
-// at once. A failed read keeps the last banner and shows the failure; a
-// failed first read shows the failure alone, so the page never hides a
-// payment problem behind silence. A newer read always wins over an older one.
+// The one banner of a workspace and scope. Native page responses supply the
+// page banner; other pages and Organizations use GET /banner with brief
+// reuse. A failed native read keeps the last banner and its page shows the
+// failure. An endpoint failure has its own notice. Accepted responses share
+// read-start order, so a newer accepted response wins. Native failures publish
+// nothing and cannot suppress an older successful response.
 
 import type { ApiFailure, ApiResult } from "../api/client.ts";
 import type { PageBanner, PageBannerView } from "../api/billing-types.ts";
@@ -21,8 +22,13 @@ export type BannerStore = {
   readonly state: Store<BannerSnapshot>;
   /** Read for a page change, unless a read is on its way or just finished. */
   visit(): Promise<void>;
-  /** Read now, such as after a payment or a plan change. */
+  /** Retry the fallback endpoint now. */
   refresh(): Promise<void>;
+  /** Publish a native page banner without changing its result or failure. */
+  readPage<T>(
+    read: () => Promise<ApiResult<T>>,
+    select: (page: T) => PageBannerView["banner"],
+  ): Promise<ApiResult<T>>;
 };
 
 /** A read that finished this recently answers a page change too. */
@@ -36,8 +42,18 @@ export function createBannerStore(options: {
   const { read, report, now } = options;
   const state = createStore<BannerSnapshot>({ status: "loading" });
   let latest = 0;
+  let accepted = 0;
   let pending: Promise<void> | null = null;
   let readAt: number | null = null;
+
+  const publish = (banner: PageBannerView["banner"]): void => {
+    readAt = now();
+    state.set({
+      status: "ready",
+      banner: banner ?? null,
+      refreshFailure: null,
+    });
+  };
 
   const refresh = (): Promise<void> => {
     latest += 1;
@@ -45,16 +61,13 @@ export function createBannerStore(options: {
     const request = read()
       .then(report)
       .then((result) => {
-        if (mine !== latest) return;
-        readAt = now();
+        if (mine <= accepted) return;
+        accepted = mine;
         if (result.ok) {
-          state.set({
-            status: "ready",
-            banner: result.value.banner ?? null,
-            refreshFailure: null,
-          });
+          publish(result.value.banner);
           return;
         }
+        readAt = now();
         const current = state.get();
         state.set(
           current.status === "ready"
@@ -72,6 +85,18 @@ export function createBannerStore(options: {
   return {
     state,
     refresh,
+    async readPage(read, select) {
+      latest += 1;
+      const mine = latest;
+      // An older endpoint cannot answer a later fallback visit after this read.
+      pending = null;
+      const result = await read();
+      if (result.ok && mine > accepted) {
+        accepted = mine;
+        publish(select(result.value));
+      }
+      return result;
+    },
     visit() {
       if (pending !== null) return pending;
       if (readAt !== null && now() - readAt < bannerFreshFor) {

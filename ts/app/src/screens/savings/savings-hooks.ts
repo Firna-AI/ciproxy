@@ -10,6 +10,7 @@ import type { SavingsRange } from "../../api/savings-types.ts";
 import { createSavingsEndpoints } from "../../api/savings.ts";
 import { useServices } from "../../services/context.tsx";
 import { useValue } from "../../services/hooks.ts";
+import { bannerStore } from "../../state/billing.ts";
 import {
   createSavingsStore,
   type SavingsSnapshot,
@@ -20,7 +21,11 @@ export function useSavings(workspaceId: string, range: SavingsRange) {
   const store = useMemo(() => {
     const endpoints = createSavingsEndpoints(services.api);
     return createSavingsStore({
-      read: (asked) => endpoints.report(workspaceId, asked),
+      read: (asked) =>
+        bannerStore(services, workspaceId).readPage(
+          () => endpoints.report(workspaceId, asked),
+          (page) => page.banner,
+        ),
       report: services.session.report,
       timers: services.env.timers,
       visibility: services.env.visibility,

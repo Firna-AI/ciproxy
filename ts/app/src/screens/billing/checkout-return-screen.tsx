@@ -130,6 +130,7 @@ function ReturnBody({
     snapshot,
     usage.status === "ready" ? usage.page : null,
     workspace,
+    context.role,
   );
   if (view.kind === "waiting") {
     return view.still ? (

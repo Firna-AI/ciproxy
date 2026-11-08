@@ -164,7 +164,6 @@ export const firstTeamPeriod = {
 export const paymentDates = {
   failed: unbroken("4 December"),
   retry: unbroken("7 December"),
-  ended: unbroken("18 December"),
 } as const;
 
 /**

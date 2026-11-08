@@ -4,6 +4,7 @@ import {
   checkoutReturnHref,
   plansHref,
 } from "../src/view/billing-routes.ts";
+import { workspaceHref } from "../src/routing/pages.ts";
 import { askPayer } from "../src/view/billing-format.ts";
 import { baseSelection } from "./fixtures-billing.ts";
 import { fixtureCheckoutId } from "./fixtures-billing-payment.ts";
@@ -187,7 +188,7 @@ export function billingScreenRuns(origin: string) {
     {
       name: "banner-error",
       scenario: "m21-banner-error",
-      path,
+      path: workspaceHref("settings", workspaceId),
       text: "Unable to check the plan status",
       statuses: [503],
     },

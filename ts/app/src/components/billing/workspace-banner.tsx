@@ -1,20 +1,28 @@
-// The one banner of every workspace page, as GET /banner chooses it: a failed
-// payment, an ended paid plan, or a passed limit. Each page change checks it
-// again. A failed check shows itself with Try again, so a payment problem is
-// never hidden. Update card opens the Stripe billing portal. The banner gets
-// the path of the page, so that on Plans it does not link to Plans.
+// The one banner of every workspace page: a failed payment, an ended paid
+// plan, or a passed limit. Jobs, Savings, Plan and usage, and Plans take it
+// from their own page reads, and so do Checkout for a payer with a valid
+// choice and its return for a payer with a session. Every other view, and the
+// Organizations scope, reads GET /banner at each page change. A failed
+// endpoint read shows itself with Try again, so a payment problem is never
+// hidden. Update card opens the Stripe billing portal. The banner gets the
+// path of the page, so that on Plans it does not link to Plans.
 
 import { useEffect, useMemo } from "react";
-import { Link, usePathname } from "expo-router";
+import { Link, useLocalSearchParams, usePathname } from "expo-router";
 
 import type { BannerScope } from "../../api/banner.ts";
 import type { WorkspaceView } from "../../api/schema.ts";
 import type { WorkspacePage } from "../../routing/pages.ts";
 import { useServices } from "../../services/context.tsx";
 import { useValue } from "../../services/hooks.ts";
-import { bannerStore } from "../../state/billing.ts";
+import { bannerStore, payerRole } from "../../state/billing.ts";
 import { createPortalAction } from "../../state/billing-flows.ts";
 import { bannerModel, type BannerActionModel } from "../../view/banner.ts";
+import {
+  billingPaths,
+  checkoutQuery,
+  sessionIdQuery,
+} from "../../view/billing-routes.ts";
 import { ActionButton, ActionLink } from "../actions.tsx";
 import { ExternalIcon } from "../icons.tsx";
 import { Notice } from "../notice.tsx";
@@ -54,6 +62,32 @@ function BannerAction({
   );
 }
 
+type Query = Record<string, string | string[]>;
+
+/**
+ * Whether the view reads GET /banner: every view whose page read does not
+ * return the banner. Checkout reads its review only for a payer with a valid
+ * choice, and the return checks its session only for a payer with one.
+ */
+function readsEndpoint(
+  scope: BannerScope,
+  page: WorkspacePage,
+  path: string,
+  query: Query,
+  payer: boolean,
+): boolean {
+  if (scope !== "page") return true;
+  if (page === "jobs" || page === "savings") return false;
+  if (page !== "billing") return true;
+  if (path === billingPaths.checkout) {
+    return !payer || checkoutQuery(query) === null;
+  }
+  if (path === billingPaths.checkoutReturn) {
+    return !payer || sessionIdQuery(query.session_id) === null;
+  }
+  return false;
+}
+
 export function WorkspaceBanner({
   workspace,
   page,
@@ -66,6 +100,7 @@ export function WorkspaceBanner({
 }) {
   const services = useServices();
   const path = usePathname();
+  const query = useLocalSearchParams<Query>();
   const store = bannerStore(services, workspace.id, scope);
   const snapshot = useValue(store.state);
   const portal = useMemo(
@@ -73,13 +108,21 @@ export function WorkspaceBanner({
     [services, workspace.id],
   );
   const opening = useValue(portal.state);
+  const endpoint = readsEndpoint(
+    scope,
+    page,
+    path,
+    query,
+    payerRole(workspace.role ?? null),
+  );
   useEffect(() => {
-    void store.visit();
-  }, [store, page]);
+    if (endpoint) void store.visit();
+  }, [store, page, path, endpoint]);
 
   const failure =
-    snapshot.status === "failed" ||
-    (snapshot.status === "ready" && snapshot.refreshFailure !== null);
+    endpoint &&
+    (snapshot.status === "failed" ||
+      (snapshot.status === "ready" && snapshot.refreshFailure !== null));
   const banner = snapshot.status === "ready" ? snapshot.banner : null;
   const model =
     banner === null

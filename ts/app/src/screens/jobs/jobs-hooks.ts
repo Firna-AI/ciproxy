@@ -7,6 +7,7 @@ import { useEffect, useMemo } from "react";
 import { createJobsEndpoints } from "../../api/jobs.ts";
 import { useServices } from "../../services/context.tsx";
 import { useValue } from "../../services/hooks.ts";
+import { bannerStore } from "../../state/billing.ts";
 import { createJobStore, type JobSnapshot } from "../../state/jobs-detail.ts";
 import {
   createHistoryStore,
@@ -27,7 +28,11 @@ export function useLive(workspaceId: string) {
   const store = useMemo(
     () =>
       createLiveStore({
-        read: () => endpoints.live(workspaceId),
+        read: () =>
+          bannerStore(services, workspaceId).readPage(
+            () => endpoints.live(workspaceId),
+            (page) => page.banner,
+          ),
         report: services.session.report,
         now: services.env.now,
         timers: services.env.timers,
@@ -50,7 +55,11 @@ export function useHistory(workspaceId: string, filters: HistoryFilters) {
   const store = useMemo(
     () =>
       createHistoryStore({
-        read: (query) => endpoints.history(workspaceId, query),
+        read: (query) =>
+          bannerStore(services, workspaceId).readPage(
+            () => endpoints.history(workspaceId, query),
+            (page) => page.banner,
+          ),
         report: services.session.report,
       }),
     [services, endpoints, workspaceId],
@@ -72,7 +81,11 @@ export function useJob(workspaceId: string, jobId: string) {
   const store = useMemo(
     () =>
       createJobStore({
-        read: () => endpoints.detail(workspaceId, jobId),
+        read: () =>
+          bannerStore(services, workspaceId).readPage(
+            () => endpoints.detail(workspaceId, jobId),
+            (page) => page.banner,
+          ),
         report: services.session.report,
       }),
     [services, endpoints, workspaceId, jobId],

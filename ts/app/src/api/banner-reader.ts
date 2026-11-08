@@ -1,7 +1,7 @@
 // The reader of the one page banner. GET /banner returns it, and every page
 // response that carries a `banner` field holds the same generated value, so a
-// page reader keeps that field with `readBannerField`. The shell shows only
-// the banner of GET /banner.
+// page reader keeps that field with `readBannerField`. Both sources publish
+// to the one banner state that the shell shows.
 
 import type {
   BannerAction,

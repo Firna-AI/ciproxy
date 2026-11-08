@@ -1,6 +1,6 @@
 // The readers of the billing pages: Plan and usage, Plans, the checkout
 // review, the checkout return, and the portal link. Each keeps the `banner`
-// field of its response, which the shell does not render.
+// field when its response has one, for the shared banner state of the shell.
 
 import type {
   CheckoutReturnPage,

@@ -2,11 +2,9 @@
 // Plans, the checkout review, the checkout return, the billing portal, and
 // Move to Free. Each payment request goes through billing-payment.ts only.
 
-import type {
-  CheckoutReturn,
-  PlanSelection,
-  PlanTier,
-} from "./billing-types.ts";
+import type { operations } from "../../../api/index.ts";
+
+import type { CheckoutReturn, PlanSelection } from "./billing-types.ts";
 import {
   parseCheckoutReturnPage,
   parseCheckoutReview,
@@ -19,11 +17,9 @@ import { parseSuccess } from "./parse-session.ts";
 import { routePath, withQuery } from "./route-path.ts";
 
 /** The choice that a review asks the API to price. */
-export type ReviewRequest = {
-  tier: PlanTier;
-  start_blocks: number;
-  machines: number;
-};
+export type ReviewRequest = Required<
+  NonNullable<operations["checkout_review"]["parameters"]["query"]>
+>;
 
 /** The review request of one exact plan choice. */
 export function reviewRequest(selection: PlanSelection): ReviewRequest {
@@ -59,7 +55,7 @@ export function createBillingEndpoints(api: ApiClient) {
             tier: request.tier,
             start_blocks: String(request.start_blocks),
             machines: String(request.machines),
-          },
+          } satisfies Record<keyof ReviewRequest, string>,
         ),
         parseCheckoutReview,
       ),

@@ -76,8 +76,8 @@ payment. It never guesses one.
 Every workspace page shows at most one banner, which the API chooses: a
 failed payment, an ended plan, inactive organizations, or a passed limit.
 Every role reads Jobs, Savings, and Plan and usage. An action shows only when
-the API allows the caller. Everyone else reads who can act, such as
-"Ask an Admin".
+the API allows the caller. A person who may not pay reads "Ask an Admin or a
+Billing person" in place of each payment action.
 
 ## Jobs, Savings, and billing
 
@@ -153,7 +153,15 @@ the API allows the caller. Everyone else reads who can act, such as
 - The return page checks the session at once, and every 3 seconds while
   Stripe confirms. Only a confirmation from the API changes the plan on the
   page. When Stripe needs the person again, the page links to the Stripe
-  address that the API gives.
+  address that the API gives. After a confirmed payment, only an Admin gets
+  Add machines, and a Billing person gets only Open plan and usage.
+- Jobs, the job page, Savings, Plan and usage, Plans, the Checkout review,
+  and the return page take the banner from their own reads. An older read
+  never replaces the banner of a newer one. A failed read keeps the last
+  banner, and the page shows its own failure. Other pages, the Organizations
+  scope, and a Checkout or return page that reads nothing use the banner
+  endpoint, unless a read just ended. There, a failure shows "Unable to
+  check the plan status", and a successful page read ends that failure.
 
 ## The API
 
@@ -260,7 +268,8 @@ credential file, the steps of the page check, and its private result file.
   `open()` holds the page lifetime, so the report reads again only while the
   page is open.
 - [src/state/billing.ts](src/state/billing.ts) creates the billing stores of
-  a workspace, and
+  a workspace. [src/state/billing-banner.ts](src/state/billing-banner.ts)
+  keeps the one banner, and its `readPage` takes the banner of each page read.
   [src/api/billing-payment.ts](src/api/billing-payment.ts) sends every payment
   request.
 - The [workspace banner](src/components/billing/workspace-banner.tsx) in

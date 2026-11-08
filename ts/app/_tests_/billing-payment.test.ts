@@ -9,7 +9,6 @@ import { usageStore } from "../src/state/billing.ts";
 import { createPagePayment } from "../src/state/billing-flows.ts";
 import { workspaceId } from "../scripts/fixtures-core.ts";
 import {
-  bannerView,
   offer,
   review,
   selection,
@@ -68,12 +67,11 @@ test("a failed read after a payment keeps new payments closed", async () => {
     response(usagePage()),
     response({ state: "confirmed" } satisfies PaymentOutcome),
     response(unavailable, 503),
-    response(bannerView()),
   );
   await usageStore(app, workspaceId).load();
   const payment = createPagePayment(app, workspaceId);
   await payment.submit(team);
-  assert.equal(calls.length, 4);
+  assert.equal(calls.length, 3);
   assert.equal(calls[1]?.url, `/api/workspaces/${workspaceId}/checkout`);
   const usage = usageStore(app, workspaceId).state.get();
   assert.equal(
@@ -81,5 +79,5 @@ test("a failed read after a payment keeps new payments closed", async () => {
     "problem",
   );
   await payment.submit(business);
-  assert.equal(calls.length, 4);
+  assert.equal(calls.length, 3);
 });

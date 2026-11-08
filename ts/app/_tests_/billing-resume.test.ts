@@ -14,7 +14,6 @@ import {
 } from "../src/state/billing-flows.ts";
 import { session, workspaceId } from "../scripts/fixtures-core.ts";
 import {
-  bannerView,
   offer,
   pendingUsagePage,
   review,
@@ -100,7 +99,6 @@ test("a bank confirmation continues after a reload", async () => {
       payment_url: bankUrl,
     } satisfies PaymentOutcome),
     response(pending),
-    response(bannerView()),
   );
   await usageStore(first.app, workspaceId).load();
   const business = offer(selection("business"), "29900", "150000", "10");
@@ -152,7 +150,6 @@ test("a confirmed return ends the saved payment, also when the read after it fai
     first.app,
     response({ outcome: { state: "confirmed" }, banner: null }),
     response(unavailable, 503),
-    response(bannerView()),
     response(pendingUsagePage()),
   );
   const ret = createCheckoutReturn(done.app, workspaceId, "cs_test_open");
