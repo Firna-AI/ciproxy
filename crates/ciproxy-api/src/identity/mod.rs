@@ -47,7 +47,7 @@ impl Grant {
     }
 }
 
-/// GitHub authorization boundary, never a GitHub App Members permission.
+/// GitHub sign-in boundary. Membership reads need the App's "Members: read".
 #[async_trait]
 pub trait UserIdentity: Send + Sync {
     /// Build the App authorization URL with browser-bound state and PKCE S256.

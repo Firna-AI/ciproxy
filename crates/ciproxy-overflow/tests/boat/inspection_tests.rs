@@ -6,7 +6,8 @@ use sandbox_interface::ProviderRef;
 use serde_json::json;
 use uuid::Uuid;
 
-use crate::tls::server::{Server, step};
+use crate::tls::peer::step;
+use crate::tls::server::Server;
 
 #[tokio::test]
 async fn launch_inspection_reads_the_marker_without_replaying_a_launch() {

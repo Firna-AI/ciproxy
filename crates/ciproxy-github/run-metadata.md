@@ -37,7 +37,8 @@ The agent sends those facts and the original token to the machine cache.
 The machine returns a checked signed scope or a typed unknown reason.
 It checks cache trust, also for reusable workflows. The agent uses the
 checked ref for Docker policy and owns the Docker-disk lifecycle.
-The App keeps all three permissions for API event and head metadata.
+Installation tokens keep their three permissions for API event and head
+metadata. The App's fourth permission, "Members: read", serves sign-in only.
 
 ## Webhook delivery recovery
 
