@@ -1979,6 +1979,13 @@ Answers of 5 November 2026:
   socket error go. A reconnect before the first handoff still means only
   GitHub's cache. There is no guessed time limit; GitHub's job time limit is
   the backstop. Rejected: A and C.
+- Item 103, A now and B in parallel, 8 November 2026: the agent release is
+  a full release, so installs and updates take it. A pre-release channel
+  for the preview release server follows, so that a test release reaches no
+  customer. Rejected: no channel at launch.
+- Item 107, A, 8 November 2026: the cache firewall proof keeps the cloud
+  provider's metadata route and DNS, and checks the block against the real
+  metadata server. Rejected: B.
 - Items 104, 105, and 106, A, 8 November 2026: grow the test host disk to
   500 GiB, sign the sandbox in to GitHub with the `workflow` scope, and
   upgrade the test workspace to Team with a Stripe test-mode checkout after
@@ -4507,6 +4514,10 @@ GitHub membership, is rejected.
 
 ### 103. The preview release server ignores the agent pre-release
 
+**Answer, 8 November 2026:** A now, and B as a follow-up item in parallel:
+`follow-ups/release-server-prerelease-channel.md`. `ciproxy-agent-v0.1.0`
+is now a full release, and the preview release server serves it.
+
 - **Severity:** High. **Effort:** Small.
 - **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
 - **Category:** Product bug.
@@ -4609,6 +4620,8 @@ GitHub membership, is rejected.
 - **Action:** ask the user, because A changes the plan of a workspace.
 
 ### 107. The cache firewall proof takes over the metadata route
+
+**Answer, 8 November 2026:** A.
 
 - **Severity:** Medium. **Effort:** Medium.
 - **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
