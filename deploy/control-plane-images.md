@@ -33,6 +33,29 @@ not publication authority. The separate publisher uses WIF, pushes the
 digest, and adds the source tag. It never executes the archive or source
 scripts. Cached images skip both the build and publisher credentials.
 
+The launcher creates a short runner-owned `0700` directory for its Unix
+socket and private daemon state. It passes that address and the runner's
+primary group directly to BuildKit. Readiness uses `BUILDKIT_HOST` as the
+ordinary runner user. The launcher writes the same address to `GITHUB_ENV`
+for later build steps. It does not use or change the global BuildKit socket.
+Logs remain under `.context/control-plane-image/`. A failed start reports
+the local connection cause without printing the raw error payload.
+
+For a manual smoke, keep startup and clients in one shell execution.
+Source the generated environment file after the launcher returns:
+
+```sh
+bash deploy/scripts/start-buildkit.sh
+. .context/control-plane-image/buildkit-env.sh
+buildctl debug workers
+# Run the image build with this same BUILDKIT_HOST.
+```
+
+The file also sets `CIPROXY_BUILDKIT_PID` and
+`CIPROXY_BUILDKIT_DIRECTORY`. After the smoke, stop only that daemon with
+`sudo -n kill "$CIPROXY_BUILDKIT_PID"`. Its private state is inside that
+directory. Existing global services stay untouched.
+
 The source hash covers the paths, modes, and bytes of the selected tracked
 files. It covers `.dockerignore`, the Dockerfile, root Cargo inputs,
 toolchain, crate manifests, Rust sources, build scripts, migrations, and
