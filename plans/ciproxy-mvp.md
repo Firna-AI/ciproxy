@@ -1979,6 +1979,8 @@ Answers of 5 November 2026:
   socket error go. A reconnect before the first handoff still means only
   GitHub's cache. There is no guessed time limit; GitHub's job time limit is
   the backstop. Rejected: A and C.
+- Item 113, A, 8 November 2026: the label dialog keeps the fit counts and
+  the placement, and the mockup drops the largest-job figures. Rejected: B.
 - Item 108, C with D, 8 November 2026: the paid change sends the same
   pending credit that the preview counted, Stripe computes the amount, and
   an alert compares each invoice with its quote. A third fix round of pull
@@ -4804,6 +4806,8 @@ request #39.
 - **Action:** ask the user, because the approved examples change.
 
 ### 113. The label dialog lacks the largest-job figures
+
+**Answer, 8 November 2026:** A.
 
 - **Severity:** Low. **Effort:** Small.
 - **Source:** Review, Milestone 21, pull request #53, its item 19.
