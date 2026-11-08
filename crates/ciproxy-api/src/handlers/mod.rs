@@ -10,7 +10,6 @@ mod job_fit;
 mod job_views;
 pub(crate) mod jobs;
 mod jobs_live;
-pub(crate) mod label_cleanup;
 mod label_views;
 pub(crate) mod labels;
 mod link_views;

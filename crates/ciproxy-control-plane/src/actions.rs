@@ -1,7 +1,7 @@
 //! Persist resource reservations before sending a one-use JIT to its machine.
 
 use ciproxy_gateway::types::Delivery;
-use ciproxy_github::persistence::session::ListenerTarget;
+use ciproxy_github::registrations::RegistrationRequest;
 use ciproxy_protocol::agent::ControlMessage;
 use ciproxy_protocol::identifiers::{CommandId, OrganizationId, RunnerId};
 use ciproxy_protocol::runners::RunnerSpec;
@@ -9,6 +9,7 @@ use ciproxy_protocol::secret::Secret;
 use ciproxy_scaler::actions::{Action, Destination, StartRunner};
 use ciproxy_store_interface::own_runners::{OwnRunner, OwnRunnerObservation, RoutingSnapshot};
 use ciproxy_store_interface::runners::{Runner, RunnerPlace, RunnerState};
+use ciproxy_store_interface::scale_sets::RegistrationTarget;
 use secrecy::ExposeSecret;
 use uuid::Uuid;
 
@@ -19,7 +20,10 @@ use crate::slots::allocate_slots;
 /// State writes that supply no new execution evidence.
 pub(crate) enum UnobservedRunnerUpdate {
     /// GitHub registration alone does not prove that the VM exists.
-    Registered { github_id: i64 },
+    Registered {
+        github_id: i64,
+        target: RegistrationTarget,
+    },
     /// Absence or registration cleanup can end a reservation without new evidence.
     Stopped { github_id: Option<i64> },
 }
@@ -54,7 +58,7 @@ impl MachineRuntime {
             return Ok(());
         };
         let machine_id: Uuid = machine_id.0.parse().internal()?;
-        let organization_id: Uuid = start.organization_id.0.parse().internal()?;
+        let organization_id: Uuid = start.target.organization_id.0.parse().internal()?;
         let github_organization_id = input
             .organizations
             .iter()
@@ -64,18 +68,18 @@ impl MachineRuntime {
         let label = input
             .labels
             .iter()
-            .find(|label| label.name == start.label.0)
+            .find(|label| label.id.to_string() == start.target.label_id)
             .ok_or(Error::StateChanged)?;
-        let store = self.store.clone();
         let workspace_id = input.workspace_id;
-        let sets =
-            tokio::task::spawn_blocking(move || store.scale_sets(workspace_id, organization_id))
-                .await
-                .internal()?
-                .internal()?;
-        let set = sets
+        let set = input
+            .scale_sets
             .iter()
-            .find(|set| set.label_id == label.id)
+            .find(|set| {
+                set.id.to_string() == start.target.scale_set_id
+                    && set.organization_id == organization_id
+                    && set.label_id == label.id
+                    && set.github_id == start.target.github_id
+            })
             .ok_or(Error::StateChanged)?;
         let store = self.store.clone();
         let reservations = tokio::task::spawn_blocking(move || store.own_runners(workspace_id))
@@ -92,12 +96,12 @@ impl MachineRuntime {
             .ok_or(Error::StateChanged)?;
         let id = self.clock.uuid();
         let command_id = self.clock.uuid();
-        let target = ListenerTarget {
+        let request = RegistrationRequest {
             workspace_id,
-            organization_id,
-            scale_set_id: set.id,
+            target: RegistrationTarget::from(set),
         };
         let runner = OwnRunner {
+            registration_scale_set_id: None,
             requested_size: label.size,
             slot_indices: slot_indices.clone(),
             runner: Runner {
@@ -128,7 +132,7 @@ impl MachineRuntime {
             .internal()?;
         let registration = self
             .registrations
-            .create(target, &format!("ciproxy-{id}"))
+            .create(request, &format!("ciproxy-{id}"))
             .await
             .internal()?;
         self.save_state(
@@ -136,6 +140,7 @@ impl MachineRuntime {
             &runner,
             UnobservedRunnerUpdate::Registered {
                 github_id: registration.runner_id,
+                target: registration.target,
             },
         )
         .await?;
@@ -169,8 +174,15 @@ impl MachineRuntime {
         update: UnobservedRunnerUpdate,
     ) -> Result<()> {
         let (state, github_id) = match update {
-            UnobservedRunnerUpdate::Registered { github_id } => {
-                (RunnerState::Starting, Some(github_id))
+            UnobservedRunnerUpdate::Registered { github_id, target } => {
+                let store = self.store.clone();
+                let id = runner.runner.id;
+                return tokio::task::spawn_blocking(move || {
+                    store.save_runner_registration(workspace_id, id, target, github_id)
+                })
+                .await
+                .internal()?
+                .internal();
             }
             UnobservedRunnerUpdate::Stopped { github_id } => (RunnerState::Stopped, github_id),
         };

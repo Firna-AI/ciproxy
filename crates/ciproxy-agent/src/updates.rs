@@ -9,6 +9,7 @@ use cli_updater::{
 };
 
 use crate::boundaries::Updates;
+use crate::cache_install::{CheckedCacheRelease, LinuxCacheInstallFiles};
 use crate::cache_network::GuardedCacheStart;
 use crate::cache_service::{CacheService, ReleasedCache};
 use crate::cache_unit::{InstalledCacheUnit, LinuxCacheUnitFiles};
@@ -55,7 +56,10 @@ impl Updates for AgentUpdates {
                 commands: self.commands.clone(),
             }),
             commands: self.commands.clone(),
-            release_server: self.release_server.clone(),
+            files: Arc::new(LinuxCacheInstallFiles),
+            release: Arc::new(CheckedCacheRelease {
+                release_server: self.release_server.clone(),
+            }),
         });
         if let Err(error) = cache.install().await {
             tracing::warn!(%error, "machine cache update will retry");

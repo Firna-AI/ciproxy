@@ -12,6 +12,7 @@ mod budget_file;
 mod cache;
 mod cache_admin;
 mod cache_authority;
+mod cache_install;
 mod cache_network;
 mod cache_service;
 mod cache_unit;
@@ -25,6 +26,7 @@ mod controller;
 mod docker;
 mod docker_files;
 mod docker_prepare;
+mod docker_recovery;
 mod error;
 mod gateway;
 mod guest_transport;
@@ -56,7 +58,37 @@ mod logging;
 mod maintenance;
 mod mode;
 mod network;
+mod network_inventory;
+mod network_lifecycle;
+
+#[cfg(test)]
+#[path = "_tests_/network_fixtures.rs"]
+mod network_fixtures;
+
+#[cfg(test)]
+#[path = "_tests_/network_ownership_tests.rs"]
+mod network_ownership_tests;
+
+#[cfg(test)]
+#[path = "_tests_/network_lifecycle_tests.rs"]
+mod network_lifecycle_tests;
+
+#[cfg(test)]
+#[path = "_tests_/network_barriers.rs"]
+mod network_barriers;
+
+#[cfg(test)]
+#[path = "_tests_/network_progress_tests.rs"]
+mod network_progress_tests;
+
+#[cfg(test)]
+#[path = "_tests_/network_uninstall_tests.rs"]
+mod network_uninstall_tests;
+
 mod network_rules;
+#[cfg(test)]
+#[path = "_tests_/network_start_failure_tests.rs"]
+mod network_start_failure_tests;
 mod observations;
 mod persistence;
 mod process;
@@ -67,9 +99,11 @@ mod runtime_reports;
 mod runtime_worker;
 mod slot_allocation;
 mod sparse_copy;
+mod startup;
 mod state;
 mod storage_sizing;
 mod system_service;
+mod terminal_completion;
 mod updates;
 mod vm_config;
 mod vm_files;

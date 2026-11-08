@@ -9,5 +9,7 @@ diesel::table! {
         label_id -> Uuid,
         scale_set_id -> Uuid,
         body -> Jsonb,
+        installation_id -> Nullable<BigInt>,
+        delete_after -> Nullable<Timestamptz>,
     }
 }

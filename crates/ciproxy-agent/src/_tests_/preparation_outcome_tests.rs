@@ -1,10 +1,9 @@
 //! Failed setup suppresses only its cache assignment and closes dormant storage.
 
-use ciproxy_protocol::guest::JobDecision;
 use std::sync::{Arc, Mutex};
 
 use ciproxy_protocol::agent::{ControlMessage, JobPreparationOutcome};
-use ciproxy_protocol::guest::AgentToGuest;
+use ciproxy_protocol::guest::{AgentToGuest, JobDecision};
 use ciproxy_protocol::guest::{GuestToAgent, JobPreparation};
 use ciproxy_protocol::identifiers::{CommandId, JobId, RunnerId};
 use unimock::{MockFn, Unimock, matching};
@@ -26,6 +25,9 @@ async fn replay_restored(state: &MachineState, outcome: JobPreparation) {
     );
     let mock = Unimock::new((
         VmsMock::restore.some_call(matching!(_)).returns(Ok(())),
+        DockerDisksMock::pending
+            .some_call(matching!(_))
+            .returns(Ok(false)),
         VmsMock::send
             .some_call(matching!(_, _))
             .answers(&|_, _, message| {
@@ -74,11 +76,11 @@ async fn replay_restored(state: &MachineState, outcome: JobPreparation) {
 }
 
 #[tokio::test]
-async fn failed_preparation_suppresses_counts_and_releases_only_after_drive_close_ack() {
+async fn failed_preparation_suppresses_counts_and_discards_only_after_drive_close_ack() {
     let events = Arc::new(Mutex::new(Vec::new()));
     let fallback = events.clone();
     let closed = events.clone();
-    let released = events.clone();
+    let discarded = events.clone();
     let mock = Unimock::new((
         github_decision_sent(),
         StoreMock::save.some_call(matching!(_)).returns(Ok(())),
@@ -91,16 +93,19 @@ async fn failed_preparation_suppresses_counts_and_releases_only_after_drive_clos
         DockerDisksMock::reserved
             .some_call(matching!(_))
             .returns(Ok(true)),
+        DockerDisksMock::failed
+            .some_call(matching!(_))
+            .returns(Ok(true)),
         VmsMock::clear_docker
             .next_call(matching!(_))
             .answers_arc(Arc::new(move |_, _| {
                 closed.lock().unwrap().push("closed");
                 Ok(())
             })),
-        DockerDisksMock::release
+        DockerDisksMock::discard
             .next_call(matching!(_))
             .answers_arc(Arc::new(move |_, _| {
-                released.lock().unwrap().push("released");
+                discarded.lock().unwrap().push("discarded");
                 Ok(())
             })),
     ));
@@ -131,7 +136,7 @@ async fn failed_preparation_suppresses_counts_and_releases_only_after_drive_clos
     );
     assert_eq!(
         *events.lock().unwrap(),
-        vec!["fallback", "closed", "released"]
+        vec!["fallback", "closed", "discarded"]
     );
     let saved = agent.state.lock().await.clone();
     replay_restored(&saved, JobPreparation::default()).await;

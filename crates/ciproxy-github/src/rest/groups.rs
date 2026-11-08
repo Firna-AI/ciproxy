@@ -1,4 +1,4 @@
-//! Dedicated runner-group reconciliation without editing existing groups.
+//! Dedicated runner-group reconciliation with separate repository access.
 
 use reqwest::{Method, StatusCode};
 use serde::{Deserialize, Serialize};
@@ -24,7 +24,6 @@ struct GroupPolicy<'a> {
     name: &'a str,
     visibility: &'static str,
     allows_public_repositories: bool,
-    selected_repository_ids: &'a [i64],
 }
 
 #[derive(Serialize)]
@@ -81,7 +80,6 @@ impl RestClient {
             name,
             visibility: "selected",
             allows_public_repositories: false,
-            selected_repository_ids: repository_ids,
         };
         let id = if let Some(id) = existing {
             Self::success(

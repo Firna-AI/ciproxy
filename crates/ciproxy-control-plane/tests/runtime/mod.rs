@@ -1,8 +1,13 @@
 //! Hosted runtime integration requirements.
 
 mod accounting_lifecycle_tests;
+mod accounting_refresh_faults;
+mod accounting_retention_failure_tests;
+mod accounting_retention_support;
+mod accounting_retention_tests;
 mod accounting_tests;
 mod app_removal_tests;
+mod binding_target_tests;
 mod clock;
 mod failure_isolation_tests;
 mod image_delivery_tests;
@@ -17,17 +22,21 @@ mod overflow_app_removal_tests;
 mod overflow_callback_tests;
 mod overflow_ports;
 mod overflow_registration_removal_tests;
+mod overflow_registration_retention_tests;
 mod overflow_reinstall_tests;
 mod overflow_replacement_tests;
 mod overflow_restart_tests;
+mod overflow_retention_support;
 mod overflow_retirement_tests;
 mod overflow_service;
 mod overflow_support;
 mod overflow_takeout_support;
 mod overflow_takeout_tests;
 mod overflow_tests;
+mod own_replacement_tests;
 mod preparation_delivery_tests;
 mod recovery_support;
+mod registration_race;
 mod reinstall_removal_tests;
 mod resource_report_tests;
 mod retirement_tests;

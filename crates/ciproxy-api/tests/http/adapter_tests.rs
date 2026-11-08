@@ -1,5 +1,8 @@
 //! Real OAuth, App-JWT metadata, and SDK validation errors through dashboard HTTP.
 
+#[path = "adapter_label_support.rs"]
+mod label_support;
+
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -203,10 +206,13 @@ async fn github_name_refusal_keeps_the_actual_sdk_validation_message() {
     let server = Server::new().await;
     let mut fixture = Fixture::new();
     let browser = fixture.login(7, Some(Role::Admin)).await;
-    fixture.state.scale_sets = Arc::new(Factory {
-        origin: server.origin.clone(),
-        token: server.token.clone(),
-    });
+    let sdk_labels = label_support::compose(
+        &mut fixture,
+        Arc::new(Factory {
+            origin: server.origin.clone(),
+            token: server.token.clone(),
+        }),
+    );
     let response=fixture.request(Some(&browser),"POST",&fixture.path("/labels"),Some(json!({"name":"refused label","vcpus":2,"memory_gb":8,"disk_gb":20,"allow_machines":true,"allow_boat":true,"when_nothing_fits":"wait"}))).await;
     if response.status() != StatusCode::UNPROCESSABLE_ENTITY {
         println!("upstream paths: {:?}", server.seen.lock().unwrap());
@@ -222,5 +228,19 @@ async fn github_name_refusal_keeps_the_actual_sdk_validation_message() {
             .unwrap()
             .len(),
         1
+    );
+    assert_eq!(*sdk_labels.lock().unwrap(), vec!["refused label"]);
+    let posts = server
+        .seen
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|path| path.starts_with("POST ") && path.ends_with("/runnerscalesets"))
+        .cloned()
+        .collect::<Vec<_>>();
+    assert_eq!(posts.len(), 1);
+    println!(
+        "SDK candidate labels: {:?}; upstream scale-set requests: {posts:?}",
+        sdk_labels.lock().unwrap()
     );
 }

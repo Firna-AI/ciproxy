@@ -8,6 +8,7 @@ diesel::table! {
         label_id -> Uuid,
         scale_set_id -> Uuid,
         github_id -> Nullable<Int8>,
+        registration_scale_set_id -> Nullable<Int8>,
         state -> Text,
         vcpus -> Int4,
         memory_bytes -> Int8,

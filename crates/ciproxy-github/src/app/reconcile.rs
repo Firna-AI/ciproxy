@@ -3,11 +3,9 @@
 use ciproxy_store_interface::github_lifecycle::GithubPreparedResources;
 use ciproxy_store_interface::labels::Label;
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
-use ciproxy_store_interface::scale_sets::ScaleSet;
 
 use crate::error::{Error, Result};
 use crate::persistence::mutation::MutationLease;
-use crate::scale_sets::ScaleSetApi;
 
 use super::AppService;
 
@@ -98,50 +96,12 @@ impl AppService {
             .await?;
         lease.check().await?;
         let api = self.scale_sets.for_organization(organization).await?;
-        release_retired(&*api, &existing, &labels, lease).await?;
-        let mut scale_sets = Vec::new();
-        for label in labels {
-            let previous = existing.iter().find(|set| set.label_id == label.id);
-            lease.check().await?;
-            let github_id = api
-                .ensure(&label.name, group_id, previous.map(|set| set.github_id))
-                .await?;
-            lease.check().await?;
-            scale_sets.push(ScaleSet {
-                id: previous
-                    .map(|set| set.id)
-                    .unwrap_or_else(|| self.runtime.uuid()),
-                organization_id: organization.id,
-                label_id: label.id,
-                github_id,
-                runner_group_id: group_id,
-            });
-        }
+        let scale_sets = self
+            .reconcile_bindings(organization, &labels, &existing, group_id, &*api, lease)
+            .await?;
         Ok(GithubPreparedResources {
             repositories,
             scale_sets,
         })
     }
-}
-
-/// Release deleted-label names before a resume or reinstall prepares replacements.
-async fn release_retired(
-    api: &dyn ScaleSetApi,
-    bindings: &[ScaleSet],
-    labels: &[Label],
-    lease: &dyn MutationLease,
-) -> Result<()> {
-    for binding in bindings
-        .iter()
-        .filter(|binding| !labels.iter().any(|label| label.id == binding.label_id))
-    {
-        lease.check().await?;
-        api.rename_scale_set(
-            binding.github_id,
-            &format!("ciproxy-retired-{}", binding.id.simple()),
-        )
-        .await?;
-        lease.check().await?;
-    }
-    Ok(())
 }

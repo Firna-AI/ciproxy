@@ -42,6 +42,8 @@ async fn http_upgrade_denials_retry_without_changing_identity_or_vms() {
         Ok(removal_socket),
     ]);
     let initial = MachineState {
+        failed_starts: Default::default(),
+        pending_networks: Default::default(),
         docker_budget: None,
         identity: Some(identity()),
         mode: Mode::Active,

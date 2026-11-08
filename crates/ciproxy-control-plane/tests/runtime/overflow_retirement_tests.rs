@@ -36,6 +36,7 @@ async fn ready_boat_supply_survives_starting_own_supply_and_an_older_missing_del
         .create_own_runner(
             workspace,
             &OwnRunner {
+                registration_scale_set_id: Some(44),
                 requested_size: label.size,
                 slot_indices: vec![0],
                 runner: Runner {

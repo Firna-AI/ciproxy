@@ -22,6 +22,8 @@ This crate does not implement those components.
 A reinstall preserves the machine identity and its drain state.
 `ciproxy-agent run` starts the daemon.
 `ciproxy-agent uninstall` stops the daemon, finishes jobs, and removes it.
+With no recorded VM, uninstall removes its owned area even after an
+interrupted install or a lost mount.
 Uninstall reclaims its image downloads and binary staging files.
 Uninstall does not revoke the registration in the hosted control plane.
 Use Remove in the dashboard to revoke the machine credential.
@@ -50,6 +52,9 @@ Reconciliation enforces current mode after each wait.
 State lives in `/var/lib/ciproxy/state.json` with mode `0600`.
 Its parent directory has mode `0700`.
 State contains the machine credential and VM ownership.
+It also keeps pending network indices and failed-start cleanup intent.
+Network cleanup keeps ownership after VM and disk removal.
+It does not keep a completed VM in reports or reserve its slots.
 It contains no one-use runner registration or install token.
 Each VM record keeps the original cache rights of its job, and the scheme,
 host, and port of its cache and results URLs.
@@ -96,6 +101,17 @@ A separate network namespace permits public IPv4 egress.
 It blocks IPv6, private networks, metadata addresses, and host access.
 The only host exception is this VM's cache address on TCP port 7887.
 The agent opens no inbound TCP port.
+The agent owns the `cpxN` namespace, root `cpxN` and `cpxNp` links, and
+`inet cpxN` firewall table for each allocated network index `N`.
+It also reclaims orphan resources with these reserved names.
+Allocation skips active, pending, and occupied host indices.
+An overlapping address blocks allocation without granting cleanup ownership.
+Reconciliation checks cleanup results and retains ownership until absence
+is confirmed. Remove and uninstall wait for that cleanup.
+One Controller operation owns terminal completion for startup, the daemon,
+and uninstall. It removes the saved identity only after checked cleanup.
+Uninstall also finishes area, runtime tools, and service cleanup first.
+Removed startup can finish saved jobs without a machine credential.
 
 ### Host requirements
 
@@ -193,49 +209,53 @@ Do not create or edit credential state by hand.
 ```sh
 cargo test --package ciproxy-agent
 cargo fmt --all -- --check
-cargo clippy --package ciproxy-agent --all-targets -- -D warnings
+cargo clippy --package ciproxy-agent --features filesystem-regression \
+  --all-targets -- -D warnings
 cargo build --package ciproxy-agent
 ```
 
 Unit tests use Unimock and deterministic barriers.
 They use no host filesystem, subprocess, network, or real timer.
+The clippy command also compiles the opt-in filesystem regression targets.
+It needs no root access and does not run those targets.
+The default gate does not compile them because it leaves their feature off.
+Run this command after changing these files or their dependencies:
+
+- `tests/root_disk_regression.rs` uses path includes for `src/error.rs`,
+  `src/process.rs`, and `src/vm_root.rs`.
+- `tests/storage_regression.rs` uses path includes for `src/budget_file.rs`,
+  `src/error.rs`, `src/host_system.rs`, `src/image_space.rs`,
+  `src/sparse_copy.rs`, and `src/storage_sizing.rs`.
+
+Path includes compile separate copies of the production modules.
+Keep each target's module list aligned when a production dependency moves.
+The default Docker regression target also uses path includes.
+The gate compiles that target because it needs no feature.
 Real VM and GitHub checks use separate smoke scripts.
 The [real root regression](image-budget.md#disposable-root-growth-regression)
 checks free bytes as runner UID 1001 on two image sizes.
-Docker lease integration tests call the real adapter in temporary folders.
-They mock host commands and cache administration, and need no root access:
-
-```sh
-cargo test --package ciproxy-agent --test docker_regression docker_regressions
-```
-
-Build and package the GNU binary for glibc 2.17 or later:
-
-```sh
-python3 -m pip install cargo-zigbuild
-cargo zigbuild --locked --release --package ciproxy-agent --target x86_64-unknown-linux-gnu.2.17
-scripts/cli-release.sh verify-glibc target/x86_64-unknown-linux-gnu/release/ciproxy-agent 2.17
-scripts/cli-release.sh package ciproxy-agent 0.1.0 x86_64-unknown-linux-gnu target/x86_64-unknown-linux-gnu/release/ciproxy-agent .context/agent-release
-```
-
-Use the version from the agent manifest.
-Packaging produces the `.tar.gz` archive and its `.sha256` companion.
-
-### KVM and GitHub smoke checks
-
-The [smoke guide](smoke-checks.md) gives the Docker, warm, and restart checks.
-The [host guide](host-preparation.md#ext4-and-kvm-smoke) gives the ext4 check.
+The [development guide](development.md) gives Docker integration checks,
+KVM and GitHub smoke checks, and release packaging commands.
 
 ### Key Code
 
 - [src/application.rs](src/application.rs) composes the Linux adapters.
+- [src/startup.rs](src/startup.rs) checks local completion before workload
+  recovery and permits a removed machine to drain without a credential.
 - [src/controller.rs](src/controller.rs) defines durable machine control.
-- [src/runtime.rs](src/runtime.rs) owns daemon inputs and task lifetimes.
+  `Agent::complete_removal` checks networks and finalizes local cleanup and
+  identity without a credential.
+- [src/runtime.rs](src/runtime.rs) owns daemon inputs and completion events.
 - [src/connection.rs](src/connection.rs) separates connection failures from
   credential rejection after Hello on the current socket.
-- [src/runtime_reports.rs](src/runtime_reports.rs) schedules independent reports.
+- [src/runtime_reports.rs](src/runtime_reports.rs) schedules independent
+  reports.
 - [src/mode.rs](src/mode.rs) owns terminal runtime mode transitions.
 - [src/vms.rs](src/vms.rs) owns separate jailed VM units.
+- [src/network.rs](src/network.rs) allocates host-free network indices and
+  verifies that cleanup removed their resources.
+- [src/network_lifecycle.rs](src/network_lifecycle.rs) keeps active and
+  pending network ownership across retirement, restart, and uninstall.
 - [src/root_sizing.rs](src/root_sizing.rs) defines the pure shared root
   allocation rule for the agent, scaler, and hosted image configuration.
 - [src/vm_root.rs](src/vm_root.rs) reflinks and grows the disposable job root.
@@ -249,7 +269,11 @@ The [host guide](host-preparation.md#ext4-and-kvm-smoke) gives the ext4 check.
   cache and Docker resources once the host has the trusted job facts.
 - [src/cache_unit.rs](src/cache_unit.rs) writes the cache service unit and
   its private listener rules.
+- [src/cache_install.rs](src/cache_install.rs) owns private install files
+  and checked cache release work after protected activation.
 - [src/docker.rs](src/docker.rs) owns Docker leases, attachment, and release.
+- [src/docker_recovery.rs](src/docker_recovery.rs) discards safely closed
+  failed attachments and keeps their byte reservations through job exit.
 - [src/vm_config.rs](src/vm_config.rs) owns the root and dormant Docker drives.
 - [src/vsock_stream.rs](src/vsock_stream.rs) keeps each registration in
   memory until the guest confirms receipt.
@@ -259,7 +283,9 @@ The [host guide](host-preparation.md#ext4-and-kvm-smoke) gives the ext4 check.
 - [src/image_files.rs](src/image_files.rs) owns Linux image files and recovery.
 - [src/image_verification.rs](src/image_verification.rs) seals checked values.
 - [src/capacity.rs](src/capacity.rs) selects shared machine resources.
-- [src/host_preparation.rs](src/host_preparation.rs) owns host setup.
+- [src/host_preparation.rs](src/host_preparation.rs) owns host setup and
+  uninstall entry points. `Uninstall::start` selects direct guarded cleanup
+  or VM recovery and drain. `Uninstall::finish` removes the drained area.
 - [src/area.rs](src/area.rs) owns area preparation, repair, and removal.
 - [scripts/](scripts/) contains real KVM and GitHub smoke checks.
 

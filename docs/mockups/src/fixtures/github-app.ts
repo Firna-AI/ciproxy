@@ -22,4 +22,9 @@ export const appPermissions: readonly AppPermission[] = [
     access: "read",
     use: "to read the branch and the event of each run",
   },
+  {
+    name: "Members",
+    access: "read",
+    use: "see who belongs to your organization, so that ciproxy can give roles",
+  },
 ];

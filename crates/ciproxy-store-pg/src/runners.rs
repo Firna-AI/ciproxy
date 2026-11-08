@@ -4,6 +4,7 @@ use ciproxy_protocol::resources::VmSize;
 use ciproxy_schema::runners::runners;
 use ciproxy_store_interface::error::{Error, Result, ResultExt};
 use ciproxy_store_interface::runners::{Runner, RunnerPlace, RunnerState, RunnerStore};
+use ciproxy_store_interface::scale_sets::RegistrationTarget;
 use diesel::prelude::*;
 use uuid::Uuid;
 
@@ -19,6 +20,7 @@ pub(crate) struct RunnerRow {
     label_id: Uuid,
     scale_set_id: Uuid,
     github_id: Option<i64>,
+    pub(crate) registration_scale_set_id: Option<i64>,
     state: String,
     vcpus: i32,
     memory_bytes: i64,
@@ -58,6 +60,7 @@ impl RunnerRow {
             label_id: runner.label_id,
             scale_set_id: runner.scale_set_id,
             github_id: runner.github_id,
+            registration_scale_set_id: None,
             state: state.to_owned(),
             vcpus: i32::try_from(runner.size.vcpu).internal()?,
             memory_bytes: i64::try_from(runner.size.memory_bytes).internal()?,
@@ -106,6 +109,60 @@ impl RunnerRow {
 }
 
 impl RunnerStore for PgStore {
+    fn save_runner_registration(
+        &self,
+        workspace_id: Uuid,
+        runner_id: Uuid,
+        target: RegistrationTarget,
+        github_id: i64,
+    ) -> Result<()> {
+        let count = diesel::update(
+            runners::table
+                .find(runner_id)
+                .filter(runners::workspace_id.eq(workspace_id))
+                .filter(runners::organization_id.eq(target.organization_id))
+                .filter(runners::label_id.eq(target.label_id))
+                .filter(runners::scale_set_id.eq(target.scale_set_id))
+                .filter(
+                    runners::registration_scale_set_id
+                        .is_null()
+                        .or(runners::registration_scale_set_id.eq(target.github_id)),
+                ),
+        )
+        .set((
+            runners::github_id.eq(github_id),
+            runners::registration_scale_set_id.eq(target.github_id),
+        ))
+        .execute(&mut *self.connection()?)
+        .store()?;
+        require_record(count)
+    }
+
+    fn runner_registration_target(
+        &self,
+        workspace_id: Uuid,
+        organization_id: Uuid,
+        runner_id: Uuid,
+    ) -> Result<Option<RegistrationTarget>> {
+        let row = runners::table
+            .find(runner_id)
+            .filter(runners::workspace_id.eq(workspace_id))
+            .filter(runners::organization_id.eq(organization_id))
+            .select((
+                runners::label_id,
+                runners::scale_set_id,
+                runners::registration_scale_set_id,
+            ))
+            .first::<(Uuid, Uuid, Option<i64>)>(&mut *self.connection()?)
+            .store()?;
+        Ok(row.2.map(|github_id| RegistrationTarget {
+            organization_id,
+            label_id: row.0,
+            scale_set_id: row.1,
+            github_id,
+        }))
+    }
+
     fn update_runner_size(
         &self,
         workspace_id: Uuid,

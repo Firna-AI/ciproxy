@@ -73,7 +73,7 @@ pub(crate) fn replenish(snapshot: &Snapshot, plan: &mut Plan, pending: &[&Waitin
             snapshot
                 .labels
                 .iter()
-                .find(|candidate| candidate.name == job.label)
+                .find(|candidate| candidate.targets.contains(&job.target))
                 .is_some_and(|candidate| eligible(machine, candidate, snapshot.root_sizing))
         }) {
             continue;
@@ -82,13 +82,19 @@ pub(crate) fn replenish(snapshot: &Snapshot, plan: &mut Plan, pending: &[&Waitin
             .into_iter()
             .take(machine.warm_count.saturating_sub(occupied))
         {
+            let Some(target) = label
+                .targets
+                .iter()
+                .find(|target| target.organization_id == organization_id)
+            else {
+                continue;
+            };
             if !plan.usage[index].fits(machine, size) {
                 break;
             }
             plan.usage[index].add(size);
             let demand = WaitingJob {
-                organization_id,
-                label: label.name.clone(),
+                target: target.clone(),
                 queued_at: snapshot.now,
             };
             plan.start(

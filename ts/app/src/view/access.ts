@@ -47,6 +47,7 @@ export const appPermissions: readonly string[] = [
   "Self-hosted runners · read and write, to start a runner for each job",
   "Metadata · read, to list your repositories",
   "Actions · read, to read the branch and the event of each run",
+  "Members · read, see who belongs to your organization, so that ciproxy can give roles",
 ];
 
 function waitingNotice(session: SessionView): NoticeModel {

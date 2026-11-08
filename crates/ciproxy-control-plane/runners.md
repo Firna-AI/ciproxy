@@ -13,6 +13,10 @@ The snapshot gives the pure scaler machine capacity, durable demand,
 current labels, and the last 24 hours of default-label job history.
 It also gives the Boat account, its deliveries, and the saved Boat
 registrations. The [overflow guide](overflow.md) gives the Boat runtime.
+The snapshot also reads active saved scale-set bindings. Labels, waiting
+jobs, and start actions retain their exact registration target. Idle
+supply counts only for the same organization, label, binding, and remote
+scale-set ID. This applies to own machines and Boat.
 
 Warm shares follow proportional counts and the documented leftover order.
 Docker spare uses a conservative upper bound on feasible root allocations.
@@ -28,6 +32,12 @@ An incorrect release length can reduce the free disk promised to a job.
 
 A runner reservation keeps its organization, machine, label request,
 byte-precise allocation, GitHub runner identity, and delivery command.
+The successful registration response supplies its exact remote target.
+The runtime saves that response before it sends the JIT configuration.
+It does not derive the target from the earlier routing snapshot or from
+a later binding read. Reports, Busy results, and recovery preserve the
+saved target. Older uncaptured targets stay unknown. Their idle runners
+retire through ordinary GitHub-first cleanup. Running work stays protected.
 The database never stores its plaintext JIT configuration or runtime token.
 An interrupted JIT response can be recovered by its unique runner name.
 The runtime retires that registration before it releases the reservation.
@@ -65,6 +75,17 @@ saved before delivery confirms nothing.
 A full report that omits a confirmed runner releases it only when the report
 arrived after that confirmation. Absence alone never stops an unconfirmed
 start.
+
+When the agent sends `RunnerReady`, `JobStarted`, or `RunnerExited`, the
+runtime saves that observation first.
+Then it reads a fresh workspace snapshot, which holds the saved runner state.
+It routes each saved GitHub job of the workspace with that snapshot.
+A `RunnerReady` that cannot replace `Busy` or `Stopping` routes no job.
+For `RunnerExited`, the runtime saves `Stopped`.
+The runner stays `Stopped` while its saved GitHub job is still `Started`,
+because job routing skips a `Stopped` runner.
+The exit releases the slots and disk of that runner for the next pass, with
+no new full report.
 
 Retirement saves `Stopping` and its stop command before delivery.
 Each pass resends every saved stop with its command ID, after report
@@ -134,3 +155,19 @@ A provider deletion failure after Boat retirement also permits acceptance.
 Cleanup retries its saved `Deleting` phase without another GitHub removal.
 A completed take-out marker never permits a stop. An unknown older idle
 state keeps its capacity.
+After a completed take-out of the current installation, recovery makes no
+GitHub call for the Boat registration records of that organization.
+Identity cleanup can then delete such a record after its delivery and
+runner end, as the [overflow guide](overflow.md#runtime-guarantees) says.
+
+## Registration rollout and live validation
+
+The [registration storage guide](../ciproxy-store-interface/registration-targets.md)
+describes the nullable migration and rollback. Deploy all runtime writers
+together, then restart their workers. Old idle runners can retire and
+need replacement capacity. Their running jobs keep their original VM.
+
+Run [the binding smoke](scripts/binding-smoke.py) with a private credential
+file in a disposable test workspace. Its
+[operator guide](binding-validation.md) gives the rollout observations,
+replacement scenario, and resume and reinstall checks.

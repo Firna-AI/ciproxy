@@ -181,8 +181,9 @@ async fn two_slot_job_reserves_free_indices_zero_and_two_between_busy_jobs() {
     let registrations = Arc::new(Unimock::new(
         RunnerRegistrationsMock::create
             .some_call(matching!(_, _))
-            .answers(&|_, _, _| {
-                Ok(ciproxy_github::scale_sets::JitRegistration {
+            .answers(&|_, request, _| {
+                Ok(ciproxy_github::registrations::RegisteredRunner {
+                    target: request.target,
                     runner_id: 55,
                     configuration: "jit-fixture".into(),
                 })

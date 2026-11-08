@@ -2,6 +2,7 @@
 
 use std::time::Duration;
 
+use ciproxy_github::error::Error;
 use ciproxy_store_interface::organizations::RepositoryAccess;
 use diesel::prelude::*;
 use diesel::sql_types::Bool;
@@ -9,7 +10,7 @@ use tokio::time::timeout;
 
 use super::app_fixture::Fixture;
 use super::database::Database;
-use super::support::setup;
+use super::support::{id, setup};
 
 #[derive(QueryableByName)]
 struct Waiting {
@@ -129,4 +130,103 @@ async fn organization_lease_orders_access_restrictions_and_overlapping_repositor
             "restrict={restrict}"
         );
     }
+}
+
+#[tokio::test]
+async fn refused_label_keeps_repository_access_saved_while_validation_waits_for_lease() {
+    let database = Database::new();
+    let target = setup(&*database.store);
+    let fixture = Fixture::new();
+    let editor = fixture.app(database.store.clone());
+    let validator = fixture.app(database.store.clone());
+    let (entered, release) = fixture.remote.hold_next_read();
+    let mut edit = tokio::spawn(async move {
+        editor
+            .set_repository_access(19, RepositoryAccess::Selected(vec![23]))
+            .await
+    });
+    entered.await.unwrap();
+    assert_eq!(
+        database
+            .store
+            .organization(target.workspace_id, target.organization_id)
+            .unwrap()
+            .unwrap()
+            .repositories,
+        RepositoryAccess::AllPrivate
+    );
+    let mut label = database
+        .store
+        .labels(target.workspace_id)
+        .unwrap()
+        .remove(0);
+    label.id = id(88);
+    label.name = "refused-label".to_owned();
+    let mut validation =
+        tokio::spawn(async move { validator.prepare_label(target.workspace_id, label).await });
+    let mut completed = None;
+    let ordered = timeout(Duration::from_secs(10), async {
+        tokio::select! {
+            _ = waiting_lease(&database.url) => true,
+            result = &mut validation => { completed = Some(result); false },
+        }
+    })
+    .await;
+    let waited = matches!(ordered, Ok(true));
+    if ordered.is_err() {
+        edit.abort();
+        validation.abort();
+    }
+    let _ = release.send(());
+    let joined = timeout(Duration::from_secs(10), async {
+        let edit_result = (&mut edit).await.unwrap();
+        let validation_result = if let Some(result) = completed {
+            result
+        } else {
+            (&mut validation).await
+        }
+        .unwrap();
+        (edit_result, validation_result)
+    })
+    .await;
+    if joined.is_err() {
+        edit.abort();
+        validation.abort();
+    }
+    assert!(
+        waited,
+        "label validation must wait for the real organization lease"
+    );
+    let (edit_result, validation_result) =
+        joined.expect("leased operations must finish after release");
+    assert!(
+        matches!(edit_result, Ok(())),
+        "access edit failed: {edit_result:?}"
+    );
+    assert!(
+        matches!(validation_result, Err(Error::AccessUnavailable(422))),
+        "GitHub must refuse the candidate: {validation_result:?}"
+    );
+    assert_eq!(
+        database
+            .store
+            .organization(target.workspace_id, target.organization_id)
+            .unwrap()
+            .unwrap()
+            .repositories,
+        RepositoryAccess::Selected(vec![23])
+    );
+    let permissions: Vec<_> = fixture
+        .remote
+        .policies
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|policy| policy.ids.clone())
+        .collect();
+    assert_eq!(
+        permissions,
+        vec![vec![23], vec![23]],
+        "refused label validation must not restore a revoked repository"
+    );
 }

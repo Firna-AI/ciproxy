@@ -17,19 +17,13 @@ import { RadioCard, RadioCardGroup } from "@firna/ui/radio";
 import { Action, LinkAction, noop } from "../../components/actions.tsx";
 import { Notice } from "../../components/feedback.tsx";
 import { paths } from "../../components/paths.ts";
-import { dotJoin } from "../../fixtures/format.ts";
 import {
   adminWorkspaces,
   joinsInactive,
   noAdminRequester,
   pickedWorkspace,
 } from "../../fixtures/org-links.ts";
-import {
-  labsOrg,
-  organizationsText,
-  user,
-  type WorkspaceChoice,
-} from "../../fixtures/org.ts";
+import { labsOrg, user, type WorkspaceChoice } from "../../fixtures/org.ts";
 import { tiers } from "../../fixtures/tiers.ts";
 import { AuthShell } from "../auth/auth-shell.tsx";
 
@@ -47,13 +41,11 @@ function Login() {
   return <span className="nowrap">{labsOrg.login}</span>;
 }
 
-/** "Team · 1 organization", and on a full plan, that the new one waits. */
-function choiceText(choice: WorkspaceChoice): string {
-  const tier = tiers[choice.tier].name;
-  const line = dotJoin(tier, organizationsText(choice.organizations));
+/** On a full plan, that the new organization stays inactive until Team. */
+function choiceNote(choice: WorkspaceChoice): string | undefined {
   return joinsInactive(choice)
-    ? `${line}. On ${tier}, ${labsOrg.login} stays inactive until ${tiers.team.name}.`
-    : line;
+    ? `${labsOrg.login} stays inactive here until the workspace moves to ${tiers.team.name}.`
+    : undefined;
 }
 
 function Heading({ title, children }: { title: string; children?: ReactNode }) {
@@ -74,7 +66,7 @@ function WorkspacePicker({ picked }: { picked?: WorkspaceChoice }) {
           <RadioCard
             key={choice.name}
             title={choice.name}
-            body={choiceText(choice)}
+            body={choiceNote(choice)}
             checked={choice.name === picked?.name}
             onPress={noop}
           />
