@@ -5,7 +5,8 @@ use std::sync::{Arc, Mutex};
 use unimock::{MockFn, Unimock, matching};
 
 use crate::fixtures::vm;
-use crate::network::{LinuxNetwork, Network};
+use crate::network::Network;
+use crate::network_fixtures::prepared_network;
 use crate::process::CommandsMock;
 
 #[tokio::test]
@@ -24,12 +25,10 @@ async fn guest_network_allows_only_public_egress_and_its_cache_port() {
                 Ok(Vec::new())
             })),
     );
-    LinuxNetwork {
-        commands: Arc::new(mock),
-    }
-    .create(&vm("runner", false))
-    .await
-    .unwrap();
+    prepared_network(Arc::new(mock))
+        .create(&vm("runner", false))
+        .await
+        .unwrap();
     let captured = captured.lock().unwrap();
     assert!(captured.iter().any(|(program, args, _)| program == "ip"
         && args.windows(2).any(|pair| pair == ["user", "100001"])));
@@ -130,12 +129,10 @@ async fn forwarding_accepts_are_installed_in_both_backends_without_policy_change
             })
         }),
     ));
-    LinuxNetwork {
-        commands: Arc::new(commands),
-    }
-    .create(&vm("probe", false))
-    .await
-    .unwrap();
+    prepared_network(Arc::new(commands))
+        .create(&vm("probe", false))
+        .await
+        .unwrap();
     let calls = calls.lock().unwrap();
     for backend in ["iptables-nft", "iptables-legacy"] {
         assert!(calls.iter().any(|(program, args)| program == backend

@@ -94,6 +94,7 @@ struct Table {
 impl LinuxNetwork {
     /// Require complete successful inspection before proving presence or absence.
     pub(crate) async fn inventory(&self) -> Result<NetworkInventory> {
+        self.prepare().await?;
         let namespaces = self.commands.namespaces().await?;
         let interfaces = self
             .commands

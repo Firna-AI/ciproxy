@@ -893,6 +893,11 @@ Live KVM and authenticated job checks remain with the orchestrator.
           comparison. Use an explicit state set for replies and owned
           forwarding accepts in both iptables backends. DNS and HTTPS
           pass with both foreign FORWARD defaults kept at DROP.
+          Owner call, 8 November 2026: install or check the VM network
+          prerequisites in the agent. Check on first network use after an
+          update and install only missing network packages. Cache success.
+          Keep reports and existing VMs running when repair fails, and
+          retry at the next network operation.
     - [ ] Orchestrator: build and publish the merged image and its new
           Boat shared snapshot. Run every live scenario again.
   - [ ] Release a guest that never received its registration. After an

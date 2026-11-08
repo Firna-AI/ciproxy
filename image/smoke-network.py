@@ -15,7 +15,7 @@ import uuid
 
 sys.dont_write_bytecode = True
 
-from _smoke_.network_host import run, running, stop
+from _smoke_.network_host import UnitState, run, stop, unit_state
 
 
 def probe(args):
@@ -83,9 +83,14 @@ def probe(args):
             raise RuntimeError("The guest network collector did not finish")
         if args.initialization_failure:
             deadline = time.monotonic() + 180
-            while time.monotonic() < deadline and running(unit):
+            while time.monotonic() < deadline:
+                state = unit_state(unit)
+                if state == UnitState.UNKNOWN:
+                    raise RuntimeError("Cannot inspect VM unit " + unit)
+                if state == UnitState.STOPPED:
+                    break
                 time.sleep(1)
-            if running(unit):
+            else:
                 raise RuntimeError("Guest initialization failure did not end the VMM")
             console = (work / "console.log").read_text(errors="replace")
             if "reboot: Restarting system" not in console:
@@ -106,19 +111,25 @@ def probe(args):
         result["reason"] = str(error)
         print("FAIL: " + str(error), file=sys.stderr, flush=True)
     finally:
-        remaining = [] if stop(unit) else ["VM process"]
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        state = stop(unit)
+        remaining = [] if state == UnitState.STOPPED else ["VM unit " + unit + ": " + state.value]
         if index is not None and not remaining:
             try:
                 run(str(args.network_driver), "remove", str(index))
-            except RuntimeError as error:
+            except (OSError, RuntimeError) as error:
                 remaining.append(str(error))
         if remaining:
             result.update(status="FAIL", reason="Probe cleanup remains: " + ", ".join(remaining))
             print("FAIL: " + result["reason"], file=sys.stderr)
-        if forward != "1":
-            run("sysctl", "-qw", "net.ipv4.ip_forward=" + forward)
-        if not remaining:
-            shutil.rmtree(work / "jailer")
+        try:
+            if forward != "1":
+                run("sysctl", "-qw", "net.ipv4.ip_forward=" + forward)
+            if not remaining:
+                shutil.rmtree(work / "jailer")
+        except (OSError, RuntimeError) as error:
+            result.update(status="FAIL", reason="Probe final cleanup failed: " + str(error))
         (work / "result.json").write_text(json.dumps(result, indent=2) + "\n")
     return 0 if result["status"] == "PASS" else 1
 

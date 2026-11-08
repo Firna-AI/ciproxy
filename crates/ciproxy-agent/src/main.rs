@@ -61,6 +61,7 @@ mod network;
 mod network_forwarding;
 mod network_inventory;
 mod network_lifecycle;
+mod network_preparation;
 
 #[cfg(test)]
 #[path = "_tests_/network_fixtures.rs"]

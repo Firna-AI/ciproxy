@@ -9,6 +9,10 @@
 mod cache_authority;
 #[path = "../../src/error.rs"]
 mod error;
+#[path = "../../src/host_packages.rs"]
+mod host_packages;
+#[path = "../../src/host_system.rs"]
+mod host_system;
 #[path = "../../src/layout.rs"]
 mod layout;
 #[path = "../../src/network.rs"]
@@ -17,6 +21,8 @@ mod network;
 mod network_forwarding;
 #[path = "../../src/network_inventory.rs"]
 mod network_inventory;
+#[path = "../../src/network_preparation.rs"]
+mod network_preparation;
 #[path = "../../src/network_rules.rs"]
 mod network_rules;
 #[path = "../../src/process.rs"]
@@ -30,7 +36,9 @@ use std::sync::Arc;
 
 use serde_json::json;
 
+use host_system::LinuxHostSystem;
 use network::{LinuxNetwork, Network};
+use network_preparation::NetworkPackages;
 use process::LinuxCommands;
 use state::VmRecord;
 use vm_config::VmConfig;
@@ -38,9 +46,12 @@ use vm_config::VmConfig;
 #[tokio::main]
 async fn main() {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
-    let network = LinuxNetwork {
-        commands: Arc::new(LinuxCommands),
-    };
+    let network = LinuxNetwork::new(
+        Arc::new(LinuxCommands),
+        Arc::new(NetworkPackages {
+            system: Arc::new(LinuxHostSystem),
+        }),
+    );
     match args.first().map(String::as_str) {
         Some("create") => {
             let index = network.allocate(&[]).await.unwrap();

@@ -59,7 +59,9 @@ Each new VM start checks both tool hashes and their ownership.
 It fetches a missing or invalid current pair without an install token.
 Existing VM restore and stop do not need that pair.
 A pending download holds no VM operation lock and does not block reports.
-Package preparation runs in install, not on each daemon restart.
+Full package preparation runs during install.
+Network use also checks commands after a daemon update or restart.
+It installs only missing network packages, without preparing storage or KVM.
 The owned tools directory is `/var/lib/ciproxy/tools/v1.17.0`.
 It includes a root-only owner marker and the upstream licence notices.
 Active VMs keep their existing executable inode during a repair.
@@ -96,6 +98,14 @@ Explicit unrelated host firewall denials still need host configuration.
 Allocation and cleanup also inspect these chains. A failed deletion keeps
 the network index owned until the jump and chain are gone.
 The package preparation installs the required iptables command tools.
+The shared network adapter checks `ip`, `nft`, `iptables`, and `sysctl`
+before its first inventory or create operation. This also covers uninstall
+and an automatic update from an older installation.
+If a command is missing, it installs only that command's package and checks
+again. It does not run a general package upgrade.
+A successful check lasts for this adapter's lifetime.
+A failed repair keeps network ownership and retries on the next operation.
+It does not stop the daemon's reports or existing VM processes.
 
 ## Storage and capacity
 

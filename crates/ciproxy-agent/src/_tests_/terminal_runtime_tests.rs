@@ -16,9 +16,9 @@ use crate::cache_authority::CacheAuthority;
 use crate::fixtures::{controller, identity, report_dependencies, vm};
 use crate::gateway::GatewayMock;
 use crate::maintenance::MaintenanceMock;
-use crate::network::LinuxNetwork;
 use crate::network_barriers::HeldDeletion;
-use crate::network_fixtures::{HostNetworks, commands, restored, runtime, saving};
+use crate::network_fixtures::prepared_network;
+use crate::network_fixtures::{HostNetworks, commands, restored, runtime_with_network, saving};
 use crate::process::{CommandsMock, UnitState};
 use crate::runtime::{AgentDaemon, Daemon};
 use crate::runtime_fakes::IncomingConnection;
@@ -85,16 +85,16 @@ async fn daemon_sends_exit_and_reports_while_terminal_cleanup_waits_then_finaliz
     )));
     let (started, cleanup_ready) = sync::oneshot::channel();
     let (release, barrier) = sync::oneshot::channel();
-    let mut vms = runtime(mock.clone());
-    vms.network = Arc::new(LinuxNetwork {
-        commands: Arc::new(HeldDeletion {
+    let vms = runtime_with_network(
+        mock.clone(),
+        Arc::new(prepared_network(Arc::new(HeldDeletion {
             delegate: mock.clone(),
             inspection_started: sync::Mutex::new(None),
             inspection_release: sync::Mutex::new(None),
             started: sync::Mutex::new(Some(started)),
             release: sync::Mutex::new(Some(barrier)),
-        }),
-    });
+        }))),
+    );
     let mut agent = controller(initial, mock.as_ref().clone());
     agent.vms = Arc::new(vms);
     let agent = Arc::new(agent);

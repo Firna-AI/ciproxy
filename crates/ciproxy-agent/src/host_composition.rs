@@ -9,16 +9,18 @@ use tokio::sync::Mutex;
 use crate::area::{AreaFiles, PersistentArea};
 use crate::area_mounts::LinuxAreaMounts;
 use crate::error::{ErrorResultExt, Result};
-use crate::host_packages::DistributionPackages;
+use crate::host_packages::{DistributionPackages, Packages};
 use crate::host_preparation::{HostPreparation, Preparation};
 use crate::host_release::PINNED;
 use crate::host_system::HostSystem;
 use crate::host_tool_files::LinuxToolFiles;
 use crate::host_tools::{HttpsHostDownload, Tools, VerifiedTools};
+use crate::network_preparation::NetworkPackages;
 
 pub(crate) struct HostServices {
     pub(crate) preparation: Arc<dyn Preparation>,
     pub(crate) tools: Arc<dyn Tools>,
+    pub(crate) network_packages: Arc<dyn Packages>,
 }
 
 pub(crate) fn services(
@@ -47,9 +49,15 @@ pub(crate) fn services(
         tools: tools.clone(),
         area: Arc::new(PersistentArea {
             files,
-            mounts: Arc::new(LinuxAreaMounts { system }),
+            mounts: Arc::new(LinuxAreaMounts {
+                system: system.clone(),
+            }),
             requested_budget,
         }),
     });
-    Ok(HostServices { preparation, tools })
+    Ok(HostServices {
+        preparation,
+        tools,
+        network_packages: Arc::new(NetworkPackages { system }),
+    })
 }

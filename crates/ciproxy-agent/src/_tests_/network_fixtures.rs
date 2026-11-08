@@ -10,11 +10,23 @@ use unimock::{Clause, MockFn, Unimock, matching};
 
 use crate::boundaries::StoreMock;
 use crate::error::Error;
+use crate::host_packages::PackagesMock;
 use crate::layout::Layout;
-use crate::network::LinuxNetwork;
-use crate::process::CommandsMock;
+use crate::network::{LinuxNetwork, Network};
+use crate::process::{Commands, CommandsMock};
 use crate::state::MachineState;
 use crate::vms::LinuxVms;
+
+pub(crate) fn prepared_network(commands: Arc<dyn Commands>) -> LinuxNetwork {
+    LinuxNetwork::new(
+        commands,
+        Arc::new(Unimock::new(
+            PackagesMock::prepare
+                .each_call(matching!())
+                .answers(&|_| Ok(())),
+        )),
+    )
+}
 
 #[derive(Clone, Copy, Default)]
 pub(crate) enum Deletion {
@@ -94,6 +106,10 @@ pub(crate) fn commands(host: Arc<Mutex<HostNetworks>>) -> impl Clause {
 }
 
 pub(crate) fn runtime(mock: Arc<Unimock>) -> LinuxVms {
+    runtime_with_network(mock.clone(), Arc::new(prepared_network(mock)))
+}
+
+pub(crate) fn runtime_with_network(mock: Arc<Unimock>, network: Arc<dyn Network>) -> LinuxVms {
     LinuxVms {
         layout: Layout {
             data: PathBuf::from("/fixture"),
@@ -102,9 +118,7 @@ pub(crate) fn runtime(mock: Arc<Unimock>) -> LinuxVms {
         },
         tools: mock.clone(),
         commands: mock.clone(),
-        network: Arc::new(LinuxNetwork {
-            commands: mock.clone(),
-        }),
+        network,
         files: mock.clone(),
         guests: mock,
         operation: sync::Mutex::new(()),

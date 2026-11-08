@@ -44,12 +44,20 @@ This check cannot prove real guestfish inspection, mounts, or a VM boot.
 
 ## Guest network
 
+Check the probe's unit-state handling without systemd or KVM:
+
+```sh
+python3 image/check-network-probe.py
+```
+
 The export check also checks the generated network file in the source,
 the finalized tree, the Boat archive, and the ext4 disk. DHCP must be off.
 The complete kernel configuration must stay in place. The image supplies
 DNS and does not duplicate the agent's address or gateway.
 
 Run the live network smoke on a disposable KVM machine before publication:
+Finish its jobs and stop its agent before this probe.
+Run it before a fresh agent installation and registered-job scenarios.
 
 ```sh
 cargo build --package ciproxy-agent --features filesystem-regression \
@@ -70,6 +78,7 @@ The guest must resolve `github.com` and open a verified HTTPS connection.
 Failure returns 1. Missing root or KVM returns SKIP with exit 77.
 The probe stops its VM, removes its namespace and disk copy, and keeps safe
 network evidence under `.context/image-network-smoke/`.
+An unknown unit state fails the probe and retains its named VM resources.
 `--disk-bytes` can use the grown copy size from the agent sizing helper.
 
 Add `--initialization-failure` to check the image's failure cleanup hook.

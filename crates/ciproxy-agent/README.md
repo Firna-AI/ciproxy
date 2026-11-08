@@ -100,6 +100,8 @@ Filesystem free bytes are a health measurement.
 Each VM has a private namespace for public IPv4 and its cache port.
 The [VM network guide](host-preparation.md#vm-network) gives isolation,
 owned forwarding rules, repair, and cleanup.
+Network use repairs missing network commands after automatic updates.
+A failed repair keeps the daemon available for reports and another attempt.
 
 ### Host requirements
 
@@ -247,6 +249,8 @@ KVM and GitHub smoke checks, and release packaging commands.
   verifies that cleanup removed their resources.
 - [src/network_forwarding.rs](src/network_forwarding.rs) owns narrow IPv4
   forwarding accepts in both iptables backends.
+- [src/network_preparation.rs](src/network_preparation.rs) checks network
+  tools and installs only missing packages before network use.
 - [src/network_lifecycle.rs](src/network_lifecycle.rs) keeps active and
   pending network ownership across retirement, restart, and uninstall.
 - [src/root_sizing.rs](src/root_sizing.rs) defines the pure shared root

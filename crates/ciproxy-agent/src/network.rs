@@ -3,8 +3,10 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use tokio::sync::OnceCell;
 
 use crate::error::{Error, Result};
+use crate::host_packages::Packages;
 use crate::layout::jail_uid;
 use crate::network_rules::{namespace_rules, root_rules};
 use crate::process::{Commands, arguments};
@@ -24,6 +26,26 @@ pub(crate) trait Network: Send + Sync {
 
 pub(crate) struct LinuxNetwork {
     pub(crate) commands: Arc<dyn Commands>,
+    packages: Arc<dyn Packages>,
+    prepared: OnceCell<()>,
+}
+
+impl LinuxNetwork {
+    /// Prepare prerequisites on first use, including after an automatic update.
+    pub(crate) fn new(commands: Arc<dyn Commands>, packages: Arc<dyn Packages>) -> Self {
+        Self {
+            commands,
+            packages,
+            prepared: OnceCell::new(),
+        }
+    }
+
+    pub(crate) async fn prepare(&self) -> Result<()> {
+        self.prepared
+            .get_or_try_init(|| self.packages.prepare())
+            .await?;
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -40,6 +62,7 @@ impl Network for LinuxNetwork {
     }
 
     async fn create(&self, vm: &VmRecord) -> Result<()> {
+        self.prepare().await?;
         let id = network_name(vm.network_index);
         let peer = format!("{id}p");
         let host = host_address(vm.network_index);

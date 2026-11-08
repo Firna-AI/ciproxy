@@ -136,9 +136,10 @@ async fn execute(action: Action) -> Result<()> {
         tools: services.tools,
         layout: layout.clone(),
         commands: commands.clone(),
-        network: Arc::new(LinuxNetwork {
-            commands: commands.clone(),
-        }),
+        network: Arc::new(LinuxNetwork::new(
+            commands.clone(),
+            services.network_packages,
+        )),
         files: Arc::new(LinuxVmFiles {
             layout: layout.clone(),
             root: Arc::new(ReflinkRoot {

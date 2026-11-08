@@ -130,6 +130,7 @@ configuration, including its boot routes. The image supplies DNS through
 its network configuration. No guest address or gateway is set in the image.
 The [network smoke](checks.md#guest-network) checks public DNS and HTTPS
 before any runner starts.
+It keeps the VM resources when the host cannot confirm that the VM stopped.
 The guest listens on vsock port 5252 by default in its systemd unit.
 Change `/etc/ciproxy/guest.env` when the agent uses another port.
 The agent must send one JSON object per line over that connection.
