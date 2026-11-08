@@ -151,6 +151,14 @@ intentional removals and retired-label cleanup. Use the same API collaborators.
 
 ## Organization linking
 
+GET `/session` returns `/install` as a stable dashboard navigation link.
+It creates no installation attempt. POST `/installation-links/start` saves
+an attempt and returns the configured GitHub URL with its opaque state.
+The normal Origin and CSRF checks protect this start action. It keeps the
+session's exact Direct or Add continuation purpose. An Add continues as
+Direct after its installation links. A personal-account retry stays Add.
+Attempts have no age limit. Add evidence is durable before GitHub opens.
+
 POST `/workspaces/{workspace_id}/organizations/add` returns the configured
 `/installations/new?state=...` URL. GitHub still chooses the organization.
 The registered setup return starts the same browser-bound OAuth proof.
@@ -175,6 +183,12 @@ stay admitted on downgrade. A current Admin can approve with POST
 `/workspaces/{workspace_id}/organizations/{organization_id}/enable`.
 Only a new workspace receives a first-Admin grant. An inactive link grants
 no role. Retained reinstall preserves holds and completed history.
+An admitted retained organization prepares its current bindings before the
+registration publishes Active, including a reinstall through Add.
+
+The session's `can_claim_admin` capability is false for an existing Admin.
+Other owners retain the recovery rules of the
+[security protocol](../../docs/protocol/security.md#who-gets-a-role).
 
 The API returns exact-workspace upgrade actions only to Billing and Admin.
 Other people get the reason and an ask-Admin capability. No held organization
@@ -223,7 +237,7 @@ It never prints a cookie, token, install command, or response body.
 - [src/installations.rs](src/installations.rs) implements App-JWT metadata reads
   and intentional uninstall.
 - [src/handlers/links.rs](src/handlers/links.rs) owns requester choice and
-  enable.
+  enable, and creates attempts only through explicit installation starts.
 - [src/handlers/overflow.rs](src/handlers/overflow.rs) serves the Boat Setup
   and Settings routes.
 - [src/handlers/overflow_views.rs](src/handlers/overflow_views.rs) builds the

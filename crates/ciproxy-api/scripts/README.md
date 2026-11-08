@@ -4,6 +4,8 @@ Run these checks only against the operator's test workspace. Keep the credential
 file outside the repository. Use a private file mode, such as `chmod 600`. Do
 not paste its contents into a log or a message.
 
+Use Python 3.9 or later for these scripts.
+
 The file is JSON. It supplies `base_url`, `workspace_id`, `session_cookie`, and
 `csrf_token`. `base_url` is the dashboard origin without `/api`.
 `session_cookie` is the value of `__Host-ciproxy`. The session endpoint returns

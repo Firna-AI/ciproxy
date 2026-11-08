@@ -1,5 +1,6 @@
 //! GitHub App installation, requester linkage, and lifecycle orchestration.
 
+mod admission;
 mod bindings;
 mod coordination;
 mod delivery;

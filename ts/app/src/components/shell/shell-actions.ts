@@ -7,8 +7,10 @@ import { useCallback, useRef, useState } from "react";
 import { pages, workspaceHomeHref } from "../../routing/pages.ts";
 import { useServices } from "../../services/context.tsx";
 import { claimFailure, type FailureCopy } from "../../view/claim.ts";
+import { installFailure } from "../../view/install.ts";
 
-export type ShellAction = "add-organization" | "claim-admin" | "sign-out";
+export type ShellAction =
+  "install" | "add-organization" | "claim-admin" | "sign-out";
 
 export type ShellFailure = FailureCopy;
 
@@ -67,6 +69,15 @@ export function useShellActions(workspaceId: string) {
     [run, services, workspaceId],
   );
 
+  const install = useCallback(
+    () =>
+      run("install", async () => {
+        const result = await services.startInstallation();
+        return result.ok ? null : installFailure;
+      }),
+    [run, services],
+  );
+
   const signOut = useCallback(
     () =>
       run("sign-out", async () => {
@@ -78,5 +89,5 @@ export function useShellActions(workspaceId: string) {
     [run, services],
   );
 
-  return { busy, failure, addOrganization, claimAdmin, signOut };
+  return { busy, failure, addOrganization, install, claimAdmin, signOut };
 }

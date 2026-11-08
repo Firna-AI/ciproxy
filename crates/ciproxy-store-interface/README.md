@@ -164,6 +164,11 @@ New linked organizations count even while inactive. Removed ones do not count.
 Retained reinstall preserves holds and admission. Only a confirmed new workspace
 creates first-Admin work. Runnable authority also requires active GitHub App
 state.
+`OrganizationActivation::permits_activation` is the common policy for remote
+preparation and registration. Retained admission permits both. Otherwise,
+both initial holds must be clear.
+Retired-label cleanup discovers workspaces and reads exact scale-set bindings.
+It preserves the retired labels and their job history.
 
 OwnRunnerStore exposes one coherent workspace routing snapshot.
 It also holds the Boat account, deliveries, and registration identities.

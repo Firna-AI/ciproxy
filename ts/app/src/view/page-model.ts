@@ -13,9 +13,9 @@ export type PageAction =
       tone: ActionTone;
       icon: "external" | null;
       newTab: boolean;
-      /** The link starts an install on GitHub, whose return shows its outcome. */
-      install: boolean;
     }
+  /** An explicit start saves installation evidence before opening GitHub. */
+  | { kind: "install"; label: string; href: string; tone: ActionTone }
   /** The server-owned check: fresh GitHub proof or a new read. */
   | { kind: "check-again"; label: string; tone: ActionTone }
   | {
@@ -56,22 +56,14 @@ export function leave(
   icon: "external" | null = null,
 ): PageAction {
   const newTab = icon === "external";
-  return { kind: "leave", label, href, tone, icon, newTab, install: false };
+  return { kind: "leave", label, href, tone, icon, newTab };
 }
 
-/** The link to GitHub that installs the App. */
-export function installLink(
+/** Start installation, with a stable navigation target for another tab. */
+export function startInstall(
   label: string,
   href: string,
   tone: ActionTone,
 ): PageAction {
-  return {
-    kind: "leave",
-    label,
-    href,
-    tone,
-    icon: null,
-    newTab: false,
-    install: true,
-  };
+  return { kind: "install", label, href, tone };
 }

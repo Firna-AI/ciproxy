@@ -4,7 +4,6 @@ use std::sync::atomic::Ordering;
 
 use ciproxy_store_interface::dashboard::records::Role;
 use sha2::{Digest, Sha256};
-use url::Url;
 
 use super::adapter_server::Server;
 use super::fixture::Fixture;
@@ -45,13 +44,7 @@ async fn fresh_personal_setup_records_only_verified_token_free_metadata() {
     )
     .await;
     assert_eq!(session["setup"]["kind"], "organizations_only");
-    let retry = Url::parse(session["install_url"].as_str().unwrap()).unwrap();
-    let retry_state = retry
-        .query_pairs()
-        .find(|(key, _)| key == "state")
-        .unwrap()
-        .1
-        .into_owned();
+    let retry_state = link_support::start(&fixture, &signed).await;
     let attempt = fixture
         .database
         .store

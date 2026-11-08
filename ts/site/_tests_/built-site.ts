@@ -12,6 +12,8 @@ import { fileURLToPath } from "node:url";
 const siteRoot = fileURLToPath(new URL("..", import.meta.url));
 
 export type BuiltSite = {
+  /** The fresh build, including its Pagefind index and browser assets. */
+  directory: string;
   /** The HTML of the page at a route, such as "/docs/quickstart/". */
   page(route: string): string;
   /** Deletes the build. */
@@ -52,6 +54,7 @@ export function buildSite(): BuiltSite {
     throw new Error(`astro build failed:\n${build.stdout}${build.stderr}`);
   }
   return {
+    directory: outDir,
     page: (route) => readFileSync(join(outDir, route, "index.html"), "utf8"),
     remove,
   };

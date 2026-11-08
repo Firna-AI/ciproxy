@@ -14,7 +14,7 @@ use crate::state::{ApiState, query};
 use crate::wire::access::{SessionView, SignInState, Success, WorkspacePath, WorkspaceView};
 use crate::wire::links::OrganizationLinkView;
 
-use super::{link_views, links, views};
+use super::{link_views, views};
 
 #[utoipa::path(operation_id = "sessions_session", get, path = "/session", responses((status = 200, body = SessionView)), security(("session" = [])))]
 pub(crate) async fn session(
@@ -107,17 +107,18 @@ pub(crate) async fn session(
                     membership.github_id == organization.github_id && membership.owner
                 })
             });
+            let role = store.dashboard_role(workspace.id, github_id)?;
             result.push(WorkspaceView {
                 id: workspace.id.to_string(),
                 name: workspace.name,
-                role: store
-                    .dashboard_role(workspace.id, github_id)?
-                    .map(views::role),
+                role: role.map(views::role),
                 admins: admins
                     .iter()
                     .filter_map(|member| member.login.clone())
                     .collect(),
-                can_claim_admin: owns_any && (admins.is_empty() || owns_all),
+                can_claim_admin: role != Some(Role::Admin)
+                    && owns_any
+                    && (admins.is_empty() || owns_all),
                 organization_limit_exceeded: store.billing(workspace.id)?.state.tier == Tier::Free
                     && organizations.len() > 1,
             });
@@ -153,7 +154,7 @@ pub(crate) async fn session(
         login: principal.login().to_owned(),
         expires_at: principal.expires_at(),
         workspaces,
-        install_url: links::continuation_link(&state, &principal).await?.url,
+        install_url: "/install".to_owned(),
     }))
 }
 
