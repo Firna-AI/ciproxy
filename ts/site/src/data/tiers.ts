@@ -2,8 +2,9 @@
 // in docs/protocol/billing.md states them. Every page that shows a price, a
 // limit, or a tier feature reads it here. A feature starts at one tier and
 // stays in every tier above it. A feature that does not ship at launch says
-// "Coming later" on every page that lists it. Several GitHub organizations
-// start at Team.
+// "Coming later" on every page that lists it. Free includes one GitHub
+// organization, and several GitHub organizations start at Team, as
+// "Organizations of a workspace" in docs/protocol/workspaces.md says.
 
 import { formatCount, unbroken } from "./format.ts";
 
@@ -22,6 +23,8 @@ export type Tier = {
   history: string;
   /** The tier sells the add-ons of `addOnPrices`. */
   addOns: boolean;
+  /** The GitHub organizations that the tier includes, when it limits them. */
+  organizations?: number;
 };
 
 export const tiers: Readonly<Record<TierKey, Tier>> = {
@@ -33,6 +36,7 @@ export const tiers: Readonly<Record<TierKey, Tier>> = {
     machines: 1,
     history: "7 days",
     addOns: false,
+    organizations: 1,
   },
   team: {
     key: "team",
@@ -153,6 +157,13 @@ export function ownMachines(count: number): string {
 /** "25,000 starts", whole on one line. */
 export function startsText(count: number): string {
   return unbroken(`${formatCount(count)} starts`);
+}
+
+/** "1", or "Any number" for a tier that does not limit its organizations. */
+export function organizationsText(tier: Tier): string {
+  return tier.organizations === undefined
+    ? "Any number"
+    : formatCount(tier.organizations);
 }
 
 /** What Free includes, in one line. */

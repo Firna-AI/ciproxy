@@ -88,9 +88,10 @@ export function DocsHomeScreen({
         <ul className="docs-list">
           <li>A GitHub organization with private repositories.</li>
           <li>
-            One or more x64 Linux machines with KVM, {unbroken("4 cores")},{" "}
-            {unbroken("16 GB")} of memory, and {unbroken("250 GB")} of disk or
-            more.
+            One or more x64 Linux machines with systemd, {unbroken("cgroup v2")}
+            , KVM, {unbroken("4 cores")}, {unbroken("16 GB")} of memory, and{" "}
+            {unbroken("250 GB")} of disk or more. Add a machine lists the
+            supported distributions.
           </li>
           <li>A Boat account for overflow. You can connect it later.</li>
         </ul>

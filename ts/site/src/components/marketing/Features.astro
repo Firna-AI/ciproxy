@@ -4,6 +4,7 @@
 // agent. Warm runners serve the label ciproxy only, so only its jobs start
 // at once.
 
+import { appPermissions } from "../../data/workflow.ts";
 import type { IconName } from "../icon/icons.ts";
 import Icon from "../icon/Icon.astro";
 import Section from "./Section.astro";
@@ -31,7 +32,7 @@ const features: readonly Feature[] = [
   {
     icon: "shield-check",
     title: "Secure by default",
-    text: "A fresh VM for every job, an agent that only connects out, and a GitHub App with three permissions.",
+    text: `A fresh VM for every job, an agent that only connects out, and a GitHub App with ${appPermissions.length} permissions.`,
   },
   {
     icon: "github",

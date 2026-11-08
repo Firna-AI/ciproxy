@@ -3,10 +3,18 @@
    them from <LinkCard>, <CardGrid>, <Steps>, <Badge>, Markdown tables, and
    its pagination; these rules restyle them with the tokens. */
 
-/* Link cards: a title, a line, and an arrow, in a box with a hairline. */
+/* Link cards: a title, a line, and an arrow, in a box with a hairline. The
+   cards are in two columns, and in one column on a phone. */
 
 .card-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+@media (width < 40rem) {
+  .card-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .sl-link-card {
@@ -67,6 +75,7 @@
 .sl-steps > li::before {
   background-color: var(--c-surface);
   box-shadow: inset 0 0 0 1px var(--c-border2);
+  border-radius: var(--r-pill);
   color: var(--c-ink);
   font-family: var(--font-mono);
   font-size: 12px;
@@ -98,6 +107,29 @@
   justify-content: flex-start;
   padding-inline: 12px;
   font-weight: 400;
+}
+
+/* Put the copy target in the header, clear of wrapped command text. */
+
+.expressive-code .frame .header {
+  padding-inline-end: 3.25rem;
+}
+
+.expressive-code .frame:is(.has-title, .is-terminal) .copy {
+  inset-block-start: 0;
+}
+
+.expressive-code .copy button {
+  border-radius: var(--r-sm);
+  background: transparent;
+}
+
+.expressive-code .copy .feedback {
+  --tooltip-bg: var(--c-ink);
+
+  border-radius: var(--r-sm);
+  color: var(--c-on-solid);
+  font-family: var(--font-sans);
 }
 
 /* A table: a header band and hairline rows that wrap, in a frame with a
@@ -159,17 +191,36 @@
   white-space: nowrap;
 }
 
-/* The previous and next pages: two boxes with a hairline, 56 px under the
-   article. Starlight's footer row for the edit link and the date is empty
-   on this site, so it does not show. */
+/* The previous and next pages: two boxes with a hairline in two columns,
+   56 px under the article. The next page stays in the right column, also
+   when no previous page is beside it. On a phone, the boxes are in one
+   column, 40 px under the article. The content panel puts 24 px of that
+   space above the footer. Starlight's footer row for the edit link and the
+   date is empty on this site, so it does not show. */
 
 .content-panel footer .meta:empty {
   display: none;
 }
 
 .pagination-links {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   margin-top: 32px;
+}
+
+.pagination-links a[rel="next"] {
+  grid-column: 2;
+}
+
+@media (width < 40rem) {
+  .pagination-links {
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: 16px;
+  }
+
+  .pagination-links a[rel="next"] {
+    grid-column: auto;
+  }
 }
 
 .pagination-links a {
