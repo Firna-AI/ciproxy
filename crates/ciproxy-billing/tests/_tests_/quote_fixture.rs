@@ -31,6 +31,8 @@ pub(super) fn quote(database: &Database, fake: &Fake, now: DateTime<Utc>) -> Uui
     let id = Uuid::new_v4();
     let payment = QuotePayment {
         id,
+        offset: None,
+        starting_balance_cents: Some(0),
         proration_at: now,
         items: vec![
             ChangeItem::Remove {
@@ -96,6 +98,8 @@ pub(super) fn quote(database: &Database, fake: &Fake, now: DateTime<Utc>) -> Uui
                 },
                 items,
                 anchor: current.billing_cycle_anchor,
+                cancel_at_period_end: current.cancel_at_period_end,
+                cancel_at: current.cancel_at,
                 anchor_day: current
                     .billing_cycle_anchor_config
                     .map(|anchor| anchor.day_of_month),

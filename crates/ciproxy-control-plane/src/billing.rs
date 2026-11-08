@@ -27,10 +27,16 @@ pub struct BillingCancellations {
 impl BillingMaintenance for BillingCancellations {
     async fn reconcile(&self) -> Result<()> {
         let store = self.store.clone();
-        let workspaces = tokio::task::spawn_blocking(move || store.billing_cancellations())
-            .await
-            .internal()?
-            .internal()?;
+        let workspaces = tokio::task::spawn_blocking(move || {
+            let mut workspaces = store.billing_cancellations()?;
+            workspaces.extend(store.billing_payment_workspaces()?);
+            workspaces.sort();
+            workspaces.dedup();
+            ciproxy_store_interface::error::Result::Ok(workspaces)
+        })
+        .await
+        .internal()?
+        .internal()?;
         for workspace in workspaces {
             let billing = self.billing.clone();
             let result =
@@ -43,6 +49,16 @@ impl BillingMaintenance for BillingCancellations {
                 Err(error) => {
                     tracing::warn!(%workspace, %error, "billing cancellation worker will retry");
                 }
+            }
+            let billing = self.billing.clone();
+            let result =
+                tokio::task::spawn_blocking(move || billing.reconcile_payments(workspace)).await;
+            match result {
+                Ok(Ok(())) => {}
+                Ok(Err(error)) => {
+                    tracing::warn!(%workspace,%error,"billing payment recovery will retry")
+                }
+                Err(error) => tracing::warn!(%workspace,%error,"billing payment worker will retry"),
             }
         }
         Ok(())

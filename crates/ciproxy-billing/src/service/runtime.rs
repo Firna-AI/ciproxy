@@ -8,6 +8,7 @@ use ciproxy_store_interface::billing::store::{BillingRecord, BillingSession, Bil
 use uuid::Uuid;
 
 use crate::access::BillingAccess;
+use crate::alerts::BillingAlerts;
 use crate::catalog::{CheckoutReview, monthly_total};
 use crate::clock::Clock;
 use crate::error::{Error, Result, ResultExt};
@@ -31,6 +32,7 @@ pub struct BillingService {
     pub(super) store: Arc<dyn BillingStore>,
     pub(super) stripe: Arc<dyn StripeApi>,
     pub(super) clock: Arc<dyn Clock>,
+    pub(super) alerts: Arc<dyn BillingAlerts>,
     pub(super) signing_secret: SigningSecret,
     pub(super) redirects: Redirects,
 }
@@ -41,6 +43,7 @@ impl BillingService {
         store: Arc<dyn BillingStore>,
         stripe: Arc<dyn StripeApi>,
         clock: Arc<dyn Clock>,
+        alerts: Arc<dyn BillingAlerts>,
         signing_secret: SigningSecret,
         redirects: Redirects,
     ) -> Self {
@@ -48,6 +51,7 @@ impl BillingService {
             store,
             stripe,
             clock,
+            alerts,
             signing_secret,
             redirects,
         }

@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 use chrono::Utc;
 use ciproxy_billing::access::{BillingAccess, Role};
+use ciproxy_billing::alerts::HostedBillingAlerts;
 use ciproxy_billing::clock::SystemClock;
 use ciproxy_billing::error;
 use ciproxy_billing::service::api::BillingApi;
@@ -75,6 +76,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         store.clone(),
         provider,
         Arc::new(SystemClock),
+        Arc::new(HostedBillingAlerts),
         SigningSecret::new(secret),
         Redirects {
             success_url: format!("{origin}/billing/return?session_id={{CHECKOUT_SESSION_ID}}"),

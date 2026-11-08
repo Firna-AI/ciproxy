@@ -75,12 +75,28 @@ impl Stripe {
         let subscription = self.clone();
         let change = self.clone();
         let cancel = self.clone();
+        let marker = self.clone();
+        let mark = StripeApiMock::mark_payment
+            .each_call(matching!())
+            .answers_arc(Arc::new(move |_, _, quote, command| {
+                let mut current = marker.subscription.lock().unwrap();
+                current.metadata.payment.ciproxy_quote_id = Some(quote);
+                current.metadata.payment.ciproxy_payment_id = Some(command);
+                Ok(())
+            }));
+        let invoices = StripeApiMock::payment_invoices
+            .each_call(matching!())
+            .answers(&|_, _, _| Ok(Vec::new()));
+        let balance = StripeApiMock::customer_balance
+            .each_call(matching!())
+            .answers(&|_, _| Ok(0));
         let checkout = StripeApiMock::checkout
             .each_call(matching!())
             .answers_arc(Arc::new(move |_, workspace, _, command| {
                 checkout.checkouts.fetch_add(1, Ordering::SeqCst);
                 let mut session = checkout.session.lock().unwrap();
                 session.metadata = Metadata {
+                    payment: Default::default(),
                     workspace_id: Some(workspace),
                     command_id: Some(command.id),
                 };
@@ -134,7 +150,15 @@ impl Stripe {
         match scenario {
             Scenario::Checkout => Arc::new(Unimock::new((checkout, read, subscription))),
             Scenario::Expired => Arc::new(Unimock::new((checkout, read))),
-            Scenario::Paid => Arc::new(Unimock::new((subscription, change, cancel, portal))),
+            Scenario::Paid => Arc::new(Unimock::new((
+                subscription,
+                change,
+                cancel,
+                portal,
+                mark,
+                invoices,
+                balance,
+            ))),
             Scenario::AddOns => Arc::new(Unimock::new((subscription, change))),
         }
     }

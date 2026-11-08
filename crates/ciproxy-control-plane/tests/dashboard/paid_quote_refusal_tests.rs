@@ -24,10 +24,7 @@ async fn paid_quote_refuses_unknown_identity_without_a_stripe_mutation() {
         (status, body["code"].clone()),
         (StatusCode::CONFLICT, json!("review_required"))
     );
-    assert_eq!(
-        dashboard.fake.posts("/v1/subscriptions/sub_recorded").len(),
-        0
-    );
+    assert_eq!(dashboard.fake.subscription_mutations().len(), 0);
     dashboard.close().await;
 }
 
@@ -49,10 +46,7 @@ async fn paid_quote_refuses_expired_review_before_starting_a_payment() {
         (status, body["code"].clone()),
         (StatusCode::CONFLICT, json!("review_required"))
     );
-    assert_eq!(
-        dashboard.fake.posts("/v1/subscriptions/sub_recorded").len(),
-        0
-    );
+    assert_eq!(dashboard.fake.subscription_mutations().len(), 0);
     dashboard.close().await;
 }
 
@@ -106,10 +100,7 @@ async fn paid_quote_refuses_another_workspaces_review_without_disclosing_ownersh
     assert_eq!(body["code"], "review_required");
     let requests_after = dashboard.fake.state.lock().unwrap().requests.len();
     assert_eq!(requests_after, requests_before);
-    assert_eq!(
-        dashboard.fake.posts("/v1/subscriptions/sub_recorded").len(),
-        0
-    );
+    assert_eq!(dashboard.fake.subscription_mutations().len(), 0);
     dashboard.close().await;
 }
 
@@ -157,27 +148,31 @@ async fn paid_quote_cannot_be_used_again_after_completion_or_rejection() {
         )
         .await;
         assert_eq!(body["code"], "review_required", "rejected={rejected}");
-        assert_eq!(
-            dashboard.fake.posts("/v1/subscriptions/sub_recorded").len(),
-            1
-        );
+        assert_eq!(dashboard.fake.subscription_mutations().len(), 1);
         dashboard.close().await;
     }
 }
 
 #[tokio::test]
 async fn paid_quote_requires_a_new_review_when_source_items_or_period_change() {
-    for changed_period in [false, true] {
+    for change in ["items", "period", "balance"] {
         let (dashboard, payer, reviewed) = reviewed().await;
         {
             let mut remote = dashboard.fake.state.lock().unwrap();
-            if changed_period {
+            if change == "period" {
                 for item in &mut remote.subscription.items.data {
                     item.current_period_start += 100_000;
                     item.current_period_end += 100_000;
                 }
-            } else {
+            } else if change == "items" {
                 remote.subscription.items.data[0].id = "si_replaced_tier".into();
+            } else {
+                let customer = remote.subscription.customer.clone();
+                remote.raw_reads.insert(
+                    format!("/v1/customers/{customer}"),
+                    json!({
+                    "id":customer,"balance":-1000,"invoice_credit_balance":{"usd":-1000}}),
+                );
             }
         }
         let body = json(
@@ -192,14 +187,8 @@ async fn paid_quote_requires_a_new_review_when_source_items_or_period_change() {
             StatusCode::CONFLICT,
         )
         .await;
-        assert_eq!(
-            body["code"], "review_required",
-            "changed_period={changed_period}"
-        );
-        assert_eq!(
-            dashboard.fake.posts("/v1/subscriptions/sub_recorded").len(),
-            0
-        );
+        assert_eq!(body["code"], "review_required", "change={change}");
+        assert_eq!(dashboard.fake.subscription_mutations().len(), 0);
         dashboard.close().await;
     }
 }

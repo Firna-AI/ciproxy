@@ -157,5 +157,5 @@ fn renewal_and_upgrade(delayed: bool, after_upgrade: SubscriptionState) {
         (SubscriptionState::Active, None, None)
     );
     assert_eq!(state(&database).tier, Tier::Team);
-    assert_eq!(fake.posts("/v1/subscriptions/sub_recorded").len(), 1);
+    assert_eq!(fake.subscription_mutations().len(), 1);
 }

@@ -3,12 +3,15 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::invoice::{CancellationDetails, CollectionMethod, Invoice};
+use super::invoice::{CancellationDetails, CollectionMethod, Invoice, PaymentMetadata};
 use crate::catalog::PriceCode;
 
 /// Server-owned metadata attached to Stripe sessions and subscriptions.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Metadata {
+    /// Dedicated current payment markers, separate from Checkout creation.
+    #[serde(flatten)]
+    pub payment: PaymentMetadata,
     /// The workspace owning the Stripe object.
     pub workspace_id: Option<Uuid>,
     /// The durable command that created the object.

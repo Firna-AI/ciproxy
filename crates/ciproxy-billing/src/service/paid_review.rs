@@ -11,6 +11,7 @@ use crate::access::BillingAccess;
 use crate::catalog::CheckoutReview;
 use crate::error::{Error, Result, ResultExt};
 
+use super::payment_work::money_held;
 use super::quote_source::source;
 use super::runtime::BillingService;
 use super::transition::{period, selection, terminal};
@@ -53,6 +54,9 @@ impl PaidReview for BillingService {
         }
         let mut session = self.lock(workspace)?;
         let record = session.record().internal()?;
+        if session.payments().internal()?.iter().any(money_held) {
+            return Err(Error::PaymentConfirming);
+        }
         if record.command.is_some() || record.checkout.is_some() {
             return Err(Error::PaymentConfirming);
         }
@@ -85,6 +89,8 @@ impl PaidReview for BillingService {
                     id,
                     proration_at: at,
                     items: preview.items,
+                    offset: preview.offset,
+                    starting_balance_cents: Some(preview.starting_balance_cents),
                 },
                 selection: wanted,
                 upgrade,

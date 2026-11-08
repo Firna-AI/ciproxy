@@ -11,6 +11,7 @@ use crate::error::{Error, Result, ResultExt};
 use crate::stripe::api::{PaidPreview, StripeApi};
 use crate::stripe::forms;
 use crate::stripe::wire::invoice::RetrievedInvoice;
+use crate::stripe::wire::pending::InvoiceItem;
 use crate::stripe::wire::types::{CheckoutSession, Subscription};
 
 use super::client::HttpStripe;
@@ -69,6 +70,43 @@ impl StripeApi for HttpStripe {
             .internal()
     }
 
+    fn pending_items(&self, customer_id: &str) -> Result<Vec<InvoiceItem>> {
+        self.list_pending_items(customer_id)
+    }
+
+    fn customer_balance(&self, customer_id: &str) -> Result<i64> {
+        self.read_customer_balance(customer_id)
+    }
+
+    fn invoice_item(&self, item_id: &str) -> Result<Option<InvoiceItem>> {
+        self.read_invoice_item(item_id)
+    }
+
+    fn delete_invoice_item(&self, item_id: &str) -> Result<()> {
+        self.remove_invoice_item(item_id)
+    }
+
+    fn mark_payment(&self, subscription_id: &str, quote_id: Uuid, command_id: Uuid) -> Result<()> {
+        self.stamp_payment(subscription_id, quote_id, command_id)
+    }
+
+    fn payment_invoices(
+        &self,
+        customer_id: &str,
+        subscription_id: &str,
+    ) -> Result<Vec<RetrievedInvoice>> {
+        self.list_payment_invoices(customer_id, subscription_id)
+    }
+
+    fn restore_balance(
+        &self,
+        customer_id: &str,
+        command_id: Uuid,
+        amount_cents: i64,
+    ) -> Result<String> {
+        self.restore_customer_balance(customer_id, command_id, amount_cents)
+    }
+
     fn change(
         &self,
         current: &Subscription,
@@ -121,7 +159,7 @@ impl StripeApi for HttpStripe {
                 ("invoice_now".into(), "false".into()),
                 ("prorate".into(), "false".into()),
             ],
-            &format!("ciproxy:renewal-stop:{invoice_id}"),
+            Some(&format!("ciproxy:renewal-stop:{invoice_id}")),
         )?;
         self.subscription(subscription_id)
     }

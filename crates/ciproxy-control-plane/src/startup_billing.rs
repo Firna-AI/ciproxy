@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 
+use ciproxy_billing::alerts::HostedBillingAlerts;
 use ciproxy_billing::clock::SystemClock;
 use ciproxy_billing::service::runtime::{BillingService, Redirects};
 use ciproxy_billing::webhook::SigningSecret;
@@ -24,6 +25,7 @@ pub(crate) async fn compose(config: &Config, store: Arc<dyn Store>) -> Result<Ar
     PageComposition::billing(
         store,
         Arc::new(SystemClock),
+        Arc::new(HostedBillingAlerts),
         StripeSettings {
             endpoint: "https://api.stripe.com/".into(),
             secret_key: key,

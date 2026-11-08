@@ -94,10 +94,10 @@ fn return_session_from_another_workspace_cannot_apply_a_paid_tier() {
         service.change(access(), quote(&database, &fake, Utc::now())),
         Err(Error::Ownership)
     ));
-    assert_eq!(fake.posts("/v1/subscriptions/sub_recorded").len(), 0);
+    assert_eq!(fake.subscription_mutations().len(), 0);
     assert!(matches!(
         service.move_to_free(access()),
         Err(Error::Ownership)
     ));
-    assert_eq!(fake.posts("/v1/subscriptions/sub_recorded").len(), 0);
+    assert_eq!(fake.subscription_mutations().len(), 0);
 }

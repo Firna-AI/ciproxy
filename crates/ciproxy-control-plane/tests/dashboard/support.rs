@@ -25,6 +25,7 @@ use uuid::Uuid;
 
 use super::fake::Fake;
 use super::fixture::{Browser, Fixture};
+use super::operator_support::OperatorEvents;
 use super::runtime_inputs::Inputs;
 use super::support_host::{Server, host};
 
@@ -34,6 +35,7 @@ pub(super) struct Dashboard {
     pub(super) fake: Fake,
     pub(super) origin: String,
     pub(super) client: Client,
+    pub(super) alerts: Arc<OperatorEvents>,
     server: Server,
 }
 
@@ -41,7 +43,7 @@ impl Dashboard {
     pub(super) async fn restart(&mut self) {
         self.server.0.abort();
         let _ = (&mut self.server.0).await;
-        let pages = composition(&self.fixture, &self.fake).await;
+        let pages = composition(&self.fixture, &self.fake, self.alerts.clone()).await;
         let previous = std::mem::replace(&mut self.pages, pages);
         tokio::task::spawn_blocking(move || drop(previous))
             .await
@@ -83,7 +85,8 @@ impl Dashboard {
         subscription.metadata.command_id = None;
         subscription.billing_cycle_anchor = Some(at("2026-10-31T12:00:00Z").timestamp());
         let fake = Fake::new(subscription);
-        let pages = composition(&fixture, &fake).await;
+        let alerts = Arc::new(OperatorEvents::default());
+        let pages = composition(&fixture, &fake, alerts.clone()).await;
         let (origin, server) = host(&fixture, &pages).await;
         Self {
             fixture,
@@ -92,6 +95,7 @@ impl Dashboard {
             origin,
             server,
             client: Client::builder().no_proxy().build().unwrap(),
+            alerts,
         }
     }
 
@@ -193,10 +197,15 @@ impl Dashboard {
     }
 }
 
-pub(super) async fn composition(fixture: &Fixture, fake: &Fake) -> PageComposition {
+pub(super) async fn composition(
+    fixture: &Fixture,
+    fake: &Fake,
+    alerts: Arc<OperatorEvents>,
+) -> PageComposition {
     let billing = PageComposition::billing(
         fixture.database.store.clone(),
         fixture.runtime.clone(),
+        alerts,
         StripeSettings {
             endpoint: fake.url.clone(),
             secret_key: "sk_test_offline_only".into(),

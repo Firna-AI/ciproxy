@@ -81,7 +81,7 @@ fn ended_events_release_paid_commands_and_preserve_a_later_checkout() {
             EventOutcome::Applied
         );
         assert_eq!(database.store.billing(workspace()).unwrap(), checkout);
-        assert_eq!(fake.posts("/v1/subscriptions/sub_recorded").len(), 0);
+        assert_eq!(fake.subscription_mutations().len(), 0);
     }
 }
 
@@ -109,7 +109,7 @@ fn direct_paid_reconciliation_commits_terminal_state_before_any_mutation() {
             (Tier::Free, SubscriptionState::Ended)
         );
         assert_eq!(database.store.billing(workspace()).unwrap().command, None);
-        assert_eq!(fake.posts("/v1/subscriptions/sub_recorded").len(), 0);
+        assert_eq!(fake.subscription_mutations().len(), 0);
         let checkout = service(&database, &fake, now);
         assert!(matches!(
             checkout.open_checkout(access(), wanted(Tier::Team, 0, 0)),

@@ -31,6 +31,8 @@ pub(super) fn quote(pages: &Pages, stripe: &Stripe) -> Uuid {
     let quote = StoredQuote {
         payment: QuotePayment {
             id,
+            offset: None,
+            starting_balance_cents: Some(0),
             proration_at: at("2026-11-06T12:00:00Z"),
             items: Vec::new(),
         },
@@ -57,6 +59,8 @@ pub(super) fn quote(pages: &Pages, stripe: &Stripe) -> Uuid {
             },
             items,
             anchor: current.billing_cycle_anchor,
+            cancel_at_period_end: current.cancel_at_period_end,
+            cancel_at: current.cancel_at,
             anchor_day: current
                 .billing_cycle_anchor_config
                 .map(|anchor| anchor.day_of_month),

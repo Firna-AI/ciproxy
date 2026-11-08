@@ -55,7 +55,7 @@ async fn paid_quote_keeps_reviewed_charge_after_clock_movement_and_retry() {
         .charges
         .clone();
     assert_eq!(charges, vec![20000]);
-    let posts = dashboard.fake.posts("/v1/subscriptions/sub_recorded");
+    let posts = dashboard.fake.subscription_mutations();
     assert_eq!(posts.len(), 2);
     assert_eq!(posts[0].key, posts[1].key);
     assert_eq!(posts[0].value("proration_date"), Some("1804334400"));
@@ -128,10 +128,7 @@ async fn paid_quote_recovers_a_lost_success_once_after_restart() {
     )
     .await;
     assert_eq!(used["code"], "review_required");
-    assert_eq!(
-        dashboard.fake.posts("/v1/subscriptions/sub_recorded").len(),
-        1
-    );
+    assert_eq!(dashboard.fake.subscription_mutations().len(), 1);
     let charges = dashboard
         .fake
         .state
@@ -170,10 +167,7 @@ async fn paid_quote_starts_only_one_command_for_concurrent_submissions() {
     let mut statuses = [first.status().as_u16(), second.status().as_u16()];
     statuses.sort();
     assert_eq!(statuses, [200, 409]);
-    assert_eq!(
-        dashboard.fake.posts("/v1/subscriptions/sub_recorded").len(),
-        1
-    );
+    assert_eq!(dashboard.fake.subscription_mutations().len(), 1);
     let quote = dashboard
         .fixture
         .database
@@ -218,10 +212,7 @@ async fn paid_quote_expiry_stops_at_period_end_and_another_quote_cannot_recover_
         )
         .await;
     assert_eq!(response.status(), StatusCode::CONFLICT);
-    assert_eq!(
-        dashboard.fake.posts("/v1/subscriptions/sub_recorded").len(),
-        1
-    );
+    assert_eq!(dashboard.fake.subscription_mutations().len(), 1);
     dashboard.save(&dashboard.paid());
     {
         let mut remote = dashboard.fake.state.lock().unwrap();

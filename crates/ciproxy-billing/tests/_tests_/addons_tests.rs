@@ -86,7 +86,7 @@ fn addon_save_keeps_the_reconciled_business_tier_and_scheduled_period_end() {
         Some("2026-12-04T12:00:00Z".parse().unwrap())
     );
     assert_eq!(database.store.billing(workspace()).unwrap().command, None);
-    let requests = fake.posts("/v1/subscriptions/sub_recorded");
+    let requests = fake.subscription_mutations();
     assert_eq!(requests.len(), 1);
     assert_eq!(field(&requests[0], "items[0][price]"), "price_business");
     assert_eq!(field(&requests[0], "items[1][deleted]"), "true");

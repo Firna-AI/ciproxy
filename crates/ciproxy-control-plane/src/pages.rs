@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_api::pages::PageServices;
+use ciproxy_billing::alerts::BillingAlerts;
 use ciproxy_billing::clock::Clock;
 use ciproxy_billing::service::runtime::{BillingService, Redirects};
 use ciproxy_billing::stripe::http::client::HttpStripe;
@@ -50,6 +51,7 @@ impl PageComposition {
     pub async fn billing(
         store: Arc<dyn BillingStore>,
         clock: Arc<dyn Clock>,
+        alerts: Arc<dyn BillingAlerts>,
         settings: StripeSettings,
     ) -> Result<Arc<BillingService>> {
         tokio::task::spawn_blocking(move || {
@@ -62,6 +64,7 @@ impl PageComposition {
                 store,
                 Arc::new(stripe),
                 clock,
+                alerts,
                 settings.signing_secret,
                 settings.redirects,
             )))

@@ -11,8 +11,18 @@ mod database;
 mod expiry_recovery_tests;
 mod expiry_support;
 mod fake;
+#[expect(
+    dead_code,
+    reason = "Credit fixture constructors are exercised by hosted control-plane tests"
+)]
+mod fake_credits;
+mod fake_payments;
 mod fake_requests;
 mod fake_routes;
+#[expect(
+    dead_code,
+    reason = "Credit request expectations are exercised by hosted control-plane tests"
+)]
 mod fake_subscriptions;
 mod fixture;
 mod http_tests;

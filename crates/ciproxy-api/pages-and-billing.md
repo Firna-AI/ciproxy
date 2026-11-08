@@ -40,14 +40,16 @@ A paid change takes two requests. GET
 current Stripe period end, and `quote`. That period stays current while stored
 renewal state lags. POST `/workspaces/{workspace_id}/billing/change` then sends
 only `quote_id`, with no selection, amount, or time. The server reads the
-reviewed selection and proration time from that quote. Start a new payment
-before `quote.expires_at`. Retry a lost reply or an `unavailable` error with
-the same `quote_id`. A started payment then continues, also after that time.
+reviewed selection and proration time from that quote. Today's charge can
+include earlier credits and charges of the period, and the payment carries them
+too. Start a new payment before `quote.expires_at`. Retry a lost reply or an
+`unavailable` error with the same `quote_id`. A started payment then continues,
+also after that time.
 
 HTTP 409 with Problem `code` `review_required` means that the quote cannot
 start a payment.
-[The quote of a paid move](../../docs/protocol/billing.md#the-quote-of-a-paid-move)
-gives the cases. Reload the billing state first, because the payment of that
+[Paid moves](../../docs/protocol/billing-paid-moves.md#the-quote) gives the
+cases. Reload the billing state first, because the payment of that
 quote can be complete. Then fetch a new review, and ask the customer to confirm
 it. On the change route, HTTP 409 with `code` `conflict` means that another
 billing operation is unfinished. PUT

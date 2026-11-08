@@ -1,10 +1,12 @@
 //! Scoped paid quotes and atomic quote consumption with durable commands.
 
-use ciproxy_schema::billing::{billing_accounts, billing_quotes};
+use ciproxy_schema::billing::{billing_accounts, billing_payments, billing_quotes};
 use ciproxy_schema::workspaces::workspaces;
 use ciproxy_store_interface::billing::commands::BillingCommand;
+use ciproxy_store_interface::billing::commands::CommandKind;
+use ciproxy_store_interface::billing::payments::PaymentWork;
 use ciproxy_store_interface::billing::quotes::StoredQuote;
-use ciproxy_store_interface::error::{Result, ResultExt};
+use ciproxy_store_interface::error::{Error, Result, ResultExt};
 use diesel::prelude::*;
 use uuid::Uuid;
 
@@ -74,8 +76,17 @@ pub(super) fn consume(
     workspace: Uuid,
     quote_id: Uuid,
     command: &BillingCommand,
+    work: &PaymentWork,
 ) -> Result<bool> {
+    if work.workspace_id != workspace
+        || work.id != command.id
+        || work.quote.payment.id != quote_id
+        || !matches!(&command.kind,CommandKind::Change{quote:Some(quote),..} if quote.id == quote_id)
+    {
+        return Err(Error::InvalidReference);
+    }
     let json = serde_json::to_string(command).internal()?;
+    let work_json = serde_json::to_string(work).internal()?;
     connection
         .transaction::<_, diesel::result::Error, _>(|connection| {
             workspaces::table
@@ -104,6 +115,14 @@ pub(super) fn consume(
             }
             diesel::update(billing_accounts::table.find(workspace))
                 .set(billing_accounts::command_json.eq(&json))
+                .execute(connection)?;
+            diesel::insert_into(billing_payments::table)
+                .values((
+                    billing_payments::command_id.eq(command.id),
+                    billing_payments::workspace_id.eq(workspace),
+                    billing_payments::state_json.eq(&work_json),
+                    billing_payments::pending.eq(work.pending),
+                ))
                 .execute(connection)?;
             Ok(true)
         })

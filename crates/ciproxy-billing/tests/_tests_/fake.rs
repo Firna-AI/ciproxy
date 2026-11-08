@@ -10,6 +10,7 @@ use serde_json::Value;
 use tiny_http::{Response, Server};
 use url::form_urlencoded;
 
+use super::fake_credits::CreditLedger;
 use super::fake_requests::{Proration, Request};
 use super::fake_routes::handle;
 use super::fake_subscriptions::{SubscriptionExchange, SubscriptionOutcome, SubscriptionRequest};
@@ -23,6 +24,7 @@ pub(super) struct State {
     pub(super) requests: Vec<Request>,
     pub(super) previews: VecDeque<(Vec<(String, String)>, Value)>,
     pub(super) proration: Option<Proration>,
+    pub(super) credits: Option<CreditLedger>,
     pub(super) lose_next_post: bool,
     pub(super) lose_next_delete: bool,
     pub(super) reject_next_checkout: Option<u16>,
@@ -106,6 +108,7 @@ impl Fake {
             requests: Vec::new(),
             previews: VecDeque::new(),
             proration: None,
+            credits: None,
             lose_next_post: false,
             lose_next_delete: false,
             reject_next_checkout: None,
@@ -187,6 +190,22 @@ impl Fake {
             .requests
             .iter()
             .filter(|request| request.method == "POST" && request.path == path)
+            .cloned()
+            .collect()
+    }
+
+    pub(super) fn subscription_mutations(&self) -> Vec<Request> {
+        self.probe().check();
+        self.state
+            .lock()
+            .unwrap()
+            .requests
+            .iter()
+            .filter(|request| {
+                request.method == "POST"
+                    && request.path.starts_with("/v1/subscriptions/")
+                    && !request.payment_marker()
+            })
             .cloned()
             .collect()
     }

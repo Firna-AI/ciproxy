@@ -43,6 +43,12 @@ pub struct QuoteSource {
     pub anchor: Option<i64>,
     /// Explicit recurring anchor day.
     pub anchor_day: Option<u32>,
+    /// Scheduled period-end cancellation observed before this intent.
+    #[serde(default)]
+    pub cancel_at_period_end: bool,
+    /// Explicit cancellation time observed before this intent.
+    #[serde(default)]
+    pub cancel_at: Option<i64>,
 }
 
 /// An immutable reviewed mutation copied into its durable payment command.
@@ -54,6 +60,38 @@ pub struct QuotePayment {
     pub proration_at: DateTime<Utc>,
     /// Exact reviewed item replacements.
     pub items: Vec<ChangeItem>,
+    /// Earlier pending items transferred into this payment, if present.
+    #[serde(default)]
+    pub offset: Option<PendingOffset>,
+    /// USD customer balance counted by the immediate preview.
+    #[serde(default)]
+    pub starting_balance_cents: Option<i64>,
+}
+
+/// One earlier invoice item included in the authoritative preview.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct PendingSource {
+    /// Stripe invoice item identifier.
+    pub id: String,
+    /// Owning Stripe customer.
+    pub customer_id: String,
+    /// Associated subscription, absent for an unscoped customer item.
+    pub subscription_id: Option<String>,
+    /// Original signed integer US cents before invoice discounts.
+    pub amount_cents: i64,
+    /// Signed contribution counted in the preview after line discounts.
+    pub effective_cents: i64,
+}
+
+/// One signed invoice effect carried by the paid mutation.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct PendingOffset {
+    /// Earlier source items which cannot also reach a later invoice.
+    pub sources: Vec<PendingSource>,
+    /// Combined signed integer US cents sent to Stripe.
+    pub amount_cents: i64,
+    /// Existing catalog product used by the one-time inline price.
+    pub product_id: String,
 }
 
 /// One workspace-owned authoritative paid quote.

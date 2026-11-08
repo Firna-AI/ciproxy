@@ -10,6 +10,7 @@ use crate::error::{Error, Result, ResultExt};
 use crate::stripe::wire::invoice::{BillingReason, InvoiceStatus};
 
 use super::completion::{Completion, classify};
+use super::payment_work::{money_held, new_work};
 use super::quote_source::source;
 use super::runtime::BillingService;
 use super::transition::{selection, terminal};
@@ -82,6 +83,7 @@ impl BillingService {
                 self.clock.now(),
             )
             .internal()?;
+        self.observe_payments(&mut *session, &current);
         if terminal(&current) {
             return Err(if quote.is_some() {
                 Error::ReviewRequired
@@ -131,13 +133,20 @@ impl BillingService {
             }
             Some(_) => return Err(Error::PaymentConfirming),
             None => {
+                if quote.is_some() && record.removal_cancel_requested {
+                    return Err(Error::PaymentConfirming);
+                }
                 if current.pending_update.is_some() {
                     return Err(Error::PaymentConfirming);
                 }
                 if let Some(quote) = &quote {
+                    if session.payments().internal()?.iter().any(money_held) {
+                        return Err(Error::PaymentConfirming);
+                    }
                     if quote.source != source(&current)? || self.clock.now() >= quote.expires_at {
                         return Err(Error::ReviewRequired);
                     }
+                    self.validate_offset(quote)?;
                 } else if selection(&current)? == wanted {
                     return Err(Error::CurrentTier);
                 }
@@ -156,7 +165,11 @@ impl BillingService {
                 };
                 if let Some(quote) = &quote {
                     if !session
-                        .consume_quote(quote.payment.id, &command)
+                        .consume_quote(
+                            quote.payment.id,
+                            &command,
+                            &new_work(workspace, quote, &command),
+                        )
                         .internal()?
                     {
                         return Err(Error::ReviewRequired);
@@ -170,10 +183,18 @@ impl BillingService {
         let current = if selection(&current)? == wanted || current.pending_update.is_some() {
             current
         } else {
-            match self.stripe.change(&current, wanted, &command) {
+            let send = match &quote {
+                Some(quote) => self.prepare_payment(&mut *session, quote, &command, &current)?,
+                None => true,
+            };
+            match if send {
+                self.stripe.change(&current, wanted, &command)
+            } else {
+                self.current_subscription(&mut *session, &baseline)
+            } {
                 Ok(current) => current,
                 Err(error) => {
-                    self.release_rejected(&mut *session, &error)?;
+                    self.payment_failure(&mut *session, &command, &error)?;
                     return Err(error);
                 }
             }
@@ -191,6 +212,7 @@ impl BillingService {
                 self.clock.now(),
             )
             .internal()?;
+        self.observe_payments(&mut *session, &current);
         if progress == Completion::Ended {
             return Err(Error::SubscriptionRequired);
         }

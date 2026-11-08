@@ -61,7 +61,12 @@ async fn durable_cancellations_recover_after_restart_and_continue_past_busy_work
         SubscriptionRequest::CancelAtPeriodEnd,
         SubscriptionOutcome::respond(canceled),
     );
-    let restarted = composition(&dashboard.fixture, &dashboard.fake).await;
+    let restarted = composition(
+        &dashboard.fixture,
+        &dashboard.fake,
+        dashboard.alerts.clone(),
+    )
+    .await;
     restarted.cancellations.reconcile().await.unwrap();
     let saved = store.billing(workspace).unwrap();
     assert!(!saved.removal_cancel_requested);
@@ -69,7 +74,7 @@ async fn durable_cancellations_recover_after_restart_and_continue_past_busy_work
     assert_eq!(saved.state.tier, Tier::Team);
     assert_eq!(saved.state.cancel_at, saved.state.paid_period_end);
     assert_eq!(store.billing_cancellations().unwrap(), Vec::<Uuid>::new());
-    let requests = dashboard.fake.posts("/v1/subscriptions/sub_recorded");
+    let requests = dashboard.fake.subscription_mutations();
     assert_eq!(requests.len(), 2);
     assert_eq!(requests[0].key, requests[1].key);
     dashboard.fake.probe().check();

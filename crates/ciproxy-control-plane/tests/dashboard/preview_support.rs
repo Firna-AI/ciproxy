@@ -43,7 +43,7 @@ pub(super) fn previews(fake: &Fake, upgrade: bool, monthly: i64, items: &[(&str,
     ] {
         remote.previews.push_back((fields, json!({
             "currency":"usd", "customer":"cus_recorded", "parent":{"subscription_details":{"subscription":"sub_recorded"}},
-            "amount_due":due, "total":total,
+            "amount_due":due, "total":total,"starting_balance":0,
         })));
     }
 }

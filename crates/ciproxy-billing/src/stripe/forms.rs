@@ -168,6 +168,24 @@ pub(super) fn reviewed(
         ));
     }
     form.extend(item_fields(&quote.items, &name("items")));
+    if !preview && let Some(offset) = &quote.offset {
+        form.extend([
+            (
+                "add_invoice_items[0][price_data][currency]".into(),
+                "usd".into(),
+            ),
+            (
+                "add_invoice_items[0][price_data][product]".into(),
+                offset.product_id.clone(),
+            ),
+            (
+                "add_invoice_items[0][price_data][unit_amount]".into(),
+                offset.amount_cents.to_string(),
+            ),
+            ("add_invoice_items[0][quantity]".into(), "1".into()),
+            ("add_invoice_items[0][discountable]".into(), "false".into()),
+        ]);
+    }
     form
 }
 

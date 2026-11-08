@@ -48,7 +48,7 @@ fn upgrade_waits_for_payment_then_applies_and_expired_payment_can_retry() {
         ),
         (Tier::Team, SubscriptionState::Active, None)
     );
-    let post = fake.posts("/v1/subscriptions/sub_recorded");
+    let post = fake.subscription_mutations();
     assert_eq!(field(&post[0], "proration_behavior"), "always_invoice");
     assert_eq!(field(&post[0], "payment_behavior"), "pending_if_incomplete");
     assert_eq!(
@@ -57,7 +57,7 @@ fn upgrade_waits_for_payment_then_applies_and_expired_payment_can_retry() {
             payment_url: Some("https://invoice.stripe.test/pay".into())
         }
     );
-    assert_eq!(fake.posts("/v1/subscriptions/sub_recorded").len(), 1);
+    assert_eq!(fake.subscription_mutations().len(), 1);
     let expired_at = "2026-11-05T12:00:00Z".parse().unwrap();
     let retry = super::fixture::service(&database, &fake, expired_at);
     let mut expired = subscription();
@@ -86,7 +86,7 @@ fn upgrade_waits_for_payment_then_applies_and_expired_payment_can_retry() {
         state(&database).paid_period_end,
         Some("2026-12-04T12:00:00Z".parse().unwrap())
     );
-    let posts = fake.posts("/v1/subscriptions/sub_recorded");
+    let posts = fake.subscription_mutations();
     assert_ne!(posts[0].key, posts[1].key);
 }
 
@@ -134,7 +134,7 @@ fn saved_addon_removal_prorates_at_once_and_lost_reply_does_not_replay_a_changed
         Ok(ChangeOutcome::Applied(_))
     ));
     assert_eq!(state(&database).add_ons.start_blocks, 0);
-    let posts = fake.posts("/v1/subscriptions/sub_recorded");
+    let posts = fake.subscription_mutations();
     assert_eq!(posts.len(), 2);
     assert_eq!(field(&posts[0], "proration_behavior"), "create_prorations");
     assert_eq!(field(&posts[0], "items[1][deleted]"), "true");
@@ -263,7 +263,7 @@ fn cancel_lost_reply_clears_claim_and_portal_undo_allows_later_paid_change() {
         ChangeOutcome::Applied(_)
     ));
     assert_eq!(state(&database).cancel_at, None);
-    assert_eq!(fake.posts("/v1/subscriptions/sub_recorded").len(), 3);
+    assert_eq!(fake.subscription_mutations().len(), 3);
 }
 
 #[test]
@@ -293,6 +293,6 @@ fn successful_pending_upgrade_after_deadline_syncs_without_second_charge() {
     let outcome = later.change(access(), quote(&database, &fake, super::fixture::at()));
     assert!(matches!(outcome, Ok(ChangeOutcome::Applied(_))));
     assert_eq!(state(&database).tier, Tier::Business);
-    assert_eq!(fake.posts("/v1/subscriptions/sub_recorded").len(), 1);
+    assert_eq!(fake.subscription_mutations().len(), 1);
     assert_eq!(database.store.billing(workspace()).unwrap().command, None);
 }

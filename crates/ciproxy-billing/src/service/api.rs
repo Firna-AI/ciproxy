@@ -42,4 +42,6 @@ pub trait BillingApi: Send + Sync {
     /// The host must poll this method and retry errors. Organization removal
     /// writes the request in the same database transaction as the removal.
     fn reconcile_removal(&self, workspace_id: Uuid) -> Result<()>;
+    /// Recover owned credit transfers and invoice checks after replies or events are lost.
+    fn reconcile_payments(&self, workspace_id: Uuid) -> Result<()>;
 }

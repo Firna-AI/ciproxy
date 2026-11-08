@@ -10,6 +10,12 @@ pub(super) struct Request {
 }
 
 impl Request {
+    pub(super) fn payment_marker(&self) -> bool {
+        self.form.len() == 2
+            && self.value("metadata[ciproxy_quote_id]").is_some()
+            && self.value("metadata[ciproxy_payment_id]").is_some()
+    }
+
     pub(super) fn value(&self, name: &str) -> Option<&str> {
         self.form
             .iter()

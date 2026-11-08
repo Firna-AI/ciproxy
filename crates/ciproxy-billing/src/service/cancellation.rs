@@ -56,16 +56,22 @@ impl BillingService {
             .command
             .as_ref()
             .is_some_and(|command| classify(command, &current, self.clock.now()).finished());
+        let superseded = current.cancel_at_period_end
+            && record
+                .command
+                .as_ref()
+                .is_some_and(|command| matches!(command.kind, CommandKind::Change { .. }));
         session
             .commit(
                 Some(&baseline),
                 None,
-                completed,
+                completed || superseded,
                 removal && (terminal(&current) || current.cancel_at_period_end),
                 self.clock.now(),
             )
             .internal()?;
         if terminal(&current) || current.cancel_at_period_end {
+            self.observe_payments(session, &current);
             return Ok(());
         }
         let mut command = match record.command.as_ref().filter(|_| !completed) {
@@ -101,6 +107,8 @@ impl BillingService {
                 removal,
                 self.clock.now(),
             )
-            .internal()
+            .internal()?;
+        self.observe_payments(session, &current);
+        Ok(())
     }
 }

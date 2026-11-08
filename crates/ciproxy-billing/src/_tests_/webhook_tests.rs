@@ -7,6 +7,7 @@ use hmac::{Hmac, KeyInit, Mac};
 use sha2::Sha256;
 use unimock::{MockFn, Unimock, matching};
 
+use crate::alerts::HostedBillingAlerts;
 use crate::clock::ClockMock;
 use crate::error::Error;
 use crate::service::api::BillingApi;
@@ -23,6 +24,7 @@ fn webhook_rejects_a_wrong_signature_even_for_an_ignored_event() {
         Arc::new(Unimock::new(
             ClockMock::now.each_call(matching!()).returns(now),
         )),
+        Arc::new(HostedBillingAlerts),
         SigningSecret::new("whsec_offline_boundary".into()),
         Redirects {
             success_url: "https://app.example/success".into(),
@@ -49,6 +51,7 @@ fn signed_unused_event_with_object_data_is_ignored_without_external_io() {
         Arc::new(Unimock::new(
             ClockMock::now.each_call(matching!()).returns(now),
         )),
+        Arc::new(HostedBillingAlerts),
         SigningSecret::new("whsec_offline_boundary".into()),
         Redirects {
             success_url: "https://app.example/success".into(),

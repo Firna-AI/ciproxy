@@ -47,4 +47,7 @@ impl BillingApi for BillingService {
     fn reconcile_removal(&self, workspace: Uuid) -> Result<()> {
         self.reconcile_removal(workspace)
     }
+    fn reconcile_payments(&self, workspace: Uuid) -> Result<()> {
+        self.reconcile_payments(workspace)
+    }
 }

@@ -32,6 +32,8 @@ pub(super) fn source(current: &Subscription) -> Result<QuoteSource> {
         period: period(current)?,
         items,
         anchor: current.billing_cycle_anchor,
+        cancel_at_period_end: current.cancel_at_period_end,
+        cancel_at: current.cancel_at,
         anchor_day: current
             .billing_cycle_anchor_config
             .as_ref()

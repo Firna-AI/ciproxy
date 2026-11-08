@@ -61,7 +61,7 @@ fn current_pending_update_survives_age_then_applied_selection_wins_over_age() {
     ));
     assert_eq!(state(&database).tier, Tier::Business);
     assert_eq!(database.store.billing(workspace()).unwrap().command, None);
-    assert_eq!(fake.posts("/v1/subscriptions/sub_recorded").len(), 1);
+    assert_eq!(fake.subscription_mutations().len(), 1);
 }
 
 #[test]
@@ -95,5 +95,5 @@ fn canceling_a_pending_upgrade_keeps_other_selections_out_of_its_payment_context
     );
     assert!(matches!(result, Err(Error::PaymentConfirming)));
     assert_eq!(database.store.billing(workspace()).unwrap().command, None);
-    assert_eq!(fake.posts("/v1/subscriptions/sub_recorded").len(), 2);
+    assert_eq!(fake.subscription_mutations().len(), 2);
 }

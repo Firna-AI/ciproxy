@@ -1423,6 +1423,26 @@ These routes serve the other pages of the dashboard.
       short limit keeps that time close to the payment. Stripe sets no
       such duration.
       Evidence: `.context/ciproxy-mvp/m18-composition/owner-fix-round2/`.
+- [x] Apply the fix round 2 re-review, finding 3, as item 108, C with D.
+      The user chose C with D on 8 November 2026 and approved this third
+      fix round. This is owner fix round 3.
+      The payment of a move up carries the earlier pending credits and
+      charges that its stored review counted. Stripe computes the charge
+      from them, so it matches the review. Keep the stored proration time,
+      the observed period, and the quote and retry rules. Each earlier item
+      reaches the customer once, and an unpaid move returns its value for a
+      later invoice. After each paid move, compare the owned Stripe invoice
+      with the quote. Record a difference and report a safe error event for
+      the ciproxy team. A difference never refuses or rolls back the payment
+      or the new tier. Update the billing protocol and the READMEs.
+      Branch: `conductor/m18-composition-pages-stripe-hook-paid-review`.
+      Implementation calls, 8 November 2026, the orchestrator's: the
+      transfer journals keep the existing workspace retention and go with
+      its purge, with no outbox-style exception. Reason: `app-removal.md`
+      deletes workspace data after 30 days, and the user approved no new
+      retention rule. The difference event goes to the existing hosted error
+      stream, with no email or pager delivery.
+      Evidence: `.context/ciproxy-mvp/m18-composition/owner-fix-round3/`.
 - [ ] Orchestrator: run the
       [live page checks](../crates/ciproxy-api/scripts/README.md#jobs-savings-and-billing)
       after the runtime and Stripe test workspace are ready. Set

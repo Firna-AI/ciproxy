@@ -88,8 +88,8 @@ against a tier.
   the add-ons, pay, or open the customer portal with its invoices.
 - [Roles](security.md#roles) defines these roles.
 - **Decision:** the roles of ciproxy decide who pays. Rejected: the billing
-  managers of the GitHub organization, because the GitHub App would then
-  need the "Members" permission.
+  managers of the GitHub organization. The App's four permissions include
+  "Members", read, for membership checks. ciproxy roles grant billing access.
 - A person who cannot pay still sees the banners of a failed payment, and
   the [offer](metering.md#the-use-and-the-offer) at a soft limit.
 - In place of the action of a banner or an offer, that person sees the
@@ -175,27 +175,8 @@ against a tier.
 
 ### The quote of a paid move
 
-- The review of a move between paid tiers gives the new monthly total, the
-  prorated charge of today, and the day of each later charge.
-- ciproxy stores each such review as a quote with its selection, amounts,
-  current period, and proration time.
-- The proration time is the time of the review.
-- The move names its quote, and ciproxy takes the selection and the
-  proration time from that quote, not from the browser.
-- Stripe prorates the move as of that time, so the charge matches the review.
-- A quote starts at most one move.
-- A new move can start from a quote for 30 minutes after the review, and
-  only before the period ends.
-- Each retry of the move keeps its proration time, also after a restart or
-  after those 30 minutes.
-- ciproxy refuses to start a move from an unknown or expired quote, the
-  quote of another workspace, or a quote whose move ended.
-- ciproxy also refuses to start it when the subscription, its tier and
-  add-ons, its billing day, or its period changed after the review.
-- The page then asks the customer to review the move again.
-- **Decision:** ciproxy stores each quote. Rejected: a signed quote that the
-  browser sends back, and a new preview with a second confirmation. Reason:
-  a stored quote best keeps the move and its retries the same as the review.
+- [Paid moves](billing-paid-moves.md) states the review, the quote, the
+  payment, and the invoice check of a move between paid tiers.
 
 ## Subscription states
 
@@ -243,6 +224,8 @@ against a tier.
 
 - [Architecture](../architecture.md#data-flow): the data flow of a checkout
   and of a failed payment.
+- [Paid moves](billing-paid-moves.md): the quote, the payment, and the
+  invoice check of a move between paid tiers.
 - [Workspaces](workspaces.md#organizations-of-a-workspace): the
   organizations that a workspace on each tier can hold.
 - [Metering](metering.md#soft-limits): the starts, the periods, the machine

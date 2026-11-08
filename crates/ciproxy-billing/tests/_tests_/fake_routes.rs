@@ -6,6 +6,8 @@ use serde_json::{Value, json};
 use url::form_urlencoded;
 
 use super::fake::State;
+use super::fake_credits;
+use super::fake_payments;
 use super::fake_requests::Request;
 use super::fake_subscriptions::SubscriptionOutcome;
 
@@ -31,6 +33,7 @@ pub(super) fn handle(state: &mut State, request: &Request) -> (u16, String) {
     if request.method == "POST"
         && state.lose_next_post
         && !path.ends_with("/prices")
+        && !request.payment_marker()
         && status == 200
     {
         state.lose_next_post = false;
@@ -43,6 +46,21 @@ pub(super) fn handle(state: &mut State, request: &Request) -> (u16, String) {
 }
 
 fn get(state: &mut State, request: &Request, path: &str) -> (u16, String) {
+    if path.starts_with("/v1/subscriptions/")
+        && let Some(ledger) = &mut state.credits
+        && ledger.fail_subscription_reads > 0
+    {
+        ledger.fail_subscription_reads -= 1;
+        return (503, "{}".into());
+    }
+    if state
+        .credits
+        .as_ref()
+        .is_some_and(|ledger| ledger.invoice_reads_fail)
+        && path.starts_with("/v1/invoices")
+    {
+        return (503, "{}".into());
+    }
     if let Some(body) = state
         .raw_read_sequences
         .get_mut(path)
@@ -52,6 +70,9 @@ fn get(state: &mut State, request: &Request, path: &str) -> (u16, String) {
     }
     if let Some(body) = state.raw_reads.get(path) {
         return (200, body.to_string());
+    }
+    if let Some(response) = fake_payments::get(state, request, path) {
+        return response;
     }
     match path {
         "/v1/prices" => {
@@ -119,8 +140,14 @@ fn get(state: &mut State, request: &Request, path: &str) -> (u16, String) {
 }
 
 fn post(state: &mut State, request: &Request, path: &str) -> (u16, String) {
+    if let Some(response) = fake_payments::post(state, request, path) {
+        return response;
+    }
     match path {
         "/v1/invoices/create_preview" => {
+            if state.credits.is_some() {
+                return (200, fake_credits::preview(state, request).to_string());
+            }
             if let Some(proration) = &state.proration {
                 let amount = if request.value("preview_mode") == Some("recurring") {
                     31900
@@ -131,7 +158,7 @@ fn post(state: &mut State, request: &Request, path: &str) -> (u16, String) {
                     200,
                     json!({"currency":"usd", "customer":state.subscription.customer,
                     "parent":{"subscription_details":{"subscription":state.subscription.id}},
-                    "amount_due":amount, "total":amount})
+                    "amount_due":amount, "total":amount,"starting_balance":0})
                     .to_string(),
                 );
             }
@@ -190,7 +217,9 @@ fn post(state: &mut State, request: &Request, path: &str) -> (u16, String) {
         }
         path if path == format!("/v1/subscriptions/{}", state.subscription.id) => {
             match state.subscription_post(request) {
-                Some(SubscriptionOutcome::Respond(subscription)) => {
+                Some(SubscriptionOutcome::Respond(mut subscription)) => {
+                    subscription.metadata.payment = state.subscription.metadata.payment.clone();
+                    fake_credits::apply(state, request, &mut subscription);
                     if let Some(proration) = &mut state.proration {
                         proration
                             .charges
@@ -206,6 +235,8 @@ fn post(state: &mut State, request: &Request, path: &str) -> (u16, String) {
                     encode(state, state.subscription.clone())
                 }
                 Some(SubscriptionOutcome::Reject(status)) => (status, "{}".into()),
+                Some(SubscriptionOutcome::ProviderError {status,kind,code}) => (status,
+                    json!({"error":{"type":kind,"code":code,"message":"synthetic-private-error-canary"}}).to_string()),
                 None => (500, "{}".into()),
             }
         }

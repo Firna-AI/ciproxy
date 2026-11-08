@@ -2,6 +2,7 @@
 
 pub mod collection;
 pub mod commands;
+pub mod payments;
 pub mod quotes;
 pub mod renewals;
 pub mod state;

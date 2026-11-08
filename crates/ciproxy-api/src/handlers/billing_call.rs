@@ -39,6 +39,7 @@ pub(super) fn result<T>(value: ciproxy_billing::error::Result<T>) -> Result<T> {
         Err(
             ciproxy_billing::error::Error::StripeHttp { .. }
             | ciproxy_billing::error::Error::StripeRejected { .. }
+            | ciproxy_billing::error::Error::StripeValidationRejected { .. }
             | ciproxy_billing::error::Error::StripeUnavailable
             | ciproxy_billing::error::Error::StripeState,
         ) => Err(Error::Unavailable),

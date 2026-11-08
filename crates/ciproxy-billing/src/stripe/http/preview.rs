@@ -11,12 +11,17 @@ use crate::error::{Error, Result, ResultExt};
 use crate::stripe::api::PaidPreview;
 use crate::stripe::forms;
 use crate::stripe::wire::invoice::InvoiceParent;
+use crate::stripe::wire::pending::PreviewLine;
+use crate::stripe::wire::types::List;
 use crate::stripe::wire::types::Subscription;
 
 use super::client::HttpStripe;
 
 #[derive(Deserialize)]
 struct PreviewInvoice {
+    id: Option<String>,
+    lines: Option<List<PreviewLine>>,
+    starting_balance: i64,
     customer: String,
     parent: Option<InvoiceParent>,
     currency: String,
@@ -52,10 +57,17 @@ impl HttpStripe {
     ) -> Result<PaidPreview> {
         let billing_day = anchor_day(current)?;
         let prices = self.prices(selection)?;
+        let pending = if upgrade {
+            self.list_pending_items(&current.customer)?
+        } else {
+            Vec::new()
+        };
         let quote = QuotePayment {
             id: Uuid::nil(),
             proration_at: at,
             items: forms::changes(current, selection, &prices)?,
+            offset: None,
+            starting_balance_cents: None,
         };
         let mut form = vec![
             ("customer".into(), current.customer.clone()),
@@ -65,6 +77,17 @@ impl HttpStripe {
         immediate.push(("preview_mode".into(), "next".into()));
         immediate.extend(forms::reviewed(&quote, upgrade, true));
         let next = self.preview_invoice(&immediate, current)?;
+        let offset = if upgrade {
+            self.preview_offset(
+                current,
+                &prices.first().ok_or(Error::StripeState)?.0,
+                &pending,
+                next.id.as_deref(),
+                next.lines,
+            )?
+        } else {
+            None
+        };
         form.extend(forms::item_fields(
             &quote.items,
             "subscription_details[items]",
@@ -78,6 +101,8 @@ impl HttpStripe {
                 billing_day,
             },
             items: quote.items,
+            offset,
+            starting_balance_cents: next.starting_balance,
         })
     }
 

@@ -67,6 +67,9 @@ The portal permits invoices, card changes, and period-end cancellation.
 It permits undo-cancellation before the period ends.
 It disables tier and quantity edits.
 
+The [paid move guide](paid-moves.md) gives the pending-item transfer, its
+`PaymentWork` journal, the invoice check, and their recovery.
+
 Each command holds a dedicated PostgreSQL billing session lock.
 The command persists before the Stripe request.
 A retry reads current items before it replays a paid change.
@@ -101,6 +104,8 @@ Last-organization removal stores a cancellation request in its transaction.
 Suspension and removal of another organization leave billing alone.
 The host polls BillingStore::billing_cancellations and calls
 BillingApi::reconcile_removal for every result.
+The same maintenance pass polls BillingStore::billing_payment_workspaces and
+calls BillingApi::reconcile_payments for every result.
 Retry Busy and provider failures.
 The request stays durable during unfinished Checkout and failed HTTP calls.
 The paid tier and add-ons stay until Stripe actually ends the subscription.
@@ -148,6 +153,7 @@ Construct BillingService at the runtime composition boundary:
 
 ```rust
 use std::sync::Arc;
+use ciproxy_billing::alerts::HostedBillingAlerts;
 use ciproxy_billing::clock::SystemClock;
 use ciproxy_billing::service::api::BillingApi;
 use ciproxy_billing::service::runtime::{BillingService, Redirects};
@@ -162,7 +168,12 @@ fn billing(
     redirects: Redirects,
 ) -> Arc<dyn BillingApi> {
     Arc::new(BillingService::new(
-        store, stripe, Arc::new(SystemClock), secret, redirects,
+        store,
+        stripe,
+        Arc::new(SystemClock),
+        Arc::new(HostedBillingAlerts),
+        secret,
+        redirects,
     ))
 }
 ```
@@ -175,6 +186,7 @@ Retry Busy and transient failures through Stripe delivery retries.
 Reject InvalidSignature.
 Poll Confirming on the return page without opening another Checkout.
 Use trusted dashboard redirects from runtime configuration.
+Pass `HostedBillingAlerts` in production, or a test double of `BillingAlerts`.
 
 ## Development
 
@@ -219,6 +231,16 @@ listener, the browser and account checks, and the external account setup.
   implements the authorized paid-plan preview boundary and stores its quote.
 - [src/service/commands.rs](src/service/commands.rs) turns a quote or
   quantities into one durable paid change command.
+- [src/service/payment_work.rs](src/service/payment_work.rs) creates and saves
+  each payment journal.
+- [src/service/payment_transfer.rs](src/service/payment_transfer.rs) retires
+  counted pending items and restores only proven uncharged value.
+- [src/service/payment_invoice.rs](src/service/payment_invoice.rs) settles a
+  transfer from the exact invoice and compares that invoice with the quote.
+- [src/service/payment_recovery.rs](src/service/payment_recovery.rs) resumes
+  pending transfer, comparison, and event emission work.
+- [src/alerts.rs](src/alerts.rs) defines `BillingAlerts` and the
+  `HostedBillingAlerts` operator event.
 - [src/service/completion.rs](src/service/completion.rs) owns the rules for
   command completion.
 - [src/service/renewal.rs](src/service/renewal.rs) refreshes failed renewals.
@@ -236,6 +258,12 @@ listener, the browser and account checks, and the external account setup.
   and recurring invoice previews without changing subscription items.
 - [src/stripe/forms.rs](src/stripe/forms.rs) renders the reviewed items and
   proration date for both the preview and the payment.
+- [src/stripe/http/preview_pending.rs](src/stripe/http/preview_pending.rs)
+  freezes only the earlier pending items that the complete preview counted.
+- [src/stripe/http/pending.rs](src/stripe/http/pending.rs) reads every pending
+  item and retires original items idempotently.
+- [src/stripe/http/payment_ledger.rs](src/stripe/http/payment_ledger.rs)
+  stamps invoice correlation, finds payment invoices, and restores balance.
 - [src/webhook.rs](src/webhook.rs) verifies raw signatures and routes events.
 - [src/catalog.rs](src/catalog.rs) owns USD prices and checkout reviews.
 - [tests/_tests_](tests/_tests_) contains the public integration scenarios.
@@ -243,6 +271,8 @@ listener, the browser and account checks, and the external account setup.
 ### Related Docs
 
 - [Billing](../../docs/protocol/billing.md) defines prices and state changes.
+- [Paid moves](../../docs/protocol/billing-paid-moves.md) defines quotes, the
+  pending-item transfer, and the invoice check.
 - [App removal](../../docs/protocol/app-removal.md) defines cancellation.
 - [Workspaces](../../docs/protocol/workspaces.md) defines ownership.
 - [Metering](../../docs/protocol/metering.md) defines UTC periods.

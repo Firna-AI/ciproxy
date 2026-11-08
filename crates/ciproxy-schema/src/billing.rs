@@ -14,6 +14,15 @@ diesel::table! {
 }
 
 diesel::table! {
+    billing_payments (command_id) {
+        command_id -> Uuid,
+        workspace_id -> Uuid,
+        state_json -> Text,
+        pending -> Bool,
+    }
+}
+
+diesel::table! {
     billing_quotes (id) {
         id -> Uuid,
         workspace_id -> Uuid,

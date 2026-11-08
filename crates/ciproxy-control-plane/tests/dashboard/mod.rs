@@ -9,6 +9,10 @@
 mod database;
 #[path = "../../../ciproxy-billing/tests/_tests_/fake.rs"]
 mod fake;
+#[path = "../../../ciproxy-billing/tests/_tests_/fake_credits.rs"]
+mod fake_credits;
+#[path = "../../../ciproxy-billing/tests/_tests_/fake_payments.rs"]
+mod fake_payments;
 #[path = "../../../ciproxy-billing/tests/_tests_/fake_requests.rs"]
 mod fake_requests;
 #[path = "../../../ciproxy-billing/tests/_tests_/fake_routes.rs"]
@@ -30,9 +34,18 @@ mod runtime_inputs;
 
 mod cancellation_tests;
 mod composition_tests;
+mod credit_guard_tests;
+mod credit_portal_tests;
+mod credit_retry_tests;
+mod credit_settlement_tests;
+mod credit_test_support;
+mod operator_invoice_tests;
+mod operator_support;
+mod operator_write_tests;
 mod paid_quote_refusal_tests;
 mod paid_quote_tests;
 mod paid_review_tests;
+mod pending_credit_tests;
 mod preview_support;
 mod quote_support;
 mod support;
