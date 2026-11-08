@@ -4,7 +4,11 @@
 // budget month before it. A reached limit comes only from the API flag,
 // never from rounded amounts.
 
-import type { BoatAccountView, OverflowSettings } from "../api/schema.ts";
+import type {
+  BoatAccountView,
+  BoatWallet,
+  OverflowSettings,
+} from "../api/schema.ts";
 import type { OverflowSnapshot } from "../state/overflow.ts";
 import { formatDay } from "./format.ts";
 import { formatCents, shareOf } from "./money.ts";
@@ -61,6 +65,24 @@ export function boatPanelModel(settings: OverflowSettings): BoatPanelModel {
     name: account.name,
     actions: { disconnect: true, changeKey: true },
   };
+}
+
+/** The identity of the personal wallet; each organization uses its Boat ID. */
+export const personalWallet = "personal";
+
+/** One wallet as a radio card of the wallet choice. */
+export type WalletOption = { value: string; title: string; body: string };
+
+/** The wallets of a checked key, in the order of the API answer. */
+export function walletOptions(wallets: readonly BoatWallet[]): WalletOption[] {
+  return wallets.map((item) => ({
+    value: item.wallet,
+    title: item.name,
+    body:
+      item.wallet === personalWallet
+        ? "Personal wallet"
+        : "Boat organization wallet",
+  }));
 }
 
 /** The account that works now: connected, and its key not rejected. */

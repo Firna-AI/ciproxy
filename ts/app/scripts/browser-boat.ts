@@ -45,7 +45,8 @@ export async function fieldFocused(page: Page, label: string): Promise<void> {
   }, label);
 }
 
-export async function fillConnection(
+/** Type the key and the limit, then press Check key. */
+export async function checkKey(
   page: Page,
   keyLabel: string,
   key: string,
@@ -57,6 +58,20 @@ export async function fillConnection(
       .getByLabel("Monthly spend limit, US dollars", { exact: true })
       .fill(limit);
   }
+  await page.getByRole("button", { name: "Check key", exact: true }).click();
+}
+
+/** Check the key, keep the likely wallet, and press Connect Boat. */
+export async function fillConnection(
+  page: Page,
+  keyLabel: string,
+  key: string,
+  limit: string | null,
+): Promise<void> {
+  await checkKey(page, keyLabel, key, limit);
+  await visible(
+    page.getByRole("radiogroup", { name: "Wallet that Boat bills" }),
+  );
   await page.getByRole("button", { name: "Connect Boat", exact: true }).click();
 }
 
@@ -70,12 +85,25 @@ export async function connections(origin: string): Promise<number[]> {
     .map((fact) => fact.status);
 }
 
-/** The field names of the last connection body that the harness saw. */
-async function connectionFields(origin: string): Promise<unknown> {
+/** The status of each key check, in order. */
+export async function checks(origin: string): Promise<number[]> {
+  return (await facts(origin))
+    .filter(
+      (fact) =>
+        fact.method === "POST" && fact.path.endsWith("/overflow/wallets"),
+    )
+    .map((fact) => fact.status);
+}
+
+/** A record of the harness: field names or the wallet, never the key. */
+export async function harnessRecord(
+  origin: string,
+  name: "boatConnectionFields" | "boatConnectionWallet",
+): Promise<unknown> {
   const value: unknown = await (
     await fetch(`${origin}/__fixture/state`)
   ).json();
-  return fields(value) ? value.boatConnectionFields : undefined;
+  return fields(value) ? value[name] : undefined;
 }
 
 async function setupConnect(page: Page, origin: string, width: number) {
@@ -83,7 +111,7 @@ async function setupConnect(page: Page, origin: string, width: number) {
   await page.goto(origin + setupPath, { waitUntil: "domcontentloaded" });
   await visible(page.getByLabel("Boat API key", { exact: true }));
   await viewportControls(page, width);
-  await fillConnection(page, "Boat API key", refusedBoatKey, "200");
+  await checkKey(page, "Boat API key", refusedBoatKey, "200");
   await visible(page.getByText(keyRefused, { exact: true }));
   assert.equal(
     await page
@@ -101,11 +129,18 @@ async function setupConnect(page: Page, origin: string, width: number) {
   );
   await focusedOn(page, "Run the first job");
   assert.equal(await page.getByLabel("Boat API key").count(), 0);
-  assert.deepEqual(await connections(origin), [422, 200]);
-  assert.deepEqual(await connectionFields(origin), [
+  assert.deepEqual(await checks(origin), [422, 200]);
+  assert.deepEqual(await connections(origin), [200]);
+  assert.deepEqual(await harnessRecord(origin, "boatConnectionFields"), [
     "api_key",
     "spend_limit_cents",
+    "wallet",
   ]);
+  assert.equal(
+    await harnessRecord(origin, "boatConnectionWallet"),
+    "boat-org-1001",
+    "Setup keeps the likely wallet",
+  );
 }
 
 async function setupSkip(page: Page, origin: string) {

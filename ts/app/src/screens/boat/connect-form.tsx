@@ -1,7 +1,9 @@
 // The form of every Boat connection, in Setup and in Settings under
 // Overflow: the API key, always masked, and the monthly spend limit in US
-// dollars, then Connect Boat and the other actions of the place. A failure
-// that belongs to neither field shows above the actions.
+// dollars, then Check key and the other actions of the place. After the key
+// check, the wallet choice shows between the key and the limit, and the
+// same button reads Connect Boat, so focus stays on it. A failure that
+// belongs to no field shows above the actions.
 
 import type { ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
@@ -10,6 +12,7 @@ import { Input } from "@firna/ui/input";
 import { ActionButton } from "../../components/actions.tsx";
 import { Notice } from "../../components/notice.tsx";
 import type { ConnectForm } from "./use-connect-form.ts";
+import { WalletChoice } from "./wallet-choice.tsx";
 
 const limitHint =
   "At the limit, jobs run on your machines only until the next month.";
@@ -49,6 +52,15 @@ export function BoatFields({
         spellCheck={false}
         editable={!form.busy && !form.locked}
       />
+      {form.wallets === null ? null : (
+        <WalletChoice
+          options={form.wallets}
+          value={form.wallet}
+          error={form.walletError}
+          disabled={form.busy || form.locked}
+          onChange={form.setWallet}
+        />
+      )}
       <Input
         label="Monthly spend limit, US dollars"
         value={form.limit}
@@ -80,7 +92,7 @@ export function ConnectFormView({
   form: ConnectForm;
   reconnect: boolean;
   autoFocus?: boolean;
-  /** The actions after Connect Boat, such as Skip for now or Cancel. */
+  /** The actions after Check key, such as Skip for now or Cancel. */
   actions?: ReactNode;
 }) {
   return (
@@ -93,7 +105,7 @@ export function ConnectFormView({
       ) : null}
       <View style={styles.row}>
         <ActionButton
-          label="Connect Boat"
+          label={form.wallets === null ? "Check key" : "Connect Boat"}
           tone="primary"
           busy={form.busy}
           disabled={form.locked}

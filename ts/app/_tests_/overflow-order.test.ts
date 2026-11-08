@@ -32,6 +32,7 @@ test("a wait save after an accepted key change waits for its read, then keeps th
   const connecting = store.connect({
     apiKey: "replacement-key",
     limitCents: "10000",
+    wallet: "personal",
   });
   await settled();
   assert.deepEqual(
@@ -86,7 +87,11 @@ test("a page visit during a change reads only after the change and its read", as
   );
   const store = app.overflow(workspaceId);
   await store.ensure();
-  const connecting = store.connect({ apiKey: "key", limitCents: "10000" });
+  const connecting = store.connect({
+    apiKey: "key",
+    limitCents: "10000",
+    wallet: "personal",
+  });
   const visiting = store.load();
   await settled();
   assert.deepEqual(methods(calls), ["GET", "POST"], "The visit waits");

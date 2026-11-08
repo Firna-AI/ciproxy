@@ -12,6 +12,7 @@ import {
   waitOptions,
 } from "../src/view/boat.ts";
 import {
+  checkProblem,
   connectProblem,
   keyRefused,
   limitSaveProblem,
@@ -168,6 +169,21 @@ test("a refused key belongs to the key field, a refused limit to the limit field
   assert.deepEqual(connectProblem(problem(422, "boat_key_rejected")), {
     field: "key",
     message: keyRefused,
+  });
+  assert.deepEqual(checkProblem(problem(422, "boat_key_rejected")), {
+    field: "key",
+    message: keyRefused,
+  });
+  assert.deepEqual(checkProblem(problem(503, "unavailable")), {
+    field: null,
+    copy: { title: "Unable to check the key", body: "Try Check key again." },
+  });
+  assert.deepEqual(checkProblem({ kind: "network" }), {
+    field: null,
+    copy: {
+      title: "Unable to check the key",
+      body: "Check the connection, then try Check key again.",
+    },
   });
   assert.deepEqual(connectProblem(problem(400, "invalid_request")), {
     field: "limit",

@@ -32,7 +32,7 @@ function Connection(props: {
   reconnect: boolean;
   autoFocus?: boolean;
   onConnected: () => void;
-  /** The actions after Connect Boat, such as Cancel or Disconnect. */
+  /** The actions after Check key or Connect Boat: Cancel or Disconnect. */
   actions?: ReactNode;
 }) {
   const form = useConnectForm(props.store, props.savedLimit, props.onConnected);

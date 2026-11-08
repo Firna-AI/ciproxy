@@ -1,11 +1,12 @@
-// The Boat routes of the fixture API: the settings, the policy, and the
-// connection. They act on the Boat fixture of the current scenario. The
-// harness keeps no key: it records only the field names of the last
+// The Boat routes of the fixture API: the settings, the policy, the key
+// check, and the connection. They act on the Boat fixture of the current
+// scenario. The key check saves nothing. The harness keeps no key: it
+// records only the field names and the wallet identity of the last
 // connection body.
 import type { IncomingMessage } from "node:http";
 
 import type { OverflowPolicy, OverflowSettings } from "../src/api/schema.ts";
-import { boatSpend, fixtureBoatKey } from "./fixtures-boat.ts";
+import { boatSpend, boatWallets, fixtureBoatKey } from "./fixtures-boat.ts";
 import { fixtureTime } from "./fixtures-core.ts";
 import type { BoatFixture } from "./harness-boat.ts";
 import { fields, problem, success } from "./harness-state.ts";
@@ -71,6 +72,16 @@ export async function serveBoat(
     }
     return true;
   }
+  if (action === "overflow/wallets" && method === "POST") {
+    const body = await read(request);
+    if (!boat.settings.available) unavailable();
+    else if (!fields(body) || typeof body.api_key !== "string")
+      send(400, problem("invalid_request", "Check the request."));
+    else if (body.api_key !== fixtureBoatKey)
+      send(422, problem("boat_key_rejected", "Boat did not accept this key."));
+    else send(200, boatWallets());
+    return true;
+  }
   if (action !== "overflow/connection") return false;
   if (!boat.settings.available || boat.connectFails) {
     unavailable();
@@ -89,6 +100,8 @@ export async function serveBoat(
     });
   }
   boat.connectionFields = fields(body) ? Object.keys(body).sort() : [];
+  boat.connectionWallet =
+    fields(body) && typeof body.wallet === "string" ? body.wallet : null;
   if (!fields(body) || !positiveCents(body.spend_limit_cents)) {
     send(400, problem("invalid_request", "Check the request."));
   } else if (body.api_key !== fixtureBoatKey) {

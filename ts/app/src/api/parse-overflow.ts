@@ -1,8 +1,10 @@
 // Readers for the Boat settings of Setup and Settings under Overflow: the
 // account, the overflow switch and wait, the saved spend limit, and the
-// spend of the month. The account never holds the key.
+// spend of the month, and for the wallets of a checked key. No response
+// holds the key.
 
 import {
+  array,
   boolean,
   decimal,
   integer,
@@ -15,6 +17,8 @@ import {
 import type {
   BoatAccountView,
   BoatSpendView,
+  BoatWallet,
+  BoatWallets,
   OverflowSettings,
 } from "./schema.ts";
 
@@ -48,5 +52,18 @@ export const parseOverflowSettings = parser((value): OverflowSettings => {
     spend: optional(fields.spend, spend),
     spend_limit_cents: optional(fields.spend_limit_cents, decimal),
     wait_seconds: integer(fields.wait_seconds),
+  };
+});
+
+function wallet(value: unknown): BoatWallet {
+  const fields = object(value, "Boat wallet");
+  return { name: string(fields.name), wallet: string(fields.wallet) };
+}
+
+export const parseBoatWallets = parser((value): BoatWallets => {
+  const fields = object(value, "Boat wallets");
+  return {
+    selected_wallet: string(fields.selected_wallet),
+    wallets: array(fields.wallets, wallet),
   };
 });

@@ -7,8 +7,10 @@
 // so no form can send an old value that it did not mean to change. A change
 // that the API accepted is never sent again: when the read after it fails,
 // the store shows the failed read with the accepted change, and Try again
-// only reads. The key of a connection waits only inside its queued request,
-// and the form drops it once the API accepted it.
+// only reads. A key check runs in the same order and holds the same mark,
+// but it saves nothing, so no read follows it. The key of a check or a
+// connection waits only inside its queued request, and the form drops it
+// once the API accepted the connection.
 
 import type { ApiFailure, ApiResult } from "../api/client.ts";
 import type {
@@ -16,6 +18,7 @@ import type {
   OverflowEndpoints,
 } from "../api/overflow-endpoints.ts";
 import type {
+  BoatWallets,
   OverflowPolicy,
   OverflowSettings,
   Success,
@@ -45,6 +48,8 @@ export type OverflowStore = {
   load(): Promise<void>;
   /** Read once for this document; later calls share that read. */
   ensure(): Promise<void>;
+  /** Check a key and list its wallets. The check saves nothing. */
+  checkKey(apiKey: string): Promise<ApiResult<BoatWallets>>;
   /**
    * Connect a key with a limit. A refused change saves nothing.
    * `onAccepted` runs once the API accepted the key, before the new read, so
@@ -163,6 +168,8 @@ export function createOverflowStore(options: {
       first ??= load();
       return first;
     },
+    checkKey: (apiKey) =>
+      queue(() => mutate(() => endpoints.checkBoatKey(workspaceId, apiKey))),
     connect: (input, onAccepted) =>
       queue(() =>
         send(

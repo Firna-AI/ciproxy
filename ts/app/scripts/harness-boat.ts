@@ -40,6 +40,8 @@ export type BoatFixture = {
   release: (() => void) | null;
   /** The field names of the last connection body, never its values. */
   connectionFields: string[] | null;
+  /** The wallet identity of the last connection body. It is no secret. */
+  connectionWallet: string | null;
 };
 
 export function defaultBoat(): BoatFixture {
@@ -53,6 +55,7 @@ export function defaultBoat(): BoatFixture {
     holdConnection: false,
     release: null,
     connectionFields: null,
+    connectionWallet: null,
   };
 }
 

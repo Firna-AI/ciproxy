@@ -1,7 +1,11 @@
 // Recorded Boat settings of the fixture workspace. Every body uses the
 // generated Rust contract. The accepted key is a fixture word that the
 // harness accepts; it is not a Boat key and opens nothing.
-import type { BoatSpendView, OverflowSettings } from "../src/api/schema.ts";
+import type {
+  BoatSpendView,
+  BoatWallets,
+  OverflowSettings,
+} from "../src/api/schema.ts";
 
 /** The one key that the fixture API accepts. */
 export const fixtureBoatKey = "fixture-only-accepted-key";
@@ -48,4 +52,20 @@ export function notConnected(): OverflowSettings {
     spend: null,
     spend_limit_cents: null,
   });
+}
+
+/**
+ * The wallets of the accepted key: the personal wallet first, then two Boat
+ * organizations. The likely wallet is the second item, so a form that picks
+ * the first item fails its checks.
+ */
+export function boatWallets(): BoatWallets {
+  return {
+    selected_wallet: "boat-org-1001",
+    wallets: [
+      { wallet: "personal", name: "Mira Patel" },
+      { wallet: "boat-org-1001", name: "northstar" },
+      { wallet: "boat-org-1002", name: "orbit" },
+    ],
+  } satisfies BoatWallets;
 }

@@ -4,13 +4,21 @@ import test from "node:test";
 import { parseOverflowSettings } from "../src/api/parse-overflow.ts";
 import type { OverflowPolicy, Problem, Success } from "../src/api/schema.ts";
 import { session, workspaceId } from "../scripts/fixtures-core.ts";
-import { notConnected, overflowSettings } from "../scripts/fixtures-boat.ts";
-import { appWith, response } from "./support.ts";
+import {
+  boatWallets,
+  notConnected,
+  overflowSettings,
+} from "../scripts/fixtures-boat.ts";
+import { appWith, deferred, response } from "./support.ts";
 
 const ok = { ok: true } satisfies Success;
 const unavailable = {
   code: "unavailable",
   message: "Try again.",
+} satisfies Problem;
+const denied = {
+  code: "access_denied",
+  message: "This request is not permitted.",
 } satisfies Problem;
 const route = `/api/workspaces/${workspaceId}/overflow`;
 
@@ -47,7 +55,7 @@ test("the settings parser keeps the generated fields and refuses a wrong shape",
   }
 });
 
-test("a connection sends only the key and the limit with the CSRF token, and drops the key before it reads", async () => {
+test("a connection sends the key, the limit, and the chosen wallet with the CSRF token, and drops the key before it reads", async () => {
   const { app, calls } = appWith(
     response(session()),
     response(ok),
@@ -57,7 +65,7 @@ test("a connection sends only the key and the limit with the CSRF token, and dro
   const store = app.overflow(workspaceId);
   let callsAtAccept = -1;
   const result = await store.connect(
-    { apiKey: "typed-key", limitCents: "20000" },
+    { apiKey: "typed-key", limitCents: "20000", wallet: "boat-org-1002" },
     () => {
       callsAtAccept = calls.length;
     },
@@ -72,6 +80,7 @@ test("a connection sends only the key and the limit with the CSRF token, and dro
   assert.deepEqual(sent(calls[1]?.init), {
     api_key: "typed-key",
     spend_limit_cents: "20000",
+    wallet: "boat-org-1002",
   });
   assert.equal(callsAtAccept, 2, "The key is dropped before the next read");
   assert.equal(calls[2]?.init.method, "GET");
@@ -90,7 +99,11 @@ test("an accepted change whose read fails is never sent again: Try again only re
     response(overflowSettings()),
   );
   const store = app.overflow(workspaceId);
-  const result = await store.connect({ apiKey: "k", limitCents: "100" });
+  const result = await store.connect({
+    apiKey: "k",
+    limitCents: "100",
+    wallet: "personal",
+  });
   assert.equal(result.ok, true);
   const failed = store.state.get();
   assert.equal(failed.status, "failed");
@@ -121,7 +134,8 @@ test("a refused connection saves nothing and reads nothing", async () => {
   const store = app.overflow(workspaceId);
   await store.ensure();
   let accepted = false;
-  const result = await store.connect({ apiKey: "k", limitCents: "100" }, () => {
+  const input = { apiKey: "k", limitCents: "100", wallet: "personal" };
+  const result = await store.connect(input, () => {
     accepted = true;
   });
   assert.deepEqual(result, {
@@ -181,4 +195,45 @@ test("a failed refresh keeps the last settings, and each workspace has its own s
   assert.deepEqual(app.overflow("another-workspace").state.get(), {
     status: "loading",
   });
+});
+
+test("a key check sends only the key in the shared order, retries a stale CSRF token once, saves nothing, and reads nothing", async () => {
+  const answer = deferred<Response>();
+  const { app, calls } = appWith(
+    response(session()),
+    response(overflowSettings()),
+    response(denied, 403),
+    response(session({ csrf_token: "rotated-token" })),
+    answer.promise,
+  );
+  await app.session.ensure();
+  const store = app.overflow(workspaceId);
+  await store.ensure();
+  const checking = store.checkKey("typed-key");
+  assert.equal(store.pending.get(), true, "The check holds the pending mark");
+  answer.resolve(response(boatWallets()));
+  assert.deepEqual(await checking, { ok: true, value: boatWallets() });
+  assert.equal(calls[2]?.url, `${route}/wallets`);
+  assert.equal(calls[2]?.init.method, "POST");
+  assert.equal(
+    new Headers(calls[2]?.init.headers).get("x-ciproxy-csrf"),
+    "fixture-csrf-current",
+  );
+  assert.deepEqual(sent(calls[2]?.init), { api_key: "typed-key" });
+  assert.deepEqual(
+    calls.slice(3).map(({ url, init }) => `${init.method} ${url}`),
+    ["GET /api/session", `POST ${route}/wallets`],
+    "A stale token refreshes the session, and the check reads nothing after it",
+  );
+  assert.equal(
+    new Headers(calls[4]?.init.headers).get("x-ciproxy-csrf"),
+    "rotated-token",
+  );
+  assert.deepEqual(sent(calls[4]?.init), { api_key: "typed-key" });
+  assert.equal(store.pending.get(), false);
+  const state = store.state.get();
+  assert.deepEqual(
+    state.status === "ready" ? state.settings : null,
+    overflowSettings(),
+  );
 });

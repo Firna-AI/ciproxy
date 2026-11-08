@@ -1,9 +1,9 @@
-// The open Boat step of Setup: the key and the monthly limit, Connect Boat,
-// and Skip for now. After Boat rejected the saved key, the step asks for a
-// new key, and the limit starts with the saved limit. A deployment without
-// the Boat service, or a failed read, leaves Skip for now. A connection that
-// the API accepted is never sent again: a failed read after it offers only
-// Try again, which reads.
+// The open Boat step of Setup: the key and the monthly limit, Check key, the
+// wallet choice and Connect Boat, and Skip for now. After Boat rejected the
+// saved key, the step asks for a new key, and the limit starts with the
+// saved limit. A deployment without the Boat service, or a failed read,
+// leaves Skip for now. A connection that the API accepted is never sent
+// again: a failed read after it offers only Try again, which reads.
 
 import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";

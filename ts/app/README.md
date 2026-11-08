@@ -72,9 +72,15 @@ the Admins, in place of each workspace page.
 - Setup and Settings under Overflow read the Boat settings of a workspace
   through one store. A change that the API accepted is never sent again.
   When the read after it fails, the page offers only Try again, which reads.
-- A Boat connection sends only the key and the monthly limit. The form
-  drops the key once the API accepts it. The pages show the account name
-  and never the key.
+- The Boat connection form has two phases, in Setup and in Settings under
+  Overflow. Check key sends only the key to
+  `POST /api/workspaces/<id>/overflow/wallets`, which saves nothing. The
+  form then lists the wallets of the answer. The `selected_wallet` of the
+  answer starts picked when the list holds it. Connect Boat sends the key,
+  the limit, and the chosen wallet. A key edit drops the wallets, and the
+  answer of an older check never applies.
+- The form drops the key once the API accepts the connection, before the
+  read after it. The pages show the account name and never the key.
 
 ## Development
 
@@ -176,8 +182,8 @@ CIPROXY_BOAT_CREDENTIALS_FILE=/absolute/path/outside/repo/boat.json \
 variable, the check prints `SKIP` and exits with status 2. A failed check
 exits with status 1. A credential file that the check cannot read or parse
 is a failed check. The check prints only fixed check names, results, and
-counts. A pass does not prove that a connection, a key change, a policy
-save, or a disconnect works.
+counts. A pass does not prove that a key check, a connection, a key change,
+a policy save, or a disconnect works.
 
 ## Key Code
 
@@ -194,16 +200,23 @@ save, or a disconnect works.
   `src/screens/add-organization` is the workspace choice.
 - `src/screens/overflow` is Settings under Overflow, below the
   [Settings tabs](src/components/settings-tabs.tsx). `src/screens/boat`
-  holds the Boat connection form of Setup and of this page, which masks the
-  key. It also holds the spend figures, which show the confirmed and the
-  unconfirmed costs apart.
+  holds the one Boat connection form of Setup and of this page, which masks
+  the key. Its `use-connect-form.ts` runs the two phases, and
+  `wallet-choice.tsx` lists the wallets. The folder also holds the spend
+  figures, which show the confirmed and the unconfirmed costs apart.
 - [src/state/overflow.ts](src/state/overflow.ts) holds the Boat settings of
-  a workspace and never keeps the key.
+  a workspace, and runs each read, key check, and change one at a time. It
+  never keeps the key. [src/state/key-check.ts](src/state/key-check.ts)
+  holds the wallets of the latest key check of a form, so an older answer
+  never applies.
   [src/api/overflow-endpoints.ts](src/api/overflow-endpoints.ts) builds the
-  one connection request. [src/state/boat-skip.ts](src/state/boat-skip.ts)
-  keeps Skip for now in the tab.
+  key check and the one connection request.
+  [src/state/boat-skip.ts](src/state/boat-skip.ts) keeps Skip for now in the
+  tab.
 - [src/view/boat.ts](src/view/boat.ts) turns the Boat settings into what the
-  pages show. A reached limit comes only from the API flag.
+  pages show. A reached limit comes only from the API flag. The notice of a
+  reached limit names the budget month and the day Boat resumes, both from
+  the next-month date of the API, in UTC.
   [src/view/money.ts](src/view/money.ts) formats the decimal-string cents of
   the API, and reads a typed dollar limit with integer arithmetic.
 - [src/api/client.ts](src/api/client.ts) is the one HTTP client.

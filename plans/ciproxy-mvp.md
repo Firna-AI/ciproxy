@@ -1516,7 +1516,7 @@ Each screen follows its mockup, as Milestone 19 says.
       that the first TODO records: the notice needs no day on which the
       spend reached the limit.
       Branch: `conductor/m22-boat-ui`.
-- [ ] Apply the owner's answer B to item 94, 8 November 2026: after the key
+- [x] Apply the owner's answer B to item 94, 8 November 2026: after the key
       check, list each wallet the key can use, with the likely one selected.
       Let the customer change it before saving. Each Boat organization has
       its own wallet. Add the mockups first. Use one choice component in
