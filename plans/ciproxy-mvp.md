@@ -1405,6 +1405,32 @@ smoke-tests its pages at 1440, 720, and 390 pixels.
       Branch: `conductor/mvp-m19-ui`.
       Verification evidence: `.context/ciproxy-mvp-m19/`.
 
+Owner review round 2 answers, 8 November 2026: the user chose A for item
+91 and A for item 92. Both answers keep the product behaviour. The app, the
+API, and the generated types stay unchanged. Only the two approved mockups
+change to match the app.
+
+- Item 91, the workspace picker of "Add an organization": each row shows
+  the workspace name and, when needed, the upgrade warning. The picker
+  mockup drops the tier and the organization count.
+- Item 92, the workspace switch: each row keeps the role, or "No role yet".
+  The switch mockup shows the role in place of the tier and the count.
+- Neither list needs the optional shared plan summary now. At the user's
+  explicit request, this branch deletes the three settled follow-up items
+  `workspace-picker-plan-facts.md`, `workspace-switch-plan-facts.md`, and
+  `workspace-list-plan-facts.md` under `plans/follow-ups/`.
+
+Item 98 answer, 8 November 2026: the user chose A. The GitHub App gets the
+organization permission "Members: read". The App then has four permissions.
+A sign-in reads the organization memberships of the person with it.
+
+- The install mockup and the install page of the app list the four
+  permissions. Both explain "Members: read" as "see who belongs to your
+  organization, so that ciproxy can give roles".
+- For item 98, this branch changes only that list and this record. The
+  backend change and the protocol docs for the membership read are outside
+  this branch.
+
 ## Milestone 20: Dashboard UI: Machines and Settings
 
 Tags: ui
