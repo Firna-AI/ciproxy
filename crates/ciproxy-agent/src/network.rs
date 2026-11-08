@@ -110,6 +110,7 @@ impl Network for LinuxNetwork {
                 root_rules(vm.network_index).as_bytes(),
             )
             .await?;
+        self.install_forwarding(vm.network_index).await?;
         self.commands
             .run("sysctl", &arguments(&["-qw", "net.ipv4.ip_forward=1"]), &[])
             .await?;
@@ -121,6 +122,11 @@ impl Network for LinuxNetwork {
         let peer = format!("{id}p");
         let inventory = self.inventory().await?;
         let mut failure = None;
+        if inventory.forwarding.contains(&id)
+            && let Err(error) = self.remove_forwarding(index).await
+        {
+            failure = Some(error);
+        }
         for (present, program, args) in [
             (
                 inventory.namespaces.contains(&id),

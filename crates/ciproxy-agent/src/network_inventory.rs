@@ -17,6 +17,8 @@ pub(crate) struct NetworkInventory {
     pub(crate) links: BTreeSet<String>,
     /// Root inet tables, without adopting other nftables families.
     pub(crate) tables: BTreeSet<String>,
+    /// Reserved IPv4 filter chains, including forwarding-only orphans.
+    pub(crate) forwarding: BTreeSet<String>,
     addresses: BTreeSet<String>,
 }
 
@@ -26,6 +28,7 @@ impl NetworkInventory {
         self.namespaces
             .iter()
             .chain(&self.tables)
+            .chain(&self.forwarding)
             .filter_map(|name| index(name))
             .chain(
                 self.links
@@ -44,6 +47,7 @@ impl NetworkInventory {
             || self.links.contains(&name)
             || self.links.contains(&format!("{name}p"))
             || self.tables.contains(&name)
+            || self.forwarding.contains(&name)
     }
 
     /// Avoid both named resources and conflicting host addresses at allocation.
@@ -120,6 +124,7 @@ impl LinuxNetwork {
                 .filter(|table| table.family == "inet")
                 .map(|table| table.name)
                 .collect(),
+            forwarding: self.forwarding_inventory().await?,
         })
     }
 }

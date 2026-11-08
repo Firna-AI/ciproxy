@@ -29,6 +29,7 @@ pub(crate) struct HostNetworks {
     pub(crate) namespaces: BTreeSet<String>,
     pub(crate) links: BTreeSet<String>,
     pub(crate) tables: BTreeSet<String>,
+    pub(crate) forwarding: BTreeSet<String>,
     pub(crate) addresses: Vec<String>,
     pub(crate) deletion: Deletion,
     pub(crate) namespace_failure: bool,
@@ -52,6 +53,14 @@ pub(crate) fn commands(host: Arc<Mutex<HostNetworks>>) -> impl Clause {
             let mut host = host.lock().unwrap();
             let words = args.iter().map(String::as_str).collect::<Vec<_>>();
             match (program, words.as_slice()) {
+                ("sh", _) => Ok(Vec::new()),
+                ("iptables", ["--wait", "-S"]) => Ok(host.forwarding.iter().map(|name| format!("-N {name}\n-A FORWARD -j {name}\n")).collect::<String>().into_bytes()),
+                ("iptables", ["--wait", "-N", name]) => { host.forwarding.insert((*name).to_owned()); Ok(Vec::new()) }
+                ("iptables", ["--wait", "-X", name]) => {
+                    if matches!(host.deletion, Deletion::Fail) { return Err(Error::HostCommand { program:program.to_owned() }); }
+                    host.forwarding.remove(*name); Ok(Vec::new())
+                }
+                ("iptables", _) => Ok(Vec::new()),
                 ("ip", ["-j", "address", "show"]) => {
                     let mut links = host.links.iter().map(|name| json!({"ifname":name})).collect::<Vec<_>>();
                     links.push(json!({"ifname":"eth0","addr_info":host.addresses.iter().map(|local| json!({"local":local})).collect::<Vec<_>>()}));

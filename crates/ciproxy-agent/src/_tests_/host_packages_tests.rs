@@ -58,6 +58,7 @@ async fn native_package_manager_installs_required_tools_and_tolerates_missing_kv
             "xfsprogs",
             network,
             "nftables",
+            "iptables",
             "coreutils",
             "e2fsprogs",
             "util-linux",

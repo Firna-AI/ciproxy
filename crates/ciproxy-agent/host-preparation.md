@@ -27,7 +27,7 @@ Missing KVM permits registration and reports zero slots.
 Enable virtualization in firmware or in the outer VM to run job VMs.
 Install does not change firmware or nested-virtualization settings.
 
-The package manager installs `xfsprogs`, `nftables`, `coreutils`,
+The package manager installs `xfsprogs`, `nftables`, `iptables`, `coreutils`,
 `e2fsprogs`, `util-linux`, `kmod`, and `ca-certificates`.
 Debian and Ubuntu also get `iproute2` and `procps`.
 The DNF distributions get `iproute` and `procps-ng` instead.
@@ -63,6 +63,39 @@ Package preparation runs in install, not on each daemon restart.
 The owned tools directory is `/var/lib/ciproxy/tools/v1.17.0`.
 It includes a root-only owner marker and the upstream licence notices.
 Active VMs keep their existing executable inode during a repair.
+
+## VM network
+
+A separate network namespace permits public IPv4 egress.
+It blocks IPv6, private networks, metadata addresses, and host access.
+The only host exception is this VM's cache address on TCP port 7887.
+The agent opens no inbound TCP port.
+The agent owns the `cpxN` namespace, root `cpxN` and `cpxNp` links, and
+`inet cpxN` firewall table for each allocated network index `N`.
+It also reclaims orphan resources with these reserved names.
+Allocation skips active, pending, and occupied host indices.
+An overlapping address blocks allocation without granting cleanup ownership.
+Reconciliation checks cleanup results and retains ownership until absence
+is confirmed. Remove and uninstall wait for that cleanup.
+One Controller operation owns terminal completion for startup, the daemon,
+and uninstall. It removes the saved identity only after checked cleanup.
+Uninstall also finishes area, runtime tools, and service cleanup first.
+Removed startup can finish saved jobs without a machine credential.
+
+The owned nftables policy blocks private destinations and spoofed sources
+before the IPv4 filter hook. Return packets must have an established or
+related connection-tracking state. Those states are a set, not a combined
+bitmask comparison.
+
+Each network also owns a `CPXN` chain and a jump from `FORWARD` in every
+available nft and legacy iptables backend. The chain accepts only the
+network's uplink source and established replies to that uplink.
+The agent leaves existing default policies unchanged. Docker can set
+`FORWARD` to DROP without stopping these permitted VM flows.
+Explicit unrelated host firewall denials still need host configuration.
+Allocation and cleanup also inspect these chains. A failed deletion keeps
+the network index owned until the jump and chain are gone.
+The package preparation installs the required iptables command tools.
 
 ## Storage and capacity
 

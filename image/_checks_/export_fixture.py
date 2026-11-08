@@ -18,9 +18,9 @@ CAPABILITY = "0100000200200000000000000000000000000000"
 
 def provision_sandbox(source, image):
     for relative in ["usr/bin", "dev", "image", "etc/ciproxy", "etc/sudoers.d",
-                     "etc/systemd/network", "usr/local/bin"]:
+                     "etc/systemd/network", "etc/systemd/system", "usr/local/bin", "sbin"]:
         (source / relative).mkdir(parents=True, exist_ok=True)
-    for name in ["provision.sh", "pins.env"]:
+    for name in ["provision.sh", "pins.env", "ciproxy-guest.service"]:
         shutil.copyfile(image / name, source / "image" / name)
     bash = pathlib.Path(shutil.which("bash")).resolve()
     libraries = subprocess.check_output(["ldd", str(bash)], text=True)
@@ -37,11 +37,20 @@ def provision_sandbox(source, image):
 case "${0##*/}" in
     dirname) printf '%s\\n' "${1%/*}" ;;
     cat) while IFS= read -r line; do printf '%s\\n' "$line"; done ;;
+    install)
+        if [[ ${@: -2:1} == /image/ciproxy-guest.service ]]; then
+            while IFS= read -r line; do printf '%s\\n' "$line"; done \\
+                < /image/ciproxy-guest.service > /etc/systemd/system/ciproxy-guest.service
+        fi ;;
     sha256sum) while IFS= read -r line; do :; done ;;
 esac
 exit 0
 ''')
     stub.chmod(0o755)
+    for name in ["reboot", "poweroff"]:
+        command = source / "sbin" / name
+        command.write_text('#!/usr/bin/bash\nprintf \'%s\\n\' "${0##*/}" "$@" > /reset-observation\n')
+        command.chmod(0o755)
     for name in ["dirname", "cat", "sha256sum", "install", "id", "useradd",
                  "chmod", "chown", "tar", "cp", "find", "systemctl", "rm"]:
         (source / "usr/bin" / name).symlink_to(stub.name)

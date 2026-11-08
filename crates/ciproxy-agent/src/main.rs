@@ -58,6 +58,7 @@ mod logging;
 mod maintenance;
 mod mode;
 mod network;
+mod network_forwarding;
 mod network_inventory;
 mod network_lifecycle;
 

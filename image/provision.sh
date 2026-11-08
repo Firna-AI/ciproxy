@@ -32,8 +32,8 @@ cat > /etc/systemd/network/10-ciproxy.network <<'EOF'
 [Match]
 Name=eth0
 [Network]
-DHCP=yes
-KeepConfiguration=static
+DHCP=no
+KeepConfiguration=yes
 DNS=1.1.1.1
 EOF
 systemctl enable systemd-networkd systemd-resolved

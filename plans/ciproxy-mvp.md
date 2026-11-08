@@ -882,6 +882,19 @@ Live KVM and authenticated job checks remain with the orchestrator.
         on `eth0`. Prove the cause on the test host first. My call, 8
         November 2026: the agent's boot arguments stay the one source of
         the guest address and gateway. Then publish a new image release.
+    - [x] Prove that the current image keeps its address but loses the
+          kernel default route. Disable DHCP and preserve the complete
+          kernel configuration. Check the exported files offline and
+          public DNS and HTTPS before runner startup in the live smoke.
+          Evidence:
+          `.context/ciproxy-mvp/own-smoke-live-2026-11-08/guest-network/`.
+          Branch: `conductor/fix-guest-network`.
+          The second fault was the agent's combined conntrack bitmask
+          comparison. Use an explicit state set for replies and owned
+          forwarding accepts in both iptables backends. DNS and HTTPS
+          pass with both foreign FORWARD defaults kept at DROP.
+    - [ ] Orchestrator: build and publish the merged image and its new
+          Boat shared snapshot. Run every live scenario again.
   - [ ] Release a guest that never received its registration. After an
         agent restart before delivery, the VM stayed Stopping for 600
         seconds. My call, 8 November 2026: the agent retires a proven
