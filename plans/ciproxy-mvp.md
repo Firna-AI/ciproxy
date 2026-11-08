@@ -1979,6 +1979,10 @@ Answers of 5 November 2026:
   socket error go. A reconnect before the first handoff still means only
   GitHub's cache. There is no guessed time limit; GitHub's job time limit is
   the backstop. Rejected: A and C.
+- Items 104, 105, and 106, A, 8 November 2026: grow the test host disk to
+  500 GiB, sign the sandbox in to GitHub with the `workflow` scope, and
+  upgrade the test workspace to Team with a Stripe test-mode checkout after
+  pull request #39 merges.
 - Item 99, A, 8 November 2026: the live machine check publishes a
   pre-release of the agent on `Firna-AI/ciproxy`, creates two private test
   repositories in Firna-AI, and limits the workspace to the test
@@ -4527,6 +4531,8 @@ GitHub membership, is rejected.
 
 ### 104. The test host disk is below the install minimum
 
+**Answer, 8 November 2026:** A.
+
 - **Severity:** High. **Effort:** Small.
 - **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
 - **Category:** Process.
@@ -4553,6 +4559,8 @@ GitHub membership, is rejected.
 
 ### 105. The sandbox GitHub login cannot write workflow files
 
+**Answer, 8 November 2026:** A.
+
 - **Severity:** High. **Effort:** Small.
 - **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
 - **Category:** Process.
@@ -4576,6 +4584,8 @@ GitHub membership, is rejected.
 - **Action:** ask the user, because only the user can grant the scope.
 
 ### 106. The Docker disk checks need a paid workspace
+
+**Answer, 8 November 2026:** A, after pull request #39 serves Checkout.
 
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
