@@ -4324,3 +4324,95 @@ GitHub membership, is rejected.
   is safe, and the check then proves the customer's install path.
 - **Action:** ask the user, because A publishes a release and creates
   repositories in the user's organization.
+
+### 100. The protected image workflow needs a home before launch
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Review, pull request #47, round 1, finding 1, and its fix.
+- **Category:** Security.
+- **Location:** `deploy/image-workflow-bootstrap.md` and
+  `deploy/terraform/bootstrap/main.tf` on the branch of pull request #47.
+- **Background:** The fix of finding 1 lets only one reusable workflow get
+  the image-publishing credentials. The npm and Cargo scripts of other
+  deploy jobs cannot. The fix pins that workflow to the protected `main`
+  branch, which today holds only `README.md`.
+- **Problem:** Until `main` holds the whole repository, every preview
+  deploy fails to start.
+- **Impact if no action:** #47 cannot merge, and the preview keeps its
+  manual image step.
+- **Root question:** Where does the protected image workflow live until
+  launch?
+- **Options:**
+  - **A.** Land the whole repository on `main` now, through a reviewed pull
+    request that passes the gate, and pin the workflow there.
+    Effort: Medium.
+  - **B.** Pin the workflow to the primary branch until launch. Other jobs
+    still cannot get the credentials. Only a change of the workflow file on
+    the primary branch can. Move the pin to `main` at launch.
+    Effort: Small.
+  - **C.** Protect the primary branch with a ruleset that requires pull
+    requests and the gate, and pin the workflow to it. Each merge then
+    goes through a pull request. Effort: Medium.
+- **Left out:** No pin, because the npm scripts of a deploy job could then
+  publish images.
+- **Wider fix:** A.
+- **Recommendation:** B. Previews stay automatic, the npm path stays
+  closed, and the code reaches `main` with the launch anyway.
+- **Action:** ask the user, because A changes `main`, and B and C change
+  the trust of the deploy.
+
+### 101. The Machines and Settings mockups need facts the API lacks
+
+- **Severity:** Medium. **Effort:** Large.
+- **Source:** Implementation, Milestone 20, pull request #50, its item 1.
+- **Category:** Mockup.
+- **Location:** `ts/api/generated/api.d.ts`, and the Milestone 20 mockups.
+- **Background:** The approved Machines and Settings mockups show agent
+  update status, Docker disk counts, disk limits, job links, label
+  placement, and organization and member details.
+- **Problem:** The page responses of the API do not give these facts.
+- **Impact if no action:** The screens cannot show every approved state.
+- **Root question:** How do the screens get these facts?
+- **Options:**
+  - **A.** Reduce the screens, and update the mockups and the affected
+    requirements. Effort: Medium.
+  - **B.** Extend the existing page responses, and regenerate the types.
+    Effort: Large.
+  - **C.** Add separate metadata endpoints, with their own requests and
+    failure states. Effort: Large.
+  - **D.** Use existing routes where possible, and add the rest. This adds
+    job polling and GitHub reads to the browser. Effort: Large.
+  - **E.** Keep the facts that the protocol requires, and remove the other
+    mockup details. Effort: Large.
+- **Left out:** Guesses in the browser, because they cannot establish the
+  facts.
+- **Wider fix:** None.
+- **Recommendation:** B. One contract supplies the approved facts, with no
+  extra GitHub reads in the browser.
+- **Action:** ask the user, because the choice is API work or a change of
+  the approved design.
+
+### 102. The warm runner control has two meanings
+
+- **Severity:** Low. **Effort:** Small.
+- **Source:** Implementation, Milestone 20, pull request #50, its item 2.
+- **Category:** Mockup.
+- **Location:** `docs/mockups/src/screens/machines/machine-detail.tsx:134`.
+- **Background:** A warm runner waits on a machine for a job. The machine
+  keeps a saved number of them. Draining keeps that saved number.
+- **Problem:** The mockup shows zero in the control of a draining or
+  offline machine. The API keeps the saved number, such as two.
+- **Impact if no action:** The control differs from the mockup, and an edit
+  from a shown zero could overwrite the saved number.
+- **Root question:** What does the warm runner control show?
+- **Options:**
+  - **A.** Show the saved number in every state, and update the mockup.
+    Effort: Small.
+  - **B.** Hide the control in those states, and show the ready count when
+    known. Effort: Small.
+  - **C.** Show the saved number and a separate ready count. Effort: Small.
+- **Left out:** None.
+- **Wider fix:** None.
+- **Recommendation:** A. The control then edits the real saved number.
+- **Action:** ask the user, because the approved mockup and the product
+  differ.
