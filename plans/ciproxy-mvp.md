@@ -4130,3 +4130,42 @@ should not be manual".
   every kind of heading.
 - **Action:** ask the user, because G refuses some links that pass today,
   and a new refusal in the gate needs the user.
+
+### 98. Sign-in removes the Admin role of a new install
+
+- **Severity:** High. **Likelihood:** Common. **Effort:** Small.
+- **Source:** Implementation, the first live install on the main preview,
+  8 November 2026.
+- **Category:** Product bug.
+- **Location:** `crates/ciproxy-api/src/identity/http.rs:208`, and
+  `crates/ciproxy-store-pg/src/dashboard/identity.rs:92`.
+- **Background:** A direct install creates a workspace and makes its
+  requester the first Admin. Each sign-in reads the person's organization
+  memberships with `GET /user/memberships/orgs`. It deletes each role in a
+  workspace whose organizations are not in that list. The App has three
+  permissions: Actions read, Metadata read, and organization self-hosted
+  runners write. GitHub lists the organization membership endpoints under
+  the "Members" permission for GitHub App user tokens.
+- **Problem:** On the preview, the install of Firna-AI created the workspace
+  and the Admin role. Each later sign-in removed the role, so the user sees
+  no workspace. The membership list returned no Firna-AI.
+- **Impact if no action:** No customer can use the dashboard after an
+  install.
+- **Root question:** How does sign-in learn which organizations a person
+  owns or belongs to?
+- **Options:**
+  - **A.** Add the organization permission "Members: read" to the App, and
+    list four permissions in the protocol and the docs. Each install then
+    asks for it. Effort: Small.
+  - **B.** Keep three permissions. Base roles on the installations that
+    the person's token can see, and drop the owner checks of items 82 and
+    83. Effort: Large.
+  - **C.** Keep three permissions. Read the memberships through a second,
+    OAuth sign-in with the `read:org` scope. Effort: Medium.
+- **Left out:** Keeping a role whose organization the membership list
+  omits, because a person who left the organization would keep access.
+- **Wider fix:** A.
+- **Recommendation:** A. It is a common, read-only permission, and the role
+  model stays as the user approved it.
+- **Action:** ask the user, because A changes the App's three permissions,
+  which item 54 = E keeps.
