@@ -54,7 +54,7 @@ It registers temporary sessions with empty tokens and public probe data.
 It sends their upstream requests through the actual cache process.
 It never prints a token, response body, or private input.
 
-Temporary HTTP listeners supply reachable loopback, private IPv4, metadata,
+Temporary HTTP listeners supply reachable loopback, private IPv4,
 IPv6, IPv4-mapped loopback, and public host-local destinations.
 The control UID must reach each listener first.
 The cache must return a failed upstream response without reaching it.
@@ -64,12 +64,29 @@ The script creates a private connection as the cache UID under a temporary
 test exception. It reloads the installed policy before that connection
 sends its request. The original-direction request must then be blocked.
 
-The script uses `10.254.253.0/30`, `169.254.169.254/32`,
-`93.184.215.254/32`, and `2001:db8:cf::/64` only for controlled listeners.
-It adds them to temporary links and removes them afterwards.
-It adds a temporary host route for the controlled metadata address.
-An existing exact metadata route makes setup fail without replacing it.
-Do not use this script on a host that depends on these probe addresses.
+On a host with a real metadata server, the control UID must first get an
+HTTP response from `169.254.169.254` on port 80. The control sends `HEAD /`
+without credentials. An HTTP error, such as 401, also proves reachability.
+The cache must then fail to reach that address through its actual process.
+The installed output firewall's drop counter must increase.
+The script keeps the provider's metadata route and DNS unchanged.
+It never assigns or adds a route to `169.254.169.254`.
+If the control gets no response but a non-default route covers that
+address, the proof fails. It never substitutes a listener for that server.
+
+On a host without a metadata response or a metadata route, a temporary
+listener at `169.254.253.2/32` proves the link-local block instead.
+The evidence records whether the proof checked a real metadata server.
+Both host kinds check seven blocked destinations.
+
+The other controlled ranges are `10.254.253.0/30`,
+`93.184.215.254/32`, and `2001:db8:cf::/64`.
+The script adds these addresses to temporary links and removes them later.
+It adds a temporary host route only for the unused link-local listener.
+Before setup, it checks every host routing table for each temporary range.
+An existing route that overlaps a temporary range makes setup fail.
+Default routes do not prevent setup. The script never changes them.
+Do not use this script on a host that depends on the temporary ranges.
 
 The cache UID must get DNS replies from each configured resolver over both
 UDP and TCP. A public HTTPS request must pass through the cache.
@@ -91,3 +108,15 @@ and marker. It keeps the public smoke cache entry for the restore check.
 Evidence stays under `.context/agent-follow-ups/firewall/host-proof.json`
 and the private-file smoke client's `.context/ciproxy-mvp/own-smoke-*` paths.
 The script writes no credentials into that evidence.
+
+## Script regression tests
+
+Run the network regression tests without root, KVM, or private inputs:
+
+```sh
+python3 -B -m unittest discover -s crates/ciproxy-agent/scripts/tests -v
+```
+
+These tests check hosts with and without a provider metadata server.
+They also check route conflicts and an unreachable provider server.
+They use simulated host commands. They do not count as live proof.
