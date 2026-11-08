@@ -7,8 +7,8 @@ import { Text } from "react-native";
 import { Notice } from "../../components/notice.tsx";
 import { WaitingLine } from "../../components/page-state.tsx";
 import { text } from "../../components/text.ts";
-import type { PreviewSnapshot } from "../../state/settings-preview.ts";
-import { fitKey, type DraftCheck } from "../../view/settings-label-form.ts";
+import { fitKey, type PreviewSnapshot } from "../../state/settings-preview.ts";
+import type { DraftCheck } from "../../view/settings-label-form.ts";
 import { fitLine } from "../../view/settings-labels.ts";
 
 export function LabelFitLine({

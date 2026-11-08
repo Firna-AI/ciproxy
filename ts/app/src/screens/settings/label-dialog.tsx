@@ -13,13 +13,12 @@ import { FeatureDialog } from "../../components/feature-parts.tsx";
 import { Notice } from "../../components/notice.tsx";
 import { useServices } from "../../services/context.tsx";
 import { useValue } from "../../services/hooks.ts";
-import { createLabelPreview } from "../../state/settings-preview.ts";
+import { createLabelPreview, fitKey } from "../../state/settings-preview.ts";
 import type { SettingsStore } from "../../state/settings-store.ts";
 import type { FailureCopy } from "../../view/claim.ts";
 import {
   checkDraft,
   editDraft,
-  fitKey,
   labelFailure,
   newDraft,
   type LabelDraft,
@@ -64,12 +63,10 @@ export function LabelDialog({
 
   const check = checkDraft(draft);
   const key = check.ok ? fitKey(check.input) : null;
-  // The fit depends only on the parts in `key`, so a new key asks again.
+  // Each change of the parts in `key` enters the preview store, which ends
+  // the earlier work and decides between the shown fit and a new ask.
   useEffect(() => {
-    if (!check.ok) return preview.request(null);
-    const shown = preview.state.get().shown;
-    if (shown !== null && fitKey(shown.input) === key) return;
-    preview.request(check.input);
+    preview.request(check.ok ? check.input : null);
   }, [key, preview]);
 
   const sizeErrors: Partial<Record<SizeField, string>> = {};

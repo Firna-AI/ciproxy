@@ -1,8 +1,9 @@
-// The live fit of the label dialog. While the person types a size, the
-// dialog asks the API how many jobs of it each machine runs. A short pause
-// after the last change sends one request, and only the answer to the latest
-// request shows, so a slow answer never replaces a newer one. The fit keeps
-// the label that it answers, so its line never mixes two drafts.
+// The live fit of the label dialog. Each change of a draft enters through
+// `request`, which first cancels the waiting pause and invalidates every
+// ask in flight. Then it reuses the shown fit when that fit answers the same
+// size, or asks the API after a short pause. Only the answer to the latest
+// ask shows, so a slow answer never replaces a newer draft. The fit keeps the
+// label that it answers, so its line never mixes two drafts.
 
 import type { ApiFailure, ApiResult } from "../api/client.ts";
 import type { LabelFit, LabelInput } from "../api/schema.ts";
@@ -22,13 +23,30 @@ export type PreviewSnapshot = {
 
 export type LabelPreview = {
   readonly state: Store<PreviewSnapshot>;
-  /** Ask for the fit of a draft after the pause; null clears a waiting ask. */
+  /**
+   * The one entry for each change of the draft. It ends all earlier work,
+   * then reuses the shown fit for the same size, or asks after the pause.
+   * Null ends the earlier work and asks for nothing.
+   */
   request(input: LabelInput | null): void;
   /** Forget waiting asks and answers, for a closed dialog. */
   stop(): void;
 };
 
 export const previewDelay = 300;
+
+/**
+ * The parts of a label that its machine fit depends on: the size and the
+ * switch "Your machines". A change of another part needs no new fit.
+ */
+export function fitKey(input: LabelInput): string {
+  return [
+    input.vcpus,
+    input.memory_gb,
+    input.disk_gb,
+    input.allow_machines,
+  ].join("/");
+}
 
 export function createLabelPreview(options: {
   preview: (input: LabelInput) => Promise<ApiResult<LabelFit>>;
@@ -44,9 +62,12 @@ export function createLabelPreview(options: {
   let latest = 0;
   let cancel: (() => void) | null = null;
 
-  const clear = (): void => {
+  /** Cancel the waiting pause, and make every ask in flight obsolete. */
+  const invalidate = (): number => {
     cancel?.();
     cancel = null;
+    latest += 1;
+    return latest;
   };
 
   const send = async (input: LabelInput, sequence: number): Promise<void> => {
@@ -62,11 +83,14 @@ export function createLabelPreview(options: {
   return {
     state,
     request(input) {
-      clear();
-      latest += 1;
-      const sequence = latest;
+      const sequence = invalidate();
       if (input === null) {
         state.set({ ...state.get(), pending: false, failure: null });
+        return;
+      }
+      const { shown } = state.get();
+      if (shown !== null && fitKey(shown.input) === fitKey(input)) {
+        state.set({ shown, pending: false, failure: null });
         return;
       }
       state.set({ ...state.get(), pending: true });
@@ -76,8 +100,7 @@ export function createLabelPreview(options: {
       }, previewDelay);
     },
     stop() {
-      clear();
-      latest += 1;
+      invalidate();
     },
   };
 }

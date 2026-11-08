@@ -18,6 +18,9 @@ import { useValue } from "../../services/hooks.ts";
 import { commandExpired } from "../../state/install-command.ts";
 import { formatTime } from "../../view/format.ts";
 
+const supportedHosts =
+  "x64 Linux with systemd and cgroup v2, on Debian, Ubuntu, Fedora, RHEL, Rocky Linux, or AlmaLinux.";
+
 export function InstallCommandView({ workspaceId }: { workspaceId: string }) {
   const services = useServices();
   const store = services.installCommand(workspaceId);
@@ -82,8 +85,8 @@ export function InstallCommandView({ workspaceId }: { workspaceId: string }) {
       <View style={styles.note}>
         <Text style={[text.caption, styles.noteText]}>
           The command adds any number of machines until{" "}
-          {formatTime(command.expires_at)}. A machine needs{" "}
-          {command.requirements}
+          {formatTime(command.expires_at)}. Supported hosts: {supportedHosts} A
+          machine needs {command.requirements}
         </Text>
         <ActionButton
           label="Revoke token"

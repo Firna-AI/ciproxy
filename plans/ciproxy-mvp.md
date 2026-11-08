@@ -1421,6 +1421,9 @@ Each screen follows its mockup, as Milestone 19 says.
   - [x] Build Machines, the machine page, and Add machine from the generated
         API responses, with the roles, controls, and recoverable failures.
         Branch: `conductor/m20-machines-and-settings-ui`.
+  - [x] Apply the supported-host answer C of 8 November 2026 in the shared
+        install view. Leave the protocol and install mockup to #40.
+        Branch: `conductor/m20-machines-and-settings-ui`.
   - [x] Build Labels, Organizations, repository access, Members, and Roles.
         Keep absent API facts unavailable until the API owner supplies them.
         Branch: `conductor/m20-machines-and-settings-ui`.

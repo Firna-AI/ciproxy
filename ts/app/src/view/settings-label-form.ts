@@ -125,16 +125,3 @@ export function labelFailure(
         : "ciproxy could not finish the change. Try again.";
   return { kind: "form", copy: { title, body } };
 }
-
-/**
- * The parts of a label that its machine fit depends on: the size and the
- * switch "Your machines". A change of another part needs no new fit.
- */
-export function fitKey(input: LabelInput): string {
-  return [
-    input.vcpus,
-    input.memory_gb,
-    input.disk_gb,
-    input.allow_machines,
-  ].join("/");
-}

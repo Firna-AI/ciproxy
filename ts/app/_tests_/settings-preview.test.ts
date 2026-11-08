@@ -43,7 +43,7 @@ test("the preview asks once after the pause, for the latest draft", () => {
 });
 
 test("a late answer for an older draft never replaces a newer one", async () => {
-  const { preview, schedule, answers } = previewWith();
+  const { preview, schedule, asked, answers } = previewWith();
   const older = labelInput({ vcpus: 4 });
   const newer = labelInput({ vcpus: 8 });
   preview.request(older);
@@ -54,11 +54,28 @@ test("a late answer for an older draft never replaces a newer one", async () => 
   await settled();
   answers[0]?.resolve({ ok: true, value: fit({ maximum_jobs: "3" }) });
   await settled();
-  assert.deepEqual(preview.state.get(), {
+  const newerShown = {
     shown: { input: newer, fit: fit({ maximum_jobs: "1" }) },
     pending: false,
     failure: null,
-  });
+  };
+  assert.deepEqual(preview.state.get(), newerShown);
+  // The shown size comes back while the ask for another size is in flight.
+  preview.request(labelInput({ vcpus: 80 }));
+  schedule.fire();
+  preview.request(newer);
+  answers[2]?.resolve({ ok: true, value: fit({ maximum_jobs: "0" }) });
+  await settled();
+  assert.deepEqual(preview.state.get(), newerShown);
+  // The shown size comes back while another size waits for its pause.
+  preview.request(labelInput({ vcpus: 80 }));
+  preview.request(newer);
+  assert.equal(schedule.pending(), 0);
+  assert.deepEqual(preview.state.get(), newerShown);
+  assert.deepEqual(
+    asked.map((input) => input.vcpus),
+    [4, 8, 80],
+  );
 });
 
 test("a draft with no valid size and a closed dialog ask for nothing", async () => {
