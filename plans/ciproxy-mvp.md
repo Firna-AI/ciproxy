@@ -1458,6 +1458,13 @@ These routes serve the other pages of the dashboard.
       Run `live_pages.py` for reads, review, Checkout and return, paid
       changes, add-ons, the portal, Move to Free, and signed webhook replay.
       Branch: `calummoore/ci-proxy-load-balancer`.
+      Run of 8 November 2026 on the preview, Stripe test mode: reads,
+      review, Checkout with the test card and its return, the refused
+      second Checkout, a paid move from Team to Business with its quote,
+      add-ons, and the portal session passed. The paid period kept its
+      dates, and no invoice difference alert appeared. Move to Free, the
+      portal cancel and undo, an unfinished Checkout, and the signed
+      webhook replay remain. Evidence: `.context/ciproxy-mvp/m21-live/`.
 
 ## Milestone 19: Dashboard UI: shell, sign-in, and setup
 
@@ -1598,6 +1605,9 @@ Each screen follows its mockup, as Milestone 19 says.
 
 - [ ] Build Jobs, Savings, Plan and usage, Plans, Checkout, and the banners.
 - [ ] Run one checkout in the Stripe test mode.
+      The API part passed on 8 November 2026: the test workspace
+      Firna-AI paid for Team with the test card, as item 106 = A asks.
+      The dashboard part runs after #53 merges.
 - [ ] Show an unknown request on Jobs. The API returns null vCPUs, memory,
       and free disk for a running or finished job whose request was not
       saved. Add that state to the Jobs mockups first.
@@ -4849,6 +4859,8 @@ is now a full release, and the preview release server serves it.
 ### 106. The Docker disk checks need a paid workspace
 
 **Answer, 8 November 2026:** A, after pull request #39 serves Checkout.
+Done 8 November 2026: Firna-AI is on a paid plan in the Stripe test
+mode.
 
 - **Severity:** Medium. **Effort:** Small.
 - **Source:** Implementation, the Milestone 13 live check, 8 November 2026.
