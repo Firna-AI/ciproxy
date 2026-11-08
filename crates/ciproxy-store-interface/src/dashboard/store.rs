@@ -9,7 +9,6 @@ use crate::dashboard::records::{
 };
 use crate::error::Result;
 use crate::installation_results::PendingInstallationResult;
-use crate::labels::Label;
 use crate::metering::history::MachineCost;
 use crate::scale_sets::ScaleSet;
 use crate::workspaces::Workspace;
@@ -126,6 +125,4 @@ pub trait DashboardStore: Send + Sync {
     ) -> Result<()>;
     /// Discover workspaces with retired labels whose remote cleanup is idempotent.
     fn retired_label_workspaces(&self) -> Result<Vec<Uuid>>;
-    /// Read retired labels for idempotent remote scale-set cleanup.
-    fn retired_dashboard_labels(&self, workspace_id: Uuid) -> Result<Vec<Label>>;
 }

@@ -161,13 +161,16 @@ export function ActionLink({
   newTab = false,
   hideLabel = false,
   onClick,
+  onActivate,
 }: Common & {
   href: string;
   newTab?: boolean;
   /** Show only the icon; the label stays the accessible name. */
   hideLabel?: boolean;
-  /** Called before the browser follows a plain click. */
+  /** The raw click hook, also used by router links. */
   onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
+  /** Run an action for a plain current-tab activation instead of following the link. */
+  onActivate?: () => void;
 }) {
   const theme = useSharedUiTheme();
   const styles = useMemo(() => createButtonStyles(theme, size), [theme, size]);
@@ -189,7 +192,25 @@ export function ActionLink({
       onBlur={focus.onBlur}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={onClick}
+      data-ciproxy-action={onActivate ? "true" : undefined}
+      onClick={
+        onActivate
+          ? (event) => {
+              if (
+                event.defaultPrevented ||
+                event.button !== 0 ||
+                newTab ||
+                event.metaKey ||
+                event.ctrlKey ||
+                event.shiftKey ||
+                event.altKey
+              )
+                return;
+              event.preventDefault();
+              onActivate();
+            }
+          : onClick
+      }
       aria-label={hideLabel ? label : undefined}
       title={hideLabel ? label : undefined}
       style={{

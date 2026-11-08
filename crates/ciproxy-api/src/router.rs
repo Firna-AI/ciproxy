@@ -48,6 +48,7 @@ pub(crate) fn routes() -> OpenApiRouter<ApiState> {
         .routes(routes!(labels::update))
         .routes(routes!(labels::remove))
         .routes(routes!(links::begin))
+        .routes(routes!(links::start))
         .routes(routes!(links::list))
         .routes(routes!(links::detail))
         .routes(routes!(links::choose))

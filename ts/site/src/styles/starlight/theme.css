@@ -1,12 +1,10 @@
 /* The Graphite theme of Starlight: its colour, font, and type variables, read
    from the shared tokens. Black is the one accent, and colour marks status
    only. The site is light only, so these values apply whatever data-theme
-   says, also before the theme script runs and without JavaScript. Starlight
-   has one radius variable, --sl-search-corners, for the search results, and
-   Pagefind has --pagefind-ui-border-radius. Both are set on the search
-   element in frame.css. Starlight gives its other parts fixed radii, so
-   frame.css, content.css, and asides.css set the token radii on the parts
-   that show. */
+   says, also before the theme script runs and without JavaScript.
+   Starlight gives its parts fixed radii, so frame.css, content.css, and
+   asides.css set the token radii on the parts that show. The search override
+   reads the tokens directly. */
 
 :root {
   color-scheme: light;

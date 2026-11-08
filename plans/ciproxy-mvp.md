@@ -1483,6 +1483,41 @@ A sign-in reads the organization memberships of the person with it.
   backend change and the protocol docs for the membership read are outside
   this branch.
 
+Installation follow-up outcomes, 8 November 2026:
+
+- `session-installation-attempt-growth.md`, B: session reads return a stable
+  navigation link and create no attempt. An Origin- and CSRF-protected POST
+  saves the attempt before returning its GitHub URL. Keep durable Add
+  evidence, continuation purposes, late approvals, and no age limit.
+  Rejected: reusing read-created attempts, signed Direct state alone,
+  sharing one open attempt, and adding an expiry.
+- `retained-add-reinstall-admission.md`, B: use one effective admission
+  policy for installation, synchronization, and registration. Retained
+  admission overrides a new Add's initial holds. Prepare current bindings
+  before publishing Active. Retained inactive organizations keep their
+  holds. Rejected: a local preparation patch, separate readiness storage,
+  and preparation for every held installation.
+- `unused-retired-label-query.md`, A: delete the unused trait method,
+  PostgreSQL method, helper, and imports. Keep retired data and the
+  workspace discovery query that maintenance uses.
+- Admin recovery flag: return false for an existing Admin. Remove the
+  dashboard's extra role check, because the API owns this capability.
+- Python compatibility: defer annotation evaluation in `live_smoke.py`.
+  Check the other crate and deployment scripts for evaluated union types.
+  Keep the documented Python 3.9 minimum without another runtime dependency.
+- My call, 8 November 2026: use the existing `/install` page as the stable
+  navigation link. Use POST `/installation-links/start` for the explicit
+  start, so the existing browser guard protects it.
+- My call, 8 November 2026: put the pure activation predicate on
+  `OrganizationActivation`. The GitHub service and registration query then
+  consume the same retained-admission rule.
+- Post-push review, 8 November 2026: apply B for the install link's native
+  navigation. Give `ActionLink` an opt-in plain-activation callback. Only
+  that callback marks the link as an action for the build-change handler.
+  Keep other links and their raw `onClick` handling unchanged. A modified
+  click opens the stable install page and creates no attempt. A plain
+  activation saves its attempt, also after observing a new API build.
+
 ## Milestone 20: Dashboard UI: Machines and Settings
 
 Tags: ui
@@ -1578,6 +1613,42 @@ Depends on: 1
       Branch: `conductor/ciproxy-mvp-milestone-23-site`.
 - [x] Smoke-test each page at 1440, 720, and 390 pixels.
       Branch: `conductor/ciproxy-mvp-milestone-23-site`.
+
+Docs search follow-up choices, 8 November 2026:
+
+- The user approved B for `site-search-keyboard-selection`: a Starlight
+  override uses the Pagefind API and owns selection, keyboard controls,
+  focus, and hints. It keeps the real index and normal links. The rejected
+  alternative kept Tab alone and omitted the keyboard hints.
+- The user approved B for `site-search-heading-count`: the same heading
+  collection supplies the count and the grouped rows. The rejected
+  alternative kept Pagefind's page count.
+- The user approved the task of `site-search-clear-control-mockup`: show
+  Clear beside the active query at desktop and phone widths. Keep Clear
+  distinct from Cancel and Escape, which close the dialog.
+- My call: arrow selection wraps through the displayed heading results.
+  Reason: each direction always reaches another result when several match.
+- My call: the input uses a combobox with a grid of normal links. Its
+  active descendant names the page and heading. Reason: selection stays
+  announced while Tab and pointer actions retain normal link behaviour.
+- Settled on this branch: all three follow-up fixes now match the approved
+  search controls. Their files are removed. The choices above remain as
+  the dated record. The MVP plan stays because its other work is open.
+  Branch: `conductor/follow-ups-docs-search-keyboard-count-clear-control`.
+
+Verification evidence: `.context/site-search/verification.md`.
+
+Docs search review fix, 8 November 2026:
+
+- The user chose A for owner review round 1, finding 1: remove the saved
+  focus target and explicit focus restoration. The HTML dialog owns focus
+  restoration. Normal fragment links keep keyboard navigation at the
+  opened heading. Escape and Cancel still return to the search button.
+- Add a browser regression for `runs-on` from `/docs/`, Up, Enter, and Tab.
+  Keep the existing tests. My call: use the Node test runner with a fresh
+  production build and local server, so the test exercises the real index.
+
+Verification evidence: `.context/site-search/fix-round-1/verification.md`.
 
 ## Milestone 24: Site: the 14 launch docs pages
 
@@ -2078,6 +2149,9 @@ Answers of 5 November 2026:
   number in every state, and the mockup changes to it. Rejected: B and C.
 - Item 113, A, 8 November 2026: the label dialog keeps the fit counts and
   the placement, and the mockup drops the largest-job figures. Rejected: B.
+- Item 114, A, 8 November 2026: merge the release server changes of
+  `futex-ai/cli-release`, with the image push of each merge, and publish
+  no release. ciproxy pins the merged commit. Rejected: B and C.
 - Item 108, C with D, 8 November 2026: the paid change sends the same
   pending credit that the preview counted, Stripe computes the amount, and
   an alert compares each invoice with its quote. A third fix round of pull
@@ -4936,6 +5010,15 @@ request #39.
 
 ### 114. The release channel change waits for a merge
 
+**Answer, 8 November 2026:** A, given before a correction. Each push to
+`main` of `futex-ai/cli-release` also publishes the release server image
+to `ghcr.io/futex-ai/cli-release-server` as `latest`, `main`, and
+`sha-<commit>`. The last push was on 5 June 2026, because later `main`
+runs failed at Clippy. A merge creates no GitHub release, tag, or crate,
+because `release_always` and `publish` are false. The merges wait for the
+user to confirm A with this correction. The user confirmed A with it on
+8 November 2026.
+
 - **Severity:** High. **Effort:** Small.
 - **Source:** Implementation, plan item 103, option B, 8 November 2026.
 - **Category:** Process.
@@ -4967,8 +5050,8 @@ request #39.
     Merge the argument pull request when its review finds no problem.
     Publish no release. ciproxy then pins the merged commit. Effort: Small.
   - **B.** Do A, and also merge the release pull request that the release
-    automation opens. This publishes the shared crates and the server
-    image of `cli-release` for every product that uses it. Effort: Small.
+    automation opens. This creates a draft GitHub release and its tag.
+    Effort: Small.
   - **C.** Leave both pull requests open, and pin the reviewed head
     `55eae44`. The pin then names a commit outside `main`. Effort: Small.
 - **Left out:** Closing #7 and marking each test release as a full release,

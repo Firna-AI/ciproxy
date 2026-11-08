@@ -1,139 +1,125 @@
-/* The results of the search dialog after the search mockup, restyled with
-   CSS only: the count as a caption, each page as a title row with a file
-   icon, and each heading hit as a row with its excerpt, indented under its
-   page. search.css styles the dialog and the field. The icons in the masks
-   are the Lucide file-text and corner-down-left icons (ISC licence, see
-   icons.ts). */
+/* One heading collection supplies these rows, the count, and selection. */
 
-#starlight__search .pagefind-ui__drawer {
-  gap: 0;
-}
-
-#starlight__search .pagefind-ui__results-area {
-  margin-top: 0;
-  padding: 0 8px 12px;
-}
-
-#starlight__search .pagefind-ui__message {
-  height: auto;
-  padding: 12px 8px 4px;
+docs-search .ds-count {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 12px 16px 4px;
   color: var(--c-muted);
   font-size: 12px;
-  font-weight: 400;
   line-height: 16px;
+  overflow-wrap: anywhere;
 }
 
-#starlight__search .pagefind-ui__results {
+docs-search [role="grid"] {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding-top: 4px;
+  padding: 4px 8px 12px;
 }
 
-#starlight__search .pagefind-ui__results > * + * {
-  margin-top: 0;
-}
-
-#starlight__search .pagefind-ui__result-inner {
+docs-search .ds-page {
+  display: flex;
+  flex-direction: column;
   gap: 2px;
 }
 
-#starlight__search .pagefind-ui__result-title,
-#starlight__search .pagefind-ui__result-nested {
-  border-radius: var(--r-md);
-  background: transparent;
-  outline: 0;
-}
-
-/* The title row of a page. */
-
-#starlight__search .pagefind-ui__result-inner > .pagefind-ui__result-title {
-  padding: 6px 8px 6px 30px;
-  font-size: 13px;
-  line-height: 18px;
-}
-
-#starlight__search
-  .pagefind-ui__result-inner
-  > .pagefind-ui__result-title::before {
-  inset-inline-start: 8px;
-  width: 14px;
-  background: var(--c-faint);
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z'/%3E%3Cpath d='M14 2v5a1 1 0 0 0 1 1h5'/%3E%3Cpath d='M10 9H8'/%3E%3Cpath d='M16 13H8'/%3E%3Cpath d='M16 17H8'/%3E%3C/svg%3E")
-    center / 14px no-repeat;
-}
-
-#starlight__search .pagefind-ui__result-link {
+docs-search .ds-page-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
   color: var(--c-ink);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
 }
 
-#starlight__search .pagefind-ui__result-inner > .pagefind-ui__result-excerpt {
-  padding: 0 8px 6px 30px;
+docs-search .ds-page-title .icon {
+  flex-shrink: 0;
+  color: var(--c-faint);
 }
 
-/* A heading hit: its heading and its excerpt, under its page. */
-
-#starlight__search .pagefind-ui__result-nested {
+docs-search .ds-hit {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   gap: 2px;
   margin-left: 15px;
   padding: 8px 32px 8px 14px;
+  border-radius: var(--r-md);
+  color: var(--c-ink);
+  text-decoration: none;
+  overflow-wrap: anywhere;
 }
 
-#starlight__search .pagefind-ui__result-nested .pagefind-ui__result-title {
+docs-search .ds-hit:hover {
+  background: var(--c-primary-soft);
+}
+
+docs-search .ds-hit-heading {
   font-size: 13px;
-  line-height: 18px;
-}
-
-#starlight__search .pagefind-ui__result-nested .pagefind-ui__result-link {
   font-weight: 500;
+  line-height: 20px;
 }
 
-#starlight__search .pagefind-ui__result-excerpt {
-  min-width: 0;
-  margin-top: 0;
+docs-search .ds-hit-excerpt {
   color: var(--c-muted);
   font-size: 13px;
   line-height: 18px;
 }
 
-#starlight__search mark {
+docs-search mark {
+  background: transparent;
   color: var(--c-ink);
   font-weight: 600;
 }
 
-/* A row under the pointer or with the focus takes the soft fill. A hit with
-   the focus shows the Enter key, which opens it, in the place of
-   Starlight's tree lines. */
-
-#starlight__search
-  .pagefind-ui__result-inner
-  > .pagefind-ui__result-title:is(:hover, :focus-within),
-#starlight__search .pagefind-ui__result-nested:is(:hover, :focus-within) {
-  background: var(--c-primary-soft);
-  outline: 0;
-}
-
-#starlight__search .pagefind-ui__result-nested::before {
+docs-search .ds-enter {
+  position: absolute;
+  top: 50%;
+  right: 10px;
   display: none;
+  color: var(--c-muted);
+  transform: translateY(-50%);
 }
 
-#starlight__search .pagefind-ui__result-nested:focus-within::before {
-  display: block;
-  inset: calc(50% - 7px) 10px auto auto;
-  width: 14px;
-  height: 14px;
-  background: var(--c-muted);
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 4v7a4 4 0 0 1-4 4H4'/%3E%3Cpath d='m9 10-5 5 5 5'/%3E%3C/svg%3E")
-    center / 14px no-repeat;
+docs-search .ds-keys {
+  display: none;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 10px 16px;
+  border-top: 1px solid var(--c-border);
+  background: var(--c-bg);
+  color: var(--c-muted);
+  font-size: 12px;
+  line-height: 16px;
 }
 
-#starlight__search .pagefind-ui__button {
-  height: 38px;
-  margin-top: 12px;
-  border: 1px solid var(--c-control-border);
-  border-radius: var(--r-md);
+docs-search .ds-keys kbd {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-sm);
   background: var(--c-surface);
-  color: var(--c-ink);
-  font-size: 13px;
-  font-weight: 500;
+}
+
+docs-search.has-keyboard-selection .ds-hit.is-selected {
+  background: var(--c-primary-soft);
+}
+
+@media (min-width: 40rem) {
+  docs-search .ds-keys {
+    display: flex;
+  }
+
+  docs-search .ds-hit.is-selected {
+    background: var(--c-primary-soft);
+  }
+
+  docs-search .ds-hit.is-selected .ds-enter {
+    display: block;
+  }
 }

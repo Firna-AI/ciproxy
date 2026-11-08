@@ -11,12 +11,11 @@ use ciproxy_store_interface::dashboard::records::Role;
 use ciproxy_store_interface::installation_links::InstallationClaim;
 use ciproxy_store_interface::installation_results::InstallationResultDelivery;
 use serde_json::{Value, json};
-use url::Url;
 use uuid::Uuid;
 
 use super::fixture::{Browser, Fixture};
 use super::fixture_io::{CallbackOutcome, json};
-use super::link_support::{begin, event, memberships, other_workspace, pending, scenario};
+use super::link_support::{self, begin, event, memberships, other_workspace, pending, scenario};
 use super::setup_support::{browser, finish};
 
 fn historical_claim(fixture: &Fixture) -> Uuid {
@@ -103,13 +102,7 @@ async fn late_first_install_sign_in_names_new_direct_claim_and_preserves_viewer_
         )
         .unwrap();
     let initial = session(&fixture, &prior).await;
-    let url = Url::parse(initial["install_url"].as_str().unwrap()).unwrap();
-    let state = url
-        .query_pairs()
-        .find(|(key, _)| key == "state")
-        .unwrap()
-        .1
-        .into_owned();
+    let state = link_support::start(&fixture, &prior).await;
     let prior = waiting(&fixture, &prior, &state).await;
     assert_eq!(
         session(&fixture, &prior).await["setup"]["kind"],

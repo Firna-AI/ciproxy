@@ -70,15 +70,20 @@ export type ClickEvent = {
 
 /**
  * The page that a plain click on a link opens inside the app, or null when
- * the browser handles the click itself: a modified click, another target, a
- * download, another origin, or an API route.
+ * an action handles it or the browser handles it: a modified click, another
+ * target, a download, another origin, or an API route.
  */
 export function appLinkHref(
   link: LinkElement | null,
   event: ClickEvent,
   origin: string,
 ): string | null {
-  if (link === null || event.defaultPrevented || event.button !== 0) {
+  if (
+    link === null ||
+    event.defaultPrevented ||
+    event.button !== 0 ||
+    link.hasAttribute("data-ciproxy-action")
+  ) {
     return null;
   }
   if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {

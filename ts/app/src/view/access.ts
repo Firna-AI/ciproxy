@@ -12,7 +12,7 @@ import type {
 import type { SignInReason } from "../routing/pages.ts";
 import { formatDeadline, joinWords, signedInAs } from "./format.ts";
 import {
-  installLink,
+  startInstall,
   leave,
   type AuthPageModel,
   type NoticeModel,
@@ -102,7 +102,7 @@ export function installPage(session: SessionView): AuthPageModel {
       list: null,
       actions: [
         { kind: "check-again", label: "Check again", tone: "primary" },
-        installLink(
+        startInstall(
           "Install on another organization",
           session.install_url,
           "secondary",
@@ -114,7 +114,9 @@ export function installPage(session: SessionView): AuthPageModel {
     ...base,
     notice: null,
     list: { caption: "The app asks for", items: appPermissions },
-    actions: [installLink("Install on GitHub", session.install_url, "primary")],
+    actions: [
+      startInstall("Install on GitHub", session.install_url, "primary"),
+    ],
   };
 }
 
@@ -128,7 +130,11 @@ export function personalAccountPage(
     notice: null,
     list: null,
     actions: [
-      installLink("Install on an organization", session.install_url, "primary"),
+      startInstall(
+        "Install on an organization",
+        session.install_url,
+        "primary",
+      ),
       leave(`Remove from ${session.login}`, removeUrl, "secondary", "external"),
     ],
     footer: signedInAs(session.login),
@@ -165,7 +171,9 @@ export function appRemovedPage(
             body: `ciproxy keeps the labels, settings, and job history until then. ${after}`,
           },
     list: null,
-    actions: [installLink("Install on GitHub", session.install_url, "primary")],
+    actions: [
+      startInstall("Install on GitHub", session.install_url, "primary"),
+    ],
     footer: signedInAs(session.login),
   };
 }
@@ -182,7 +190,7 @@ export function accessEndedPage(session: SessionView): AuthPageModel {
     list: null,
     actions: [
       { kind: "check-again", label: "Check again", tone: "primary" },
-      installLink(
+      startInstall(
         "Install on another organization",
         session.install_url,
         "secondary",
@@ -223,7 +231,7 @@ export function noRolePage(
         ]
       : [
           { kind: "check-again", label: "Check again", tone: "primary" },
-          installLink(
+          startInstall(
             "Install on another organization",
             session.install_url,
             "secondary",

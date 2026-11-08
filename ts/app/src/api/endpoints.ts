@@ -25,6 +25,8 @@ export function workspacePath(workspaceId: string, rest: string): string {
 export function createEndpoints(client: ApiClient) {
   return {
     session: () => client.read("/session", parseSession),
+    startInstallation: () =>
+      client.change("POST", "/installation-links/start", parseInstallLink),
     signOut: () => client.change("POST", "/auth/sign-out", parseSuccess),
     claimAdmin: (workspaceId: string) =>
       client.change(

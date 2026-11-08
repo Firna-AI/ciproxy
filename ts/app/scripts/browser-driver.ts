@@ -10,7 +10,9 @@ export type Locator = {
     state?: "visible" | "hidden" | "attached";
     timeout?: number;
   }): Promise<void>;
-  click(): Promise<void>;
+  click(options?: {
+    modifiers: ("Control" | "Meta" | "Shift" | "Alt")[];
+  }): Promise<void>;
   fill(value: string): Promise<void>;
   inputValue(): Promise<string>;
   focus(): Promise<void>;
@@ -29,6 +31,7 @@ export type Locator = {
 };
 
 export type Page = {
+  close(): Promise<void>;
   goto(
     url: string,
     options?: { waitUntil: "domcontentloaded" },
@@ -74,6 +77,7 @@ export type Page = {
 };
 
 export type BrowserContext = {
+  waitForEvent(event: "page"): Promise<Page>;
   tracing: {
     start(options: {
       screenshots: boolean;

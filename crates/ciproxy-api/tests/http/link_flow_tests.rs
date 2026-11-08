@@ -6,11 +6,12 @@ use axum::http::StatusCode;
 use ciproxy_github::app::webhook::InstallationAction;
 use ciproxy_store_interface::dashboard::records::Role;
 use serde_json::json;
-use url::Url;
 use uuid::Uuid;
 
 use super::fixture_io::{CallbackOutcome, json};
-use super::link_support::{begin, claims, event, other_workspace, pending, returned, scenario};
+use super::link_support::{
+    self, begin, claims, event, other_workspace, pending, returned, scenario,
+};
 
 #[tokio::test]
 async fn installation_orders_preserve_original_requester_and_never_guess_a_workspace() {
@@ -20,15 +21,7 @@ async fn installation_orders_preserve_original_requester_and_never_guess_a_works
         if owner_first {
             server.control.person.store(8, Ordering::SeqCst);
             let owner = fixture.login(8, Some(Role::Admin)).await;
-            let owner_session =
-                json(fixture.request(Some(&owner), "GET", "/session", None).await).await;
-            let owner_url = Url::parse(owner_session["install_url"].as_str().unwrap()).unwrap();
-            let owner_state = owner_url
-                .query_pairs()
-                .find(|(key, _)| key == "state")
-                .unwrap()
-                .1
-                .into_owned();
+            let owner_state = link_support::start(&fixture, &owner).await;
             returned(&fixture, &owner_state, CallbackOutcome::Accepted)
                 .await
                 .unwrap();

@@ -12,6 +12,7 @@ import type { BrowserContext, Page } from "./browser-driver.ts";
 import { control, viewportControls, visible } from "./browser-fixture.ts";
 import { shellJourney, staticReloads } from "./browser-journeys.ts";
 import { createLateApprovalRuns } from "./browser-late-approval.ts";
+import { installNavigation } from "./browser-install.ts";
 
 export type SmokeRun = {
   name: string;
@@ -71,6 +72,10 @@ export function createSmokeRegistry(
 ): readonly SmokeRun[] {
   return [
     ...smokeCases.map((item) => screenRun(item, origin, output)),
+    {
+      name: "install-native-navigation",
+      check: (page, context) => installNavigation(page, context, origin),
+    },
     ...createLateApprovalRuns(origin),
     ...createBoatRuns(origin),
     ...createOverflowRuns(origin),

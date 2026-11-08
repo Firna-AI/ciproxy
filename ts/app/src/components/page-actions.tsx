@@ -1,13 +1,13 @@
 // The actions of a page model, in order. A link out of the app is an
-// anchor; an install link first marks this tab, so the return from GitHub can
-// show what the install did. A page of the app opens through the router.
+// anchor; an install action saves its entry before opening GitHub.
+// A page of the app opens through the router.
 
 import { Link } from "expo-router";
 
-import { useServices } from "../services/context.tsx";
 import type { PageAction } from "../view/page-model.ts";
 import { ActionButton, ActionLink, type Size } from "./actions.tsx";
 import { ExternalIcon } from "./icons.tsx";
+import { InstallAction } from "./install-action.tsx";
 
 export type ActionHandlers = {
   onCheckAgain?: () => void;
@@ -29,8 +29,9 @@ export function PageActionView({
   size?: Size;
   block?: boolean;
 }) {
-  const services = useServices();
   switch (action.kind) {
+    case "install":
+      return <InstallAction action={action} size={size} block={block} />;
     case "leave":
       return (
         <ActionLink
@@ -41,9 +42,6 @@ export function PageActionView({
           block={block}
           newTab={action.newTab}
           icon={action.icon === "external" ? ExternalIcon : undefined}
-          onClick={
-            action.install ? () => services.markInstallStarted() : undefined
-          }
         />
       );
     case "go":
