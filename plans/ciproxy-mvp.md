@@ -4663,8 +4663,8 @@ is now a full release, and the preview release server serves it.
 
 ### 108. Pending credits can change the quoted charge
 
-**Answer, 8 November 2026:** C with D, as a third fix round of pull request
-#39.
+**Answer, 8 November 2026:** C with D, as a third fix round of the pull
+request #39.
 
 - **Severity:** High. **Likelihood:** Common. **Effort:** Medium.
 - **Source:** Review, pull request #39, after its second fix round.
