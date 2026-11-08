@@ -268,3 +268,13 @@ override_resource {
   target = google_service_account.nodes
   values = { name = "projects/ciproxy/serviceAccounts/ciproxy-shared-gke@ciproxy.iam.gserviceaccount.com", email = "ciproxy-shared-gke@ciproxy.iam.gserviceaccount.com" }
 }
+
+override_resource {
+  target = google_service_account.ci["image_lookup"]
+  values = { name = "projects/ciproxy/serviceAccounts/ciproxy-image-lookup@ciproxy.iam.gserviceaccount.com", email = "ciproxy-image-lookup@ciproxy.iam.gserviceaccount.com" }
+}
+
+override_resource {
+  target = google_service_account.ci["image_publish"]
+  values = { name = "projects/ciproxy/serviceAccounts/ciproxy-image-publish@ciproxy.iam.gserviceaccount.com", email = "ciproxy-image-publish@ciproxy.iam.gserviceaccount.com" }
+}

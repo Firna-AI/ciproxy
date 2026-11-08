@@ -112,6 +112,7 @@ class TerraformPolicyTests(PromotionCase):
             ("bootstrap", "google_project_iam_member", 'apply["roles/storage.admin"]'),
             ("bootstrap", "google_project_iam_custom_role", "plan_lock"),
             ("bootstrap", "google_storage_bucket_iam_member", "plan_lock"),
+            ("bootstrap", "google_artifact_registry_repository_iam_member", "control_plane_image"),
             ("seed", "google_storage_bucket", "state"),
             ("seed", "google_project_service", 'identity["iam.googleapis.com"]'),
         ]

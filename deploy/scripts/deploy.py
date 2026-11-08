@@ -90,7 +90,7 @@ def main():
     neg_zones("release-neg", config["prefix"] + "-release", config["allowed_zones"], config["namespace"])
     if runtime_enabled:
         neg_zones("control-plane-neg", config["prefix"] + "-control", config["allowed_zones"], config["namespace"])
-    save_workload_inputs(environment, config, runtime_enabled)
+    save_workload_inputs(environment, config, runtime_enabled, control_image)
     summary = (
         f"Deployed {environment} static exports and the release server.\n"
         f"Control-plane runtime enabled: {str(runtime_enabled).lower()}.\n"
