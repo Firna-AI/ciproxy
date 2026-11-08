@@ -1537,6 +1537,42 @@ Depends on: 1
 - [x] Smoke-test each page at 1440, 720, and 390 pixels.
       Branch: `conductor/ciproxy-mvp-milestone-23-site`.
 
+Docs search follow-up choices, 8 November 2026:
+
+- The user approved B for `site-search-keyboard-selection`: a Starlight
+  override uses the Pagefind API and owns selection, keyboard controls,
+  focus, and hints. It keeps the real index and normal links. The rejected
+  alternative kept Tab alone and omitted the keyboard hints.
+- The user approved B for `site-search-heading-count`: the same heading
+  collection supplies the count and the grouped rows. The rejected
+  alternative kept Pagefind's page count.
+- The user approved the task of `site-search-clear-control-mockup`: show
+  Clear beside the active query at desktop and phone widths. Keep Clear
+  distinct from Cancel and Escape, which close the dialog.
+- My call: arrow selection wraps through the displayed heading results.
+  Reason: each direction always reaches another result when several match.
+- My call: the input uses a combobox with a grid of normal links. Its
+  active descendant names the page and heading. Reason: selection stays
+  announced while Tab and pointer actions retain normal link behaviour.
+- Settled on this branch: all three follow-up fixes now match the approved
+  search controls. Their files are removed. The choices above remain as
+  the dated record. The MVP plan stays because its other work is open.
+  Branch: `conductor/follow-ups-docs-search-keyboard-count-clear-control`.
+
+Verification evidence: `.context/site-search/verification.md`.
+
+Docs search review fix, 8 November 2026:
+
+- The user chose A for owner review round 1, finding 1: remove the saved
+  focus target and explicit focus restoration. The HTML dialog owns focus
+  restoration. Normal fragment links keep keyboard navigation at the
+  opened heading. Escape and Cancel still return to the search button.
+- Add a browser regression for `runs-on` from `/docs/`, Up, Enter, and Tab.
+  Keep the existing tests. My call: use the Node test runner with a fresh
+  production build and local server, so the test exercises the real index.
+
+Verification evidence: `.context/site-search/fix-round-1/verification.md`.
+
 ## Milestone 24: Site: the 14 launch docs pages
 
 Depends on: 13, 15, 23

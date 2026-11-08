@@ -9,10 +9,12 @@ import {
   CornerDownLeft,
   FileText,
   Search,
+  X,
 } from "lucide-react";
 import { MockLink, type Viewport } from "@mokly/mokly";
+import { Button } from "@firna/ui/button";
 
-import { Action } from "../../components/actions.tsx";
+import { Action, noop } from "../../components/actions.tsx";
 import { paths, type CataloguePath } from "../../components/paths.ts";
 import { topId } from "./docs-parts.tsx";
 import "./search.css";
@@ -107,6 +109,14 @@ export function SearchDialog({ viewport }: { viewport: Viewport }) {
             readOnly
             aria-label="Search docs"
           />
+          <Button
+            tone="plain"
+            size="sm"
+            shape="square"
+            icon={X}
+            accessibilityLabel="Clear search"
+            onPress={noop}
+          />
           {viewport === "mobile" ? (
             <Action tone="ghost" size="sm">
               Cancel
@@ -140,14 +150,14 @@ export function SearchDialog({ viewport }: { viewport: Viewport }) {
         </ul>
         {viewport === "desktop" ? (
           <p className="ds-keys caption">
-            <kbd className="site-kbd" aria-label="Up">
+            <kbd className="site-kbd" role="img" aria-label="Up">
               <ArrowUp size={11} />
             </kbd>
-            <kbd className="site-kbd" aria-label="Down">
+            <kbd className="site-kbd" role="img" aria-label="Down">
               <ArrowDown size={11} />
             </kbd>
             <span>to move,</span>
-            <kbd className="site-kbd" aria-label="Enter">
+            <kbd className="site-kbd" role="img" aria-label="Enter">
               <CornerDownLeft size={11} />
             </kbd>
             <span>to open</span>

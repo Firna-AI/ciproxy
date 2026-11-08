@@ -41,8 +41,15 @@ The look is Graphite:
   full hairline border, never a left accent edge. A note or a tip is white,
   a caution is amber, and a danger is rose. No other box has a left accent
   edge either.
-- The search dialog is the Starlight search with Pagefind, restyled with CSS
-  only.
+- The Starlight search override uses the Pagefind index. It groups matches
+  by page and counts the heading results that it shows. Up and Down select
+  a result, and Enter opens it. Tab, click, and middle click use normal
+  links. Clear empties the query. Escape and Cancel close the dialog.
+  Dismissal returns focus to the search button. Opening a heading on the
+  current page continues keyboard navigation at that heading.
+  The input keeps focus during arrow selection and announces the active
+  heading to screen readers. Search needs JavaScript and a production
+  build, which generates the Pagefind index.
 
 Rules for work on the site:
 
@@ -111,6 +118,7 @@ npm --prefix ts run site:dev -- --host 0.0.0.0
 npm --prefix ts run site:typecheck
 npm --prefix ts run site:lint
 npm --prefix ts --workspace @ciproxy/site run test
+npm --prefix ts --workspace @ciproxy/site run test:browser
 npm --prefix ts run site:build
 npm --prefix ts --workspace @ciproxy/site run format
 ```
@@ -121,8 +129,16 @@ The typecheck uses `astro check` with the strict TypeScript configuration.
 ESLint uses the Astro plugin and recommended TypeScript rules.
 Prettier uses the Astro plugin.
 The tests under `_tests_` run on the Node test runner. They cover the choice
-of the cheapest plan, the calculation of the cost claim, and the Copy text of
-the runs-on examples of the docs. That last test builds the site with
+of the cheapest plan, the calculation of the cost claim, search selection
+and heading counts, and the Copy text of the runs-on examples of the docs.
+The search tests also cover query changes during unfinished searches.
+The browser tests under `_tests_/browser/` use the same Node test runner
+with `playwright-core`. They need Google Chrome installed. They build and
+serve a fresh production site with its real search index. They check focus
+after same-page result navigation and after Escape and Cancel dismissals.
+Run site builds and test commands one at a time. Astro shares its `.astro/`
+prerender directory.
+The Copy test builds the site with
 `astro build` into a temporary folder and reads the Copy text of each example
 from the built pages. `_tests_/built-site.ts`
 holds that build and the reader of the Copy text.
@@ -173,6 +189,10 @@ This keeps it separate from the Markdown lint tool's YAML version.
 - [src/components/starlight/](src/components/starlight/Header.astro) holds
   the Starlight overrides: the head, the top bar with the search, the page
   title with its lead, and the light-only theme provider and theme switch.
+- [src/components/starlight/Search.astro](src/components/starlight/Search.astro)
+  is the docs search dialog. Its `search/` modules load the Pagefind API,
+  manage queries and selection, render grouped headings, and handle focus
+  and keyboard controls. The result count and rows use one collection.
 - [src/styles/starlight/theme.css](src/styles/starlight/theme.css) maps the
   Starlight variables to the tokens. The other files in that folder restyle
   the frame, the columns, the article, its blocks, the asides, and the
