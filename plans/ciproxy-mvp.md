@@ -4202,11 +4202,20 @@ personal accounts only.
 
 ### 97. The gate's Markdown link check differs from GitHub
 
+**Answer, 7 November 2026:** I. The user wrote "we should not be blocking
+for this - that is totally silly", and then chose I. A link to a missing
+file still fails the gate. A fragment that matches no heading only warns.
+My call, 7 November 2026: markdownlint's MD051 rule, which checks fragments
+within one file, also only warns. Reason: answer I covers each anchor check
+of the gate. This replaces the choice of 4 November 2026 to keep MD051
+unchanged.
+
 **Answer, 8 November 2026:** G, as a follow-up item that blocks nothing:
 `follow-ups/markdown-heading-ids-comrak.md`. Until then, fix a link test
-that breaks by hand.
+that breaks by hand. So I applies now, through pull request #49, and G
+stays the follow-up item.
 
-- **Severity:** Medium. **Effort:** Large.
+- **Severity:** Low. **Effort:** Small.
 - **Source:** Implementation, pull request #45, the follow-up item
   `follow-ups/markdown-heading-ids-comrak.md`.
 - **Category:** Repository rule.
@@ -4214,7 +4223,8 @@ that breaks by hand.
 - **Background:** The Markdown phase of the gate finds broken links in the
   docs and plans. Its own parser computes the link target of each heading.
   The follow-up item chose comrak, a Rust parser of GitHub's Markdown. The
-  orchestrator told the branch to add no new refusal without the user.
+  orchestrator told the branch to add no new refusal without the user. All
+  1,106 links of 113 documents got the same result from both parsers.
 - **Problem:** An exact match with GitHub refuses some links that pass
   today. A direct switch to comrak also refuses valid `#softbreak` and
   `#hardbreak` links.
@@ -4236,6 +4246,9 @@ that breaks by hand.
   - **G.** Render each page with comrak, and take the heading targets from
     the HTML. It changes `Cargo.lock`, so it waits for pull request #39.
     Effort: Large.
+  - **H.** Change nothing, and delete the follow-up item. Effort: Small.
+  - **I.** Keep the check for missing files, but only warn when a fragment
+    matches no heading. Effort: Small.
 - **Left out:** A live GitHub call, because the gate then needs the
   network. A check of today's documents only, because known defects stay.
 - **Wider fix:** G.

@@ -3,6 +3,7 @@
     "MD013": {
       "code_blocks": false,
       "tables": false
-    }
+    },
+    "MD051": "warning"
   }
 }
