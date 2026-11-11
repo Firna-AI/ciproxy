@@ -1,8 +1,8 @@
 // The tabs of Settings, as the mockups show them: a row of links over a
 // hairline, with the current tab in ink and underlined. Each tab is a real
 // link that the router opens in place. Labels is the Settings page, and
-// Overflow has its own page. The other tabs of the mockups join this list
-// with their pages.
+// Overflow has its own page. Organizations and Members open their tabs of the
+// Settings page.
 
 import { useState, type MouseEvent } from "react";
 import { Link } from "expo-router";
@@ -11,8 +11,9 @@ import { useFocusRing } from "@firna/ui/focusRing";
 import { colors, fonts } from "@ciproxy/tokens";
 
 import { overflowHref, workspaceHref } from "../routing/pages.ts";
+import { settingsHref } from "../view/settings-tabs.ts";
 
-export type SettingsTab = "labels" | "overflow";
+export type SettingsTab = "labels" | "overflow" | "organizations" | "members";
 
 const tabs: readonly {
   key: SettingsTab;
@@ -25,6 +26,16 @@ const tabs: readonly {
     href: (workspaceId) => workspaceHref("settings", workspaceId),
   },
   { key: "overflow", label: "Overflow", href: overflowHref },
+  {
+    key: "organizations",
+    label: "Organizations",
+    href: (workspaceId) => settingsHref(workspaceId, "organizations"),
+  },
+  {
+    key: "members",
+    label: "Members",
+    href: (workspaceId) => settingsHref(workspaceId, "members"),
+  },
 ];
 
 function TabAnchor({

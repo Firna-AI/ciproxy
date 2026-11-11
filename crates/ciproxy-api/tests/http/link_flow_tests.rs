@@ -4,13 +4,14 @@ use std::sync::atomic::Ordering;
 
 use axum::http::StatusCode;
 use ciproxy_github::app::webhook::InstallationAction;
+use ciproxy_store_interface::billing::state::Tier;
 use ciproxy_store_interface::dashboard::records::Role;
 use serde_json::json;
 use uuid::Uuid;
 
 use super::fixture_io::{CallbackOutcome, json};
 use super::link_support::{
-    self, begin, claims, event, other_workspace, pending, returned, scenario,
+    self, begin, claims, event, other_workspace, pending, returned, scenario, tier,
 };
 
 #[tokio::test]
@@ -143,6 +144,32 @@ async fn several_admin_workspaces_require_an_exact_offered_choice_and_fresh_inst
     let links = claims(&fixture, &current).await;
     assert_eq!(links[0]["state"], "choose_workspace");
     assert_eq!(links[0]["workspaces"].as_array().unwrap().len(), 2);
+    assert_eq!(
+        links[0]["workspaces"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|workspace| workspace["requires_upgrade"] == true)
+            .count(),
+        2
+    );
+    tier(&fixture, other.id, Tier::Team);
+    let changed = claims(&fixture, &current).await;
+    let other_offer = changed[0]["workspaces"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|workspace| workspace["id"] == other.id.to_string())
+        .unwrap();
+    assert_eq!(other_offer["requires_upgrade"], false);
+    let original_offer = changed[0]["workspaces"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|workspace| workspace["id"] == fixture.workspace.to_string())
+        .unwrap();
+    assert_eq!(original_offer["requires_upgrade"], true);
+    tier(&fixture, other.id, Tier::Free);
     assert!(links[0]["workspace_id"].is_null());
     let path = format!("/installation-links/{id}/workspace");
     let refused = fixture

@@ -71,11 +71,15 @@ pub(super) fn establish(
     memberships: &[Membership],
     session: &Session,
     installation_results: &[PendingInstallationResult],
+    profile_name: Option<&str>,
 ) -> Result<bool> {
     store
         .connection()?
         .transaction(|connection| {
             super::identity::save_on(connection, user, memberships)?;
+            diesel::update(ciproxy_schema::dashboard::dashboard_users::table.find(user.id))
+                .set(ciproxy_schema::dashboard::dashboard_users::name.eq(profile_name))
+                .execute(connection)?;
             super::identity::requests_on(connection, user.id, user.checked_at)?;
             super::identity::prune_on(connection)?;
             let exists = ciproxy_schema::dashboard::dashboard_users::table

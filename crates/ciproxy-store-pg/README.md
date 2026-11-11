@@ -204,6 +204,23 @@ Keep the database URL in runtime configuration.
 Use the returned store through `Arc<dyn Store>`.
 Keep a returned scale set lock handle alive until the listener stops.
 
+## Dashboard fact provenance
+
+Forward migration `202611090000_dashboard_facts` adds nullable public profile,
+request, grant, registration, and repository observation metadata. Legacy rows
+keep unknown facts empty. Future organization inserts record transaction time.
+Reinstall keeps that first observation. A complete repository replacement
+records its observation in the same transaction.
+
+Access requests capture the organization identities and logins observed in
+their exact workspace. Changed role grants record their supplied event time.
+Repeated identical role saves preserve the previous grant date. The existing
+identity pruning also removes public names and profile images.
+
+Dashboard jobs expose exact runner identities and report aliases through the
+same scoped Actions/attempt projection. Workspace and organization predicates
+stay on every alias, placement, and profile-provenance query.
+
 ## Development
 
 Install libpq development files.

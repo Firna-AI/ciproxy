@@ -27,7 +27,8 @@ import { DesktopShell } from "./desktop-shell.tsx";
 import { MobileShell } from "./mobile-shell.tsx";
 import { useShellActions } from "./shell-actions.ts";
 
-function Banner({
+/** The banner of the organization soft limit, on every page. */
+export function SoftLimitBanner({
   workspace,
   role,
 }: {
@@ -62,6 +63,7 @@ export function AppShell({
   role,
   page,
   setup,
+  banner,
   children,
 }: {
   session: SessionView;
@@ -69,6 +71,8 @@ export function AppShell({
   role: WorkspaceRole;
   page: WorkspacePage;
   setup: SetupProgress | null;
+  /** A banner of the page that takes the place of the soft-limit banner. */
+  banner?: ReactNode;
   children: ReactNode;
 }) {
   const viewport = useViewport();
@@ -83,7 +87,11 @@ export function AppShell({
     children: (
       <>
         <SessionRefreshNotice />
-        <Banner workspace={workspace} role={role} />
+        {banner === undefined ? (
+          <SoftLimitBanner workspace={workspace} role={role} />
+        ) : (
+          banner
+        )}
         {actions.failure ? (
           <Notice tone="danger" title={actions.failure.title}>
             {actions.failure.body}

@@ -83,6 +83,14 @@ pub struct MembersView {
 /// One workspace member or access request.
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct MemberView {
+    /// Optional public name from the last successful GitHub authorization.
+    pub name: Option<String>,
+    /// Retained profile image URL.
+    pub avatar_url: Option<String>,
+    /// Time the current role was granted, unavailable for legacy grants.
+    pub granted_at: Option<DateTime<Utc>>,
+    /// Workspace memberships observed at the initial access request.
+    pub request_organizations: Option<Vec<super::facts::MemberOrganization>>,
     /// Stable GitHub account identifier as a string.
     pub id: String,
     /// Account name, absent before its first dashboard sign-in.

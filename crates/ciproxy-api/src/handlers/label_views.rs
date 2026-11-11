@@ -7,6 +7,8 @@ use uuid::Uuid;
 
 use crate::capacity::MachineCapacity;
 use crate::error::{Error, Result};
+use crate::wire::facts::{LabelMachineFit, LabelPlacement};
+use crate::wire::job_fit::BoatLabelFit;
 use crate::wire::settings::{LabelFit, LabelInput, LabelView, NothingFits};
 
 pub(super) fn stored(id: Uuid, input: LabelInput) -> Result<Label> {
@@ -52,6 +54,9 @@ pub(super) fn label(
         id: label.id.to_string(),
         label: input,
         fit,
+        jobs_last_30_days: None,
+        job_count_since: None,
+        job_count_until: None,
     }
 }
 
@@ -70,6 +75,7 @@ pub(super) fn fit(
             .saturating_mul(GIGABYTE),
     };
     let mut counts = Vec::new();
+    let mut offers = Vec::new();
     let eligible = machines
         .iter()
         .filter(|machine| {
@@ -83,6 +89,34 @@ pub(super) fn fit(
     for view in &eligible {
         let facts = capacity.capacity(&view.snapshot);
         let root_bytes = capacity.required_root_bytes(&view.snapshot, size.disk_bytes);
+        let concurrent_jobs =
+            facts
+                .job_disk_bytes
+                .zip(root_bytes)
+                .map(|(job_disk_bytes, root_bytes)| {
+                    if label.allow_machines {
+                        Resources {
+                            slots: facts.slots,
+                            job_disk_bytes,
+                        }
+                        .concurrent_vms(VmSize {
+                            disk_bytes: root_bytes,
+                            ..size
+                        })
+                    } else {
+                        0
+                    }
+                });
+        offers.push(LabelMachineFit {
+            id: view.snapshot.machine.id.to_string(),
+            hostname: view.snapshot.machine.hostname.clone(),
+            slots: facts.slots.0.to_string(),
+            vcpus: facts.slots.0.saturating_mul(2).to_string(),
+            memory_bytes: facts.slots.0.saturating_mul(8 * GIGABYTE).to_string(),
+            job_disk_bytes: facts.job_disk_bytes.map(|bytes| bytes.to_string()),
+            required_root_disk_bytes: root_bytes.map(|bytes| bytes.to_string()),
+            concurrent_jobs: concurrent_jobs.map(|jobs| jobs.to_string()),
+        });
         let (Some(job_disk_bytes), Some(root_bytes)) = (facts.job_disk_bytes, root_bytes) else {
             unavailable += 1;
             continue;
@@ -104,6 +138,16 @@ pub(super) fn fit(
         }
     }
     LabelFit {
+        machines: offers,
+        boat_connected: None,
+        boat: if label.allow_boat {
+            BoatLabelFit::Unavailable
+        } else {
+            BoatLabelFit::Disabled
+        },
+        largest_boat: None,
+        boat_required_root_disk_bytes: None,
+        placement: LabelPlacement::Unavailable,
         unavailable_machines: unavailable,
         eligible_machines: eligible.len().try_into().unwrap_or(u32::MAX),
         fitting_machines: counts.len().try_into().unwrap_or(u32::MAX),

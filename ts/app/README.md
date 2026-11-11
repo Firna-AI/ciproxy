@@ -5,11 +5,15 @@ It targets web only and has no open licence.
 A person signs in with GitHub, installs the ciproxy GitHub App, adds
 organizations to a workspace, and follows Setup. Its Boat step connects the
 Boat account of the customer, which takes jobs when the machines of the
-workspace are busy. On Settings under Overflow, an Admin connects Boat,
-changes its key, or disconnects it. The same page sets the overflow switch,
-the wait, and the monthly spend limit, and shows the spend of the month.
-Jobs, Machines, Savings, Plan and usage, and the Labels tab of Settings show
-a coming-soon state until later work fills them.
+workspace are busy.
+Machines shows the machines of the workspace, and an Admin adds and manages
+them there. In Settings, an Admin manages the labels, the organizations, the
+workspace name, and the members. On Settings under Overflow, an Admin
+connects Boat, changes its key, or disconnects it. The same page sets the
+overflow switch, the wait, and the monthly spend limit, and shows the spend
+of the month.
+Jobs, Savings, and Plan and usage show a coming-soon state until later work
+fills them.
 
 The screens follow the [mockups](../../docs/mockups/README.md).
 Controls come from `@firna/ui` first, then from `src/components`.
@@ -25,19 +29,20 @@ The icons and the brand mark are inline SVG elements.
 
 The static export holds one HTML file for each route.
 
-| Route                                        | Page                                                 |
-| -------------------------------------------- | ---------------------------------------------------- |
-| `/`                                          | Opens the page that the session asks for             |
-| `/sign-in`                                   | Sign in with GitHub                                  |
-| `/install`                                   | The App install, or the wait for an owner's approval |
-| `/add-organization`                          | The workspace choice and its state after an install  |
-| `/personal-account`                          | An install on a personal account                     |
-| `/app-removed`                               | The App left the last organization of the workspace  |
-| `/access-ended`                              | GitHub no longer lists the person                    |
-| `/setup`                                     | For Admins: the App, a machine, Boat, the first job  |
-| `/jobs`, `/machines`, `/savings`, `/billing` | Coming soon, in the shell                            |
-| `/settings`                                  | For Admins: Settings tabs, with Labels coming soon   |
-| `/settings/overflow`                         | For Admins: Boat, the overflow wait, the spend limit |
+| Route                           | Page                                                 |
+| ------------------------------- | ---------------------------------------------------- |
+| `/`                             | Opens the page that the session asks for             |
+| `/sign-in`                      | Sign in with GitHub                                  |
+| `/install`                      | The App install, or the wait for an owner's approval |
+| `/add-organization`             | The workspace choice and its state after an install  |
+| `/personal-account`             | An install on a personal account                     |
+| `/app-removed`                  | The App left the last organization of the workspace  |
+| `/access-ended`                 | GitHub no longer lists the person                    |
+| `/setup`                        | For Admins: the App, a machine, Boat, the first job  |
+| `/machines`                     | The machines, one machine, or Add a machine          |
+| `/settings`                     | For Admins: labels, organizations, and members       |
+| `/settings/overflow`            | For Admins: Boat, the overflow wait, the spend limit |
+| `/jobs`, `/savings`, `/billing` | Coming soon, in the shell                            |
 
 A workspace page names its workspace by its opaque ID in `?workspace=<id>`.
 `/?workspace=<id>` opens Setup for an Admin until it is done, else Jobs.
@@ -49,6 +54,106 @@ workspace, and the person who skipped.
 The shell holds the navigation, the workspace switch, the account menu, and
 Add an organization for Admins. A person with no role sees a page that names
 the Admins, in place of each workspace page.
+
+Machines and Settings each keep one route, and more query parameters choose
+the page. A reload or a link then opens the same page. Each ID is opaque.
+Settings under Overflow has a route of its own.
+
+| Address                                                        | Page                                              |
+| -------------------------------------------------------------- | ------------------------------------------------- |
+| `/machines?workspace=<id>`                                     | The machines of the workspace                     |
+| `/machines?workspace=<id>&machine=<id>`                        | One machine                                       |
+| `/machines?workspace=<id>&view=add`                            | For Admins: Add a machine. It wins over `machine` |
+| `/settings?workspace=<id>&tab=<tab>`                           | The tab of Settings                               |
+| `/settings?workspace=<id>&tab=organizations&organization=<id>` | The repository access of one organization         |
+| `/settings/overflow?workspace=<id>`                            | For Admins: Settings under Overflow               |
+
+The tabs are `labels`, `overflow`, `organizations`, and `members`. A missing
+or unknown tab opens Labels. The Overflow tab opens Settings under Overflow.
+The address with `tab=overflow` opens that page too, in place of its own
+entry in the browser history. The tabs of Settings under Overflow open the
+other tabs on `/settings`.
+
+### Machines
+
+- Every role sees the list and each machine. Only an Admin adds, drains, or
+  removes a machine, clears its cache, or sets its warm runners and its
+  monthly cost. Another role on Add a machine goes to the list.
+- The list shows the figures of the machines, a table with the slots,
+  health, and cache of each machine, a notice for each offline machine, and
+  the Overflow panel with the Boat spend of the month.
+- The three pages share one read of `GET /workspaces/{id}/machines`. They
+  read it again every 10 seconds, and Add a machine every 5 seconds. A
+  machine that the read does not hold shows a not-found state. After Remove,
+  the page of the machine goes back to the list.
+- Add a machine shows the install command of Setup after its first read of
+  the machines. A machine that was not in that read is new, and the page
+  shows what its agent reported.
+- The machine page shows the saved warm runner count in every state, also
+  while the machine drains, is offline, or has no slots. The slots show the
+  warm runners that are ready.
+- A busy slot names the job that the API matched to it, with its repository,
+  its pull request or branch, and how long it has run. The name links to
+  `/job?workspace=<id>&job=<id>` with the dashboard ID of the job, a page
+  that the Jobs pages own. A job that the API could not match links nowhere,
+  and the job ID of a machine report never makes a link.
+- The agent version says whether it is the newest release only from a fresh
+  report, and only when ciproxy could read the newest release. Cache shows
+  the space of the Docker disks and their count of repositories.
+- When the API says that the disk holds fewer jobs of `ciproxy` than the
+  slots, the page names the limit, the VM disk of one such job, and the disk
+  for jobs, and the free slots beyond the limit say that they have no disk
+  for a job. Add a machine shows the same limit for a machine that joins.
+
+### Settings
+
+- Settings is for Admins, and another role goes to Jobs. Each tab reads the
+  settings of the workspace, so Members shows the count of open requests for
+  access on each tab.
+- Labels lists each label with its size, where its jobs run now, and the
+  jobs of the last 30 days, as the API gives them. A count that the API does
+  not know says so.
+- Without a Boat account, the jobs of a label run on the machines only, and
+  the dialog keeps the fit of the machines and says that Boat is not
+  connected. It never says that a Boat size does not fit before the Boat
+  catalog says so. When the API knows the fit of the machines but not the
+  Boat fit, the list and the dialog give the fit of the machines and say
+  that the Boat fit is not known yet.
+- While the person types a size or changes a switch in Add label or Edit,
+  the dialog asks `POST /workspaces/{id}/labels/preview` again. It shows the
+  VM disk of one job, how many jobs each machine runs at a time, and the Boat
+  size that runs them, or the offers of the machines and the largest Boat
+  size when nothing fits. "Run on the largest Boat size" names that size.
+- A label keeps its name. Each label but `ciproxy` has Delete label. When
+  GitHub refuses a new name, the dialog shows why.
+- Organizations shows the workspace name with Rename, Add an organization,
+  and each organization of the workspace. A linked organization has its
+  repository access, Take out, and the action that clears a hold: Choose
+  Team or Turn on. The last linked organization has no Take out.
+- Add an organization is an action of every Admin on every tier. When the
+  settings say that a new organization would need Team, the caption under
+  the list says that it stays inactive until Team. With one linked
+  organization, a notice also offers Team with Compare plans.
+- The repository access of an organization is all its private repositories,
+  or the selected ones. A public repository cannot be selected.
+- When an owner removes the App from one organization on GitHub, its row
+  shows "App removed" until ciproxy deletes its data. The row gives the last
+  day for a new install that keeps the job history, and Install again. It
+  has no repository access, and the rule of the last linked organization
+  does not count it.
+- On the Organizations tab, the banner of an inactive organization takes the
+  place of the soft-limit banner of the shell.
+- Members lists the requests for access and the members. The tab gives
+  access, declines a request, changes a role, and removes a member. The row
+  of the signed-in person has no Remove. Before a person gets the Admin role,
+  a dialog shows the trust notice of the API.
+- An organization row shows the day it joined and the counts of private
+  repositories of its latest complete repository snapshot. An inactive row,
+  its banner, and Turn on name the person who added the organization.
+- Members shows the name and the login of each person, the day of each
+  role, and for each request its day and the organizations that the person
+  was a member of then. A day, a name, or a count that the API does not
+  know stays out, or the row says that it is not known.
 
 ## The API
 
@@ -137,13 +242,29 @@ CIPROXY_PLAYWRIGHT_PATH=/absolute/path/playwright-core/index.mjs \
   node ts/app/scripts/browser-smoke.ts
 ```
 
+Machines and Settings have a second harness and smoke with the same options.
+That smoke covers the Machines pages, the Settings tabs with their dialogs,
+and the recovery after a failed read or change. It also needs the export:
+
+```sh
+npm --prefix ts run app:export
+node ts/app/scripts/m20-harness-server.ts --port=4341
+CIPROXY_PLAYWRIGHT_PATH=/absolute/path/playwright-core/index.mjs \
+  node ts/app/scripts/m20-browser-smoke.ts
+```
+
 - `--case=NAME` runs one case or a comma-separated list of cases. A name
   that matches no case fails the run.
 - `CIPROXY_CHROME_PATH` sets the browser, by default `/usr/bin/google-chrome`.
 - `CIPROXY_HARNESS_URL` sets the harness, by default `http://127.0.0.1:4340`.
+  For Machines and Settings, the default port is 4341.
 - `CIPROXY_SMOKE_OUTPUT` sets the directory for the screenshots,
   `results.json`, and a trace of each failed case. By default, it is
-  `.context/ciproxy-mvp-m19/browser-smoke` under the current directory.
+  `.context/ciproxy-mvp-m19/browser-smoke` under the current directory. For
+  Machines and Settings, it is `.context/ciproxy-mvp-m20/browser-smoke`.
+- `POST /__fixture/control` with a JSON `scenario` sets the fixture state of
+  a running harness. `scripts/harness-scenarios.ts` and
+  `scripts/m20-harness-state.ts` list the scenario names.
 
 ## Live checks
 
@@ -152,6 +273,15 @@ dashboard. It reads the session, Setup, and the machines, and checks the
 build header. It creates one install command and revokes it at once. Then it
 reloads the Jobs page at each width. It prints only the name and the result
 of each check.
+
+The live check of Machines and Settings uses the same credential file. It
+reads Machines, the overflow summary, Settings, Members, and the repository
+access of one linked organization. It previews an existing label, and
+creates and revokes one install command. Then it opens and reloads
+Machines, one machine, the Labels, Organizations, and Members tabs, and the
+repository access at each width. It changes no machine, label,
+organization, repository access, or role. It also prints only the name and
+the result of each check.
 
 The credential file holds a live sign-in. Keep it outside the repository,
 and never share its values. It is a JSON object with four strings:
@@ -168,6 +298,17 @@ CIPROXY_PLAYWRIGHT_PATH=/absolute/path/playwright-core/index.mjs \
 ```
 
 Without the credential variable, it prints `SKIP` and exits with status 2.
+Run the live check of Machines and Settings the same way:
+
+```sh
+CIPROXY_DASHBOARD_CREDENTIALS_FILE=/absolute/path/outside/repo/dashboard.json \
+CIPROXY_PLAYWRIGHT_PATH=/absolute/path/playwright-core/index.mjs \
+  node ts/app/scripts/m20-live-smoke.ts
+```
+
+It prints `SKIP` and exits with status 2 also when the file is missing. A
+file that is not valid, or a failed check, exits with status 1. A workspace
+with no machine or no linked organization skips the checks that need one.
 
 ### Boat settings
 
@@ -203,10 +344,24 @@ a policy save, or a disconnect works.
   reads the exact claims of the latest sign-in.
 - [src/screens/workspace-page.tsx](src/screens/workspace-page.tsx) shows a
   workspace page in the [shell](src/components/shell/app-shell.tsx), or the
-  page for no role.
+  page for no role. With `visitKey`, each Machines page and each Settings
+  tab checks the session again. With `banner`, a page replaces the
+  soft-limit banner of the shell.
 - [src/screens/setup/setup-screen.tsx](src/screens/setup/setup-screen.tsx) is
   Setup, with its Boat step in `boat-step.tsx`.
   `src/screens/add-organization` is the workspace choice.
+- The [Machines screen](src/screens/machines/machines-screen.tsx) opens the
+  list, one machine, or Add a machine, as
+  [src/view/machines-routes.ts](src/view/machines-routes.ts) reads the query.
+  The three pages share the [machines store](src/state/machines.ts).
+  [src/state/machines-changes.ts](src/state/machines-changes.ts) runs the
+  changes of an Admin, one at a time, and
+  [src/view/machines-copy.ts](src/view/machines-copy.ts) holds the words.
+- The [Settings screen](src/screens/settings/settings-screen.tsx) opens the
+  tab that [src/view/settings-tabs.ts](src/view/settings-tabs.ts) reads from
+  the query. The [settings store](src/state/settings-store.ts) holds the
+  settings of a workspace. A change that succeeds reads them and the session
+  again.
 - `src/screens/overflow` is Settings under Overflow, below the
   [Settings tabs](src/components/settings-tabs.tsx). `src/screens/boat`
   holds the one Boat connection form of Setup and of this page, which masks
@@ -236,7 +391,15 @@ a policy save, or a disconnect works.
   the next-month date of the API, in UTC.
   [src/view/money.ts](src/view/money.ts) formats the decimal-string cents of
   the API, and reads a typed dollar limit with integer arithmetic.
-- [src/api/client.ts](src/api/client.ts) is the one HTTP client.
+- [src/api/client.ts](src/api/client.ts) is the one HTTP client. The
+  readers in `src/api/parse-*.ts` narrow each response body to its generated
+  type; [src/api/parse-jobs.ts](src/api/parse-jobs.ts) reads one dashboard
+  job, as a busy slot names it.
+  [src/api/machine-endpoints.ts](src/api/machine-endpoints.ts) and
+  [src/api/settings-endpoints.ts](src/api/settings-endpoints.ts) hold the
+  routes of Machines and Settings on it.
+- [src/components/feature-parts.tsx](src/components/feature-parts.tsx) holds
+  the panel, the page header, and the dialog that both features share.
 - [src/state/navigation.ts](src/state/navigation.ts) reloads on a new build.
 - [app.json](app.json) limits Expo to web and enables static export.
 
@@ -246,6 +409,15 @@ a policy save, or a disconnect works.
 - [Sign-in and access](../../docs/protocol/security.md#sign-in-and-access),
   [Add an organization](../../docs/protocol/workspaces.md#add-an-organization),
   and [Removing the App](../../docs/protocol/app-removal.md#removing-the-app).
+- For Machines: the [install](../../docs/protocol/agent.md#install),
+  [health](../../docs/protocol/agent.md#health), and
+  [removal](../../docs/protocol/agent.md#drain-and-remove) of a machine, its
+  [slots](../../docs/protocol/job-routing.md#slots), and
+  [Clear cache](../../docs/protocol/cache.md#cache-scopes).
+- For Settings: the [labels](../../docs/protocol/labels.md#custom-labels), the
+  [roles](../../docs/protocol/security.md#roles), the
+  [repository access](../../docs/protocol/security.md#repository-access), and
+  the [organizations](../../docs/protocol/workspaces.md) of a workspace.
 - [Overflow](../../docs/protocol/overflow.md), with the Boat account and the
   spend limit, and
   [the overflow wait](../../docs/protocol/job-routing.md#the-overflow-wait).

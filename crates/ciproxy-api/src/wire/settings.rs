@@ -34,8 +34,10 @@ pub struct SettingsView {
     pub labels: Vec<LabelView>,
     /// Count displayed on the Members tab.
     pub open_requests: u32,
-    /// Whether the current tier permits another organization.
+    /// Whether the current Admin may start Add, including an inactive link.
     pub can_add_organization: bool,
+    /// Whether a new organization at the current linked count would need Team.
+    pub new_organization_requires_upgrade: bool,
 }
 
 /// A workspace rename request.
@@ -60,6 +62,14 @@ pub struct OrganizationView {
     pub installation_id: String,
     /// Active, suspended, or removed App state.
     pub state: InstallationState,
+    /// First registration observation, absent for legacy registrations.
+    pub joined_at: Option<DateTime<Utc>>,
+    /// Trusted owner-removal time, absent for an intentional take-out.
+    pub removed_at: Option<DateTime<Utc>>,
+    /// Counts from the last complete installation-visible repository snapshot.
+    pub repositories: Option<super::facts::OrganizationRepositories>,
+    /// Original adder and optional retained profile, absent for legacy installs.
+    pub added_by: Option<super::facts::MemberProfile>,
     /// Owner-removal retention deadline, absent for an intentional take-out.
     pub delete_after: Option<DateTime<Utc>>,
     /// This organization's allowed private repositories.
@@ -142,6 +152,12 @@ pub struct LabelView {
     pub id: String,
     /// Current label policy.
     pub label: LabelInput,
+    /// Taken jobs with known real start times in the exact count window.
+    pub jobs_last_30_days: Option<String>,
+    /// Inclusive start of the thirty-day summary window.
+    pub job_count_since: Option<DateTime<Utc>>,
+    /// Inclusive end of the thirty-day summary window.
+    pub job_count_until: Option<DateTime<Utc>>,
     /// Capacity range for connected machines that accept jobs.
     pub fit: LabelFit,
 }
@@ -149,6 +165,18 @@ pub struct LabelView {
 /// Computed machine capacity for a label preview.
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct LabelFit {
+    /// Physical offers from the eligible machines, before current occupancy.
+    pub machines: Vec<super::facts::LabelMachineFit>,
+    /// Account presence from a successful observation, absent when not observed.
+    pub boat_connected: Option<bool>,
+    /// Physical Boat fit under the label's exact routing policy.
+    pub boat: super::job_fit::BoatLabelFit,
+    /// Largest size in the trusted physical Boat catalog.
+    pub largest_boat: Option<super::facts::LabelBoatSize>,
+    /// Complete required root under the shared trusted Boat image policy.
+    pub boat_required_root_disk_bytes: Option<String>,
+    /// Current physical placement, with missing sources explicit.
+    pub placement: super::facts::LabelPlacement,
     /// Count of connected, non-draining machines.
     pub eligible_machines: u32,
     /// Machines whose prepared capacity or required root allocation is unavailable.

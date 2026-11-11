@@ -1,7 +1,7 @@
-// A page of the shell that a later release fills.
+// Machines: the list, one machine, and Add a machine, on one static route.
 
-import { ComingSoonScreen } from "../screens/coming-soon.tsx";
+import { MachinesScreen } from "../screens/machines/machines-screen.tsx";
 
 export default function Machines() {
-  return <ComingSoonScreen page="machines" />;
+  return <MachinesScreen />;
 }

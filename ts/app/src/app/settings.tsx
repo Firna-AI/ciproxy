@@ -1,7 +1,7 @@
-// A page of the shell that a later release fills.
+// Settings of a workspace, for an Admin.
 
-import { ComingSoonScreen } from "../screens/coming-soon.tsx";
+import { SettingsScreen } from "../screens/settings/settings-screen.tsx";
 
 export default function Settings() {
-  return <ComingSoonScreen page="settings" />;
+  return <SettingsScreen />;
 }

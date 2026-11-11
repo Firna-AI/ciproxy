@@ -3,6 +3,7 @@
 #![warn(unreachable_pub)]
 
 pub mod access;
+pub mod agent_releases;
 pub mod capacity;
 pub mod crypto;
 pub mod error;

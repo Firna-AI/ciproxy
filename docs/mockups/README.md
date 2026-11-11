@@ -65,12 +65,15 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   own period, which begins on the day the tier begins. Cal Moore installs the
   GitHub App, so he is the first Admin. `members.ts` names the person of each
   role, the owner with the Billing role, and a second Admin.
-- Some screens are what-ifs of November, in `access.ts` and `machines.ts`: a
-  fourth machine, the mini PC office-mini-1, whose disk holds fewer jobs than
-  its slots; Tom Becker suspends or removes the GitHub App; and Jonas Weber
-  leaves the organizations on GitHub. `hardware.ts` holds the slot rule and
-  the disk rule, in which each running job holds its VM disk: the current
-  image with the free disk of its label, as `vm-disk.ts` gives it.
+- Some screens are what-ifs of November, in `access.ts`, `machines.ts`, and
+  `settings.ts`: a fourth machine, the mini PC office-mini-1, whose disk
+  holds fewer jobs than its slots; the agent of hetzner-ax42-1 one release
+  behind the newest; Tom Becker suspends or removes the GitHub App; an owner
+  of mokly-labs removes the App from mokly-labs alone; Jonas Weber leaves
+  the organizations on GitHub; and a setup that skipped Boat, so the labels
+  run on the machines only. `hardware.ts` holds the slot rule and the disk
+  rule, in which each running job holds its VM disk: the current image with
+  the free disk of its label, as `vm-disk.ts` gives it.
 - The return of Add an organization and the inactive organizations are
   what-ifs in `org-links.ts`. In the main story, Cal Moore is an Admin of one
   workspace, so the return links mokly-labs at once. On 2 November, he is also
@@ -79,6 +82,16 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   inactive. In a second what-if, Ana Souza adds it, and her Admin role ends
   after the return saves its workspace and before ciproxy finishes the link,
   so it joins with a second hold, which waits for an Admin.
+- Each organization of the Organizations tab is linked or removed, as
+  `WorkspaceOrganization` in `org-links.ts` gives it. A linked one belongs to
+  the workspace, also while it is inactive, and counts for the rule that
+  keeps the last organization. A removed one does not count. In the what-if
+  of 20 November, an owner removes the App from mokly-labs on GitHub. The
+  tab keeps mokly-labs as removed for 30 days. Its row shows the day before
+  which a new install keeps its job history, and Install again, with no
+  repository access and no Take out. mokly-ai, the last linked organization,
+  has no Take out. The flow "A removed organization comes back" installs the
+  App again.
 - A screen takes the role of the signed-in person. The shell shows the person
   of the role, and Settings only to an Admin. In place of an action that the
   role does not allow, the screen shows the words of
@@ -225,10 +238,13 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   the rest.
 - `src/fixtures/org.ts`: the workspace and its two GitHub organizations.
   `github-app.ts` holds the permissions of the GitHub App, and `access.ts` the
-  sign-in length and the what-ifs of a suspended or removed App.
+  sign-in length and the what-ifs of a suspended or removed App, also its
+  removal from mokly-labs alone.
 - `src/fixtures/org-links.ts`: the what-ifs of Add an organization: the Admin
   workspaces that the return lists, the rule that a new organization joins
-  inactive on a full plan, and the holds of mokly-studio.
+  inactive on a full plan, and the holds of mokly-studio. It also holds the
+  linked and removed states of an organization row. `linkedCount()` and
+  `canTakeOut()` give the rule of the last organization from them.
 - `src/components/inactive-banner.tsx`: the banner of an inactive
   organization, and the reason of each hold, which its row repeats.
 - `src/components/install-command.tsx`: the one-line install command, and the

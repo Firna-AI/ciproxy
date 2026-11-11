@@ -1,12 +1,10 @@
 //! Typed requester recovery and local activation views.
 
-use ciproxy_store_interface::billing::state::Tier;
 use ciproxy_store_interface::dashboard::records::Role;
 use ciproxy_store_interface::error::{Error, Result};
 use ciproxy_store_interface::installation_links::{
     InstallationClaim, InstallationRecovery, OrganizationActivation,
 };
-use ciproxy_store_interface::organizations::AppState;
 use ciproxy_store_interface::store::Store;
 
 use crate::wire::links::{
@@ -14,6 +12,8 @@ use crate::wire::links::{
     OrganizationTier, OrganizationUpgrade,
 };
 use uuid::Uuid;
+
+use super::organization_admission;
 
 pub(super) fn activation(
     local: OrganizationActivation,
@@ -82,15 +82,14 @@ pub(super) fn view(
             continue;
         }
         if let Some(record) = store.workspace(workspace)? {
-            let count = store
-                .organizations(workspace)?
-                .iter()
-                .filter(|organization| organization.app_state != AppState::Removed)
-                .count();
+            let organizations = store.organizations(workspace)?;
             workspaces.push(EligibleWorkspace {
                 id: workspace,
                 name: record.name,
-                requires_upgrade: store.billing(workspace)?.state.tier == Tier::Free && count >= 1,
+                requires_upgrade: organization_admission::requires_upgrade(
+                    store.billing(workspace)?.state.tier,
+                    &organizations,
+                ),
             });
         }
     }

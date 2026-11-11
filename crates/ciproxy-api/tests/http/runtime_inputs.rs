@@ -54,3 +54,12 @@ impl AgentEvents for Events {
         Ok(())
     }
 }
+
+/// Controlled release service when a scenario does not need the HTTP adapter.
+pub(super) struct Releases;
+#[async_trait::async_trait]
+impl ciproxy_api::agent_releases::AgentReleases for Releases {
+    async fn latest(&self) -> Result<String> {
+        Ok("0.1.0".to_owned())
+    }
+}

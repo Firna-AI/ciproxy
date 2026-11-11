@@ -13,6 +13,10 @@ use crate::vm_size;
 pub struct DashboardJob {
     /// Stable Actions or exact scale-set attempt identity.
     pub id: Uuid,
+    /// Exact stored runner whose placement establishes this job.
+    pub runner_id: Option<Uuid>,
+    /// Scale-set report identities proved to refer to this canonical job.
+    pub reported_ids: Vec<Uuid>,
     /// Organization whose repository owns the job.
     pub organization_id: Uuid,
     /// Current organization login.

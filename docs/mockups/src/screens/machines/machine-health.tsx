@@ -1,6 +1,8 @@
 // The health of one machine. While it is offline, only the last contact is
 // current: the other checks show their last values in grey, with a note. A
-// machine without KVM shows that check as failed.
+// machine without KVM shows that check as failed. The agent row says that
+// the agent runs the newest release, or names the newest release beside an
+// older one; the old value of an offline machine claims neither.
 
 import type { ReactNode } from "react";
 
@@ -8,7 +10,7 @@ import { DetailList, DetailRow, Panel } from "../../components/page.tsx";
 import { DotLabel } from "../../components/status.tsx";
 import { dotJoin, unbroken } from "../../fixtures/format.ts";
 import {
-  agentVersion,
+  latestAgentVersion,
   offlineFor,
   type Machine,
 } from "../../fixtures/machines.ts";
@@ -23,6 +25,19 @@ function Check({ stale, children }: { stale: boolean; children: ReactNode }) {
   );
 }
 
+function AgentRelease({ machine }: { machine: Machine }) {
+  const version = machine.agentVersion;
+  if (machine.status === "offline") return <Check stale>{version}</Check>;
+  if (version === latestAgentVersion) {
+    return <Check stale={false}>{dotJoin(version, "up to date")}</Check>;
+  }
+  return (
+    <DotLabel tone="warn">
+      {dotJoin(version, unbroken(`${latestAgentVersion} available`))}
+    </DotLabel>
+  );
+}
+
 export function MachineHealth({ machine }: { machine: Machine }) {
   const offline = machine.status === "offline";
   return (
@@ -34,6 +49,8 @@ export function MachineHealth({ machine }: { machine: Machine }) {
         <DetailRow label="KVM">
           {machine.kvm ? (
             <Check stale={offline}>Ready</Check>
+          ) : offline ? (
+            <Check stale>Not available</Check>
           ) : (
             <DotLabel tone="err">Not available</DotLabel>
           )}
@@ -44,9 +61,7 @@ export function MachineHealth({ machine }: { machine: Machine }) {
           </Check>
         </DetailRow>
         <DetailRow label="Agent">
-          <Check stale={offline}>
-            {offline ? agentVersion : dotJoin(agentVersion, "up to date")}
-          </Check>
+          <AgentRelease machine={machine} />
         </DetailRow>
       </DetailList>
       {offline ? (

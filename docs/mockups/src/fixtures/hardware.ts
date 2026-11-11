@@ -91,6 +91,20 @@ export const miniPc: Hardware = {
   monthlyCost: 25,
 };
 
+/**
+ * office-pc-1, an older office PC below the machine minimum. Its 8 GB of
+ * memory leave no room for one slot after the host reserve, so it connects
+ * with no slots. The monthly cost is the power that mokly-ai entered.
+ */
+export const oldPc: Hardware = {
+  cpu: "Intel Core i5-6500T",
+  threads: 4,
+  memoryGb: 8,
+  disk: unbroken("256 GB SSD"),
+  diskGb: 256,
+  monthlyCost: 12,
+};
+
 /** "16 threads · 64 GB", the line under a machine name. */
 export function hardwareSize(hardware: Hardware): string {
   return dotJoin(

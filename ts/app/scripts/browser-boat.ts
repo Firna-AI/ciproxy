@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 
 import { overflowHref, workspaceHref } from "../src/routing/pages.ts";
 import { keyRefused } from "../src/view/boat-failures.ts";
+import { settingsHref } from "../src/view/settings-tabs.ts";
 import {
   assertKeyMasked,
   assertKeyPrivate,
@@ -200,7 +201,8 @@ async function settingsTabs(page: Page, origin: string, width: number) {
   await page.goto(origin + workspaceHref("settings", workspaceId), {
     waitUntil: "domcontentloaded",
   });
-  await visible(page.getByText("This page is coming soon", { exact: true }));
+  const labels = page.getByRole("button", { name: "Add label", exact: true });
+  await visible(labels);
   await viewportControls(page, width);
   await page.getByRole("link", { name: "Overflow", exact: true }).click();
   await page.waitForURL(/\/settings\/overflow\?workspace=/);
@@ -211,8 +213,18 @@ async function settingsTabs(page: Page, origin: string, width: number) {
       .getAttribute("aria-current"),
     "page",
   );
+  for (const [name, tab] of [
+    ["Organizations", "organizations"],
+    ["Members", "members"],
+  ] as const) {
+    assert.equal(
+      await page.getByRole("link", { name, exact: true }).getAttribute("href"),
+      settingsHref(workspaceId, tab),
+      `The ${name} tab of Settings under Overflow opens its Settings tab`,
+    );
+  }
   await page.getByRole("link", { name: "Labels", exact: true }).click();
-  await visible(page.getByText("This page is coming soon", { exact: true }));
+  await visible(labels);
   assert.equal(new URL(page.url()).pathname, "/settings");
 }
 

@@ -28,6 +28,14 @@ pub struct MachineView {
     pub selected_image_disk_bytes: Option<String>,
     /// Whole default-label jobs that fit concurrently, including disk.
     pub concurrent_default_jobs: Option<String>,
+    /// Default-label concurrency from reported CPU and memory slots alone.
+    pub default_jobs_by_slots: Option<String>,
+    /// Complete root allocation required by one default-label job.
+    pub default_root_disk_bytes: Option<String>,
+    /// Exact prepared job-area bytes, unavailable before a trusted report.
+    pub job_disk_bytes: Option<String>,
+    /// Whether disk reduces default-label concurrency below its slot capacity.
+    pub disk_limited: Option<bool>,
     /// Whether prepared capacity and the required root allocation are available.
     pub capacity_known: bool,
     /// Whether no contact arrived during the last sixty seconds.
@@ -42,6 +50,10 @@ pub struct MachineView {
     pub last_contact_at: Option<DateTime<Utc>>,
     /// Last reported agent release.
     pub agent_version: String,
+    /// Newest agent release from the configured trusted release host.
+    pub latest_agent_version: Option<String>,
+    /// Exact release match, unavailable when current release metadata is absent.
+    pub agent_up_to_date: Option<bool>,
     /// Last reported disks.
     pub disks: Vec<DiskView>,
     /// Last reported individual slot occupants.
@@ -72,6 +84,8 @@ pub struct SlotView {
     pub state: SlotState,
     /// Registered runner identity, absent for a free slot.
     pub runner_id: Option<String>,
+    /// Canonical dashboard job proved by its exact runner, placement, and alias.
+    pub job: Option<super::jobs::JobView>,
     /// Job identity, present only for a running job.
     pub job_id: Option<String>,
 }
@@ -99,6 +113,8 @@ pub struct CacheView {
     pub restores_last_7_days: String,
     /// Local hits during the last seven days.
     pub hits_last_7_days: String,
+    /// Repositories with persistent Docker disks in the last report.
+    pub docker_repositories: String,
     /// Persistent Docker disk bytes, which Clear cache preserves.
     pub docker_disk_bytes: String,
 }

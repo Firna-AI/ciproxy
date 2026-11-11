@@ -17,6 +17,7 @@ export const organizations = defineScreen({
     paths.flowAddOrganization,
     paths.flowChooseWorkspace,
     paths.flowApprovedLater,
+    paths.flowRemovedOrganization,
   ],
   render: (_props, context) => (
     <OrganizationsScreen viewport={context.viewport} state="team" />

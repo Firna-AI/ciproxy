@@ -71,3 +71,18 @@ export const takeOut = defineScreen({
     <OrganizationsScreen viewport={context.viewport} state="take-out" />
   ),
 });
+
+export const removed = defineScreen({
+  slug: "removed",
+  title: "An organization whose App was removed",
+  description:
+    "A what-if of 20 November: an owner of mokly-labs removes the ciproxy GitHub App from mokly-labs on GitHub, without Take out. mokly-labs leaves the workspace and no new job of it starts on ciproxy. mokly-ai keeps running its jobs, and the workspace keeps its machines, its Boat account, and its subscription. For 30 days, the tab keeps mokly-labs as removed, with the day before which a new install keeps its job history, and offers Install again. ciproxy has no GitHub access left to mokly-labs, so its row has no repository access, no Repositories, and no Take out. mokly-ai is now the last linked organization, so it has no Take out either.",
+  rationale:
+    "app-removal.md: a removal takes only that organization out of its workspace, because the other organizations still use its machines, its Boat account, and its subscription. For 30 days, the Organizations tab shows the organization as removed, and a new install within that time keeps its job history. The rule of the last organization counts each linked organization, also an inactive or a suspended one, and not a removed one.",
+  relatedDocs: relatedMvp("appRemoval", "workspaces"),
+  address,
+  useCasePaths: [paths.flowRemovedOrganization],
+  render: (_props, context) => (
+    <OrganizationsScreen viewport={context.viewport} state="removed" />
+  ),
+});

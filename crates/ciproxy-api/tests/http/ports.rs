@@ -48,6 +48,7 @@ impl UserIdentity for Identity {
         Ok(Profile {
             id,
             login: format!("person-{id}"),
+            name: Some(format!("Person {id}")),
             avatar_url: "https://github.example/avatar".to_owned(),
         })
     }

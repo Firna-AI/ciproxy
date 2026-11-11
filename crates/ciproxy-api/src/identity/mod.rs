@@ -19,6 +19,8 @@ pub struct Profile {
     pub id: i64,
     /// Current GitHub account name.
     pub login: String,
+    /// Optional public name returned by GitHub.
+    pub name: Option<String>,
     /// Profile image URL from GitHub.
     pub avatar_url: String,
 }

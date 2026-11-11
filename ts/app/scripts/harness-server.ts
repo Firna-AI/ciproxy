@@ -53,11 +53,17 @@ async function staticFile(
 export async function startHarness(
   port: number,
   root = fileURLToPath(new URL("../dist", import.meta.url)),
+  handleRequest?: (
+    request: IncomingMessage,
+    response: ServerResponse,
+    url: URL,
+  ) => Promise<boolean>,
 ) {
   await stat(resolve(root, "index.html"));
   const state = createHarnessState();
   const serve = async (request: IncomingMessage, response: ServerResponse) => {
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
+    if (handleRequest && (await handleRequest(request, response, url))) return;
     if (url.pathname === "/__fixture/control" && request.method === "POST") {
       const valid = updateHarness(state, await readJson(request));
       json(response, valid ? 200 : 400, { ok: valid }, state.build);

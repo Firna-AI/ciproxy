@@ -212,6 +212,44 @@ The [pages and billing guide](pages-and-billing.md) shows how to mount the page
 router and the Stripe hook. It also gives the paid review and payment steps,
 and the rules of Jobs, Savings, and the shared banner.
 
+## Machines and Settings facts
+
+Settings keeps the Admin's permission to start Add in `can_add_organization`.
+`new_organization_requires_upgrade` predicts the hold for a new registration.
+It uses the actual stored tier and current non-removed organization count.
+Settings and the workspace choice share that prediction. Retained reinstalls
+continue to use their saved activation and admission authority.
+
+The machine routes fetch the newest supported Linux agent version from the
+configured release host. The router constructs a redirect-free HTTPS client.
+Release failure leaves update status unavailable. Offline health still marks
+the last reported version and cache facts as old. Tests can supply a release
+collaborator with `router_with_agent_releases`.
+
+Machine views keep slot-only default-label fit separate from complete root
+allocation and prepared job disk. Slots expose a canonical job only after the
+report identity, exact stored runner, machine, slot range, and job alias match.
+A mismatched or ambiguous report keeps the raw identity with no job link.
+
+Labels include physical machine offers, complete root allocations, Boat fit,
+the largest Boat size, and current placement. The normal router uses the
+existing overflow service and trusted configured image size. PageServices can
+supply its existing collaborators. Busy slots, provider refusals, and missing
+spend bounds do not change physical resource fit. Thirty-day job summaries use
+retained label identity and canonical taken jobs across every organization.
+Unknown start times keep their label's count unavailable.
+A successful observation distinguishes a disconnected Boat account from an
+unknown connection. Disconnected Boat keeps catalog fit unavailable.
+Known machines then run jobs alone, or known no-fit capacity waits.
+Missing observations or unknown own capacity keep placement unavailable.
+
+Organizations include nullable first-registration and removal dates, complete
+repository snapshot counts, and retained adder profiles. Members include the
+GitHub public name and avatar, exact initial request organizations, and the
+current role's grant date. Repeated identical grants preserve the date.
+Legacy metadata stays unavailable. Retained reinstall preserves the first
+registration date. Profile retention follows the existing role/request rule.
+
 ## Development
 
 Run commands from the repository root. Set up PostgreSQL as

@@ -5,7 +5,7 @@ import type {
   SetupJob,
   SetupView,
 } from "../src/api/schema.ts";
-import { activation } from "./fixtures-core.ts";
+import { activation, fixtureTime } from "./fixtures-core.ts";
 
 export function machine(overrides: Partial<MachineView> = {}): MachineView {
   return {
@@ -41,13 +41,22 @@ export function organization(
   return {
     access: { mode: "selected", ids: ["7001"] },
     activation: activation(),
+    added_by: { id: "101", login: "mira", name: "Mira Chen", avatar_url: null },
     delete_after: null,
     github_id: "8001",
     id: "40000000-0000-4000-8000-000000000001",
     installation_id: "9001",
+    joined_at: "2026-09-01T09:00:00Z",
     login: "northstar-labs",
     manage_url:
       "https://github.com/organizations/northstar-labs/settings/installations/9001",
+    removed_at: null,
+    repositories: {
+      visible: "3",
+      private: "2",
+      allowed_private: "1",
+      observed_at: fixtureTime,
+    },
     state: "active",
     ...overrides,
   } satisfies OrganizationView;
@@ -77,14 +86,23 @@ export function setup(overrides: Partial<SetupView> = {}): SetupView {
     labels: [
       {
         fit: {
+          boat: { state: "unavailable" },
+          boat_connected: false,
+          boat_required_root_disk_bytes: "61000000000",
           eligible_machines: 0,
           fitting_machines: 0,
+          largest_boat: null,
+          machines: [],
           maximum_jobs: null,
           minimum_jobs: null,
           no_machine_fits: true,
+          placement: "waits",
           unavailable_machines: 0,
         },
         id: "60000000-0000-4000-8000-000000000001",
+        job_count_since: "2026-10-07T12:00:00Z",
+        job_count_until: fixtureTime,
+        jobs_last_30_days: "0",
         label: {
           allow_boat: true,
           allow_machines: true,

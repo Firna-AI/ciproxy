@@ -89,3 +89,13 @@ mod pending_result_tests;
 mod retained_add_tests;
 mod session_failure_tests;
 mod signed_association_tests;
+
+mod m20_machine_tests;
+mod m20_release_peer;
+
+mod m20_member_tests;
+mod m20_organization_tests;
+
+mod m20_label_tests;
+
+mod m20_admission_tests;

@@ -1,6 +1,7 @@
 //! Dashboard identity, access, and history-preserving management persistence.
 
 mod continuations;
+mod facts;
 mod identity;
 mod machines;
 mod resources;
@@ -10,6 +11,7 @@ mod sessions;
 mod takeouts;
 
 use chrono::{DateTime, Utc};
+use ciproxy_store_interface::dashboard::facts::{MemberProfile, OrganizationFacts};
 use ciproxy_store_interface::dashboard::records::{
     AdminClaim, CurrentCostClock, CurrentMachineCost, LoginState, Member, Membership, Role,
     Session, Takeout, User,
@@ -49,8 +51,16 @@ impl DashboardStore for PgStore {
         memberships: &[Membership],
         session: &Session,
         installation_results: &[PendingInstallationResult],
+        profile_name: Option<&str>,
     ) -> Result<bool> {
-        sessions::establish(self, user, memberships, session, installation_results)
+        sessions::establish(
+            self,
+            user,
+            memberships,
+            session,
+            installation_results,
+            profile_name,
+        )
     }
     fn dashboard_continuation(&self, session_id: Uuid, at: DateTime<Utc>) -> Result<Vec<Uuid>> {
         continuations::read(self, session_id, at)
@@ -119,6 +129,16 @@ impl DashboardStore for PgStore {
     }
     fn complete_organization_takeout(&self, takeout: &Takeout) -> Result<()> {
         takeouts::complete(self, takeout)
+    }
+    fn dashboard_member_profile(&self, github_user_id: i64) -> Result<Option<MemberProfile>> {
+        facts::profile(self, github_user_id)
+    }
+    fn dashboard_organization_facts(
+        &self,
+        workspace: Uuid,
+        organization: Uuid,
+    ) -> Result<OrganizationFacts> {
+        facts::organization(self, workspace, organization)
     }
     fn dashboard_machine_costs(&self, id: Uuid) -> Result<Vec<MachineCost>> {
         machines::costs(self, id)

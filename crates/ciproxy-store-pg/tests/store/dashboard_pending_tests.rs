@@ -51,7 +51,7 @@ fn session_consumes_only_snapshotted_pending_revisions_and_keeps_later_results()
     assert!(
         database
             .store
-            .establish_dashboard_session(&user, &memberships, &session, &snapshot)
+            .establish_dashboard_session(&user, &memberships, &session, &snapshot, None)
             .unwrap()
     );
     assert_eq!(
@@ -71,7 +71,7 @@ fn session_consumes_only_snapshotted_pending_revisions_and_keeps_later_results()
     assert!(
         database
             .store
-            .establish_dashboard_session(&user, &memberships, &session, &pending)
+            .establish_dashboard_session(&user, &memberships, &session, &pending, None)
             .unwrap()
     );
     assert_eq!(

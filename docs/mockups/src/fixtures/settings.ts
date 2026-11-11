@@ -139,9 +139,16 @@ export function defaultLabelJobs(hardware: Hardware): {
 }
 
 /** Where the jobs of a label run now. */
-export type Placement = "machines-then-boat" | "boat-only" | "waits";
+export type Placement =
+  "machines-then-boat" | "machines-only" | "boat-only" | "waits";
 
-export function placementOf(label: Label): Placement {
+/**
+ * Where the jobs of a label run now. Without a Boat account, as after a setup
+ * that skipped Boat, they run on the machines only, and a size that fits no
+ * machine waits; no Boat size is checked.
+ */
+export function placementOf(label: Label, boatConnected = true): Placement {
+  if (!boatConnected) return fitsOwnMachine(label) ? "machines-only" : "waits";
   if (fitsOwnMachine(label)) return "machines-then-boat";
   if (fitsBoat(label)) return "boat-only";
   if (

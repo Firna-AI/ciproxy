@@ -13844,6 +13844,7 @@
           "capacity_bytes",
           "restores_last_7_days",
           "hits_last_7_days",
+          "docker_repositories",
           "docker_disk_bytes"
         ],
         "properties": {
@@ -13854,6 +13855,10 @@
           "docker_disk_bytes": {
             "type": "string",
             "description": "Persistent Docker disk bytes, which Clear cache preserves."
+          },
+          "docker_repositories": {
+            "type": "string",
+            "description": "Repositories with persistent Docker disks in the last report."
           },
           "hits_last_7_days": {
             "type": "string",
@@ -14723,16 +14728,55 @@
           }
         }
       },
+      "LabelBoatSize": {
+        "type": "object",
+        "description": "One trusted Boat catalog size with its complete actual allocation.",
+        "required": [
+          "name",
+          "size"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Actual catalog name."
+          },
+          "size": {
+            "$ref": "#/components/schemas/JobVmSize",
+            "description": "Actual resources, with byte counts as decimal strings."
+          }
+        }
+      },
       "LabelFit": {
         "type": "object",
         "description": "Computed machine capacity for a label preview.",
         "required": [
+          "machines",
+          "boat",
+          "placement",
           "eligible_machines",
           "unavailable_machines",
           "fitting_machines",
           "no_machine_fits"
         ],
         "properties": {
+          "boat": {
+            "$ref": "#/components/schemas/BoatLabelFit",
+            "description": "Physical Boat fit under the label's exact routing policy."
+          },
+          "boat_connected": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Account presence from a successful observation, absent when not observed."
+          },
+          "boat_required_root_disk_bytes": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Complete required root under the shared trusted Boat image policy."
+          },
           "eligible_machines": {
             "type": "integer",
             "format": "int32",
@@ -14744,6 +14788,24 @@
             "format": "int32",
             "description": "Count of those machines that fit at least one job.",
             "minimum": 0
+          },
+          "largest_boat": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/LabelBoatSize",
+                "description": "Largest size in the trusted physical Boat catalog."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "machines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LabelMachineFit"
+            },
+            "description": "Physical offers from the eligible machines, before current occupancy."
           },
           "maximum_jobs": {
             "type": [
@@ -14762,6 +14824,10 @@
           "no_machine_fits": {
             "type": "boolean",
             "description": "Whether no allowed own machine currently fits this size."
+          },
+          "placement": {
+            "$ref": "#/components/schemas/LabelPlacement",
+            "description": "Current physical placement, with missing sources explicit."
           },
           "unavailable_machines": {
             "type": "integer",
@@ -14817,6 +14883,71 @@
           }
         }
       },
+      "LabelMachineFit": {
+        "type": "object",
+        "description": "One eligible machine's physical offer from the exact prepared snapshot.",
+        "required": [
+          "id",
+          "hostname",
+          "slots",
+          "vcpus",
+          "memory_bytes"
+        ],
+        "properties": {
+          "concurrent_jobs": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Whole concurrent jobs, unavailable when disk or sizing is unknown."
+          },
+          "hostname": {
+            "type": "string",
+            "description": "Last reported host name."
+          },
+          "id": {
+            "type": "string",
+            "description": "Stable workspace machine identity."
+          },
+          "job_disk_bytes": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Exact prepared job-area capacity."
+          },
+          "memory_bytes": {
+            "type": "string",
+            "description": "Memory bytes supplied by those slots."
+          },
+          "required_root_disk_bytes": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Complete VM root required by this machine's selected image."
+          },
+          "slots": {
+            "type": "string",
+            "description": "Whole slots available to job VMs before current occupancy."
+          },
+          "vcpus": {
+            "type": "string",
+            "description": "Hardware threads supplied by those slots."
+          }
+        }
+      },
+      "LabelPlacement": {
+        "type": "string",
+        "description": "Current physical placement, independent of temporary start availability.",
+        "enum": [
+          "machines_then_boat",
+          "machines_only",
+          "boat_only",
+          "waits",
+          "unavailable"
+        ]
+      },
       "LabelView": {
         "type": "object",
         "description": "A stored label with its current machine fit.",
@@ -14833,6 +14964,29 @@
           "id": {
             "type": "string",
             "description": "Stable label identity."
+          },
+          "job_count_since": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Inclusive start of the thirty-day summary window."
+          },
+          "job_count_until": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Inclusive end of the thirty-day summary window."
+          },
+          "jobs_last_30_days": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Taken jobs with known real start times in the exact count window."
           },
           "label": {
             "$ref": "#/components/schemas/LabelInput",
@@ -14887,6 +15041,13 @@
           "occupancy"
         ],
         "properties": {
+          "agent_up_to_date": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Exact release match, unavailable when current release metadata is absent."
+          },
           "agent_version": {
             "type": "string",
             "description": "Last reported agent release."
@@ -14913,6 +15074,27 @@
             ],
             "description": "Whole default-label jobs that fit concurrently, including disk."
           },
+          "default_jobs_by_slots": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Default-label concurrency from reported CPU and memory slots alone."
+          },
+          "default_root_disk_bytes": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Complete root allocation required by one default-label job."
+          },
+          "disk_limited": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Whether disk reduces default-label concurrency below its slot capacity."
+          },
           "disks": {
             "type": "array",
             "items": {
@@ -14936,6 +15118,13 @@
             "type": "string",
             "description": "Stable registered-machine identity."
           },
+          "job_disk_bytes": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Exact prepared job-area bytes, unavailable before a trusted report."
+          },
           "kvm": {
             "type": "boolean",
             "description": "Whether KVM can start job VMs."
@@ -14947,6 +15136,13 @@
             ],
             "format": "date-time",
             "description": "Last server-observed contact time."
+          },
+          "latest_agent_version": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Newest agent release from the configured trusted release host."
           },
           "memory_bytes": {
             "type": "string",
@@ -15002,6 +15198,58 @@
           }
         }
       },
+      "MemberOrganization": {
+        "type": "object",
+        "description": "Organization membership captured when a person requested access.",
+        "required": [
+          "id",
+          "login"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable organization registration in this workspace."
+          },
+          "login": {
+            "type": "string",
+            "description": "Login observed when the person made the request."
+          }
+        }
+      },
+      "MemberProfile": {
+        "type": "object",
+        "description": "Credential-free original adder with optional retained profile facts.",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "avatar_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Retained profile image URL."
+          },
+          "id": {
+            "type": "string",
+            "description": "Stable GitHub identity."
+          },
+          "login": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Retained current login, unavailable after identity pruning."
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional public name from the last GitHub authorization."
+          }
+        }
+      },
       "MemberView": {
         "type": "object",
         "description": "One workspace member or access request.",
@@ -15010,6 +15258,21 @@
           "requested_at"
         ],
         "properties": {
+          "avatar_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Retained profile image URL."
+          },
+          "granted_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Time the current role was granted, unavailable for legacy grants."
+          },
           "id": {
             "type": "string",
             "description": "Stable GitHub account identifier as a string."
@@ -15020,6 +15283,23 @@
               "null"
             ],
             "description": "Account name, absent before its first dashboard sign-in."
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional public name from the last successful GitHub authorization."
+          },
+          "request_organizations": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/MemberOrganization"
+            },
+            "description": "Workspace memberships observed at the initial access request."
           },
           "requested_at": {
             "type": "string",
@@ -15149,6 +15429,35 @@
           }
         }
       },
+      "OrganizationRepositories": {
+        "type": "object",
+        "description": "Counts from a complete installation-visible repository snapshot.",
+        "required": [
+          "visible",
+          "private",
+          "allowed_private",
+          "observed_at"
+        ],
+        "properties": {
+          "allowed_private": {
+            "type": "string",
+            "description": "Visible private repositories permitted by the saved access policy."
+          },
+          "observed_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Database observation of the complete snapshot."
+          },
+          "private": {
+            "type": "string",
+            "description": "Visible private repositories."
+          },
+          "visible": {
+            "type": "string",
+            "description": "All repositories visible to the installation, including public ones."
+          }
+        }
+      },
       "OrganizationTier": {
         "type": "string",
         "description": "Tier needed to admit several linked organizations.",
@@ -15197,6 +15506,17 @@
             "$ref": "#/components/schemas/ActivationView",
             "description": "Local admission, independent of GitHub's App state."
           },
+          "added_by": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/MemberProfile",
+                "description": "Original adder and optional retained profile, absent for legacy installs."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "delete_after": {
             "type": [
               "string",
@@ -15217,6 +15537,14 @@
             "type": "string",
             "description": "Current installation identity as a string."
           },
+          "joined_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "First registration observation, absent for legacy registrations."
+          },
           "login": {
             "type": "string",
             "description": "Current GitHub organization name."
@@ -15224,6 +15552,25 @@
           "manage_url": {
             "type": "string",
             "description": "GitHub URL for installation visibility changes."
+          },
+          "removed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Trusted owner-removal time, absent for an intentional take-out."
+          },
+          "repositories": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/OrganizationRepositories",
+                "description": "Counts from the last complete installation-visible repository snapshot."
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "state": {
             "$ref": "#/components/schemas/InstallationState",
@@ -16513,12 +16860,13 @@
           "organizations",
           "labels",
           "open_requests",
-          "can_add_organization"
+          "can_add_organization",
+          "new_organization_requires_upgrade"
         ],
         "properties": {
           "can_add_organization": {
             "type": "boolean",
-            "description": "Whether the current tier permits another organization."
+            "description": "Whether the current Admin may start Add, including an inactive link."
           },
           "labels": {
             "type": "array",
@@ -16530,6 +16878,10 @@
           "name": {
             "type": "string",
             "description": "Workspace name editable by an Admin."
+          },
+          "new_organization_requires_upgrade": {
+            "type": "boolean",
+            "description": "Whether a new organization at the current linked count would need Team."
           },
           "open_requests": {
             "type": "integer",
@@ -16801,6 +17153,17 @@
           "index": {
             "type": "string",
             "description": "Zero-based slot index as a decimal string."
+          },
+          "job": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/JobView",
+                "description": "Canonical dashboard job proved by its exact runner, placement, and alias."
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "job_id": {
             "type": [

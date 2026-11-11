@@ -1,4 +1,6 @@
-// Readers for Setup: its organizations, labels, and first job.
+// Readers for Setup: its organizations, labels, and first job. Settings and
+// the label preview share the organization and label readers. The nested
+// facts of a label fit and of an organization have their own readers.
 
 import {
   array,
@@ -13,7 +15,17 @@ import {
   string,
   time,
 } from "./parse-core.ts";
+import {
+  readBoatFit,
+  readBoatSize,
+  readMachineFit,
+  readPlacement,
+} from "./parse-label-facts.ts";
 import { readActivation } from "./parse-links.ts";
+import {
+  readProfile,
+  readRepositoryCounts,
+} from "./parse-organization-facts.ts";
 import type {
   InstallationState,
   LabelFit,
@@ -59,24 +71,37 @@ export function readOrganization(value: unknown): OrganizationView {
   return {
     access: access(fields.access),
     activation: readActivation(fields.activation),
+    added_by: optional(fields.added_by, readProfile),
     delete_after: optional(fields.delete_after, time),
     github_id: string(fields.github_id),
     id: string(fields.id),
     installation_id: string(fields.installation_id),
+    joined_at: optional(fields.joined_at, time),
     login: string(fields.login),
     manage_url: string(fields.manage_url),
+    removed_at: optional(fields.removed_at, time),
+    repositories: optional(fields.repositories, readRepositoryCounts),
     state: installationState(fields.state),
   };
 }
 
-function fit(value: unknown): LabelFit {
+export function readLabelFit(value: unknown): LabelFit {
   const fields = object(value, "label fit");
   return {
+    boat: readBoatFit(fields.boat),
+    boat_connected: optional(fields.boat_connected, boolean),
+    boat_required_root_disk_bytes: optional(
+      fields.boat_required_root_disk_bytes,
+      decimal,
+    ),
     eligible_machines: integer(fields.eligible_machines),
     fitting_machines: integer(fields.fitting_machines),
+    largest_boat: optional(fields.largest_boat, readBoatSize),
+    machines: array(fields.machines, readMachineFit),
     maximum_jobs: optional(fields.maximum_jobs, decimal),
     minimum_jobs: optional(fields.minimum_jobs, decimal),
     no_machine_fits: boolean(fields.no_machine_fits),
+    placement: readPlacement(fields.placement),
     unavailable_machines: integer(fields.unavailable_machines),
   };
 }
@@ -94,11 +119,14 @@ function labelInput(value: unknown): LabelInput {
   };
 }
 
-function label(value: unknown): LabelView {
+export function readLabel(value: unknown): LabelView {
   const fields = object(value, "label view");
   return {
-    fit: fit(fields.fit),
+    fit: readLabelFit(fields.fit),
     id: string(fields.id),
+    job_count_since: optional(fields.job_count_since, time),
+    job_count_until: optional(fields.job_count_until, time),
+    jobs_last_30_days: optional(fields.jobs_last_30_days, decimal),
     label: labelInput(fields.label),
   };
 }
@@ -124,7 +152,7 @@ export const parseSetup = parser((value): SetupView => {
   return {
     current_image_disk_bytes: decimal(fields.current_image_disk_bytes),
     first_job: optional(fields.first_job, job),
-    labels: array(fields.labels, label),
+    labels: array(fields.labels, readLabel),
     machines: integer(fields.machines),
     organizations: array(fields.organizations, readOrganization),
     waiting_for_machine: boolean(fields.waiting_for_machine),

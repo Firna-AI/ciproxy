@@ -5,6 +5,7 @@
 
 import {
   createApiClient,
+  type ApiClient,
   type ApiResult,
   type Transport,
 } from "../api/client.ts";
@@ -48,6 +49,7 @@ export type AppServices = {
   readonly env: AppEnvironment;
   readonly gate: BuildGate;
   readonly navigator: Navigator;
+  readonly client: ApiClient;
   readonly endpoints: Endpoints;
   readonly session: SessionStore;
   setup(workspaceId: string): SetupStore;
@@ -104,6 +106,7 @@ export function createAppServices(env: AppEnvironment): AppServices {
     env,
     gate,
     navigator,
+    client,
     endpoints,
     session: sessionStore,
     setup: cached((workspaceId) =>

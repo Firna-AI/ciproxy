@@ -9,6 +9,7 @@ use uuid::Uuid;
 use super::link_views;
 use crate::error::{Error, Result};
 use crate::wire::access::{MemberView, WorkspaceRole};
+use crate::wire::facts::{MemberOrganization, MemberProfile, OrganizationRepositories};
 use crate::wire::settings::{InstallationState, OrganizationView, RepositorySelection};
 
 pub(super) fn role(value: Role) -> WorkspaceRole {
@@ -31,6 +32,18 @@ pub(super) fn member(value: Member) -> MemberView {
     MemberView {
         id: value.github_user_id.to_string(),
         login: value.login,
+        name: value.name,
+        avatar_url: value.avatar_url,
+        granted_at: value.granted_at,
+        request_organizations: value.request_organizations.map(|organizations| {
+            organizations
+                .into_iter()
+                .map(|organization| MemberOrganization {
+                    id: organization.id.to_string(),
+                    login: organization.login,
+                })
+                .collect()
+        }),
         role: value.role.map(role),
         requested_at: value.requested_at,
     }
@@ -38,6 +51,15 @@ pub(super) fn member(value: Member) -> MemberView {
 
 pub(super) fn organization(value: Organization, local: OrganizationActivation) -> OrganizationView {
     OrganizationView {
+        joined_at: None,
+        removed_at: value.removed_at,
+        repositories: None,
+        added_by: local.added_by.map(|id| MemberProfile {
+            id: id.to_string(),
+            login: None,
+            name: None,
+            avatar_url: None,
+        }),
         activation: link_views::activation(local, value.workspace_id, Some(Role::Admin)),
         id: value.id.to_string(),
         github_id: value.github_id.to_string(),
@@ -66,12 +88,59 @@ pub(super) fn organizations(
     store: &dyn Store,
     workspace: Uuid,
 ) -> ciproxy_store_interface::error::Result<Vec<OrganizationView>> {
-    store
-        .organizations(workspace)?
+    organization_records(store, workspace, store.organizations(workspace)?)
+}
+
+/// Map the already-read registration snapshot without another organization read.
+pub(super) fn organization_records(
+    store: &dyn Store,
+    workspace: Uuid,
+    organizations: Vec<Organization>,
+) -> ciproxy_store_interface::error::Result<Vec<OrganizationView>> {
+    organizations
         .into_iter()
         .map(|value| {
             let local = store.organization_activation(workspace, value.id)?;
-            Ok(organization(value, local))
+            let facts = store.dashboard_organization_facts(workspace, value.id)?;
+            let repositories = match facts.repositories_observed_at {
+                Some(observed_at) => {
+                    let repositories = store.repositories(workspace, value.id)?;
+                    let private = repositories
+                        .iter()
+                        .filter(|repository| repository.private)
+                        .count();
+                    let allowed = repositories
+                        .iter()
+                        .filter(|repository| {
+                            repository.private
+                                && match &value.repositories {
+                                    RepositoryAccess::AllPrivate => true,
+                                    RepositoryAccess::Selected(ids) => ids.contains(&repository.id),
+                                }
+                        })
+                        .count();
+                    Some(OrganizationRepositories {
+                        visible: repositories.len().to_string(),
+                        private: private.to_string(),
+                        allowed_private: allowed.to_string(),
+                        observed_at,
+                    })
+                }
+                None => None,
+            };
+            let adder = match local.added_by {
+                Some(id) => store.dashboard_member_profile(id)?,
+                None => None,
+            };
+            let mut view = organization(value, local);
+            view.joined_at = facts.joined_at;
+            view.repositories = repositories;
+            if let (Some(profile), Some(adder)) = (view.added_by.as_mut(), adder) {
+                profile.login = Some(adder.login);
+                profile.avatar_url = Some(adder.avatar_url);
+                profile.name = adder.name;
+            }
+            Ok(view)
         })
         .collect()
 }

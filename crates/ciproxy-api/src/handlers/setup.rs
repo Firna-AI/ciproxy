@@ -9,19 +9,21 @@ use ciproxy_store_interface::runners::RunnerPlace;
 
 use crate::access::Principal;
 use crate::error::{Error, Result};
+use crate::pages::PageServices;
 use crate::state::{ApiState, query};
 use crate::wire::access::{Success, WorkspacePath};
 use crate::wire::settings::{
     SettingsView, SetupJob, SetupPhase, SetupPlace, SetupView, WorkspaceName,
 };
 
-use super::{labels, views};
+use super::{labels, organization_admission, views};
 
 #[utoipa::path(operation_id = "setup_setup", get, path = "/workspaces/{workspace_id}/setup", params(WorkspacePath), responses((status = 200, body = SetupView)), security(("session" = [])))]
 pub(crate) async fn setup(
     State(state): State<ApiState>,
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<WorkspacePath>,
+    pages: Option<Extension<Arc<PageServices>>>,
 ) -> Result<Json<SetupView>> {
     let workspace_id = state
         .access
@@ -88,7 +90,12 @@ pub(crate) async fn setup(
         organizations,
         machines,
         waiting_for_machine: machines == 0,
-        labels: labels::read(&state, workspace_id).await?,
+        labels: labels::read(
+            &state,
+            workspace_id,
+            pages.as_ref().map(|pages| pages.0.as_ref()),
+        )
+        .await?,
     }))
 }
 
@@ -97,30 +104,44 @@ pub(crate) async fn settings(
     State(state): State<ApiState>,
     Extension(principal): Extension<Arc<Principal>>,
     Path(path): Path<WorkspacePath>,
+    pages: Option<Extension<Arc<PageServices>>>,
 ) -> Result<Json<SettingsView>> {
     let workspace_id = state
         .access
         .require_role(&principal, path.workspace_id, true)
         .await?;
-    let (workspace, organizations, requests) = query(state.store.clone(), move |store| {
-        Ok((
-            store.workspace(workspace_id)?,
-            views::organizations(store, workspace_id)?,
-            store
-                .dashboard_members(workspace_id)?
-                .iter()
-                .filter(|member| member.role.is_none())
-                .count(),
-        ))
-    })
-    .await?;
+    let (workspace, organizations, requests, new_organization_requires_upgrade) =
+        query(state.store.clone(), move |store| {
+            let organizations = store.organizations(workspace_id)?;
+            let requires_upgrade = organization_admission::requires_upgrade(
+                store.billing(workspace_id)?.state.tier,
+                &organizations,
+            );
+            Ok((
+                store.workspace(workspace_id)?,
+                views::organization_records(store, workspace_id, organizations)?,
+                store
+                    .dashboard_members(workspace_id)?
+                    .iter()
+                    .filter(|member| member.role.is_none())
+                    .count(),
+                requires_upgrade,
+            ))
+        })
+        .await?;
     let workspace = workspace.ok_or(Error::NotFound)?;
     Ok(Json(SettingsView {
         name: workspace.name,
         organizations,
-        labels: labels::read(&state, workspace_id).await?,
+        labels: labels::read(
+            &state,
+            workspace_id,
+            pages.as_ref().map(|pages| pages.0.as_ref()),
+        )
+        .await?,
         open_requests: requests.try_into().unwrap_or(u32::MAX),
         can_add_organization: true,
+        new_organization_requires_upgrade,
     }))
 }
 

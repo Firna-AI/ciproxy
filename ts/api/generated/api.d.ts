@@ -897,6 +897,8 @@ export interface components {
             capacity_bytes: string;
             /** @description Persistent Docker disk bytes, which Clear cache preserves. */
             docker_disk_bytes: string;
+            /** @description Repositories with persistent Docker disks in the last report. */
+            docker_repositories: string;
             /** @description Local hits during the last seven days. */
             hits_last_7_days: string;
             /** @description Handled restores during the last seven days. */
@@ -1221,8 +1223,21 @@ export interface components {
             /** @description Actual ready own-machine runners. */
             warm_runners: string;
         };
+        /** @description One trusted Boat catalog size with its complete actual allocation. */
+        LabelBoatSize: {
+            /** @description Actual catalog name. */
+            name: string;
+            /** @description Actual resources, with byte counts as decimal strings. */
+            size: components["schemas"]["JobVmSize"];
+        };
         /** @description Computed machine capacity for a label preview. */
         LabelFit: {
+            /** @description Physical Boat fit under the label's exact routing policy. */
+            boat: components["schemas"]["BoatLabelFit"];
+            /** @description Account presence from a successful observation, absent when not observed. */
+            boat_connected?: boolean | null;
+            /** @description Complete required root under the shared trusted Boat image policy. */
+            boat_required_root_disk_bytes?: string | null;
             /**
              * Format: int32
              * @description Count of connected, non-draining machines.
@@ -1233,12 +1248,17 @@ export interface components {
              * @description Count of those machines that fit at least one job.
              */
             fitting_machines: number;
+            largest_boat?: components["schemas"]["LabelBoatSize"] | null;
+            /** @description Physical offers from the eligible machines, before current occupancy. */
+            machines: components["schemas"]["LabelMachineFit"][];
             /** @description Maximum whole jobs per fitting machine, absent when none fits. */
             maximum_jobs?: string | null;
             /** @description Minimum whole jobs per fitting machine, absent when none fits. */
             minimum_jobs?: string | null;
             /** @description Whether no allowed own machine currently fits this size. */
             no_machine_fits: boolean;
+            /** @description Current physical placement, with missing sources explicit. */
+            placement: components["schemas"]["LabelPlacement"];
             /**
              * Format: int32
              * @description Machines whose prepared capacity or required root allocation is unavailable.
@@ -1271,12 +1291,48 @@ export interface components {
             /** @description What happens when neither destination fits. */
             when_nothing_fits: components["schemas"]["NothingFits"];
         };
+        /** @description One eligible machine's physical offer from the exact prepared snapshot. */
+        LabelMachineFit: {
+            /** @description Whole concurrent jobs, unavailable when disk or sizing is unknown. */
+            concurrent_jobs?: string | null;
+            /** @description Last reported host name. */
+            hostname: string;
+            /** @description Stable workspace machine identity. */
+            id: string;
+            /** @description Exact prepared job-area capacity. */
+            job_disk_bytes?: string | null;
+            /** @description Memory bytes supplied by those slots. */
+            memory_bytes: string;
+            /** @description Complete VM root required by this machine's selected image. */
+            required_root_disk_bytes?: string | null;
+            /** @description Whole slots available to job VMs before current occupancy. */
+            slots: string;
+            /** @description Hardware threads supplied by those slots. */
+            vcpus: string;
+        };
+        /**
+         * @description Current physical placement, independent of temporary start availability.
+         * @enum {string}
+         */
+        LabelPlacement: "machines_then_boat" | "machines_only" | "boat_only" | "waits" | "unavailable";
         /** @description A stored label with its current machine fit. */
         LabelView: {
             /** @description Capacity range for connected machines that accept jobs. */
             fit: components["schemas"]["LabelFit"];
             /** @description Stable label identity. */
             id: string;
+            /**
+             * Format: date-time
+             * @description Inclusive start of the thirty-day summary window.
+             */
+            job_count_since?: string | null;
+            /**
+             * Format: date-time
+             * @description Inclusive end of the thirty-day summary window.
+             */
+            job_count_until?: string | null;
+            /** @description Taken jobs with known real start times in the exact count window. */
+            jobs_last_30_days?: string | null;
             /** @description Current label policy. */
             label: components["schemas"]["LabelInput"];
         };
@@ -1295,6 +1351,8 @@ export interface components {
         };
         /** @description Hardware and state for one own machine. Byte counts use decimal strings. */
         MachineView: {
+            /** @description Exact release match, unavailable when current release metadata is absent. */
+            agent_up_to_date?: boolean | null;
             /** @description Last reported agent release. */
             agent_version: string;
             cache?: components["schemas"]["CacheView"] | null;
@@ -1302,6 +1360,12 @@ export interface components {
             capacity_known: boolean;
             /** @description Whole default-label jobs that fit concurrently, including disk. */
             concurrent_default_jobs?: string | null;
+            /** @description Default-label concurrency from reported CPU and memory slots alone. */
+            default_jobs_by_slots?: string | null;
+            /** @description Complete root allocation required by one default-label job. */
+            default_root_disk_bytes?: string | null;
+            /** @description Whether disk reduces default-label concurrency below its slot capacity. */
+            disk_limited?: boolean | null;
             /** @description Last reported disks. */
             disks: components["schemas"]["DiskView"][];
             /** @description Desired drain state. */
@@ -1312,6 +1376,8 @@ export interface components {
             hostname: string;
             /** @description Stable registered-machine identity. */
             id: string;
+            /** @description Exact prepared job-area bytes, unavailable before a trusted report. */
+            job_disk_bytes?: string | null;
             /** @description Whether KVM can start job VMs. */
             kvm: boolean;
             /**
@@ -1319,6 +1385,8 @@ export interface components {
              * @description Last server-observed contact time.
              */
             last_contact_at?: string | null;
+            /** @description Newest agent release from the configured trusted release host. */
+            latest_agent_version?: string | null;
             /** @description Installed memory in bytes. */
             memory_bytes: string;
             monthly_cost_cents?: components["schemas"]["Cents"] | null;
@@ -1346,12 +1414,41 @@ export interface components {
              */
             warm_runners: number;
         };
+        /** @description Organization membership captured when a person requested access. */
+        MemberOrganization: {
+            /** @description Stable organization registration in this workspace. */
+            id: string;
+            /** @description Login observed when the person made the request. */
+            login: string;
+        };
+        /** @description Credential-free original adder with optional retained profile facts. */
+        MemberProfile: {
+            /** @description Retained profile image URL. */
+            avatar_url?: string | null;
+            /** @description Stable GitHub identity. */
+            id: string;
+            /** @description Retained current login, unavailable after identity pruning. */
+            login?: string | null;
+            /** @description Optional public name from the last GitHub authorization. */
+            name?: string | null;
+        };
         /** @description One workspace member or access request. */
         MemberView: {
+            /** @description Retained profile image URL. */
+            avatar_url?: string | null;
+            /**
+             * Format: date-time
+             * @description Time the current role was granted, unavailable for legacy grants.
+             */
+            granted_at?: string | null;
             /** @description Stable GitHub account identifier as a string. */
             id: string;
             /** @description Account name, absent before its first dashboard sign-in. */
             login?: string | null;
+            /** @description Optional public name from the last successful GitHub authorization. */
+            name?: string | null;
+            /** @description Workspace memberships observed at the initial access request. */
+            request_organizations?: components["schemas"]["MemberOrganization"][] | null;
             /**
              * Format: date-time
              * @description Initial request or grant time in UTC.
@@ -1407,6 +1504,20 @@ export interface components {
             /** @description Current eligible choices, with no default selection. */
             workspaces: components["schemas"]["EligibleWorkspace"][];
         };
+        /** @description Counts from a complete installation-visible repository snapshot. */
+        OrganizationRepositories: {
+            /** @description Visible private repositories permitted by the saved access policy. */
+            allowed_private: string;
+            /**
+             * Format: date-time
+             * @description Database observation of the complete snapshot.
+             */
+            observed_at: string;
+            /** @description Visible private repositories. */
+            private: string;
+            /** @description All repositories visible to the installation, including public ones. */
+            visible: string;
+        };
         /**
          * @description Tier needed to admit several linked organizations.
          * @enum {string}
@@ -1428,6 +1539,7 @@ export interface components {
             access: components["schemas"]["RepositorySelection"];
             /** @description Local admission, independent of GitHub's App state. */
             activation: components["schemas"]["ActivationView"];
+            added_by?: components["schemas"]["MemberProfile"] | null;
             /**
              * Format: date-time
              * @description Owner-removal retention deadline, absent for an intentional take-out.
@@ -1439,10 +1551,21 @@ export interface components {
             id: string;
             /** @description Current installation identity as a string. */
             installation_id: string;
+            /**
+             * Format: date-time
+             * @description First registration observation, absent for legacy registrations.
+             */
+            joined_at?: string | null;
             /** @description Current GitHub organization name. */
             login: string;
             /** @description GitHub URL for installation visibility changes. */
             manage_url: string;
+            /**
+             * Format: date-time
+             * @description Trusted owner-removal time, absent for an intentional take-out.
+             */
+            removed_at?: string | null;
+            repositories?: components["schemas"]["OrganizationRepositories"] | null;
             /** @description Active, suspended, or removed App state. */
             state: components["schemas"]["InstallationState"];
         };
@@ -1922,12 +2045,14 @@ export interface components {
         };
         /** @description Admin-only non-Boat Settings data. */
         SettingsView: {
-            /** @description Whether the current tier permits another organization. */
+            /** @description Whether the current Admin may start Add, including an inactive link. */
             can_add_organization: boolean;
             /** @description Active labels and their computed machine fit. */
             labels: components["schemas"]["LabelView"][];
             /** @description Workspace name editable by an Admin. */
             name: string;
+            /** @description Whether a new organization at the current linked count would need Team. */
+            new_organization_requires_upgrade: boolean;
             /**
              * Format: int32
              * @description Count displayed on the Members tab.
@@ -2031,6 +2156,7 @@ export interface components {
         SlotView: {
             /** @description Zero-based slot index as a decimal string. */
             index: string;
+            job?: components["schemas"]["JobView"] | null;
             /** @description Job identity, present only for a running job. */
             job_id?: string | null;
             /** @description Registered runner identity, absent for a free slot. */

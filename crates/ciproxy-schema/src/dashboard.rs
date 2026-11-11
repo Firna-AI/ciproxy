@@ -6,6 +6,7 @@ diesel::table! {
         github_id -> Int8,
         login -> Text,
         avatar_url -> Text,
+        name -> Nullable<Text>,
         credentials -> Bytea,
         checked_at -> Timestamptz,
     }
@@ -52,6 +53,8 @@ diesel::table! {
         github_user_id -> Int8,
         role -> Nullable<Text>,
         requested_at -> Timestamptz,
+        granted_at -> Nullable<Timestamptz>,
+        request_organizations -> Nullable<Jsonb>,
     }
 }
 

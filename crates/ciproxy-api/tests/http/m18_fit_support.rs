@@ -7,7 +7,7 @@ use ciproxy_api::pages::PageServices;
 use ciproxy_overflow::api::OverflowConfig;
 use ciproxy_overflow::clock::ClockMock;
 use ciproxy_overflow::crypto::KeyCipherMock;
-use ciproxy_overflow::provider::{BackendFactoryMock, Capabilities};
+use ciproxy_overflow::provider::{BackendFactoryMock, BoatAccountApi, Capabilities};
 use ciproxy_overflow::secrets::SecretBytes;
 use ciproxy_overflow::service::{OverflowDependencies, OverflowService};
 use ciproxy_protocol::secret::Secret;
@@ -21,6 +21,10 @@ use uuid::Uuid;
 use super::m18_support::{Pages, at};
 
 pub(super) fn attach(pages: &mut Pages) {
+    attach_with_account(pages, Arc::new(Unimock::new(())));
+}
+
+pub(super) fn attach_with_account(pages: &mut Pages, account: Arc<dyn BoatAccountApi>) {
     pages
         .fixture
         .database
@@ -46,7 +50,7 @@ pub(super) fn attach(pages: &mut Pages) {
         lifecycle: Arc::new(Unimock::new(())),
         capacity: Arc::new(Unimock::new(())),
         files: Arc::new(Unimock::new(())),
-        account: Arc::new(Unimock::new(())),
+        account,
         launcher: Arc::new(Unimock::new(())),
         inspection: Arc::new(Unimock::new(())),
     };

@@ -4,6 +4,8 @@ use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
+use crate::dashboard::facts::MemberOrganization;
+
 /// One current machine price, without a caller-selected effective time.
 pub struct CurrentMachineCost {
     /// Identity of the new interval.
@@ -81,6 +83,14 @@ pub struct Member {
     pub github_user_id: i64,
     /// Current login, absent until this person first signs in.
     pub login: Option<String>,
+    /// Optional public name returned by GitHub at the last authorization.
+    pub name: Option<String>,
+    /// Profile image from the retained authorized identity.
+    pub avatar_url: Option<String>,
+    /// Time this current role was granted, unknown for legacy grants.
+    pub granted_at: Option<DateTime<Utc>>,
+    /// Memberships captured for the initial request, unknown for legacy requests.
+    pub request_organizations: Option<Vec<MemberOrganization>>,
     /// Admin, Billing, Viewer, or an unanswered request.
     pub role: Option<Role>,
     /// When the person asked for access or received the first role.

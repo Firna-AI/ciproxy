@@ -1,10 +1,12 @@
 // How long a sign-in lasts, and what happens on GitHub in the screens of an
 // ended access: Tom Becker, an owner of mokly-ai, suspends or removes the
-// ciproxy GitHub App, and Jonas Weber, a Viewer, leaves mokly-ai on GitHub.
-// Each is a what-if of November, not a step of the main story.
+// ciproxy GitHub App, an owner of mokly-labs removes it from mokly-labs alone,
+// and Jonas Weber, a Viewer, leaves mokly-ai on GitHub. Each is a what-if of
+// November, not a step of the main story.
 
 import { formatDay, unbroken } from "./format.ts";
 import { owner, viewer } from "./members.ts";
+import { labsOrg } from "./org.ts";
 import { teamPeriodEnd } from "./usage.ts";
 
 /** A sign-in lasts 30 days, and ciproxy checks the membership each hour. */
@@ -26,6 +28,18 @@ export const appRemoval = {
   deletedOn: formatDay(deletedOn),
   /** Team ends at the end of the paid period, as a move to Free does. */
   planEnds: teamPeriodEnd,
+} as const;
+
+/**
+ * An owner of mokly-labs removes the App from mokly-labs alone, on the same
+ * Friday 20 November. mokly-labs leaves the workspace. mokly-ai keeps its
+ * jobs, and the workspace keeps its machines, its Boat account, and its
+ * subscription. ciproxy keeps the data of mokly-labs for the same 30 days,
+ * so a new install before the day of `appRemoval` keeps its job history.
+ */
+export const labsRemoval = {
+  organization: labsOrg,
+  installBefore: appRemoval.deletedOn,
 } as const;
 
 /** Tom Becker suspends the App on Thursday 19 November. */

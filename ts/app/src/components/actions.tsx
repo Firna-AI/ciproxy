@@ -28,6 +28,7 @@ type ButtonStyles = ReturnType<typeof createButtonStyles>;
 
 type Common = {
   label: string;
+  accessibilityLabel?: string;
   tone?: Tone;
   size?: Size;
   icon?: IconComponent;
@@ -65,6 +66,7 @@ const wrappingLinkLabel: CSSProperties = {
 
 export function ActionButton({
   label,
+  accessibilityLabel,
   tone = "secondary",
   size = "md",
   icon,
@@ -89,6 +91,7 @@ export function ActionButton({
   );
   return (
     <Button
+      accessibilityLabel={accessibilityLabel}
       tone={tone}
       size={size}
       icon={icon}
@@ -153,6 +156,7 @@ function linkStyle(
 /** A link that looks like a button. */
 export function ActionLink({
   label,
+  accessibilityLabel,
   href,
   tone = "secondary",
   size = "md",
@@ -211,7 +215,7 @@ export function ActionLink({
             }
           : onClick
       }
-      aria-label={hideLabel ? label : undefined}
+      aria-label={accessibilityLabel ?? (hideLabel ? label : undefined)}
       title={hideLabel ? label : undefined}
       style={{
         ...linkStyle(styles, tone, hovered, block),

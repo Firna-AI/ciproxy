@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import type { InstallLink, WorkspaceChoice } from "../src/api/schema.ts";
+import type { SettingsView } from "../src/api/settings-schema.ts";
 import { activation } from "./fixtures-core.ts";
 import { installCommand } from "./fixtures-setup.ts";
 import { serveBoat } from "./harness-boat-api.ts";
@@ -207,6 +208,19 @@ export async function serveApi(
   }
   if (action === "machines" && method === "GET") {
     send(200, current.machines);
+    return;
+  }
+  // The Settings page reads its labels and organizations. The Overflow page
+  // links to it through the tabs of Settings.
+  if (action === "settings" && method === "GET") {
+    send(200, {
+      name: "Northstar",
+      labels: current.setup.labels,
+      organizations: current.setup.organizations,
+      open_requests: 0,
+      can_add_organization: true,
+      new_organization_requires_upgrade: false,
+    } satisfies SettingsView);
     return;
   }
   if (action === "install-tokens" && method === "POST") {

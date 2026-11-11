@@ -4,12 +4,14 @@
 // edit ciproxy-32vcpu, which nothing fits, raise the free disk of
 // ciproxy-4vcpu while the machines fit different numbers of its jobs, and add
 // a label whose name GitHub refuses. The list is the moment of 18 November,
-// when a request for access waits on the Members tab.
+// when a request for access waits on the Members tab. A what-if without a
+// Boat account, after a setup that skipped Boat, shows the list and the edit
+// of ciproxy-8vcpu, whose jobs run on the machines only.
 
 import { Plus } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
 
-import { LinkAction } from "../../components/actions.tsx";
+import { Action, LinkAction } from "../../components/actions.tsx";
 import { ReadFailure } from "../../components/feedback.tsx";
 import { Panel } from "../../components/page.tsx";
 import { paths } from "../../components/paths.ts";
@@ -30,6 +32,8 @@ export const labelsStates = [
   "label-waits",
   "mixed-machines",
   "refused-name",
+  "no-boat",
+  "no-boat-edit",
   "loading",
   "error",
 ] as const;
@@ -41,6 +45,7 @@ const dialogModes: Partial<Record<LabelsState, LabelDialogMode>> = {
   "nothing-fits": "nothing-fits",
   "mixed-machines": "mixed-machines",
   "refused-name": "refused-name",
+  "no-boat-edit": "no-boat",
 };
 
 /** The list holds ciproxy-32vcpu once mokly-ai added it for load tests. */
@@ -58,6 +63,7 @@ export function LabelsScreen({
   state: LabelsState;
 }) {
   const mode = dialogModes[state];
+  const boat = state !== "no-boat" && state !== "no-boat-edit";
   return (
     <SettingsFrame
       viewport={viewport}
@@ -86,15 +92,22 @@ export function LabelsScreen({
             title="Labels"
             flush
             action={
-              <LinkAction to={paths.noMachineFits} size="sm" icon={Plus}>
-                Add label
-              </LinkAction>
+              boat ? (
+                <LinkAction to={paths.noMachineFits} size="sm" icon={Plus}>
+                  Add label
+                </LinkAction>
+              ) : (
+                <Action size="sm" icon={Plus}>
+                  Add label
+                </Action>
+              )
             }
           >
             <LabelList
               viewport={viewport}
               labels={labelsOf(state)}
               loading={state === "loading"}
+              boat={boat}
             />
           </Panel>
           <p className="caption">

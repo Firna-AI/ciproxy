@@ -2,3 +2,5 @@
 
 pub mod records;
 pub mod store;
+
+pub mod facts;
