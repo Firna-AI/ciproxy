@@ -1,5 +1,6 @@
 //! Typed App REST boundary. It reads no job logs, artifacts, or code.
 
+pub mod cache_metadata;
 mod groups;
 pub mod http;
 mod job_times;

@@ -3,6 +3,10 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use axum::body::{Body, to_bytes};
+use axum::extract::State;
+use axum::http::{Request, Response};
+use axum::middleware::{self, Next};
 use ciproxy_cache_sidecar::clock::Clock;
 use ciproxy_cache_sidecar::machine::MachineCache;
 use ciproxy_cache_sidecar::runtime_token::TokenVerifier;
@@ -17,6 +21,7 @@ use reqwest::Client;
 use serde_json::{Value, json};
 use tempfile::TempDir;
 use tokio::net::TcpListener;
+use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
 use super::github::Github;
@@ -44,6 +49,7 @@ pub struct Fixture {
     tasks: Vec<JoinHandle<()>>,
     pub(super) network: Arc<dyn Transport>,
     capacity: AtomicU64,
+    pub admin_bodies: Arc<Mutex<Vec<Vec<u8>>>>,
 }
 
 impl Fixture {
@@ -66,6 +72,7 @@ impl Fixture {
             tasks: Vec::new(),
             network: Arc::new(HttpTransport::new().unwrap()),
             capacity: AtomicU64::new(capacity),
+            admin_bodies: Arc::new(Mutex::new(Vec::new())),
         };
         fixture.restart().await;
         fixture
@@ -113,9 +120,23 @@ impl Fixture {
         self.tasks.push(tokio::spawn(async move {
             axum::serve(jobs, router).await.unwrap();
         }));
+        let admin_router = admin_router(service).layer(middleware::from_fn_with_state(
+            self.admin_bodies.clone(),
+            record_admin,
+        ));
         self.tasks.push(tokio::spawn(async move {
-            axum::serve(admin, admin_router(service)).await.unwrap();
+            axum::serve(admin, admin_router).await.unwrap();
         }));
+    }
+
+    pub async fn entries(&self) -> Vec<ciproxy_cache_sidecar::storage::interface::Entry> {
+        DiskStorage::new(
+            self.root.path().join("cache"),
+            self.capacity.load(Ordering::SeqCst),
+        )
+        .entries()
+        .await
+        .unwrap()
     }
 
     pub async fn report(&self) -> MachineCacheReport {
@@ -215,4 +236,16 @@ impl Drop for Fixture {
             task.abort();
         }
     }
+}
+
+async fn record_admin(
+    State(bodies): State<Arc<Mutex<Vec<Vec<u8>>>>>,
+    request: Request<Body>,
+    next: Next,
+) -> Response<Body> {
+    let (parts, body) = request.into_parts();
+    let bytes = to_bytes(body, 16 * 1024 * 1024).await.unwrap();
+    bodies.lock().await.push(bytes.to_vec());
+    next.run(Request::from_parts(parts, Body::from(bytes)))
+        .await
 }

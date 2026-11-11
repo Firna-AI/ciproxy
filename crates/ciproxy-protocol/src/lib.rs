@@ -2,6 +2,7 @@
 
 pub mod agent;
 pub mod cache;
+pub mod cache_metadata;
 pub mod guest;
 pub mod identifiers;
 pub mod images;

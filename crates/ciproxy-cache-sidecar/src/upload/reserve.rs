@@ -119,10 +119,17 @@ impl MachineCache {
         let body = to_bytes(response.into_body(), 1024 * 1024)
             .await
             .internal()?;
-        let accepted = !path.starts_with(V2)
-            || serde_json::from_slice::<CacheResponse>(&body)
-                .internal()?
-                .ok;
+        let result = if path.starts_with(V2) {
+            Some(serde_json::from_slice::<CacheResponse>(&body).internal()?)
+        } else {
+            None
+        };
+        let accepted = result.as_ref().is_none_or(|result| result.ok);
+        let accepted_id = if let Some(result) = result {
+            (!result.entry_id.is_empty()).then_some(result.entry_id)
+        } else {
+            path.rsplit('/').next().map(str::to_owned)
+        };
         if accepted && let Some(upload) = &upload {
             let upload = upload.lock().await;
             let size = if path.starts_with(V2) {
@@ -134,12 +141,21 @@ impl MachineCache {
                 && let Some(blob) = self.assemble(&upload).await
                 && size == Some(blob.size)
             {
-                let entry = self.entry(
+                let mut entry = self.entry(
                     &session,
                     upload.key.clone(),
                     upload.version.clone(),
                     EntryOrigin::AcceptedSave,
                 );
+                entry.upstream_id = accepted_id;
+                if let Ok(Some(metadata)) = self.metadata(&session).await {
+                    entry.source = metadata.into_iter().find(|source| {
+                        entry.upstream_id.as_ref() == Some(&source.id)
+                            && source.key == entry.key
+                            && source.version == entry.version
+                            && source.git_ref.0 == entry.scope.reference
+                    });
+                }
                 if self.store.publish(entry, &blob).await.is_err() {
                     tracing::warn!("Local cache save unavailable");
                 }

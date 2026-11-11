@@ -21,6 +21,18 @@ pub(crate) struct CacheRequest {
     pub size: u64,
 }
 
+/// Exact upstream restore request after the shared resolver selects its key.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct LookupRequest {
+    /// Selected complete cache key.
+    pub key: String,
+    /// Original archive version.
+    pub version: String,
+    /// No prefix fallback is needed after the resolver selected a complete key.
+    pub restore_keys: Vec<String>,
+}
+
 #[derive(Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct CacheResponse {
@@ -55,6 +67,8 @@ pub(crate) struct LegacyEntry {
     pub archive_location: String,
     #[serde(default)]
     pub cache_key: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope: Option<String>,
 }
 
 #[derive(Deserialize, Serialize)]

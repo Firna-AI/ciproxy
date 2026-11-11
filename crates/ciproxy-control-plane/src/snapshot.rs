@@ -203,4 +203,4 @@ fn instant(at: DateTime<Utc>) -> Duration {
 
 #[cfg(test)]
 #[path = "_tests_/snapshot/mod.rs"]
-mod tests;
+pub(crate) mod tests;

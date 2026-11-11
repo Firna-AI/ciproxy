@@ -5,6 +5,8 @@ mod github;
 pub mod job;
 mod registration;
 pub mod relay;
+pub mod restore;
+pub mod scoped;
 pub mod tokens;
 pub mod uploads;
 

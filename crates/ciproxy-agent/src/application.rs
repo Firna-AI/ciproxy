@@ -5,6 +5,7 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::time::Duration;
 
+use ciproxy_agent::cache_metadata::connection::connection;
 use ciproxy_protocol::reports::REPORT_INTERVAL_SECONDS;
 use clap::Parser;
 use tokio::signal::unix::{SignalKind, signal};
@@ -15,8 +16,8 @@ use tracing_subscriber::util::SubscriberInitExt;
 
 use crate::area::AreaFiles;
 use crate::area_files::LinuxAreaFiles;
-use crate::boundaries::{Cache, Connection, Host, Service, Store, Vms};
-use crate::cache::HttpCache;
+use crate::boundaries::{Connection, Host, Service, Store, Vms};
+use crate::cache_composition;
 use crate::cache_install::{CheckedCacheRelease, LinuxCacheInstallFiles};
 use crate::cache_network::GuardedCacheStart;
 use crate::cache_service::{CacheService, ReleasedCache};
@@ -129,7 +130,13 @@ async fn execute(action: Action) -> Result<()> {
     let identity = state.identity.clone();
     let removing = state.mode == Mode::Removed;
     let commands: Arc<dyn Commands> = Arc::new(LinuxCommands);
-    let cache: Arc<dyn Cache> = Arc::new(HttpCache::new(commands.clone())?);
+    let gateway_url = std::env::var("CIPROXY_AGENT_URL")
+        .unwrap_or_else(|_| "wss://app.ciproxy.dev/agent/".to_owned());
+    let metadata = identity
+        .as_ref()
+        .and_then(|identity| connection(&gateway_url, identity.credential.clone()));
+    let cache_services = cache_composition::services(commands.clone(), metadata)?;
+    let cache = cache_services.cache.clone();
     let (guest_tx, mut guest_rx) = mpsc::channel(256);
     let guests = Arc::new(LinuxGuests::new(layout.clone(), commands.clone(), guest_tx));
     let vms: Arc<dyn Vms> = Arc::new(LinuxVms {
@@ -168,8 +175,7 @@ async fn execute(action: Action) -> Result<()> {
         }) as Arc<dyn DockerDisks>),
     });
     let connection: Arc<dyn Connection> = Arc::new(WebSocketConnection::new(
-        std::env::var("CIPROXY_AGENT_URL")
-            .unwrap_or_else(|_| "wss://app.ciproxy.dev/agent/".to_owned()),
+        gateway_url,
         Arc::new(TlsWebSocketDialer),
     ));
     match action {

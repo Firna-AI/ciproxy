@@ -1,13 +1,12 @@
 //! Recoverable metadata reads and deterministic matching of local entries.
 
-use std::collections::HashSet;
 use std::path::Path;
 
 use tokio::fs;
 
 use crate::error::{CacheError, Result, ResultExt};
 
-use super::interface::{Entry, EntryOrigin, Lookup};
+use super::interface::Entry;
 
 pub(super) async fn entries(root: &Path) -> Result<Vec<Entry>> {
     fs::create_dir_all(root).await.internal()?;
@@ -27,41 +26,6 @@ pub(super) async fn entries(root: &Path) -> Result<Vec<Entry>> {
         }
     }
     Ok(entries)
-}
-
-pub(super) fn matching(entries: &[Entry], lookup: &Lookup) -> Option<Entry> {
-    for scope in &lookup.scopes {
-        for key in &lookup.keys {
-            let candidates: Vec<_> = entries
-                .iter()
-                .filter(|entry| entry.scope == *scope && entry.version == lookup.version)
-                .collect();
-            let saved_keys: HashSet<_> = candidates
-                .iter()
-                .filter(|entry| entry.origin == EntryOrigin::AcceptedSave)
-                .map(|entry| entry.key.as_str())
-                .collect();
-            let candidates: Vec<_> = candidates
-                .iter()
-                .copied()
-                .filter(|entry| {
-                    entry.origin == EntryOrigin::AcceptedSave
-                        || !saved_keys.contains(entry.key.as_str())
-                })
-                .collect();
-            if let Some(exact) = candidates.iter().find(|entry| entry.key == *key) {
-                return Some((*exact).clone());
-            }
-            if let Some(prefix) = candidates
-                .into_iter()
-                .filter(|entry| entry.key.starts_with(key))
-                .max_by_key(|entry| (entry.created, &entry.id))
-            {
-                return Some(prefix.clone());
-            }
-        }
-    }
-    None
 }
 
 pub(super) async fn remove(root: &Path, entry: &Entry) -> Result<()> {

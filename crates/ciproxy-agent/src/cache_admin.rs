@@ -5,6 +5,7 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use ciproxy_protocol::cache::MachineCacheReport;
+use ciproxy_protocol::cache_metadata::CacheMetadataRelayConfig;
 use ciproxy_protocol::jobs::JobFacts;
 use ciproxy_protocol::jobs::JobScope;
 use ciproxy_protocol::runtime::CacheRegistration;
@@ -43,10 +44,11 @@ struct Budget {
 pub(crate) struct HttpAdministration {
     client: Client,
     token_file: PathBuf,
+    metadata_relay: bool,
 }
 
 impl HttpAdministration {
-    pub(crate) fn new(token_file: PathBuf) -> Result<Self> {
+    pub(crate) fn new(token_file: PathBuf, metadata_relay: bool) -> Result<Self> {
         Ok(Self {
             client: Client::builder()
                 .redirect(reqwest::redirect::Policy::none())
@@ -54,6 +56,7 @@ impl HttpAdministration {
                 .build()
                 .context("configure local cache client")?,
             token_file,
+            metadata_relay,
         })
     }
 
@@ -87,6 +90,14 @@ impl HttpAdministration {
 #[async_trait]
 impl Administration for HttpAdministration {
     async fn recover(&self, registration: &CacheRegistration) -> Result<Option<Credential>> {
+        if self.metadata_relay {
+            self.request(
+                Method::PUT,
+                "/metadata-relay",
+                Some(&CacheMetadataRelayConfig { enabled: true }),
+            )
+            .await?;
+        }
         self.request(Method::POST, "/sessions/recover", Some(registration))
             .await?
             .json()

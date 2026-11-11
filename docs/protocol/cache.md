@@ -12,10 +12,10 @@ This doc states the cache rules for jobs on
 - **cache scope:** the rule that says which jobs can restore a cache entry.
 - **cache counts:** how many entries a job restored, and the space of these
   entries.
-- **Docker disk:** a disk for one repository on one own machine that keeps
-  Docker data between the jobs of the repository.
-- The [tiers](billing.md#tiers) call the Docker disk feature "sticky Docker
-  disks".
+- **GitHub fill:** the copy that the machine cache keeps of an entry that a
+  job restored from the GitHub cache.
+- **entry facts:** the ID, ref, key, version, and creation time of an entry
+  of the GitHub cache, as GitHub reports them.
 
 ## Transparent cache
 
@@ -56,7 +56,7 @@ This doc states the cache rules for jobs on
   every entry of the machine cache of one machine.
 - The dashboard shows "Clear cache" next to the cache use of that machine.
 - "Clear cache" never deletes an entry of the GitHub cache.
-- "Clear cache" never deletes a [Docker disk](#docker-disks) of the
+- "Clear cache" never deletes a [Docker disk](docker-disks.md) of the
   machine.
 - **Decision:** the machine cache keeps entries after the GitHub cache
   evicts them, and "Clear cache" removes a bad entry. Rejected: restoring
@@ -64,6 +64,38 @@ This doc states the cache rules for jobs on
   cache could then serve no more entries than the GitHub cache holds.
 - **Decision:** "Clear cache" acts on one machine. Reason: it sits with the
   cache use of that machine.
+
+## Restore order
+
+- A restore searches the cache scopes in the order that
+  [Cache scopes](#cache-scopes) gives, and its keys in the requested order.
+- For each key, an exact match comes before a prefix match.
+- Among prefix matches, the newest entry wins.
+- For a job with a checked ref, this order covers the entries of the
+  machine cache and the GitHub cache together.
+- So a match in one cache never hides an earlier match in the other cache.
+- This order needs the [entry facts](#terms) of the GitHub cache.
+- When they are missing or inconsistent, a job with a checked ref gets the
+  contents from the GitHub cache, or it sees a cache miss.
+- The job never fails for this reason.
+- The entry facts come from GitHub, not from the job.
+- The control plane reads them with the "Actions" read permission of the
+  [GitHub App](security.md#github-app-permissions).
+- It gives the entry facts of a repository only to the machine that runs a
+  job of that repository.
+- Each restore uses the entry facts that GitHub reports at that time.
+- A saved entry or a GitHub fill takes its place in the order from the
+  entry facts of its GitHub cache entry.
+- The machine cache keeps those facts after a restart, and after GitHub
+  deletes or evicts that GitHub cache entry.
+- Those facts never change which jobs can restore the entry from the
+  machine cache.
+- The machine never guesses the ref or the creation time of an entry.
+- **Decision:** one order covers both caches. Rejected: two lookups with a
+  check between them, because two orders can disagree. Rejected: a shared
+  entry index across machines, because it adds shared state.
+- **Decision:** the entry facts come from GitHub through the control plane.
+  Rejected: a ref from the job, because job code can choose it.
 
 ## Trusted write-back
 
@@ -188,63 +220,13 @@ This doc states the cache rules for jobs on
 
 ## Docker disks
 
-- A Docker disk keeps the Docker data of one repository on one own machine
-  between the jobs of the repository.
-- A Docker disk attaches to the [job VM](agent.md#job-vms) after the job
-  starts, because ciproxy learns the repository of a job only then.
-- One job at a time keeps its changes to a Docker disk: the first job of a
-  trusted event on the default branch that uses the disk.
-- The trusted events are those of
-  [Trusted write-back](#trusted-write-back): `push`, `workflow_dispatch`,
-  `repository_dispatch`, `delete`, `registry_package`, `page_build`, and
-  `schedule`.
-- Each other job of the repository works on a copy of the disk, also each
-  job that does not run on the default branch, and each job of another
-  event.
-- ciproxy discards a copy when its job ends.
-- The Docker disk uses the same machine-checked ref and trusted-event rule
-  as the machine cache.
-- A job without a checked ref gets a disposable copy of the Docker disk.
-- ciproxy discards that copy when the job ends.
-- The Docker disk of one repository never attaches to a job of another
-  repository.
-- A job on Boat gets no Docker disk.
-- An attached Docker disk or copy reserves its data plus the free disk of
-  the label of its job.
-- It takes that reservation only from the spare disk of the machine, as
-  [Disk](job-routing.md#disk) says.
-- It keeps the reservation until its job ends.
-- It never shrinks or detaches during its job.
-- When the spare disk has no room for the reservation, or the disk cannot
-  attach, the job runs without its Docker disk.
-- Docker then keeps its data on the root disk of the job VM.
-- ciproxy discards a repository Docker disk that fails to mount.
-- The next trusted writer builds a fresh disk.
-- **Decision:** discard the failed disk instead of repairing it for reuse,
-  because rebuilding disposable Docker data loses only time.
-- So a machine whose disk limits its jobs gets few or no Docker disks.
-- **Decision:** an attached Docker disk reserves its data plus the free disk
-  of its label. Rejected: a Docker budget, because the 250 GB minimum then
-  fits no default job. Reason: Docker then gets the free disk of the label,
-  as it does on the root disk.
-- The machine page shows how many repositories have a Docker disk on the
-  machine, and the space that these disks take.
-- Only Team and Business include Docker disks, as
-  [Tier features](billing.md#tier-features) says.
-- A job of a workspace on Free gets no Docker disk.
-- **Decision:** only a job of a trusted event on the default branch keeps
-  its changes to a Docker disk, as for the machine cache. Rejected: any
-  event on the default branch, because a person outside the repository
-  can start some of them, and `push` jobs only, because the disk would
-  then update less often.
-- **Decision:** Docker persistence uses the checked token scope. Rejected:
-  an API branch name or a job-supplied ref, because neither proves the full
-  ref that may keep disk changes.
+- [Docker disks](docker-disks.md) states the rules for the Docker disks of
+  own machines.
 
 ## Related docs
 
 - [Architecture](../architecture.md): the components and the data flow.
 - [Agent](agent.md): own machines and job VMs.
+- [Docker disks](docker-disks.md): the Docker disks of own machines.
 - [Security](security.md): job isolation and job data.
 - [Overflow](overflow.md): the jobs that run on Boat.
-- [Billing](billing.md#tier-features): the tiers that include Docker disks.

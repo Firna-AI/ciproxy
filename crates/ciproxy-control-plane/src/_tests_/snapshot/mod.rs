@@ -1,4 +1,4 @@
 //! Snapshot requirements at the scaler boundary.
 
-mod fixtures;
+pub(crate) mod fixtures;
 mod snapshot_tests;

@@ -25,8 +25,9 @@ The App uses these permissions only:
 The dashboard uses Members through the person's App user token.
 Installation tokens request the three runner and repository permissions.
 
-The REST adapter reads repository metadata and workflow-run metadata.
-It never reads code, logs, or artifact contents.
+The REST adapter reads repository metadata, workflow-run metadata, and the
+cache entry list of a repository.
+It never reads code, logs, artifact contents, or cache contents.
 RSA App JWTs allow one minute of clock drift and expire eight minutes
 after the supplied clock time.
 Installation tokens refresh before expiry and after a rejected token.
@@ -194,7 +195,8 @@ See [Service integration boundaries](INTEGRATION.md#service-integration-boundari
 ### Trusted run metadata
 
 The [run metadata guide](run-metadata.md) gives the trusted run facts,
-the assignment facts for the agent, and webhook delivery recovery.
+the assignment facts for the agent, the cache entry metadata, and webhook
+delivery recovery.
 
 ## Quick Start
 
@@ -245,6 +247,8 @@ commands, fixture contracts, and cleanup for the live probes.
 - [src/installation_state.rs](src/installation_state.rs) reads authoritative
   current App identity and state with the App JWT.
 - [src/rest](src/rest) owns repository and workflow-run REST operations.
+- [src/rest/cache_metadata.rs](src/rest/cache_metadata.rs) defines
+  `CacheEntries`, which reads every page of a repository's cache entry list.
 - [src/listener](src/listener) holds session locks and delivers durable
   demand before acknowledgement.
 - [src/scale_sets](src/scale_sets) adapts the SDK and raw message polling.

@@ -12,6 +12,7 @@ mod budget_file;
 mod cache;
 mod cache_admin;
 mod cache_authority;
+mod cache_composition;
 mod cache_install;
 mod cache_network;
 mod cache_service;

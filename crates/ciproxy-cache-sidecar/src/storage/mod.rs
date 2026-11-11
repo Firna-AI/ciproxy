@@ -8,5 +8,6 @@ mod allocation;
 mod assembly;
 mod index;
 mod maintenance;
+mod metadata;
 mod publication;
 mod read;

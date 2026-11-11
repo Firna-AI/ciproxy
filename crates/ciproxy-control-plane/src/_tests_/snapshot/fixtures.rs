@@ -12,11 +12,11 @@ use ciproxy_store_interface::settings::{OverflowWait, Settings};
 use ciproxy_store_interface::vm_size::VmSize;
 use uuid::Uuid;
 
-pub(super) fn at() -> DateTime<Utc> {
+pub(crate) fn at() -> DateTime<Utc> {
     "2026-11-05T12:00:00Z".parse().unwrap()
 }
 
-pub(super) fn input() -> RoutingSnapshot {
+pub(crate) fn input() -> RoutingSnapshot {
     let report=serde_json::from_value(serde_json::json!({
   "hostname":"fixture", "agent_version":"fixture",
   "hardware":{"processor":"x64","threads":8,"memory_bytes":32_000_000_000u64,"kvm":true,"disks":[{"name":"/","capacity_bytes":1_000_000_000_000u64,"free_bytes":800_000_000_000u64}]},
@@ -91,7 +91,7 @@ pub(super) fn organization(id: u128) -> Organization {
     }
 }
 
-pub(super) fn job(id: u128, org: u128, age_hours: i64) -> GithubJob {
+pub(crate) fn job(id: u128, org: u128, age_hours: i64) -> GithubJob {
     GithubJob {
         id: Uuid::from_u128(id),
         organization_id: Uuid::from_u128(org),
