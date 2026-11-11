@@ -1,8 +1,8 @@
 //! Billing isolation and atomic receipt rollback through PostgreSQL.
 
+use chrono::Utc;
 use ciproxy_billing::access::{BillingAccess, Role};
 use ciproxy_billing::error::Error;
-use ciproxy_store_interface::billing::state::Tier;
 use ciproxy_store_interface::error;
 use ciproxy_store_interface::workspaces::Workspace;
 use uuid::Uuid;
@@ -10,8 +10,9 @@ use uuid::Uuid;
 use super::database::Database;
 use super::fake::Fake;
 use super::fixture::{
-    access, at, idle_service, seed_checkout, seed_paid, state, subscription, wanted, workspace,
+    access, at, idle_service, seed_checkout, seed_paid, state, subscription, workspace,
 };
+use super::quote_fixture::quote;
 
 #[test]
 fn failed_state_commit_rolls_back_event_receipt_and_preserves_both_workspaces() {
@@ -90,13 +91,13 @@ fn return_session_from_another_workspace_cannot_apply_a_paid_tier() {
         remote.subscription = wrong;
     }
     assert!(matches!(
-        service.change(access(), wanted(Tier::Business, 2, 1)),
+        service.change(access(), quote(&database, &fake, Utc::now())),
         Err(Error::Ownership)
     ));
-    assert_eq!(fake.posts("/v1/subscriptions/sub_recorded").len(), 0);
+    assert_eq!(fake.subscription_mutations().len(), 0);
     assert!(matches!(
         service.move_to_free(access()),
         Err(Error::Ownership)
     ));
-    assert_eq!(fake.posts("/v1/subscriptions/sub_recorded").len(), 0);
+    assert_eq!(fake.subscription_mutations().len(), 0);
 }

@@ -12,7 +12,7 @@ import type { OrganizationView } from "../api/schema.ts";
 import type { SettingsView } from "../api/settings-schema.ts";
 import { workspaceHref } from "../routing/pages.ts";
 import type { FailureCopy } from "./claim.ts";
-import { formatDay, formatDeadline } from "./format.ts";
+import { formatDeadline, formatPlainDay } from "./format.ts";
 
 export type StatusTone = "warn" | "idle";
 
@@ -186,7 +186,7 @@ export function organizationRows(
       since:
         removed || joined === null
           ? null
-          : `Since ${formatDay(joined, timeZone)}`,
+          : `Since ${formatPlainDay(joined, timeZone)}`,
       state: removed ? "removed" : "linked",
       status: status(organization, timeZone),
       access: accessText(organization),
@@ -216,7 +216,7 @@ export function addedByText(
     return `The person who added ${login} is no longer an Admin.`;
   }
   const joined = organization.joined_at ?? null;
-  const day = joined === null ? "" : ` on ${formatDay(joined, timeZone)}`;
+  const day = joined === null ? "" : ` on ${formatPlainDay(joined, timeZone)}`;
   return `${adder} added ${login}${day} and is no longer an Admin.`;
 }
 

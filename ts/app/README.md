@@ -3,12 +3,17 @@
 The private ciproxy dashboard, built with Expo Router and React Native Web.
 It targets web only and has no open licence.
 A person signs in with GitHub, installs the ciproxy GitHub App, adds
-organizations to a workspace, and follows Setup without its Boat step.
+organizations to a workspace, and follows Setup. Its Boat step connects the
+Boat account of the customer, which takes jobs when the machines of the
+workspace are busy.
 Machines shows the machines of the workspace, and an Admin adds and manages
 them there. In Settings, an Admin manages the labels, the organizations, the
-workspace name, and the members.
+workspace name, and the members. On Settings under Overflow, an Admin
+connects Boat, changes its key, or disconnects it. The same page sets the
+overflow switch, the wait, and the monthly spend limit, and shows the spend
+of the month.
 Jobs, Savings, and Plan and usage show a coming-soon state until later work
-fills them. The Overflow tab of Settings shows the same state.
+fills them.
 
 The screens follow the [mockups](../../docs/mockups/README.md).
 Controls come from `@firna/ui` first, then from `src/components`.
@@ -33,13 +38,18 @@ The static export holds one HTML file for each route.
 | `/personal-account`             | An install on a personal account                     |
 | `/app-removed`                  | The App left the last organization of the workspace  |
 | `/access-ended`                 | GitHub no longer lists the person                    |
-| `/setup`                        | For Admins: the App, a machine, and the first job    |
+| `/setup`                        | For Admins: the App, a machine, Boat, the first job  |
 | `/machines`                     | The machines, one machine, or Add a machine          |
 | `/settings`                     | For Admins: labels, organizations, and members       |
+| `/settings/overflow`            | For Admins: Boat, the overflow wait, the spend limit |
 | `/jobs`, `/savings`, `/billing` | Coming soon, in the shell                            |
 
 A workspace page names its workspace by its opaque ID in `?workspace=<id>`.
 `/?workspace=<id>` opens Setup for an Admin until it is done, else Jobs.
+Setup is done after the App, a machine, and the first job, with or without
+Boat. After Skip for now, the Boat step links to Settings under Overflow.
+The API keeps no record of a skip, so it lasts only for the tab, the
+workspace, and the person who skipped.
 `?reason=github` or `?reason=ended` on `/sign-in` adds a notice.
 The shell holds the navigation, the workspace switch, the account menu, and
 Add an organization for Admins. A person with no role sees a page that names
@@ -47,6 +57,7 @@ the Admins, in place of each workspace page.
 
 Machines and Settings each keep one route, and more query parameters choose
 the page. A reload or a link then opens the same page. Each ID is opaque.
+Settings under Overflow has a route of its own.
 
 | Address                                                        | Page                                              |
 | -------------------------------------------------------------- | ------------------------------------------------- |
@@ -55,9 +66,13 @@ the page. A reload or a link then opens the same page. Each ID is opaque.
 | `/machines?workspace=<id>&view=add`                            | For Admins: Add a machine. It wins over `machine` |
 | `/settings?workspace=<id>&tab=<tab>`                           | The tab of Settings                               |
 | `/settings?workspace=<id>&tab=organizations&organization=<id>` | The repository access of one organization         |
+| `/settings/overflow?workspace=<id>`                            | For Admins: Settings under Overflow               |
 
 The tabs are `labels`, `overflow`, `organizations`, and `members`. A missing
-or unknown tab opens Labels.
+or unknown tab opens Labels. The Overflow tab opens Settings under Overflow.
+The address with `tab=overflow` opens that page too, in place of its own
+entry in the browser history. The tabs of Settings under Overflow open the
+other tabs on `/settings`.
 
 ### Machines
 
@@ -168,6 +183,18 @@ or unknown tab opens Labels.
 - Each API response names its build in the `x-ciproxy-build` header. After a
   new build, the next page change loads a new document, also through the
   back and forward buttons. Until then, the page keeps its input.
+- Setup and Settings under Overflow read the Boat settings of a workspace
+  through one store. A change that the API accepted is never sent again.
+  When the read after it fails, the page offers only Try again, which reads.
+- The Boat connection form has two phases, in Setup and in Settings under
+  Overflow. Check key sends only the key to
+  `POST /api/workspaces/<id>/overflow/wallets`, which saves nothing. The
+  form then lists the wallets of the answer. The `selected_wallet` of the
+  answer starts picked when the list holds it. Connect Boat sends the key,
+  the limit, and the chosen wallet. A key edit drops the wallets, and the
+  answer of an older check never applies.
+- The form drops the key once the API accepts the connection, before the
+  read after it. The pages show the account name and never the key.
 
 ## Development
 
@@ -239,12 +266,13 @@ CIPROXY_PLAYWRIGHT_PATH=/absolute/path/playwright-core/index.mjs \
   a running harness. `scripts/harness-scenarios.ts` and
   `scripts/m20-harness-state.ts` list the scenario names.
 
-## Live check
+## Live checks
 
-The live check uses the sign-in of an Admin on a deployed dashboard. It reads
-the session, Setup, and the machines, and checks the build header. It creates
-one install command and revokes it at once. Then it reloads the Jobs page at
-each width. It prints only the name and the result of each check.
+The dashboard live check uses the sign-in of an Admin on a deployed
+dashboard. It reads the session, Setup, and the machines, and checks the
+build header. It creates one install command and revokes it at once. Then it
+reloads the Jobs page at each width. It prints only the name and the result
+of each check.
 
 The live check of Machines and Settings uses the same credential file. It
 reads Machines, the overflow summary, Settings, Members, and the repository
@@ -282,6 +310,31 @@ It prints `SKIP` and exits with status 2 also when the file is missing. A
 file that is not valid, or a failed check, exits with status 1. A workspace
 with no machine or no linked organization skips the checks that need one.
 
+### Boat settings
+
+The Boat live check reads the Boat settings of a deployed dashboard with the
+sign-in of an Admin. It sends two GET requests: `/api/session`, and the
+Overflow settings of the workspace. It checks the Admin role, the current
+CSRF token, the response types, and one build header across both requests.
+It changes no account, key, policy, or job. It needs no Boat key and no
+browser.
+
+Its credential file follows the rules above, with the same four strings:
+`base_url`, `workspace_id`, `session_cookie`, and `csrf_token`. The
+`csrf_token` must be the current token of the sign-in.
+
+```sh
+CIPROXY_BOAT_CREDENTIALS_FILE=/absolute/path/outside/repo/boat.json \
+  node ts/app/scripts/boat-live-smoke.ts
+```
+
+`--help` prints the usage and reads no file. Without the credential
+variable, the check prints `SKIP` and exits with status 2. A failed check
+exits with status 1. A credential file that the check cannot read or parse
+is a failed check. The check prints only fixed check names, results, and
+counts. A pass does not prove that a key check, a connection, a key change,
+a policy save, or a disconnect works.
+
 ## Key Code
 
 - [src/app/_layout.tsx](src/app/_layout.tsx) sets the Firna theme, loads the
@@ -295,7 +348,8 @@ with no machine or no linked organization skips the checks that need one.
   tab checks the session again. With `banner`, a page replaces the
   soft-limit banner of the shell.
 - [src/screens/setup/setup-screen.tsx](src/screens/setup/setup-screen.tsx) is
-  Setup. `src/screens/add-organization` is the workspace choice.
+  Setup, with its Boat step in `boat-step.tsx`.
+  `src/screens/add-organization` is the workspace choice.
 - The [Machines screen](src/screens/machines/machines-screen.tsx) opens the
   list, one machine, or Add a machine, as
   [src/view/machines-routes.ts](src/view/machines-routes.ts) reads the query.
@@ -308,6 +362,35 @@ with no machine or no linked organization skips the checks that need one.
   the query. The [settings store](src/state/settings-store.ts) holds the
   settings of a workspace. A change that succeeds reads them and the session
   again.
+- `src/screens/overflow` is Settings under Overflow, below the
+  [Settings tabs](src/components/settings-tabs.tsx). `src/screens/boat`
+  holds the one Boat connection form of Setup and of this page, which masks
+  the key. Its `use-connect-form.ts` runs the two phases and builds the
+  connection request, and `wallet-choice.tsx` lists the wallets. The folder
+  also holds the spend figures, which show the confirmed and the unconfirmed
+  costs apart.
+- [src/screens/boat/use-saved-draft.ts](src/screens/boat/use-saved-draft.ts)
+  holds the value of both limit fields: in the connection form, and in the
+  limit panel of Settings under Overflow. Its rules are in
+  [src/state/saved-draft.ts](src/state/saved-draft.ts). A field shows the
+  latest saved limit until the person types. The typed limit stays until
+  an accepted save of its own form.
+- [src/state/overflow.ts](src/state/overflow.ts) holds the Boat settings of
+  a workspace, and runs each read, key check, and change one at a time. It
+  never keeps the key. [src/state/key-check.ts](src/state/key-check.ts)
+  holds the wallets of the latest key check of a form, so an older answer
+  never applies.
+  [src/api/overflow-endpoints.ts](src/api/overflow-endpoints.ts) builds the
+  key check. It sends the generated connection request as it is, with a
+  required wallet.
+  [src/state/boat-skip.ts](src/state/boat-skip.ts) keeps Skip for now in the
+  tab.
+- [src/view/boat.ts](src/view/boat.ts) turns the Boat settings into what the
+  pages show. A reached limit comes only from the API flag. The notice of a
+  reached limit names the budget month and the day Boat resumes, both from
+  the next-month date of the API, in UTC.
+  [src/view/money.ts](src/view/money.ts) formats the decimal-string cents of
+  the API, and reads a typed dollar limit with integer arithmetic.
 - [src/api/client.ts](src/api/client.ts) is the one HTTP client. The
   readers in `src/api/parse-*.ts` narrow each response body to its generated
   type; [src/api/parse-jobs.ts](src/api/parse-jobs.ts) reads one dashboard
@@ -335,5 +418,8 @@ with no machine or no linked organization skips the checks that need one.
   [roles](../../docs/protocol/security.md#roles), the
   [repository access](../../docs/protocol/security.md#repository-access), and
   the [organizations](../../docs/protocol/workspaces.md) of a workspace.
+- [Overflow](../../docs/protocol/overflow.md), with the Boat account and the
+  spend limit, and
+  [the overflow wait](../../docs/protocol/job-routing.md#the-overflow-wait).
 - [ciproxy-api](../../crates/ciproxy-api/README.md) registers the GitHub URLs,
   and the [deployment](../../deploy/README.md#environments) serves `/api`.

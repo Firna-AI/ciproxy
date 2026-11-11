@@ -25,6 +25,9 @@ async fn drain_waits_for_confirmed_stop_and_keeps_jobs_until_resume() {
         VmsMock::request_stop
             .each_call(matching!((record) if record.report.runner_id.0 == "idle"))
             .answers(&|_, _| Ok(())),
+        VmsMock::configuration_lost
+            .each_call(matching!(_))
+            .answers(&|_, _| Ok(false)),
     ));
     let agent = controller(
         MachineState {
@@ -114,6 +117,7 @@ async fn a_late_job_started_survives_pending_removal_until_runner_exit() {
         VmsMock::remove_network.some_call(matching!(1)).returns(Ok(())),
         StoreMock::save.each_call(matching!(_)).answers(&|_, _| Ok(())),
         VmsMock::request_stop.some_call(matching!(_)).returns(Ok(())),
+        VmsMock::configuration_lost.some_call(matching!(_)).returns(Ok(false)),
         VmsMock::stop.some_call(matching!((record) if record.report.state == RunnerState::Running { job_id: JobId("raced-job".to_owned()) })).returns(Ok(())),
         CacheMock::release.some_call(matching!(_)).returns(Ok(())),
     ));

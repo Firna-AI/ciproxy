@@ -214,8 +214,8 @@ export const boat = {
   waitSeconds: 30,
   /** The day Boat stopped accepting the key. */
   keyRejectedOn: unbroken("12 November"),
-  /** The day the Boat spend of November reached the limit. */
-  limitReachedOn: unbroken("26 November"),
+  /** The UTC month whose Boat spend reached the limit: the budget month. */
+  budgetMonth: "November",
   /** The first day of the next month, when Boat takes jobs again. */
   nextMonth: unbroken("1 December"),
 } as const;

@@ -11,7 +11,7 @@ import type { ApiFailure } from "../api/client.ts";
 import type { WorkspaceRole } from "../api/schema.ts";
 import type { MemberView, MembersView } from "../api/settings-schema.ts";
 import type { FailureCopy } from "./claim.ts";
-import { formatDay, joinWords, roleNames } from "./format.ts";
+import { formatPlainDay, joinWords, roleNames } from "./format.ts";
 
 /** The roles in the order of the role picker, with what each may do. */
 export const roleOrder: readonly WorkspaceRole[] = [
@@ -86,7 +86,7 @@ export type RequestRow = Person & { asked: string };
 
 /** "Asked on 18 November · member of mokly-ai": the request and its context. */
 function askedText(member: MemberView, timeZone?: string): string {
-  const asked = `Asked on ${formatDay(member.requested_at, timeZone)}`;
+  const asked = `Asked on ${formatPlainDay(member.requested_at, timeZone)}`;
   const organizations = member.request_organizations ?? [];
   if (organizations.length === 0) return asked;
   const logins = organizations.map((organization) => organization.login);
@@ -122,7 +122,7 @@ export function membersModel(
         ...person,
         you: member.login === login,
         role,
-        since: granted === null ? null : formatDay(granted, timeZone),
+        since: granted === null ? null : formatPlainDay(granted, timeZone),
       });
     }
   }

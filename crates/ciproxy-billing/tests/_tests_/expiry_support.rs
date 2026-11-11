@@ -4,13 +4,13 @@ use chrono::{DateTime, Utc};
 use ciproxy_billing::error::Error;
 use ciproxy_billing::stripe::wire::invoice::{BillingReason, InvoiceStatus};
 use ciproxy_billing::stripe::wire::types::{PendingUpdate, Status, Subscription};
-use ciproxy_store_interface::billing::state::Tier;
 use serde_json::json;
 
 use super::database::Database;
 use super::fake::Fake;
 use super::fake_subscriptions::SubscriptionOutcome;
-use super::fixture::{access, seed_paid, service, subscription, wanted, workspace};
+use super::fixture::{access, seed_paid, service, subscription, workspace};
+use super::quote_fixture::quote;
 use super::subscription_requests::business_upgrade;
 
 pub(super) fn started() -> DateTime<Utc> {
@@ -54,12 +54,15 @@ pub(super) fn lost_upgrade() -> (Database, Fake) {
     let fake = Fake::new(subscription());
     {
         let mut remote = fake.state.lock().unwrap();
-        remote.expect_subscription(business_upgrade(), SubscriptionOutcome::respond(pending()));
+        remote.expect_subscription(
+            business_upgrade().at(1796382000),
+            SubscriptionOutcome::respond(pending()),
+        );
         remote.lose_next_post = true;
     }
     let billing = service(&database, &fake, started());
     assert!(matches!(
-        billing.change(access(), wanted(Tier::Business, 2, 1)),
+        billing.change(access(), quote(&database, &fake, started())),
         Err(Error::StripeHttp { status: 503 })
     ));
     assert_eq!(

@@ -23,7 +23,11 @@ async fn starts_a_fresh_vm_and_keeps_registration_out_of_durable_state() {
     let mock = Unimock::new((report_dependencies(),
         start_image(),
         VmsMock::allocate.some_call(matching!((report, used) if report.state == RunnerState::Starting && used.is_empty()))
-            .returns(Ok(vm("runner-1", false))),
+            .answers(&|_, report, _| {
+                let mut allocated = vm("runner-1", false);
+                allocated.report = report;
+                Ok(allocated)
+            }),
         StoreMock::save.some_call(matching!((state) if state.runners.len() == 1))
             .answers(&|_, state| {
                 assert!(!serde_json::to_string(state).unwrap().contains("one-use-registration")); Ok(())
@@ -54,7 +58,11 @@ async fn failed_state_save_leaves_no_phantom_runner() {
         start_image(),
         VmsMock::allocate
             .each_call(matching!(_, _))
-            .answers(&|_, _, _| Ok(vm("runner-1", false))),
+            .answers(&|_, report, _| {
+                let mut allocated = vm("runner-1", false);
+                allocated.report = report;
+                Ok(allocated)
+            }),
         StoreMock::save.stub(|each| {
             each.call(matching!(_))
                 .answers(&|_, _| Err(Error::Capacity))

@@ -79,6 +79,8 @@ export async function startHarness(
           issued: state.issued,
           revoked: state.revoked,
           facts: state.facts,
+          boatConnectionFields: state.scenario.boat.connectionFields,
+          boatConnectionWallet: state.scenario.boat.connectionWallet,
         },
         state.build,
       );

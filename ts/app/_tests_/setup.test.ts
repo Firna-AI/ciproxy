@@ -3,7 +3,11 @@ import test from "node:test";
 
 import type { Problem, SetupPhase } from "../src/api/schema.ts";
 import { setupWaits } from "../src/state/setup.ts";
-import { firstJob, setupModel } from "../src/view/setup-steps.ts";
+import {
+  firstJob,
+  setupModel,
+  type BoatProgress,
+} from "../src/view/setup-steps.ts";
 import { workspaceId } from "../scripts/fixtures-core.ts";
 import {
   job,
@@ -13,24 +17,28 @@ import {
 } from "../scripts/fixtures-setup.ts";
 import { appWith, response, settled } from "./support.ts";
 
-test("Setup uses actual machine capacity and KVM for its three non-Boat steps", () => {
-  const initial = setupModel(setup(), [], false);
+const noBoat: BoatProgress = { connected: null, skipped: false };
+
+test("Setup uses actual machine capacity and KVM for its steps", () => {
+  const initial = setupModel(setup(), [], false, noBoat);
   assert.deepEqual(
     initial.steps.map((step) => [step.key, step.status]),
     [
       ["github", "done"],
       ["machine", "active"],
+      ["boat", "todo"],
       ["job", "todo"],
     ],
   );
   assert.deepEqual(
     [initial.done, initial.total, initial.complete],
-    [1, 3, false],
+    [1, 4, false],
   );
   const unavailable = setupModel(
     setup({ machines: 1 }),
     [machine({ kvm: false, hostname: "no-kvm" })],
     false,
+    noBoat,
   );
   assert.equal(unavailable.noKvm, "no-kvm");
   assert.equal(unavailable.connected, null);
@@ -38,6 +46,7 @@ test("Setup uses actual machine capacity and KVM for its three non-Boat steps", 
     setup({ machines: 1, waiting_for_machine: false }),
     [machine()],
     false,
+    noBoat,
   );
   assert.deepEqual(ready.connected, {
     name: "forge-01",
@@ -46,10 +55,11 @@ test("Setup uses actual machine capacity and KVM for its three non-Boat steps", 
   });
   assert.deepEqual(
     ready.steps.map((step) => step.status),
-    ["done", "done", "active"],
+    ["done", "done", "active", "todo"],
   );
   assert.equal(
-    setupModel(setup({ machines: 1 }), [machine()], true).steps[1]?.status,
+    setupModel(setup({ machines: 1 }), [machine()], true, noBoat).steps[1]
+      ?.status,
     "active",
   );
   assert.deepEqual(
@@ -57,6 +67,7 @@ test("Setup uses actual machine capacity and KVM for its three non-Boat steps", 
       setup({ organizations: [organization({ state: "suspended" })] }),
       [],
       false,
+      noBoat,
     ).suspended,
     ["northstar-labs"],
   );
@@ -97,7 +108,7 @@ test("first job follows GitHub phases and only its success result reports a pass
     first_job: passed,
   });
   assert.equal(setupWaits(complete), false);
-  assert.equal(setupModel(complete, [machine()], false).complete, true);
+  assert.equal(setupModel(complete, [machine()], false, noBoat).complete, true);
 });
 
 test("Setup refresh errors retain the last view and recover without creating install tokens", async () => {

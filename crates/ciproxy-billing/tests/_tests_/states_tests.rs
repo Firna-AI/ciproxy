@@ -138,7 +138,7 @@ fn actual_end_starts_free_month_and_ended_banner_without_changing_workspace_reso
         EventOutcome::Duplicate
     );
     assert_eq!(state(&database), free);
-    assert_eq!(fake.posts("/v1/subscriptions/sub_recorded").len(), 0);
+    assert_eq!(fake.subscription_mutations().len(), 0);
 }
 
 #[test]

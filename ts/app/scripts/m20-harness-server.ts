@@ -123,7 +123,12 @@ async function serve(
     const body: components["schemas"]["PageBannerView"] = { banner: null };
     return send(200, body);
   }
-  if (route === "overflow/summary" && method === "GET") {
+  // Machines reads the summary. While Setup is open, the navigation of an
+  // Admin reads the Boat settings for its Setup count. Both get one body.
+  if (
+    (route === "overflow/summary" || route === "overflow") &&
+    method === "GET"
+  ) {
     const unconnected = state.scenario === "overflow-unconnected";
     const body: components["schemas"]["OverflowSettings"] = {
       available: true,

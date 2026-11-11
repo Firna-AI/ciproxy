@@ -21,6 +21,7 @@ pub(super) async fn call<T: Send + 'static>(
 pub(super) fn result<T>(value: ciproxy_billing::error::Result<T>) -> Result<T> {
     match value {
         Ok(value) => Ok(value),
+        Err(ciproxy_billing::error::Error::ReviewRequired) => Err(Error::ReviewRequired),
         Err(
             ciproxy_billing::error::Error::Forbidden | ciproxy_billing::error::Error::Ownership,
         ) => Err(Error::Forbidden),
@@ -38,6 +39,7 @@ pub(super) fn result<T>(value: ciproxy_billing::error::Result<T>) -> Result<T> {
         Err(
             ciproxy_billing::error::Error::StripeHttp { .. }
             | ciproxy_billing::error::Error::StripeRejected { .. }
+            | ciproxy_billing::error::Error::StripeValidationRejected { .. }
             | ciproxy_billing::error::Error::StripeUnavailable
             | ciproxy_billing::error::Error::StripeState,
         ) => Err(Error::Unavailable),

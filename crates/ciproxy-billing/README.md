@@ -27,19 +27,48 @@ This also covers retries after Stripe removes an old idempotency key.
 Checkout return and webhook paths retrieve current session state.
 They apply confirmed coverage through the same reconciliation method.
 Paid changes preserve the Stripe period and prorate the difference.
+`PaidReview` quotes an exact paid selection at the supplied observation time.
+It holds the workspace billing lock and verifies the subscription owner.
+It rounds that time down to a whole second for Stripe's proration date.
+A time outside the current Stripe period returns ReviewRequired.
+It saves a `StoredQuote`, then returns `PaidQuote` with its id and expiry.
+The quote freezes the reviewed items, catalog prices, upgrade mode, and amounts.
+It also keeps the source subscription, customer, items, anchor, and period.
+A new payment can use it for 30 minutes, and only before the period ends.
+The quote reads both period bounds from that same subscription snapshot.
+It leaves the stored period unchanged while renewal delivery is late.
+The HTTP adapter renders preview and payment fields with one form builder.
+It also requests a recurring preview for the new monthly total.
+An upgrade uses the immediate preview's amount due for today's charge.
+A downgrade keeps its credit for the later invoice and charges nothing today.
+Signed invoice totals preserve negative downgrade credits.
+The recurring day comes from Stripe's explicit anchor configuration or anchor.
+The current period start never supplies that day.
 Upgrades invoice at once with pending_if_incomplete.
 The old tier stays until payment succeeds.
 An open subscription-update invoice supplies its upgrade payment page.
 A renewal invoice never supplies that page.
 Confirmed expiry releases the old change for a fresh attempt.
-Use change only for an explicitly chosen paid tier and quantities.
+Use change only with the id of a stored quote.
+An unused quote must be unexpired, and its source must match the subscription.
+Then one transaction consumes it and saves its Change command before Stripe.
+The command copies the quote's proration time and item replacements.
+Its retries reuse them with the same idempotency key, also after expiry.
+A used quote recovers only its own unfinished command.
+An unknown quote, or one that fails these rules, returns ReviewRequired.
+A valid unused quote gets PaymentConfirming while another payment is unfinished.
+These refusals send no Stripe mutation.
 Use change_add_ons for quantities alone. It reconciles the current Stripe tier
 inside the billing lock before it resolves the selection.
+Its quantity-only commands carry no quote.
 Both operations share durable commands, retry recovery, and Stripe proration.
 Add-on changes apply at once with create_prorations.
 The portal permits invoices, card changes, and period-end cancellation.
 It permits undo-cancellation before the period ends.
 It disables tier and quantity edits.
+
+The [paid move guide](paid-moves.md) gives the pending-item transfer, its
+`PaymentWork` journal, the invoice check, and their recovery.
 
 Each command holds a dedicated PostgreSQL billing session lock.
 The command persists before the Stripe request.
@@ -75,6 +104,8 @@ Last-organization removal stores a cancellation request in its transaction.
 Suspension and removal of another organization leave billing alone.
 The host polls BillingStore::billing_cancellations and calls
 BillingApi::reconcile_removal for every result.
+The same maintenance pass polls BillingStore::billing_payment_workspaces and
+calls BillingApi::reconcile_payments for every result.
 Retry Busy and provider failures.
 The request stays durable during unfinished Checkout and failed HTTP calls.
 The paid tier and add-ons stay until Stripe actually ends the subscription.
@@ -122,6 +153,7 @@ Construct BillingService at the runtime composition boundary:
 
 ```rust
 use std::sync::Arc;
+use ciproxy_billing::alerts::HostedBillingAlerts;
 use ciproxy_billing::clock::SystemClock;
 use ciproxy_billing::service::api::BillingApi;
 use ciproxy_billing::service::runtime::{BillingService, Redirects};
@@ -136,7 +168,12 @@ fn billing(
     redirects: Redirects,
 ) -> Arc<dyn BillingApi> {
     Arc::new(BillingService::new(
-        store, stripe, Arc::new(SystemClock), secret, redirects,
+        store,
+        stripe,
+        Arc::new(SystemClock),
+        Arc::new(HostedBillingAlerts),
+        secret,
+        redirects,
     ))
 }
 ```
@@ -149,6 +186,7 @@ Retry Busy and transient failures through Stripe delivery retries.
 Reject InvalidSignature.
 Poll Confirming on the return page without opening another Checkout.
 Use trusted dashboard redirects from runtime configuration.
+Pass `HostedBillingAlerts` in production, or a test double of `BillingAlerts`.
 
 ## Development
 
@@ -182,97 +220,27 @@ The complete repository gate remains the final verification step.
 
 ### Stripe test mode
 
-Use a dedicated Stripe test sandbox for the smoke run.
-
-The smoke runner reads credentials only from environment variables.
-It refuses live-mode keys and hides errors that could contain credentials.
-It changes only the named test workspace and Stripe test-mode objects.
-Keep DATABASE_URL on a disposable test database.
-Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET in the environment.
-Get them from the Stripe test-mode account and the test event destination.
-Do not put them in a command, source file, or terminal log.
-Set CIPROXY_STRIPE_TEST_WORKSPACE to a fresh UUID.
-Optional CIPROXY_STRIPE_TEST_RETURN_ORIGIN sets the dashboard return origin.
-
-```sh
-crates/ciproxy-billing/scripts/stripe-test-mode.sh provision
-crates/ciproxy-billing/scripts/stripe-test-mode.sh listen
-```
-
-In another terminal, forward real signed Stripe events to the local listener.
-Configure the CLI with an environment key.
-Keep its secret-bearing startup output in a private local file.
-Set STRIPE_WEBHOOK_SECRET to that listener's signing secret before startup.
-A deployed host instead registers its HTTPS webhook destination.
-Use API version 2026-10-28.endive for that destination.
-Subscribe to Checkout completed, async payment, and expiration events.
-Subscribe to subscription created, updated, deleted, and pending-update events.
-Subscribe to invoice paid, payment_failed, payment_action_required, and updated.
-Also subscribe to invoice.marked_uncollectible.
-The listener saves sanitized real events under
-.context/ciproxy-mvp/billing/stripe-test-mode and prints no raw event data.
-
-```sh
-crates/ciproxy-billing/scripts/stripe-test-mode.sh checkout
-```
-
-Pay in the displayed Stripe page with the documented test card.
-The initial Team selection has two starts blocks and one extra machine.
-Its monthly and first payment total is $89 with no tax.
-Set CIPROXY_STRIPE_TEST_SESSION to the printed session identifier.
-Then run these steps:
-
-```sh
-crates/ciproxy-billing/scripts/stripe-test-mode.sh reconcile
-crates/ciproxy-billing/scripts/stripe-test-mode.sh upgrade
-crates/ciproxy-billing/scripts/stripe-test-mode.sh addons
-crates/ciproxy-billing/scripts/stripe-test-mode.sh portal
-crates/ciproxy-billing/scripts/stripe-test-mode.sh cancel
-crates/ciproxy-billing/scripts/stripe-test-mode.sh status
-```
-
-Check the immediate prorated upgrade charge and the unchanged paid bounds.
-Check the saved card, invoice list, cancel, and undo-cancel in the portal.
-The portal must offer no tier or quantity editor.
-Use Stripe test cards for failed charges and bank confirmation.
-Use a test-clock customer or Stripe's subscription simulation to exercise
-renewal retries, recovery, final failure, and the actual paid-period end.
-Check that a failed upgrade on an Active subscription retains Team.
-It must not create a renewal banner.
-Also fail a renewal, then attempt an upgrade before that renewal recovers.
-Keep the renewal banner and its failed-payment date after the upgrade invoice
-becomes latest, including after its unpaid update expires.
-Check that later renewal retries update the next-try date.
-Delay the renewal event until after the upgrade, then repeat its delivery.
-The renewal invoice and failure date must still appear.
-Pay the renewal and check that its banner clears.
-End a subscription with a paid command still pending.
-Check that a new Checkout opens and a late old end event preserves it.
-Lose an unpaid upgrade reply close to renewal.
-Let a webhook observe its expiry, then let renewal replace the latest invoice.
-Check that a different selection works after the observed expiry.
-Repeat with no observation during the pending window.
-A current read must keep it before 24 hours and release it at 24 hours.
-A still-pending update must stay protected after that limit.
-An applied selection must keep its paid result after that limit.
-An old-selection retry must never offer the renewal invoice as an upgrade page.
-Check that Move to Free leaves no payment page for an unrelated new selection
-while Stripe still holds the old pending update.
-Check signed recordings and repeat deliveries through the listener.
-These browser and account steps need real Stripe test-mode credentials.
-An offline test result does not prove that they passed.
-
-External account setup must enable receipts for successful payments.
-It must set the failed-payment retry schedule.
-It must cancel the subscription after the last failed retry.
-No tax registration, tax rate, or Stripe Tax setup is required.
-Set production keys through secret configuration when the service is deployed.
-Never run this smoke script with a live key.
+The [Stripe test mode guide](stripe-test-mode.md) gives the smoke run, the
+listener, the browser and account checks, and the external account setup.
 
 ### Key Code
 
 - [src/service/api.rs](src/service/api.rs) owns the dyn BillingApi entry points.
 - [src/service/runtime.rs](src/service/runtime.rs) constructs BillingService.
+- [src/service/paid_review.rs](src/service/paid_review.rs) defines and
+  implements the authorized paid-plan preview boundary and stores its quote.
+- [src/service/commands.rs](src/service/commands.rs) turns a quote or
+  quantities into one durable paid change command.
+- [src/service/payment_work.rs](src/service/payment_work.rs) creates and saves
+  each payment journal.
+- [src/service/payment_transfer.rs](src/service/payment_transfer.rs) retires
+  counted pending items and restores only proven uncharged value.
+- [src/service/payment_invoice.rs](src/service/payment_invoice.rs) settles a
+  transfer from the exact invoice and compares that invoice with the quote.
+- [src/service/payment_recovery.rs](src/service/payment_recovery.rs) resumes
+  pending transfer, comparison, and event emission work.
+- [src/alerts.rs](src/alerts.rs) defines `BillingAlerts` and the
+  `HostedBillingAlerts` operator event.
 - [src/service/completion.rs](src/service/completion.rs) owns the rules for
   command completion.
 - [src/service/renewal.rs](src/service/renewal.rs) refreshes failed renewals.
@@ -286,6 +254,16 @@ Never run this smoke script with a live key.
   subscription owners before provider reads and discovers unknown identities.
 - [src/stripe/api.rs](src/stripe/api.rs) owns the dyn StripeApi boundary.
 - [src/stripe/http/client.rs](src/stripe/http/client.rs) owns the HTTP adapter.
+- [src/stripe/http/preview.rs](src/stripe/http/preview.rs) reads immediate
+  and recurring invoice previews without changing subscription items.
+- [src/stripe/forms.rs](src/stripe/forms.rs) renders the reviewed items and
+  proration date for both the preview and the payment.
+- [src/stripe/http/preview_pending.rs](src/stripe/http/preview_pending.rs)
+  freezes only the earlier pending items that the complete preview counted.
+- [src/stripe/http/pending.rs](src/stripe/http/pending.rs) reads every pending
+  item and retires original items idempotently.
+- [src/stripe/http/payment_ledger.rs](src/stripe/http/payment_ledger.rs)
+  stamps invoice correlation, finds payment invoices, and restores balance.
 - [src/webhook.rs](src/webhook.rs) verifies raw signatures and routes events.
 - [src/catalog.rs](src/catalog.rs) owns USD prices and checkout reviews.
 - [tests/_tests_](tests/_tests_) contains the public integration scenarios.
@@ -293,6 +271,8 @@ Never run this smoke script with a live key.
 ### Related Docs
 
 - [Billing](../../docs/protocol/billing.md) defines prices and state changes.
+- [Paid moves](../../docs/protocol/billing-paid-moves.md) defines quotes, the
+  pending-item transfer, and the invoice check.
 - [App removal](../../docs/protocol/app-removal.md) defines cancellation.
 - [Workspaces](../../docs/protocol/workspaces.md) defines ownership.
 - [Metering](../../docs/protocol/metering.md) defines UTC periods.

@@ -104,7 +104,10 @@ impl Agent for Controller {
             .cloned()
             .ok_or(Error::GuestMismatch)?;
         let lost = self.vms.configuration_lost(&vm).await?;
-        self.record_configuration(runner_id, lost).await
+        if lost {
+            self.record_configuration(runner_id, true).await?;
+        }
+        Ok(())
     }
     async fn reconcile(&self) -> Result<()> {
         let hardware = self.host.hardware()?;
@@ -201,6 +204,10 @@ mod docker_policy_tests;
 #[cfg(test)]
 #[path = "_tests_/configuration_state_tests.rs"]
 mod configuration_state_tests;
+
+#[cfg(test)]
+#[path = "_tests_/unconfigured_retirement_tests.rs"]
+mod unconfigured_retirement_tests;
 
 #[cfg(test)]
 #[path = "_tests_/startup_removal_tests.rs"]

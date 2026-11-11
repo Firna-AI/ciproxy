@@ -27,8 +27,8 @@ pub trait BillingApi: Send + Sync {
         access: BillingAccess,
         session_id: &str,
     ) -> Result<CheckoutOutcome>;
-    /// Apply an explicitly chosen paid tier and its selected quantities.
-    fn change(&self, access: BillingAccess, selection: Selection) -> Result<ChangeOutcome>;
+    /// Start or recover payment for an exact authoritative paid quote.
+    fn change(&self, access: BillingAccess, quote_id: Uuid) -> Result<ChangeOutcome>;
     /// Save quantities while keeping the Stripe tier reconciled under the billing lock.
     fn change_add_ons(&self, access: BillingAccess, add_ons: AddOns) -> Result<ChangeOutcome>;
     /// Keep paid coverage until Stripe actually ends the subscription.
@@ -42,4 +42,6 @@ pub trait BillingApi: Send + Sync {
     /// The host must poll this method and retry errors. Organization removal
     /// writes the request in the same database transaction as the removal.
     fn reconcile_removal(&self, workspace_id: Uuid) -> Result<()>;
+    /// Recover owned credit transfers and invoice checks after replies or events are lost.
+    fn reconcile_payments(&self, workspace_id: Uuid) -> Result<()>;
 }

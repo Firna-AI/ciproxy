@@ -888,9 +888,17 @@ Live KVM and authenticated job checks remain with the orchestrator.
         unconfigured guest itself, with the GitHub retirement checks and
         the running-job protection kept. Reason: the host must not depend
         on a guest that has no registration.
+        Code fix: agent-owned retirement and guest reset. Live proof stays
+        with the orchestrator after the merge. The guest reset ships in
+        the next image release.
+        Branch:
+        `conductor/fix-agent-live-defects-unconfigured-stop-xfs-first-install`.
   - [ ] Finish the first XFS area setup in one install call. A fresh host
         needed a second install after four growth passes. My call, 8
         November 2026: the install finishes the measured growth itself.
+        Code fix: continue measured growth in the same install call.
+        Branch:
+        `conductor/fix-agent-live-defects-unconfigured-stop-xfs-first-install`.
   - [ ] Run every scenario again, with the firewall proof and its reboot.
 
 Owner review of pull request #31, round 1, 6 November 2026: the user chose
@@ -1349,19 +1357,25 @@ These routes serve the other pages of the dashboard.
         Add HTTP regressions and repeat the new or changed tests ten times.
         Branch: `conductor/mvp-m18-api`.
         Evidence: `.context/ciproxy-mvp/m18/review-fix-round1/`.
-- [ ] Orchestrator: compose `PageServices` in the control plane. Mount
+- [x] Orchestrator: compose `PageServices` in the control plane. Mount
       `router_with_pages` under `/api` and `stripe_router` at the dashboard
       host root for `/hooks/stripe`. Supply the existing billing, metering,
       and overflow services and dated USD comparison price lists. Supply
       the exact Boat `RootSizing` already used by the overflow runtime.
       Poll `billing_cancellations` and call `reconcile_removal` on blocking
       workers so durable last-organization cancellations complete.
-      Branch: `calummoore/ci-proxy-load-balancer`.
-- [ ] Orchestrator: implement and inject `PaidReview` with an authoritative
+      Implementation calls, 7 November 2026: supply the verified dated
+      comparison lists as trusted configuration defaults. Run billing
+      cancellation recovery independently of GitHub maintenance.
+      Branch: `conductor/m18-composition-pages-stripe-hook-paid-review`.
+- [x] Orchestrator: implement and inject `PaidReview` with an authoritative
       Stripe invoice preview for a move between paid plans. The existing
       billing review gives the full monthly price as today's charge. The
       API keeps paid review unavailable until the preview exists.
-      Branch: `calummoore/ci-proxy-load-balancer`.
+      Implementation calls, 7 November 2026: keep `PaidReview` in billing.
+      Use the same selected items for immediate and recurring previews.
+      Read the recurring day from Stripe's anchor, not the period start.
+      Branch: `conductor/m18-composition-pages-stripe-hook-paid-review`.
 - [x] Fix the billing parser for signed Stripe events that it ignores.
       Use a typed parser and add the billing-level unit regression.
       Keep the HTTP regression for real `data.object` payloads.
@@ -1387,11 +1401,56 @@ These routes serve the other pages of the dashboard.
       the store projection and nullable values at the existing wire paths.
       Reason: preserve one complete request and the current field names.
       Evidence: `.context/ciproxy-mvp/m18/owner-fix-round1/report.md`.
-- [ ] Orchestrator: expose the overflow owner's resource-only catalog
+- [x] Orchestrator: expose the overflow owner's resource-only catalog
       accessor of review finding 6. Replace the private fit-conversion
       adapter after this workspace merges. Keep accounting and availability
       outside physical fit, and preserve the accounting-gap regression.
-      Branch: `calummoore/ci-proxy-load-balancer`.
+      Branch: `conductor/m18-composition-pages-stripe-hook-paid-review`.
+- [x] Apply owner review round 1, finding 2, option A. Return the current
+      Stripe period with the paid quote, and use it in the review response.
+      Add the real-PgStore delayed-renewal regression. Keep finding 1
+      unchanged until the user answers item 95.
+      Branch: `conductor/m18-composition-pages-stripe-hook-paid-review`.
+- [x] Apply owner review round 1, finding 1, as item 95, option B. The user
+      chose B on 8 November 2026. This is owner fix round 2.
+      Store each paid review as a workspace quote: the exact selection, the
+      amounts, the current period, and a whole-second proration time. The
+      paid change sends only the quote ID. One transaction consumes the
+      quote and saves its command under the billing lock, before Stripe.
+      Retries keep the proration time and the idempotency key, also after
+      the quote expires. Refuse an unknown, foreign, expired, or outdated
+      quote, or one whose payment ended, with HTTP 409 and
+      `review_required`. Keep add-on writes, Free Checkout, and the
+      delayed-renewal regression of finding 2.
+      Update the generated types, the billing protocol, and the READMEs.
+      Branch: `conductor/m18-composition-pages-stripe-hook-paid-review`.
+      Implementation call, 8 November 2026, the orchestrator's: a new
+      payment can use a quote for 30 minutes, and only before the quoted
+      period ends. Reason: Stripe matches its preview only with the same
+      proration time, and takes only a time inside the current period. A
+      short limit keeps that time close to the payment. Stripe sets no
+      such duration.
+      Evidence: `.context/ciproxy-mvp/m18-composition/owner-fix-round2/`.
+- [x] Apply the fix round 2 re-review, finding 3, as item 108, C with D.
+      The user chose C with D on 8 November 2026 and approved this third
+      fix round. This is owner fix round 3.
+      The payment of a move up carries the earlier pending credits and
+      charges that its stored review counted. Stripe computes the charge
+      from them, so it matches the review. Keep the stored proration time,
+      the observed period, and the quote and retry rules. Each earlier item
+      reaches the customer once, and an unpaid move returns its value for a
+      later invoice. After each paid move, compare the owned Stripe invoice
+      with the quote. Record a difference and report a safe error event for
+      the ciproxy team. A difference never refuses or rolls back the payment
+      or the new tier. Update the billing protocol and the READMEs.
+      Branch: `conductor/m18-composition-pages-stripe-hook-paid-review`.
+      Implementation calls, 8 November 2026, the orchestrator's: the
+      transfer journals keep the existing workspace retention and go with
+      its purge, with no outbox-style exception. Reason: `app-removal.md`
+      deletes workspace data after 30 days, and the user approved no new
+      retention rule. The difference event goes to the existing hosted error
+      stream, with no email or pager delivery.
+      Evidence: `.context/ciproxy-mvp/m18-composition/owner-fix-round3/`.
 - [ ] Orchestrator: run the
       [live page checks](../crates/ciproxy-api/scripts/README.md#jobs-savings-and-billing)
       after the runtime and Stripe test workspace are ready. Set
@@ -1697,8 +1756,50 @@ Depends on: 15, 19
 
 Each screen follows its mockup, as Milestone 19 says.
 
-- [ ] Build the Boat step of Setup, and Settings under Overflow, with their
+- [x] Build the Boat step of Setup, and Settings under Overflow, with their
       states.
+      Branch: `conductor/m22-boat-ui`.
+      Implementation calls, 8 November 2026: keep Skip for now in the tab,
+      for one workspace and one person. A finished first job completes
+      Setup with or without Boat. Build the connection body in one place,
+      with the account choice still open under item 94.
+      API gap: no field gives the day the spend reached the limit. The app
+      shows the reached flag and the API resume date. The mockup keeps its
+      reached-on date until the user chooses the final notice.
+      Verification evidence: `.context/ciproxy-mvp-m22/`.
+- [x] Fix review findings 2 and 3: share pending Boat changes in the store,
+      build policy writes from intended edits and current settings, and
+      keep Disconnect available after key rejection. Update the mockup
+      before the app, and add the regression cases.
+      Branch: `conductor/m22-boat-ui`.
+- [x] Apply the user's answer C to item 109, 8 November 2026, for review
+      finding 1: the spend limit notice names the budget month and the day
+      Boat resumes, as the Jobs page does, from data that the API has. Update
+      the approved Overflow mockup first, then the notice. Run their browser
+      checks at 1440, 720, and 390 pixels. This answer settles the API gap
+      that the first TODO records: the notice needs no day on which the
+      spend reached the limit.
+      Branch: `conductor/m22-boat-ui`.
+- [x] Apply the owner's answer B to item 94, 8 November 2026: after the key
+      check, list each wallet the key can use, with the likely one selected.
+      Let the customer change it before saving. Each Boat organization has
+      its own wallet. Add the mockups first. Use one choice component in
+      Setup and Settings, and use the generated key-check types after the
+      API workspace merges. That workspace owns the protocol update.
+      Branch: `conductor/m22-boat-ui`.
+- [x] Apply the owner's review round 1 at `09dad16`: finding 1 B uses one
+      saved-value and draft helper in both limit forms. Finding 2 A adds
+      privacy checks to one browser connection journey. Finding 3 A uses
+      the generated connection request with a required wallet and removes
+      its handwritten copy and converter. Prove the budget and masking
+      regressions fail before the fixes. The user approved B/A/A on
+      8 November 2026.
+      Branch: `conductor/m22-boat-ui`.
+- [ ] Orchestrator: run `node ts/app/scripts/boat-live-smoke.ts` against the
+      preview API. Set `CIPROXY_BOAT_CREDENTIALS_FILE` to the path of a private
+      Admin credential file outside the repository. The script reads the
+      session and Overflow settings. It changes no key, policy, or job.
+      Branch: `conductor/m22-boat-ui`.
 
 ## Milestone 23: Site: marketing pages and the docs look
 

@@ -8,6 +8,7 @@ import {
   type BrowserContext,
   type Page,
 } from "./browser-driver.ts";
+import { boatExpectedStatus } from "./browser-boat.ts";
 import { viewportControls } from "./browser-fixture.ts";
 import { createSmokeRegistry, selectSmokeRuns } from "./browser-registry.ts";
 import { fixtureTime } from "./fixtures-core.ts";
@@ -79,11 +80,13 @@ async function run(
                 "session-refresh-workspace",
                 "claim-failure-no-role",
                 "claim-failure-workspace",
+                "boat-setup-load-failure",
+                "overflow-load-failure",
               ].includes(name)
             ? 503
             : name === "claim-failure-csrf"
               ? 403
-              : null;
+              : (boatExpectedStatus.get(name) ?? null);
       if (
         message.type() === "error" &&
         !(

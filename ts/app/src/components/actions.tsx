@@ -8,7 +8,14 @@
 // between words, and inside a word that is wider than the control. A control
 // is never wider than its row, and a short one keeps its width in a row.
 
-import { useMemo, useState, type CSSProperties, type MouseEvent } from "react";
+import {
+  useMemo,
+  useState,
+  type CSSProperties,
+  type MouseEvent,
+  type Ref,
+} from "react";
+import type { View } from "react-native";
 import type { IconComponent } from "@firna/ui";
 import { Button, buttonIconSize, createButtonStyles } from "@firna/ui/button";
 import { useFocusRing } from "@firna/ui/focusRing";
@@ -66,11 +73,15 @@ export function ActionButton({
   block,
   busy,
   disabled,
+  buttonRef,
   onPress,
 }: Omit<Common, "tone"> & {
+  /** A button can also end something, such as Disconnect. */
   tone?: Tone | "danger";
   busy?: boolean;
   disabled?: boolean;
+  /** A handle for focus, such as the safe action that a dialog opens on. */
+  buttonRef?: Ref<View>;
   onPress: () => void;
 }) {
   const theme = useSharedUiTheme();
@@ -88,6 +99,7 @@ export function ActionButton({
       busy={busy}
       disabled={disabled}
       onPress={disabled ? undefined : onPress}
+      buttonRef={buttonRef}
       style={box}
       labelStyle={wrappingLabel}
     >

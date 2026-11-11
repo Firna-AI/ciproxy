@@ -124,6 +124,7 @@ It mounts an unmounted owned area and repairs missing executable files.
 It preserves a mounted area and never restarts that mount for repair.
 It does not resize or format a published area.
 Fresh Creating areas finish measured growth before they become Ready.
+The same install call completes each measured growth pass.
 A durable old/target length pair permits interrupted growth to resume.
 An interrupted first format can resume only in the unpublished Creating
 phase. A matching XFS UUID completes that phase without a second format.

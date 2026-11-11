@@ -26,8 +26,12 @@ Start the listener with the JIT environment value and `--once`.
 Report `RunnerReady` after its `Listening for Jobs` message.
 Report `RunnerExited` with its actual process exit code.
 An exit without a process code uses `null`.
-Power off the own-machine VM after normal or failed execution.
-The image's systemd unit also powers off after initialization fails.
+End the own-machine VM after normal or failed execution.
+Use a guest reboot with the agent's `reboot=k` boot setting.
+Firecracker ends its x86 process on that reset instead of booting again.
+Guest `poweroff` leaves that process alive because x86 Firecracker has no
+ACPI power control. See the [Firecracker shutdown contract][shutdown].
+The image's systemd unit also requests shutdown after initialization fails.
 
 Handle `Shutdown` while the runner waits.
 A second configuration starts no second runner, because each guest runs one
@@ -130,6 +134,8 @@ Live vsock, Docker, GitHub, and Boat checks need external infrastructure.
   preparation across a vsock reconnect.
 - [src/handoff.rs](src/handoff.rs) prepares the in-memory proxy.
 - [src/process.rs](src/process.rs) drains the listener and controls its group.
+- [src/power.rs](src/power.rs) requests the Firecracker reset or leaves Boat
+  shutdown to its wrapper.
 - [src/cli.rs](src/cli.rs) composes the selected Linux runtime.
 - [src/_tests_/service_tests.rs](src/_tests_/service_tests.rs) protects the
   lifecycle requirements.
@@ -143,3 +149,5 @@ Live vsock, Docker, GitHub, and Boat checks need external infrastructure.
 - [Agent protocol](../../docs/protocol/agent.md) defines job VMs and images.
 - [Overflow protocol](../../docs/protocol/overflow.md) defines sandbox cleanup.
 - [Architecture](../../docs/architecture.md) defines the open-source boundary.
+
+[shutdown]: https://github.com/firecracker-microvm/firecracker/blob/v1.17.0/FAQ.md#how-can-i-gracefully-reboot-the-guest-how-can-i-gracefully-poweroff-the-guest

@@ -1,9 +1,10 @@
 // The tabs of Settings and their addresses. Settings keeps one static page,
 // so the query names the tab, and the repository access of one organization
-// adds the organization ID. The Members tab counts the open requests for
-// access, because ciproxy sends no email.
+// adds the organization ID. Overflow has a page of its own, so its tab opens
+// that page. The Members tab counts the open requests for access, because
+// ciproxy sends no email.
 
-import { idParam, workspaceHref } from "../routing/pages.ts";
+import { idParam, overflowHref, workspaceHref } from "../routing/pages.ts";
 
 export const settingsTabs = [
   "labels",
@@ -83,7 +84,10 @@ export function tabItems(
     return {
       tab,
       label,
-      href: settingsHref(workspaceId, tab),
+      href:
+        tab === "overflow"
+          ? overflowHref(workspaceId)
+          : settingsHref(workspaceId, tab),
       active: tab === active,
       count,
       accessibilityLabel:

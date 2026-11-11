@@ -42,6 +42,7 @@ async fn http_upgrade_denials_retry_without_changing_identity_or_vms() {
         Ok(removal_socket),
     ]);
     let initial = MachineState {
+        registration_claims: Default::default(),
         failed_starts: Default::default(),
         pending_networks: Default::default(),
         docker_budget: None,
@@ -60,6 +61,9 @@ async fn http_upgrade_denials_retry_without_changing_identity_or_vms() {
             VmsMock::request_stop
                 .each_call(matching!(_))
                 .answers(&|_, _| Ok(())),
+            VmsMock::configuration_lost
+                .each_call(matching!(_))
+                .answers(&|_, _| Ok(false)),
         )),
     ));
     let delay = Arc::new(Unimock::new((

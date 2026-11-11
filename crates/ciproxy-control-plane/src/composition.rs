@@ -6,6 +6,9 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use axum::Router;
+use ciproxy_agent::root_sizing::RootSizing;
+use ciproxy_api::pages::PageServices;
+use ciproxy_api::state::ApiState;
 use ciproxy_gateway::boundary::{AgentEvents, Authorization, SystemClock, SystemEntropy};
 use ciproxy_gateway::connections::{Connections, LocalConnections};
 use ciproxy_gateway::gateway::{Gateway, MachineGateway};
@@ -25,7 +28,7 @@ use ciproxy_github::rest::http::RestClient;
 use ciproxy_github::runtime::{Runtime, SystemRuntime};
 use ciproxy_github::scale_sets::{ScaleSetFactory, sdk::AppScaleSetFactory};
 use ciproxy_github::timing::RepairTiming;
-use ciproxy_metering::service::StoredMetering;
+use ciproxy_metering::service::{Metering, StoredMetering};
 use ciproxy_overflow::api::Overflow;
 use ciproxy_protocol::agent::AgentMessage;
 use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
@@ -45,6 +48,10 @@ use crate::runtime::{MachineRuntime, OwnMachines};
 pub struct Hosted {
     /// Shared Boat executor for runtime, callback, and dashboard routes.
     pub overflow: Option<Arc<dyn Overflow>>,
+    /// The exact image sizing passed into the shared overflow executor.
+    pub boat_root_sizing: Option<RootSizing>,
+    /// Shared store-backed metering for accounting and dashboard reports.
+    pub metering: Arc<dyn Metering>,
     /// Gateway used by the dashboard and its WebSocket transport.
     pub gateway: Arc<dyn MachineGateway>,
     /// App used by dashboard setup and repository changes.
@@ -144,6 +151,7 @@ impl Hosted {
             config.cdn_signing_key_name.clone(),
             config.secret("cdn-signing-key")?.expose_secret(),
         )?));
+        let metering: Arc<dyn Metering> = Arc::new(StoredMetering::new(store.clone()));
         let accounting = Arc::new(AccountingWorker::new(
             store.clone(),
             Arc::new(RepairTiming::new(
@@ -151,7 +159,7 @@ impl Hosted {
                 rest.clone(),
                 clock.clone(),
             )),
-            Arc::new(StoredMetering::new(store.clone())),
+            metering.clone(),
             clock,
         ));
         let machines: Arc<dyn OwnMachines> = Arc::new(machine_runtime);
@@ -183,7 +191,9 @@ impl Hosted {
             app: app.clone(),
         });
         Ok(Self {
+            boat_root_sizing: overflow.as_ref().map(|overflow| overflow.root_sizing),
             overflow: overflow.map(|overflow| overflow.service),
+            metering,
             accounting,
             repositories,
             gateway,
@@ -208,10 +218,11 @@ impl Hosted {
     }
 
     /// Mount the dashboard service under /api on the same public host.
-    pub fn router(&self, api: Router) -> Router {
-        let router = crate::http::router(
+    pub fn router(&self, state: ApiState, pages: Arc<PageServices>) -> Router {
+        let router = crate::http::dashboard_router(
             self.transport.router(),
-            api,
+            state,
+            pages,
             self.hooks.clone(),
             self.ready.clone(),
         );

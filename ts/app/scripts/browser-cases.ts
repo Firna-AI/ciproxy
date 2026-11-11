@@ -1,5 +1,6 @@
 import { workspaceId } from "./fixtures-core.ts";
 import type { ScenarioName } from "./harness-scenarios.ts";
+import { boatCases } from "./browser-boat-cases.ts";
 import { reviewCases } from "./browser-review-cases.ts";
 
 export type SmokeCase = {
@@ -17,6 +18,7 @@ const add = "/add-organization";
 
 export const smokeCases: readonly SmokeCase[] = [
   ...reviewCases,
+  ...boatCases,
   {
     name: "sign-in",
     scenario: "signed-out",

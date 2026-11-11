@@ -2,15 +2,15 @@
 // their repository access and the name of the workspace, and the members
 // with their roles. The query names the tab. Every tab reads the settings of
 // the workspace, so the Members tab counts the open requests on each tab.
-// Overflow comes in a later release, so its tab says so and shows no data.
+// Overflow has a page of its own, so its tab address opens that page.
 
 import { useEffect } from "react";
 import { useLocalSearchParams } from "expo-router";
 
-import { InfoIcon } from "../../components/icons.tsx";
-import { PageHeader, StateBlock } from "../../components/page-state.tsx";
+import { PageHeader } from "../../components/page-state.tsx";
+import { overflowHref } from "../../routing/pages.ts";
 import { useServices } from "../../services/context.tsx";
-import { useValue } from "../../services/hooks.ts";
+import { useRedirect, useValue } from "../../services/hooks.ts";
 import { settingsServices } from "../../state/settings-services.ts";
 import { settingsRoute, type SettingsRoute } from "../../view/settings-tabs.ts";
 import {
@@ -24,12 +24,10 @@ import { OrganizationsTab } from "./organizations-tab.tsx";
 import { RepositoriesPage } from "./repositories-page.tsx";
 import { SettingsTabs } from "./settings-tabs.tsx";
 
-function OverflowTab() {
-  return (
-    <StateBlock icon={InfoIcon} title="This tab is coming soon">
-      ciproxy keeps running your jobs in the meantime.
-    </StateBlock>
-  );
+/** The address of the Overflow tab opens the Overflow page in its place. */
+function OverflowTab({ workspaceId }: { workspaceId: string }) {
+  useRedirect(overflowHref(workspaceId));
+  return null;
 }
 
 function TabBody({
@@ -51,7 +49,7 @@ function TabBody({
     case "labels":
       return <LabelsTab context={context} />;
     case "overflow":
-      return <OverflowTab />;
+      return <OverflowTab workspaceId={context.workspace.id} />;
     case "organizations":
       return <OrganizationsTab context={context} />;
     case "members":

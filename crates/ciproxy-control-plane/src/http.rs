@@ -8,8 +8,22 @@ use axum::body::Bytes;
 use axum::extract::{DefaultBodyLimit, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::routing::{get, post};
+use ciproxy_api::pages::{PageServices, router_with_pages, stripe_router};
+use ciproxy_api::state::ApiState;
 use ciproxy_github::error::Error;
 use ciproxy_github::hooks::WebhookHandler;
+
+/// Mount every dashboard page and its raw Stripe hook on the shared host.
+pub fn dashboard_router(
+    agent: Router,
+    state: ApiState,
+    pages: Arc<PageServices>,
+    hooks: Arc<dyn WebhookHandler>,
+    ready: Arc<AtomicBool>,
+) -> Router {
+    let stripe = stripe_router(state.clone(), pages.billing.clone());
+    router(agent, router_with_pages(state, pages), hooks, ready).merge(stripe)
+}
 
 /// Mount an API router beside the agent transport and GitHub webhooks.
 pub fn router(

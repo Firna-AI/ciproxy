@@ -206,7 +206,24 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
 - `src/components/dialog.tsx`: the dialog over a page, a sheet on mobile, such
   as Edit label, Clear cache, and Move to Free.
 - `src/components/boat-fields.tsx`: the Boat key and the monthly spend limit,
-  which every connection of Boat asks for, in setup and in Settings.
+  which every connection of Boat asks for, in setup and in Settings. A typed
+  key shows masked. `src/fixtures/boat-form.ts` holds what the person typed:
+  a key that is not real, and a limit that did not save. Each connection
+  checks the key first with Check key. The wallet choice then shows between
+  the key and the limit, and Connect Boat connects.
+- `src/components/boat-wallets.tsx`: the wallet choice of a connection. It
+  lists the personal wallet and each Boat organization wallet that the key
+  can use, with the likely wallet picked. The person can pick another wallet
+  before Connect Boat. `src/fixtures/boat-wallets.ts` holds the wallets that
+  the key of Cal Moore can use.
+- `src/components/boat-spend.tsx`: the Boat spend of the month against the
+  monthly limit, on Settings under Overflow and on the Machines page. As the
+  [overflow doc](../protocol/overflow.md#spend-limit) asks, it shows the costs
+  that Boat confirmed and the costs that it has not confirmed yet apart.
+  `src/fixtures/boat-spend.ts` splits a total of November into these two
+  parts. Each total comes from `machines.ts`: the spend of the month, or the
+  limit when the spend reaches it. The unconfirmed part holds each start that
+  Boat has not reported, at its highest cost, also after its lifetime ends.
 - `src/fixtures/sizes.ts`: the size of a label as text, the size of the
   default label, the least free disk of a label, and the sizes that the Boat
   account can start, with their whole disks, which decide where the jobs of a

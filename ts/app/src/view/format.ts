@@ -20,8 +20,22 @@ export function formatDeadline(iso: string, timeZone?: string): string {
   }).format(new Date(iso));
 }
 
-/** "1 September": a day in the time zone of the browser. */
+/** "12 November": the day of an instant, kept on one line. */
 export function formatDay(iso: string, timeZone?: string): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "long",
+    timeZone,
+  })
+    .format(new Date(iso))
+    .replace(" ", "\u00a0");
+}
+
+/**
+ * "1 September": a day in the time zone of the browser, with an ordinary
+ * space, as the Members and Organizations tabs of Settings show it.
+ */
+export function formatPlainDay(iso: string, timeZone?: string): string {
   return new Intl.DateTimeFormat("en-GB", {
     day: "numeric",
     month: "long",

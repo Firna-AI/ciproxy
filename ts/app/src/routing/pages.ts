@@ -38,6 +38,11 @@ export function workspaceHref(
   return `/${page}?workspace=${encodeURIComponent(workspaceId)}`;
 }
 
+/** Settings under Overflow: a Settings page with its own static path. */
+export function overflowHref(workspaceId: string): string {
+  return `/settings/overflow?workspace=${encodeURIComponent(workspaceId)}`;
+}
+
 /** The landing of one workspace, which picks Setup or Jobs for it. */
 export function workspaceHomeHref(workspaceId: string): string {
   return `${pages.home}?workspace=${encodeURIComponent(workspaceId)}`;

@@ -44,7 +44,11 @@ async fn m18_viewer_reads_pages_but_cannot_pay_or_cross_workspace_authority() {
             "/checkout/return",
             Some(json!({"session_id":"cs_m18"})),
         ),
-        ("POST", "/billing/change", Some(selection)),
+        (
+            "POST",
+            "/billing/change",
+            Some(json!({"quote_id":Uuid::nil()})),
+        ),
         (
             "PUT",
             "/billing/add-ons",

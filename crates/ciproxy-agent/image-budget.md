@@ -99,6 +99,8 @@ The agent also keeps conservative filesystem support headroom:
 Both additions remain in the host reserve.
 They increase filesystem headroom, not VM disk reservations.
 The agent grows only this unpublished area and measures it again.
+One install call repeats measured growth until the area holds that space.
+It keeps the same backing inode, XFS UUID, and image budget through growth.
 It publishes Ready only after all job bytes, image budget, and metadata
 headroom remain available. Later install preserves that backing length.
 No quota, quota mount option, or quota tool is required.

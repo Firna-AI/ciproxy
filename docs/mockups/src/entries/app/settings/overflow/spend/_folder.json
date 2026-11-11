@@ -1,0 +1,9 @@
+{
+  "title": "Spend",
+  "order": [
+    "limit-reached",
+    "unknown-costs",
+    "spend-unavailable",
+    "save-failed"
+  ]
+}

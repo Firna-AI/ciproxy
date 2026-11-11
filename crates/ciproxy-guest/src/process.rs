@@ -17,7 +17,7 @@ use crate::assignment::{Assignments, Inbox, SocketAssignments};
 use crate::guest_setup::{GuestSetup, PreloadedDocker};
 use crate::runner_assignment::{AssignedJob, WaitingJob};
 
-use crate::boundary::{EventFuture, Power, Runner, RunnerEvent};
+use crate::boundary::{EventFuture, Runner, RunnerEvent};
 use crate::error::{Error, ErrorOptionExt, ErrorResultExt, Result};
 
 pub(crate) struct LinuxRunner {
@@ -168,31 +168,5 @@ impl Runner for LinuxRunner {
             return Err(Error::PoweroffFailed);
         }
         assigned.decide(decision).await
-    }
-}
-
-pub(crate) struct LinuxPower;
-
-#[async_trait]
-impl Power for LinuxPower {
-    async fn shutdown(&mut self) -> Result<()> {
-        let status = Command::new("/sbin/poweroff")
-            .status()
-            .await
-            .context("power off job VM")?;
-        if status.success() {
-            Ok(())
-        } else {
-            Err(Error::PoweroffFailed)
-        }
-    }
-}
-
-pub(crate) struct NamespacePower;
-
-#[async_trait]
-impl Power for NamespacePower {
-    async fn shutdown(&mut self) -> Result<()> {
-        Ok(())
     }
 }

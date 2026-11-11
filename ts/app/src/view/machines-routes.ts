@@ -2,7 +2,7 @@
 // Add a machine. The query names the workspace and, by its opaque ID, the
 // machine, so the static hosting serves a reload of each page.
 
-import { idParam, workspaceHref } from "../routing/pages.ts";
+import { idParam, overflowHref, workspaceHref } from "../routing/pages.ts";
 
 export type MachinesRoute =
   { kind: "list" } | { kind: "add" } | { kind: "machine"; machineId: string };
@@ -28,9 +28,9 @@ export function addMachineHref(workspaceId: string): string {
   return `${machinesHref(workspaceId)}&view=add`;
 }
 
-/** The Overflow tab of Settings, a page that Settings owns. */
+/** Settings under Overflow, a page that Settings owns. */
 export function overflowSettingsHref(workspaceId: string): string {
-  return `${workspaceHref("settings", workspaceId)}&tab=overflow`;
+  return overflowHref(workspaceId);
 }
 
 export function jobHistoryHref(workspaceId: string): string {
