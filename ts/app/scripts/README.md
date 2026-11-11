@@ -31,7 +31,8 @@ node ts/app/scripts/harness-server.ts --port=4340
     recorded requests and counters, unless `reset` is `false`.
   - `pages` changes the Jobs, Savings, and billing responses of the current
     scenario, such as the role, a failed or held route, or the next payment
-    outcome.
+    outcome. With `reviewRequired`, each paid change gets
+    `409 review_required`, as for a quote that the harness did not give.
   - `build` sets the API build that the responses name, for the reload after
     a new build.
   - An invalid body gets status 400 and changes nothing.
@@ -64,7 +65,8 @@ banner. It also covers each page while it loads, and Viewer and Billing views
 of Jobs, Savings, and the billing pages. Its journeys follow the History
 filters to a job and back, change the Savings range, recover a failed read,
 and take an offer through review, payment, and return. Other journeys cover a
-paid change with a bank confirmation, and a return that names its workspace.
+paid change with a bank confirmation, a refused quote that needs a new review
+and a new click, and a return that names its workspace.
 A Viewer case checks that a saved Stripe address gives a Viewer no payment
 action.
 
@@ -177,7 +179,9 @@ The page check also reads three optional fields of the credential file:
 - `runtime_redirects`: the exact `success_url`, `cancel_url`, and optional
   `portal_return_url` of the billing runtime. Checkout needs it. The success
   URL must open `/checkout-return` on `base_url` with
-  `session_id={CHECKOUT_SESSION_ID}`.
+  `session_id={CHECKOUT_SESSION_ID}`. A `workspace` in it must be
+  `{WORKSPACE_ID}`, which the runtime fills, or the `workspace_id` of the
+  file.
 
 The Stripe address and the session ID go only to the result file, which the
 check writes for its owner alone. Never copy them into a log or a message.

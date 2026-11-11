@@ -13,6 +13,7 @@ const docs = {
   labels: "docs/protocol/labels.md",
   metering: "docs/protocol/metering.md",
   overflow: "docs/protocol/overflow.md",
+  paidMoves: "docs/protocol/billing-paid-moves.md",
   security: "docs/protocol/security.md",
   workspaces: "docs/protocol/workspaces.md",
 } as const;

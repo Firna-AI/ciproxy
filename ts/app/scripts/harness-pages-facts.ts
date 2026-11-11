@@ -3,6 +3,7 @@ import type { components } from "../../api/index.ts";
 export type CapturedBody =
   | null
   | components["schemas"]["PlanSelection"]
+  | components["schemas"]["PaidChangePayment"]
   | components["schemas"]["PlanAddOns"]
   | components["schemas"]["CheckoutReturn"]
   | { invalid: true };

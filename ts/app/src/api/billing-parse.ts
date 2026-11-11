@@ -14,6 +14,7 @@ import type {
 import { readBannerField } from "./banner-reader.ts";
 import {
   readAddOns,
+  readPaidQuote,
   readPaymentOutcome,
   readPlanOffer,
   readPlanStatus,
@@ -89,6 +90,7 @@ export const parseCheckoutReview = parser((value): CheckoutReviewPage => {
     today_cents: decimal(fields.today_cents),
     billing_day: integer(fields.billing_day),
     prorated: boolean(fields.prorated),
+    quote: readPaidQuote(fields.quote),
     period_end: time(fields.period_end),
     banner: readBannerField(fields.banner),
   };

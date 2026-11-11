@@ -93,14 +93,14 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   reason of a Boat refusal, no total of the day, no tier name, no routing
   reason, no fit of a Boat size, and no resource that is short for a label
   that nothing fits. In Savings, it names no tier and no machine count. In
-  billing, it names no unit prices of the add-ons, no receipt address, and
-  no workspace in a Stripe return. Its `pending` folder shows
-  Continue payment for a payment whose Stripe page the tab saved. Its
-  `checkout` folder shows a paid review, an unavailable price, and a refused
-  review that asks the person to review the change again. Its `payment-gate`
-  folder shows why a payment cannot start, and `unknown-results` shows a
-  payment or a Move to Free whose result the page did not get. A payment
-  that waits on its Stripe page names that page, not a bank.
+  billing, it names no unit prices of the add-ons and no receipt address.
+  Its `pending` folder shows Continue payment for a payment whose Stripe
+  page the tab saved. Its `checkout` folder shows a paid review, an
+  unavailable price, and a refused review that asks the person to review
+  the change again. Its `payment-gate` folder shows why a payment cannot
+  start, and `unknown-results` shows a payment or a Move to Free whose
+  result the page did not get. A payment that waits on its Stripe page
+  names that page, not a bank.
 - The Jobs folders `wait-facts`, `queue-facts`, `place-facts`, `fit-facts`,
   and `job-states` and the Savings folder `report-states` show the states
   that come from facts of the API, such as an unknown fit, a job that no

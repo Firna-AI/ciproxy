@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import type { components } from "../../api/index.ts";
 import { fixtureTime, workspaceId } from "./fixtures-core.ts";
 import { planOffer, planTiers } from "./fixtures-billing.ts";
@@ -43,6 +45,14 @@ export function parseSelection(
     : { tier, add_ons: addOns };
 }
 
+export function parsePaidChange(
+  value: unknown,
+): components["schemas"]["PaidChangePayment"] | undefined {
+  return object(value) && typeof value.quote_id === "string"
+    ? { quote_id: value.quote_id }
+    : undefined;
+}
+
 export function reviewSelection(
   query: URLSearchParams,
   suggested: components["schemas"]["PlanSelection"],
@@ -80,6 +90,17 @@ export function checkoutReview(
   );
   const difference =
     BigInt(choice.monthly_cents) - BigInt(usage.current.monthly_cents);
+  const quote: components["schemas"]["PaidQuoteReference"] | null = prorated
+    ? {
+        id: randomUUID(),
+        expires_at: new Date(
+          Math.min(
+            Date.parse(fixtureTime) + 30 * 60 * 1000,
+            Date.parse(usage.status.period_end),
+          ),
+        ).toISOString(),
+      }
+    : null;
   return {
     choice,
     billing_day: prorated
@@ -87,6 +108,7 @@ export function checkoutReview(
       : 6,
     period_end: usage.status.period_end,
     prorated,
+    quote,
     today_cents: prorated
       ? difference <= 0n
         ? "0"

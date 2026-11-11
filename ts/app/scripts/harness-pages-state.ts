@@ -71,6 +71,8 @@ export type PagesFixtureState = {
   payment: PaymentState;
   returned: PaymentState;
   target: components["schemas"]["PlanSelection"];
+  quotes: Map<string, components["schemas"]["CheckoutReviewPage"]>;
+  reviewRequired: boolean;
   inactiveOrganizations: boolean;
   failures: PageRoute[];
   held: PageRoute[];
@@ -88,6 +90,8 @@ export function createPagesFixture(): PagesFixtureState {
     payment: "open",
     returned: "confirming",
     target: baseSelection("team"),
+    quotes: new Map(),
+    reviewRequired: false,
     inactiveOrganizations: false,
     failures: [],
     held: [],

@@ -3,14 +3,16 @@
 // read again after its outcome, so no second payment can start from the
 // state before the first one. A new submission also waits until the server
 // confirms no other payment. Retry sends the same submission again, which
-// continues or checks the same payment, because the server reuses a payment
-// for the same choice. Only the server's outcome changes the page: an open
-// payment leaves for Stripe, and every other outcome reads the workspace
-// again.
+// keeps the original quote of a paid change and its payment. Only the
+// server's outcome changes the page: an open payment leaves for Stripe,
+// and every other outcome reads the workspace again.
 
 import type { ApiFailure, ApiResult } from "../api/client.ts";
 import type { PaymentOutcome } from "../api/billing-types.ts";
-import type { PaymentSubmission } from "../api/billing-payment.ts";
+import {
+  isReviewRequired,
+  type PaymentSubmission,
+} from "../api/billing-payment.ts";
 import { createStore, type Store } from "./store.ts";
 
 export type PaymentSnapshot =
@@ -89,7 +91,12 @@ export function createPaymentStore(options: {
           failure: result.failure,
           reading: true,
         };
-    state.set(after);
+    // Recovery from a refused quote needs the billing facts after the refusal.
+    const reviewRefused =
+      submission.kind === "plan" &&
+      !result.ok &&
+      isReviewRequired(result.failure);
+    if (!reviewRefused) state.set(after);
     try {
       await settled();
     } finally {

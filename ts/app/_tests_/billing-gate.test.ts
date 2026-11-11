@@ -40,6 +40,7 @@ function summaryOf(app: AppServices, store: ReviewStore): SummaryState {
     gate: paymentGate(app, workspaceId),
     usage: usage.status === "ready" ? usage.page : null,
     workspace: "mokly-ai",
+    payment: { status: "idle" },
   });
 }
 

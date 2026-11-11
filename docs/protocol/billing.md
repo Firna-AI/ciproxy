@@ -105,6 +105,10 @@ against a tier.
 - The customer then pays on Stripe Checkout.
 - ciproxy changes the tier only when Stripe confirms the payment.
 - Checkout takes cards only.
+- Stripe Checkout returns the customer to the return page with the
+  workspace and the exact Checkout session of the payment.
+- Reason: the return then works also in a browser that did not start the
+  payment.
 - The return page waits a few seconds for the confirmation.
 - When Stripe still confirms the payment after that wait, the return page
   says so and updates by itself.

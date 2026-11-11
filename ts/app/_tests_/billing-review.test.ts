@@ -7,20 +7,26 @@ import type {
   PaymentOutcome,
   PlanSelection,
 } from "../src/api/billing-types.ts";
-import { submitPayment } from "../src/api/billing-payment.ts";
+import { planSubmission, submitPayment } from "../src/api/billing-payment.ts";
 import { createReview } from "../src/state/billing-flows.ts";
 import {
   createReviewStore,
   reviewedChoice,
 } from "../src/state/billing-review.ts";
+import { paymentGate, usageStore } from "../src/state/billing.ts";
 import { reviewModel } from "../src/view/billing-checkout.ts";
+import { checkoutSummary } from "../src/view/billing-checkout-summary.ts";
 import { workspaceId } from "../scripts/fixtures-core.ts";
 import {
   offer,
+  paidQuote,
+  paidReview,
   review,
   selection,
+  signedInWith,
   teamOffer,
   unavailable,
+  usagePage,
 } from "./billing-support.ts";
 import { appWith, deferred, response, settled } from "./support.ts";
 
@@ -86,7 +92,7 @@ test("each submission sends the reviewed or quoted choice to its route", async (
     response(confirmed),
     response(confirmed),
   );
-  const prorated = review(oneBlock, { prorated: true });
+  const prorated = paidReview(oneBlock);
   await submitPayment(app.api, workspaceId, {
     kind: "plan",
     review: review(oneBlock),
@@ -103,21 +109,69 @@ test("each submission sends the reviewed or quoted choice to its route", async (
   ]);
   assert.deepEqual(sent, [
     ["POST", "/checkout", selection("team", 1)],
-    ["POST", "/billing/change", selection("team", 1)],
+    ["POST", "/billing/change", { quote_id: paidQuote.id }],
     ["PUT", "/billing/add-ons", { start_blocks: 1, machines: 0 }],
   ]);
+});
+
+test("a review keeps its stored paid quote and normalizes an absent quote", async () => {
+  const unpriced = {
+    kind: "blocked",
+    title: "Unable to price this change",
+    body: "The price of this choice did not load. Try again.",
+    action: { kind: "retry-review", label: "Try again" },
+  };
+  const quotes = [
+    { quote: paidQuote, expected: { kind: "ready" } },
+    { quote: null, expected: unpriced },
+    { quote: undefined, expected: unpriced },
+  ];
+  for (const { quote, expected } of quotes) {
+    const { app } = await signedInWith(
+      "admin",
+      response(usagePage()),
+      response({ ...paidReview(), quote }),
+    );
+    const usage = usageStore(app, workspaceId);
+    await usage.load();
+    const store = createReview(app, workspaceId, selection("team"));
+    await store.ensure();
+    assert.equal(store.state.get().review.status, "ready");
+    assert.deepEqual(reviewedChoice(store.state.get())?.quote, quote ?? null);
+    const current = usage.state.get();
+    const summary = checkoutSummary({
+      review: store.state.get(),
+      gate: paymentGate(app, workspaceId),
+      usage: current.status === "ready" ? current.page : null,
+      payment: { status: "idle" },
+      workspace: "mokly-ai",
+    });
+    assert.deepEqual(
+      summary.kind === "ready" ? { kind: summary.kind } : summary,
+      expected,
+    );
+  }
+  const { app } = appWith(response({ ...review(), quote: undefined }));
+  const store = createReview(app, workspaceId, selection("team"));
+  await store.ensure();
+  assert.equal(reviewedChoice(store.state.get())?.quote, null);
+});
+
+test("a paid review without its quote cannot build a payment", () => {
+  for (const quote of [null, undefined]) {
+    assert.equal(planSubmission({ ...paidReview(), quote }), null);
+  }
 });
 
 test("a paid review shows today's charge apart from the monthly total, with the day of later charges", () => {
   // Business with 2 blocks of starts and 1 extra own machine. The API gives
   // a prorated charge for today that differs from the monthly total, and a
   // period that ends at midnight on the billing day.
-  const paid = review(
+  const paid = paidReview(
     offer(selection("business", 2, 1), "33900", "170000", "11"),
     {
       today_cents: "21037",
       billing_day: 17,
-      prorated: true,
       period_end: "2026-12-17T00:00:00Z",
     },
   );

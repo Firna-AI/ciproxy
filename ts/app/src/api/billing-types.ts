@@ -1,7 +1,7 @@
 // The generated billing and banner contract. Rust owns every type here; each
-// alias names one generated schema and adds nothing.
+// alias names one generated contract type and adds nothing.
 
-import type { components } from "../../../api/index.ts";
+import type { components, operations } from "../../../api/index.ts";
 
 type Schemas = components["schemas"];
 
@@ -13,6 +13,9 @@ export type CheckoutReviewPage = Schemas["CheckoutReviewPage"];
 export type InactiveOrganization = Schemas["InactiveOrganization"];
 export type PageBanner = Schemas["PageBanner"];
 export type PageBannerView = Schemas["PageBannerView"];
+export type PaidChangePayment =
+  operations["billing_change"]["requestBody"]["content"]["application/json"];
+export type PaidQuoteReference = Schemas["PaidQuoteReference"];
 export type PaymentOutcome = Schemas["PaymentOutcome"];
 export type PlanAddOns = Schemas["PlanAddOns"];
 export type PlanCard = Schemas["PlanCard"];

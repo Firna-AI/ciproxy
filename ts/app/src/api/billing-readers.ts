@@ -4,6 +4,7 @@
 // says, so a page reader rejects the whole response.
 
 import type {
+  PaidQuoteReference,
   PaymentOutcome,
   PlanAddOns,
   PlanOffer,
@@ -36,6 +37,13 @@ const readSubscription = oneOf<SubscriptionStatus>({
   payment_failed: true,
   ended: true,
 });
+
+export function readPaidQuote(value: unknown): PaidQuoteReference | null {
+  return optional(value, (value) => {
+    const fields = object(value, "paid quote");
+    return { id: string(fields.id), expires_at: time(fields.expires_at) };
+  });
+}
 
 export function readAddOns(value: unknown): PlanAddOns {
   const fields = object(value, "add-ons");

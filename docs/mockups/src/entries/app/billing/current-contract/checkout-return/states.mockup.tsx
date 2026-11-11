@@ -46,7 +46,7 @@ export const noWorkspace = defineScreen({
   slug: "no-workspace",
   title: "A return that names no workspace",
   description:
-    "Stripe returns to one address for every workspace. This tab saved no workspace before it left for Stripe, for example because the payment started in another browser. The page says so in place of a guess. Stripe also tells ciproxy about the payment, so the plan changes once Stripe confirms it.",
+    "Stripe returns to an address that names the workspace of the payment. A return without it, such as one from an older address, uses the workspace that this tab saved before it left for Stripe. Here the return names no workspace, and this tab saved none, for example because the payment started in another browser. The page says so in place of a guess. Stripe also tells ciproxy about the payment, so the plan changes once Stripe confirms it.",
   rationale:
     "The page never guesses the workspace of a payment from the last workspace that the person opened.",
   relatedDocs: related("billing", "security"),

@@ -1,9 +1,8 @@
-// The workspace of the Stripe page that this tab opened. Stripe returns to one
-// URL for all workspaces, so before a tab leaves for Stripe Checkout or the
-// billing portal, it saves the exact workspace of that page in its own tab
-// storage. A Stripe return without a workspace reads it from there. Normal
-// navigation and other tabs never change it, unlike the workspace that the
-// browser remembers for the landing.
+// The workspace of the Stripe page that this tab opened, as a fallback for
+// older return URLs that name no workspace. Before a tab leaves for Stripe
+// Checkout or the billing portal, it saves that page's exact workspace in
+// its own tab storage. Normal navigation and other tabs never change it,
+// unlike the workspace that the browser remembers for the landing.
 
 import { idParam } from "../routing/pages.ts";
 import type { KeyValueStorage } from "./storage.ts";

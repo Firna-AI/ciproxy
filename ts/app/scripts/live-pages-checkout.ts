@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 
 import { createBillingEndpoints, reviewRequest } from "../src/api/billing.ts";
-import { sameSelection, submitPayment } from "../src/api/billing-payment.ts";
+import {
+  planSubmission,
+  sameSelection,
+  submitPayment,
+} from "../src/api/billing-payment.ts";
 import type { ApiClient } from "../src/api/client.ts";
 import { apiValue, type LiveCheck } from "./live-pages-checks.ts";
 import type { LivePagesCredentials } from "./live-pages-config.ts";
@@ -59,8 +63,12 @@ export async function startLiveCheckout(
     writePrivateJson(path, prepared, true),
   );
   await check("one Stripe test Checkout opened", async () => {
+    const submission = planSubmission(review);
+    assert.notEqual(submission, null, "The reviewed choice must be payable.");
+    if (submission === null)
+      throw new Error("The review cannot start payment.");
     const payment = apiValue(
-      await submitPayment(api, config.workspace_id, { kind: "plan", review }),
+      await submitPayment(api, config.workspace_id, submission),
     );
     const checkout = checkoutSession(payment);
     const submitted: CheckoutRecord = {

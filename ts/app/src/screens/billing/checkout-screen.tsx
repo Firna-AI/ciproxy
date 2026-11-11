@@ -3,8 +3,9 @@
 // review on the page only. From Free, the payment goes on to Stripe Checkout;
 // between paid plans, Stripe charges the card on file at once. When a payment
 // cannot start, the summary says why, from the one payment gate, and its Try
-// again reads Plan and usage again. Only an Admin or a Billing person
-// reviews; a Viewer reads who can.
+// again reads Plan and usage again. When the API refused the quote of a paid
+// review, Review again reads a new review, and only a new click pays. Only an
+// Admin or a Billing person reviews; a Viewer reads who can.
 
 import { useEffect, useMemo, useState } from "react";
 import { StyleSheet, View, useWindowDimensions } from "react-native";
@@ -23,12 +24,12 @@ import { useValue } from "../../services/hooks.ts";
 import { paymentGate, usageStore } from "../../state/billing.ts";
 import {
   checkoutReload,
+  checkoutReviewAgain,
   createPagePayment,
   createPortalAction,
   createReview,
 } from "../../state/billing-flows.ts";
 import { paymentBusy } from "../../state/billing-payment.ts";
-import { reviewedChoice } from "../../state/billing-review.ts";
 import { checkoutSummary } from "../../view/billing-checkout-summary.ts";
 import { reviewTitle } from "../../view/billing-checkout.ts";
 import { askPayer } from "../../view/billing-format.ts";
@@ -93,6 +94,7 @@ function Review({
     gate: paymentGate(services, workspace.id),
     usage: usageState.status === "ready" ? usageState.page : null,
     workspace: workspace.name,
+    payment: paying,
   });
   const outcome = outcomeModel(paying, workspace, usageState);
   const reload = () => {
@@ -147,13 +149,13 @@ function Review({
             submitting={busy}
             reloading={reloading}
             onSubmit={() => {
-              const shown = reviewedChoice(snapshot);
-              if (summary.kind === "ready" && shown !== null) {
-                void payment.submit({ kind: "plan", review: shown });
+              if (summary.kind === "ready") {
+                void payment.submit(summary.submission);
               }
             }}
             onRetryReview={() => void review.retry()}
             onReload={reload}
+            onReviewAgain={() => void checkoutReviewAgain(review, payment)}
           />
           {outcome ? (
             <PaymentResult

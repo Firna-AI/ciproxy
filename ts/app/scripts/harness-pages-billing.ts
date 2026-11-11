@@ -4,6 +4,7 @@ import {
   fixtureCheckoutId,
   parseAddOns,
   parseCheckoutReturn,
+  parsePaidChange,
   parseSelection,
   paymentOutcome,
   reviewSelection,
@@ -46,14 +47,24 @@ export function serveBillingPage(
     }
     if (pages.failures.includes(route))
       return pageError(503, "unavailable", "The review is unavailable.");
-    return pageReply(checkoutReview(selected, usage));
+    const review = checkoutReview(selected, usage);
+    if (review.quote) pages.quotes.set(review.quote.id, review);
+    return pageReply(review);
   }
-  const selected = parseSelection(value);
+  const paidChange = parsePaidChange(value);
+  const quote =
+    paidChange === undefined
+      ? undefined
+      : pages.quotes.get(paidChange.quote_id);
+  const selected =
+    route === "billing/change"
+      ? quote?.choice.selection
+      : parseSelection(value);
   const addOns = parseAddOns(value);
   const returned = parseCheckoutReturn(value);
   let captured: CapturedBody = null;
-  if (route === "checkout" || route === "billing/change")
-    captured = selected ?? { invalid: true };
+  if (route === "checkout") captured = selected ?? { invalid: true };
+  if (route === "billing/change") captured = paidChange ?? { invalid: true };
   if (route === "billing/add-ons") captured = addOns ?? { invalid: true };
   if (route === "checkout/return")
     captured =
@@ -101,6 +112,12 @@ export function serveBillingPage(
   }
   if (usage.status.payment_pending || usage.status.operation_in_progress)
     return fail(409, "conflict", "A payment is already in progress.");
+  if (route === "billing/change") {
+    if (paidChange === undefined)
+      return fail(400, "invalid_request", "Supply the reviewed quote.");
+    if (pages.reviewRequired || quote === undefined)
+      return fail(409, "review_required", "Review this change again.");
+  }
   if (route === "billing/add-ons") {
     if (addOns === undefined)
       return fail(400, "invalid_request", "Supply the add-on quantities.");

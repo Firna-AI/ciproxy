@@ -68,13 +68,6 @@ link keeps them. A value that a page does not know falls back to its default.
 - `/checkout-return`: `session_id=<id>` is the exact Stripe Checkout session.
   The page checks only that session.
 
-Before a tab leaves for Stripe Checkout or the Stripe portal, it saves the
-workspace of its page in its own tab storage. `/checkout-return` and `/plans`
-without `workspace` use the workspace saved before Checkout, and `/billing`
-the one saved before the portal. A query with `workspace` always wins. With
-nothing saved, the return page says that it cannot tell the workspace of the
-payment. It never guesses one.
-
 Every workspace page shows at most one banner, which the API chooses: a
 failed payment, an ended plan, inactive organizations, or a passed limit.
 Every role reads Jobs, Savings, and Plan and usage. An action shows only when
@@ -115,48 +108,8 @@ Billing person" in place of each payment action.
   its refresh raced another one, the page reads again every 2 seconds, but
   only while it is open. A read that answers after the page closed starts
   no new read.
-- Prices, totals, offers, charges, and dates come from the API. The app
-  computes no price.
-- Plan and usage saves add-ons only at a quantity that the API prices: the
-  saved add-ons, or the offer that keeps the plan. Another quantity shows
-  "Monthly total not available" and cannot be saved.
-- One payment runs at a time. While Stripe confirms a payment or a billing
-  change runs, Plan and usage and Plans say so, read again every 5 seconds,
-  and start no second payment. A Checkout that stays open on Stripe keeps the
-  payment pending until Stripe ends the session.
-- While a payment is pending, Plan and usage and Plans offer a person who
-  may pay "Continue payment" with the exact Stripe address that this tab
-  received from the API, for a Checkout or for the Stripe page of a paid
-  change. Another tab or browser has no such address, so its page only says
-  that Stripe confirms the payment.
-- A payment that waits on its Stripe page says "Your payment is not
-  finished", with "Open the Stripe page" and "Check again". It names the
-  Stripe page, not a bank, because the API does not say why Stripe waits.
-- One payment gate decides whether a payment may start: a payer role in the
-  latest session read, a successful latest Plan and usage response, the API
-  permission, and no payment or billing change that waits. When the gate is
-  closed, Checkout says why: a failed Plan and usage read with Try again,
-  before the words of a refused review; a person who cannot pay; a payment
-  or a billing change in progress, with "Open plan and usage"; or "Checking
-  your plan".
-- A payment or a Move to Free whose result the page did not get, such as no
-  answer, a server error, or a plain conflict, says only what the next Plan
-  and usage read proves. A payment says "Unable to confirm this payment",
-  with "Open plan and usage" and Try again, until that read shows the choice
-  as the current plan or a payment in progress. The dialog of an unconfirmed
-  Move to Free closes with "Close", because the cancellation may have taken
-  effect. A refusal that the server names keeps its own words.
-- Plan and usage shows each UTC date of the billing period, also its last
-  date when the period ends during that day.
-- The review shows the charge that the API gives. When the API cannot price a
-  change, the review says so, and no payment starts.
-- Every payment request goes through one module. It sends the reviewed or
-  quoted choice, never the quantities that the person still edits.
-- The return page checks the session at once, and every 3 seconds while
-  Stripe confirms. Only a confirmation from the API changes the plan on the
-  page. When Stripe needs the person again, the page links to the Stripe
-  address that the API gives. After a confirmed payment, only an Admin gets
-  Add machines, and a Billing person gets only Open plan and usage.
+- [Billing pages](src/screens/billing/README.md) gives the rules of Plan and
+  usage, Plans, the Checkout review, each payment, and the Stripe returns.
 - Jobs, the job page, Savings, Plan and usage, Plans, the Checkout review,
   and the return page take the banner from their own reads. An older read
   never replaces the banner of a newer one. A failed read keeps the last
@@ -197,11 +150,6 @@ Billing person" in place of each payment action.
   new build, the next page change loads a new document, also through the
   back and forward buttons. Until then, the page keeps its input. A filter or
   range change after a new build loads a new document with the new address.
-- The billing runtime has one Checkout success URL, one cancel URL, and one
-  portal return URL for all workspaces, with no workspace placeholder. Set
-  the success URL to `/checkout-return?session_id={CHECKOUT_SESSION_ID}` on
-  the dashboard origin, so that Stripe names the exact session. The return
-  then takes the workspace that its tab saved.
 
 ## Development
 

@@ -3,12 +3,15 @@
 // on its Stripe page, a card that failed, or a refusal. When the page did not
 // get the result, it says only what the Plan and usage read after it proves:
 // the submitted choice is the current plan, or a payment or a billing change
-// waits. Otherwise the result stays unknown. Retry sends the same choice
-// again, which continues the same payment on the server.
+// waits. Otherwise the result stays unknown. Retry sends the same submission
+// again, with the same quote of a paid change, so the server continues the
+// same payment. A refused quote of a plan shows no notice: the Checkout
+// summary asks for a new review, and a retry would send that quote again.
 
 import type { PlanUsagePage } from "../api/billing-types.ts";
 import { failureStatus } from "../api/client.ts";
 import {
+  isReviewRequired,
   sameSelection,
   submittedSelection,
   type PaymentSubmission,
@@ -54,6 +57,12 @@ export function outcomeModel(
   }
   const usage = link("Open plan and usage", billingHref(workspace.id));
   if (snapshot.status === "failed") {
+    if (
+      snapshot.submission.kind === "plan" &&
+      isReviewRequired(snapshot.failure)
+    ) {
+      return null;
+    }
     const status = failureStatus(snapshot.failure);
     if (uncertainFailure(snapshot.failure)) {
       return uncertainModel(snapshot, current, usage);

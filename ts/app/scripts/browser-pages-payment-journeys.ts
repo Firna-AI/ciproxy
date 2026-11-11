@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
 
+import { parseCheckoutReview } from "../src/api/billing-parse.ts";
+import type { PaidChangePayment } from "../src/api/billing-types.ts";
+import { apiPrefix } from "../src/api/client.ts";
+import { routePath } from "../src/api/route-path.ts";
 import {
   billingHref,
   checkoutHref,
@@ -158,10 +162,24 @@ export function paymentJourneys(
       name: "paid-change-hosted-confirmation",
       async check(page, _context, width) {
         await control(origin, { scenario: "m21-payment-required" });
+        const reviewPath = routePath(
+          "/workspaces/{workspace_id}/checkout/review",
+          { workspace_id: workspaceId },
+        );
+        const reviewed = page.waitForResponse(
+          (response) =>
+            new URL(response.url()).pathname === `${apiPrefix}${reviewPath}` &&
+            response.request().method() === "GET",
+        );
         await page.goto(
           origin + checkoutHref(workspaceId, baseSelection("business")),
           { waitUntil: "domcontentloaded" },
         );
+        const response = await reviewed;
+        await response.finished();
+        assert.equal(response.status(), 200);
+        const review = parseCheckoutReview(await response.json());
+        assert.ok(review?.quote, "A paid review must include its quote.");
         await page
           .getByRole("button", { name: "Move to Business", exact: true })
           .click();
@@ -211,12 +229,20 @@ export function paymentJourneys(
         );
         assert.equal(new URL(bank.url()).pathname, "/__fixture/stripe/payment");
         await bank.close();
+        const changePath = routePath(
+          "/workspaces/{workspace_id}/billing/change",
+          {
+            workspace_id: workspaceId,
+          },
+        );
         const mutations = (await facts(origin)).filter(
           (fact) =>
-            fact.method === "POST" && fact.path.endsWith("/billing/change"),
+            fact.method === "POST" && fact.path === `${apiPrefix}${changePath}`,
         );
         assert.equal(mutations.length, 1);
-        assert.deepEqual(mutations[0]?.body, baseSelection("business"));
+        assert.deepEqual(mutations[0]?.body, {
+          quote_id: review.quote.id,
+        } satisfies PaidChangePayment);
       },
     },
     {

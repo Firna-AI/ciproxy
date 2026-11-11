@@ -2,7 +2,8 @@
 // charges today, and the button that pays for exactly this review. While a
 // read runs, the summary says which. When a payment cannot start, it says why
 // and offers what recovers it, with no button that pays, so nothing can pay
-// for a choice that the page does not show.
+// for a choice that the page does not show. After the API refused a quote,
+// Review again reads a new review, and only the next click on its button pays.
 
 import { StyleSheet, Text, View } from "react-native";
 import { Link } from "expo-router";
@@ -24,13 +25,25 @@ function Recover({
   reloading,
   onRetryReview,
   onReload,
+  onReviewAgain,
 }: {
   action: SummaryAction;
   usageHref: string;
   reloading: boolean;
   onRetryReview: () => void;
   onReload: () => void;
+  onReviewAgain: () => void;
 }) {
+  if (action.kind === "review-again") {
+    return (
+      <ActionButton
+        label={action.label}
+        tone="primary"
+        block
+        onPress={onReviewAgain}
+      />
+    );
+  }
   if (action.kind === "reload") {
     return (
       <ActionButton
@@ -62,6 +75,7 @@ export function CheckoutSummary({
   onSubmit,
   onRetryReview,
   onReload,
+  onReviewAgain,
 }: {
   state: SummaryState;
   plansHref: string;
@@ -73,6 +87,8 @@ export function CheckoutSummary({
   onSubmit: () => void;
   onRetryReview: () => void;
   onReload: () => void;
+  /** Read a new review after a refused quote. It sends no payment. */
+  onReviewAgain: () => void;
 }) {
   const back = (
     <Link href={plansHref} asChild>
@@ -104,6 +120,7 @@ export function CheckoutSummary({
               reloading={reloading}
               onRetryReview={onRetryReview}
               onReload={onReload}
+              onReviewAgain={onReviewAgain}
             />
           ) : null}
           {back}

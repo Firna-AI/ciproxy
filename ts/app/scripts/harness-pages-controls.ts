@@ -33,6 +33,7 @@ export type PagesControl = {
   returned?: PaymentState;
   role?: components["schemas"]["WorkspaceRole"] | null;
   inactiveOrganizations?: boolean;
+  reviewRequired?: boolean;
   failures?: PageRoute[];
   held?: PageRoute[];
 };
@@ -103,8 +104,9 @@ export function parsePagesControl(value: unknown): PagesControl | undefined {
         break;
       }
       case "inactiveOrganizations":
+      case "reviewRequired":
         if (typeof raw !== "boolean") return undefined;
-        control.inactiveOrganizations = raw;
+        control[key] = raw;
         break;
       case "failures":
       case "held": {
@@ -146,6 +148,8 @@ export function applyPagesControl(
   }
   if (control.inactiveOrganizations !== undefined)
     state.inactiveOrganizations = control.inactiveOrganizations;
+  if (control.reviewRequired !== undefined)
+    state.reviewRequired = control.reviewRequired;
   if (control.failures !== undefined) state.failures = control.failures;
   if (control.held !== undefined) releasePages(state, control.held);
 }

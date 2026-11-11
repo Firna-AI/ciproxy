@@ -2,8 +2,9 @@
 // names no receipt address, so the confirmed plan says only that Stripe
 // emails the receipt. A Checkout that is still open continues on Stripe. A
 // payment that did not finish opens the plans again, because a new payment
-// starts from a new review. Stripe returns to one address for every
-// workspace, so a tab that saved no workspace says so in place of a guess.
+// starts from a new review. Stripe returns to an address that names the
+// workspace. A return without it, from an older address, uses the workspace
+// that its tab saved, and a tab that saved none says so in place of a guess.
 
 import { CircleCheck, CreditCard, ExternalLink, Info } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";

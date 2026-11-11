@@ -1,8 +1,8 @@
 // A billing route: its page in the shell, for the workspace of its query.
-// Stripe returns to one URL for all workspaces, so a Stripe return without a
-// workspace goes on with the workspace that this tab saved before it left
-// for Stripe, and with no other. A Checkout return with nothing saved says so
-// in place of guessing a workspace; the API still checks the exact session.
+// The runtime names the workspace in each Stripe return. An older return
+// without a workspace uses only the workspace that this tab saved before it
+// left for Stripe. A Checkout return with nothing saved says so in place of
+// guessing a workspace; the API still checks the exact session.
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocalSearchParams } from "expo-router";

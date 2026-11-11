@@ -96,9 +96,9 @@ fn compose(database: &Database, fake: &Fake, clock: Arc<dyn Clock>) -> Box<dyn B
         Arc::new(HostedBillingAlerts),
         SigningSecret::new("whsec_offline_only".into()),
         Redirects {
-            success_url: "https://app.example/return?session_id={CHECKOUT_SESSION_ID}".into(),
-            cancel_url: "https://app.example/plans".into(),
-            portal_return_url: "https://app.example/billing".into(),
+            success_url: "https://app.example/checkout-return?workspace={WORKSPACE_ID}&session_id={CHECKOUT_SESSION_ID}".into(),
+            cancel_url: "https://app.example/plans?workspace={WORKSPACE_ID}".into(),
+            portal_return_url: "https://app.example/billing?workspace={WORKSPACE_ID}".into(),
         },
     ))
 }

@@ -15,6 +15,7 @@ import {
 import { session, workspaceId } from "../scripts/fixtures-core.ts";
 import {
   offer,
+  paidReview,
   pendingUsagePage,
   review,
   selection,
@@ -104,7 +105,7 @@ test("a bank confirmation continues after a reload", async () => {
   const business = offer(selection("business"), "29900", "150000", "10");
   await createPagePayment(first.app, workspaceId).submit({
     kind: "plan",
-    review: review(business, { prorated: true }),
+    review: paidReview(business),
   });
   assert.equal(
     first.calls[1]?.url,

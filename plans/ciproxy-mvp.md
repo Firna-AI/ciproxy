@@ -1651,6 +1651,24 @@ workspaces after pull request #53 merges.
   the API. The required Boat fit of saved and draft labels stays in
   `follow-ups/label-boat-fit-boundary.md`.
 
+Integration record, 8 November 2026:
+
+- The owner reported that pull request #39 merged into the primary branch
+  as `f29911f`. This branch merged the primary as `160f311`. The
+  regenerated API files did not change.
+- The integration step sends the stored quote from the one payment module.
+  A retry keeps its quote. A refused quote shows only after a fresh Plan
+  and usage read. Review again only reads a new review, so each payment
+  needs its own click. Evidence: `.context/m21/quote-integration/`.
+- Root's call: one billing-service helper fills `{WORKSPACE_ID}` in the
+  success, cancel, and portal return URLs from the authorized workspace.
+  It keeps Stripe's `{CHECKOUT_SESSION_ID}` and adds no startup rejection.
+  A configured URL without the placeholder and a saved Checkout command
+  stay unchanged, and the tab context covers their returns. Rejected: a
+  saved tab context on each Continue payment, and one shared dashboard
+  exit helper. Reason: only the server binds every return, also after a
+  Back step or in another browser.
+
 ## Milestone 21a: Review mockup states
 
 Tags: mockup

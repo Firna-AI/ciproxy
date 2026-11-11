@@ -37,6 +37,13 @@ export function reviewTitle(tier: PlanTier): string {
 
 export type ReviewFailure = { title: string; body: string; retry: boolean };
 
+/** The words of a choice that has no price to pay, with Try again. */
+export const unpricedReview: Readonly<ReviewFailure> = {
+  title: "Unable to price this change",
+  body: "The price of this choice did not load. Try again.",
+  retry: true,
+};
+
 /**
  * Why the API priced no review. A conflict means a payment or an operation
  * runs, or the choice is the current plan; Plan and usage tells which.
@@ -70,11 +77,7 @@ export function reviewFailure(
       retry: false,
     };
   }
-  return {
-    title: "Unable to price this change",
-    body: "The price of this choice did not load. Try again.",
-    retry: true,
-  };
+  return { ...unpricedReview };
 }
 
 export function reviewModel(

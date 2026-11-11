@@ -31,6 +31,8 @@ export function runtimeRedirects(
     sessionIdQuery(success.searchParams.get("session_id") ?? undefined),
     "{CHECKOUT_SESSION_ID}",
   );
+  if (success.searchParams.get("workspace") === "{WORKSPACE_ID}")
+    success.searchParams.set("workspace", config.workspace_id);
   const workspace = success.searchParams.get("workspace");
   if (workspace !== null) assert.equal(workspace, config.workspace_id);
   return redirects;

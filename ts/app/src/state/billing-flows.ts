@@ -190,3 +190,13 @@ export async function checkoutReload(
     reviewFailed ? review.retry() : null,
   ]);
 }
+
+/** Start the review before reset, so loading keeps the old review off. */
+export async function checkoutReviewAgain(
+  review: ReviewStore,
+  payment: PaymentStore,
+): Promise<void> {
+  const reading = review.retry();
+  payment.reset();
+  await reading;
+}

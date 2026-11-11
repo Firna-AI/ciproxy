@@ -97,9 +97,14 @@
 - **Previous examples:** The review query in `ts/app/src/api/billing.ts` was
   typed by hand until the owner's fix of 2026-11-08 derived it from
   `checkout_review`.
-- **Related:** `plans/follow-ups/inactive-banner-hold-reasons.md`, same read:
-  it words the banner that the `page` name of this item asks for. Neither
-  item waits for the other.
+- **Related:**
+  - `plans/follow-ups/inactive-banner-hold-reasons.md`, same read: it words
+    the banner that the `page` name of this item asks for. Neither item
+    waits for the other.
+  - `plans/follow-ups/generated-command-bodies.md`, same boundary: it types
+    the request bodies of writes, and this item the query names of reads.
+    One route-typed helper can serve both, but neither item waits for the
+    other.
 - **Recommendation:** B. One typed helper covers every query read, also each
   new one, and it keeps the owner's fix of the review query. A is the
   smallest change.

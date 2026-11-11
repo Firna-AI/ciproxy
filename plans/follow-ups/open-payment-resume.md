@@ -1,18 +1,21 @@
-# Another browser cannot continue an open payment
+# Pages without the payment URL cannot continue it
 
 - **Severity:** Medium. **Likelihood:** Rare. **Effort:** Medium.
   **Confidence:** High. **Harder later:** No.
 - **Kind:** Outside the scope.
 - **Added:** 2026-11-08, from `conductor/m21-jobs-savings-and-billing-ui`,
-  the handoff of the billing pages.
-- **Source:** Implementation.
+  the handoff of the billing pages. Extended on 2026-11-08 with a new
+  problem that the check of owner finding 1 of pull request #53 found,
+  which has the same cause.
+- **Source:** Implementation and Review.
 - **Category:** Product bug.
-- **Location:** `crates/ciproxy-api/src/wire/billing.rs:55`,
+- **Location:** `crates/ciproxy-api/src/wire/billing.rs:56`,
   `crates/ciproxy-api/src/handlers/checkout.rs:52`,
   `crates/ciproxy-billing/src/service/checkout.rs:29`,
-  `crates/ciproxy-billing/src/service/commands.rs:107`,
-  `ts/app/src/view/billing-usage.ts:156`, and
-  `docs/protocol/billing.md:111`.
+  `crates/ciproxy-billing/src/service/commands.rs:119-134`,
+  `ts/app/src/view/billing-usage.ts:156`,
+  `ts/app/src/screens/billing/checkout-screen.tsx:106-109`, and
+  `docs/protocol/billing.md:115`.
 - **Reason:** The fix needs a new API answer, which the UI branch does not
   own.
 
@@ -23,19 +26,19 @@
     Checkout or a payment command is open, at
     `crates/ciproxy-api/src/handlers/page_context.rs:177`.
   - **Quote:** the priced review of one exact choice, which the server
-    stores, and which a payment request names.
+    stores, and which the request of a move between paid plans names.
 - **Background:**
-  - `docs/protocol/billing.md:111-114` says that while Stripe confirms a
+  - `docs/protocol/billing.md:115-118` says that while Stripe confirms a
     payment, the Plans page opens no second checkout, because no page asks
     for a second payment while the first one confirms. A checkout that
-    does not finish offers to try again, at `:117-120`. When the bank asks
-    to confirm a charge, the Stripe payment page opens, at `:157`.
+    does not finish offers to try again, at `:121-124`. When the bank asks
+    to confirm a charge, the Stripe payment page opens, at `:161`.
   - `POST /checkout` answers `open` with the hosted Checkout URL. A paid
     change, through `POST /billing/change` or `PUT /billing/add-ons`,
     answers `payment_required` with the hosted invoice URL of the latest
-    open subscription-update invoice, at `service/commands.rs:161`.
+    open subscription-update invoice, at `service/commands.rs:222-229`.
   - The server keeps the open Checkout. `CheckoutProgress` at
-    `crates/ciproxy-store-interface/src/billing/commands.rs:47` holds its
+    `crates/ciproxy-store-interface/src/billing/commands.rs:51` holds its
     `session_id` and its hosted `url`, until Stripe confirms or expires
     it. The hosted invoice URL of a paid change is not stored. It comes
     from Stripe during the change.
@@ -44,18 +47,23 @@
       and answers `open` with its URL while it is open, whatever the
       selection, at `service/checkout.rs:29` and `:119`.
     - Both paid change routes go through `change_items` at
-      `service/commands.rs:48`. A repeat with the same selection reuses
-      the open command and answers the invoice URL again, at `:107` and
-      `:161`. Another selection gets `409`, at `:110`.
+      `service/commands.rs:38`. A repeat of `POST /billing/change` with
+      the quote of the open move reuses that move, also after the 30
+      minutes of the quote, and answers the invoice URL again, at
+      `:44-56`, `:119-132`, and `:222-229`. A repeat of
+      `PUT /billing/add-ons` with the same add-ons does the same. Another
+      request while a move is open gets `409`, at `:134`.
   - On 8 November 2026, the user chose server-stored quotes for the paid
-    review. Each payment request names the quote of its review, and the
-    server refuses an unknown, used, or outdated quote. Pull request #39
-    adds that contract. Another browser does not hold the quote of an
-    open payment.
+    review. Pull request #39 added that contract, and it merged on that
+    day as `f29911f`. A move between paid plans names the quote of its
+    review, and only the quote of the open move continues that move.
+    `docs/protocol/billing-paid-moves.md` names the quotes that the server
+    refuses with `409 review_required`. Another browser does not hold the
+    quote of an open payment.
   - The review answers `409` while a Checkout or a command is open, at
     `handlers/checkout.rs:52`, so the Plans page cannot reach a payment
     request while pending.
-  - `PlanStatus` at `wire/billing.rs:55` has `payment_pending`,
+  - `PlanStatus` at `wire/billing.rs:56` has `payment_pending`,
     `operation_in_progress`, and `can_pay`, but no URL and no selection of
     the open payment.
   - The Checkout form sets no `expires_at`, at
@@ -67,10 +75,21 @@
     `ts/app/src/state/billing-open-payment.ts`. While a fresh read says
     pending and `can_pay`, Plan and usage and Plans offer "Continue
     payment" with that URL. A confirmed or not-pending read clears it.
+  - The tab that started a paid change keeps the submission with its
+    quote, so a retry continues the same move. On Checkout, an add-on edit
+    resets the payment, at
+    `ts/app/src/screens/billing/checkout-screen.tsx:106-109`, and drops
+    that quote. Each new request first clears the saved URL, at
+    `ts/app/src/state/billing-flows.ts:45-46`. So after a lost answer, or
+    a `payment_required` answer with no URL, that tab keeps no URL. After
+    a `payment_required` answer with a URL, Plan and usage still offers
+    Continue payment.
 - **Problem:** Another tab, another browser, or a tab whose storage is gone
-  has no URL. Plan and usage then says "Stripe is confirming a payment"
-  with no action, and the review refuses a new choice. So the person can
-  neither continue nor replace the open payment.
+  has no URL. The tab that started a paid change is in the same state when
+  an add-on edit drops its quote after a lost answer. Plan and usage then
+  says "Stripe is confirming a payment" with no action, and the review
+  refuses a new choice. So the person can neither continue nor replace the
+  open payment.
 - **Impact if no action:** A payer who left an unfinished Checkout on
   another device cannot pay from the dashboard until the provider session
   expires. The Stripe page of a paid change that opened in a lost tab cannot
@@ -92,10 +111,14 @@
 - **Left out:**
   - A repeat of the payment request, with the selection of the open
     payment in `PlanStatus`. The server answers such a repeat with the open
-    payment today. Under the quote contract of 8 November 2026, a payment
-    request names the quote of its review. Another browser holds no such
-    quote, the review refuses a new one while the payment is open, and the
-    server refuses a used quote.
+    payment today. Under the quote contract of 8 November 2026, a move
+    between paid plans names the quote of its review, and only the quote of
+    the open move continues it. Another browser, or a tab whose edit
+    dropped the quote, holds no such quote, and the review refuses a new
+    one while the payment is open.
+  - Keeping the quote of an unfinished paid change across an add-on edit
+    on Checkout, because it covers only the tab that started the change. B
+    covers that tab and every other case with one route.
   - A new Checkout while one is open, because no page may ask for a second
     payment.
   - A dashboard that ends an open session at Stripe, because it could end
