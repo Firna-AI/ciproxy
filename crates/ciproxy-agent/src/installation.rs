@@ -10,6 +10,7 @@ use ciproxy_protocol::version::ProtocolVersion;
 use crate::boundaries::{Connection, Host, Service, Store};
 use crate::connection_types::ControlEvent;
 use crate::controller::Agent;
+use crate::endpoint::{AgentEndpoint, EndpointSettings};
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::host_preparation::Preparation;
 use crate::state::{Identity, Mode};
@@ -20,6 +21,8 @@ pub(crate) trait Install: Send + Sync {
 }
 
 pub(crate) struct Installer {
+    pub(crate) endpoint: AgentEndpoint,
+    pub(crate) endpoints: Arc<dyn EndpointSettings>,
     pub(crate) store: Arc<dyn Store>,
     pub(crate) host: Arc<dyn Host>,
     pub(crate) service: Arc<dyn Service>,
@@ -35,6 +38,7 @@ impl Install for Installer {
         self.preparation.prepare().await?;
         let mut state = self.store.load()?;
         if state.mode != Mode::Removed && state.identity.is_some() {
+            self.endpoints.save(&self.endpoint)?;
             return self.service.install();
         }
         if !state.runners.is_empty() {
@@ -77,6 +81,7 @@ impl Install for Installer {
         });
         state.mode = Mode::Active;
         self.store.save(&state)?;
+        self.endpoints.save(&self.endpoint)?;
         self.service.install()
     }
 }
@@ -84,3 +89,7 @@ impl Install for Installer {
 #[cfg(test)]
 #[path = "_tests_/installation_tests.rs"]
 mod installation_tests;
+
+#[cfg(test)]
+#[path = "_tests_/endpoint_install_tests.rs"]
+mod endpoint_install_tests;

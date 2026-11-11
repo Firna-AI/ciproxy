@@ -18,6 +18,9 @@ no second command.
 Copy the command from Setup, or from **Machines** under **Add machine**.
 Only an Admin of the workspace sees it.
 
+A preview command includes `--agent-url` for the control plane that issued
+it. The production command keeps the form above.
+
 ## What install does
 
 - It checks the Linux distribution, systemd, and cgroup v2 of the machine,
@@ -56,6 +59,18 @@ Run the install command again on a registered machine to repair it. It
 repairs the missing parts, and keeps the registration of the machine, its
 drain state, and its jobs.
 
+### The control-plane endpoint
+
+`--agent-url` selects the endpoint during install. It must be a valid
+`wss://` URL with a host and a valid TLS certificate.
+Without a saved endpoint, `CIPROXY_AGENT_URL` supplies the same setting
+through the environment.
+Install saves the selected endpoint for the service.
+Restarts and updates keep it. A later install without `--agent-url` keeps
+the saved endpoint, also when the environment has a different setting.
+Without either setting or a saved endpoint, the agent uses
+`wss://app.ciproxy.dev/agent/`.
+
 ### Uninstall
 
 ```sh title="Terminal"
@@ -69,8 +84,8 @@ page of the machine for that, as
 
 ## Network
 
-- The agent connects out to ciproxy at `app.ciproxy.dev`. The machine opens
-  no inbound port.
+- The agent connects out to its saved control plane, which defaults to
+  `app.ciproxy.dev`. The machine opens no inbound port.
 - The machine needs outbound HTTPS to ciproxy, to GitHub, and to
   `get.ciproxy.dev`.
 

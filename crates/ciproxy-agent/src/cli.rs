@@ -3,6 +3,8 @@
 use ciproxy_protocol::secret::Secret;
 use clap::{Parser, Subcommand};
 
+use crate::endpoint::AgentEndpoint;
+
 #[derive(Parser)]
 #[command(name = "ciproxy-agent", version)]
 pub(crate) struct Cli {
@@ -17,6 +19,9 @@ enum Command {
         /// Workspace install token. It works for one hour.
         #[arg(long)]
         token: String,
+        /// Control-plane endpoint. Install saves this wss:// URL for the service.
+        #[arg(long)]
+        agent_url: Option<AgentEndpoint>,
     },
     /// Run the machine agent under systemd.
     Run,
@@ -25,7 +30,10 @@ enum Command {
 }
 
 pub(crate) enum Action {
-    Install(Secret),
+    Install {
+        token: Secret,
+        agent_url: Option<AgentEndpoint>,
+    },
     Run,
     Uninstall,
 }
@@ -33,7 +41,10 @@ pub(crate) enum Action {
 impl Cli {
     pub(crate) fn action(self) -> Action {
         match self.command {
-            Some(Command::Install { token }) => Action::Install(Secret::new(token)),
+            Some(Command::Install { token, agent_url }) => Action::Install {
+                token: Secret::new(token),
+                agent_url,
+            },
             Some(Command::Uninstall) => Action::Uninstall,
             _ => Action::Run,
         }

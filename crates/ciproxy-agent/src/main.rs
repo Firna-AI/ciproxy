@@ -27,6 +27,8 @@ mod docker;
 mod docker_files;
 mod docker_prepare;
 mod docker_recovery;
+mod endpoint;
+mod endpoint_files;
 mod error;
 mod gateway;
 mod guest_transport;

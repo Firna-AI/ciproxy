@@ -11,6 +11,7 @@ use unimock::{MockFn, Unimock, matching};
 use crate::boundaries::{ConnectionMock, HostMock, ServiceMock, StoreMock};
 use crate::connection_types::ControlEvent;
 use crate::controller::AgentMock;
+use crate::endpoint::{AgentEndpoint, EndpointSettingsMock};
 use crate::error::Error;
 use crate::fixtures::{identity, report, vm};
 use crate::host_preparation::PreparationMock;
@@ -20,6 +21,12 @@ use crate::state::{Identity, MachineState, Mode};
 fn installer(mock: Unimock) -> Installer {
     let mock = Arc::new(mock);
     Installer {
+        endpoint: AgentEndpoint::default(),
+        endpoints: Arc::new(Unimock::new(
+            EndpointSettingsMock::save
+                .each_call(matching!(_))
+                .answers(&|_, _| Ok(())),
+        )),
         store: mock.clone(),
         host: mock.clone(),
         service: mock.clone(),

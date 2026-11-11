@@ -54,6 +54,7 @@ mod setup_personal_tests;
 
 mod continuation_tests;
 mod direct_recovery_tests;
+mod install_endpoint_tests;
 mod install_start_tests;
 mod late_approval_tests;
 mod link_final_tests;

@@ -6,6 +6,7 @@ pub(crate) mod billing_pages;
 mod billing_views;
 pub(crate) mod checkout;
 pub(crate) mod github_setup;
+mod install_command;
 mod job_fit;
 mod job_views;
 pub(crate) mod jobs;
