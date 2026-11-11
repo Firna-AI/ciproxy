@@ -6,6 +6,7 @@ use std::process::Command;
 
 use crate::boundaries::Service;
 use crate::cache_unit::{FIREWALL_PATH, POLICY_PATH, RUNTIME_TOKEN_PATH};
+use crate::endpoint_files::{ENDPOINT_PATH, PENDING_ENDPOINT_PATH};
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::persistence::private_directory;
 
@@ -62,6 +63,8 @@ impl Service for SystemService {
         self.remove_cache_policy()?;
         for path in [
             UNIT_PATH,
+            ENDPOINT_PATH,
+            PENDING_ENDPOINT_PATH,
             POLICY_PATH,
             FIREWALL_PATH,
             RUNTIME_TOKEN_PATH,

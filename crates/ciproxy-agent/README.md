@@ -20,6 +20,8 @@ This crate does not implement those components.
 
 `ciproxy-agent install --token TOKEN` registers once and installs systemd.
 A reinstall preserves the machine identity and its drain state.
+Preview commands also supply `--agent-url` for their control plane.
+Install saves that endpoint for service restarts, updates, and repairs.
 `ciproxy-agent run` starts the daemon.
 `ciproxy-agent uninstall` stops the daemon, finishes jobs, and removes it.
 With no recorded VM, uninstall removes its owned area even after an
@@ -32,8 +34,8 @@ Fresh registration sends the install token and the initial machine report.
 The gateway returns the workspace ID, machine ID, and machine credential.
 The agent saves these values in its root-only identity state.
 
-The shared release installer also needs its approved argument-forwarding
-step. It must invoke the installed binary with the script arguments.
+The shared release installer invokes the installed binary with the script
+arguments.
 
 The daemon sends a full hello and reports every ten seconds.
 Report waits and delivery do not wait for command work.
@@ -124,7 +126,14 @@ Missing KVM still permits registration with zero slots.
 ### Gateway, image, and cache integration
 
 The default route is `wss://app.ciproxy.dev/agent/`.
-`CIPROXY_AGENT_URL` selects another WSS route with a valid TLS certificate.
+The install option `--agent-url` selects another WSS route with a valid TLS
+certificate. Without a saved route, `CIPROXY_AGENT_URL` selects one too.
+Both accept only a valid `wss://` URL with a host.
+Install saves the selected route in `/var/lib/ciproxy/agent-url` with mode
+`0600`. Install and the daemon prefer the saved route over the environment
+setting, so an inherited setting cannot redirect the installed service.
+Only an explicit install option replaces the saved route.
+Uninstall removes the saved route.
 The gateway authenticates Hello before Welcome.
 An authenticated policy close with `[gateway] authentication failed`
 revokes the local machine. Other failures reconnect and preserve its VMs.
@@ -215,6 +224,8 @@ KVM and GitHub smoke checks, and release packaging commands.
 ### Key Code
 
 - [src/application.rs](src/application.rs) composes the Linux adapters.
+- [src/endpoint.rs](src/endpoint.rs) selects and saves one endpoint for
+  registration and the installed service.
 - [src/startup.rs](src/startup.rs) checks local completion before workload
   recovery and permits a removed machine to drain without a credential.
 - [src/controller.rs](src/controller.rs) defines durable machine control.

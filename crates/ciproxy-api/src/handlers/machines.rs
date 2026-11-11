@@ -18,7 +18,7 @@ use crate::wire::machines::{
     MachinePath, MachineView, TokenPath, WarmRunnerTarget,
 };
 
-use super::machine_views;
+use super::{install_command, machine_views};
 
 #[utoipa::path(operation_id = "machines_list", get, path = "/workspaces/{workspace_id}/machines", params(WorkspacePath), responses((status = 200, body = [MachineView])), security(("session" = [])))]
 pub(crate) async fn list(
@@ -202,11 +202,7 @@ pub(crate) async fn issue_token(
         .api()?;
     Ok(Json(InstallCommand {
         id: token.id.to_string(),
-        command: format!(
-            "curl -fsSL {} | sudo sh -s -- install --token {}",
-            state.config.download_url,
-            token.token.expose_secret()
-        ),
+        command: install_command::command(&state.config, &token.token)?,
         expires_at: token.expires_at,
         requirements: "x64 Linux with KVM, 4 cores, 16 GB of memory, and at least 250 GB of disk."
             .to_owned(),

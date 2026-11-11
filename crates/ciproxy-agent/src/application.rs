@@ -26,6 +26,8 @@ use crate::connection::WebSocketConnection;
 use crate::connection_socket::TlsWebSocketDialer;
 use crate::controller::{Agent, Controller};
 use crate::docker::{DockerDisks, LinuxDockers};
+use crate::endpoint::{AgentEndpoint, EndpointSettings, SavedEndpoint};
+use crate::endpoint_files::LinuxEndpointFiles;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::gateway::ReconnectingGateway;
 use crate::hardware::LinuxHost;
@@ -64,6 +66,14 @@ pub(crate) async fn main() -> Result<()> {
 }
 
 async fn execute(action: Action) -> Result<()> {
+    let endpoints: Arc<dyn EndpointSettings> = Arc::new(SavedEndpoint {
+        files: Arc::new(LinuxEndpointFiles),
+    });
+    let endpoint = match &action {
+        Action::Install { agent_url, .. } => endpoints.resolve(agent_url.as_ref())?,
+        Action::Run => endpoints.resolve(None)?,
+        Action::Uninstall => AgentEndpoint::default(),
+    };
     let service: Arc<dyn Service> = Arc::new(SystemService);
     let layout = Layout {
         data: PathBuf::from(AREA),
@@ -169,12 +179,11 @@ async fn execute(action: Action) -> Result<()> {
         }) as Arc<dyn DockerDisks>),
     });
     let connection: Arc<dyn Connection> = Arc::new(WebSocketConnection::new(
-        std::env::var("CIPROXY_AGENT_URL")
-            .unwrap_or_else(|_| "wss://app.ciproxy.dev/agent/".to_owned()),
+        endpoint.as_str().to_owned(),
         Arc::new(TlsWebSocketDialer),
     ));
     match action {
-        Action::Install(token) => {
+        Action::Install { token, .. } => {
             preparation.prepare().await?;
             let cache_service: Arc<dyn CacheService> = Arc::new(ReleasedCache {
                 unit: Arc::new(InstalledCacheUnit {
@@ -194,6 +203,8 @@ async fn execute(action: Action) -> Result<()> {
                 tracing::warn!(%error, "machine cache install unavailable; GitHub fallback remains available");
             }
             let installer: Arc<dyn Install> = Arc::new(Installer {
+                endpoint,
+                endpoints,
                 store,
                 host,
                 service,

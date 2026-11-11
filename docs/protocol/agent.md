@@ -38,6 +38,14 @@ runs on own machines.
 
 - The command fetches the install script over HTTPS from the download site,
   and runs it as root.
+- The copied command registers with the control plane that issued it.
+- A command for another environment supplies that environment's agent
+  endpoint from trusted runtime configuration, never from the request.
+- The production command keeps the form above.
+- An install endpoint must be a `wss://` URL.
+- Registration and the installed service use the same endpoint.
+- Restarts and updates keep the saved endpoint.
+- A later install without an endpoint keeps the saved one.
 - The install script installs the agent, then runs the agent with the
   arguments that the command gives the script.
 - So the agent runs `install` with the install token, and the machine needs

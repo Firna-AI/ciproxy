@@ -33,6 +33,11 @@ Requests that change data require the configured Origin and the session's CSRF
 token. Every response carries `x-ciproxy-build` and `Cache-Control: no-store`.
 This includes framework extraction errors and unknown routes.
 
+Install commands use the agent endpoint derived from the trusted
+`ApiConfig.public_origin`. Preview commands supply `--agent-url` so the
+machine registers with the issuing control plane. The production command
+keeps its documented form. Request headers never select this endpoint.
+
 The API consumes actual prepared job-area capacity through an injected
 `MachineCapacity` adapter. The hosted runtime reads the exact snapshot. A report
 without available capacity produces an explicit unavailable value. Label fit

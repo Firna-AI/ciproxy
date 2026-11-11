@@ -6,6 +6,9 @@ use thiserror::Error;
 #[derive(Debug, Error, internal_error::ErrorContract)]
 /// Typed handled failures and a redacted internal fallback.
 pub enum Error {
+    /// The agent endpoint must be a secure WebSocket URL with a host.
+    #[error("[agent] the agent endpoint must be a wss:// URL with a host")]
+    AgentEndpoint,
     /// An owned VM network still has host resources after cleanup.
     #[error("[agent/network] network index {index} still has owned resources")]
     NetworkCleanup {

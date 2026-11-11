@@ -9,7 +9,8 @@ fn explicit_commands_select_machine_lifecycle_actions() {
     let action = Cli::try_parse_from(["ciproxy-agent", "install", "--token", "install-secret"])
         .unwrap()
         .action();
-    assert!(matches!(action, Action::Install(token) if token.expose_secret() == "install-secret"));
+    assert!(matches!(action, Action::Install { token, agent_url: None }
+        if token.expose_secret() == "install-secret"));
     assert!(matches!(
         Cli::try_parse_from(["ciproxy-agent", "run"])
             .unwrap()
@@ -22,6 +23,43 @@ fn explicit_commands_select_machine_lifecycle_actions() {
             .action(),
         Action::Uninstall
     ));
+}
+
+#[test]
+fn install_accepts_a_wss_endpoint_and_rejects_invalid_endpoints() {
+    let action = Cli::try_parse_from([
+        "ciproxy-agent",
+        "install",
+        "--token",
+        "synthetic-token",
+        "--agent-url",
+        "wss://preview.ciproxy.example:8443/agent/",
+    ])
+    .unwrap()
+    .action();
+    assert!(
+        matches!(action, Action::Install { token, agent_url: Some(endpoint) }
+        if token.expose_secret() == "synthetic-token"
+            && endpoint.as_str() == "wss://preview.ciproxy.example:8443/agent/")
+    );
+    for endpoint in [
+        "ws://preview.example/agent/",
+        "https://preview.example/agent/",
+        "wss://",
+        "wss://[invalid]/agent/",
+    ] {
+        let result = Cli::try_parse_from([
+            "ciproxy-agent",
+            "install",
+            "--token",
+            "synthetic-token",
+            "--agent-url",
+            endpoint,
+        ])
+        .map(|_| ())
+        .map_err(|error| error.kind());
+        assert_eq!(result, Err(ErrorKind::ValueValidation), "{endpoint}");
+    }
 }
 
 #[test]
