@@ -7,7 +7,8 @@ use unimock::Unimock;
 use crate::boundaries::Vms;
 use crate::error::Error;
 use crate::fixtures::vm;
-use crate::network::{LinuxNetwork, Network};
+use crate::network::Network;
+use crate::network_fixtures::prepared_network;
 use crate::network_fixtures::{Deletion, HostNetworks, commands, runtime};
 
 #[tokio::test]
@@ -48,9 +49,7 @@ async fn failed_deletion_preserves_cleanup_until_absence_is_verified() {
         ..HostNetworks::default()
     }));
     let mock = Arc::new(Unimock::new(commands(host.clone())));
-    let network = LinuxNetwork {
-        commands: mock.clone(),
-    };
+    let network = prepared_network(mock.clone());
     let result = network.remove(1).await;
     assert!(matches!(result, Err(Error::HostCommand { program }) if program == "ip"));
     assert_eq!(host.lock().unwrap().deletions.len(), 3);
@@ -63,4 +62,25 @@ async fn failed_deletion_preserves_cleanup_until_absence_is_verified() {
     assert_eq!(host.links, ["unrelated".to_owned()].into());
     assert_eq!(host.tables, ["unrelated".to_owned()].into());
     assert_eq!(host.addresses, vec!["169.254.0.5"]);
+}
+
+#[tokio::test]
+async fn forwarding_only_orphans_remain_owned_and_block_reuse_until_cleanup() {
+    let host = Arc::new(Mutex::new(HostNetworks {
+        forwarding: ["CPX1".to_owned(), "UNRELATED".to_owned()].into(),
+        ..HostNetworks::default()
+    }));
+    let network = prepared_network(Arc::new(Unimock::new(commands(host.clone()))));
+    assert_eq!(network.owned().await.unwrap(), vec![1]);
+    assert_eq!(network.allocate(&[]).await.unwrap(), 2);
+    host.lock().unwrap().deletion = Deletion::Fail;
+    assert!(network.remove(1).await.is_err());
+    assert_eq!(network.owned().await.unwrap(), vec![1]);
+    host.lock().unwrap().deletion = Deletion::Succeed;
+    network.remove(1).await.unwrap();
+    assert_eq!(network.owned().await.unwrap(), Vec::<u16>::new());
+    assert_eq!(
+        host.lock().unwrap().forwarding,
+        ["UNRELATED".to_owned()].into()
+    );
 }

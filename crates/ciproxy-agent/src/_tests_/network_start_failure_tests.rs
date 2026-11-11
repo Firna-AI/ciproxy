@@ -83,7 +83,7 @@ async fn failed_start_logs_cleanup_cause_and_recovers_owned_resources_after_rest
     recovered.vms = Arc::new(runtime(mock.clone()));
     recovered.restore().await.unwrap();
     let result = recovered.reconcile().await;
-    assert!(matches!(result, Err(Error::HostCommand { program }) if program == "ip"));
+    assert!(matches!(result, Err(Error::HostCommand { program }) if program == "iptables"));
     assert_eq!(recovered.state.lock().await.runners.len(), 0);
     assert_eq!(restored(&saved).failed_starts, Default::default());
     assert_eq!(restored(&saved).pending_networks, [1].into());

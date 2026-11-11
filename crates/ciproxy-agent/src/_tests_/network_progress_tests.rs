@@ -10,9 +10,9 @@ use unimock::{MockFn, Unimock, matching};
 use crate::boundaries::CacheMock;
 use crate::controller::Agent;
 use crate::fixtures::{controller, report_dependencies};
-use crate::network::LinuxNetwork;
 use crate::network_barriers::HeldDeletion;
-use crate::network_fixtures::{HostNetworks, commands, restored, runtime, saving};
+use crate::network_fixtures::prepared_network;
+use crate::network_fixtures::{HostNetworks, commands, restored, runtime_with_network, saving};
 use crate::state::{MachineState, Mode};
 use crate::terminal_completion::CompletionAction;
 
@@ -35,16 +35,16 @@ async fn reports_and_terminal_removal_progress_while_network_deletion_waits() {
     let (release, barrier) = sync::oneshot::channel();
     let (inspection_started, inspection_ready) = sync::oneshot::channel();
     let (inspection_release, inspection_barrier) = sync::oneshot::channel();
-    let mut vms = runtime(mock.clone());
-    vms.network = Arc::new(LinuxNetwork {
-        commands: Arc::new(HeldDeletion {
+    let vms = runtime_with_network(
+        mock.clone(),
+        Arc::new(prepared_network(Arc::new(HeldDeletion {
             delegate: mock.clone(),
             inspection_started: sync::Mutex::new(Some(inspection_started)),
             inspection_release: sync::Mutex::new(Some(inspection_barrier)),
             started: sync::Mutex::new(Some(started)),
             release: sync::Mutex::new(Some(barrier)),
-        }),
-    });
+        }))),
+    );
     let mut agent = controller(
         MachineState {
             mode: Mode::Draining,

@@ -10,11 +10,23 @@ use unimock::{Clause, MockFn, Unimock, matching};
 
 use crate::boundaries::StoreMock;
 use crate::error::Error;
+use crate::host_packages::PackagesMock;
 use crate::layout::Layout;
-use crate::network::LinuxNetwork;
-use crate::process::CommandsMock;
+use crate::network::{LinuxNetwork, Network};
+use crate::process::{Commands, CommandsMock};
 use crate::state::MachineState;
 use crate::vms::LinuxVms;
+
+pub(crate) fn prepared_network(commands: Arc<dyn Commands>) -> LinuxNetwork {
+    LinuxNetwork::new(
+        commands,
+        Arc::new(Unimock::new(
+            PackagesMock::prepare
+                .each_call(matching!())
+                .answers(&|_| Ok(())),
+        )),
+    )
+}
 
 #[derive(Clone, Copy, Default)]
 pub(crate) enum Deletion {
@@ -29,6 +41,7 @@ pub(crate) struct HostNetworks {
     pub(crate) namespaces: BTreeSet<String>,
     pub(crate) links: BTreeSet<String>,
     pub(crate) tables: BTreeSet<String>,
+    pub(crate) forwarding: BTreeSet<String>,
     pub(crate) addresses: Vec<String>,
     pub(crate) deletion: Deletion,
     pub(crate) namespace_failure: bool,
@@ -52,6 +65,14 @@ pub(crate) fn commands(host: Arc<Mutex<HostNetworks>>) -> impl Clause {
             let mut host = host.lock().unwrap();
             let words = args.iter().map(String::as_str).collect::<Vec<_>>();
             match (program, words.as_slice()) {
+                ("sh", _) => Ok(Vec::new()),
+                ("iptables", ["--wait", "-S"]) => Ok(host.forwarding.iter().map(|name| format!("-N {name}\n-A FORWARD -j {name}\n")).collect::<String>().into_bytes()),
+                ("iptables", ["--wait", "-N", name]) => { host.forwarding.insert((*name).to_owned()); Ok(Vec::new()) }
+                ("iptables", ["--wait", "-X", name]) => {
+                    if matches!(host.deletion, Deletion::Fail) { return Err(Error::HostCommand { program:program.to_owned() }); }
+                    host.forwarding.remove(*name); Ok(Vec::new())
+                }
+                ("iptables", _) => Ok(Vec::new()),
                 ("ip", ["-j", "address", "show"]) => {
                     let mut links = host.links.iter().map(|name| json!({"ifname":name})).collect::<Vec<_>>();
                     links.push(json!({"ifname":"eth0","addr_info":host.addresses.iter().map(|local| json!({"local":local})).collect::<Vec<_>>()}));
@@ -85,6 +106,10 @@ pub(crate) fn commands(host: Arc<Mutex<HostNetworks>>) -> impl Clause {
 }
 
 pub(crate) fn runtime(mock: Arc<Unimock>) -> LinuxVms {
+    runtime_with_network(mock.clone(), Arc::new(prepared_network(mock)))
+}
+
+pub(crate) fn runtime_with_network(mock: Arc<Unimock>, network: Arc<dyn Network>) -> LinuxVms {
     LinuxVms {
         layout: Layout {
             data: PathBuf::from("/fixture"),
@@ -93,9 +118,7 @@ pub(crate) fn runtime(mock: Arc<Unimock>) -> LinuxVms {
         },
         tools: mock.clone(),
         commands: mock.clone(),
-        network: Arc::new(LinuxNetwork {
-            commands: mock.clone(),
-        }),
+        network,
         files: mock.clone(),
         guests: mock,
         operation: sync::Mutex::new(()),

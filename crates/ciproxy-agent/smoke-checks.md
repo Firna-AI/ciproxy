@@ -46,6 +46,11 @@ Do not reuse agent state, image indexes, or VM records from an older test
 installation. Use a fresh disposable host. Uninstall the older agent after
 its jobs finish before you reset its files or prepare the host again.
 
+Run the selected image's [guest network smoke](../../image/checks.md#guest-network)
+before installing the agent on that fresh host. Keep the agent stopped
+and finish all VM jobs first. It checks public DNS and HTTPS in a
+private guest copy before any runner starts and needs no GitHub credential.
+
 Copy the updated workflow fixture to the allowed private repository.
 Copy it to a second private repository that the runner group disallows.
 The workflow's cache scenario uses the pinned official `actions/cache`.

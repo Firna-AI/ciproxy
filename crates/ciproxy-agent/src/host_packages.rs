@@ -39,11 +39,11 @@ impl Packages for DistributionPackages {
         let (manager, packages) = match id.as_str() {
             "debian" | "ubuntu" => (
                 "apt-get",
-                "xfsprogs iproute2 nftables coreutils e2fsprogs util-linux kmod procps ca-certificates",
+                "xfsprogs iproute2 nftables iptables coreutils e2fsprogs util-linux kmod procps ca-certificates",
             ),
             "fedora" | "rhel" | "rocky" | "almalinux" => (
                 "dnf",
-                "xfsprogs iproute nftables coreutils e2fsprogs util-linux kmod procps-ng ca-certificates",
+                "xfsprogs iproute nftables iptables coreutils e2fsprogs util-linux kmod procps-ng ca-certificates",
             ),
             _ => {
                 return Err(repair(

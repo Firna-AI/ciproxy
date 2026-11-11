@@ -11,7 +11,7 @@ pub(crate) fn namespace_rules(index: u16) -> String {
  chain input {{ type filter hook input priority 0; policy drop; }}
  chain forward {{ type filter hook forward priority 0; policy drop;
   meta nfproto ipv6 drop
-  iifname "uplink" oifname "tap0" ct state established,related accept
+  iifname "uplink" oifname "tap0" ct state {{ established, related }} accept
   iifname "tap0" ip saddr != 172.30.0.2 drop
   iifname "tap0" oifname "uplink" ip daddr {host} tcp dport 7887 accept
   iifname "tap0" ip daddr {{ {NON_PUBLIC} }} drop
@@ -39,7 +39,7 @@ pub(crate) fn root_rules(index: u16) -> String {
   iifname "{id}" meta nfproto ipv6 drop
   iifname "{id}" ip saddr != {uplink} drop
   iifname "{id}" ip daddr {{ {NON_PUBLIC} }} drop
-  oifname "{id}" ct state != established,related drop
+  oifname "{id}" ct state != {{ established, related }} drop
  }}
  chain nat {{ type nat hook postrouting priority srcnat; policy accept;
   ip saddr {uplink} oifname != "{id}" masquerade

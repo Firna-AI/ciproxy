@@ -5,7 +5,8 @@ use std::sync::{Arc, Mutex};
 use unimock::{MockFn, Unimock, matching};
 
 use crate::fixtures::vm;
-use crate::network::{LinuxNetwork, Network};
+use crate::network::Network;
+use crate::network_fixtures::prepared_network;
 use crate::process::CommandsMock;
 
 #[tokio::test]
@@ -24,12 +25,10 @@ async fn guest_network_allows_only_public_egress_and_its_cache_port() {
                 Ok(Vec::new())
             })),
     );
-    LinuxNetwork {
-        commands: Arc::new(mock),
-    }
-    .create(&vm("runner", false))
-    .await
-    .unwrap();
+    prepared_network(Arc::new(mock))
+        .create(&vm("runner", false))
+        .await
+        .unwrap();
     let captured = captured.lock().unwrap();
     assert!(captured.iter().any(|(program, args, _)| program == "ip"
         && args.windows(2).any(|pair| pair == ["user", "100001"])));
@@ -45,8 +44,53 @@ async fn guest_network_allows_only_public_egress_and_its_cache_port() {
         .2;
     assert!(root.contains("iifname \"cpx1\" ip daddr 169.254.0.5 tcp dport 7887 accept"));
     assert!(root.contains("iifname \"cpx1\" drop"));
-    assert!(root.contains("oifname \"cpx1\" ct state != established,related drop"));
+    assert!(
+        captured
+            .iter()
+            .any(|(program, args, _)| program == "iptables"
+                && args == &["--wait", "-I", "FORWARD", "1", "-j", "CPX1"])
+    );
+    assert!(
+        captured
+            .iter()
+            .any(|(program, args, _)| program == "iptables"
+                && args
+                    == &[
+                        "--wait",
+                        "-A",
+                        "CPX1",
+                        "-i",
+                        "cpx1",
+                        "-s",
+                        "169.254.0.6",
+                        "-j",
+                        "ACCEPT"
+                    ])
+    );
+    assert!(
+        captured
+            .iter()
+            .any(|(program, args, _)| program == "iptables"
+                && args
+                    == &[
+                        "--wait",
+                        "-A",
+                        "CPX1",
+                        "-o",
+                        "cpx1",
+                        "-d",
+                        "169.254.0.6",
+                        "-m",
+                        "conntrack",
+                        "--ctstate",
+                        "ESTABLISHED,RELATED",
+                        "-j",
+                        "ACCEPT"
+                    ])
+    );
+    assert!(root.contains("oifname \"cpx1\" ct state != { established, related } drop"));
     assert!(namespace.contains("meta nfproto ipv6 drop"));
+    assert!(namespace.contains("ct state { established, related } accept"));
     assert!(namespace.contains("iifname \"tap0\" ip saddr != 172.30.0.2 drop"));
     for blocked in [
         "10.0.0.0/8",
@@ -65,5 +109,45 @@ async fn guest_network_allows_only_public_egress_and_its_cache_port() {
     assert!(
         namespace.find("ip daddr {").unwrap()
             < namespace.find("oifname \"uplink\" accept").unwrap()
+    );
+}
+
+#[tokio::test]
+async fn forwarding_accepts_are_installed_in_both_backends_without_policy_changes() {
+    let calls = Arc::new(Mutex::new(Vec::new()));
+    let captured = calls.clone();
+    let commands = Unimock::new(CommandsMock::run.each_call(matching!(_, _, _)).answers_arc(
+        Arc::new(move |_, program, args, _| {
+            captured
+                .lock()
+                .unwrap()
+                .push((program.to_owned(), args.to_vec()));
+            Ok(if program == "sh" {
+                b"iptables-nft\niptables-legacy\n".to_vec()
+            } else {
+                Vec::new()
+            })
+        }),
+    ));
+    prepared_network(Arc::new(commands))
+        .create(&vm("probe", false))
+        .await
+        .unwrap();
+    let calls = calls.lock().unwrap();
+    for backend in ["iptables-nft", "iptables-legacy"] {
+        assert!(calls.iter().any(|(program, args)| program == backend
+            && args == &["--wait", "-I", "FORWARD", "1", "-j", "CPX1"]));
+        assert_eq!(
+            calls
+                .iter()
+                .filter(|(program, _)| program == backend)
+                .count(),
+            4
+        );
+    }
+    assert!(
+        !calls
+            .iter()
+            .any(|(_, args)| args.iter().any(|arg| arg == "-P"))
     );
 }

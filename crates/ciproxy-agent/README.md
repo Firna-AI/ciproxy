@@ -97,21 +97,11 @@ The XFS area also includes measured overhead from the host reserve.
 Admission and cache budgets use the shared protocol Resources API.
 Filesystem free bytes are a health measurement.
 
-A separate network namespace permits public IPv4 egress.
-It blocks IPv6, private networks, metadata addresses, and host access.
-The only host exception is this VM's cache address on TCP port 7887.
-The agent opens no inbound TCP port.
-The agent owns the `cpxN` namespace, root `cpxN` and `cpxNp` links, and
-`inet cpxN` firewall table for each allocated network index `N`.
-It also reclaims orphan resources with these reserved names.
-Allocation skips active, pending, and occupied host indices.
-An overlapping address blocks allocation without granting cleanup ownership.
-Reconciliation checks cleanup results and retains ownership until absence
-is confirmed. Remove and uninstall wait for that cleanup.
-One Controller operation owns terminal completion for startup, the daemon,
-and uninstall. It removes the saved identity only after checked cleanup.
-Uninstall also finishes area, runtime tools, and service cleanup first.
-Removed startup can finish saved jobs without a machine credential.
+Each VM has a private namespace for public IPv4 and its cache port.
+The [VM network guide](host-preparation.md#vm-network) gives isolation,
+owned forwarding rules, repair, and cleanup.
+Network use repairs missing network commands after automatic updates.
+A failed repair keeps the daemon available for reports and another attempt.
 
 ### Host requirements
 
@@ -211,6 +201,9 @@ Run this command after changing these files or their dependencies:
 
 Path includes compile separate copies of the production modules.
 Keep each target's module list aligned when a production dependency moves.
+The opt-in `network-smoke-driver` example also includes the production
+network modules. The [image network smoke](../../image/checks.md#guest-network)
+uses it before any runner starts, without credentials.
 The default Docker regression target also uses path includes.
 The gate compiles that target because it needs no feature.
 Real VM and GitHub checks use separate smoke scripts.
@@ -240,6 +233,10 @@ KVM and GitHub smoke checks, and release packaging commands.
   claims and checks each retry against current VM state.
 - [src/network.rs](src/network.rs) allocates host-free network indices and
   verifies that cleanup removed their resources.
+- [src/network_forwarding.rs](src/network_forwarding.rs) owns narrow IPv4
+  forwarding accepts in both iptables backends.
+- [src/network_preparation.rs](src/network_preparation.rs) checks network
+  tools and installs only missing packages before network use.
 - [src/network_lifecycle.rs](src/network_lifecycle.rs) keeps active and
   pending network ownership across retirement, restart, and uninstall.
 - [src/root_sizing.rs](src/root_sizing.rs) defines the pure shared root

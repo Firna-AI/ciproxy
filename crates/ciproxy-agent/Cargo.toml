@@ -51,3 +51,9 @@ required-features = ["filesystem-regression"]
 name = "root-disk-regression"
 path = "tests/root_disk_regression.rs"
 required-features = ["filesystem-regression"]
+
+[[example]]
+name = "network-smoke-driver"
+path = "tests/network_smoke/driver.rs"
+test = false
+required-features = ["filesystem-regression"]

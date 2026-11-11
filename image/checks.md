@@ -42,6 +42,58 @@ It grows a copy of the packaged release disk with plain `resize2fs`.
 It neither forces resizing nor repairs the copy first.
 This check cannot prove real guestfish inspection, mounts, or a VM boot.
 
+## Guest network
+
+Check the probe's unit-state handling without systemd or KVM:
+
+```sh
+python3 image/check-network-probe.py
+```
+
+The export check also checks the generated network file in the source,
+the finalized tree, the Boat archive, and the ext4 disk. DHCP must be off.
+The complete kernel configuration must stay in place. The image supplies
+DNS and does not duplicate the agent's address or gateway.
+
+Run the live network smoke on a disposable KVM machine before publication:
+Finish its jobs and stop its agent before this probe.
+Run it before a fresh agent installation and registered-job scenarios.
+
+```sh
+cargo build --package ciproxy-agent --features filesystem-regression \
+  --example network-smoke-driver
+sudo python3 image/smoke-network.py .context/ciproxy-image-build/artifacts \
+  --tools-dir /var/lib/ciproxy/tools/v1.17.0 \
+  --network-driver target/debug/examples/network-smoke-driver
+```
+
+Use the checked Firecracker and jailer directory from host preparation.
+The probe needs `ip`, nftables, systemd, e2fsprogs, and root access.
+The opt-in driver calls the production agent network and VM configuration
+code. It supplies the boot arguments, namespace, and both firewall paths.
+It boots a private disk copy with the same jailer and network setup.
+Its temporary collector runs before the guest service and any runner.
+No registration, GitHub token, or dashboard credential is needed.
+The guest must resolve `github.com` and open a verified HTTPS connection.
+Failure returns 1. Missing root or KVM returns SKIP with exit 77.
+The probe stops its VM, removes its namespace and disk copy, and keeps safe
+network evidence under `.context/image-network-smoke/`.
+An unknown unit state fails the probe and retains its named VM resources.
+`--disk-bytes` can use the grown copy size from the agent sizing helper.
+
+Add `--initialization-failure` to check the image's failure cleanup hook.
+After the network checks, an invalid guest port causes an early failure.
+The probe requires an observed guest reboot and automatic VMM exit.
+It sends no runner registration. The offline export check executes the
+installed cleanup command and checks that both artifacts keep that unit.
+The [Firecracker shutdown contract][reset] explains the x86 reset path.
+
+Boat keeps its provider kernel and network services. Its wrapper copies
+the provider resolver file into the chroot and never starts the image's
+network service. The guest network smoke covers Firecracker only.
+
+[reset]: https://github.com/firecracker-microvm/firecracker/blob/v1.17.0/FAQ.md#how-can-i-gracefully-reboot-the-guest-how-can-i-gracefully-poweroff-the-guest
+
 ## Retained userspace export
 
 To export a retained, complete release tree without software provisioning:
