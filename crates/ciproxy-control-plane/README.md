@@ -89,7 +89,9 @@ requester proves installation access and chooses an eligible workspace.
 Local billing or Admin holds keep that organization inactive.
 
 SIGTERM or Ctrl-C during startup stops the process with status 0 before it
-serves. After startup, the signal makes readiness return HTTP 503 at once.
+serves. After startup, the signal withdraws readiness and stops new
+connections at once. A new readiness probe is then normally refused. A probe
+on a connection that is already open can see HTTP 503.
 HTTP requests, listeners, and maintenance then get up to 240 seconds to
 finish. Other runtime work then gets up to five more seconds.
 
@@ -210,6 +212,7 @@ cargo clippy --package ciproxy-control-plane --all-targets -- -D warnings
 Runtime integration tests create and remove isolated PostgreSQL databases.
 They mock GitHub and gateway side effects.
 The PostgreSQL role needs CREATEDB rights.
+Executable signal tests need Linux procfs and the `openssl` command.
 The [live smoke checks](overflow.md#live-smoke-checks) need live Boat,
 GitHub, and database access, so they stay operator work.
 
