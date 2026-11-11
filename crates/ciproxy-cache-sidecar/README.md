@@ -2,8 +2,9 @@
 
 A transparent GitHub Actions cache for customer machines. The machine
 service owns persistent entries and measured reports. A proxy in each job
-VM keeps the runner interface unchanged. This crate depends only on
-`ciproxy-protocol` inside the workspace. It has the Apache-2.0 licence in
+VM keeps the runner interface unchanged. The library depends only on
+`ciproxy-protocol` inside the workspace. Its tests also use the Apache-2.0
+`ciproxy-agent` library. It has the Apache-2.0 licence in
 [LICENSE](LICENSE).
 
 ## Responsibilities
@@ -14,13 +15,16 @@ fall back to GitHub or produce an unavailable cache result.
 
 ## What This Crate Does
 
-Reads use the machine first, then GitHub with local fill. Saves stream to
-GitHub and capture a local copy. Only accepted saves own immutable local
-keys for a repository, ref, key, and version. The machine keeps them after
-GitHub
-deletes or evicts its copy. Lookup searches each allowed ref in order:
-own ref, pull request base ref, default ref. It checks an exact key before
-prefix matches. A prefix match uses the newest entry.
+A read selects one entry from the local entries and the trusted GitHub
+entry metadata. Lookup searches each allowed ref in order: own ref, pull
+request base ref, default ref. It checks an exact key before prefix
+matches. A prefix match uses the newest entry. For a checked ref, this
+order covers both stores, as
+[Restore order](../../docs/protocol/cache.md#restore-order) requires.
+A selected GitHub entry streams through the machine, which can keep a local
+fill. Saves stream to GitHub and capture a local copy. Only accepted saves
+own immutable local keys for a repository, ref, key, and version. The
+machine keeps them after GitHub deletes or evicts its copy.
 
 The machine checks each original runtime token at admin registration.
 It verifies RS256, GitHub's issuer, the validity interval, and the expected
@@ -28,11 +32,24 @@ repository, run, runner, and optional job identity from `JobFacts`.
 Exactly one signed scope with the write bit supplies the full ref.
 The machine keeps raw scope keys, including GitHub's tag scope keys.
 It ignores job metadata for scope, repository, permission, destination, and
-counts. A GitHub fill stays within the reader's own scope because the
-GitHub lookup response does not identify the source ref. The service keeps
-fills separate from accepted saves. A fill cannot prevent a later save in
-that scope. An accepted save takes precedence over a fill of the same
-scoped key. Existing records without provenance stay readable as fills.
+counts. A GitHub fill stays visible only within the reader's own scope.
+The service keeps fills separate from accepted saves. A fill cannot prevent
+a later save in that scope. An accepted save takes precedence over a fill
+of the same scoped key. Existing records without provenance stay readable
+as fills.
+
+Each restore asks for current trusted entry metadata. The service queues
+that request on its private admin listener, and the root agent answers it
+from the hosted GitHub App listing. Jobs never supply this metadata. Each
+local entry keeps its trusted source ref and creation time apart from its
+visibility scope. The resolver ranks candidates by the source facts. Only
+the visibility scope decides which sessions can read an entry. A restart
+and a GitHub deletion or eviction keep both. A fill never takes the
+reader's ref as its source. Missing or inconsistent metadata gives a
+checked session GitHub's lookup result or a miss. The service then keeps
+no fill with a guessed source. An unknown session keeps its default-branch
+local reads. Without the root relay, as in a standalone service, lookup
+uses local entries first, then GitHub.
 
 Only the trusted events in
 [Trusted write-back](../../docs/protocol/cache.md#trusted-write-back) can
@@ -126,16 +143,19 @@ loopback. The agent must not bind it to a VM-reachable interface.
 
 The agent calls the admin listener with `Authorization: Bearer TOKEN`:
 
-| Method and path           | Input or result                                             |
-| ------------------------- | ----------------------------------------------------------- |
-| `POST /sessions`          | `CacheRegistration` JSON. Returns `SessionCredential` JSON. |
-| `DELETE /sessions/TOKEN`  | Revoke that VM's credential and finish its report.          |
-| `POST /sessions/recover`  | Recover a live session with its exact registration.         |
-| `POST /sessions/close`    | Revoke sessions with the exact trusted `JobFacts`.          |
-| `POST /sessions/fallback` | Hide counts for the exact trusted `JobFacts`.               |
-| `GET /report`             | `ciproxy_protocol::cache::MachineCacheReport` JSON.         |
-| `POST /clear`             | Clear this machine's local entries. Returns HTTP 204.       |
-| `PUT /budget`             | `{"capacity_bytes":12345}`. Returns HTTP 204.               |
+| Method and path            | Input or result                                             |
+| -------------------------- | ----------------------------------------------------------- |
+| `POST /sessions`           | `CacheRegistration` JSON. Returns `SessionCredential` JSON. |
+| `DELETE /sessions/TOKEN`   | Revoke that VM's credential and finish its report.          |
+| `POST /sessions/recover`   | Recover a live session with its exact registration.         |
+| `POST /sessions/close`     | Revoke sessions with the exact trusted `JobFacts`.          |
+| `POST /sessions/fallback`  | Hide counts for the exact trusted `JobFacts`.               |
+| `GET /report`              | `ciproxy_protocol::cache::MachineCacheReport` JSON.         |
+| `POST /clear`              | Clear this machine's local entries. Returns HTTP 204.       |
+| `PUT /budget`              | `{"capacity_bytes":12345}`. Returns HTTP 204.               |
+| `PUT /metadata-relay`      | `{"enabled":true}`. Returns HTTP 204.                       |
+| `GET /metadata-requests`   | Waits briefly. Returns one `CacheMetadataWork` or `null`.   |
+| `POST /metadata-responses` | One `CacheMetadataAnswer`. Returns HTTP 204.                |
 
 `CacheRegistration` contains `job_id`, `facts`, `permissions`, `github_token`,
 `cache_url`, `results_url`, and `proxy_url`. The exact types live in

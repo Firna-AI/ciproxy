@@ -46,7 +46,9 @@ The control plane is closed source and written in Rust. It has these parts:
 - **Scaler:** decides how many [runners](protocol/job-routing.md#terms)
   start, and where they start. This includes the
   [warm runners](protocol/job-routing.md#warm-runners) of each own machine.
-- **Machine gateway:** keeps the connections of the agents.
+- **Machine gateway:** keeps the connections of the agents. It also
+  answers the requests of the agents for the cache
+  [entry facts](protocol/cache.md#terms) of their running jobs.
 - **Backend client:** starts and deletes the
   [sandboxes](protocol/overflow.md#terms) of
   [overflow](protocol/overflow.md#overflow-runners) runners on the
@@ -72,7 +74,7 @@ these things:
   warm runners included.
 - It keeps the [image](protocol/agent.md#the-image) of the job VMs.
 - It serves the [machine cache](protocol/cache.md#cache-tiers) to its job VMs.
-- It keeps the [Docker disks](protocol/cache.md#docker-disks) of the machine.
+- It keeps the [Docker disks](protocol/docker-disks.md) of the machine.
 
 [Updates](protocol/agent.md#updates) says how the agent gets a new version.
 
@@ -118,7 +120,8 @@ design tokens that the dashboard uses.
   jobs of each label through its session. For each new runner, the control
   plane gets a just-in-time runner registration from GitHub. It reads the
   ref, the event, and the head repository of the run of each job from the
-  GitHub API. GitHub also reports each
+  GitHub API. It also reads the [entry facts](protocol/cache.md#terms) of
+  the GitHub cache of a repository. GitHub also reports each
   [removal or suspension](protocol/app-removal.md) of the App.
 - **GitHub and the runners:** each runner opens its own connection to
   GitHub. It gets one job with its code and secrets, and it sends the logs
@@ -130,7 +133,11 @@ design tokens that the dashboard uses.
   reports. The control plane sends runner registrations, the ref, the
   event, and the head repository of each job, and the
   [drain](protocol/agent.md#drain-and-remove) and remove actions.
-  [Connection](protocol/agent.md#connection) holds the rules.
+  [Connection](protocol/agent.md#connection) holds the rules. For each
+  restore of its machine cache, the agent also asks the control plane over
+  HTTPS for the entry facts of the repository of the job. The control plane
+  answers only the machine that runs the job, as
+  [Restore order](protocol/cache.md#restore-order) says.
 - **The agent and its job VMs:** the agent passes one runner registration
   into each job VM. [Job isolation](protocol/security.md#job-isolation)
   says what a job VM can reach.
@@ -150,93 +157,22 @@ design tokens that the dashboard uses.
 
 ## Data flow
 
-### A job on an own machine
+The [data flow](architecture/data-flow.md) page follows the main flows
+across these boundaries:
 
-1. GitHub queues a job whose `runs-on` names a ciproxy label. It sends a
-   message about the job to the control plane.
-2. GitHub gives the job to a ready warm runner of its organization and
-   label, and the job starts at once. Without a warm runner, the scaler
-   starts a runner in free [slots](protocol/job-routing.md#slots) of an own
-   machine of the workspace.
-3. The control plane reads the ref, the event, and the head repository of
-   the run of the job from the GitHub API. It sends them to the agent for
-   the [cache scopes](protocol/cache.md#cache-scopes) and the Docker disk of
-   the job.
-4. Metering counts one start. When a slot and its disk are free, the
-   scaler sends the agent a registration for a new warm runner.
-5. When the job ends, the agent ends the job VM and reports it.
+- [A job on an own machine][flow-own-machine]
+- [A job on Boat][flow-boat]
+- [A cache restore and save][flow-cache]
+- [A checkout and a failed payment][flow-checkout]
+- [Machine reports and offline detection][flow-reports]
+- [A control plane outage][flow-outage]
 
-### A job on Boat
-
-1. GitHub queues a job of a ciproxy label. No own machine has free slots
-   for it, so the job waits in GitHub.
-2. When the job has waited the
-   [overflow wait](protocol/job-routing.md#where-a-job-runs), the scaler
-   starts a runner on Boat. The backend client starts its sandbox from the
-   image in the customer's Boat account.
-3. GitHub gives a waiting job of the label to the new runner. Metering
-   counts one start. [Overflow runners](protocol/overflow.md#overflow-runners)
-   says what a Boat runner without a job does.
-4. When the job ends, the backend client deletes the sandbox. It adds the
-   cost of the sandbox to the Boat spend of the month.
-
-### A cache restore and save
-
-1. On an own machine, a step such as `actions/cache` restores an entry. The
-   [cache scope](protocol/cache.md#cache-scopes) of the job decides which
-   entries it can restore.
-2. The machine cache gives the contents when it has them. Otherwise they
-   come from the GitHub cache, and the machine cache keeps them. When the
-   machine cache fails, the job falls back to the
-   [GitHub cache](protocol/cache.md#fallback-to-the-github-cache).
-3. A save goes to the machine cache and through to the GitHub cache.
-   [Trusted write-back](protocol/cache.md#trusted-write-back) says which
-   saves other branches can restore.
-4. A job on Boat restores and saves through the GitHub cache only.
-5. The agent reports the cache hits of its machine to the control plane.
-   It also reports the [cache counts](protocol/cache.md#terms) of each job
-   whose restores the machine cache handled. A sandbox reports no cache
-   counts. The cache contents stay on the machine and in the GitHub cache.
-
-### A checkout and a failed payment
-
-1. In the dashboard, the customer picks a tier and the add-on quantities.
-   Billing opens [Stripe Checkout](protocol/billing.md#checkout), where the
-   customer pays.
-2. Stripe sends an event that confirms the payment. Billing then changes
-   the tier, and a new [period](protocol/metering.md#periods) starts.
-3. When a renewal charge fails, Stripe sends an event and tries again
-   later. [Failed payments](protocol/billing.md#failed-payments) says what
-   the dashboard shows.
-4. The customer changes the card in the Stripe customer portal. Stripe
-   sends an event for each later charge.
-5. After the last failed retry, Stripe ends the subscription. Billing moves
-   the workspace to Free.
-
-### Machine reports and offline detection
-
-1. The agent registers once with the
-   [install token](protocol/agent.md#install). Then it connects out with
-   its machine credential.
-2. At a fixed interval, the agent reports its slots, its job VMs, its warm
-   runners, its [health](protocol/agent.md#health) checks, and its version.
-3. When no report arrives for a [set time](protocol/agent.md#connection),
-   the control plane marks the machine offline. The scaler starts no new
-   runner on it. [Failures](protocol/job-routing.md#failures) says what
-   happens to its jobs.
-4. When the agent connects again, the machine is back online.
-
-### A control plane outage
-
-1. Running jobs go on, because each runner talks to GitHub directly.
-2. No new runner starts on an own machine or on Boat. Jobs without a runner
-   stay queued in GitHub. [Failures](protocol/job-routing.md#failures)
-   holds the rules.
-3. The agents keep their job VMs and warm runners, and they try to connect
-   again.
-4. When the control plane is back, the scaler starts runners for the queued
-   jobs. The backend client deletes each sandbox that ciproxy started, that
-   runs no job, and that no waiting job needs.
+[flow-own-machine]: architecture/data-flow.md#a-job-on-an-own-machine
+[flow-boat]: architecture/data-flow.md#a-job-on-boat
+[flow-cache]: architecture/data-flow.md#a-cache-restore-and-save
+[flow-checkout]: architecture/data-flow.md#a-checkout-and-a-failed-payment
+[flow-reports]: architecture/data-flow.md#machine-reports-and-offline-detection
+[flow-outage]: architecture/data-flow.md#a-control-plane-outage
 
 ## Open source and hosted parts
 
@@ -268,5 +204,6 @@ design tokens that the dashboard uses.
 - [Security](protocol/security.md)
 - [Removing or suspending the App](protocol/app-removal.md)
 - [Cache](protocol/cache.md)
+- [Docker disks](protocol/docker-disks.md)
 - [Metering](protocol/metering.md)
 - [Billing](protocol/billing.md)

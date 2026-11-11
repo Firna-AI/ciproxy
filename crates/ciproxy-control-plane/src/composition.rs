@@ -1,21 +1,19 @@
 //! Construct hosted adapters without exposing secrets to agents or API clients.
 
 use std::sync::atomic::AtomicBool;
-use std::sync::{Arc, OnceLock, Weak};
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
-use async_trait::async_trait;
 use axum::Router;
 use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_api::pages::PageServices;
 use ciproxy_api::state::ApiState;
-use ciproxy_gateway::boundary::{AgentEvents, Authorization, SystemClock, SystemEntropy};
+use ciproxy_gateway::boundary::{Authorization, SystemClock, SystemEntropy};
 use ciproxy_gateway::connections::{Connections, LocalConnections};
 use ciproxy_gateway::gateway::{Gateway, MachineGateway};
 use ciproxy_gateway::transport::{AgentTransport, WebSocketTransport};
-use ciproxy_gateway::types::Session;
 use ciproxy_github::app::webhook::HmacVerifier;
-use ciproxy_github::app::{AppService, GitHubApp, InstallAuthority, LifecycleOutput};
+use ciproxy_github::app::{AppService, GitHubApp, InstallAuthority};
 use ciproxy_github::assignments::AssignmentService;
 use ciproxy_github::auth::jwt::RsaAppJwt;
 use ciproxy_github::auth::tokens::RotatingTokens;
@@ -30,16 +28,18 @@ use ciproxy_github::scale_sets::{ScaleSetFactory, sdk::AppScaleSetFactory};
 use ciproxy_github::timing::RepairTiming;
 use ciproxy_metering::service::{Metering, StoredMetering};
 use ciproxy_overflow::api::Overflow;
-use ciproxy_protocol::agent::AgentMessage;
-use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
 use ciproxy_store_interface::store::Store;
 use reqwest::{Client, Url, redirect};
 use secrecy::ExposeSecret;
 use tokio::runtime::Handle;
 
 use crate::accounting::{Accounting, AccountingWorker};
+use crate::cache_metadata::records::StoredMetadataRecords;
+use crate::cache_metadata::service::{CacheMetadata, HostedCacheMetadata};
+use crate::cache_metadata::transport;
 use crate::config::Config;
 use crate::error::{Error, ErrorResultExt, Result};
+use crate::hosted_events::Relay;
 use crate::image_signing::CdnSigning;
 use crate::repositories::{RefreshRepositories, RepositoryRefresh, StoredInstallations};
 use crate::runtime::{MachineRuntime, OwnMachines};
@@ -67,6 +67,7 @@ pub struct Hosted {
     pub(crate) persistence: Arc<StoreAdapter>,
     transport: Arc<dyn AgentTransport>,
     hooks: Arc<dyn WebhookHandler>,
+    metadata: Arc<dyn CacheMetadata>,
     pub(crate) ready: Arc<AtomicBool>,
     pub(crate) recovery: Arc<dyn WebhookRecovery>,
     pub(crate) repositories: Arc<dyn RepositoryRefresh>,
@@ -105,6 +106,13 @@ impl Hosted {
             clock.clone(),
         ));
         let rest = Arc::new(RestClient::new(http.clone(), api.clone(), tokens));
+        let metadata = Arc::new(HostedCacheMetadata {
+            records: Arc::new(StoredMetadataRecords {
+                store: store.clone(),
+            }),
+            caches: rest.clone(),
+            clock: clock.clone(),
+        });
         let scale_sets: Arc<dyn ScaleSetFactory> =
             Arc::new(AppScaleSetFactory::new(signer.clone(), http.clone()));
         let persistence = Arc::new(StoreAdapter::new(store.clone(), clock.clone()));
@@ -205,6 +213,7 @@ impl Hosted {
             persistence,
             transport,
             hooks,
+            metadata,
             signer: signer.clone(),
             ready: Arc::new(AtomicBool::new(false)),
             recovery: Arc::new(RecoverDeliveries {
@@ -226,74 +235,11 @@ impl Hosted {
             self.hooks.clone(),
             self.ready.clone(),
         );
+        let router = router.merge(transport::router(self.metadata.clone()));
         if let Some(overflow) = &self.overflow {
             router.merge(crate::boat_callback::router(overflow.clone()))
         } else {
             router
-        }
-    }
-}
-
-struct Relay {
-    machines: OnceLock<Weak<dyn OwnMachines>>,
-    handle: Handle,
-}
-
-impl Relay {
-    fn runtime(&self) -> Result<Arc<dyn OwnMachines>> {
-        self.machines
-            .get()
-            .and_then(Weak::upgrade)
-            .ok_or(Error::StateChanged)
-    }
-}
-
-impl AgentEvents for Relay {
-    fn machine_removed(
-        &self,
-        workspace_id: uuid::Uuid,
-        machine_id: uuid::Uuid,
-    ) -> ciproxy_gateway::error::Result<()> {
-        let runtime = match self.runtime() {
-            Ok(runtime) => runtime,
-            Err(_) => return Err(ciproxy_gateway::error::Error::UnexpectedMessage),
-        };
-        self.handle
-            .block_on(runtime.machine_removed(workspace_id, machine_id))
-            .map_or_else(
-                |_| Err(ciproxy_gateway::error::Error::UnexpectedMessage),
-                |_| Ok(()),
-            )
-    }
-    fn receive(
-        &self,
-        session: Session,
-        message: AgentMessage,
-    ) -> ciproxy_gateway::error::Result<()> {
-        let result = self.runtime();
-        match result {
-            Ok(runtime) => self
-                .handle
-                .block_on(runtime.agent(session.workspace_id, session.machine_id, message))
-                .map_or_else(
-                    |_| Err(ciproxy_gateway::error::Error::UnexpectedMessage),
-                    |_| Ok(()),
-                ),
-            Err(_) => Err(ciproxy_gateway::error::Error::UnexpectedMessage),
-        }
-    }
-}
-
-#[async_trait]
-impl LifecycleOutput for Relay {
-    async fn changed(&self, event: LifecycleEvent) -> ciproxy_github::error::Result<()> {
-        let runtime = match self.runtime() {
-            Ok(runtime) => runtime,
-            Err(_) => return Err(ciproxy_github::error::Error::OrganizationInactive),
-        };
-        match runtime.lifecycle(event).await {
-            Ok(()) => Ok(()),
-            Err(_) => Err(ciproxy_github::error::Error::OrganizationInactive),
         }
     }
 }

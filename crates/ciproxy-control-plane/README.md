@@ -69,6 +69,7 @@ release file gives each field.
 | Route                       | Use                                                       |
 | --------------------------- | --------------------------------------------------------- |
 | `/agent/`                   | The agent WebSocket.                                      |
+| `/agent/cache-metadata`     | Cache entry metadata for a job on the calling machine.    |
 | `/hooks/github`             | GitHub App webhooks, up to GitHub's 25 MiB payload limit. |
 | `/hooks/stripe`             | Raw signed Stripe billing webhooks.                       |
 | `/hooks/boat/runner-exit`   | Boat sandbox exit reports, while Boat is configured.      |
@@ -257,6 +258,9 @@ GitHub, and database access, so they stay operator work.
 - [src/accounting.rs](src/accounting.rs) runs coalesced accounting passes
   outside runner operations.
 - [src/events.rs](src/events.rs) binds authenticated observations to runners.
+- [src/cache_metadata/](src/cache_metadata/mod.rs) checks the machine
+  credential, workspace, and job placement, then lists the job's GitHub
+  cache entries.
 - [src/snapshot.rs](src/snapshot.rs) supplies the pure scaler's inputs.
 - [src/warm.rs](src/warm.rs) allocates warm runners from recent jobs.
 - [src/slots.rs](src/slots.rs) selects exact logical slot sets.
@@ -290,7 +294,8 @@ GitHub, and database access, so they stay operator work.
 - [ciproxy-overflow](../ciproxy-overflow/README.md) executes Boat deliveries.
 - [Agent](../../docs/protocol/agent.md) defines machine and VM lifecycle.
 - [Routing](../../docs/protocol/job-routing.md) defines fit and warm runners.
-- [Cache](../../docs/protocol/cache.md) defines trusted cache and Docker use.
+- [Cache](../../docs/protocol/cache.md) defines cache trust and restore order.
+- [Docker disks](../../docs/protocol/docker-disks.md) defines Docker disk use.
 - [Dashboard API](../ciproxy-api/README.md) defines the `/api` routes.
 - [GitHub integration](../ciproxy-github/README.md) defines App boundaries.
 - [Runtime setup](../../deploy/runtime.md) defines the deployed interface.

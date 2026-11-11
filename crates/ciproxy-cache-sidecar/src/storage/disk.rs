@@ -7,6 +7,7 @@ use std::sync::{Arc, Weak};
 use async_trait::async_trait;
 use axum::body::Body;
 use bytes::Bytes;
+use ciproxy_protocol::cache_metadata::CacheEntryMetadata;
 use sha2::{Digest, Sha256};
 use tempfile::NamedTempFile;
 use tokio::fs;
@@ -17,10 +18,10 @@ use crate::error::{CacheError, Result, ResultExt};
 
 use super::allocation::{Allocation, DiskAllocation};
 use super::capture::{self, Capture, Captured, Reservation, hex};
-use super::index::{entries, matching, next_order, remove};
-use super::interface::{Entry, Lookup, ReadSource, Storage};
+use super::index::{entries, next_order, remove};
+use super::interface::{Entry, EntryOrigin, ReadSource, Storage};
 use super::publication::persist;
-use super::{assembly, read};
+use super::{assembly, metadata, read};
 
 /// Filesystem storage. A machine must have only one service for this root.
 pub struct DiskStorage {
@@ -102,9 +103,16 @@ impl Storage for DiskStorage {
         read::read(&self.root, source, offset, length).await
     }
 
-    async fn lookup(&self, lookup: &Lookup) -> Result<Option<Entry>> {
+    async fn entries(&self) -> Result<Vec<Entry>> {
         let _guard = self.index.lock().await;
-        Ok(matching(&entries(&self.root).await?, lookup))
+        entries(&self.root).await
+    }
+
+    async fn annotate_source(&self, entry: &Entry, source: &CacheEntryMetadata) -> Result<()> {
+        let mut index = self.index.lock().await;
+        metadata::annotate(&self.root, entry, source).await?;
+        *index = None;
+        Ok(())
     }
 
     async fn verify(&self, entry: &Entry) -> Result<()> {
@@ -138,15 +146,16 @@ impl Storage for DiskStorage {
         let mut index = self.index.lock().await;
         let path = self.root.join(format!("{}.json", entry.id));
         if fs::metadata(&path).await.is_ok() {
-            let mut entry = entry.clone();
-            entry.accessed = next_order(
+            let bytes = fs::read(&path).await.internal()?;
+            let mut current: Entry = serde_json::from_slice(&bytes).internal()?;
+            current.accessed = next_order(
                 entries(&self.root)
                     .await?
                     .iter()
                     .map(|entry| entry.accessed),
             )?;
             let temporary = self.root.join(format!("{}.pending", entry.id));
-            fs::write(&temporary, serde_json::to_vec(&entry).internal()?)
+            fs::write(&temporary, serde_json::to_vec(&current).internal()?)
                 .await
                 .internal()?;
             fs::rename(temporary, path).await.internal()?;
@@ -209,6 +218,7 @@ impl Storage for DiskStorage {
                 && old.key == entry.key
                 && old.version == entry.version
                 && old.origin == entry.origin
+                && (entry.origin == EntryOrigin::AcceptedSave || old.source == entry.source)
         }) {
             return Ok(old.clone());
         }

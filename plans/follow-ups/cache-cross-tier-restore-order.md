@@ -135,4 +135,36 @@
   retained entries when GitHub has only a lower-priority candidate. The
   resolver accepts no job-provided scope authority.
 
+## Implementation design, 8 November 2026
+
+The user selected B and authorized the required agent relay changes.
+The control plane reads the repository cache listing with its existing
+GitHub App Actions read permission. It returns entry IDs, full refs,
+keys, versions, and creation times through a machine-authenticated host
+route. Each request checks the machine's workspace and assigned job.
+The machine requests current metadata during a restore. It uses no
+job-start snapshot or shared persistent metadata index.
+
+The agent derives the hosted endpoint from its existing gateway address.
+It configures metadata access through cache administration outside the
+job VM. The machine credential and App tokens never enter the guest
+proxy configuration. Job-supplied refs remain untrusted.
+
+One resolver orders eligible local and upstream candidates by the existing
+scope, requested-key, exact-match, and newest-prefix rules. The local entry
+record keeps its trusted source identity separately from its write-back
+visibility. Retained entries keep these facts after restart and upstream
+deletion. A fill cannot claim the reader's ref as its source or displace
+an accepted save.
+
+Missing or inconsistent trusted metadata uses the existing GitHub fallback
+or cache miss. It never grants a guessed source ref to a fill. A metadata
+failure does not delete retained entries or fail the job. The change adds
+no App permission, customer setting, or cache requirement.
+
+Design calls: use the existing Actions read permission and host credential
+to avoid a new authority. Fetch metadata for each restore to include
+entries created during the job. Keep source identity and local visibility
+separate to preserve trusted write-back.
+
 [legacy-entry]: https://github.com/actions/toolkit/blob/main/packages/cache/src/internal/contracts.ts

@@ -12,9 +12,7 @@ use ciproxy_protocol::secret::Secret;
 use tokio::sync::Mutex;
 
 use crate::boundaries::Cache;
-use crate::cache_admin::{
-    Administration, CacheFiles, Credential, HttpAdministration, OwnedCacheFiles,
-};
+use crate::cache_admin::{Administration, CacheFiles, Credential};
 use crate::cache_authority::CheckedRuntime;
 use crate::error::{Error, Result};
 use crate::network::host_address;
@@ -37,19 +35,6 @@ pub(crate) struct HttpCache {
 }
 
 impl HttpCache {
-    pub(crate) fn new(commands: Arc<dyn Commands>) -> Result<Self> {
-        Ok(Self::with_boundaries(
-            Arc::new(HttpAdministration::new(
-                "/var/lib/ciproxy/cache-admin-token".into(),
-            )?),
-            Arc::new(OwnedCacheFiles {
-                directory: "/var/lib/ciproxy/area/cache".into(),
-                commands: commands.clone(),
-            }),
-            commands,
-        ))
-    }
-
     pub(crate) fn with_boundaries(
         admin: Arc<dyn Administration>,
         files: Arc<dyn CacheFiles>,

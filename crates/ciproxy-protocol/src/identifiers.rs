@@ -19,6 +19,10 @@ identifier!(
 );
 identifier!(RunnerId, "The identifier of one runner and its fresh VM.");
 identifier!(JobId, "The GitHub identifier of one job.");
+identifier!(
+    CacheMetadataRequestId,
+    "One host-admin cache metadata request."
+);
 identifier!(RepositoryId, "The GitHub identifier of one repository.");
 identifier!(ImageId, "The release identifier of one job VM image.");
 identifier!(

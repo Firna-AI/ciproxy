@@ -1,9 +1,9 @@
 # Trusted run metadata
 
 This guide gives the run facts that the App integration reads from
-GitHub, the assignment facts for the agent, and webhook delivery
-recovery. The [crate README](README.md) gives the rest of the
-integration.
+GitHub, the assignment facts for the agent, the cache entry metadata, and
+webhook delivery recovery. The [crate README](README.md) gives the rest of
+the integration.
 
 ## Run facts
 
@@ -39,6 +39,22 @@ It checks cache trust, also for reusable workflows. The agent uses the
 checked ref for Docker policy and owns the Docker-disk lifecycle.
 Installation tokens keep their three permissions for API event and head
 metadata. The App's fourth permission, "Members: read", serves sign-in only.
+
+## Cache entry metadata
+
+`CacheEntries::cache_entries` reads the cache entry list of one repository
+with its installation token. The existing "Actions: read" permission
+covers this list. The adapter reads every page of the list on each call,
+and it keeps no copy between calls. Each `CacheEntryMetadata` keeps the GitHub entry ID, the full ref, the
+key, the version, and the creation time. Refs stay unchanged, also tag
+refs. The creation time becomes decimal-string Unix nanoseconds. A failed
+page or an unreadable time fails the whole call, so no partial list leaves
+the adapter. It reads no cache contents.
+
+The control plane calls this adapter only for the repository of a job that
+runs on the calling machine. The
+[cache protocol](../../docs/protocol/cache.md#restore-order) gives that
+rule and the use of these facts.
 
 ## Webhook delivery recovery
 

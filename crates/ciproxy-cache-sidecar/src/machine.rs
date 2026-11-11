@@ -13,6 +13,7 @@ use uuid::Uuid;
 use crate::clock::Clock;
 use crate::download::Download;
 use crate::error::{CacheError, Result, ResultExt};
+use crate::metadata_relay::{AdminMetadataRelay, MetadataRequests};
 use crate::metrics::{Metrics, Reports};
 use crate::runtime_token::RuntimeTokens;
 use crate::scope::can_save;
@@ -41,6 +42,7 @@ pub struct MachineCache {
     pub(crate) sessions: Mutex<HashMap<String, Arc<Session>>>,
     pub(crate) admin_token: String,
     pub(crate) tokens: Arc<dyn RuntimeTokens>,
+    pub(crate) metadata_requests: Arc<dyn MetadataRequests>,
 }
 
 impl MachineCache {
@@ -60,6 +62,7 @@ impl MachineCache {
             sessions: Mutex::new(HashMap::new()),
             admin_token,
             tokens,
+            metadata_requests: Arc::new(AdminMetadataRelay::new()),
         }
     }
 

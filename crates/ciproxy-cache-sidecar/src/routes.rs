@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use axum::body::{Body, to_bytes};
 use axum::http::{Method, Request, Response, StatusCode};
+use ciproxy_protocol::cache_metadata::{CacheMetadataAnswer, CacheMetadataRelayConfig};
 use ciproxy_protocol::secret::Secret;
 use serde::Deserialize;
 use tokio::sync::Mutex;
@@ -103,6 +104,19 @@ impl MachineCache {
             (Method::GET, "/report") => Ok(json(&self.metrics.report().await?)),
             (Method::POST, "/clear") => {
                 self.store.clear().await?;
+                Ok(status(StatusCode::NO_CONTENT))
+            }
+            (Method::PUT, "/metadata-relay") => {
+                let bytes = to_bytes(body, 1024).await.internal()?;
+                let config: CacheMetadataRelayConfig = serde_json::from_slice(&bytes).internal()?;
+                self.metadata_requests.enable(config.enabled).await;
+                Ok(status(StatusCode::NO_CONTENT))
+            }
+            (Method::GET, "/metadata-requests") => Ok(json(&self.metadata_requests.next().await)),
+            (Method::POST, "/metadata-responses") => {
+                let bytes = to_bytes(body, 16 * 1024 * 1024).await.internal()?;
+                let answer: CacheMetadataAnswer = serde_json::from_slice(&bytes).internal()?;
+                self.metadata_requests.answer(answer).await;
                 Ok(status(StatusCode::NO_CONTENT))
             }
             (Method::PUT, "/budget") => {

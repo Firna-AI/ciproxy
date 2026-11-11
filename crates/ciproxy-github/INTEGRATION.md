@@ -44,4 +44,5 @@ The dashboard take-out service owns the intentional-removal distinction.
 ## Trusted run metadata
 
 The [run metadata guide](run-metadata.md) gives trusted run facts,
-assignment preparation, and webhook delivery recovery.
+assignment preparation, cache entry metadata, and webhook delivery
+recovery.

@@ -61,6 +61,20 @@ restored bytes. A pure method derives the content source from these
 counts. Zero entries give no observed source.
 Direct GitHub use and fallback carry no counts.
 
+`cache_metadata` carries trusted GitHub cache entry metadata for the
+restore order. `CacheMetadataRequest` names only the assigned job. The
+hosted route at `CACHE_METADATA_PATH` answers with a
+`CacheMetadataResponse`: the current entry list of that job's repository.
+Each `CacheEntryMetadata` holds the GitHub entry ID, the full ref, the key,
+the version, and the creation time. The ref stays unchanged, also for tags.
+The ID and the creation time are decimal strings. The creation time counts
+Unix nanoseconds. `CacheMetadataWork` and `CacheMetadataAnswer` carry one
+queued request and its answer between the cache service and the root
+agent. An answer holds metadata or an unavailable result, never a secret.
+`CacheMetadataRelayConfig` only turns that relay on or off.
+`CacheMetadataSource` holds the hosted URL and the machine credential for
+the root agent only. None of these values enters a guest.
+
 `Secret` hides credentials, tokens, registrations, and URLs from `Debug`.
 Its `expose_secret` method gives explicit access to the original value.
 JSON serialization also carries the original value for delivery.
@@ -145,6 +159,8 @@ Review snapshot changes before accepting them.
 - [src/reports.rs](src/reports.rs) defines current machine state.
 - [src/cache.rs](src/cache.rs) defines restore handling and
   `CacheRestoreCounts::source`, which derives the measured content source.
+- [src/cache_metadata.rs](src/cache_metadata.rs) defines the hosted entry
+  metadata route, its values, and the root relay values.
 - [src/jobs.rs](src/jobs.rs) carries expected assignment identities and
   checked or unknown machine scopes.
 - [src/secret.rs](src/secret.rs) protects secret diagnostic output.
@@ -158,5 +174,6 @@ Review snapshot changes before accepting them.
 - [Architecture](../../docs/architecture.md) defines component boundaries.
 - [Agent protocol](../../docs/protocol/agent.md) defines connection and health.
 - [Job routing](../../docs/protocol/job-routing.md) defines slots and job disk.
-- [Cache](../../docs/protocol/cache.md) defines cache scopes and reports.
+- [Cache](../../docs/protocol/cache.md) defines cache scopes, restore order,
+  and reports.
 - [Security](../../docs/protocol/security.md) defines key custody.

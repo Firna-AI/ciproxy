@@ -11,8 +11,13 @@ pub mod storage;
 pub mod transport;
 
 mod blobs;
+mod candidates;
 mod download;
+mod metadata;
+mod metadata_relay;
 mod metrics;
+mod resolver;
+mod restore;
 mod routes;
 mod scope;
 mod upload;

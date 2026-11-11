@@ -18,3 +18,12 @@ mod storage_tests;
 mod trusted_event_tests;
 #[path = "cases/wire_tests.rs"]
 mod wire_tests;
+
+#[path = "cases/restore_order_tests.rs"]
+mod restore_order_tests;
+
+#[path = "cases/metadata_relay_tests.rs"]
+mod metadata_relay_tests;
+
+#[path = "cases/retained_metadata_tests.rs"]
+mod retained_metadata_tests;

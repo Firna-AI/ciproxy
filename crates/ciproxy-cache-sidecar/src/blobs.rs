@@ -164,12 +164,17 @@ impl MachineCache {
         if expected.is_some_and(|size| size != blob.size) {
             return Err(CacheError::Unavailable);
         }
-        let entry = self.entry(
+        let mut entry = self.entry(
             session,
             download.key.clone(),
             download.version.clone(),
             EntryOrigin::ReaderFill,
         );
+        entry.source = download.source.clone();
+        if !download.retain {
+            download.blob = Some(blob);
+            return Ok(());
+        }
         if download.generation != self.store.generation() {
             return Err(CacheError::Unavailable);
         }

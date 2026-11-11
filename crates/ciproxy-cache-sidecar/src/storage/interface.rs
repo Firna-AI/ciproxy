@@ -5,6 +5,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use axum::body::Body;
 use bytes::Bytes;
+use ciproxy_protocol::cache_metadata::CacheEntryMetadata;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
@@ -36,6 +37,12 @@ pub struct Entry {
     #[serde(default)]
     pub origin: EntryOrigin,
     pub(crate) scope: Scope,
+    /// Trusted upstream source, distinct from the reader visibility of a fill.
+    #[serde(default)]
+    pub source: Option<CacheEntryMetadata>,
+    /// Accepted upstream identifier, retained when creation metadata is unavailable.
+    #[serde(default)]
+    pub upstream_id: Option<String>,
     /// Physical archive size, measured while writing.
     pub size: u64,
     /// Digest measured while writing, used to detect disk corruption.
@@ -72,8 +79,10 @@ pub enum ReadSource {
 pub trait Storage: Send + Sync {
     /// Recover orphaned files once before this storage starts serving requests.
     async fn recover(&self) -> Result<()>;
-    /// Find an entry in branch-first exact/prefix key order.
-    async fn lookup(&self, lookup: &Lookup) -> Result<Option<Entry>>;
+    /// Read local candidate facts without applying restore order.
+    async fn entries(&self) -> Result<Vec<Entry>>;
+    /// Persist learned source facts without changing immutable bytes or LRU order.
+    async fn annotate_source(&self, entry: &Entry, source: &CacheEntryMetadata) -> Result<()>;
     /// Verify and open a local archive.
     async fn verify(&self, entry: &Entry) -> Result<()>;
     /// Record a local entry access for least-recently-used eviction.
