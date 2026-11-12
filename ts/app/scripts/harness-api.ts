@@ -6,6 +6,8 @@ import { activation } from "./fixtures-core.ts";
 import { installCommand } from "./fixtures-setup.ts";
 import { serveBoat } from "./harness-boat-api.ts";
 import { recordedScenario } from "./harness-scenarios.ts";
+import { servePages } from "./harness-pages.ts";
+import { queryFacts, type CapturedBody } from "./harness-pages-facts.ts";
 import {
   fields,
   problem,
@@ -54,8 +56,16 @@ export async function serveApi(
 ): Promise<void> {
   const method = request.method ?? "GET";
   const current = state.scenario;
-  const send = (status: number, body: unknown) => {
-    state.facts.push({ method, path, status, kind: "api" });
+  const url = new URL(request.url ?? path, "http://127.0.0.1");
+  const send = (status: number, body: unknown, requestBody?: CapturedBody) => {
+    state.facts.push({
+      method,
+      path,
+      status,
+      kind: "api",
+      query: queryFacts(url),
+      body: requestBody,
+    });
     json(response, status, body, state.build);
   };
   if (
@@ -179,6 +189,13 @@ export async function serveApi(
     member.role = "admin";
     member.can_claim_admin = false;
     send(200, success);
+    return;
+  }
+  const page = await servePages(method, id, action ?? "", url, state, () =>
+    readJson(request),
+  );
+  if (page !== undefined) {
+    send(page.status, page.body, page.requestBody);
     return;
   }
   if (member.role !== "admin") {

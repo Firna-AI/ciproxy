@@ -21,11 +21,24 @@ export const missingCosts = defineScreen({
 export const empty = defineScreen({
   slug: "empty",
   title: "No jobs yet",
-  description: "A new organization before its first job.",
+  description:
+    "A new organization before its first job. The range control stays above the empty report.",
   relatedDocs: related("metering"),
   address,
   render: (_props, context) => (
     <SavingsScreen viewport={context.viewport} state="empty" />
+  ),
+});
+
+export const emptyRange = defineScreen({
+  slug: "empty-range",
+  title: "A range with no jobs",
+  description:
+    "A what-if: a workspace whose first job ran in November opens Last month. The range control stays, so the person can choose another range.",
+  relatedDocs: related("metering"),
+  address,
+  render: (_props, context) => (
+    <SavingsScreen viewport={context.viewport} state="empty-range" />
   ),
 });
 

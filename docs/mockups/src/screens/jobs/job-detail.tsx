@@ -3,9 +3,11 @@
 // which Boat bills, with its whole disk as Boat states it, while a label
 // states the free disk of its jobs. The cache counts show only when the
 // machine cache handled the restores; a job on Boat, and a job that fell back
-// to the GitHub cache, show only the cache source.
+// to the GitHub cache, show only the cache source. When ciproxy has no saved
+// request for a job, the label says so in place of a size, and the VM size
+// comes from the VM that ran the job, never from the label as it is now.
 
-import { Cloud, ExternalLink, Server } from "lucide-react";
+import { CircleDashed, Cloud, ExternalLink, Server } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
 
 import { Action } from "../../components/actions.tsx";
@@ -26,11 +28,15 @@ import {
   type JobDetailState,
 } from "../../fixtures/job-details.ts";
 import type { Where } from "../../fixtures/jobs.ts";
-import { boatSizeText, sizeText } from "../../fixtures/sizes.ts";
+import { boatSizeText, sizeText, vmSizeText } from "../../fixtures/sizes.ts";
 import "./jobs.css";
 import "./job-detail.css";
 
+/** The text in place of a routing reason that the API does not give. */
+const noReason = "Why the job ran here is not available.";
+
 function WhereTitle({ where }: { where: Where }) {
+  if (where.kind === "none") return "No runner";
   if (where.kind !== "own") return "Boat";
   return (
     <>
@@ -40,17 +46,44 @@ function WhereTitle({ where }: { where: Where }) {
   );
 }
 
-/** The VM size that ran the job: the label's on a machine, Boat's on Boat. */
+/**
+ * The VM size that ran the job: the request on a machine, Boat's on Boat. For
+ * an unknown request, the VM that ran it, with its whole VM disk, and a Boat
+ * size without the claim that it fits the label.
+ */
 function VmSize({ job }: { job: JobDetail }) {
-  if (!job.boatSize) return <>{sizeText(job.label)}</>;
+  if (!job.boatSize) {
+    if (job.request !== "unknown") return <>{sizeText(job.request)}</>;
+    return <>{job.vm ? vmSizeText(job.vm) : "Unknown"}</>;
+  }
   return (
     <span className="detail-stack">
       <span>
         {dotJoin(`Boat ${job.boatSize.name}`, boatSizeText(job.boatSize))}
       </span>
       <span className="caption">
-        The cheapest Boat size that fits the label and the image. Boat bills
-        this size.
+        {job.request === "unknown" || job.currentContract
+          ? "Boat bills this size."
+          : "The cheapest Boat size that fits the label and the image. Boat bills this size."}
+      </span>
+    </span>
+  );
+}
+
+/**
+ * The label of the job. On Boat, the size of the label shows under its name,
+ * because the Boat size can be larger. An unknown request shows there too.
+ */
+function LabelValue({ job }: { job: JobDetail }) {
+  const name = <span className="inline-code">{job.label}</span>;
+  if (job.request !== "unknown" && !job.boatSize) return name;
+  return (
+    <span className="detail-stack">
+      {name}
+      <span className="caption">
+        {job.request === "unknown"
+          ? "Requested size unknown"
+          : sizeText(job.request)}
       </span>
     </span>
   );
@@ -68,6 +101,9 @@ const machineSources = {
  * because each text is then true for every job.
  */
 function CacheRows({ cache, job }: { cache: CacheUse; job: JobDetail }) {
+  if (cache.source === "unknown") {
+    return <DetailRow label="Cache">Unknown</DetailRow>;
+  }
   if (cache.source === "none") {
     return <DetailRow label="Cache">No entries restored</DetailRow>;
   }
@@ -103,6 +139,25 @@ function CacheRows({ cache, job }: { cache: CacheUse; job: JobDetail }) {
   );
 }
 
+/** The rows of a job that a ciproxy runner took. */
+function RanDetails({ job }: { job: JobDetail }) {
+  return (
+    <>
+      <DetailRow label="VM size">
+        <VmSize job={job} />
+      </DetailRow>
+      <DetailRow label="Waited">
+        <span className="duration">{job.waited}</span>
+      </DetailRow>
+      <DetailRow label="Duration">
+        <span className="duration">{job.duration}</span>
+      </DetailRow>
+      <CacheRows cache={job.cache} job={job} />
+      <DetailRow label="Starts">Counts as 1 start</DetailRow>
+    </>
+  );
+}
+
 export function JobDetailScreen({
   viewport,
   state,
@@ -111,13 +166,18 @@ export function JobDetailScreen({
   state: JobDetailState;
 }) {
   const job = jobDetails[state];
-  const Icon = job.where.kind === "boat" ? Cloud : Server;
+  const Icon =
+    job.where.kind === "boat"
+      ? Cloud
+      : job.where.kind === "none"
+        ? CircleDashed
+        : Server;
   return (
     <AppShell viewport={viewport} tier="team" active="jobs">
       <PageHeader
         crumbs={[{ label: "Jobs", to: paths.jobsHistory }]}
         title={job.name}
-        status={<JobStateLabel state="passed" />}
+        status={<JobStateLabel state={job.result ?? "passed"} />}
         subtitle={job.context}
         actions={<Action icon={ExternalLink}>View on GitHub</Action>}
       />
@@ -131,7 +191,7 @@ export function JobDetailScreen({
               <p className="where-ran-title">
                 <WhereTitle where={job.where} />
               </p>
-              <p className="small muted">{job.why}</p>
+              <p className="small muted">{job.why ?? noReason}</p>
             </div>
           </div>
           <ol className="timeline">
@@ -154,26 +214,9 @@ export function JobDetailScreen({
         <Panel title="Details">
           <DetailList>
             <DetailRow label="Label">
-              {job.boatSize ? (
-                <span className="detail-stack">
-                  <span className="inline-code">{job.label.name}</span>
-                  <span className="caption">{sizeText(job.label)}</span>
-                </span>
-              ) : (
-                <span className="inline-code">{job.label.name}</span>
-              )}
+              <LabelValue job={job} />
             </DetailRow>
-            <DetailRow label="VM size">
-              <VmSize job={job} />
-            </DetailRow>
-            <DetailRow label="Waited">
-              <span className="duration">{job.waited}</span>
-            </DetailRow>
-            <DetailRow label="Duration">
-              <span className="duration">{job.duration}</span>
-            </DetailRow>
-            <CacheRows cache={job.cache} job={job} />
-            <DetailRow label="Starts">Counts as 1 start</DetailRow>
+            {job.noRunner ? null : <RanDetails job={job} />}
           </DetailList>
         </Panel>
       </div>

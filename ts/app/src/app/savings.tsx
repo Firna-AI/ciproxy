@@ -1,7 +1,8 @@
-// A page of the shell that a later release fills.
+// Savings: the cost of the jobs with ciproxy against the same jobs on
+// Blacksmith and on GitHub-hosted runners.
 
-import { ComingSoonScreen } from "../screens/coming-soon.tsx";
+import { SavingsScreen } from "../screens/savings/savings-screen.tsx";
 
 export default function Savings() {
-  return <ComingSoonScreen page="savings" />;
+  return <SavingsScreen />;
 }

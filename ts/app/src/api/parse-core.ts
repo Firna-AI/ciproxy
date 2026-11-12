@@ -58,6 +58,28 @@ export function decimal(value: unknown): string {
   return text;
 }
 
+/**
+ * An exact decimal in string form, with an optional fraction, such as
+ * "372.5" seconds or "80604.25" minutes. It stays a string, so no digit is
+ * lost.
+ */
+export function fraction(value: unknown): string {
+  const text = string(value);
+  if (!/^-?\d+(\.\d+)?$/.test(text)) throw new ParseError("decimal value");
+  return text;
+}
+
+/** A UTC calendar date in YYYY-MM-DD form, kept as its wire string. */
+export function date(value: unknown): string {
+  const text = string(value);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  if (match === null) throw new ParseError("date");
+  const [year, month, day] = [match[1], match[2], match[3]].map(Number);
+  const at = new Date(Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1));
+  if (at.toISOString().slice(0, 10) !== text) throw new ParseError("date");
+  return text;
+}
+
 /** A UTC RFC 3339 time, kept as its wire string. */
 export function time(value: unknown): string {
   const text = string(value);

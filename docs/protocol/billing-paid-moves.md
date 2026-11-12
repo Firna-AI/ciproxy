@@ -17,6 +17,7 @@ of a move.
 - A quote starts at most one move.
 - A new move can start from a quote for 30 minutes after the review, and
   only before the period ends.
+- A retry of the move names the same quote.
 - Each retry of the move keeps its proration time and its amounts, also
   after a restart or after those 30 minutes.
 - ciproxy refuses to start a move from an unknown or expired quote, the
@@ -25,6 +26,16 @@ of a move.
   add-ons, its billing day, its period, its earlier credits and charges, or
   the credit balance of the customer changed after the review.
 - The page then asks the customer to review the move again.
+- Before it asks for the new review, the page reads the billing state of
+  the workspace again.
+- The page asks for the new review only when that read succeeds and shows
+  that the move can still start.
+- The new review starts no payment.
+- The move starts only when the customer confirms the new review, also
+  when its charge did not change.
+- **Decision:** each review needs its own confirmation. Rejected: a move
+  that starts by itself after the new review. Reason: Stripe makes no
+  charge that the customer did not confirm.
 - **Decision:** ciproxy stores each quote. Rejected: a signed quote that the
   browser sends back, and a new preview with a second confirmation. Reason:
   a stored quote best keeps the move and its retries the same as the review.

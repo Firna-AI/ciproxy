@@ -25,7 +25,7 @@ export const billing = defineScreen({
   slug: "billing",
   title: "Machines, seen by a Billing person",
   description:
-    "Dana Kim has the Billing role. A fourth machine passed the three of Team, and the banner gives her the extra-machine add-on, because she pays. She cannot add a machine or open the overflow settings.",
+    "Dana Kim has the Billing role. A fourth machine passed the three of Team, and the banner gives her its action, Plan and usage, because she pays. She cannot add a machine or open the overflow settings.",
   relatedDocs: related("security", "billing", "metering"),
   address,
   render: (_props, context) => (

@@ -10,6 +10,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { json, readJson, serveApi } from "./harness-api.ts";
 import { createHarnessState, updateHarness } from "./harness-state.ts";
+import { pagesSnapshot, releasePages } from "./harness-pages-state.ts";
+import { queryFacts } from "./harness-pages-facts.ts";
 
 const media: Readonly<Record<string, string>> = {
   ".html": "text/html; charset=utf-8",
@@ -81,6 +83,7 @@ export async function startHarness(
           facts: state.facts,
           boatConnectionFields: state.scenario.boat.connectionFields,
           boatConnectionWallet: state.scenario.boat.connectionWallet,
+          pages: pagesSnapshot(state.scenario.pages),
         },
         state.build,
       );
@@ -96,6 +99,7 @@ export async function startHarness(
         path: url.pathname,
         status: 200,
         kind: "navigation",
+        query: queryFacts(url),
       });
       response.writeHead(200, {
         "Content-Type": "text/html",
@@ -119,6 +123,7 @@ export async function startHarness(
         path: url.pathname,
         status: 200,
         kind: "document",
+        query: queryFacts(url),
       });
     response.writeHead(200, {
       "Content-Type": media[extname(file)] ?? "application/octet-stream",
@@ -141,10 +146,12 @@ export async function startHarness(
     throw new Error("Harness has no TCP address");
   return {
     origin: `http://127.0.0.1:${address.port}`,
-    stop: () =>
-      new Promise<void>((done, fail) => {
+    stop: () => {
+      releasePages(state.scenario.pages);
+      return new Promise<void>((done, fail) => {
         server.close((error) => (error ? fail(error) : done()));
-      }),
+      });
+    },
   };
 }
 

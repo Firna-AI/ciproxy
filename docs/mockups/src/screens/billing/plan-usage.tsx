@@ -1,60 +1,85 @@
 // Plan and usage: the tier, the starts and own machines of the period against
 // the tier, the add-ons, and the way to the Stripe billing portal. A Viewer
 // sees the same page without its payment actions, and can compare the plans.
+// The banner and the links of a moment come from billing-scenes.tsx. With
+// `api`, the page shows what the current API gives at that moment: its
+// banner, its notices, and the add-ons that it prices.
 
 import { ExternalLink } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
 import { SkeletonBar, SkeletonGroup } from "@firna/ui/skeleton";
 
 import { Action, LinkAction } from "../../components/actions.tsx";
+import { apiBanner } from "../../components/api-banner.tsx";
 import { ReadFailure } from "../../components/feedback.tsx";
 import { Meter } from "../../components/figures.tsx";
 import { PageHeader, Panel } from "../../components/page.tsx";
-import { paths } from "../../components/paths.ts";
+import { paths, type CataloguePath } from "../../components/paths.ts";
 import { AskPayer, canPay } from "../../components/role-actions.tsx";
 import { AppShell } from "../../components/shell/app-shell.tsx";
-import { usageBanner } from "../../components/usage-banner.tsx";
+import type { AddOnCount } from "../../fixtures/current-api.ts";
 import { dotJoin, formatCount, monthly } from "../../fixtures/format.ts";
 import type { Role } from "../../fixtures/members.ts";
+import { ownMachines, startsText, tiers } from "../../fixtures/tiers.ts";
 import {
-  addOnPrices,
-  ownMachines,
-  startsText,
-  tiers,
-} from "../../fixtures/tiers.ts";
-import {
+  included,
   usageScenes,
   type Usage,
   type UsageScene,
 } from "../../fixtures/usage.ts";
 import { AddOns } from "./add-ons.tsx";
+import { ApiAddOns, type AddOnsOutcome } from "./api-add-ons.tsx";
+import {
+  PaceNotice,
+  PendingNotice,
+  type PendingPayment,
+} from "./api-notices.tsx";
+import { freePlansOf, sceneBanner } from "./billing-scenes.tsx";
 import { usageNotice } from "./usage-notices.tsx";
 import "./billing.css";
 
 export type PlanUsageState = UsageScene | "loading" | "error";
 
+/** Plan and usage as the current API gives it, at one moment. */
+export type UsageApi = {
+  /** The Plans screen of the moment, which the banner and the plan open. */
+  plans: CataloguePath;
+  /** A payment that waits, and the Stripe page that this tab saved. */
+  pending?: PendingPayment;
+  /** The add-on quantities that the payer set, when not the saved ones. */
+  edited?: AddOnCount;
+  /** What Stripe answered to Save add-ons. */
+  outcome?: AddOnsOutcome;
+};
+
 export function PlanUsageScreen({
   viewport,
   state,
   role = "admin",
+  api,
 }: {
   viewport: Viewport;
   state: PlanUsageState;
   /** The role of the signed-in person: a Viewer cannot pay. */
   role?: Role;
+  api?: UsageApi;
 }) {
   const scene: UsageScene =
     state === "loading" || state === "error" ? "steady" : state;
   const usage = usageScenes[scene];
   const system = state === "loading" || state === "error";
   const payer = canPay(role);
+  const plans = api?.plans ?? freePlansOf(scene);
+  const banner = api
+    ? apiBanner({ scene, plans: api.plans })
+    : sceneBanner(scene, "billing", payer);
   return (
     <AppShell
       viewport={viewport}
       tier={usage.tier}
       active="billing"
       role={role}
-      banner={system ? undefined : usageBanner(scene, "billing", payer)}
+      banner={system ? undefined : banner}
     >
       <PageHeader title="Plan and usage" />
       {state === "error" ? (
@@ -65,12 +90,30 @@ export function PlanUsageScreen({
         <LoadingUsage />
       ) : (
         <>
-          {usageNotice(scene, usage, payer)}
+          {api ? (
+            <>
+              {api.pending ? (
+                <PendingNotice pending={api.pending} page="usage" />
+              ) : null}
+              <PaceNotice scene={scene} plans={api.plans} />
+            </>
+          ) : (
+            usageNotice(scene, usage, payer, plans)
+          )}
           <div className="grid-2">
-            <CurrentPlan usage={usage} canPay={payer} />
+            <CurrentPlan usage={usage} canPay={payer} plans={plans} />
             <UsagePanel usage={usage} />
           </div>
-          <AddOns scene={scene} usage={usage} canPay={payer} />
+          {api ? (
+            <ApiAddOns
+              scene={scene}
+              edited={api.edited}
+              outcome={api.outcome}
+              waiting={api.pending !== undefined || api.outcome !== undefined}
+            />
+          ) : (
+            <AddOns scene={scene} usage={usage} canPay={payer} />
+          )}
         </>
       )}
     </AppShell>
@@ -83,7 +126,16 @@ function renewal(usage: Usage): string | undefined {
   return usage.renews ? `renews on ${usage.renews}` : undefined;
 }
 
-function CurrentPlan({ usage, canPay }: { usage: Usage; canPay: boolean }) {
+function CurrentPlan({
+  usage,
+  canPay,
+  plans,
+}: {
+  usage: Usage;
+  canPay: boolean;
+  /** The Plans screen that Compare plans opens on Free. */
+  plans: CataloguePath;
+}) {
   const tier = tiers[usage.tier];
   const paid = tier.price > 0;
   const when = paid ? renewal(usage) : undefined;
@@ -102,7 +154,7 @@ function CurrentPlan({ usage, canPay }: { usage: Usage; canPay: boolean }) {
         {canPay ? (
           <div className="row-wrap">
             <LinkAction
-              to={paid ? paths.plansOnTeam : paths.plans}
+              to={paid ? paths.plansOnTeam : plans}
               tone={paid ? "secondary" : "primary"}
             >
               {paid ? "Change plan" : "Compare plans"}
@@ -127,17 +179,8 @@ function CurrentPlan({ usage, canPay }: { usage: Usage; canPay: boolean }) {
   );
 }
 
-/** The included starts and machines: the tier plus the saved add-ons. */
-function limits(usage: Usage) {
-  const tier = tiers[usage.tier];
-  return {
-    starts: tier.starts + usage.extraStarts * addOnPrices.startsBlock,
-    machines: tier.machines + usage.extraMachines,
-  };
-}
-
 function UsagePanel({ usage }: { usage: Usage }) {
-  const limit = limits(usage);
+  const limit = included(usage);
   const startsOver = usage.starts > limit.starts;
   const startsNear = usage.projected > limit.starts;
   const machinesOver = usage.machines > limit.machines;

@@ -1,0 +1,4 @@
+{
+  "title": "Add-ons as the API prices them",
+  "order": ["offer", "unpriced", "pace", "bank", "card"]
+}

@@ -15,12 +15,7 @@ import {
   personalAccountPage,
   signInPage,
 } from "../src/view/access.ts";
-import {
-  accountMenu,
-  navItems,
-  organizationBanner,
-  workspaceMenu,
-} from "../src/view/shell.ts";
+import { accountMenu, navItems, workspaceMenu } from "../src/view/shell.ts";
 import {
   otherWorkspaceId,
   session,
@@ -147,15 +142,6 @@ test("shell permissions follow roles while workspace switching includes no-role 
     assert.equal(
       accountMenu(data, current, role).canClaim,
       current.can_claim_admin,
-    );
-    assert.deepEqual(
-      organizationBanner(current, role)?.action,
-      role === "viewer"
-        ? { ask: "Ask an Admin or a Billing person" }
-        : {
-            label: "Plan and usage",
-            href: `/billing?workspace=${workspaceId}`,
-          },
     );
   }
   assert.deepEqual(

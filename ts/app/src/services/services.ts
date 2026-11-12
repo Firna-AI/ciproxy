@@ -49,7 +49,7 @@ export type AppServices = {
   readonly env: AppEnvironment;
   readonly gate: BuildGate;
   readonly navigator: Navigator;
-  readonly client: ApiClient;
+  readonly api: ApiClient;
   readonly endpoints: Endpoints;
   readonly session: SessionStore;
   setup(workspaceId: string): SetupStore;
@@ -106,7 +106,7 @@ export function createAppServices(env: AppEnvironment): AppServices {
     env,
     gate,
     navigator,
-    client,
+    api: client,
     endpoints,
     session: sessionStore,
     setup: cached((workspaceId) =>

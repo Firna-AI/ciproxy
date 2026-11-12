@@ -3,11 +3,31 @@
 // machine cache was not available, so it used the GitHub cache, one of
 // mokly-labs that restored from both caches, and one that restored no entry.
 // Only a job whose restores the machine cache handled shows the cache counts.
+//
+// The size of a job is the request that its label gave it at the start, which
+// ciproxy saves. In a what-if, ciproxy has no saved request for two jobs of
+// the history, one on an own machine and one on Boat. Their request is then
+// unknown, never the current size of the label, which can change after a job.
+// The VM that ran each of them stays known.
 
-import { onBoat, own, repositoryName, type Where } from "./jobs.ts";
+import { factDetails } from "./job-details-facts.ts";
+import {
+  onBoat,
+  own,
+  repositoryName,
+  type JobState,
+  type Where,
+} from "./jobs.ts";
 import { boat } from "./machines.ts";
-import { labelNamed, type Label } from "./settings.ts";
-import { boatSizeFor, type BoatSize } from "./sizes.ts";
+import { labelNamed } from "./settings.ts";
+import {
+  boatSizeFor,
+  boatSizeNamed,
+  type BoatSize,
+  type JobVm,
+  type Size,
+} from "./sizes.ts";
+import { vmDiskBytes } from "./vm-disk.ts";
 
 /** The counts of the restores that the machine cache handled. */
 type CacheCounts = { restored: number; sizeGb: number };
@@ -21,7 +41,9 @@ export type CacheUse =
   | ({ source: "machine" } & CacheCounts)
   | ({ source: "both" } & CacheCounts)
   | { source: "github"; fallback: boolean }
-  | { source: "none" };
+  | { source: "none" }
+  /** The API gives neither a cache source nor counts. */
+  | { source: "unknown" };
 
 /** One line of the timeline; a machine name in it shows in monospace. */
 export type JobEvent = { time: string; text: string; machine?: string };
@@ -32,10 +54,22 @@ export type JobDetail = {
   /** The name and the ref of the job in the history list. */
   ref: string;
   where: Where;
-  label: Label;
+  /** The name of the label in runs-on. */
+  label: string;
+  /** The size that the label gave the job at its start, when ciproxy has it. */
+  request: Size | "unknown";
   /** The Boat size that ran a job on Boat. */
   boatSize?: BoatSize;
-  why: string;
+  /** The VM that ran a job on an own machine, shown for an unknown request. */
+  vm?: JobVm;
+  /** Why the job ran there, or null when the API gives no reason. */
+  why: string | null;
+  /** The result in the header; Passed when it is not given. */
+  result?: JobState;
+  /** No ciproxy runner took the job, so it is not a start. */
+  noRunner?: true;
+  /** A page of the current API, which gives no fit for a Boat size. */
+  currentContract?: true;
   timeline: readonly JobEvent[];
   waited: string;
   duration: string;
@@ -51,10 +85,18 @@ export const jobDetailStates = [
   "fallback",
   "mixed-cache",
   "no-restores",
+  "unknown-request",
+  "unknown-request-boat",
+  "no-runner",
+  "unknown-facts",
+  "current-own",
+  "current-boat",
 ] as const;
 export type JobDetailState = (typeof jobDetailStates)[number];
 
 const warmReason = "A warm runner was ready, so the job started at once.";
+
+const boatReason = `Your machines were full, so the job started on Boat after ${boat.waitSeconds} seconds.`;
 
 export const jobDetails: Readonly<Record<JobDetailState, JobDetail>> = {
   own: {
@@ -62,7 +104,8 @@ export const jobDetails: Readonly<Record<JobDetailState, JobDetail>> = {
     context: `${repositoryName("mokly")} · CI · #1542 Add catalogue search`,
     ref: "#1542",
     where: own(1, 3),
-    label,
+    label: label.name,
+    request: label,
     why: warmReason,
     timeline: [
       { time: "14:25:09", text: "Queued on GitHub" },
@@ -82,9 +125,10 @@ export const jobDetails: Readonly<Record<JobDetailState, JobDetail>> = {
     context: `${repositoryName("mokly")} · E2E · main`,
     ref: "main",
     where: onBoat,
-    label,
+    label: label.name,
+    request: label,
     boatSize: boatSizeFor(label),
-    why: `Your machines were full, so the job started on Boat after ${boat.waitSeconds} seconds.`,
+    why: boatReason,
     timeline: [
       { time: "14:23:04", text: "Queued on GitHub" },
       { time: "14:23:04", text: "No free slot on your machines" },
@@ -101,7 +145,8 @@ export const jobDetails: Readonly<Record<JobDetailState, JobDetail>> = {
     context: `${repositoryName("mokly")} · CI · #1542 Add catalogue search`,
     ref: "#1542",
     where: own(2, 4),
-    label,
+    label: label.name,
+    request: label,
     why: warmReason,
     timeline: [
       { time: "14:26:20", text: "Queued on GitHub" },
@@ -121,7 +166,8 @@ export const jobDetails: Readonly<Record<JobDetailState, JobDetail>> = {
     context: `${repositoryName("eval-runner")} · Evals · main`,
     ref: "main",
     where: own(2, 3),
-    label,
+    label: label.name,
+    request: label,
     why: warmReason,
     timeline: [
       { time: "14:20:00", text: "Queued on GitHub" },
@@ -141,7 +187,8 @@ export const jobDetails: Readonly<Record<JobDetailState, JobDetail>> = {
     context: `${repositoryName("mokly")} · CI · #1538 Restyle the catalogue sidebar`,
     ref: "#1538",
     where: own(2, 6),
-    label,
+    label: label.name,
+    request: label,
     why: warmReason,
     timeline: [
       { time: "14:18:41", text: "Queued on GitHub" },
@@ -156,4 +203,47 @@ export const jobDetails: Readonly<Record<JobDetailState, JobDetail>> = {
     duration: "21s",
     cache: { source: "none" },
   },
+  "unknown-request": {
+    name: "storybook",
+    context: `${repositoryName("mokly")} · CI · #1537 Upgrade Storybook`,
+    ref: "#1537",
+    where: own(1, 2),
+    label: label.name,
+    request: "unknown",
+    vm: { vcpu: 2, memoryGb: 8, vmDiskBytes: vmDiskBytes({ freeDiskGb: 20 }) },
+    why: warmReason,
+    timeline: [
+      { time: "14:13:27", text: "Queued on GitHub" },
+      {
+        time: "14:13:27",
+        text: "Taken by a warm runner on",
+        machine: "hetzner-ax42-1",
+      },
+      { time: "14:17:00", text: "Passed" },
+    ],
+    waited: "0s",
+    duration: "3m 33s",
+    cache: { source: "machine", restored: 2, sizeGb: 0.9 },
+  },
+  "unknown-request-boat": {
+    name: "docker image",
+    context: `${repositoryName("mokly-cloud")} · Release · main`,
+    ref: "main",
+    where: onBoat,
+    label: label.name,
+    request: "unknown",
+    boatSize: boatSizeNamed("large"),
+    why: boatReason,
+    timeline: [
+      { time: "14:19:08", text: "Queued on GitHub" },
+      { time: "14:19:08", text: "No free slot on your machines" },
+      { time: "14:19:38", text: "Runner started on Boat" },
+      { time: "14:19:40", text: "Taken by the Boat runner" },
+      { time: "14:24:20", text: "Passed" },
+    ],
+    waited: "32s",
+    duration: "4m 40s",
+    cache: { source: "github", fallback: false },
+  },
+  ...factDetails,
 };

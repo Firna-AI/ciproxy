@@ -18,9 +18,11 @@ pub(crate) async fn compose(config: &Config, store: Arc<dyn Store>) -> Result<Ar
     let secret = config.secret("stripe-webhook-secret")?;
     let origin = config.public_url.trim_end_matches('/');
     let redirects = Redirects {
-        success_url: format!("{origin}/billing/return?session_id={{CHECKOUT_SESSION_ID}}"),
-        cancel_url: format!("{origin}/plans"),
-        portal_return_url: format!("{origin}/billing"),
+        success_url: format!(
+            "{origin}/checkout-return?workspace={{WORKSPACE_ID}}&session_id={{CHECKOUT_SESSION_ID}}"
+        ),
+        cancel_url: format!("{origin}/plans?workspace={{WORKSPACE_ID}}"),
+        portal_return_url: format!("{origin}/billing?workspace={{WORKSPACE_ID}}"),
     };
     PageComposition::billing(
         store,

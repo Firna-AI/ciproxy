@@ -79,9 +79,11 @@ fn run() -> Result<(), Box<dyn Error>> {
         Arc::new(HostedBillingAlerts),
         SigningSecret::new(secret),
         Redirects {
-            success_url: format!("{origin}/billing/return?session_id={{CHECKOUT_SESSION_ID}}"),
-            cancel_url: format!("{origin}/plans"),
-            portal_return_url: format!("{origin}/billing"),
+            success_url: format!(
+                "{origin}/checkout-return?workspace={{WORKSPACE_ID}}&session_id={{CHECKOUT_SESSION_ID}}"
+            ),
+            cancel_url: format!("{origin}/plans?workspace={{WORKSPACE_ID}}"),
+            portal_return_url: format!("{origin}/billing?workspace={{WORKSPACE_ID}}"),
         },
     );
     let billing: &dyn BillingApi = &service;

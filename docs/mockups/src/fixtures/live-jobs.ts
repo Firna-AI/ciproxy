@@ -2,6 +2,13 @@
 
 import { none, onBoat, own, rows } from "./jobs.ts";
 
+/**
+ * Wednesday 18 November 2026, a UTC day: the release that fills the own
+ * slots at 10:05, and the busy afternoon. The savings report of the overflow
+ * flow ends on this day.
+ */
+export const releaseDay = new Date(Date.UTC(2026, 10, 18));
+
 /** Wednesday 18 November, 14:32. 21 running; the first 11 are listed. */
 export const steadyRunning = rows("steady", [
   ["test (rust)", "CI", "mokly", "#1542", "running", own(1, 1), "4m 12s"],

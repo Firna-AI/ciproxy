@@ -1,0 +1,10 @@
+{
+  "title": "Results that the page did not get",
+  "order": [
+    "payment-unknown",
+    "payment-current",
+    "payment-waits",
+    "add-ons-unknown",
+    "move-to-free-unknown"
+  ]
+}

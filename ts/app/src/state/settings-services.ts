@@ -35,7 +35,7 @@ function cached<T>(create: (key: string) => T): (key: string) => T {
 }
 
 function createSettingsServices(app: AppServices): SettingsServices {
-  const endpoints = createSettingsEndpoints(app.client);
+  const endpoints = createSettingsEndpoints(app.api);
   const { mutate, report } = app.session;
   const refreshSession = () => app.session.refresh();
   const settings = cached((workspaceId) =>

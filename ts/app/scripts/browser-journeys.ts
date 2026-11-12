@@ -88,11 +88,14 @@ export async function staticReloads(page: Page, origin: string): Promise<void> {
     });
     await page.reload({ waitUntil: "domcontentloaded" });
     await visible(page.getByRole("heading", { name: title, exact: true }));
-    await visible(
-      page.getByRole("heading", {
-        name: "This page is coming soon",
-        exact: true,
-      }),
-    );
+    const loaded =
+      path === "jobs"
+        ? "2 warm runners are ready"
+        : path === "savings"
+          ? "Your cost with ciproxy"
+          : path === "billing"
+            ? "This period"
+            : "This page is coming soon";
+    await visible(page.getByRole("heading", { name: loaded, exact: true }));
   }
 }

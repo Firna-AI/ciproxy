@@ -20,6 +20,15 @@
   border-top: 1px solid var(--c-border);
 }
 
+/* The total of the current API, with up to two buttons: they wrap. */
+.addons-total-wrap {
+  flex-wrap: wrap;
+}
+
+.addons-total-wrap > .stack-tight {
+  flex: 1 1 220px;
+}
+
 .tier-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

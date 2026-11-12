@@ -1,0 +1,4 @@
+{
+  "title": "Job page states",
+  "order": ["loading", "error", "not-found", "no-runner", "unknown-facts"]
+}

@@ -73,12 +73,17 @@
 - **Previous examples:** The session store reads again on each page change
   through `visit`, so that an ended role shows on the next page. The Setup
   page already watches its store while it shows.
-- **Related:** `plans/follow-ups/explicit-session-refresh-order.md` changes
-  the same Setup store. Its recommended helper decides which reads share an
-  open read, and which reads start a new one. The shell watch of B is a
-  background read, and the landing read is an explicit read. Neither fix
-  waits for the other. The fix that lands second follows the rule of the
-  first.
+- **Related:**
+  - `plans/follow-ups/explicit-session-refresh-order.md` changes the same
+    Setup store. Its recommended helper decides which reads share an open
+    read, and which reads start a new one. The shell watch of B is a
+    background read, and the landing read is an explicit read. Neither fix
+    waits for the other. The fix that lands second follows the rule of the
+    first.
+  - `plans/follow-ups/shared-poller-lifetime.md` gives the shared poller a
+    page lifetime that counts its openers. That count is the watcher count
+    of B, so the two fixes share one mechanism. Neither item waits for the
+    other.
 - **Recommendation:** B. One shared poller keeps every shell consumer
   current, and it stops at completion.
 - **Action:** fix after merge, apply B, because the review found it after

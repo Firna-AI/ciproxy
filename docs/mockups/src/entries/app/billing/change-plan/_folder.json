@@ -4,6 +4,7 @@
     "to-business",
     "move-to-free",
     "free-scheduled",
-    "free-organizations"
+    "free-organizations",
+    "inactive-organization"
   ]
 }

@@ -1,61 +1,25 @@
 // The signed-in frame of every workspace page. It picks the desktop, rail,
 // or phone frame by the window, and puts the notice of a failed session
-// check, the banner of the organization soft limit, and a failed menu action
-// above the page.
+// check, the one banner of the workspace from the API, and a failed menu
+// action above the page.
 
 import type { ReactNode } from "react";
-import { Link } from "expo-router";
-import { Text } from "react-native";
 
+import type { BannerScope } from "../../api/banner.ts";
 import type {
   SessionView,
   WorkspaceRole,
   WorkspaceView,
 } from "../../api/schema.ts";
 import type { WorkspacePage } from "../../routing/pages.ts";
-import {
-  navItems,
-  organizationBanner,
-  type SetupProgress,
-} from "../../view/shell.ts";
-import { ActionLink } from "../actions.tsx";
+import { navItems, type SetupProgress } from "../../view/shell.ts";
+import { WorkspaceBanner } from "../billing/workspace-banner.tsx";
 import { Notice } from "../notice.tsx";
 import { SessionRefreshNotice } from "../session-notice.tsx";
-import { text } from "../text.ts";
 import { useViewport } from "../viewport.ts";
 import { DesktopShell } from "./desktop-shell.tsx";
 import { MobileShell } from "./mobile-shell.tsx";
 import { useShellActions } from "./shell-actions.ts";
-
-/** The banner of the organization soft limit, on every page. */
-export function SoftLimitBanner({
-  workspace,
-  role,
-}: {
-  workspace: WorkspaceView;
-  role: WorkspaceRole;
-}) {
-  const banner = organizationBanner(workspace, role);
-  if (banner === null) return null;
-  const { action } = banner;
-  return (
-    <Notice
-      tone="warning"
-      title={banner.title}
-      actions={
-        "ask" in action ? (
-          <Text style={text.caption}>{action.ask}</Text>
-        ) : (
-          <Link href={action.href} asChild>
-            <ActionLink label={action.label} href={action.href} size="sm" />
-          </Link>
-        )
-      }
-    >
-      {banner.body}
-    </Notice>
-  );
-}
 
 export function AppShell({
   session,
@@ -64,6 +28,7 @@ export function AppShell({
   page,
   setup,
   banner,
+  bannerScope = "page",
   children,
 }: {
   session: SessionView;
@@ -71,8 +36,10 @@ export function AppShell({
   role: WorkspaceRole;
   page: WorkspacePage;
   setup: SetupProgress | null;
-  /** A banner of the page that takes the place of the soft-limit banner. */
+  /** A banner of the page that takes the place of the workspace banner. */
   banner?: ReactNode;
+  /** The scope of the one banner; the Organizations tab sets its own. */
+  bannerScope?: BannerScope;
   children: ReactNode;
 }) {
   const viewport = useViewport();
@@ -88,7 +55,11 @@ export function AppShell({
       <>
         <SessionRefreshNotice />
         {banner === undefined ? (
-          <SoftLimitBanner workspace={workspace} role={role} />
+          <WorkspaceBanner
+            workspace={workspace}
+            page={page}
+            scope={bannerScope}
+          />
         ) : (
           banner
         )}

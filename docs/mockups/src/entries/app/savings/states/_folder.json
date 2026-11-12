@@ -1,1 +1,4 @@
-{ "title": "States", "order": ["missing-costs", "empty", "loading", "error"] }
+{
+  "title": "States",
+  "order": ["missing-costs", "empty", "empty-range", "loading", "error"]
+}

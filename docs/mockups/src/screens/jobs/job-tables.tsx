@@ -55,6 +55,12 @@ const detailPaths: Readonly<Record<JobDetailState, CataloguePath>> = {
   fallback: paths.jobFallback,
   "mixed-cache": paths.jobMixedCache,
   "no-restores": paths.jobNoRestores,
+  "unknown-request": paths.jobUnknownRequest,
+  "unknown-request-boat": paths.jobUnknownRequestBoat,
+  "no-runner": paths.jobNoRunner,
+  "unknown-facts": paths.jobUnknownFacts,
+  "current-own": paths.jobCurrentOwn,
+  "current-boat": paths.jobCurrentBoat,
 };
 
 /**
@@ -74,7 +80,18 @@ function LabelName({ job }: { job: Job }) {
   return <span className="inline-code">{job.label}</span>;
 }
 
-function JobName({ job, kind }: { job: Job; kind: JobListKind }) {
+/** A page for some rows in place of the page that the fixtures give. */
+export type RowLinks = Readonly<Record<string, CataloguePath>>;
+
+function JobName({
+  job,
+  kind,
+  links,
+}: {
+  job: Job;
+  kind: JobListKind;
+  links?: RowLinks;
+}) {
   const context = dotJoin(
     job.workflow,
     `${repositoryName(job.repo)} ${job.ref}`,
@@ -82,7 +99,10 @@ function JobName({ job, kind }: { job: Job; kind: JobListKind }) {
   return (
     <span className="job-name">
       {kind === "finished" ? (
-        <MockLink to={detailPath(job)} className="job-name-title">
+        <MockLink
+          to={links?.[job.id] ?? detailPath(job)}
+          className="job-name-title"
+        >
           {job.name}
         </MockLink>
       ) : (
@@ -93,13 +113,21 @@ function JobName({ job, kind }: { job: Job; kind: JobListKind }) {
   );
 }
 
-function cell(job: Job, key: string, kind: JobListKind) {
+/** Where a job runs or ran. A finished job without a place had no runner. */
+function Where({ job, kind }: { job: Job; kind: JobListKind }) {
+  if (kind === "finished" && job.where.kind === "none") {
+    return <span className="muted">No runner</span>;
+  }
+  return <WhereLabel where={job.where} slot={kind !== "finished"} />;
+}
+
+function cell(job: Job, key: string, kind: JobListKind, links?: RowLinks) {
   switch (key) {
     case "state":
       return <JobStateLabel state={job.state} />;
     case "job":
       return kind === "finished" ? (
-        <JobName job={job} kind={kind} />
+        <JobName job={job} kind={kind} links={links} />
       ) : (
         <span className="job-cell">
           <JobStateDot state={job.state} />
@@ -107,7 +135,7 @@ function cell(job: Job, key: string, kind: JobListKind) {
         </span>
       );
     case "where":
-      return <WhereLabel where={job.where} slot={kind !== "finished"} />;
+      return <Where job={job} kind={kind} />;
     case "label":
       return <LabelName job={job} />;
     case "waited":
@@ -123,18 +151,23 @@ export function JobList({
   viewport,
   kind,
   jobs,
+  links,
 }: {
   viewport: Viewport;
   kind: JobListKind;
   jobs: readonly Job[];
+  /** Finished rows that open a page other than the fixture page. */
+  links?: RowLinks;
 }) {
-  if (viewport === "mobile") return <JobRows kind={kind} jobs={jobs} />;
+  if (viewport === "mobile") {
+    return <JobRows kind={kind} jobs={jobs} links={links} />;
+  }
   return (
     <DataTable
       columns={columns[kind]}
       rows={jobs}
       rowKey={(job) => job.id}
-      cell={(job, key) => cell(job, key, kind)}
+      cell={(job, key) => cell(job, key, kind, links)}
     />
   );
 }
@@ -143,7 +176,15 @@ export function JobList({
  * The dense mobile list. A live row leads with its state dot and shows where
  * the job runs; a finished row names its result, where it ran, and the wait.
  */
-function JobRows({ kind, jobs }: { kind: JobListKind; jobs: readonly Job[] }) {
+function JobRows({
+  kind,
+  jobs,
+  links,
+}: {
+  kind: JobListKind;
+  jobs: readonly Job[];
+  links?: RowLinks;
+}) {
   const finished = kind === "finished";
   return (
     <ul className="job-rows">
@@ -151,11 +192,11 @@ function JobRows({ kind, jobs }: { kind: JobListKind; jobs: readonly Job[] }) {
         <li key={job.id} className={`job-row${finished ? " is-finished" : ""}`}>
           {finished ? null : <JobStateDot state={job.state} />}
           <span className="job-row-main">
-            <JobName job={job} kind={kind} />
+            <JobName job={job} kind={kind} links={links} />
             {finished ? (
               <span className="job-row-meta">
                 <JobStateLabel state={job.state} />
-                <WhereLabel where={job.where} />
+                <Where job={job} kind={kind} />
                 <span className="caption">waited {job.waited}</span>
               </span>
             ) : kind === "waiting" ? (

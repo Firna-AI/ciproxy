@@ -16,7 +16,8 @@ use crate::stripe::api::StripeApi;
 use crate::stripe::wire::types::Subscription;
 use crate::webhook::SigningSecret;
 
-/// Trusted dashboard redirects, configured by runtime composition.
+/// Trusted dashboard URL templates, configured by runtime composition.
+/// An optional `{WORKSPACE_ID}` uses the authenticated billing workspace.
 #[derive(Clone, Debug)]
 pub struct Redirects {
     /// Checkout success URL, including Stripe's session placeholder.
@@ -25,6 +26,11 @@ pub struct Redirects {
     pub cancel_url: String,
     /// Customer portal return URL.
     pub portal_return_url: String,
+}
+
+/// Fill the workspace while preserving Stripe's Checkout session placeholder.
+pub(super) fn workspace_redirect(template: &str, workspace: Uuid) -> String {
+    template.replace("{WORKSPACE_ID}", &workspace.to_string())
 }
 
 /// Billing runtime with dyn persistence, Stripe, and clock boundaries.
@@ -107,7 +113,13 @@ impl BillingService {
             .state
             .customer_id
             .ok_or(Error::SubscriptionRequired)?;
-        self.stripe
-            .portal(&customer, &self.redirects.portal_return_url)
+        self.stripe.portal(
+            &customer,
+            &workspace_redirect(&self.redirects.portal_return_url, workspace),
+        )
     }
 }
+
+#[cfg(test)]
+#[path = "_tests_/redirect_tests.rs"]
+mod redirect_tests;

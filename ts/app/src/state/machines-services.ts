@@ -38,7 +38,7 @@ function cached<T>(create: (key: string) => T): (key: string) => T {
 }
 
 function createMachinesServices(app: AppServices): MachinesServices {
-  const endpoints = createMachineEndpoints(app.client);
+  const endpoints = createMachineEndpoints(app.api);
   const report = app.session.report;
   const machines = cached((workspaceId) =>
     createMachinesStore({

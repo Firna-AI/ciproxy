@@ -50,6 +50,9 @@ warning and runs again.
 The page routes share the same billing, metering, and overflow services.
 Paid-plan review uses Stripe's invoice previews through the billing service.
 It uses the current quoted Stripe period when stored renewal state is late.
+Stripe returns the customer to the dashboard on `PUBLIC_URL`, with the
+payer's workspace: `/checkout-return` with the exact Checkout session,
+`/plans` after a cancel of Checkout, and `/billing` from the portal.
 An independent worker retries durable last-organization cancellations and
 pending paid-move payment work at startup and each minute. GitHub maintenance
 failures do not delay that worker. Billing raises paid-move operator events

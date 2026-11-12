@@ -8,7 +8,7 @@ use crate::access::BillingAccess;
 use crate::error::{Error, Result, ResultExt};
 use crate::stripe::wire::types::{CheckoutSession, CheckoutStatus, PaymentStatus};
 
-use super::runtime::BillingService;
+use super::runtime::{BillingService, workspace_redirect};
 use super::view::CheckoutOutcome;
 
 impl BillingService {
@@ -42,8 +42,8 @@ impl BillingService {
                     payment_expires_at: None,
                     kind: CommandKind::Checkout {
                         selection,
-                        success_url: self.redirects.success_url.clone(),
-                        cancel_url: self.redirects.cancel_url.clone(),
+                        success_url: workspace_redirect(&self.redirects.success_url, workspace),
+                        cancel_url: workspace_redirect(&self.redirects.cancel_url, workspace),
                     },
                 };
                 session.save_command(&command).internal()?;

@@ -212,10 +212,10 @@ pub(super) async fn composition(
             signing_secret: SigningSecret::new("whsec_offline_only".into()),
             redirects: Redirects {
                 success_url:
-                    "https://app.ciproxy.example/billing/return?session_id={CHECKOUT_SESSION_ID}"
+                    "https://app.ciproxy.example/checkout-return?workspace={WORKSPACE_ID}&session_id={CHECKOUT_SESSION_ID}"
                         .into(),
-                cancel_url: "https://app.ciproxy.example/plans".into(),
-                portal_return_url: "https://app.ciproxy.example/billing".into(),
+                cancel_url: "https://app.ciproxy.example/plans?workspace={WORKSPACE_ID}".into(),
+                portal_return_url: "https://app.ciproxy.example/billing?workspace={WORKSPACE_ID}".into(),
             },
         },
     )

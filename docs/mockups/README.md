@@ -73,7 +73,9 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   the organizations on GitHub; and a setup that skipped Boat, so the labels
   run on the machines only. `hardware.ts` holds the slot rule and the disk
   rule, in which each running job holds its VM disk: the current image with
-  the free disk of its label, as `vm-disk.ts` gives it.
+  the free disk of its label, as `vm-disk.ts` gives it. In
+  `job-details.ts`, ciproxy has no saved request for two jobs of the history,
+  so their pages show an unknown request and the VM that ran each job.
 - The return of Add an organization and the inactive organizations are
   what-ifs in `org-links.ts`. In the main story, Cal Moore is an Admin of one
   workspace, so the return links mokly-labs at once. On 2 November, he is also
@@ -81,7 +83,9 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   December, on Free, a third organization, mokly-studio, joins mokly-ai
   inactive. In a second what-if, Ana Souza adds it, and her Admin role ends
   after the return saves its workspace and before ciproxy finishes the link,
-  so it joins with a second hold, which waits for an Admin.
+  so it joins with a second hold, which waits for an Admin. Every billing link
+  of 8 December opens the Plan and usage and the Plans of that day, as
+  `src/screens/billing/billing-scenes.tsx` joins them.
 - Each organization of the Organizations tab is linked or removed, as
   `WorkspaceOrganization` in `org-links.ts` gives it. A linked one belongs to
   the workspace, also while it is inactive, and counts for the rule that
@@ -92,6 +96,32 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   repository access and no Take out. mokly-ai, the last linked organization,
   has no Take out. The flow "A removed organization comes back" installs the
   App again.
+- The overflow flow and the Savings report share one day: `releaseDay` of
+  `live-jobs.ts`, the release of 18 November. The report covers the 30 UTC
+  days that end on it, and its range and day labels come from it.
+- The known-data scenes of the story show each page with every fact, but a
+  banner names only the facts that the API gives. Beside them, a
+  `current-contract` folder shows the same moments with only the facts that
+  the API gives. In Jobs, it names no person or date of a suspension, no
+  reason of a Boat refusal, no total of the day, no tier name, no routing
+  reason, no fit of a Boat size, and no resource that is short for a label
+  that nothing fits. In Savings, it names no tier and no machine count. In
+  billing, it names no unit prices of the add-ons and no receipt address.
+  Its `pending` folder shows Continue payment for a payment whose Stripe
+  page the tab saved. Its `checkout` folder shows a paid review, an
+  unavailable price, and a refused review that asks the person to review
+  the change again. Its `payment-gate` folder shows why a payment cannot
+  start, and `unknown-results` shows a payment or a Move to Free whose
+  result the page did not get. A payment that waits on its Stripe page
+  names that page, not a bank.
+- The Jobs folders `wait-facts`, `queue-facts`, `place-facts`, `fit-facts`,
+  and `job-states` and the Savings folder `report-states` show the states
+  that come from facts of the API, such as an unknown fit, a job that no
+  runner took, a negative saving, and a missing comparison price.
+  `place-facts` shows where the waiting jobs of each label can start, also
+  of a label that only Boat runs and of a label whose Boat size Boat
+  refused. `fit-facts` shows a label that no permitted place fits, with its
+  full request, and a label that does not run on Boat.
 - A screen takes the role of the signed-in person. The shell shows the person
   of the role, and Settings only to an Admin. In place of an action that the
   role does not allow, the screen shows the words of
@@ -225,9 +255,9 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   limit when the spend reaches it. The unconfirmed part holds each start that
   Boat has not reported, at its highest cost, also after its lifetime ends.
 - `src/fixtures/sizes.ts`: the size of a label as text, the size of the
-  default label, the least free disk of a label, and the sizes that the Boat
-  account can start, with their whole disks, which decide where the jobs of a
-  label run.
+  default label, the least free disk of a label, the VM that ran a job with
+  its VM disk, and the sizes that the Boat account can start, with their
+  whole disks, which decide where the jobs of a label run.
 - `src/fixtures/vm-disk.ts`: the VM disk of a job, which grows the root disk
   of the current image by the free disk of its label. It mirrors `RootSizing`
   of `ciproxy-agent`, and it holds the root size of the current image. No
@@ -254,7 +284,37 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   cheapest plan that covers a use, and `plan-compare.ts` the feature
   comparison of the pricing page, from the tier features in `tiers.ts`.
 - `src/fixtures/job-details.ts`: the jobs of the job page, with the label, the
-  Boat size that ran a job on Boat, and the cache source and counts.
+  request that it gave the job or an unknown request, the Boat size that ran
+  a job on Boat, and the cache source and counts.
+- `src/fixtures/usage.ts`: Plan and usage at each moment, the included starts
+  and own machines of a use, and the day on which the pace passes the
+  included starts, which decides the pace notice of Free.
+- `src/screens/billing/billing-scenes.tsx`: the billing pages of a moment,
+  which its banner, its notices, and its links open.
+- `src/fixtures/history-facts.ts`: the finished jobs of the History states
+  of the API: a filtered list, a job that no runner took, a job with no
+  finish time, and the date choices of the history window.
+- `src/fixtures/job-details-facts.ts`: the job pages of facts that the API
+  gives or lacks: a job that no runner took, a job with unknown facts, and
+  the current-contract pages.
+- `src/fixtures/wait-facts.ts`: the waiting jobs of a label whose fit is
+  unknown and of a label that starts on the largest Boat size.
+  `src/screens/jobs/live-fact-scenes.ts` and `live-fact-notices.tsx` build
+  these moments of the live queue and their notices, and the moments of
+  `place-facts` and `fit-facts`. `place-fact-notices.tsx` words the notices
+  of a refused Boat size and of a label that no permitted place fits.
+- `src/fixtures/savings-states.ts`: the figures of each Savings state,
+  changed from the known report only where the state needs it: a cost that
+  nobody set or that is known in part, a missing comparison price, a negative
+  saving on a quiet day, a refresh, and ranges with no jobs.
+- `src/fixtures/current-api.ts`: the offer of the API for each usage moment,
+  and the moments that pass a limit, for the banners and the billing pages of
+  the current API. `src/components/api-banner.tsx` words every banner as the
+  API does, also the banner of a known moment.
+- `src/screens/billing/api-notices.tsx`, `api-add-ons.tsx`, `api-review.tsx`,
+  `api-outcome.tsx`, and `api-return.tsx`: the notices, the add-ons, the
+  review, the unknown results, and the return of the billing pages of the
+  current API.
 - `src/components/state-schema.ts`: the closed prop schema of a screen whose
   states differ by one `state` prop.
 - `src/screens/`: one component per screen, by area.

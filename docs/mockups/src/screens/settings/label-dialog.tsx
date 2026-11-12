@@ -24,11 +24,7 @@ import {
   refusedLabel,
   type Label,
 } from "../../fixtures/settings.ts";
-import {
-  largestBoatSize,
-  minimumFreeDiskGb,
-  sizePhrase,
-} from "../../fixtures/sizes.ts";
+import { minimumFreeDiskGb } from "../../fixtures/sizes.ts";
 import { diskText, vmDiskBytes } from "../../fixtures/vm-disk.ts";
 import { FitNote } from "./label-fit.tsx";
 
@@ -200,11 +196,7 @@ export function LabelDialog({ mode }: { mode: LabelDialogMode }) {
         />
         <RadioCard
           title="Run on the largest Boat size"
-          body={
-            copy.noBoat
-              ? "Jobs run on the largest size of your Boat account, also when it is smaller than the label."
-              : `Jobs run on ${sizePhrase(largestBoatSize)}, the largest size of your Boat account.`
-          }
+          body="Jobs run on the largest size of your Boat account."
           checked={label.whenNothingFits === "largest-boat-size"}
           onPress={noop}
         />

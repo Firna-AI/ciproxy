@@ -83,7 +83,9 @@ function LiveFigures({ scene }: { scene: LiveScene }) {
       <Kpi
         label="Own slots in use"
         value={scene.ownBusy}
-        valueFormat={(value) => `${value} of ${scene.ownSlots}`}
+        valueFormat={(value) =>
+          scene.slotsUnknown ? "Unknown" : `${value} of ${scene.ownSlots}`
+        }
       />
       <Kpi label="On Boat" value={scene.onBoat} />
     </KpiRow>
@@ -113,6 +115,16 @@ function LiveLists({
           The next job with{" "}
           <span className="inline-code">runs-on: ciproxy</span> starts at once
           on one of your machines.
+        </StateBlock>
+      </Panel>
+    );
+  }
+  if (state === "quiet-no-warm") {
+    return (
+      <Panel>
+        <StateBlock icon={Zap} title="No job runs now">
+          Jobs with <span className="inline-code">runs-on: ciproxy</span> show
+          here when they wait or run.
         </StateBlock>
       </Panel>
     );

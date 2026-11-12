@@ -6,6 +6,7 @@
 import { useEffect, type ReactNode } from "react";
 import { useLocalSearchParams } from "expo-router";
 
+import type { BannerScope } from "../api/banner.ts";
 import type {
   SessionView,
   WorkspaceRole,
@@ -73,6 +74,7 @@ export function WorkspacePageView({
   page,
   visitKey = "",
   banner,
+  bannerScope = "page",
   children,
 }: {
   page: WorkspacePage;
@@ -82,10 +84,12 @@ export function WorkspacePageView({
    */
   visitKey?: string;
   /**
-   * A banner of the page that takes the place of the soft-limit banner of
-   * the shell. Undefined keeps the soft-limit banner.
+   * A banner of the page that takes the place of the one workspace banner of
+   * the shell. Undefined keeps the workspace banner.
    */
   banner?: (context: WorkspaceContext) => ReactNode;
+  /** The scope of the one banner; the Organizations tab sets its own. */
+  bannerScope?: BannerScope;
   children: (context: WorkspaceContext) => ReactNode;
 }) {
   const services = useServices();
@@ -136,6 +140,7 @@ export function WorkspacePageView({
       page={page}
       setup={progress}
       banner={banner?.(context)}
+      bannerScope={bannerScope}
     >
       {children(context)}
     </AppShell>

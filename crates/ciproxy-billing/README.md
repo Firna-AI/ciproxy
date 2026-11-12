@@ -186,6 +186,11 @@ Retry Busy and transient failures through Stripe delivery retries.
 Reject InvalidSignature.
 Poll Confirming on the return page without opening another Checkout.
 Use trusted dashboard redirects from runtime configuration.
+Each redirect can hold `{WORKSPACE_ID}` for the payer's workspace.
+The service fills it in each new Checkout command and each portal session.
+It leaves Stripe's `{CHECKOUT_SESSION_ID}` in the success URL.
+A redirect without the placeholder reaches Stripe unchanged.
+A saved Checkout command keeps the redirects that it saved.
 Pass `HostedBillingAlerts` in production, or a test double of `BillingAlerts`.
 
 ## Development

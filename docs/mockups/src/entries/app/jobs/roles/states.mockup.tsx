@@ -28,7 +28,7 @@ export const billing = defineScreen({
   slug: "billing",
   title: "Jobs, seen by a Billing person",
   description:
-    "Dana Kim has the Billing role. On 4 September, mokly-ai passed the Free starts, and the banner on Jobs gives her its actions, Plan and usage and Choose Team, because she pays. Settings is not in her navigation.",
+    "Dana Kim has the Billing role. On 4 September, mokly-ai passed the Free starts, and the banner on Jobs gives her its action, Plan and usage, because she pays. Settings is not in her navigation.",
   rationale:
     "Billing contains Viewer and adds the plan, the add-ons, and the invoices, so the banners of a limit or a payment act for a Billing person on every page.",
   relatedDocs: related("security", "billing", "metering"),

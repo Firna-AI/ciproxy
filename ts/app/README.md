@@ -12,8 +12,11 @@ workspace name, and the members. On Settings under Overflow, an Admin
 connects Boat, changes its key, or disconnects it. The same page sets the
 overflow switch, the wait, and the monthly spend limit, and shows the spend
 of the month.
-Jobs, Savings, and Plan and usage show a coming-soon state until later work
-fills them.
+Jobs shows the live queue, the history of finished jobs, and a page for each
+job. Savings compares the cost of the jobs with ciproxy against the same jobs
+on Blacksmith and on GitHub-hosted runners. Plan and usage, Plans, and the
+Checkout pages show the plan and its use, and take each payment through
+Stripe.
 
 The screens follow the [mockups](../../docs/mockups/README.md).
 Controls come from `@firna/ui` first, then from `src/components`.
@@ -29,22 +32,30 @@ The icons and the brand mark are inline SVG elements.
 
 The static export holds one HTML file for each route.
 
-| Route                           | Page                                                 |
-| ------------------------------- | ---------------------------------------------------- |
-| `/`                             | Opens the page that the session asks for             |
-| `/sign-in`                      | Sign in with GitHub                                  |
-| `/install`                      | The App install, or the wait for an owner's approval |
-| `/add-organization`             | The workspace choice and its state after an install  |
-| `/personal-account`             | An install on a personal account                     |
-| `/app-removed`                  | The App left the last organization of the workspace  |
-| `/access-ended`                 | GitHub no longer lists the person                    |
-| `/setup`                        | For Admins: the App, a machine, Boat, the first job  |
-| `/machines`                     | The machines, one machine, or Add a machine          |
-| `/settings`                     | For Admins: labels, organizations, and members       |
-| `/settings/overflow`            | For Admins: Boat, the overflow wait, the spend limit |
-| `/jobs`, `/savings`, `/billing` | Coming soon, in the shell                            |
+| Route                | Page                                                 |
+| -------------------- | ---------------------------------------------------- |
+| `/`                  | Opens the page that the session asks for             |
+| `/sign-in`           | Sign in with GitHub                                  |
+| `/install`           | The App install, or the wait for an owner's approval |
+| `/add-organization`  | The workspace choice and its state after an install  |
+| `/personal-account`  | An install on a personal account                     |
+| `/app-removed`       | The App left the last organization of the workspace  |
+| `/access-ended`      | GitHub no longer lists the person                    |
+| `/setup`             | For Admins: the App, a machine, Boat, the first job  |
+| `/machines`          | The machines, one machine, or Add a machine          |
+| `/settings`          | For Admins: labels, organizations, and members       |
+| `/settings/overflow` | For Admins: Boat, the overflow wait, the spend limit |
+| `/jobs`              | Jobs: the live queue, or History of finished jobs    |
+| `/job`               | One job, opened from History                         |
+| `/savings`           | The savings report of one UTC range                  |
+| `/billing`           | Plan and usage: the plan, its use, and the add-ons   |
+| `/plans`             | The plans, with the offer that covers the use        |
+| `/checkout`          | The review of one exact plan choice, then payment    |
+| `/checkout-return`   | The return from Stripe Checkout                      |
 
 A workspace page names its workspace by its opaque ID in `?workspace=<id>`.
+The app takes the ID from the session and never builds one, and the API
+checks it on each request.
 `/?workspace=<id>` opens Setup for an Admin until it is done, else Jobs.
 Setup is done after the App, a machine, and the first job, with or without
 Boat. After Skip for now, the Boat step links to Settings under Overflow.
@@ -155,12 +166,79 @@ other tabs on `/settings`.
   was a member of then. A day, a name, or a count that the API does not
   know stays out, or the row says that it is not known.
 
+The other choices of a page are in its query too, so a reload or a shared
+link keeps them. A value that a page does not know falls back to its default.
+
+- `/jobs`: `tab=history` opens History, with `search=<text>`,
+  `place=machine` or `place=boat`, and `days=7`, `days=30`, or `days=90`.
+  With no `days`, History shows today. A filter change replaces the address.
+- `/job`: `job=<id>` names the job. With no job, the page opens History.
+- `/savings`: `range=this_month` or `range=last_month`. With no range, the
+  report covers the last 30 days.
+- `/checkout`: `tier`, `start_blocks`, and `machines` name one exact choice.
+  A missing or invalid value gives no review.
+- `/checkout-return`: `session_id=<id>` is the exact Stripe Checkout session.
+  The page checks only that session.
+
+Every workspace page shows at most one banner, which the API chooses: a
+failed payment, an ended plan, inactive organizations, or a passed limit.
+Every role reads Jobs, Savings, and Plan and usage. An action shows only when
+the API allows the caller. A person who may not pay reads "Ask an Admin or a
+Billing person" in place of each payment action.
+
+## Jobs, Savings, and billing
+
+- Jobs Live reads the queue again every 5 seconds while the tab shows. A
+  failed refresh keeps the last queue and says so. A figure that the API
+  leaves out says "Unknown", never 0. A waiting job shows its label, not a
+  machine, because GitHub gives it to whichever runner is idle first.
+- The notices of the queue promise a place only from the facts of each
+  waiting label. A full queue counts the jobs whose label fits your
+  machines. It promises Boat after the overflow wait only to the labels that
+  Boat starts now, and Boat at once to a label that no own machine runs.
+  While the Boat costs have no safe count, it promises no Boat start. While
+  Boat takes no new job, a notice says that only the jobs whose label fits
+  your machines wait there for a free slot.
+- A saved Boat retry time holds new Boat starts only while it is after the
+  browser time of the read, because the API gives no response time. A
+  refused Boat size holds only the labels that use it. A label that no
+  permitted place fits names its full request and each place that it
+  forbids or that takes no jobs. It never names one short resource, because
+  the API does not say which one is. It offers the largest Boat size only
+  while the label allows Boat and waits when nothing fits.
+- History asks for the finished jobs from the first UTC date of the chosen
+  window, and shows every job that the API returns, newest first. The API
+  gives no total, so the footer counts the jobs of the list and names the
+  history window of the plan in days.
+- The job page shows the request of the label as the API kept it, or
+  "Requested size unknown", and never the current size of the label. It names
+  the VM that ran the job, and why the job ran there when the API gives a
+  reason. A job that no runner took is not a start.
+- Savings shows the costs that the API gives. The savings figure shows only
+  when every cost is known, and a negative saving says "more than". A cost
+  that the API knows only in part reads "At least". While the API says that
+  its refresh raced another one, the page reads again every 2 seconds, but
+  only while it is open. A read that answers after the page closed starts
+  no new read.
+- [Billing pages](src/screens/billing/README.md) gives the rules of Plan and
+  usage, Plans, the Checkout review, each payment, and the Stripe returns.
+- Jobs, the job page, Savings, Plan and usage, Plans, the Checkout review,
+  and the return page take the banner from their own reads. An older read
+  never replaces the banner of a newer one. A failed read keeps the last
+  banner, and the page shows its own failure. Other pages, the Organizations
+  scope, and a Checkout or return page that reads nothing use the banner
+  endpoint, unless a read just ended. There, a failure shows "Unable to
+  check the plan status", and a successful page read ends that failure.
+
 ## The API
 
 - The app calls the API under `/api` on its own origin, with the cookies of
   the browser. Serve the export and the API from one origin.
 - [@ciproxy/api](../api/README.md) generates every request and response type
   from the Rust code. Names, roles, and choices come from the API only.
+- Every read and change goes through the one HTTP client. Each read passes
+  through the session store, so an ended sign-in opens sign-in, and a refused
+  role reads the session again.
 - Sign-in is a top-level navigation to `/api/auth/github`. GitHub returns a
   sign-in to `/api/auth/github/callback` and an install to `/api/github/setup`.
   The API checks each return, then opens `/`, or `/sign-in?reason=github` on
@@ -182,7 +260,8 @@ other tabs on `/settings`.
   The API returns false for a person who already has the Admin role.
 - Each API response names its build in the `x-ciproxy-build` header. After a
   new build, the next page change loads a new document, also through the
-  back and forward buttons. Until then, the page keeps its input.
+  back and forward buttons. Until then, the page keeps its input. A filter or
+  range change after a new build loads a new document with the new address.
 - Setup and Settings under Overflow read the Boat settings of a workspace
   through one store. A change that the API accepted is never sent again.
   When the read after it fails, the page offers only Try again, which reads.
@@ -228,6 +307,13 @@ pages leaves it light.
 
 ## Browser checks
 
+The fixture harness serves the export and a typed fixture API on `127.0.0.1`,
+with no live API. The browser smokes drive headless Chrome against it at
+1440, 720, and 390 pixels: the shell smoke checks sign-in, Setup, and the
+shell, and the page smoke checks Jobs, Savings, and the billing pages.
+[Dashboard scripts](scripts/README.md#browser-checks) gives the commands, the
+flags, the scenarios, and the evidence folders.
+
 The fixture harness serves the export and a typed fixture API on `127.0.0.1`.
 It contacts no live API, and runs until Ctrl+C. The browser smoke drives
 headless Chrome against it at 1440, 720, and 390 pixels. It covers the pages
@@ -267,6 +353,12 @@ CIPROXY_PLAYWRIGHT_PATH=/absolute/path/playwright-core/index.mjs \
   `scripts/m20-harness-state.ts` list the scenario names.
 
 ## Live checks
+
+The live checks read a deployed dashboard with the sign-in of a person, from
+a private credential file outside the repository. Without
+`CIPROXY_DASHBOARD_CREDENTIALS_FILE`, each check prints `SKIP` and exits with
+status 2. [Dashboard scripts](scripts/README.md#live-checks) gives the
+credential file, the steps of the page check, and its private result file.
 
 The dashboard live check uses the sign-in of an Admin on a deployed
 dashboard. It reads the session, Setup, and the machines, and checks the
@@ -391,6 +483,32 @@ a policy save, or a disconnect works.
   the next-month date of the API, in UTC.
   [src/view/money.ts](src/view/money.ts) formats the decimal-string cents of
   the API, and reads a typed dollar limit with integer arithmetic.
+- [src/screens/jobs](src/screens/jobs) holds Jobs, History, and the job page.
+  [src/screens/savings](src/screens/savings) holds Savings, and
+  [src/screens/billing](src/screens/billing) Plan and usage, Plans, and the
+  Checkout pages.
+- [src/view/jobs-links.ts](src/view/jobs-links.ts) builds the Jobs addresses
+  and the History query.
+  [src/view/jobs-places.ts](src/view/jobs-places.ts) gives where the waiting
+  jobs of each label can start, and the one hold of Boat at the time of the
+  read, which every notice of the queue reads.
+  [src/view/jobs-label-notices.ts](src/view/jobs-label-notices.ts) words the
+  notices of each waiting label from those facts.
+- [src/state/savings.ts](src/state/savings.ts) reads the Savings report. Its
+  `open()` holds the page lifetime, so the report reads again only while the
+  page is open.
+- [src/state/billing.ts](src/state/billing.ts) creates the billing stores of
+  a workspace. [src/state/billing-banner.ts](src/state/billing-banner.ts)
+  keeps the one banner, and its `readPage` takes the banner of each page read.
+  [src/api/billing-payment.ts](src/api/billing-payment.ts) sends every payment
+  request.
+- The [workspace banner](src/components/billing/workspace-banner.tsx) in
+  `src/components/billing` shows the one banner of each workspace page.
+- [src/components/panel.tsx](src/components/panel.tsx) and its neighbours
+  `figures.tsx`, `detail-list.tsx`, `link-tabs.tsx`, and `status-label.tsx`
+  are the shared page parts.
+  [src/view/exact-format.ts](src/view/exact-format.ts) formats counts, cents,
+  and UTC dates without floating-point loss.
 - [src/api/client.ts](src/api/client.ts) is the one HTTP client. The
   readers in `src/api/parse-*.ts` narrow each response body to its generated
   type; [src/api/parse-jobs.ts](src/api/parse-jobs.ts) reads one dashboard
@@ -398,9 +516,13 @@ a policy save, or a disconnect works.
   [src/api/machine-endpoints.ts](src/api/machine-endpoints.ts) and
   [src/api/settings-endpoints.ts](src/api/settings-endpoints.ts) hold the
   routes of Machines and Settings on it.
+  [src/api/route-path.ts](src/api/route-path.ts) builds the path of a
+  generated route.
 - [src/components/feature-parts.tsx](src/components/feature-parts.tsx) holds
   the panel, the page header, and the dialog that both features share.
 - [src/state/navigation.ts](src/state/navigation.ts) reloads on a new build.
+- [scripts](scripts/README.md) holds the fixture harness, the browser smokes,
+  and the live checks.
 - [app.json](app.json) limits Expo to web and enables static export.
 
 ## Related docs
@@ -421,5 +543,8 @@ a policy save, or a disconnect works.
 - [Overflow](../../docs/protocol/overflow.md), with the Boat account and the
   spend limit, and
   [the overflow wait](../../docs/protocol/job-routing.md#the-overflow-wait).
+- [Job routing](../../docs/protocol/job-routing.md#what-the-dashboard-shows),
+  the [savings report](../../docs/protocol/metering.md#savings-report), and
+  [Checkout](../../docs/protocol/billing.md#checkout).
 - [ciproxy-api](../../crates/ciproxy-api/README.md) registers the GitHub URLs,
   and the [deployment](../../deploy/README.md#environments) serves `/api`.

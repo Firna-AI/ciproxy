@@ -3,16 +3,20 @@ import assert from "node:assert/strict";
 import type { Locator, Page } from "./browser-driver.ts";
 import { fields, type RequestFact } from "./harness-state.ts";
 import type { ScenarioName } from "./harness-scenarios.ts";
+import type { PagesControl } from "./harness-pages-controls.ts";
+
+export type HarnessControl = {
+  scenario?: ScenarioName;
+  build?: string;
+  reset?: boolean;
+  /** Answer a held Boat connection. */
+  release?: boolean;
+  pages?: PagesControl;
+};
 
 export async function control(
   origin: string,
-  value: {
-    scenario?: ScenarioName;
-    build?: string;
-    reset?: boolean;
-    /** Answer a held Boat connection. */
-    release?: boolean;
-  },
+  value: HarnessControl,
 ): Promise<void> {
   const result = await fetch(`${origin}/__fixture/control`, {
     method: "POST",

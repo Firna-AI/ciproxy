@@ -119,6 +119,7 @@ function labelInput(value: unknown): LabelInput {
   };
 }
 
+/** A label with its size, its places, and its own-machine fit. */
 export function readLabel(value: unknown): LabelView {
   const fields = object(value, "label view");
   return {

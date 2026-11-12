@@ -25,7 +25,7 @@ export const freeOver = defineScreen({
   slug: "free-over",
   title: "Two organizations on Free",
   description:
-    "On 4 December, after Move to Free, mokly-ai is on Free and keeps mokly-ai and mokly-labs. Free includes one organization, so the banner of every page says that jobs keep running in both and offers Team. Each of the two keeps its Take out. Add an organization stays, and a new organization joins inactive until Team.",
+    "On 4 December, after Move to Free, mokly-ai is on Free and keeps mokly-ai and mokly-labs. Free includes one organization, so the banner of every page says that mokly-ai passed a limit of its plan and offers Team. Each of the two keeps its Take out. Add an organization stays, and a new organization joins inactive until Team.",
   rationale:
     "A workspace that holds more than one organization when it moves to Free keeps them all, and their jobs keep running. On Free, the number of organizations is a soft limit with the banner and the offer, as for the machine count.",
   relatedDocs: relatedMvp("workspaces", "metering", "billing"),

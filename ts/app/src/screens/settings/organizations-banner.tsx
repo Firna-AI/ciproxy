@@ -1,15 +1,15 @@
 // The banner of the Organizations tab. While an organization is inactive,
 // it names the organization and its reasons, and offers Team or Turn on. It
-// takes the place of the soft-limit banner of the shell, so the page keeps
-// one banner. With no inactive organization, the soft-limit banner shows as
-// on every other page.
+// takes the place of the workspace banner of the shell, so the page keeps
+// one banner. With no inactive organization, the workspace banner of the
+// Organizations scope shows.
 
 import { useState } from "react";
 import { Link } from "expo-router";
 
 import { ActionButton, ActionLink } from "../../components/actions.tsx";
 import { Notice } from "../../components/notice.tsx";
-import { SoftLimitBanner } from "../../components/shell/app-shell.tsx";
+import { WorkspaceBanner } from "../../components/billing/workspace-banner.tsx";
 import { useServices } from "../../services/context.tsx";
 import { useValue } from "../../services/hooks.ts";
 import { settingsServices } from "../../state/settings-services.ts";
@@ -30,7 +30,11 @@ export function OrganizationsBanner({
   const banner = inactiveBanner(organizations);
   if (banner === null) {
     return (
-      <SoftLimitBanner workspace={context.workspace} role={context.role} />
+      <WorkspaceBanner
+        workspace={context.workspace}
+        page="settings"
+        scope="organizations"
+      />
     );
   }
   const { chooseTeam, turnOn } = banner;

@@ -69,10 +69,12 @@ const styles = StyleSheet.create({
   },
   icon: { paddingTop: 2 },
   text: { flexGrow: 1, flexShrink: 1, flexBasis: 200, gap: 2, minWidth: 0 },
+  // Never wider than the notice, so the buttons wrap in a narrow column.
   actions: {
     flexDirection: "row",
     flexWrap: "wrap",
     alignItems: "center",
     gap: 8,
+    maxWidth: "100%",
   },
 });
