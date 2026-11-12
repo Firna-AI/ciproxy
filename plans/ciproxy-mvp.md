@@ -2241,6 +2241,57 @@ The gate, the review, and the pull request stay with the orchestrator.
       update the price list of the site and its date. My call of 4 November
       2026: the claim names its date, so a monthly check keeps it true.
 
+## State at the move off Conductor, 11 November 2026
+
+Cal asked to merge all in-progress work into this branch, also when it is
+incomplete. These pull requests merged as work-in-progress snapshots. Each
+list gives what is not done.
+
+- [ ] #50, Milestone 20, Machines and Settings: finish the shared Settings
+      badges, the reload fixtures, and the placeholder cleanup. Run the
+      browser checks and the complete gate. Record the deferred Boat
+      start-status fix. Run the live smoke. Join the Milestone 21 banners,
+      Plans, and job links.
+- [ ] #53, Milestone 21, Jobs, Savings, and billing: close the docs, the
+      plan records, and the follow-up items. Run the browser checks at 1440,
+      720, and 390 pixels, the complete gate, and the final review. Run the
+      dashboard part of the Stripe test-mode checkout.
+- [ ] Reconcile the two banner paths. The shell shows the workspace banner
+      of the API, which covers the soft limit and inactive organizations.
+      The Organizations tab of Milestone 20 still shows its own banner with
+      Turn on, and falls back to the workspace banner of its scope.
+- [ ] #59, cache restore order: finish the docs and delete the follow-up
+      item. Run each changed asynchronous test ten times, the complete gate,
+      and a review.
+- [ ] #61, serving shutdown test: repair the incoming Markdown link. Run the
+      complete gate and a review.
+- [ ] #62, install command endpoint: fix the failing wrong-handshake test
+      fixture. Run the async tests ten times, the agent build, a CLI smoke,
+      the complete gate, and a review.
+- [ ] #60, guest network: finish its review. Then build and publish the
+      image release from this branch, with a new Boat shared snapshot. Set
+      `JOB_IMAGE_MANIFEST_PATH` and a new version of the Boat snapshot
+      secret. Delete `follow-ups/guest-initialization-reset.md`, which #60
+      settles. Then run every live scenario of Milestone 13 again.
+- [ ] Live checks that remain: Milestone 18 Move to Free, the portal cancel
+      and undo, an unfinished Checkout, and a signed webhook replay; the
+      Milestone 22 Boat live read; the overflow smoke of Milestone 15; the
+      docs pages of Milestone 24; and the repeated-authorization probe of
+      Milestone 14.
+
+The preview runs the control-plane image that CI builds, and the release
+server of `futex-ai/cli-release` at `53a1dd3` with the pre-release channel.
+The test workspace Firna-AI is on Business with one start block, in the
+Stripe test mode. The test host `ciproxy-spike-2` keeps running with its
+inputs and the retained image build userspace. Delete it and
+`ciproxy-spike-mi` after the live checks.
+
+Credentials stay outside the repository and do not move with it: the App
+key, the session cookie, the Boat key, and the Stripe test key were in the
+private folder of the old Conductor sandbox. The next environment needs its
+own copies. A process listing showed Conductor credentials in one session's
+tool output on 11 November 2026. Rotate them.
+
 ## Open decisions
 
 Design calls on the draft's questions, my calls, 4 November 2026. Each one
