@@ -1,7 +1,11 @@
 // Test data for the Machines tests. Every body uses the generated contract.
 
 import type { OverflowSettings } from "../src/api/machine-schema.ts";
-import type { MachineView, SlotView } from "../src/api/schema.ts";
+import type { CacheView, SlotView } from "../src/api/schema.ts";
+import type {
+  MeasuredCache,
+  MeasuredDocker,
+} from "../src/view/machines-cache.ts";
 
 export const nbsp = "\u00a0";
 
@@ -21,18 +25,37 @@ export function slot(
   };
 }
 
+/** A machine cache that the machine measured: 83 of 191 GB in use. */
+export function measuredCache(hits: string, restores: string): MeasuredCache {
+  return {
+    capacity_bytes: "191000000000",
+    hits_last_7_days: hits,
+    restores_last_7_days: restores,
+    status: "measured",
+    used_bytes: "83000000000",
+  };
+}
+
+/** Docker disks that the machine measured. */
+export function docker(
+  repositories: string,
+  usedBytes = "96000000000",
+): MeasuredDocker {
+  return { repositories, status: "measured", used_bytes: usedBytes };
+}
+
+/** A part of a stored report that the machine did not measure. */
+export const unavailable = { status: "unavailable" } as const;
+
+/** A stored report: a measured machine cache, and 3 Docker disks of 96 GB. */
 export function cache(
   hits: string,
   restores: string,
-  overrides: Partial<NonNullable<MachineView["cache"]>> = {},
-): NonNullable<MachineView["cache"]> {
+  overrides: Partial<CacheView> = {},
+): CacheView {
   return {
-    capacity_bytes: "191000000000",
-    docker_disk_bytes: "96000000000",
-    docker_repositories: "3",
-    hits_last_7_days: hits,
-    restores_last_7_days: restores,
-    used_bytes: "83000000000",
+    docker_disks: docker("3"),
+    machine_cache: measuredCache(hits, restores),
     ...overrides,
   };
 }

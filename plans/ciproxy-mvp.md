@@ -2391,7 +2391,7 @@ tool output on 11 November 2026. Rotate them.
       The user answered item 117 with D on 16 November 2026.
 - [ ] Build item 117 = D: the identity carries its endpoint.
       Branch: `conductor/item-117-d-endpoint-in-identity`.
-- [ ] Build item 118 = E of `follow-ups/machine-statistics-availability.md`:
+- [x] Build item 118 = E of `follow-ups/machine-statistics-availability.md`:
       unknown machine statistics, mockup first.
       Branch: `conductor/item-118-e-unknown-machine-statistics`.
       My calls, 16 November 2026: both sections use `Statistics<T>`.
@@ -2403,6 +2403,11 @@ tool output on 11 November 2026. Rotate them.
       The aggregate hit share counts only measured machines and names the
       excluded machines. With none measured, it says "Unknown".
       These calls preserve measured zeros and identify incomplete figures.
+      The scaler input keeps gross job disk and optional Docker leases.
+      This separates label eligibility from permission to start a runner.
+      The shared report entry point attempts the initial cache budget once.
+      The cache client replays its latest budget before a service report.
+      This covers registration and restarts without a Docker reclaim.
 - [x] Correct `deploy/release-server.md`: the copied preview command now
       supplies `--agent-url`. My call, 16 November 2026: a doc that
       states the implemented command needs no decision.

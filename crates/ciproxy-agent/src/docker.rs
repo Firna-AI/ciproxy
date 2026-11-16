@@ -36,6 +36,7 @@ pub(crate) trait DockerDisks: Send + Sync {
     ) -> Result<Option<DockerDiskAttachment>>;
     fn release(&self, vm: &VmRecord) -> Result<()>;
     fn report(&self) -> Result<DockerDiskReport>;
+    fn unused_bytes(&self) -> Result<u64>;
     fn reclaim(&self, free_pool: u64) -> Result<u64>;
 }
 
@@ -187,6 +188,13 @@ impl DockerDisks for LinuxDockers {
             repositories: repositories.len() as u64,
             used_bytes: bases.iter().map(|(_, _, bytes)| bytes).sum(),
         })
+    }
+
+    fn unused_bytes(&self) -> Result<u64> {
+        Ok(docker_files::unused(&self.layout)?
+            .iter()
+            .map(|(_, _, bytes)| bytes)
+            .sum())
     }
 
     fn reclaim(&self, free_pool: u64) -> Result<u64> {

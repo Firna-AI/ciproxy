@@ -41,6 +41,11 @@ The daemon sends a full hello and reports every ten seconds.
 Report waits and delivery do not wait for command work.
 Reconciliation requests coalesce while the worker is busy.
 It reports CPU, threads, memory, KVM, disk space, slots, VMs, and images.
+Cache and Docker sections each carry measured figures or an unavailable
+result. A failed section read logs a warning and keeps the other sections.
+Before its first report, the agent tries to send the cache its byte budget.
+Cache report reads replay the latest budget after a service restart.
+These report reads do not reclaim Docker disks.
 Missing KVM gives zero slots. It does not reject registration.
 Connection failures keep running jobs and warm runners.
 Reconnect waits grow from one second to sixty seconds.
@@ -233,6 +238,8 @@ KVM and GitHub smoke checks, and release packaging commands.
   credential rejection after Hello on the current socket.
 - [src/runtime_reports.rs](src/runtime_reports.rs) schedules independent
   reports.
+- [src/reporting.rs](src/reporting.rs) preserves independent cache and
+  Docker availability in each full report.
 - [src/mode.rs](src/mode.rs) owns terminal runtime mode transitions.
 - [src/vms.rs](src/vms.rs) owns separate jailed VM units.
 - [src/retirement.rs](src/retirement.rs) ends proven unconfigured VMs and

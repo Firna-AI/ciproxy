@@ -4,6 +4,7 @@ use ciproxy_api::capacity::MachineCapacity;
 use ciproxy_protocol::identifiers::ImageId;
 use ciproxy_protocol::images::ImageMetadata;
 use ciproxy_protocol::resources::Slots;
+use ciproxy_protocol::statistics::Statistics;
 use ciproxy_store_interface::gateway::{MachineSnapshot, ReceivedReport};
 use ciproxy_store_interface::machines::Machine;
 use uuid::Uuid;
@@ -69,7 +70,26 @@ fn dashboard_capacity_subtracts_only_active_leases_and_sizes_the_selected_local_
     );
     assert_eq!(adapter.required_root_bytes(&snapshot, u64::MAX), None);
 
+    snapshot.report.as_mut().unwrap().report.cache = Statistics::Unavailable;
+    assert_eq!(
+        adapter.capacity(&snapshot).job_disk_bytes,
+        Some(137_000_000_000)
+    );
+    let measured_docker = snapshot
+        .report
+        .as_ref()
+        .unwrap()
+        .report
+        .docker_disks
+        .clone();
+    snapshot.report.as_mut().unwrap().report.docker_disks = Statistics::Unavailable;
+    let capacity = adapter.capacity(&snapshot);
+    assert_eq!(capacity.job_disk_bytes, None);
+    assert_eq!(capacity.slots, Slots(7));
+    assert_eq!(capacity.image_disk_bytes, Some(59_000_000_000));
+
     let report = &mut snapshot.report.as_mut().unwrap().report;
+    report.docker_disks = measured_docker;
     report.job_disk_bytes = 0;
     report.images.newest = Some(ImageId("unavailable".to_owned()));
     let capacity = adapter.capacity(&snapshot);

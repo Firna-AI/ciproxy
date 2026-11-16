@@ -4,6 +4,7 @@ use ciproxy_protocol::cache::{DockerDiskReport, MachineCacheReport};
 use ciproxy_protocol::images::ImageReport;
 use ciproxy_protocol::reports::{DrainState, HardwareReport, MachineReport};
 use ciproxy_protocol::resources::Slots;
+use ciproxy_protocol::statistics::Statistics;
 use ciproxy_store_interface::gateway::{Contact, Registration};
 use ciproxy_store_interface::secrets::TokenHash;
 use uuid::Uuid;
@@ -35,19 +36,19 @@ pub(super) fn registration(workspace_id: Uuid, install_hash: TokenHash) -> Regis
                 slots: vec![],
                 runners: vec![],
                 drain: DrainState::Active,
-                cache: MachineCacheReport {
+                cache: Statistics::Measured(MachineCacheReport {
                     used_bytes: 0,
                     capacity_bytes: 0,
                     restores_last_7_days: 0,
                     hits_last_7_days: 0,
                     unknown_jobs: vec![],
                     jobs: vec![],
-                },
-                docker_disks: DockerDiskReport {
+                }),
+                docker_disks: Statistics::Measured(DockerDiskReport {
                     leased_bytes: 0,
                     repositories: 0,
                     used_bytes: 0,
-                },
+                }),
                 images: ImageReport {
                     available: vec![],
                     newest: None,

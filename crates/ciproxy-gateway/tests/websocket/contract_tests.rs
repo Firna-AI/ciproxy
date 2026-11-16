@@ -145,7 +145,7 @@ async fn serves_machine_lifecycle_without_losing_identity_or_latest_health() {
     fixture.advance_to(3610);
     let mut latest = report();
     latest.hostname = "renamed-builder".into();
-    latest.cache.used_bytes = 42_000;
+    latest.cache.as_mut().measured().unwrap().used_bytes = 42_000;
     previous
         .send(AgentMessage::Report {
             report: latest.clone(),

@@ -24,7 +24,7 @@ test("a placement that the API cannot establish keeps the known facts and names 
     ),
     {
       kind: "caption",
-      text: "Your machines have not reported their capacity yet.",
+      text: "The capacity of your machines is not known yet.",
     },
   );
   assert.deepEqual(

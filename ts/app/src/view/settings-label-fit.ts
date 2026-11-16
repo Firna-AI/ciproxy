@@ -40,11 +40,11 @@ function machineFit(fit: LabelFit): string {
   if (fitting === eligible) {
     return `Each of your machines runs ${jobs} of this size at a time.`;
   }
-  const unreported =
+  const unknownCapacity =
     unknown > 0
-      ? ` ${plural(unknown, "machine has", "machines have")} not reported ${unknown === 1 ? "its" : "their"} capacity yet.`
+      ? ` The capacity of ${plural(unknown, "machine", "machines")} is not known yet.`
       : "";
-  return `${jobs} of this size at a time on ${fitting} of your ${eligible} machines.${unreported}`;
+  return `${jobs} of this size at a time on ${fitting} of your ${eligible} machines.${unknownCapacity}`;
 }
 
 const onlyBoat = "Only Boat may run jobs with this label.";
@@ -157,7 +157,7 @@ function unavailable(label: LabelInput, fit: LabelFit): FitLine {
   if (fit.unavailable_machines > 0) {
     return {
       kind: "caption",
-      text: "Your machines have not reported their capacity yet.",
+      text: "The capacity of your machines is not known yet.",
     };
   }
   if (fit.eligible_machines === 0) {

@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
 use crate::clock::Clock;
-use crate::error::{CacheError, Result};
+use crate::error::{CacheError, Result, ResultExt};
 use crate::storage::interface::Storage;
 
 const WEEK: u64 = 7 * 24 * 60 * 60;
@@ -24,6 +24,14 @@ const WEEK: u64 = 7 * 24 * 60 * 60;
 struct Records {
     events: Vec<Event>,
     jobs: BTreeMap<String, Job>,
+}
+
+#[derive(Default)]
+enum RecordsState {
+    #[default]
+    Unread,
+    Measured(Records),
+    Unavailable,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -57,7 +65,7 @@ pub(crate) trait Reports: Send + Sync {
 pub(crate) struct Metrics {
     store: Arc<dyn Storage>,
     clock: Arc<dyn Clock>,
-    records: Mutex<Option<Records>>,
+    records: Mutex<RecordsState>,
 }
 
 impl Metrics {
@@ -65,19 +73,33 @@ impl Metrics {
         Self {
             store,
             clock,
-            records: Mutex::new(None),
+            records: Mutex::new(RecordsState::Unread),
         }
     }
 
-    async fn load(&self) -> Records {
-        let mut records: Records = match self.store.read_metrics().await {
-            Ok(bytes) if !bytes.is_empty() => serde_json::from_slice(&bytes).unwrap_or_default(),
-            _ => Records::default(),
+    async fn load(&self, state: &mut RecordsState) {
+        if matches!(state, RecordsState::Unread) {
+            *state = match self.read_records().await {
+                Ok(records) => RecordsState::Measured(records),
+                Err(error) => {
+                    tracing::warn!(%error, "Cache saved counts unavailable");
+                    RecordsState::Unavailable
+                }
+            };
+        }
+    }
+
+    async fn read_records(&self) -> Result<Records> {
+        let bytes = self.store.read_metrics().await?;
+        let mut records: Records = if bytes.is_empty() {
+            Records::default()
+        } else {
+            serde_json::from_slice(&bytes).internal()?
         };
         for job in records.jobs.values_mut().filter(|job| job.active) {
             job.usage = JobCacheUsage::Github;
         }
-        records
+        Ok(records)
     }
 
     async fn persist(&self, records: &mut Records) {
@@ -99,10 +121,8 @@ impl Metrics {
 impl Reports for Metrics {
     async fn registered(&self, registration: &CacheRegistration, scope: &JobScope) {
         let mut lock = self.records.lock().await;
-        if lock.is_none() {
-            *lock = Some(self.load().await);
-        }
-        if let Some(records) = lock.as_mut() {
+        self.load(&mut lock).await;
+        if let RecordsState::Measured(records) = &mut *lock {
             let job = records.jobs.entry(key(registration)).or_insert(Job {
                 job_id: registration.job_id.clone(),
                 organization_id: registration.facts.organization_id.clone(),
@@ -131,7 +151,7 @@ impl Reports for Metrics {
 
     async fn closed(&self, registration: &CacheRegistration) {
         let mut lock = self.records.lock().await;
-        if let Some(records) = lock.as_mut() {
+        if let RecordsState::Measured(records) = &mut *lock {
             if let Some(job) = records.jobs.get_mut(&key(registration)) {
                 job.active = false;
             }
@@ -141,10 +161,8 @@ impl Reports for Metrics {
 
     async fn restored(&self, registration: &CacheRegistration, local: bool, bytes: u64) {
         let mut lock = self.records.lock().await;
-        if lock.is_none() {
-            *lock = Some(self.load().await);
-        }
-        if let Some(records) = lock.as_mut() {
+        self.load(&mut lock).await;
+        if let RecordsState::Measured(records) = &mut *lock {
             records.events.push(Event {
                 time: self.clock.now(),
                 local,
@@ -166,10 +184,8 @@ impl Reports for Metrics {
 
     async fn fallback(&self, registration: &CacheRegistration) {
         let mut lock = self.records.lock().await;
-        if lock.is_none() {
-            *lock = Some(self.load().await);
-        }
-        if let Some(records) = lock.as_mut() {
+        self.load(&mut lock).await;
+        if let RecordsState::Measured(records) = &mut *lock {
             let unknown_reason = records
                 .jobs
                 .get(&key(registration))
@@ -193,11 +209,11 @@ impl Reports for Metrics {
 
     async fn report(&self) -> Result<MachineCacheReport> {
         let mut lock = self.records.lock().await;
-        if lock.is_none() {
-            *lock = Some(self.load().await);
-        }
+        self.load(&mut lock).await;
         let (used_bytes, capacity_bytes) = self.store.usage().await?;
-        let records = lock.as_ref().ok_or(CacheError::Unavailable)?;
+        let RecordsState::Measured(records) = &*lock else {
+            return Err(CacheError::Unavailable);
+        };
         let cutoff = self.clock.now().saturating_sub(WEEK);
         let events: Vec<_> = records
             .events

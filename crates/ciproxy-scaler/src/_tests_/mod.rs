@@ -8,4 +8,5 @@ mod fixtures;
 mod lifecycle_tests;
 mod routing_tests;
 mod runner_selection_tests;
+mod statistics_tests;
 mod warm_tests;

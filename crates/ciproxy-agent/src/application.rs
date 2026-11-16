@@ -156,6 +156,7 @@ async fn execute(action: Action) -> Result<()> {
     });
     let agent: Arc<dyn Agent> = Arc::new(Controller {
         allocation: Mutex::new(()),
+        reporting_initialized: Mutex::new(false),
         network_cleanup: Mutex::new(()),
         control_connected: AtomicBool::new(false),
         state: Mutex::new(state),

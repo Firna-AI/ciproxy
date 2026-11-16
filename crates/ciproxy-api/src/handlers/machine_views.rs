@@ -8,6 +8,7 @@ use ciproxy_store_interface::job_views::DashboardJob;
 use ciproxy_store_interface::metering::history::MachineCost;
 
 use crate::capacity::Capacity;
+use crate::wire::machine_statistics::{CacheView, DockerDiskView, MachineCacheView};
 use crate::wire::machines;
 use crate::wire::money::Cents;
 
@@ -74,13 +75,17 @@ pub(super) fn machine(
                 .collect()
         })
         .unwrap_or_default();
-    let cache = report.map(|report| machines::CacheView {
-        used_bytes: report.cache.used_bytes.to_string(),
-        capacity_bytes: report.cache.capacity_bytes.to_string(),
-        restores_last_7_days: report.cache.restores_last_7_days.to_string(),
-        hits_last_7_days: report.cache.hits_last_7_days.to_string(),
-        docker_disk_bytes: report.docker_disks.used_bytes.to_string(),
-        docker_repositories: report.docker_disks.repositories.to_string(),
+    let cache = report.map(|report| CacheView {
+        machine_cache: report.cache.map(|cache| MachineCacheView {
+            used_bytes: cache.used_bytes.to_string(),
+            capacity_bytes: cache.capacity_bytes.to_string(),
+            restores_last_7_days: cache.restores_last_7_days.to_string(),
+            hits_last_7_days: cache.hits_last_7_days.to_string(),
+        }),
+        docker_disks: report.docker_disks.map(|docker| DockerDiskView {
+            used_bytes: docker.used_bytes.to_string(),
+            repositories: docker.repositories.to_string(),
+        }),
     });
     let by_slots = default_size.as_ref().and_then(|size| {
         capacity

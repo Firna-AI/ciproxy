@@ -11,10 +11,10 @@ import { colors } from "@ciproxy/tokens";
 import type { MachineView } from "../../api/schema.ts";
 import { text } from "../../components/text.ts";
 import type { Viewport } from "../../components/viewport.ts";
+import { cacheText } from "../../view/machines-cache.ts";
 import { listCopy, statusWords } from "../../view/machines-copy.ts";
 import { machineHref } from "../../view/machines-routes.ts";
 import {
-  cacheText,
   hardwareText,
   lastSeenText,
   machineStatus,
@@ -125,7 +125,18 @@ function Cell({
     case "slots":
       return <Slots machine={machine} stacked={stacked} />;
     case "cache":
-      return <Text style={[text.small, styles.ink]}>{cacheText(machine)}</Text>;
+      return (
+        <Text
+          style={[
+            text.small,
+            machine.cache?.machine_cache.status === "unavailable"
+              ? styles.muted
+              : styles.ink,
+          ]}
+        >
+          {cacheText(machine)}
+        </Text>
+      );
     default:
       return <Text style={text.small}>{lastSeenText(machine, props.now)}</Text>;
   }
@@ -207,6 +218,7 @@ const styles = StyleSheet.create({
   right: { alignItems: "flex-end" },
   th: { fontSize: 12, fontWeight: "500", color: colors.muted },
   ink: { color: colors.ink },
+  muted: { color: colors.muted },
   name: { minWidth: 0 },
   nameRow: {
     flexDirection: "row",

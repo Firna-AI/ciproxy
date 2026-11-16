@@ -13838,39 +13838,19 @@
       },
       "CacheView": {
         "type": "object",
-        "description": "Machine-cache metadata. Clear cache acts only on this machine's entries.",
+        "description": "Statistics from one stored report, with independent section availability.",
         "required": [
-          "used_bytes",
-          "capacity_bytes",
-          "restores_last_7_days",
-          "hits_last_7_days",
-          "docker_repositories",
-          "docker_disk_bytes"
+          "machine_cache",
+          "docker_disks"
         ],
         "properties": {
-          "capacity_bytes": {
-            "type": "string",
-            "description": "Machine-cache capacity bytes, as a decimal string."
+          "docker_disks": {
+            "$ref": "#/components/schemas/Statistics_DockerDiskView",
+            "description": "Repository Docker disk use measured independently by the agent."
           },
-          "docker_disk_bytes": {
-            "type": "string",
-            "description": "Persistent Docker disk bytes, which Clear cache preserves."
-          },
-          "docker_repositories": {
-            "type": "string",
-            "description": "Repositories with persistent Docker disks in the last report."
-          },
-          "hits_last_7_days": {
-            "type": "string",
-            "description": "Local hits during the last seven days."
-          },
-          "restores_last_7_days": {
-            "type": "string",
-            "description": "Handled restores during the last seven days."
-          },
-          "used_bytes": {
-            "type": "string",
-            "description": "Machine-cache bytes used, as a decimal string."
+          "machine_cache": {
+            "$ref": "#/components/schemas/Statistics_MachineCacheView",
+            "description": "Cache space and seven-day counts measured by the machine cache."
           }
         }
       },
@@ -15056,7 +15036,7 @@
             "oneOf": [
               {
                 "$ref": "#/components/schemas/CacheView",
-                "description": "Last reported machine-cache facts."
+                "description": "Independent cache and Docker observations, absent only without a report."
               },
               {
                 "type": "null"
@@ -17214,6 +17194,130 @@
             "description": "Registered own-machine identity, absent for Boat."
           }
         }
+      },
+      "Statistics_DockerDiskView": {
+        "oneOf": [
+          {
+            "allOf": [
+              {
+                "type": "object",
+                "description": "Measured persistent Docker disk figures, which Clear cache preserves.",
+                "required": [
+                  "repositories",
+                  "used_bytes"
+                ],
+                "properties": {
+                  "repositories": {
+                    "type": "string",
+                    "description": "Repositories with persistent Docker disks, as a decimal string."
+                  },
+                  "used_bytes": {
+                    "type": "string",
+                    "description": "Persistent Docker disk bytes, as a decimal string."
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "measured"
+                    ]
+                  }
+                }
+              }
+            ],
+            "description": "Figures measured by their producer, including a true zero."
+          },
+          {
+            "type": "object",
+            "description": "The producer could not measure this section.",
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "unavailable"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "One statistics section, with no figures when its producer could not measure it."
+      },
+      "Statistics_MachineCacheView": {
+        "oneOf": [
+          {
+            "allOf": [
+              {
+                "type": "object",
+                "description": "Measured machine-cache figures. Clear cache acts only on these entries.",
+                "required": [
+                  "used_bytes",
+                  "capacity_bytes",
+                  "restores_last_7_days",
+                  "hits_last_7_days"
+                ],
+                "properties": {
+                  "capacity_bytes": {
+                    "type": "string",
+                    "description": "Machine-cache capacity bytes, as a decimal string."
+                  },
+                  "hits_last_7_days": {
+                    "type": "string",
+                    "description": "Local hits during the last seven days, as a decimal string."
+                  },
+                  "restores_last_7_days": {
+                    "type": "string",
+                    "description": "Handled restores during the last seven days, as a decimal string."
+                  },
+                  "used_bytes": {
+                    "type": "string",
+                    "description": "Machine-cache bytes used, as a decimal string."
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "measured"
+                    ]
+                  }
+                }
+              }
+            ],
+            "description": "Figures measured by their producer, including a true zero."
+          },
+          {
+            "type": "object",
+            "description": "The producer could not measure this section.",
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "unavailable"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "One statistics section, with no figures when its producer could not measure it."
       },
       "StripeReceipt": {
         "type": "string",

@@ -1,7 +1,10 @@
 // The figures of the Machines pages: the slots of a machine as a thin
-// segmented bar with its legend, a meter against a limit, and the row of
-// headline figures above the table, which becomes two by two on a phone.
+// segmented bar with its legend, a meter against a limit, a figure that the
+// machine did not measure, and the row of headline figures above the table,
+// which becomes two by two on a phone. A headline figure can have a line
+// under its value.
 
+import type { ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { ProgressBar } from "@firna/ui/loader";
 
@@ -9,7 +12,7 @@ import { colors, fonts, radii, slotColors } from "@ciproxy/tokens";
 
 import type { SlotState } from "../../api/schema.ts";
 import { text } from "../../components/text.ts";
-import { listCopy } from "../../view/machines-copy.ts";
+import { cacheCopy, listCopy } from "../../view/machines-copy.ts";
 
 /**
  * The corner of a slot mark: 1 px, as the mockups draw it. The token package
@@ -96,9 +99,28 @@ export function Meter({
   );
 }
 
-export type Figure = { label: string; value: string };
+/** "Unknown" in the muted ink, in place of a figure that was not measured. */
+export function UnknownValue() {
+  return <Text style={[text.small, styles.unknown]}>{cacheCopy.unknown}</Text>;
+}
 
-/** The headline figures: one row on a wide window, two by two on a phone. */
+/** The label of a meter whose figure is unknown, with no bar to read as 0. */
+export function UnknownMeter({ label }: { label: string }) {
+  return (
+    <View style={styles.meterHead}>
+      <Text style={[text.small, text.strong]}>{label}</Text>
+      <UnknownValue />
+    </View>
+  );
+}
+
+/** A headline figure, with a line under its value, such as what it leaves out. */
+export type Figure = { label: string; value: string; detail?: ReactNode };
+
+/**
+ * The headline figures: one row on a wide window, two by two on a phone.
+ * Each figure is a group named by its label, for a screen reader.
+ */
 export function FigureRow({
   figures,
   compact,
@@ -111,6 +133,8 @@ export function FigureRow({
       {figures.map((figure, index) => (
         <View
           key={figure.label}
+          role="group"
+          aria-label={figure.label}
           style={[
             styles.figure,
             compact ? styles.figureCompact : styles.figureWide,
@@ -125,6 +149,7 @@ export function FigureRow({
           >
             {figure.value}
           </Text>
+          {figure.detail ?? null}
         </View>
       ))}
     </View>
@@ -145,6 +170,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   meterValue: { fontVariant: ["tabular-nums"] },
+  unknown: { color: colors.muted },
   figures: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -176,7 +202,10 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: colors.muted,
   },
+  // The value takes the width of its text, so a word such as Unknown stays
+  // whole on a narrow window, and a value with spaces still wraps at them.
   figureValue: {
+    alignSelf: "flex-start",
     fontFamily: fonts.sans,
     fontSize: 26,
     fontWeight: "600",

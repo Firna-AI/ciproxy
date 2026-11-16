@@ -99,7 +99,8 @@ export async function machineReply(
     else if (command === "remove")
       state.machines = state.machines.filter((item) => item.id !== machine.id);
     else if (command === "clear-cache") {
-      if (machine.cache) machine.cache.used_bytes = "0";
+      const figures = machine.cache?.machine_cache;
+      if (figures?.status === "measured") figures.used_bytes = "0";
     } else return undefined;
     const body: Schemas["CommandResult"] = { connected: !machine.offline };
     return { status: 200, body };

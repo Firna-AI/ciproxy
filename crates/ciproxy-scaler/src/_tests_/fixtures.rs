@@ -49,6 +49,7 @@ pub(super) fn snapshot() -> Snapshot {
             draining: false,
             capacity: Slots(6),
             disk_budget_bytes: 600 * GIGABYTE,
+            docker_leased_bytes: Some(0),
             warm_count: 0,
             warm_allocation: Vec::new(),
             runners: Vec::new(),

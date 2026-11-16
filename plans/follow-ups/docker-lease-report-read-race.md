@@ -46,14 +46,14 @@
   - The agent runtime is multi-threaded: `#[tokio::main]` at
     `crates/ciproxy-agent/src/main.rs:181`, with the tokio `full` features.
     So the two tasks can run at the same time.
-  - `machine_report()` holds the controller state lock while it reads the
-    leases, from `crates/ciproxy-agent/src/reporting.rs:24` to `:76`.
-    `retire()` takes no such lock. So no lock orders the two.
+  - `machine_report()` reads the Docker figures before it takes the
+    controller state lock, in `crates/ciproxy-agent/src/reporting.rs`.
+    `retire()` takes no shared lease-read lock. No lock orders the two.
   - So a job end can remove a lease between the listing and the read of a
     report. `LinuxDockers::report()`, at `docker.rs:174-190`, then fails.
-  - The report turns that failure into zero Docker figures, at
-    `reporting.rs:68-76`. One report then shows "0 repositories · 0 GB" and
-    a zero reservation, until the next report 10 seconds later.
+  - The report logs the failure and marks its Docker figures unavailable.
+    The page shows "Unknown", and the hosted capacity becomes unknown.
+    The scaler starts no new runner there until a measured report arrives.
   - Every lease reader calls `leases()`: `reserved()` at `docker.rs:71-75`,
     `prepare()` at `:88`, `report()` at `:176`, `held()` and `unused()` at
     `docker_files.rs:77-94`, and Docker recovery at
@@ -74,14 +74,14 @@
     `partial_pending_lease_does_not_block_reporting`. No test proves that a
     lease that does not decode still fails the read.
   - Neither option changes what the report sends after a failed read.
-    `plans/follow-ups/machine-statistics-availability.md` holds that choice.
+    `docs/protocol/docker-disks.md#unavailable-figures` states that rule.
   - The per-file read came with commit `1722b62` of 2026-11-06.
 - **Problem:** A lease that a job end removes after the listing fails the
   whole Docker read with NotFound. The released lease holds no disk, so the
   read should count the leases that remain.
-- **Impact if no action:** Rarely, one machine report shows
-  "0 repositories · 0 GB" and a zero Docker reservation. The page and the
-  dashboard capacity read them as measured until the next report.
+- **Impact if no action:** Rarely, the page shows unknown Docker figures
+  and capacity. New runner starts wait for the next measured report,
+  although the removed lease holds no disk.
 - **Root question:** How does the agent read its Docker leases while a job
   end removes one of them?
 - **Options:**
@@ -119,11 +119,10 @@
   agent for the same pattern.
 - **Previous examples:** None found as a defect. `bases()` and `load()` in
   `docker_files.rs` already treat a file that is gone as absent.
-- **Related:** `plans/follow-ups/machine-statistics-availability.md`: the
-  same reader and the same report path. This race is one cause of a failed
-  Docker read, which the zero fallback of that item turns into zeros. This
-  fix does not depend on its choice, and that choice does not wait for this
-  fix.
+- **Related:** `docs/protocol/docker-disks.md#unavailable-figures`: the same
+  reader and report path. This race is one cause of unavailable figures.
+  The availability rule already applies. The direct race fix remains
+  separate.
 - **Recommendation:** A. It fixes the race in the one shared reader, and it
   keeps every real error.
 - **Action:** fix after merge, apply A, because the fix is agent code
