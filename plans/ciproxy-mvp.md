@@ -1641,7 +1641,11 @@ Boat start-status fix gets a standalone follow-up item. The label dialog
 also follows answer 113 A: keep its fit counts, placement, and VM disk,
 without the optional machine-offer and largest-job figures.
 
-- [ ] Complete the remaining Machines and Settings states and the review
+[PR #65](https://github.com/Firna-AI/ciproxy/pull/65) is open and ready.
+The app closure is verified. A passing complete gate still waits for the
+inherited fixes named in the orchestrator step under Milestone 20d.
+
+- [x] Complete the remaining Machines and Settings states and the review
       fixes below. Keep Overflow with Milestone 22.
       Branch: `conductor/m20-closure`.
       Verification evidence: `.context/ciproxy-m20-closure/verification.md`.
@@ -1747,7 +1751,7 @@ The existing Machines and Settings screens keep their controls and flows.
 - [x] Run the mockup check and smoke-test the app at 1440, 720, and 390
       pixels. Run the complete gate with `DATABASE_URL` set.
       Branch: `conductor/m20-machines-and-settings-ui`.
-- [ ] Commit and push the closure, review the new diff, and fix confirmed
+- [x] Commit and push the closure, review the new diff, and fix confirmed
       findings. Open a ready pull request against
       `calummoore/ci-proxy-load-balancer`. Keep the wider MVP plan and do not
       merge the pull request. PR #50 is the earlier merged snapshot.
@@ -1773,10 +1777,16 @@ Depends on: 20c
       fact. Keep Add available. Test the view and smoke-test the Free page
       at 1440, 720, and 390 pixels. Finding 4 needs no source change.
       Branch: `conductor/m20-machines-and-settings-ui`.
-- [ ] Verify the Free organization guidance on the combined dashboard.
+- [x] Verify the Free organization guidance on the combined dashboard.
       Run the complete gate, commit and push, review the closure, and report
       its pull request and head. The second fix round of PR #50 supplied
       the guidance. Keep the wider plan and do not merge the closure.
+      Branch: `conductor/m20-closure`.
+- [ ] Orchestrator: after the #61 and #62 closure fixes reach the primary
+      branch, run the complete gate again with `DATABASE_URL` set. The
+      inherited agent file length, shutdown follow-up link, and agent
+      wrong-handshake fixture still block a passing gate for this closure.
+      Keep every check and assertion. This is required before its merge.
       Branch: `conductor/m20-closure`.
 
 ## Milestone 21: Dashboard UI: Jobs, Savings, and billing
@@ -2259,7 +2269,7 @@ Cal asked to merge all in-progress work into this branch, also when it is
 incomplete. These pull requests merged as work-in-progress snapshots. Each
 list gives what is not done.
 
-- [ ] #50, Milestone 20, Machines and Settings: finish the shared Settings
+- [x] #50, Milestone 20, Machines and Settings: finish the shared Settings
       badges, the reload fixtures, and the placeholder cleanup. Run the
       browser checks and the complete gate. Record the deferred Boat
       start-status fix. Check the live Jobs, job, and Plans destinations.
