@@ -2637,6 +2637,11 @@ Answers of 5 November 2026:
 - Item 114, A, 8 November 2026: merge the release server changes of
   `futex-ai/cli-release`, with the image push of each merge, and publish
   no release. ciproxy pins the merged commit. Rejected: B and C.
+- Item 115, B, 16 November 2026: the Conductor credentials that a session
+  output showed are not rotated, because Conductor shuts down. Rejected: A.
+- Item 116, A, 16 November 2026: an MIT licence file in
+  `futex-ai/cli-release`, in pull request #9 there, which the user merges.
+  Rejected: B, C, D, E, and F.
 - Item 108, C with D, 8 November 2026: the paid change sends the same
   pending credit that the preview counted, Stripe computes the amount, and
   an alert compares each invoice with its quote. A third fix round of pull
@@ -5565,6 +5570,8 @@ remain with the orchestrator in Milestone 13 and
 
 ### 116. The installer repository has no licence file
 
+**Answer, 16 November 2026:** A, in `futex-ai/cli-release` pull request #9.
+
 - **Severity:** Low. **Effort:** Small.
 - **Source:** Implementation, the Milestone 27 licence check, 16 November
   2026. The options check of the same day added D, E, and F.
@@ -5622,3 +5629,27 @@ remain with the orchestrator in Milestone 13 and
   codebase.
 - **Action:** ask the user, because the user approves each merge in
   `futex-ai/cli-release`.
+
+### 115. Conductor credentials appeared in a tool output
+
+**Answer, 16 November 2026:** B.
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Implementation, the collection of in-progress work, 11
+  November 2026.
+- **Category:** Security.
+- **Location:** None. The text is in the transcript of one Conductor
+  session, not in the repository.
+- **Background:** A session listed the running processes, and the list
+  showed Conductor credentials. The session committed nothing secret.
+- **Problem:** The credentials are in that session's transcript.
+- **Impact if no action:** A person who can read the transcript can use
+  them while they stay valid.
+- **Root question:** How do the credentials stop being usable?
+- **Options:**
+  - **A.** Rotate or revoke them when Conductor shuts down. Effort: Small.
+  - **B.** Change nothing, and rely on the shutdown. Effort: Small.
+- **Left out:** Editing the transcript, because copies can exist.
+- **Wider fix:** None.
+- **Recommendation:** A.
+- **Action:** ask the user, because only the user can rotate them.
