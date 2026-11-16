@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 
+import { overflowHref } from "../src/routing/pages.ts";
+import { plansHref } from "../src/view/billing-routes.ts";
 import type { Page } from "./browser-driver.ts";
 import { visible } from "./browser-fixture.ts";
+import { workspaceId } from "./fixtures-core.ts";
 
 /** A phone shows cards; a wider window shows tables with column headers. */
 function phone(width: number): boolean {
@@ -84,6 +87,47 @@ export async function freeOrganizationFacts(page: Page): Promise<void> {
       .getByRole("button", { name: "Take out northstar-labs", exact: true })
       .count(),
     0,
+  );
+}
+
+/**
+ * Settings under Overflow shows the tabs of Settings, and Members counts the
+ * open requests of the settings read, also after a reload. Back returns to
+ * the tab that opened it.
+ */
+export async function overflowTabFacts(
+  page: Page,
+  origin: string,
+): Promise<void> {
+  await page.getByRole("link", { name: "Overflow", exact: true }).click();
+  await page.waitForURL(origin + overflowHref(workspaceId));
+  const account = page.getByText("Connected to the account Northstar Boat", {
+    exact: true,
+  });
+  const members = page.getByRole("link", {
+    name: "Members, 1 open request",
+    exact: true,
+  });
+  await visible(account);
+  await visible(members);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await visible(account);
+  await visible(members);
+  await page.goBack({ waitUntil: "domcontentloaded" });
+}
+
+/** Compare plans opens Plans, and Back returns to the Free notice. */
+export async function comparePlansLink(
+  page: Page,
+  origin: string,
+): Promise<void> {
+  await page.getByRole("link", { name: "Compare plans", exact: true }).click();
+  await page.waitForURL(origin + plansHref(workspaceId));
+  await visible(page.getByRole("heading", { name: "Plans", exact: true }));
+  await visible(page.getByRole("link", { name: "Choose Team", exact: true }));
+  await page.goBack({ waitUntil: "domcontentloaded" });
+  await visible(
+    page.getByText("Run more organizations on Team", { exact: true }),
   );
 }
 

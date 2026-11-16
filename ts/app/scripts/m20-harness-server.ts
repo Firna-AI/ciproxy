@@ -10,12 +10,22 @@ import { startHarness } from "./harness-server.ts";
 import { problem, success } from "./harness-state.ts";
 import { accessReply } from "./m20-harness-access.ts";
 import { machineReply } from "./m20-harness-machines.ts";
+import { linkedPageReply } from "./m20-harness-pages.ts";
 import { settingsReply } from "./m20-harness-settings.ts";
 import {
   createM20State,
   updateM20State,
   type M20State,
 } from "./m20-harness-state.ts";
+
+/** A read of every role: Machines, its summary, the banner, Jobs, and Plans. */
+function everyRole(route: string): boolean {
+  return (
+    /^machines(?:\/[^/]+)?$/.test(route) ||
+    /^jobs\/[^/]+$/.test(route) ||
+    ["overflow/summary", "banner", "plans"].includes(route)
+  );
+}
 
 function fails(state: M20State, method: string, route: string): boolean {
   const scenario = state.scenario;
@@ -96,13 +106,7 @@ async function serve(
   if (match[1] !== workspaceId || role == null)
     return send(403, problem("access_denied", "Access ended."));
   const route = match[2] ?? "";
-  if (
-    role !== "admin" &&
-    !(
-      method === "GET" &&
-      (/^machines(?:\/[^/]+)?$/.test(route) || route === "overflow/summary")
-    )
-  )
+  if (role !== "admin" && !(method === "GET" && everyRole(route)))
     return send(403, problem("access_denied", "Admin role required."));
   if (fails(state, method, route))
     return send(
@@ -158,7 +162,8 @@ async function serve(
   const reply =
     (await machineReply(request, route, state)) ??
     (await settingsReply(request, route, state)) ??
-    (await accessReply(request, route, state));
+    (await accessReply(request, route, state)) ??
+    linkedPageReply(method, route, state, role);
   return reply
     ? send(reply.status, reply.body)
     : send(404, problem("not_found", "Route not found."));

@@ -1,8 +1,10 @@
 // The pages of Machines on its one static route: the list, one machine, and
 // Add a machine. The query names the workspace and, by its opaque ID, the
-// machine, so the static hosting serves a reload of each page.
+// machine, so the static hosting serves a reload of each page. The links to
+// the pages of Settings and Jobs take their addresses from those pages.
 
 import { idParam, overflowHref, workspaceHref } from "../routing/pages.ts";
+import { jobHref, jobsHref } from "./jobs-links.ts";
 
 export type MachinesRoute =
   { kind: "list" } | { kind: "add" } | { kind: "machine"; machineId: string };
@@ -33,16 +35,16 @@ export function overflowSettingsHref(workspaceId: string): string {
   return overflowHref(workspaceId);
 }
 
+/** History of Jobs, with the finished jobs of the workspace. */
 export function jobHistoryHref(workspaceId: string): string {
-  return workspaceHref("jobs", workspaceId);
+  return jobsHref(workspaceId, "history");
 }
 
 /**
- * The page of one dashboard job, which the Jobs pages own: `/job` with the
- * workspace and the canonical job ID that the API matched to a busy slot.
- * The job ID of a machine report never makes a link.
+ * The page of one dashboard job, which the Jobs pages own, by the canonical
+ * job ID that the API matched to a busy slot. The job ID of a machine report
+ * never makes a link.
  */
 export function slotJobHref(workspaceId: string, jobId: string): string {
-  const query = new URLSearchParams({ workspace: workspaceId, job: jobId });
-  return `/job?${query.toString()}`;
+  return jobHref(workspaceId, jobId);
 }

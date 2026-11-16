@@ -10,7 +10,7 @@
 import type { ApiFailure } from "../api/client.ts";
 import type { OrganizationView } from "../api/schema.ts";
 import type { SettingsView } from "../api/settings-schema.ts";
-import { workspaceHref } from "../routing/pages.ts";
+import { plansHref } from "./billing-routes.ts";
 import type { FailureCopy } from "./claim.ts";
 import { formatDeadline, formatPlainDay } from "./format.ts";
 
@@ -31,7 +31,7 @@ export type OrganizationRow = {
   state: "linked" | "removed";
   status: OrganizationStatus | null;
   access: string;
-  /** Plan and usage, where a person who pays moves to Team. */
+  /** Plans, where a person who pays chooses Team. */
   chooseTeam: string | null;
   turnOn: boolean;
   repositories: boolean;
@@ -197,9 +197,7 @@ export function organizationRows(
       status: status(organization, timeZone),
       access: accessText(organization),
       chooseTeam:
-        !removed && upgrade !== null
-          ? workspaceHref("billing", upgrade.workspace_id)
-          : null,
+        !removed && upgrade !== null ? plansHref(upgrade.workspace_id) : null,
       turnOn: !removed && activation.can_enable,
       repositories: !removed,
       takeOut: !removed && severalLinked,

@@ -14,6 +14,7 @@ import {
   labelFacts,
   memberFacts,
   organizationFacts,
+  overflowTabFacts,
 } from "./m20-browser-settings-facts.ts";
 import { labelCases } from "./m20-browser-labels.ts";
 import { organizationCases } from "./m20-browser-organizations.ts";
@@ -56,6 +57,10 @@ export function settingsCases(origin: string, output: string): M20Case[] {
         await memberFacts(page, width);
         await capture(page, width, output, "settings-members");
         await page.goBack({ waitUntil: "domcontentloaded" });
+        await visible(
+          page.getByRole("button", { name: "Rename", exact: true }),
+        );
+        await overflowTabFacts(page, origin);
         await visible(
           page.getByRole("button", { name: "Rename", exact: true }),
         );

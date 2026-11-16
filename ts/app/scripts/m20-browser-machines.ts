@@ -12,7 +12,11 @@ import {
   open,
   type M20Case,
 } from "./m20-browser-fixture.ts";
-import { machineStates, slotJobLinks } from "./m20-browser-machine-states.ts";
+import {
+  followMachineLinks,
+  machineStates,
+  slotJobLinks,
+} from "./m20-browser-machine-states.ts";
 import { machineIds } from "./m20-fixtures-machines.ts";
 
 export function machineCases(origin: string, output: string): M20Case[] {
@@ -27,6 +31,7 @@ export function machineCases(origin: string, output: string): M20Case[] {
           page.getByRole("heading", { name: "forge-01", exact: true }),
         );
         await slotJobLinks(page);
+        await followMachineLinks(page, origin);
         await page.reload({ waitUntil: "domcontentloaded" });
         await visible(
           page.getByRole("heading", { name: "forge-01", exact: true }),

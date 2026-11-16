@@ -1,9 +1,15 @@
 import assert from "node:assert/strict";
 
+import { jobHref, jobsHref } from "../src/view/jobs-links.ts";
 import type { Page } from "./browser-driver.ts";
 import { visible } from "./browser-fixture.ts";
 import { workspaceId } from "./fixtures-core.ts";
-import { capture, m20Control, machinesUrl } from "./m20-browser-fixture.ts";
+import {
+  capture,
+  m20Control,
+  machinesUrl,
+  within,
+} from "./m20-browser-fixture.ts";
 import { machineIds, slotJobIds } from "./m20-fixtures-machines.ts";
 
 /**
@@ -105,4 +111,35 @@ export async function slotJobLinks(page: Page): Promise<void> {
     href(slotJobIds.build),
   ]);
   await visible(page.getByRole("link", { name: "test (rust)", exact: true }));
+}
+
+/**
+ * On forge-01, Job history opens History of Jobs, and the name of a busy slot
+ * opens the page of its canonical job. Back returns to the machine each time.
+ */
+export async function followMachineLinks(
+  page: Page,
+  origin: string,
+): Promise<void> {
+  const machine = page.getByRole("heading", { name: "forge-01", exact: true });
+  await page.getByRole("link", { name: "Job history", exact: true }).click();
+  await page.waitForURL(origin + jobsHref(workspaceId, "history"));
+  await visible(
+    page.getByRole("heading", { name: "Finished jobs show here", exact: true }),
+  );
+  assert.equal(
+    await within(page.getByRole("navigation", { name: "Jobs views" }))
+      .getByRole("link", { name: "History", exact: true })
+      .getAttribute("aria-current"),
+    "page",
+  );
+  await page.goBack({ waitUntil: "domcontentloaded" });
+  await visible(machine);
+  await page.getByRole("link", { name: "test (rust)", exact: true }).click();
+  await page.waitForURL(origin + jobHref(workspaceId, slotJobIds.test));
+  await visible(
+    page.getByRole("heading", { name: "test (rust)", exact: true }),
+  );
+  await page.goBack({ waitUntil: "domcontentloaded" });
+  await visible(machine);
 }

@@ -13,6 +13,7 @@ import {
 } from "./m20-browser-fixture.ts";
 import { organizationIds } from "./m20-fixtures-settings.ts";
 import {
+  comparePlansLink,
   freeOrganizationFacts,
   teamOrganizationFacts,
 } from "./m20-browser-settings-facts.ts";
@@ -144,6 +145,7 @@ export function organizationCases(origin: string, output: string): M20Case[] {
         );
         await freeOrganizationFacts(page);
         await capture(page, width, output, "organizations-free");
+        await comparePlansLink(page, origin);
       },
     },
     {

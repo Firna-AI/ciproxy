@@ -19,11 +19,11 @@ import { Notice } from "../../components/notice.tsx";
 import { useShellActions } from "../../components/shell/shell-actions.ts";
 import { text } from "../../components/text.ts";
 import { useViewport } from "../../components/viewport.ts";
-import { workspaceHref } from "../../routing/pages.ts";
 import { useServices } from "../../services/context.tsx";
 import { useValue } from "../../services/hooks.ts";
 import { settingsServices } from "../../state/settings-services.ts";
 import type { SettingsStore } from "../../state/settings-store.ts";
+import { plansHref } from "../../view/billing-routes.ts";
 import {
   freeGuidance,
   organizationRows,
@@ -70,7 +70,7 @@ function WorkspacePanel({
 }
 
 function FreeNotice({ workspaceId }: { workspaceId: string }) {
-  const href = workspaceHref("billing", workspaceId);
+  const href = plansHref(workspaceId);
   return (
     <Notice
       tone="info"

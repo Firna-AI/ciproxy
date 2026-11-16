@@ -12,6 +12,7 @@ import { Switch } from "@firna/ui/switch";
 
 import { text } from "../../components/text.ts";
 import type { LabelDraft, SizeField } from "../../view/settings-label-form.ts";
+import { largestBoatText } from "../../view/settings-label-sizes.ts";
 
 function Toggle({
   label,
@@ -55,7 +56,6 @@ export function LabelForm({
   nameError,
   sizeErrors,
   fit,
-  largestBoat,
   onChange,
 }: {
   draft: LabelDraft;
@@ -67,8 +67,6 @@ export function LabelForm({
   sizeErrors: Partial<Record<SizeField, string>>;
   /** The line that says where jobs of the size run. */
   fit: ReactNode;
-  /** The text of "Run on the largest Boat size", with that size. */
-  largestBoat: string;
   onChange: (next: LabelDraft) => void;
 }) {
   return (
@@ -132,7 +130,7 @@ export function LabelForm({
         />
         <RadioCard
           title="Run on the largest Boat size"
-          body={largestBoat}
+          body={largestBoatText}
           checked={draft.whenNothingFits === "largest_boat"}
           onPress={() =>
             onChange({ ...draft, whenNothingFits: "largest_boat" })

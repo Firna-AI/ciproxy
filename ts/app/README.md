@@ -85,90 +85,6 @@ The address with `tab=overflow` opens that page too, in place of its own
 entry in the browser history. The tabs of Settings under Overflow open the
 other tabs on `/settings`.
 
-### Machines
-
-- Every role sees the list and each machine. Only an Admin adds, drains, or
-  removes a machine, clears its cache, or sets its warm runners and its
-  monthly cost. Another role on Add a machine goes to the list.
-- The list shows the figures of the machines, a table with the slots,
-  health, and cache of each machine, a notice for each offline machine, and
-  the Overflow panel with the Boat spend of the month.
-- The three pages share one read of `GET /workspaces/{id}/machines`. They
-  read it again every 10 seconds, and Add a machine every 5 seconds. A
-  machine that the read does not hold shows a not-found state. After Remove,
-  the page of the machine goes back to the list.
-- Add a machine shows the install command of Setup after its first read of
-  the machines. A machine that was not in that read is new, and the page
-  shows what its agent reported.
-- The machine page shows the saved warm runner count in every state, also
-  while the machine drains, is offline, or has no slots. The slots show the
-  warm runners that are ready.
-- A busy slot names the job that the API matched to it, with its repository,
-  its pull request or branch, and how long it has run. The name links to
-  `/job?workspace=<id>&job=<id>` with the dashboard ID of the job, a page
-  that the Jobs pages own. A job that the API could not match links nowhere,
-  and the job ID of a machine report never makes a link.
-- The agent version says whether it is the newest release only from a fresh
-  report, and only when ciproxy could read the newest release. Cache shows
-  the space of the Docker disks and their count of repositories.
-- When the API says that the disk holds fewer jobs of `ciproxy` than the
-  slots, the page names the limit, the VM disk of one such job, and the disk
-  for jobs, and the free slots beyond the limit say that they have no disk
-  for a job. Add a machine shows the same limit for a machine that joins.
-
-### Settings
-
-- Settings is for Admins, and another role goes to Jobs. Each tab reads the
-  settings of the workspace, so Members shows the count of open requests for
-  access on each tab.
-- Labels lists each label with its size, where its jobs run now, and the
-  jobs of the last 30 days, as the API gives them. A count that the API does
-  not know says so.
-- Without a Boat account, the jobs of a label run on the machines only, and
-  the dialog keeps the fit of the machines and says that Boat is not
-  connected. It never says that a Boat size does not fit before the Boat
-  catalog says so. When the API knows the fit of the machines but not the
-  Boat fit, the list and the dialog give the fit of the machines and say
-  that the Boat fit is not known yet.
-- While the person types a size or changes a switch in Add label or Edit,
-  the dialog asks `POST /workspaces/{id}/labels/preview` again. It shows the
-  VM disk of one job, how many jobs each machine runs at a time, and the Boat
-  size that runs them, or the offers of the machines and the largest Boat
-  size when nothing fits. "Run on the largest Boat size" names that size.
-- A label keeps its name. Each label but `ciproxy` has Delete label. When
-  GitHub refuses a new name, the dialog shows why.
-- Organizations shows the workspace name with Rename, Add an organization,
-  and each organization of the workspace. A linked organization has its
-  repository access, Take out, and the action that clears a hold: Choose
-  Team or Turn on. The last linked organization has no Take out.
-- Add an organization is an action of every Admin on every tier. When the
-  settings say that a new organization would need Team, the caption under
-  the list says that it stays inactive until Team. With one linked
-  organization, a notice also offers Team with Compare plans.
-- The repository access of an organization is all its private repositories,
-  or the selected ones. A public repository cannot be selected.
-- When an owner removes the App from one organization on GitHub, its row
-  shows "App removed" until ciproxy deletes its data. The row gives the last
-  day for a new install that keeps the job history, and Install again. It
-  has no repository access, and the rule of the last linked organization
-  does not count it.
-- On the Organizations tab, the shell shows the banner of the Organizations
-  scope, in which inactive organizations come before a passed limit. For one
-  inactive organization, that banner gives its reasons in the words of its
-  row. For more, it points to the rows. It offers only what the API allows,
-  such as Choose Team, or Turn on with the dialog of the row.
-- Members lists the requests for access and the members. The tab gives
-  access, declines a request, changes a role, and removes a member. The row
-  of the signed-in person has no Remove. Before a person gets the Admin role,
-  a dialog shows the trust notice of the API.
-- An organization row shows the day it joined and the counts of private
-  repositories of its latest complete repository snapshot. An inactive row,
-  its banner, and Turn on name the person who added the organization.
-- Members shows the name and the login of each person, the day of each
-  role, and for each request its day and the organizations that the person
-  was a member of then. A day, a name, or a count that the API does not
-  know stays out, or the row says that it is not known.
-
 The other choices of a page are in its query too, so a reload or a shared
 link keeps them. A value that a page does not know falls back to its default.
 
@@ -189,34 +105,28 @@ Every role reads Jobs, Savings, and Plan and usage. An action shows only when
 the API allows the caller. A person who may not pay reads "Ask an Admin or a
 Billing person" in place of each payment action.
 
+### Machines
+
+[Machines pages](src/screens/machines/README.md) gives the rules of the list,
+one machine, and Add a machine: the roles, the reads, the slots, and the disk
+limit.
+
+### Settings
+
+[Settings pages](src/screens/settings/README.md) gives the rules of the
+Labels, Organizations, and Members tabs, the label dialog, and Settings under
+Overflow with its Boat form.
+
+- On the Organizations tab, the shell shows the banner of the Organizations
+  scope, in which inactive organizations come before a passed limit. For one
+  inactive organization, that banner gives its reasons in the words of its
+  row. For more, it points to the rows. It offers only what the API allows,
+  such as Choose Team, or Turn on with the dialog of the row.
+
 ## Jobs, Savings, and billing
 
-- Jobs Live reads the queue again every 5 seconds while the tab shows. A
-  failed refresh keeps the last queue and says so. A figure that the API
-  leaves out says "Unknown", never 0. A waiting job shows its label, not a
-  machine, because GitHub gives it to whichever runner is idle first.
-- The notices of the queue promise a place only from the facts of each
-  waiting label. A full queue counts the jobs whose label fits your
-  machines. It promises Boat after the overflow wait only to the labels that
-  Boat starts now, and Boat at once to a label that no own machine runs.
-  While the Boat costs have no safe count, it promises no Boat start. While
-  Boat takes no new job, a notice says that only the jobs whose label fits
-  your machines wait there for a free slot.
-- A saved Boat retry time holds new Boat starts only while it is after the
-  browser time of the read, because the API gives no response time. A
-  refused Boat size holds only the labels that use it. A label that no
-  permitted place fits names its full request and each place that it
-  forbids or that takes no jobs. It never names one short resource, because
-  the API does not say which one is. It offers the largest Boat size only
-  while the label allows Boat and waits when nothing fits.
-- History asks for the finished jobs from the first UTC date of the chosen
-  window, and shows every job that the API returns, newest first. The API
-  gives no total, so the footer counts the jobs of the list and names the
-  history window of the plan in days.
-- The job page shows the request of the label as the API kept it, or
-  "Requested size unknown", and never the current size of the label. It names
-  the VM that ran the job, and why the job ran there when the API gives a
-  reason. A job that no runner took is not a start.
+- [Jobs pages](guides/jobs/README.md) gives the rules of Jobs Live, its
+  notices, History, and the job page.
 - Savings shows the costs that the API gives. The savings figure shows only
   when every cost is known, and a negative saving says "more than". A cost
   that the API knows only in part reads "At least". While the API says that
@@ -245,41 +155,10 @@ Billing person" in place of each payment action.
 - Every read and change goes through the one HTTP client. Each read passes
   through the session store, so an ended sign-in opens sign-in, and a refused
   role reads the session again.
-- Sign-in is a top-level navigation to `/api/auth/github`. GitHub returns a
-  sign-in to `/api/auth/github/callback` and an install to `/api/github/setup`.
-  The API checks each return, then opens `/`, or `/sign-in?reason=github` on
-  a failure. The app takes no installation ID from a URL.
-- The session names the exact claims from the latest successful GitHub
-  sign-in, including results kept after a failed authorization. These
-  include installs that an owner approved later. When one
-  named claim ended, `/` opens its workspace before a remembered one. When
-  several ended, `/` opens the return page, which shows each outcome. A
-  named claim that still waits adds no route, so the removed-App and
-  ended-access pages stay first. The browser handles each ended
-  continuation once, and claim order, time, and roles choose nothing.
-- The session's install URL opens `/install` without creating an attempt.
-  Each install action calls POST `/api/installation-links/start`, then opens
-  its returned GitHub URL. The start preserves the session's install purpose.
-  Add an organization uses its existing workspace action.
-  A plain install action also works after the page observes a newer API build.
-- The account menu reads `can_claim_admin` directly from the session.
-  The API returns false for a person who already has the Admin role.
-- Each API response names its build in the `x-ciproxy-build` header. After a
-  new build, the next page change loads a new document, also through the
-  back and forward buttons. Until then, the page keeps its input. A filter or
-  range change after a new build loads a new document with the new address.
-- Setup and Settings under Overflow read the Boat settings of a workspace
-  through one store. A change that the API accepted is never sent again.
-  When the read after it fails, the page offers only Try again, which reads.
-- The Boat connection form has two phases, in Setup and in Settings under
-  Overflow. Check key sends only the key to
-  `POST /api/workspaces/<id>/overflow/wallets`, which saves nothing. The
-  form then lists the wallets of the answer. The `selected_wallet` of the
-  answer starts picked when the list holds it. Connect Boat sends the key,
-  the limit, and the chosen wallet. A key edit drops the wallets, and the
-  answer of an older check never applies.
-- The form drops the key once the API accepts the connection, before the
-  read after it. The pages show the account name and never the key.
+- [Dashboard API use](src/api/README.md) gives the rules of sign-in, the
+  claims of the session, the install, the account menu, and a new API build.
+- The [Settings guide](src/screens/settings/README.md#settings-under-overflow)
+  gives the rules of the Boat settings and of the Boat form.
 
 ## Development
 
@@ -313,125 +192,25 @@ pages leaves it light.
 
 ## Browser checks
 
-The fixture harness serves the export and a typed fixture API on `127.0.0.1`,
-with no live API. The browser smokes drive headless Chrome against it at
-1440, 720, and 390 pixels: the shell smoke checks sign-in, Setup, and the
-shell, and the page smoke checks Jobs, Savings, and the billing pages.
-[Dashboard scripts](scripts/README.md#browser-checks) gives the commands, the
-flags, the scenarios, and the evidence folders.
-
-The fixture harness serves the export and a typed fixture API on `127.0.0.1`.
-It contacts no live API, and runs until Ctrl+C. The browser smoke drives
-headless Chrome against it at 1440, 720, and 390 pixels. It covers the pages
-and their states, the shell, and the reload after a build change. The
-repository has no browser dependency, so supply `playwright-core`. Run the
-smoke in a second terminal:
-
-```sh
-npm --prefix ts run app:export
-node ts/app/scripts/harness-server.ts --port=4340
-CIPROXY_PLAYWRIGHT_PATH=/absolute/path/playwright-core/index.mjs \
-  node ts/app/scripts/browser-smoke.ts
-```
-
-Machines and Settings have a second harness and smoke with the same options.
-That smoke covers the Machines pages, the Settings tabs with their dialogs,
-and the recovery after a failed read or change. It also needs the export:
-
-```sh
-npm --prefix ts run app:export
-node ts/app/scripts/m20-harness-server.ts --port=4341
-CIPROXY_PLAYWRIGHT_PATH=/absolute/path/playwright-core/index.mjs \
-  node ts/app/scripts/m20-browser-smoke.ts
-```
-
-- `--case=NAME` runs one case or a comma-separated list of cases. A name
-  that matches no case fails the run.
-- `CIPROXY_CHROME_PATH` sets the browser, by default `/usr/bin/google-chrome`.
-- `CIPROXY_HARNESS_URL` sets the harness, by default `http://127.0.0.1:4340`.
-  For Machines and Settings, the default port is 4341.
-- `CIPROXY_SMOKE_OUTPUT` sets the directory for the screenshots,
-  `results.json`, and a trace of each failed case. By default, it is
-  `.context/ciproxy-mvp-m19/browser-smoke` under the current directory. For
-  Machines and Settings, it is `.context/ciproxy-mvp-m20/browser-smoke`.
-- `POST /__fixture/control` with a JSON `scenario` sets the fixture state of
-  a running harness. `scripts/harness-scenarios.ts` and
-  `scripts/m20-harness-state.ts` list the scenario names.
+Three browser smokes drive headless Chrome against a fixture harness, with
+no live API: the shell smoke, the page smoke, and the Machines and Settings
+smoke. [Dashboard scripts](scripts/README.md#browser-checks) gives what each
+smoke checks, the commands, the flags, the scenarios, and the evidence
+folders.
 
 ## Live checks
 
-The live checks read a deployed dashboard with the sign-in of a person, from
-a private credential file outside the repository. Without
-`CIPROXY_DASHBOARD_CREDENTIALS_FILE`, each check prints `SKIP` and exits with
-status 2. [Dashboard scripts](scripts/README.md#live-checks) gives the
-credential file, the steps of the page check, and its private result file.
-
-The dashboard live check uses the sign-in of an Admin on a deployed
-dashboard. It reads the session, Setup, and the machines, and checks the
-build header. It creates one install command and revokes it at once. Then it
-reloads the Jobs page at each width. It prints only the name and the result
-of each check.
-
-The live check of Machines and Settings uses the same credential file. It
-reads Machines, the overflow summary, Settings, Members, and the repository
-access of one linked organization. It previews an existing label, and
-creates and revokes one install command. Then it opens and reloads
-Machines, one machine, the Labels, Organizations, and Members tabs, and the
-repository access at each width. It changes no machine, label,
-organization, repository access, or role. It also prints only the name and
-the result of each check.
-
-The credential file holds a live sign-in. Keep it outside the repository,
-and never share its values. It is a JSON object with four strings:
-
-- `base_url`: the HTTPS origin of the dashboard, with no path.
-- `workspace_id`: a workspace in which the person is an Admin.
-- `session_cookie`: the value of the `__Host-ciproxy` cookie of the sign-in.
-- `csrf_token`: the `csrf_token` of `GET /api/session` for the sign-in.
-
-```sh
-CIPROXY_DASHBOARD_CREDENTIALS_FILE=/absolute/path/outside/repo/dashboard.json \
-CIPROXY_PLAYWRIGHT_PATH=/absolute/path/playwright-core/index.mjs \
-  node ts/app/scripts/live-smoke.ts
-```
-
-Without the credential variable, it prints `SKIP` and exits with status 2.
-Run the live check of Machines and Settings the same way:
-
-```sh
-CIPROXY_DASHBOARD_CREDENTIALS_FILE=/absolute/path/outside/repo/dashboard.json \
-CIPROXY_PLAYWRIGHT_PATH=/absolute/path/playwright-core/index.mjs \
-  node ts/app/scripts/m20-live-smoke.ts
-```
-
-It prints `SKIP` and exits with status 2 also when the file is missing. A
-file that is not valid, or a failed check, exits with status 1. A workspace
-with no machine or no linked organization skips the checks that need one.
+Four live checks read a deployed dashboard with the sign-in of a person, from
+a private credential file outside the repository: the shell check, the
+Machines and Settings check, the page check, and the Boat check.
+[Dashboard scripts](scripts/README.md#live-checks) gives the credential file,
+the command and the exit status of each check, and the private result file
+of the page check.
 
 ### Boat settings
 
-The Boat live check reads the Boat settings of a deployed dashboard with the
-sign-in of an Admin. It sends two GET requests: `/api/session`, and the
-Overflow settings of the workspace. It checks the Admin role, the current
-CSRF token, the response types, and one build header across both requests.
-It changes no account, key, policy, or job. It needs no Boat key and no
-browser.
-
-Its credential file follows the rules above, with the same four strings:
-`base_url`, `workspace_id`, `session_cookie`, and `csrf_token`. The
-`csrf_token` must be the current token of the sign-in.
-
-```sh
-CIPROXY_BOAT_CREDENTIALS_FILE=/absolute/path/outside/repo/boat.json \
-  node ts/app/scripts/boat-live-smoke.ts
-```
-
-`--help` prints the usage and reads no file. Without the credential
-variable, the check prints `SKIP` and exits with status 2. A failed check
-exits with status 1. A credential file that the check cannot read or parse
-is a failed check. The check prints only fixed check names, results, and
-counts. A pass does not prove that a key check, a connection, a key change,
-a policy save, or a disconnect works.
+[Dashboard scripts](scripts/README.md#boat-live-check) gives the Boat live
+check, which reads the Boat settings of a deployed dashboard.
 
 ## Key Code
 
@@ -448,58 +227,14 @@ a policy save, or a disconnect works.
 - [src/screens/setup/setup-screen.tsx](src/screens/setup/setup-screen.tsx) is
   Setup, with its Boat step in `boat-step.tsx`.
   `src/screens/add-organization` is the workspace choice.
-- The [Machines screen](src/screens/machines/machines-screen.tsx) opens the
-  list, one machine, or Add a machine, as
-  [src/view/machines-routes.ts](src/view/machines-routes.ts) reads the query.
-  The three pages share the [machines store](src/state/machines.ts).
-  [src/state/machines-changes.ts](src/state/machines-changes.ts) runs the
-  changes of an Admin, one at a time, and
-  [src/view/machines-copy.ts](src/view/machines-copy.ts) holds the words.
-- The [Settings screen](src/screens/settings/settings-screen.tsx) opens the
-  tab that [src/view/settings-tabs.ts](src/view/settings-tabs.ts) reads from
-  the query. The [settings store](src/state/settings-store.ts) holds the
-  settings of a workspace. A change that succeeds reads them and the session
-  again.
-- `src/screens/overflow` is Settings under Overflow, below the
-  [Settings tabs](src/components/settings-tabs.tsx). `src/screens/boat`
-  holds the one Boat connection form of Setup and of this page, which masks
-  the key. Its `use-connect-form.ts` runs the two phases and builds the
-  connection request, and `wallet-choice.tsx` lists the wallets. The folder
-  also holds the spend figures, which show the confirmed and the unconfirmed
-  costs apart.
-- [src/screens/boat/use-saved-draft.ts](src/screens/boat/use-saved-draft.ts)
-  holds the value of both limit fields: in the connection form, and in the
-  limit panel of Settings under Overflow. Its rules are in
-  [src/state/saved-draft.ts](src/state/saved-draft.ts). A field shows the
-  latest saved limit until the person types. The typed limit stays until
-  an accepted save of its own form.
-- [src/state/overflow.ts](src/state/overflow.ts) holds the Boat settings of
-  a workspace, and runs each read, key check, and change one at a time. It
-  never keeps the key. [src/state/key-check.ts](src/state/key-check.ts)
-  holds the wallets of the latest key check of a form, so an older answer
-  never applies.
-  [src/api/overflow-endpoints.ts](src/api/overflow-endpoints.ts) builds the
-  key check. It sends the generated connection request as it is, with a
-  required wallet.
-  [src/state/boat-skip.ts](src/state/boat-skip.ts) keeps Skip for now in the
-  tab.
-- [src/view/boat.ts](src/view/boat.ts) turns the Boat settings into what the
-  pages show. A reached limit comes only from the API flag. The notice of a
-  reached limit names the budget month and the day Boat resumes, both from
-  the next-month date of the API, in UTC.
-  [src/view/money.ts](src/view/money.ts) formats the decimal-string cents of
-  the API, and reads a typed dollar limit with integer arithmetic.
-- [src/screens/jobs](src/screens/jobs) holds Jobs, History, and the job page.
-  [src/screens/savings](src/screens/savings) holds Savings, and
+- The guides of [Machines](src/screens/machines/README.md#key-code),
+  [Settings](src/screens/settings/README.md#key-code),
+  [Jobs](guides/jobs/README.md#key-code),
+  [billing](src/screens/billing/README.md#key-code), and
+  [API use](src/api/README.md#key-code) give the entry points of their code.
+- [src/screens/savings](src/screens/savings) holds Savings, and
   [src/screens/billing](src/screens/billing) Plan and usage, Plans, and the
   Checkout pages.
-- [src/view/jobs-links.ts](src/view/jobs-links.ts) builds the Jobs addresses
-  and the History query.
-  [src/view/jobs-places.ts](src/view/jobs-places.ts) gives where the waiting
-  jobs of each label can start, and the one hold of Boat at the time of the
-  read, which every notice of the queue reads.
-  [src/view/jobs-label-notices.ts](src/view/jobs-label-notices.ts) words the
-  notices of each waiting label from those facts.
 - [src/state/savings.ts](src/state/savings.ts) reads the Savings report. Its
   `open()` holds the page lifetime, so the report reads again only while the
   page is open.
@@ -519,20 +254,10 @@ a policy save, or a disconnect works.
   are the shared page parts.
   [src/view/exact-format.ts](src/view/exact-format.ts) formats counts, cents,
   and UTC dates without floating-point loss.
-- [src/api/client.ts](src/api/client.ts) is the one HTTP client. The
-  readers in `src/api/parse-*.ts` narrow each response body to its generated
-  type; [src/api/parse-jobs.ts](src/api/parse-jobs.ts) reads one dashboard
-  job, as a busy slot names it.
-  [src/api/machine-endpoints.ts](src/api/machine-endpoints.ts) and
-  [src/api/settings-endpoints.ts](src/api/settings-endpoints.ts) hold the
-  routes of Machines and Settings on it.
-  [src/api/route-path.ts](src/api/route-path.ts) builds the path of a
-  generated route.
 - [src/components/feature-parts.tsx](src/components/feature-parts.tsx) holds
   the panel, the page header, and the dialog that both features share.
-- [src/state/navigation.ts](src/state/navigation.ts) reloads on a new build.
-- [scripts](scripts/README.md) holds the fixture harness, the browser smokes,
-  and the live checks.
+- [scripts](scripts/README.md) holds the fixture harnesses, the browser
+  smokes, and the live checks.
 - [app.json](app.json) limits Expo to web and enables static export.
 
 ## Related docs
@@ -541,15 +266,6 @@ a policy save, or a disconnect works.
 - [Sign-in and access](../../docs/protocol/security.md#sign-in-and-access),
   [Add an organization](../../docs/protocol/workspaces.md#add-an-organization),
   and [Removing the App](../../docs/protocol/app-removal.md#removing-the-app).
-- For Machines: the [install](../../docs/protocol/agent.md#install),
-  [health](../../docs/protocol/agent.md#health), and
-  [removal](../../docs/protocol/agent.md#drain-and-remove) of a machine, its
-  [slots](../../docs/protocol/job-routing.md#slots), and
-  [Clear cache](../../docs/protocol/cache.md#cache-scopes).
-- For Settings: the [labels](../../docs/protocol/labels.md#custom-labels), the
-  [roles](../../docs/protocol/security.md#roles), the
-  [repository access](../../docs/protocol/security.md#repository-access), and
-  the [organizations](../../docs/protocol/workspaces.md) of a workspace.
 - [Overflow](../../docs/protocol/overflow.md), with the Boat account and the
   spend limit, and
   [the overflow wait](../../docs/protocol/job-routing.md#the-overflow-wait).
@@ -558,3 +274,4 @@ a policy save, or a disconnect works.
   [Checkout](../../docs/protocol/billing.md#checkout).
 - [ciproxy-api](../../crates/ciproxy-api/README.md) registers the GitHub URLs,
   and the [deployment](../../deploy/README.md#environments) serves `/api`.
+- Each page guide above lists the protocol docs of its own pages.
