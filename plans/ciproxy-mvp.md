@@ -2274,9 +2274,9 @@ list gives what is not done.
 - [ ] #59, cache restore order: finish the docs and delete the follow-up
       item. Run each changed asynchronous test ten times, the complete gate,
       and a review.
-- [ ] #61, serving shutdown test: repair the incoming Markdown link. Run the
+- [x] #61, serving shutdown test: repair the incoming Markdown link. Run the
       complete gate and a review.
-- [ ] #62, install command endpoint: fix the failing wrong-handshake test
+- [x] #62, install command endpoint: fix the failing wrong-handshake test
       fixture. Run the async tests ten times, the agent build, a CLI smoke,
       the complete gate, and a review.
 - [ ] #60, guest network: finish its review. Then build and publish the
@@ -2302,6 +2302,19 @@ key, the session cookie, the Boat key, and the Stripe test key were in the
 private folder of the old Conductor sandbox. The next environment needs its
 own copies. A process listing showed Conductor credentials in one session's
 tool output on 11 November 2026. Rotate them.
+
+### Install endpoint review follow-ups, 16 November 2026
+
+- [ ] Decide how reinstall handles an endpoint from another control plane.
+      A registered machine currently keeps its credential when an explicit
+      install option replaces its saved endpoint. Binding the issuing
+      endpoint to machine identity needs this decision. Keep the current
+      reinstall policy until Cal answers.
+- [ ] Approve a correction to `deploy/release-server.md` outside the
+      endpoint closure's allowed files. Its release check still says the
+      copied preview command has no endpoint. The API now supplies
+      `--agent-url`. Keep the deployment file unchanged until Cal approves
+      the wider file scope.
 
 ## Open decisions
 

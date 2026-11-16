@@ -134,6 +134,10 @@ Install saves the selected route in `/var/lib/ciproxy/agent-url` with mode
 setting, so an inherited setting cannot redirect the installed service.
 Only an explicit install option replaces the saved route.
 Uninstall removes the saved route.
+During its job drain, uninstall uses only that saved route for hosted cache
+metadata. A missing or damaged route keeps local cleanup available.
+The metadata relay then returns unavailable without sending a machine
+credential. Cache restores keep their normal GitHub fallback.
 The gateway authenticates Hello before Welcome.
 An authenticated policy close with `[gateway] authentication failed`
 revokes the local machine. Other failures reconnect and preserve its VMs.
@@ -224,6 +228,12 @@ KVM and GitHub smoke checks, and release packaging commands.
 ### Key Code
 
 - [src/application.rs](src/application.rs) composes the Linux adapters.
+- [src/application_cache.rs](src/application_cache.rs) composes the cache
+  installer and the metadata services for the selected agent endpoint.
+- [src/application_endpoint.rs](src/application_endpoint.rs) resolves
+  install, run, and local uninstall targets.
+- [src/application_metadata.rs](src/application_metadata.rs) keeps a local
+  unavailable relay when an installed machine has no trusted metadata URL.
 - [src/endpoint.rs](src/endpoint.rs) selects and saves one endpoint for
   registration and the installed service.
 - [src/startup.rs](src/startup.rs) checks local completion before workload
