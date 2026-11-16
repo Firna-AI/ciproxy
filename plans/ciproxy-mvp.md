@@ -2295,7 +2295,7 @@ list gives what is not done.
         Branch: `conductor/m21-closure-and-one-banner`.
   - [x] Run the complete gate with the store database.
         Branch: `conductor/m21-closure-and-one-banner`.
-  - [ ] Run the final review after the push, and apply its fix rule.
+  - [x] Run the final review after the push, and apply its fix rule.
         Branch: `conductor/m21-closure-and-one-banner`.
   - [ ] Run the dashboard part of the Stripe test-mode checkout, as the live
         TODO of Milestone 21 says. It needs a private credential file and a
