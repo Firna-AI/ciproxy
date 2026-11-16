@@ -40,16 +40,20 @@ as fills.
 
 Each restore asks for current trusted entry metadata. The service queues
 that request on its private admin listener, and the root agent answers it
-from the hosted GitHub App listing. Jobs never supply this metadata. Each
-local entry keeps its trusted source ref and creation time apart from its
-visibility scope. The resolver ranks candidates by the source facts. Only
-the visibility scope decides which sessions can read an entry. A restart
-and a GitHub deletion or eviction keep both. A fill never takes the
-reader's ref as its source. Missing or inconsistent metadata gives a
-checked session GitHub's lookup result or a miss. The service then keeps
-no fill with a guessed source. An unknown session keeps its default-branch
-local reads. Without the root relay, as in a standalone service, lookup
-uses local entries first, then GitHub.
+from the hosted GitHub App listing. A restore waits up to 95 seconds for
+that answer. Jobs never supply this metadata. A local entry keeps its
+trusted source ref and creation time apart from its visibility scope. The
+resolver ranks candidates by the source facts. Only the visibility scope
+decides which sessions can read an entry. A restart and a GitHub deletion
+or eviction keep both. An accepted save keeps its GitHub entry ID. It takes
+its source facts from the first listing that shows that entry. A fill gets
+its source facts only from the listing, never from the reader's ref. Exactly
+one listed entry must match GitHub's result before and after the lookup.
+Missing or inconsistent metadata gives a checked session GitHub's lookup
+result or a miss. The service then keeps no fill with a guessed source.
+An unknown session keeps its default-branch local reads. Without the root
+relay, as in a standalone service, lookup uses local entries first, then
+GitHub.
 
 Only the trusted events in
 [Trusted write-back](../../docs/protocol/cache.md#trusted-write-back) can
@@ -157,6 +161,9 @@ The agent calls the admin listener with `Authorization: Bearer TOKEN`:
 | `GET /metadata-requests`   | Waits briefly. Returns one `CacheMetadataWork` or `null`.   |
 | `POST /metadata-responses` | One `CacheMetadataAnswer`. Returns HTTP 204.                |
 
+The metadata routes serve the root agent's relay. The relay starts off in
+each service process. Turn it on before you register or recover sessions.
+
 `CacheRegistration` contains `job_id`, `facts`, `permissions`, `github_token`,
 `cache_url`, `results_url`, and `proxy_url`. The exact types live in
 [protocol runtime types](../ciproxy-protocol/src/runtime.rs).
@@ -243,6 +250,12 @@ executable smoke, SDK conformance, and authenticated GitHub commands.
 - [machine.rs](src/machine.rs) authenticates and routes machine requests.
 - [proxy.rs](src/proxy.rs) owns VM forwarding and cache misses during outages.
 - [storage/](src/storage/mod.rs) owns capture, persistence, and disk budgets.
+- [resolver.rs](src/resolver.rs) applies one restore order to local and
+  GitHub candidates.
+- [candidates.rs](src/candidates.rs) gets current entry facts and selects one
+  candidate. [restore.rs](src/restore.rs) serves it to v1 and v2 lookups.
+- [metadata_relay.rs](src/metadata_relay.rs) queues entry-fact requests for
+  the root agent.
 - [session.rs](src/session.rs) defines the agent registration contract.
 - [runtime_token/](src/runtime_token/mod.rs) verifies scopes with injected
   public-key and clock boundaries.

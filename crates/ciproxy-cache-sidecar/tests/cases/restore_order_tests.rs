@@ -1,7 +1,11 @@
 //! Cross-tier restore order and retained source identities through public HTTP.
 
+use ciproxy_protocol::jobs::{JobScope, UnknownJobScopeReason};
+use serde_json::json;
+
 use crate::support::restore::{contents, lookup};
 use crate::support::scoped::Scoped;
+use crate::support::tokens::signed;
 use crate::support::{Fixture, facts};
 
 async fn feature_exact_over_default_prefix(legacy: bool) {
@@ -35,6 +39,78 @@ async fn v1_feature_exact_precedes_local_default_prefix() {
 #[tokio::test]
 async fn v2_feature_exact_precedes_local_default_prefix() {
     feature_exact_over_default_prefix(false).await;
+}
+
+#[tokio::test]
+async fn unknown_jobs_keep_upstream_keys_and_local_default_reads() {
+    let mut fixture = Fixture::new().await;
+    let peer = Scoped::start(&mut fixture).await;
+    peer.add("refs/heads/main", "deps-old", "old-default", 100)
+        .await;
+    peer.add("refs/heads/feature", "deps-exact", "feature-exact", 200)
+        .await;
+    let mut spec = facts("refs/heads/feature");
+    let access = json!([
+        {"Scope":"refs/heads/feature","Permission":1},
+        {"Scope":"refs/heads/main","Permission":1}
+    ]);
+    spec.token = Some(signed(
+        &json!({"iss":"https://token.actions.githubusercontent.com","nbf":999_000,"exp":2_000_000,
+        "repository_id":"10","run_id":"31","runner_id":"71","job_id":"unknown-restore",
+        "ac":access.to_string()}),
+    ));
+    let unknown = fixture.job("unknown-restore", spec).await;
+    assert_eq!(
+        unknown.scope,
+        JobScope::Unknown {
+            reason: UnknownJobScopeReason::NoWriteScope
+        }
+    );
+    let mut restored = Vec::new();
+    for (legacy, protocol) in [(true, "v1"), (false, "v2")] {
+        let entry = lookup(&unknown, legacy, "deps-exact").await;
+        let key_field = if legacy { "cacheKey" } else { "matchedKey" };
+        let url_field = if legacy {
+            "archiveLocation"
+        } else {
+            "signedDownloadUrl"
+        };
+        let data = unknown
+            .client
+            .get(entry[url_field].as_str().unwrap())
+            .send()
+            .await
+            .unwrap()
+            .text()
+            .await
+            .unwrap();
+        restored.push((
+            protocol,
+            entry[key_field].as_str().unwrap().to_owned(),
+            data,
+        ));
+    }
+    assert_eq!(
+        restored,
+        vec![
+            ("v1", "deps-exact".to_owned(), "feature-exact".to_owned()),
+            ("v2", "deps-exact".to_owned(), "feature-exact".to_owned())
+        ],
+        "unknown jobs must pass their original lookup and restore keys to GitHub"
+    );
+    assert_eq!(fixture.entries().await.len(), 0, "no guessed source fill");
+    let main = fixture
+        .job("default-source", facts("refs/heads/main"))
+        .await;
+    assert_eq!(contents(&main, false, "deps-old").await, "old-default");
+    peer.remove("refs/heads/main").await;
+    for legacy in [true, false] {
+        assert_eq!(
+            contents(&unknown, legacy, "deps-old").await,
+            "old-default",
+            "unknown jobs keep local default reads with the metadata relay enabled"
+        );
+    }
 }
 
 #[tokio::test]

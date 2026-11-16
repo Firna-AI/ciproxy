@@ -4,6 +4,28 @@ The agent gives each guest one in-memory GitHub runner registration.
 The [agent protocol](../../docs/protocol/agent.md#drain-and-remove) defines
 which stops preserve running jobs and when GitHub retirement comes first.
 
+## Gateway endpoint
+
+The default route is `wss://app.ciproxy.dev/agent/`.
+The install option `--agent-url` selects another WSS route with a valid TLS
+certificate. Without a saved route, `CIPROXY_AGENT_URL` selects one too.
+Both accept only a valid `wss://` URL with a host.
+Install saves the selected route in `/var/lib/ciproxy/agent-url` with mode
+`0600`. Install and the daemon prefer the saved route over the environment
+setting, so an inherited setting cannot redirect the installed service.
+Only an explicit install option replaces the saved route.
+Uninstall removes the saved route.
+Cache metadata requests use the selected route's host and port over HTTPS.
+During its job drain, uninstall uses only that saved route for hosted cache
+metadata. A missing or damaged route keeps local cleanup available.
+The metadata relay then returns unavailable without sending a machine
+credential. Cache restores keep their normal GitHub fallback.
+The gateway authenticates Hello before Welcome.
+An authenticated policy close with `[gateway] authentication failed`
+revokes the local machine. Other failures reconnect and preserve its VMs.
+
+## Registration delivery and retirement
+
 The hosted runtime stores runner placement, GitHub IDs, and command IDs.
 It removes an idle GitHub registration before StopRunner.
 Drain disables admission while that removal runs.
