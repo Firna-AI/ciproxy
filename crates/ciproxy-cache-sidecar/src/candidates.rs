@@ -103,6 +103,7 @@ impl MachineCache {
             Some(Candidate::Upstream(entry)) => (None, Some(entry)),
             None => (None, None),
         };
+        let upstream = upstream.filter(|_| matches!(session.scope, JobScope::Checked { .. }));
         let local = match local {
             Some(entry) if self.store.verify(&entry).await.is_ok() => Some(entry),
             _ => None,

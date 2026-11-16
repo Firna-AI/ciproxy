@@ -2338,7 +2338,7 @@ list gives what is not done.
       of Settings, which made a second choice of the banner beside the API.
       Reason: the order of the API stays in force, so a failed payment also
       comes first on the tab, and no leftover banner layer stays.
-- [ ] #59, cache restore order: finish the docs and delete the follow-up
+- [x] #59, cache restore order: finish the docs and delete the follow-up
       item. Run each changed asynchronous test ten times, the complete gate,
       and a review.
 - [x] #61, serving shutdown test: repair the incoming Markdown link. Run the
