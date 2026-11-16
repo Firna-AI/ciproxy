@@ -2274,9 +2274,9 @@ list gives what is not done.
 - [ ] #59, cache restore order: finish the docs and delete the follow-up
       item. Run each changed asynchronous test ten times, the complete gate,
       and a review.
-- [ ] #61, serving shutdown test: repair the incoming Markdown link. Run the
+- [x] #61, serving shutdown test: repair the incoming Markdown link. Run the
       complete gate and a review.
-- [ ] #62, install command endpoint: fix the failing wrong-handshake test
+- [x] #62, install command endpoint: fix the failing wrong-handshake test
       fixture. Run the async tests ten times, the agent build, a CLI smoke,
       the complete gate, and a review.
 - [ ] #60, guest network: finish its review. Then build and publish the
