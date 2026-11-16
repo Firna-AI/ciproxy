@@ -1,7 +1,7 @@
-// The tabs of Settings: real links that the router opens in place, with the
-// count of open requests on Members. The current tab has an ink underline
-// over the hairline of the row. On a phone, the row scrolls sideways when
-// the tabs do not fit.
+// The tabs of Settings, on Settings and on Settings under Overflow: real
+// links that the router opens in place, with the count of open requests on
+// Members. The current tab has an ink underline over the hairline of the
+// row. On a phone, the row scrolls sideways when the tabs do not fit.
 
 import { useState, type MouseEvent } from "react";
 import { Link } from "expo-router";

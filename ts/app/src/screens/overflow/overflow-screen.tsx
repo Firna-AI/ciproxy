@@ -3,7 +3,9 @@
 // reads the settings at each visit. A change that the API accepted is never
 // sent again: when the read after it fails, the page names the change and
 // offers only Try again, which reads. Each workspace gets a fresh page, so
-// no typed key or limit passes to another workspace.
+// no typed key or limit passes to another workspace. The tabs are those of
+// Settings, and Members counts the open requests from the settings of the
+// workspace, which this page also reads at each visit.
 
 import { useEffect, useRef, useState } from "react";
 import type { View } from "react-native";
@@ -19,11 +21,12 @@ import {
   StateBlock,
 } from "../../components/page-state.tsx";
 import { Panel } from "../../components/panel.tsx";
-import { SettingsTabs } from "../../components/settings-tabs.tsx";
 import { useServices } from "../../services/context.tsx";
 import { useValue } from "../../services/hooks.ts";
 import type { AcceptedChange, OverflowStore } from "../../state/overflow.ts";
+import { settingsServices } from "../../state/settings-services.ts";
 import { activeAccount, overflowNotice } from "../../view/boat.ts";
+import { SettingsTabs } from "../settings/settings-tabs.tsx";
 import {
   WorkspacePageView,
   type WorkspaceContext,
@@ -185,12 +188,33 @@ function OverflowBody({ workspaceId }: { workspaceId: string }) {
   );
 }
 
+/**
+ * The tabs of Settings with the open requests of the settings read. While
+ * that read loads or after it failed, Members shows no count.
+ */
+function OverflowTabs({ workspaceId }: { workspaceId: string }) {
+  const store = settingsServices(useServices()).settings(workspaceId);
+  const snapshot = useValue(store.state);
+  useEffect(() => {
+    void store.load();
+  }, [store]);
+  return (
+    <SettingsTabs
+      workspaceId={workspaceId}
+      active="overflow"
+      openRequests={
+        snapshot.status === "ready" ? snapshot.value.open_requests : null
+      }
+    />
+  );
+}
+
 function Overflow({ context }: { context: WorkspaceContext }) {
   const workspaceId = context.workspace.id;
   return (
     <>
       <PageHeader title="Settings" />
-      <SettingsTabs workspaceId={workspaceId} active="overflow" />
+      <OverflowTabs workspaceId={workspaceId} />
       <OverflowBody key={workspaceId} workspaceId={workspaceId} />
     </>
   );

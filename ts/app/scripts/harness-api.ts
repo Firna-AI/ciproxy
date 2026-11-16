@@ -227,6 +227,11 @@ export async function serveApi(
     send(200, current.machines);
     return;
   }
+  // Machines reads the overflow summary: the Boat settings of the scenario.
+  if (action === "overflow/summary" && method === "GET") {
+    send(200, current.boat.settings);
+    return;
+  }
   // The Settings page reads its labels and organizations. The Overflow page
   // links to it through the tabs of Settings.
   if (action === "settings" && method === "GET") {

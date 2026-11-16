@@ -1,22 +1,19 @@
 // The fit line of the label dialog, which says, before the save, where jobs
-// of the size run now. The placement, the job counts, the offer of each
-// machine, the Boat sizes, and whether the workspace has a Boat account come
-// from the API fit; this module only puts them into words. Without a Boat
+// of the size run now. The placement, the job counts, the Boat fit, and
+// whether the workspace has a Boat account come from the API fit; this module
+// only puts them into words. A size that no machine fits is named by its full
+// request, never by what a machine or a Boat size offers. Without a Boat
 // account, the line keeps the fit of the machines and says that Boat is not
 // connected; it never says that a Boat size does not fit unless the Boat
 // catalog says so. The sizes in words are in settings-label-sizes.ts.
 
 import type { LabelFit, LabelInput } from "../api/schema.ts";
-import {
-  labelSizePhrase,
-  largestBoat,
-  largestBoatBody,
-  machineOffer,
-} from "./settings-label-sizes.ts";
+import { largestBoatText, requestPhrase } from "./settings-label-sizes.ts";
 
+/** A caption, or a warning whose title can stand alone. */
 export type FitLine =
   | { kind: "caption"; text: string }
-  | { kind: "warning"; title: string; body: string };
+  | { kind: "warning"; title: string; body: string | null };
 
 /** "1 job", "3 jobs", or "2 to 3 jobs". */
 export function jobsText(minimum: string, maximum: string): string {
@@ -54,54 +51,47 @@ const onlyBoat = "Only Boat may run jobs with this label.";
 const noBoatFit = "Its Boat fit is not known yet.";
 const notConnected = "Boat is not connected.";
 const noMachine = "No connected machine can run jobs now.";
+const waitForMachine =
+  "Jobs with this label wait until a machine that fits connects.";
 
 /** The label allows Boat, and the API saw that the workspace has no account. */
 function boatNotConnected(label: LabelInput, fit: LabelFit): boolean {
   return label.allow_boat && fit.boat_connected === false;
 }
 
-/** The machines and the largest Boat size, for a size that nothing fits. */
-function offers(fit: LabelFit, machines: boolean, boat: boolean): string {
-  const offer = machines ? machineOffer(fit) : null;
-  const largest = boat ? largestBoat(fit) : null;
-  if (offer !== null && largest !== null) {
-    return `${offer}, and the largest Boat size offers ${largest}.`;
-  }
-  if (offer !== null) return `${offer}.`;
-  if (largest !== null) return `The largest Boat size offers ${largest}.`;
-  return machines ? noMachine : "Jobs with this label wait until a size fits.";
+/** The title of a size that no machine fits, with its full request. */
+function noMachineFits(label: LabelInput): string {
+  return `No machine of yours fits a job of ${requestPhrase(label)}`;
+}
+
+/** The title of a size that no machine and no Boat size fits. */
+function nothingFits(label: LabelInput): string {
+  return `No machine of yours and no Boat size fits a job of ${requestPhrase(label)}`;
+}
+
+/** The sentence, after the fact that no machine is connected when none is. */
+function afterMachines(fit: LabelFit, sentence: string): string {
+  return fit.eligible_machines === 0 ? `${noMachine} ${sentence}` : sentence;
 }
 
 function boatOnly(label: LabelInput, fit: LabelFit): FitLine {
   const fallback = fit.boat.state === "largest_fallback";
-  const largest = fallback ? largestBoatBody(fit) : null;
   if (!label.allow_machines) {
     return {
       kind: "caption",
-      text: largest === null ? onlyBoat : `${onlyBoat} ${largest}`,
+      text: fallback ? `${onlyBoat} ${largestBoatText}` : onlyBoat,
     };
   }
-  const size = labelSizePhrase(label);
-  if (largest !== null) {
-    return {
-      kind: "warning",
-      title: `No machine and no Boat size fits ${size}`,
-      body: largest,
-    };
-  }
-  const offer = machineOffer(fit);
-  return {
-    kind: "warning",
-    title: `No machine fits ${size}`,
-    body: `Jobs with this label run on Boat.${offer === null ? "" : ` ${offer}.`}`,
-  };
+  return fallback
+    ? { kind: "warning", title: nothingFits(label), body: largestBoatText }
+    : {
+        kind: "warning",
+        title: noMachineFits(label),
+        body: "Jobs with this label run on Boat.",
+      };
 }
 
-const waitForMachine =
-  "Jobs with this label wait until a machine that fits connects.";
-
 function waits(label: LabelInput, fit: LabelFit): FitLine {
-  const size = labelSizePhrase(label);
   const { allow_machines: machines, allow_boat: boat } = label;
   if (!machines && !boat) {
     return {
@@ -114,8 +104,11 @@ function waits(label: LabelInput, fit: LabelFit): FitLine {
     return machines
       ? {
           kind: "warning",
-          title: `No machine fits ${size}`,
-          body: `${offers(fit, true, false)} Boat is not connected, so jobs with this label wait until a machine that fits connects.`,
+          title: noMachineFits(label),
+          body: afterMachines(
+            fit,
+            "Boat is not connected, so jobs with this label wait until a machine that fits connects.",
+          ),
         }
       : {
           kind: "warning",
@@ -126,8 +119,8 @@ function waits(label: LabelInput, fit: LabelFit): FitLine {
   if (!boat) {
     return {
       kind: "warning",
-      title: `No machine fits ${size}`,
-      body: `${offers(fit, true, false)} ${waitForMachine}`,
+      title: noMachineFits(label),
+      body: afterMachines(fit, waitForMachine),
     };
   }
   // A wait whose Boat fit the catalog does not give names only what is known.
@@ -135,17 +128,22 @@ function waits(label: LabelInput, fit: LabelFit): FitLine {
     return machines
       ? {
           kind: "warning",
-          title: `No machine fits ${size}`,
-          body: `${offers(fit, true, false)} ${noBoatFit}`,
+          title: noMachineFits(label),
+          body: afterMachines(fit, noBoatFit),
         }
       : { kind: "caption", text: `${onlyBoat} ${noBoatFit}` };
   }
+  if (!machines) {
+    return {
+      kind: "warning",
+      title: `No Boat size fits a job of ${requestPhrase(label)}`,
+      body: null,
+    };
+  }
   return {
     kind: "warning",
-    title: machines
-      ? `No machine and no Boat size fits ${size}`
-      : `No Boat size fits ${size}`,
-    body: offers(fit, machines, true),
+    title: nothingFits(label),
+    body: fit.eligible_machines === 0 ? noMachine : null,
   };
 }
 
@@ -165,11 +163,7 @@ function unavailable(label: LabelInput, fit: LabelFit): FitLine {
   if (fit.eligible_machines === 0) {
     return { kind: "caption", text: `${noMachine} ${noBoatFit}` };
   }
-  return {
-    kind: "warning",
-    title: `No machine fits ${labelSizePhrase(label)}`,
-    body: noBoatFit,
-  };
+  return { kind: "warning", title: noMachineFits(label), body: noBoatFit };
 }
 
 /** The line of the dialog that says, before the save, where jobs run. */

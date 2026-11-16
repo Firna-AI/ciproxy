@@ -75,27 +75,21 @@ export async function shellJourney(
 
 export async function staticReloads(page: Page, origin: string): Promise<void> {
   await control(origin, { scenario: "admin" });
-  const titles = {
-    jobs: "Jobs",
-    machines: "Machines",
-    savings: "Savings",
-    billing: "Plan and usage",
-    settings: "Settings",
-  } as const;
-  for (const [path, title] of Object.entries(titles)) {
+  // Each page, its title, and a part that shows only after its reads. The
+  // admin scenario has no machine yet, and Settings opens on Labels.
+  const reloads = [
+    ["jobs", "Jobs", "heading", "2 warm runners are ready"],
+    ["machines", "Machines", "heading", "Add your first machine"],
+    ["savings", "Savings", "heading", "Your cost with ciproxy"],
+    ["billing", "Plan and usage", "heading", "This period"],
+    ["settings", "Settings", "button", "Add label"],
+  ] as const;
+  for (const [path, title, role, loaded] of reloads) {
     await page.goto(`${origin}/${path}?workspace=${workspaceId}`, {
       waitUntil: "domcontentloaded",
     });
     await page.reload({ waitUntil: "domcontentloaded" });
     await visible(page.getByRole("heading", { name: title, exact: true }));
-    const loaded =
-      path === "jobs"
-        ? "2 warm runners are ready"
-        : path === "savings"
-          ? "Your cost with ciproxy"
-          : path === "billing"
-            ? "This period"
-            : "This page is coming soon";
-    await visible(page.getByRole("heading", { name: loaded, exact: true }));
+    await visible(page.getByRole(role, { name: loaded, exact: true }));
   }
 }

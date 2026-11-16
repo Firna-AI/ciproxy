@@ -2,12 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { fitLine } from "../src/view/settings-label-fit.ts";
-import { largestBoatBody } from "../src/view/settings-label-sizes.ts";
 import { fit, labelInput } from "./settings-support.ts";
 
 const nbsp = "\u00a0";
-const size = `8${nbsp}vCPU and 32${nbsp}GB`;
-const machineOffer = `24${nbsp}vCPU and 96${nbsp}GB`;
+const request = `8${nbsp}vCPU, 32${nbsp}GB of memory, and 60${nbsp}GB of free disk`;
 
 test("a placement that the API cannot establish keeps the known facts and names the unknown one", () => {
   const unknown = {
@@ -43,7 +41,7 @@ test("a placement that the API cannot establish keeps the known facts and names 
     fitLine(labelInput(), fit({ ...unknown, ...none, no_machine_fits: true })),
     {
       kind: "warning",
-      title: `No machine fits ${size}`,
+      title: `No machine of yours fits a job of ${request}`,
       body: "Its Boat fit is not known yet.",
     },
   );
@@ -68,8 +66,8 @@ test("a placement that the API cannot establish keeps the known facts and names 
     ),
     {
       kind: "warning",
-      title: `No machine fits ${size}`,
-      body: `Your machines offer ${machineOffer} each. Its Boat fit is not known yet.`,
+      title: `No machine of yours fits a job of ${request}`,
+      body: "Its Boat fit is not known yet.",
     },
     "a wait never says that no Boat size fits before the catalog does",
   );
@@ -102,8 +100,8 @@ test("a workspace without Boat keeps the fit of the machines and says that Boat 
     },
     {
       kind: "warning",
-      title: `No machine fits ${size}`,
-      body: `Your machines offer ${machineOffer} each. Boat is not connected, so jobs with this label wait until a machine that fits connects.`,
+      title: `No machine of yours fits a job of ${request}`,
+      body: "Boat is not connected, so jobs with this label wait until a machine that fits connects.",
     },
     {
       kind: "warning",
@@ -130,9 +128,5 @@ test("a workspace without Boat keeps the fit of the machines and says that Boat 
       text: "Each of your machines runs 3 jobs of this size at a time.",
     },
     "a label without Boat does not mention the account",
-  );
-  assert.equal(
-    largestBoatBody(fit(noBoat)),
-    "Jobs run on the largest size of your Boat account, also when it is smaller than the label.",
   );
 });
