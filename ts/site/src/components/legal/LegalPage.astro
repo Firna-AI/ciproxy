@@ -1,10 +1,9 @@
 ---
 // A legal page of ciproxy.dev, the terms of service or the privacy policy,
-// after the legal mockups: the title, the switch between the two pages, "On
-// this page" on a wide window, and the section headings. The owner writes or
-// approves the text of each section before the launch, so grey lines hold
-// its place. Only the data retention of the privacy policy has text: the
-// limits that docs/protocol/security.md decides.
+// after the legal mockups: the title with the effective date, the switch
+// between the two pages, "On this page" on a wide window, and the sections
+// with their paragraphs. After its paragraphs, the data retention of the
+// privacy policy shows the limits that docs/protocol/security.md decides.
 
 import {
   historyWindows,
@@ -20,21 +19,21 @@ import "./legal.css";
 
 interface Props {
   page: LegalPageKey;
+  /** The date from which the text applies. The owner sets it. */
+  effectiveDate: string;
 }
 
-const { page } = Astro.props;
+const { page, effectiveDate } = Astro.props;
 const { title, sections } = legalPages[page];
-
-/** The widths of the grey lines of a section, which vary by section. */
-const lineSets: readonly (readonly number[])[] = [
-  [100, 96, 88, 54],
-  [100, 91, 72],
-  [98, 100, 94, 83, 41],
-];
 ---
 
 <Section class="legal-top">
-  <SectionHead page eyebrow="Legal" title={title} />
+  <SectionHead
+    page
+    eyebrow="Legal"
+    title={title}
+    lead={`Effective date: ${effectiveDate}`}
+  />
   <nav class="legal-switch" aria-label="Legal pages">
     {legalPageOrder.map((key) => (
       <a
@@ -46,6 +45,10 @@ const lineSets: readonly (readonly number[])[] = [
       </a>
     ))}
   </nav>
+  <div class="legal-draft" role="note">
+    <p class="legal-draft-title">Draft for the owner's review</p>
+    <p>Square brackets mark the details that the owner must complete.</p>
+  </div>
 </Section>
 <Section class="legal-body">
   <div class="legal-grid">
@@ -62,17 +65,16 @@ const lineSets: readonly (readonly number[])[] = [
       </ul>
     </nav>
     <article class="legal-article">
-      {sections.map((section, index) => (
+      {sections.map((section) => (
         <section class="legal-section">
           <h2 id={section.id} class="legal-h2">
             {section.title}
           </h2>
-          {page === "privacy" && section.id === retentionId ? (
+          {section.paragraphs.map((paragraph) => (
+            <p>{paragraph}</p>
+          ))}
+          {page === "privacy" && section.id === retentionId && (
             <>
-              <p>
-                ciproxy keeps each kind of data for the period below, then
-                deletes it.
-              </p>
               <div class="legal-table-frame">
                 <table class="legal-table">
                   <thead>
@@ -95,12 +97,6 @@ const lineSets: readonly (readonly number[])[] = [
                 Each plan shows only its own job history: {historyWindows()}.
               </p>
             </>
-          ) : (
-            <div class="legal-lines" aria-hidden="true">
-              {(lineSets[index % lineSets.length] ?? []).map((width) => (
-                <span class="legal-line" style={`width: ${width}%`} />
-              ))}
-            </div>
           )}
         </section>
       ))}
