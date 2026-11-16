@@ -1642,8 +1642,8 @@ also follows answer 113 A: keep its fit counts, placement, and VM disk,
 without the optional machine-offer and largest-job figures.
 
 [PR #65](https://github.com/Firna-AI/ciproxy/pull/65) is open and ready.
-The app closure is verified. A passing complete gate still waits for the
-inherited fixes named in the orchestrator step under Milestone 20d.
+The app closure and the required gate handoff under Milestone 20d are
+complete. The deployed live smoke stays with Cal.
 
 - [x] Complete the remaining Machines and Settings states and the review
       fixes below. Keep Overflow with Milestone 22.
@@ -1782,11 +1782,10 @@ Depends on: 20c
       its pull request and head. The second fix round of PR #50 supplied
       the guidance. Keep the wider plan and do not merge the closure.
       Branch: `conductor/m20-closure`.
-- [ ] Orchestrator: after the #61 and #62 closure fixes reach the primary
-      branch, run the complete gate again with `DATABASE_URL` set. The
-      inherited agent file length, shutdown follow-up link, and agent
-      wrong-handshake fixture still block a passing gate for this closure.
-      Keep every check and assertion. This is required before its merge.
+- [x] Orchestrator: merge the #61 and #62 closure fixes from the primary
+      branch, regenerate the API files, and run the complete gate again
+      with `DATABASE_URL` set. Keep every check and assertion. Complete
+      this verification before the closure merges.
       Branch: `conductor/m20-closure`.
 
 ## Milestone 21: Dashboard UI: Jobs, Savings, and billing
