@@ -22,11 +22,7 @@ fn installer(mock: Unimock) -> Installer {
     let mock = Arc::new(mock);
     Installer {
         endpoint: AgentEndpoint::default(),
-        endpoints: Arc::new(Unimock::new(
-            EndpointSettingsMock::save
-                .each_call(matching!(_))
-                .answers(&|_, _| Ok(())),
-        )),
+        endpoints: mock.clone(),
         store: mock.clone(),
         host: mock.clone(),
         service: mock.clone(),
@@ -61,6 +57,9 @@ async fn reinstall_keeps_registration_without_reusing_the_install_token() {
             .some_call(matching!())
             .returns(Ok(())),
         StoreMock::load.some_call(matching!()).returns(Ok(state)),
+        EndpointSettingsMock::save
+            .some_call(matching!(_))
+            .returns(Ok(())),
         ServiceMock::install
             .some_call(matching!())
             .answers_arc(Arc::new(move |_| {
@@ -119,6 +118,9 @@ async fn registration_saves_the_workspace_and_credential_returned_by_gateway() {
                     credential: Secret::new("gateway-machine-secret"),
                 },
             )))),
+        EndpointSettingsMock::save
+            .some_call(matching!(_))
+            .returns(Ok(())),
         ServiceMock::install.some_call(matching!()).returns(Ok(())),
     ));
     installer(mock)
