@@ -2387,9 +2387,13 @@ tool output on 11 November 2026. Rotate them.
 
 ### Install endpoint review follow-ups, 16 November 2026
 
-- [ ] Decide how reinstall handles an endpoint from another control plane.
-      Item 117 asks the user. Keep the current reinstall policy until the
-      user answers.
+- [x] Decide how reinstall handles an endpoint from another control plane.
+      The user answered item 117 with D on 16 November 2026.
+- [ ] Build item 117 = D: the identity carries its endpoint.
+      Branch: `conductor/item-117-d-endpoint-in-identity`.
+- [ ] Build item 118 = E of `follow-ups/machine-statistics-availability.md`:
+      unknown machine statistics, mockup first.
+      Branch: `conductor/item-118-e-unknown-machine-statistics`.
 - [x] Correct `deploy/release-server.md`: the copied preview command now
       supplies `--agent-url`. My call, 16 November 2026: a doc that
       states the implemented command needs no decision.
@@ -2733,6 +2737,14 @@ Answers of 5 November 2026:
 - Item 116, A, 16 November 2026: an MIT licence file in
   `futex-ai/cli-release`, in pull request #9 there, which the user merges.
   Rejected: B, C, D, E, and F.
+- Item 117, D, 16 November 2026: the identity carries its endpoint, in one
+  write with the credential. An install uses the endpoint of its command.
+  A registered machine keeps its control plane, and the install says to
+  uninstall first to move it. Rejected: A, B, C, E, F, and G.
+- Item 118, E, 16 November 2026: each producer marks the machine figures
+  that it did not measure, the report carries them as unavailable, and the
+  scaler starts no runner on a machine with unknown leases. Rejected: A,
+  B, C, D, and F.
 - Item 108, C with D, 8 November 2026: the paid change sends the same
   pending credit that the preview counted, Stripe computes the amount, and
   an alert compares each invoice with its quote. A third fix round of pull
@@ -5746,6 +5758,8 @@ remain with the orchestrator in Milestone 13 and
 - **Action:** ask the user, because only the user can rotate them.
 
 ### 117. A reinstall can send the credential to another control plane
+
+**Answer, 16 November 2026:** D.
 
 - **Severity:** High. **Effort:** Medium.
 - **Source:** Review, pull request #64, 16 November 2026. The options check

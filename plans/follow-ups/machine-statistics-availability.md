@@ -1,8 +1,10 @@
 # Unread cache and Docker statistics show as zeros
 
+**Answer, 16 November 2026:** E. Plan item 118 builds it.
+
 - **Severity:** Medium. **Likelihood:** Rare. **Effort:** Large.
   **Confidence:** High. **Harder later:** No.
-- **Kind:** Needs decision.
+- **Kind:** Fix after merge.
 - **Added:** 2026-11-16, from `conductor/m26-docker-disks`, the Docker
   disks audit of Milestone 26 and its independent availability check.
 - **Source:** Implementation.
