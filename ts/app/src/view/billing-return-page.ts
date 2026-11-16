@@ -4,16 +4,16 @@
 // plan, its capacity, and its new period. A payment that did not finish, or
 // a Checkout that is still open, shows the warning look of the mockup. After
 // a confirmed payment, only an Admin gets Add machines, because only an Admin
-// adds machines.
+// adds machines. It opens the Add a machine page of Machines.
 
 import type { PaymentOutcome, PlanUsagePage } from "../api/billing-types.ts";
 import { failureStatus } from "../api/client.ts";
 import type { WorkspaceRole } from "../api/schema.ts";
-import { workspaceHref } from "../routing/pages.ts";
 import type { ReturnSnapshot } from "../state/billing-return.ts";
 import { askPayer, capacityText, tierNames } from "./billing-format.ts";
 import { billingHref, plansHref } from "./billing-routes.ts";
 import { usageModel, type MeterModel } from "./billing-usage.ts";
+import { addMachineHref } from "./machines-routes.ts";
 
 export type ReturnAction =
   | { kind: "link"; label: string; href: string; primary: boolean }
@@ -80,7 +80,7 @@ function settled(
               {
                 kind: "link",
                 label: "Add machines",
-                href: workspaceHref("machines", workspace.id),
+                href: addMachineHref(workspace.id),
                 primary: true,
               },
               usageLink,

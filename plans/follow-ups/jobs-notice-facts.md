@@ -14,7 +14,7 @@
 - **Location:** `docs/mockups/src/screens/jobs/live-notices.tsx:62`, `:66`,
   `:82`, and `:97`, `docs/mockups/src/screens/jobs/job-detail.tsx:67`,
   `docs/mockups/src/entries/app/jobs/current-contract/states.mockup.tsx:10`,
-  `docs/mockups/README.md:89`, `crates/ciproxy-api/src/wire/jobs.rs:235`,
+  `docs/mockups/README.md:102`, `crates/ciproxy-api/src/wire/jobs.rs:235`,
   `crates/ciproxy-api/src/wire/job_overflow.rs:11`,
   `crates/ciproxy-api/src/wire/job_fit.rs:23`,
   `crates/ciproxy-api/src/handlers/job_fit.rs:78`,
@@ -260,7 +260,7 @@
   - A list of every place with its offer or its short resources, because
     it is a detail of F or G with a longer notice, not another approach.
 - **Wider fix:** None. Each fact needs its own source. The current-contract
-  pattern of `docs/mockups/README.md:89-98` and the real-data rule already
+  pattern of `docs/mockups/README.md:102-111` and the real-data rule already
   cover the class.
 - **Previous examples:** Until 8 November 2026, the product notice of a
   label that nothing fits claimed a short vCPU and memory from
@@ -293,7 +293,7 @@
   suspension, the reason of a Boat refusal, and the Boat account address
   from the facts for which the known-data pages stay the target. It keeps
   the total of the day, the tier name, and the routing reason, and it drops
-  the fit when the API gives its kind. `docs/mockups/README.md:89` says that
+  the fit when the API gives its kind. `docs/mockups/README.md:102` says that
   known-data scenes show every fact. Name these notices there beside the
   banner, and drop the fit from its Jobs list too.
 - **Action:** fix after merge, apply D, because it is backend work for a

@@ -8,7 +8,6 @@ import type {
   PlanUsagePage,
 } from "../src/api/billing-types.ts";
 import type { WorkspaceRole } from "../src/api/schema.ts";
-import { workspaceHref } from "../src/routing/pages.ts";
 import {
   confirmingAnswers,
   createReturnStore,
@@ -20,6 +19,7 @@ import {
   type ReturnAction,
 } from "../src/view/billing-return-page.ts";
 import { billingHref } from "../src/view/billing-routes.ts";
+import { addMachineHref } from "../src/view/machines-routes.ts";
 import { workspaceId } from "../scripts/fixtures-core.ts";
 import {
   conflict,
@@ -203,7 +203,7 @@ test("after a confirmed payment, only an Admin gets Add machines", () => {
   const addMachines: ReturnAction = {
     kind: "link",
     label: "Add machines",
-    href: workspaceHref("machines", workspaceId),
+    href: addMachineHref(workspaceId),
     primary: true,
   };
   const cases: readonly {

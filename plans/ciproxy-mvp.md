@@ -1799,7 +1799,7 @@ Each screen follows its mockup, as Milestone 19 says.
 - [x] Build Jobs, Savings, Plan and usage, Plans, Checkout, and the banners
       against the current generated API contract.
       Branch: `conductor/m21-jobs-savings-and-billing-ui`.
-- [ ] Orchestrator integration step: after pull request #39 merges,
+- [x] Orchestrator integration step: after pull request #39 merges,
       regenerate the API files and connect the stored paid-review quote
       to the one payment request module. Map `409 review_required` to a
       fresh billing read and a new review, with an explicit payment click.
@@ -1815,6 +1815,8 @@ Each screen follows its mockup, as Milestone 19 says.
       pull request #39 merges. Keep the request in the one payment module
       until then. The accepted answer is B of item 95 on the primary
       branch, which owns the API and its pending-payment status contract.
+      Verified on 16 November 2026 in the closure branch, after #53 merged.
+      Branch: `conductor/m21-closure-and-one-banner`.
 - [ ] Run one checkout in the Stripe test mode.
       The API part passed on 8 November 2026: the test workspace
       Firna-AI paid for Team with the test card, as item 106 = A asks.
@@ -1879,6 +1881,26 @@ Integration record, 8 November 2026:
   saved tab context on each Continue payment, and one shared dashboard
   exit helper. Reason: only the server binds every return, also after a
   Back step or in another browser.
+
+Closure record, 16 November 2026:
+
+- The billing service fills the workspace of the payer in the Checkout
+  success, Checkout cancel, and portal return URLs. This settles A of
+  `follow-ups/stripe-return-workspace.md`. This branch deletes that item
+  and its links in three other items.
+- The banner of the Organizations scope names the reasons of each hold
+  through the reason helper of the rows. This settles B of
+  `follow-ups/inactive-banner-hold-reasons.md`. This branch deletes that
+  item and its link in `follow-ups/generated-query-names.md`.
+- After a confirmed payment, Add machines opens Add a machine through the
+  address builder of the Machines pages. This settles A of
+  `follow-ups/return-add-machine-link.md`, which this branch deletes.
+- The answers 110 B, 111 A, 112 D, and 113 A stay as recorded above.
+- Root's call: the M20 closure moves the check docs out of
+  `ts/app/README.md` and splits that guide. This branch changes only its
+  banner facts.
+- Branch: `conductor/m21-closure-and-one-banner`. Evidence:
+  `.context/m21-closure/`.
 
 ## Milestone 21a: Review mockup states
 
@@ -2290,10 +2312,32 @@ list gives what is not done.
       plan records, and the follow-up items. Run the browser checks at 1440,
       720, and 390 pixels, the complete gate, and the final review. Run the
       dashboard part of the Stripe test-mode checkout.
-- [ ] Reconcile the two banner paths. The shell shows the workspace banner
+  - [x] Close the docs, the plan records, and the settled follow-up items.
+        Branch: `conductor/m21-closure-and-one-banner`.
+  - [x] Run the browser checks at 1440, 720, and 390 pixels.
+        Branch: `conductor/m21-closure-and-one-banner`.
+  - [x] Run the complete gate with the store database.
+        Branch: `conductor/m21-closure-and-one-banner`.
+  - [x] Run the final review after the push, and apply its fix rule.
+        Branch: `conductor/m21-closure-and-one-banner`.
+  - [ ] Run the dashboard part of the Stripe test-mode checkout, as the live
+        TODO of Milestone 21 says. It needs a private credential file and a
+        Free test workspace with a payer.
+- [x] Reconcile the two banner paths. The shell shows the workspace banner
       of the API, which covers the soft limit and inactive organizations.
       The Organizations tab of Milestone 20 still shows its own banner with
       Turn on, and falls back to the workspace banner of its scope.
+      Branch: `conductor/m21-closure-and-one-banner`.
+      User answer, 16 November 2026: one banner path. The shell shows the
+      workspace banner of the API on every page. On the Organizations tab,
+      the banner of the Organizations scope offers Choose Team and Turn on
+      for an inactive organization. Turn on opens the existing Turn on
+      dialog of Settings, `TurnOnDialog`. The banner of the tab and the
+      banner override of the page and of the shell go. The look and the
+      words stay as the approved mockups show them. Rejected: the override
+      of Settings, which made a second choice of the banner beside the API.
+      Reason: the order of the API stays in force, so a failed payment also
+      comes first on the tab, and no leftover banner layer stays.
 - [x] #59, cache restore order: finish the docs and delete the follow-up
       item. Run each changed asynchronous test ten times, the complete gate,
       and a review.

@@ -13,7 +13,7 @@
   `ResultAction`, `ts/app/src/screens/billing/add-ons-panel.tsx:134`,
   `ts/app/src/screens/billing/usage-notices.tsx:76`,
   `ts/app/src/screens/billing/usage-panels.tsx:60`, and
-  `ts/app/src/components/billing/workspace-banner.tsx:106`.
+  `ts/app/src/components/billing/workspace-banner.tsx:126`.
 - **Reason:** Update card shows only for a payment outcome without a Stripe
   page, which the server sends in unusual states, and the portal request
   must then fail too. The fix costs the same later.
@@ -52,7 +52,7 @@
     - The Plan panel and the workspace banner already show progress and
       failure: "Unable to open the Stripe billing portal. Try again.", at
       `usage-panels.tsx:60-70`, and the banner at
-      `workspace-banner.tsx:106-115`.
+      `workspace-banner.tsx:126-135`.
 - **Problem:** Each surface wires the portal action by itself. Checkout and
   the add-ons panel show no progress and no failure for Update card, and
   Keep plan shows no progress. So a failed portal request looks as if the
@@ -106,11 +106,6 @@
     permission that decides whether each portal button shows. B takes that
     permission outside the shared control, so apply B with that fix or
     after it.
-  - `plans/follow-ups/stripe-return-workspace.md`, same component: its C
-    routes the open-Checkout link of `ResultAction` through one shared
-    exit helper. If both dashboard fixes land, the portal control of B can
-    use that helper. Its recommended A changes none of these files, and
-    neither item waits for the other.
 - **Recommendation:** B. One portal control owns progress and failure on
   every surface. D is the direct option if a later split is needed.
 - **Action:** fix after merge, apply B, because Update card without a Stripe

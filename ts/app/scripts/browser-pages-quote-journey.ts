@@ -14,6 +14,7 @@ import { formatCents } from "../src/view/exact-format.ts";
 import type { BrowserResponse } from "./browser-driver.ts";
 import { control, facts, visible } from "./browser-fixture.ts";
 import { absent, capturePage } from "./browser-pages-helpers.ts";
+import { controlledBusinessReview } from "./browser-pages-paid-review.ts";
 import type { PagesSmokeRun } from "./browser-pages-runtime.ts";
 import { baseSelection } from "./fixtures-billing.ts";
 import { workspaceId } from "./fixtures-core.ts";
@@ -46,8 +47,10 @@ export function quoteJourney(origin: string, output: string): PagesSmokeRun {
       const firstResponse = await firstReview;
       await firstResponse.finished();
       assert.equal(firstResponse.status(), 200);
-      const first = parseCheckoutReview(await firstResponse.json());
-      assert.ok(first?.quote, "The paid review must have a quote.");
+      const initial = parseCheckoutReview(await firstResponse.json());
+      assert.ok(initial?.quote, "The paid review must have a quote.");
+      const first = await controlledBusinessReview(page, origin, reviewPath);
+      assert.ok(first.quote, "The paid review must have a quote.");
       const summary = page.getByRole("region", {
         name: "Summary",
         exact: true,

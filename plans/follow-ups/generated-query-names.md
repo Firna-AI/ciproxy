@@ -30,7 +30,7 @@
     `{ page: scope === "organizations" ? "organizations" : undefined }`.
     The generated `page_banner` query is `{ page?: "organizations" }`. No
     type ties the name or the value to it. Only the Organizations scope
-    sends the name, and no page asks for that scope yet.
+    sends the name. The Organizations tab of Settings asks for that scope.
   - The Savings read, at `ts/app/src/api/savings.ts:11-18`, sends
     `{ range }`. The generated `savings` query is
     `{ range?: SavingsRange }`. The value type `SavingsRange` is generated,
@@ -98,9 +98,6 @@
   typed by hand until the owner's fix of 2026-11-08 derived it from
   `checkout_review`.
 - **Related:**
-  - `plans/follow-ups/inactive-banner-hold-reasons.md`, same read: it words
-    the banner that the `page` name of this item asks for. Neither item
-    waits for the other.
   - `plans/follow-ups/generated-command-bodies.md`, same boundary: it types
     the request bodies of writes, and this item the query names of reads.
     One route-typed helper can serve both, but neither item waits for the

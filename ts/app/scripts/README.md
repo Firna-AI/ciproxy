@@ -34,6 +34,10 @@ node ts/app/scripts/harness-server.ts --port=4340
     scenario, such as the role, a failed or held route, or the next payment
     outcome. With `reviewRequired`, each paid change gets
     `409 review_required`, as for a quote that the harness did not give.
+    With `organizationBanner`, the harness serves the Settings read, the
+    Organizations banner, and Turn on of one inactive organization. `plan`
+    and `admin` choose the hold in the banner, `enable-failed` makes Turn on
+    fail, and `none` gives no inactive banner.
   - `build` sets the API build that the responses name, for the reload after
     a new build.
   - An invalid body gets status 400 and changes nothing.
@@ -83,6 +87,9 @@ filters to a job and back, change the Savings range, recover a failed read,
 and take an offer through review, payment, and return. Other journeys cover a
 paid change with a bank confirmation, a refused quote that needs a new review
 and a new click, and a return that names its workspace.
+Another journey checks the banner of the Organizations tab. The API chooses
+it, and a failed payment comes first. Turn on opens the dialog of the row,
+and the banner reads again after it.
 A Viewer case checks that a saved Stripe address gives a Viewer no payment
 action.
 

@@ -73,7 +73,6 @@ function useSetupProgress(
 export function WorkspacePageView({
   page,
   visitKey = "",
-  banner,
   bannerScope = "page",
   children,
 }: {
@@ -83,11 +82,6 @@ export function WorkspacePageView({
    * Each new visit checks the session again, as a page change does.
    */
   visitKey?: string;
-  /**
-   * A banner of the page that takes the place of the one workspace banner of
-   * the shell. Undefined keeps the workspace banner.
-   */
-  banner?: (context: WorkspaceContext) => ReactNode;
   /** The scope of the one banner; the Organizations tab sets its own. */
   bannerScope?: BannerScope;
   children: (context: WorkspaceContext) => ReactNode;
@@ -139,7 +133,6 @@ export function WorkspacePageView({
       role={context.role}
       page={page}
       setup={progress}
-      banner={banner?.(context)}
       bannerScope={bannerScope}
     >
       {children(context)}

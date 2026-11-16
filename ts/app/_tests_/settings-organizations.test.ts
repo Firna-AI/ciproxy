@@ -2,14 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { plansHref } from "../src/view/billing-routes.ts";
-import { inactiveBanner } from "../src/view/settings-organization-banner.ts";
 import {
   addedByText,
   freeGuidance,
   organizationFailure,
   organizationRows,
 } from "../src/view/settings-organizations.ts";
-import { activation, workspaceId } from "../scripts/fixtures-core.ts";
+import { workspaceId } from "../scripts/fixtures-core.ts";
 import { held, linked, removed } from "./settings-support.ts";
 
 test("the last linked organization has no Take out, and a removed one does not count", () => {
@@ -145,56 +144,6 @@ test("a row shows the day it joined and counts the private repositories of the l
       [null, "All private repositories"],
       ["Since 1 September", "Selected private repositories"],
     ],
-  );
-});
-
-test("the banner names the inactive organization, its reasons, and the ones that keep running", () => {
-  const banner = inactiveBanner([
-    linked(1, "mokly-ai"),
-    linked(2, "mokly-labs"),
-    linked(5, "mokly-new", {
-      activation: activation({ admitted: false, preparing: true }),
-    }),
-    removed(6, "mokly-old", "2026-12-20T10:00:00Z"),
-    held(3, "mokly-studio", ["billing_upgrade", "admin_approval"], workspaceId),
-  ]);
-  assert.deepEqual(banner, {
-    title: "mokly-studio is inactive",
-    body: "Free includes 1 organization, and Ana Souza, who added mokly-studio, is no longer an Admin. It starts its jobs on Team, after an Admin turns it on. Jobs keep running in mokly-ai and mokly-labs.",
-    chooseTeam: `/billing?workspace=${workspaceId}`,
-    turnOn: null,
-  });
-  assert.deepEqual(
-    inactiveBanner([
-      linked(1, "mokly-ai"),
-      held(3, "mokly-studio", ["admin_approval"], workspaceId),
-    ]),
-    {
-      title: "mokly-studio is inactive",
-      body: "Ana Souza, who added mokly-studio, is no longer an Admin. It starts its jobs after an Admin turns it on. Jobs keep running in mokly-ai.",
-      chooseTeam: null,
-      turnOn: {
-        id: "40000000-0000-4000-8000-000000000003",
-        login: "mokly-studio",
-      },
-    },
-  );
-  assert.equal(inactiveBanner([linked(1, "mokly-ai")]), null);
-  const both = held(
-    3,
-    "mokly-studio",
-    ["billing_upgrade", "admin_approval"],
-    workspaceId,
-  );
-  assert.equal(
-    inactiveBanner([
-      {
-        ...both,
-        added_by: null,
-        activation: { ...both.activation, added_by: null },
-      },
-    ])?.body,
-    "Free includes 1 organization, and the person who added mokly-studio is no longer an Admin. It starts its jobs on Team, after an Admin turns it on.",
   );
 });
 
