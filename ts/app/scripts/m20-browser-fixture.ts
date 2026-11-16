@@ -70,17 +70,29 @@ export async function selectRole(
   await option.click();
 }
 
+async function control(origin: string, body: object): Promise<void> {
+  const result = await fetch(`${origin}/__fixture/control`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  assert.equal(result.status, 200, "Fixture control failed");
+}
+
 export async function m20Control(
   origin: string,
   scenario: M20Scenario,
   reset = true,
 ): Promise<void> {
-  const result = await fetch(`${origin}/__fixture/control`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ scenario, reset }),
-  });
-  assert.equal(result.status, 200, "Fixture control failed");
+  await control(origin, { scenario, reset });
+}
+
+/** Holds each read of the machines in the harness, or releases them all. */
+export async function m20HoldMachines(
+  origin: string,
+  held: boolean,
+): Promise<void> {
+  await control(origin, { holdMachines: held });
 }
 
 export function machinesUrl(

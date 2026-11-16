@@ -68,6 +68,10 @@ export type M20State = {
   revokedTokens: Set<string>;
   /** A new organization would need Team, as on Free. */
   newOrganizationRequiresUpgrade: boolean;
+  /** While true, each read of the machines waits for a release. */
+  holdMachines: boolean;
+  /** The releases of the machine reads that wait. */
+  heldReads: (() => void)[];
 };
 
 export function createM20State(scenario: M20Scenario = "machines"): M20State {
@@ -89,6 +93,8 @@ export function createM20State(scenario: M20Scenario = "machines"): M20State {
     labelSequence: 4,
     revokedTokens: new Set(),
     newOrganizationRequiresUpgrade: false,
+    holdMachines: false,
+    heldReads: [],
   };
   if (["viewer", "billing", "no-role"].includes(scenario))
     state.session.workspaces = [
@@ -156,6 +162,8 @@ export function createM20State(scenario: M20Scenario = "machines"): M20State {
 
 export function updateM20State(state: M20State, value: unknown): boolean {
   if (!fields(value)) return false;
+  const hold = value.holdMachines;
+  if (hold !== undefined && typeof hold !== "boolean") return false;
   if (value.scenario !== undefined) {
     const name = m20Scenarios.find((item) => item === value.scenario);
     if (name === undefined) return false;
@@ -167,6 +175,7 @@ export function updateM20State(state: M20State, value: unknown): boolean {
       next.revokedTokens = state.revokedTokens;
       next.build = state.build;
     }
+    releaseMachines(state);
     Object.assign(state, next);
   }
   if (
@@ -174,5 +183,25 @@ export function updateM20State(state: M20State, value: unknown): boolean {
     /^fixture-build-m20-[a-z]+$/.test(value.build)
   )
     state.build = value.build;
+  if (hold !== undefined) {
+    state.holdMachines = hold;
+    if (!hold) releaseMachines(state);
+  }
   return true;
+}
+
+/**
+ * A read of the machines waits while the control holds them, so a check can
+ * see a page before its first read answers. A release or a new scenario lets
+ * each waiting read answer with the state of that moment.
+ */
+export async function machinesRead(state: M20State): Promise<void> {
+  if (!state.holdMachines) return;
+  await new Promise<void>((release) => state.heldReads.push(release));
+}
+
+function releaseMachines(state: M20State): void {
+  const reads = state.heldReads;
+  state.heldReads = [];
+  for (const release of reads) release();
 }

@@ -3,7 +3,11 @@ import type { IncomingMessage } from "node:http";
 import type { components } from "../../api/index.ts";
 import { readJson } from "./harness-api.ts";
 import { fields, problem, success } from "./harness-state.ts";
-import type { FixtureReply, M20State } from "./m20-harness-state.ts";
+import {
+  machinesRead,
+  type FixtureReply,
+  type M20State,
+} from "./m20-harness-state.ts";
 
 type Schemas = components["schemas"];
 
@@ -13,8 +17,10 @@ export async function machineReply(
   state: M20State,
 ): Promise<FixtureReply | undefined> {
   const method = request.method ?? "GET";
-  if (route === "machines" && method === "GET")
+  if (route === "machines" && method === "GET") {
+    await machinesRead(state);
     return { status: 200, body: state.machines };
+  }
   if (route === "install-tokens" && method === "POST") {
     state.issued += 1;
     const command: Schemas["InstallCommand"] = {

@@ -13,6 +13,10 @@ import {
   type M20Case,
 } from "./m20-browser-fixture.ts";
 import {
+  machineReadStates,
+  readOnlyCache,
+} from "./m20-browser-machine-cache.ts";
+import {
   followMachineLinks,
   machineStates,
   slotJobLinks,
@@ -90,6 +94,11 @@ export function machineCases(origin: string, output: string): M20Case[] {
           page.getByRole("heading", { name: "Add a machine", exact: true }),
         );
       },
+    },
+    {
+      name: "machine-read-states",
+      expectedHttp: [503],
+      check: (page) => machineReadStates(page, origin),
     },
     {
       name: "machines-load-recovery",
@@ -197,6 +206,16 @@ export function machineCases(origin: string, output: string): M20Case[] {
             .count(),
           0,
         );
+        await readOnlyCache(page);
+        // A Billing person reads the same machine page as a Viewer.
+        await open(
+          page,
+          origin,
+          "billing",
+          machinesUrl(origin, machineIds.primary),
+          "forge-01",
+        );
+        await readOnlyCache(page);
       },
     },
   ];

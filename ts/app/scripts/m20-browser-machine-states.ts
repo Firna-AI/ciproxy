@@ -10,19 +10,25 @@ import {
   machinesUrl,
   within,
 } from "./m20-browser-fixture.ts";
+import {
+  dockerDisks,
+  forgeDocker,
+  noDocker,
+} from "./m20-browser-machine-cache.ts";
 import { machineIds, slotJobIds } from "./m20-fixtures-machines.ts";
 
 /**
  * The machine states of the page. Every state saves 2 warm runners, while
- * the slots of a drain report none ready.
+ * the slots of a drain report none ready. The third value is the Docker
+ * disks of the last report, or null for a machine that has not reported.
  */
 const states = [
-  [machineIds.offline, "forge-offline"],
-  [machineIds.noKvm, "lab-no-kvm"],
-  [machineIds.noSlots, "lab-no-slots"],
-  [machineIds.diskLimited, "office-mini-1"],
-  [machineIds.unknownCapacity, "forge-preparing"],
-  [machineIds.draining, "forge-draining"],
+  [machineIds.offline, "forge-offline", forgeDocker],
+  [machineIds.noKvm, "lab-no-kvm", null],
+  [machineIds.noSlots, "lab-no-slots", null],
+  [machineIds.diskLimited, "office-mini-1", noDocker],
+  [machineIds.unknownCapacity, "forge-preparing", null],
+  [machineIds.draining, "forge-draining", forgeDocker],
 ] as const;
 
 /** The addresses of the links to the page of one dashboard job. */
@@ -84,7 +90,7 @@ export async function machineStates(
   await visible(page.getByText(/^0\.4\.1\s·\s0\.4\.2\savailable$/));
   await capture(page, width, output, "forge-01-agent-behind");
   await m20Control(origin, "machines");
-  for (const [id, hostname] of states) {
+  for (const [id, hostname, docker] of states) {
     await page.goto(machinesUrl(origin, id), {
       waitUntil: "domcontentloaded",
     });
@@ -97,6 +103,7 @@ export async function machineStates(
       `${hostname} shows the saved warm runner count`,
     );
     await stateFacts(page, hostname);
+    await dockerDisks(page, hostname, docker);
     await capture(page, width, output, hostname);
   }
 }

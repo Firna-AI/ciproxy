@@ -12,6 +12,7 @@ import {
   open,
   within,
 } from "./m20-browser-fixture.ts";
+import { forgeDocker } from "./m20-browser-machine-cache.ts";
 
 export async function machineControls(
   page: Page,
@@ -32,6 +33,8 @@ export async function machineControls(
     exact: true,
   });
   await visible(refreshFailure);
+  // A failed refresh keeps the Docker disks of the last read.
+  await visible(page.getByText(forgeDocker));
   await m20Control(origin, "machines", false);
   await page.clock.runFor(10001);
   await refreshFailure.waitFor({ state: "hidden" });
@@ -72,6 +75,13 @@ export async function machineControls(
     .getByRole("button", { name: "Clear cache", exact: true })
     .click();
   await dialog.waitFor({ state: "hidden" });
+  // The read after Clear cache shows an empty machine cache, and the Docker
+  // disks keep their data.
+  await visible(
+    page.getByText("forge-01 is clearing its cache", { exact: true }),
+  );
+  await visible(page.getByText("0 of 402 GB", { exact: true }));
+  await visible(page.getByText(forgeDocker));
   await capture(page, width, output, "machine-controls-saved");
 }
 
