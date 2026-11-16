@@ -1478,7 +1478,7 @@ These routes serve the other pages of the dashboard.
       retention rule. The difference event goes to the existing hosted error
       stream, with no email or pager delivery.
       Evidence: `.context/ciproxy-mvp/m18-composition/owner-fix-round3/`.
-- [ ] Orchestrator: run the
+- [x] Orchestrator: run the
       [live page checks](../crates/ciproxy-api/scripts/README.md#jobs-savings-and-billing)
       after the runtime and Stripe test workspace are ready. Set
       `CIPROXY_API_CREDENTIALS_FILE` to a private file outside the repository.
@@ -1492,6 +1492,11 @@ These routes serve the other pages of the dashboard.
       dates, and no invoice difference alert appeared. Move to Free, the
       portal cancel and undo, an unfinished Checkout, and the signed
       webhook replay remain. Evidence: `.context/ciproxy-mvp/m21-live/`.
+      Run of 16 November 2026 at `b49591d`: Move to Free scheduled the end
+      at the period end, the portal's "Don't cancel subscription" removed
+      it, and a signed replay of a real event, sent twice, changed nothing.
+      An unfinished Checkout needs a Free workspace and stays open below.
+      Evidence: `.context/ciproxy-mvp/live-2026-11-16/`.
 
 ## Milestone 19: Dashboard UI: shell, sign-in, and setup
 
@@ -2057,11 +2062,12 @@ Each screen follows its mockup, as Milestone 19 says.
       regressions fail before the fixes. The user approved B/A/A on
       8 November 2026.
       Branch: `conductor/m22-boat-ui`.
-- [ ] Orchestrator: run `node ts/app/scripts/boat-live-smoke.ts` against the
+- [x] Orchestrator: run `node ts/app/scripts/boat-live-smoke.ts` against the
       preview API. Set `CIPROXY_BOAT_CREDENTIALS_FILE` to the path of a private
       Admin credential file outside the repository. The script reads the
       session and Overflow settings. It changes no key, policy, or job.
       Branch: `conductor/m22-boat-ui`.
+      Run of 16 November 2026 on the preview at `b49591d`: 3 of 3 passed.
 
 ## Milestone 23: Site: marketing pages and the docs look
 
@@ -2351,11 +2357,12 @@ list gives what is not done.
       `JOB_IMAGE_MANIFEST_PATH` and a new version of the Boat snapshot
       secret. Delete `follow-ups/guest-initialization-reset.md`, which #60
       settles. Then run every live scenario of Milestone 13 again.
-- [ ] Live checks that remain: Milestone 18 Move to Free, the portal cancel
-      and undo, an unfinished Checkout, and a signed webhook replay; the
-      Milestone 22 Boat live read; the overflow smoke of Milestone 15; the
-      docs pages of Milestone 24; and the repeated-authorization probe of
-      Milestone 14.
+- [ ] Live checks that remain: an unfinished Checkout of Milestone 18,
+      which needs a Free workspace; the overflow smoke of Milestone 15;
+      the docs pages of Milestone 24; and the repeated-authorization probe
+      of Milestone 14. Done on 16 November 2026: Move to Free, the portal
+      undo, the signed webhook replay, the Boat live read, the shell and
+      Machines and Settings live checks, and the page read check.
 
 The preview runs the control-plane image that CI builds, and the release
 server of `futex-ai/cli-release` at `53a1dd3` with the pre-release channel.
