@@ -224,6 +224,19 @@ test("the cache shows its reported use, and only an Admin clears an online cache
     `9,007,199,254,740,993${nbsp}repositories${nbsp}· 96${nbsp}GB`,
     "a count past the safe integers of JavaScript stays exact",
   );
+  const none = cacheModel(
+    machine({
+      cache: cache("0", "0", {
+        docker_disk_bytes: "0",
+        docker_repositories: "0",
+      }),
+    }),
+  );
+  assert.equal(
+    none.reported ? none.docker : null,
+    `0${nbsp}repositories${nbsp}· 0${nbsp}GB`,
+    "a report of no Docker disks shows zero, apart from no report",
+  );
   assert.equal(canClearCache(reported, true), true);
   assert.equal(canClearCache(reported, false), false);
   assert.equal(

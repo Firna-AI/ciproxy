@@ -30,8 +30,13 @@ addresses.
   and the job ID of a machine report never makes a link. Job history opens
   History of Jobs.
 - The agent version says whether it is the newest release only from a fresh
-  report, and only when ciproxy could read the newest release. Cache shows
-  the space of the Docker disks and their count of repositories.
+  report, and only when ciproxy could read the newest release.
+- Cache shows the count of repositories with a Docker disk on the machine
+  and the space of these disks, from the last report, also while the machine
+  is offline. A report of no Docker disks shows 0, and a machine with no
+  report yet shows no cache figures. The page shows the reported Docker
+  disks on every tier. On Free, new jobs get no Docker disk. Clear cache
+  keeps the Docker disks, and they have no action of their own.
 - When the API says that the disk holds fewer jobs of `ciproxy` than the
   slots, the page names the limit, the VM disk of one such job, and the disk
   for jobs, and the free slots beyond the limit say that they have no disk
@@ -55,6 +60,7 @@ addresses.
   [health](../../../../../docs/protocol/agent.md#health), and
   [removal](../../../../../docs/protocol/agent.md#drain-and-remove) of a
   machine, its [slots](../../../../../docs/protocol/job-routing.md#slots),
-  and [Clear cache](../../../../../docs/protocol/cache.md#cache-scopes).
+  [Clear cache](../../../../../docs/protocol/cache.md#cache-scopes), and its
+  [Docker disks](../../../../../docs/protocol/docker-disks.md#tiers-and-the-machine-page).
 - The [dashboard scripts](../../../scripts/README.md#browser-checks) drive
   these pages in a browser.

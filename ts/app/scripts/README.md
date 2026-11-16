@@ -54,7 +54,10 @@ node ts/app/scripts/harness-server.ts --port=4340
 pages and the Settings tabs, with the same `--port` option, by default 4341.
 It also answers the reads of History, a job, and Plans that those pages link
 to. `POST /__fixture/control` with a JSON `scenario` sets its fixture state,
-and `m20-harness-state.ts` lists its scenario names.
+and `m20-harness-state.ts` lists its scenario names. With `holdMachines` set
+to `true`, each read of the machines waits. A control that sets it to `false`
+or names a scenario lets each waiting read answer. Any other value of
+`holdMachines` gets status 400 and changes nothing.
 
 ```sh
 npm --prefix ts run app:export
@@ -96,7 +99,10 @@ action.
 The Machines and Settings smoke, `m20-browser-smoke.ts`, runs against the
 second harness. It covers the Machines pages, the Settings tabs with their
 dialogs, and the recovery after a failed read or change. It follows the
-links to History, a job, and Plans, and Back.
+links to History, a job, and Plans, and Back. On the machine page, it checks
+the Docker disks in each machine state and for each role. It also checks
+them while the first read waits, after a failed first read and its Try
+again, after a failed refresh, and after Clear cache.
 
 - `--case=NAME` runs one case or a comma-separated list of cases. A name
   that matches no case fails the run. With no `--case`, a smoke runs every

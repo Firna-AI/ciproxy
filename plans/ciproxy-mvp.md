@@ -2232,7 +2232,9 @@ Depends on: 20, 21, 25
 
 Each screen follows its mockup, as Milestone 19 says.
 
-- [ ] Build the Docker disks of the machine page.
+- [x] Build the Docker disks of the machine page.
+      Branch: `conductor/m26-docker-disks`.
+      Verification evidence: `.context/ciproxy-m26-docker-disks/verification.md`.
 
 ## Milestone 27: Launch
 
