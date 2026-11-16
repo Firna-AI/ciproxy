@@ -11,7 +11,7 @@ use unimock::{MockFn, Unimock, matching};
 use crate::boundaries::{ConnectionMock, HostMock, ServiceMock, StoreMock};
 use crate::connection_types::ControlEvent;
 use crate::controller::AgentMock;
-use crate::endpoint::{AgentEndpoint, EndpointSettingsMock};
+use crate::endpoint::AgentEndpoint;
 use crate::error::Error;
 use crate::fixtures::{identity, report, vm};
 use crate::host_preparation::PreparationMock;
@@ -22,7 +22,6 @@ fn installer(mock: Unimock) -> Installer {
     let mock = Arc::new(mock);
     Installer {
         endpoint: AgentEndpoint::default(),
-        endpoints: mock.clone(),
         store: mock.clone(),
         host: mock.clone(),
         service: mock.clone(),
@@ -57,9 +56,6 @@ async fn reinstall_keeps_registration_without_reusing_the_install_token() {
             .some_call(matching!())
             .returns(Ok(())),
         StoreMock::load.some_call(matching!()).returns(Ok(state)),
-        EndpointSettingsMock::save
-            .some_call(matching!(_))
-            .returns(Ok(())),
         ServiceMock::install
             .some_call(matching!())
             .answers_arc(Arc::new(move |_| {
@@ -76,7 +72,7 @@ async fn reinstall_keeps_registration_without_reusing_the_install_token() {
 }
 
 #[tokio::test]
-async fn registration_saves_the_workspace_and_credential_returned_by_gateway() {
+async fn registration_saves_identity_and_endpoint_in_one_state_write() {
     let report = report().await;
     let initial_report = report.clone();
     let saved = Arc::new(Mutex::new(Vec::new()));
@@ -118,9 +114,6 @@ async fn registration_saves_the_workspace_and_credential_returned_by_gateway() {
                     credential: Secret::new("gateway-machine-secret"),
                 },
             )))),
-        EndpointSettingsMock::save
-            .some_call(matching!(_))
-            .returns(Ok(())),
         ServiceMock::install.some_call(matching!()).returns(Ok(())),
     ));
     installer(mock)
@@ -136,12 +129,21 @@ async fn registration_saves_the_workspace_and_credential_returned_by_gateway() {
         }]
     );
     let states = saved.lock().unwrap();
+    assert_eq!(states.len(), 2);
+    assert_eq!(
+        states
+            .iter()
+            .filter(|state| state.identity.is_some())
+            .count(),
+        1
+    );
     assert_eq!(
         states.last().unwrap().identity,
         Some(Identity {
             workspace_id: WorkspaceId("gateway-workspace-7b3".to_owned()),
             machine_id: MachineId("gateway-machine-c8".to_owned()),
             credential: Secret::new("gateway-machine-secret"),
+            endpoint: Some(AgentEndpoint::default()),
         })
     );
     assert!(states.iter().all(|state| {

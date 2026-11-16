@@ -6,20 +6,49 @@ which stops preserve running jobs and when GitHub retirement comes first.
 
 ## Gateway endpoint
 
-The default route is `wss://app.ciproxy.dev/agent/`.
-The install option `--agent-url` selects another WSS route with a valid TLS
-certificate. Without a saved route, `CIPROXY_AGENT_URL` selects one too.
-Both accept only a valid `wss://` URL with a host.
-Install saves the selected route in `/var/lib/ciproxy/agent-url` with mode
-`0600`. Install and the daemon prefer the saved route over the environment
-setting, so an inherited setting cannot redirect the installed service.
-Only an explicit install option replaces the saved route.
-Uninstall removes the saved route.
-Cache metadata requests use the selected route's host and port over HTTPS.
-During its job drain, uninstall uses only that saved route for hosted cache
-metadata. A missing or damaged route keeps local cleanup available.
+The [agent endpoint protocol](../../docs/protocol/agent-endpoint.md)
+defines which control plane receives the install token and the machine
+credential.
+
+The default endpoint is `wss://app.ciproxy.dev/agent/`.
+Install selects its endpoint from its command only. The install option
+`--agent-url` comes first, then `CIPROXY_AGENT_URL`, then the default.
+Both accept only a valid `wss://` URL with a host. The endpoint also needs
+a valid TLS certificate. Install never reads saved state for this choice.
+
+A machine without an identity registers at the selected endpoint.
+The agent saves that endpoint in the identity, with the workspace ID, the
+machine ID, and the machine credential. One atomic write of
+`/var/lib/ciproxy/state.json`, with mode `0600`, saves all four values.
+The daemon, the metadata relay, and uninstall take the endpoint for the
+machine credential only from that identity. So an inherited setting or a
+later install option cannot redirect the credential.
+Cache metadata requests use the host and port of that endpoint over HTTPS.
+
+A reinstall on a registered machine keeps the identity and its endpoint.
+It sends no install token. It repairs the machine and succeeds.
+When the selected endpoint differs, the last output line names the kept
+endpoint and the selected endpoint. It says to uninstall first to move the
+machine.
+A remote removal clears the identity and its endpoint after the jobs end.
+The next install then registers at the endpoint of its command.
+Uninstall removes the state file and any old endpoint file.
+
+Older agents saved the endpoint apart, in `/var/lib/ciproxy/agent-url`.
+Install stops the old agent service before it loads and migrates state.
+This prevents an old process from replacing the migrated identity.
+The separate VM units keep running jobs alive.
+Before the agent builds a credential client, it moves a valid endpoint from
+that file into an identity without one. It saves the identity first, then
+removes the file. Without an identity, or with an endpoint already in the
+identity, the agent only removes the file.
+A missing or unusable file leaves the identity without an endpoint.
+That identity authorizes no credential traffic. The daemon keeps its jobs
+without a connection, and uninstall keeps local cleanup available.
 The metadata relay then returns unavailable without sending a machine
 credential. Cache restores keep their normal GitHub fallback.
+A reinstall reports the kept endpoint as unavailable.
+
 The gateway authenticates Hello before Welcome.
 An authenticated policy close with `[gateway] authentication failed`
 revokes the local machine. Other failures reconnect and preserve its VMs.

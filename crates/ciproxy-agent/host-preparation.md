@@ -261,7 +261,8 @@ bash crates/ciproxy-agent/scripts/smoke-host.sh
 ```
 
 Use the readiness value only after the staging components are aligned.
-The script sets the WSS URL for install and the persistent service.
+The script sets the WSS URL for install through `CIPROXY_AGENT_URL`.
+Registration saves it in the identity, and the service uses that endpoint.
 It installs on ext4, writes a data sentinel, removes the owned mount unit
 and jailer, and repeats install to prove repair without data loss.
 It then dispatches two held real Docker jobs.

@@ -11,7 +11,6 @@ use ciproxy_protocol::cache_metadata::{CacheMetadataResponse, CacheMetadataSourc
 use ciproxy_protocol::identifiers::JobId;
 use reqwest::{Client, redirect};
 
-use crate::endpoint::AgentEndpoint;
 use crate::error::{ErrorResultExt, Result};
 use crate::state::Identity;
 
@@ -26,15 +25,14 @@ pub(crate) enum MetadataTarget {
 }
 
 impl MetadataTarget {
-    /// Pair a retained identity only with an explicitly selected hosted target.
-    pub(crate) fn for_machine(
-        endpoint: Option<&AgentEndpoint>,
-        identity: Option<&Identity>,
-    ) -> Self {
+    /// Take the credential and its hosted target from the same identity.
+    pub(crate) fn for_machine(identity: Option<&Identity>) -> Self {
         let Some(identity) = identity else {
             return Self::Disabled;
         };
-        let source = endpoint
+        let source = identity
+            .endpoint
+            .as_ref()
             .and_then(|endpoint| connection(endpoint.as_str(), identity.credential.clone()));
         match source {
             Some(source) => Self::Hosted(source),

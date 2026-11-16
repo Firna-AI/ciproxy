@@ -23,6 +23,8 @@ mod docker_prepare;
 mod docker_recovery;
 #[path = "docker/mod.rs"]
 mod docker_regressions;
+#[path = "../src/endpoint.rs"]
+mod endpoint;
 #[path = "../src/error.rs"]
 mod error;
 #[path = "docker/fixtures.rs"]

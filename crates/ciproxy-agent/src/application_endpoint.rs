@@ -2,14 +2,18 @@
 
 use std::sync::Arc;
 
+use async_trait::async_trait;
+use ciproxy_protocol::agent::AgentMessage;
 use ciproxy_protocol::secret::Secret;
 
 use crate::boundaries::Connection;
 use crate::cli::Action;
 use crate::connection::WebSocketConnection;
 use crate::connection_socket::TlsWebSocketDialer;
+use crate::connection_types::{ConnectionError, ConnectionResult, ControlEvent};
 use crate::endpoint::{AgentEndpoint, EndpointSettings};
 use crate::error::Result;
+use crate::state::Identity;
 
 /// A lifecycle action with a required or optional control-plane target.
 pub(crate) enum ConfiguredAction {
@@ -18,23 +22,25 @@ pub(crate) enum ConfiguredAction {
         token: Secret,
         endpoint: AgentEndpoint,
     },
-    /// Run the daemon against its selected endpoint.
-    Run { endpoint: AgentEndpoint },
+    /// Run the daemon against the route held with its credential.
+    Run { endpoint: Option<AgentEndpoint> },
     /// Drain locally even when no trusted hosted target remains.
-    Uninstall { endpoint: Option<AgentEndpoint> },
+    Uninstall,
 }
 
 impl ConfiguredAction {
-    /// Return the hosted target permitted for this lifecycle operation.
-    pub(crate) fn endpoint(&self) -> Option<&AgentEndpoint> {
+    /// Bind the daemon only after startup loads the retained identity.
+    pub(crate) fn bind_identity(self, identity: Option<&Identity>) -> Self {
         match self {
-            Self::Install { endpoint, .. } | Self::Run { endpoint } => Some(endpoint),
-            Self::Uninstall { endpoint } => endpoint.as_ref(),
+            Self::Run { .. } => Self::Run {
+                endpoint: identity.and_then(|identity| identity.endpoint.clone()),
+            },
+            action => action,
         }
     }
 }
 
-/// Resolve normal settings for the daemon and only the saved route for uninstall.
+/// Resolve the command endpoint before loading a retained machine identity.
 pub(crate) fn configure(
     action: Action,
     settings: &dyn EndpointSettings,
@@ -44,19 +50,8 @@ pub(crate) fn configure(
             token,
             endpoint: settings.resolve(agent_url.as_ref())?,
         },
-        Action::Run => ConfiguredAction::Run {
-            endpoint: settings.resolve(None)?,
-        },
-        Action::Uninstall => {
-            let endpoint = match settings.saved() {
-                Ok(endpoint) => endpoint,
-                Err(error) => {
-                    tracing::warn!(%error, "Saved agent endpoint is unavailable. Uninstall will continue without hosted cache metadata.");
-                    None
-                }
-            };
-            ConfiguredAction::Uninstall { endpoint }
-        }
+        Action::Run => ConfiguredAction::Run { endpoint: None },
+        Action::Uninstall => ConfiguredAction::Uninstall,
     })
 }
 
@@ -66,6 +61,35 @@ pub(crate) fn connection(endpoint: &AgentEndpoint) -> Arc<dyn Connection> {
         endpoint.as_str().to_owned(),
         Arc::new(TlsWebSocketDialer),
     ))
+}
+
+/// Keep jobs and local cleanup alive when a legacy route is unavailable.
+pub(crate) fn retained_connection(endpoint: Option<&AgentEndpoint>) -> Arc<dyn Connection> {
+    match endpoint {
+        Some(endpoint) => connection(endpoint),
+        None => Arc::new(UnavailableConnection),
+    }
+}
+
+struct UnavailableConnection;
+
+#[async_trait]
+impl Connection for UnavailableConnection {
+    async fn connect(&self) -> ConnectionResult<()> {
+        Err(ConnectionError::Disconnected)
+    }
+
+    async fn send(&self, _message: &AgentMessage) -> ConnectionResult<()> {
+        Err(ConnectionError::Disconnected)
+    }
+
+    async fn receive(&self) -> ConnectionResult<ControlEvent> {
+        Err(ConnectionError::Disconnected)
+    }
+
+    async fn receive_handshake(&self) -> ConnectionResult<ControlEvent> {
+        Err(ConnectionError::Disconnected)
+    }
 }
 
 #[cfg(test)]

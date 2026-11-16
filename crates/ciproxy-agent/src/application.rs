@@ -15,13 +15,16 @@ use tracing_subscriber::util::SubscriberInitExt;
 
 use crate::application_cache;
 use crate::application_endpoint::{self, ConfiguredAction};
+use crate::application_setup::{
+    InvocationError, InvocationSetup, LoadedInvocation, PreparedInvocation,
+};
 use crate::area::AreaFiles;
 use crate::area_files::LinuxAreaFiles;
 use crate::boundaries::{Host, Service, Store, Vms};
 use crate::cli::{Action, Cli};
 use crate::controller::{Agent, Controller};
 use crate::docker::{DockerDisks, LinuxDockers};
-use crate::endpoint::{EndpointSettings, SavedEndpoint};
+use crate::endpoint::{CommandEndpoint, EndpointSettings};
 use crate::endpoint_files::LinuxEndpointFiles;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::gateway::ReconnectingGateway;
@@ -33,6 +36,7 @@ use crate::host_preparation::{
     FinalUninstall, Uninstall, UninstallState, stage_error, uninstall_inventory,
 };
 use crate::host_system::LinuxHostSystem;
+use crate::identity_store::IdentityStore;
 use crate::installation::{Install, Installer};
 use crate::layout::Layout;
 use crate::logging::subscriber;
@@ -61,10 +65,10 @@ pub(crate) async fn main() -> Result<()> {
 }
 
 async fn execute(action: Action) -> Result<()> {
-    let endpoints: Arc<dyn EndpointSettings> = Arc::new(SavedEndpoint {
-        files: Arc::new(LinuxEndpointFiles),
+    let endpoint_files = Arc::new(LinuxEndpointFiles);
+    let endpoints: Arc<dyn EndpointSettings> = Arc::new(CommandEndpoint {
+        files: endpoint_files.clone(),
     });
-    let action = application_endpoint::configure(action, endpoints.as_ref())?;
     let service: Arc<dyn Service> = Arc::new(SystemService);
     let layout = Layout {
         data: PathBuf::from(AREA),
@@ -98,23 +102,29 @@ async fn execute(action: Action) -> Result<()> {
     let requested_budget = setting(requested.as_deref())?;
     let services = services(files.clone(), system, requested_budget)?;
     let preparation = services.preparation;
-    if matches!(action, ConfiguredAction::Uninstall { .. }) {
-        service.stop()?;
-    }
-    let store: Arc<dyn Store> = Arc::new(FileStore {
-        directory: PathBuf::from(CONTROL),
+    let store: Arc<dyn Store> = Arc::new(IdentityStore {
+        store: Arc::new(FileStore {
+            directory: PathBuf::from(CONTROL),
+        }),
+        endpoints: endpoint_files,
     });
-    let state = match store.load() {
-        Ok(state) => state,
-        Err(error) => {
+    let setup: Arc<dyn InvocationSetup> = Arc::new(LoadedInvocation {
+        endpoints,
+        service: service.clone(),
+        store: store.clone(),
+    });
+    let PreparedInvocation { action, state } = match setup.prepare(action) {
+        Ok(invocation) => invocation,
+        Err(InvocationError::State(error)) => {
             return Err(stage_error(
                 error,
                 "machine identity state",
                 "Restore /var/lib/ciproxy/state.json from a root-only backup. Keep existing job data.",
             ));
         }
+        Err(InvocationError::Setup(error)) => return Err(error),
     };
-    let inventory = if matches!(action, ConfiguredAction::Uninstall { .. }) {
+    let inventory = if matches!(action, ConfiguredAction::Uninstall) {
         uninstall_inventory(files.as_ref())?
     } else {
         files.inspect()?
@@ -130,8 +140,7 @@ async fn execute(action: Action) -> Result<()> {
     let identity = state.identity.clone();
     let removing = state.mode == Mode::Removed;
     let commands: Arc<dyn Commands> = Arc::new(LinuxCommands);
-    let cache_services =
-        application_cache::prepare(commands.clone(), action.endpoint(), identity.as_ref())?;
+    let cache_services = application_cache::prepare(commands.clone(), identity.as_ref())?;
     let cache = cache_services.cache.clone();
     let (guest_tx, mut guest_rx) = mpsc::channel(256);
     let guests = Arc::new(LinuxGuests::new(layout.clone(), commands.clone(), guest_tx));
@@ -181,7 +190,6 @@ async fn execute(action: Action) -> Result<()> {
             }
             let installer: Arc<dyn Install> = Arc::new(Installer {
                 endpoint,
-                endpoints,
                 store,
                 host,
                 service,
@@ -189,11 +197,11 @@ async fn execute(action: Action) -> Result<()> {
                 agent,
                 preparation,
             });
-            installer.install(token).await?;
-            println!("ciproxy agent installed");
+            let outcome = installer.install(token).await?;
+            println!("{}", outcome.message());
         }
         ConfiguredAction::Run { endpoint } => {
-            let connection = application_endpoint::connection(&endpoint);
+            let connection = application_endpoint::retained_connection(endpoint.as_ref());
             let startup: Arc<dyn Startup> = Arc::new(AgentStartup {
                 agent: agent.clone(),
                 preparation,
@@ -236,7 +244,7 @@ async fn execute(action: Action) -> Result<()> {
             let _ = input.await;
             result?;
         }
-        ConfiguredAction::Uninstall { .. } => {
+        ConfiguredAction::Uninstall => {
             let uninstall: Arc<dyn Uninstall> = Arc::new(FinalUninstall {
                 files,
                 images,

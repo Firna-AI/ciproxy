@@ -1,12 +1,9 @@
-//! Atomic endpoint settings outside the workload area and update binaries.
+//! Command environment and the endpoint file retired by identity migration.
 
 use std::fs;
-use std::path::Path;
 
 use crate::endpoint::EndpointFiles;
 use crate::error::{ErrorResultExt, Result};
-use crate::host_paths::CONTROL;
-use crate::persistence::{atomic_private_write, private_directory};
 
 pub(crate) const ENDPOINT_PATH: &str = "/var/lib/ciproxy/agent-url";
 pub(crate) const PENDING_ENDPOINT_PATH: &str = "/var/lib/ciproxy/agent-url.pending";
@@ -30,8 +27,11 @@ impl EndpointFiles for LinuxEndpointFiles {
         }
     }
 
-    fn write(&self, endpoint: &str) -> Result<()> {
-        private_directory(Path::new(CONTROL))?;
-        atomic_private_write(Path::new(ENDPOINT_PATH), endpoint.as_bytes())
+    fn remove(&self) -> Result<()> {
+        match fs::remove_file(ENDPOINT_PATH) {
+            Ok(()) => Ok(()),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(error) => Err(error).context("remove legacy agent endpoint"),
+        }
     }
 }

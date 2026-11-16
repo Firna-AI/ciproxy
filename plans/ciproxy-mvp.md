@@ -2389,8 +2389,12 @@ tool output on 11 November 2026. Rotate them.
 
 - [x] Decide how reinstall handles an endpoint from another control plane.
       The user answered item 117 with D on 16 November 2026.
-- [ ] Build item 117 = D: the identity carries its endpoint.
+- [x] Build item 117 = D: the identity carries its endpoint.
       Branch: `conductor/item-117-d-endpoint-in-identity`.
+      My calls, 16 November 2026: install stops the old agent service before
+      identity migration, so its state writes cannot discard the endpoint.
+      The endpoint rules use the linked `docs/protocol/agent-endpoint.md`,
+      so the main agent protocol stays short.
 - [ ] Build item 118 = E of `follow-ups/machine-statistics-availability.md`:
       unknown machine statistics, mockup first.
       Branch: `conductor/item-118-e-unknown-machine-statistics`.
