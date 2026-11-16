@@ -56,8 +56,9 @@ it. The production command keeps the form above.
 ### Run install again
 
 Run the install command again on a registered machine to repair it. It
-repairs the missing parts. It keeps the machine identity, drain state,
-jobs, and endpoint.
+reads the existing identity without stopping the service or changing that
+identity on disk. It repairs missing parts and keeps the machine identity,
+drain state, jobs, and endpoint.
 
 The repair succeeds even when the command selects another endpoint. It
 sends no install token. The last line names the retained endpoint and the
@@ -82,9 +83,12 @@ identity. The agent uses that endpoint for every connection with its
 machine credential, including job metadata and uninstall. Service restarts
 and agent updates keep it.
 
-An update preserves the endpoint of an older installation. At its first
-start, the agent moves that endpoint into the identity. It then removes the
-old endpoint file. This needs no manual action.
+An update preserves the endpoint of an older installation. If the identity
+has no endpoint, the agent recovers it from the old endpoint file. It keeps
+a matching file while the identity exists. This keeps the same endpoint
+when an older agent runs or you restore saved state. The agent removes that
+file only at uninstall, when the identity ends, or when the file names a
+different endpoint. This needs no manual action.
 
 When remote removal clears the local identity, it also clears its endpoint.
 The next install registers at the endpoint selected by its command.

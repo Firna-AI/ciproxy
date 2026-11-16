@@ -136,3 +136,7 @@ mod endpoint_install_tests;
 #[cfg(test)]
 #[path = "_tests_/endpoint_mismatch_tests.rs"]
 mod endpoint_mismatch_tests;
+
+#[cfg(test)]
+#[path = "_tests_/legacy_install_tests.rs"]
+mod legacy_install_tests;

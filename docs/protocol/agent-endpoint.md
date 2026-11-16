@@ -11,6 +11,8 @@ which control plane receives its machine credential.
 - **machine identity:** what registration saves on the own machine: the
   workspace and machine IDs, the machine credential, and the agent
   endpoint.
+- **earlier endpoint:** the agent endpoint that an earlier agent saved
+  apart from the machine identity.
 - [Agent](agent.md#terms) defines the own machine, the install token, and
   the machine credential.
 
@@ -54,10 +56,21 @@ which control plane receives its machine credential.
   credential nowhere.
 - Such a machine stays offline.
 - Its uninstall still finishes the local cleanup.
-- A newer agent keeps the agent endpoint that an earlier agent saved apart
-  from the machine identity.
-- The newer agent moves that endpoint into the machine identity, and it
-  removes the earlier copy.
+- When the machine identity has no agent endpoint, a newer agent copies the
+  earlier endpoint into it.
+- The newer agent keeps the earlier endpoint while the machine identity
+  lives and has the same agent endpoint.
+- So the machine keeps its agent endpoint when an earlier agent or a
+  restored state backup drops it from the machine identity.
+- The newer agent removes the earlier endpoint at uninstall and when it
+  forgets the machine identity.
+- It also removes an earlier endpoint that differs from the agent endpoint
+  of the machine identity.
+- **Decision:** the earlier endpoint stays while the machine identity
+  lives. Rejected: its removal after the copy, because an earlier agent or
+  a restored state backup can later drop the agent endpoint from the
+  machine identity. A stop of the agent service does not prevent this,
+  because an agent that a person started directly keeps running.
 - The agent of a removed machine forgets its machine identity, with the
   agent endpoint, after its jobs end.
 - A later install then registers a new machine at the endpoint of its

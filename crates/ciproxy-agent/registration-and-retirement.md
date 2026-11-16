@@ -35,16 +35,27 @@ The next install then registers at the endpoint of its command.
 Uninstall removes the state file and any old endpoint file.
 
 Older agents saved the endpoint apart, in `/var/lib/ciproxy/agent-url`.
-Install stops the old agent service before it loads and migrates state.
-This prevents an old process from replacing the migrated identity.
-The separate VM units keep running jobs alive.
+Before the agent builds a credential client, each identity load copies a
+valid endpoint from that file into an identity without one.
 Run claims `/var/lib/ciproxy/images.lock` before it loads identity state.
 Image recovery keeps that same claim after workload area verification.
 A rejected duplicate start changes no identity state or legacy endpoint file.
-Before the agent builds a credential client, it moves a valid endpoint from
-that file into an identity without one. It saves the identity first, then
-removes the file. Without an identity, or with an endpoint already in the
-identity, the agent only removes the file.
+Run and uninstall save the copied endpoint in the identity.
+Install inspects the identity without a service stop. That inspection
+changes no identity on disk. Install uses the copy in memory for the
+metadata relay and its last output line. At its end, a successful repair
+still rewrites the service unit and restarts the service. Separate VM units
+keep running jobs alive through that restart.
+
+The agent keeps the file while the file names the identity endpoint.
+An older agent can save the identity without its endpoint field.
+A service stop does not end an older agent that a person started directly.
+An older binary can also start later. An operator can also restore an
+older state backup. After each of these, the next identity load copies the
+endpoint from the file again. The agent removes the file only at uninstall,
+when the identity ends or is absent, or when the file names another
+endpoint.
+
 A missing or unusable file leaves the identity without an endpoint.
 That identity authorizes no credential traffic. The daemon keeps its jobs
 without a connection, and uninstall keeps local cleanup available.

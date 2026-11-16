@@ -225,6 +225,10 @@ mod runtime_fakes;
 mod host_fixtures;
 
 #[cfg(test)]
+#[path = "_tests_/identity_store_fixtures.rs"]
+mod identity_store_fixtures;
+
+#[cfg(test)]
 #[path = "_tests_/host_lifecycle_fakes.rs"]
 mod host_lifecycle_fakes;
 

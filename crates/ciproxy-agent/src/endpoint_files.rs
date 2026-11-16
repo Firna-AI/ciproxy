@@ -1,4 +1,4 @@
-//! Command environment and the endpoint file retired by identity migration.
+//! Command environment and legacy endpoint storage for retained identities.
 
 use std::fs;
 

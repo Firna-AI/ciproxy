@@ -1,4 +1,4 @@
-//! Acquire startup ownership before loading and migrating durable identity.
+//! Inspect install identity or acquire ownership before identity migration.
 
 use std::fmt::{self, Debug, Formatter};
 use std::sync::Arc;
@@ -28,14 +28,14 @@ pub(crate) enum InvocationError {
 /// A startup result whose state failures keep their existing recovery context.
 pub(crate) type InvocationResult<T> = std::result::Result<T, InvocationError>;
 
-/// A resolved command and identity with a runtime claim or stopped-service proof.
+/// A resolved command and identity with optional migration ownership.
 pub(crate) struct PreparedInvocation {
     pub(crate) action: ConfiguredAction,
     pub(crate) state: MachineState,
-    pub(crate) ownership: InvocationOwnership,
+    pub(crate) ownership: Option<InvocationOwnership>,
 }
 
-/// Keep runtime exclusion alive through identity migration and image recovery.
+/// Hold a runtime claim or stopped-service proof through identity recovery.
 pub(crate) struct InvocationOwnership {
     runtime: Option<Arc<dyn RuntimeOwner>>,
 }
@@ -77,19 +77,26 @@ impl InvocationSetup for LoadedInvocation {
             Ok(action) => action,
             Err(error) => return Err(InvocationError::Setup(error)),
         };
-        let runtime = if matches!(action, ConfiguredAction::Run { .. }) {
-            match self.runtime.claim() {
-                Ok(owner) => Some(owner),
+        let ownership = match action {
+            ConfiguredAction::Run { .. } => match self.runtime.claim() {
+                Ok(owner) => Some(InvocationOwnership {
+                    runtime: Some(owner),
+                }),
                 Err(error) => return Err(InvocationError::Setup(error)),
+            },
+            ConfiguredAction::Uninstall => {
+                if let Err(error) = self.service.stop() {
+                    return Err(InvocationError::Setup(error));
+                }
+                Some(InvocationOwnership { runtime: None })
             }
-        } else {
-            if let Err(error) = self.service.stop() {
-                return Err(InvocationError::Setup(error));
-            }
-            None
+            ConfiguredAction::Install { .. } => None,
         };
-        let ownership = InvocationOwnership { runtime };
-        let state = match self.identity.load(&ownership) {
+        let loaded = match &ownership {
+            Some(owner) => self.identity.load_owned(owner),
+            None => self.identity.load(),
+        };
+        let state = match loaded {
             Ok(state) => state,
             Err(error) => return Err(InvocationError::State(error)),
         };

@@ -1,4 +1,4 @@
-//! Default filesystem-boundary regressions for the production Docker adapter.
+//! Default filesystem tests for Docker leases, images, runtime locks, and state.
 
 #![expect(
     dead_code,

@@ -1,141 +1,127 @@
-//! Legacy endpoint migration commits the full identity before retiring the file.
+//! Legacy endpoints remain available until their machine identity ends.
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use ciproxy_protocol::secret::Secret;
 use unimock::{MockFn, Unimock, matching};
 
 use crate::application_endpoint::ConfiguredAction;
-use crate::application_setup::{InvocationSetup, LoadedInvocation, PreparedInvocation};
-use crate::boundaries::{ServiceMock, StoreMock};
+use crate::application_setup::InvocationSetup;
+use crate::boundaries::{ServiceMock, VmsMock};
 use crate::cli::Action;
-use crate::endpoint::{AgentEndpoint, EndpointFilesMock, EndpointSettingsMock};
-use crate::identity_store::IdentityStore;
-use crate::runtime_ownership::RuntimeClaimsMock;
-use crate::state::MachineState;
+use crate::controller::Agent;
+use crate::fixtures::controller;
+use crate::host_preparation::PreparationMock;
+use crate::identity_store_fixtures::{IdentityFiles, legacy_state};
+use crate::state::{MachineState, Mode};
+use crate::terminal_completion::{CompletionAction, UninstallCleanup};
 
 #[test]
-fn install_stops_the_service_before_migrating_the_legacy_endpoint_once() {
-    let state: MachineState = serde_json::from_str(r#"{
-        "identity":{"workspace_id":"workspace-1","machine_id":"machine-1","credential":"machine-secret"},
-        "mode":"Active","runners":[]
-    }"#).unwrap();
-    let stored = Arc::new(Mutex::new(state));
-    let load = stored.clone();
-    let save = stored.clone();
-    let observed = stored.clone();
-    let events = Arc::new(Mutex::new(Vec::new()));
-    let writes = events.clone();
-    let removals = events.clone();
-    let stops = events.clone();
-    let resolves = events.clone();
-    let loads = events.clone();
-    let claims = events.clone();
-    let mock = Arc::new(Unimock::new((
-        RuntimeClaimsMock::claim
-            .some_call(matching!())
-            .answers_arc(Arc::new(move |_| {
-                claims.lock().unwrap().push("claim");
-                Ok(Arc::new(Unimock::new(())))
-            })),
-        EndpointSettingsMock::resolve
-            .each_call(matching!(_))
-            .answers_arc(Arc::new(move |_, _| {
-                resolves.lock().unwrap().push("resolve");
-                Ok(AgentEndpoint::default())
-            })),
-        ServiceMock::stop
-            .each_call(matching!())
-            .answers_arc(Arc::new(move |_| {
-                stops.lock().unwrap().push("stop");
-                Ok(())
-            })),
-        StoreMock::load
-            .each_call(matching!())
-            .answers_arc(Arc::new(move |_| {
-                loads.lock().unwrap().push("load");
-                Ok(load.lock().unwrap().clone())
-            })),
-        StoreMock::save
-            .some_call(matching!(_))
-            .answers_arc(Arc::new(move |_, state| {
-                writes.lock().unwrap().push("state");
-                *save.lock().unwrap() = state.clone();
-                Ok(())
-            })),
-        EndpointFilesMock::read
-            .some_call(matching!())
-            .returns(Ok(Some("wss://preview.ciproxy.example/agent/".to_owned()))),
-        EndpointFilesMock::remove
-            .each_call(matching!())
-            .answers_arc(Arc::new(move |_| {
-                assert_eq!(
-                    observed
-                        .lock()
-                        .unwrap()
-                        .identity
-                        .as_ref()
-                        .unwrap()
-                        .endpoint
-                        .as_ref()
-                        .unwrap()
-                        .as_str(),
-                    "wss://preview.ciproxy.example/agent/"
-                );
-                removals.lock().unwrap().push("remove");
-                Ok(())
-            })),
-    )));
-    let setup = LoadedInvocation {
-        endpoints: mock.clone(),
-        service: mock.clone(),
-        runtime: mock.clone(),
-        identity: Arc::new(IdentityStore {
-            store: mock.clone(),
-            endpoints: mock,
-        }),
-    };
-    let PreparedInvocation {
-        action,
-        state: first,
-        ..
-    } = setup
+fn install_reads_legacy_endpoint_without_stopping_or_persisting_migration() {
+    let files = IdentityFiles::new(legacy_state());
+    let prepared = files
+        .setup()
         .prepare(Action::Install {
             token: Secret::new("synthetic-install-token"),
             agent_url: None,
         })
         .unwrap();
-    let ConfiguredAction::Install { endpoint, .. } = action else {
-        panic!("install must retain its selected command endpoint");
+    let ConfiguredAction::Install { endpoint, .. } = prepared.action else {
+        panic!("install must keep its command endpoint");
     };
     assert_eq!(endpoint.as_str(), "wss://app.ciproxy.dev/agent/");
     assert_eq!(
-        first
-            .identity
-            .as_ref()
-            .and_then(|identity| identity.endpoint.as_ref())
-            .map(|endpoint| endpoint.as_str()),
+        prepared.state.identity.unwrap().endpoint.unwrap().as_str(),
+        "wss://preview.ciproxy.example/agent/"
+    );
+    assert_eq!(*files.effects.lock().unwrap(), Vec::<&str>::new());
+    assert_eq!(*files.state.lock().unwrap(), legacy_state());
+    assert_eq!(
+        files.legacy.lock().unwrap().as_deref(),
         Some("wss://preview.ciproxy.example/agent/")
     );
-    let PreparedInvocation {
-        action,
-        state: second,
-        ..
-    } = setup.prepare(Action::Run).unwrap();
-    assert_eq!(second, first);
-    let ConfiguredAction::Run { endpoint } = action else {
-        panic!("daemon startup must keep its action");
+}
+
+#[test]
+fn run_restores_endpoint_after_an_old_writer_drops_the_identity_field() {
+    let files = IdentityFiles::new(legacy_state());
+    files.setup().prepare(Action::Run).unwrap();
+    *files.state.lock().unwrap() = legacy_state();
+    let prepared = files.setup().prepare(Action::Run).unwrap();
+    let ConfiguredAction::Run { endpoint } = prepared.action else {
+        panic!("run must keep its daemon action");
     };
     assert_eq!(
         endpoint.as_ref().map(|endpoint| endpoint.as_str()),
         Some("wss://preview.ciproxy.example/agent/")
     );
     assert_eq!(
-        *events.lock().unwrap(),
-        vec![
-            "resolve", "stop", "load", "state", "remove", "claim", "load", "remove"
-        ]
+        files.legacy.lock().unwrap().as_deref(),
+        Some("wss://preview.ciproxy.example/agent/")
     );
-    let encoded = serde_json::to_string(&*stored.lock().unwrap()).unwrap();
-    assert!(encoded.contains(r#""endpoint":"wss://preview.ciproxy.example/agent/""#));
+    assert_eq!(*files.state.lock().unwrap(), prepared.state);
+    assert_eq!(*files.effects.lock().unwrap(), vec!["save", "save"]);
+}
+
+#[test]
+fn owned_load_removes_stale_legacy_without_replacing_the_identity_route() {
+    let mut registered = legacy_state();
+    registered.identity.as_mut().unwrap().endpoint =
+        Some("wss://retained.ciproxy.example/agent/".parse().unwrap());
+    for (state, expected) in [
+        (MachineState::default(), None),
+        (registered, Some("wss://retained.ciproxy.example/agent/")),
+    ] {
+        let files = IdentityFiles::new(state);
+        let prepared = files.setup().prepare(Action::Run).unwrap();
+        let ConfiguredAction::Run { endpoint } = prepared.action else {
+            panic!("run must keep the daemon action");
+        };
+        assert_eq!(
+            endpoint.as_ref().map(|endpoint| endpoint.as_str()),
+            expected
+        );
+        assert_eq!(*files.legacy.lock().unwrap(), None);
+        assert_eq!(*files.effects.lock().unwrap(), vec!["remove"]);
+    }
+}
+
+#[tokio::test]
+async fn uninstall_retains_legacy_until_the_identity_is_cleared() {
+    let files = IdentityFiles::new(legacy_state());
+    let prepared = files.setup().prepare(Action::Uninstall).unwrap();
+    assert_eq!(
+        files.legacy.lock().unwrap().as_deref(),
+        Some("wss://preview.ciproxy.example/agent/")
+    );
+    assert_eq!(*files.effects.lock().unwrap(), vec!["stop", "save"]);
+    let mock = Arc::new(Unimock::new((
+        VmsMock::networks
+            .some_call(matching!())
+            .returns(Ok(Vec::new())),
+        PreparationMock::remove
+            .some_call(matching!())
+            .returns(Ok(())),
+        ServiceMock::uninstall
+            .some_call(matching!())
+            .returns(Ok(())),
+    )));
+    let mut agent = controller(prepared.state, mock.as_ref().clone());
+    agent.state.lock().await.mode = Mode::Removed;
+    agent.store = files.store();
+    assert!(
+        agent
+            .complete_removal(CompletionAction::Uninstall(UninstallCleanup {
+                preparation: mock.clone(),
+                service: mock.clone(),
+            }))
+            .await
+            .unwrap()
+    );
+    assert_eq!(agent.state.lock().await.identity, None);
+    assert_eq!(*files.legacy.lock().unwrap(), None);
+    assert_eq!(
+        *files.effects.lock().unwrap(),
+        vec!["stop", "save", "clear", "remove"]
+    );
 }

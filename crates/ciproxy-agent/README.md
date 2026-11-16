@@ -203,12 +203,12 @@ Keep each target's module list aligned when a production dependency moves.
 The opt-in `network-smoke-driver` example also includes the production
 network modules. The [image network smoke](../../image/checks.md#guest-network)
 uses it before any runner starts, without credentials.
-The default Docker regression target also uses path includes.
-The gate compiles that target because it needs no feature.
+The default `docker_regression` target also uses path includes.
+The gate compiles and runs that target because it needs no feature.
 Real VM and GitHub checks use separate smoke scripts.
 The [real root regression](image-budget.md#disposable-root-growth-regression)
 checks free bytes as runner UID 1001 on two image sizes.
-The [development guide](development.md) gives Docker integration checks,
+The [development guide](development.md) gives the `docker_regression` checks,
 KVM and GitHub smoke checks, and release packaging commands.
 
 ### Key Code
@@ -222,8 +222,8 @@ KVM and GitHub smoke checks, and release packaging commands.
   install endpoint and gives the daemon only the endpoint of its identity.
 - [src/endpoint.rs](src/endpoint.rs) checks endpoints and selects the
   install endpoint from `--agent-url`, `CIPROXY_AGENT_URL`, or the default.
-- [src/identity_store.rs](src/identity_store.rs) moves a legacy endpoint
-  file into the identity before any credential client starts.
+- [src/identity_store.rs](src/identity_store.rs) copies the legacy endpoint
+  into an identity without one, and keeps a matching legacy file.
 - [src/installation.rs](src/installation.rs) registers once, or repairs
   and names both endpoints when the command selects another one.
 - [src/startup.rs](src/startup.rs) checks local completion before workload

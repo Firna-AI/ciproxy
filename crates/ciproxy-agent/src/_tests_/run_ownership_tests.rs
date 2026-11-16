@@ -1,4 +1,4 @@
-//! Run must own the existing runtime before it can retire legacy endpoint state.
+//! Run must own the existing runtime before it can persist recovered identity.
 
 use std::sync::{Arc, Mutex};
 
@@ -139,12 +139,12 @@ fn run_claim_precedes_migration_and_stays_owned_after_setup_handoff() {
                 }),
             };
             let prepared = setup.prepare(Action::Run).unwrap();
-            prepared.ownership.runtime()
+            prepared.ownership.unwrap().runtime()
         };
         assert_eq!(held.strong_count(), 1);
         assert_eq!(
             *events.lock().unwrap(),
-            vec!["claim", "load", "read", "save", "remove"]
+            vec!["claim", "load", "read", "save", "read"]
         );
         assert_eq!(
             state
@@ -156,7 +156,10 @@ fn run_claim_precedes_migration_and_stays_owned_after_setup_handoff() {
                 .map(|endpoint| endpoint.as_str()),
             Some("wss://preview.ciproxy.example/agent/")
         );
-        assert_eq!(*endpoint.lock().unwrap(), None);
+        assert_eq!(
+            endpoint.lock().unwrap().as_deref(),
+            Some("wss://preview.ciproxy.example/agent/")
+        );
         let _runtime_lifetime = retained;
     }
     assert_eq!(held.strong_count(), 0);

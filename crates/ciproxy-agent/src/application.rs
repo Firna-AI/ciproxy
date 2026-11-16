@@ -20,7 +20,7 @@ use crate::application_setup::{
 };
 use crate::area::AreaFiles;
 use crate::area_files::LinuxAreaFiles;
-use crate::boundaries::{Host, Service, Store, Vms};
+use crate::boundaries::{Host, Service, Vms};
 use crate::cli::{Action, Cli};
 use crate::controller::{Agent, Controller};
 use crate::docker::{DockerDisks, LinuxDockers};
@@ -103,8 +103,11 @@ async fn execute(action: Action) -> Result<()> {
     let requested_budget = setting(requested.as_deref())?;
     let services = services(files.clone(), system, requested_budget)?;
     let preparation = services.preparation;
-    let store: Arc<dyn Store> = Arc::new(FileStore {
-        directory: PathBuf::from(CONTROL),
+    let store = Arc::new(IdentityStore {
+        store: Arc::new(FileStore {
+            directory: PathBuf::from(CONTROL),
+        }),
+        endpoints: endpoint_files,
     });
     let runtime: Arc<dyn RuntimeClaims> = Arc::new(LinuxRuntimeClaims {
         control: PathBuf::from(CONTROL),
@@ -112,10 +115,7 @@ async fn execute(action: Action) -> Result<()> {
     let setup: Arc<dyn InvocationSetup> = Arc::new(LoadedInvocation {
         endpoints,
         service: service.clone(),
-        identity: Arc::new(IdentityStore {
-            store: store.clone(),
-            endpoints: endpoint_files,
-        }),
+        identity: store.clone(),
         runtime: runtime.clone(),
     });
     let PreparedInvocation {
@@ -143,8 +143,9 @@ async fn execute(action: Action) -> Result<()> {
         .map_or(requested_budget.unwrap_or(DEFAULT_IMAGE_BYTES), |record| {
             record.image_budget
         });
+    let preclaimed = ownership.and_then(|ownership| ownership.runtime());
     let image_services =
-        crate::application_images::prepare(&layout, image_budget, runtime, ownership.runtime())?;
+        crate::application_images::prepare(&layout, image_budget, runtime, preclaimed)?;
     let space = image_services.space;
     let images = image_services.images;
     let identity = state.identity.clone();

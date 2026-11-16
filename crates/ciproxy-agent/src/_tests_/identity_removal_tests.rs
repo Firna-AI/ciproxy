@@ -11,7 +11,7 @@ use unimock::{MockFn, Unimock, matching};
 
 use crate::application_endpoint::ConfiguredAction;
 use crate::application_setup::{InvocationSetup, LoadedInvocation, PreparedInvocation};
-use crate::boundaries::{CacheMock, GuestProvenance, ServiceMock, StoreMock, VmsMock};
+use crate::boundaries::{CacheMock, GuestProvenance, StoreMock, VmsMock};
 use crate::cli::Action;
 use crate::controller::Agent;
 use crate::endpoint::{CommandEndpoint, EndpointFilesMock};
@@ -22,6 +22,9 @@ use crate::terminal_completion::CompletionAction;
 
 #[tokio::test]
 async fn guest_exit_discards_vm_and_removal_finishes_only_after_the_job() {
+    let retained = Arc::new(Mutex::new(Some("wss://gateway.test/agent/".to_owned())));
+    let reads = retained.clone();
+    let removals = retained.clone();
     let mock = Unimock::new((
         VmsMock::networks
             .some_call(matching!())
@@ -38,16 +41,30 @@ async fn guest_exit_discards_vm_and_removal_finishes_only_after_the_job() {
                 matching!((state) if state.runners.is_empty() && state.mode == Mode::Removed),
             )
             .answers(&|_, _| Ok(())),
+        EndpointFilesMock::read
+            .each_call(matching!())
+            .answers_arc(Arc::new(move |_| Ok(reads.lock().unwrap().clone()))),
+        EndpointFilesMock::remove
+            .some_call(matching!())
+            .answers_arc(Arc::new(move |_| {
+                *removals.lock().unwrap() = None;
+                Ok(())
+            })),
     ));
-    let agent = controller(
+    let files = Arc::new(mock);
+    let mut agent = controller(
         MachineState {
             identity: Some(identity()),
             runners: vec![vm("job", true)],
             mode: Mode::Removed,
             ..MachineState::default()
         },
-        mock,
+        files.as_ref().clone(),
     );
+    agent.store = Arc::new(IdentityStore {
+        store: files.clone(),
+        endpoints: files.clone(),
+    });
     assert_eq!(
         agent
             .guest(
@@ -74,6 +91,7 @@ async fn guest_exit_discards_vm_and_removal_finishes_only_after_the_job() {
     );
     let state = agent.state.lock().await.clone();
     assert_eq!(state.identity, None);
+    assert_eq!(*retained.lock().unwrap(), None);
     assert!(
         !serde_json::to_string(&state)
             .unwrap()
@@ -86,7 +104,6 @@ async fn guest_exit_discards_vm_and_removal_finishes_only_after_the_job() {
     let remove = legacy.clone();
     let mock = Arc::new(
         Unimock::new((
-            ServiceMock::stop.some_call(matching!()).returns(Ok(())),
             StoreMock::load.some_call(matching!()).returns(Ok(state)),
             EndpointFilesMock::read
                 .each_call(matching!())
@@ -128,5 +145,8 @@ async fn guest_exit_discards_vm_and_removal_finishes_only_after_the_job() {
         panic!("removed machine must accept a fresh install");
     };
     assert_eq!(endpoint.as_str(), "wss://app.ciproxy.dev/agent/");
-    assert_eq!(*legacy.lock().unwrap(), None);
+    assert_eq!(
+        legacy.lock().unwrap().as_deref(),
+        Some("wss://retired-preview.ciproxy.example/agent/")
+    );
 }
