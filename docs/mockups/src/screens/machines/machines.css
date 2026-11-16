@@ -120,7 +120,9 @@ a.machine-link:hover {
   min-width: 0;
 }
 
-.health-note {
+/* The note under the figures of Health or Cache. */
+.health-note,
+.cache-note {
   margin-top: 10px;
 }
 

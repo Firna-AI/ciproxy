@@ -68,7 +68,9 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
 - Some screens are what-ifs of November, in `access.ts`, `machines.ts`, and
   `settings.ts`: a fourth machine, the mini PC office-mini-1, whose disk
   holds fewer jobs than its slots; the agent of hetzner-ax42-1 one release
-  behind the newest; Tom Becker suspends or removes the GitHub App; an owner
+  behind the newest; hetzner-ax42-1 without measured figures of its machine
+  cache, its Docker disks, or both; a moment in which no machine measured
+  its machine cache; Tom Becker suspends or removes the GitHub App; an owner
   of mokly-labs removes the App from mokly-labs alone; Jonas Weber leaves
   the organizations on GitHub; and a setup that skipped Boat, so the labels
   run on the machines only. `hardware.ts` holds the slot rule and the disk
@@ -262,6 +264,12 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   of the current image by the free disk of its label. It mirrors `RootSizing`
   of `ciproxy-agent`, and it holds the root size of the current image. No
   other mockup file repeats the rule or that size.
+- `src/fixtures/machines.ts`: the own machines of each moment. The machine
+  cache and the Docker disks of a machine each hold the figures that it
+  measured, or no figures when they are unavailable. A screen shows an
+  unavailable figure as Unknown. `src/screens/machines/cache-hits.tsx` gives
+  the cache hits of Machines: the share of the machines that measured their
+  cache, with the names of the others.
 - `src/fixtures/hardware.ts`: the hardware of each machine, the slot rule,
   and the disk rule: the VM images keep 140 GB, the host keeps a quarter of
   the rest, each running job holds its VM disk, and the machine cache uses

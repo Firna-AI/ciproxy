@@ -2394,6 +2394,15 @@ tool output on 11 November 2026. Rotate them.
 - [ ] Build item 118 = E of `follow-ups/machine-statistics-availability.md`:
       unknown machine statistics, mockup first.
       Branch: `conductor/item-118-e-unknown-machine-statistics`.
+      My calls, 16 November 2026: both sections use `Statistics<T>`.
+      Measured sections keep their fields and add a status. An absent
+      status means measured, so older reports still decode.
+      The API keeps its outer null for no stored report and gives each
+      section its own status. The page says "Unknown" with no meter for
+      an unavailable cache. Clear cache keeps its existing Admin rule.
+      The aggregate hit share counts only measured machines and names the
+      excluded machines. With none measured, it says "Unknown".
+      These calls preserve measured zeros and identify incomplete figures.
 - [x] Correct `deploy/release-server.md`: the copied preview command now
       supplies `--agent-url`. My call, 16 November 2026: a doc that
       states the implemented command needs no decision.

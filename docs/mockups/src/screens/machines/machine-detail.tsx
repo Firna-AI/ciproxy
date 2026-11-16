@@ -3,8 +3,9 @@
 // slots, so it cannot run jobs, and the page names the fix. A machine without
 // room for a slot says why too. A machine whose disk holds fewer jobs than
 // its slots says so, as design call 34 says. After Clear cache, or a drain
-// that waits for the machine to connect again, a notice says so. Every role
-// sees the machine; only an Admin drains, removes, or changes it.
+// that waits for the machine to connect again, a notice says so. A part of
+// the cache that the machine did not measure shows Unknown, with no notice.
+// Every role sees the machine; only an Admin drains, removes, or changes it.
 // The warm runner count is the saved count in every state, also while the
 // machine drains, is offline, or has no slots; the slots show the warm
 // runners that are ready.
@@ -32,7 +33,7 @@ import { defaultLabelJobs } from "../../fixtures/settings.ts";
 import { sizePhrase } from "../../fixtures/sizes.ts";
 import { ClearCacheDialog, MachineCache } from "./machine-cache.tsx";
 import { MachineHealth } from "./machine-health.tsx";
-import { MachineNotice } from "./machine-notices.tsx";
+import { MachineNotice, type NoticeState } from "./machine-notices.tsx";
 import { MachineSlots } from "./machine-slots.tsx";
 import "./machines.css";
 
@@ -47,6 +48,9 @@ export const machineStates = [
   "saved-offline",
   "no-room",
   "agent-behind",
+  "cache-unknown",
+  "docker-unknown",
+  "both-unknown",
 ] as const;
 export type MachineState = (typeof machineStates)[number];
 
@@ -62,6 +66,9 @@ const machineIn: Record<MachineState, [MachineScene, number]> = {
   "saved-offline": ["drainSaved", 0],
   "no-room": ["tooSmall", 3],
   "agent-behind": ["agentBehind", 0],
+  "cache-unknown": ["cacheUnknown", 0],
+  "docker-unknown": ["dockerUnknown", 0],
+  "both-unknown": ["figuresUnknown", 0],
 };
 
 function machineOf(state: MachineState): Machine {
@@ -69,6 +76,21 @@ function machineOf(state: MachineState): Machine {
   const machine = machineScenes[scene][index];
   if (!machine) throw new Error(`No machine for ${state}`);
   return machine;
+}
+
+/** The notice that leads the page, or null for a state without one. */
+function noticeOf(state: MachineState): NoticeState | null {
+  switch (state) {
+    case "healthy":
+    case "clear-cache":
+    case "agent-behind":
+    case "cache-unknown":
+    case "docker-unknown":
+    case "both-unknown":
+      return null;
+    default:
+      return state;
+  }
 }
 
 function HeaderActions({ state }: { state: MachineState }) {
@@ -101,6 +123,7 @@ export function MachineDetailScreen({
   const { hardware } = machine;
   const noSlots = machine.slots.length === 0;
   const admin = role === "admin";
+  const notice = noticeOf(state);
   return (
     <AppShell
       viewport={viewport}
@@ -120,10 +143,8 @@ export function MachineDetailScreen({
         subtitle={dotJoin(hardware.cpu, hardwareSize(hardware), hardware.disk)}
         actions={admin ? <HeaderActions state={state} /> : undefined}
       />
-      {state === "healthy" ||
-      state === "clear-cache" ||
-      state === "agent-behind" ? null : (
-        <MachineNotice state={state} machine={machine} admin={admin} />
+      {notice === null ? null : (
+        <MachineNotice state={notice} machine={machine} admin={admin} />
       )}
       <div className="grid-2">
         <Panel
