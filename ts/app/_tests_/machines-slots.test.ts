@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { slotJobHref } from "../src/view/machines-routes.ts";
+import { tabOf } from "../src/view/jobs-links.ts";
+import { jobHistoryHref, slotJobHref } from "../src/view/machines-routes.ts";
 import { slotsModel, type SlotsModel } from "../src/view/machines-slots.ts";
 import { machine } from "../scripts/fixtures-setup.ts";
 import { slotJob, slotJobIds } from "../scripts/m20-fixtures-machines.ts";
@@ -116,6 +117,15 @@ test("a busy slot names the job that the API matched, by its canonical ID", () =
   assert.equal(
     slotJobHref("workspace one", slotJobIds.test),
     `/job?workspace=workspace+one&job=${slotJobIds.test}`,
+  );
+});
+
+test("Job history of a machine opens History of its workspace, not Live", () => {
+  const href = new URL(jobHistoryHref("workspace one"), "https://app.test");
+  const query = Object.fromEntries(href.searchParams);
+  assert.deepEqual(
+    [href.pathname, query.workspace, tabOf(query)],
+    ["/jobs", "workspace one", "history"],
   );
 });
 

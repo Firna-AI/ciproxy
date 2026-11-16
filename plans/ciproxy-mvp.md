@@ -1632,10 +1632,19 @@ remains a separate observed fact. PR #39 keeps ownership of the API files
 `checkout.rs`, `job_fit.rs`, `jobs_live.rs`, and `pages.rs`. Milestone 21
 keeps ownership of the Jobs pages.
 
+Closure, 16 November 2026: PR #50 merged as a work-in-progress snapshot.
+The closure branch finishes shared Settings request badges, reload fixtures,
+placeholder cleanup, and the links to the live Jobs, job, and Plans pages.
+Milestone 21 owns the shell and banner reconciliation. The deployed live
+smoke stays with Cal because it needs private credentials. The deferred
+Boat start-status fix gets a standalone follow-up item. The label dialog
+also follows answer 113 A: keep its fit counts, placement, and VM disk,
+without the optional machine-offer and largest-job figures.
+
 - [ ] Complete the remaining Machines and Settings states and the review
       fixes below. Keep Overflow with Milestone 22.
-      Branch: `conductor/m20-machines-and-settings-ui`.
-      Verification evidence: `.context/ciproxy-mvp-m20/verification.md`.
+      Branch: `conductor/m20-closure`.
+      Verification evidence: `.context/ciproxy-m20-closure/verification.md`.
   - [x] Apply item 102 = A to the approved machine mockups. Show the saved
         warm runner number in every state.
         Branch: `conductor/m20-machines-and-settings-ui`.
@@ -1658,14 +1667,15 @@ keeps ownership of the Jobs pages.
   - [x] Commit, push, review, fix the confirmed findings, and open a ready
         pull request into `conductor/mvp-m19-ui`.
         Branch: `conductor/m20-machines-and-settings-ui`.
-  - [ ] Orchestrator: run `node ts/app/scripts/m20-live-smoke.ts` with
+  - [ ] Cal: run `node ts/app/scripts/m20-live-smoke.ts` with
         `CIPROXY_DASHBOARD_CREDENTIALS_FILE` set to a private credential
         file outside the repository, and `CIPROXY_PLAYWRIGHT_PATH` set.
-        Branch: `conductor/m20-machines-and-settings-ui`.
-  - [ ] Orchestrator: integrate the Milestone 21 banners, Plans route, and
-        job detail destination. Check the over-machine limit and payment
-        priority on these pages, and follow each canonical slot job link.
-        Branch: `conductor/m20-machines-and-settings-ui`.
+        Branch: `conductor/m20-closure`.
+  - [x] Finish the links from Machines and Settings to the live Jobs,
+        job, and Plans pages. Follow each canonical slot job link.
+        Milestone 21 owns the banners, machine-limit notice, and payment
+        priority checks. Keep its shell and banner files unchanged here.
+        Branch: `conductor/m20-closure`.
   - [x] Orchestrator: after #36 merges, merge
         `calummoore/ci-proxy-load-balancer`, regenerate the API files, and
         retarget this pull request. Run the gate on that merged tree.
@@ -1737,10 +1747,11 @@ The existing Machines and Settings screens keep their controls and flows.
 - [x] Run the mockup check and smoke-test the app at 1440, 720, and 390
       pixels. Run the complete gate with `DATABASE_URL` set.
       Branch: `conductor/m20-machines-and-settings-ui`.
-- [ ] Commit, push, review the new work, fix confirmed findings, and update
-      ready PR #50 against `calummoore/ci-proxy-load-balancer`. Do not merge
-      the pull request. Keep the wider MVP plan for the other milestones.
-      Branch: `conductor/m20-machines-and-settings-ui`.
+- [ ] Commit and push the closure, review the new diff, and fix confirmed
+      findings. Open a ready pull request against
+      `calummoore/ci-proxy-load-balancer`. Keep the wider MVP plan and do not
+      merge the pull request. PR #50 is the earlier merged snapshot.
+      Branch: `conductor/m20-closure`.
 
 ## Milestone 20c: Settings admission fact review fix
 
@@ -1762,10 +1773,11 @@ Depends on: 20c
       fact. Keep Add available. Test the view and smoke-test the Free page
       at 1440, 720, and 390 pixels. Finding 4 needs no source change.
       Branch: `conductor/m20-machines-and-settings-ui`.
-- [ ] Run the combined gate, commit and push the finding 5 fix, then
-      re-review once. This is the second branch fix round. Keep the wider
-      plan, update PR #50, and report the final head without merging it.
-      Branch: `conductor/m20-machines-and-settings-ui`.
+- [ ] Verify the Free organization guidance on the combined dashboard.
+      Run the complete gate, commit and push, review the closure, and report
+      its pull request and head. The second fix round of PR #50 supplied
+      the guidance. Keep the wider plan and do not merge the closure.
+      Branch: `conductor/m20-closure`.
 
 ## Milestone 21: Dashboard UI: Jobs, Savings, and billing
 
@@ -2250,8 +2262,10 @@ list gives what is not done.
 - [ ] #50, Milestone 20, Machines and Settings: finish the shared Settings
       badges, the reload fixtures, and the placeholder cleanup. Run the
       browser checks and the complete gate. Record the deferred Boat
-      start-status fix. Run the live smoke. Join the Milestone 21 banners,
-      Plans, and job links.
+      start-status fix. Check the live Jobs, job, and Plans destinations.
+      The live smoke stays with Cal. Banner reconciliation stays with the
+      Milestone 21 session.
+      Branch: `conductor/m20-closure`.
 - [ ] #53, Milestone 21, Jobs, Savings, and billing: close the docs, the
       plan records, and the follow-up items. Run the browser checks at 1440,
       720, and 390 pixels, the complete gate, and the final review. Run the

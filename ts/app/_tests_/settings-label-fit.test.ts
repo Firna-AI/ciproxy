@@ -2,16 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { fitLine } from "../src/view/settings-label-fit.ts";
-import {
-  largestBoatBody,
-  vmDiskLine,
-} from "../src/view/settings-label-sizes.ts";
+import { vmDiskLine } from "../src/view/settings-label-sizes.ts";
 import { fit, labelInput, offer, xlarge } from "./settings-support.ts";
 
 const nbsp = "\u00a0";
-const size = `8${nbsp}vCPU and 32${nbsp}GB`;
-const largest = `16${nbsp}vCPU and 32${nbsp}GB`;
-const machineOffer = `24${nbsp}vCPU and 96${nbsp}GB`;
+const request = `8${nbsp}vCPU, 32${nbsp}GB of memory, and 60${nbsp}GB of free disk`;
+const largestBoat = "Jobs run on the largest size of your Boat account.";
 
 test("the fit line gives one count, a range, or the machines that fit", () => {
   const cases = [
@@ -78,37 +74,48 @@ test("a size that fits no machine says where its jobs go: Boat, the largest Boat
     Parameters<typeof labelInput>[0],
     Parameters<typeof fit>[0],
     string,
-    string,
+    string | null,
   ][] = [
     [
       {},
       { placement: "boat_only" },
-      `No machine fits ${size}`,
-      `Jobs with this label run on Boat. Your machines offer ${machineOffer} each.`,
+      `No machine of yours fits a job of ${request}`,
+      "Jobs with this label run on Boat.",
     ],
     [
       {},
       { placement: "boat_only", boat: fallback },
-      `No machine and no Boat size fits ${size}`,
-      `Jobs run on ${largest}, the largest size of your Boat account.`,
+      `No machine of yours and no Boat size fits a job of ${request}`,
+      largestBoat,
     ],
     [
       {},
       { placement: "waits", boat: { state: "no_size_fits" } },
-      `No machine and no Boat size fits ${size}`,
-      `Your machines offer ${machineOffer} each, and the largest Boat size offers ${largest}.`,
+      `No machine of yours and no Boat size fits a job of ${request}`,
+      null,
     ],
     [
       { allow_boat: false },
       { placement: "waits", boat: { state: "disabled" } },
-      `No machine fits ${size}`,
-      `Your machines offer ${machineOffer} each. Jobs with this label wait until a machine that fits connects.`,
+      `No machine of yours fits a job of ${request}`,
+      "Jobs with this label wait until a machine that fits connects.",
+    ],
+    [
+      { allow_boat: false },
+      {
+        placement: "waits",
+        boat: { state: "disabled" },
+        eligible_machines: 0,
+        machines: [],
+      },
+      `No machine of yours fits a job of ${request}`,
+      "No connected machine can run jobs now. Jobs with this label wait until a machine that fits connects.",
     ],
     [
       { allow_machines: false },
       { placement: "waits", boat: { state: "no_size_fits" } },
-      `No Boat size fits ${size}`,
-      `The largest Boat size offers ${largest}.`,
+      `No Boat size fits a job of ${request}`,
+      null,
     ],
     [
       { allow_machines: false, allow_boat: false },
@@ -125,19 +132,19 @@ test("a size that fits no machine says where its jobs go: Boat, the largest Boat
           offer("2"),
         ],
       },
-      `No machine fits ${size}`,
-      `Jobs with this label run on Boat. Your largest machine offers ${machineOffer}.`,
+      `No machine of yours fits a job of ${request}`,
+      "Jobs with this label run on Boat.",
     ],
     [
       {},
       { placement: "boat_only", eligible_machines: 1, machines: [offer("1")] },
-      `No machine fits ${size}`,
-      `Jobs with this label run on Boat. Your machine offers ${machineOffer}.`,
+      `No machine of yours fits a job of ${request}`,
+      "Jobs with this label run on Boat.",
     ],
     [
       {},
       { placement: "boat_only", eligible_machines: 0, machines: [] },
-      `No machine fits ${size}`,
+      `No machine of yours fits a job of ${request}`,
       "Jobs with this label run on Boat.",
     ],
   ];
@@ -157,18 +164,37 @@ test("a size that fits no machine says where its jobs go: Boat, the largest Boat
   );
 });
 
-test("the dialog names the VM disk of the size and the largest Boat size of the account", () => {
+test("the dialog names the VM disk of the size, and never a size of the Boat account", () => {
   assert.equal(
     vmDiskLine(fit()),
     `With the current image, each VM has a disk of 122${nbsp}GB.`,
   );
   assert.equal(vmDiskLine(fit({ boat_required_root_disk_bytes: null })), null);
-  assert.equal(
-    largestBoatBody(fit()),
-    `Jobs run on ${largest}, the largest size of your Boat account.`,
+  const fallback = fit({
+    placement: "boat_only",
+    fitting_machines: 0,
+    minimum_jobs: null,
+    maximum_jobs: null,
+    no_machine_fits: true,
+    boat: {
+      state: "largest_fallback",
+      refused: false,
+      size: xlarge.size,
+      size_name: xlarge.name,
+    },
+  });
+  const nothingFits = {
+    kind: "warning",
+    title: `No machine of yours and no Boat size fits a job of ${request}`,
+    body: largestBoat,
+  };
+  assert.deepEqual(fitLine(labelInput(), fallback), nothingFits);
+  assert.deepEqual(
+    fitLine(labelInput(), { ...fallback, largest_boat: null }),
+    nothingFits,
   );
-  const unknown =
-    "Jobs run on the largest size of your Boat account, also when it is smaller than the label.";
-  assert.equal(largestBoatBody(fit({ largest_boat: null })), unknown);
-  assert.equal(largestBoatBody(null), unknown);
+  assert.deepEqual(fitLine(labelInput({ allow_machines: false }), fallback), {
+    kind: "caption",
+    text: `Only Boat may run jobs with this label. ${largestBoat}`,
+  });
 });

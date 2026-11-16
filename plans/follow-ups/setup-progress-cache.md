@@ -8,9 +8,8 @@
   round of that review.
 - **Source:** Review.
 - **Category:** Product bug.
-- **Location:** `ts/app/src/screens/workspace-page.tsx:35`,
-  `useSetupProgress`, `ts/app/src/screens/landing.tsx:42`, in `open`,
-  `ts/app/src/screens/coming-soon.tsx:19`, `SetupAction`, and
+- **Location:** `ts/app/src/screens/workspace-page.tsx:43`,
+  `useSetupProgress`, `ts/app/src/screens/landing.tsx:42`, in `open`, and
   `ts/app/src/state/setup.ts:94`, `watch`.
 - **Reason:** The review found this after its last fix round, and the stale
   view costs at most one extra Setup visit.
@@ -20,7 +19,7 @@
     with three steps: the GitHub App, a machine, and the first job.
   - **Setup store:** `createSetupStore` in `ts/app/src/state/setup.ts`. The
     app keeps one for each workspace for the whole document. The shell of an
-    Admin, Continue setup, the landing, and the Setup page read it.
+    Admin, the landing, and the Setup page read it.
   - **Shell progress:** the "Set up" entry with "N of 3" that the navigation
     shows first while Setup is open. `navItems` in
     `ts/app/src/view/shell.ts` builds it.
@@ -29,13 +28,11 @@
 - **Background:**
   - `useSetupProgress` gives the shell progress of an Admin. It calls
     `ensure` of the Setup store, which reads Setup once for each document.
-  - `SetupAction` shows "Continue setup" on the pages that later work
-    fills, while the stored Setup is not complete. It reads the same store.
   - Only the Setup page polls. It calls `load` and `watch` on mount, at
-    `ts/app/src/screens/setup/setup-screen.tsx:31`. Leaving Setup stops the
+    `ts/app/src/screens/setup/setup-screen.tsx:34`. Leaving Setup stops the
     poll.
   - The workspace switch opens the workspace landing, at
-    `ts/app/src/view/shell.ts:98`.
+    `ts/app/src/view/shell.ts:96`.
   - `open` in `landing.tsx` calls `ensure`. Then it decides from the stored
     state, with `workspaceLanding` of `ts/app/src/routing/landing.ts`.
   - `ts/app/README.md` says that `/?workspace=<id>` opens Setup for an
@@ -50,9 +47,9 @@
     `reset: false`. The scenarios `setup-started` and `setup-success`
     exist.
 - **Problem:** Leave Setup while the first job runs, and let that job
-  finish. No read runs off Setup, so the shell progress and Continue setup
-  stay open. A workspace switch then uses the stored running state and
-  opens Setup instead of Jobs, where a new read shows the completion.
+  finish. No read runs off Setup, so the shell progress stays open. A
+  workspace switch then uses the stored running state and opens Setup
+  instead of Jobs, where a new read shows the completion.
 - **Impact if no action:** The Admin sees stale onboarding progress, or
   opens Setup once more than needed. A reload or a Setup visit corrects it.
 - **Root question:** How should workspace landing and shell progress stop
@@ -105,8 +102,7 @@
     it for both.
   - Add a browser smoke case. Open Setup with the scenario `setup-started`,
     then open Jobs. Change the scenario to `setup-success` with
-    `reset: false`. Wait until the "Set up" entry and Continue setup are
-    gone.
+    `reset: false`. Wait until the "Set up" entry is gone.
   - Then open the same workspace from the workspace switch, and expect Jobs.
     Run the case at 1440, 720, and 390 pixels.
   - Run `node --test ts/app/_tests_/setup.test.ts`, and run the smoke as

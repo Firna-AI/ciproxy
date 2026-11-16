@@ -31,9 +31,10 @@
   - Both return mockups open the Add machine page, at
     `docs/mockups/src/screens/billing/checkout-result.tsx:122` and
     `docs/mockups/src/screens/billing/api-return.tsx:85`.
-  - In this repository, `/machines` shows "This page is coming soon" in the
-    shell, at `ts/app/src/screens/coming-soon.tsx:43`, with the Setup action
-    for an Admin. So today the action opens that page for any address.
+  - The Machines pages are live. `/machines?workspace=<id>` opens the
+    Machines list, and `/machines?workspace=<id>&view=add` opens the Add
+    machine page, as `ts/app/README.md` says. So today the action opens the
+    list, and the Admin then needs its Add machine link.
   - The Machines pages own the addresses of the list, of one machine, and of
     the Add machine page. Search `ts/app/src/view` for their builder of the
     Add machine address, such as `addMachineHref`, before the change.
@@ -42,9 +43,8 @@
     Admin address with `workspaceHref` at `:206`.
 - **Problem:** The Add machines action of an Admin opens the Machines list,
   while both mockups open the Add machine page.
-- **Impact if no action:** After the Machines pages land, an Admin who just
-  paid needs one more step to add a machine. Today the action opens the
-  coming-soon page of Machines.
+- **Impact if no action:** An Admin who just paid lands on the live
+  Machines list, and needs one more step there to add a machine.
 - **Root question:** Which page does Add machines open after a confirmed
   payment?
 - **Options:**

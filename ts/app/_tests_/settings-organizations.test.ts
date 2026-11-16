@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { plansHref } from "../src/view/billing-routes.ts";
 import { inactiveBanner } from "../src/view/settings-organization-banner.ts";
 import {
   addedByText,
@@ -88,7 +89,7 @@ test("an inactive row names each hold and the person who added it, and offers th
   });
   assert.deepEqual(
     [plan?.chooseTeam, plan?.turnOn],
-    [`/billing?workspace=${workspaceId}`, false],
+    [plansHref(workspaceId), false],
   );
   assert.deepEqual(
     [admin?.status?.lines, admin?.chooseTeam, admin?.turnOn],
