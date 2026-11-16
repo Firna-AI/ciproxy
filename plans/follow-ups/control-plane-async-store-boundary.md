@@ -81,7 +81,7 @@
   which commit `703b9b1` of pull request #31 added. It was the only such
   call found in the control plane.
 - **Related:**
-  [The serving shutdown item](control-plane-serving-shutdown-regression.md)
+  [The serving shutdown item](https://github.com/Firna-AI/ciproxy/blob/1fc64e593ae5a90d89fa25e0d7583e42852982c3/plans/follow-ups/control-plane-serving-shutdown-regression.md)
   covers the stop path of `Hosted::supervise`, the same code. Until it
   lands, no test protects that stop path, so F must keep it unchanged.
   Neither item waits for the other.

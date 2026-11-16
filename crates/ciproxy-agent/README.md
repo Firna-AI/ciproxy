@@ -224,6 +224,8 @@ KVM and GitHub smoke checks, and release packaging commands.
 ### Key Code
 
 - [src/application.rs](src/application.rs) composes the Linux adapters.
+- [src/application_cache.rs](src/application_cache.rs) composes the cache
+  installer and the metadata services for the selected agent endpoint.
 - [src/endpoint.rs](src/endpoint.rs) selects and saves one endpoint for
   registration and the installed service.
 - [src/startup.rs](src/startup.rs) checks local completion before workload

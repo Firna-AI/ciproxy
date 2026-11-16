@@ -5,7 +5,6 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::time::Duration;
 
-use ciproxy_agent::cache_metadata::connection::connection;
 use ciproxy_protocol::reports::REPORT_INTERVAL_SECONDS;
 use clap::Parser;
 use tokio::signal::unix::{SignalKind, signal};
@@ -14,14 +13,10 @@ use tokio::time::interval;
 use tracing_subscriber::fmt::writer::BoxMakeWriter;
 use tracing_subscriber::util::SubscriberInitExt;
 
+use crate::application_cache;
 use crate::area::AreaFiles;
 use crate::area_files::LinuxAreaFiles;
 use crate::boundaries::{Connection, Host, Service, Store, Vms};
-use crate::cache_composition;
-use crate::cache_install::{CheckedCacheRelease, LinuxCacheInstallFiles};
-use crate::cache_network::GuardedCacheStart;
-use crate::cache_service::{CacheService, ReleasedCache};
-use crate::cache_unit::{InstalledCacheUnit, LinuxCacheUnitFiles};
 use crate::cli::{Action, Cli};
 use crate::connection::WebSocketConnection;
 use crate::connection_socket::TlsWebSocketDialer;
@@ -141,10 +136,8 @@ async fn execute(action: Action) -> Result<()> {
     let removing = state.mode == Mode::Removed;
     let commands: Arc<dyn Commands> = Arc::new(LinuxCommands);
     let gateway_url = endpoint.as_str().to_owned();
-    let metadata = identity
-        .as_ref()
-        .and_then(|identity| connection(&gateway_url, identity.credential.clone()));
-    let cache_services = cache_composition::services(commands.clone(), metadata)?;
+    let cache_services =
+        application_cache::prepare(commands.clone(), &endpoint, identity.as_ref())?;
     let cache = cache_services.cache.clone();
     let (guest_tx, mut guest_rx) = mpsc::channel(256);
     let guests = Arc::new(LinuxGuests::new(layout.clone(), commands.clone(), guest_tx));
@@ -191,20 +184,7 @@ async fn execute(action: Action) -> Result<()> {
     match action {
         Action::Install { token, .. } => {
             preparation.prepare().await?;
-            let cache_service: Arc<dyn CacheService> = Arc::new(ReleasedCache {
-                unit: Arc::new(InstalledCacheUnit {
-                    files: Arc::new(LinuxCacheUnitFiles),
-                }),
-                starter: Arc::new(GuardedCacheStart {
-                    commands: commands.clone(),
-                }),
-                commands: commands.clone(),
-                files: Arc::new(LinuxCacheInstallFiles),
-                release: Arc::new(CheckedCacheRelease {
-                    release_server: std::env::var("CIPROXY_RELEASE_SERVER_URL")
-                        .unwrap_or_else(|_| "https://get.ciproxy.dev".to_owned()),
-                }),
-            });
+            let cache_service = application_cache::installer(commands.clone());
             if let Err(error) = cache_service.install().await {
                 tracing::warn!(%error, "machine cache install unavailable; GitHub fallback remains available");
             }

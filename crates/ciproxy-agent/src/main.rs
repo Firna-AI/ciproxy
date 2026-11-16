@@ -1,6 +1,7 @@
 //! Composition root of the open-source ciproxy machine agent.
 
 mod application;
+mod application_cache;
 mod application_images;
 mod area;
 mod area_files;
