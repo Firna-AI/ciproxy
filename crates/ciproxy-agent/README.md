@@ -134,6 +134,7 @@ Install saves the selected route in `/var/lib/ciproxy/agent-url` with mode
 setting, so an inherited setting cannot redirect the installed service.
 Only an explicit install option replaces the saved route.
 Uninstall removes the saved route.
+Cache metadata requests use the selected route's host and port over HTTPS.
 The gateway authenticates Hello before Welcome.
 An authenticated policy close with `[gateway] authentication failed`
 revokes the local machine. Other failures reconnect and preserve its VMs.
@@ -158,8 +159,8 @@ These are required new formats. No old-format adapter is supplied.
 A dormant drive slot permits a later checked Docker disk switch.
 
 The [cache and Docker guide](cache-and-docker.md) gives the runner handoff,
-the machine cache service and its listener rules, cache budgets and
-recovery, and Docker leases.
+the machine cache service and its listener rules, the metadata relay, cache
+budgets and recovery, and Docker leases.
 
 Machine reports carry the actual total job disk from the persisted image
 budget. This value does not depend on a working cache service.
@@ -265,6 +266,10 @@ KVM and GitHub smoke checks, and release packaging commands.
   its private listener rules.
 - [src/cache_install.rs](src/cache_install.rs) owns private install files
   and checked cache release work after protected activation.
+- [src/cache_composition.rs](src/cache_composition.rs) builds cache
+  administration and starts the root metadata relay for a registered machine.
+- [src/cache_metadata/](src/cache_metadata/mod.rs) derives the hosted URL and
+  relays queued entry-fact requests with the machine credential.
 - [src/docker.rs](src/docker.rs) owns Docker leases, attachment, and release.
 - [src/docker_recovery.rs](src/docker_recovery.rs) discards safely closed
   failed attachments and keeps their byte reservations through job exit.

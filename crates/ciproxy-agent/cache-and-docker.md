@@ -1,8 +1,9 @@
 # Cache and Docker integration
 
 The agent connects each job VM to the machine cache of its host and to a
-checked Docker disk. This guide gives that integration boundary. The
-[agent README](README.md) gives the rest of the agent.
+checked Docker disk. It also relays the trusted cache entry facts of the
+control plane to the machine cache. This guide gives that integration
+boundary. The [agent README](README.md) gives the rest of the agent.
 
 ## Runner handoff
 
@@ -106,6 +107,39 @@ Uninstall stops the service before it removes both private files and rules.
 It also removes an interrupted start's transient credential.
 The inactive system account remains to avoid reusing its UID.
 
+## Cache metadata relay
+
+The machine cache orders its entries and the GitHub cache entries with
+trusted entry facts, as
+[Restore order](../../docs/protocol/cache.md#restore-order) requires.
+The cache service holds no hosted credential. A root task in the agent
+therefore relays its requests for entry facts to the control plane.
+
+A registered agent derives the hosted URL from its selected gateway route.
+The URL keeps the host and the port, uses `https`, and has the path
+`/agent/cache-metadata`. The default route gives
+`https://app.ciproxy.dev/agent/cache-metadata`. An agent without a machine
+identity starts no relay.
+
+The task uses the private admin listener and its token:
+
+- It turns the relay on with `PUT /metadata-relay` before each long poll.
+- It takes one queued request from `GET /metadata-requests`.
+- It posts a `CacheMetadataRequest` with the job ID of that request to the
+  hosted URL. The machine credential is its bearer token. The control plane
+  answers only for a job that runs on this machine.
+- It returns the entry list with `POST /metadata-responses`. After a
+  hosted failure, it returns no metadata.
+
+The agent also turns the relay on before it recovers or registers a cache
+session. So a restarted cache service relays before its sessions restore.
+The hosted request times out after 90 seconds. The cache service waits up
+to 95 seconds for an answer. Without one, that restore has no entry facts.
+The machine credential and the hosted URL stay in the root agent. The admin
+messages, the cache service, and the guest never hold them. The cache
+service sends no request to the control plane, so its output firewall
+stays unchanged.
+
 ## Cache budgets and recovery
 
 Before a VM starts or a Docker disk takes space, the cache acknowledges its
@@ -162,4 +196,6 @@ Live KVM proof remains required.
 - [Cache](../../docs/protocol/cache.md) defines the cache rules and the
   cache handoff.
 - [Security](../../docs/protocol/security.md) defines job isolation.
+- [Cache sidecar](../ciproxy-cache-sidecar/README.md) gives the admin
+  listener routes and the restore result without entry facts.
 - [Smoke checks](smoke-checks.md) give the live cache and Docker checks.
