@@ -2330,15 +2330,11 @@ tool output on 11 November 2026. Rotate them.
 ### Install endpoint review follow-ups, 16 November 2026
 
 - [ ] Decide how reinstall handles an endpoint from another control plane.
-      A registered machine currently keeps its credential when an explicit
-      install option replaces its saved endpoint. Binding the issuing
-      endpoint to machine identity needs this decision. Keep the current
-      reinstall policy until Cal answers.
-- [ ] Approve a correction to `deploy/release-server.md` outside the
-      endpoint closure's allowed files. Its release check still says the
-      copied preview command has no endpoint. The API now supplies
-      `--agent-url`. Keep the deployment file unchanged until Cal approves
-      the wider file scope.
+      Item 117 asks the user. Keep the current reinstall policy until the
+      user answers.
+- [x] Correct `deploy/release-server.md`: the copied preview command now
+      supplies `--agent-url`. My call, 16 November 2026: a doc that
+      states the implemented command needs no decision.
 
 ## Open decisions
 
@@ -5690,3 +5686,88 @@ remain with the orchestrator in Milestone 13 and
 - **Wider fix:** None.
 - **Recommendation:** A.
 - **Action:** ask the user, because only the user can rotate them.
+
+### 117. A reinstall can send the credential to another control plane
+
+- **Severity:** High. **Effort:** Medium.
+- **Source:** Review, pull request #64, 16 November 2026. The options check
+  of the same day added D, E, F, and G, and found four more paths.
+- **Category:** Security.
+- **Location:** `crates/ciproxy-agent/src/installation.rs:40` and `:83`,
+  `resolve` in `crates/ciproxy-agent/src/endpoint.rs`,
+  `crates/ciproxy-agent/src/application.rs:133`,
+  `crates/ciproxy-agent/src/application_endpoint.rs:45`, and
+  `crates/ciproxy-agent/src/controller.rs:79`.
+- **Terms:**
+  - **Agent endpoint:** the WSS address of the control plane that a
+    machine connects to.
+  - **Identity:** the saved machine ID and its credential, a bearer secret
+    that each connection sends.
+- **Background:** Install registers a machine once and saves its identity.
+  A later install repairs the service and keeps the identity. Since #62,
+  the install command outside production carries `--agent-url`. The agent
+  saves the endpoint in a file apart from the identity. An install without
+  `--agent-url`, such as the production command, uses the saved endpoint.
+- **Problem:** These paths pair the credential, or an install token, with
+  another control plane:
+  - An install with a different `--agent-url` replaces the saved endpoint
+    and keeps the old credential.
+  - During that install, the metadata relay starts with the endpoint of
+    the command and the saved credential, before the installer runs.
+  - A remote removal clears the identity but keeps the endpoint file, so a
+    later production command sends its install token to the old endpoint.
+  - The production command on a machine bound to preview repairs it and
+    says nothing about preview.
+  - Registration saves the identity and the endpoint in two writes.
+- **Impact if no action:** A wrong or hostile install command can collect a
+  valid machine credential or an install token. A refusal there can also
+  make the agent drop its local registration.
+- **Root question:** How do the machine credential and an install token
+  reach only their issuing control plane when an install command comes from
+  another one?
+- **Options:**
+  - **A.** Keep the saved identity and endpoint, ignore the new endpoint,
+    and print a warning. Effort: Small.
+  - **B.** Bind the endpoint to the identity. Refuse an install that names
+    a different endpoint, and say to uninstall first. Effort: Medium.
+  - **C.** Drain the jobs, clear the caches and the Docker disks, and
+    register a new identity at the new endpoint, with an automatic move
+    flow. Effort: Large.
+  - **D.** Save the endpoint inside the identity, in the same write as the
+    credential. Every connection that carries the credential takes its
+    endpoint only from that record. An install takes the endpoint of its
+    command, from `--agent-url`, then `CIPROXY_AGENT_URL`, then the
+    production default, never from saved state. A machine without an
+    identity registers there. On a registered machine with a different
+    endpoint, install keeps the identity, finishes the repair, and its last
+    line names both endpoints and says to uninstall first to move. Move the
+    old endpoint file into the identity once. Update
+    `docs/protocol/agent.md`, the crate README, and the docs page. A script
+    sees success for a command that did not move the machine. Effort:
+    Medium.
+  - **E.** Do D, but stop with an error before any change when the
+    endpoints differ. A repair on a preview machine then needs the flag.
+    Effort: Medium.
+  - **F.** Do D, and put `--agent-url` in every install command, also in
+    production, so that an install without it can use the saved endpoint.
+    The production command of the docs, the site, and the mockup changes.
+    Effort: Medium.
+  - **G.** Do D, and replace the bearer credential with a key pair. Each
+    connection signs a fresh challenge and its endpoint, so a wrong control
+    plane gets nothing that it can use again. This changes the protocol
+    crate, the gateway, the metadata route, the store with a migration, and
+    `docs/protocol/security.md`. Effort: Large.
+- **Left out:** The current behaviour, because it discloses the credential.
+  A check in the control plane, because the credential has already left
+  the machine. One identity for each control plane, because an own machine
+  never runs jobs of another workspace. A confirmation prompt, because the
+  piped command gives the agent no terminal.
+- **Wider fix:** D. The identity carries its endpoint, so no action can
+  pair the credential with another route. G best protects the codebase.
+- **Previous examples:** Uninstall used the wrong endpoint in the same way,
+  and #64 fixed it.
+- **Recommendation:** D, changed from B by the options check. It closes
+  every path above and adds no refusal, because the kept and repaired
+  machine is correct and safe. Choose E when a script must see a failure.
+- **Action:** ask the user, because the install rule of
+  `docs/protocol/agent.md` changes, and the review proposed a refusal.
