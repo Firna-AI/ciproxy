@@ -2203,6 +2203,11 @@ The repository is public from item 70 = E, and the site links to it.
       checkout that the user approves.
 - [ ] Check that the open parts build alone, and check the licence of the
       installer of `futex-ai/cli-release`.
+      Run of 16 November 2026: the four Apache-2.0 crates, `ciproxy-protocol`,
+      `ciproxy-agent`, `ciproxy-guest`, and `ciproxy-cache-sidecar`, build
+      alone in a workspace without the other crates. The installer of
+      `futex-ai/cli-release` declares MIT in its Cargo metadata, but that
+      repository has no licence file. Item 116 asks the user.
 - [ ] Ask Boat to confirm in writing that a customer may run ciproxy
       runners on its own Boat account. The user sends the request. My call:
       the terms allow this use by inference only.
@@ -2210,6 +2215,12 @@ The repository is public from item 70 = E, and the site links to it.
       self-hosted runners again. Update the price list of the site and its
       date. Reason: GitHub only postponed a charge of $0.002 a minute, which
       would lower the claim to about 54%.
+      Check of 16 November 2026: GitHub Linux 2-core is still $0.006 a
+      minute, and Blacksmith 2 vCPU still $0.004. GitHub's billing docs
+      still list self-hosted runners as free, and the charge has no new
+      date. Hetzner shows the AX42 at €99 a month and €49 to set up, as
+      before. Its US dollar view needs a browser, so the date of the site
+      stays until a person confirms $119 and $59 there.
 - [ ] Publish the site. Then make the GitHub App public.
 
 - [ ] Move the image-publishing credentials of item 100 = B from the
@@ -5551,3 +5562,63 @@ remain with the orchestrator in Milestone 13 and
   needs no release.
 - **Action:** ask the user, because the user approves each merge and each
   release in `futex-ai/cli-release`.
+
+### 116. The installer repository has no licence file
+
+- **Severity:** Low. **Effort:** Small.
+- **Source:** Implementation, the Milestone 27 licence check, 16 November
+  2026. The options check of the same day added D, E, and F.
+- **Category:** Process.
+- **Location:** the root of `futex-ai/cli-release`, the `cli-updater` and
+  `cli-release-interface` pins in `Cargo.toml`, `README.md`,
+  `docs/architecture.md`, and the docs page "Agent install options".
+- **Background:**
+  - Customers install the agent with the script that the release server of
+    `futex-ai/cli-release` generates. That repository is public.
+  - The agent also links `cli-updater` and `cli-release-interface` from it,
+    pinned at `30513bd1`.
+  - Its Cargo metadata declares MIT, and it has no licence file.
+  - Item 20 = F of the foundation plan says that every part on the
+    customer's side is Apache-2.0, also the install script.
+- **Problem:** The installer and the updater have no licence file, and the
+  docs call the install script Apache-2.0 while its code says MIT.
+- **Impact if no action:** A customer or a reviewer cannot see the licence
+  of the code that installs and updates the agent.
+- **Root question:** Under which licence may customers use and audit the
+  installer and the updater, and where do they read it?
+- **Options:**
+  - **A.** Add an MIT licence file to `futex-ai/cli-release`, in a pull
+    request that the user merges. Effort: Small.
+  - **B.** Do A, and add an SPDX licence line to the generated install
+    script. It reaches customers only after a new release server pin, an
+    image mirror, and a deploy. Effort: Small.
+  - **C.** Change nothing. The user owns both repositories, and the Cargo
+    metadata already says MIT. Effort: Small.
+  - **D.** License `futex-ai/cli-release` as `MIT OR Apache-2.0`, with
+    both licence files and the Cargo metadata, in a pull request that the
+    user merges. Move the pins of `cli-updater` and
+    `cli-release-interface` to that commit. Name the source and the
+    licence of the install script and the updater in the README, the
+    architecture doc, and the docs page. MIT stays, so the other products
+    lose nothing. Effort: Small.
+  - **E.** Do A, and change the README, the architecture doc, and the docs
+    page to say that the install script and the updater are MIT. This
+    changes item 20 = F for the install script. Effort: Small.
+  - **F.** Do D. Also add an MIT licence file to `futex-ai/internal-error`,
+    which the agent and the guest link, and move its pin. Add a notice file
+    with the licences of every dependency to each agent archive, for
+    example with `cargo about`. This adds a release tool and a step that
+    fails on an unknown licence, which needs the user. Effort: Medium.
+- **Left out:** Apache-2.0 only, because D gives the same terms and keeps
+  MIT for the other products. A copy of the installer or the updater in
+  this repository, because D gives the same terms with no second copy. A
+  private `futex-ai/cli-release`, because the public agent source could no
+  longer build.
+- **Wider fix:** F. It covers both repositories and every dependency in
+  the released binaries.
+- **Previous examples:** None found.
+- **Recommendation:** D, changed from A by the options check. It costs as
+  little as A, keeps MIT, and makes item 20 = F true. F best protects the
+  codebase.
+- **Action:** ask the user, because the user approves each merge in
+  `futex-ai/cli-release`.
