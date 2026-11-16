@@ -2271,7 +2271,7 @@ list gives what is not done.
       of the API, which covers the soft limit and inactive organizations.
       The Organizations tab of Milestone 20 still shows its own banner with
       Turn on, and falls back to the workspace banner of its scope.
-- [ ] #59, cache restore order: finish the docs and delete the follow-up
+- [x] #59, cache restore order: finish the docs and delete the follow-up
       item. Run each changed asynchronous test ten times, the complete gate,
       and a review.
 - [x] #61, serving shutdown test: repair the incoming Markdown link. Run the
