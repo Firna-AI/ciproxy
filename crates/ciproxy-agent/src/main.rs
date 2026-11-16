@@ -2,7 +2,9 @@
 
 mod application;
 mod application_cache;
+mod application_endpoint;
 mod application_images;
+mod application_metadata;
 mod area;
 mod area_files;
 mod area_mounts;

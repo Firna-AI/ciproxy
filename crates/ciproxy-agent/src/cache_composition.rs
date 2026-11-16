@@ -4,9 +4,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use ciproxy_agent::cache_metadata::administration::HttpMetadataAdministration;
-use ciproxy_agent::cache_metadata::client::RootMetadataClient;
+use ciproxy_agent::cache_metadata::client::TrustedMetadata;
 use ciproxy_agent::cache_metadata::relay::{MetadataRelay, RootMetadataRelay, TokioRelayDelay};
-use ciproxy_protocol::cache_metadata::CacheMetadataSource;
 use reqwest::{Client, redirect};
 use tokio::task::JoinHandle;
 
@@ -26,18 +25,18 @@ pub(crate) struct CacheServices {
 /// Build cache administration and start the root-only relay when identity exists.
 pub(crate) fn services(
     commands: Arc<dyn Commands>,
-    source: Option<CacheMetadataSource>,
+    hosted: Option<Arc<dyn TrustedMetadata>>,
 ) -> Result<CacheServices> {
     let token_file = "/var/lib/ciproxy/cache-admin-token".into();
     let cache: Arc<dyn Cache> = Arc::new(HttpCache::with_boundaries(
-        Arc::new(HttpAdministration::new(token_file, source.is_some())?),
+        Arc::new(HttpAdministration::new(token_file, hosted.is_some())?),
         Arc::new(OwnedCacheFiles {
             directory: "/var/lib/ciproxy/area/cache".into(),
             commands: commands.clone(),
         }),
         commands,
     ));
-    let task = if let Some(source) = source {
+    let task = if let Some(hosted) = hosted {
         let client = Client::builder()
             .redirect(redirect::Policy::none())
             .connect_timeout(Duration::from_secs(5))
@@ -50,7 +49,7 @@ pub(crate) fn services(
                 "http://127.0.0.1:8229".into(),
                 "/var/lib/ciproxy/cache-admin-token".into(),
             )),
-            hosted: Arc::new(RootMetadataClient::new(client, source)),
+            hosted,
             delay: Arc::new(TokioRelayDelay),
         });
         Some(tokio::spawn(async move {

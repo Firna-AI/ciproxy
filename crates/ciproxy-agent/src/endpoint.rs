@@ -47,6 +47,7 @@ pub(crate) trait EndpointFiles: Send + Sync {
 
 #[cfg_attr(test, unimock::unimock(api = EndpointSettingsMock))]
 pub(crate) trait EndpointSettings: Send + Sync {
+    fn saved(&self) -> Result<Option<AgentEndpoint>>;
     fn resolve(&self, supplied: Option<&AgentEndpoint>) -> Result<AgentEndpoint>;
     fn save(&self, endpoint: &AgentEndpoint) -> Result<()>;
 }
@@ -56,15 +57,18 @@ pub(crate) struct SavedEndpoint {
 }
 
 impl EndpointSettings for SavedEndpoint {
+    fn saved(&self) -> Result<Option<AgentEndpoint>> {
+        self.files.read()?.map(|value| value.parse()).transpose()
+    }
+
     fn resolve(&self, supplied: Option<&AgentEndpoint>) -> Result<AgentEndpoint> {
         if let Some(endpoint) = supplied {
             return Ok(endpoint.clone());
         }
-        let value = match self.files.read()? {
-            Some(value) => Some(value),
-            None => self.files.environment()?,
-        };
-        match value {
+        if let Some(endpoint) = self.saved()? {
+            return Ok(endpoint);
+        }
+        match self.files.environment()? {
             Some(value) => value.parse(),
             None => Ok(AgentEndpoint::default()),
         }

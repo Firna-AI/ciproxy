@@ -14,15 +14,14 @@ use tracing_subscriber::fmt::writer::BoxMakeWriter;
 use tracing_subscriber::util::SubscriberInitExt;
 
 use crate::application_cache;
+use crate::application_endpoint::{self, ConfiguredAction};
 use crate::area::AreaFiles;
 use crate::area_files::LinuxAreaFiles;
-use crate::boundaries::{Connection, Host, Service, Store, Vms};
+use crate::boundaries::{Host, Service, Store, Vms};
 use crate::cli::{Action, Cli};
-use crate::connection::WebSocketConnection;
-use crate::connection_socket::TlsWebSocketDialer;
 use crate::controller::{Agent, Controller};
 use crate::docker::{DockerDisks, LinuxDockers};
-use crate::endpoint::{AgentEndpoint, EndpointSettings, SavedEndpoint};
+use crate::endpoint::{EndpointSettings, SavedEndpoint};
 use crate::endpoint_files::LinuxEndpointFiles;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::gateway::ReconnectingGateway;
@@ -65,11 +64,7 @@ async fn execute(action: Action) -> Result<()> {
     let endpoints: Arc<dyn EndpointSettings> = Arc::new(SavedEndpoint {
         files: Arc::new(LinuxEndpointFiles),
     });
-    let endpoint = match &action {
-        Action::Install { agent_url, .. } => endpoints.resolve(agent_url.as_ref())?,
-        Action::Run => endpoints.resolve(None)?,
-        Action::Uninstall => AgentEndpoint::default(),
-    };
+    let action = application_endpoint::configure(action, endpoints.as_ref())?;
     let service: Arc<dyn Service> = Arc::new(SystemService);
     let layout = Layout {
         data: PathBuf::from(AREA),
@@ -103,7 +98,7 @@ async fn execute(action: Action) -> Result<()> {
     let requested_budget = setting(requested.as_deref())?;
     let services = services(files.clone(), system, requested_budget)?;
     let preparation = services.preparation;
-    if matches!(action, Action::Uninstall) {
+    if matches!(action, ConfiguredAction::Uninstall { .. }) {
         service.stop()?;
     }
     let store: Arc<dyn Store> = Arc::new(FileStore {
@@ -119,7 +114,7 @@ async fn execute(action: Action) -> Result<()> {
             ));
         }
     };
-    let inventory = if matches!(action, Action::Uninstall) {
+    let inventory = if matches!(action, ConfiguredAction::Uninstall { .. }) {
         uninstall_inventory(files.as_ref())?
     } else {
         files.inspect()?
@@ -135,9 +130,8 @@ async fn execute(action: Action) -> Result<()> {
     let identity = state.identity.clone();
     let removing = state.mode == Mode::Removed;
     let commands: Arc<dyn Commands> = Arc::new(LinuxCommands);
-    let gateway_url = endpoint.as_str().to_owned();
     let cache_services =
-        application_cache::prepare(commands.clone(), &endpoint, identity.as_ref())?;
+        application_cache::prepare(commands.clone(), action.endpoint(), identity.as_ref())?;
     let cache = cache_services.cache.clone();
     let (guest_tx, mut guest_rx) = mpsc::channel(256);
     let guests = Arc::new(LinuxGuests::new(layout.clone(), commands.clone(), guest_tx));
@@ -177,12 +171,9 @@ async fn execute(action: Action) -> Result<()> {
             cache,
         }) as Arc<dyn DockerDisks>),
     });
-    let connection: Arc<dyn Connection> = Arc::new(WebSocketConnection::new(
-        gateway_url,
-        Arc::new(TlsWebSocketDialer),
-    ));
     match action {
-        Action::Install { token, .. } => {
+        ConfiguredAction::Install { token, endpoint } => {
+            let connection = application_endpoint::connection(&endpoint);
             preparation.prepare().await?;
             let cache_service = application_cache::installer(commands.clone());
             if let Err(error) = cache_service.install().await {
@@ -201,7 +192,8 @@ async fn execute(action: Action) -> Result<()> {
             installer.install(token).await?;
             println!("ciproxy agent installed");
         }
-        Action::Run => {
+        ConfiguredAction::Run { endpoint } => {
+            let connection = application_endpoint::connection(&endpoint);
             let startup: Arc<dyn Startup> = Arc::new(AgentStartup {
                 agent: agent.clone(),
                 preparation,
@@ -244,7 +236,7 @@ async fn execute(action: Action) -> Result<()> {
             let _ = input.await;
             result?;
         }
-        Action::Uninstall => {
+        ConfiguredAction::Uninstall { .. } => {
             let uninstall: Arc<dyn Uninstall> = Arc::new(FinalUninstall {
                 files,
                 images,
