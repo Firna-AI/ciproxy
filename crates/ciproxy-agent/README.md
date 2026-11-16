@@ -127,20 +127,10 @@ Missing KVM still permits registration with zero slots.
 
 The default route is `wss://app.ciproxy.dev/agent/`.
 The install option `--agent-url` selects another WSS route with a valid TLS
-certificate. Without a saved route, `CIPROXY_AGENT_URL` selects one too.
-Both accept only a valid `wss://` URL with a host.
-Install saves the selected route in `/var/lib/ciproxy/agent-url` with mode
-`0600`. Install and the daemon prefer the saved route over the environment
-setting, so an inherited setting cannot redirect the installed service.
-Only an explicit install option replaces the saved route.
-Uninstall removes the saved route.
-Cache metadata requests use the selected route's host and port over HTTPS.
-The gateway authenticates Hello before Welcome.
-An authenticated policy close with `[gateway] authentication failed`
-revokes the local machine. Other failures reconnect and preserve its VMs.
-
+certificate.
 The [registration and retirement guide](registration-and-retirement.md)
-covers one-use delivery, reconnect proof, and authorized idle stops.
+covers endpoint selection, cache metadata during uninstall, authentication,
+one-use delivery, reconnect proof, and authorized idle stops.
 
 The agent verifies the release byte count and SHA-256 before extraction.
 The released `.tar.zst` bundle contains the root, kernel, and five metadata
@@ -225,6 +215,12 @@ KVM and GitHub smoke checks, and release packaging commands.
 ### Key Code
 
 - [src/application.rs](src/application.rs) composes the Linux adapters.
+- [src/application_cache.rs](src/application_cache.rs) composes the cache
+  installer and the metadata services for the selected agent endpoint.
+- [src/application_endpoint.rs](src/application_endpoint.rs) resolves
+  install, run, and local uninstall targets.
+- [src/application_metadata.rs](src/application_metadata.rs) keeps a local
+  unavailable relay when an installed machine has no trusted metadata URL.
 - [src/endpoint.rs](src/endpoint.rs) selects and saves one endpoint for
   registration and the installed service.
 - [src/startup.rs](src/startup.rs) checks local completion before workload

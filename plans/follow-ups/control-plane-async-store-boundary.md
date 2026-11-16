@@ -81,10 +81,10 @@
   which commit `703b9b1` of pull request #31 added. It was the only such
   call found in the control plane.
 - **Related:**
-  [The serving shutdown item](control-plane-serving-shutdown-regression.md)
-  covers the stop path of `Hosted::supervise`, the same code. Until it
-  lands, no test protects that stop path, so F must keep it unchanged.
-  Neither item waits for the other.
+  The serving shutdown regression in
+  `crates/ciproxy-control-plane/tests/startup_shutdown_tests.rs` checks the
+  HTTP drain and clean process exit. It does not prove each listener's
+  stop. F must preserve listener shutdown.
 - **Recommendation:** F. It makes the wrong call fail to compile in the
   control plane, with no change to public constructors or other crates. G
   best protects every crate, but it changes the store design everywhere.
