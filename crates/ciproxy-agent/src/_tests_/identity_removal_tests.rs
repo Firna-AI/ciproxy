@@ -9,8 +9,9 @@ use ciproxy_protocol::runners::RunnerExit;
 use ciproxy_protocol::secret::Secret;
 use unimock::{MockFn, Unimock, matching};
 
-use crate::application_endpoint::{ConfiguredAction, configure};
-use crate::boundaries::{CacheMock, GuestProvenance, Store, StoreMock, VmsMock};
+use crate::application_endpoint::ConfiguredAction;
+use crate::application_setup::{InvocationSetup, LoadedInvocation, PreparedInvocation};
+use crate::boundaries::{CacheMock, GuestProvenance, ServiceMock, StoreMock, VmsMock};
 use crate::cli::Action;
 use crate::controller::Agent;
 use crate::endpoint::{CommandEndpoint, EndpointFilesMock};
@@ -85,6 +86,7 @@ async fn guest_exit_discards_vm_and_removal_finishes_only_after_the_job() {
     let remove = legacy.clone();
     let mock = Arc::new(
         Unimock::new((
+            ServiceMock::stop.some_call(matching!()).returns(Ok(())),
             StoreMock::load.some_call(matching!()).returns(Ok(state)),
             EndpointFilesMock::read
                 .each_call(matching!())
@@ -104,21 +106,24 @@ async fn guest_exit_discards_vm_and_removal_finishes_only_after_the_job() {
         ))
         .no_verify_in_drop(),
     );
-    let store = IdentityStore {
-        store: mock.clone(),
-        endpoints: mock.clone(),
+    let setup = LoadedInvocation {
+        endpoints: Arc::new(CommandEndpoint {
+            files: mock.clone(),
+        }),
+        service: mock.clone(),
+        runtime: mock.clone(),
+        identity: Arc::new(IdentityStore {
+            store: mock.clone(),
+            endpoints: mock,
+        }),
     };
-    let settings = CommandEndpoint { files: mock };
-    let state = store.load().unwrap();
-    assert_eq!(state.identity, None);
-    let action = configure(
-        Action::Install {
+    let PreparedInvocation { state, action, .. } = setup
+        .prepare(Action::Install {
             token: Secret::new("synthetic-production-token"),
             agent_url: None,
-        },
-        &settings,
-    )
-    .unwrap();
+        })
+        .unwrap();
+    assert_eq!(state.identity, None);
     let ConfiguredAction::Install { endpoint, .. } = action else {
         panic!("removed machine must accept a fresh install");
     };

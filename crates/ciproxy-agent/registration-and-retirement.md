@@ -38,6 +38,9 @@ Older agents saved the endpoint apart, in `/var/lib/ciproxy/agent-url`.
 Install stops the old agent service before it loads and migrates state.
 This prevents an old process from replacing the migrated identity.
 The separate VM units keep running jobs alive.
+Run claims `/var/lib/ciproxy/images.lock` before it loads identity state.
+Image recovery keeps that same claim after workload area verification.
+A rejected duplicate start changes no identity state or legacy endpoint file.
 Before the agent builds a credential client, it moves a valid endpoint from
 that file into an identity without one. It saves the identity first, then
 removes the file. Without an identity, or with an endpoint already in the

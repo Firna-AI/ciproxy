@@ -45,6 +45,7 @@ use crate::network::LinuxNetwork;
 use crate::persistence::FileStore;
 use crate::process::{Commands, LinuxCommands};
 use crate::runtime::{AgentDaemon, Daemon};
+use crate::runtime_ownership::{LinuxRuntimeClaims, RuntimeClaims};
 use crate::startup::{AgentStartup, Startup, StartupState};
 use crate::state::Mode;
 use crate::storage_sizing::{DEFAULT_IMAGE_BYTES, setting};
@@ -102,18 +103,26 @@ async fn execute(action: Action) -> Result<()> {
     let requested_budget = setting(requested.as_deref())?;
     let services = services(files.clone(), system, requested_budget)?;
     let preparation = services.preparation;
-    let store: Arc<dyn Store> = Arc::new(IdentityStore {
-        store: Arc::new(FileStore {
-            directory: PathBuf::from(CONTROL),
-        }),
-        endpoints: endpoint_files,
+    let store: Arc<dyn Store> = Arc::new(FileStore {
+        directory: PathBuf::from(CONTROL),
+    });
+    let runtime: Arc<dyn RuntimeClaims> = Arc::new(LinuxRuntimeClaims {
+        control: PathBuf::from(CONTROL),
     });
     let setup: Arc<dyn InvocationSetup> = Arc::new(LoadedInvocation {
         endpoints,
         service: service.clone(),
-        store: store.clone(),
+        identity: Arc::new(IdentityStore {
+            store: store.clone(),
+            endpoints: endpoint_files,
+        }),
+        runtime: runtime.clone(),
     });
-    let PreparedInvocation { action, state } = match setup.prepare(action) {
+    let PreparedInvocation {
+        action,
+        state,
+        ownership,
+    } = match setup.prepare(action) {
         Ok(invocation) => invocation,
         Err(InvocationError::State(error)) => {
             return Err(stage_error(
@@ -134,7 +143,8 @@ async fn execute(action: Action) -> Result<()> {
         .map_or(requested_budget.unwrap_or(DEFAULT_IMAGE_BYTES), |record| {
             record.image_budget
         });
-    let image_services = crate::application_images::prepare(&layout, image_budget)?;
+    let image_services =
+        crate::application_images::prepare(&layout, image_budget, runtime, ownership.runtime())?;
     let space = image_services.space;
     let images = image_services.images;
     let identity = state.identity.clone();

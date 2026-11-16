@@ -33,6 +33,10 @@ mod fixtures;
 mod host_system;
 #[path = "../src/image_artifact.rs"]
 mod image_artifact;
+#[path = "../src/image_extract.rs"]
+mod image_extract;
+#[path = "../src/image_files.rs"]
+mod image_files;
 #[path = "../src/_tests_/image_fixtures.rs"]
 mod image_fixtures;
 #[path = "../src/image_registry.rs"]
@@ -49,6 +53,8 @@ mod layout;
 mod persistence;
 #[path = "../src/process.rs"]
 mod process;
+#[path = "../src/runtime_ownership.rs"]
+mod runtime_ownership;
 #[path = "../src/sparse_copy.rs"]
 mod sparse_copy;
 #[path = "../src/state.rs"]

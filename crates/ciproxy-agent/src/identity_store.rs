@@ -1,5 +1,6 @@
 //! Move a legacy endpoint into the atomic identity before any credential use.
 
+use std::fmt::Debug;
 use std::sync::Arc;
 
 use crate::boundaries::Store;
@@ -13,8 +14,17 @@ pub(crate) struct IdentityStore {
     pub(crate) endpoints: Arc<dyn EndpointFiles>,
 }
 
-impl Store for IdentityStore {
-    fn load(&self) -> Result<MachineState> {
+/// Proof that startup has excluded the previous runtime or stopped its service.
+pub trait IdentityOwner: Debug + Send + Sync {}
+
+/// Load and migrate identity only while the caller holds startup ownership.
+#[cfg_attr(test, unimock::unimock(api = IdentityLoaderMock))]
+pub(crate) trait IdentityLoader: Send + Sync {
+    fn load(&self, owner: &dyn IdentityOwner) -> Result<MachineState>;
+}
+
+impl IdentityLoader for IdentityStore {
+    fn load(&self, _owner: &dyn IdentityOwner) -> Result<MachineState> {
         let mut state = self.store.load()?;
         if let Some(identity) = state.identity.as_mut()
             && identity.endpoint.is_none()
@@ -43,14 +53,6 @@ impl Store for IdentityStore {
             tracing::warn!(%error, "The identity no longer uses the legacy endpoint file. Its cleanup will retry at the next start.");
         }
         Ok(state)
-    }
-
-    fn save(&self, state: &MachineState) -> Result<()> {
-        self.store.save(state)
-    }
-
-    fn clear(&self) -> Result<()> {
-        self.store.clear()
     }
 }
 

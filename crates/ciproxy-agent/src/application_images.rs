@@ -12,13 +12,19 @@ use crate::image_space::{ImageBudget, ImageSpace, LinuxSpaceUsage};
 use crate::image_store::LinuxImageStore;
 use crate::images::ManagedImages;
 use crate::layout::Layout;
+use crate::runtime_ownership::{RuntimeClaims, RuntimeOwner};
 
 pub(crate) struct ImageServices {
     pub(crate) images: Arc<dyn Images>,
     pub(crate) space: Arc<dyn ImageSpace>,
 }
 
-pub(crate) fn prepare(layout: &Layout, image_budget: u64) -> Result<ImageServices> {
+pub(crate) fn prepare(
+    layout: &Layout,
+    image_budget: u64,
+    claims: Arc<dyn RuntimeClaims>,
+    owner: Option<Arc<dyn RuntimeOwner>>,
+) -> Result<ImageServices> {
     let space: Arc<dyn ImageSpace> = Arc::new(ImageBudget::new(
         image_budget,
         Arc::new(LinuxSpaceUsage {
@@ -26,7 +32,12 @@ pub(crate) fn prepare(layout: &Layout, image_budget: u64) -> Result<ImageService
         }),
     ));
     let images: Arc<dyn Images> = Arc::new(ManagedImages::new(
-        Arc::new(LinuxImageStore::new(layout.clone(), space.clone())),
+        Arc::new(LinuxImageStore::new(
+            layout.clone(),
+            space.clone(),
+            claims,
+            owner,
+        )),
         Arc::new(HttpsImageDownload {
             client: Client::builder()
                 .https_only(true)

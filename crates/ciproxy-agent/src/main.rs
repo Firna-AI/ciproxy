@@ -107,6 +107,7 @@ mod release_client;
 mod reporting;
 mod retirement;
 mod runtime;
+mod runtime_ownership;
 mod runtime_reports;
 mod runtime_worker;
 mod slot_allocation;

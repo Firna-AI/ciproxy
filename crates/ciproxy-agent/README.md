@@ -215,7 +215,7 @@ KVM and GitHub smoke checks, and release packaging commands.
 
 - [src/application.rs](src/application.rs) composes the Linux adapters.
 - [src/application_setup.rs](src/application_setup.rs) resolves commands
-  and stops the old service before install loads and migrates its identity.
+  and claims the [runtime lock](src/runtime_ownership.rs) for Run.
 - [src/application_cache.rs](src/application_cache.rs) composes the cache
   and the [metadata relay](src/application_metadata.rs) for its identity.
 - [src/application_endpoint.rs](src/application_endpoint.rs) selects the

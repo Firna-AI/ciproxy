@@ -6,10 +6,11 @@ use ciproxy_protocol::secret::Secret;
 use unimock::{MockFn, Unimock, matching};
 
 use crate::application_setup::{InvocationError, InvocationSetup, LoadedInvocation};
-use crate::boundaries::{ServiceMock, StoreMock};
+use crate::boundaries::ServiceMock;
 use crate::cli::Action;
 use crate::endpoint::{CommandEndpoint, EndpointFilesMock};
 use crate::error::Error;
+use crate::identity_store::IdentityLoaderMock;
 use crate::state::MachineState;
 
 #[test]
@@ -34,9 +35,9 @@ fn invalid_install_endpoint_does_not_stop_the_service_or_load_state() {
                     stops.lock().unwrap().push("stop");
                     Ok(())
                 })),
-            StoreMock::load
-                .each_call(matching!())
-                .answers_arc(Arc::new(move |_| {
+            IdentityLoaderMock::load
+                .each_call(matching!(_))
+                .answers_arc(Arc::new(move |_, _| {
                     loads.lock().unwrap().push("load");
                     Ok(MachineState::default())
                 })),
@@ -46,7 +47,8 @@ fn invalid_install_endpoint_does_not_stop_the_service_or_load_state() {
     let setup = LoadedInvocation {
         endpoints: Arc::new(CommandEndpoint { files }),
         service: dependencies.clone(),
-        store: dependencies,
+        runtime: dependencies.clone(),
+        identity: dependencies,
     };
     let result = setup.prepare(Action::Install {
         token: Secret::new("synthetic-install-token"),

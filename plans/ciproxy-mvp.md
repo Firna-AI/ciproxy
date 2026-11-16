@@ -2395,6 +2395,10 @@ tool output on 11 November 2026. Rotate them.
       identity migration, so its state writes cannot discard the endpoint.
       The endpoint rules use the linked `docs/protocol/agent-endpoint.md`,
       so the main agent protocol stays short.
+- [x] Fix item 117 review finding 1: Run owns the existing runtime lock
+      before it loads and migrates identity state. Keep that same claim
+      through image recovery. The independent check confirmed B.
+      Branch: `conductor/item-117-d-endpoint-in-identity`.
 - [ ] Build item 118 = E of `follow-ups/machine-statistics-availability.md`:
       unknown machine statistics, mockup first.
       Branch: `conductor/item-118-e-unknown-machine-statistics`.

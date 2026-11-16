@@ -11,6 +11,7 @@ use crate::boundaries::{ServiceMock, StoreMock};
 use crate::cli::Action;
 use crate::endpoint::{AgentEndpoint, EndpointFilesMock, EndpointSettingsMock};
 use crate::identity_store::IdentityStore;
+use crate::runtime_ownership::RuntimeClaimsMock;
 use crate::state::MachineState;
 
 #[test]
@@ -29,7 +30,14 @@ fn install_stops_the_service_before_migrating_the_legacy_endpoint_once() {
     let stops = events.clone();
     let resolves = events.clone();
     let loads = events.clone();
+    let claims = events.clone();
     let mock = Arc::new(Unimock::new((
+        RuntimeClaimsMock::claim
+            .some_call(matching!())
+            .answers_arc(Arc::new(move |_| {
+                claims.lock().unwrap().push("claim");
+                Ok(Arc::new(Unimock::new(())))
+            })),
         EndpointSettingsMock::resolve
             .each_call(matching!(_))
             .answers_arc(Arc::new(move |_, _| {
@@ -81,7 +89,8 @@ fn install_stops_the_service_before_migrating_the_legacy_endpoint_once() {
     let setup = LoadedInvocation {
         endpoints: mock.clone(),
         service: mock.clone(),
-        store: Arc::new(IdentityStore {
+        runtime: mock.clone(),
+        identity: Arc::new(IdentityStore {
             store: mock.clone(),
             endpoints: mock,
         }),
@@ -89,6 +98,7 @@ fn install_stops_the_service_before_migrating_the_legacy_endpoint_once() {
     let PreparedInvocation {
         action,
         state: first,
+        ..
     } = setup
         .prepare(Action::Install {
             token: Secret::new("synthetic-install-token"),
@@ -110,6 +120,7 @@ fn install_stops_the_service_before_migrating_the_legacy_endpoint_once() {
     let PreparedInvocation {
         action,
         state: second,
+        ..
     } = setup.prepare(Action::Run).unwrap();
     assert_eq!(second, first);
     let ConfiguredAction::Run { endpoint } = action else {
@@ -122,7 +133,7 @@ fn install_stops_the_service_before_migrating_the_legacy_endpoint_once() {
     assert_eq!(
         *events.lock().unwrap(),
         vec![
-            "resolve", "stop", "load", "state", "remove", "load", "remove"
+            "resolve", "stop", "load", "state", "remove", "claim", "load", "remove"
         ]
     );
     let encoded = serde_json::to_string(&*stored.lock().unwrap()).unwrap();

@@ -6,7 +6,8 @@ use unimock::{MockFn, Unimock, matching};
 
 use crate::application_endpoint::{ConfiguredAction, configure};
 use crate::application_metadata::MetadataTarget;
-use crate::boundaries::{Store, StoreMock};
+use crate::application_setup::{InvocationSetup, LoadedInvocation};
+use crate::boundaries::{ServiceMock, StoreMock};
 use crate::cli::Action;
 use crate::endpoint::EndpointFilesMock;
 use crate::fixtures::identity;
@@ -53,6 +54,7 @@ fn uninstall_without_a_trusted_identity_endpoint_keeps_local_cleanup_available()
             ..MachineState::default()
         };
         let mock = Arc::new(Unimock::new((
+            ServiceMock::stop.some_call(matching!()).returns(Ok(())),
             StoreMock::load
                 .some_call(matching!())
                 .returns(Ok(state.clone())),
@@ -60,11 +62,19 @@ fn uninstall_without_a_trusted_identity_endpoint_keeps_local_cleanup_available()
                 .some_call(matching!())
                 .returns(Ok(endpoint)),
         )));
-        let store = IdentityStore {
-            store: mock.clone(),
+        let setup = LoadedInvocation {
             endpoints: mock.clone(),
+            service: mock.clone(),
+            runtime: mock.clone(),
+            identity: Arc::new(IdentityStore {
+                store: mock.clone(),
+                endpoints: mock.clone(),
+            }),
         };
-        let loaded = store.load().ok();
+        let loaded = setup
+            .prepare(Action::Uninstall)
+            .ok()
+            .map(|invocation| invocation.state);
         assert_eq!(loaded, Some(state));
         let state = loaded.unwrap();
         let action = configure(Action::Uninstall, mock.as_ref()).unwrap();
