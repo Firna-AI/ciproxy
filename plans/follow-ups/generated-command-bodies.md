@@ -5,15 +5,19 @@
 - **Kind:** Fix after merge.
 - **Added:** 2026-11-08, from `conductor/m21-jobs-savings-and-billing-ui`,
   pull request #53, the wider fix that the check of owner finding 1 split
-  off.
+  off. Refreshed on 2026-11-16 at `9bb43bb`, with the writes of the
+  Machines, Boat, and Settings pages.
 - **Source:** Review.
 - **Category:** Repository rule.
 - **Location:** `ts/app/src/api/client.ts:30-35`,
   `ts/app/src/api/endpoints.ts:29-72`, `ts/app/src/api/billing.ts:63-92`,
-  and `ts/app/src/api/billing-payment.ts:83-114`.
+  `ts/app/src/api/billing-payment.ts:83-114`,
+  `ts/app/src/api/machine-endpoints.ts:37-63`,
+  `ts/app/src/api/overflow-endpoints.ts:28-42`, and
+  `ts/app/src/api/settings-endpoints.ts:67-180`.
 - **Reason:** The integration step of the branch that found the problem
   typed only the paid change body, and the client change reaches the base
-  client and all 13 of its write calls.
+  client and all 30 of its write calls.
 
 - **Terms:**
   - **`ApiClient.change`:** the write method of the one HTTP client, at
@@ -30,20 +34,25 @@
   - The shared-types rule says that Rust owns every type that crosses the
     boundary. `ts/api/README.md:3-6` says that the Rust types own the
     requests, and that dashboard code imports them.
-  - Every write of the dashboard goes through `ApiClient.change`. It has 13
-    calls: 7 in `ts/app/src/api/endpoints.ts`, 3 in
-    `ts/app/src/api/billing.ts`, and 3 in `ts/app/src/api/billing-payment.ts`.
-    Five of them send a body.
+  - Every write of the dashboard goes through `ApiClient.change`. At
+    `9bb43bb`, it has 30 calls: 7 in `ts/app/src/api/endpoints.ts`, 3 in
+    `ts/app/src/api/billing.ts`, 3 in `ts/app/src/api/billing-payment.ts`, 3
+    in `ts/app/src/api/machine-endpoints.ts`, 4 in
+    `ts/app/src/api/overflow-endpoints.ts`, and 10 in
+    `ts/app/src/api/settings-endpoints.ts`. Sixteen of them send a body.
   - Four bodies use aliases of generated schemas: `WorkspaceChoice`,
     `CheckoutReturn`, `PlanAddOns`, and `PlanSelection`. Since the
     integration of 8 November 2026, the paid change body
     `PaidChangePayment` comes from the generated operation `billing_change`,
     at `ts/app/src/api/billing-types.ts`.
+  - The 11 bodies of the Machines, Boat, and Settings writes also use
+    aliases of generated schemas, such as `WarmRunnerTarget`,
+    `OverflowPolicy`, and `LabelInput`.
   - No type ties a body to the operation of its route and method. The
     client accepts any value for any path.
   - The axum JSON extractor refuses a body that misses a field. The router
     sends that as HTTP 422 with the code `invalid_request`, at
-    `crates/ciproxy-api/src/router.rs:142-150`.
+    `crates/ciproxy-api/src/router.rs:150-158`.
 - **Problem:** A write body is not tied to the generated operation of its
   route and method. After a Rust change of a request body, the app still
   compiles and sends the old body.
@@ -61,7 +70,7 @@
     its path values, and a body typed from the generated operation of that
     route and method, and it builds the path with `routePath`. Then each
     write fails the type check when its Rust request body changes, also
-    each new write. Cost: the base client, its test doubles, and its 13
+    each new write. Cost: the base client, its test doubles, and its 30
     calls change, and the exact-body tests guard the runtime. Effort:
     Medium.
 - **Left out:**
@@ -92,5 +101,5 @@
 - **Recommendation:** B. One typed client covers every write body, also
   each new one. A is the smallest change.
 - **Action:** fix after merge, apply B, because it reaches the base client
-  and all 13 of its write calls, outside the integration step that typed
+  and all 30 of its write calls, outside the integration step that typed
   only the paid change body.

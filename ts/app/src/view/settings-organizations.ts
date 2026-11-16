@@ -40,10 +40,16 @@ export type OrganizationRow = {
 };
 
 /**
+ * The facts that word a hold: a row of the Settings read, or an organization
+ * of the inactive banner of the API, which has no profile of the person.
+ */
+export type HoldFacts = Pick<OrganizationView, "added_by" | "activation">;
+
+/**
  * The person who added an organization: the name that ciproxy kept, else the
  * login, else the GitHub ID; null when the API names nobody.
  */
-export function adderName(organization: OrganizationView): string | null {
+export function adderName(organization: HoldFacts): string | null {
   const person = organization.added_by ?? null;
   if (person !== null) {
     return person.name ?? person.login ?? `GitHub user ${person.id}`;
@@ -57,8 +63,8 @@ export function adderName(organization: OrganizationView): string | null {
  * the organization, and `lead` says whether the reason starts a sentence.
  */
 export function holdReason(
-  organization: OrganizationView,
-  reason: OrganizationView["activation"]["reasons"][number],
+  organization: HoldFacts,
+  reason: HoldFacts["activation"]["reasons"][number],
   subject = "it",
   lead = true,
 ): string {

@@ -1,22 +1,27 @@
 // The one banner of every workspace page: a failed payment, an ended paid
-// plan, or a passed limit. Jobs, Savings, Plan and usage, and Plans take it
-// from their own page reads, and so do Checkout for a payer with a valid
-// choice and its return for a payer with a session. Every other view, and the
-// Organizations scope, reads GET /banner at each page change. A failed
+// plan, or a passed limit. On the Organizations tab, the API puts inactive
+// organizations before a passed limit. Jobs, Savings, Plan and usage, and
+// Plans take the banner from their own page reads, and so do Checkout for a
+// payer with a valid choice and its return for a payer with a session. Every
+// other view reads GET /banner at each page change. The Organizations scope
+// reads it at each entry and after each change of its organizations. A failed
 // endpoint read shows itself with Try again, so a payment problem is never
-// hidden. Update card opens the Stripe billing portal. The banner gets the
-// path of the page, so that on Plans it does not link to Plans.
+// hidden. Update card opens the Stripe billing portal, and Turn on opens the
+// dialog of the Organizations tab. The banner gets the path of the page, so
+// that on Plans it does not link to Plans.
 
 import { useEffect, useMemo } from "react";
 import { Link, useLocalSearchParams, usePathname } from "expo-router";
 
 import type { BannerScope } from "../../api/banner.ts";
+import type { PageBanner } from "../../api/billing-types.ts";
 import type { WorkspaceView } from "../../api/schema.ts";
 import type { WorkspacePage } from "../../routing/pages.ts";
 import { useServices } from "../../services/context.tsx";
 import { useValue } from "../../services/hooks.ts";
 import { bannerStore, payerRole } from "../../state/billing.ts";
 import { createPortalAction } from "../../state/billing-flows.ts";
+import { watchOrganizationHolds } from "../../state/organizations-banner.ts";
 import { bannerModel, type BannerActionModel } from "../../view/banner.ts";
 import {
   billingPaths,
@@ -27,17 +32,32 @@ import { ActionButton, ActionLink } from "../actions.tsx";
 import { ExternalIcon } from "../icons.tsx";
 import { Notice } from "../notice.tsx";
 import { RoleNote } from "../role-note.tsx";
+import { TurnOnAction } from "./turn-on-action.tsx";
 
 function BannerAction({
   action,
+  banner,
+  workspaceId,
   onPortal,
   busy,
 }: {
   action: BannerActionModel;
+  /** The banner of the API, which names the organization of Turn on. */
+  banner: PageBanner;
+  workspaceId: string;
   onPortal: () => void;
   busy: boolean;
 }) {
   if (action.kind === "ask") return <RoleNote>{action.text}</RoleNote>;
+  if (action.kind === "turn-on") {
+    const organization =
+      banner.kind === "inactive_organizations"
+        ? banner.organizations.find((item) => item.id === action.organizationId)
+        : undefined;
+    return organization ? (
+      <TurnOnAction workspaceId={workspaceId} organization={organization} />
+    ) : null;
+  }
   if (action.kind === "portal") {
     return (
       <ActionButton
@@ -55,7 +75,7 @@ function BannerAction({
       <ActionLink
         label={action.label}
         href={action.href}
-        tone="primary"
+        tone={action.primary === false ? "secondary" : "primary"}
         size="sm"
       />
     </Link>
@@ -116,8 +136,17 @@ export function WorkspaceBanner({
     payerRole(workspace.role ?? null),
   );
   useEffect(() => {
-    if (endpoint) void store.visit();
-  }, [store, page, path, endpoint]);
+    if (endpoint && scope === "page") void store.visit();
+  }, [store, scope, page, path, endpoint]);
+  // The Organizations scope reads at each entry, and after each change of its
+  // organizations, so a banner from before a change never stays.
+  useEffect(
+    () =>
+      scope === "organizations"
+        ? watchOrganizationHolds(services, workspace.id)
+        : undefined,
+    [services, workspace.id, scope],
+  );
 
   const failure =
     endpoint &&
@@ -135,7 +164,7 @@ export function WorkspaceBanner({
         );
   return (
     <>
-      {model ? (
+      {banner !== null && model !== null ? (
         <Notice
           tone={model.tone}
           title={model.title}
@@ -146,6 +175,8 @@ export function WorkspaceBanner({
                   <BannerAction
                     key={action.kind === "ask" ? action.text : action.label}
                     action={action}
+                    banner={banner}
+                    workspaceId={workspace.id}
                     busy={opening.status === "working"}
                     onPortal={() => void portal.run()}
                   />

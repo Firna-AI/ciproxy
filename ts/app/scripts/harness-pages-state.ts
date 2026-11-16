@@ -19,6 +19,7 @@ type PageBody = components["schemas"][
   | "PaymentOutcome"
   | "PortalLink"
   | "Success"
+  | "SettingsView"
   | "PageBannerView"
   | "Problem"];
 export type PageReply = {
@@ -61,6 +62,14 @@ export const pageRoutes = [
 ] as const;
 export type PageRoute = (typeof pageRoutes)[number];
 
+export const organizationBannerModes = [
+  "plan",
+  "admin",
+  "enable-failed",
+  "none",
+] as const;
+export type OrganizationBannerMode = (typeof organizationBannerModes)[number];
+
 export type PagesFixtureState = {
   jobs: JobsMode;
   history: "populated" | "empty";
@@ -74,6 +83,7 @@ export type PagesFixtureState = {
   quotes: Map<string, components["schemas"]["CheckoutReviewPage"]>;
   reviewRequired: boolean;
   inactiveOrganizations: boolean;
+  organizationBanner: OrganizationBannerMode | "enabled" | null;
   failures: PageRoute[];
   held: PageRoute[];
   pending: { route: PageRoute; release: () => void }[];
@@ -93,6 +103,7 @@ export function createPagesFixture(): PagesFixtureState {
     quotes: new Map(),
     reviewRequired: false,
     inactiveOrganizations: false,
+    organizationBanner: null,
     failures: [],
     held: [],
     pending: [],
@@ -162,6 +173,7 @@ export function pagesSnapshot(state: PagesFixtureState) {
     returned: state.returned,
     target: state.target,
     inactiveOrganizations: state.inactiveOrganizations,
+    organizationBanner: state.organizationBanner,
     failures: state.failures,
     held: state.held,
     pending: state.pending.map((item) => item.route),

@@ -152,8 +152,11 @@ other tabs on `/settings`.
   day for a new install that keeps the job history, and Install again. It
   has no repository access, and the rule of the last linked organization
   does not count it.
-- On the Organizations tab, the banner of an inactive organization takes the
-  place of the soft-limit banner of the shell.
+- On the Organizations tab, the shell shows the banner of the Organizations
+  scope, in which inactive organizations come before a passed limit. For one
+  inactive organization, that banner gives its reasons in the words of its
+  row. For more, it points to the rows. It offers only what the API allows,
+  such as Choose Team, or Turn on with the dialog of the row.
 - Members lists the requests for access and the members. The tab gives
   access, declines a request, changes a role, and removes a member. The row
   of the signed-in person has no Remove. Before a person gets the Admin role,
@@ -227,8 +230,11 @@ Billing person" in place of each payment action.
   never replaces the banner of a newer one. A failed read keeps the last
   banner, and the page shows its own failure. Other pages, the Organizations
   scope, and a Checkout or return page that reads nothing use the banner
-  endpoint, unless a read just ended. There, a failure shows "Unable to
-  check the plan status", and a successful page read ends that failure.
+  endpoint. There, a failure shows "Unable to check the plan status", and a
+  successful page read ends that failure. A page reuses a read of the
+  endpoint that just ended, but the Organizations scope reads at each entry.
+  The scope reads again after each Settings read that changes the
+  organizations or their holds, such as after Turn on.
 
 ## The API
 
@@ -437,8 +443,8 @@ a policy save, or a disconnect works.
 - [src/screens/workspace-page.tsx](src/screens/workspace-page.tsx) shows a
   workspace page in the [shell](src/components/shell/app-shell.tsx), or the
   page for no role. With `visitKey`, each Machines page and each Settings
-  tab checks the session again. With `banner`, a page replaces the
-  soft-limit banner of the shell.
+  tab checks the session again. With `bannerScope`, the Organizations tab
+  asks the shell for the banner of its scope.
 - [src/screens/setup/setup-screen.tsx](src/screens/setup/setup-screen.tsx) is
   Setup, with its Boat step in `boat-step.tsx`.
   `src/screens/add-organization` is the workspace choice.
@@ -503,7 +509,11 @@ a policy save, or a disconnect works.
   [src/api/billing-payment.ts](src/api/billing-payment.ts) sends every payment
   request.
 - The [workspace banner](src/components/billing/workspace-banner.tsx) in
-  `src/components/billing` shows the one banner of each workspace page.
+  `src/components/billing` shows the one banner of each workspace page. Its
+  `turn-on-action.tsx` opens the Turn on dialog of the Organizations tab.
+  [src/state/organizations-banner.ts](src/state/organizations-banner.ts)
+  reads the banner of that scope at each entry and after each change of its
+  organizations.
 - [src/components/panel.tsx](src/components/panel.tsx) and its neighbours
   `figures.tsx`, `detail-list.tsx`, `link-tabs.tsx`, and `status-label.tsx`
   are the shared page parts.

@@ -5,6 +5,7 @@ import { filteredHistory, visibleHistory } from "./fixtures-jobs.ts";
 import { liveJobs } from "./fixtures-jobs-live.ts";
 import { savingsRanges, savingsReport } from "./fixtures-savings.ts";
 import { serveBillingPage } from "./harness-pages-billing.ts";
+import { serveOrganizationPages } from "./harness-pages-organizations.ts";
 import {
   pageError,
   pageReply,
@@ -30,6 +31,14 @@ export async function servePages(
   state: HarnessState,
   readBody: () => Promise<unknown>,
 ): Promise<PageReply | undefined> {
+  const organizationPage = await serveOrganizationPages(
+    method,
+    workspaceId,
+    action,
+    url,
+    state,
+  );
+  if (organizationPage !== undefined) return organizationPage;
   const route = identifyRoute(action);
   if (route === undefined) return undefined;
   const mutation =

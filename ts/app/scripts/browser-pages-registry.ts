@@ -12,6 +12,7 @@ import { billingErrorRuns } from "./browser-pages-error-journeys.ts";
 import { checkoutRecoveryRuns } from "./browser-pages-checkout-recovery.ts";
 import { jobsPollingRuns } from "./browser-pages-jobs-polling.ts";
 import { quoteJourney } from "./browser-pages-quote-journey.ts";
+import { organizationsBannerJourney } from "./browser-pages-organizations-banner-journey.ts";
 
 export function createPagesRegistry(
   origin: string,
@@ -31,5 +32,6 @@ export function createPagesRegistry(
     ...checkoutRecoveryRuns(origin, output),
     ...jobsPollingRuns(origin, output),
     quoteJourney(origin, output),
+    organizationsBannerJourney(origin, output),
   ];
 }

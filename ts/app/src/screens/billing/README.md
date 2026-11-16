@@ -95,8 +95,8 @@ that it cannot tell the workspace of the payment. It never guesses one.
 The return page checks the session at once, and every 3 seconds while Stripe
 confirms. Only a confirmation from the API changes the plan on the page. When
 Stripe needs the person again, the page links to the Stripe address that the
-API gives. After a confirmed payment, only an Admin gets Add machines, and a
-Billing person gets only Open plan and usage.
+API gives. After a confirmed payment, only an Admin gets Add machines, which
+opens Add a machine. A Billing person gets only Open plan and usage.
 
 ## Key Code
 

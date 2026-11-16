@@ -12,8 +12,8 @@
   `continuablePayment`, `ts/app/src/screens/billing/plan-usage-screen.tsx:99`,
   `ts/app/src/screens/billing/add-ons-panel.tsx:88`,
   `ts/app/src/view/billing-plans.ts:85`,
-  `ts/app/src/view/banner.ts:52`, and
-  `ts/app/src/components/billing/workspace-banner.tsx:32`.
+  `ts/app/src/view/banner.ts:63`, and
+  `ts/app/src/components/billing/workspace-banner.tsx:38`.
 - **Reason:** The stale action needs a demotion while the same document
   keeps a payer page and its next billing read is slow, which is an unusual
   timing, and the fix costs the same later.
@@ -47,7 +47,7 @@
     - The add-ons panel shows its editor from the cached `can_pay`, at
       `add-ons-panel.tsx:88`.
     - The workspace banner keeps the payer action of its last read, such as
-      Update card, at `banner.ts:52-58`, on every workspace page until its
+      Update card, at `banner.ts:63-69`, on every workspace page until its
       read returns, and also after a failed read.
   - The shared payment gate already reads the current session role, at
     `billing.ts:157`, so no new payment starts from a stale page.
@@ -113,11 +113,6 @@
     outside the control.
   - `plans/follow-ups/saved-payment-lifetime.md` orders the removal of the
     same saved link. B gates only the display and adds no removal.
-  - `plans/follow-ups/stripe-return-workspace.md`, same code: its B and C
-    change the Continue payment controls that B of this item changes. If
-    one of them lands, land it with B of this item, so that one
-    continuation value carries both the payer permission and the
-    workspace. Its recommended A changes none of these files.
 - **Recommendation:** B. One effective permission keeps each API
   restriction and the saved URL, with no wait for a person whose role did
   not change. D covers more cases, but it delays every payer action on

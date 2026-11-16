@@ -16,9 +16,11 @@ import {
 } from "./fixtures-billing-payment.ts";
 import {
   pageRoutes,
+  organizationBannerModes,
   releasePages,
   settlePayment,
   type PageRoute,
+  type OrganizationBannerMode,
   type PagesFixtureState,
 } from "./harness-pages-state.ts";
 
@@ -33,6 +35,7 @@ export type PagesControl = {
   returned?: PaymentState;
   role?: components["schemas"]["WorkspaceRole"] | null;
   inactiveOrganizations?: boolean;
+  organizationBanner?: OrganizationBannerMode;
   reviewRequired?: boolean;
   failures?: PageRoute[];
   held?: PageRoute[];
@@ -108,6 +111,12 @@ export function parsePagesControl(value: unknown): PagesControl | undefined {
         if (typeof raw !== "boolean") return undefined;
         control[key] = raw;
         break;
+      case "organizationBanner": {
+        const parsed = oneOf(raw, organizationBannerModes);
+        if (parsed === undefined) return undefined;
+        control.organizationBanner = parsed;
+        break;
+      }
       case "failures":
       case "held": {
         if (!Array.isArray(raw)) return undefined;
@@ -148,6 +157,8 @@ export function applyPagesControl(
   }
   if (control.inactiveOrganizations !== undefined)
     state.inactiveOrganizations = control.inactiveOrganizations;
+  if (control.organizationBanner !== undefined)
+    state.organizationBanner = control.organizationBanner;
   if (control.reviewRequired !== undefined)
     state.reviewRequired = control.reviewRequired;
   if (control.failures !== undefined) state.failures = control.failures;

@@ -27,7 +27,6 @@ export function AppShell({
   role,
   page,
   setup,
-  banner,
   bannerScope = "page",
   children,
 }: {
@@ -36,8 +35,6 @@ export function AppShell({
   role: WorkspaceRole;
   page: WorkspacePage;
   setup: SetupProgress | null;
-  /** A banner of the page that takes the place of the workspace banner. */
-  banner?: ReactNode;
   /** The scope of the one banner; the Organizations tab sets its own. */
   bannerScope?: BannerScope;
   children: ReactNode;
@@ -54,15 +51,11 @@ export function AppShell({
     children: (
       <>
         <SessionRefreshNotice />
-        {banner === undefined ? (
-          <WorkspaceBanner
-            workspace={workspace}
-            page={page}
-            scope={bannerScope}
-          />
-        ) : (
-          banner
-        )}
+        <WorkspaceBanner
+          workspace={workspace}
+          page={page}
+          scope={bannerScope}
+        />
         {actions.failure ? (
           <Notice tone="danger" title={actions.failure.title}>
             {actions.failure.body}

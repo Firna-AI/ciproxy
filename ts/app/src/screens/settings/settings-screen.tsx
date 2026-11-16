@@ -19,7 +19,6 @@ import {
 } from "../workspace-page.tsx";
 import { LabelsTab } from "./labels-tab.tsx";
 import { MembersTab } from "./members-tab.tsx";
-import { OrganizationsBanner } from "./organizations-banner.tsx";
 import { OrganizationsTab } from "./organizations-tab.tsx";
 import { RepositoriesPage } from "./repositories-page.tsx";
 import { SettingsTabs } from "./settings-tabs.tsx";
@@ -99,11 +98,7 @@ export function SettingsScreen() {
           ? route.tab
           : `repositories:${route.organizationId}`
       }
-      banner={
-        organizations
-          ? (context) => <OrganizationsBanner context={context} />
-          : undefined
-      }
+      bannerScope={organizations ? "organizations" : "page"}
     >
       {(context) => <Settings context={context} route={route} />}
     </WorkspacePageView>
