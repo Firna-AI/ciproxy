@@ -12,9 +12,10 @@ The pages follow the marketing and docs mockups under
   closing call to action.
 - `/pricing/` has the tiers, the add-ons, the feature comparison, and the
   questions. The last question shows the calculation of the cost claim.
-- `/terms/` and `/privacy/` are the frames of the legal pages. Grey lines
-  hold the place of the text that the owner writes or approves before the
-  launch. Only the data retention of the privacy policy has text.
+- `/terms/` and `/privacy/` are the terms of service and the privacy policy.
+  Both pages show draft text for the owner's review, with visible
+  placeholders in square brackets. The privacy policy also shows the
+  decided data retention.
 - `/docs/` is Starlight with a Graphite theme. Its sidebar has the 14 pages
   of the docs sidebar mockup, in its order:
   - Start here: Overview at `/docs/`, Quickstart, and How ciproxy works.
@@ -107,6 +108,31 @@ Rules for the docs pages:
   workflows. The list of supported Linux distributions is under "What the
   machine needs" of Add a machine.
 
+Rules for the legal pages:
+
+- The sections of the terms and their text come from
+  `src/data/legal-terms.ts`. Those of the privacy policy come from
+  `src/data/legal-privacy.ts`. `src/data/legal.ts` joins them into the two
+  pages. Each page file, `src/pages/terms.astro` or
+  `src/pages/privacy.astro`, gives the effective date of its text.
+- A placeholder in square brackets, such as `[effective date]`, marks a
+  detail that the owner must complete. Keep the placeholder until the owner
+  gives the detail. Never put the current date or a guess in its place.
+- The data retention of the privacy policy shows its text first. The table
+  of the decided limits and the job history of each plan come after it.
+  The limits come from `src/data/legal.ts`.
+- A shared draft note at the top of each page says that the text is a
+  draft. Remove the note only after the owner completes every placeholder
+  and approves both texts. To remove it:
+  1. Open `/terms/` and `/privacy/`, and search each page for `[`. No match
+     may remain.
+  2. In `src/components/legal/LegalPage.astro`, delete the element with the
+     class `legal-draft`.
+  3. In `src/components/legal/legal.css`, delete the `.legal-draft` and
+     `.legal-draft-title` rules and the comment above them.
+  4. In this README, delete this rule and the rule on placeholders. Then
+     describe `/terms/` and `/privacy/` as the approved texts.
+
 ## Development
 
 Use the Node version in [.nvmrc](../../.nvmrc).
@@ -175,7 +201,13 @@ This keeps it separate from the Markdown lint tool's YAML version.
 - [src/components/pricing/](src/components/pricing/PriceCards.astro) holds
   the parts of the pricing page.
 - [src/components/legal/LegalPage.astro](src/components/legal/LegalPage.astro)
-  is the frame of the terms and the privacy policy.
+  is the view of the terms and the privacy policy: the head with the
+  effective date, the switch, "On this page", and the sections.
+- [src/data/legal.ts](src/data/legal.ts) exports the legal pages, the
+  retention rows, and the job history windows.
+  [src/data/legal-terms.ts](src/data/legal-terms.ts) and
+  [src/data/legal-privacy.ts](src/data/legal-privacy.ts) hold the sections
+  and the text of each page.
 - [src/components/site-header/SiteHeader.astro](src/components/site-header/SiteHeader.astro)
   is the top bar. Its `section` prop selects the page that it marks, and the
   docs form.
@@ -184,7 +216,7 @@ This keeps it separate from the Markdown lint tool's YAML version.
   [src/components/icon/Icon.astro](src/components/icon/Icon.astro) an icon.
 - [src/data/](src/data/tiers.ts) holds the data of the pages: the tiers, the
   plan choice, the comparison, the price lists, the slot rule, the cost
-  claim, the legal sections, the addresses, and the values of the
+  claim, the legal text, the addresses, and the values of the
   illustration.
 - [src/components/starlight/](src/components/starlight/Header.astro) holds
   the Starlight overrides: the head, the top bar with the search, the page

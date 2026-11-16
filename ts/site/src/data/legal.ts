@@ -1,10 +1,9 @@
-// The legal pages of the site: the terms of service and the privacy policy,
-// with their section headings. The owner writes or approves the text of each
-// section before the launch. Only the data retention of the privacy policy
-// has text now, because "Data retention" in docs/protocol/security.md and
-// docs/protocol/app-removal.md decide its limits.
+// Draft legal text needs the owner's approval before launch. Retention limits
+// follow docs/protocol/security.md, app-removal.md, and overflow.md.
 
 import { listText } from "./format.ts";
+import { privacySections } from "./legal-privacy.ts";
+import { termsSections } from "./legal-terms.ts";
 import { sitePages } from "./site.ts";
 import { tierOrder, tiers } from "./tiers.ts";
 
@@ -13,8 +12,12 @@ export type LegalPageKey = "terms" | "privacy";
 /** The legal pages in the order of the switch between them. */
 export const legalPageOrder: readonly LegalPageKey[] = ["terms", "privacy"];
 
-/** A section of a legal page: its id for "On this page", and its heading. */
-export type LegalSection = { id: string; title: string };
+/** A legal section with plain-text paragraphs and a stable navigation id. */
+export type LegalSection = {
+  readonly id: string;
+  readonly title: string;
+  readonly paragraphs: readonly string[];
+};
 
 export type LegalPage = {
   title: string;
@@ -27,39 +30,16 @@ export const legalPages: Readonly<Record<LegalPageKey, LegalPage>> = {
   terms: {
     title: "Terms of service",
     href: sitePages.terms,
-    sections: [
-      { id: "service", title: "The service" },
-      { id: "accounts", title: "Accounts, workspaces, and organizations" },
-      { id: "plans", title: "Plans and payment" },
-      { id: "machines", title: "Your machines and Boat" },
-      { id: "use", title: "Acceptable use" },
-      { id: "data", title: "Your data" },
-      { id: "agent", title: "The open-source agent" },
-      { id: "ending", title: "Ending the service" },
-      { id: "liability", title: "Warranties and liability" },
-      { id: "changes", title: "Changes to these terms" },
-      { id: "contact", title: "Contact" },
-    ],
+    sections: termsSections,
   },
   privacy: {
     title: "Privacy policy",
     href: sitePages.privacy,
-    sections: [
-      { id: "who", title: "Who we are" },
-      { id: "stored", title: "What ciproxy stores" },
-      { id: "never", title: "What ciproxy never receives" },
-      { id: "use", title: "How ciproxy uses data" },
-      { id: "processors", title: "Who processes data for ciproxy" },
-      { id: "retention", title: "Data retention" },
-      { id: "rights", title: "Your rights" },
-      { id: "security", title: "Security" },
-      { id: "changes", title: "Changes to this policy" },
-      { id: "contact", title: "Contact" },
-    ],
+    sections: privacySections,
   },
 };
 
-/** The section of the privacy policy that states the decided limits. */
+/** The section that also renders the retention table and plan history. */
 export const retentionId = "retention";
 
 /** The decided limits, in days. */
@@ -90,7 +70,15 @@ export const retentionRows: readonly RetentionRow[] = [
   },
   {
     data: "The data of an organization that removes the GitHub App",
-    kept: `${keep.removalDays} days after the removal`,
+    kept: `${keep.removalDays} days after removal, with earlier normal expiry still in force`,
+  },
+  {
+    data: "The workspace data after its last organization removes the GitHub App",
+    kept: `${keep.removalDays} days after removal, with earlier normal expiry still in force`,
+  },
+  {
+    data: "A Boat key after a key change, Disconnect, or removal of the last organization",
+    kept: "Only until the last sandbox that needs that key ends",
   },
 ];
 

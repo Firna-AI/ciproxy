@@ -2246,6 +2246,12 @@ The repository is public from item 70 = E, and the site links to it.
       Close the follow-up item `expo-56-npm-advisories.md`.
 - [ ] Draft the terms and the privacy policy, which the user writes or
       approves. They state the limits of "Data retention" in `security.md`.
+  - [x] Write the complete draft text of both pages. Square brackets mark
+        each detail that the user must complete, and a note at the top of
+        each page says that the text is a draft.
+        Branch: `conductor/m27-draft-terms-and-privacy-policy`.
+  - [ ] User: complete each detail in square brackets, and approve both
+        texts. Then remove the draft note, as the site README says.
 - [ ] Register the production App and the Stripe live mode, which need the
       accounts of the user.
 - [ ] Deploy production. Smoke-test a first job, an overflow, and a live

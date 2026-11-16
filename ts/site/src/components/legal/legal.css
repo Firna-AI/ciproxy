@@ -1,7 +1,7 @@
-/* The legal pages (LegalPage.astro): the head with the switch between the
-   terms and the privacy policy, then "On this page" beside the article on a
-   wide window. Grey lines hold the place of the text that the owner writes.
-   A heading that a link opens stays clear of the top bar. */
+/* The legal pages (LegalPage.astro): the head with the effective date and
+   the switch between the terms and the privacy policy, then "On this page"
+   beside the article on a wide window. A heading that a link opens stays
+   clear of the top bar. */
 
 .mk-section.legal-top {
   padding-bottom: 48px;
@@ -30,6 +30,32 @@
 .legal-switch-link.is-active {
   border-color: var(--c-ink);
   color: var(--c-ink);
+}
+
+/* The draft note: a tinted box with a full hairline border, as a caution
+   of the docs, and never a left accent edge. The site README says when it
+   goes. */
+
+.legal-draft {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: fit-content;
+  margin-top: 24px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--c-amber) 30%, var(--c-amber-soft));
+  border-radius: var(--r-lg);
+  background: var(--c-amber-soft);
+  color: var(--c-ink2);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.legal-draft-title {
+  color: var(--c-ink);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
 }
 
 .mk-section.legal-body {
@@ -97,23 +123,14 @@
   scroll-margin-top: 88px;
 }
 
+/* A long word, such as a web address, wraps rather than widen a phone
+   page. */
+
 .legal-section p {
   color: var(--c-ink2);
   font-size: 15px;
   line-height: 1.7;
-}
-
-.legal-lines {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 6px 0;
-}
-
-.legal-line {
-  height: 10px;
-  border-radius: var(--r-sm);
-  background: var(--c-soft);
+  overflow-wrap: break-word;
 }
 
 .legal-table-frame {
