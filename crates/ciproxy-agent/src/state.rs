@@ -10,6 +10,7 @@ use ciproxy_protocol::secret::Secret;
 use serde::{Deserialize, Serialize};
 
 use crate::cache_authority::CacheAuthority;
+use crate::endpoint::AgentEndpoint;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 /// The workspace-bound machine credential saved on this machine.
@@ -17,6 +18,9 @@ pub struct Identity {
     pub(crate) workspace_id: WorkspaceId,
     pub(crate) machine_id: MachineId,
     pub(crate) credential: Secret,
+    /// Absent only when a legacy identity has no usable saved endpoint.
+    #[serde(default)]
+    pub(crate) endpoint: Option<AgentEndpoint>,
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]

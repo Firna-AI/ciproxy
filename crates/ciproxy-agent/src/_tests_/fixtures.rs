@@ -30,6 +30,7 @@ pub(super) fn identity() -> Identity {
         workspace_id: WorkspaceId("workspace-1".to_owned()),
         machine_id: MachineId("machine-1".to_owned()),
         credential: Secret::new("machine-secret"),
+        endpoint: Some("wss://gateway.test/agent/".parse().unwrap()),
     }
 }
 

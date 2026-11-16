@@ -56,20 +56,42 @@ it. The production command keeps the form above.
 ### Run install again
 
 Run the install command again on a registered machine to repair it. It
-repairs the missing parts, and keeps the registration of the machine, its
-drain state, and its jobs.
+reads the existing identity without stopping the service or changing that
+identity on disk. It repairs missing parts and keeps the machine identity,
+drain state, jobs, and endpoint.
+
+The repair succeeds even when the command selects another endpoint. It
+sends no install token. The last line names the retained endpoint and the
+command endpoint. It says to uninstall first to move the machine to the
+command endpoint.
 
 ### The control-plane endpoint
 
-`--agent-url` selects the endpoint during install. It must be a valid
-`wss://` URL with a host and a valid TLS certificate.
-Without a saved endpoint, `CIPROXY_AGENT_URL` supplies the same setting
-through the environment.
-Install saves the selected endpoint for the service.
-Restarts and updates keep it. A later install without `--agent-url` keeps
-the saved endpoint, also when the environment has a different setting.
-Without either setting or a saved endpoint, the agent uses
-`wss://app.ciproxy.dev/agent/`.
+The control-plane endpoint is the `wss://` address that the agent connects
+to. Each install command selects an endpoint in this order:
+
+1. `--agent-url`, when the command includes it.
+2. `CIPROXY_AGENT_URL`, when set in the environment.
+3. `wss://app.ciproxy.dev/agent/`.
+
+The endpoint must be a valid `wss://` URL with a host and a valid TLS
+certificate. The command does not take its endpoint from saved state.
+
+A machine without a saved identity registers at the selected endpoint.
+Registration saves the endpoint and machine credential together in its
+identity. The agent uses that endpoint for every connection with its
+machine credential, including job metadata and uninstall. Service restarts
+and agent updates keep it.
+
+An update preserves the endpoint of an older installation. If the identity
+has no endpoint, the agent recovers it from the old endpoint file. It keeps
+a matching file while the identity exists. This keeps the same endpoint
+when an older agent runs or you restore saved state. The agent removes that
+file only at uninstall, when the identity ends, or when the file names a
+different endpoint. This needs no manual action.
+
+When remote removal clears the local identity, it also clears its endpoint.
+The next install registers at the endpoint selected by its command.
 
 ### Uninstall
 

@@ -7,6 +7,8 @@
 
 #[path = "../../src/cache_authority.rs"]
 mod cache_authority;
+#[path = "../../src/endpoint.rs"]
+mod endpoint;
 #[path = "../../src/error.rs"]
 mod error;
 #[path = "../../src/host_packages.rs"]

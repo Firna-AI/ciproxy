@@ -19,9 +19,9 @@ This crate does not implement those components.
 ## What This Crate Does
 
 `ciproxy-agent install --token TOKEN` registers once and installs systemd.
-A reinstall preserves the machine identity and its drain state.
+A reinstall preserves the machine identity, its endpoint, and its drain state.
 Preview commands also supply `--agent-url` for their control plane.
-Install saves that endpoint for service restarts, updates, and repairs.
+Registration saves the selected endpoint in the identity for credential use.
 `ciproxy-agent run` starts the daemon.
 `ciproxy-agent uninstall` stops the daemon, finishes jobs, and removes it.
 With no recorded VM, uninstall removes its owned area even after an
@@ -32,7 +32,7 @@ Use Remove in the dashboard to revoke the machine credential.
 
 Fresh registration sends the install token and the initial machine report.
 The gateway returns the workspace ID, machine ID, and machine credential.
-The agent saves these values in its root-only identity state.
+The agent saves them with the endpoint in one root-only identity write.
 
 The shared release installer invokes the installed binary with the script
 arguments.
@@ -53,7 +53,7 @@ Reconciliation enforces current mode after each wait.
 
 State lives in `/var/lib/ciproxy/state.json` with mode `0600`.
 Its parent directory has mode `0700`.
-State contains the machine credential and VM ownership.
+State contains the machine credential, its endpoint, and VM ownership.
 It also keeps pending network indices and failed-start cleanup intent.
 Network cleanup keeps ownership after VM and disk removal.
 It does not keep a completed VM in reports or reserve its slots.
@@ -125,12 +125,11 @@ Missing KVM still permits registration with zero slots.
 
 ### Gateway, image, and cache integration
 
-The default route is `wss://app.ciproxy.dev/agent/`.
-The install option `--agent-url` selects another WSS route with a valid TLS
-certificate.
+The default endpoint is `wss://app.ciproxy.dev/agent/`.
+Install selects another one with `--agent-url` or `CIPROXY_AGENT_URL`.
 The [registration and retirement guide](registration-and-retirement.md)
-covers endpoint selection, cache metadata during uninstall, authentication,
-one-use delivery, reconnect proof, and authorized idle stops.
+covers endpoint selection and storage, cache metadata during uninstall,
+authentication, one-use delivery, reconnect proof, and authorized idle stops.
 
 The agent verifies the release byte count and SHA-256 before extraction.
 The released `.tar.zst` bundle contains the root, kernel, and five metadata
@@ -204,25 +203,29 @@ Keep each target's module list aligned when a production dependency moves.
 The opt-in `network-smoke-driver` example also includes the production
 network modules. The [image network smoke](../../image/checks.md#guest-network)
 uses it before any runner starts, without credentials.
-The default Docker regression target also uses path includes.
-The gate compiles that target because it needs no feature.
+The default `docker_regression` target also uses path includes.
+The gate compiles and runs that target because it needs no feature.
 Real VM and GitHub checks use separate smoke scripts.
 The [real root regression](image-budget.md#disposable-root-growth-regression)
 checks free bytes as runner UID 1001 on two image sizes.
-The [development guide](development.md) gives Docker integration checks,
+The [development guide](development.md) gives the `docker_regression` checks,
 KVM and GitHub smoke checks, and release packaging commands.
 
 ### Key Code
 
 - [src/application.rs](src/application.rs) composes the Linux adapters.
+- [src/application_setup.rs](src/application_setup.rs) resolves commands
+  and claims the [runtime lock](src/runtime_ownership.rs) for Run.
 - [src/application_cache.rs](src/application_cache.rs) composes the cache
-  installer and the metadata services for the selected agent endpoint.
-- [src/application_endpoint.rs](src/application_endpoint.rs) resolves
-  install, run, and local uninstall targets.
-- [src/application_metadata.rs](src/application_metadata.rs) keeps a local
-  unavailable relay when an installed machine has no trusted metadata URL.
-- [src/endpoint.rs](src/endpoint.rs) selects and saves one endpoint for
-  registration and the installed service.
+  and the [metadata relay](src/application_metadata.rs) for its identity.
+- [src/application_endpoint.rs](src/application_endpoint.rs) selects the
+  install endpoint and gives the daemon only the endpoint of its identity.
+- [src/endpoint.rs](src/endpoint.rs) checks endpoints and selects the
+  install endpoint from `--agent-url`, `CIPROXY_AGENT_URL`, or the default.
+- [src/identity_store.rs](src/identity_store.rs) copies the legacy endpoint
+  into an identity without one, and keeps a matching legacy file.
+- [src/installation.rs](src/installation.rs) registers once, or repairs
+  and names both endpoints when the command selects another one.
 - [src/startup.rs](src/startup.rs) checks local completion before workload
   recovery and permits a removed machine to drain without a credential.
 - [src/controller.rs](src/controller.rs) defines durable machine control.
@@ -290,6 +293,7 @@ KVM and GitHub smoke checks, and release packaging commands.
 - [Shared protocol](../ciproxy-protocol/README.md) owns wire types.
 - [Architecture](../../docs/architecture.md) defines component boundaries.
 - [Agent](../../docs/protocol/agent.md) defines machine behavior.
+- [Agent endpoint](../../docs/protocol/agent-endpoint.md) defines endpoint use.
 - [Job routing](../../docs/protocol/job-routing.md) defines VM resources.
 - [Labels](../../docs/protocol/labels.md) defines the sizes of job VMs.
 - [Security](../../docs/protocol/security.md) defines isolation and key custody.

@@ -19,7 +19,7 @@ enum Command {
         /// Workspace install token. It works for one hour.
         #[arg(long)]
         token: String,
-        /// Control-plane endpoint. Install saves this wss:// URL for the service.
+        /// Registration endpoint. A repair keeps the endpoint of the saved identity.
         #[arg(long)]
         agent_url: Option<AgentEndpoint>,
     },

@@ -42,10 +42,8 @@ runs on own machines.
 - A command for another environment supplies that environment's agent
   endpoint from trusted runtime configuration, never from the request.
 - The production command keeps the form above.
-- An install endpoint must be a `wss://` URL.
-- Registration and the installed service use the same endpoint.
-- Restarts and updates keep the saved endpoint.
-- A later install without an endpoint keeps the saved one.
+- [Agent endpoint](agent-endpoint.md#install) says which control plane an
+  install registers with, and what it does on a registered machine.
 - The install script installs the agent, then runs the agent with the
   arguments that the command gives the script.
 - So the agent runs `install` with the install token, and the machine needs
@@ -142,6 +140,8 @@ runs on own machines.
 - After that, the agent connects with the machine credential of its
   machine.
 - Each registered machine has its own machine credential.
+- [The saved endpoint](agent-endpoint.md#the-saved-endpoint) says which
+  control plane receives the machine credential.
 - The dashboard shows each machine by its host name.
 - The machine credential works until a person removes the machine, as
   [Drain and remove](#drain-and-remove) says.
@@ -246,6 +246,8 @@ runs on own machines.
 ## Related docs
 
 - [Architecture](../architecture.md): the components and the data flow.
+- [Agent endpoint](agent-endpoint.md): the control plane of an install and
+  of the machine credential.
 - [Labels](labels.md): the labels and the size of each job VM.
 - [Job routing](job-routing.md): slots, the disk of a job, warm runners, and
   failures.
