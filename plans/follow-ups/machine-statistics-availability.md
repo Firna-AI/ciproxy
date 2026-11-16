@@ -136,7 +136,12 @@
   and size, and it can overstate the job disk. People can trust a false
   empty state. These reporting paths delete no Docker disk.
 - **Root question:** What does ciproxy show and use for the cache and
-  Docker figures of a machine when the agent cannot measure them?
+  Docker figures of a machine when they are not known? A failed read by
+  the agent is one cause. The cache service also reports figures that it
+  did not measure as zeros: its capacity before its first budget, its use
+  after a failed disk recovery, and its counts after a failed load. The
+  registration report and the first report after a cache service start
+  come before any budget, so normal installs and restarts meet this.
 - **Options:**
   - **A.** Word each zero Docker summary as possibly unread, in the app and
     the mockups, with no backend change.
@@ -193,6 +198,23 @@
       decode a report without the Docker section.
     - Cost: a smaller change. The class stays in the cache section.
     - Effort: Medium.
+  - **E.** Do B, with two additions. The cache service answers its report
+    with an error while it waits for its first budget, after a failed disk
+    recovery, and after a failed load of its saved counts, so the agent
+    sends the cache section as unavailable. `cache.md` states that each
+    producer marks a figure that it did not measure. While the leases are
+    unavailable, the scaler keeps the machine eligible for its labels but
+    starts no new runner there, as the agent refuses each start whose
+    leases it cannot read. This needs one new field in the scaler input for
+    each machine. The agent can send its budget before the registration
+    and first reports, so that the cache section is rarely unavailable.
+    The chosen option also states in `cache.md` how the hit share of all
+    machines treats an unavailable machine. Effort: Large.
+  - **F.** Do E, but leave the hosted capacity readers as they are. Outside
+    a label or image change, an unread lease changes no fit of the current
+    labels, and the admission guard of the agent still refuses a start that
+    does not fit. During a lasting lease read error, the scaler keeps
+    sending starts that the agent refuses. Effort: Large, smaller than E.
 - **Left out:**
   - A guess in the app or the API from zero figures, because the same
     numbers arrive in both cases.
@@ -213,15 +235,22 @@
   - A mockup of a phase before the first report, because registration
     already carries a full report. The unknown state of B, C, or D gets the
     mockup instead. That mockup can also cover a null `cache`.
-- **Wider fix:** B. One shared observation type that each statistics
-  section uses stops a failed read from looking like a measured value. Two
-  separate optional fields would be two direct fixes.
+- **Wider fix:** E, changed from B by the options check of 16 November
+  2026. It puts the rule at each producer, so the rule still holds when
+  an unknown figure comes from another cause than a failed read.
 - **Previous examples:**
   - The cache section has the same fallback, `empty_cache()` at
     `reporting.rs:19-22`, from commit `17d96b9`.
   - `plans/follow-ups/job-cache-cause.md`: the job page turns absent cache
     counts into a confirmed cause.
 - **Related:**
+  - A lasting lease read error makes the agent refuse every runner start,
+    at `crates/ciproxy-agent/src/launches.rs:53-58`, while the page shows
+    a healthy machine. E stops the repeated starts. No option gives the
+    page a health signal for it.
+  - `plans/follow-ups/agent-reconcile-lease-read-abort.md` and
+    `plans/follow-ups/cache-metrics-failed-load-overwrite.md`: two
+    problems that the options check found in the same paths.
   - `plans/follow-ups/docker-lease-report-read-race.md`: the same reader
     and the same report path. That race is one cause of a failed Docker
     read. Its direct fix does not depend on this choice, and this choice
@@ -230,9 +259,11 @@
     writer reads the cache facts of each job from the cache section, which
     `empty_cache()` empties after a failed read. Under B or C, that writer
     must not read an unavailable section as no cache use.
-- **Recommendation:** B. It is the structural fix, it keeps the approved
-  measured zero, and it covers the capacity use. D is the smaller direct
-  alternative, and a branch may apply D first and the cache section later.
+- **Recommendation:** E, changed from B by the options check. It costs B
+  plus a small cache service change and one scaler field. It covers the
+  zeros of the cache service that normal installs, updates, and reboots
+  meet, and it settles the scaler rule that B leaves open. Choose F if
+  the scaler must not change now.
 - **Action:** ask the user, because no requirement covers unread figures,
   and every option changes the agent, the protocol, and the API, or an
   approved state.
