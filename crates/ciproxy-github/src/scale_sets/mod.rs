@@ -1,6 +1,7 @@
 //! Narrow scale-set and message-session boundaries backed by scaleset.
 
 mod failure;
+pub(crate) mod ownership;
 mod queue;
 pub mod sdk;
 

@@ -1,8 +1,8 @@
 # Repository access and scale sets
 
 This guide describes how the GitHub App integration keeps repository
-access, runner groups, and scale sets. The [crate README](README.md) gives
-the rest of the integration.
+access, runner groups, scale sets, and their workspace ownership. The
+[crate README](README.md) gives the rest of the integration.
 
 ## Repository access
 
@@ -45,12 +45,13 @@ ScaleSetGroupChanged. The adapter makes no unproven remote move and deletes
 no unknown or retained resource. That case needs live move proof before
 automatic repair can be enabled. It does not erase retained job history.
 
-Before preparing active bindings, reconciliation releases retired names by
-their exact remote IDs. It renames a binding while tracked work, pending
-delivery, or a listener lease remains. Otherwise it owns that listener
-lease, checks tracked work again, removes the remote resource, and records
-cleanup. It retains the binding and its job history. A missing old remote
-resource counts as released. Authentication and provider failures stay errors.
+Before preparing active bindings, reconciliation releases the names of
+deleted labels by their exact remote IDs. It renames a binding while tracked
+work, pending delivery, or a listener lease remains. Otherwise it owns that
+listener lease, checks tracked work again, removes the remote resource, and
+records cleanup. It retains the binding and its job history. A missing old
+remote resource counts as released. Authentication and provider failures
+stay errors.
 
 New label validation uses this same reconciler before the API saves the
 label. Later reconciliation saves the prepared binding with activation.
@@ -66,5 +67,32 @@ reconstruct the registration target.
 [Binding reconciliation](src/app/bindings.rs) owns creation and retirement.
 [Registration storage](../ciproxy-store-interface/registration-targets.md)
 describes capture and older records.
+
+## Workspace ownership
+
+All workspaces of one GitHub organization share its managed runner group,
+so the scale sets of two workspaces can claim the same label name. A scale
+set therefore serves one workspace at most. The selected workspace is the
+workspace that a preparation serves.
+
+Before preparation, reconcile reads the current and retained registrations
+of the GitHub organization in every workspace. It renames each saved scale
+set of another workspace to a stable retired name and label. Unlike the
+release of a deleted label, this path never removes such a set. Its running
+jobs and retained idle runners stay, and they take no new job. A failed
+rename fails that preparation.
+
+Reconcile restores the name and the labels of each saved set of the
+selected workspace to its label name. A saved remote ID that another
+workspace also claims is foreign. Reconcile gives that shared set a durable
+quarantine name and marker label on GitHub. Later retirement renames keep
+the quarantine state.
+A saved-ID ensure never adopts a marked set. It creates or recovers a fresh
+current set for that label, so a later return cannot restore the shared
+set. GitHub keeps the marker, so the store keeps no extra record. Internal
+names avoid the requested labels. A label that uses an internal prefix
+remains valid. This path removes no runner.
+[App removal](../../docs/protocol/app-removal.md#removing-the-app) gives
+the workspace rule.
 
 [free-groups]: https://github.blog/changelog/2024-10-17-actions-runner-groups-now-available-for-organizations-on-free-plan/

@@ -9,6 +9,7 @@ use crate::error::{Error, Result};
 use crate::persistence::mutation::MutationLease;
 use crate::persistence::session::ListenerTarget;
 use crate::scale_sets::ScaleSetApi;
+use crate::scale_sets::ownership::{quarantine_name, retirement_name};
 
 use super::AppService;
 
@@ -85,6 +86,7 @@ impl AppService {
                 let bindings = self.store.scale_sets(&organization).await?;
                 self.retire_bindings(&organization, &labels, &bindings, &*api, &*locked.lease)
                     .await
+                    .map(|_| ())
             };
             if let Err(error) = result {
                 failure = Some(error);
@@ -105,16 +107,28 @@ impl AppService {
         api: &dyn ScaleSetApi,
         lease: &dyn MutationLease,
     ) -> Result<Vec<ScaleSet>> {
-        self.retire_bindings(organization, labels, bindings, api, lease)
+        let foreign = self
+            .retire_bindings(organization, labels, bindings, api, lease)
             .await?;
         let mut prepared = Vec::new();
         for label in labels {
             let previous = bindings.iter().find(|set| set.label_id == label.id);
+            let reusable = previous.filter(|set| !foreign.contains(&set.github_id));
             lease.check().await?;
-            let github_id = api
-                .ensure(&label.name, group_id, previous.map(|set| set.github_id))
+            let mut github_id = api
+                .ensure(&label.name, group_id, reusable.map(|set| set.github_id))
                 .await?;
             lease.check().await?;
+            let mut attempt = 0;
+            while foreign.contains(&github_id) {
+                attempt += 1;
+                let name =
+                    retirement_name(&format!("ciproxy-retired-{github_id}-{attempt}"), labels);
+                api.rename_scale_set(github_id, &name).await?;
+                lease.check().await?;
+                github_id = api.ensure(&label.name, group_id, None).await?;
+                lease.check().await?;
+            }
             prepared.push(ScaleSet {
                 id: previous.map_or_else(|| self.runtime.uuid(), |set| set.id),
                 organization_id: organization.id,
@@ -133,11 +147,14 @@ impl AppService {
         bindings: &[ScaleSet],
         api: &dyn ScaleSetApi,
         lease: &dyn MutationLease,
-    ) -> Result<()> {
-        for set in bindings
-            .iter()
-            .filter(|set| !labels.iter().any(|label| label.id == set.label_id))
-        {
+    ) -> Result<Vec<i64>> {
+        let foreign = self
+            .retire_foreign_bindings(organization, labels, bindings, api, lease)
+            .await?;
+        for set in bindings.iter().filter(|set| {
+            !foreign.contains(&set.github_id)
+                && !labels.iter().any(|label| label.id == set.label_id)
+        }) {
             let target = ListenerTarget {
                 workspace_id: organization.workspace_id,
                 organization_id: organization.id,
@@ -179,13 +196,61 @@ impl AppService {
                 }
             }
             lease.check().await?;
-            api.rename_scale_set(
-                set.github_id,
-                &format!("ciproxy-retired-{}", set.id.simple()),
-            )
-            .await?;
+            let name = retirement_name(&format!("ciproxy-retired-{}", set.id.simple()), labels);
+            api.rename_scale_set(set.github_id, &name).await?;
             lease.check().await?;
         }
-        Ok(())
+        Ok(foreign)
+    }
+
+    /// Isolate saved foreign ownership without deleting retained runners or work.
+    async fn retire_foreign_bindings(
+        &self,
+        organization: &Organization,
+        labels: &[Label],
+        bindings: &[ScaleSet],
+        api: &dyn ScaleSetApi,
+        lease: &dyn MutationLease,
+    ) -> Result<Vec<i64>> {
+        let mut owners: Vec<_> = bindings
+            .iter()
+            .cloned()
+            .map(|set| (organization.workspace_id, set))
+            .collect();
+        for registration in self.store.by_github_id(organization.github_id).await? {
+            if registration.id != organization.id {
+                owners.extend(
+                    self.store
+                        .scale_sets(&registration)
+                        .await?
+                        .into_iter()
+                        .map(|set| (registration.workspace_id, set)),
+                );
+            }
+        }
+        owners.sort_by_key(|(_, set)| set.github_id);
+        let mut retired = Vec::new();
+        for (workspace, set) in owners
+            .iter()
+            .filter(|(workspace, _)| *workspace != organization.workspace_id)
+        {
+            if retired.contains(&set.github_id) {
+                continue;
+            }
+            let shared = owners
+                .iter()
+                .any(|(owner, other)| owner != workspace && other.github_id == set.github_id);
+            let base = if shared {
+                quarantine_name(set.github_id)
+            } else {
+                format!("ciproxy-retired-{}", set.id.simple())
+            };
+            let name = retirement_name(&base, labels);
+            lease.check().await?;
+            api.rename_scale_set(set.github_id, &name).await?;
+            lease.check().await?;
+            retired.push(set.github_id);
+        }
+        Ok(retired)
     }
 }

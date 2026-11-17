@@ -43,8 +43,8 @@ async fn retained_reinstall_reuses_workspace_and_preserves_shared_label_configur
             .some_call(matching!((claim) if claim.requester_id == 41 && claim.github_id == 17 && claim.installation_id == 19))
             .returns(Ok(InstallationDecision::Direct)),
         InstallationStoreMock::by_github_id
-            .some_call(matching!(17))
-            .returns(Ok(vec![retained])),
+            .each_call(matching!(17))
+            .answers_arc(Arc::new(move |_, _| Ok(vec![retained.clone()]))),
         RuntimeMock::now.some_call(matching!()).returns(at()),
         LifecycleStoreMock::register
             .some_call(matching!(_))
@@ -64,8 +64,8 @@ async fn retained_reinstall_reuses_workspace_and_preserves_shared_label_configur
             .some_call(matching!(_, _, _, _, _))
             .returns(Ok(47)),
         InstallationStoreMock::scale_sets
-            .some_call(matching!(_))
-            .returns(Ok(vec![context().scale_set])),
+            .each_call(matching!(_))
+            .answers(&|_, _| Ok(vec![context().scale_set])),
         ScaleSetFactoryMock::for_organization
             .some_call(matching!(_))
             .returns(Ok(api)),
@@ -120,8 +120,8 @@ async fn expired_retained_organization_joins_admin_workspace_as_new_registration
                 billing_hold: false,
             })),
         InstallationStoreMock::by_github_id
-            .some_call(matching!(17))
-            .returns(Ok(vec![expired])),
+            .each_call(matching!(17))
+            .answers_arc(Arc::new(move |_, _| Ok(vec![expired.clone()]))),
         RuntimeMock::now.some_call(matching!()).returns(at()),
         RuntimeMock::uuid.each_call(matching!()).returns(id(5)),
         LifecycleStoreMock::register
@@ -143,8 +143,8 @@ async fn expired_retained_organization_joins_admin_workspace_as_new_registration
             .some_call(matching!(_, _, _, _, _))
             .returns(Ok(47)),
         InstallationStoreMock::scale_sets
-            .some_call(matching!(_))
-            .returns(Ok(vec![context().scale_set])),
+            .each_call(matching!(_))
+            .answers(&|_, _| Ok(vec![context().scale_set])),
         ScaleSetFactoryMock::for_organization
             .some_call(matching!(_))
             .returns(Ok(api)),

@@ -1,5 +1,6 @@
 //! Typed remote scale-set controls for App service integration scenarios.
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -105,6 +106,8 @@ pub(super) struct Resources {
     pub(super) base_id: AtomicI64,
     pub(super) ensures: Mutex<Vec<(String, i64, Option<i64>)>>,
     pub(super) fail_next: AtomicBool,
+    names: Mutex<BTreeMap<String, i64>>,
+    retired: Mutex<BTreeSet<i64>>,
 }
 impl Resources {
     pub(super) fn new() -> Self {
@@ -112,6 +115,8 @@ impl Resources {
             base_id: AtomicI64::new(53),
             ensures: Mutex::new(vec![]),
             fail_next: AtomicBool::new(false),
+            names: Mutex::new(BTreeMap::new()),
+            retired: Mutex::new(BTreeSet::new()),
         }
     }
 }
@@ -128,12 +133,25 @@ impl ScaleSetApi for Resources {
             .lock()
             .unwrap()
             .push((label.to_owned(), group, saved));
-        match label {
-            "ciproxy" => Ok(self.base_id.load(Ordering::SeqCst)),
-            "ciproxy-4vcpu" => Ok(59),
-            "ciproxy-8vcpu" => Ok(61),
-            _ => Err(Error::AccessUnavailable(422)),
-        }
+        let canonical = match label {
+            "ciproxy" => self.base_id.load(Ordering::SeqCst),
+            "ciproxy-4vcpu" => 59,
+            "ciproxy-8vcpu" => 61,
+            _ => return Err(Error::AccessUnavailable(422)),
+        };
+        let mut names = self.names.lock().unwrap();
+        let mut retired = self.retired.lock().unwrap();
+        let id = if let Some(id) = saved.filter(|id| retired.remove(id)) {
+            id
+        } else if let Some(id) = names.get(label) {
+            *id
+        } else if retired.contains(&canonical) {
+            canonical + 30
+        } else {
+            canonical
+        };
+        names.insert(label.to_owned(), id);
+        Ok(id)
     }
     async fn open(&self, _: i64, _: &str) -> Result<Box<dyn MessageQueue>> {
         Err(Error::AccessUnavailable(501))
@@ -147,8 +165,10 @@ impl ScaleSetApi for Resources {
     async fn remove_scale_set(&self, _: i64) -> Result<()> {
         Err(Error::AccessUnavailable(501))
     }
-    async fn rename_scale_set(&self, _: i64, _: &str) -> Result<()> {
-        Err(Error::AccessUnavailable(501))
+    async fn rename_scale_set(&self, id: i64, _: &str) -> Result<()> {
+        self.names.lock().unwrap().retain(|_, value| *value != id);
+        self.retired.lock().unwrap().insert(id);
+        Ok(())
     }
 }
 

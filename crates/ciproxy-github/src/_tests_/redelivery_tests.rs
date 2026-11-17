@@ -39,6 +39,8 @@ async fn recovery_retries_latest_failures_across_pages_and_preserves_successful_
                         delivery(4, "still-failing", 2, None, "repository"),
                         delivery(5, "ignored", 3, Some(500), "issues"),
                         delivery(6, "another", 3, Some(500), "installation_repositories"),
+                        delivery(7, "redirect-before-route", 3, Some(302), "installation"),
+                        delivery(8, "proxy-page-before-route", 3, Some(200), "repository"),
                     ],
                     next: None,
                 })
@@ -57,5 +59,5 @@ async fn recovery_retries_latest_failures_across_pages_and_preserves_successful_
     )));
     let recovery = RecoverDeliveries { api };
     recovery.retry_failed().await.unwrap();
-    assert_eq!(*retried.lock().unwrap(), vec![4, 6]);
+    assert_eq!(*retried.lock().unwrap(), vec![4, 6, 7, 8]);
 }

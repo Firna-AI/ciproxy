@@ -10,6 +10,7 @@ mod installation_tests;
 mod jit_tests;
 mod lifecycle_retry_tests;
 mod listener_tests;
+mod ownership;
 mod recovery_http_tests;
 mod rename_tests;
 mod resource_fixture;
