@@ -2,12 +2,12 @@
 
 use std::sync::atomic::Ordering;
 
-use ciproxy_control_plane::runtime::OwnMachines;
 use ciproxy_store_interface::github::DemandPhase;
 use ciproxy_store_interface::scale_sets::ScaleSet;
 use uuid::Uuid;
 
 use super::overflow_support::Harness;
+use super::settled::Settled;
 use super::support::at;
 
 #[tokio::test]
@@ -37,7 +37,7 @@ async fn replacement_label_gets_new_supply_for_ready_starting_and_running_old_bi
         store.create_scale_set(workspace, &binding).unwrap();
         let mut old_job = harness.queued_for(label.id, binding.id);
         harness.ports.pending.store(creating, Ordering::SeqCst);
-        harness.runtime.tick().await.unwrap();
+        harness.runtime.settled_tick().await.unwrap();
         assert_eq!(harness.ports.creates.lock().unwrap().len(), 1, "{scenario}");
         let old = store
             .boat_runtime_snapshot(workspace)
@@ -63,7 +63,7 @@ async fn replacement_label_gets_new_supply_for_ready_starting_and_running_old_bi
         binding.github_id = 61;
         store.create_scale_set(workspace, &binding).unwrap();
         harness.queued_for(label.id, binding.id);
-        harness.runtime.tick().await.unwrap();
+        harness.runtime.settled_tick().await.unwrap();
         assert_eq!(harness.ports.creates.lock().unwrap().len(), 2, "{scenario}");
         assert_eq!(
             harness.ports.deletes.load(Ordering::SeqCst),

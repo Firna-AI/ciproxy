@@ -11,7 +11,8 @@ use uuid::Uuid;
 
 use crate::error::Result;
 
-use super::session::{ListenerTarget, SessionLease, SessionStore};
+use super::lease::Lease;
+use super::session::{ListenerTarget, SessionStore};
 use super::{StoreAdapter, query};
 
 /// Store operations used only by App installation orchestration.
@@ -23,7 +24,7 @@ pub trait InstallationStore: Send + Sync {
     /// Read the exact binding's retirement and completion state.
     async fn binding(&self, target: ListenerTarget) -> Result<Option<ScaleSetBinding>>;
     /// Own the listener session before deleting a retired remote resource.
-    async fn lock_binding(&self, target: ListenerTarget) -> Result<Option<Box<dyn SessionLease>>>;
+    async fn lock_binding(&self, target: ListenerTarget) -> Result<Option<Box<dyn Lease>>>;
     /// Confirm cleanup without deleting the binding or its job history.
     async fn complete_binding(
         &self,
@@ -73,7 +74,7 @@ impl InstallationStore for StoreAdapter {
         })
         .await
     }
-    async fn lock_binding(&self, target: ListenerTarget) -> Result<Option<Box<dyn SessionLease>>> {
+    async fn lock_binding(&self, target: ListenerTarget) -> Result<Option<Box<dyn Lease>>> {
         SessionStore::lock(self, target).await
     }
     async fn complete_binding(

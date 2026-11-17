@@ -59,8 +59,11 @@ this close on its next contact. A caller that needs immediate removal uses
 `manage` with `MachineAction::Remove` on the gateway owner.
 Unsupported versions use code 1008 and the fixed reason
 `[gateway] unsupported protocol version`. A replaced connection uses code
-1008 and `[gateway] connection replaced`. Hosted logging excludes dependency
-targets that can expose frame contents at every verbosity.
+1008 and `[gateway] connection replaced`. A malformed frame uses code 1008
+and `[gateway] invalid message`. A failure while the hosted runtime handles
+a lifecycle message does not close the connection. The runtime logs a
+warning instead. Hosted logging excludes dependency targets that can expose
+frame contents at every verbosity.
 
 ### Integration boundary
 
@@ -82,7 +85,10 @@ targets that can expose frame contents at every verbosity.
    the command. Drain and removal still remain in the database.
 7. Handle typed runner events and command results through `AgentEvents`.
    Check each event's organization and runner ownership in that service.
-   The callback can send a command through the same gateway. It runs
+   Return from each callback at once, and do slow work after it returns.
+   The hosted runtime queues each event and each machine removal in arrival
+   order. An error from `receive` still closes the connection with code
+   1008. The callback can send a command through the same gateway. It runs
    without the gateway operation lock.
 8. Use `logging::subscriber` to construct every hosted tracing subscriber.
    Pass the RUST_LOG environment result and output writer. Print its notice

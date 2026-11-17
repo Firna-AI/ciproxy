@@ -4,6 +4,7 @@
 
 pub mod billing;
 pub mod boat;
+pub mod boat_delivery;
 pub mod boat_runtime;
 pub mod dashboard;
 pub mod error;
@@ -23,6 +24,7 @@ pub mod organizations;
 pub mod overflow;
 pub mod own_runners;
 pub mod runners;
+pub mod runtime_results;
 pub mod scale_sets;
 pub mod secrets;
 pub mod settings;

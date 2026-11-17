@@ -3,7 +3,6 @@
 use std::sync::Arc;
 
 use chrono::Duration;
-use ciproxy_control_plane::runtime::OwnMachines;
 use ciproxy_github::persistence::StoreAdapter;
 use ciproxy_github::registrations::RegistrationService;
 use ciproxy_store_interface::github::DemandPhase;
@@ -13,6 +12,7 @@ use uuid::Uuid;
 use super::overflow_retention_support::{extra_intent, report_end};
 use super::overflow_support::Harness;
 use super::overflow_takeout_support::prepare;
+use super::settled::Settled;
 use super::support::at;
 use super::takeout_support::{Answer, Call, Factory, Remote};
 
@@ -21,7 +21,7 @@ async fn organization_expiry_forgets_only_terminal_owned_registrations() {
     let mut harness = Harness::new(false, false).await;
     harness.queued();
     harness.queued();
-    harness.runtime.tick().await.unwrap();
+    harness.runtime.settled_tick().await.unwrap();
     let store = harness.fixture.store.clone();
     let workspace = harness.fixture.workspace;
     let organization = harness.fixture.organization;
@@ -91,7 +91,7 @@ async fn organization_expiry_forgets_only_terminal_owned_registrations() {
     *harness.ports.now.lock().unwrap() = at() + Duration::days(31);
     harness.runtime.overflow = None;
     harness.runtime.boat_retirement = None;
-    harness.runtime.tick().await.unwrap();
+    harness.runtime.settled_tick().await.unwrap();
     assert_eq!(store.boat_runner_intents(workspace).unwrap(), vec![unknown]);
     assert_eq!(*remote.calls.lock().unwrap(), Vec::<Call>::new());
     assert_eq!(
@@ -111,7 +111,7 @@ async fn completed_takeout_forgets_terminal_registrations_after_retained_reinsta
     let mut harness = Harness::new(false, false).await;
     let mut first_job = harness.queued();
     let mut second_job = harness.queued();
-    harness.runtime.tick().await.unwrap();
+    harness.runtime.settled_tick().await.unwrap();
     let store = harness.fixture.store.clone();
     let workspace = harness.fixture.workspace;
     let organization = harness.fixture.organization;
@@ -132,7 +132,7 @@ async fn completed_takeout_forgets_terminal_registrations_after_retained_reinsta
     }
     let remote = Remote::new(Answer::Busy);
     let event = prepare(&mut harness, remote.clone());
-    harness.runtime.lifecycle(event).await.unwrap();
+    harness.runtime.settled_lifecycle(event).await.unwrap();
     let takeout = store.pending_organization_takeouts().unwrap().remove(0);
     store.complete_organization_takeout(&takeout).unwrap();
     first_job.phase = DemandPhase::Completed;
@@ -152,7 +152,7 @@ async fn completed_takeout_forgets_terminal_registrations_after_retained_reinsta
     store.create_boat_runner_intent(workspace, &newer).unwrap();
     *remote.answer.lock().unwrap() = Answer::DeleteUnavailable;
     remote.calls.lock().unwrap().clear();
-    harness.runtime.tick().await.unwrap();
+    harness.runtime.settled_tick().await.unwrap();
     assert_eq!(store.boat_runner_intents(workspace).unwrap().len(), 3);
     let calls = remote.calls.lock().unwrap().clone();
     assert!(calls.contains(&Call::Remove(100)), "{calls:?}");
@@ -167,12 +167,12 @@ async fn completed_takeout_forgets_terminal_registrations_after_retained_reinsta
         .unwrap()
         .event
         .clone();
-    harness.runtime.tick().await.unwrap();
+    harness.runtime.settled_tick().await.unwrap();
     assert_eq!(store.boat_runner_intents(workspace).unwrap().len(), 3);
     remote.answers.lock().unwrap().insert(100, Answer::Removed);
     remote.answers.lock().unwrap().insert(101, Answer::Busy);
     remote.answers.lock().unwrap().insert(102, Answer::Removed);
-    harness.runtime.lifecycle(event).await.unwrap();
+    harness.runtime.settled_lifecycle(event).await.unwrap();
     let takeout = store.pending_organization_takeouts().unwrap().remove(0);
     assert_eq!(takeout.installation_id, 49);
     store.complete_organization_takeout(&takeout).unwrap();
@@ -180,7 +180,7 @@ async fn completed_takeout_forgets_terminal_registrations_after_retained_reinsta
     let runners = store.runners(workspace, organization).unwrap();
     remote.calls.lock().unwrap().clear();
     remote.contexts.lock().unwrap().clear();
-    harness.runtime.tick().await.unwrap();
+    harness.runtime.settled_tick().await.unwrap();
     assert_eq!(
         store.boat_runner_intents(workspace).unwrap(),
         vec![second.clone()]
@@ -192,7 +192,7 @@ async fn completed_takeout_forgets_terminal_registrations_after_retained_reinsta
     let runners = store.runners(workspace, organization).unwrap();
     remote.answers.lock().unwrap().clear();
     for tick in 1..=3 {
-        harness.runtime.tick().await.unwrap();
+        harness.runtime.settled_tick().await.unwrap();
         assert_eq!(
             store.boat_runner_intents(workspace).unwrap(),
             Vec::new(),

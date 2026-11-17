@@ -4,6 +4,8 @@ use std::sync::Arc;
 
 use axum::extract::{Path, State};
 use axum::{Extension, Json};
+use ciproxy_github::error;
+use ciproxy_github::persistence::lease::LeaseStore;
 use ciproxy_store_interface::dashboard::records::Takeout;
 use ciproxy_store_interface::organizations::RepositoryAccess;
 
@@ -119,25 +121,23 @@ pub(crate) async fn takeout(
     .ok_or(Error::NotFound)?;
     let github_id = organization.github_id;
     let removal = {
-        let mut lease = query(state.store.clone(), move |store| {
-            store.lock_github_organization(github_id)
-        })
-        .await?;
+        let lease = state.store.organization_lease(github_id).await.internal()?;
         let removal = query(state.store.clone(), move |store| {
             store.begin_organization_takeout(workspace_id, path.organization_id)
         })
         .await?;
-        lease.check_connection().internal()?;
+        lease.check().await.internal()?;
         removal
     };
-    state.github.replay_lifecycle(github_id).await.api()?;
+    match state.github.replay_lifecycle(github_id).await {
+        Ok(()) => (),
+        Err(error::Error::OrganizationInactive) => return Ok(Json(Success { ok: true })),
+        Err(error) => return Err(error).api(),
+    }
     {
-        let mut lease = query(state.store.clone(), move |store| {
-            store.lock_github_organization(github_id)
-        })
-        .await?;
+        let lease = state.store.organization_lease(github_id).await.internal()?;
         finish_takeout(&state, &removal).await?;
-        lease.check_connection().internal()?;
+        lease.check().await.internal()?;
     }
     Ok(Json(Success { ok: true }))
 }

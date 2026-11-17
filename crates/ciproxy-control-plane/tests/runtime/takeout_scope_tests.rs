@@ -1,7 +1,6 @@
 //! Take-out acceptance owns one lease and one immutable installation scope.
 
 use ciproxy_control_plane::error::Error;
-use ciproxy_control_plane::runtime::OwnMachines;
 use ciproxy_protocol::agent::ControlMessage;
 use ciproxy_store_interface::organizations::AppState;
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
@@ -9,6 +8,7 @@ use ciproxy_store_interface::scale_sets::ScaleSet;
 use uuid::Uuid;
 
 use super::recovery_support::{other_organization, saved};
+use super::settled::Settled;
 use super::support::Fixture;
 use super::takeout_gateway::Capture;
 use super::takeout_installations::Probe;
@@ -36,7 +36,7 @@ async fn takeout_lease_conflict_returns_error_before_accepting_the_event() {
     let remote = Remote::new(Answer::Busy);
     let gateway = Capture::new(false);
     let runtime = real_runtime(&fixture, remote.clone(), gateway.clone());
-    let result = runtime.lifecycle(event).await;
+    let result = runtime.settled_lifecycle(event).await;
     assert!(matches!(result, Err(Error::StateChanged)), "{result:?}");
     assert_eq!(saved(&fixture).runner.state, RunnerState::Ready);
     assert_eq!(fixture.store.pending_github_lifecycle(42).unwrap().len(), 1);
@@ -89,7 +89,7 @@ async fn takeout_busy_answer_preserves_a_sibling_organizations_warm_reservation(
     let gateway = Capture::new(false);
     let mut runtime = real_runtime(&fixture, remote.clone(), gateway.clone());
     runtime.installations = Probe::present();
-    runtime.lifecycle(event).await.unwrap();
+    runtime.settled_lifecycle(event).await.unwrap();
     let rows = fixture.store.own_runners(fixture.workspace).unwrap();
     assert_eq!(
         rows.iter()
@@ -146,7 +146,7 @@ async fn stale_takeout_event_uses_ordinary_reconciliation_after_reinstall() {
     let mut runtime = real_runtime(&fixture, remote.clone(), gateway.clone());
     let probe = Probe::present();
     runtime.installations = probe.clone();
-    runtime.lifecycle(event).await.unwrap();
+    runtime.settled_lifecycle(event).await.unwrap();
     assert_eq!(saved(&fixture).runner.state, RunnerState::Busy);
     assert_eq!(*probe.calls.lock().unwrap(), Vec::<i64>::new());
     assert_eq!(*remote.calls.lock().unwrap(), Vec::<Call>::new());

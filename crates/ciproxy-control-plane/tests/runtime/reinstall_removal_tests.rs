@@ -3,7 +3,6 @@
 use std::sync::{Arc, Mutex};
 
 use chrono::Duration;
-use ciproxy_control_plane::runtime::OwnMachines;
 use ciproxy_gateway::gateway::MachineGateway;
 use ciproxy_github::registrations::{RegistrationRetirement, RunnerRegistrationsMock};
 use ciproxy_github::runtime::Runtime;
@@ -15,6 +14,7 @@ use uuid::Uuid;
 
 use super::clock::clock;
 use super::recovery_support::{gateway, other_organization, runtime_with_clock};
+use super::settled::Settled;
 use super::support::{Fixture, at};
 
 #[tokio::test]
@@ -76,7 +76,7 @@ async fn reinstall_retires_only_old_reservations_github_first_and_keeps_busy_ans
                 gateway(messages.clone())
             };
         let runtime = runtime_with_clock(&fixture, registrations, delivery, clock);
-        runtime.lifecycle(event).await.unwrap();
+        runtime.settled_lifecycle(event).await.unwrap();
         let runners = fixture.store.own_runners(fixture.workspace).unwrap();
         let old = runners
             .iter()

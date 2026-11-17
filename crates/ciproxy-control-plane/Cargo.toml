@@ -47,3 +47,5 @@ sandbox-boat = { workspace = true }
 diesel = { version = "2.3.14", features = ["postgres"] }
 tower = { version = "0.5.3", features = ["util"] }
 unimock = "0.6.8"
+tokio-tungstenite = "0.30.0"
+futures-util = "0.3.34"

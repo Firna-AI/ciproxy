@@ -3,7 +3,6 @@
 use std::sync::{Arc, Mutex};
 
 use ciproxy_control_plane::error;
-use ciproxy_control_plane::runtime::OwnMachines;
 use ciproxy_gateway::gateway::MachineGatewayMock;
 use ciproxy_gateway::types::Delivery;
 use ciproxy_github::assignments::JobAssignmentsMock;
@@ -16,6 +15,7 @@ use unimock::{MockFn, Unimock, matching};
 use uuid::Uuid;
 
 use super::recovery_support::{gateway, job, runtime, runtime_with_clock};
+use super::settled::Settled;
 use super::support::{Fixture, at};
 
 #[tokio::test]
@@ -65,10 +65,13 @@ async fn removed_repository_delivers_a_github_only_decision_on_job_and_tick() {
                 })),
         )),
     );
-    runtime.job(fixture.workspace, job.clone()).await.unwrap();
-    runtime.tick().await.unwrap();
     runtime
-        .agent(
+        .settled_job(fixture.workspace, job.clone())
+        .await
+        .unwrap();
+    runtime.settled_tick().await.unwrap();
+    runtime
+        .settled_agent(
             fixture.workspace,
             fixture.machine,
             AgentMessage::JobStarted {
@@ -126,7 +129,7 @@ async fn transient_assignment_failure_returns_an_error_and_retries_without_fallb
                 })
             });
     })));
-    let failed = runtime.job(fixture.workspace, job.clone()).await;
+    let failed = runtime.settled_job(fixture.workspace, job.clone()).await;
     assert!(matches!(failed, Err(error::Error::Internal(_))));
     let error = failed.unwrap_err();
     assert!(matches!(
@@ -135,7 +138,10 @@ async fn transient_assignment_failure_returns_an_error_and_retries_without_fallb
             if matches!(internal.source_ref().downcast_ref::<Error>(), Some(Error::AccessUnavailable(503)))
     ));
     assert_eq!(*messages.lock().unwrap(), Vec::new());
-    runtime.job(fixture.workspace, job.clone()).await.unwrap();
+    runtime
+        .settled_job(fixture.workspace, job.clone())
+        .await
+        .unwrap();
     assert_eq!(
         *messages.lock().unwrap(),
         vec![github_only(&fixture, job.id)]

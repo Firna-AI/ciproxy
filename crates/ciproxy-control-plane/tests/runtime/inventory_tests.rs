@@ -3,13 +3,13 @@
 use std::sync::{Arc, Mutex};
 
 use chrono::Duration;
-use ciproxy_control_plane::runtime::OwnMachines;
 use ciproxy_protocol::agent::{AgentMessage, CommandFailure, CommandOutcome, ControlMessage};
 use ciproxy_protocol::identifiers::CommandId;
 use ciproxy_store_interface::runners::RunnerState;
 use unimock::Unimock;
 
 use super::recovery_support::{gateway, keep_warm, runtime, saved};
+use super::settled::Settled;
 use super::support::{Fixture, at};
 
 #[tokio::test]
@@ -43,7 +43,7 @@ async fn event_contact_cannot_make_an_old_absent_report_release_a_busy_runner() 
     let messages = Arc::new(Mutex::new(Vec::new()));
     let runtime = runtime(&fixture, Arc::new(Unimock::new(())), gateway(messages));
     runtime
-        .agent(
+        .settled_agent(
             fixture.workspace,
             fixture.machine,
             AgentMessage::CommandResult {
@@ -53,7 +53,7 @@ async fn event_contact_cannot_make_an_old_absent_report_release_a_busy_runner() 
         )
         .await
         .unwrap();
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     assert_eq!(saved(&fixture).runner.state, RunnerState::Busy);
 }
 
@@ -94,7 +94,7 @@ async fn inventory_after_issue_but_before_agent_confirmation_cannot_retire_the_s
         gateway(messages.clone()),
     );
     runtime
-        .agent(
+        .settled_agent(
             fixture.workspace,
             fixture.machine,
             AgentMessage::CommandResult {
@@ -104,7 +104,7 @@ async fn inventory_after_issue_but_before_agent_confirmation_cannot_retire_the_s
         )
         .await
         .unwrap();
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     assert_eq!(saved(&fixture).runner.state, RunnerState::Starting);
     assert_eq!(
         messages
@@ -142,11 +142,11 @@ async fn unconfirmed_stop_waits_for_a_result_then_releases_on_later_inventory() 
         Arc::new(Unimock::new(())),
         gateway(messages.clone()),
     );
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     assert_eq!(saved(&fixture).runner.state, RunnerState::Stopping);
     assert_eq!(saved(&fixture).confirmed_at, None);
     runtime
-        .agent(
+        .settled_agent(
             fixture.workspace,
             fixture.machine,
             AgentMessage::CommandResult {
@@ -165,7 +165,7 @@ async fn unconfirmed_stop_waits_for_a_result_then_releases_on_later_inventory() 
         .store
         .record_contact(fixture.workspace, fixture.machine, &fixture.contact)
         .unwrap();
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     assert_eq!(saved(&fixture).runner.state, RunnerState::Stopped);
     assert_eq!(
         messages

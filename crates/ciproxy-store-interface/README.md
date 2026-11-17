@@ -171,7 +171,8 @@ Retired-label cleanup discovers workspaces and reads exact scale-set bindings.
 It preserves the retired labels and their job history.
 
 OwnRunnerStore exposes one coherent workspace routing snapshot.
-It also holds the Boat account, deliveries, and registration identities.
+It also holds the Boat account, deliveries, registration identities, and
+the saved Boat runners in `RoutingSnapshot.boat_runners`.
 Its dedicated session lease serializes own-machine decisions.
 Runner intents retain exact slot sets and the original whole-GB label
 request. The shared Runner record is the byte-precise actual allocation.
@@ -212,6 +213,10 @@ Keep a ScaleSetSession handle alive for the complete GitHub session.
 Call its check_connection method before continued use after a connection
 error or during listener health checks.
 Stop the listener when this query fails.
+The store lease traits are synchronous. Async services take the scale-set,
+organization, and workspace execution leases through
+`ciproxy_github::persistence::lease::LeaseStore`. It runs each lock and
+each check on a blocking worker.
 
 ## Dashboard fact provenance
 
@@ -248,6 +253,10 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
   authorization results and their delivery mode.
 - [src/dashboard](src/dashboard) owns dashboard identity and access queries.
 - [src/own_runners.rs](src/own_runners.rs) owns exact execution records.
+- [src/runtime_results.rs](src/runtime_results.rs) defines the remote result
+  guards and `BoatRunnerWrite`, the exact guard after a Boat write.
+  [src/boat_delivery.rs](src/boat_delivery.rs) defines `BoatDeliveryGuard`,
+  the delivery part of a Boat guard, with no usage or billing reading.
 - [src/boat_runtime.rs](src/boat_runtime.rs) owns Boat registration identities.
 
 - [src/store.rs](src/store.rs) defines Store and its connection factory.

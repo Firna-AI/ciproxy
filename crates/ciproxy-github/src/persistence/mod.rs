@@ -2,6 +2,7 @@
 
 pub mod assignment;
 pub mod installation;
+pub mod lease;
 pub mod lifecycle;
 pub mod mutation;
 pub mod session;

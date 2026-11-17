@@ -103,7 +103,16 @@ impl MachineRuntime {
                 .internal()?;
             }
             if configuration_lost {
-                self.retire_runner(input.workspace_id, runner).await?;
+                let store = self.store.clone();
+                let workspace = input.workspace_id;
+                let id = runner.runner.id;
+                let current =
+                    tokio::task::spawn_blocking(move || store.own_runner_guard(workspace, id))
+                        .await
+                        .internal()?
+                        .internal()?
+                        .ok_or(Error::StateChanged)?;
+                self.retire_runner(workspace, &current.runner).await?;
                 return Ok(());
             }
         } else if runner

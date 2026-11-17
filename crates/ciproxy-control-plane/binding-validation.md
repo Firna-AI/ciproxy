@@ -5,7 +5,7 @@ The replacement probe deletes and recreates that label. It preserves its
 name and settings, but its label and binding IDs change.
 
 Use the private credential file and workflow fixture from the
-[overflow smoke guide](overflow.md#live-smoke-checks). Add `binding_label`
+[overflow smoke guide](overflow-smoke.md). Add `binding_label`
 with the custom label name. Add `binding_organization_id` with the ciproxy
 UUID of the organization used for reactivation. The label must allow only
 the destination of the probe. Keep database credentials in the existing

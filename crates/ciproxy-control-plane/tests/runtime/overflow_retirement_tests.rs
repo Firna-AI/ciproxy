@@ -3,20 +3,20 @@
 use std::sync::atomic::Ordering;
 
 use chrono::Duration;
-use ciproxy_control_plane::runtime::OwnMachines;
 use ciproxy_store_interface::github::DemandPhase;
 use ciproxy_store_interface::own_runners::OwnRunner;
 use ciproxy_store_interface::runners::{Runner, RunnerPlace, RunnerState};
 use uuid::Uuid;
 
 use super::overflow_support::Harness;
+use super::settled::Settled;
 use super::support::at;
 
 #[tokio::test]
 async fn ready_boat_supply_survives_starting_own_supply_and_an_older_missing_delivery() {
     let harness = Harness::new(false, false).await;
     harness.queued();
-    harness.runtime.tick().await.unwrap();
+    harness.runtime.settled_tick().await.unwrap();
     let workspace = harness.fixture.workspace;
     let store = &harness.fixture.store;
     store
@@ -64,7 +64,7 @@ async fn ready_boat_supply_survives_starting_own_supply_and_an_older_missing_del
             },
         )
         .unwrap();
-    harness.runtime.tick().await.unwrap();
+    harness.runtime.settled_tick().await.unwrap();
     assert_eq!(harness.ports.deletes.load(Ordering::SeqCst), 0);
     assert_eq!(
         store.boat_runtime_snapshot(workspace).unwrap().starts[0].ends_at,
@@ -77,7 +77,7 @@ async fn ready_boat_supply_survives_starting_own_supply_and_an_older_missing_del
 async fn failed_completed_boat_cleanup_does_not_block_a_new_own_start() {
     let harness = Harness::new(false, false).await;
     let mut completed = harness.queued();
-    harness.runtime.tick().await.unwrap();
+    harness.runtime.settled_tick().await.unwrap();
     completed.phase = DemandPhase::Completed;
     completed.runner_github_id = Some(100);
     completed.completed_at = Some(at());
@@ -93,7 +93,7 @@ async fn failed_completed_boat_cleanup_does_not_block_a_new_own_start() {
         .unwrap();
     harness.queued();
     harness.ports.fail.store(true, Ordering::SeqCst);
-    harness.runtime.tick().await.unwrap();
+    harness.runtime.settled_tick().await.unwrap();
     assert_eq!(harness.own_starts.load(Ordering::SeqCst), 1);
     assert_eq!(harness.ports.deletes.load(Ordering::SeqCst), 0);
     assert_eq!(

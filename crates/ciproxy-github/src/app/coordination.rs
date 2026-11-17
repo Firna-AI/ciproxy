@@ -4,13 +4,13 @@ use ciproxy_store_interface::organizations::Organization;
 
 use crate::error::{Error, Result};
 use crate::installation_state::InstalledApp;
-use crate::persistence::mutation::MutationLease;
+use crate::persistence::lease::Lease;
 
 use super::AppService;
 use super::webhook::{Account, AccountKind};
 
 pub(super) struct LockedOrganization {
-    pub(super) lease: Box<dyn MutationLease>,
+    pub(super) lease: Box<dyn Lease>,
     pub(super) current: InstalledApp,
     pub(super) organization: Option<Organization>,
 }
@@ -20,7 +20,7 @@ impl AppService {
         &self,
         account: &Account,
         installation_id: i64,
-        lease: &dyn MutationLease,
+        lease: &dyn Lease,
     ) -> Result<InstalledApp> {
         lease.check().await?;
         let current = match self.installations.for_organization(&account.login).await {

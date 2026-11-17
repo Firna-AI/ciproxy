@@ -3,7 +3,6 @@
 use std::collections::BTreeSet;
 use std::sync::{Arc, Mutex};
 
-use ciproxy_control_plane::runtime::OwnMachines;
 use ciproxy_gateway::gateway::MachineGatewayMock;
 use ciproxy_gateway::types::Delivery;
 use ciproxy_github::assignments::JobAssignmentsMock;
@@ -16,6 +15,7 @@ use uuid::Uuid;
 
 use super::clock::clock;
 use super::recovery_support::{gateway, job, reconnect, runtime, runtime_with_clock, saved};
+use super::settled::Settled;
 use super::support::{Fixture, at};
 
 #[tokio::test]
@@ -45,10 +45,10 @@ async fn offline_stop_replays_same_identity_until_applied_and_preserves_capacity
             .returns(Ok(RegistrationRetirement::Removed { id: 47 })),
     ));
     let runtime = runtime(&fixture, registrations, gateway);
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     let stopping = saved(&fixture);
     reconnect(&fixture);
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     assert_eq!(stops.lock().unwrap().len(), 2);
     assert_eq!(
         *stops.lock().unwrap(),
@@ -56,7 +56,7 @@ async fn offline_stop_replays_same_identity_until_applied_and_preserves_capacity
     );
     assert_eq!(saved(&fixture).issued_at, stopping.issued_at);
     runtime
-        .agent(
+        .settled_agent(
             fixture.workspace,
             fixture.machine,
             AgentMessage::CommandResult {
@@ -68,10 +68,10 @@ async fn offline_stop_replays_same_identity_until_applied_and_preserves_capacity
         )
         .await
         .unwrap();
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     assert_eq!(stops.lock().unwrap().len(), 3);
     runtime
-        .agent(
+        .settled_agent(
             fixture.workspace,
             fixture.machine,
             AgentMessage::CommandResult {
@@ -81,12 +81,12 @@ async fn offline_stop_replays_same_identity_until_applied_and_preserves_capacity
         )
         .await
         .unwrap();
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     assert_eq!(stops.lock().unwrap().len(), 3);
     assert_eq!(saved(&fixture).runner.state, RunnerState::Stopping);
     assert_eq!(saved(&fixture).slot_indices, vec![0]);
     runtime
-        .agent(
+        .settled_agent(
             fixture.workspace,
             fixture.machine,
             AgentMessage::RunnerReady {
@@ -123,7 +123,7 @@ async fn failed_send_replays_before_job_routing_error_and_running_report_closes_
             .returns(Ok(RegistrationRetirement::Removed { id: 47 })),
     ));
     let mut runtime = runtime(&fixture, registrations, gateway);
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     let stopping = saved(&fixture);
     let job = job(&fixture);
     fixture
@@ -135,7 +135,7 @@ async fn failed_send_replays_before_job_routing_error_and_running_report_closes_
             .each_call(matching!(_, _, _))
             .answers(&|_, _, _, _| Err(ciproxy_github::error::Error::OrganizationInactive)),
     ));
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     assert_eq!(
         *stops.lock().unwrap(),
         vec![CommandId(stopping.command_id.to_string()); 2]
@@ -149,7 +149,7 @@ async fn failed_send_replays_before_job_routing_error_and_running_report_closes_
         .store
         .record_contact(fixture.workspace, fixture.machine, &fixture.contact)
         .unwrap();
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     assert_eq!(saved(&fixture).runner.state, RunnerState::Busy);
     assert_eq!(stops.lock().unwrap().len(), 2);
 }
@@ -179,7 +179,7 @@ async fn runner_ready_keeps_retirement_but_guest_job_started_preserves_the_job()
         clock(true),
     );
     runtime
-        .agent(
+        .settled_agent(
             fixture.workspace,
             fixture.machine,
             AgentMessage::RunnerReady {
@@ -190,7 +190,7 @@ async fn runner_ready_keeps_retirement_but_guest_job_started_preserves_the_job()
         .unwrap();
     assert_eq!(saved(&fixture).runner.state, RunnerState::Stopping);
     runtime
-        .agent(
+        .settled_agent(
             fixture.workspace,
             fixture.machine,
             AgentMessage::JobStarted {
@@ -248,7 +248,7 @@ async fn recovery_send_error_does_not_block_another_saved_stop() {
             })),
     ));
     let runtime = runtime(&fixture, Arc::new(Unimock::new(())), gateway);
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     assert_eq!(
         sent.lock()
             .unwrap()

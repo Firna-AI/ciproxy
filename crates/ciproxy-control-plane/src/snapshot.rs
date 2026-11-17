@@ -22,6 +22,7 @@ use ciproxy_store_interface::runners::{self, RunnerPlace};
 use ciproxy_store_interface::settings::OverflowWait;
 use uuid::Uuid;
 
+use crate::boat_snapshot;
 use crate::warm::allocate;
 
 pub(crate) fn build(
@@ -129,7 +130,7 @@ pub(crate) fn build(
             largest_size: None,
             refusals: Vec::new(),
         },
-        sandboxes: Vec::new(),
+        sandboxes: boat_snapshot::project(input, &input.overflow.starts),
         overflow_wait: Duration::from_secs(match input.settings.overflow_wait {
             OverflowWait::AtOnce => 0,
             OverflowWait::Seconds15 => 15,
@@ -166,7 +167,7 @@ fn machine_input(
         runners: input.runners.iter().filter(|intent| intent.runner.state != runners::RunnerState::Stopped && matches!(intent.runner.place, RunnerPlace::Machine { machine_id, .. } if machine_id == machine.machine.id)).map(|intent| {
             let running_job = input.jobs.iter().find(|job| job.phase == DemandPhase::Started && job.runner_github_id == intent.runner.github_id && job.organization_id == intent.runner.organization_id && job.scale_set_id == intent.runner.scale_set_id);
             let state = if let Some(job) = running_job { RunnerState::Running(JobId(job.id.to_string())) } else { match intent.runner.state { runners::RunnerState::Starting => RunnerState::Starting, runners::RunnerState::Ready => RunnerState::Ready, runners::RunnerState::Busy => RunnerState::Running(JobId(intent.runner.id.to_string())), runners::RunnerState::Stopping => RunnerState::Retiring, runners::RunnerState::Stopped => RunnerState::Exited } };
-            Runner { target: intent.registration_scale_set_id.map(|github_id| registration_target(intent.runner.organization_id, intent.runner.label_id, intent.runner.scale_set_id, github_id)), id: RunnerId(intent.runner.id.to_string()), organization_id: OrganizationId(intent.runner.organization_id.to_string()), label: LabelName(intent.label_name.clone()), requested_size: size(intent.requested_size), size: intent.runner.size, state }
+            Runner { target: intent.registration_scale_set_id.or_else(|| (intent.runner.github_id.is_none() && intent.runner.state == runners::RunnerState::Starting).then(|| input.scale_sets.iter().find(|set| set.id == intent.runner.scale_set_id).map(|set| set.github_id)).flatten()).map(|github_id| registration_target(intent.runner.organization_id, intent.runner.label_id, intent.runner.scale_set_id, github_id)), id: RunnerId(intent.runner.id.to_string()), organization_id: OrganizationId(intent.runner.organization_id.to_string()), label: LabelName(intent.label_name.clone()), requested_size: size(intent.requested_size), size: intent.runner.size, state }
         }).collect(),
     }
 }

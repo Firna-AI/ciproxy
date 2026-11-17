@@ -3,7 +3,6 @@
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
-use ciproxy_control_plane::runtime::OwnMachines;
 use ciproxy_github::persistence::StoreAdapter;
 use ciproxy_github::registrations::RegistrationService;
 use ciproxy_protocol::secret::Secret;
@@ -12,6 +11,7 @@ use ciproxy_store_interface::overflow::record::StartPhase;
 use uuid::Uuid;
 
 use super::overflow_support::Harness;
+use super::settled::Settled;
 use super::support::at;
 use super::takeout_support::{Answer, Call, Factory, Remote};
 
@@ -19,7 +19,7 @@ use super::takeout_support::{Answer, Call, Factory, Remote};
 async fn owner_removal_defers_ended_and_missing_registration_recovery_until_reinstall() {
     let mut harness = Harness::new(false, false).await;
     let mut job = harness.queued();
-    harness.runtime.tick().await.unwrap();
+    harness.runtime.settled_tick().await.unwrap();
     let store = harness.fixture.store.clone();
     let workspace = harness.fixture.workspace;
     let organization = harness.fixture.organization;
@@ -60,7 +60,7 @@ async fn owner_removal_defers_ended_and_missing_registration_recovery_until_rein
         scale_sets: Arc::new(Factory(remote.clone())),
     }));
     for tick in 1..=3 {
-        harness.runtime.tick().await.unwrap();
+        harness.runtime.settled_tick().await.unwrap();
         assert_eq!(
             *remote.calls.lock().unwrap(),
             Vec::<Call>::new(),
@@ -85,7 +85,7 @@ async fn owner_removal_defers_ended_and_missing_registration_recovery_until_rein
     reinstalled.installation_id = 49;
     store.install_organization(&reinstalled).unwrap();
     *remote.answer.lock().unwrap() = Answer::Removed;
-    harness.runtime.tick().await.unwrap();
+    harness.runtime.settled_tick().await.unwrap();
     assert_eq!(store.boat_runner_intents(workspace).unwrap(), Vec::new());
     let mut calls = remote.calls.lock().unwrap().clone();
     calls.sort_by_key(|call| match call {

@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use ciproxy_control_plane::runtime::{MachineRuntime, OwnMachines};
+use ciproxy_control_plane::runtime::MachineRuntime;
 use ciproxy_gateway::gateway::MachineGatewayMock;
 use ciproxy_gateway::types::Delivery;
 use ciproxy_github::assignments::AssignmentService;
@@ -17,6 +17,7 @@ use ciproxy_store_interface::runners::RunnerState;
 use unimock::{MockFn, Unimock, matching};
 use uuid::Uuid;
 
+use super::settled::Settled;
 use super::support::{Fixture, at};
 
 #[tokio::test]
@@ -111,7 +112,7 @@ async fn removal_between_facts_and_delivery_preserves_job_until_trusted_completi
     );
     assert_eq!(
         runtime
-            .job(fixture.workspace, job.clone())
+            .settled_job(fixture.workspace, job.clone())
             .await
             .map_err(|_| "workspace aborted"),
         Ok(())
@@ -128,7 +129,7 @@ async fn removal_between_facts_and_delivery_preserves_job_until_trusted_completi
         .store
         .save_github_job(fixture.workspace, &job, at())
         .unwrap();
-    runtime.job(fixture.workspace, job).await.unwrap();
+    runtime.settled_job(fixture.workspace, job).await.unwrap();
     assert_eq!(
         fixture.store.own_runners(fixture.workspace).unwrap()[0]
             .runner

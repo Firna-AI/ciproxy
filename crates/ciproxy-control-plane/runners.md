@@ -11,8 +11,9 @@ Routing reads one repeatable-read workspace snapshot.
 A dedicated PostgreSQL session lease serializes execution decisions.
 The snapshot gives the pure scaler machine capacity, durable demand,
 current labels, and the last 24 hours of default-label job history.
-It also gives the Boat account, its deliveries, and the saved Boat
-registrations. The [overflow guide](overflow.md) gives the Boat runtime.
+It also gives the Boat account, its deliveries, the saved Boat
+registrations, and the saved Boat runner states. The
+[overflow guide](overflow.md) gives the Boat runtime.
 The snapshot also reads active saved scale-set bindings. Labels, waiting
 jobs, and start actions retain their exact registration target. Idle
 supply counts only for the same organization, label, binding, and remote
@@ -76,6 +77,15 @@ A full report that omits a confirmed runner releases it only when the report
 arrived after that confirmation. Absence alone never stops an unconfirmed
 start.
 
+The gateway callbacks put each agent event and each machine removal on one
+queue, in arrival order, and return at once. The queue holds up to 1024
+events. One supervised runtime task handles them one at a time. It skips an
+agent event whose connection is no longer the current one of its machine.
+When the handling of an event fails or panics, the runtime logs a warning
+and handles the next event. The machine stays connected. The runtime logs a
+warning when it drops an event because the queue is full. The next full
+report and the saved-stop resend then repair the saved state.
+
 When the agent sends `RunnerReady`, `JobStarted`, or `RunnerExited`, the
 runtime saves that observation first.
 Then it reads a fresh workspace snapshot, which holds the saved runner state.
@@ -110,6 +120,37 @@ The GitHub API supplies repository, event, default branch, and head data.
 The original runtime token stays on the customer machine.
 The machine cache checks its signed scope outside the VM.
 
+## Remote requests
+
+The runtime changes reservations and runner states in short serialized
+steps. The workspace lease serializes these steps across processes. The
+runtime never holds that lease while it waits for GitHub or Boat.
+Each GitHub or Boat request runs in its own supervised task. The runtime
+logs each request that fails. Shutdown stops and joins these tasks and the
+event queue. The runtime also cancels them when its supervisor ends with an
+error or is cancelled.
+Tick, job, agent, and lifecycle calls return after their saved-state steps.
+They do not wait for the remote tasks that they start.
+A slow request does not delay the reports of other machines, command
+delivery, job updates, or other workspaces.
+A reservation or a stop counts only after the store saves it. The
+reservation saved before a request counts as supply, so a later pass starts
+no second request for it.
+Before an own-machine request starts, the runtime reads the current saved
+guard of the reservation. It compares only identity and lifecycle with the
+proposed work: the runner, organization, label, binding, GitHub ID,
+captured registration target, placement, command ID, and state. Evidence
+and measurements, such as the first confirmation, the acknowledgement, the
+issue time, the slot set, and sizes, do not stop a dispatch.
+An own-machine result saves only while the complete saved state that
+allowed its request still matches, newer evidence included. A Boat result
+saves only while the lifecycle authority of its records still matches.
+So a late result cannot replace a newer report, command, runner state,
+job, removal, or reinstall. It also cannot release capacity early.
+The runtime sends a start or job preparation only while that state still
+matches. A late GitHub registration keeps its actual identity for
+GitHub-first cleanup by its unique name, and it starts no runner.
+
 ## Removal and take-out
 
 The user selected immediate idle stop for machine removal and App removal.
@@ -124,17 +165,29 @@ After a reinstall, older reservations use GitHub-first retirement.
 Reservations issued after the removal stay untouched.
 A workspace take-out keeps ordinary job protection.
 
-A take-out callback holds the operation lock and the workspace lease.
-A lease conflict returns an error, so the event stays pending.
-The callback checks the organization, the GitHub account, the
+A take-out callback first checks the organization, the GitHub account, the
 installation, and its state. A stale event runs ordinary reconciliation
-after the lease ends. It grants no authority over a newer installation.
-A matching take-out first looks up its exact installation with the App
-JWT. A successful lookup keeps ordinary GitHub-first retirement.
+instead. It grants no authority over a newer installation.
+For a matching event, the callback takes the workspace lease for its
+saved-state steps only. A lease conflict returns an error, so the event
+stays pending.
+A matching take-out then looks up its exact installation with the App
+JWT. That lookup runs in a supervised task, outside the lease, and the
+callback returns an error meanwhile. The task uses the answer only while
+the saved organization still matches the event exactly.
+A successful lookup keeps ordinary GitHub-first retirement for one pass.
+Each pending pass that used it starts one fresh exact lookup, outside the
+lease, with at most one lookup at a time for each organization. Only the
+first lookup starts retirement. A fresh lookup changes only the saved
+answer, and the next pass uses it. A confirming answer keeps the busy
+answers of the current take-out check, and a failed check stays failed.
 A 404 for that installation while the take-out is pending proves that the
-owner removed the App, because ciproxy has not uninstalled it yet. The
-callback then applies the owner-removal policy, with no registration call.
-A 403, a token-route 404, or another lookup error grants no authority.
+owner removed the App, because ciproxy has not uninstalled it yet. That
+answer stays final. The callback then applies the owner-removal policy,
+with no registration call. An earlier failed Boat check does not block
+that acceptance.
+A 403, a token-route 404, or another lookup error grants no authority, and
+the last answer stays.
 Only the reservations of that organization enter the callback.
 Busy jobs, saved stops, and stopped reservations stay protected.
 Each other live reservation needs positive retirement or a busy answer.
@@ -142,13 +195,21 @@ Acceptance includes own-machine commands, Boat registration intents, Boat
 deliveries, and materialized Boat runners. A Boat delivery that can still
 launch keeps take-out pending. This includes an ambiguous dispatched start.
 A retained running Boat delivery needs a current GitHub busy answer and a
-saved `Busy` state. Old job facts alone grant no take-out answer.
+saved `Busy` state. That answer must come from the supervised GitHub check
+of the current take-out. Its lifecycle authority must not change after it.
+That authority is the organization, the registration, the runner, its
+jobs, and the fixed inputs, phase, sandbox ID, end, and end report of the
+delivery. Routine usage and billing readings, measured starts, and lifetime
+bounds do not change it. A saved `Busy` state or old job facts alone grant
+no take-out answer.
 A retired idle Boat delivery needs saved provider deletion and removal of
 its registration intent. Registration-only reservations also need positive
 GitHub retirement before their intent is removed.
 The API removes scale sets and the App only after this callback accepts.
 One failed runner does not stop the others, but an unanswered reservation
-makes the callback return an error.
+makes the callback return an error. A queued or running GitHub or Boat
+request is not an answer. The lifecycle outbox then retries the same event
+until each reservation has saved retirement or a current busy answer.
 A delivery failure after a saved stop does not reject the event. Recovery
 resends that stop with its command ID and issue time, with no GitHub call.
 A provider deletion failure after Boat retirement also permits acceptance.

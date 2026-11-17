@@ -9,25 +9,42 @@ use ciproxy_gateway::types::Session;
 use ciproxy_github::app::LifecycleOutput;
 use ciproxy_protocol::agent::AgentMessage;
 use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
-use tokio::runtime::Handle;
 
 use crate::error::{Error, Result};
 use crate::runtime::OwnMachines;
 
 /// Relay authenticated gateway and installation events to the shared runtime.
-pub(crate) struct Relay {
+pub struct Relay {
     /// Installed after the runtime is composed.
     pub(crate) machines: OnceLock<Weak<dyn OwnMachines>>,
-    /// Runtime handle used by the synchronous gateway event boundary.
-    pub(crate) handle: Handle,
 }
 
 impl Relay {
+    /// Create the gateway relay before the runtime is composed.
+    pub fn new() -> Self {
+        Self {
+            machines: OnceLock::new(),
+        }
+    }
+
+    /// Bind the completed runtime without a strong ownership cycle.
+    pub fn bind(&self, runtime: &Arc<dyn OwnMachines>) -> Result<()> {
+        self.machines
+            .set(Arc::downgrade(runtime))
+            .map_or_else(|_| Err(Error::StateChanged), |_| Ok(()))
+    }
+
     fn runtime(&self) -> Result<Arc<dyn OwnMachines>> {
         self.machines
             .get()
             .and_then(Weak::upgrade)
             .ok_or(Error::StateChanged)
+    }
+}
+
+impl Default for Relay {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -37,33 +54,27 @@ impl AgentEvents for Relay {
         workspace_id: uuid::Uuid,
         machine_id: uuid::Uuid,
     ) -> ciproxy_gateway::error::Result<()> {
-        let runtime = match self.runtime() {
-            Ok(runtime) => runtime,
-            Err(_) => return Err(ciproxy_gateway::error::Error::UnexpectedMessage),
-        };
-        self.handle
-            .block_on(runtime.machine_removed(workspace_id, machine_id))
-            .map_or_else(
-                |_| Err(ciproxy_gateway::error::Error::UnexpectedMessage),
-                |_| Ok(()),
-            )
+        match self.runtime() {
+            Ok(runtime) => runtime.enqueue_machine_removed(workspace_id, machine_id),
+            Err(error) => {
+                tracing::warn!(%error, "machine removal relay unavailable; saved state retains recovery")
+            }
+        }
+        Ok(())
     }
+
     fn receive(
         &self,
         session: Session,
         message: AgentMessage,
     ) -> ciproxy_gateway::error::Result<()> {
-        let result = self.runtime();
-        match result {
-            Ok(runtime) => self
-                .handle
-                .block_on(runtime.agent(session.workspace_id, session.machine_id, message))
-                .map_or_else(
-                    |_| Err(ciproxy_gateway::error::Error::UnexpectedMessage),
-                    |_| Ok(()),
-                ),
-            Err(_) => Err(ciproxy_gateway::error::Error::UnexpectedMessage),
+        match self.runtime() {
+            Ok(runtime) => runtime.enqueue_agent(session, message),
+            Err(error) => {
+                tracing::warn!(%error, "agent event relay unavailable; full reports retain recovery")
+            }
         }
+        Ok(())
     }
 }
 

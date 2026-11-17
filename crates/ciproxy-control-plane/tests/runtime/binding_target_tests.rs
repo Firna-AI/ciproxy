@@ -2,12 +2,12 @@
 
 use std::sync::atomic::Ordering;
 
-use ciproxy_control_plane::runtime::OwnMachines;
 use ciproxy_protocol::resources::Slots;
 use ciproxy_store_interface::scale_sets::RegistrationTarget;
 
 use super::overflow_support::Harness;
 use super::registration_race::Race;
+use super::settled::Settled;
 
 async fn captures_and_replaces(own: bool) {
     let mut harness = Harness::new(own, false).await;
@@ -21,7 +21,7 @@ async fn captures_and_replaces(own: bool) {
         .unwrap();
     let race = Race::install(&mut harness);
     let job = harness.queued();
-    harness.runtime.tick().await.unwrap();
+    harness.runtime.settled_tick().await.unwrap();
     let store = &harness.fixture.store;
     let workspace = harness.fixture.workspace;
     let organization = harness.fixture.organization;
@@ -58,7 +58,7 @@ async fn captures_and_replaces(own: bool) {
         }),
         "own={own}: save registration-time context"
     );
-    harness.runtime.tick().await.unwrap();
+    harness.runtime.settled_tick().await.unwrap();
     assert_eq!(
         *race.registered.lock().unwrap(),
         vec![144, 244],

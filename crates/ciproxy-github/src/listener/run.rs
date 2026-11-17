@@ -6,7 +6,8 @@ use scaleset::MessageId;
 use tokio::sync::watch;
 
 use crate::error::{Error, Result};
-use crate::persistence::session::{ListenerContext, ListenerTarget, SessionLease};
+use crate::persistence::lease::Lease;
+use crate::persistence::session::{ListenerContext, ListenerTarget};
 use crate::scale_sets::MessageQueue;
 
 use super::{DurableListener, ListenerOptions};
@@ -44,11 +45,7 @@ impl DurableListener {
         closed
     }
 
-    async fn check(
-        &self,
-        target: ListenerTarget,
-        lease: &dyn SessionLease,
-    ) -> Result<ListenerContext> {
+    async fn check(&self, target: ListenerTarget, lease: &dyn Lease) -> Result<ListenerContext> {
         lease.check().await?;
         let context = self.store.context(target).await?;
         if context.organization.app_state != AppState::Active {
@@ -60,7 +57,7 @@ impl DurableListener {
     async fn bound_context(
         &self,
         target: ListenerTarget,
-        lease: &dyn SessionLease,
+        lease: &dyn Lease,
         opened: &ListenerContext,
     ) -> Result<ListenerContext> {
         let context = self.check(target, lease).await?;
@@ -81,7 +78,7 @@ impl DurableListener {
         target: ListenerTarget,
         options: &ListenerOptions,
         mut stop: watch::Receiver<bool>,
-        lease: &dyn SessionLease,
+        lease: &dyn Lease,
         queue: &dyn MessageQueue,
         opened: &ListenerContext,
     ) -> Result<()> {

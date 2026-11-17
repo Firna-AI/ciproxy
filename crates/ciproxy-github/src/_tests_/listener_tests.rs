@@ -10,7 +10,8 @@ use unimock::{MockFn, Unimock, matching};
 
 use crate::error::Error;
 use crate::listener::{DurableListener, JobOutputMock, ListenerOptions, ScaleSetListener};
-use crate::persistence::session::{SessionLease, SessionLeaseMock, SessionStoreMock};
+use crate::persistence::lease::{Lease, LeaseMock};
+use crate::persistence::session::SessionStoreMock;
 use crate::rest::GitHubRestMock;
 use crate::scale_sets::{
     MessageQueue, MessageQueueMock, ScaleSetApi, ScaleSetApiMock, ScaleSetFactoryMock,
@@ -76,10 +77,8 @@ async fn assigned_job_is_durable_with_api_facts_before_output_and_ack() {
     let service = listener(Unimock::new((
         SessionStoreMock::lock
             .some_call(matching!(_))
-            .answers(&|mock, _| Ok(Some(Box::new(mock.clone()) as Box<dyn SessionLease>))),
-        SessionLeaseMock::check
-            .each_call(matching!())
-            .answers(&|_| Ok(())),
+            .answers(&|mock, _| Ok(Some(Box::new(mock.clone()) as Box<dyn Lease>))),
+        LeaseMock::check.each_call(matching!()).answers(&|_| Ok(())),
         SessionStoreMock::context
             .each_call(matching!(_))
             .answers(&|_, _| Ok(context())),
@@ -139,10 +138,8 @@ async fn failed_storage_keeps_message_unacknowledged_and_closes_session() {
     let service = listener(Unimock::new((
         SessionStoreMock::lock
             .some_call(matching!(_))
-            .answers(&|mock, _| Ok(Some(Box::new(mock.clone()) as Box<dyn SessionLease>))),
-        SessionLeaseMock::check
-            .each_call(matching!())
-            .answers(&|_| Ok(())),
+            .answers(&|mock, _| Ok(Some(Box::new(mock.clone()) as Box<dyn Lease>))),
+        LeaseMock::check.each_call(matching!()).answers(&|_| Ok(())),
         SessionStoreMock::context
             .each_call(matching!(_))
             .answers(&|_, _| Ok(context())),
@@ -197,8 +194,8 @@ async fn lost_database_session_stops_processing_and_closes_github_session() {
     let service = listener(Unimock::new((
         SessionStoreMock::lock
             .some_call(matching!(_))
-            .answers(&|mock, _| Ok(Some(Box::new(mock.clone()) as Box<dyn SessionLease>))),
-        SessionLeaseMock::check.stub(|each| {
+            .answers(&|mock, _| Ok(Some(Box::new(mock.clone()) as Box<dyn Lease>))),
+        LeaseMock::check.stub(|each| {
             each.call(matching!())
                 .answers(&|_| Ok(()))
                 .n_times(2)
@@ -239,10 +236,8 @@ async fn changed_remote_identity_closes_old_session_before_the_next_poll() {
         let service = listener(Unimock::new((
             SessionStoreMock::lock
                 .some_call(matching!(_))
-                .answers(&|mock, _| Ok(Some(Box::new(mock.clone()) as Box<dyn SessionLease>))),
-            SessionLeaseMock::check
-                .each_call(matching!())
-                .answers(&|_| Ok(())),
+                .answers(&|mock, _| Ok(Some(Box::new(mock.clone()) as Box<dyn Lease>))),
+            LeaseMock::check.each_call(matching!()).answers(&|_| Ok(())),
             SessionStoreMock::context.stub(|each| {
                 each.call(matching!(_))
                     .answers(&|_, _| Ok(context()))

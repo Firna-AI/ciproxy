@@ -1,9 +1,10 @@
 //! Restart recovery for memberships, sign-in expiry, labels, and take-outs.
 
 use async_trait::async_trait;
+use ciproxy_github::persistence::lease::LeaseStore;
 use ciproxy_store_interface::dashboard::records::Takeout;
 
-use crate::error::{Result, ServiceResultExt};
+use crate::error::{ErrorResultExt, Result, ServiceResultExt};
 use crate::handlers::organizations;
 use crate::state::{ApiState, query};
 
@@ -99,10 +100,7 @@ impl Maintenance {
         };
         let id = current.github_id;
         self.state.github.replay_lifecycle(id).await.api()?;
-        let _lease = query(self.state.store.clone(), move |store| {
-            store.lock_github_organization(id)
-        })
-        .await?;
+        let _lease = self.state.store.organization_lease(id).await.internal()?;
         organizations::finish_takeout(&self.state, &removal).await
     }
 }

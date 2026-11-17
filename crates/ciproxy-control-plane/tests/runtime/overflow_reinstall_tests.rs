@@ -2,7 +2,6 @@
 
 use std::sync::atomic::Ordering;
 
-use ciproxy_control_plane::runtime::OwnMachines;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_store_interface::github::DemandPhase;
 use ciproxy_store_interface::overflow::record::StartPhase;
@@ -10,6 +9,7 @@ use ciproxy_store_interface::runners::RunnerState;
 use uuid::Uuid;
 
 use super::overflow_support::Harness;
+use super::settled::Settled;
 use super::support::at;
 
 #[tokio::test]
@@ -17,7 +17,7 @@ async fn reinstall_then_boat_reconnect_retires_old_idle_supply_and_preserves_run
     let harness = Harness::new(false, false).await;
     let mut idle = harness.queued();
     let mut running = harness.queued();
-    harness.runtime.tick().await.unwrap();
+    harness.runtime.settled_tick().await.unwrap();
     let workspace = harness.fixture.workspace;
     let organization = harness.fixture.organization;
     let store = &harness.fixture.store;
@@ -31,7 +31,7 @@ async fn reinstall_then_boat_reconnect_retires_old_idle_supply_and_preserves_run
     store
         .record_app_removal(workspace, organization, at())
         .unwrap();
-    harness.runtime.tick().await.unwrap();
+    harness.runtime.settled_tick().await.unwrap();
     let removed = store.boat_runtime_snapshot(workspace).unwrap();
     let old_key = removed.accounts[0].account.id;
     assert_eq!(removed.accounts[0].account.retired_at, Some(at()));
@@ -90,7 +90,7 @@ async fn reinstall_then_boat_reconnect_retires_old_idle_supply_and_preserves_run
         )
         .await
         .unwrap();
-    harness.runtime.tick().await.unwrap();
+    harness.runtime.settled_tick().await.unwrap();
     let reconnected = store.boat_runtime_snapshot(workspace).unwrap();
     assert_eq!(reconnected.accounts.len(), 2);
     assert_eq!(

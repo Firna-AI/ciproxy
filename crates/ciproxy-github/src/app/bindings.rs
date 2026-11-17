@@ -6,7 +6,7 @@ use ciproxy_store_interface::scale_sets::{ScaleSet, ScaleSetState};
 use uuid::Uuid;
 
 use crate::error::{Error, Result};
-use crate::persistence::mutation::MutationLease;
+use crate::persistence::lease::Lease;
 use crate::persistence::session::ListenerTarget;
 use crate::scale_sets::ScaleSetApi;
 use crate::scale_sets::ownership::quarantine_name;
@@ -105,7 +105,7 @@ impl AppService {
         bindings: &[ScaleSet],
         group_id: i64,
         api: &dyn ScaleSetApi,
-        lease: &dyn MutationLease,
+        lease: &dyn Lease,
     ) -> Result<Vec<ScaleSet>> {
         let foreign = self
             .retire_bindings(organization, labels, bindings, api, lease)
@@ -154,7 +154,7 @@ impl AppService {
         labels: &[Label],
         bindings: &[ScaleSet],
         api: &dyn ScaleSetApi,
-        lease: &dyn MutationLease,
+        lease: &dyn Lease,
     ) -> Result<Vec<i64>> {
         let requested_labels: Vec<_> = labels.iter().map(|label| label.name.as_str()).collect();
         let foreign = self
@@ -220,7 +220,7 @@ impl AppService {
         requested_labels: &[&str],
         bindings: &[ScaleSet],
         api: &dyn ScaleSetApi,
-        lease: &dyn MutationLease,
+        lease: &dyn Lease,
     ) -> Result<Vec<i64>> {
         let mut owners: Vec<_> = bindings
             .iter()

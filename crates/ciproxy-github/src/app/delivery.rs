@@ -3,7 +3,7 @@
 use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
 
 use crate::error::Result;
-use crate::persistence::mutation::MutationLease;
+use crate::persistence::lease::Lease;
 
 use super::AppService;
 
@@ -13,11 +13,7 @@ impl AppService {
         self.deliver_lifecycle(github_id, &*lease).await
     }
 
-    pub(super) async fn deliver_lifecycle(
-        &self,
-        github_id: i64,
-        lease: &dyn MutationLease,
-    ) -> Result<()> {
+    pub(super) async fn deliver_lifecycle(&self, github_id: i64, lease: &dyn Lease) -> Result<()> {
         lease.check().await?;
         for delivery in self.outbox.pending(github_id).await? {
             lease.check().await?;
