@@ -84,6 +84,7 @@ pub(super) struct Remote {
     pub(super) fail_delete: AtomicBool,
     pub(super) fail_ensure: AtomicBool,
     pub(super) fail_lifecycle: AtomicBool,
+    pub(super) pending_lifecycle: AtomicBool,
 }
 #[async_trait]
 impl InstallationApi for Remote {
@@ -212,6 +213,9 @@ impl LifecycleOutput for Remote {
     async fn changed(&self, event: LifecycleEvent) -> ciproxy_github::error::Result<()> {
         if self.fail_lifecycle.swap(false, Ordering::SeqCst) {
             return Err(ciproxy_github::error::Error::AccessUnavailable(503));
+        }
+        if self.pending_lifecycle.load(Ordering::SeqCst) {
+            return Err(ciproxy_github::error::Error::OrganizationInactive);
         }
         if let LifecycleEvent::Active(organization) = &event {
             let labels = self

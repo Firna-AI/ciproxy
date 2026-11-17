@@ -91,6 +91,7 @@ impl Fixture {
             fail_delete: AtomicBool::new(false),
             fail_ensure: AtomicBool::new(false),
             fail_lifecycle: AtomicBool::new(false),
+            pending_lifecycle: AtomicBool::new(false),
         });
         let factory = Arc::new(Factory(remote.clone()));
         let persistence = Arc::new(StoreAdapter::new(database.store.clone(), runtime.clone()));
