@@ -57,7 +57,7 @@ impl Controller {
         &self,
         vm: &VmRecord,
         job_id: &JobId,
-        runtime: Option<RuntimeCredentials>,
+        runtime: RuntimeCredentials,
         initial_authority: bool,
     ) -> Result<(VmRecord, Option<CheckedRuntime>)> {
         let mut state = self.state.lock().await;
@@ -76,17 +76,9 @@ impl Controller {
             record.report.state,
             RunnerState::Starting | RunnerState::Warm
         );
-        let checked = match runtime {
-            Some(runtime) => record
-                .cache_authority
-                .handoff(first, initial_authority, runtime),
-            None => {
-                if matches!(record.cache_authority, CacheAuthority::Waiting) {
-                    record.cache_authority = CacheAuthority::GitHubOnly;
-                }
-                None
-            }
-        };
+        let checked = record
+            .cache_authority
+            .handoff(first, initial_authority, runtime);
         record.report.state = RunnerState::Running {
             job_id: job_id.clone(),
         };

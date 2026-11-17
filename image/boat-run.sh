@@ -25,7 +25,7 @@ rm -f "$rootfs/etc/resolv.conf"
 cp -L /etc/resolv.conf "$rootfs/etc/resolv.conf"
 chroot "$rootfs" /usr/bin/dockerd \
     --host=unix:///run/docker.sock --exec-root=/run/docker \
-    --pidfile=/run/docker.pid --bridge=ciproxy0 > /tmp/ciproxy-docker.log 2>&1 &
+    --pidfile=/run/docker.pid > /tmp/ciproxy-docker.log 2>&1 &
 docker_pid=$!
 trap 'kill "$docker_pid" 2>/dev/null || true' EXIT
 ready=false

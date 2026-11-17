@@ -306,7 +306,8 @@ KVM and GitHub smoke checks, and release packaging commands.
   uninstall drain loop while cleanup retains runtime ownership.
 - [src/area.rs](src/area.rs) owns area preparation, repair, and removal.
   Fresh creation completes measured growth in one install call.
-- [scripts/](scripts/) contains smoke checks and network regression tests.
+- [scripts/](scripts/) contains release packaging, smoke checks, and network
+  regression tests.
 
 ### Related Docs
 
