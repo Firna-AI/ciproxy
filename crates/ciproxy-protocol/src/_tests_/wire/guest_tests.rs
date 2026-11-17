@@ -1,5 +1,6 @@
 //! Both directions of the private agent-to-guest vsock protocol.
 
+use crate::cache::{DockerDiskAccess, DockerDiskAttachment};
 use crate::guest::HANDOFF_PROTOCOL_VERSION;
 use crate::guest::{AgentToGuest, GuestToAgent, JobDecision};
 use crate::runners::RunnerExit;
@@ -124,6 +125,22 @@ fn preparation_decisions_name_the_job_and_selected_cache_route() {
                 facts: Box::new(fixtures::facts()),
                 cache: fixtures::cache_connection(),
                 docker: None,
+            },
+        },
+    );
+    snapshot(
+        "vsock_job_machine_cache_docker",
+        "prepare_job",
+        AgentToGuest::PrepareJob {
+            job_id: fixtures::job_id(),
+            decision: JobDecision::MachineCache {
+                facts: Box::new(fixtures::facts()),
+                cache: fixtures::cache_connection(),
+                docker: Some(DockerDiskAttachment {
+                    free_bytes: 20_000_000_000,
+                    drive_id: "docker_cache".into(),
+                    access: DockerDiskAccess::DisposableCopy,
+                }),
             },
         },
     );
