@@ -2874,6 +2874,13 @@ Answers of 5 November 2026:
 - Item 119, A, 17 November 2026: the orchestrator merges the reviewed Boat
   client fix in `futex-ai/sandbox`, pull request #13, merged as `037fbd7`.
   Rejected: B.
+- Item 120, B, 17 November 2026: a separate test organization,
+  `firna-test-org`, gives the workspace on Free for the Checkout checks.
+  Rejected: A and C.
+- Item 121, C, 17 November 2026: a one-time repair closes the historical
+  unsent Boat start in the preview, and
+  `follow-ups/boat-historical-start-recovery.md` records the operator
+  command for later cases. Rejected: A alone and B alone.
 - Item 108, C with D, 8 November 2026: the paid change sends the same
   pending credit that the preview counted, Stripe computes the amount, and
   an alert compares each invoice with its quote. A third fix round of pull
