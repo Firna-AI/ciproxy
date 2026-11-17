@@ -152,7 +152,19 @@ that the callback deleted its sandbox.
 If the control plane deletes it before status can read the logs, keep the
 callback server's receipt and the provider deletion result as evidence.
 Delete a remaining smoke sandbox with the explicit delete command.
-`delete` sends the sandbox ID in Boat's `X-Ascii-Confirm-Delete` header.
+`delete` uses the shared [Boat delete helper](boat_delete.py). The helper
+takes the encoded request route and Boat's `X-Ascii-Confirm-Delete` header
+from the same sandbox ID. The overflow smoke cleanup uses the same helper.
+Change Boat deletion only in that helper. The
+[delete confirmation check](checks.md#boat-delete-confirmation) needs no
+Boat key or network:
+
+```sh
+python3 -B image/check-boat-delete.py
+```
+
+After a change to the helper, also run the local tests in the
+[overflow guide](../crates/ciproxy-control-plane/overflow.md#local-tests).
 
 Boat documents 51 GB for files on `small` and `default`.
 Those sizes cannot hold the full userspace.
