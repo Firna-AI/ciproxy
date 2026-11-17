@@ -13,6 +13,7 @@ use crate::auth::{AppJwt, ScaleSetJwt};
 use crate::error::{Error, Result, ResultExt};
 
 use super::failure::{Operation, matches, missing};
+use super::ownership::is_quarantined;
 use super::queue::SdkQueue;
 use super::{JitRegistration, MessageQueue, ScaleSetApi, ScaleSetFactory};
 
@@ -52,7 +53,7 @@ impl ScaleSetFactory for AppScaleSetFactory {
 
 /// The real SDK adapter. Tests can supply an SDK client for a fake HTTP server.
 pub struct SdkScaleSetApi {
-    client: scaleset::Client,
+    pub(super) client: scaleset::Client,
     http: Client,
 }
 
@@ -78,6 +79,7 @@ impl ScaleSetApi for SdkScaleSetApi {
         label: &str,
         runner_group_id: i64,
         saved_id: Option<i64>,
+        requested_labels: &[&str],
     ) -> Result<i64> {
         let group = RunnerGroupId(runner_group_id);
         if let Some(id) = saved_id {
@@ -90,7 +92,9 @@ impl ScaleSetApi for SdkScaleSetApi {
                             actual_group: existing.runner_group_id.get(),
                         });
                     }
-                    return Ok(existing.id.get());
+                    if !is_quarantined(&existing) {
+                        return self.restore_label(&existing, label, requested_labels).await;
+                    }
                 }
                 Err(error) if missing(&error, Operation::ScaleSet(id)) => {}
                 Err(error) => return Err(error).internal(),
@@ -101,9 +105,12 @@ impl ScaleSetApi for SdkScaleSetApi {
             .get_runner_scale_set_by_name(group, label)
             .await
             .internal()?
+            && !is_quarantined(&existing)
         {
-            return Ok(existing.id.get());
+            return self.restore_label(&existing, label, requested_labels).await;
         }
+        self.release_quarantine_labels(group, requested_labels)
+            .await?;
         let spec = RunnerScaleSetSpec::new(label)
             .runner_group_id(group)
             .disable_update();
@@ -180,18 +187,13 @@ impl ScaleSetApi for SdkScaleSetApi {
         }
     }
 
-    async fn rename_scale_set(&self, scale_set_id: i64, name: &str) -> Result<()> {
-        match self
-            .client
-            .update_runner_scale_set(
-                ScaleSetId(scale_set_id),
-                &RunnerScaleSetSpec::new(name).labels([name]),
-            )
+    async fn rename_scale_set(
+        &self,
+        scale_set_id: i64,
+        name: &str,
+        requested_labels: &[&str],
+    ) -> Result<()> {
+        self.retire_remote(scale_set_id, name, requested_labels)
             .await
-        {
-            Ok(_) => Ok(()),
-            Err(error) if missing(&error, Operation::ScaleSet(scale_set_id)) => Ok(()),
-            Err(error) => Err(error).internal(),
-        }
     }
 }

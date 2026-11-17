@@ -74,7 +74,7 @@ pub trait BillingSession: Send {
     fn save_checkout(&mut self, checkout: &CheckoutProgress) -> Result<()>;
     /// Detect an already committed event before locked reconciliation reads.
     fn event_applied(&mut self, event_id: &str) -> Result<bool>;
-    /// Commit state, optional event receipt, and command completion atomically.
+    /// Commit state, changed plan cost, event receipt, and completion atomically.
     ///
     /// None for state preserves the confirmed state. A completed command also
     /// clears Checkout. A handled removal clears only its durable request.

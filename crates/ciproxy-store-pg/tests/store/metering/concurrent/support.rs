@@ -11,9 +11,9 @@ use diesel::sql_types;
 use url::Url;
 use uuid::Uuid;
 
-pub(super) struct TaggedStore {
-    pub(super) store: Arc<dyn Store>,
-    pub(super) pid: i32,
+pub(in crate::store) struct TaggedStore {
+    pub(in crate::store) store: Arc<dyn Store>,
+    pub(in crate::store) pid: i32,
 }
 
 #[derive(QueryableByName)]
@@ -28,7 +28,7 @@ struct Blocking {
     blocked: bool,
 }
 
-pub(super) fn tagged_store(database_url: &str) -> TaggedStore {
+pub(in crate::store) fn tagged_store(database_url: &str) -> TaggedStore {
     let tag = format!("metering-operation-{}", Uuid::new_v4());
     let mut url = Url::parse(database_url).unwrap();
     url.query_pairs_mut()
@@ -41,7 +41,7 @@ pub(super) fn tagged_store(database_url: &str) -> TaggedStore {
     TaggedStore { store, pid }
 }
 
-pub(super) fn backend_pid(connection: &mut PgConnection) -> i32 {
+pub(in crate::store) fn backend_pid(connection: &mut PgConnection) -> i32 {
     diesel::sql_query("SELECT pg_backend_pid() AS pid")
         .get_result::<Backend>(connection)
         .unwrap()
@@ -49,7 +49,7 @@ pub(super) fn backend_pid(connection: &mut PgConnection) -> i32 {
 }
 
 /// The deadline detects hung setup, never the timing of a product outcome.
-pub(super) fn wait_for_blocker(observer: &mut PgConnection, waiter: i32, blocker: i32) {
+pub(in crate::store) fn wait_for_blocker(observer: &mut PgConnection, waiter: i32, blocker: i32) {
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
         let state = diesel::sql_query("SELECT $1 = ANY(pg_blocking_pids($2)) AS blocked")

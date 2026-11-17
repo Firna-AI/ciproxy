@@ -14,6 +14,7 @@ Keep Stripe keys and signing secrets out of diagnostics.
 ## What This Crate Does
 
 Provisions the four monthly USD prices and a restricted customer portal.
+Reads published prices from the shared store-interface billing catalog.
 Free creates neither a Stripe customer nor a card.
 Admin and Billing roles can pay and change billing.
 A Viewer can read the billing state and banner dates.
@@ -96,6 +97,12 @@ Shared completion rules release paid commands when a subscription ends.
 A late end event preserves a new Checkout command.
 Direct paid commands reconcile an ended subscription before any mutation.
 State, command completion, and an event receipt commit in one transaction.
+The same transaction records each changed monthly tier and add-on total.
+Checkout cost begins at the confirmed Stripe period start.
+Subscription end starts the zero-dollar Free cost at Stripe's end time.
+Other confirmed price changes use the commit time.
+The cost boundary never precedes the current interval's start.
+An equal monthly total preserves its current interval.
 The store creates the Free anchor when it creates the workspace.
 Confirmed paid bounds and later Free anchors are available to metering.
 Billing changes no job, organization, or machine record.
@@ -270,7 +277,8 @@ listener, the browser and account checks, and the external account setup.
 - [src/stripe/http/payment_ledger.rs](src/stripe/http/payment_ledger.rs)
   stamps invoice correlation, finds payment invoices, and restores balance.
 - [src/webhook.rs](src/webhook.rs) verifies raw signatures and routes events.
-- [src/catalog.rs](src/catalog.rs) owns USD prices and checkout reviews.
+- [src/catalog.rs](src/catalog.rs) maps Stripe price codes to the shared
+  catalog and calculates checkout reviews.
 - [tests/_tests_](tests/_tests_) contains the public integration scenarios.
 
 ### Related Docs

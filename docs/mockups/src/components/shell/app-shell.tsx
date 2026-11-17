@@ -21,8 +21,11 @@ import "./app-shell-rail.css";
 
 export type SetupProgress = { done: number; total: number; active: boolean };
 
-/** The signed-in person, and whether GitHub names the person an owner. */
-export type ShellPerson = Pick<Member, "name" | "login" | "initials" | "owner">;
+/** The signed-in person, and whether ciproxy offers the Admin claim. */
+export type ShellPerson = Pick<
+  Member,
+  "name" | "login" | "initials" | "canClaimAdmin"
+>;
 
 export type AppShellProps = {
   viewport: Viewport;

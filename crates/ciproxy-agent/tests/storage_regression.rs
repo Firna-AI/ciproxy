@@ -8,16 +8,26 @@
 
 #[path = "../src/budget_file.rs"]
 mod budget_file;
+#[path = "../src/cache_authority.rs"]
+mod cache_authority;
+#[path = "../src/endpoint.rs"]
+mod endpoint;
 #[path = "../src/error.rs"]
 mod error;
 #[path = "../src/host_system.rs"]
 mod host_system;
 #[path = "../src/image_space.rs"]
 mod image_space;
+#[path = "../src/layout.rs"]
+mod layout;
 #[path = "../src/sparse_copy.rs"]
 mod sparse_copy;
+#[path = "../src/state.rs"]
+mod state;
 #[path = "../src/storage_sizing.rs"]
 mod storage_sizing;
+#[path = "../src/vm_drives.rs"]
+mod vm_drives;
 
 use std::fs::{self, OpenOptions};
 use std::io::Write;
@@ -31,7 +41,9 @@ use sha2::{Digest, Sha256};
 use budget_file::BudgetFile;
 use error::Error;
 use image_space::{ImageBudget, ImageSpace, LinuxSpaceUsage};
+use layout::Layout;
 use storage_sizing::AreaSizing;
+use vm_drives::VmDrive;
 
 fn run(program: &str, args: &[&str]) -> String {
     let output = Command::new(program)
@@ -119,9 +131,16 @@ fn main() {
             >= sizing.job() + sizing.images + sizing.metadata_safety()
     );
     assert!(file.metadata().unwrap().len() < host_bytes);
+    let layout = Layout {
+        data: area.clone(),
+        firecracker: PathBuf::from("firecracker"),
+        jailer: PathBuf::from("jailer"),
+    };
     let space: Arc<dyn ImageSpace> = Arc::new(ImageBudget::new(
         sizing.images,
-        Arc::new(LinuxSpaceUsage { area: area.clone() }),
+        Arc::new(LinuxSpaceUsage {
+            layout: layout.clone(),
+        }),
     ));
     let base = area.join("images/base");
     let mut output = BudgetFile::create(&base, space.clone()).unwrap();
@@ -131,9 +150,9 @@ fn main() {
     }
     output.sync().unwrap();
     let before = digest(&base);
-    let vm_root = area.join("jailer/firecracker/0123456789abcdef0123456789abcdef/root");
+    let vm_root = layout.jail_root_id("0123456789abcdef0123456789abcdef");
     fs::create_dir_all(&vm_root).unwrap();
-    let vm = vm_root.join("rootfs.ext4");
+    let vm = vm_root.join(VmDrive::Root.file_name());
     run(
         "cp",
         &[

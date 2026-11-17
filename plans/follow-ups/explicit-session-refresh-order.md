@@ -116,8 +116,10 @@
     does not import a billing module.
   - The page store numbers each read when it starts, and it drops an older
     reply. It keeps the last good page beside the failure of a later read,
-    and it polls while the page waits. The Usage store, the Plans store,
-    and the Machines overflow summary store use it.
+    and it polls while the page waits, or while no good page exists. The
+    Usage store and the Plans store use `createPageStore`. The Machines
+    overflow summary store uses its read rule alone, `createPageRead`, with
+    no poll.
   - Five other read stores copy the same rule by hand: a counter of the
     latest read, and a refresh failure beside the kept data. They are
     `machines.ts`, `jobs-live.ts`, `savings.ts`, `settings-store.ts`, and
@@ -278,7 +280,7 @@
     cover this.
   - On 17 November 2026, the final review found that the Machines overflow
     summary store ignored a failed read after a success. Its fix moved the
-    store onto `createPageStore`.
+    store onto `createPageRead`, the read rule of the page store.
 - **Related:**
   - `plans/follow-ups/setup-progress-cache.md` changes the same Setup store.
     Its fix adds two Setup reads: a watch from the shell, which is a

@@ -9,7 +9,7 @@ import type {
 import type { PaymentSubmission } from "../src/api/billing-payment.ts";
 import { usageStore } from "../src/state/billing.ts";
 import { createPagePayment } from "../src/state/billing-flows.ts";
-import type { PageSnapshot } from "../src/state/billing-page.ts";
+import type { PageSnapshot } from "../src/state/page-store.ts";
 import type { PaymentSnapshot } from "../src/state/billing-payment.ts";
 import { outcomeModel } from "../src/view/billing-outcome.ts";
 import { moveToFreeFailure } from "../src/view/billing-uncertain.ts";

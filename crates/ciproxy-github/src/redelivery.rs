@@ -11,6 +11,7 @@ use serde::Deserialize;
 
 use crate::auth::AppJwt;
 use crate::error::{Error, Result, ResultExt};
+use crate::hooks::WEBHOOK_ACCEPTED_STATUS;
 
 #[derive(Debug, thiserror::Error)]
 #[error("[github/redelivery] repeated delivery-history cursor")]
@@ -95,11 +96,7 @@ impl WebhookRecovery for RecoverDeliveries {
         }
         let mut failed: Vec<_> = latest
             .values()
-            .filter(|delivery| {
-                !delivery
-                    .status_code
-                    .is_some_and(|status| (200..400).contains(&status))
-            })
+            .filter(|delivery| delivery.status_code != Some(WEBHOOK_ACCEPTED_STATUS.as_u16()))
             .collect();
         failed.sort_by_key(|delivery| (delivery.delivered_at, delivery.id));
         for delivery in failed {

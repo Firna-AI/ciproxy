@@ -2,12 +2,10 @@
 
 use ciproxy_billing::access::{BillingAccess, Role};
 use ciproxy_billing::service::view::{ChangeOutcome, CheckoutOutcome};
-use ciproxy_metering::pricing;
 use ciproxy_store_interface::billing::state::{AddOns, Selection, Tier};
 use rust_decimal::{Decimal, RoundingStrategy};
 use uuid::Uuid;
 
-use crate::error::{ErrorResultExt, Result};
 use crate::wire::billing::{PaymentOutcome, PlanAddOns, PlanSelection, PlanTier};
 use crate::wire::money::Cents;
 
@@ -51,34 +49,6 @@ pub(super) fn stored(value: PlanSelection) -> Selection {
             machines: value.add_ons.machines,
         },
     }
-}
-
-pub(super) fn plan(tier: Tier, add_ons: AddOns) -> pricing::Plan {
-    pricing::Plan {
-        tier: match tier {
-            Tier::Free => pricing::Tier::Free,
-            Tier::Team => pricing::Tier::Team,
-            Tier::Business => pricing::Tier::Business,
-        },
-        add_ons: pricing::AddOns {
-            start_blocks: u64::from(add_ons.start_blocks),
-            machines: u64::from(add_ons.machines),
-        },
-    }
-}
-
-pub(super) fn choice_selection(value: pricing::Plan) -> Result<PlanSelection> {
-    Ok(PlanSelection {
-        tier: match value.tier {
-            pricing::Tier::Free => PlanTier::Free,
-            pricing::Tier::Team => PlanTier::Team,
-            pricing::Tier::Business => PlanTier::Business,
-        },
-        add_ons: PlanAddOns {
-            start_blocks: value.add_ons.start_blocks.try_into().internal()?,
-            machines: value.add_ons.machines.try_into().internal()?,
-        },
-    })
 }
 
 pub(super) fn access(

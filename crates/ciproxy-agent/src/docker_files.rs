@@ -16,6 +16,8 @@ use crate::state::VmRecord;
 pub(crate) enum AttachmentPhase {
     #[default]
     Preparing,
+    /// The attachment owns its blocks and no longer needs its source path.
+    Bound,
     Offered,
     Discard,
     Abandon,

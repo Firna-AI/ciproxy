@@ -23,7 +23,7 @@
   display: inline-block;
   width: 14px;
   height: 6px;
-  border-radius: 1px;
+  border-radius: var(--r-mark-sm);
 }
 
 .slot-busy {
@@ -45,7 +45,7 @@
 .slot-strip-lg .slot {
   width: 22px;
   height: 10px;
-  border-radius: 2px;
+  border-radius: var(--r-mark-md);
 }
 
 .slot-legend {

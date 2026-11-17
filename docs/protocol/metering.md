@@ -162,6 +162,14 @@ of each tier.
   range on which the machine was registered.
 - The report counts the monthly price of the tier and its add-ons for the
   days of the range.
+- Confirmed billing state and its changed monthly price become visible together.
+- A Checkout price starts at the confirmed Stripe billing-period start.
+- When Stripe ends a subscription, the zero-dollar Free price starts at
+  Stripe's end time.
+- Other confirmed paid-tier and add-on price changes start at confirmation.
+- No price boundary precedes the current monthly-price interval's start.
+- An unchanged monthly total adds no price boundary.
+- Quotes, pending payments, and unconfirmed changes keep the confirmed price.
 - When a monthly machine cost or tier and add-on price changes on a UTC
   date, the last price on that date counts for the whole date.
 - **Decision:** the last monthly price counts for the whole UTC date.

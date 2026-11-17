@@ -1,6 +1,6 @@
 //! Public PostgreSQL metering integration tests.
 
-mod concurrent;
+pub(in crate::store) mod concurrent;
 mod cursor_tests;
 mod facts_tests;
 mod observation_tests;

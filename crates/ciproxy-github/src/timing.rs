@@ -140,6 +140,7 @@ impl JobTiming for RepairTiming {
             {
                 continue;
             }
+            let awaiting_completion = target.attempt.awaiting_completion;
             let job = target.attempt.job;
             let Some(runner_id) = job.runner_github_id else {
                 continue;
@@ -157,7 +158,8 @@ impl JobTiming for RepairTiming {
                 Ok(Some(times)) => {
                     let complete = times.started_at.or(job.started_at).is_some()
                         && (!(times.terminal || job.phase == DemandPhase::Completed)
-                            || times.completed_at.or(job.completed_at).is_some());
+                            || times.completed_at.or(job.completed_at).is_some())
+                        && (!awaiting_completion || times.terminal);
                     self.store.save(workspace_id, id, times, now).await?;
                     complete
                 }

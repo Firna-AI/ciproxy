@@ -1,30 +1,29 @@
 // The overflow summary of one workspace, which every role reads for the
 // Overflow panel of Machines and for where jobs go while a machine takes
-// none. A failed read shows with Try again; it never hides the machines.
+// none. It is a page read: a failed first read shows with Try again, and a
+// failed refresh keeps the last summary and shows the failure with Try again.
+// Neither hides the machines. The summary reads again only when a page asks,
+// never on an interval, because each read asks Boat for the costs of the
+// open starts.
 
-import type { ApiFailure, ApiResult } from "../api/client.ts";
+import type { ApiResult } from "../api/client.ts";
 import type { MachineEndpoints } from "../api/machine-endpoints.ts";
 import type { OverflowSettings } from "../api/machine-schema.ts";
-import { createStore, type Store } from "./store.ts";
+import {
+  createPageRead,
+  type PageRead,
+  type PageSnapshot,
+} from "./page-store.ts";
 
-export type OverflowSnapshot =
-  | { status: "loading" }
-  | { status: "ready"; summary: OverflowSettings }
-  | { status: "failed"; failure: ApiFailure };
+export type OverflowSnapshot = PageSnapshot<OverflowSettings>;
 
-export type OverflowStore = {
-  readonly state: Store<OverflowSnapshot>;
-  /** Read the summary now. A later read makes this one count for nothing. */
-  load(): Promise<void>;
-  /** Read once for this document; later calls share that read. */
-  ensure(): Promise<void>;
-};
+export type OverflowStore = PageRead<OverflowSettings>;
 
 /** The summary that a snapshot holds, or null while none is known. */
 export function overflowSummary(
   snapshot: OverflowSnapshot,
 ): OverflowSettings | null {
-  return snapshot.status === "ready" ? snapshot.summary : null;
+  return snapshot.status === "ready" ? snapshot.page : null;
 }
 
 export function createOverflowStore(options: {
@@ -33,28 +32,8 @@ export function createOverflowStore(options: {
   report: <T>(result: ApiResult<T>) => ApiResult<T>;
 }): OverflowStore {
   const { endpoints, workspaceId, report } = options;
-  const state = createStore<OverflowSnapshot>({ status: "loading" });
-  let latest = 0;
-  let first: Promise<void> | null = null;
-
-  const load = async (): Promise<void> => {
-    latest += 1;
-    const mine = latest;
-    const result = report(await endpoints.overflowSummary(workspaceId));
-    if (mine !== latest) return;
-    if (result.ok) {
-      state.set({ status: "ready", summary: result.value });
-    } else if (state.get().status !== "ready") {
-      state.set({ status: "failed", failure: result.failure });
-    }
-  };
-
-  return {
-    state,
-    load,
-    ensure() {
-      first ??= load();
-      return first;
-    },
-  };
+  return createPageRead({
+    read: () => endpoints.overflowSummary(workspaceId),
+    report,
+  });
 }

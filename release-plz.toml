@@ -17,3 +17,17 @@ git_release_name = "ciproxy agent v{{ version }}"
 git_tag_enable = true
 git_tag_name = "ciproxy-agent-v{{ version }}"
 publish = false
+
+[[package]]
+name = "ciproxy-cache-sidecar"
+release = true
+git_release_enable = false
+git_tag_enable = false
+git_tag_name = "ciproxy-agent-v{{ version }}"
+
+[[package]]
+name = "ciproxy-protocol"
+release = true
+git_release_enable = false
+git_tag_enable = false
+git_tag_name = "ciproxy-agent-v{{ version }}"

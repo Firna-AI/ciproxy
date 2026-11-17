@@ -15,8 +15,9 @@ use diesel::sql_types::BigInt;
 use uuid::Uuid;
 
 use crate::error::QueryResultExt;
+use crate::gateway_transaction::transaction;
 
-use super::{payments, quotes, renewals, rows};
+use super::{costs, payments, quotes, renewals, rows};
 
 pub(super) struct Session {
     pub(super) connection: PgConnection,
@@ -124,49 +125,54 @@ impl BillingSession for Session {
             return Err(Error::InvalidReference);
         }
         let json = state.map(serde_json::to_string).transpose().internal()?;
-        self.connection
-            .transaction::<_, diesel::result::Error, _>(|connection| {
-                workspaces::table
-                    .find(self.workspace_id)
-                    .select(workspaces::id)
-                    .for_update()
-                    .first::<Uuid>(connection)?;
-                if let Some(event_id) = event_id {
-                    let inserted = diesel::insert_into(billing_events::table)
-                        .values((
-                            billing_events::event_id.eq(event_id),
-                            billing_events::workspace_id.eq(self.workspace_id),
-                            billing_events::applied_at.eq(at),
-                        ))
-                        .on_conflict_do_nothing()
-                        .execute(connection)?;
-                    if inserted == 0 {
-                        return Ok(());
-                    }
+        transaction(&mut self.connection, |connection| {
+            workspaces::table
+                .find(self.workspace_id)
+                .select(workspaces::id)
+                .for_update()
+                .first::<Uuid>(connection)
+                .store()?;
+            if let Some(event_id) = event_id {
+                let inserted = diesel::insert_into(billing_events::table)
+                    .values((
+                        billing_events::event_id.eq(event_id),
+                        billing_events::workspace_id.eq(self.workspace_id),
+                        billing_events::applied_at.eq(at),
+                    ))
+                    .on_conflict_do_nothing()
+                    .execute(connection)
+                    .store()?;
+                if inserted == 0 {
+                    return Ok(());
                 }
-                if let (Some(json), Some(state)) = (&json, state) {
-                    diesel::update(billing_accounts::table.find(self.workspace_id))
-                        .set((
-                            billing_accounts::state_json.eq(json),
-                            billing_accounts::subscription_id.eq(&state.subscription_id),
-                        ))
-                        .execute(connection)?;
-                }
-                if finish_command {
-                    diesel::update(billing_accounts::table.find(self.workspace_id))
-                        .set((
-                            billing_accounts::command_json.eq::<Option<String>>(None),
-                            billing_accounts::checkout_json.eq::<Option<String>>(None),
-                        ))
-                        .execute(connection)?;
-                }
-                if handled_removal {
-                    diesel::update(billing_accounts::table.find(self.workspace_id))
-                        .set(billing_accounts::removal_cancel_requested.eq(false))
-                        .execute(connection)?;
-                }
-                Ok(())
-            })
-            .store()
+            }
+            if let (Some(json), Some(state)) = (&json, state) {
+                let previous = rows::read(connection, self.workspace_id)?.state;
+                costs::save(connection, &previous, state, at)?;
+                diesel::update(billing_accounts::table.find(self.workspace_id))
+                    .set((
+                        billing_accounts::state_json.eq(json),
+                        billing_accounts::subscription_id.eq(&state.subscription_id),
+                    ))
+                    .execute(connection)
+                    .store()?;
+            }
+            if finish_command {
+                diesel::update(billing_accounts::table.find(self.workspace_id))
+                    .set((
+                        billing_accounts::command_json.eq::<Option<String>>(None),
+                        billing_accounts::checkout_json.eq::<Option<String>>(None),
+                    ))
+                    .execute(connection)
+                    .store()?;
+            }
+            if handled_removal {
+                diesel::update(billing_accounts::table.find(self.workspace_id))
+                    .set(billing_accounts::removal_cancel_requested.eq(false))
+                    .execute(connection)
+                    .store()?;
+            }
+            Ok(())
+        })
     }
 }

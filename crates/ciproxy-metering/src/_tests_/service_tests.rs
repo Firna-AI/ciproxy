@@ -2,6 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 
+use ciproxy_store_interface::billing::state::Tier;
 use ciproxy_store_interface::metering::facts::{JobPlace, WorkspaceUsage};
 use ciproxy_store_interface::metering::history::{BoatAccounting, Period};
 use ciproxy_store_interface::metering::report::SavingsSnapshot;
@@ -12,7 +13,6 @@ use ciproxy_store_interface::metering::totals::{
 use unimock::{MockFn, Unimock, matching};
 use uuid::Uuid;
 
-use crate::pricing::Tier;
 use crate::report::catalog::Alternative;
 use crate::service::{Metering, Refresh, StoredMetering};
 use crate::test_support::{at, catalog, day, free_history, job, plan, range, size, usd};

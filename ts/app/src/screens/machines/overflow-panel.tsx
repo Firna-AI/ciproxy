@@ -1,12 +1,15 @@
 // The Overflow panel of Machines: where jobs go when the own machines are
 // busy, and the Boat spend of the month against its limit. Every role sees
 // it; only an Admin gets the link to the overflow settings. A failed read
-// shows in the panel with Try again, and the machines stay on the page.
+// shows in the panel with Try again, and the machines stay on the page. A
+// failed refresh keeps the last summary, with a warning and Try again above
+// it.
 
 import { StyleSheet, Text, View } from "react-native";
 
 import { colors, radii } from "@ciproxy/tokens";
 
+import type { OverflowSettings } from "../../api/machine-schema.ts";
 import { ActionButton } from "../../components/actions.tsx";
 import { Panel, TextLink } from "../../components/feature-parts.tsx";
 import { Notice } from "../../components/notice.tsx";
@@ -36,6 +39,20 @@ function CloudIcon() {
   );
 }
 
+function RefreshFailure({ onRetry }: { onRetry: () => void }) {
+  return (
+    <Notice
+      tone="warning"
+      title={overflowCopy.refreshTitle}
+      actions={
+        <ActionButton label={listCopy.tryAgain} size="sm" onPress={onRetry} />
+      }
+    >
+      {overflowCopy.refreshBody}
+    </Notice>
+  );
+}
+
 function Body({
   snapshot,
   onRetry,
@@ -59,7 +76,17 @@ function Body({
       />
     );
   }
-  const model = overflowModel(snapshot.summary);
+  return <Summary summary={snapshot.page} compact={compact} />;
+}
+
+function Summary({
+  summary,
+  compact,
+}: {
+  summary: OverflowSettings;
+  compact: boolean;
+}) {
+  const model = overflowModel(summary);
   return (
     <View style={[styles.row, compact && styles.rowCompact]}>
       <View style={styles.tile}>
@@ -109,6 +136,9 @@ export function OverflowPanel({
         ) : undefined
       }
     >
+      {snapshot.status === "ready" && snapshot.refreshFailure !== null ? (
+        <RefreshFailure onRetry={onRetry} />
+      ) : null}
       <Body snapshot={snapshot} onRetry={onRetry} compact={compact} />
     </Panel>
   );

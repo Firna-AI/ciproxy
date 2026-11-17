@@ -80,7 +80,6 @@ async fn starts_under_jailer_in_an_independent_unit_with_registration_only_on_vs
                 runner_id: record.report.runner_id.clone(),
                 organization_id: record.report.organization_id.clone(),
                 registration: Secret::new("one-use-registration"),
-                cache: None,
             },
         )
         .await
@@ -158,7 +157,6 @@ async fn a_pending_new_pin_preserves_existing_vm_restore_and_stop() {
             runner_id: fresh.report.runner_id.clone(),
             organization_id: fresh.report.organization_id.clone(),
             registration: Secret::new("one-use-registration"),
-            cache: None,
         },
     );
     pin_mut!(start);

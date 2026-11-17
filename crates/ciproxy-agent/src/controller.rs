@@ -11,12 +11,12 @@ use ciproxy_protocol::runners::RunnerState;
 use tokio::sync::Mutex;
 
 use crate::boundaries::{Cache, GuestProvenance, Host, Images, Store, Vms};
-use crate::capacity::machine_resources;
 use crate::docker::DockerDisks;
 use crate::error::{Error, Result};
 use crate::mode::ModeAction;
 use crate::state::{MachineState, Mode};
 use crate::terminal_completion::{CompletionAction, UninstallCleanup};
+use crate::workload_space::WorkloadSpace;
 
 #[cfg_attr(test, unimock::unimock(api = AgentMock))]
 #[async_trait]
@@ -40,17 +40,18 @@ pub(crate) trait Agent: Send + Sync {
 
 pub(crate) struct Controller {
     /// Serialize admission while host inventory runs outside the state lock.
-    pub(crate) allocation: Mutex<()>,
+    pub(crate) allocation: Arc<Mutex<()>>,
     pub(crate) reporting_initialized: Mutex<bool>,
     /// Prevent overlapping cleanup attempts from deleting a reused index.
     pub(crate) network_cleanup: Mutex<()>,
     pub(crate) control_connected: AtomicBool,
-    pub(crate) state: Mutex<MachineState>,
+    pub(crate) state: Arc<Mutex<MachineState>>,
     pub(crate) store: Arc<dyn Store>,
     pub(crate) host: Arc<dyn Host>,
     pub(crate) vms: Arc<dyn Vms>,
     pub(crate) images: Arc<dyn Images>,
     pub(crate) cache: Arc<dyn Cache>,
+    pub(crate) space: Arc<dyn WorkloadSpace>,
     pub(crate) image_budget: u64,
     pub(crate) dockers: Option<Arc<dyn DockerDisks>>,
 }
@@ -111,7 +112,6 @@ impl Agent for Controller {
         Ok(())
     }
     async fn reconcile(&self) -> Result<()> {
-        let hardware = self.host.hardware()?;
         let owned = self.state.lock().await.runners.clone();
         for vm in owned {
             if self.state.lock().await.failed_starts.contains(&vm.local_id)
@@ -127,14 +127,13 @@ impl Agent for Controller {
                 tracing::warn!(%error, "pending Docker recovery will retry");
             }
         }
-        let budget = {
-            let state = self.state.lock().await;
-            machine_resources(&hardware, self.image_budget)
-                .available(state.runners.iter().map(|vm| vm.report.size))
-                .job_disk_bytes
-        };
-        if let Err(error) = self.cache.refresh_budget(self.cache_budget(budget)?).await {
-            tracing::warn!(error = %error, "cache budget unavailable; keep jobs running");
+        {
+            let _allocation = self.allocation.lock().await;
+            let free = self.space.available(self.image_budget).await?;
+            let budget = self.space.cache_budget(free, self.dockers.as_deref())?;
+            if let Err(error) = self.cache.refresh_budget(budget).await {
+                tracing::warn!(error = %error, "cache budget unavailable; keep jobs running");
+            }
         }
         self.enforce_mode().await?;
         self.retry_network_cleanup().await
@@ -206,6 +205,10 @@ mod slot_allocation_tests;
 #[cfg(test)]
 #[path = "_tests_/docker_admission_tests.rs"]
 mod docker_admission_tests;
+
+#[cfg(test)]
+#[path = "_tests_/allocation_report_tests.rs"]
+mod allocation_report_tests;
 
 #[cfg(test)]
 #[path = "_tests_/docker_policy_tests.rs"]

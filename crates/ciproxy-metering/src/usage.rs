@@ -3,12 +3,13 @@
 use std::collections::BTreeSet;
 
 use chrono::{DateTime, Duration, NaiveDate, Utc};
+use ciproxy_store_interface::billing::state::{Selection, Tier};
 use ciproxy_store_interface::metering::facts::WorkspaceUsage;
 use ciproxy_store_interface::metering::history::Period;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::ToPrimitive;
 
-use crate::pricing::{Plan, PlanChoice, Tier, cheapest_offer, plan_choice};
+use crate::pricing::{PlanChoice, cheapest_offer, plan_choice};
 
 /// The single banner that a page displays.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -62,7 +63,7 @@ pub struct Usage {
 pub fn workspace_usage(
     facts: &WorkspaceUsage,
     period: Period,
-    plan: Plan,
+    plan: Selection,
     at: DateTime<Utc>,
     payment: PaymentNotice,
 ) -> Usage {

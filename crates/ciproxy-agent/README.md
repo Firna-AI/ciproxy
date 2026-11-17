@@ -23,7 +23,9 @@ A reinstall preserves the machine identity, its endpoint, and its drain state.
 Preview commands also supply `--agent-url` for their control plane.
 Registration saves the selected endpoint in the identity for credential use.
 `ciproxy-agent run` starts the daemon.
-`ciproxy-agent uninstall` stops the daemon, finishes jobs, and removes it.
+`ciproxy-agent uninstall` stops the service, finishes jobs, and removes it.
+It waits for any directly started agent to stop before it reads machine data.
+It holds the runtime lock until cleanup ends.
 With no recorded VM, uninstall removes its owned area even after an
 interrupted install or a lost mount.
 Uninstall reclaims its image downloads and binary staging files.
@@ -96,12 +98,15 @@ Runtime recovery reclaims abandoned downloads and interrupted removals.
 The store renames cache entries before it deletes their contents.
 An exclusive runtime lock protects this image folder.
 The install CLI only reads the index and never runs destructive recovery.
+VM drive files stay outside the image budget, including the dormant Docker slot.
 Each VM reserves its complete root allocation, including a warm VM.
 The default image budget reserves 140 GB before the remaining disk splits.
 The host keeps one quarter of that remainder, and jobs get three quarters.
 The [image budget](image-budget.md) limits physical image/support allocation.
 The XFS area also includes measured overhead from the host reserve.
 Admission and cache budgets use the shared protocol Resources API.
+Root and Docker reservations release idle Docker disks before disk writes.
+Each Docker growth step releases space before it extends the disk.
 Filesystem free bytes are a health measurement.
 
 Each VM has a private namespace for public IPv4 and its cache port.
@@ -220,7 +225,7 @@ KVM and GitHub smoke checks, and release packaging commands.
 
 - [src/application.rs](src/application.rs) composes the Linux adapters.
 - [src/application_setup.rs](src/application_setup.rs) resolves commands
-  and claims the [runtime lock](src/runtime_ownership.rs) for Run.
+  and claims the [runtime lock](src/runtime_ownership.rs) for Run and uninstall.
 - [src/application_cache.rs](src/application_cache.rs) composes the cache
   and the [metadata relay](src/application_metadata.rs) for its identity.
 - [src/application_endpoint.rs](src/application_endpoint.rs) selects the
@@ -242,7 +247,7 @@ KVM and GitHub smoke checks, and release packaging commands.
 - [src/runtime_reports.rs](src/runtime_reports.rs) schedules independent
   reports.
 - [src/reporting.rs](src/reporting.rs) preserves independent cache and
-  Docker availability in each full report.
+  Docker availability in each full report and initializes the cache budget.
 - [src/mode.rs](src/mode.rs) owns terminal runtime mode transitions.
 - [src/vms.rs](src/vms.rs) owns separate jailed VM units.
 - [src/retirement.rs](src/retirement.rs) ends proven unconfigured VMs and
@@ -277,9 +282,13 @@ KVM and GitHub smoke checks, and release packaging commands.
 - [src/cache_metadata/](src/cache_metadata/mod.rs) derives the hosted URL and
   relays queued entry-fact requests with the machine credential.
 - [src/docker.rs](src/docker.rs) owns Docker leases, attachment, and release.
+- [src/docker_reservation.rs](src/docker_reservation.rs) saves Docker growth
+  leases and releases space under the allocation lock.
 - [src/docker_recovery.rs](src/docker_recovery.rs) discards safely closed
   failed attachments and keeps their byte reservations through job exit.
 - [src/vm_config.rs](src/vm_config.rs) owns the root and dormant Docker drives.
+- [src/vm_drives.rs](src/vm_drives.rs) defines the drive paths for Firecracker,
+  VM files, Docker cleanup, and image-budget exclusions.
 - [src/vsock_stream.rs](src/vsock_stream.rs) keeps each registration in
   memory until the guest confirms receipt.
 - [src/images.rs](src/images.rs) coordinates checked image fetches.
@@ -288,9 +297,13 @@ KVM and GitHub smoke checks, and release packaging commands.
 - [src/image_files.rs](src/image_files.rs) owns Linux image files and recovery.
 - [src/image_verification.rs](src/image_verification.rs) seals checked values.
 - [src/capacity.rs](src/capacity.rs) selects shared machine resources.
+- [src/workload_space.rs](src/workload_space.rs) releases idle Docker disks
+  and machine-cache space before root and Docker writes.
 - [src/host_preparation.rs](src/host_preparation.rs) owns host setup and
   uninstall entry points. `Uninstall::start` selects direct guarded cleanup
   or VM recovery and drain. `Uninstall::finish` removes the drained area.
+- [src/application_uninstall.rs](src/application_uninstall.rs) runs the
+  uninstall drain loop while cleanup retains runtime ownership.
 - [src/area.rs](src/area.rs) owns area preparation, repair, and removal.
   Fresh creation completes measured growth in one install call.
 - [scripts/](scripts/) contains smoke checks and network regression tests.

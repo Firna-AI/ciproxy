@@ -160,11 +160,14 @@ async fn unsuspend_reconciles_access_and_resumes_organization_capacity() {
     suspended.app_state = AppState::Suspended;
     let api: Arc<dyn ScaleSetApi> = Arc::new(Unimock::new(
         ScaleSetApiMock::ensure
-            .some_call(matching!("ciproxy", 47, Some(53)))
+            .some_call(matching!("ciproxy", 47, Some(53), _))
             .returns(Ok(53)),
     ));
     let service = app(Unimock::new((
         coordination(false),
+        InstallationStoreMock::by_github_id
+            .some_call(matching!(17))
+            .returns(Ok(vec![organization()])),
         InstallationStoreMock::by_installation
             .some_call(matching!(19))
             .returns(Ok(Some(suspended))),

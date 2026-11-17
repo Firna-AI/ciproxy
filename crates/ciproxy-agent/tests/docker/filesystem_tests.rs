@@ -43,27 +43,24 @@ async fn offline_corruption_discards_idle_sources_and_preserves_a_live_writer() 
             Arc::new(Unimock::new(()))
         } else {
             Arc::new(Unimock::new(
-                CacheMock::budget.some_call(matching!(_)).returns(Ok(())),
+                CacheMock::budget
+                    .each_call(matching!(_))
+                    .answers(&|_, _| Ok(())),
             ))
         };
         let adapter = LinuxDockers {
             layout: temporary.layout.clone(),
             commands: Arc::new(LinuxCommands),
-            cache,
+            allocation: Arc::new(tokio::sync::Mutex::new(())),
+            space: temporary.space(cache, 64 * 1024 * 1024),
+            image_budget: 0,
         };
         let result = if live_writer {
             adapter.failed(&record).unwrap();
             adapter.discard(&record).await
         } else {
             adapter
-                .prepare(
-                    &record,
-                    &facts(),
-                    &scope(),
-                    4096,
-                    64 * 1024 * 1024,
-                    64 * 1024 * 1024,
-                )
+                .prepare(&record, &facts(), &scope(), 4096, 64 * 1024 * 1024)
                 .await
                 .map(|_| ())
         };

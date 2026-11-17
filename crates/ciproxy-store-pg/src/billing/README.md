@@ -18,6 +18,14 @@ Those rows survive quote pruning and command cleanup.
 They cascade with the workspace purge.
 The shared read model exposes confirmed coverage and UTC period anchors.
 A transaction commits event receipts, state, and command completion together.
+It compares the stored and confirmed monthly totals from the shared catalog.
+A changed total closes the open plan-cost interval and inserts its replacement.
+These cost writes share the billing transaction and retain the initial Free row.
+Checkout uses the confirmed Stripe period start as the cost boundary.
+Subscription end uses the new Free anchor from Stripe's end time.
+Other paid-tier and add-on changes use the commit time.
+No boundary precedes the open interval's start.
+Equal totals, pending commands, and payment-state changes add no cost interval.
 A failed state write rolls its receipt back.
 Renewal outcomes use separate workspace-scoped invoice records.
 They preserve recovery and verified automatic stops after banner fields clear.

@@ -2366,6 +2366,25 @@ require and the product does.
 The source map, browser evidence, and detailed live checklist are under
 `.context/ciproxy-mvp/` in the delegated workspace.
 
+Live pass of 17 November 2026, agent 0.1.2, image `2026-11-17-4a950ae`:
+434 of 1,049 claims passed, 3 mismatched, and 612 wait for a live check.
+The three mismatches have one cause. Ordinary private jobs reached their
+runners but never started a step, because the control plane prepares a job
+with the hosted job ID from GitHub's demand message, and the agent expects
+the job ID of the runner's assignment. A manual Drain released them. My
+call, 17 November 2026: fix now, with one verified binding of the two IDs
+for preparation, cache authorization, job metadata, and cleanup, after the
+runtime fix of the final review merges, because both change the same event
+code. Reason: the binding keeps the signed-token identity checks, and a
+GitHub-only preparation would drop the machine cache and Docker reuse.
+The 117 claims that need a Boat job wait for the Boat client fix, and the
+firewall reboot proof waits for a rerun. Evidence:
+`.context/ciproxy-mvp/m24-docs/live-2026-11-17/`.
+
+- [ ] Bind the hosted job ID to the job ID of the runner's assignment, and
+      use the binding for preparation, cache authorization, job metadata,
+      and cleanup. Then run the affected page checks again.
+
 ## Milestone 25: Tier features: backend
 
 Depends on: 13, 18
@@ -2402,6 +2421,12 @@ The repository is public from item 70 = E, and the site links to it.
       each problem. ciproxy runs private repositories only, and item 70 = E
       made this repository public.
       Close the follow-up item `expo-56-npm-advisories.md`.
+      Run of 17 November 2026: a copy of this repository at `f81fb8d` ran
+      its complete gate on ciproxy in the private repository
+      `firna-test-org/test-repo-private`, with only `runs-on` changed.
+      PostgreSQL, Rust, Node, the cache actions, and the gate passed, but
+      only after a manual Drain released the job preparation. The job ID
+      binding of Milestone 24 fixes that. Then run it again.
 - [x] Draft the terms and the privacy policy, which the user writes or
       approves. They state the limits of "Data retention" in `security.md`.
   - [x] Write the complete draft text of both pages. Square brackets mark

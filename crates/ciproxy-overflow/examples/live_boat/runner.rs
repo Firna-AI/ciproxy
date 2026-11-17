@@ -47,12 +47,8 @@ pub(super) async fn launch(
         let mut registration: Registration =
             serde_json::from_slice(&fs::read(registration_path).safe("read private registration")?)
                 .safe("decode private registration")?;
-        if let AgentToGuest::ConfigureRunner {
-            runner_id, cache, ..
-        } = &mut registration.configure
-        {
+        if let AgentToGuest::ConfigureRunner { runner_id, .. } = &mut registration.configure {
             runner_id.0 = state.runner_id.to_string();
-            *cache = None;
         } else {
             return Err(std::io::Error::other("configure required"))
                 .safe("check private registration");

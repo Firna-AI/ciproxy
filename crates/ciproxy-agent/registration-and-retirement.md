@@ -38,6 +38,8 @@ Older agents saved the endpoint apart, in `/var/lib/ciproxy/agent-url`.
 Before the agent builds a credential client, each identity load copies a
 valid endpoint from that file into an identity without one.
 Run claims `/var/lib/ciproxy/images.lock` before it loads identity state.
+Uninstall stops the service, then waits for that claim before identity recovery.
+It keeps the claim through [local cleanup](host-preparation.md#uninstall).
 Image recovery keeps that same claim after workload area verification.
 A rejected duplicate start changes no identity state or legacy endpoint file.
 Run and uninstall save the copied endpoint in the identity.

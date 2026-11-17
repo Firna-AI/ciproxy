@@ -11,7 +11,7 @@ export const installApp = defineScreen({
   description:
     "After the first sign-in, before any organization uses ciproxy. The page lists the permissions of the app. Install on GitHub opens the GitHub page that picks the organization and its repositories, then returns to setup. The first install creates the workspace, which takes the name of the organization.",
   rationale:
-    "GitHub owns the choice of organization and repositories, so ciproxy shows only what the app asks for and hands over to GitHub. The answer A to item 32 adds Actions, read, so that ciproxy reads the branch and the event of each run from GitHub.",
+    "GitHub owns the choice of organization and repositories, so ciproxy shows only what the app asks for and hands over to GitHub. The answer A to item 32 adds Actions, read. After the answer E to item 54, ciproxy reads the event and the head repository of each run from GitHub, and the checked runtime token of the job gives the full ref. The answer A to item 98 adds Members, read, to check the memberships and the ownership of the person who signs in.",
   relatedDocs: relatedMvp("workspaces", "security"),
   address: `${host}/install`,
   useCasePaths: [paths.flowFirstGreenJob],

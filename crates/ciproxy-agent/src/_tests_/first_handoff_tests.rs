@@ -76,7 +76,6 @@ async fn reconnect_before_first_handoff_permanently_uses_github_even_after_confi
                 runner_id: record.report.runner_id.clone(),
                 organization_id: record.report.organization_id.clone(),
                 registration: spec().registration,
-                cache: None,
             }),
         )
         .await

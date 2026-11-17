@@ -171,6 +171,10 @@ The [pages and billing guide](pages-and-billing.md) shows how to mount the page
 router and the Stripe hook. It also gives the paid review and payment steps,
 and the rules of Jobs, Savings, and the shared banner.
 
+Plans, usage, and Checkout use the billing catalog in ciproxy-store-interface.
+The same catalog supplies job-history limits. The page builders use its
+shared Selection plan model directly.
+
 ## Machines and Settings facts
 
 Settings keeps the Admin's permission to start Add in `can_add_organization`.
@@ -206,6 +210,10 @@ A successful observation distinguishes a disconnected Boat account from an
 unknown connection. Disconnected Boat keeps catalog fit unavailable.
 Known machines then run jobs alone, or known no-fit capacity waits.
 Missing observations or unknown own capacity keep placement unavailable.
+Settings and Jobs use one physical Boat fit calculation. Each waiting label
+in Jobs has the same Boat choice in `current.fit.boat` and `boat`. Its
+`current.fit` also includes the account presence, required root disk,
+largest Boat size, and placement when the trusted image sizing is known.
 
 Organizations include nullable first-registration and removal dates, complete
 repository snapshot counts, and retained adder profiles. Members include the

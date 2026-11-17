@@ -11,46 +11,45 @@ use super::assertions::snapshot;
 use super::fixtures;
 
 #[test]
-fn configure_runner_delivers_registration_and_cache_access_over_vsock() {
-    snapshot(
-        "vsock_configure_runner",
-        "configure_runner",
-        AgentToGuest::ConfigureRunner {
-            protocol_version: ProtocolVersion::CURRENT,
-            runner_id: fixtures::runner_id(),
-            organization_id: fixtures::organization_id(),
-            registration: Secret::new(fixtures::REGISTRATION),
-            cache: Some(fixtures::cache_connection()),
-        },
+fn configure_runner_delivers_registration_over_vsock() {
+    let configuration = AgentToGuest::ConfigureRunner {
+        protocol_version: ProtocolVersion::CURRENT,
+        runner_id: fixtures::runner_id(),
+        organization_id: fixtures::organization_id(),
+        registration: Secret::new(fixtures::REGISTRATION),
+    };
+    assert_eq!(
+        serde_json::to_value(&configuration).unwrap().get("cache"),
+        None
     );
+    snapshot("vsock_configure_runner", "configure_runner", configuration);
 }
 
 #[test]
-fn guest_job_facts_preserve_all_cache_scope_inputs() {
-    snapshot(
-        "vsock_job_facts",
-        "job_facts",
-        AgentToGuest::JobFacts {
-            job_id: fixtures::job_id(),
-            facts: fixtures::facts(),
-        },
-    );
-}
-
-#[test]
-fn docker_disk_identifies_the_job_drive_and_copy_mode() {
-    snapshot(
-        "vsock_docker_disk",
-        "docker_disk",
-        AgentToGuest::DockerDisk {
-            job_id: fixtures::job_id(),
-            disk: DockerDiskAttachment {
-                free_bytes: 20_000_000_000,
-                drive_id: "docker_cache".into(),
-                access: DockerDiskAccess::DisposableCopy,
+fn obsolete_setup_commands_are_not_supported() {
+    for message in [
+        serde_json::json!({
+            "type": "job_facts",
+            "job_id": fixtures::job_id(),
+            "facts": fixtures::facts(),
+        }),
+        serde_json::json!({
+            "type": "docker_disk",
+            "job_id": fixtures::job_id(),
+            "disk": {
+                "free_bytes": 20_000_000_000_u64,
+                "drive_id": "docker_cache",
+                "access": "disposable_copy",
             },
-        },
-    );
+        }),
+    ] {
+        let decoded = serde_json::from_value::<AgentToGuest>(message.clone());
+        assert_eq!(
+            decoded.map(|_| ()).map_err(|error| error.classify()),
+            Err(serde_json::error::Category::Data),
+            "obsolete command: {message}"
+        );
+    }
 }
 
 #[test]
@@ -126,6 +125,22 @@ fn preparation_decisions_name_the_job_and_selected_cache_route() {
                 facts: Box::new(fixtures::facts()),
                 cache: fixtures::cache_connection(),
                 docker: None,
+            },
+        },
+    );
+    snapshot(
+        "vsock_job_machine_cache_docker",
+        "prepare_job",
+        AgentToGuest::PrepareJob {
+            job_id: fixtures::job_id(),
+            decision: JobDecision::MachineCache {
+                facts: Box::new(fixtures::facts()),
+                cache: fixtures::cache_connection(),
+                docker: Some(DockerDiskAttachment {
+                    free_bytes: 20_000_000_000,
+                    drive_id: "docker_cache".into(),
+                    access: DockerDiskAccess::DisposableCopy,
+                }),
             },
         },
     );

@@ -84,6 +84,20 @@ impl Controller {
     }
 }
 
+impl Controller {
+    pub(crate) async fn initialize_report_budget(&self) -> Result<()> {
+        let _allocation = self.allocation.lock().await;
+        let free = self.space.available(self.image_budget).await?;
+        let budget = match &self.dockers {
+            Some(dockers) => free
+                .saturating_sub(dockers.report()?.leased_bytes)
+                .saturating_sub(dockers.unused_bytes()?),
+            None => free,
+        };
+        self.cache.refresh_budget(budget).await
+    }
+}
+
 #[cfg(test)]
 #[path = "_tests_/reporting_tests.rs"]
 mod reporting_tests;

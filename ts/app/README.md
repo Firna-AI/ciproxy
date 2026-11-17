@@ -238,6 +238,11 @@ check, which reads the Boat settings of a deployed dashboard.
 - [src/state/savings.ts](src/state/savings.ts) reads the Savings report. Its
   `open()` holds the page lifetime, so the report reads again only while the
   page is open.
+- [src/state/page-store.ts](src/state/page-store.ts) keeps the page of one
+  read, such as Plan and usage, Plans, or the overflow summary of Machines.
+  A newer read wins over an older one, and a failed refresh keeps the last
+  good page with the failure. A watched page store reads again on its
+  interval while its page waits, or while no good page exists.
 - [src/state/billing.ts](src/state/billing.ts) creates the billing stores of
   a workspace. [src/state/billing-banner.ts](src/state/billing-banner.ts)
   keeps the one banner, and its `readPage` takes the banner of each page read.
