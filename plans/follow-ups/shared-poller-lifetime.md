@@ -15,7 +15,7 @@
   `ts/app/src/state/billing-return.ts:101`, in `follow`,
   `ts/app/src/state/jobs-live.ts:78`, `watch`,
   `ts/app/src/state/setup.ts:94`, `watch`, and
-  `ts/app/src/state/billing-page.ts:81`, `watch`.
+  `ts/app/src/state/page-store.ts:104`, `watch`.
 - **Reason:** The wider fix changes the shared poller and stores that the
   reviewed branch did not change, and that branch fixed its own two leaks
   directly.
@@ -40,7 +40,7 @@
     one, so the old watcher stays for the life of the document.
   - Six stores own a poller: Savings, at `ts/app/src/state/savings.ts:86`,
     Jobs Live, at `jobs-live.ts:65`, Setup, at `setup.ts:80`, the billing
-    page store, at `billing-page.ts:67`, the Checkout return, at
+    page store, at `page-store.ts:95`, the Checkout return, at
     `billing-return.ts:91`, and the organization links, at `links.ts:159`.
   - Each store guards its restarts by hand:
     - Savings opens a page lifetime when its page mounts. `open()` returns

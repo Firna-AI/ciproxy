@@ -208,8 +208,9 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
 - `src/render.tsx`: the renderer. It adds the base stylesheet, the static
   Firna CSS with the tokens, and the Firna theme provider around every screen.
 - [`@ciproxy/tokens`](../../ts/tokens/README.md): the Graphite tokens: the
-  Firna theme with the Geist faces, and the status, chart, slot, and sidebar
-  colours.
+  Firna theme with the Geist faces, the status, chart, slot, and sidebar
+  colours, and the `--r-mark-*` corners of small data marks, such as slot
+  segments, chart keys, and the data ends of bars.
 - `src/theme/firna.tsx`: takes the `--c-*`, `--r-*`, and `--font-*` custom
   properties from `tokenDeclarations()` of `@ciproxy/tokens/css`, adds the
   two Firna focus-ring properties, and puts them beside the static Firna CSS.
@@ -229,8 +230,10 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   soft-limit and payment warnings. It shows the signed-in person, and
   Settings only to an Admin. The switch opens the workspaces of
   `workspace-menu.tsx`. The avatar opens the account menu of
-  `account-menu.tsx`, where an owner with the Billing or the Viewer role
-  claims the Admin role.
+  `account-menu.tsx`, where a person with the Billing or the Viewer role
+  claims the Admin role when ciproxy offers the claim. Like the page for no
+  role, it reads that offer from `canClaimAdmin` of the person in
+  `src/fixtures/members.ts`, as the dashboard reads the claim of the session.
 - `src/components/`: the shared parts, such as the dense `DataTable`, the
   figure strip in `kpis.tsx`, the status dots and tags in `status.tsx`, and the
   starts chart.

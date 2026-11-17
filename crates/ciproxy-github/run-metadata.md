@@ -75,9 +75,10 @@ job on the current remote ID stays out of this scan.
 
 For such an attempt, the repair polls GitHub with the same backoff until
 GitHub reports the actual completion. It saves the terminal state, the
-finish time, and GitHub's conclusion verbatim as the job result. A saved
-nonempty result stays. Unavailable times and results stay absent. This
-needs only the existing "Actions: read" permission and no new service.
+finish time, and GitHub's conclusion verbatim. The store's
+[timing writes](../ciproxy-store-pg/github-jobs.md#actions-timing-writes)
+say which saved values stay. This needs only the existing "Actions: read"
+permission and no new service.
 
 ## Webhook delivery recovery
 

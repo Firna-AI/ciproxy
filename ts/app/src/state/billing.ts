@@ -21,11 +21,8 @@ import type { AppServices } from "../services/services.ts";
 import { createBannerStore, type BannerStore } from "./billing-banner.ts";
 import { ownedCache } from "./billing-cache.ts";
 import { clearOpenPayment } from "./billing-open-payment.ts";
-import {
-  createPageStore,
-  statusWaits,
-  type PageStore,
-} from "./billing-page.ts";
+import { billingPollInterval, statusWaits } from "./billing-page.ts";
+import { createPageStore, type PageStore } from "./page-store.ts";
 
 const endpointCache = ownedCache<BillingEndpoints>();
 const usageCache = ownedCache<PageStore<PlanUsagePage>>();
@@ -68,6 +65,7 @@ export function usageStore(
         ),
       report: services.session.report,
       waits: (page) => statusWaits(page.status),
+      interval: billingPollInterval,
       timers: services.env.timers,
       visibility: services.env.visibility,
     }),
@@ -92,6 +90,7 @@ export function plansStore(
         ),
       report: services.session.report,
       waits: (page) => statusWaits(page.usage.status),
+      interval: billingPollInterval,
       timers: services.env.timers,
       visibility: services.env.visibility,
     }),

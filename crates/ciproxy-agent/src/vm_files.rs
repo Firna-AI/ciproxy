@@ -13,6 +13,7 @@ use crate::layout::{Layout, jail_uid};
 use crate::persistence::private_directory;
 use crate::state::VmRecord;
 use crate::vm_config::VmConfig;
+use crate::vm_drives::VmDrive;
 use crate::vm_root::RootDisk;
 
 #[cfg_attr(test, unimock::unimock(api = VmFilesMock))]
@@ -38,11 +39,11 @@ impl VmFiles for LinuxVmFiles {
         self.root
             .prepare(
                 &image.join("rootfs.ext4"),
-                &root.join("rootfs.ext4"),
+                &VmDrive::Root.path(&self.layout, vm),
                 vm.report.size.disk_bytes,
             )
             .await?;
-        let slot = fs::File::create(root.join("docker-slot"))
+        let slot = fs::File::create(VmDrive::DockerSlot.path(&self.layout, vm))
             .context("create inactive Docker drive slot")?;
         slot.set_len(512)
             .context("size inactive Docker drive slot")?;
@@ -53,8 +54,12 @@ impl VmFiles for LinuxVmFiles {
         let mut file = BudgetFile::create(&root.join("config.json"), self.space.clone())?;
         file.write(&config)?;
         file.sync()?;
-        for file in ["vmlinux", "rootfs.ext4", "config.json", "docker-slot"] {
-            let path = root.join(file);
+        for path in [
+            root.join("vmlinux"),
+            VmDrive::Root.path(&self.layout, vm),
+            root.join("config.json"),
+            VmDrive::DockerSlot.path(&self.layout, vm),
+        ] {
             fs::set_permissions(&path, fs::Permissions::from_mode(0o600))
                 .context("protect VM files")?;
             chown(&path, Some(jail_uid(vm)), Some(jail_uid(vm)))

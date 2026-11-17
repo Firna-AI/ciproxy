@@ -23,7 +23,6 @@ import {
   recordOutcome,
   type OpenPayment,
 } from "./billing-open-payment.ts";
-import type { PageSnapshot } from "./billing-page.ts";
 import { createPaymentStore, type PaymentStore } from "./billing-payment.ts";
 import { createReturnStore, type ReturnStore } from "./billing-return.ts";
 import { createReviewStore, type ReviewStore } from "./billing-review.ts";
@@ -34,6 +33,7 @@ import {
   paymentGate,
   usageStore,
 } from "./billing.ts";
+import type { PageSnapshot } from "./page-store.ts";
 
 export function createPagePayment(
   services: AppServices,

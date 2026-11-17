@@ -11,8 +11,8 @@
   F, and F became the recommendation.
 - **Source:** Review.
 - **Category:** Product bug.
-- **Location:** `ts/app/src/state/billing.ts:42`, `forgetEnded`,
-  `ts/app/src/state/page-store.ts`, in `load` of `createPageStore`,
+- **Location:** `ts/app/src/state/billing.ts:39`, `forgetEnded`,
+  `ts/app/src/state/page-store.ts:47`, in `load` of `createPageStore`,
   `ts/app/src/state/billing-flows.ts:46`, in `createPagePayment`, and
   `ts/app/src/state/billing-open-payment.ts:51`, `clearOpenPayment`.
 - **Reason:** An older read must stall until after a payment answers, which
@@ -31,10 +31,11 @@
     outcome replaces the record, and a read that shows no pending payment
     removes it, so the tab never offers an ended payment.
   - `forgetEnded` removes the link when an answer says that no payment is
-    pending, at `billing.ts:42-53`. It runs in the read of the Usage store,
-    at `:66`, and of the Plans store, at `:89`.
+    pending, at `billing.ts:39-50`. It runs in the read of the Usage store,
+    at `:63`, and of the Plans store, at `:87`.
   - The removal runs before `load` of the page store compares the answer
-    with the latest read of its store and drops an older answer.
+    with the latest read of its store and drops an older answer, at
+    `page-store.ts:47`.
   - So an answer from before a payment can remove the link that the payment
     saved later. Three timings do so:
     - A page read is held while the payment answers, and then ends.

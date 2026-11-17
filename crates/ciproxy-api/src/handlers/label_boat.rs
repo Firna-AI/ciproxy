@@ -29,13 +29,7 @@ pub(super) fn enrich(
     };
     let required = sizing.vm_size(requested);
     fit.boat_required_root_disk_bytes = required.map(|size| size.disk_bytes.to_string());
-    let catalog = overflow.and_then(|view| {
-        view.account.as_ref()?;
-        view.state.checked_at?;
-        let mut physical = view.clone();
-        physical.state.refused_sizes.clear();
-        physical.retained_scaler_account().ok()
-    });
+    let catalog = overflow.and_then(|view| view.resource_catalog().ok().flatten());
     fit.largest_boat = catalog
         .as_ref()
         .and_then(|catalog| {

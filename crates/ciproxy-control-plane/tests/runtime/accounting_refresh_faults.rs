@@ -3,12 +3,12 @@
 use std::sync::{Arc, Mutex};
 
 use chrono::{DateTime, Utc};
-use ciproxy_metering::pricing::Plan;
 use ciproxy_metering::report::catalog::PriceList;
 use ciproxy_metering::report::range::DateRange;
 use ciproxy_metering::report::savings::SavingsReport;
 use ciproxy_metering::service::{Metering, Refresh, StoredMetering};
 use ciproxy_metering::usage::{PaymentNotice, Usage};
+use ciproxy_store_interface::billing::state::Selection;
 use ciproxy_store_interface::error::{Error, Result};
 use ciproxy_store_interface::metering::history::Period;
 use uuid::Uuid;
@@ -52,7 +52,7 @@ impl Metering for RefreshFault {
         &self,
         workspace: Uuid,
         period: Period,
-        plan: Plan,
+        plan: Selection,
         at: DateTime<Utc>,
         payment: PaymentNotice,
     ) -> Result<Usage> {

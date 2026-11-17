@@ -29,7 +29,7 @@ impl Controller {
         if let Some(vm) = existing {
             return self.retry_start(vm, runner).await;
         }
-        let (vm, cache_budget, _image) = {
+        let (vm, released, _image) = {
             let _allocation = self.allocation.lock().await;
             let (report, used, cache_budget, image) = {
                 let state = self.state.lock().await;
@@ -94,18 +94,23 @@ impl Controller {
             let slot_indices = report.slot_indices.clone();
             let mut vm = self.vms.allocate(report, &used).await?;
             vm.report.slot_indices = slot_indices;
-            let mut state = self.state.lock().await;
-            if state.mode != Mode::Active {
-                return Err(Error::Draining);
+            {
+                let mut state = self.state.lock().await;
+                if state.mode != Mode::Active {
+                    return Err(Error::Draining);
+                }
+                let mut next = state.clone();
+                next.runners.push(vm.clone());
+                self.store.save(&next)?;
+                *state = next;
             }
-            let mut next = state.clone();
-            next.runners.push(vm.clone());
-            self.store.save(&next)?;
-            *state = next;
-            (vm, cache_budget, image)
+            let released = self
+                .space
+                .release(cache_budget, self.dockers.as_deref())
+                .await;
+            (vm, released, image)
         };
-        let cache_budget = self.cache_budget(cache_budget)?;
-        if let Err(error) = self.cache.budget(cache_budget).await {
+        if let Err(error) = released {
             tracing::warn!(error = %error, "cache space is not released; preserve VM disk admission");
             self.retire(&vm).await?;
             return Err(error);

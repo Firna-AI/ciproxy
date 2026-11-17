@@ -1,6 +1,8 @@
 //! Hand-worked paid tier and add-on price comparisons.
 
-use crate::pricing::{Tier, cheapest_offer};
+use ciproxy_store_interface::billing::state::Tier;
+
+use crate::pricing::cheapest_offer;
 use crate::test_support::usd;
 
 #[test]

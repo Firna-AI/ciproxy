@@ -4,13 +4,13 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
+use ciproxy_store_interface::billing::state::Selection;
 use ciproxy_store_interface::error::Result;
 use ciproxy_store_interface::metering::history::Period;
 use ciproxy_store_interface::metering::store::MeteringStore;
 use ciproxy_store_interface::metering::totals::{AccountedBoat, AccountedJob};
 use uuid::Uuid;
 
-use crate::pricing::Plan;
 use crate::report::boat::boat_cost_deltas;
 use crate::report::catalog::PriceList;
 use crate::report::range::{DateRange, retention_start};
@@ -40,7 +40,7 @@ pub trait Metering: Send + Sync {
         &self,
         workspace_id: Uuid,
         period: Period,
-        plan: Plan,
+        plan: Selection,
         at: DateTime<Utc>,
         payment: PaymentNotice,
     ) -> Result<Usage>;
@@ -73,7 +73,7 @@ impl Metering for StoredMetering {
         &self,
         workspace_id: Uuid,
         period: Period,
-        plan: Plan,
+        plan: Selection,
         at: DateTime<Utc>,
         payment: PaymentNotice,
     ) -> Result<Usage> {

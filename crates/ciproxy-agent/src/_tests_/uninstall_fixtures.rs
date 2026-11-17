@@ -20,6 +20,7 @@ pub(super) enum Event {
 
 pub(super) fn uninstall(mock: Arc<Unimock>) -> FinalUninstall {
     FinalUninstall {
+        _runtime: Arc::new(Unimock::new(())),
         files: mock.clone(),
         images: mock.clone(),
         preparation: mock.clone(),

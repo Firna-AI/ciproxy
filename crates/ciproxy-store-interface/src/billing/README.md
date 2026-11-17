@@ -4,6 +4,9 @@ These traits and types form the billing area of
 [ciproxy-store-interface](../../README.md).
 [Billing](../../../../docs/protocol/billing.md) defines the requirements.
 
+The shared `Tier`, `AddOns`, and `Selection` types own the published catalog.
+Their methods supply monthly USD cents, included capacity, and job-history days.
+Selection calculations ignore Free add-ons. Billing rejects those selections.
 BillingStore adds the confirmed tier, add-ons, paid bounds, and Free anchor.
 It exposes retry and ended-banner dates without changing job execution.
 BillingSession owns exclusive command and event reconciliation.
@@ -12,7 +15,8 @@ Each renewal retains whether the provider attempted its payment.
 Verified automatic collection stops remain available after a service restart.
 Each stop event retains its eligible, superseded, or completed decision.
 The subscription-ID lookup resolves a billing workspace before provider reads.
-State and event receipts commit atomically.
+State, event receipts, and changed monthly plan costs commit atomically.
+An equal monthly total preserves the current cost interval.
 App removal stores a durable billing cancellation request.
 BillingSession reads, saves, and consumes paid quotes in the locked workspace.
 A `StoredQuote` keeps the reviewed selection, amounts, source, and expiry.

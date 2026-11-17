@@ -144,6 +144,23 @@ async fn composed_pages_and_stripe_hook_share_the_bound_dashboard_host() {
     )
     .await;
     assert_eq!(returned["outcome"]["state"], "confirmed");
+    let savings = json(
+        dashboard
+            .request(
+                Some(&viewer),
+                Method::GET,
+                "/savings?range=this_month",
+                None,
+            )
+            .await,
+        StatusCode::OK,
+    )
+    .await;
+    assert_eq!(savings["known_plan_cents"], "890");
+    assert_eq!(savings["total_cents"], "890");
+    assert_eq!(savings["missing_costs"], json!([]));
+    assert_eq!(savings["comparisons"][0]["savings_cents"], "-890");
+    assert_eq!(savings["comparisons"][1]["savings_cents"], "-890");
     assert_eq!(
         dashboard
             .fixture

@@ -64,7 +64,7 @@ pub(super) async fn sealed_state(runtime: RuntimeCredentials) -> MachineState {
         )
         .await
         .unwrap();
-    agent.state.into_inner()
+    agent.state.lock().await.clone()
 }
 
 pub(super) fn facts() -> ControlMessage {

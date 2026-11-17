@@ -21,6 +21,7 @@ Accepts Stripe's confirmed paid-period boundaries.
 Computes forecasts from the UTC dates touched by each period.
 The current date counts in the elapsed dates.
 Computes advisory soft limits and the cheapest paid tier with add-ons.
+Uses the billing catalog and selection types from ciproxy-store-interface.
 An equal-price offer keeps the current paid tier, then prefers Team.
 An offer never changes the saved plan or prevents a job.
 Payment notices take precedence over a soft-limit notice.
@@ -83,8 +84,9 @@ fn metering(store: Arc<dyn MeteringStore>) -> Arc<dyn Metering> {
 
 Trusted fact producers must supply these inputs:
 
-1. At workspace creation, call record_workspace_start.
-   Save the initial zero-dollar Free PlanCost and metering period.
+1. Create workspaces through WorkspaceStore or GitHub registration.
+   PostgreSQL saves the trusted creation time, zero-dollar Free price,
+   and first Free period in that creation transaction.
 2. At first machine registration, call record_machine_registration.
    Save monthly MachineCost intervals when the customer supplies costs.
    Existing remove_machine calls preserve the registration's end time.
@@ -92,8 +94,12 @@ Trusted fact producers must supply these inputs:
    Update completed-at times when trusted GitHub facts arrive.
 4. Save each ciproxy Boat runner's prices with save_boat_cost.
    Supply its actual billing start, end, start fee, and minute rate.
-5. After billing confirmation, save PlanCost and Period histories.
-   Close prior intervals with their actual exclusive ends.
+5. Confirm billing through BillingSession::commit.
+   PostgreSQL records a changed monthly PlanCost with the billing state.
+   Checkout uses the Stripe period start. Subscription end uses the Free anchor.
+   Other confirmed price changes use the commit time.
+   The boundary never precedes the current interval's start.
+   Usage reads the current Free or Stripe period from BillingState.
 6. Call Metering::refresh after facts change and before data purges.
    Refresh also updates running runtime through its supplied time.
    Refresh must precede organization, job, and workspace purges.
@@ -128,7 +134,7 @@ snapshots through the production adapter.
 
 - [src/period.rs](src/period.rs) owns Free anchors and period changes.
 - [src/usage.rs](src/usage.rs) computes counts, forecasts, and notices.
-- [src/pricing.rs](src/pricing.rs) computes paid offers and capacities.
+- [src/pricing.rs](src/pricing.rs) finds paid offers from the shared catalog.
 - [src/service.rs](src/service.rs) implements Metering over a dyn store.
 - [src/report/runtime.rs](src/report/runtime.rs) computes daily corrections.
 - [src/report/boat.rs](src/report/boat.rs) accounts for idle sandbox costs.

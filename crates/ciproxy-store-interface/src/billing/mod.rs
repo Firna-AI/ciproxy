@@ -1,5 +1,7 @@
 //! Durable workspace billing state and serialized external commands.
 
+mod catalog;
+
 pub mod collection;
 pub mod commands;
 pub mod payments;

@@ -110,8 +110,7 @@ Use this mode 0600 file format:
     "protocol_version": 1,
     "runner_id": "ONE_RUNNER_ID",
     "organization_id": "GITHUB_ORGANIZATION_ID",
-    "registration": "ENCODED_JIT_REGISTRATION",
-    "cache": null
+    "registration": "ENCODED_JIT_REGISTRATION"
   },
   "exit_report_url": "https://callback.example/ACTUAL_SANDBOX_ROUTE",
   "exit_report_token": "TOKEN_FOR_THIS_SANDBOX_ONLY"

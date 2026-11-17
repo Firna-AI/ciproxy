@@ -8,18 +8,14 @@ import type { ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { ProgressBar } from "@firna/ui/loader";
 
-import { colors, fonts, radii, slotColors } from "@ciproxy/tokens";
+import { colors, fonts, markRadii, radii, slotColors } from "@ciproxy/tokens";
 
 import type { SlotState } from "../../api/schema.ts";
 import { text } from "../../components/text.ts";
 import { cacheCopy, listCopy } from "../../view/machines-copy.ts";
 
-/**
- * The corner of a slot mark: 1 px, as the mockups draw it. The token package
- * has no small-mark radius yet, so the value comes from the smallest radius
- * token, as the site derives its small marks.
- */
-export const markRadius = radii.sm / 4;
+/** The corner of a slot mark, the smallest radius of a data mark. */
+export const markRadius = markRadii.sm;
 
 /** The colour of each slot state, from the token package. */
 export const slotFill: Readonly<Record<SlotState, string>> = {

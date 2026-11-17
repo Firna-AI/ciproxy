@@ -26,7 +26,7 @@ pub struct AddOns {
     pub machines: u32,
 }
 
-/// A requested paid tier and monthly quantities.
+/// A saved or requested tier and monthly quantities.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Selection {
     /// The chosen tier.
@@ -84,6 +84,14 @@ pub struct BillingState {
 }
 
 impl BillingState {
+    /// The confirmed tier and customer-selected monthly quantities.
+    pub fn selection(&self) -> Selection {
+        Selection {
+            tier: self.tier,
+            add_ons: self.add_ons,
+        }
+    }
+
     /// Initialize Free at workspace creation, without contacting Stripe.
     pub fn free(workspace_id: Uuid, at: DateTime<Utc>) -> Self {
         Self {
