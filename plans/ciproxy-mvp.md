@@ -2423,6 +2423,9 @@ The repository is public from item 70 = E, and the site links to it.
 Depends on: every other milestone
 
 The gate, the review, and the pull request stay with the orchestrator.
+Item 122 = B, 17 November 2026: the final review starts before the live
+checks of Milestones 13, 15, 24, and 27 end. A fix from a check gets one
+more review round before the pull request.
 
 - [ ] Run the targeted tests and the complete gate named in `AGENTS.md`.
 - [ ] Commit with Conventional Commits and push the branch.
@@ -2942,6 +2945,9 @@ Answers of 5 November 2026:
   unsent Boat start in the preview, and
   `follow-ups/boat-historical-start-recovery.md` records the operator
   command for later cases. Rejected: A alone and B alone.
+- Item 122, B, 17 November 2026: the four remaining checks stay before the
+  merge, and the final review starts beside them. A fix from a check gets
+  one more review round. Rejected: A, C, and D.
 - Item 108, C with D, 8 November 2026: the paid change sends the same
   pending credit that the preview counted, Stripe computes the amount, and
   an alert compares each invoice with its quote. A third fix round of pull
@@ -6067,3 +6073,40 @@ remain with the orchestrator in Milestone 13 and
 - **Recommendation:** A.
 - **Action:** ask the user, because the user approves each merge in
   `futex-ai/sandbox`.
+
+### 122. Which checks must pass before the merge
+
+**Answer, 17 November 2026:** B. All four checks stay before the merge,
+and the final review starts now, beside them.
+
+- **Severity:** Medium. **Effort:** Large.
+- **Source:** Design.
+- **Category:** Process.
+- **Location:** Milestones 24, 27, and 28 of this plan.
+- **Background:** Four checks remained on the main preview: live run 4
+  with twelve job checks, the live docs page checks, the CI of a private
+  test repository on ciproxy, and the fresh-host smoke on a new KVM test
+  VM. The plan started the final review only after every check ended.
+- **Problem:** The checks and the final review ran one after the other,
+  which delayed the pull request. The user's request to move the
+  outstanding items to follow-up items could also cover these checks.
+- **Impact if no action:** The final review waits for the last check.
+- **Root question:** Which checks must pass before the merge into `main`,
+  and when does the final review start?
+- **Options:**
+  - **A.** Keep all four checks before the merge, and start the final
+    review after they pass. Effort: Large.
+  - **B.** Keep all four checks before the merge, and start the final
+    review now. A fix from a check gets one more review round.
+    Effort: Large.
+  - **C.** Keep live run 4 and the private repository CI before the merge.
+    Move the docs page checks and the fresh-host smoke to follow-up items.
+    Start the final review now. Effort: Large.
+  - **D.** Move all remaining checks to follow-up items, and start the
+    final review now. Effort: Large.
+- **Left out:** No final review, because the repository rules require it.
+  An early pull request with the checks still running, because the review
+  must still end before the merge.
+- **Wider fix:** None, because this is a choice of scope.
+- **Recommendation:** B.
+- **Action:** ask the user, because speed and coverage trade off.
