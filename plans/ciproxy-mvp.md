@@ -949,21 +949,33 @@ Live KVM and authenticated job checks remain with the orchestrator.
         image, tell a create that was never sent apart from an uncertain
         one, and recover the blocked unsent start. The client part is in
         `futex-ai/sandbox`, whose merge needs the user.
-    - [ ] In `futex-ai/sandbox`, accept the shared snapshot reference, send
+    - [x] In `futex-ai/sandbox`, accept the shared snapshot reference, send
           the delete confirmation, and return a typed local rejection for a
           create that the client refuses before it sends the request.
-          Another workspace owns this change. It had no pull request on 17
-          November 2026.
-    - [ ] When that pull request exists, pin every sandbox dependency to its
+          [futex-ai/sandbox#13](https://github.com/futex-ai/sandbox/pull/13)
+          holds this code, with `SandboxCreateNotSent` as that rejection.
+          Its reviewed head `16d9a244ed72771acec66d5a33c927c94258d608` passed
+          CI on 17 November 2026.
+          Branch: `fix/boat-shared-snapshots-delete-confirmation` in
+          `futex-ai/sandbox`.
+    - [ ] Merge that pull request. The merge needs the user.
+    - [x] When that pull request exists, pin every sandbox dependency to its
           reviewed immutable revision and update `Cargo.lock` through Cargo.
-          Save a create
-          with the local rejection as definitively not created, and release
-          its pending authority. Keep each create that may have been sent on
-          recovery only. Add a regression through the public overflow
-          service.
+          Save a create with the local rejection as definitively not
+          created, and release its pending authority. Keep each create that
+          may have been sent on recovery only. Add a regression through the
+          public overflow service.
+          My call, 17 November 2026: only the fresh create after the
+          `Creating` transition accepts `SandboxCreateNotSent`. The delivery
+          then ends in the existing `Refused` phase, with no account
+          restriction. Reason: the error proves that no request reached
+          Boat, but says nothing about the Boat account.
+          Branch: `fix/live-run-2026-11-16`.
     - [ ] Recover the blocked start of the live run only with definitive
           proof that its create was never sent. A generic recovery error or
-          an empty inventory is not that proof.
+          an empty inventory is not that proof. `SandboxCreateNotSent` covers
+          only fresh creates, so it gives no proof for this older `Creating`
+          record. An operator must find that proof and recover the start.
   - [ ] Send the delete confirmation of Boat from each sandbox deletion,
         in `image/boat.py` and in `futex-ai/sandbox`.
     - [x] Check `image/boat.py`. It already sends the target sandbox ID as
@@ -971,8 +983,11 @@ Live KVM and authenticated job checks remain with the orchestrator.
           `image/check-boat-delete.py` now checks two IDs through the real
           command path. A copy of the helper without the header fails it.
           Branch: `fix/live-run-2026-11-16`.
-    - [ ] Send it from `futex-ai/sandbox`, with the upstream change of the
-          Boat client TODO above.
+    - [x] Send it from `futex-ai/sandbox`, with the upstream change of the
+          Boat client TODO above. The pinned head derives it from the target
+          ID, and the Boat boundary test checks the header on a delete.
+          Branch: `fix/live-run-2026-11-16`.
+    - [ ] Merge that upstream change, as the Boat client TODO above says.
   - [x] Mount the prepared Docker disk directly at `/var/lib/docker`, keeping
         the root fallback. The mount move failed under a shared mount.
         Branch: `fix/live-run-2026-11-16`.

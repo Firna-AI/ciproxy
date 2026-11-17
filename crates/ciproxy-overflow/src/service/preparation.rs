@@ -140,9 +140,26 @@ impl OverflowService {
             }
             ReservationOutcome::Reserved => {}
         }
-        let result = authority.create(request).await.map(Some);
+        let result = authority.create(request).await;
         *record = candidate;
-        Ok(DispatchOutcome::Submitted(result))
+        if matches!(
+            result,
+            Err(sandbox_interface::Error::SandboxCreateNotSent { .. })
+        ) {
+            tracing::warn!("Boat create was rejected before dispatch");
+            record.phase = StartPhase::Refused;
+            record.ends_at = Some(self.dependencies.clock.now());
+            record.runtime_complete = true;
+            let changed = record.clone();
+            session
+                .call(move |session| session.save_start(&changed))
+                .await?;
+            self.collect(session).await?;
+            return Ok(DispatchOutcome::Stopped(Box::new(StartOutcome::Ended(
+                record.clone(),
+            ))));
+        }
+        Ok(DispatchOutcome::Submitted(result.map(Some)))
     }
 
     pub(super) async fn cancel_unsent(

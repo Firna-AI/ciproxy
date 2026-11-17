@@ -2923,7 +2923,7 @@ dependencies = [
 [[package]]
 name = "sandbox-boat"
 version = "0.2.0"
-source = "git+https://github.com/futex-ai/sandbox?rev=965836198ba65947108cbe5e669524d2249d851a#965836198ba65947108cbe5e669524d2249d851a"
+source = "git+https://github.com/futex-ai/sandbox?rev=16d9a244ed72771acec66d5a33c927c94258d608#16d9a244ed72771acec66d5a33c927c94258d608"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -2947,7 +2947,7 @@ dependencies = [
 [[package]]
 name = "sandbox-interface"
 version = "0.2.0"
-source = "git+https://github.com/futex-ai/sandbox?rev=965836198ba65947108cbe5e669524d2249d851a#965836198ba65947108cbe5e669524d2249d851a"
+source = "git+https://github.com/futex-ai/sandbox?rev=16d9a244ed72771acec66d5a33c927c94258d608#16d9a244ed72771acec66d5a33c927c94258d608"
 dependencies = [
  "async-trait",
  "chrono",
@@ -2965,7 +2965,7 @@ dependencies = [
 [[package]]
 name = "sandbox-runtime-assets"
 version = "0.2.0"
-source = "git+https://github.com/futex-ai/sandbox?rev=965836198ba65947108cbe5e669524d2249d851a#965836198ba65947108cbe5e669524d2249d851a"
+source = "git+https://github.com/futex-ai/sandbox?rev=16d9a244ed72771acec66d5a33c927c94258d608#16d9a244ed72771acec66d5a33c927c94258d608"
 
 [[package]]
 name = "scaleset"
@@ -3378,7 +3378,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
