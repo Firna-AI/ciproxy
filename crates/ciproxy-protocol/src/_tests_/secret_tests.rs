@@ -5,7 +5,7 @@ use std::fmt::Debug;
 use serde::Serialize;
 
 use crate::agent::{AgentMessage, ControlMessage};
-use crate::guest::AgentToGuest;
+use crate::guest::{AgentToGuest, JobDecision};
 use crate::secret::Secret;
 use crate::version::ProtocolVersion;
 use crate::wire_tests::fixtures;
@@ -71,12 +71,18 @@ fn nested_debug_hides_secrets_while_json_delivers_them() {
             runner_id: fixtures::runner_id(),
             organization_id: fixtures::organization_id(),
             registration: Secret::new(fixtures::REGISTRATION),
-            cache: Some(fixtures::cache_connection()),
         },
-        &[
-            fixtures::REGISTRATION,
-            fixtures::CACHE_URL,
-            fixtures::CACHE_TOKEN,
-        ],
+        &[fixtures::REGISTRATION],
+    );
+    assert_hidden(
+        AgentToGuest::PrepareJob {
+            job_id: fixtures::job_id(),
+            decision: JobDecision::MachineCache {
+                facts: Box::new(fixtures::facts()),
+                cache: fixtures::cache_connection(),
+                docker: None,
+            },
+        },
+        &[fixtures::CACHE_URL, fixtures::CACHE_TOKEN],
     );
 }

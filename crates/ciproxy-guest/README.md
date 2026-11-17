@@ -85,6 +85,8 @@ Replays replace a selected proxy's machine credential through its private pipe.
 The proxy acknowledges each replacement before the guest accepts it.
 Failed replacements can retry.
 A `GitHubOnly` decision stays in force for the whole job.
+The guest warns and ignores preparation before configuration or for a job
+that is not running in this guest.
 
 The entry mode selects the byte-identical stock Worker assembly for Boat.
 Its original cache and results endpoints therefore remain unchanged.

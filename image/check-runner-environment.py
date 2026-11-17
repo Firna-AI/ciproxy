@@ -89,7 +89,7 @@ printf 'fixture: Listening for Jobs\\n'
     (root / "registration.json").write_text(json.dumps({
         "configure": {"type": "configure_runner", "protocol_version": 1,
                       "runner_id": "fixture-runner", "organization_id": "fixture-org",
-                      "registration": REGISTRATION, "cache": None},
+                      "registration": REGISTRATION},
         "exit_report_url": "https://127.0.0.1:1/unused",
         "exit_report_token": "fixture-exit-token",
     }))

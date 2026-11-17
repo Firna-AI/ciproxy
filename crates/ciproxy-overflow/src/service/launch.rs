@@ -38,7 +38,6 @@ impl OverflowService {
                 runner_id: RunnerId(request.runner_id.to_string()),
                 organization_id: request.action.organization_id.clone(),
                 registration: request.registration.clone(),
-                cache: None,
             },
             exit_report_url: self.config.exit_report_url.clone(),
             exit_report_token: token,

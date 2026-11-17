@@ -82,7 +82,9 @@ impl Supervisor {
                     return result;
                 }
                 Some(AgentToGuest::Shutdown) | None => return Ok(()),
-                Some(_) => warn!("runner configuration has not arrived"),
+                Some(AgentToGuest::PrepareJob { job_id, .. }) => {
+                    warn!(job_id = %job_id.0, "runner configuration has not arrived");
+                }
             }
         }
     }
@@ -138,7 +140,9 @@ impl Supervisor {
                         decision = Some(next.clone());
                         self.prepare_job(runner_id, job_id, next).await;
                     }
-                    Ok(Some(_)) => warn!("cache integration is not installed"),
+                    Ok(Some(AgentToGuest::PrepareJob { job_id, .. })) => {
+                        warn!(job_id = %job_id.0, ?running, "job preparation does not match the running job");
+                    }
                 },
                 event = self.runner.next_event() => match event? {
                     RunnerEvent::Starting { job_id, runtime } => {

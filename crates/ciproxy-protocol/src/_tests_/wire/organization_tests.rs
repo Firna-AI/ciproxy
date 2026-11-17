@@ -3,7 +3,7 @@
 use serde_json::json;
 
 use crate::agent::{AgentMessage, ControlMessage, JobPreparationOutcome};
-use crate::guest::AgentToGuest;
+use crate::guest::{AgentToGuest, JobDecision};
 use crate::secret::Secret;
 use crate::version::ProtocolVersion;
 
@@ -27,7 +27,6 @@ fn runner_scope_retains_organization_and_defers_repository_until_assignment() {
         runner_id: fixtures::runner_id(),
         organization_id: fixtures::organization_id(),
         registration: Secret::new(fixtures::REGISTRATION),
-        cache: Some(fixtures::cache_connection()),
     })
     .unwrap();
     let hello = serde_json::to_value(AgentMessage::Hello {
@@ -80,14 +79,18 @@ fn assigned_job_facts_preserve_organization_and_actual_repository() {
         },
     })
     .unwrap();
-    let guest = serde_json::to_value(AgentToGuest::JobFacts {
+    let guest = serde_json::to_value(AgentToGuest::PrepareJob {
         job_id: fixtures::job_id(),
-        facts: fixtures::facts(),
+        decision: JobDecision::MachineCache {
+            facts: Box::new(fixtures::facts()),
+            cache: fixtures::cache_connection(),
+            docker: None,
+        },
     })
     .unwrap();
     for (name, message) in [
         ("control-plane facts", control["outcome"].clone()),
-        ("guest facts", guest),
+        ("guest facts", guest["decision"].clone()),
     ] {
         assert_eq!(
             message["facts"]["organization_id"],
