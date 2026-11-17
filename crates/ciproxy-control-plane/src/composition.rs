@@ -1,7 +1,7 @@
 //! Construct hosted adapters without exposing secrets to agents or API clients.
 
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use axum::Router;
@@ -31,14 +31,13 @@ use ciproxy_overflow::api::Overflow;
 use ciproxy_store_interface::store::Store;
 use reqwest::{Client, Url, redirect};
 use secrecy::ExposeSecret;
-use tokio::runtime::Handle;
 
 use crate::accounting::{Accounting, AccountingWorker};
 use crate::cache_metadata::records::StoredMetadataRecords;
 use crate::cache_metadata::service::{CacheMetadata, HostedCacheMetadata};
 use crate::cache_metadata::transport;
 use crate::config::Config;
-use crate::error::{Error, ErrorResultExt, Result};
+use crate::error::{ErrorResultExt, Result};
 use crate::hosted_events::Relay;
 use crate::image_signing::CdnSigning;
 use crate::repositories::{RefreshRepositories, RepositoryRefresh, StoredInstallations};
@@ -116,10 +115,7 @@ impl Hosted {
         let scale_sets: Arc<dyn ScaleSetFactory> =
             Arc::new(AppScaleSetFactory::new(signer.clone(), http.clone()));
         let persistence = Arc::new(StoreAdapter::new(store.clone(), clock.clone()));
-        let relay = Arc::new(Relay {
-            machines: OnceLock::new(),
-            handle: Handle::current(),
-        });
+        let relay = Arc::new(Relay::new());
         let connections: Arc<dyn Connections> = Arc::new(LocalConnections::default());
         let gateway: Arc<dyn MachineGateway> = Arc::new(Gateway::new(
             store.clone(),
@@ -171,10 +167,7 @@ impl Hosted {
             clock,
         ));
         let machines: Arc<dyn OwnMachines> = Arc::new(machine_runtime);
-        relay
-            .machines
-            .set(Arc::downgrade(&machines))
-            .map_or_else(|_| Err(Error::StateChanged), |_| Ok(()))?;
+        relay.bind(&machines)?;
         let app: Arc<dyn GitHubApp> = Arc::new(AppService {
             leases: persistence.clone(),
             installations,

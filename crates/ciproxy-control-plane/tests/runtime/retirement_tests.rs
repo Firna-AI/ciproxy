@@ -1,8 +1,9 @@
 //! GitHub removal and durable capacity release.
 
 use super::clock::clock;
+use super::settled::Settled;
 use super::support::{Fixture, at};
-use ciproxy_control_plane::runtime::{MachineRuntime, OwnMachines};
+use ciproxy_control_plane::runtime::MachineRuntime;
 use ciproxy_gateway::gateway::MachineGatewayMock;
 use ciproxy_gateway::types::Delivery;
 use ciproxy_github::assignments::AssignmentService;
@@ -47,7 +48,7 @@ async fn github_busy_race_preserves_the_vm_across_stale_warm_reports() {
         None,
         Arc::new(Unimock::new(())),
     );
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     assert_eq!(removals.load(Ordering::SeqCst), 1);
     assert_eq!(
         fixture.store.own_runners(fixture.workspace).unwrap()[0]
@@ -55,7 +56,7 @@ async fn github_busy_race_preserves_the_vm_across_stale_warm_reports() {
             .state,
         RunnerState::Busy
     );
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     assert_eq!(removals.load(Ordering::SeqCst), 1);
     assert_eq!(
         fixture.store.own_runners(fixture.workspace).unwrap()[0]
@@ -104,7 +105,7 @@ async fn github_removal_precedes_stop_and_capacity_waits_for_an_absent_vm_report
         None,
         Arc::new(Unimock::new(())),
     );
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     let stopping = fixture
         .store
         .own_runners(fixture.workspace)
@@ -114,7 +115,7 @@ async fn github_removal_precedes_stop_and_capacity_waits_for_an_absent_vm_report
     assert_eq!(stopping.confirmed_at, Some(at()));
     assert_eq!(*events.lock().unwrap(), vec!["github_removed", "stop_sent"]);
     runtime
-        .agent(
+        .settled_agent(
             fixture.workspace,
             fixture.machine,
             AgentMessage::CommandResult {
@@ -136,7 +137,7 @@ async fn github_removal_precedes_stop_and_capacity_waits_for_an_absent_vm_report
         .store
         .record_contact(fixture.workspace, fixture.machine, &fixture.contact)
         .unwrap();
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     assert_eq!(
         fixture.store.own_runners(fixture.workspace).unwrap()[0]
             .runner
@@ -174,7 +175,7 @@ async fn removed_offline_machine_still_loses_its_idle_github_registration() {
         None,
         Arc::new(Unimock::new(())),
     );
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     assert_eq!(
         fixture.store.own_runners(fixture.workspace).unwrap()[0]
             .runner
@@ -217,7 +218,7 @@ async fn unavailable_app_access_keeps_its_idle_runner_reserved_on_a_shared_machi
         None,
         Arc::new(Unimock::new(())),
     );
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     assert_eq!(events.lock().unwrap().len(), 0);
     assert_eq!(
         fixture.store.own_runners(fixture.workspace).unwrap()[0]

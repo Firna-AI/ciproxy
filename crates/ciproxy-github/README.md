@@ -262,6 +262,9 @@ commands, fixture contracts, and cleanup for the live probes.
   scale-message identity, and JIT identity into the agent assignment.
 - [src/persistence](src/persistence) keeps blocking store calls outside the
   asynchronous services. Its lifecycle seam is the only App state writer.
+- [src/persistence/lease.rs](src/persistence/lease.rs) defines `Lease` and
+  `LeaseStore`, the shared async boundary for store leases. `LeaseStore` on
+  `Arc<dyn Store>` takes each lease and runs each check on a blocking worker.
 - [src/app/delivery.rs](src/app/delivery.rs) replays immutable lifecycle
   notifications and confirms them after consumer acceptance.
 

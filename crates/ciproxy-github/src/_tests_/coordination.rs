@@ -7,8 +7,9 @@ use std::sync::Mutex;
 use unimock::{Clause, MockFn, matching};
 
 use crate::installation_state::{InstallationApiMock, InstalledApp};
+use crate::persistence::lease::{Lease, LeaseMock};
 use crate::persistence::lifecycle::LifecycleStoreMock;
-use crate::persistence::mutation::{MutationLease, MutationLeaseMock, OrganizationMutationsMock};
+use crate::persistence::mutation::OrganizationMutationsMock;
 
 use super::support::event;
 use crate::app::webhook::InstallationAction;
@@ -25,10 +26,8 @@ pub(super) fn lease() -> impl Clause {
     (
         OrganizationMutationsMock::acquire
             .each_call(matching!(17))
-            .answers(&|mock, _| Ok(Box::new(mock.clone()) as Box<dyn MutationLease>)),
-        MutationLeaseMock::check
-            .each_call(matching!())
-            .answers(&|_| Ok(())),
+            .answers(&|mock, _| Ok(Box::new(mock.clone()) as Box<dyn Lease>)),
+        LeaseMock::check.each_call(matching!()).answers(&|_| Ok(())),
     )
 }
 

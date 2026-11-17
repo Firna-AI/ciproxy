@@ -15,6 +15,9 @@ pub enum Error {
     /// A concurrent or previous owner changed the runtime's state.
     #[error("[control-plane] execution state changed; retry reconciliation")]
     StateChanged,
+    /// An owned runtime task panicked or could not be joined.
+    #[error("[control-plane] runtime task join failed")]
+    TaskJoin(#[source] tokio::task::JoinError),
     /// Internal failure with its typed source retained.
     #[error("[control-plane] internal failure")]
     Internal(#[from] InternalError),

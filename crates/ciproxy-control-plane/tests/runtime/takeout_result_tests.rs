@@ -1,11 +1,11 @@
 //! Unavailable retirement stays pending; confirmed retirement saves stable stops.
 
 use ciproxy_control_plane::error::Error;
-use ciproxy_control_plane::runtime::OwnMachines;
 use ciproxy_protocol::agent::ControlMessage;
 use ciproxy_store_interface::runners::RunnerState;
 
 use super::recovery_support::{other_organization, saved};
+use super::settled::Settled;
 use super::support::Fixture;
 use super::takeout_gateway::Capture;
 use super::takeout_installations::Probe;
@@ -52,9 +52,9 @@ async fn unavailable_lookup_or_delete_keeps_takeout_pending_on_callback_and_tick
         let mut runtime = real_runtime(&fixture, remote.clone(), gateway.clone());
         let probe = Probe::present();
         runtime.installations = probe.clone();
-        let result = runtime.lifecycle(event).await;
+        let result = runtime.settled_lifecycle(event).await;
         assert!(matches!(result, Err(Error::StateChanged)), "{result:?}");
-        runtime.tick().await.unwrap();
+        runtime.settled_tick().await.unwrap();
         assert_eq!(*remote.calls.lock().unwrap(), expected);
         assert_eq!(*probe.calls.lock().unwrap(), vec![43]);
         let held = saved(&fixture);
@@ -109,15 +109,15 @@ async fn confirmed_removal_or_absence_saves_a_stop_before_offline_delivery_and_r
         let gateway = Capture::new(true);
         let mut runtime = real_runtime(&fixture, remote.clone(), gateway.clone());
         runtime.installations = Probe::present();
-        runtime.lifecycle(event.clone()).await.unwrap();
+        runtime.settled_lifecycle(event.clone()).await.unwrap();
         let stop = saved(&fixture);
         assert_eq!(stop.runner.state, RunnerState::Stopping);
         assert_eq!(
             stop.runner.github_id,
             if calls.len() == 2 { Some(47) } else { None }
         );
-        runtime.lifecycle(event).await.unwrap();
-        runtime.tick().await.unwrap();
+        runtime.settled_lifecycle(event).await.unwrap();
+        runtime.settled_tick().await.unwrap();
         assert_eq!(*remote.calls.lock().unwrap(), calls);
         assert_eq!(saved(&fixture).command_id, stop.command_id);
         assert_eq!(saved(&fixture).issued_at, stop.issued_at);

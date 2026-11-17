@@ -1,20 +1,23 @@
 //! One serialized own-machine execution domain and restart reconciliation.
 
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 
 use async_trait::async_trait;
-use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_gateway::gateway::MachineGateway;
+use ciproxy_gateway::types::Session;
 use ciproxy_github::assignments::JobAssignments;
 use ciproxy_github::installation_state::InstallationApi;
 use ciproxy_github::registrations::RunnerRegistrations;
 use ciproxy_github::runtime::Runtime;
 use ciproxy_overflow::api::Overflow;
 use ciproxy_protocol::agent::AgentMessage;
+use ciproxy_protocol::identifiers::ImageId;
 use ciproxy_protocol::images::ImageDownload;
 use ciproxy_store_interface::github::GithubJob;
-use ciproxy_store_interface::github_lifecycle::{LifecycleEvent, RemovalCause};
+use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
+use ciproxy_store_interface::own_runners::RoutingSnapshot;
+use ciproxy_store_interface::runtime_results::BoatRunnerGuard;
 use ciproxy_store_interface::store::Store;
 use tokio::sync::Mutex;
 use uuid::Uuid;
@@ -22,14 +25,22 @@ use uuid::Uuid;
 use crate::boat_authority::BoatRegistrationRetirement;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::image_signing::ImageSigning;
-use crate::snapshot::build;
-use ciproxy_store_interface::own_runners::RoutingSnapshot;
+use crate::runtime_tasks::RuntimeTasks;
+use crate::takeout::TakeoutCheck;
 
 /// Runtime entry points shared by HTTP events, listeners, and periodic repair.
 #[async_trait]
 pub trait OwnMachines: Send + Sync {
-    /// Remove accessible idle registrations synchronously with an Admin removal.
+    /// Dispatch retirement of accessible idle registrations after an Admin removal.
     async fn machine_removed(&self, workspace_id: Uuid, machine_id: Uuid) -> Result<()>;
+    /// Queue an authenticated event without waiting for runtime processing.
+    fn enqueue_agent(&self, session: Session, message: AgentMessage);
+    /// Queue saved machine removal without waiting for registration access.
+    fn enqueue_machine_removed(&self, workspace_id: Uuid, machine_id: Uuid);
+    /// Cancel owned work if the runtime supervisor exits or is cancelled.
+    fn cancel_tasks(&self);
+    /// Stop and join all owned remote work during process shutdown.
+    async fn shutdown(&self) -> Result<()>;
     /// Reconcile every retained workspace independently after restart or a tick.
     async fn tick(&self) -> Result<()>;
     /// Route a saved job update through its durable GitHub runner mapping.
@@ -67,12 +78,17 @@ pub struct MachineRuntime {
     pub image: Option<ImageDownload>,
     /// Production CDN signer, supplied only at the hosted composition root.
     pub image_signing: Option<Arc<dyn ImageSigning>>,
-    pub(crate) operation: Mutex<()>,
-    pub(crate) image_requests: Mutex<HashMap<(Uuid, Uuid), ImageRequest>>,
+    pub(crate) operation: Arc<Mutex<()>>,
+    pub(crate) tasks: Weak<RuntimeTasks>,
+    task_owner: Option<Arc<RuntimeTasks>>,
+    pub(crate) boat_operations: Arc<Mutex<HashMap<Uuid, Arc<Mutex<()>>>>>,
+    pub(crate) image_requests: Arc<Mutex<HashMap<(Uuid, Uuid), ImageRequest>>>,
+    pub(crate) boat_answers: Arc<Mutex<HashMap<Uuid, (u64, BoatRunnerGuard)>>>,
+    pub(crate) takeout_checks: Arc<Mutex<HashMap<Uuid, TakeoutCheck>>>,
 }
 
 pub(crate) struct ImageRequest {
-    pub(crate) image_id: ciproxy_protocol::identifiers::ImageId,
+    pub(crate) image_id: ImageId,
     pub(crate) session_id: Uuid,
     pub(crate) command_id: Uuid,
 }
@@ -88,6 +104,7 @@ impl MachineRuntime {
         image: Option<ImageDownload>,
         installations: Arc<dyn InstallationApi>,
     ) -> Self {
+        let tasks = RuntimeTasks::new();
         Self {
             boat_retirement: None,
             overflow: None,
@@ -99,10 +116,46 @@ impl MachineRuntime {
             image,
             installations,
             image_signing: None,
-            operation: Mutex::new(()),
-            image_requests: Mutex::new(HashMap::new()),
+            operation: Arc::new(Mutex::new(())),
+            tasks: Arc::downgrade(&tasks),
+            task_owner: Some(tasks),
+            boat_operations: Arc::new(Mutex::new(HashMap::new())),
+            image_requests: Arc::new(Mutex::new(HashMap::new())),
+            takeout_checks: Arc::new(Mutex::new(HashMap::new())),
+            boat_answers: Arc::new(Mutex::new(HashMap::new())),
         }
     }
+    /// Wait until queued events and all remote tasks finish, returning a joined error.
+    pub async fn quiesce(&self) -> Result<()> {
+        self.task_scope()?.quiesce().await
+    }
+
+    pub(crate) fn task_scope(&self) -> Result<Arc<RuntimeTasks>> {
+        self.tasks.upgrade().ok_or(Error::StateChanged)
+    }
+
+    pub(crate) fn worker(&self) -> Self {
+        Self {
+            boat_retirement: self.boat_retirement.clone(),
+            overflow: self.overflow.clone(),
+            store: self.store.clone(),
+            gateway: self.gateway.clone(),
+            registrations: self.registrations.clone(),
+            assignments: self.assignments.clone(),
+            clock: self.clock.clone(),
+            installations: self.installations.clone(),
+            image: self.image.clone(),
+            image_signing: self.image_signing.clone(),
+            operation: self.operation.clone(),
+            image_requests: self.image_requests.clone(),
+            takeout_checks: self.takeout_checks.clone(),
+            boat_answers: self.boat_answers.clone(),
+            tasks: self.tasks.clone(),
+            task_owner: None,
+            boat_operations: self.boat_operations.clone(),
+        }
+    }
+
     pub(crate) async fn load(&self, workspace_id: Uuid) -> Result<RoutingSnapshot> {
         let store = self.store.clone();
         tokio::task::spawn_blocking(move || store.own_routing_snapshot(workspace_id))
@@ -112,7 +165,7 @@ impl MachineRuntime {
     }
 
     /// Keep required local cleanup independent of optional provider work.
-    async fn purge_boat_registration_metadata(&self, workspace_id: Uuid) -> Result<()> {
+    pub(crate) async fn purge_boat_registration_metadata(&self, workspace_id: Uuid) -> Result<()> {
         let store = self.store.clone();
         let at = self.clock.now();
         tokio::task::spawn_blocking(move || {
@@ -151,121 +204,12 @@ impl MachineRuntime {
         .await
         .internal()?
     }
-
-    /// Run ordinary best-effort routing under this workspace execution lease.
-    pub(crate) async fn reconcile_workspace(&self, workspace_id: Uuid) -> Result<()> {
-        let store = self.store.clone();
-        let Some(mut lease) =
-            tokio::task::spawn_blocking(move || store.try_lock_own_runners(workspace_id))
-                .await
-                .internal()?
-                .internal()?
-        else {
-            return Ok(());
-        };
-        lease.check_connection().internal()?;
-        if let Err(error) = self.purge_boat_registration_metadata(workspace_id).await {
-            tracing::warn!(%workspace_id,%error,"Boat registration metadata cleanup will retry");
-        }
-        let mut input = self.load(workspace_id).await?;
-        self.reconcile_reports(&input).await?;
-        input = self.load(workspace_id).await?;
-        self.recover_stops(&input, &mut *lease).await?;
-        for job in &input.jobs {
-            self.route_boat_job(&input, job).await?;
-            self.route_job(&input, job).await?;
-        }
-        self.ensure_image(&input).await?;
-        for machine in &input.machines {
-            if let Err(error) = self.send_docker_budget(&input, machine.machine.id).await {
-                tracing::warn!(machine=%machine.machine.id,%error,"Docker policy update will retry");
-            }
-        }
-        let root_sizing = self
-            .image
-            .as_ref()
-            .map_or_else(RootSizing::default, |image| RootSizing {
-                image_root_bytes: image.root_disk_bytes,
-            });
-        let runnable = self.runnable_organizations(&input).await?;
-        let mut snapshot = build(&input, &runnable, self.clock.now(), root_sizing);
-        self.reconcile_boat(&input, &mut snapshot).await;
-        for action in ciproxy_scaler::decision::decide(&snapshot) {
-            lease.check_connection().internal()?;
-            match self.apply(&input, action).await {
-                Ok(()) => {}
-                Err(Error::StateChanged) => return Err(Error::StateChanged),
-                Err(error) => {
-                    tracing::warn!(%workspace_id,%error,"runner action will retry; independent actions continue")
-                }
-            }
-        }
-        Ok(())
-    }
 }
 
-#[async_trait]
-impl OwnMachines for MachineRuntime {
-    async fn machine_removed(&self, workspace_id: Uuid, machine_id: Uuid) -> Result<()> {
-        let _operation = self.operation.lock().await;
-        let input = self.load(workspace_id).await?;
-        for runner in &input.runners {
-            if matches!(runner.runner.place,ciproxy_store_interface::runners::RunnerPlace::Machine{machine_id:owner,..}if owner==machine_id)
-                && runner.runner.state != ciproxy_store_interface::runners::RunnerState::Stopped
-            {
-                self.stop(&input, runner).await?;
-            }
-        }
-        Ok(())
-    }
-    async fn tick(&self) -> Result<()> {
-        let _operation = self.operation.lock().await;
-        let store = self.store.clone();
-        let workspaces = tokio::task::spawn_blocking(move || store.routing_workspaces())
-            .await
-            .internal()?
-            .internal()?;
-        for workspace_id in workspaces {
-            if let Err(error) = self.reconcile_workspace(workspace_id).await {
-                tracing::warn!(%workspace_id, %error, "own-machine reconciliation will retry");
-            }
-        }
-        Ok(())
-    }
-
-    async fn job(&self, workspace_id: Uuid, job: GithubJob) -> Result<()> {
-        let _operation = self.operation.lock().await;
-        let input = self.load(workspace_id).await?;
-        self.route_boat_job(&input, &job).await?;
-        self.route_job(&input, &job).await
-    }
-
-    async fn agent(
-        &self,
-        workspace_id: Uuid,
-        machine_id: Uuid,
-        message: AgentMessage,
-    ) -> Result<()> {
-        let _operation = self.operation.lock().await;
-        self.agent_event(workspace_id, machine_id, message).await
-    }
-
-    async fn lifecycle(&self, event: LifecycleEvent) -> Result<()> {
-        let workspace_id = event.organization().workspace_id;
-        let _operation = self.operation.lock().await;
-        match event {
-            LifecycleEvent::Inactive { organization, .. } => self.inactive(&organization).await,
-            LifecycleEvent::Removed {
-                organization,
-                cause,
-                ..
-            } => match cause {
-                RemovalCause::Owner => self.owner_removed(&organization).await,
-                RemovalCause::WorkspaceTakeout => self.takeout(&organization).await,
-            },
-            LifecycleEvent::Active(_) | LifecycleEvent::Suspended(_) => {
-                self.reconcile_workspace(workspace_id).await
-            }
+impl Drop for MachineRuntime {
+    fn drop(&mut self) {
+        if self.task_owner.is_some() {
+            tracing::debug!("runtime owner stopped; owned tasks will stop");
         }
     }
 }

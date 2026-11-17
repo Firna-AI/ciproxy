@@ -1,6 +1,7 @@
 //! Fresh link authority while retaining rotated grants before any membership read.
 
 use chrono::Duration;
+use ciproxy_github::persistence::lease::LeaseStore;
 use ciproxy_store_interface::dashboard::records::{Membership, User};
 
 use crate::error::{Error, ErrorResultExt, Result};
@@ -16,10 +17,7 @@ impl AccessService {
         user: User,
     ) -> Result<(Grant, Vec<Membership>)> {
         let person = user.github_id;
-        let mut lease = query(self.store.clone(), move |store| {
-            store.lock_github_organization(person)
-        })
-        .await?;
+        let lease = self.store.organization_lease(person).await.internal()?;
         let mut user = query(self.store.clone(), move |store| {
             store.dashboard_user_by_github(person)
         })
@@ -33,7 +31,7 @@ impl AccessService {
         {
             grant = self.identity.refresh(grant).await?;
             user.credentials = self.cipher.seal(user.id, grant.encode()?).await?;
-            lease.check_connection().internal()?;
+            lease.check().await.internal()?;
             let id = user.id;
             let credentials = user.credentials.clone();
             query(self.store.clone(), move |store| {
@@ -44,7 +42,7 @@ impl AccessService {
         let memberships = self.identity.memberships(&grant).await?;
         user.credentials = self.cipher.seal(user.id, grant.encode()?).await?;
         user.checked_at = now;
-        lease.check_connection().internal()?;
+        lease.check().await.internal()?;
         let observed = memberships.clone();
         query(self.store.clone(), move |store| {
             store.save_dashboard_user(&user, &observed)

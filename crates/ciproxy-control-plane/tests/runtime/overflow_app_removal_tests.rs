@@ -3,7 +3,6 @@
 use std::sync::atomic::Ordering;
 
 use chrono::Duration;
-use ciproxy_control_plane::runtime::OwnMachines;
 use ciproxy_overflow::error::Error;
 use ciproxy_store_interface::github::DemandPhase;
 use ciproxy_store_interface::overflow::record::StartPhase;
@@ -11,6 +10,7 @@ use ciproxy_store_interface::runners::RunnerState;
 use sandbox_interface::SandboxLifetime;
 
 use super::overflow_support::Harness;
+use super::settled::Settled;
 use super::support::at;
 
 #[tokio::test]
@@ -20,7 +20,7 @@ async fn removed_app_retains_idle_and_running_boat_supply_to_the_full_or_trial_l
         harness.ports.trial.store(trial, Ordering::SeqCst);
         let mut idle = harness.queued();
         let mut running = harness.queued();
-        harness.runtime.tick().await.unwrap();
+        harness.runtime.settled_tick().await.unwrap();
         assert_eq!(harness.ports.launches.load(Ordering::SeqCst), 2);
         for create in harness.ports.creates.lock().unwrap().iter() {
             assert_eq!(
@@ -45,7 +45,7 @@ async fn removed_app_retains_idle_and_running_boat_supply_to_the_full_or_trial_l
         store
             .record_app_removal(workspace, organization, at())
             .unwrap();
-        harness.runtime.tick().await.unwrap();
+        harness.runtime.settled_tick().await.unwrap();
         assert_eq!(
             harness.ports.deletes.load(Ordering::SeqCst),
             0,
@@ -73,7 +73,7 @@ async fn removed_app_retains_idle_and_running_boat_supply_to_the_full_or_trial_l
         );
         let end = at() + Duration::seconds(lifetime_seconds.try_into().unwrap());
         *harness.ports.now.lock().unwrap() = end - Duration::seconds(1);
-        harness.runtime.tick().await.unwrap();
+        harness.runtime.settled_tick().await.unwrap();
         assert_eq!(harness.ports.deletes.load(Ordering::SeqCst), 0);
         assert_eq!(harness.ports.creates.lock().unwrap().len(), 2);
         harness.ports.fail.store(true, Ordering::SeqCst);
@@ -111,7 +111,7 @@ async fn removed_app_retains_idle_and_running_boat_supply_to_the_full_or_trial_l
 async fn app_removal_during_github_retirement_retains_the_launched_sandbox() {
     let harness = Harness::new(false, false).await;
     let mut job = harness.queued();
-    harness.runtime.tick().await.unwrap();
+    harness.runtime.settled_tick().await.unwrap();
     job.phase = DemandPhase::Completed;
     job.completed_at = Some(at());
     let store = &harness.fixture.store;

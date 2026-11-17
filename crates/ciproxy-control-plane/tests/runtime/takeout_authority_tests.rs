@@ -2,12 +2,12 @@
 
 use std::sync::{Arc, Mutex};
 
-use ciproxy_control_plane::runtime::OwnMachines;
 use ciproxy_protocol::agent::ControlMessage;
 use ciproxy_store_interface::organizations::AppState;
 use ciproxy_store_interface::runners::RunnerState;
 
 use super::recovery_support::{gateway, other_organization, saved};
+use super::settled::Settled;
 use super::support::Fixture;
 use super::takeout_support::{Answer, Call, Remote, real_runtime};
 
@@ -31,7 +31,7 @@ async fn busy_on_tick(saved_id: Option<i64>) {
     let remote = Remote::new(Answer::Busy);
     let messages = Arc::new(Mutex::new(Vec::new()));
     let runtime = real_runtime(&fixture, remote.clone(), gateway(messages.clone()));
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     assert_eq!(
         *remote.calls.lock().unwrap(),
         if saved_id.is_some() {

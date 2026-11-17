@@ -11,13 +11,17 @@ use ciproxy_overflow::api::{Retirement, RunnerAuthority};
 use ciproxy_overflow::error::{Error, Result};
 use ciproxy_overflow::view::OverflowView;
 use ciproxy_scaler::actions::Action;
+use ciproxy_scaler::decision::decide;
 use ciproxy_store_interface::boat_runtime::BoatRunnerIntent;
 use ciproxy_store_interface::github::DemandPhase;
 use ciproxy_store_interface::organizations::AppState;
 use ciproxy_store_interface::overflow::record::StartPhase;
 use ciproxy_store_interface::runners::RunnerState;
+use ciproxy_store_interface::runtime_results::{BoatRunnerGuard, BoatRunnerResult};
 use ciproxy_store_interface::store::Store;
 use uuid::Uuid;
+
+use crate::snapshot::build;
 
 /// Shared registration authority used by overflow cleanup and runtime recovery.
 pub struct BoatRunnerAuthority {
@@ -31,11 +35,19 @@ pub struct BoatRunnerAuthority {
     pub registrations: Arc<dyn RunnerRegistrations>,
 }
 
+/// A live retirement result tied to the saved authority that accepted it.
+pub struct BoatRemoval {
+    /// GitHub's current retirement decision.
+    pub retirement: Retirement,
+    /// Exact saved authority after the conditional result write.
+    pub guard: BoatRunnerGuard,
+}
+
 /// GitHub retirement shared by startup recovery, take-out, and overflow maintenance.
 #[async_trait]
 pub trait BoatRegistrationRetirement: Send + Sync {
     /// Obtain live GitHub removal or Busy proof. Callers enforce delivery safety.
-    async fn remove(&self, workspace_id: Uuid, intent: &BoatRunnerIntent) -> Result<Retirement>;
+    async fn remove(&self, workspace_id: Uuid, intent: &BoatRunnerIntent) -> Result<BoatRemoval>;
 }
 
 #[async_trait]
@@ -89,25 +101,30 @@ impl RunnerAuthority for BoatRunnerAuthority {
         {
             return Ok(Retirement::RunningJob);
         }
-        let view = OverflowView::from_snapshot(input.overflow.clone(), self.clock.now())?;
-        let mut snapshot =
-            crate::snapshot::build(&input, &runnable, self.clock.now(), self.root_sizing);
-        snapshot.boat = view.retained_scaler_account()?;
-        crate::boat_snapshot::append(&mut snapshot, intents, &view.starts, &input.jobs);
-        let sandbox = snapshot.sandboxes.iter().find(|sandbox| {
-            sandbox
-                .runner
-                .as_ref()
-                .is_some_and(|retained| retained.runner.id.0 == runner_id.to_string())
+        let busy = input.boat_runners.iter().any(|runner| {
+            runner.id == runner_id
+                && runner.organization_id == organization_id
+                && runner.state == RunnerState::Busy
         });
-        let retire = sandbox.is_none_or(|sandbox| {
-            ciproxy_scaler::decision::decide(&snapshot).iter().any(|action|
-            matches!(action, Action::DeleteSandbox {sandbox_id,..} if *sandbox_id == sandbox.id))
-        });
-        if !takeout && !retire {
-            return Ok(Retirement::WaitingDemand);
+        if !takeout && !busy {
+            let view = OverflowView::from_snapshot(input.overflow.clone(), self.clock.now())?;
+            let mut snapshot = build(&input, &runnable, self.clock.now(), self.root_sizing);
+            snapshot.boat = view.retained_scaler_account()?;
+            let sandbox = snapshot.sandboxes.iter().find(|sandbox| {
+                sandbox
+                    .runner
+                    .as_ref()
+                    .is_some_and(|retained| retained.runner.id.0 == runner_id.to_string())
+            });
+            let retire = sandbox.is_none_or(|sandbox| {
+                decide(&snapshot).iter().any(|action|
+                matches!(action, Action::DeleteSandbox {sandbox_id,..} if *sandbox_id == sandbox.id))
+            });
+            if !retire {
+                return Ok(Retirement::WaitingDemand);
+            }
         }
-        let retirement = self.remove(workspace_id, intent).await?;
+        let retirement = self.remove(workspace_id, intent).await?.retirement;
         if retirement == Retirement::Removed
             && self
                 .registration_access_ended(workspace_id, runner_id)
@@ -121,13 +138,23 @@ impl RunnerAuthority for BoatRunnerAuthority {
 
 #[async_trait]
 impl BoatRegistrationRetirement for BoatRunnerAuthority {
-    async fn remove(&self, workspace_id: Uuid, intent: &BoatRunnerIntent) -> Result<Retirement> {
+    async fn remove(&self, workspace_id: Uuid, intent: &BoatRunnerIntent) -> Result<BoatRemoval> {
         if self
             .registration_access_ended(workspace_id, intent.runner_id)
             .await?
         {
             return Err(Error::RunnerNeeded);
         }
+        let store = self.store.clone();
+        let runner = intent.runner_id;
+        let expected = match tokio::task::spawn_blocking(move || {
+            store.boat_runner_guard(workspace_id, runner)
+        })
+        .await
+        {
+            Ok(Ok(Some(expected))) => expected,
+            _ => return Err(Error::OwnershipUnknown),
+        };
         let result = self
             .registrations
             .retire(
@@ -142,35 +169,52 @@ impl BoatRegistrationRetirement for BoatRunnerAuthority {
             .await;
         match result {
             Ok(RegistrationRetirement::Busy { id }) => {
+                let mut saved = expected.clone();
+                saved.intent.github_id = Some(id);
+                if saved.delivery.as_ref().is_some_and(|record| {
+                    record.phase == StartPhase::Running && record.ends_at.is_none()
+                }) && let Some(runner) = &mut saved.runner
+                {
+                    runner.state = RunnerState::Busy;
+                    runner.github_id = Some(id);
+                }
                 let store = self.store.clone();
-                let runner = intent.runner_id;
-                let organization = intent.organization_id;
                 match tokio::task::spawn_blocking(move || {
-                    store.register_boat_runner(workspace_id, runner, id)?;
-                    let input = store.boat_runtime_snapshot(workspace_id)?;
-                    if input.starts.iter().any(|record| {
-                        record.runner_id == runner
-                            && record.phase == StartPhase::Running
-                            && record.ends_at.is_none()
-                    }) {
-                        store.update_runner(
-                            workspace_id,
-                            organization,
-                            runner,
-                            RunnerState::Busy,
-                            Some(id),
-                        )?;
-                    }
-                    Ok::<_, ciproxy_store_interface::error::Error>(())
+                    store.apply_boat_runner_result(
+                        workspace_id,
+                        &expected,
+                        BoatRunnerResult::Busy { github_id: id },
+                    )
                 })
                 .await
                 {
-                    Ok(Ok(())) => Ok(Retirement::RunningJob),
+                    Ok(Ok(true)) => Ok(BoatRemoval {
+                        retirement: Retirement::RunningJob,
+                        guard: saved,
+                    }),
+                    Ok(Ok(false)) => Err(Error::RunnerNeeded),
                     _ => Err(Error::ProviderUnavailable),
                 }
             }
             Ok(RegistrationRetirement::Removed { .. } | RegistrationRetirement::Absent) => {
-                Ok(Retirement::Removed)
+                let saved = expected.clone();
+                let store = self.store.clone();
+                match tokio::task::spawn_blocking(move || {
+                    store.apply_boat_runner_result(
+                        workspace_id,
+                        &expected,
+                        BoatRunnerResult::Checked,
+                    )
+                })
+                .await
+                {
+                    Ok(Ok(true)) => Ok(BoatRemoval {
+                        retirement: Retirement::Removed,
+                        guard: saved,
+                    }),
+                    Ok(Ok(false)) => Err(Error::RunnerNeeded),
+                    _ => Err(Error::ProviderUnavailable),
+                }
             }
             Err(_) => Err(Error::ProviderUnavailable),
         }

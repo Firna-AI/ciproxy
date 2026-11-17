@@ -2,6 +2,7 @@
 
 use ciproxy_github::app::GitHubApp;
 use ciproxy_github::app::webhook::AccountKind;
+use ciproxy_github::persistence::lease::LeaseStore;
 use ciproxy_store_interface::dashboard::records::{Membership, Role};
 use ciproxy_store_interface::installation_links::{
     InstallationAttempt, InstallationClaim, InstallationRecovery,
@@ -11,7 +12,7 @@ use ciproxy_store_interface::organizations::AppState;
 use ciproxy_store_interface::store::Store;
 use uuid::Uuid;
 
-use crate::error::{Error, Result, ServiceResultExt};
+use crate::error::{Error, ErrorResultExt, Result, ServiceResultExt};
 use crate::identity::{Grant, Profile};
 use crate::state::query;
 
@@ -56,10 +57,7 @@ impl AccessService {
         memberships: &[Membership],
     ) -> Result<()> {
         let person = profile.id;
-        let _lease = query(self.store.clone(), move |store| {
-            store.lock_github_organization(person)
-        })
-        .await?;
+        let _lease = self.store.organization_lease(person).await.internal()?;
         let Some(mut user) = query(self.store.clone(), move |store| {
             store.dashboard_user_by_github(person)
         })

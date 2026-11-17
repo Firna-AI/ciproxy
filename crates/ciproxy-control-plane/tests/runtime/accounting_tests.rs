@@ -6,7 +6,6 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use ciproxy_control_plane::accounting::{Accounting, AccountingWorker};
-use ciproxy_control_plane::runtime::OwnMachines;
 use ciproxy_github::timing::JobTiming;
 use ciproxy_metering::service::StoredMetering;
 use ciproxy_protocol::agent::AgentMessage;
@@ -17,6 +16,7 @@ use unimock::Unimock;
 use uuid::Uuid;
 
 use super::recovery_support::{gateway, job, other_organization, runtime, saved};
+use super::settled::Settled;
 use super::support::{Fixture, at};
 
 struct PendingTiming(Arc<Notify>);
@@ -61,10 +61,13 @@ async fn pending_timing_does_not_block_tick_job_agent_or_removal() {
     worker.request();
     let outcome = tokio::time::timeout(Duration::from_secs(10), async {
         entered.notified().await;
-        runtime.tick().await.unwrap();
-        runtime.job(fixture.workspace, job(&fixture)).await.unwrap();
+        runtime.settled_tick().await.unwrap();
         runtime
-            .agent(
+            .settled_job(fixture.workspace, job(&fixture))
+            .await
+            .unwrap();
+        runtime
+            .settled_agent(
                 fixture.workspace,
                 fixture.machine,
                 AgentMessage::JobStarted {
@@ -84,7 +87,7 @@ async fn pending_timing_does_not_block_tick_job_agent_or_removal() {
             .unwrap()
             .remove(0)
             .event;
-        runtime.lifecycle(event).await.unwrap();
+        runtime.settled_lifecycle(event).await.unwrap();
         stop.send_replace(true);
         task.await.unwrap();
     })

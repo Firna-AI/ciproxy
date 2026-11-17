@@ -18,7 +18,7 @@ use crate::runners::RunnerRow;
 
 #[derive(Queryable, Selectable, Insertable)]
 #[diesel(table_name = own_runner_commands)]
-struct CommandRow {
+pub(crate) struct CommandRow {
     runner_id: Uuid,
     workspace_id: Uuid,
     label_name: String,
@@ -244,23 +244,25 @@ pub(crate) fn load(connection: &mut PgConnection, workspace_id: Uuid) -> Result<
         .load::<(CommandRow, RunnerRow)>(connection)
         .store()?
         .into_iter()
-        .map(|(command, runner)| {
-            Ok(OwnRunner {
-                registration_scale_set_id: runner.registration_scale_set_id,
-                requested_size: serde_json::from_value(command.requested_size).internal()?,
-                slot_indices: command
-                    .slot_indices
-                    .into_iter()
-                    .map(u64::try_from)
-                    .collect::<std::result::Result<Vec<_>, _>>()
-                    .internal()?,
-                runner: runner.into_record()?,
-                label_name: command.label_name,
-                command_id: command.command_id,
-                issued_at: command.issued_at,
-                acknowledged: command.acknowledged,
-                confirmed_at: command.confirmed_at,
-            })
-        })
+        .map(into_record)
         .collect()
+}
+
+pub(crate) fn into_record((command, runner): (CommandRow, RunnerRow)) -> Result<OwnRunner> {
+    Ok(OwnRunner {
+        registration_scale_set_id: runner.registration_scale_set_id,
+        requested_size: serde_json::from_value(command.requested_size).internal()?,
+        slot_indices: command
+            .slot_indices
+            .into_iter()
+            .map(u64::try_from)
+            .collect::<std::result::Result<Vec<_>, _>>()
+            .internal()?,
+        runner: runner.into_record()?,
+        label_name: command.label_name,
+        command_id: command.command_id,
+        issued_at: command.issued_at,
+        acknowledged: command.acknowledged,
+        confirmed_at: command.confirmed_at,
+    })
 }

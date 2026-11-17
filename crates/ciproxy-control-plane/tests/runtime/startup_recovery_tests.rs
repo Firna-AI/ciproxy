@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use ciproxy_control_plane::runtime::{MachineRuntime, OwnMachines};
+use ciproxy_control_plane::runtime::MachineRuntime;
 use ciproxy_gateway::gateway::MachineGatewayMock;
 use ciproxy_gateway::types::Delivery;
 use ciproxy_github::assignments::AssignmentService;
@@ -14,6 +14,7 @@ use ciproxy_store_interface::runners::RunnerState;
 use unimock::{MockFn, Unimock, matching};
 
 use super::clock::clock;
+use super::settled::Settled;
 use super::support::{Fixture, at};
 
 #[tokio::test]
@@ -91,7 +92,7 @@ async fn confirmed_configuration_loss_retires_github_first_with_exact_resources_
             None,
             Arc::new(Unimock::new(())),
         );
-        runtime.tick().await.unwrap();
+        runtime.settled_tick().await.unwrap();
         let held = fixture
             .store
             .own_runners(fixture.workspace)

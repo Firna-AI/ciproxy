@@ -5,7 +5,13 @@ These boundaries extend the [crate guide](README.md).
 ## Service integration boundaries
 
 The crate consumes the hosted store through `dyn Store` and blocking
-workers. The later control-plane runtime supplies these adapters:
+workers. `persistence::lease::LeaseStore` on `Arc<dyn Store>` is the one
+async lease boundary. The listener, the App service, the control-plane
+runtime, and the dashboard API take their scale-set, organization, and
+workspace execution leases through it. `Lease::check` also runs on a
+blocking worker.
+
+The control-plane runtime supplies these adapters:
 
 - `InstallAuthority` resolves exact installation claims and grants the first
   Admin role only for a new workspace. The sign-in service owns memberships

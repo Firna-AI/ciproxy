@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use chrono::Duration;
 use ciproxy_github::app::GitHubApp;
 use ciproxy_github::installation_state::InstalledApp;
+use ciproxy_github::persistence::lease::LeaseStore;
 use ciproxy_store_interface::dashboard::records::{Role, User};
 use ciproxy_store_interface::installation_links::InstallationClaim;
 use secrecy::SecretString;
@@ -30,10 +31,7 @@ impl AccessService {
             return Ok(user);
         }
         let github_id = user.github_id;
-        let mut lease = query(self.store.clone(), move |store| {
-            store.lock_github_organization(github_id)
-        })
-        .await?;
+        let lease = self.store.organization_lease(github_id).await.internal()?;
         user = query(self.store.clone(), move |store| {
             store.dashboard_user_by_github(github_id)
         })
@@ -49,7 +47,7 @@ impl AccessService {
         {
             grant = self.identity.refresh(grant).await?;
             user.credentials = self.cipher.seal(user.id, grant.encode()?).await?;
-            lease.check_connection().internal()?;
+            lease.check().await.internal()?;
             let id = user.id;
             let credentials = user.credentials.clone();
             query(self.store.clone(), move |store| {
@@ -60,7 +58,7 @@ impl AccessService {
         let memberships = self.identity.memberships(&grant).await?;
         user.credentials = self.cipher.seal(user.id, grant.encode()?).await?;
         user.checked_at = now;
-        lease.check_connection().internal()?;
+        lease.check().await.internal()?;
         let saved = user.clone();
         query(self.store.clone(), move |store| {
             store.save_dashboard_user(&saved, &memberships)

@@ -5,7 +5,7 @@ use ciproxy_store_interface::labels::Label;
 use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryAccess};
 
 use crate::error::{Error, Result};
-use crate::persistence::mutation::MutationLease;
+use crate::persistence::lease::Lease;
 
 use super::AppService;
 
@@ -60,7 +60,7 @@ impl AppService {
         &self,
         organization: &Organization,
         labels: Vec<Label>,
-        lease: &dyn MutationLease,
+        lease: &dyn Lease,
     ) -> Result<GithubPreparedResources> {
         lease.check().await?;
         let repositories = self.rest.repositories(organization.installation_id).await?;

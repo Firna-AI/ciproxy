@@ -5,6 +5,7 @@
 mod billing;
 mod boat;
 mod boat_registration_ownership;
+mod boat_results;
 mod boat_runtime;
 mod connection;
 mod dashboard;
@@ -32,6 +33,8 @@ mod overflow;
 mod own_lease;
 mod own_observation;
 mod own_reservation;
+mod own_result_guard;
+mod own_results;
 mod own_runners;
 mod routing_snapshot;
 mod runners;

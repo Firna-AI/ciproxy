@@ -4,7 +4,6 @@ use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use chrono::{DateTime, Duration, Utc};
-use ciproxy_control_plane::runtime::OwnMachines;
 use ciproxy_gateway::gateway::MachineGatewayMock;
 use ciproxy_gateway::types::Delivery;
 use ciproxy_github::registrations::RegisteredRunner;
@@ -22,6 +21,7 @@ use unimock::{MockFn, Unimock, matching};
 use uuid::Uuid;
 
 use super::recovery_support::{gateway, job, keep_warm, runtime_with_clock};
+use super::settled::Settled;
 use super::support::{Fixture, at};
 
 #[tokio::test]
@@ -76,7 +76,7 @@ async fn lost_start_reply_then_completed_github_job_releases_slots_and_disk_on_l
             })),
     ));
     let runtime = runtime_with_clock(&fixture, registrations, gateway, clock);
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     let issued = registered(&fixture, 48);
     assert_eq!(issued.runner.state, RunnerState::Starting);
     assert_eq!(issued.confirmed_at, None);
@@ -100,11 +100,11 @@ async fn lost_start_reply_then_completed_github_job_releases_slots_and_disk_on_l
         .save_github_job(fixture.workspace, &demand, busy_at)
         .unwrap();
     runtime
-        .job(fixture.workspace, demand.clone())
+        .settled_job(fixture.workspace, demand.clone())
         .await
         .unwrap();
     assert_eq!(registered(&fixture, 48).runner.state, RunnerState::Busy);
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     assert_eq!(registered(&fixture, 48).runner.state, RunnerState::Busy);
 
     let completed_at = at() + Duration::seconds(3);
@@ -116,7 +116,10 @@ async fn lost_start_reply_then_completed_github_job_releases_slots_and_disk_on_l
         .store
         .save_github_job(fixture.workspace, &demand, completed_at)
         .unwrap();
-    runtime.job(fixture.workspace, demand).await.unwrap();
+    runtime
+        .settled_job(fixture.workspace, demand)
+        .await
+        .unwrap();
     assert_eq!(registered(&fixture, 48).runner.state, RunnerState::Busy);
 
     fixture.contact.at = at() + Duration::seconds(4);
@@ -125,7 +128,7 @@ async fn lost_start_reply_then_completed_github_job_releases_slots_and_disk_on_l
         .store
         .record_contact(fixture.workspace, fixture.machine, &fixture.contact)
         .unwrap();
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     let ended = registered(&fixture, 48);
     assert_eq!(ended.runner.state, RunnerState::Stopped);
     assert_eq!(ended.confirmed_at, Some(busy_at));
@@ -182,11 +185,14 @@ async fn runner_exit_before_github_completion_stays_stopped_and_releases_slots_a
     let messages = Arc::new(Mutex::new(Vec::new()));
     let (clock, _) = clock();
     let runtime = runtime_with_clock(&fixture, registrations, gateway(messages.clone()), clock);
-    runtime.job(fixture.workspace, demand).await.unwrap();
+    runtime
+        .settled_job(fixture.workspace, demand)
+        .await
+        .unwrap();
     assert_eq!(registered(&fixture, 47).runner.state, RunnerState::Busy);
 
     runtime
-        .agent(
+        .settled_agent(
             fixture.workspace,
             fixture.machine,
             AgentMessage::RunnerExited {
@@ -204,7 +210,7 @@ async fn runner_exit_before_github_completion_stays_stopped_and_releases_slots_a
     assert_eq!(input.jobs[0].phase, DemandPhase::Started);
     assert_eq!(input.jobs[0].completed_at, None);
 
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     assert_eq!(registered(&fixture, 47).runner.state, RunnerState::Stopped);
     let replacement = registered(&fixture, 48);
     assert_eq!(replacement.runner.state, RunnerState::Starting);

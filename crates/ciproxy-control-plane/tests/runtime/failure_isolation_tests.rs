@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use ciproxy_control_plane::runtime::{MachineRuntime, OwnMachines};
+use ciproxy_control_plane::runtime::MachineRuntime;
 use ciproxy_gateway::gateway::MachineGatewayMock;
 use ciproxy_gateway::types::Delivery;
 use ciproxy_github::assignments::AssignmentService;
@@ -15,6 +15,7 @@ use unimock::{MockFn, Unimock, matching};
 use uuid::Uuid;
 
 use super::clock::clock;
+use super::settled::Settled;
 use super::support::Fixture;
 
 #[tokio::test]
@@ -97,7 +98,7 @@ async fn failed_retirement_does_not_block_an_active_organizations_start() {
         Some(image),
         Arc::new(Unimock::new(())),
     );
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     let rows = fixture.store.own_runners(fixture.workspace).unwrap();
     assert_eq!(
         rows.iter()

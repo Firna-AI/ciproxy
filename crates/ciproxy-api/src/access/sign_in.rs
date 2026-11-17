@@ -2,10 +2,11 @@
 
 use chrono::Duration;
 use ciproxy_github::app::GitHubApp;
+use ciproxy_github::persistence::lease::LeaseStore;
 use ciproxy_store_interface::dashboard::records::{Session, User};
 use secrecy::{ExposeSecret, SecretString};
 
-use crate::error::{Error, Result};
+use crate::error::{Error, ErrorResultExt, Result};
 use crate::state::query;
 use crate::wire::access::{RemovedOrganization, SetupOutcome};
 use ciproxy_store_interface::organizations::AppState;
@@ -152,10 +153,7 @@ impl AccessService {
                 .max_by_key(|organization| organization.delete_after))
         })
         .await?;
-        let _identity_lease = query(self.store.clone(), move |store| {
-            store.lock_github_organization(github_id)
-        })
-        .await?;
+        let _identity_lease = self.store.organization_lease(github_id).await.internal()?;
         let installation_results = query(self.store.clone(), move |store| {
             store.pending_installation_results(github_id)
         })

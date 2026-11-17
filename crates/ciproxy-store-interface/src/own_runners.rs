@@ -99,6 +99,7 @@ pub trait OwnRunnerStore: Send + Sync {
 }
 
 /// Coherent persisted input to one workspace's pure routing calculation.
+#[derive(Clone)]
 pub struct RoutingSnapshot {
     /// Active saved bindings from the same committed view as labels and demand.
     pub scale_sets: Vec<ScaleSet>,
@@ -106,6 +107,8 @@ pub struct RoutingSnapshot {
     pub overflow: OverflowSnapshot,
     /// Registration identities saved before GitHub JIT requests.
     pub boat_intents: Vec<BoatRunnerIntent>,
+    /// Saved Boat runner lifecycles from the same committed view as demand.
+    pub boat_runners: Vec<Runner>,
     /// Workspace that owns every resource below.
     pub workspace_id: Uuid,
     /// Current and retained organization registrations.
@@ -122,7 +125,7 @@ pub struct RoutingSnapshot {
     pub settings: Settings,
 }
 
-/// Exclusive workspace execution ownership retained across remote operations.
+/// Exclusive workspace ownership for brief reservation and result sections.
 pub trait OwnRunnerLease: Send {
     /// Check that the database session still owns this workspace.
     fn check_connection(&mut self) -> Result<()>;

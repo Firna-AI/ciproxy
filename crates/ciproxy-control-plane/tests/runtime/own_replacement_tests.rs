@@ -2,13 +2,13 @@
 
 use std::sync::atomic::Ordering;
 
-use ciproxy_control_plane::runtime::OwnMachines;
 use ciproxy_protocol::resources::Slots;
 use ciproxy_store_interface::runners::RunnerState;
 use ciproxy_store_interface::scale_sets::ScaleSet;
 use uuid::Uuid;
 
 use super::overflow_support::Harness;
+use super::settled::Settled;
 use super::support::at;
 
 async fn replacement(state: RunnerState) {
@@ -35,7 +35,7 @@ async fn replacement(state: RunnerState) {
     };
     store.create_scale_set(fixture.workspace, &binding).unwrap();
     harness.queued_for(label.id, binding.id);
-    harness.runtime.tick().await.unwrap();
+    harness.runtime.settled_tick().await.unwrap();
     assert_eq!(harness.own_starts.load(Ordering::SeqCst), 1);
     let old = store
         .own_runners(fixture.workspace)
@@ -62,7 +62,7 @@ async fn replacement(state: RunnerState) {
     store.create_label(fixture.workspace, &label).unwrap();
     store.create_scale_set(fixture.workspace, &binding).unwrap();
     harness.queued_for(label.id, binding.id);
-    harness.runtime.tick().await.unwrap();
+    harness.runtime.settled_tick().await.unwrap();
     assert_eq!(
         harness.own_starts.load(Ordering::SeqCst),
         2,

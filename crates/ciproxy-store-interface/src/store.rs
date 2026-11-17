@@ -19,6 +19,7 @@ use crate::organizations::OrganizationStore;
 use crate::overflow::store::OverflowStore;
 use crate::own_runners::OwnRunnerStore;
 use crate::runners::RunnerStore;
+use crate::runtime_results::{BoatResultStore, RuntimeResultStore};
 use crate::scale_sets::ScaleSetStore;
 use crate::settings::SettingsStore;
 use crate::tokens::TokenStore;
@@ -46,6 +47,8 @@ pub trait Store:
     + DashboardStore
     + InstallationLinkStore
     + OwnRunnerStore
+    + RuntimeResultStore
+    + BoatResultStore
 {
 }
 

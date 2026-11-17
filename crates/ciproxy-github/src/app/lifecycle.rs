@@ -5,7 +5,7 @@ use ciproxy_store_interface::organizations::{AppState, Organization, RepositoryA
 
 use crate::error::{Error, Result};
 use crate::installation_state::InstalledApp;
-use crate::persistence::mutation::MutationLease;
+use crate::persistence::lease::Lease;
 
 use super::webhook::InstallationEvent;
 use super::{AppService, InstallationOutcome};
@@ -14,7 +14,7 @@ impl AppService {
     pub(super) async fn remove_installation(
         &self,
         event: InstallationEvent,
-        lease: &dyn MutationLease,
+        lease: &dyn Lease,
     ) -> Result<InstallationOutcome> {
         let Some(mut organization) = self.store.by_installation(event.installation.id).await?
         else {
@@ -29,7 +29,7 @@ impl AppService {
     pub(super) async fn retire_installation(
         &self,
         organization: &mut Organization,
-        lease: &dyn MutationLease,
+        lease: &dyn Lease,
     ) -> Result<()> {
         lease.check().await?;
         *organization = self.outbox.remove(organization, self.runtime.now()).await?;
@@ -40,7 +40,7 @@ impl AppService {
         &self,
         event: InstallationEvent,
         current: InstalledApp,
-        lease: &dyn MutationLease,
+        lease: &dyn Lease,
     ) -> Result<InstallationOutcome> {
         let Some(organization) = self.store.by_installation(event.installation.id).await? else {
             self.deliver_lifecycle(event.installation.account.id, lease)
@@ -64,7 +64,7 @@ impl AppService {
         current: InstalledApp,
         access: Option<RepositoryAccess>,
         notify: bool,
-        lease: &dyn MutationLease,
+        lease: &dyn Lease,
     ) -> Result<Organization> {
         let editing = access.is_some();
         let mut desired = organization.clone();

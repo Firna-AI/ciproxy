@@ -6,7 +6,7 @@ use ciproxy_store_interface::scale_sets::{ScaleSet, ScaleSetState};
 use uuid::Uuid;
 
 use crate::error::{Error, Result};
-use crate::persistence::mutation::MutationLease;
+use crate::persistence::lease::Lease;
 use crate::persistence::session::ListenerTarget;
 use crate::scale_sets::ScaleSetApi;
 
@@ -103,7 +103,7 @@ impl AppService {
         bindings: &[ScaleSet],
         group_id: i64,
         api: &dyn ScaleSetApi,
-        lease: &dyn MutationLease,
+        lease: &dyn Lease,
     ) -> Result<Vec<ScaleSet>> {
         self.retire_bindings(organization, labels, bindings, api, lease)
             .await?;
@@ -132,7 +132,7 @@ impl AppService {
         labels: &[Label],
         bindings: &[ScaleSet],
         api: &dyn ScaleSetApi,
-        lease: &dyn MutationLease,
+        lease: &dyn Lease,
     ) -> Result<()> {
         for set in bindings
             .iter()

@@ -1,59 +1,68 @@
-//! Wire pure Boat actions to the existing durable overflow executor.
+//! Reconciliation reads saved Boat supply and dispatches independent remote work.
 
-use chrono::DateTime;
-use ciproxy_github::registrations::RegistrationRequest;
-use ciproxy_overflow::api::{StartOutcome, StartRequest};
 use ciproxy_overflow::view::OverflowView;
-use ciproxy_protocol::identifiers::OrganizationId;
-use ciproxy_protocol::secret::Secret;
-use ciproxy_scaler::actions::StartRunner;
 use ciproxy_scaler::snapshot::Snapshot;
-use ciproxy_store_interface::boat_runtime::BoatRunnerIntent;
-use ciproxy_store_interface::overflow::record::{StartPhase, StartRecord};
+use ciproxy_store_interface::overflow::record::StartPhase;
 use ciproxy_store_interface::own_runners::RoutingSnapshot;
-use ciproxy_store_interface::scale_sets::RegistrationTarget;
-use secrecy::ExposeSecret;
 use uuid::Uuid;
 
-use crate::boat_snapshot;
-use crate::error::{Error, ErrorResultExt, Result};
+use crate::error::{ErrorResultExt, Result};
 use crate::runtime::MachineRuntime;
+use crate::runtime_tasks::Work;
 
 impl MachineRuntime {
-    pub(crate) async fn reconcile_boat(&self, input: &RoutingSnapshot, snapshot: &mut Snapshot) {
+    pub(crate) async fn reconcile_boat(
+        &self,
+        input: &RoutingSnapshot,
+        snapshot: &mut Snapshot,
+        refresh: bool,
+    ) {
         let Some(overflow) = &self.overflow else {
+            snapshot.sandboxes.clear();
             return;
         };
-        if let Err(error) = self.cleanup_boat(input.workspace_id).await {
-            tracing::warn!(%error, "Boat cleanup will retry");
-        }
         let workspace = input.workspace_id;
-        let current = match self.load(workspace).await {
-            Ok(current) => current,
-            Err(error) => {
-                tracing::warn!(%error,"Boat registration recovery will retry");
-                return;
+        if let Ok(view) = OverflowView::from_snapshot(input.overflow.clone(), self.clock.now()) {
+            match if refresh {
+                view.retained_scaler_account()
+            } else {
+                view.scaler_account(chrono::DateTime::UNIX_EPOCH)
+            } {
+                Ok(account) => snapshot.boat = account,
+                Err(error) => tracing::warn!(%error,"Boat accounting prevents new starts"),
             }
-        };
-        let intents = current.boat_intents.clone();
-        let view = match OverflowView::from_snapshot(current.overflow.clone(), self.clock.now()) {
-            Ok(view) => view,
-            Err(error) => {
-                tracing::warn!(%error,"Boat durable supply read will retry");
-                return;
+        }
+        if refresh {
+            if let Err(error) = self.cleanup_boat(workspace).await {
+                tracing::warn!(%error,"Boat cleanup dispatch will retry");
             }
-        };
-        let runnable = match self.runnable_organizations(&current).await {
-            Ok(runnable) => runnable,
-            Err(error) => {
-                tracing::warn!(%error,"Boat admission read will retry");
-                return;
+            let overflow = overflow.clone();
+            let runtime = self.worker();
+            if let Err(error) = self.dispatch(Work::BoatRefresh(workspace), async move {
+                runtime
+                    .task_scope()?
+                    .wait_for(Work::BoatCleanup(workspace))
+                    .await;
+                {
+                    let boat = runtime.boat_operation(workspace).await;
+                    let _boat = boat.lock().await;
+                    overflow.view(workspace).await.internal()?;
+                }
+                let _operation = runtime.operation.lock().await;
+                runtime.reconcile_workspace_saved(workspace).await
+            }) {
+                tracing::warn!(%error,"Boat refresh dispatch will retry");
             }
-        };
-        *snapshot =
-            crate::snapshot::build(&current, &runnable, self.clock.now(), snapshot.root_sizing);
-        for intent in &intents {
-            let record = view
+        }
+        for intent in &input.boat_intents {
+            if self
+                .task_scope()
+                .is_ok_and(|tasks| tasks.contains(Work::Create(intent.runner_id)))
+            {
+                continue;
+            }
+            let record = input
+                .overflow
                 .starts
                 .iter()
                 .find(|record| record.delivery_id == intent.delivery_id);
@@ -62,168 +71,36 @@ impl MachineRuntime {
                     .retire_boat_registration(workspace, intent, record)
                     .await
                 {
-                    tracing::warn!(%error,"Boat registration cleanup will retry");
+                    tracing::warn!(%error,"Boat registration cleanup dispatch will retry");
                 }
-            } else if let Some(record) = record {
-                if !matches!(record.phase, StartPhase::Running | StartPhase::Deleting)
-                    && let Err(error) = overflow.resume(workspace, record.delivery_id).await
-                {
-                    tracing::warn!(%error, "Boat delivery recovery will retry");
-                }
-                if let Some(id) = intent.github_id {
-                    let store = self.store.clone();
-                    let runner = intent.runner_id;
-                    if !matches!(
-                        tokio::task::spawn_blocking(
-                            move || store.register_boat_runner(workspace, runner, id)
-                        )
-                        .await,
-                        Ok(Ok(()))
-                    ) {
-                        tracing::warn!("Boat registration identity update will retry");
-                    }
+            } else if let Some(record) = record
+                && !matches!(record.phase, StartPhase::Running | StartPhase::Deleting)
+            {
+                let delivery = record.delivery_id;
+                let overflow = overflow.clone();
+                let runtime = self.worker();
+                if let Err(error) = self.dispatch(Work::BoatRecovery(delivery), async move {
+                    let boat = runtime.boat_operation(workspace).await;
+                    let _boat = boat.lock().await;
+                    overflow.resume(workspace, delivery).await.internal()?;
+                    Ok(())
+                }) {
+                    tracing::warn!(%error,"Boat delivery recovery dispatch will retry");
                 }
             }
         }
-        let (view, refreshed) = match overflow.view(workspace).await {
-            Ok(view) => (view, true),
-            Err(error) => {
-                tracing::warn!(%error,"Boat is unavailable; durable supply remains reserved");
-                (view, false)
-            }
-        };
-        snapshot.boat = view
-            .retained_scaler_account()
-            .unwrap_or_else(|_| snapshot.boat.clone());
-        if refreshed {
-            match view.scaler_account(DateTime::UNIX_EPOCH) {
-                Ok(account) => snapshot.boat = account,
-                Err(error) => tracing::warn!(%error, "Boat accounting prevents new starts"),
-            }
-        }
-        boat_snapshot::append(snapshot, &intents, &view.starts, &current.jobs);
     }
 
     pub(crate) async fn cleanup_boat(&self, workspace: Uuid) -> Result<()> {
         if let Some(overflow) = &self.overflow {
-            overflow.cleanup(workspace).await.internal()?;
+            let overflow = overflow.clone();
+            let runtime = self.worker();
+            self.dispatch(Work::BoatCleanup(workspace), async move {
+                let boat = runtime.boat_operation(workspace).await;
+                let _boat = boat.lock().await;
+                overflow.cleanup(workspace).await.internal()
+            })?;
         }
         Ok(())
-    }
-
-    pub(crate) async fn start_boat(
-        &self,
-        input: &RoutingSnapshot,
-        mut action: StartRunner,
-    ) -> Result<()> {
-        let overflow = self.overflow.as_ref().ok_or(Error::StateChanged)?;
-        let organization: Uuid = action.target.organization_id.0.parse().internal()?;
-        let github_organization = input
-            .organizations
-            .iter()
-            .find(|candidate| candidate.id == organization)
-            .ok_or(Error::StateChanged)?
-            .github_id;
-        action.organization_id = OrganizationId(github_organization.to_string());
-        let label = input
-            .labels
-            .iter()
-            .find(|label| label.id.to_string() == action.target.label_id)
-            .ok_or(Error::StateChanged)?;
-        let workspace = input.workspace_id;
-        let set = input
-            .scale_sets
-            .iter()
-            .find(|set| {
-                set.id.to_string() == action.target.scale_set_id
-                    && set.organization_id == organization
-                    && set.label_id == label.id
-                    && set.github_id == action.target.github_id
-            })
-            .ok_or(Error::StateChanged)?;
-        let intent = BoatRunnerIntent {
-            registration_scale_set_id: None,
-            delivery_id: self.clock.uuid(),
-            runner_id: self.clock.uuid(),
-            organization_id: organization,
-            label_id: label.id,
-            label_name: label.name.clone(),
-            scale_set_id: set.id,
-            requested_size: action.requested_size,
-            size: action.size,
-            required_root_disk_bytes: self
-                .image
-                .as_ref()
-                .map_or_else(ciproxy_agent::root_sizing::RootSizing::default, |image| {
-                    ciproxy_agent::root_sizing::RootSizing {
-                        image_root_bytes: image.root_disk_bytes,
-                    }
-                })
-                .root_bytes(action.requested_size.disk_bytes)
-                .ok_or(Error::StateChanged)?,
-            github_id: None,
-            created_at: self.clock.now(),
-        };
-        let saved = intent.clone();
-        let store = self.store.clone();
-        tokio::task::spawn_blocking(move || store.create_boat_runner_intent(workspace, &saved))
-            .await
-            .internal()?
-            .internal()?;
-        let registration = self
-            .registrations
-            .create(
-                RegistrationRequest {
-                    workspace_id: workspace,
-                    target: RegistrationTarget::from(set),
-                },
-                &format!("ciproxy-{}", intent.runner_id),
-            )
-            .await
-            .internal()?;
-        let store = self.store.clone();
-        let runner = intent.runner_id;
-        let github_id = registration.runner_id;
-        let target = registration.target;
-        tokio::task::spawn_blocking(move || {
-            store.save_boat_registration(workspace, runner, target, github_id)
-        })
-        .await
-        .internal()?
-        .internal()?;
-        let outcome = overflow
-            .start(
-                workspace,
-                StartRequest {
-                    delivery_id: intent.delivery_id,
-                    runner_id: intent.runner_id,
-                    organization_id: organization,
-                    label_id: label.id,
-                    scale_set_id: set.id,
-                    action,
-                    registration: Secret::new(registration.configuration.expose_secret()),
-                },
-            )
-            .await
-            .internal()?;
-        if let StartOutcome::Pending(record) | StartOutcome::Started(record) = outcome {
-            self.boat_registration(workspace, &record, github_id)
-                .await?;
-        }
-        Ok(())
-    }
-
-    async fn boat_registration(
-        &self,
-        workspace: Uuid,
-        record: &StartRecord,
-        id: i64,
-    ) -> Result<()> {
-        let store = self.store.clone();
-        let runner = record.runner_id;
-        tokio::task::spawn_blocking(move || store.register_boat_runner(workspace, runner, id))
-            .await
-            .internal()?
-            .internal()
     }
 }

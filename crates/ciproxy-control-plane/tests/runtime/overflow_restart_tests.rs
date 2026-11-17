@@ -3,7 +3,7 @@
 use std::slice;
 use std::sync::atomic::Ordering;
 
-use ciproxy_control_plane::runtime::{MachineRuntime, OwnMachines};
+use ciproxy_control_plane::runtime::MachineRuntime;
 use ciproxy_store_interface::overflow::record::StartPhase;
 use ciproxy_store_interface::runners::RunnerPlace;
 use rust_decimal::Decimal;
@@ -11,13 +11,14 @@ use sandbox_interface::{BackendSandbox, ProviderRef, SandboxState};
 
 use super::overflow_service::{authority, service};
 use super::overflow_support::Harness;
+use super::settled::Settled;
 
 #[tokio::test]
 async fn runtime_restart_recovers_post_create_delivery_with_same_identities_and_one_cost_bound() {
     let mut harness = Harness::new(false, false).await;
     harness.queued();
     harness.ports.pending.store(true, Ordering::SeqCst);
-    harness.runtime.tick().await.unwrap();
+    harness.runtime.settled_tick().await.unwrap();
     let workspace = harness.fixture.workspace;
     let store = harness.fixture.store.clone();
     let pending = store.boat_runtime_snapshot(workspace).unwrap();
@@ -63,7 +64,7 @@ async fn runtime_restart_recovers_post_create_delivery_with_same_identities_and_
     harness.runtime = restarted;
 
     for _ in 0..2 {
-        harness.runtime.tick().await.unwrap();
+        harness.runtime.settled_tick().await.unwrap();
         let recovered = store.boat_runtime_snapshot(workspace).unwrap();
         assert_eq!(
             harness.ports.launches.load(Ordering::SeqCst),

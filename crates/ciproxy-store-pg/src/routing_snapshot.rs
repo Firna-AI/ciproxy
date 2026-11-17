@@ -3,6 +3,7 @@
 use ciproxy_schema::github::github_jobs;
 use ciproxy_schema::labels::labels;
 use ciproxy_schema::organizations::organizations;
+use ciproxy_schema::runners::runners;
 use ciproxy_schema::scale_sets::scale_sets;
 use ciproxy_schema::settings::settings;
 use ciproxy_store_interface::error::{Result, ResultExt};
@@ -16,6 +17,7 @@ use crate::labels::LabelRow;
 use crate::machine_reads::load_snapshots;
 use crate::organization_rows::OrganizationRow;
 use crate::own_runners::load;
+use crate::runners::RunnerRow;
 use crate::scale_sets::ScaleSetRow;
 use crate::settings::SettingsRow;
 
@@ -72,6 +74,16 @@ pub(crate) fn snapshot(
                 .collect(),
             overflow: crate::overflow::rows::load(connection, workspace_id)?,
             boat_intents: crate::boat_runtime::load(connection, workspace_id)?,
+            boat_runners: runners::table
+                .filter(runners::workspace_id.eq(workspace_id))
+                .filter(runners::sandbox_id.is_not_null())
+                .order(runners::id)
+                .select(RunnerRow::as_select())
+                .load::<RunnerRow>(connection)
+                .store()?
+                .into_iter()
+                .map(RunnerRow::into_record)
+                .collect::<Result<Vec<_>>>()?,
             workspace_id,
             organizations,
             labels,

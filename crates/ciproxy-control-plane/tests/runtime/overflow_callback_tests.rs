@@ -5,7 +5,6 @@ use std::sync::atomic::Ordering;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use ciproxy_control_plane::boat_callback;
-use ciproxy_control_plane::runtime::OwnMachines;
 use ciproxy_overflow::api::StartRequest;
 use ciproxy_protocol::identifiers::{LabelName, OrganizationId};
 use ciproxy_protocol::resources::VmSize;
@@ -19,12 +18,13 @@ use tower::ServiceExt;
 use uuid::Uuid;
 
 use super::overflow_support::Harness;
+use super::settled::Settled;
 
 #[tokio::test]
 async fn callback_tokens_cannot_end_a_runner_in_another_workspace() {
     let harness = Harness::new(false, false).await;
     harness.queued();
-    harness.runtime.tick().await.unwrap();
+    harness.runtime.settled_tick().await.unwrap();
     let other = Uuid::new_v4();
     let runner = Uuid::new_v4();
     let store = &harness.fixture.store;

@@ -1,8 +1,9 @@
 //! Image download confirmation precedes runner registration.
 
 use super::clock::clock;
+use super::settled::Settled;
 use super::support::{Fixture, at};
-use ciproxy_control_plane::runtime::{MachineRuntime, OwnMachines};
+use ciproxy_control_plane::runtime::MachineRuntime;
 use ciproxy_gateway::gateway::MachineGatewayMock;
 use ciproxy_gateway::types::Delivery;
 use ciproxy_github::assignments::AssignmentService;
@@ -80,8 +81,8 @@ async fn bootstrap_fetches_once_per_connection_before_registering_without_a_sele
         Some(image.clone()),
         Arc::new(Unimock::new(())),
     );
-    runtime.tick().await.unwrap();
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     assert_eq!(messages.lock().unwrap().len(), 3);
     assert!(messages.lock().unwrap()[1..].iter().all(|message| matches!(
         message,
@@ -105,7 +106,7 @@ async fn bootstrap_fetches_once_per_connection_before_registering_without_a_sele
         .store
         .record_contact(fixture.workspace, fixture.machine, &fixture.contact)
         .unwrap();
-    runtime.tick().await.unwrap();
+    runtime.settled_tick().await.unwrap();
     assert_eq!(messages.lock().unwrap().len(), 5);
     assert!(
         matches!(&messages.lock().unwrap()[4],ciproxy_protocol::agent::ControlMessage::StartRunner{runner,..} if runner.organization_id.0=="42")

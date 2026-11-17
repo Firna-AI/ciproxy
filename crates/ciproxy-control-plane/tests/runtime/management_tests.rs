@@ -11,7 +11,6 @@ use ciproxy_github::assignments::AssignmentService;
 use ciproxy_github::persistence::StoreAdapter;
 use ciproxy_github::registrations::{RegistrationRetirement, RunnerRegistrationsMock};
 use ciproxy_store_interface::runners::RunnerState;
-use tokio::runtime::Handle;
 use unimock::{MockFn, Unimock, matching};
 use uuid::Uuid;
 
@@ -24,21 +23,20 @@ async fn offline_remove_waits_for_registration_retirement_after_revocation_witho
     let fixture = Fixture::new();
     let workspace_id = fixture.workspace;
     let machine_id = fixture.machine;
-    let runtime_slot = Arc::new(OnceLock::<Arc<dyn OwnMachines>>::new());
+    let runtime_slot = Arc::new(OnceLock::<Arc<MachineRuntime>>::new());
     let callback = runtime_slot.clone();
     let store = fixture.store.clone();
-    let received = Handle::current();
     let events = Arc::new(Unimock::new(
         AgentEventsMock::machine_removed
             .some_call(matching!(_, _))
             .answers_arc(Arc::new(move |_, workspace, machine| {
                 assert_eq!((workspace, machine), (workspace_id, machine_id));
                 assert_eq!(store.machine_session(workspace, machine).unwrap(), None);
-                match received.block_on(callback.get().unwrap().machine_removed(workspace, machine))
-                {
-                    Ok(()) => Ok(()),
-                    Err(error) => Err(ciproxy_gateway::error::Error::internal(error)),
-                }
+                callback
+                    .get()
+                    .unwrap()
+                    .enqueue_machine_removed(workspace, machine);
+                Ok(())
             })),
     ));
     let gateway: Arc<dyn MachineGateway> = Arc::new(Gateway::new(
@@ -60,7 +58,7 @@ async fn offline_remove_waits_for_registration_retirement_after_revocation_witho
         events,
     ));
     let clock = clock(true);
-    let runtime: Arc<dyn OwnMachines> = Arc::new(MachineRuntime::new(
+    let runtime: Arc<MachineRuntime> = Arc::new(MachineRuntime::new(
         fixture.store.clone(),
         gateway.clone(),
         Arc::new(Unimock::new(
@@ -88,6 +86,7 @@ async fn offline_remove_waits_for_registration_retirement_after_revocation_witho
     .unwrap()
     .unwrap();
     assert_eq!(result, Delivery::Offline);
+    runtime_slot.get().unwrap().quiesce().await.unwrap();
     assert_eq!(
         fixture.store.own_runners(fixture.workspace).unwrap()[0]
             .runner

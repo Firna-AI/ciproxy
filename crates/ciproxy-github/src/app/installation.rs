@@ -9,7 +9,7 @@ use ciproxy_store_interface::workspaces::Workspace;
 
 use crate::error::{Error, Result};
 use crate::installation_state::InstalledApp;
-use crate::persistence::mutation::MutationLease;
+use crate::persistence::lease::Lease;
 
 use super::webhook::{AccountKind, InstallationAction, InstallationEvent};
 use super::{AppService, InstallationDecision, InstallationOutcome};
@@ -69,7 +69,7 @@ impl AppService {
         &self,
         event: InstallationEvent,
         current_state: InstalledApp,
-        lease: &dyn MutationLease,
+        lease: &dyn Lease,
     ) -> Result<InstallationOutcome> {
         let requester = event.requester.as_ref().unwrap_or(&event.sender).id;
         let github_id = event.installation.account.id;

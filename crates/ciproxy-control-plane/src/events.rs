@@ -1,19 +1,12 @@
 //! Reconcile authenticated agent observations with durable GitHub identities.
 
-use ciproxy_github::persistence::session::ListenerTarget;
-use ciproxy_github::registrations::RegistrationRetirement;
-use ciproxy_github::scale_sets::JitRegistration;
-use ciproxy_protocol::agent::{
-    AgentMessage, CommandOutcome, ControlMessage, JobPreparationOutcome,
-};
-use ciproxy_protocol::identifiers::{CommandId, JobId, RunnerId};
+use ciproxy_protocol::agent::{AgentMessage, CommandOutcome};
 use ciproxy_store_interface::github::{DemandPhase, GithubJob};
 use ciproxy_store_interface::organizations::AppState;
 use ciproxy_store_interface::own_runners::{OwnRunner, OwnRunnerObservation, RoutingSnapshot};
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
 use uuid::Uuid;
 
-use crate::actions::UnobservedRunnerUpdate;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::runtime::MachineRuntime;
 
@@ -24,7 +17,6 @@ impl MachineRuntime {
         machine_id: Uuid,
         message: AgentMessage,
     ) -> Result<()> {
-        let input = self.load(workspace_id).await?;
         if let AgentMessage::CommandResult {
             command_id,
             outcome,
@@ -44,14 +36,19 @@ impl MachineRuntime {
             if image_command {
                 return Ok(());
             }
-            let Some(runner) = input
-                .runners
-                .iter()
-                .find(|runner| runner.command_id.to_string() == command_id.0)
+            let Ok(command) = command_id.0.parse() else {
+                return Ok(());
+            };
+            let store = self.store.clone();
+            let Some(runner) =
+                tokio::task::spawn_blocking(move || store.own_command(workspace_id, command))
+                    .await
+                    .internal()?
+                    .internal()?
             else {
                 return Ok(());
             };
-            require_machine(runner, machine_id)?;
+            require_machine(&runner, machine_id)?;
             let store = self.store.clone();
             let command = runner.command_id;
             let applied = *outcome == CommandOutcome::Applied;
@@ -63,10 +60,12 @@ impl MachineRuntime {
             .internal()?
             .internal()?;
             if !applied && runner.runner.state == RunnerState::Starting {
-                self.stop(&input, runner).await?;
+                self.dispatch_retirement(workspace_id, &runner, false)
+                    .await?;
             }
             return Ok(());
         }
+        let input = self.load(workspace_id).await?;
         let (id, state) = match message {
             AgentMessage::RunnerReady { runner_id } => (runner_id, RunnerState::Ready),
             AgentMessage::JobStarted { runner_id, .. } => (runner_id, RunnerState::Busy),
@@ -79,6 +78,9 @@ impl MachineRuntime {
             .find(|runner| runner.runner.id.to_string() == id.0)
             .ok_or(Error::RunnerOwnership)?;
         require_machine(runner, machine_id)?;
+        if runner.runner.state == RunnerState::Stopped && state != RunnerState::Stopped {
+            return Ok(());
+        }
         let protected_ready = state == RunnerState::Ready
             && matches!(
                 runner.runner.state,
@@ -138,54 +140,7 @@ impl MachineRuntime {
             if input.organizations.iter().any(|organization| {
                 organization.id == job.organization_id && organization.app_state == AppState::Active
             }) {
-                let target = ListenerTarget {
-                    workspace_id,
-                    organization_id: job.organization_id,
-                    scale_set_id: job.scale_set_id,
-                };
-                match self
-                    .registrations
-                    .retire(
-                        target,
-                        &format!("ciproxy-{}", runner.runner.id),
-                        Some(github_id),
-                    )
-                    .await
-                    .internal()?
-                {
-                    RegistrationRetirement::Removed { id } => {
-                        self.save_state(
-                            workspace_id,
-                            runner,
-                            UnobservedRunnerUpdate::Stopped {
-                                github_id: Some(id),
-                            },
-                        )
-                        .await?
-                    }
-                    RegistrationRetirement::Absent => {
-                        self.save_state(
-                            workspace_id,
-                            runner,
-                            UnobservedRunnerUpdate::Stopped {
-                                github_id: Some(github_id),
-                            },
-                        )
-                        .await?
-                    }
-                    RegistrationRetirement::Busy { id } => {
-                        self.observe_runner(
-                            workspace_id,
-                            runner,
-                            OwnRunnerObservation {
-                                state: RunnerState::Busy,
-                                github_id: Some(id),
-                                observed_at: self.clock.now(),
-                            },
-                        )
-                        .await?
-                    }
-                }
+                self.dispatch_retirement(workspace_id, runner, true).await?;
             }
             return Ok(());
         }
@@ -201,38 +156,7 @@ impl MachineRuntime {
             )
             .await?;
         }
-        let target = ListenerTarget {
-            workspace_id,
-            organization_id: job.organization_id,
-            scale_set_id: job.scale_set_id,
-        };
-        let jit = JitRegistration {
-            runner_id: github_id,
-            configuration: "".into(),
-        };
-        let outcome = self.assignments.facts(target, job, &jit).await.internal()?;
-        if matches!(outcome, JobPreparationOutcome::TrustedFacts { .. })
-            && !self.send_docker_budget(input, machine_id).await?
-        {
-            return Ok(());
-        }
-        let message = ControlMessage::JobPreparation {
-            command_id: CommandId(self.clock.uuid().to_string()),
-            runner_id: RunnerId(runner.runner.id.to_string()),
-            job_id: JobId(job.id.to_string()),
-            outcome,
-        };
-        let gateway = self.gateway.clone();
-        match tokio::task::spawn_blocking(move || gateway.send(workspace_id, machine_id, message))
-            .await
-            .internal()?
-        {
-            Ok(_)
-            | Err(ciproxy_gateway::error::Error::NotFound)
-            | Err(ciproxy_gateway::error::Error::Unauthorized) => {}
-            Err(error) => return Err(error).internal(),
-        }
-        Ok(())
+        self.prepare_job(input, runner, job, machine_id).await
     }
 }
 

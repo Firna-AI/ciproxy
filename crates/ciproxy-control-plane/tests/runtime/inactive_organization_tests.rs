@@ -3,7 +3,6 @@
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Arc, Mutex};
 
-use ciproxy_control_plane::runtime::OwnMachines;
 use ciproxy_github::registrations::RegisteredRunner;
 use ciproxy_github::registrations::{RegistrationRetirement, RunnerRegistrationsMock};
 use ciproxy_github::runtime::RuntimeMock;
@@ -16,6 +15,7 @@ use uuid::Uuid;
 
 use super::inactive_support::populate;
 use super::recovery_support::{gateway, runtime_with_clock};
+use super::settled::Settled;
 use super::support::{Fixture, at};
 
 #[tokio::test]
@@ -64,7 +64,7 @@ async fn inactive_organization_retires_only_idle_work_and_routes_received_jobs_w
     let mut superseded = event.organization().clone();
     superseded.installation_id = 44;
     runtime
-        .lifecycle(LifecycleEvent::Inactive {
+        .settled_lifecycle(LifecycleEvent::Inactive {
             organization: superseded,
             billing_hold: false,
             admin_approval_hold: true,
@@ -85,7 +85,7 @@ async fn inactive_organization_retires_only_idle_work_and_routes_received_jobs_w
         "an inactive event must name the current installation"
     );
     assert_eq!(messages.lock().unwrap().len(), 0);
-    runtime.lifecycle(event.clone()).await.unwrap();
+    runtime.settled_lifecycle(event.clone()).await.unwrap();
     let saved = fixture.store.own_runners(fixture.workspace).unwrap();
     assert_eq!(
         saved
@@ -113,8 +113,8 @@ async fn inactive_organization_retires_only_idle_work_and_routes_received_jobs_w
             .unwrap(),
         &ready
     );
-    runtime.tick().await.unwrap();
-    runtime.lifecycle(event.clone()).await.unwrap();
+    runtime.settled_tick().await.unwrap();
+    runtime.settled_lifecycle(event.clone()).await.unwrap();
     fixture.admit_organization();
     let mut admitted = fixture.intent.clone();
     admitted.runner.id = Uuid::new_v4();
@@ -125,7 +125,7 @@ async fn inactive_organization_retires_only_idle_work_and_routes_received_jobs_w
         .store
         .create_own_runner(fixture.workspace, &admitted)
         .unwrap();
-    runtime.lifecycle(event).await.unwrap();
+    runtime.settled_lifecycle(event).await.unwrap();
     assert_eq!(
         fixture
             .store

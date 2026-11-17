@@ -50,6 +50,19 @@ impl Drop for RecoveryTask {
     }
 }
 
+struct RuntimeStop {
+    machines: Arc<dyn OwnMachines>,
+    armed: bool,
+}
+
+impl Drop for RuntimeStop {
+    fn drop(&mut self) {
+        if self.armed {
+            self.machines.cancel_tasks();
+        }
+    }
+}
+
 struct Jobs {
     machines: Arc<dyn OwnMachines>,
     accounting: Arc<dyn Accounting>,
@@ -72,6 +85,10 @@ impl Hosted {
     /// Run periodic reconciliation until shutdown, closing message sessions first.
     pub async fn supervise(&self, mut stop: watch::Receiver<bool>) -> Result<()> {
         let _readiness = Readiness(self.ready.clone());
+        let mut runtime_stop = RuntimeStop {
+            machines: self.machines.clone(),
+            armed: true,
+        };
         let recovery = self.recovery.clone();
         let mut recovery_stop = stop.clone();
         let _recovery = RecoveryTask(tokio::spawn(async move {
@@ -108,6 +125,7 @@ impl Hosted {
         let mut running: HashMap<uuid::Uuid, Running> = HashMap::new();
         let mut ticks = interval(Duration::from_secs(10));
         ticks.set_missed_tick_behavior(MissedTickBehavior::Skip);
+        let result: Result<()> = async {
         loop {
             tokio::select! {
                 _ = ticks.tick() => {
@@ -150,13 +168,21 @@ impl Hosted {
                 changed = stop.changed() => { if changed.is_err() || *stop.borrow() { break; } }
             }
         }
+        Ok(())
+        }.await;
         for value in running.values() {
             value.stop.send_replace(true);
         }
         for (_, mut value) in running {
             let _ = (&mut value.task.0).await;
         }
-        Ok(())
+        let shutdown = self.machines.shutdown().await;
+        runtime_stop.armed = false;
+        if let Err(error) = &shutdown {
+            tracing::warn!(%error,"runtime work shutdown failed");
+        }
+        result?;
+        shutdown
     }
 
     async fn listener_targets(&self) -> Result<Vec<DiscoveredTarget>> {

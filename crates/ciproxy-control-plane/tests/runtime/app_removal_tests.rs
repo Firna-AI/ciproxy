@@ -3,7 +3,6 @@
 use std::sync::{Arc, Mutex};
 
 use ciproxy_control_plane::error::Error;
-use ciproxy_control_plane::runtime::OwnMachines;
 use ciproxy_gateway::gateway::MachineGatewayMock;
 use ciproxy_protocol::agent::ControlMessage;
 use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
@@ -13,6 +12,7 @@ use unimock::{MockFn, Unimock, matching};
 use super::recovery_support::{
     gateway, job, other_organization, runtime, runtime_with_clock, saved,
 };
+use super::settled::Settled;
 use super::support::{Fixture, at};
 use super::takeout_gateway::Capture;
 use super::takeout_installations::Probe;
@@ -56,11 +56,11 @@ async fn owner_removal_stops_hosted_busy_warm_vm_and_replays_immutable_command()
         Arc::new(Unimock::new(())),
         gateway(messages.clone()),
     );
-    runtime.lifecycle(event.clone()).await.unwrap();
+    runtime.settled_lifecycle(event.clone()).await.unwrap();
     assert_eq!(saved(&fixture).runner.state, RunnerState::Stopping);
     let command = saved(&fixture).command_id;
-    runtime.lifecycle(event).await.unwrap();
-    runtime.tick().await.unwrap();
+    runtime.settled_lifecycle(event).await.unwrap();
+    runtime.settled_tick().await.unwrap();
     assert_eq!(saved(&fixture).runner.state, RunnerState::Stopping);
     let stops: Vec<_> = messages
         .lock()
@@ -94,7 +94,7 @@ async fn owner_removal_lease_conflict_keeps_the_event_pending() {
         Arc::new(Unimock::new(())),
         Arc::new(Unimock::new(())),
     );
-    let result = runtime.lifecycle(event).await;
+    let result = runtime.settled_lifecycle(event).await;
     assert!(matches!(result, Err(Error::StateChanged)), "{result:?}");
     assert_eq!(fixture.store.pending_github_lifecycle(42).unwrap().len(), 1);
 }
@@ -133,7 +133,7 @@ async fn removal_saves_an_unregistered_start_and_accepts_offline_or_last_machine
                 })),
         ));
         let runtime = runtime(&fixture, Arc::new(Unimock::new(())), gateway);
-        runtime.lifecycle(event.clone()).await.unwrap();
+        runtime.settled_lifecycle(event.clone()).await.unwrap();
         let stopping = saved(&fixture);
         assert_eq!(
             stopping.runner.state,
@@ -141,7 +141,7 @@ async fn removal_saves_an_unregistered_start_and_accepts_offline_or_last_machine
             "last organization: {last}"
         );
         assert_eq!(stopping.runner.github_id, None);
-        runtime.lifecycle(event).await.unwrap();
+        runtime.settled_lifecycle(event).await.unwrap();
         assert_eq!(saved(&fixture).command_id, stopping.command_id);
         assert_eq!(saved(&fixture).issued_at, stopping.issued_at);
         assert_eq!(commands.lock().unwrap().len(), 2);
@@ -187,7 +187,7 @@ async fn workspace_takeout_keeps_a_busy_runner_and_records_the_distinct_cause() 
         Arc::new(Unimock::new(())),
     );
     runtime.installations = Probe::present();
-    runtime.lifecycle(event).await.unwrap();
+    runtime.settled_lifecycle(event).await.unwrap();
     assert_eq!(saved(&fixture).runner.state, RunnerState::Busy);
     assert_eq!(
         messages

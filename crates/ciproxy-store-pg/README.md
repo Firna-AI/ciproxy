@@ -87,20 +87,9 @@ When GitHub omitted its completion time, the first trusted observation
 supplied by the caller starts the period. Exact replay keeps that instant.
 The query stores this observation separately from GitHub's metadata.
 
-Gateway queries lock the workspace before registration or token issuance.
-They serialize against last-App removal and reject a retained empty workspace.
-Registration inserts the machine, report, and hashed credential together.
-It holds the install-token row until that transaction commits.
-Independent token revocation waits for that registration before it returns.
-Registrations that validate the token after revocation cannot use it.
-The full last report uses JSONB, a connection identifier, and the receipt
-time that only a full report writes. Snapshots read both from one row.
-Replaced sessions and removed machines cannot overwrite it.
-Desired drain and warm settings stay separate from observed report fields.
-Machine reads keep machine fields and disks in one committed view.
-Gateway snapshots include the full report from that same view.
-A shared read snapshot prevents mixed report generations.
-Contact writes contain only observed columns.
+The [execution query guide](execution.md) gives the gateway queries, the
+own-machine reservations and routing snapshot, observations, retirement,
+and guarded result writes.
 
 PgStoreFactory connects and applies pending migrations.
 One connection serializes ordinary queries across clones of the store.
@@ -169,21 +158,6 @@ Retired scale-set bindings keep completion context and durable cleanup state.
 Listener discovery includes unfinished work and pending notification revisions.
 Confirmed remote removal excludes the old binding from later cleanup and
 discovery without deleting job history.
-
-Own-machine queries save runner and command reservations atomically.
-A repeatable-read routing snapshot keeps reports, demand, and settings
-consistent. It also reads the Boat account, deliveries, and registration
-identities. A separate negative advisory-key range owns execution leases.
-Mutable machine, organization, and label authority is checked again under
-row locks before a new reservation commits.
-The command records retain exact byte dimensions and logical slot sets.
-No conversion through integer GB changes the held root allocation.
-The first confirmation of a runner is written once, and retirement keeps it.
-An observation saves the runner state, its GitHub ID, and that first time in
-one transaction. A missing runner or command record rolls back both writes.
-An applied command result stays a separate value.
-A retirement saves the trusted GitHub ID, `Stopping`, and its stop command
-in one transaction.
 
 ## Quick Start
 
@@ -256,6 +230,8 @@ CI starts the database for the existing workspace test phase.
 - [src/own_observation.rs](src/own_observation.rs) saves one scoped runner
   observation and its first confirmation.
 - [src/routing_snapshot.rs](src/routing_snapshot.rs) reads coherent routing.
+- [src/own_results.rs](src/own_results.rs) and
+  [src/boat_results.rs](src/boat_results.rs) apply guarded remote results.
 
 - [src/billing/session.rs](src/billing/session.rs) commits billing state.
 - [src/billing/payments.rs](src/billing/payments.rs) reads and saves

@@ -12,6 +12,8 @@ Own the executable and the single HTTP host.
 Keep GitHub App credentials in the hosted process.
 Persist runner reservations before one-use registrations leave the process.
 Preserve running jobs across busy races, offline machines, and restarts.
+Keep a slow GitHub or Boat request from delaying other machines, jobs, and
+workspaces.
 Compose the Boat overflow service and keep accepted Boat supply across
 restarts.
 
@@ -27,48 +29,9 @@ root sizing, then exits. It reads no runtime setting or secret file.
 diagnostic value. Only `diagnose` accepts the flag.
 Serving ignores `CIPROXY_IMAGE_ROOT_BYTES`.
 
-Serving reads its settings from the environment and its secrets from files.
-A missing setting stops the process with exit status 1 and names the setting.
-The process then signs and fetches the pinned published manifest.
-It reads `downloads.json` from the same release directory.
-These files supply the exact root bytes, image ID, archive hash, and size.
-The process then connects to PostgreSQL and applies the embedded migrations.
-It binds `HTTP_BIND` only after these steps succeed.
-
-Startup builds the dashboard access service first. It owns sign-in,
-workspace roles, and the App install authority. The machine gateway and the
-GitHub App service use it. The dashboard API gets the same gateway, App
-service, scale-set client, and App signer.
-`MachineRuntime::new` requires an `InstallationApi`. Composition passes the
-App service's App-JWT installation client, which take-out acceptance uses.
-The API reads machine capacity from the last report of each machine: its
-slots, its job disk minus active Docker leases, and the root bytes of its
-selected image.
-A report with unavailable Docker reservations keeps its slots and image,
-but its dashboard disk capacity is unknown. The scaler keeps the machine's
-label eligibility and starts no new runner there until reservations return.
-A machine without a report has zero slots and unknown disk capacity.
-API maintenance runs at startup and then every minute. A failed run logs a
-warning and runs again.
-The page routes share the same billing, metering, and overflow services.
-Paid-plan review uses Stripe's invoice previews through the billing service.
-It uses the current quoted Stripe period when stored renewal state is late.
-Stripe returns the customer to the dashboard on `PUBLIC_URL`, with the
-payer's workspace: `/checkout-return` with the exact Checkout session,
-`/plans` after a cancel of Checkout, and `/billing` from the portal.
-An independent worker retries durable last-organization cancellations and
-pending paid-move payment work at startup and each minute. GitHub maintenance
-failures do not delay that worker. Billing raises paid-move operator events
-through `HostedBillingAlerts`: error-level tracing events with the
-`ciproxy_billing::operator` target. They promise no email or page.
-Billing and PostgreSQL calls run on blocking workers.
-
-This one release supplies the image facts of the process. The agents'
-image download, the API's image disk size, the scaler fallback, and Boat
-sizes come from it. Each machine's selected local image still sizes the new
-roots of that machine.
-[Runtime setup](../../deploy/runtime.md#turn-on-the-runtime) says which
-release file gives each field.
+The [startup guide](startup.md) gives the startup order, the hosted services
+that startup builds, with billing and the Stripe return URLs, and the image
+facts of the process.
 
 ### Routes
 
@@ -104,9 +67,9 @@ finish. Other runtime work then gets up to five more seconds.
 
 ### Routing and runners
 
-The [runner guide](runners.md) gives routing, reservations, report
-confirmation, stop replay, retirement authority, and the removal and
-take-out policies.
+The [runner guide](runners.md) gives routing, reservations, the agent event
+queue, remote requests, report confirmation, stop replay, retirement
+authority, and the removal and take-out policies.
 Take-out checks saved retirement for both own-machine and Boat reservations
 before the API removes GitHub access.
 
@@ -116,7 +79,8 @@ The optional `BOAT_SHARED_SNAPSHOT` setting turns on the Boat service.
 Without it, own machines still run jobs, and Boat stays off.
 The runtime, the dashboard API, and the exit callback share one overflow
 service. The [overflow guide](overflow.md) gives the configuration, the
-runtime guarantees, the exit callback, and the live smoke checks.
+runtime guarantees, and the exit callback. The
+[live smoke guide](overflow-smoke.md) gives the live smoke checks.
 After an owner removes the App, launched sandboxes run until their runner
 exits or their saved lifetime ends. The runtime holds the Boat key for
 their cleanup, also after the last organization leaves.
@@ -217,10 +181,12 @@ cargo clippy --package ciproxy-control-plane --all-targets -- -D warnings
 ```
 
 Runtime integration tests create and remove isolated PostgreSQL databases.
-They mock GitHub and gateway side effects.
+They mock GitHub and gateway side effects. They await
+`MachineRuntime::quiesce`, or `quiesce_lifecycle` for a lifecycle event,
+before they check the results of queued and remote work.
 The PostgreSQL role needs CREATEDB rights.
 Executable signal tests need Linux procfs and the `openssl` command.
-The [live smoke checks](overflow.md#live-smoke-checks) need live Boat,
+The [live smoke checks](overflow-smoke.md) need live Boat,
 GitHub, and database access, so they stay operator work.
 
 ### Key Code
@@ -246,9 +212,24 @@ GitHub, and database access, so they stay operator work.
 - [Gateway logging](../ciproxy-gateway/src/logging.rs) keeps frame guards
   mandatory while it preserves unrelated selected diagnostics.
 - [src/listeners.rs](src/listeners.rs) supervises reconciliation, listener
-  discovery, and readiness.
-- [src/runtime.rs](src/runtime.rs) owns workspace execution reconciliation.
-- [src/actions.rs](src/actions.rs) reserves starts and saves runner states.
+  discovery, readiness, and the stop of runtime tasks.
+- [src/runtime.rs](src/runtime.rs) defines `OwnMachines` and `MachineRuntime`.
+- [src/runtime_entrypoints.rs](src/runtime_entrypoints.rs) runs the tick, job,
+  agent, and lifecycle entry points as short saved-state steps.
+- [src/runtime_reconciliation.rs](src/runtime_reconciliation.rs) runs the
+  short leased workspace pass, and the Boat-only pass after a Boat refresh.
+- [src/runtime_inbox.rs](src/runtime_inbox.rs) handles queued agent events
+  and machine removals in arrival order.
+- [src/runtime_tasks.rs](src/runtime_tasks.rs) owns and joins one GitHub or
+  Boat task for each key. `OwnMachines::shutdown` stops them.
+- [src/remote_results.rs](src/remote_results.rs) saves remote results through
+  the guarded store writes.
+- [src/hosted_events.rs](src/hosted_events.rs) defines `Relay`. Its gateway
+  callbacks queue events and return at once.
+- [src/actions.rs](src/actions.rs) routes scaler actions and saves runner
+  states.
+- [src/own_start.rs](src/own_start.rs) reserves an own-machine start before
+  its GitHub registration task.
 - [src/reconciliation.rs](src/reconciliation.rs) applies full reports to
   reservations, with the confirmation and absence rules.
 - [src/retirement.rs](src/retirement.rs) saves stops and delivers them, live
@@ -257,6 +238,8 @@ GitHub, and database access, so they stay operator work.
   App removal cause.
 - [src/takeout.rs](src/takeout.rs) accepts a take-out only when each
   reservation of its organization has an answer.
+- [src/lifecycle_completion.rs](src/lifecycle_completion.rs) defines
+  `takeout_accepted`, which the callback and `quiesce_lifecycle` share.
 - [src/reservations.rs](src/reservations.rs) gives one saved retirement
   result for machine commands, Boat registrations, deliveries, and runners.
 - [src/boat_retirement.rs](src/boat_retirement.rs) shares durable Boat
@@ -267,19 +250,23 @@ GitHub, and database access, so they stay operator work.
 - [src/cache_metadata/](src/cache_metadata/mod.rs) checks the machine
   credential, workspace, and job placement, then lists the job's GitHub
   cache entries.
-- [src/snapshot.rs](src/snapshot.rs) supplies the pure scaler's inputs.
+- [src/snapshot.rs](src/snapshot.rs) builds the pure scaler's inputs,
+  including the saved Boat supply.
 - [src/warm.rs](src/warm.rs) allocates warm runners from recent jobs.
 - [src/slots.rs](src/slots.rs) selects exact logical slot sets.
 - [src/http.rs](src/http.rs) mounts shared HTTP routes and health checks.
 - [src/overflow_composition.rs](src/overflow_composition.rs) builds the
   Boat service and its registration authority when Boat is configured.
-- [src/boat_runtime.rs](src/boat_runtime.rs) starts and recovers Boat
-  deliveries and their GitHub registrations.
-- [src/boat_snapshot.rs](src/boat_snapshot.rs) adds accepted Boat supply to
-  the scaler snapshot.
+- [src/boat_runtime.rs](src/boat_runtime.rs) dispatches the Boat cleanup,
+  refresh, and recovery tasks of each pass.
+- [src/boat_start.rs](src/boat_start.rs) starts a Boat delivery after its
+  GitHub registration, in a supervised task.
+- [src/boat_snapshot.rs](src/boat_snapshot.rs) turns saved Boat deliveries,
+  registrations, and runner states into scaler supply.
 - [src/boat_authority.rs](src/boat_authority.rs) defines
   `BoatRunnerAuthority`. It retires Boat registrations GitHub-first for the
-  overflow service and for runtime recovery. It preserves the launched
+  overflow service and for runtime recovery. It asks GitHub again about a
+  saved `Busy` runner without a started job. It preserves the launched
   sandboxes of an organization whose owner removed the App.
 - [src/boat_jobs.rs](src/boat_jobs.rs) binds trusted GitHub job facts to
   Boat runners.
