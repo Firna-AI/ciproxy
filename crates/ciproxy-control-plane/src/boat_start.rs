@@ -8,7 +8,7 @@ use ciproxy_protocol::secret::Secret;
 use ciproxy_scaler::actions::StartRunner;
 use ciproxy_store_interface::boat_runtime::BoatRunnerIntent;
 use ciproxy_store_interface::own_runners::RoutingSnapshot;
-use ciproxy_store_interface::runtime_results::BoatRunnerResult;
+use ciproxy_store_interface::runtime_results::{BoatRunnerResult, BoatRunnerWrite};
 use ciproxy_store_interface::scale_sets::RegistrationTarget;
 use secrecy::ExposeSecret;
 use uuid::Uuid;
@@ -110,7 +110,7 @@ impl MachineRuntime {
             .await
             .internal()?
             .internal()?;
-            if !accepted {
+            if !matches!(accepted, BoatRunnerWrite::Applied(_)) {
                 return runtime.cleanup_late_registration(workspace, runner_id, target, github_id);
             }
             let boat = runtime.boat_operation(workspace).await;

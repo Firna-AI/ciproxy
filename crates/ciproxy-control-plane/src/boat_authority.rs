@@ -15,9 +15,10 @@ use ciproxy_scaler::decision::decide;
 use ciproxy_store_interface::boat_runtime::BoatRunnerIntent;
 use ciproxy_store_interface::github::DemandPhase;
 use ciproxy_store_interface::organizations::AppState;
-use ciproxy_store_interface::overflow::record::StartPhase;
 use ciproxy_store_interface::runners::RunnerState;
-use ciproxy_store_interface::runtime_results::{BoatRunnerGuard, BoatRunnerResult};
+use ciproxy_store_interface::runtime_results::{
+    BoatRunnerGuard, BoatRunnerResult, BoatRunnerWrite,
+};
 use ciproxy_store_interface::store::Store;
 use uuid::Uuid;
 
@@ -169,15 +170,6 @@ impl BoatRegistrationRetirement for BoatRunnerAuthority {
             .await;
         match result {
             Ok(RegistrationRetirement::Busy { id }) => {
-                let mut saved = expected.clone();
-                saved.intent.github_id = Some(id);
-                if saved.delivery.as_ref().is_some_and(|record| {
-                    record.phase == StartPhase::Running && record.ends_at.is_none()
-                }) && let Some(runner) = &mut saved.runner
-                {
-                    runner.state = RunnerState::Busy;
-                    runner.github_id = Some(id);
-                }
                 let store = self.store.clone();
                 match tokio::task::spawn_blocking(move || {
                     store.apply_boat_runner_result(
@@ -188,16 +180,17 @@ impl BoatRegistrationRetirement for BoatRunnerAuthority {
                 })
                 .await
                 {
-                    Ok(Ok(true)) => Ok(BoatRemoval {
+                    Ok(Ok(BoatRunnerWrite::Applied(saved))) => Ok(BoatRemoval {
                         retirement: Retirement::RunningJob,
-                        guard: saved,
+                        guard: *saved,
                     }),
-                    Ok(Ok(false)) => Err(Error::RunnerNeeded),
+                    Ok(Ok(BoatRunnerWrite::Rejected | BoatRunnerWrite::Retired)) => {
+                        Err(Error::RunnerNeeded)
+                    }
                     _ => Err(Error::ProviderUnavailable),
                 }
             }
             Ok(RegistrationRetirement::Removed { .. } | RegistrationRetirement::Absent) => {
-                let saved = expected.clone();
                 let store = self.store.clone();
                 match tokio::task::spawn_blocking(move || {
                     store.apply_boat_runner_result(
@@ -208,11 +201,13 @@ impl BoatRegistrationRetirement for BoatRunnerAuthority {
                 })
                 .await
                 {
-                    Ok(Ok(true)) => Ok(BoatRemoval {
+                    Ok(Ok(BoatRunnerWrite::Applied(saved))) => Ok(BoatRemoval {
                         retirement: Retirement::Removed,
-                        guard: saved,
+                        guard: *saved,
                     }),
-                    Ok(Ok(false)) => Err(Error::RunnerNeeded),
+                    Ok(Ok(BoatRunnerWrite::Rejected | BoatRunnerWrite::Retired)) => {
+                        Err(Error::RunnerNeeded)
+                    }
                     _ => Err(Error::ProviderUnavailable),
                 }
             }

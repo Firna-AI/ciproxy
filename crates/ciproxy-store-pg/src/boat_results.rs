@@ -7,13 +7,14 @@ use ciproxy_schema::organizations::organizations;
 use ciproxy_schema::overflow::overflow_starts;
 use ciproxy_schema::runners::runners;
 use ciproxy_schema::workspaces::workspaces;
+use ciproxy_store_interface::boat_delivery::BoatDeliveryGuard;
 use ciproxy_store_interface::boat_runtime::BoatRunnerIntent;
 use ciproxy_store_interface::error::{Result, ResultExt};
 use ciproxy_store_interface::github::GithubJob;
 use ciproxy_store_interface::organizations::AppState;
-use ciproxy_store_interface::overflow::record::StartPhase;
+use ciproxy_store_interface::overflow::record::{StartPhase, StartRecord};
 use ciproxy_store_interface::runtime_results::{
-    BoatResultStore, BoatRunnerGuard, BoatRunnerResult,
+    BoatResultStore, BoatRunnerGuard, BoatRunnerResult, BoatRunnerWrite,
 };
 use diesel::prelude::*;
 use diesel::sql_types::BigInt;
@@ -37,15 +38,15 @@ impl BoatResultStore for PgStore {
         workspace: Uuid,
         expected: &BoatRunnerGuard,
         result: BoatRunnerResult,
-    ) -> Result<bool> {
+    ) -> Result<BoatRunnerWrite> {
         transaction(&mut *self.connection()?, |connection| {
             let id = expected.intent.runner_id;
             let Some(current) = load(connection, workspace, id)? else {
-                return Ok(false);
+                return Ok(BoatRunnerWrite::Rejected);
             };
             let matches = &current == expected;
-            match result {
-                BoatRunnerResult::Checked => Ok(matches),
+            let accepted = match result {
+                BoatRunnerResult::Checked => matches,
                 BoatRunnerResult::Registered { target, github_id } => {
                     let mut intent = current.intent;
                     if intent.organization_id != target.organization_id
@@ -56,7 +57,7 @@ impl BoatResultStore for PgStore {
                             .registration_scale_set_id
                             .is_some_and(|id| id != target.github_id)
                     {
-                        return Ok(false);
+                        return Ok(BoatRunnerWrite::Rejected);
                     }
                     intent.github_id = Some(github_id);
                     intent.registration_scale_set_id = Some(target.github_id);
@@ -77,15 +78,15 @@ impl BoatResultStore for PgStore {
                         .optional()
                         .store()?
                         .unwrap_or(false);
-                    Ok(matches
+                    matches
                         && admitted
                         && current
                             .organization
-                            .is_some_and(|organization| organization.app_state == AppState::Active))
+                            .is_some_and(|organization| organization.app_state == AppState::Active)
                 }
                 BoatRunnerResult::Busy { github_id } => {
                     if !matches {
-                        return Ok(false);
+                        return Ok(BoatRunnerWrite::Rejected);
                     }
                     diesel::sql_query("UPDATE boat_runner_intents SET body=jsonb_set(body,'{github_id}',to_jsonb($3::bigint)) WHERE workspace_id=$1 AND runner_id=$2")
                         .bind::<diesel::sql_types::Uuid,_>(workspace).bind::<diesel::sql_types::Uuid,_>(id).bind::<BigInt,_>(github_id).execute(connection).store()?;
@@ -101,7 +102,7 @@ impl BoatResultStore for PgStore {
                         .execute(connection)
                         .store()?;
                     }
-                    Ok(true)
+                    true
                 }
                 BoatRunnerResult::Retired => {
                     if !matches
@@ -109,7 +110,7 @@ impl BoatResultStore for PgStore {
                             record.ends_at.is_none() && record.phase != StartPhase::Deleting
                         })
                     {
-                        return Ok(false);
+                        return Ok(BoatRunnerWrite::Rejected);
                     }
                     diesel::delete(
                         boat_runner_intents::table
@@ -118,9 +119,15 @@ impl BoatResultStore for PgStore {
                     )
                     .execute(connection)
                     .store()?;
-                    Ok(true)
+                    return Ok(BoatRunnerWrite::Retired);
                 }
+            };
+            if !accepted {
+                return Ok(BoatRunnerWrite::Rejected);
             }
+            Ok(load(connection, workspace, id)?
+                .map(|guard| BoatRunnerWrite::Applied(Box::new(guard)))
+                .unwrap_or(BoatRunnerWrite::Rejected))
         })
     }
 }
@@ -166,8 +173,9 @@ fn load(
         .first::<String>(connection)
         .optional()
         .store()?
-        .map(|json| serde_json::from_str(&json).internal())
-        .transpose()?;
+        .map(|json| serde_json::from_str::<StartRecord>(&json).internal())
+        .transpose()?
+        .map(BoatDeliveryGuard::from);
     let runner = runners::table
         .find(id)
         .filter(runners::workspace_id.eq(workspace))

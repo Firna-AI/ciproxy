@@ -39,7 +39,15 @@ An applied command result stays a separate value.
 A retirement saves the trusted GitHub ID, `Stopping`, and its stop command
 in one transaction.
 Guarded result writes lock their guard rows and compare them again in one
-transaction. Any change rejects the result and saves nothing. A late
-registration can still save its actual GitHub runner ID and remote
-scale-set ID for cleanup. It permits the start only while the guard matches
-and the organization is admitted and active.
+transaction. An own-machine result needs the complete saved guard. A Boat
+result needs only its lifecycle authority: the organization, the
+registration intent, the runner, its jobs, and a `BoatDeliveryGuard`. That
+delivery part holds the fixed inputs, phase, sandbox ID, end, and end
+report of the delivery. A usage or billing reading, a measured start, or a
+lifetime bound does not reject a Boat result.
+`apply_boat_runner_result` returns `BoatRunnerWrite::Applied` with the
+exact guard after the write, `Retired` after it removes the registration
+intent, or `Rejected`. A rejected result saves nothing, with one
+exception. A late registration can still save its actual GitHub runner ID
+and remote scale-set ID for cleanup. It permits the start only while the
+guard matches and the organization is admitted and active.
