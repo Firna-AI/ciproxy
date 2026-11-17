@@ -82,6 +82,9 @@ impl IdentityFiles {
                         stops.lock().unwrap().push("stop");
                         Ok(())
                     })),
+                RuntimeClaimsMock::wait
+                    .each_call(matching!())
+                    .answers(&|_| Ok(Arc::new(Unimock::new(())) as Arc<dyn RuntimeOwner>)),
                 RuntimeClaimsMock::claim
                     .each_call(matching!())
                     .answers(&|_| Ok(Arc::new(Unimock::new(())) as Arc<dyn RuntimeOwner>)),

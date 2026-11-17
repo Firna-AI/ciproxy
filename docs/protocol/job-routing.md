@@ -82,8 +82,8 @@ warm runners. It also states what happens when a part fails.
   cache never keeps a job from starting.
 - The Docker disks that no job uses share the available job disk with the
   machine cache.
-- When a job VM needs space, ciproxy deletes the Docker disk that no job
-  uses and that a job used least recently.
+- When a job VM or an attached Docker disk needs space, ciproxy deletes
+  the Docker disk that no job uses and that a job used least recently.
 - Reason: a Docker disk is a cache, so its loss costs only time.
 - **Decision:** a job needs job disk as well as slots, and the machine cache
   gets the rest of the disk. Rejected: slots that ignore the disk, because

@@ -28,7 +28,7 @@ pub(crate) fn prepare(
     let space: Arc<dyn ImageSpace> = Arc::new(ImageBudget::new(
         image_budget,
         Arc::new(LinuxSpaceUsage {
-            area: layout.data.clone(),
+            layout: layout.clone(),
         }),
     ));
     let images: Arc<dyn Images> = Arc::new(ManagedImages::new(

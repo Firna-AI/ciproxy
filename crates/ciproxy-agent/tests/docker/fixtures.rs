@@ -9,17 +9,19 @@ use ciproxy_protocol::identifiers::{
 };
 use ciproxy_protocol::images::ImageMetadata;
 use ciproxy_protocol::jobs::{JobAssignment, JobFacts, JobScope, Repository};
+use ciproxy_protocol::reports::{DiskReport, HardwareReport};
 use ciproxy_protocol::resources::VmSize;
 use ciproxy_protocol::runners::{RunnerReport, RunnerState};
 use unimock::{MockFn, Unimock, matching};
 
-use crate::boundaries::CacheMock;
+use crate::boundaries::{Cache, CacheMock, HostMock};
 use crate::cache_authority::CacheAuthority;
 use crate::docker::{DockerDisks, LinuxDockers};
 use crate::docker_files;
 use crate::error::Error;
 use crate::layout::Layout;
-use crate::state::{PreparationState, VmRecord};
+use crate::state::{MachineState, PreparationState, VmRecord};
+use crate::workload_space::{MachineWorkloadSpace, WorkloadSpace};
 
 pub(super) struct TemporaryLayout {
     pub(super) layout: Layout,
@@ -43,12 +45,50 @@ impl TemporaryLayout {
         LinuxDockers {
             layout: self.layout.clone(),
             commands: mock.clone(),
-            cache: mock,
+            allocation: Arc::new(tokio::sync::Mutex::new(())),
+            space: self.space(mock, 65_536),
+            image_budget: 0,
         }
+    }
+
+    pub(super) fn space(&self, cache: Arc<dyn Cache>, free_pool: u64) -> Arc<dyn WorkloadSpace> {
+        Arc::new(MachineWorkloadSpace {
+            state: Arc::new(tokio::sync::Mutex::new(MachineState::default())),
+            host: Arc::new(
+                Unimock::new(
+                    HostMock::hardware
+                        .some_call(matching!())
+                        .answers_arc(Arc::new(move |_| {
+                            Ok(HardwareReport {
+                                processor: "Fixture CPU".to_owned(),
+                                threads: 4,
+                                memory_bytes: 16_000_000_000,
+                                kvm: true,
+                                disks: vec![DiskReport {
+                                    name: "data".to_owned(),
+                                    capacity_bytes: (free_pool * 4).div_ceil(3),
+                                    free_bytes: free_pool,
+                                }],
+                            })
+                        }))
+                        .at_least_times(0),
+                )
+                .no_verify_in_drop(),
+            ),
+            cache,
+        })
     }
 
     pub(super) fn lease_path(&self, vm: &VmRecord) -> PathBuf {
         self.layout.data.join("docker-leases").join(&vm.local_id)
+    }
+
+    pub(super) fn base(&self, repository: &str) -> PathBuf {
+        self.layout
+            .data
+            .join("docker")
+            .join(repository)
+            .join("base.ext4")
     }
 
     pub(super) async fn repository(&self) -> String {
@@ -67,7 +107,7 @@ impl TemporaryLayout {
         let vm = vm("repository-key");
         assert!(
             adapter
-                .prepare(&vm, &facts(), &scope(), 4096, 65536, 65536)
+                .prepare(&vm, &facts(), &scope(), 4096, 65536)
                 .await
                 .is_err()
         );

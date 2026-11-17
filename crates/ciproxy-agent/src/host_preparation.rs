@@ -12,6 +12,7 @@ use crate::error::{Error, Result};
 use crate::host_packages::Packages;
 use crate::host_system::repair;
 use crate::host_tools::Tools;
+use crate::runtime_ownership::RuntimeOwner;
 use crate::terminal_completion::{CompletionAction, UninstallCleanup};
 
 #[cfg_attr(test, unimock::unimock(api = PreparationMock))]
@@ -111,6 +112,8 @@ pub(crate) enum UninstallState {
 }
 
 pub(crate) struct FinalUninstall {
+    /// Keep the same runtime claim until all files and the identity are removed.
+    pub(crate) _runtime: Arc<dyn RuntimeOwner>,
     pub(crate) files: Arc<dyn AreaFiles>,
     pub(crate) images: Arc<dyn Images>,
     pub(crate) preparation: Arc<dyn Preparation>,

@@ -10,10 +10,10 @@ use ciproxy_protocol::jobs::{JobScope, UnknownJobScopeReason};
 use ciproxy_protocol::secret::Secret;
 use unimock::{MockFn, Unimock, matching};
 
-use crate::boundaries::{CacheMock, HostMock, ImagesMock, StoreMock, VmsMock};
+use crate::boundaries::{CacheMock, ImagesMock, StoreMock, VmsMock};
 use crate::controller::Agent;
 use crate::docker::DockerDisksMock;
-use crate::fixtures::{controller, hardware, metadata, trusted_facts, vm};
+use crate::fixtures::{controller, metadata, trusted_facts, vm};
 use crate::state::MachineState;
 
 #[tokio::test]
@@ -48,12 +48,9 @@ async fn old_image_policy_grants_nothing_after_local_selection_changes() {
                     7,
                 )))
             }),
-        HostMock::hardware
-            .each_call(matching!())
-            .answers(&|_| Ok(hardware())),
         DockerDisksMock::prepare
-            .each_call(matching!(_, _, _, _, _, _))
-            .answers_arc(Arc::new(move |_, _, _, _, _, spare, _| {
+            .each_call(matching!(_, _, _, _, _))
+            .answers_arc(Arc::new(move |_, _, _, _, _, spare| {
                 captured.lock().unwrap().push(spare);
                 Ok(None)
             })),

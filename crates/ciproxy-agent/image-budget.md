@@ -124,7 +124,8 @@ Each file and directory also receives a conservative support charge.
 Each recognized VM jail keeps an 8 MiB support reservation in this budget.
 This covers the future copied Firecracker executable and small jail files.
 Actual copied executable, kernel, and config allocations are counted too.
-Only root and Docker payload blocks at an actual VM root are excluded.
+Only the VM drive files at an actual VM root are excluded.
+These files are the root disk, dormant Docker slot, and attached Docker disk.
 Their full logical disks already belong to the protocol job disk.
 An arbitrary file with the same name elsewhere is still counted.
 

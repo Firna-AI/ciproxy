@@ -3,6 +3,7 @@
 use serde::Serialize;
 
 use crate::state::VmRecord;
+use crate::vm_drives::VmDrive;
 
 #[derive(Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -61,13 +62,13 @@ impl VmConfig {
             drives: [
                 Drive {
                     drive_id: "rootfs",
-                    path_on_host: "/rootfs.ext4",
+                    path_on_host: VmDrive::Root.jailed(),
                     is_root_device: true,
                     is_read_only: false,
                 },
                 Drive {
                     drive_id: "docker",
-                    path_on_host: "/docker-slot",
+                    path_on_host: VmDrive::DockerSlot.jailed(),
                     is_root_device: false,
                     is_read_only: false,
                 },
