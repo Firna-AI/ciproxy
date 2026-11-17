@@ -4,6 +4,7 @@ pub mod access;
 pub mod facts;
 mod facts_deserialize;
 pub mod links;
+pub mod machine_statistics;
 pub mod machines;
 pub mod settings;
 

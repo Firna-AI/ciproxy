@@ -1,12 +1,46 @@
 //! Agent-originated JSON, including registration and reconnect state.
 
 use crate::agent::{AgentMessage, CommandFailure, CommandOutcome};
+use crate::cache::{DockerDiskReport, MachineCacheReport};
+use crate::reports::MachineReport;
 use crate::runners::RunnerExit;
 use crate::secret::Secret;
+use crate::statistics::Statistics;
 use crate::version::ProtocolVersion;
 
 use super::assertions::snapshot;
 use super::fixtures;
+
+#[test]
+fn legacy_machine_reports_keep_both_statistics_sections_measured() {
+    let report: MachineReport = serde_json::from_value(serde_json::json!({
+        "hostname":"legacy", "agent_version":"old",
+        "hardware":{"processor":"x64", "threads":0, "memory_bytes":0, "kvm":false, "disks":[]},
+        "capacity":0, "job_disk_bytes":0, "slots":[], "runners":[], "drain":"active",
+        "cache":{"used_bytes":0, "capacity_bytes":0, "restores_last_7_days":0, "hits_last_7_days":0, "jobs":[]},
+        "docker_disks":{"leased_bytes":0, "repositories":0, "used_bytes":0},
+        "images":{"available":[], "newest":null}
+    })).unwrap();
+    assert_eq!(
+        report.cache,
+        Statistics::Measured(MachineCacheReport {
+            used_bytes: 0,
+            capacity_bytes: 0,
+            restores_last_7_days: 0,
+            hits_last_7_days: 0,
+            unknown_jobs: vec![],
+            jobs: vec![],
+        })
+    );
+    assert_eq!(
+        report.docker_disks,
+        Statistics::Measured(DockerDiskReport {
+            leased_bytes: 0,
+            repositories: 0,
+            used_bytes: 0,
+        })
+    );
+}
 
 #[test]
 fn register_has_install_token_and_initial_state() {

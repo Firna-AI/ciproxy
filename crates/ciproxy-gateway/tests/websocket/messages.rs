@@ -50,11 +50,16 @@ pub(super) fn report() -> MachineReport {
             occupancy: SlotOccupancy::Free,
         },
     ];
-    report.cache.used_bytes = 4 * GIGABYTE;
-    report.cache.capacity_bytes = 117_200_774_656;
-    report.cache.restores_last_7_days = 19;
-    report.cache.hits_last_7_days = 11;
-    report.cache.jobs = vec![JobCacheReport {
+    report.cache.as_mut().measured().unwrap().used_bytes = 4 * GIGABYTE;
+    report.cache.as_mut().measured().unwrap().capacity_bytes = 117_200_774_656;
+    report
+        .cache
+        .as_mut()
+        .measured()
+        .unwrap()
+        .restores_last_7_days = 19;
+    report.cache.as_mut().measured().unwrap().hits_last_7_days = 11;
+    report.cache.as_mut().measured().unwrap().jobs = vec![JobCacheReport {
         organization_id: OrganizationId("org-2".into()),
         repository_id: ciproxy_protocol::identifiers::RepositoryId("repo-9".into()),
         assignment: ciproxy_protocol::jobs::JobAssignment {
@@ -69,8 +74,13 @@ pub(super) fn report() -> MachineReport {
             restored_bytes: 72_000,
         }),
     }];
-    report.docker_disks.repositories = 3;
-    report.docker_disks.used_bytes = 8 * GIGABYTE;
+    report
+        .docker_disks
+        .as_mut()
+        .measured()
+        .unwrap()
+        .repositories = 3;
+    report.docker_disks.as_mut().measured().unwrap().used_bytes = 8 * GIGABYTE;
     report.images.available = vec![ImageMetadata {
         image_id: ImageId("image-4".into()),
         root_disk_bytes: 60_263_759_872,

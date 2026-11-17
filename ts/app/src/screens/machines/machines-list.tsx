@@ -43,6 +43,7 @@ import {
   machineFigures,
 } from "../../view/machines.ts";
 import type { WorkspaceContext } from "../workspace-page.tsx";
+import { cacheHitsFigure } from "./cache-hits.tsx";
 import { FigureRow } from "./machine-figures.tsx";
 import { MachineTable } from "./machine-table.tsx";
 import { MachinesRefreshNotice } from "./machines-refresh.tsx";
@@ -210,7 +211,7 @@ function Body({
           { label: listCopy.machines, value: figures.machines },
           { label: listCopy.slotsInUse, value: figures.slots },
           { label: listCopy.warmRunners, value: figures.warm },
-          { label: listCopy.cacheHits, value: figures.cacheHits },
+          cacheHitsFigure(figures.cacheHits),
         ]}
       />
       <Panel title={listCopy.ownMachines} flush>

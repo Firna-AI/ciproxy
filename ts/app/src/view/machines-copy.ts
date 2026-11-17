@@ -16,6 +16,8 @@ export const listCopy = {
   warmRunners: "Warm runners",
   cacheHits: "Cache hits, 7 days",
   noRestores: "No restores yet",
+  excludes: "Excludes",
+  and: "and",
   ownMachines: "Own machines",
   columns: {
     machine: "Machine",
@@ -174,6 +176,12 @@ export const cacheCopy = {
     ),
   unreported: "Cache use shows after the machine reports it.",
   noReport: "No report yet",
+  unknown: "Unknown",
+  unknownCache:
+    "Cache disk and cache hits show after the machine measures them.",
+  unknownDocker: "Docker disks show after the machine measures them.",
+  unknownBoth:
+    "Cache disk, cache hits, and Docker disks show after the machine measures them.",
   dialogTitle: (host: string) => `Clear the cache of ${host}?`,
   dialogBody: (used: string | null) =>
     `ciproxy deletes ${used === null ? "the cache entries" : `the ${unbroken(`${used} GB`)} of cache entries`} on this machine. The GitHub cache keeps its entries, so the next jobs restore from there.`,

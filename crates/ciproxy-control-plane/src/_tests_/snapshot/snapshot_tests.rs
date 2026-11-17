@@ -2,14 +2,18 @@
 
 use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_protocol::identifiers::OrganizationId;
+use ciproxy_protocol::statistics::Statistics;
 use ciproxy_scaler::actions::{Action, StartReason};
+use ciproxy_scaler::decision::decide;
+
+use crate::snapshot::build;
 
 use super::fixtures::{at, input, job, organization};
-use crate::snapshot::build;
 
 #[test]
 fn persisted_image_budget_still_limits_warm_starts_when_cache_reporting_fails() {
-    let input = input();
+    let mut input = input();
+    input.machines[0].report.as_mut().unwrap().report.cache = Statistics::Unavailable;
     let runnable = input
         .organizations
         .iter()
@@ -18,6 +22,63 @@ fn persisted_image_budget_still_limits_warm_starts_when_cache_reporting_fails() 
     let actions =
         ciproxy_scaler::decision::decide(&build(&input, &runnable, at(), RootSizing::default()));
     assert_eq!(actions.iter().filter(|action|matches!(action,Action::StartRunner(start) if start.reason==StartReason::WarmPool)).count(),1);
+}
+
+#[test]
+fn docker_statistics_keep_gross_disk_separate_and_block_starts_until_measured() {
+    let mut input = input();
+    let runnable = vec![input.organizations[0].id];
+    let measured_empty = input.machines[0]
+        .report
+        .as_ref()
+        .unwrap()
+        .report
+        .docker_disks
+        .clone();
+    input.machines[0]
+        .report
+        .as_mut()
+        .unwrap()
+        .report
+        .docker_disks
+        .as_mut()
+        .measured()
+        .unwrap()
+        .leased_bytes = 10_000_000_000;
+    let snapshot = build(&input, &runnable, at(), RootSizing::default());
+    assert_eq!(snapshot.machines[0].disk_budget_bytes, 150_000_000_000);
+    assert_eq!(
+        snapshot.machines[0].docker_leased_bytes,
+        Some(10_000_000_000)
+    );
+    assert_eq!(decide(&snapshot), vec![]);
+
+    input.machines[0]
+        .report
+        .as_mut()
+        .unwrap()
+        .report
+        .docker_disks = Statistics::Unavailable;
+    let snapshot = build(&input, &runnable, at(), RootSizing::default());
+    assert_eq!(snapshot.machines[0].docker_leased_bytes, None);
+    assert_eq!(decide(&snapshot), vec![]);
+
+    input.machines[0]
+        .report
+        .as_mut()
+        .unwrap()
+        .report
+        .docker_disks = measured_empty;
+    let snapshot = build(&input, &runnable, at(), RootSizing::default());
+    assert_eq!(snapshot.machines[0].docker_leased_bytes, Some(0));
+    let reasons: Vec<_> = decide(&snapshot)
+        .into_iter()
+        .map(|action| match action {
+            Action::StartRunner(start) => Some(start.reason),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(reasons, vec![Some(StartReason::WarmPool)]);
 }
 
 #[test]

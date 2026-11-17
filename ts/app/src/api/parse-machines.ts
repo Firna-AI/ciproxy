@@ -1,5 +1,8 @@
 // Readers for the machines of a workspace and the one-hour install command.
 // A busy slot carries the dashboard job that the API matched to it, or null.
+// A null cache means that ciproxy holds no report of the machine. Otherwise
+// the machine cache and the Docker disks are each measured, with figures, or
+// unavailable, with its status only.
 
 import {
   array,
@@ -10,6 +13,7 @@ import {
   oneOf,
   optional,
   parser,
+  ParseError,
   string,
   time,
 } from "./parse-core.ts";
@@ -25,15 +29,45 @@ import type {
 
 const slotState = oneOf<SlotState>({ free: true, warm: true, job: true });
 
-function cache(value: unknown): CacheView {
+function machineCache(value: unknown): CacheView["machine_cache"] {
   const fields = object(value, "machine cache");
+  switch (fields.status) {
+    case "measured":
+      return {
+        capacity_bytes: decimal(fields.capacity_bytes),
+        hits_last_7_days: decimal(fields.hits_last_7_days),
+        restores_last_7_days: decimal(fields.restores_last_7_days),
+        status: "measured",
+        used_bytes: decimal(fields.used_bytes),
+      };
+    case "unavailable":
+      return { status: "unavailable" };
+    default:
+      throw new ParseError("machine cache");
+  }
+}
+
+function dockerDisks(value: unknown): CacheView["docker_disks"] {
+  const fields = object(value, "Docker disks");
+  switch (fields.status) {
+    case "measured":
+      return {
+        repositories: decimal(fields.repositories),
+        status: "measured",
+        used_bytes: decimal(fields.used_bytes),
+      };
+    case "unavailable":
+      return { status: "unavailable" };
+    default:
+      throw new ParseError("Docker disks");
+  }
+}
+
+function cache(value: unknown): CacheView {
+  const fields = object(value, "machine statistics");
   return {
-    capacity_bytes: decimal(fields.capacity_bytes),
-    docker_disk_bytes: decimal(fields.docker_disk_bytes),
-    docker_repositories: decimal(fields.docker_repositories),
-    hits_last_7_days: decimal(fields.hits_last_7_days),
-    restores_last_7_days: decimal(fields.restores_last_7_days),
-    used_bytes: decimal(fields.used_bytes),
+    docker_disks: dockerDisks(fields.docker_disks),
+    machine_cache: machineCache(fields.machine_cache),
   };
 }
 

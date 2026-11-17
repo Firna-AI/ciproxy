@@ -9,6 +9,7 @@ const docs = {
   appRemoval: "docs/protocol/app-removal.md",
   billing: "docs/protocol/billing.md",
   cache: "docs/protocol/cache.md",
+  dockerDisks: "docs/protocol/docker-disks.md",
   jobRouting: "docs/protocol/job-routing.md",
   labels: "docs/protocol/labels.md",
   metering: "docs/protocol/metering.md",

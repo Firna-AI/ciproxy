@@ -182,8 +182,26 @@ This doc states the cache rules for jobs on
 - They also show the cache hits of the last 7 days.
 - The cache hits of a machine are the share of its cache restores of the
   last 7 days that the machine cache served.
-- On the Machines page, the cache hits cover the cache restores of all own
-  machines.
+- On Machines, cache hits cover restores of own machines with
+  [measured](#machine-figures) cache figures. The page names the others.
+- With no measured machine, the cache hits say "Unknown", not "No restores yet".
+
+## Machine figures
+
+- The cache figures and the [Docker disk figures](docker-disks.md#terms) of a
+  report are each measured or unavailable. A measured zero is a true zero.
+- Each producer reports the figures that it did not measure as unavailable.
+- So the cache figures are unavailable until the machine cache knows its total
+  space and recovers its disk, and while it cannot read its saved counts.
+- The agent tries to send the machine cache its total space before each first
+  report: at registration, and after a start of the agent or the machine cache.
+- The agent logs each failed read. The rest of its report still arrives.
+- No reader counts an unavailable figure as zero, or as no cache use of a job.
+- Each page shows "Unknown" in place of an unavailable figure.
+- Figures without a mark, as from an earlier agent, count as measured.
+- **Decision:** each producer marks the figures that it did not measure.
+  Rejected: uncertain zeros, because they make a true empty state unclear.
+  Rejected: old figures, because they need stored state and an age rule.
 
 ## The cache handoff
 

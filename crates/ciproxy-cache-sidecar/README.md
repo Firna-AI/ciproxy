@@ -136,6 +136,10 @@ service then recovers its retained entries, writes no new archive, and
 evicts nothing until `PUT /budget` sets a budget. With an explicit
 capacity, also zero, startup reclaims the entries that do not fit it.
 The agent's unit omits the option.
+`GET /report` returns HTTP 503 until the budget is known and disk recovery
+has succeeded. A later budget does not hide failed recovery.
+A failed read or decode of saved counts also keeps reports unavailable.
+Cache requests continue, and events do not overwrite those unread counts.
 
 ### Agent integration
 

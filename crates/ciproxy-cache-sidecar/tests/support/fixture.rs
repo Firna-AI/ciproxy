@@ -1,5 +1,6 @@
 //! Machine, admin, and job-proxy listeners on isolated ephemeral ports.
 
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -87,11 +88,19 @@ impl Fixture {
         self.restart_budget(None).await;
     }
 
+    pub fn cache_path(&self) -> PathBuf {
+        self.root.path().join("cache")
+    }
+
+    pub fn saved_counts_path(&self) -> PathBuf {
+        self.cache_path().join("reports")
+    }
+
     async fn restart_budget(&mut self, budget: Option<u64>) {
         for task in self.tasks.drain(..) {
             task.abort();
         }
-        let root = self.root.path().join("cache");
+        let root = self.cache_path();
         let store = Arc::new(match budget {
             Some(bytes) => DiskStorage::new(root, bytes),
             None => DiskStorage::waiting_for_budget(root),
@@ -130,23 +139,27 @@ impl Fixture {
     }
 
     pub async fn entries(&self) -> Vec<ciproxy_cache_sidecar::storage::interface::Entry> {
-        DiskStorage::new(
-            self.root.path().join("cache"),
-            self.capacity.load(Ordering::SeqCst),
-        )
-        .entries()
-        .await
-        .unwrap()
+        DiskStorage::new(self.cache_path(), self.capacity.load(Ordering::SeqCst))
+            .entries()
+            .await
+            .unwrap()
     }
 
     pub async fn report(&self) -> MachineCacheReport {
+        self.report_response()
+            .await
+            .error_for_status()
+            .unwrap()
+            .json()
+            .await
+            .unwrap()
+    }
+
+    pub async fn report_response(&self) -> reqwest::Response {
         self.client
             .get(format!("{}/report", self.admin))
             .bearer_auth("admin-secret")
             .send()
-            .await
-            .unwrap()
-            .json()
             .await
             .unwrap()
     }

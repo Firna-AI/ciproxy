@@ -230,6 +230,11 @@ Machine views keep slot-only default-label fit separate from complete root
 allocation and prepared job disk. Slots expose a canonical job only after the
 report identity, exact stored runner, machine, slot range, and job alias match.
 A mismatched or ambiguous report keeps the raw identity with no job link.
+The cache view contains independent `machine_cache` and `docker_disks`
+observations. Each observation is measured or unavailable. Measured figures
+use decimal strings, including true zeros. Only a machine without a stored
+report has a null cache view. Unknown Docker reservations keep slot and image
+facts, but make disk capacity and complete concurrency unavailable.
 
 Labels include physical machine offers, complete root allocations, Boat fit,
 the largest Boat size, and current placement. The normal router uses the
@@ -288,6 +293,8 @@ It never prints a cookie, token, install command, or response body.
 - [src/wire/overflow.rs](src/wire/overflow.rs) defines the Boat wire types.
 - [src/maintenance.rs](src/maintenance.rs) owns restart and hourly work.
 - [src/wire](src/wire) owns the Rust dashboard boundary types.
+- [src/wire/machine_statistics.rs](src/wire/machine_statistics.rs) carries
+  independent cache and Docker observations through the shared protocol type.
 - [src/openapi.rs](src/openapi.rs) builds the generated reference.
 - [src/pages.rs](src/pages.rs) composes metering, billing, and Stripe previews.
 - [src/handlers/checkout.rs](src/handlers/checkout.rs) serves reviews, quote

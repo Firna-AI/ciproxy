@@ -206,7 +206,7 @@ async fn m20_slots_resolve_exact_aliases_and_release_failures_stay_explicit() {
     assert_eq!(offline["agent_version"], "0.1.0");
     assert_eq!(offline["latest_agent_version"], Value::Null);
     assert_eq!(offline["agent_up_to_date"], Value::Null);
-    assert_eq!(offline["cache"]["docker_repositories"], "2");
+    assert_eq!(offline["cache"]["docker_disks"]["repositories"], "2");
     pages.fixture.state.capacity = capacity_fixture::unavailable();
     let unknown = json(
         pages

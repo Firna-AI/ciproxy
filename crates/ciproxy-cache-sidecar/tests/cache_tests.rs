@@ -6,6 +6,8 @@ mod support;
 mod fallback_tests;
 #[path = "cases/replacement_tests.rs"]
 mod replacement_tests;
+#[path = "cases/report_availability_tests.rs"]
+mod report_availability_tests;
 #[path = "cases/runtime_scope_tests.rs"]
 mod runtime_scope_tests;
 #[path = "cases/scope_tests.rs"]

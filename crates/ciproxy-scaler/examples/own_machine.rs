@@ -50,6 +50,7 @@ fn main() {
             draining: false,
             capacity: Slots(1),
             disk_budget_bytes: 82_500_000_000,
+            docker_leased_bytes: Some(0),
             warm_count: 0,
             warm_allocation: Vec::new(),
             runners: Vec::new(),

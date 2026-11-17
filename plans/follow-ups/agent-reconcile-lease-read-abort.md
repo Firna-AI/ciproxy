@@ -38,7 +38,9 @@
   fail for its own reason.
 - **Previous examples:** The same function already logs a failed
   `refresh_budget` and goes on.
-- **Related:** `machine-statistics-availability.md`: the same lease read.
+- **Related:** `docs/protocol/docker-disks.md#unavailable-figures`: the same
+  lease read. Reports now mark unread figures as unavailable. This item
+  concerns the separate reconcile steps that the failed read still stops.
 - **Recommendation:** B. It keeps each step independent, at the same cost.
 - **Action:** fix after merge, apply B, because it is separate from the
   branch that found it.

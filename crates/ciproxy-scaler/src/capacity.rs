@@ -39,9 +39,15 @@ impl Usage {
     }
 
     pub(crate) fn fits(self, machine: &Machine, size: VmSize) -> bool {
+        let Some(leased_bytes) = machine.docker_leased_bytes else {
+            return false;
+        };
         Resources {
             slots: Slots(machine.capacity.0.saturating_sub(self.slots)),
-            job_disk_bytes: machine.disk_budget_bytes.saturating_sub(self.disk_bytes),
+            job_disk_bytes: machine
+                .disk_budget_bytes
+                .saturating_sub(leased_bytes)
+                .saturating_sub(self.disk_bytes),
         }
         .fits(size)
     }
@@ -50,7 +56,11 @@ impl Usage {
 pub(crate) fn eligible(machine: &Machine, label: &Label, sizing: RootSizing) -> bool {
     let capacity = Resources {
         slots: machine.capacity,
-        job_disk_bytes: machine.disk_budget_bytes,
+        job_disk_bytes: machine
+            .docker_leased_bytes
+            .map_or(machine.disk_budget_bytes, |leased| {
+                machine.disk_budget_bytes.saturating_sub(leased)
+            }),
     };
     label.destinations.own_machines
         && machine.connected

@@ -9,8 +9,8 @@ use unimock::{MockFn, Unimock, matching};
 
 use crate::boundaries::{CacheMock, HostMock, ImagesMock, StoreMock, VmsMock};
 use crate::controller::Agent;
+use crate::fixtures::empty_cache;
 use crate::fixtures::{controller, hardware, lease, metadata, spec, vm};
-use crate::reporting::empty_cache;
 use crate::state::{MachineState, VmRecord};
 
 #[tokio::test]

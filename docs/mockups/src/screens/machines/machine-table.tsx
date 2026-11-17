@@ -14,11 +14,12 @@ import { MachineStatusLabel } from "../../components/status.tsx";
 import { dotJoin, unbroken } from "../../fixtures/format.ts";
 import { hardwareSize } from "../../fixtures/hardware.ts";
 import { officeMini, type Machine } from "../../fixtures/machines.ts";
+import { UnknownFigure } from "./machine-cache.tsx";
 
 /**
- * The detail screens that exist: hetzner-ax42-1, the offline machine, and
- * office-mini-1, whose disk limits its slots. A person who cannot change
- * machines opens the read-only machine page.
+ * The detail screens that exist: hetzner-ax42-1, also while its cache is
+ * unknown, the offline machine, and office-mini-1, whose disk limits its
+ * slots. A person who cannot change machines opens the read-only machine page.
  */
 function detailPath(
   machine: Machine,
@@ -28,7 +29,10 @@ function detailPath(
   if (readOnly) return first ? paths.machineViewer : undefined;
   if (machine.status === "offline") return paths.machineOffline;
   if (machine.name === officeMini.name) return paths.machineDiskLimit;
-  return first ? paths.machine : undefined;
+  if (!first) return undefined;
+  return machine.cache.status === "measured"
+    ? paths.machine
+    : paths.machineCacheUnknown;
 }
 
 function MachineName({
@@ -77,10 +81,12 @@ function cell(machine: Machine, key: string, readOnly: boolean) {
         </span>
       );
     case "cache":
-      return (
+      return machine.cache.status === "measured" ? (
         <span className="num">
-          {machine.cacheUsedGb} of {machine.cacheSizeGb} GB
+          {machine.cache.usedGb} of {machine.cache.sizeGb} GB
         </span>
+      ) : (
+        <UnknownFigure />
       );
     default:
       return <span className="muted num">{machine.lastSeen}</span>;

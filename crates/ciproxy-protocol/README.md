@@ -20,6 +20,11 @@ as JSON with a `type` tag and snake-case variant names.
 The connection hello carries the same full machine state as later reports.
 Reports include hardware, health, slots, runners, images, cache counts,
 and Docker disk use. The report interval is ten seconds.
+Each cache and Docker section uses `Statistics<T>`: measured figures or an
+unavailable result. Measured fields stay flat beside `status: "measured"`.
+Unavailable sections carry only `status: "unavailable"`.
+Older sections without a status decode as measured.
+The optional `openapi` feature exports the shared statistics schema.
 The guest uses separate message types for both directions over vsock.
 The guest Hello requires `handoff_protocol_version`, which is
 `HANDOFF_PROTOCOL_VERSION`, now 2. `PrepareJob` carries the job ID and a
@@ -157,6 +162,8 @@ Review snapshot changes before accepting them.
 - [src/agent.rs](src/agent.rs) defines both agent connection directions.
 - [src/guest.rs](src/guest.rs) defines both guest vsock directions.
 - [src/reports.rs](src/reports.rs) defines current machine state.
+- [src/statistics.rs](src/statistics.rs) keeps independent measured or
+  unavailable statistics and reads older measured reports.
 - [src/cache.rs](src/cache.rs) defines restore handling and
   `CacheRestoreCounts::source`, which derives the measured content source.
 - [src/cache_metadata.rs](src/cache_metadata.rs) defines the hosted entry

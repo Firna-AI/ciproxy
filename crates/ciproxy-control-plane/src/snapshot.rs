@@ -151,10 +151,7 @@ fn machine_input(
         .as_ref()
         .map(|report| Resources {
             slots: report.report.capacity,
-            job_disk_bytes: report
-                .report
-                .job_disk_bytes
-                .saturating_sub(report.report.docker_disks.leased_bytes),
+            job_disk_bytes: report.report.job_disk_bytes,
         })
         .unwrap_or_default();
     let count = usize::try_from(machine.machine.warm_runners).unwrap_or(0);
@@ -164,6 +161,7 @@ fn machine_input(
         connected: machine.machine.last_contact_at.is_some_and(|at| now < at + chrono::Duration::seconds(60)) && machine.report.as_ref().is_some_and(|report| report.report.images.selected().is_some()),
         draining: machine.machine.draining,
         capacity: resources.slots, disk_budget_bytes: resources.job_disk_bytes,
+        docker_leased_bytes: machine.report.as_ref().and_then(|report| report.report.docker_disks.as_ref().measured().map(|docker| docker.leased_bytes)),
         warm_count: count, warm_allocation: allocate(count, history),
         runners: input.runners.iter().filter(|intent| intent.runner.state != runners::RunnerState::Stopped && matches!(intent.runner.place, RunnerPlace::Machine { machine_id, .. } if machine_id == machine.machine.id)).map(|intent| {
             let running_job = input.jobs.iter().find(|job| job.phase == DemandPhase::Started && job.runner_github_id == intent.runner.github_id && job.organization_id == intent.runner.organization_id && job.scale_set_id == intent.runner.scale_set_id);

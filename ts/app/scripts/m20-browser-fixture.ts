@@ -95,6 +95,11 @@ export async function m20HoldMachines(
   await control(origin, { holdMachines: held });
 }
 
+/** A phone shows cards; a wider window shows tables with column headers. */
+export function phone(width: number): boolean {
+  return width < 640;
+}
+
 export function machinesUrl(
   origin: string,
   machine?: string,

@@ -28,6 +28,7 @@ pub struct DiskStorage {
     pub(super) root: PathBuf,
     pub(super) capacity: Arc<AtomicU64>,
     pub(super) budget_known: Arc<AtomicBool>,
+    pub(super) recovered: AtomicBool,
     pub(super) used: Arc<AtomicU64>,
     pub(super) generation: AtomicU64,
     pub(super) captures: Mutex<Vec<Weak<Reservation>>>,
@@ -64,6 +65,7 @@ impl DiskStorage {
             root,
             capacity,
             budget_known,
+            recovered: AtomicBool::new(false),
             used,
             generation: AtomicU64::new(0),
             captures: Mutex::new(Vec::new()),
@@ -91,7 +93,10 @@ impl DiskStorage {
 #[async_trait]
 impl Storage for DiskStorage {
     async fn recover(&self) -> Result<()> {
-        self.recover_files().await
+        self.recovered.store(false, Ordering::SeqCst);
+        self.recover_files().await?;
+        self.recovered.store(true, Ordering::SeqCst);
+        Ok(())
     }
 
     fn generation(&self) -> u64 {
@@ -242,6 +247,9 @@ impl Storage for DiskStorage {
     }
 
     async fn usage(&self) -> Result<(u64, u64)> {
+        if !self.budget_known.load(Ordering::SeqCst) || !self.recovered.load(Ordering::SeqCst) {
+            return Err(CacheError::Unavailable);
+        }
         Ok((
             self.used.load(Ordering::SeqCst),
             self.capacity.load(Ordering::SeqCst),

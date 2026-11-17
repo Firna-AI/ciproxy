@@ -3,6 +3,7 @@
 mod access_tests;
 mod database;
 mod fixture;
+mod machine_statistics_tests;
 mod machine_tests;
 mod ports;
 mod ports_gate;

@@ -752,6 +752,7 @@ dependencies = [
  "insta",
  "serde",
  "serde_json",
+ "utoipa",
 ]
 
 [[package]]

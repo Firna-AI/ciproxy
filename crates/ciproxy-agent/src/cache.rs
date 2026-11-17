@@ -32,6 +32,7 @@ pub(crate) struct HttpCache {
     files: Arc<dyn CacheFiles>,
     pub(crate) commands: Arc<dyn Commands>,
     pending: Mutex<HashMap<String, Pending>>,
+    desired_budget: Mutex<Option<u64>>,
 }
 
 impl HttpCache {
@@ -45,6 +46,7 @@ impl HttpCache {
             files,
             commands,
             pending: Mutex::new(HashMap::new()),
+            desired_budget: Mutex::new(None),
         }
     }
 
@@ -69,6 +71,8 @@ impl HttpCache {
 #[async_trait]
 impl Cache for HttpCache {
     async fn refresh_budget(&self, capacity_bytes: u64) -> Result<()> {
+        let mut budget = self.desired_budget.lock().await;
+        *budget = Some(capacity_bytes);
         if let Err(error) = self.admin.budget(capacity_bytes).await {
             if let Err(restart) = self
                 .commands
@@ -86,6 +90,8 @@ impl Cache for HttpCache {
         Ok(())
     }
     async fn budget(&self, capacity_bytes: u64) -> Result<()> {
+        let mut budget = self.desired_budget.lock().await;
+        *budget = Some(capacity_bytes);
         if self.admin.budget(capacity_bytes).await.is_ok() {
             return Ok(());
         }
@@ -107,6 +113,10 @@ impl Cache for HttpCache {
     }
 
     async fn report(&self) -> Result<MachineCacheReport> {
+        let budget = self.desired_budget.lock().await;
+        if let Some(bytes) = *budget {
+            self.admin.budget(bytes).await?;
+        }
         self.admin.report().await
     }
     async fn clear(&self) -> Result<()> {
@@ -224,3 +234,7 @@ fn assigned_job(vm: &VmRecord) -> Option<JobFacts> {
 #[cfg(test)]
 #[path = "_tests_/cache_tests.rs"]
 mod cache_tests;
+
+#[cfg(test)]
+#[path = "_tests_/cache_report_tests.rs"]
+mod cache_report_tests;

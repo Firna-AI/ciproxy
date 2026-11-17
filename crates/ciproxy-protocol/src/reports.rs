@@ -7,6 +7,7 @@ use crate::identifiers::{JobId, RunnerId};
 use crate::images::ImageReport;
 use crate::resources::Slots;
 use crate::runners::RunnerReport;
+use crate::statistics::Statistics;
 
 /// The documented report interval used by the agent, in seconds.
 pub const REPORT_INTERVAL_SECONDS: u64 = 10;
@@ -31,9 +32,9 @@ pub struct MachineReport {
     /// Whether the machine accepts new runners.
     pub drain: DrainState,
     /// Machine cache space, seven-day hits, and per-job usage.
-    pub cache: MachineCacheReport,
+    pub cache: Statistics<MachineCacheReport>,
     /// Persistent repository Docker disk use.
-    pub docker_disks: DockerDiskReport,
+    pub docker_disks: Statistics<DockerDiskReport>,
     /// Images available for new VMs.
     pub images: ImageReport,
 }

@@ -16,6 +16,7 @@ use crate::reports::{
 use crate::resources::{GIGABYTE, Slots, VmSize};
 use crate::runners::{RunnerReport, RunnerSpec, RunnerState};
 use crate::secret::Secret;
+use crate::statistics::Statistics;
 
 pub(crate) const INSTALL_TOKEN: &str = "dummy-install-token";
 pub(crate) const CREDENTIAL: &str = "dummy-machine-credential";
@@ -179,7 +180,7 @@ pub(crate) fn report() -> MachineReport {
             },
         ],
         drain: DrainState::Active,
-        cache: MachineCacheReport {
+        cache: Statistics::Measured(MachineCacheReport {
             used_bytes: 20 * GIGABYTE,
             capacity_bytes: 100 * GIGABYTE,
             restores_last_7_days: 100,
@@ -230,12 +231,12 @@ pub(crate) fn report() -> MachineReport {
                     }),
                 },
             ],
-        },
-        docker_disks: DockerDiskReport {
+        }),
+        docker_disks: Statistics::Measured(DockerDiskReport {
             leased_bytes: 0,
             repositories: 2,
             used_bytes: 15 * GIGABYTE,
-        },
+        }),
         images: ImageReport {
             available: vec![
                 ImageMetadata {

@@ -12,12 +12,17 @@ impl MachineCapacity for ReportedCapacity {
         match &snapshot.report {
             Some(report) => Capacity {
                 slots: report.report.capacity,
-                job_disk_bytes: Some(
-                    report
-                        .report
-                        .job_disk_bytes
-                        .saturating_sub(report.report.docker_disks.leased_bytes),
-                ),
+                job_disk_bytes: report
+                    .report
+                    .docker_disks
+                    .as_ref()
+                    .measured()
+                    .map(|docker| {
+                        report
+                            .report
+                            .job_disk_bytes
+                            .saturating_sub(docker.leased_bytes)
+                    }),
                 image_disk_bytes: report
                     .report
                     .images

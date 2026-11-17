@@ -1,9 +1,9 @@
 //! Full hardware and slot reports, including every live VM after reconnect.
 
-use ciproxy_protocol::cache::{DockerDiskReport, MachineCacheReport};
 use ciproxy_protocol::reports::{DrainState, MachineReport, SlotOccupancy, SlotReport};
 use ciproxy_protocol::resources::Slots;
 use ciproxy_protocol::runners::RunnerState;
+use ciproxy_protocol::statistics::Statistics;
 
 use crate::capacity::machine_resources;
 use crate::controller::Controller;
@@ -16,10 +16,23 @@ impl Controller {
         let hardware = self.host.hardware()?;
         let capacity = Slots::for_machine(hardware.threads, hardware.memory_bytes, hardware.kvm);
         let job_disk_bytes = machine_resources(&hardware, self.image_budget).job_disk_bytes;
-        let cache = self.cache.report().await.unwrap_or_else(|error| {
-            tracing::warn!(error = %error, "machine cache reports unavailable");
-            empty_cache()
-        });
+        let cache = match self.cache.report().await {
+            Ok(report) => Statistics::Measured(report),
+            Err(error) => {
+                tracing::warn!(error = %error, "machine cache reports unavailable");
+                Statistics::Unavailable
+            }
+        };
+        let docker_disks = match &self.dockers {
+            Some(dockers) => match dockers.report() {
+                Ok(report) => Statistics::Measured(report),
+                Err(error) => {
+                    tracing::warn!(%error, "Docker disk reports unavailable");
+                    Statistics::Unavailable
+                }
+            },
+            None => Statistics::Unavailable,
+        };
         let images = self.images.report()?;
         let state = self.state.lock().await;
         let runners = state
@@ -65,27 +78,12 @@ impl Controller {
                 DrainState::Draining
             },
             cache,
-            docker_disks: self
-                .dockers
-                .as_ref()
-                .and_then(|dockers| dockers.report().ok())
-                .unwrap_or(DockerDiskReport {
-                    leased_bytes: 0,
-                    repositories: 0,
-                    used_bytes: 0,
-                }),
+            docker_disks,
             images,
         })
     }
 }
 
-pub(crate) fn empty_cache() -> MachineCacheReport {
-    MachineCacheReport {
-        used_bytes: 0,
-        capacity_bytes: 0,
-        restores_last_7_days: 0,
-        hits_last_7_days: 0,
-        unknown_jobs: Vec::new(),
-        jobs: Vec::new(),
-    }
-}
+#[cfg(test)]
+#[path = "_tests_/reporting_tests.rs"]
+mod reporting_tests;

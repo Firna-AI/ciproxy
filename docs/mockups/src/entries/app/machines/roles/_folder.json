@@ -1,1 +1,10 @@
-{ "title": "Roles", "order": ["viewer", "billing", "machine-viewer"] }
+{
+  "title": "Roles",
+  "order": [
+    "viewer",
+    "billing",
+    "machine-viewer",
+    "figures-billing",
+    "figures-viewer"
+  ]
+}

@@ -1,11 +1,14 @@
 //! Own-machine views, health, cache facts, and Admin controls.
 
-use super::money::Cents;
-use crate::access::workspace::WorkspaceId;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
+
+use crate::access::workspace::WorkspaceId;
+
+use super::machine_statistics::CacheView;
+use super::money::Cents;
 
 /// Hardware and state for one own machine. Byte counts use decimal strings.
 #[derive(Deserialize, Serialize, ToSchema)]
@@ -58,7 +61,7 @@ pub struct MachineView {
     pub disks: Vec<DiskView>,
     /// Last reported individual slot occupants.
     pub occupancy: Vec<SlotView>,
-    /// Last reported machine-cache facts.
+    /// Independent cache and Docker observations, absent only without a report.
     pub cache: Option<CacheView>,
     /// Current monthly machine cost in integer US cents.
     pub monthly_cost_cents: Option<Cents>,
@@ -100,23 +103,6 @@ pub enum SlotState {
     Warm,
     /// A job occupies this slot.
     Job,
-}
-
-/// Machine-cache metadata. Clear cache acts only on this machine's entries.
-#[derive(Deserialize, Serialize, ToSchema)]
-pub struct CacheView {
-    /// Machine-cache bytes used, as a decimal string.
-    pub used_bytes: String,
-    /// Machine-cache capacity bytes, as a decimal string.
-    pub capacity_bytes: String,
-    /// Handled restores during the last seven days.
-    pub restores_last_7_days: String,
-    /// Local hits during the last seven days.
-    pub hits_last_7_days: String,
-    /// Repositories with persistent Docker disks in the last report.
-    pub docker_repositories: String,
-    /// Persistent Docker disk bytes, which Clear cache preserves.
-    pub docker_disk_bytes: String,
 }
 
 /// Independent desired warm-runner target.
