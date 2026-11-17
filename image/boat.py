@@ -15,6 +15,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+from boat_delete import confirmed_delete
+
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, request, file, code, message, headers, url):
@@ -152,8 +154,7 @@ def metadata(api, args):
 
 
 def delete(api, args):
-    api.request("DELETE", f"/sandboxes/{args.sandbox}", headers={
-        "X-Ascii-Confirm-Delete": args.sandbox})
+    confirmed_delete(api.request, args.sandbox)
     print(json.dumps({"sandbox_id": args.sandbox, "delete_requested": True}))
 
 

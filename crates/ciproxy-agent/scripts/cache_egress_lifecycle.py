@@ -85,6 +85,8 @@ def lifecycle(cache):
         if agent_active:
             command("systemctl", "start", "ciproxy-agent.service")
     wait_started(cache)
+    if agent_active:
+        cache.wait_report()
 
 
 def firewall_fallback(smoke, cache):
@@ -111,3 +113,4 @@ def firewall_fallback(smoke, cache):
         command("systemctl", "reset-failed", "ciproxy-cache.service")
         command("systemctl", "start", "ciproxy-cache.service")
     cache.inspect()
+    cache.wait_report()

@@ -9,6 +9,7 @@ import socket
 import struct
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 import uuid
@@ -60,6 +61,25 @@ class InstalledCache:
         require(200 <= status < 300, "Cache administration did not succeed")
         return json.loads(raw) if raw else None
 
+    def ready(self):
+        # Authentication precedes routing. The unused root path reads no state.
+        url = "http://127.0.0.1:8229/"
+        status, _ = request(url, headers=self.headers)
+        require(status == 404, "Cache administration readiness did not succeed")
+        status, _ = request(url)
+        require(status == 401, "Cache administration readiness did not succeed")
+
+    def wait_report(self):
+        deadline = time.monotonic() + 60
+        while time.monotonic() < deadline:
+            status, raw = request("http://127.0.0.1:8229/report", headers=self.headers,
+                                  timeout=min(20, deadline - time.monotonic()))
+            if status != 503:
+                require(200 <= status < 300, "Cache administration did not succeed")
+                return json.loads(raw) if raw else None
+            time.sleep(min(1, max(0, deadline - time.monotonic())))
+        require(False, "The cache usage report did not become available")
+
     def inspect(self):
         pid = int(command("systemctl", "show", "-p", "MainPID", "--value",
                           "ciproxy-cache.service").stdout)
@@ -99,7 +119,7 @@ class InstalledCache:
             require(metadata.st_uid == 0 and metadata.st_gid == self.account.pw_gid
                     and metadata.st_mode & 0o777 == mode,
                     "The transient cache credential has unsafe ownership or permissions")
-        self.admin("/report")
+        self.ready()
         command("nft", "list", "chain", "inet", "ciproxy_cache", "output")
         denied = """from pathlib import Path
 import sys

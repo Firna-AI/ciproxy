@@ -1050,11 +1050,11 @@ Live KVM and authenticated job checks remain with the orchestrator.
           directory. No Boat runner starts. My call, 17 November 2026: fix
           the path comparison in `futex-ai/sandbox`, then update the pin.
           The merge there needs the user's approval.
-    - [ ] The firewall proof script waits for a cache usage report, which
+    - [x] The firewall proof script waits for a cache usage report, which
           needs the agent's budget. My call: separate the readiness check
           from the usage report.
           Branch: `conductor/live-run-4-script-fixes`.
-    - [ ] The overflow smoke scripts delete Boat sandboxes without the
+    - [x] The overflow smoke scripts delete Boat sandboxes without the
           confirmation header. My call: one shared confirmed-deletion
           helper for the operator scripts.
           Branch: `conductor/live-run-4-script-fixes`.

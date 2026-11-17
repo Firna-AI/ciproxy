@@ -5,9 +5,9 @@
 import contextlib
 import io
 import json
-import os
 import sys
 import unittest
+import urllib.request
 from unittest.mock import patch
 
 sys.dont_write_bytecode = True
@@ -21,10 +21,11 @@ class DeleteConfirmation(unittest.TestCase):
             with self.subTest(sandbox=sandbox):
                 response = io.BytesIO(b'{"ok":true}')
                 output = io.StringIO()
-                with patch.dict(os.environ, {
-                    "BOAT_API_KEY": "fixture-key",
-                    "BOAT_API_BASE": "https://boat.example/api/v1",
-                }), patch.object(sys, "argv", ["boat.py", "delete", sandbox]), \
+                api = boat.Api.__new__(boat.Api)
+                api.base, api.key = "https://boat.example/api/v1", ""
+                api.opener = urllib.request.build_opener(boat.NoRedirect)
+                with patch.object(boat, "Api", return_value=api), \
+                        patch.object(sys, "argv", ["boat.py", "delete", sandbox]), \
                         patch("urllib.request.OpenerDirector.open", return_value=response) as opened, \
                         contextlib.redirect_stdout(output):
                     self.assertEqual(boat.main(), 0)
