@@ -16,7 +16,8 @@ Only an Admin connects Boat.
 1. Create an API key in your Boat account.
 2. In ciproxy, open **Settings**, then **Overflow**. Setup has the same
    step, and you can skip it there.
-3. Paste the API key. ciproxy checks the key with Boat.
+3. Paste the API key. Select **Check key**. ciproxy checks the key with
+   Boat.
 4. Choose the wallet that pays for the sandboxes. After the key check, the
    form lists the wallets that the key can use, and selects the most likely
    one.
@@ -54,7 +55,9 @@ rules. The **Machines** page shows your Boat account and the overflow wait.
 - Each job runs in its own sandbox. ciproxy deletes the sandbox when the job
   ends.
 - The sandbox has the cheapest Boat size that covers the vCPU, the memory,
-  and the VM disk of the label. The job page names that Boat size.
+  and the VM disk of the label. When none fits, the label's
+  [When nothing fits](/docs/reference/labels/#custom-labels) setting can
+  allow the largest Boat size instead. The job page names that Boat size.
 - Boat ends each sandbox after 6 hours, or 2 hours on a Boat free trial. So
   a job on Boat runs for at most 6 hours, as on a GitHub-hosted runner.
 - A job on Boat uses the GitHub cache, and it gets no Docker disk.
