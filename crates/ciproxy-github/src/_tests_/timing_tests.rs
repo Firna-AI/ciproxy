@@ -21,6 +21,7 @@ fn target() -> TimingTarget {
         repository: "customer/private".into(),
         attempt: PendingTiming {
             attempt_id: id(80),
+            awaiting_completion: false,
             job: GithubJob {
                 id: id(71),
                 organization_id: id(5),
@@ -81,6 +82,7 @@ async fn failed_absent_and_incomplete_times_share_exponential_backoff() {
                         actions_job_id: 333,
                         started_at: (second >= 210).then_some(at()),
                         completed_at: (second >= 750).then_some(at() + Duration::minutes(1)),
+                        result: None,
                         terminal: true,
                     })),
                 }
@@ -101,6 +103,7 @@ async fn failed_absent_and_incomplete_times_share_exponential_backoff() {
             actions_job_id: 333,
             started_at: Some(at()),
             completed_at: Some(at() + Duration::minutes(1)),
+            result: None,
             terminal: true
         }
     );

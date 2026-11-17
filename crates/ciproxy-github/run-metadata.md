@@ -1,9 +1,9 @@
 # Trusted run metadata
 
 This guide gives the run facts that the App integration reads from
-GitHub, the assignment facts for the agent, the cache entry metadata, and
-webhook delivery recovery. The [crate README](README.md) gives the rest of
-the integration.
+GitHub, the assignment facts for the agent, the cache entry metadata, job
+completion recovery, and webhook delivery recovery. The
+[crate README](README.md) gives the rest of the integration.
 
 ## Run facts
 
@@ -37,8 +37,9 @@ The agent sends those facts and the original token to the machine cache.
 The machine returns a checked signed scope or a typed unknown reason.
 It checks cache trust, also for reusable workflows. The agent uses the
 checked ref for Docker policy and owns the Docker-disk lifecycle.
-Installation tokens keep their three permissions for API event and head
-metadata. The App's fourth permission, "Members: read", serves sign-in only.
+The REST adapter reads the API event and head metadata with its
+installation token. [Credential scopes](README.md#credential-scopes) gives
+the scope of each credential.
 
 ## Cache entry metadata
 
@@ -57,11 +58,41 @@ runs on the calling machine. The
 [cache protocol](../../docs/protocol/cache.md#restore-order) gives that
 rule and the use of these facts.
 
+## Job completion recovery
+
+The REST timing repair reads the actual Actions job of a run and its
+unique runner. It saves the real times and the numeric Actions job ID of
+an attempt that still lacks a real start or finish. The control plane runs
+it in its [accounting worker](../ciproxy-control-plane/github-workers.md),
+with a backoff for each attempt.
+
+A listener receives the messages of one remote scale set. When reconcile
+moves a binding to a fresh remote set, its listener restarts on the new
+remote ID. A started job on the old remote set then gets no completion
+message. The repair therefore also selects each started attempt whose
+exact runner registered on a previous remote ID of the binding. A started
+job on the current remote ID stays out of this scan.
+
+The runner can belong to a retained registration in another workspace of
+the same GitHub organization. Recovery matches stable GitHub organization
+and runner IDs. The attempt and its updates stay in its saved workspace.
+
+For such an attempt, the repair polls GitHub with the same backoff until
+GitHub reports the actual completion. It saves the terminal state, the
+finish time, and GitHub's conclusion verbatim. The store's
+[timing writes](../ciproxy-store-pg/github-jobs.md#actions-timing-writes)
+say which saved values stay. This needs only the existing "Actions: read"
+permission and no new service.
+
 ## Webhook delivery recovery
 
 The hosted runtime can recover failed webhook deliveries through the
 App-JWT delivery-history API. Recovery reads every cursor page and groups
-attempts by event GUID. A successful latest retry prevents an older failure
-from being redelivered again. Individual redelivery failures remain
-retryable without blocking the other retained events.
-This uses no extra installation permission.
+attempts by event GUID. A latest attempt that got the route's
+acknowledgement prevents an older failure from being redelivered again.
+Every other latest attempt counts as failed. The
+[GitHub worker guide](../ciproxy-control-plane/github-workers.md) gives the
+acknowledgement status and its reason. Individual redelivery failures
+remain retryable without blocking the other retained events.
+Recovery uses only the App JWT, as
+[Credential scopes](README.md#credential-scopes) says.

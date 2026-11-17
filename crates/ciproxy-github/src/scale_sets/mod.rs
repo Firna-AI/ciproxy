@@ -1,6 +1,7 @@
 //! Narrow scale-set and message-session boundaries backed by scaleset.
 
 mod failure;
+pub(crate) mod ownership;
 mod queue;
 pub mod sdk;
 
@@ -35,8 +36,14 @@ pub trait ScaleSetFactory: Send + Sync {
 #[async_trait]
 pub trait ScaleSetApi: Send + Sync {
     /// Find or create one label in the dedicated group with updates disabled.
-    async fn ensure(&self, label: &str, runner_group_id: i64, saved_id: Option<i64>)
-    -> Result<i64>;
+    /// Supply every label selected for this reconciliation before a remote rename.
+    async fn ensure(
+        &self,
+        label: &str,
+        runner_group_id: i64,
+        saved_id: Option<i64>,
+        requested_labels: &[&str],
+    ) -> Result<i64>;
     /// Open one message session after the caller has acquired the store lock.
     async fn open(&self, scale_set_id: i64, owner: &str) -> Result<Box<dyn MessageQueue>>;
     /// Create the ephemeral registration for one selected runner identity.
@@ -48,7 +55,13 @@ pub trait ScaleSetApi: Send + Sync {
     /// Delete a scale set while App access still exists, such as a take-out.
     async fn remove_scale_set(&self, scale_set_id: i64) -> Result<()>;
     /// Release a retired label name while retaining its exact remote binding.
-    async fn rename_scale_set(&self, scale_set_id: i64, name: &str) -> Result<()>;
+    /// Supply every label selected for this reconciliation before a remote rename.
+    async fn rename_scale_set(
+        &self,
+        scale_set_id: i64,
+        name: &str,
+        requested_labels: &[&str],
+    ) -> Result<()>;
 }
 
 /// An owned GitHub message session. It never acknowledges messages itself.

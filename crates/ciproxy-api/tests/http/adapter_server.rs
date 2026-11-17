@@ -146,6 +146,13 @@ async fn handle(
         return Json(requests).into_response();
     }
     if path.ends_with("/access_tokens") {
+        let expected = format!("Bearer {}", data.token.expose_secret());
+        if !headers
+            .get("Authorization")
+            .is_some_and(|value| value == expected.as_str())
+        {
+            return StatusCode::UNAUTHORIZED.into_response();
+        }
         return (
             StatusCode::CREATED,
             Json(json!({"token":data.token.expose_secret(),"expires_at":"2099-01-01T00:00:00Z"})),

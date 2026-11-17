@@ -112,6 +112,9 @@ async fn handle(
         return Json(state.job_pages.lock().unwrap()[page - 1].clone()).into_response();
     }
     if path.ends_with("/access_tokens") {
+        if !app_jwt {
+            return StatusCode::UNAUTHORIZED.into_response();
+        }
         let number = state.tokens.fetch_add(1, Ordering::SeqCst) + 1;
         let expiry = if number == 1 {
             "2026-11-04T12:10:00Z"

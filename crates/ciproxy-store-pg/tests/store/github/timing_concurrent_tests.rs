@@ -14,15 +14,20 @@ fn terminal_timing_preserves_listener_completion_during_overlap() {
     preserves_listener_completion(
         true,
         Some("2026-11-04T10:46:24.317465059Z".parse().unwrap()),
+        Some("failure".to_owned()),
     );
 }
 
 #[test]
 fn running_timing_recovers_actions_id_after_listener_completion_during_overlap() {
-    preserves_listener_completion(false, None);
+    preserves_listener_completion(false, None, None);
 }
 
-fn preserves_listener_completion(terminal: bool, completed_at: Option<DateTime<Utc>>) {
+fn preserves_listener_completion(
+    terminal: bool,
+    completed_at: Option<DateTime<Utc>>,
+    result: Option<String>,
+) {
     let mut database = Database::new();
     let workspace = database.workspace();
     let organization = database.organization(&workspace);
@@ -51,6 +56,7 @@ fn preserves_listener_completion(terminal: bool, completed_at: Option<DateTime<U
         actions_job_id: 81,
         started_at: Some("2026-11-04T10:46:21.661245605Z".parse().unwrap()),
         completed_at,
+        result,
         terminal,
     };
     timing_after_listener(

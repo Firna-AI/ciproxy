@@ -75,24 +75,8 @@ It also records the trusted creation time, zero-dollar Free cost, and
 initial Free period from the same billing creation anchor.
 GitHub labels, pending Admin, and lifecycle events remain in the enclosing
 registration transaction.
-UUID scale-set demand stays separate from numeric Actions job history.
-Each demand write saves a pending delivery revision in the same statement.
-Stale replay cannot replace a later assignment or a terminal state.
-An exact UTC text key preserves nanosecond assignment order across the
-microsecond precision of PostgreSQL timestamps.
-Delivery confirmation cannot consume a newer revision.
-The GitHub retention query deletes completed demand after 90 days,
-including pending deliveries. Active work stays.
-When GitHub omitted its completion time, the first trusted observation
-supplied by the caller starts the period. Exact replay keeps that instant.
-The query stores this observation separately from GitHub's metadata.
 
-Authoritative Actions timing writes change only times, completion phase, and
-the numeric Actions job ID. They preserve listener metadata and results when
-writes overlap. One transaction saves the retained assignment, its matching
-current demand, and the pending delivery revision. An older assignment cannot
-change the current demand. Duplicate timing keeps the revision unchanged.
-The first completion observation stays unchanged.
+The [GitHub job guide](github-jobs.md) gives job demand and timing writes.
 
 Gateway queries lock the workspace before registration or token issuance.
 They serialize against last-App removal and reject a retained empty workspace.
@@ -292,7 +276,7 @@ CI starts the database for the existing workspace test phase.
 - [src/overflow/connections.rs](src/overflow/connections.rs) issues pending
   connection grants under the workspace removal lock.
 - [src/github](src/github) owns atomic installation setup, repository
-  snapshots, durable job revisions, and demand retention.
+  snapshots, durable job revisions, demand retention, and timing writes.
 - [src/machine_removal.rs](src/machine_removal.rs) preserves removal times.
 - [src/metering](src/metering) stores cost histories and accounting deltas.
 - [src/metering/snapshot.rs](src/metering/snapshot.rs) configures shared

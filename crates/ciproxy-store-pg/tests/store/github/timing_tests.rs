@@ -31,6 +31,7 @@ fn timing_updates_retained_attempt_without_replacing_current_assignment() {
         actions_job_id: 81,
         started_at: Some("2026-11-04T10:46:21.661245605Z".parse().unwrap()),
         completed_at: None,
+        result: None,
         terminal: true,
     };
     database
@@ -78,14 +79,16 @@ fn timing_updates_retained_attempt_without_replacing_current_assignment() {
         .save_github_job(workspace.id, &reassigned, at())
         .unwrap();
     times.completed_at = Some("2026-11-04T10:46:24.317465059Z".parse().unwrap());
+    times.result = Some("failure".to_owned());
     database
         .store
         .save_github_job_times(workspace.id, attempt_id, &times, at() + Duration::days(2))
         .unwrap();
     completed.completed_at = Some("2026-11-04T10:46:24.317465059Z".parse().unwrap());
+    completed.result = Some("failure".to_owned());
     assert_eq!(
         saved_attempt(&mut database, workspace.id, attempt_id),
-        (completed, Some(at()))
+        (completed.clone(), Some(at()))
     );
     assert_eq!(
         database
@@ -100,8 +103,25 @@ fn timing_updates_retained_attempt_without_replacing_current_assignment() {
             .pending_github_jobs(workspace.id, organization.id, scale_set.id)
             .unwrap(),
         vec![JobDelivery {
-            job: reassigned,
+            job: reassigned.clone(),
             revision: 3,
         }]
+    );
+    times.result = Some("success".to_owned());
+    times.terminal = false;
+    database
+        .store
+        .save_github_job_times(workspace.id, attempt_id, &times, at() + Duration::days(3))
+        .unwrap();
+    assert_eq!(
+        saved_attempt(&mut database, workspace.id, attempt_id),
+        (completed, Some(at()))
+    );
+    assert_eq!(
+        database
+            .store
+            .github_jobs(workspace.id, organization.id)
+            .unwrap(),
+        vec![reassigned]
     );
 }

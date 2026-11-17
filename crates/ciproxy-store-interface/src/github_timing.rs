@@ -12,6 +12,8 @@ pub struct PendingTiming {
     pub attempt_id: Uuid,
     /// Trusted scale-set identity and API repository/run facts.
     pub job: GithubJob,
+    /// Its captured runner belongs to a previous remote binding and needs completion.
+    pub awaiting_completion: bool,
 }
 
 /// Real Actions job metadata matched by run and unique ephemeral runner.
@@ -23,6 +25,8 @@ pub struct JobTimes {
     pub started_at: Option<DateTime<Utc>>,
     /// Real finish, absent until GitHub supplies it.
     pub completed_at: Option<DateTime<Utc>>,
+    /// GitHub's conclusion, kept verbatim and absent while unavailable.
+    pub result: Option<String>,
     /// GitHub reports the attempt completed even if its finish is unavailable.
     pub terminal: bool,
 }

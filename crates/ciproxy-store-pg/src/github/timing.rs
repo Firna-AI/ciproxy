@@ -23,25 +23,63 @@ struct TimingUpdate {
     started_at: Option<DateTime<Utc>>,
     completed_at: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    result: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     phase: Option<DemandPhase>,
+}
+
+/// Match captured runners across retained owners in the same GitHub organization.
+/// Compare their targets with the attempt's own current binding.
+const STRANDED_STARTED: &str = concat!(
+    "github_job_attempts.phase = 1 AND EXISTS (",
+    "SELECT 1 FROM scale_sets s JOIN organizations job_org ",
+    "ON job_org.id = s.organization_id AND job_org.workspace_id = s.workspace_id ",
+    "JOIN organizations runner_org ON runner_org.github_id = job_org.github_id ",
+    "JOIN runners r ON r.organization_id = runner_org.id ",
+    "AND r.workspace_id = runner_org.workspace_id ",
+    "WHERE s.workspace_id = github_job_attempts.workspace_id ",
+    "AND s.organization_id = github_job_attempts.organization_id ",
+    "AND s.id = (github_job_attempts.body->>'scale_set_id')::uuid ",
+    "AND s.label_id = (github_job_attempts.body->>'label_id')::uuid ",
+    "AND r.github_id = (github_job_attempts.body->>'runner_github_id')::bigint ",
+    "AND r.registration_scale_set_id <> s.github_id)",
+);
+
+/// Apply timing facts while keeping an existing non-null result first.
+fn merged_timing_body(table: &str) -> String {
+    let incoming = format!("{table}.body || $3");
+    let merged = updates::merged_body(table, &incoming);
+    format!(
+        "({merged}) || jsonb_build_object('result', COALESCE(NULLIF({table}.body->'result', 'null'::jsonb), $3->'result'))"
+    )
 }
 
 pub(super) fn pending(store: &PgStore, workspace_id: Uuid) -> Result<Vec<PendingTiming>> {
     github_job_attempts::table
         .filter(github_job_attempts::workspace_id.eq(workspace_id))
         .filter(github_job_attempts::phase.ge(1))
-        .filter(diesel::dsl::sql::<diesel::sql_types::Bool>(
-            "body->>'started_at' IS NULL OR (phase=2 AND body->>'completed_at' IS NULL)",
-        ))
+        .filter(
+            diesel::dsl::sql::<diesel::sql_types::Bool>(
+                "body->>'started_at' IS NULL OR (phase=2 AND body->>'completed_at' IS NULL)",
+            )
+            .or(diesel::dsl::sql::<diesel::sql_types::Bool>(
+                STRANDED_STARTED,
+            )),
+        )
         .order(github_job_attempts::id)
-        .select((github_job_attempts::id, github_job_attempts::body))
-        .load::<(Uuid, serde_json::Value)>(&mut *store.connection()?)
+        .select((
+            github_job_attempts::id,
+            github_job_attempts::body,
+            diesel::dsl::sql::<diesel::sql_types::Bool>(STRANDED_STARTED),
+        ))
+        .load::<(Uuid, serde_json::Value, bool)>(&mut *store.connection()?)
         .store()?
         .into_iter()
-        .map(|(attempt_id, body)| {
+        .map(|(attempt_id, body, awaiting_completion)| {
             Ok(PendingTiming {
                 attempt_id,
                 job: serde_json::from_value(body).internal()?,
+                awaiting_completion,
             })
         })
         .collect()
@@ -58,6 +96,7 @@ pub(super) fn save(
         actions_job_id: times.actions_job_id,
         started_at: times.started_at,
         completed_at: times.completed_at,
+        result: times.result.clone(),
         phase: times.terminal.then_some(DemandPhase::Completed),
     };
     let body = serde_json::to_value(update).internal()?;
@@ -67,7 +106,7 @@ pub(super) fn save(
         DemandPhase::Available
     };
     let completion_observed = updates::completion_observation(phase, observed_at);
-    let merged_body = updates::merged_body("github_jobs", "github_jobs.body || $3");
+    let merged_body = merged_timing_body("github_jobs");
     let merged_phase = updates::monotonic_phase("github_jobs", "$4");
     let completed_observed_at = updates::completed_observed_at("github_jobs", "$5");
     let demand_query = format!(
@@ -82,7 +121,7 @@ pub(super) fn save(
          AND github_jobs.body IS DISTINCT FROM ({merged_body})",
         updates::NEXT_REVISION
     );
-    let merged_body = updates::merged_body("github_job_attempts", "github_job_attempts.body || $3");
+    let merged_body = merged_timing_body("github_job_attempts");
     let merged_phase = updates::monotonic_phase("github_job_attempts", "$4");
     let completed_observed_at = updates::completed_observed_at("github_job_attempts", "$5");
     let attempt_query = format!(
