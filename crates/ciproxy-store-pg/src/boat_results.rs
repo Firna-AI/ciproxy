@@ -132,6 +132,7 @@ impl BoatResultStore for PgStore {
     }
 }
 
+/// Keep delivery foreign-key checks compatible with the workspace fence.
 fn load(
     connection: &mut PgConnection,
     workspace: Uuid,
@@ -140,7 +141,7 @@ fn load(
     workspaces::table
         .find(workspace)
         .select(workspaces::id)
-        .for_update()
+        .for_no_key_update()
         .first::<Uuid>(connection)
         .store()?;
     let body = boat_runner_intents::table
