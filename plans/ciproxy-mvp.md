@@ -927,6 +927,29 @@ Live KVM and authenticated job checks remain with the orchestrator.
         Branch:
         `conductor/fix-agent-live-defects-unconfigured-stop-xfs-first-install`.
   - [ ] Run every scenario again, with the firewall proof and its reboot.
+      Run of 16 November 2026 with agent pre-release 0.1.1 and image
+      `2026-11-16-b49591d`: 21 passed, 9 failed, 6 skipped. The customer
+      install, warm, slots, drain, offline, restart, disallowed, the
+      interrupted startup, remove, Docker with no fit, the Milestone 9
+      smokes, and the firewall network checks across the reboot passed.
+      Evidence: `.context/ciproxy-mvp/live-2026-11-16/agent-runtime/`. My
+      calls of 17 November 2026 for its six findings, all fix now:
+  - [ ] Set the runner account environment in the guest launcher, so that
+        `HOME` is `/home/runner`. Cache jobs failed without it.
+  - [ ] Let the Boat client accept the shared snapshot reference of the
+        image, tell a create that was never sent apart from an uncertain
+        one, and recover the blocked unsent start. The client part is in
+        `futex-ai/sandbox`, whose merge needs the user.
+  - [ ] Send the delete confirmation of Boat from each sandbox deletion,
+        in `image/boat.py` and in `futex-ai/sandbox`.
+  - [ ] Mount the prepared Docker disk directly at `/var/lib/docker`, keeping
+        the root fallback. The mount move failed under a shared mount.
+  - [ ] Restore the trusted file capabilities of the image release before
+        the runner starts on Boat, and keep the comparison check.
+  - [ ] Use the Rust setup of the gate in the tagged agent release workflow.
+  - [ ] Publish agent pre-release 0.1.2 with item 117 = D and these fixes,
+        build the next image release with its Boat snapshot, and run the
+        failed and skipped checks again, with the overflow smoke.
 
 Owner review of pull request #31, round 1, 6 November 2026: the user chose
 fix now for findings 1 to 8 and fix after the merge for finding 9.
