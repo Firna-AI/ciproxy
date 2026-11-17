@@ -58,6 +58,9 @@ async fn m18_waiting_label_fit_distinguishes_missing_capacity_busy_refusal_and_f
         assert_eq!(fit["nothing_fits"], true);
         assert_eq!(fit["current"]["fit"]["no_machine_fits"], true);
         assert_eq!(fit["boat"]["state"], "no_size_fits");
+        assert_eq!(fit["current"]["fit"]["boat"], fit["boat"]);
+        assert_eq!(fit["current"]["fit"]["boat_connected"], true);
+        assert_eq!(fit["current"]["fit"]["placement"], "waits");
         assert_eq!(fit["can_edit"], editable);
         assert_eq!(fit["ask_admin"], ask);
     }
@@ -80,12 +83,24 @@ async fn m18_waiting_label_fit_distinguishes_missing_capacity_busy_refusal_and_f
     assert_eq!(gap["overflow"]["limit_cents"], "100");
     assert_eq!(gap["overflow"]["measured_complete"], false);
     assert_eq!(gap["waiting_labels"][0]["boat"]["state"], "no_size_fits");
+    assert_eq!(
+        gap["waiting_labels"][0]["current"]["fit"]["boat"],
+        gap["waiting_labels"][0]["boat"]
+    );
     assert_eq!(gap["waiting_labels"][0]["nothing_fits"], true);
     assert_eq!(gap["waiting_labels"][0]["ask_admin"], true);
     catalog(&pages, true, false);
     let body = live(&pages, &viewer).await;
     assert_eq!(body["waiting_labels"][0]["nothing_fits"], false);
     assert_eq!(body["waiting_labels"][0]["boat"]["state"], "fitting");
+    assert_eq!(
+        body["waiting_labels"][0]["current"]["fit"]["boat"],
+        body["waiting_labels"][0]["boat"]
+    );
+    assert_eq!(
+        body["waiting_labels"][0]["current"]["fit"]["placement"],
+        "boat_only"
+    );
     assert_eq!(
         body["waiting_labels"][0]["boat"]["size"]["disk_bytes"],
         "100000000000"
@@ -94,6 +109,10 @@ async fn m18_waiting_label_fit_distinguishes_missing_capacity_busy_refusal_and_f
     let body = live(&pages, &viewer).await;
     assert_eq!(body["waiting_labels"][0]["nothing_fits"], false);
     assert_eq!(body["waiting_labels"][0]["boat"]["refused"], true);
+    assert_eq!(
+        body["waiting_labels"][0]["current"]["fit"]["boat"],
+        body["waiting_labels"][0]["boat"]
+    );
     assert_eq!(body["overflow"]["refused_sizes"][0], "observed-size");
     catalog(&pages, false, false);
     label.when_nothing_fits = WhenNothingFits::LargestBoat;
@@ -113,10 +132,27 @@ async fn m18_waiting_label_fit_distinguishes_missing_capacity_busy_refusal_and_f
         body["waiting_labels"][0]["boat"]["size"]["disk_bytes"],
         "60000000000"
     );
+    assert_eq!(
+        body["waiting_labels"][0]["current"]["fit"]["boat"],
+        body["waiting_labels"][0]["boat"]
+    );
+    pages.fixture.state.capacity = capacity_fixture::unavailable();
+    let body = live(&pages, &viewer).await;
+    assert_eq!(body["waiting_labels"][0]["nothing_fits"], Value::Null);
+    assert_eq!(body["waiting_labels"][0]["boat"]["state"], "unavailable");
+    assert_eq!(
+        body["waiting_labels"][0]["current"]["fit"]["boat"],
+        body["waiting_labels"][0]["boat"]
+    );
+    pages.fixture.state.capacity = capacity_fixture::standard();
     sizing(&mut pages, false);
     let body = live(&pages, &viewer).await;
     assert_eq!(body["waiting_labels"][0]["nothing_fits"], Value::Null);
     assert_eq!(body["waiting_labels"][0]["boat"]["state"], "unavailable");
+    assert_eq!(
+        body["waiting_labels"][0]["current"]["fit"]["boat"],
+        body["waiting_labels"][0]["boat"]
+    );
     label.allow_machines = false;
     label.allow_boat = false;
     pages
@@ -129,6 +165,10 @@ async fn m18_waiting_label_fit_distinguishes_missing_capacity_busy_refusal_and_f
     let body = live(&pages, &viewer).await;
     assert_eq!(body["waiting_labels"][0]["nothing_fits"], true);
     assert_eq!(body["waiting_labels"][0]["boat"]["state"], "disabled");
+    assert_eq!(
+        body["waiting_labels"][0]["current"]["fit"]["boat"],
+        body["waiting_labels"][0]["boat"]
+    );
     assert_eq!(
         body["waiting_labels"][0]["current"]["fit"]["unavailable_machines"],
         1

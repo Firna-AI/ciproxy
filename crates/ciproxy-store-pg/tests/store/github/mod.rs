@@ -10,3 +10,6 @@ mod own_observation_tests;
 mod own_routing_tests;
 mod reconcile_tests;
 mod registration_tests;
+mod timing_concurrent_tests;
+mod timing_support;
+mod timing_tests;

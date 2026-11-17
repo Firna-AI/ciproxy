@@ -2,12 +2,12 @@
 
 use chrono::{DateTime, NaiveDate, Utc};
 use ciproxy_protocol::resources::VmSize;
+use ciproxy_store_interface::billing::state::{AddOns, Selection, Tier};
 use ciproxy_store_interface::metering::facts::{JobPlace, UsageJob};
 use ciproxy_store_interface::metering::history::{CostHistory, PlanCost};
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
-use crate::pricing::{AddOns, Plan, Tier};
 use crate::report::catalog::{Alternative, PriceList, SizePrice};
 use crate::report::range::DateRange;
 
@@ -27,8 +27,8 @@ pub(crate) fn size() -> VmSize {
         disk_bytes: 60_000_000_000,
     }
 }
-pub(crate) fn plan(tier: Tier) -> Plan {
-    Plan {
+pub(crate) fn plan(tier: Tier) -> Selection {
+    Selection {
         tier,
         add_ons: AddOns::default(),
     }

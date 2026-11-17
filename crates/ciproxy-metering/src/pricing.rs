@@ -1,44 +1,14 @@
 //! Published tier capacities, manually selected add-ons, and paid offers.
 
+use ciproxy_store_interface::billing::state::{AddOns, Selection, Tier};
 use rust_decimal::Decimal;
 use rust_decimal::prelude::ToPrimitive;
-
-const START_BLOCK_SIZE: u64 = 10_000;
-
-/// A published ciproxy pricing tier.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Tier {
-    /// The tier with no subscription or add-ons.
-    Free,
-    /// The first paid tier.
-    Team,
-    /// The larger paid tier.
-    Business,
-}
-
-/// Customer-selected monthly add-on quantities.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub struct AddOns {
-    /// Blocks of ten thousand extra starts.
-    pub start_blocks: u64,
-    /// Extra own machines.
-    pub machines: u64,
-}
-
-/// A tier with its customer-selected add-ons.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Plan {
-    /// The published tier.
-    pub tier: Tier,
-    /// The manually saved quantities, ignored for Free.
-    pub add_ons: AddOns,
-}
 
 /// Capacity and monthly price of a tier with add-ons.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PlanChoice {
     /// The tier and required add-on quantities.
-    pub plan: Plan,
+    pub plan: Selection,
     /// The included starts of each billing period.
     pub starts: Decimal,
     /// The included current machine count.
@@ -48,21 +18,15 @@ pub struct PlanChoice {
 }
 
 /// Compute the published capacities and price without changing the saved plan.
-pub fn plan_choice(plan: Plan) -> PlanChoice {
-    let (starts, machines, price) = base(plan.tier);
-    let add_ons = if plan.tier == Tier::Free {
-        AddOns::default()
-    } else {
-        plan.add_ons
-    };
+pub fn plan_choice(mut plan: Selection) -> PlanChoice {
+    if plan.tier == Tier::Free {
+        plan.add_ons = AddOns::default();
+    }
     PlanChoice {
-        plan: Plan { add_ons, ..plan },
-        starts: Decimal::from(starts)
-            + Decimal::from(add_ons.start_blocks) * Decimal::from(START_BLOCK_SIZE),
-        machines: u128::from(machines) + u128::from(add_ons.machines),
-        monthly_usd: Decimal::from(price)
-            + Decimal::from(add_ons.start_blocks) * Decimal::from(10)
-            + Decimal::from(add_ons.machines) * Decimal::from(20),
+        plan,
+        starts: Decimal::from(plan.included_starts()),
+        machines: u128::from(plan.included_machines()),
+        monthly_usd: Decimal::from(plan.monthly_cents()) / Decimal::from(100),
     }
 }
 
@@ -82,27 +46,21 @@ pub fn cheapest_offer(expected_starts: Decimal, machines: u64, current: Tier) ->
 }
 
 fn covering(tier: Tier, expected: Decimal, machine_count: u64) -> PlanChoice {
-    let (starts, machines, _) = base(tier);
-    let blocks = ((expected - Decimal::from(starts)).max(Decimal::ZERO)
-        / Decimal::from(START_BLOCK_SIZE))
+    let blocks = ((expected - Decimal::from(tier.included_starts())).max(Decimal::ZERO)
+        / Decimal::from(AddOns::STARTS_PER_BLOCK))
     .ceil()
-    .to_u64()
-    .unwrap_or_default();
-    plan_choice(Plan {
+    .to_u32()
+    .unwrap_or(u32::MAX);
+    plan_choice(Selection {
         tier,
         add_ons: AddOns {
             start_blocks: blocks,
-            machines: machine_count.saturating_sub(machines),
+            machines: machine_count
+                .saturating_sub(tier.included_machines())
+                .try_into()
+                .unwrap_or(u32::MAX),
         },
     })
-}
-
-fn base(tier: Tier) -> (u64, u64, u64) {
-    match tier {
-        Tier::Free => (2_000, 1, 0),
-        Tier::Team => (25_000, 3, 49),
-        Tier::Business => (150_000, 10, 299),
-    }
 }
 
 #[cfg(test)]

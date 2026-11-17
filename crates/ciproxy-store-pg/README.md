@@ -87,6 +87,13 @@ When GitHub omitted its completion time, the first trusted observation
 supplied by the caller starts the period. Exact replay keeps that instant.
 The query stores this observation separately from GitHub's metadata.
 
+Authoritative Actions timing writes change only times, completion phase, and
+the numeric Actions job ID. They preserve listener metadata and results when
+writes overlap. One transaction saves the retained assignment, its matching
+current demand, and the pending delivery revision. An older assignment cannot
+change the current demand. Duplicate timing keeps the revision unchanged.
+The first completion observation stays unchanged.
+
 Gateway queries lock the workspace before registration or token issuance.
 They serialize against last-App removal and reject a retained empty workspace.
 Registration inserts the machine, report, and hashed credential together.
@@ -245,6 +252,7 @@ Separate databases isolate sequence keys and advisory locks.
 Lock tests terminate only their own lock session.
 Metering concurrency tests coordinate tagged sessions through exact database
 lock dependencies. They check production cursor writes and report snapshots.
+GitHub timing overlap tests use the same signals for competing writes.
 CI starts the database for the existing workspace test phase.
 
 ### Key Code

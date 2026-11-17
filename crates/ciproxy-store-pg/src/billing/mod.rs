@@ -1,5 +1,6 @@
 //! Billing queries and dedicated PostgreSQL session locks.
 
+mod costs;
 mod payments;
 mod queries;
 mod quotes;

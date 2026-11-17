@@ -17379,7 +17379,7 @@
             "oneOf": [
               {
                 "$ref": "#/components/schemas/LabelView",
-                "description": "Current label policy and physical own-machine fit, absent after retirement."
+                "description": "Current label policy and physical machine and Boat fit, absent after retirement."
               },
               {
                 "type": "null"
