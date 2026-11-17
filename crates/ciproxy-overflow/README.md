@@ -23,7 +23,7 @@ The control plane must keep own-machine routing available when Boat fails.
 ## What This Crate Does
 
 The dependency revision is
-`16d9a244ed72771acec66d5a33c927c94258d608` of `futex-ai/sandbox`.
+`037fbd7e3671975e79775c7dbcfb95b1a1fe37ab` of `futex-ai/sandbox`.
 `BoatFactory` constructs the pinned lifecycle, capacity, and file capabilities.
 All capabilities use the same explicit personal or organization wallet.
 Account reads supply the verified name, trial state, and start-fee bound.
