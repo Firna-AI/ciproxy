@@ -1247,6 +1247,13 @@ UTC RFC 3339, and IDs as strings. Reason: JavaScript loses 64-bit numbers.
       Read credentials through `CIPROXY_API_CREDENTIALS_FILE`. Record no
       secret in evidence. Branch: `conductor/ciproxy-mvp-milestone-14-api`.
       Verification evidence: `.context/ciproxy-mvp-m14/`.
+      The live API smoke passed on 8 and 16 November 2026. The one-tab
+      repeated authorization passed on 17 November 2026: GitHub showed no
+      consent page, the session moved from access ended to ready with both
+      workspaces, and the original expiry stayed. The two-tab variant and
+      the install-binding probes remain. The binding probes need a GitHub
+      user token and an App JWT in the private file. Evidence:
+      `.context/ciproxy-mvp/m14-reauth/`.
 
 ## Milestone 15: Overflow to Boat end to end
 
@@ -1586,6 +1593,14 @@ These routes serve the other pages of the dashboard.
       it, and a signed replay of a real event, sent twice, changed nothing.
       An unfinished Checkout needs a Free workspace and stays open below.
       Evidence: `.context/ciproxy-mvp/live-2026-11-16/`.
+      Run of 17 November 2026 at `4a950ae`, on the Free workspace of the
+      `firna-test-org` organization (item 120 = B): a return before the
+      payment stayed pending, with the plan on Free and the payment
+      pending. A second Checkout request returned the same Stripe session,
+      so the open payment resumed and no second one started. After the test
+      card payment, the return confirmed Team with an active subscription
+      and no pending payment. Evidence:
+      `.context/ciproxy-mvp/live-2026-11-17/checkout/`.
 
 ## Milestone 19: Dashboard UI: shell, sign-in, and setup
 
@@ -1911,10 +1926,15 @@ Each screen follows its mockup, as Milestone 19 says.
       branch, which owns the API and its pending-payment status contract.
       Verified on 16 November 2026 in the closure branch, after #53 merged.
       Branch: `conductor/m21-closure-and-one-banner`.
-- [ ] Run one checkout in the Stripe test mode.
+- [x] Run one checkout in the Stripe test mode.
       The API part passed on 8 November 2026: the test workspace
       Firna-AI paid for Team with the test card, as item 106 = A asks.
-      The dashboard part runs after #53 merges.
+      The dashboard part passed on 17 November 2026 at `4a950ae`, on the
+      Free workspace of `firna-test-org`: the read step passed 10 checks
+      with 1 skip, the Checkout step and the return of the exact saved
+      session passed, and the plan became Team. Stripe now draws the card
+      form in a frame, so the private payment helper finds the form in
+      any frame. Evidence: `.context/ciproxy-mvp/live-2026-11-17/checkout/`.
       Orchestrator live step: set `CIPROXY_DASHBOARD_CREDENTIALS_FILE` to
       a private JSON file outside the repository. After the page API and
       Stripe test workspace are ready, run
@@ -2454,19 +2474,22 @@ list gives what is not done.
       `JOB_IMAGE_MANIFEST_PATH` and a new version of the Boat snapshot
       secret. Delete `follow-ups/guest-initialization-reset.md`, which #60
       settles. Then run every live scenario of Milestone 13 again.
-- [ ] Live checks that remain: an unfinished Checkout of Milestone 18,
-      which needs a Free workspace; the overflow smoke of Milestone 15;
-      the docs pages of Milestone 24; and the repeated-authorization probe
-      of Milestone 14. Done on 16 November 2026: Move to Free, the portal
-      undo, the signed webhook replay, the Boat live read, the shell and
-      Machines and Settings live checks, and the page read check.
+- [ ] Live checks that remain: the overflow smoke of Milestone 15; the
+      docs pages of Milestone 24; and the two-tab authorization and the
+      install-binding probes of Milestone 14. Done on 16 November 2026:
+      Move to Free, the portal undo, the signed webhook replay, the Boat
+      live read, the shell and Machines and Settings live checks, and the
+      page read check. Done on 17 November 2026: the unfinished Checkout
+      of Milestone 18, the dashboard Checkout of Milestone 21, and the
+      one-tab authorization of Milestone 14.
 
 The preview runs the control-plane image that CI builds, and the release
 server of `futex-ai/cli-release` at `53a1dd3` with the pre-release channel.
 The test workspace Firna-AI is on Business with one start block, in the
-Stripe test mode. The test host `ciproxy-spike-2` keeps running with its
-inputs and the retained image build userspace. Delete it and
-`ciproxy-spike-mi` after the live checks.
+Stripe test mode. The test workspace of `firna-test-org` is on Team since
+17 November 2026, also in the Stripe test mode. The test host
+`ciproxy-spike-2` keeps running with its inputs and the retained image
+build userspace. Delete it and `ciproxy-spike-mi` after the live checks.
 
 Credentials stay outside the repository and do not move with it: the App
 key, the session cookie, the Boat key, and the Stripe test key were in the
