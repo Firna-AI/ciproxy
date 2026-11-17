@@ -6,10 +6,13 @@
 - **Added:** 2026-11-08, from pull request #50, branch
   `conductor/m20-machines-and-settings-ui`, review finding 6 of round 4b,
   deferred with option D. Recorded on 2026-11-16 from
-  `conductor/m20-closure`.
+  `conductor/m20-closure`. On 2026-11-17, the final review of the branch
+  `calummoore/ci-proxy-load-balancer` found the accounting hold again as
+  finding 603. Its check confirmed option D, found the missing billing and
+  retry holds again, and added option F.
 - **Source:** Review.
 - **Category:** Product bug.
-- **Location:** `ts/app/src/view/machines.ts:160`, `boatTakesJobs`,
+- **Location:** `ts/app/src/view/machines.ts:134`, `boatTakesJobs`,
   `ts/app/src/view/machines-overflow.ts:47`, `caption`,
   `crates/ciproxy-api/src/wire/overflow.rs:77`, `OverflowSettings`,
   `crates/ciproxy-api/src/handlers/overflow_views.rs:52`, `read`,
@@ -37,11 +40,11 @@
   - Two Machines views say whether Boat takes new jobs now. Both read the
     overflow summary.
   - The first view says where new jobs go while a machine takes none, in
-    `elsewhereText` at `ts/app/src/view/machines.ts:176-190`. The list
+    `elsewhereText` at `ts/app/src/view/machines.ts:150-164`. The list
     shows it in the notice of an offline machine. A machine page shows it
     for a machine with no slots.
   - `elsewhereText` names Boat when `boatTakesJobs` at
-    `machines.ts:159-170` is true. That function checks the deployment, the
+    `machines.ts:134-144` is true. That function checks the deployment, the
     switch, the account, the key, and `spend.limit_reached !== true`.
   - The second view is the caption of the Overflow panel of the list, in
     `caption` at `ts/app/src/view/machines-overflow.ts:47-57`. It promises
@@ -61,7 +64,8 @@
   Routing and spend stay correct, because backend admission holds the
   start.
 - **Root question:** How should Machines learn and show whether Boat takes
-  new jobs now, without promising a start that the control plane holds?
+  new jobs now, so that it never promises a start that the control plane
+  holds?
 - **Options:**
   - **A.** Handle the missing bound in both views. Show the accounting
     hold, and add its cases to the existing view tests. The views keep two
@@ -78,29 +82,50 @@
       time, or the accounting hold.
     - Compute it in `ciproxy-overflow` from `scaler_account` and the
       scheduler rule, made public.
+    - Give no status when the API reads stored facts after a failed or busy
+      refresh. Do not show a hold then.
+    - Add the Machines mockup state first.
     - Render it in both Machines views.
     - Extend the real-store gap case of
-      `crates/ciproxy-api/tests/http/m18_fit_tests.rs` and the existing
-      view tests.
+      `crates/ciproxy-api/tests/http/m18_fit_tests.rs` to read the summary,
+      and extend the existing view tests.
     - Settings under Overflow reads the same body, so its `overflowNotice`
-      can use the status too.
+      shows the status too.
+    - Jobs keeps its own rule, `boatHold`, over the `JobOverflow` facts of
+      its own route.
     - Cost: a change across the overflow, scaler, API, and app code, with
-      a wider contract. Effort: Medium.
+      a wider contract. The retry check must use one clock origin for the
+      retry time and the current time, as the control plane does.
+      Effort: Medium.
   - **E.** Treat the missing bound like the other states where Boat takes
     no jobs, with existing copy only. `boatTakesJobs` returns false when
     `bounded` is false, so the notices name the machines or the wait. The
     caption reads "Jobs run on your machines only." Add both view cases. It
     names no cause, and it still misses the billing and retry holds. Its
     copy choice also works with B or D. Effort: Small.
+  - **F.** Add the missing hold facts to the summary, and share one client
+    rule:
+    - Add `billing_required` and `retry_at` to `OverflowSettings`.
+      `JobOverflow` already has both facts.
+    - Move `boatHold` at `ts/app/src/view/jobs-places.ts:86` into one
+      client projection that Jobs, Machines, and Settings share.
+    - Add the Machines mockup state and the view cases.
+    - Cost: one client copy of the scheduler rule stays. A new server hold
+      then needs a client change too.
+    - Effort: Medium.
 - **Left out:**
   - No change, because it keeps the wrong start promise.
   - Hiding the panel, because it removes the approved account and spend
     facts.
   - A new backend guard, because backend admission already stops these
     starts.
-  - A default bound for an old record, because it overrides the hold of
-    `docs/protocol/overflow.md:218`, which commit `6450c3e` applied on
-    5 November 2026. It also leaves the billing and retry holds.
+  - A default bound or a serde alias for an old record, because it
+    overrides the hold of `docs/protocol/overflow.md:218`, which commit
+    `6450c3e` applied on 5 November 2026. It also leaves the billing and
+    retry holds.
+  - Absent spend shown as a hold, because absent spend often comes from
+    the busy try-lock of `read_view`, while the control plane can still
+    start Boat jobs. "What the fix keeps" below gives the facts.
   - A read of the overflow facts of the Jobs live page from Machines,
     because it adds a poll of another route. On 8 November 2026, the user
     chose to extend the existing page responses of Machines and Settings
@@ -112,7 +137,8 @@
 - **Wider fix:** D. One server status from the scheduler rule replaces the
   client rules, so a missing client fact cannot become a start promise. B
   is a direct fix: it joins the two client copies, but it must still read
-  each hold field.
+  each hold field. F carries the missing facts, but one client copy of the
+  rule stays.
 - **Previous examples:**
   - The app took the add permission `can_add_organization` for the
     admission of a new organization. Commit `3d3f599` of 8 November 2026
@@ -125,20 +151,30 @@
   - The server computes the label placement, at
     `crates/ciproxy-api/src/handlers/label_boat.rs:90-96`, so no client
     rule decides it.
-- **Related:** `plans/follow-ups/label-boat-fit-boundary.md`, a shared
-  server hold. Its option A gives the label responses the current Boat
-  facts of `JobOverflow`, so that one hold rule serves the live queue and
-  the label screens. `LabelPlacement` at
-  `crates/ciproxy-api/src/wire/facts.rs:39-53` is physical, and it ignores
-  the current hold. The start status of D is that hold, computed once on
-  the server. The branch that lands second reuses the server source of the
-  first, so that Machines and the label screens cannot disagree. Neither
-  item waits for the other.
+  - Commit `0ade974` of 8 November 2026, "fix(jobs): use current holds and
+    truthful fit explanations", made Jobs keep an uncounted spend apart
+    from a start promise, at `ts/app/src/view/jobs-places.ts:102`.
+- **Related:**
+  - `plans/follow-ups/label-boat-fit-boundary.md`, a shared server hold.
+    Its option A gives the label responses the current Boat facts of
+    `JobOverflow`, so that one hold rule serves the live queue and the
+    label screens. `LabelPlacement` at
+    `crates/ciproxy-api/src/wire/facts.rs:39-53` is physical, and it
+    ignores the current hold. The start status of D is that hold, computed
+    once on the server. The branch that lands second reuses the server
+    source of the first, so that Machines and the label screens cannot
+    disagree. Neither item waits for the other.
+  - `plans/follow-ups/dashboard-duplicate-controls.md`, the same code. The
+    Overflow panel at `ts/app/src/screens/machines/overflow-panel.tsx`
+    uses the feature parts `Panel` and `TextLink`, which that item replaces
+    with the standalone components. Only the order of the work changes.
+    The options do not conflict.
 - **Recommendation:** D. Both Machines views then show the status of the
   scheduler rule, so a hold that the page cannot see never becomes a start
   promise. C sees every hold too, but its copy of the rule in the API can
   drift. The first-pass review recommended B, which still misses the
-  billing and retry holds.
+  billing and retry holds. The final review of 17 November 2026 also
+  recommended B first, and its check confirmed D for the same reason.
 - **Action:** fix after merge, apply D, because backend admission already
   stops these starts, and the fix reaches the overflow, scaler, and API
   crates after the branch that found it had used its permitted fix rounds.
@@ -181,7 +217,8 @@ Keep these rules:
   machine, the list notice says "New jobs run on Boat." A machine with no
   slots says "No slots. Jobs run on Boat." The panel says "Connected to
   the account mokly · jobs start there after 30 seconds". Its note stays
-  empty, because `spend` exists.
+  empty, because `spend` exists. The final review of 17 November 2026
+  reproduced the same text with an offline machine and unbounded spend.
 - **The accounting hold.** `Spend::counted_usd` at
   `crates/ciproxy-overflow/src/view.rs:36-41` fails with
   `AccountingIncomplete` while a start of the month has no bound. Then the
@@ -263,6 +300,14 @@ Keep these rules:
   `offline` state at
   `docs/mockups/src/entries/app/machines/list/states.mockup.tsx:21-31`.
   When the fix needs hold copy that no Machines mockup state shows, add
-  that state before the implementation.
+  that state before the implementation. This holds for every option, also
+  for A, B, and C.
+- The app also shows the off, limit, rejected-key, not-connected, and
+  machines-only captions, from `ts/app/src/view/machines-copy.ts:215-221`.
+  No Machines mockup shows these states.
+- The summary store in `ts/app/src/state/machines-overflow.ts` is built on
+  `createPageStore` of `ts/app/src/state/page-store.ts` since 17 November
+  2026. Read the status from its snapshot. A failed refresh then shows
+  beside a kept status that can be old.
 - Reuse the setup of the real-store gap case for the HTTP regression of the
   summary.

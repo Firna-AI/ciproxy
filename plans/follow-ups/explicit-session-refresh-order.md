@@ -1,17 +1,25 @@
-# Dashboard reads can apply older snapshots
+# Dashboard read stores lack one read rule
 
-- **Severity:** Medium. **Likelihood:** Rare. **Effort:** Medium.
+- **Severity:** Medium. **Likelihood:** Rare. **Effort:** Large.
   **Confidence:** High. **Harder later:** No.
 - **Kind:** Fix after merge.
 - **Added:** 2026-11-06, from `conductor/mvp-m19-ui`, PR #36, review
   finding 4 on the session store. Review finding 6 on the Setup store
-  joined it on 2026-11-07, because both findings share one wider fix.
+  joined it on 2026-11-07, because both findings share one wider fix. On
+  2026-11-17, the final review of the branch
+  `calummoore/ci-proxy-load-balancer` found the Setup case again as
+  finding 602. The wider fix of its finding 604 joined this item too,
+  because both are one class: one read rule for every dashboard read store.
 - **Source:** Review.
 - **Category:** Product bug.
 - **Location:** `ts/app/src/state/session.ts:87`, `load`, `:137`, `mutate`,
   `:149`, `ensure`, `:157`, `refresh`, `:158`, `visit`, and `:179`,
   `claimAdmin`, `ts/app/src/state/setup.ts:64`, `load`, and `:90`,
-  `ensure`, and `ts/app/src/state/poller.ts:52`, `run`.
+  `ensure`, `ts/app/src/state/poller.ts:52`, `run`,
+  `ts/app/src/state/page-store.ts`, `createPageStore`,
+  `ts/app/src/state/machines.ts:46`, `ts/app/src/state/jobs-live.ts:41`,
+  `ts/app/src/state/savings.ts:50`, `ts/app/src/state/settings-store.ts:22`,
+  and `ts/app/src/state/settings-members.ts:37`.
 - **Reason:** Each wrong result needs one reply that arrives after a later
   read or action, and one more check, a reload, or a new Setup visit
   recovers.
@@ -75,8 +83,11 @@
     `Promise.all`. Then it stores the pair, or the failure of either read.
     It does not check whether a newer read already stored a result.
   - The Setup page calls `load` on mount and starts the poller with `watch`,
-    at `ts/app/src/screens/setup/setup-screen.tsx:31`. Try again calls
+    at `ts/app/src/screens/setup/setup-screen.tsx:34-36`. Try again calls
     `load` too. `ensure` shares only the first read of the document.
+  - On a direct load or a reload of Setup, the page's `load` and the
+    shell's `ensure` at `ts/app/src/screens/workspace-page.tsx:58` start at
+    the same time. So the page sends `GET setup` and `GET machines` twice.
   - The poller waits for each read before it schedules the next, so two
     polls never overlap. A poll whose read returns false stops the poller.
     A stopped poller ignores the tab visibility.
@@ -91,15 +102,42 @@
     end of one session read, or a delay of one reply on the network.
   - The Setup case needs a first job that ends between two server reads, a
     later poll that answers first, and an earlier reply that stalls. The
-    first job ends once for each workspace.
+    first job ends once for each workspace. The first poll starts 5 seconds
+    after the page opens.
   - `ts/app/_tests_/session.test.ts` covers the sign-out and 401 races, the
     role check, and a CSRF recovery with a fresh read. No test keeps an
     older read open during a claim or a CSRF recovery.
   - `ts/app/_tests_/setup.test.ts` covers the kept view after a failed read
     and the stop of polling at completion. No test keeps an older load open
     while a poll answers.
-- **Problem:** Both stores can let an older reply decide what a newer read
-  or action shows. These orders give a wrong result:
+  - The shared page store is `createPageStore` in
+    `ts/app/src/state/page-store.ts`. It moved there from
+    `ts/app/src/state/billing-page.ts` on 17 November 2026, so that Machines
+    does not import a billing module.
+  - The page store numbers each read when it starts, and it drops an older
+    reply. It keeps the last good page beside the failure of a later read,
+    and it polls while the page waits. The Usage store, the Plans store,
+    and the Machines overflow summary store use it.
+  - Five other read stores copy the same rule by hand: a counter of the
+    latest read, and a refresh failure beside the kept data. They are
+    `machines.ts`, `jobs-live.ts`, `savings.ts`, `settings-store.ts`, and
+    `settings-members.ts`, all under `ts/app/src/state/`.
+  - Two generic snapshot types exist: `PageSnapshot` in `page-store.ts`,
+    and `ReadSnapshot` at `settings-store.ts:22`.
+  - `forget` at `machines.ts:85` advances the counter of the Machines store
+    and drops one machine from the kept list.
+  - The copies drift. Until 17 November 2026, the Machines overflow summary
+    store ignored a failed read after a success. Then it moved onto the page
+    store. The Setup store has no order guard at all.
+  - Three stores follow other rules. The History store in `jobs-history.ts`
+    and the job store in `jobs-detail.ts` replace the view with a failure.
+    The Settings overflow store in `overflow.ts` queues each read behind an
+    open edit.
+  - Work inside the `read` of a page store runs before the counter drops an
+    older reply. `forgetEnded` of the billing stores is such work.
+- **Problem:** Two stores can let an older reply decide what a newer read or
+  action shows, and five stores keep copies of the read rule by hand. These
+  cases give a wrong result, or can give one later:
   - Claim: an older session read with the earlier role answers the read
     after a successful claim. The landing then shows the page for no role
     again, or the shell with the earlier role. A page change within 2
@@ -110,15 +148,20 @@
   - Setup: a load that is not a poll gets an old first-job phase while its
     machines reply stalls. A later poll stores the completed first job and
     stops. The stalled reply then restores the old progress, and no poll
-    corrects it.
+    corrects it. The final review of 17 November 2026 reproduced it: after
+    the older reply, the store showed zero machines and scheduled no poll.
   - Setup failure: a late failure of that load shows that Setup tries again
     by itself, after the poller stopped.
+  - Copies: the five copies work today, but a hand-made copy can break, as
+    the copy of the overflow summary store did before 17 November 2026.
 - **Impact if no action:** A granted Admin role can stay hidden until
   another explicit check, and a change that could succeed stays refused.
   Setup can show an open first job until a reload, with a notice that
-  promises a retry that does not run.
-- **Root question:** How does each dashboard store keep an older reply from
-  replacing newer state, or from answering a newer request?
+  promises a retry that does not run. Each new read store needs its own
+  copy of the rule, and each copy can break again.
+- **Root question:** How does every dashboard read store stop an older
+  reply from setting its state, failure, or polling, or from answering a
+  newer request?
 - **Options:**
   - **A.** Read again after each affected action. The claim and the CSRF
     recovery wait for the open session read, then start one more read. Setup
@@ -142,20 +185,56 @@
     the role check keep the shared read. Setup gets the guard of A. Cost: two
     separate rules in two stores, and each later polling store needs its
     own copy. Effort: Small.
-  - **E.** Put the read order in one helper under `ts/app/src/state/`, and
-    move both stores to it. The helper numbers each read when it starts. A
-    reply or a failure applies only when no read that started later has
-    applied. A background read shares an open read. An explicit read
-    starts a new read. A poll decides from the stored state, not from its
-    own reply. Cost: the helper must keep the sign-out and 401 rule and the
-    visible failure of the newest read. An explicit read during a
-    background read sends one more session read, with its GitHub call.
-    Effort: Medium.
+  - **E.** Put one read rule and one generic read snapshot in one shared
+    module under `ts/app/src/state/`, and build every dashboard read store
+    on it.
+    - The rule numbers each read when it starts. A reply or a failure
+      applies only when no read that started later has applied.
+    - A background read shares an open read. An explicit read starts a new
+      read.
+    - A poll decides from the stored state, not from its own reply.
+    - The snapshot keeps the last good data beside the failure of the
+      newest read. Keep one of the two generic snapshot types.
+    - `createPageStore` is the natural base, because it already owns the
+      counter, the refresh failure, and the poll.
+    - The stores: the session store, the Setup store, the users of the page
+      store, `machines.ts`, `jobs-live.ts`, `savings.ts`,
+      `settings-store.ts`, and `settings-members.ts`. The History store,
+      the job store, and the Settings overflow store keep their own rules.
+    - Cost: the helper must keep the sign-out and 401 rule and the visible
+      failure of the newest read. An explicit read during a background read
+      sends one more session read, with its GitHub call. About eight stores
+      change, with their screens and their tests. `forget` of `machines.ts`
+      needs a hook.
+    - The work can land in steps of a few stores. Each step keeps the
+      product working.
+    - Effort: Large.
   - **F.** Return the full session from the claim endpoint. Cost: a Rust
     change and regenerated API types. The claim would also need the GitHub
     call of the session read. An older read can still land after the
     returned session, so F still needs the generation step of D. The CSRF
     recovery and Setup stay unfixed. Effort: Medium.
+  - **G.** Build only the Setup store on the shared page store.
+    - Give `createPageStore` the poll interval as an option, when it does
+      not take one yet. Keep `statusWaits` and the billing interval in the
+      billing module.
+    - In the shared store, keep the poll running after a failed read when
+      no good page exists, as Setup does now. Billing never polls in that
+      state, because its screens call `watch` only while a ready page
+      waits.
+    - Without that change, the store stops the poll when a read fails
+      before any good page exists. The Setup page calls `watch` only once
+      for each visit, so after a successful Try again, Setup has no poll.
+    - Read `{ setup, machines }` as one page, with one `report` call for
+      each request.
+    - Move the four readers to `snapshot.page`: `setup/setup-screen.tsx`,
+      `workspace-page.tsx`, `landing.tsx`, and `savings/savings-screen.tsx`,
+      under `ts/app/src/screens/`.
+    - Add the delayed-read regression. Add a second regression: a poll
+      fails before any good page, then Try again succeeds.
+    - Cost: the four readers change shape, and the session store stays
+      unfixed.
+    - Effort: Small.
 - **Left out:**
   - Change nothing: it fails the goal, because the orders above stay
     possible.
@@ -165,7 +244,8 @@
     the open older read. Each page change would also add a session read,
     with its GitHub call.
   - A revision from the API: inside one tab, the start order of the client
-    gives the same result with no Rust change.
+    gives the same result with no Rust change. Also, only the client knows
+    that its read failed.
   - One shared open read, or a queue, for every Setup read: the page load
     and Try again would get, or wait behind, a read that started before
     them. The client has no timeout, so Try again could wait behind a
@@ -179,23 +259,42 @@
     App can be removed, so it would hide real changes.
   - One combined Setup endpoint: two combined reads can still answer out of
     order, and it needs a Rust change.
-  - One shared store that also owns the value, the failure, and polling: E
-    meets the goal with a smaller change, and the stores keep different
-    state shapes.
-- **Wider fix:** E. One helper holds the order rule, so each store and each
-  later polling page gets the rule by default.
-- **Previous examples:** Sign-out and a 401 already advance the generation,
-  so a reply from before them changes nothing. The tests "sign out clears
-  local access and a stale refresh cannot restore it" and "401 ends access
-  and an expired sign-in survives a stale request" in
-  `ts/app/_tests_/session.test.ts` cover this.
-- **Related:** `plans/follow-ups/setup-progress-cache.md` changes the same
-  Setup store. Its fix adds two Setup reads: a watch from the shell, which
-  is a background read, and a fresh read for the landing, which is an
-  explicit read. Neither fix waits for the other. The fix that lands second
-  follows the read rule of E.
+  - One store type that also owns the sign-in state of every store: the
+    session store keeps its own shape, with the generation, the CSRF token,
+    and the 2-second window. E shares the rule and the snapshot, and each
+    store keeps its own extra state.
+  - A query-cache library: every store uses the app's own `createStore` and
+    `createPoller`, and E gives the same rule with no new dependency.
+  - One read of the machines and the overflow summary together: the summary
+    would then follow the 10-second poll of the machines. Each summary read
+    asks Boat for the costs of the open starts.
+- **Wider fix:** E. One module holds the read rule and the snapshot, so
+  each store and each later read store gets the rule by default.
+- **Previous examples:**
+  - Sign-out and a 401 already advance the generation, so a reply from
+    before them changes nothing. The tests "sign out clears local access and
+    a stale refresh cannot restore it" and "401 ends access and an expired
+    sign-in survives a stale request" in `ts/app/_tests_/session.test.ts`
+    cover this.
+  - On 17 November 2026, the final review found that the Machines overflow
+    summary store ignored a failed read after a success. Its fix moved the
+    store onto `createPageStore`.
+- **Related:**
+  - `plans/follow-ups/setup-progress-cache.md` changes the same Setup store.
+    Its fix adds two Setup reads: a watch from the shell, which is a
+    background read, and a fresh read for the landing, which is an explicit
+    read. Neither fix waits for the other. The fix that lands second follows
+    the read rule of E.
+  - `plans/follow-ups/shared-poller-lifetime.md` changes the same Setup
+    `watch`. E keeps the poller in place. G moves it into the page store,
+    so the steps of that item move with it. Neither fix waits for the other.
+  - `plans/follow-ups/saved-payment-lifetime.md`, the same class in other
+    code. Its removal runs inside the `read` of the billing page stores,
+    before the counter drops an older reply. The rule of E orders the reads
+    of one store only, so neither item closes the other.
 - **Recommendation:** E. One rule gives every explicit read a new read, and
-  it stops every older reply in both stores.
+  it stops every older reply in every read store. G is the smallest fix of
+  Setup alone.
 - **Action:** fix after merge, apply E, because each wrong order needs one
   stalled reply in a short window, and one more check or a reload
   recovers.
@@ -213,13 +312,20 @@
     last read.
   - In the Setup store, `ensure` and the poll make background reads. The
     page load and Try again make explicit reads. Keep the Setup reply and
-    the machines reply as one pair.
+    the machines reply as one pair. The shell's `ensure` then shares the
+    open page read, so a direct load sends each Setup request once.
   - The poll decides from the stored state after its read settles. A stored
     failure keeps the poll running, as now.
   - Keep the sign-out and 401 rule. They drop every open read, so no older
     reply restores the signed-in view.
   - A discarded reply sets no failure. The failure of the newest read stays
     visible in `SessionRefreshNotice` and in the Setup refresh notice.
+  - Build the other read stores on the same module: the users of the page
+    store, `machines.ts`, `jobs-live.ts`, `savings.ts`, `settings-store.ts`,
+    and `settings-members.ts`. Keep their behaviour and the assertions of
+    their tests. Give `forget` of `machines.ts` a hook.
+  - Keep each `read` free of side effects, except `report`, because work
+    inside a `read` runs before the rule drops an older reply.
   - The test "403 reads refresh the session so a lost role becomes visible"
     in `ts/app/_tests_/session.test.ts` starts the role check. Then it
     awaits that open read through `refresh`. `refresh` then starts a new
@@ -242,6 +348,10 @@
   - Run `node --test ts/app/_tests_/session.test.ts` and
     `node --test ts/app/_tests_/setup.test.ts`. The complete gate does not
     run these tests. Run each new case 10 times.
-  - When a change fixes only one store, use D for the session store and the
-    guard of A for Setup. Do not copy the shared open read of the session
-    store into Setup.
+  - Also run the tests of each other moved store under `ts/app/_tests_/`,
+    such as `machines-store.test.ts`, `jobs-store.test.ts`,
+    `savings-store.test.ts`, `settings-stores.test.ts`,
+    `settings-members.test.ts`, and the billing tests.
+  - When a change fixes only one store, use D for the session store, and G
+    or the guard of A for Setup. Do not copy the shared open read of the
+    session store into Setup.
