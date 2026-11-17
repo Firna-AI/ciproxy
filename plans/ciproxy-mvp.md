@@ -2866,6 +2866,9 @@ Answers of 5 November 2026:
   that it did not measure, the report carries them as unavailable, and the
   scaler starts no runner on a machine with unknown leases. Rejected: A,
   B, C, D, and F.
+- Item 119, A, 17 November 2026: the orchestrator merges the reviewed Boat
+  client fix in `futex-ai/sandbox`, pull request #13, merged as `037fbd7`.
+  Rejected: B.
 - Item 108, C with D, 8 November 2026: the paid change sends the same
   pending credit that the preview counted, Stripe computes the amount, and
   an alert compares each invoice with its quote. A third fix round of pull
@@ -5964,3 +5967,30 @@ remain with the orchestrator in Milestone 13 and
   machine is correct and safe. Choose E when a script must see a failure.
 - **Action:** ask the user, because the install rule of
   `docs/protocol/agent.md` changes, and the review proposed a refusal.
+
+### 119. Who merges the Boat client fix?
+
+**Answer, 17 November 2026:** A. Merged as `037fbd7` in `futex-ai/sandbox`.
+
+- **Severity:** High. **Effort:** Small.
+- **Source:** Implementation, the live run of 16 November 2026.
+- **Category:** Process.
+- **Location:** `futex-ai/sandbox`, crate `sandbox-boat`, which ciproxy pins.
+- **Background:** The pinned Boat client rejected the shared snapshot
+  reference of the ciproxy image, and it deleted sandboxes without Boat's
+  confirmation header. Agent merges are off in `futex-ai/sandbox`, and
+  answer 65 let the orchestrator merge there once.
+- **Problem:** The fix pull request needed a merge before ciproxy could pin
+  it.
+- **Impact if no action:** Overflow to Boat could not work.
+- **Root question:** How does the reviewed client fix reach `main` of
+  `futex-ai/sandbox`?
+- **Options:**
+  - **A.** The orchestrator merges it when its review finds no problem.
+    Effort: Small.
+  - **B.** The user merges it. Effort: Small.
+- **Left out:** A second Boat client inside ciproxy.
+- **Wider fix:** None.
+- **Recommendation:** A.
+- **Action:** ask the user, because the user approves each merge in
+  `futex-ai/sandbox`.
