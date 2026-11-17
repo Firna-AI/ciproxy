@@ -1,10 +1,11 @@
 //! Offline Docker filesystem sizing verifies the promised free bytes.
 
-use std::fs::{self, OpenOptions};
+use std::fs::{self, File, OpenOptions};
 use std::os::unix::fs::chown;
+use std::time::SystemTime;
 
 use crate::docker::LinuxDockers;
-use crate::docker_files::{self, Lease};
+use crate::docker_files::{AttachmentPhase, Lease};
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::layout::jail_uid;
 use crate::process::{arguments, reflink_copy};
@@ -14,9 +15,8 @@ pub(crate) struct Preparation {
     pub(crate) base: std::path::PathBuf,
     pub(crate) path: std::path::PathBuf,
     pub(crate) lease: Lease,
-    pub(crate) limit: u64,
+    pub(crate) spare: u64,
     pub(crate) data: u64,
-    pub(crate) free_pool: u64,
 }
 
 impl LinuxDockers {
@@ -25,24 +25,13 @@ impl LinuxDockers {
             base,
             path,
             mut lease,
-            limit,
+            spare,
             data,
-            free_pool,
         } = prepared;
         let mut bytes = lease.bytes;
         let base = base.as_path();
         let path = path.as_path();
-        let unused = docker_files::unused(&self.layout)?
-            .iter()
-            .map(|(_, _, bytes)| *bytes)
-            .sum::<u64>();
-        self.cache
-            .budget(
-                free_pool
-                    .saturating_sub(docker_files::held(&self.layout)?)
-                    .saturating_sub(unused),
-            )
-            .await?;
+        self.reserve(vm, &lease, spare).await?;
         let fresh = !base.exists();
         if base.exists() {
             if lease.writer {
@@ -68,6 +57,14 @@ impl LinuxDockers {
                 fs::hard_link(path, base).context("retain repository Docker base")?;
             }
         }
+        if base.exists() {
+            File::open(base)
+                .context("open Docker last-use marker")?
+                .set_modified(SystemTime::now())
+                .context("record Docker source use")?;
+        }
+        lease.phase = AttachmentPhase::Bound;
+        self.reserve(vm, &lease, spare).await?;
         if !fresh {
             match self
                 .commands
@@ -119,19 +116,12 @@ impl LinuxDockers {
                 .saturating_add(needed.saturating_sub(free).saturating_mul(2))
                 .div_ceil(4096)
                 * 4096;
-            if next > limit || next <= bytes {
+            if next <= bytes {
                 return Err(Error::Capacity);
             }
             bytes = next;
             lease.bytes = bytes;
-            docker_files::save(&self.layout, vm, &lease)?;
-            self.cache
-                .budget(
-                    free_pool
-                        .saturating_sub(docker_files::held(&self.layout)?)
-                        .saturating_sub(unused),
-                )
-                .await?;
+            self.reserve(vm, &lease, spare).await?;
             OpenOptions::new()
                 .write(true)
                 .open(path)

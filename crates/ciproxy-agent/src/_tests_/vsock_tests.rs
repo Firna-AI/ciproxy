@@ -73,7 +73,6 @@ async fn an_absent_guest_coalesces_shutdown_without_losing_configuration() {
         runner_id: record.report.runner_id.clone(),
         organization_id: record.report.organization_id.clone(),
         registration: Secret::new("registration"),
-        cache: None,
     };
     guests.send(&record, &configuration).await.unwrap();
     assert_eq!(receiver.try_recv().unwrap(), configuration);

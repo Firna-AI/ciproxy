@@ -52,6 +52,11 @@ cleanup only after the runtime accepts that replay. The runtime accepts it
 only when each runner of the organization has a saved stop, a stopped
 reservation, or a protected busy job. Cleanup deletes scale sets before it
 uninstalls the exact App installation.
+After the marker is saved, a replay that the runtime keeps pending is not an
+error. The take-out request then returns the usual `Success` response with
+no remote cleanup. Maintenance finishes the cleanup after the runtime
+accepts. Other replay errors still fail the request. The last organization
+of a workspace still gets a conflict before any marker is saved.
 
 The generated [OpenAPI document](../../ts/api/generated/openapi.json) is the
 route and schema reference. The TypeScript package
@@ -156,61 +161,19 @@ intentional removals and retired-label cleanup. Use the same API collaborators.
 
 ## Organization linking
 
-GET `/session` returns `/install` as a stable dashboard navigation link.
-It creates no installation attempt. POST `/installation-links/start` saves
-an attempt and returns the configured GitHub URL with its opaque state.
-The normal Origin and CSRF checks protect this start action. It keeps the
-session's exact Direct or Add continuation purpose. An Add continues as
-Direct after its installation links. A personal-account retry stays Add.
-Attempts have no age limit. Add evidence is durable before GitHub opens.
-
-POST `/workspaces/{workspace_id}/organizations/add` returns the configured
-`/installations/new?state=...` URL. GitHub still chooses the organization.
-The registered setup return starts the same browser-bound OAuth proof.
-`setup_action=request` stays waiting and chooses no workspace.
-
-GET `/installation-links` refreshes the original person's installed claims.
-Add requires the exact signed requester and fresh own-user installation proof.
-Signed Direct claims retry without Add proof, even when the person's
-installation list omits them. A provisional Direct return still waits for the
-signed event.
-The store joins signed identity before the access service resolves admission.
-Another person's provisional return supplies no flow, proof, or destination.
-One current Admin workspace links Add automatically. Several require
-PUT `/installation-links/{claim_id}/workspace` with an offered workspace ID.
-No eligible workspace leaves the claim waiting. Exact offers survive the
-choice-to-link role-loss window. Missing state never proves a Direct flow.
-
-A linked organization has local activation separate from GitHub App state.
-Billing and Admin reasons can coexist. Every linked inactive organization
-counts against the tier, excluding Removed. Existing admitted organizations
-stay admitted on downgrade. A current Admin can approve with POST
-`/workspaces/{workspace_id}/organizations/{organization_id}/enable`.
-Only a new workspace receives a first-Admin grant. An inactive link grants
-no role. Retained reinstall preserves holds and completed history.
-An admitted retained organization prepares its current bindings before the
-registration publishes Active, including a reinstall through Add.
-
-The session's `can_claim_admin` capability is false for an existing Admin.
-Other owners retain the recovery rules of the
-[security protocol](../../docs/protocol/security.md#who-gets-a-role).
-
-The API returns exact-workspace upgrade actions only to Billing and Admin.
-Other people get the reason and an ask-Admin capability. No held organization
-can acquire work, register a JIT runner, or reserve/start overflow.
-Run the existing maintenance method to reconcile billing eligibility and
-retry saved choices. It discovers durable pending work after restart.
-
-Pass the existing GitHub service to `DashboardAccess::finish_login` for this
-operation. Organization linking needs no other constructor or ApiState field.
-Fresh proof resolves before the identity lease. No browser-only grant is
-retained.
+The [organization linking guide](organization-linking.md) gives the install
+start, the Add flow, installation claims, local activation, and the related
+maintenance.
 
 ## Jobs, Savings, and billing composition
 
 The [pages and billing guide](pages-and-billing.md) shows how to mount the page
 router and the Stripe hook. It also gives the paid review and payment steps,
 and the rules of Jobs, Savings, and the shared banner.
+
+Plans, usage, and Checkout use the billing catalog in ciproxy-store-interface.
+The same catalog supplies job-history limits. The page builders use its
+shared Selection plan model directly.
 
 ## Machines and Settings facts
 
@@ -247,6 +210,10 @@ A successful observation distinguishes a disconnected Boat account from an
 unknown connection. Disconnected Boat keeps catalog fit unavailable.
 Known machines then run jobs alone, or known no-fit capacity waits.
 Missing observations or unknown own capacity keep placement unavailable.
+Settings and Jobs use one physical Boat fit calculation. Each waiting label
+in Jobs has the same Boat choice in `current.fit.boat` and `boat`. Its
+`current.fit` also includes the account presence, required root disk,
+largest Boat size, and placement when the trusted image sizing is known.
 
 Organizations include nullable first-registration and removal dates, complete
 repository snapshot counts, and retained adder profiles. Members include the

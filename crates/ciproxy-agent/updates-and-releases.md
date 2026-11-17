@@ -14,7 +14,11 @@ User directives cannot enable transport payload diagnostics.
 The systemd service reads `/etc/ciproxy-agent/environment` when present.
 Keep this root-only settings file at mode `0600`.
 
-Release-plz tags only the agent, with `ciproxy-agent-vVERSION`.
+Release-plz processes the agent, cache sidecar, and shared protocol crate.
+A change to any of these packages updates their shared workspace version.
+All three compare changes with the last `ciproxy-agent-vVERSION` tag.
+Only the agent creates a tag and a release.
+The release workflow packages both executables under that agent tag.
 The release workflow runs the complete gate in a read-only PostgreSQL job.
 Versioning requires that job to pass.
 Package builds run read-only. A separate job uploads the verified assets.

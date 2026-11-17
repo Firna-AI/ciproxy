@@ -4,21 +4,16 @@ use std::collections::BTreeMap;
 
 use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_gateway::types::MachineView;
-use ciproxy_overflow::catalog::ResourceCatalog;
 use ciproxy_overflow::view::OverflowView;
-use ciproxy_protocol::resources::{GIGABYTE, VmSize};
-use ciproxy_scaler::size_policy::{BoatChoice, select_boat_size};
-use ciproxy_scaler::snapshot::NothingFits;
 use ciproxy_store_interface::job_views::DashboardJob;
 use ciproxy_store_interface::jobs::JobState;
-use ciproxy_store_interface::labels::{Label, WhenNothingFits};
+use ciproxy_store_interface::labels::Label;
 use uuid::Uuid;
 
 use crate::capacity::MachineCapacity;
 use crate::wire::job_fit::{BoatLabelFit, WaitingLabelFit};
-use crate::wire::jobs::JobVmSize;
 
-use super::label_views;
+use super::{label_boat, label_views};
 
 pub(super) struct FitInput<'a> {
     pub jobs: &'a [DashboardJob],
@@ -47,30 +42,27 @@ pub(super) fn labels(input: FitInput<'_>) -> Vec<WaitingLabelFit> {
             .or_insert((job.label.clone(), 0));
         entry.1 += 1;
     }
-    let catalog = overflow.and_then(|view| view.resource_catalog().ok().flatten());
     waiting
         .into_iter()
         .map(|(id, (name, count))| {
             let label = labels.iter().find(|label| label.id == id);
-            let current = label.map(|label| label_views::label(label.clone(), machines, capacity));
+            let current = label.map(|label| {
+                let mut current = label_views::label(label.clone(), machines, capacity);
+                if let Some(sizing) = sizing {
+                    label_boat::enrich(&mut current.fit, &current.label, overflow, sizing);
+                }
+                current
+            });
             let own_fits = current
                 .as_ref()
                 .is_some_and(|current| current.fit.fitting_machines > 0);
             let own_unknown = current.as_ref().is_none_or(|current| {
                 current.label.allow_machines && current.fit.unavailable_machines > 0
             });
-            let boat = match (label, sizing, catalog.as_ref(), overflow) {
-                (Some(label), _, _, _) if !label.allow_boat => BoatLabelFit::Disabled,
-                (Some(label), Some(sizing), Some(catalog), Some(view)) => boat_fit(
-                    label,
-                    sizing,
-                    catalog,
-                    &view.state.refused_sizes,
-                    own_fits,
-                    own_unknown,
-                ),
-                _ => BoatLabelFit::Unavailable,
-            };
+            let boat = current
+                .as_ref()
+                .map(|current| current.fit.boat.clone())
+                .unwrap_or(BoatLabelFit::Unavailable);
             let nothing_fits = if own_fits
                 || matches!(
                     boat,
@@ -96,59 +88,4 @@ pub(super) fn labels(input: FitInput<'_>) -> Vec<WaitingLabelFit> {
             }
         })
         .collect()
-}
-
-fn boat_fit(
-    label: &Label,
-    sizing: RootSizing,
-    catalog: &ResourceCatalog,
-    refused: &[String],
-    own_fits: bool,
-    own_unknown: bool,
-) -> BoatLabelFit {
-    let requested = VmSize {
-        vcpu: label.size.vcpus.try_into().unwrap_or(0),
-        memory_bytes: u64::try_from(label.size.memory_gb)
-            .unwrap_or(0)
-            .saturating_mul(GIGABYTE),
-        disk_bytes: u64::try_from(label.size.disk_gb)
-            .unwrap_or(0)
-            .saturating_mul(GIGABYTE),
-    };
-    let Some(required) = sizing.vm_size(requested) else {
-        return BoatLabelFit::Unavailable;
-    };
-    let policy = match label.when_nothing_fits {
-        WhenNothingFits::Wait => NothingFits::Wait,
-        WhenNothingFits::LargestBoat => NothingFits::LargestBoatSize,
-    };
-    match select_boat_size(
-        catalog.sizes.iter(),
-        catalog.largest_size.as_ref(),
-        required,
-        sizing.image_root_bytes,
-        own_fits,
-        policy,
-    ) {
-        Some(BoatChoice::Fitting(size)) => BoatLabelFit::Fitting {
-            size_name: size.id.0.clone(),
-            size: size_view(size.size),
-            refused: refused.contains(&size.id.0),
-        },
-        Some(BoatChoice::Largest(_)) if own_unknown => BoatLabelFit::Unavailable,
-        Some(BoatChoice::Largest(size)) => BoatLabelFit::LargestFallback {
-            size_name: size.id.0.clone(),
-            size: size_view(size.size),
-            refused: refused.contains(&size.id.0),
-        },
-        None => BoatLabelFit::NoSizeFits,
-    }
-}
-
-fn size_view(size: VmSize) -> JobVmSize {
-    JobVmSize {
-        vcpus: size.vcpu,
-        memory_bytes: size.memory_bytes.to_string(),
-        disk_bytes: size.disk_bytes.to_string(),
-    }
 }

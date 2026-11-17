@@ -45,7 +45,7 @@ async fn writer_lease_excludes_another_writer_until_release() {
 
     assert!(
         adapter
-            .prepare(&next, &facts(), &scope(), 4096, 65536, 65536)
+            .prepare(&next, &facts(), &scope(), 4096, 65536)
             .await
             .is_err()
     );
@@ -53,7 +53,7 @@ async fn writer_lease_excludes_another_writer_until_release() {
     adapter.release(&owner).unwrap();
     assert!(
         adapter
-            .prepare(&next, &facts(), &scope(), 4096, 65536, 65536)
+            .prepare(&next, &facts(), &scope(), 4096, 65536)
             .await
             .is_err()
     );
@@ -91,9 +91,7 @@ async fn disposable_copy_uses_valid_reflink_options_and_releases_failed_reservat
         reason: UnknownJobScopeReason::MissingToken,
     };
 
-    let _ = adapter
-        .prepare(&vm, &facts(), &scope, 4096, 65536, 65536)
-        .await;
+    let _ = adapter.prepare(&vm, &facts(), &scope, 4096, 65536).await;
 
     assert_eq!(
         *captured.lock().unwrap(),

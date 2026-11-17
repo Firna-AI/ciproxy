@@ -16,7 +16,16 @@ organizations keep their runners and demand.
 GitHub does not automatically retry failed webhooks.
 A separate worker scans all pages of retained App delivery history each
 minute. It groups retries by delivery GUID and uses the latest attempt.
-It requests redelivery only for relevant events whose latest attempt failed.
+It requests redelivery for each relevant event whose latest attempt did not
+get the route's acknowledgement, HTTP 204. `/hooks/github` returns 204 only
+after the App accepts the delivery.
+GitHub counts every status from 200 to 399 as a success. A redirect or a
+proxy page can return such a status before the route runs, so the worker
+does not count it as delivered. An extra redelivery is safe, because the
+handled events are idempotent. A lost event is not safe.
+A proxy that rewrites the 204 makes the worker redeliver that event each
+minute while GitHub keeps it in the history. Do not put such a proxy in
+front of the route.
 The App's durable lifecycle outbox handles failures after local persistence.
 A separate startup and five-minute poll refreshes current installation
 authority and repository snapshots. It needs no optional event subscriptions.

@@ -86,7 +86,10 @@ async fn owned_group_survives_rename_and_sdk_recovers_204_absence_with_typed_mis
         .await
         .unwrap();
     server.state.resource.set_id.store(0, Ordering::SeqCst);
-    assert!(matches!(sdk.ensure("ciproxy", 47, Some(53)).await, Ok(83)));
+    assert!(matches!(
+        sdk.ensure("ciproxy", 47, Some(53), &["ciproxy"]).await,
+        Ok(83)
+    ));
     let requests = server.state.requests.lock().unwrap().clone();
     assert_eq!(
         requests
@@ -130,7 +133,7 @@ async fn owned_group_survives_rename_and_sdk_recovers_204_absence_with_typed_mis
     server.state.resource.set_id.store(53, Ordering::SeqCst);
     server.state.resource.set_group.store(99, Ordering::SeqCst);
     assert!(matches!(
-        sdk.ensure("ciproxy", 47, Some(53)).await,
+        sdk.ensure("ciproxy", 47, Some(53), &["ciproxy"]).await,
         Err(Error::ScaleSetGroupChanged {
             scale_set_id: 53,
             expected_group: 47,
@@ -140,7 +143,8 @@ async fn owned_group_survives_rename_and_sdk_recovers_204_absence_with_typed_mis
     assert_eq!(server.state.requests.lock().unwrap().iter().filter(|(method, path, _)| *method == Method::PATCH && path.contains("runnerscalesets")).count(), 0);
     assert!(
         matches!(
-            sdk.rename_scale_set(99, "ciproxy-retired-absent").await,
+            sdk.rename_scale_set(99, "ciproxy-retired-absent", &[])
+                .await,
             Ok(())
         ),
         "an absent retired scale set must not block preparation"

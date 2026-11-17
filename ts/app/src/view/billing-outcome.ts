@@ -16,7 +16,8 @@ import {
   submittedSelection,
   type PaymentSubmission,
 } from "../api/billing-payment.ts";
-import { statusWaits, type PageSnapshot } from "../state/billing-page.ts";
+import { statusWaits } from "../state/billing-page.ts";
+import type { PageSnapshot } from "../state/page-store.ts";
 import type { PaymentSnapshot } from "../state/billing-payment.ts";
 import { askPayer, selectionText } from "./billing-format.ts";
 import { billingHref, plansHref } from "./billing-routes.ts";

@@ -55,7 +55,6 @@ async fn boot_connection_failure_keeps_first_authority_until_configuration_is_se
         runner_id: record.report.runner_id.clone(),
         organization_id: record.report.organization_id.clone(),
         registration: spec().registration,
-        cache: None,
     };
     guests
         .attach(&record, Some(configure.clone()))

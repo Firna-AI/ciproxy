@@ -258,7 +258,7 @@ Keep these rules:
 - **The tests.** Every spend object of the Machines tests has
   `bounded: true`: `ts/app/_tests_/machines-fixtures.ts:53`,
   `ts/app/_tests_/machines-view.test.ts:115`, and
-  `ts/app/_tests_/machines-overflow.test.ts:18` and `:59`. The Machines
+  `ts/app/_tests_/machines-overflow.test.ts:22` and `:63`. The Machines
   browser harness does the same, in the `overflow/summary` reply of
   `ts/app/scripts/m20-harness-server.ts`. No Machines case covers a missing
   bound, billing, or a retry time. Only the Settings tests cover
@@ -279,7 +279,7 @@ Keep these rules:
   `crates/ciproxy-api/src/handlers/overflow_views.rs:53-60`. The control
   plane can still start Boat jobs then, so do not show that state as a
   hold. Keep its current text, which
-  `ts/app/_tests_/machines-overflow.test.ts:70-74` expects: the start
+  `ts/app/_tests_/machines-overflow.test.ts:74-78` expects: the start
   caption, with the note "Boat spend shows here when Boat reports it."
 - Do not weaken admission, and do not guess a missing cost.
 - Use the generated API types. Run `npm --prefix ts run api:generate`, and
@@ -296,7 +296,7 @@ Keep these rules:
   - The billing and retry notices of the Jobs page, at
     `ts/app/src/view/jobs-boat-notices.ts:66-83`.
 - The Machines mockups show only the start promise, at
-  `docs/mockups/src/screens/machines/overflow-panel.tsx:32-37` and in the
+  `docs/mockups/src/screens/machines/overflow-panel.tsx:56-61` and in the
   `offline` state at
   `docs/mockups/src/entries/app/machines/list/states.mockup.tsx:21-31`.
   When the fix needs hold copy that no Machines mockup state shows, add
@@ -306,8 +306,9 @@ Keep these rules:
   machines-only captions, from `ts/app/src/view/machines-copy.ts:215-221`.
   No Machines mockup shows these states.
 - The summary store in `ts/app/src/state/machines-overflow.ts` is built on
-  `createPageStore` of `ts/app/src/state/page-store.ts` since 17 November
-  2026. Read the status from its snapshot. A failed refresh then shows
-  beside a kept status that can be old.
+  `createPageRead` of `ts/app/src/state/page-store.ts` since 17 November
+  2026, the read rule of `createPageStore` with no interval. Read the status
+  from its snapshot. A failed refresh then shows beside a kept status that
+  can be old.
 - Reuse the setup of the real-store gap case for the HTTP regression of the
   summary.

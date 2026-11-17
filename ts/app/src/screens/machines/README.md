@@ -17,6 +17,11 @@ addresses.
   read it again every 10 seconds, and Add a machine every 5 seconds. A
   machine that the read does not hold shows a not-found state. After Remove,
   the page of the machine goes back to the list.
+- The Overflow panel reads `GET /workspaces/{id}/overflow/summary` each time
+  the list opens, and with Try again, never on an interval. A failed first
+  read shows "Unable to load overflow" in the panel. A failed refresh keeps
+  the last summary under a warning with Try again. Both keep the machines on
+  the page.
 - Add a machine shows the install command of Setup after its first read of
   the machines. A machine that was not in that read is new, and the page
   shows what its agent reported.
@@ -66,6 +71,9 @@ addresses.
   of each status, and gives the cache hits of the list.
 - [machine-endpoints.ts](../../api/machine-endpoints.ts) holds the routes of
   Machines on the one HTTP client.
+- [machines-overflow.ts](../../state/machines-overflow.ts) reads the overflow
+  summary of the Overflow panel as a page read of
+  [page-store.ts](../../state/page-store.ts).
 
 ## Related docs
 

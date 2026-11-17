@@ -23,6 +23,7 @@ mod retention_tests;
 
 mod initial_admin_tests;
 
+mod takeout_pending_tests;
 mod takeout_reinstall_tests;
 
 mod capacity_fixture;

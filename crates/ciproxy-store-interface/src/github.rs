@@ -117,7 +117,7 @@ pub trait OrganizationLease: Send {
 
 /// Queries needed only by the hosted GitHub integration.
 pub trait GithubStore: Send + Sync {
-    /// Read attempts missing actual start or terminal finish timestamps.
+    /// Read missing timestamps and started attempts stranded on an old remote binding.
     fn incomplete_github_job_attempts(
         &self,
         workspace_id: Uuid,

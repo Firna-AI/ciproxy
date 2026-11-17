@@ -11,7 +11,7 @@ use axum::routing::{get, post};
 use ciproxy_api::pages::{PageServices, router_with_pages, stripe_router};
 use ciproxy_api::state::ApiState;
 use ciproxy_github::error::Error;
-use ciproxy_github::hooks::WebhookHandler;
+use ciproxy_github::hooks::{WEBHOOK_ACCEPTED_STATUS, WebhookHandler};
 
 /// Mount every dashboard page and its raw Stripe hook on the shared host.
 pub fn dashboard_router(
@@ -74,7 +74,7 @@ async fn webhook(
         return StatusCode::UNAUTHORIZED;
     };
     match handler.handle(event, signature, &bytes).await {
-        Ok(_) => StatusCode::NO_CONTENT,
+        Ok(_) => WEBHOOK_ACCEPTED_STATUS,
         Err(Error::InvalidSignature) => StatusCode::UNAUTHORIZED,
         Err(error) => {
             tracing::warn!(%error, "GitHub webhook failed; delivery-history recovery will retry");

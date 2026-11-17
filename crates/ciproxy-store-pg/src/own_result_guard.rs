@@ -43,6 +43,7 @@ pub(crate) fn command(
         .transpose()
 }
 
+/// Keep child foreign-key checks compatible with the workspace fence.
 pub(crate) fn load(
     connection: &mut PgConnection,
     workspace: Uuid,
@@ -51,7 +52,7 @@ pub(crate) fn load(
     workspaces::table
         .find(workspace)
         .select(workspaces::id)
-        .for_update()
+        .for_no_key_update()
         .first::<Uuid>(connection)
         .store()?;
     let owner = runners::table

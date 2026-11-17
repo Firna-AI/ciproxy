@@ -35,7 +35,6 @@ pub(in crate::service) fn configure() -> AgentToGuest {
         runner_id: RunnerId("runner-7".into()),
         organization_id: OrganizationId("org-1".into()),
         registration: Secret::new("jit-for-one-runner"),
-        cache: None,
     }
 }
 

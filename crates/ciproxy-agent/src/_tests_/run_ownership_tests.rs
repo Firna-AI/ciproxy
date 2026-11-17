@@ -14,7 +14,7 @@ use crate::identity_store::IdentityStore;
 use crate::runtime_ownership::{RuntimeClaimsMock, RuntimeOwner};
 use crate::state::MachineState;
 
-fn legacy() -> MachineState {
+pub(super) fn legacy() -> MachineState {
     let mut identity = identity();
     identity.endpoint = None;
     MachineState {
@@ -23,7 +23,7 @@ fn legacy() -> MachineState {
     }
 }
 
-fn files(
+pub(super) fn files(
     state: Arc<Mutex<MachineState>>,
     endpoint: Arc<Mutex<Option<String>>>,
     events: Arc<Mutex<Vec<&'static str>>>,

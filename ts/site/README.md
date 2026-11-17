@@ -56,6 +56,8 @@ Rules for work on the site:
 
 - Take every colour, font, and radius from the `--c-*`, `--r-*`, and
   `--font-*` custom properties of the [token package](../tokens/README.md).
+  A small data mark, such as a slot segment or the end of a bar, takes its
+  corner from `--r-mark-*`.
 - Take every price, limit, and tier feature from `src/data/tiers.ts`. A
   feature that ships after the launch says "Coming later".
 - The cost claim computes every number from the dated list prices in

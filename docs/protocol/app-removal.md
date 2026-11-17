@@ -34,6 +34,23 @@ person installs the App.
   [spend limit](overflow.md#spend-limit).
 - The scale sets and the runners of the organization stay on GitHub,
   because ciproxy has no GitHub access left to delete them.
+- Only the current workspace of an organization receives new jobs through
+  the scale sets of that organization.
+- A workspace can use its own scale sets again.
+- Each time ciproxy prepares the scale sets of the organization, it first
+  retires each scale set with saved ownership in another workspace. A
+  retired scale set has no job eligibility.
+- The organization turns active in a workspace only after this step.
+- The busy and idle runners of the retired scale sets of another workspace
+  keep the rules above. They take no new job.
+- This isolation rule also applies when a take-out left scale sets on
+  GitHub.
+- **Decision:** a scale set of another workspace loses its job eligibility
+  and stays on GitHub. Rejected: a deletion, because the rules above keep
+  its busy and idle runners. Reason: two workspaces can have the same label
+  name, so an idle runner of another workspace could otherwise take a job
+  of the current workspace, against
+  [Tenant isolation](security.md#tenant-isolation).
 - After a removal, the [dashboard](../architecture.md#components) says that
   the App was removed from the organization, and how to install it again.
 - For 30 days, the Organizations tab of Settings shows the organization as
@@ -105,7 +122,8 @@ person installs the App.
 
 - [Workspaces](workspaces.md): the organizations of a workspace, and how an
   Admin takes one out.
-- [Security](security.md): sign-in, roles, key custody, and job data.
+- [Security](security.md): sign-in, roles, key custody, tenant isolation,
+  and job data.
 - [Agent](agent.md#drain-and-remove): what a removed machine does.
 - [Overflow](overflow.md#after-an-app-removal): the sandboxes after a
   removal, and the Boat key.

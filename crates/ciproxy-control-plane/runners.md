@@ -180,9 +180,17 @@ delivery, job updates, or other workspaces.
 A reservation or a stop counts only after the store saves it. The
 reservation saved before a request counts as supply, so a later pass starts
 no second request for it.
-A result saves only while the saved state that allowed its request still
-matches. So a late result cannot replace a newer report, command, runner
-state, job, removal, or reinstall. It also cannot release capacity early.
+Before an own-machine request starts, the runtime reads the current saved
+guard of the reservation. It compares only identity and lifecycle with the
+proposed work: the runner, organization, label, binding, GitHub ID,
+captured registration target, placement, command ID, and state. Evidence
+and measurements, such as the first confirmation, the acknowledgement, the
+issue time, the slot set, and sizes, do not stop a dispatch.
+An own-machine result saves only while the complete saved state that
+allowed its request still matches, newer evidence included. A Boat result
+saves only while the lifecycle authority of its records still matches.
+So a late result cannot replace a newer report, command, runner state,
+job, removal, or reinstall. It also cannot release capacity early.
 The runtime sends a start or job preparation only while that state still
 matches. A late GitHub registration keeps its actual identity for
 GitHub-first cleanup by its unique name, and it starts no runner.
@@ -211,11 +219,19 @@ A matching take-out then looks up its exact installation with the App
 JWT. That lookup runs in a supervised task, outside the lease, and the
 callback returns an error meanwhile. The task uses the answer only while
 the saved organization still matches the event exactly.
-A successful lookup keeps ordinary GitHub-first retirement.
+A successful lookup keeps ordinary GitHub-first retirement for one pass.
+Each pending pass that used it starts one fresh exact lookup, outside the
+lease, with at most one lookup at a time for each organization. Only the
+first lookup starts retirement. A fresh lookup changes only the saved
+answer, and the next pass uses it. A confirming answer keeps the busy
+answers of the current take-out check, and a failed check stays failed.
 A 404 for that installation while the take-out is pending proves that the
-owner removed the App, because ciproxy has not uninstalled it yet. The
-callback then applies the owner-removal policy, with no registration call.
-A 403, a token-route 404, or another lookup error grants no authority.
+owner removed the App, because ciproxy has not uninstalled it yet. That
+answer stays final. The callback then applies the owner-removal policy,
+with no registration call. An earlier failed Boat check does not block
+that acceptance.
+A 403, a token-route 404, or another lookup error grants no authority, and
+the last answer stays.
 Only the reservations of that organization enter the callback.
 Busy jobs, saved stops, and stopped reservations stay protected.
 Each other live reservation needs positive retirement or a busy answer.
@@ -224,8 +240,12 @@ deliveries, and materialized Boat runners. A Boat delivery that can still
 launch keeps take-out pending. This includes an ambiguous dispatched start.
 A retained running Boat delivery needs a current GitHub busy answer and a
 saved `Busy` state. That answer must come from the supervised GitHub check
-of the current take-out, and its saved Boat records must not change after
-it. A saved `Busy` state or old job facts alone grant no take-out answer.
+of the current take-out. Its lifecycle authority must not change after it.
+That authority is the organization, the registration, the runner, its
+jobs, and the fixed inputs, phase, sandbox ID, end, and end report of the
+delivery. Routine usage and billing readings, measured starts, and lifetime
+bounds do not change it. A saved `Busy` state or old job facts alone grant
+no take-out answer.
 A retired idle Boat delivery needs saved provider deletion and removal of
 its registration intent. Registration-only reservations also need positive
 GitHub retirement before their intent is removed.

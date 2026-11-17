@@ -5,7 +5,6 @@ use std::sync::Arc;
 use axum::extract::{Path, Query, State};
 use axum::{Extension, Json};
 use chrono::Duration;
-use ciproxy_store_interface::billing::state::Tier;
 use ciproxy_store_interface::job_views::DashboardJob;
 use ciproxy_store_interface::jobs::JobState;
 use uuid::Uuid;
@@ -21,20 +20,12 @@ use crate::wire::jobs::{
 
 use super::{job_views, jobs_live, page_context};
 
-pub(super) fn history_days(tier: Tier) -> u32 {
-    match tier {
-        Tier::Free => 7,
-        Tier::Team => 30,
-        Tier::Business => 90,
-    }
-}
-
 pub(super) async fn read(
     state: &ApiState,
     workspace: Uuid,
     context: &page_context::Context,
 ) -> Result<Vec<DashboardJob>> {
-    let since = context.at - Duration::days(i64::from(history_days(context.record.state.tier)));
+    let since = context.at - Duration::days(i64::from(context.record.state.tier.history_days()));
     query(state.store.clone(), move |store| {
         store.dashboard_jobs(workspace, since)
     })
@@ -106,7 +97,7 @@ pub(crate) async fn history(
         .collect();
     Ok(Json(JobsHistoryPage {
         jobs,
-        history_days: history_days(context.record.state.tier),
+        history_days: context.record.state.tier.history_days(),
         banner: page_context::banner(&mut context)?,
     }))
 }

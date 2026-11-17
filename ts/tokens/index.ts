@@ -49,6 +49,13 @@ export const fonts = {
 /** The Graphite corner radii, in CSS pixels. */
 export const radii = { sm: 4, md: 6, lg: 6, xl: 8, xxl: 8, pill: 999 } as const;
 
+/**
+ * The corners of small data marks, in CSS pixels: the segments of a slot bar,
+ * the keys of a chart, and the data ends of thin bars. The radii above start
+ * at 4 px and shape controls and boxes; the Firna theme reads only them.
+ */
+export const markRadii = { sm: 1, md: 2, lg: 3 } as const;
+
 /** The status colours. With black, they are the only colours on a screen. */
 export const statusColors = {
   ok: "#12A150",

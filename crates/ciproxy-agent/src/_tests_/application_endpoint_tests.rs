@@ -12,6 +12,7 @@ use crate::cli::Action;
 use crate::endpoint::EndpointFilesMock;
 use crate::fixtures::identity;
 use crate::identity_store::IdentityStore;
+use crate::runtime_ownership::{RuntimeClaimsMock, RuntimeOwner};
 use crate::state::MachineState;
 
 #[test]
@@ -55,6 +56,9 @@ fn uninstall_without_a_trusted_identity_endpoint_keeps_local_cleanup_available()
         };
         let mock = Arc::new(Unimock::new((
             ServiceMock::stop.some_call(matching!()).returns(Ok(())),
+            RuntimeClaimsMock::wait
+                .some_call(matching!())
+                .returns(Ok(Arc::new(Unimock::new(())) as Arc<dyn RuntimeOwner>)),
             StoreMock::load
                 .some_call(matching!())
                 .returns(Ok(state.clone())),

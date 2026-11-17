@@ -1,6 +1,6 @@
 //! The USD monthly catalog and its user-selected quantities.
 
-use ciproxy_store_interface::billing::state::{Selection, Tier};
+use ciproxy_store_interface::billing::state::{AddOns, Selection, Tier};
 use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Result};
@@ -36,10 +36,10 @@ impl PriceCode {
     /// The monthly USD amount in cents.
     pub fn cents(self) -> u64 {
         match self {
-            Self::Team => 4900,
-            Self::Business => 29900,
-            Self::Starts => 1000,
-            Self::Machine => 2000,
+            Self::Team => Tier::Team.monthly_cents(),
+            Self::Business => Tier::Business.monthly_cents(),
+            Self::Starts => AddOns::START_BLOCK_CENTS,
+            Self::Machine => AddOns::MACHINE_CENTS,
         }
     }
 }
@@ -57,15 +57,10 @@ pub struct CheckoutReview {
 
 /// Calculate the selected monthly total without choosing a tier from use.
 pub fn monthly_total(selection: Selection) -> Result<u64> {
-    let base = match selection.tier {
-        Tier::Free if selection.add_ons.start_blocks == 0 && selection.add_ons.machines == 0 => 0,
-        Tier::Free => return Err(Error::FreeAddOns),
-        Tier::Team => PriceCode::Team.cents(),
-        Tier::Business => PriceCode::Business.cents(),
-    };
-    Ok(base
-        + u64::from(selection.add_ons.start_blocks) * 1000
-        + u64::from(selection.add_ons.machines) * 2000)
+    if selection.tier == Tier::Free && selection.add_ons != AddOns::default() {
+        return Err(Error::FreeAddOns);
+    }
+    Ok(selection.monthly_cents())
 }
 
 pub(crate) fn line_items(selection: Selection) -> Result<Vec<(PriceCode, u32)>> {

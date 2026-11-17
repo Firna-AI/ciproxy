@@ -59,7 +59,7 @@ def registration(client, args):
     value = {
         "configure": {"type": "configure_runner", "protocol_version": 1,
                       "runner_id": args.runner_id, "organization_id": str(organization["id"]),
-                      "registration": answer["encoded_jit_config"], "cache": None},
+                      "registration": answer["encoded_jit_config"]},
         "exit_report_url": args.callback_url_file.read_text().strip(),
         "exit_report_token": args.sandbox_token_file.read_text().strip(),
     }

@@ -33,6 +33,8 @@ mod process;
 mod state;
 #[path = "../../src/vm_config.rs"]
 mod vm_config;
+#[path = "../../src/vm_drives.rs"]
+mod vm_drives;
 
 use std::sync::Arc;
 

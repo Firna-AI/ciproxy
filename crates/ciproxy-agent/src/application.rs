@@ -3,13 +3,10 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use std::time::Duration;
 
-use ciproxy_protocol::reports::REPORT_INTERVAL_SECONDS;
 use clap::Parser;
 use tokio::signal::unix::{SignalKind, signal};
 use tokio::sync::{Mutex, mpsc};
-use tokio::time::interval;
 use tracing_subscriber::fmt::writer::BoxMakeWriter;
 use tracing_subscriber::util::SubscriberInitExt;
 
@@ -18,6 +15,7 @@ use crate::application_endpoint::{self, ConfiguredAction};
 use crate::application_setup::{
     InvocationError, InvocationSetup, LoadedInvocation, PreparedInvocation,
 };
+use crate::application_uninstall;
 use crate::area::AreaFiles;
 use crate::area_files::LinuxAreaFiles;
 use crate::boundaries::{Host, Service, Vms};
@@ -32,9 +30,7 @@ use crate::hardware::LinuxHost;
 use crate::host_composition::services;
 use crate::host_file_ops::directory;
 use crate::host_paths::{AREA, CONTROL, tools};
-use crate::host_preparation::{
-    FinalUninstall, Uninstall, UninstallState, stage_error, uninstall_inventory,
-};
+use crate::host_preparation::{FinalUninstall, Uninstall, stage_error, uninstall_inventory};
 use crate::host_system::LinuxHostSystem;
 use crate::identity_store::IdentityStore;
 use crate::installation::{Install, Installer};
@@ -45,7 +41,7 @@ use crate::network::LinuxNetwork;
 use crate::persistence::FileStore;
 use crate::process::{Commands, LinuxCommands};
 use crate::runtime::{AgentDaemon, Daemon};
-use crate::runtime_ownership::{LinuxRuntimeClaims, RuntimeClaims};
+use crate::runtime_ownership::{CliRuntimeWaitNotice, LinuxRuntimeClaims, RuntimeClaims};
 use crate::startup::{AgentStartup, Startup, StartupState};
 use crate::state::Mode;
 use crate::storage_sizing::{DEFAULT_IMAGE_BYTES, setting};
@@ -55,6 +51,7 @@ use crate::vm_files::LinuxVmFiles;
 use crate::vm_root::{LinuxRootFiles, ReflinkRoot};
 use crate::vms::LinuxVms;
 use crate::vsock::LinuxGuests;
+use crate::workload_space::{MachineWorkloadSpace, WorkloadSpace};
 
 pub(crate) async fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -111,6 +108,7 @@ async fn execute(action: Action) -> Result<()> {
     });
     let runtime: Arc<dyn RuntimeClaims> = Arc::new(LinuxRuntimeClaims {
         control: PathBuf::from(CONTROL),
+        notice: Arc::new(CliRuntimeWaitNotice),
     });
     let setup: Arc<dyn InvocationSetup> = Arc::new(LoadedInvocation {
         endpoints,
@@ -143,9 +141,9 @@ async fn execute(action: Action) -> Result<()> {
         .map_or(requested_budget.unwrap_or(DEFAULT_IMAGE_BYTES), |record| {
             record.image_budget
         });
-    let preclaimed = ownership.and_then(|ownership| ownership.runtime());
+    let preclaimed = ownership.map(|ownership| ownership.runtime());
     let image_services =
-        crate::application_images::prepare(&layout, image_budget, runtime, preclaimed)?;
+        crate::application_images::prepare(&layout, image_budget, runtime, preclaimed.clone())?;
     let space = image_services.space;
     let images = image_services.images;
     let identity = state.identity.clone();
@@ -153,7 +151,7 @@ async fn execute(action: Action) -> Result<()> {
     let commands: Arc<dyn Commands> = Arc::new(LinuxCommands);
     let cache_services = application_cache::prepare(commands.clone(), identity.as_ref())?;
     let cache = cache_services.cache.clone();
-    let (guest_tx, mut guest_rx) = mpsc::channel(256);
+    let (guest_tx, guest_rx) = mpsc::channel(256);
     let guests = Arc::new(LinuxGuests::new(layout.clone(), commands.clone(), guest_tx));
     let vms: Arc<dyn Vms> = Arc::new(LinuxVms {
         tools: services.tools,
@@ -174,22 +172,32 @@ async fn execute(action: Action) -> Result<()> {
         guests,
         operation: Mutex::new(()),
     });
+    let allocation = Arc::new(Mutex::new(()));
+    let state = Arc::new(Mutex::new(state));
+    let workload_space: Arc<dyn WorkloadSpace> = Arc::new(MachineWorkloadSpace {
+        state: state.clone(),
+        host: host.clone(),
+        cache: cache.clone(),
+    });
     let agent: Arc<dyn Agent> = Arc::new(Controller {
-        allocation: Mutex::new(()),
+        allocation: allocation.clone(),
         reporting_initialized: Mutex::new(false),
         network_cleanup: Mutex::new(()),
         control_connected: AtomicBool::new(false),
-        state: Mutex::new(state),
+        state,
         store: store.clone(),
         host: host.clone(),
         vms,
         images: images.clone(),
         cache: cache.clone(),
+        space: workload_space.clone(),
         image_budget,
         dockers: Some(Arc::new(LinuxDockers {
             layout: layout.clone(),
             commands: commands.clone(),
-            cache,
+            allocation,
+            space: workload_space,
+            image_budget,
         }) as Arc<dyn DockerDisks>),
     });
     match action {
@@ -257,7 +265,11 @@ async fn execute(action: Action) -> Result<()> {
             result?;
         }
         ConfiguredAction::Uninstall => {
+            let Some(runtime) = preclaimed else {
+                return Err(Error::ImageOwnership);
+            };
             let uninstall: Arc<dyn Uninstall> = Arc::new(FinalUninstall {
+                _runtime: runtime,
                 files,
                 images,
                 preparation,
@@ -265,34 +277,7 @@ async fn execute(action: Action) -> Result<()> {
                 store,
                 agent: agent.clone(),
             });
-            if uninstall.start().await? == UninstallState::Complete {
-                println!("ciproxy agent uninstalled");
-                return Ok(());
-            }
-            let mut timer = interval(Duration::from_secs(REPORT_INTERVAL_SECONDS));
-            loop {
-                match uninstall.finish().await {
-                    Ok(()) => break,
-                    Err(Error::Draining) => {}
-                    Err(error) => {
-                        tracing::warn!(%error, "Uninstall cleanup will retry automatically. Stop this command before running uninstall again.")
-                    }
-                }
-                let result = tokio::select! {
-                    event = guest_rx.recv() => {
-                        let event = event.ok_or(Error::Disconnected)?;
-                        if event.configuration_lost {
-                            agent.configuration_lost(&event.runner_id.0).await?;
-                        }
-                        agent.guest(event.provenance, &event.runner_id.0, event.message).await.map(|_| ())
-                    }
-                    _ = timer.tick() => agent.reconcile().await,
-                };
-                if let Err(error) = result {
-                    tracing::warn!(error = %error, "uninstall is waiting for job and VM cleanup");
-                }
-            }
-            println!("ciproxy agent uninstalled");
+            application_uninstall::execute(uninstall, agent, guest_rx).await?;
         }
     }
     Ok(())

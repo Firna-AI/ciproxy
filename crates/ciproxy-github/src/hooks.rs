@@ -3,11 +3,18 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use reqwest::StatusCode;
 use serde::Deserialize;
 
 use crate::app::webhook::WebhookVerifier;
 use crate::app::{GitHubApp, InstallationOutcome};
 use crate::error::{Result, ResultExt};
+
+/// The acknowledgement returned after the hosted hook accepts a delivery.
+///
+/// GitHub labels 200-399 successful, but a proxy or redirect can return those
+/// statuses before the hook runs. Only the route's own 204 confirms acceptance.
+pub const WEBHOOK_ACCEPTED_STATUS: StatusCode = StatusCode::NO_CONTENT;
 
 /// The result returned to the hosted route after a verified delivery.
 #[derive(Clone, Debug, Eq, PartialEq)]

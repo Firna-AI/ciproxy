@@ -49,3 +49,7 @@ impl AppJwt for RsaAppJwt {
             .into())
     }
 }
+
+#[cfg(test)]
+#[path = "_tests_/jwt_tests.rs"]
+mod jwt_tests;

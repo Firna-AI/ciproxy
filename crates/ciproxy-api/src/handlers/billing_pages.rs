@@ -4,7 +4,8 @@ use std::sync::Arc;
 
 use axum::extract::{Path, Query, State};
 use axum::{Extension, Json};
-use ciproxy_metering::pricing::{Plan, Tier, plan_choice};
+use ciproxy_metering::pricing::plan_choice;
+use ciproxy_store_interface::billing::state::{Selection, Tier};
 
 use crate::access::Principal;
 use crate::error::Result;
@@ -44,10 +45,10 @@ pub(crate) async fn plans(
         page_context::usage(page_context::read(&state, workspace, principal.github_id()).await?)?;
     let mut plans = Vec::new();
     for tier in [Tier::Free, Tier::Team, Tier::Business] {
-        let offer = page_context::offer(plan_choice(Plan {
+        let offer = page_context::offer(plan_choice(Selection {
             tier,
             add_ons: Default::default(),
-        }))?;
+        }));
         let current = offer.selection.tier == usage.status.selection.tier;
         let covers_use = offer.selection.tier == usage.offer.selection.tier && !current;
         let mut features = vec![
@@ -80,11 +81,7 @@ pub(crate) async fn plans(
                 && !usage.status.operation_in_progress,
             current,
             covers_use,
-            history_days: match tier {
-                Tier::Free => 7,
-                Tier::Team => 30,
-                Tier::Business => 90,
-            },
+            history_days: tier.history_days(),
             organizations: (tier == Tier::Free).then_some(1),
             features,
             initial_add_ons: if offer.selection.tier == usage.offer.selection.tier {

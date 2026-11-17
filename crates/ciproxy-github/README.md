@@ -15,15 +15,35 @@ Save job updates before acknowledging their messages.
 
 ## What This Crate Does
 
-The App uses these permissions only:
+### Credential scopes
+
+The App has the four permissions that
+[GitHub App permissions](../../docs/protocol/security.md#github-app-permissions)
+gives:
 
 - Organization self-hosted runners: write.
 - Organization Members: read.
 - Repository Metadata: read.
 - Repository Actions: read.
 
-The dashboard uses Members through the person's App user token.
-Installation tokens request the three runner and repository permissions.
+Each credential has this scope:
+
+- The App JWT acts as the App, not as an installation. It requests
+  installation tokens, reads installation state, reads and redelivers
+  webhook deliveries, and uninstalls the App at take-out.
+- `RotatingTokens` issues the installation tokens of the REST adapter. Each
+  token requests organization self-hosted runners write, repository
+  metadata read, and repository actions read.
+- The `scaleset` SDK mints its own installation token with the App JWT.
+  That token has every installation permission, also Members read. The SDK
+  exchanges it for a runner registration token to reach the Actions
+  service, which serves scale sets, message sessions, and runner
+  registrations.
+- The dashboard's App user token uses Members read for the person's own
+  organization memberships and ownership.
+- The App-key live probes request the three `RotatingTokens` permissions
+  through [probe_common.py](scripts/probe_common.py). A probe fails when
+  GitHub grants any other set.
 
 The REST adapter reads repository metadata, workflow-run metadata, and the
 cache entry list of a repository.
@@ -119,8 +139,9 @@ pending choices and activation without a new constructor or startup dependency.
 ### Repository access and scale sets
 
 The [scale-set guide](scale-sets.md) gives repository refresh, the
-managed runner groups, scale-set creation and reconcile, and label
-replacement.
+managed runner groups, scale-set creation and reconcile, label
+replacement, and the
+[workspace ownership](scale-sets.md#workspace-ownership) of scale sets.
 
 Runner group sync creates or updates the managed name and private-access
 policy. It sets selected repositories through the separate repository
@@ -195,8 +216,8 @@ See [Service integration boundaries](INTEGRATION.md#service-integration-boundari
 ### Trusted run metadata
 
 The [run metadata guide](run-metadata.md) gives the trusted run facts,
-the assignment facts for the agent, the cache entry metadata, and webhook
-delivery recovery.
+the assignment facts for the agent, the cache entry metadata, job
+completion recovery, and webhook delivery recovery.
 
 ## Quick Start
 
@@ -239,6 +260,7 @@ commands, fixture contracts, and cleanup for the live probes.
 ### Key Code
 
 - [src/redelivery.rs](src/redelivery.rs) recovers failed App webhooks.
+- [src/timing.rs](src/timing.rs) recovers real job times and completions.
 
 - [src/app/mod.rs](src/app/mod.rs) owns `GitHubApp` and its role and
   lifecycle callbacks.

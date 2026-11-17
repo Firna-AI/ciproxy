@@ -2,8 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { parseOverflowSummary } from "../src/api/machine-parse.ts";
+import type { Problem } from "../src/api/schema.ts";
+import { machinesServices } from "../src/state/machines-services.ts";
 import { overflowModel } from "../src/view/machines-overflow.ts";
+import { workspaceId } from "../scripts/fixtures-core.ts";
 import { nbsp, summary } from "./machines-fixtures.ts";
+import { appWith, response } from "./support.ts";
 
 test("a connected Boat account shows its wait and the confirmed spend against the limit", () => {
   assert.deepEqual(overflowModel(summary()), {
@@ -82,4 +86,35 @@ test("the overflow summary reader keeps nulls and refuses a negative wait", () =
   );
   assert.equal(parseOverflowSummary({ ...body, wait_seconds: -1 }), undefined);
   assert.equal(parseOverflowSummary({ ...body, enabled: "yes" }), undefined);
+});
+
+test("a failed refresh keeps the last overflow summary and shows the failure until a read works", async () => {
+  const unavailable = {
+    code: "unavailable",
+    message: "Boat did not answer.",
+  } satisfies Problem;
+  const later = summary({ wait_seconds: 0 });
+  const { app, calls } = appWith(
+    response(summary()),
+    response(unavailable, 503),
+    response(later),
+  );
+  const store = machinesServices(app).overflow(workspaceId);
+  await store.load();
+  await store.load();
+  assert.deepEqual(store.state.get(), {
+    status: "ready",
+    page: summary(),
+    refreshFailure: { kind: "problem", status: 503, problem: unavailable },
+  });
+  await store.load();
+  assert.deepEqual(store.state.get(), {
+    status: "ready",
+    page: later,
+    refreshFailure: null,
+  });
+  assert.deepEqual(
+    calls.map((call) => call.url),
+    Array(3).fill(`/api/workspaces/${workspaceId}/overflow/summary`),
+  );
 });

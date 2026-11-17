@@ -35,17 +35,16 @@ pub(crate) struct PreparedInvocation {
     pub(crate) ownership: Option<InvocationOwnership>,
 }
 
-/// Hold a runtime claim or stopped-service proof through identity recovery.
+/// Hold the runtime claim through identity recovery and command cleanup.
 pub(crate) struct InvocationOwnership {
-    runtime: Option<Arc<dyn RuntimeOwner>>,
+    runtime: Arc<dyn RuntimeOwner>,
 }
 
 impl Debug for InvocationOwnership {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("InvocationOwnership")
-            .field("runtime", &self.runtime.is_some())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -53,7 +52,7 @@ impl IdentityOwner for InvocationOwnership {}
 
 impl InvocationOwnership {
     /// Share the same file claim with image recovery and its runtime owner.
-    pub(crate) fn runtime(&self) -> Option<Arc<dyn RuntimeOwner>> {
+    pub(crate) fn runtime(&self) -> Arc<dyn RuntimeOwner> {
         self.runtime.clone()
     }
 }
@@ -79,16 +78,17 @@ impl InvocationSetup for LoadedInvocation {
         };
         let ownership = match action {
             ConfiguredAction::Run { .. } => match self.runtime.claim() {
-                Ok(owner) => Some(InvocationOwnership {
-                    runtime: Some(owner),
-                }),
+                Ok(owner) => Some(InvocationOwnership { runtime: owner }),
                 Err(error) => return Err(InvocationError::Setup(error)),
             },
             ConfiguredAction::Uninstall => {
                 if let Err(error) = self.service.stop() {
                     return Err(InvocationError::Setup(error));
                 }
-                Some(InvocationOwnership { runtime: None })
+                match self.runtime.wait() {
+                    Ok(runtime) => Some(InvocationOwnership { runtime }),
+                    Err(error) => return Err(InvocationError::Setup(error)),
+                }
             }
             ConfiguredAction::Install { .. } => None,
         };
@@ -115,3 +115,7 @@ mod application_setup_tests;
 #[cfg(test)]
 #[path = "_tests_/run_ownership_tests.rs"]
 mod run_ownership_tests;
+
+#[cfg(test)]
+#[path = "_tests_/uninstall_ownership_tests.rs"]
+mod uninstall_ownership_tests;

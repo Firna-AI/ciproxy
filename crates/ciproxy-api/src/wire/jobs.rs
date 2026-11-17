@@ -80,7 +80,7 @@ pub enum JobLocation {
 }
 
 /// Actual byte-precise VM dimensions, distinct from requested free job disk.
-#[derive(Serialize, ToSchema)]
+#[derive(Clone, Serialize, ToSchema)]
 pub struct JobVmSize {
     /// Actual virtual CPUs.
     pub vcpus: u32,

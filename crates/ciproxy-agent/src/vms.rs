@@ -16,6 +16,7 @@ use crate::layout::{Layout, jail_uid, unit_name};
 use crate::network::{Network, network_name};
 use crate::process::{Commands, UnitState, arguments};
 use crate::state::VmRecord;
+use crate::vm_drives::VmDrive;
 use crate::vm_files::VmFiles;
 use crate::vsock::Guests;
 
@@ -39,10 +40,10 @@ impl Vms for LinuxVms {
         self.guests.configuration_lost(vm).await
     }
     async fn clear_docker(&self, vm: &VmRecord) -> Result<()> {
-        self.switch_docker(vm, "/docker-slot").await
+        self.switch_docker(vm, VmDrive::DockerSlot.jailed()).await
     }
     async fn swap_docker(&self, vm: &VmRecord) -> Result<()> {
-        self.switch_docker(vm, "/docker-job.ext4").await
+        self.switch_docker(vm, VmDrive::DockerJob.jailed()).await
     }
     async fn allocate(&self, report: RunnerReport, used: &[u16]) -> Result<VmRecord> {
         let network_index = self.network.allocate(used).await?;

@@ -31,13 +31,13 @@ async fn requester_creates_named_workspace_with_atomic_defaults_and_private_grou
     let observed = created.clone();
     let api: Arc<dyn ScaleSetApi> = Arc::new(Unimock::new((
         ScaleSetApiMock::ensure
-            .some_call(matching!("ciproxy", 47, None))
+            .some_call(matching!("ciproxy", 47, None, _))
             .returns(Ok(53)),
         ScaleSetApiMock::ensure
-            .some_call(matching!("ciproxy-4vcpu", 47, None))
+            .some_call(matching!("ciproxy-4vcpu", 47, None, _))
             .returns(Ok(59)),
         ScaleSetApiMock::ensure
-            .some_call(matching!("ciproxy-8vcpu", 47, None))
+            .some_call(matching!("ciproxy-8vcpu", 47, None, _))
             .returns(Ok(61)),
     )));
     let _keep_api = api.clone();
@@ -57,8 +57,8 @@ async fn requester_creates_named_workspace_with_atomic_defaults_and_private_grou
             .some_call(matching!((claim) if claim.requester_id == 41 && claim.github_id == 17 && claim.installation_id == 19))
             .returns(Ok(InstallationDecision::Direct)),
         InstallationStoreMock::by_github_id
-            .some_call(matching!(17))
-            .returns(Ok(vec![])),
+            .each_call(matching!(17))
+            .answers(&|_, _| Ok(vec![])),
         LifecycleStoreMock::register
             .some_call(matching!(_))
             .answers_arc(Arc::new(move |_, registration| {
@@ -137,11 +137,12 @@ async fn requester_creates_named_workspace_with_atomic_defaults_and_private_grou
 async fn admin_intent_uses_shared_workspace_and_replay_keeps_label_edits() {
     let mut existing = organization();
     existing.repositories = RepositoryAccess::Selected(vec![23, 29, 101]);
+    let registrations = existing.clone();
     let mut edited = labels().remove(0);
     edited.size.vcpus = 6;
     let api: Arc<dyn ScaleSetApi> = Arc::new(Unimock::new(
         ScaleSetApiMock::ensure
-            .some_call(matching!("ciproxy", 47, Some(53)))
+            .some_call(matching!("ciproxy", 47, Some(53), _))
             .returns(Ok(53)),
     ));
     let service = app(Unimock::new((
@@ -162,8 +163,8 @@ async fn admin_intent_uses_shared_workspace_and_replay_keeps_label_edits() {
                 billing_hold: false,
             })),
         InstallationStoreMock::by_github_id
-            .some_call(matching!(17))
-            .returns(Ok(vec![existing.clone()])),
+            .each_call(matching!(17))
+            .answers_arc(Arc::new(move |_, _| Ok(vec![registrations.clone()]))),
         LifecycleStoreMock::register
             .some_call(matching!(_))
             .answers(&|_, registration| {

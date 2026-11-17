@@ -158,6 +158,7 @@ async fn uninstall_completion_checks_networks_and_preserves_identity_through_cle
         events.lock().unwrap().clear();
         let agent = Arc::new(controller(initial, mock.as_ref().clone()));
         let uninstall = FinalUninstall {
+            _runtime: Arc::new(Unimock::new(())),
             files: mock.clone(),
             images,
             preparation: Arc::new(HostPreparation {

@@ -3,12 +3,12 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
+use crate::boat_delivery::BoatDeliveryGuard;
 use crate::boat_runtime::BoatRunnerIntent;
 use crate::error::Result;
 use crate::gateway::MachineSnapshot;
 use crate::github::GithubJob;
 use crate::organizations::Organization;
-use crate::overflow::record::StartRecord;
 use crate::own_runners::OwnRunner;
 use crate::runners::Runner;
 use crate::scale_sets::RegistrationTarget;
@@ -72,7 +72,7 @@ pub struct BoatRunnerGuard {
     /// Current installation identity and removal authority.
     pub organization: Option<Organization>,
     /// Current delivery phase and completion evidence.
-    pub delivery: Option<StartRecord>,
+    pub delivery: Option<BoatDeliveryGuard>,
     /// Current materialized runner, including trusted Busy state.
     pub runner: Option<Runner>,
     /// Trusted jobs mapped to this registration.
@@ -99,6 +99,16 @@ pub enum BoatRunnerResult {
     Retired,
 }
 
+/// Exact saved authority after one conditional Boat result write.
+pub enum BoatRunnerWrite {
+    /// The result applied and this authority remains saved in the same transaction.
+    Applied(Box<BoatRunnerGuard>),
+    /// Retirement applied and removed the registration reservation.
+    Retired,
+    /// Newer saved authority rejected the result.
+    Rejected,
+}
+
 /// Scoped Boat authority reads and atomic conditional remote-result writes.
 pub trait BoatResultStore: Send + Sync {
     /// Capture one Boat reservation under row locks.
@@ -107,13 +117,13 @@ pub trait BoatResultStore: Send + Sync {
         workspace_id: Uuid,
         runner_id: Uuid,
     ) -> Result<Option<BoatRunnerGuard>>;
-    /// Apply only against the saved Boat reservation, delivery, and installation.
+    /// Apply against current lifecycle authority and return its exact saved result.
     fn apply_boat_runner_result(
         &self,
         workspace_id: Uuid,
         expected: &BoatRunnerGuard,
         result: BoatRunnerResult,
-    ) -> Result<bool>;
+    ) -> Result<BoatRunnerWrite>;
 }
 
 /// Scoped own-machine command reads and conditional remote results.

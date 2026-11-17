@@ -62,12 +62,11 @@
   gap: 10px;
 }
 
-/* Square at the baseline, a small rounded data end: half the token radius
-   of a control. */
+/* Square at the baseline, a small rounded data end. */
 .cost-fill {
   display: inline-block;
   height: 22px;
-  border-radius: 0 calc(var(--r-md) / 2) calc(var(--r-md) / 2) 0;
+  border-radius: 0 var(--r-mark-lg) var(--r-mark-lg) 0;
   background: var(--c-chart-context);
 }
 

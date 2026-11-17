@@ -191,6 +191,7 @@ async fn final_uninstall_waits_for_jobs_then_preserves_identity_until_cleanup_su
             mock.as_ref().clone(),
         );
         let result = FinalUninstall {
+            _runtime: Arc::new(Unimock::new(())),
             files: mock.clone(),
             images: mock.clone(),
             preparation: mock.clone(),

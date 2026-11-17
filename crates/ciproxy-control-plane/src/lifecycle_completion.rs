@@ -85,7 +85,9 @@ impl MachineRuntime {
             .lock()
             .await
             .get(&organization.id)
-            .filter(|check| &check.organization == current && !check.failed)
+            .filter(|check| {
+                &check.organization == current && (check.owner_removed || !check.failed)
+            })
             .map(|check| check.owner_removed)
             .ok_or(Error::StateChanged)?;
         if owner_removed {

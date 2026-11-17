@@ -20,7 +20,7 @@ use crate::wire::machines::{
     MachinePath, MachineView, TokenPath, WarmRunnerTarget,
 };
 
-use super::{install_command, jobs, machine_views};
+use super::{install_command, machine_views};
 
 #[utoipa::path(operation_id = "machines_list", get, path = "/workspaces/{workspace_id}/machines", params(WorkspacePath), responses((status = 200, body = [MachineView])), security(("session" = [])))]
 pub(crate) async fn list(
@@ -54,9 +54,9 @@ pub(super) async fn read(
     let jobs = query(state.store.clone(), move |store| {
         store.dashboard_jobs(
             workspace,
-            at - Duration::days(i64::from(jobs::history_days(
-                store.billing(workspace)?.state.tier,
-            ))),
+            at - Duration::days(i64::from(
+                store.billing(workspace)?.state.tier.history_days(),
+            )),
         )
     })
     .await?;

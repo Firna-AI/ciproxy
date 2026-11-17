@@ -28,6 +28,7 @@ impl ScaleSetApi for Remote {
         name: &str,
         group: i64,
         saved: Option<i64>,
+        _: &[&str],
     ) -> ciproxy_github::error::Result<i64> {
         if self.fail_ensure.swap(false, Ordering::SeqCst) {
             return Err(ciproxy_github::error::Error::AccessUnavailable(503));
@@ -55,7 +56,12 @@ impl ScaleSetApi for Remote {
         self.sets.lock().unwrap().retain(|_, value| *value != id);
         Ok(())
     }
-    async fn rename_scale_set(&self, id: i64, name: &str) -> ciproxy_github::error::Result<()> {
+    async fn rename_scale_set(
+        &self,
+        id: i64,
+        name: &str,
+        _: &[&str],
+    ) -> ciproxy_github::error::Result<()> {
         let mut sets = self.sets.lock().unwrap();
         let previous = sets
             .iter()

@@ -1,4 +1,4 @@
-# Label responses cannot tell Boat from wait
+# Label responses lack current Boat start holds
 
 - **Severity:** Medium. **Likelihood:** Common. **Effort:** Medium.
   **Confidence:** High. **Harder later:** No.
@@ -8,25 +8,22 @@
   check of `plans/follow-ups/jobs-notice-facts.md` found.
 - **Source:** Review.
 - **Category:** Product bug.
-- **Location:** `crates/ciproxy-api/src/wire/settings.rs:140`,
-  `crates/ciproxy-api/src/wire/settings.rs:151`,
-  `crates/ciproxy-api/src/handlers/labels.rs:44`,
-  `crates/ciproxy-api/src/handlers/job_fit.rs:111`,
-  `crates/ciproxy-api/src/handlers/job_fit.rs:133`,
-  `crates/ciproxy-api/src/wire/job_fit.rs:33`, and
-  `docs/protocol/labels.md:127`.
-- **Reason:** The fix is API work outside the UI branch, and only the label
-  screens of Settings, which the dashboard has not built yet, depend on it.
+- **Location:** `crates/ciproxy-api/src/wire/settings.rs`, `LabelFit`,
+  `crates/ciproxy-api/src/handlers/label_boat.rs`, `enrich`,
+  `crates/ciproxy-api/src/wire/job_overflow.rs`, `JobOverflow`, and
+  `docs/protocol/labels.md`, "A size that nothing can run".
+- **Reason:** Saved and draft labels have physical Boat fit. Their current
+  start holds still need the shared server status that
+  `plans/follow-ups/machines-boat-start-status.md` records.
 
 - **Terms:**
   - **Placement:** where the jobs of a label run now: own machines, Boat,
     or wait.
-  - **`LabelFit`:** the own-machine fit of a label: counts of eligible,
-    unavailable, and fitting machines, and the jobs that fit on each.
-  - **`BoatLabelFit`:** the Boat fit of a label that the live queue
-    already gets: `unavailable`, `disabled`, `no_size_fits`, `fitting` with
-    a size, or `largest_fallback` with a size. A fitting size also has a
-    `refused` flag.
+  - **`LabelFit`:** physical machine and Boat fit, with account presence,
+    required root disk, the largest Boat size, and placement.
+  - **`BoatLabelFit`:** physical Boat fit shared by Settings and Jobs:
+    `unavailable`, `disabled`, `no_size_fits`, `fitting`, or
+    `largest_fallback`. A selected size also has a `refused` flag.
   - **Draft label:** a label in the label dialog before the save, which
     the preview reads.
   - **Offer:** the largest job that one place takes. On 8 November 2026,
@@ -40,106 +37,84 @@
     save. At `:118-126`, the setting "When nothing fits" chooses between
     waiting and the largest Boat size. At `:129-132`, a label that nothing
     fits is never refused at save.
-  - These responses carry a saved label, and each gives only `LabelFit`:
+  - These responses carry a saved label with the full `LabelFit`:
     - `GET /api/workspaces/<id>/labels`, at
-      `crates/ciproxy-api/src/handlers/labels.rs:31-42`.
+      `crates/ciproxy-api/src/handlers/labels.rs`, `list`.
     - The replies of `POST /api/workspaces/<id>/labels` and
-      `PUT /api/workspaces/<id>/labels/<label id>`, at `labels.rs:68` and
-      `labels.rs:102`.
+      `PUT /api/workspaces/<id>/labels/<label id>`, at `create` and
+      `update` in the same file.
     - `SettingsView` and `SetupView`, at
-      `crates/ciproxy-api/src/wire/settings.rs:28-34` and `:11-23`.
-  - `LabelView` at `settings.rs:140-147` holds the label and
-    `fit: LabelFit`. `LabelFit` at `settings.rs:151-164` holds the
-    own-machine counts only.
-  - The preview `POST /api/workspaces/<id>/labels/preview` reads a draft
-    label and the machines only, and returns `LabelFit`, at
-    `labels.rs:44-65`.
-  - The live queue already gets the Boat fit, but only for labels with
-    waiting jobs. `WaitingLabelFit` at
-    `crates/ciproxy-api/src/wire/job_fit.rs:11-28` gives
-    `boat: BoatLabelFit`, at `job_fit.rs:33-58`, and `nothing_fits`.
-    `crates/ciproxy-api/src/handlers/job_fit.rs` computes them:
-    - `physical_catalog` at `:111-131` takes the Boat catalog from the
-      overflow view, without its temporary refusals and spend.
-    - `boat_fit` at `:133-178` applies the root sizing of the agent, the
-      size policy of the scaler, and the setting "When nothing fits".
-    - The `nothing_fits` rule is at `:78-90`.
-  - The live page also sends the current Boat facts as `JobOverflow`, at
-    `crates/ciproxy-api/src/wire/jobs.rs:213`: `connected`,
+      `crates/ciproxy-api/src/wire/settings.rs`.
+  - `LabelView` holds the label and `fit: LabelFit` in `settings.rs`.
+    `crates/ciproxy-api/src/handlers/label_facts.rs` adds the Boat fit to
+    saved labels and draft previews through `label_boat::enrich`.
+  - The preview `POST /api/workspaces/<id>/labels/preview` returns the
+    draft's full `LabelFit`. It uses the machines, trusted image sizing,
+    and existing overflow observation.
+  - `WaitingLabelFit` in `crates/ciproxy-api/src/wire/job_fit.rs` gives
+    `current.fit`, `boat: BoatLabelFit`, and `nothing_fits`.
+    `crates/ciproxy-api/src/handlers/job_fit.rs` enriches `current.fit`
+    through the same `label_boat::enrich` call when root sizing is known.
+    Its outer Boat choice and `nothing_fits` use `current.fit.boat`.
+  - `label_boat::enrich` reads `OverflowView::resource_catalog` directly.
+    It uses the scaler size policy and the trusted root sizing.
+    Temporary refusals and missing spend bounds do not change physical
+    fit. A selected size keeps its refusal flag. Unknown own-machine
+    capacity prevents a largest-size fallback.
+  - The live page also sends the current Boat facts as `JobOverflow`:
+    `connected`,
     `key_rejected`, `billing_required`, `retry_at`, the spend limit, and
-    `refused_sizes`, at `crates/ciproxy-api/src/wire/job_overflow.rs:11-32`.
+    `refused_sizes`, at `crates/ciproxy-api/src/wire/job_overflow.rs`.
     The app words a current Boat hold from them.
-  - So a client can tell from the saved and draft responses whether an own
-    machine fits, but not whether Boat runs the jobs or they wait. A label
-    with no waiting job, and every draft, has no Boat fit in any response.
+  - Saved labels and drafts now give physical placement even without
+    waiting jobs. They still give no current start status for a rejected
+    key, billing, a retry time, or an accounting hold.
   - The current clients:
-    - No app code calls the label list, the preview, or the create and
-      update routes. The label screens of Settings are not built.
-    - The Setup parser reads the `LabelFit` of the Setup labels field by
-      field, at `ts/app/src/api/parse-setup.ts:72-81`. The live queue reads
-      the own fit from `current.fit`, at
-      `ts/app/src/view/jobs-places.ts:112-113`. Both ignore an added field.
+    - Settings calls the preview, create, and update routes through
+      `ts/app/src/api/settings-endpoints.ts`.
+    - `ts/app/src/view/settings-labels.ts` reads the server placement.
+      `ts/app/src/view/settings-label-fit.ts` shows the full physical fit
+      in the label dialog.
+    - Setup and Settings read the shared fit through
+      `ts/app/src/api/parse-setup.ts`. The live queue reads `current.fit`
+      and the outer Boat fit through `ts/app/src/api/jobs-live-parse.ts`.
     - `npm --prefix ts run api:generate` regenerates the types in
       `ts/api/generated/`.
-    - So the fix costs the same while it waits. It gets harder only if the
-      label screens of Settings are built before it, with a placement of
-      their own.
-  - The label list and the label dialog of Settings depend on this item for
-    their placement. The Jobs, Savings, and billing pages do not, because
-    the live queue already gets the Boat fit of each waiting label.
-  - The existing API tests: `crates/ciproxy-api/tests/http/settings_tests.rs:16`
-    covers the label list and the preview, with own fit only, at `:27` and
-    `:48`. `crates/ciproxy-api/tests/http/m18_fit_tests.rs:24` covers the
-    Boat fit states of waiting labels.
-- **Problem:** The label list and the label dialog must show whether the
-  jobs of a label run on own machines, on Boat, or wait. The saved and
-  draft responses give only the own-machine fit, so a client cannot tell
-  Boat from wait without a fit rule of its own.
-- **Impact if no action:** The label screens of Settings cannot meet
-  `docs/protocol/labels.md:127-128`. They must leave out the placement of
-  each label that no own machine fits, or guess it.
-- **Root question:** How do the label list and the label dialog learn where
-  the jobs of a saved or a draft label run now?
+  - `crates/ciproxy-api/tests/http/m20_label_tests.rs` covers saved and
+    draft Boat fit, refusals, fallback, and unknown facts.
+    `crates/ciproxy-api/tests/http/m18_fit_tests.rs` covers the matching
+    nested and outer Boat choices for waiting labels.
+  - On 17 November 2026, the user chose one physical Boat fit calculation
+    for Settings and Jobs. That work does not add current start status.
+- **Problem:** Physical Boat fit does not tell a client whether Boat can
+  start a new job now. Saved and draft label responses lack the current
+  key, billing, retry, spend limit, and accounting holds.
+- **Impact if no action:** Settings can name Boat as the physical placement
+  while new starts wait. The label list and dialog cannot explain that hold.
+- **Root question:** How do saved and draft labels learn whether Boat can
+  start their jobs now?
 - **Options:**
-  - **A.** Add to the saved and draft responses the Boat facts that the API
-    already computes for the live queue:
-    - Give each saved label of the label list, the Settings view, and the
-      create and update replies, and the draft of the preview, its
-      `BoatLabelFit` and its `nothing_fits` result. Compute them with
-      `physical_catalog`, `boat_fit`, and the `nothing_fits` rule of
-      `crates/ciproxy-api/src/handlers/job_fit.rs`, from the same label,
-      machines, root sizing, catalog, and overflow view. Move that code to
-      one place that every route calls.
-    - Give these responses the current Boat facts once, as the live page
-      gives them in `JobOverflow`, so that one hold rule serves the live
-      queue and the label screens.
-    - Where the shared `LabelView` also appears in the live queue, both
-      Boat fits come from the same call, so they cannot differ.
+  - **A.** Add current Boat start status to the existing saved and draft
+    label responses:
+    - Keep the shared physical `LabelFit` computation.
+    - Give these responses the current Boat status once. Reuse the server
+      status of `plans/follow-ups/machines-boat-start-status.md` so that
+      Machines, Jobs, and Settings share one hold rule.
+    - Keep the physical Boat choice separate from current start status.
+      A refused fitting size stays visible as a physical fit.
     - Add no validation, no refusal at save, and no other behaviour. The
       protocol keeps its lines, and the API types are regenerated.
-    - Add tests at the API boundary, beside the test at
-      `settings_tests.rs:16`. For the label list and for the preview, add
-      one case for each placement:
-      - An own machine fits.
-      - No own machine fits, and a Boat size fits.
-      - The label forbids Boat.
-      - No Boat size fits, and the label waits.
-      - The label uses the largest-size fallback.
-      - Boat facts are missing, which gives `unavailable`.
-      - Boat refused the fitting size.
-    - Also test that a saved label with waiting jobs gives the same Boat fit
-      in the label list and in the live queue, and that a label that
-      nothing fits still saves.
+    - Extend the existing HTTP fit tests with the missing hold case.
+      Keep the physical-fit assertions and the unknown-observation cases.
     - Effort: Medium.
-  - **B.** Add a separate read that returns the placement of each saved
-    label, and add the same Boat facts to the preview. It uses the same
-    computation and the same tests as A. The saved-label types stay as they
-    are, but the label screens need a second request, and the API gets a
-    new route. Effort: Medium.
+  - **B.** Add a separate read for the current Boat start status of saved
+    labels. Add the same status to the preview. It uses the same server
+    rule and regression case as A. Saved-label types stay unchanged, but
+    Settings needs a second request and the API gains a route.
+    Effort: Medium.
 - **Left out:**
-  - A Boat fit that the app computes from a Boat catalog, because no label
-    response sends a catalog, and a second fit rule in the app can disagree
-    with the scaler, which counts the image root and the ext4 allowance.
+  - A Boat fit that the app computes from a Boat catalog, because the API
+    already gives the shared physical fit and placement.
   - The Boat fit of the live queue for saved labels, because it covers only
     labels with waiting jobs, and never a draft.
   - "Boat" for every label that allows Boat and fits no own machine,
@@ -147,31 +122,27 @@
     wait.
   - A protocol change that drops Boat and wait from the label list and the
     dialog, because `docs/protocol/labels.md:127-128` stays in force.
-  - The offers of the places, because they are an optional extra that the
-    user left out on 8 November 2026, and they do not say where the jobs
-    run.
+  - The offers of the places, because the user left them out on
+    8 November 2026, and they do not identify current start holds.
   - A refusal at save of a label that nothing fits, because
     `docs/protocol/labels.md:129-132` rejects it.
-- **Wider fix:** A. One owner computation of the Boat fit then serves the
-  live queue, the label list, and the dialog, so no client needs a fit rule
-  of its own.
-- **Previous examples:** The live queue gained the Boat fit of each waiting
-  label, at `crates/ciproxy-api/src/wire/job_fit.rs:33-58`, but the saved
-  and draft responses did not.
+- **Wider fix:** A. One server start status serves the live queue, the
+  label list, and the dialog. Clients then need no hold rule of their own.
+- **Previous examples:** Settings and Jobs now use `label_boat::enrich`
+  for physical fit. The separate current-start gap also affects Machines,
+  as `plans/follow-ups/machines-boat-start-status.md` records.
 - **Related:**
   - On 8 November 2026, the user kept the label dialog on its fit counts
     and placement, and its mockup dropped the offers of the places. This
-    item stays required, because the dialog still needs the Boat fit to
-    show its placement. The Boat fit says whether Boat runs the jobs, and an
-    offer says the largest job that a place takes, so the two need separate
-    fields.
+    physical fit is now present. A physical fit, an offer, and current
+    start status describe different facts.
+  - `plans/follow-ups/machines-boat-start-status.md` owns the shared server
+    status. Reuse its source when adding status to label responses.
   - `plans/follow-ups/jobs-notice-facts.md` keeps the kind of the Boat size
     choice of each start. On 8 November 2026, the user chose that option,
     not the offers of its option G. Neither item waits for the other.
-- **Recommendation:** A. One response then gives each label its placement
-  from the computation that the live queue already uses, with no second
-  request and no rule in the app. B keeps the saved-label types as they
-  are, but it adds a request and a route.
-- **Action:** fix after merge, apply A, because the change is API work
-  outside the UI branch, and only the label screens of Settings, which the
-  dashboard has not built yet, depend on it.
+- **Recommendation:** A. Existing responses then give current start status
+  from one server rule, with no second request or copied client rule.
+  B keeps saved-label types unchanged but adds a request and a route.
+- **Action:** fix after merge, apply A, because the remaining shared
+  start-status work reaches the overflow, scaler, API, and app code.

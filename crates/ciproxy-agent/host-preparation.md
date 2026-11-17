@@ -194,9 +194,13 @@ For an old installation with top-level `images` or `jailer` data:
 ## Uninstall
 
 Uninstall stops the agent service and lets independent VM jobs finish.
+Before it reads machine data, it waits for exclusive runtime ownership.
+If another agent process still runs, it prints one line.
+It then waits for that process to stop.
+It holds that ownership through final cleanup, also with no recorded VM.
 With no recorded VM, it goes directly to guarded area removal.
 It first retries pending network cleanup and finds reserved-name orphans.
-It needs no runtime verification, image recovery, or registration.
+It needs no area verification, image recovery, or registration.
 This path accepts an interrupted Creating area, an unmounted Ready area,
 or an area whose reflink check fails.
 It permits a never-formatted file only with matching Creating ownership.

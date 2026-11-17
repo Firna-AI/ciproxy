@@ -7,6 +7,7 @@ use crate::docker::LinuxDockers;
 use crate::docker_files::{self, AttachmentPhase, Lease};
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::state::VmRecord;
+use crate::vm_drives::VmDrive;
 
 impl LinuxDockers {
     pub(crate) fn fail_attachment(&self, vm: &VmRecord) -> Result<bool> {
@@ -14,7 +15,7 @@ impl LinuxDockers {
             return Ok(false);
         };
         lease.phase = match lease.phase {
-            AttachmentPhase::Preparing => AttachmentPhase::Abandon,
+            AttachmentPhase::Preparing | AttachmentPhase::Bound => AttachmentPhase::Abandon,
             AttachmentPhase::Offered => AttachmentPhase::Discard,
             AttachmentPhase::Detached => return Ok(false),
             phase => phase,
@@ -41,7 +42,7 @@ impl LinuxDockers {
                 self.discard_invalid_source(vm, &lease).await?;
             }
         }
-        remove(&self.layout.jail_root(vm).join("docker-job.ext4"))?;
+        remove(&VmDrive::DockerJob.path(&self.layout, vm))?;
         lease.writer = false;
         lease.phase = AttachmentPhase::Detached;
         docker_files::save(&self.layout, vm, &lease)

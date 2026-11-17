@@ -59,7 +59,7 @@ pub(super) async fn read(state: &ApiState, workspace: Uuid, person: i64) -> Resu
         let usage = workspace_usage(
             &store.workspace_usage(workspace)?,
             period,
-            billing_views::plan(saved.tier, saved.add_ons),
+            saved.selection(),
             at,
             payment,
         );
@@ -127,7 +127,7 @@ pub(super) fn banner(context: &mut Context) -> Result<Option<PageBanner>> {
             action,
         }),
         Some(Banner::SoftLimit) => Some(PageBanner::SoftLimit {
-            offer: offer(context.usage.offer.clone())?,
+            offer: offer(context.usage.offer.clone()),
             action,
         }),
         _ => None,
@@ -149,19 +149,19 @@ pub(super) fn organizations_banner(context: &mut Context) -> Result<Option<PageB
     banner(context)
 }
 
-pub(super) fn offer(choice: PlanChoice) -> Result<PlanOffer> {
-    Ok(PlanOffer {
-        selection: billing_views::choice_selection(choice.plan)?,
+pub(super) fn offer(choice: PlanChoice) -> PlanOffer {
+    PlanOffer {
+        selection: billing_views::selection(choice.plan.tier, choice.plan.add_ons),
         included_starts: choice.starts.to_string(),
         included_machines: choice.machines.to_string(),
         monthly_cents: billing_views::cents(choice.monthly_usd),
-    })
+    }
 }
 
 pub(super) fn usage(mut context: Context) -> Result<PlanUsagePage> {
     let banner = banner(&mut context)?;
     let state = context.record.state;
-    let current = offer(plan_choice(billing_views::plan(state.tier, state.add_ons)))?;
+    let current = offer(plan_choice(state.selection()));
     Ok(PlanUsagePage {
         status: PlanStatus {
             selection: billing_views::selection(state.tier, state.add_ons),
@@ -193,7 +193,7 @@ pub(super) fn usage(mut context: Context) -> Result<PlanUsagePage> {
         machines_over: context.usage.machines_over.to_string(),
         organizations_over: context.usage.organizations_over.to_string(),
         crossing_day: context.usage.crossing_day,
-        offer: offer(context.usage.offer)?,
+        offer: offer(context.usage.offer),
         banner,
     })
 }

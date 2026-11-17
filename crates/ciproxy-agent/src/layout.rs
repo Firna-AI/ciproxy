@@ -1,6 +1,6 @@
 //! Paths derived only from locally generated identities and verified image keys.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use ciproxy_protocol::identifiers::ImageId;
 use sha2::{Digest, Sha256};
@@ -16,11 +16,24 @@ pub(crate) struct Layout {
 
 impl Layout {
     pub(crate) fn jail_root(&self, vm: &VmRecord) -> PathBuf {
+        self.jail_root_id(&vm.local_id)
+    }
+
+    /// Recognize the root built by this layout, including a renamed executable.
+    pub(crate) fn is_jail_root(&self, path: &Path) -> bool {
+        path.parent()
+            .and_then(Path::file_name)
+            .and_then(|id| id.to_str())
+            .is_some_and(|id| self.jail_root_id(id) == path)
+    }
+
+    /// Build a jail root from its trusted local identity.
+    pub(crate) fn jail_root_id(&self, id: &str) -> PathBuf {
         let executable = self.firecracker.file_name().unwrap_or_default();
         self.data
             .join("jailer")
             .join(executable)
-            .join(&vm.local_id)
+            .join(id)
             .join("root")
     }
 

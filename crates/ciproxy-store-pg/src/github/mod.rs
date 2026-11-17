@@ -9,6 +9,7 @@ mod registration;
 mod repositories;
 mod scale_sets;
 mod timing;
+mod updates;
 
 use chrono::{DateTime, Utc};
 use ciproxy_store_interface::error::Result;
