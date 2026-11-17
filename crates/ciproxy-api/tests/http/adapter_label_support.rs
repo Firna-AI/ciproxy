@@ -67,12 +67,21 @@ struct Api {
 
 #[async_trait]
 impl ScaleSetApi for Api {
-    async fn ensure(&self, label: &str, group: i64, saved: Option<i64>) -> Result<i64> {
+    async fn ensure(
+        &self,
+        label: &str,
+        group: i64,
+        saved: Option<i64>,
+        requested_labels: &[&str],
+    ) -> Result<i64> {
         if saved.is_some() {
-            return self.existing.ensure(label, group, saved).await;
+            return self
+                .existing
+                .ensure(label, group, saved, requested_labels)
+                .await;
         }
         self.labels.lock().unwrap().push(label.to_owned());
-        self.sdk.ensure(label, group, saved).await
+        self.sdk.ensure(label, group, saved, requested_labels).await
     }
     async fn open(&self, id: i64, owner: &str) -> Result<Box<dyn MessageQueue>> {
         self.sdk.open(id, owner).await
@@ -89,7 +98,7 @@ impl ScaleSetApi for Api {
     async fn remove_scale_set(&self, id: i64) -> Result<()> {
         self.sdk.remove_scale_set(id).await
     }
-    async fn rename_scale_set(&self, id: i64, name: &str) -> Result<()> {
-        self.sdk.rename_scale_set(id, name).await
+    async fn rename_scale_set(&self, id: i64, name: &str, requested_labels: &[&str]) -> Result<()> {
+        self.sdk.rename_scale_set(id, name, requested_labels).await
     }
 }

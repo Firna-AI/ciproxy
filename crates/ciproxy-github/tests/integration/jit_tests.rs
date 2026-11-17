@@ -94,7 +94,7 @@ async fn jit_http_registers_one_runner_and_removal_accepts_missing_but_preserves
         );
         assert!(
             matches!(
-                api.rename_scale_set(53, "ciproxy-retired-53").await,
+                api.rename_scale_set(53, "ciproxy-retired-53", &[]).await,
                 Err(Error::Internal(_))
             ),
             "{route}: auth failure must not claim a retired name was released"

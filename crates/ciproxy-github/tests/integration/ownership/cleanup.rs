@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use ciproxy_github::app::webhook::InstallationAction;
 use ciproxy_github::app::{AppService, GitHubApp};
+use ciproxy_github::error::Error;
 use ciproxy_github::scale_sets::ScaleSetFactory;
 use ciproxy_store_interface::organizations::AppState;
 use ciproxy_store_interface::runners::{Runner, RunnerState};
@@ -34,6 +35,17 @@ pub(super) async fn return_after_takeout_cleanup(
         .unwrap();
     *fixture.state.current.lock().unwrap() = Some(installed(9, false));
     seed_installation_choice(store.as_ref(), &installed(9, false), id(90), 41);
+    server.state.lock().unwrap().fail_rename = Some(54);
+    assert!(matches!(
+        app.installation(event(InstallationAction::Created, 9))
+            .await,
+        Err(Error::Internal(_))
+    ));
+    assert_eq!(
+        server.eligible_runners(retired_name),
+        Vec::<i64>::new(),
+        "a failed later retirement must not expose a selected customer label"
+    );
     app.installation(event(InstallationAction::Created, 9))
         .await
         .unwrap();

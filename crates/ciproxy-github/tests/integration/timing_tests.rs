@@ -33,7 +33,7 @@ async fn timing_lookup_pages_all_attempts_and_matches_exact_run_and_unique_runne
             {"id":331,"run_id":99,"runner_id":71,"started_at":"2026-11-04T12:00:00Z","completed_at":null,"status":"completed"},
             {"id":332,"run_id":31,"runner_id":72,"started_at":null,"completed_at":null,"status":"in_progress"}]}),
         json!({"total_count":3,"jobs":[
-            {"id":333,"run_id":31,"runner_id":71,"started_at":"2026-11-04T12:00:00.000000001Z","completed_at":"2026-11-04T12:01:00.000000002Z","status":"completed"}]}),
+            {"id":333,"run_id":31,"runner_id":71,"started_at":"2026-11-04T12:00:00.000000001Z","completed_at":"2026-11-04T12:01:00.000000002Z","status":"completed","conclusion":"failure"}]}),
     ];
     assert_eq!(
         rest.job_times(19, "customer/private", 31, 71)
@@ -43,6 +43,7 @@ async fn timing_lookup_pages_all_attempts_and_matches_exact_run_and_unique_runne
             actions_job_id: 333,
             started_at: Some("2026-11-04T12:00:00.000000001Z".parse().unwrap()),
             completed_at: Some("2026-11-04T12:01:00.000000002Z".parse().unwrap()),
+            result: Some("failure".to_owned()),
             terminal: true,
         })
     );

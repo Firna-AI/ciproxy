@@ -12,6 +12,7 @@ use super::super::resource_fixture::seed_installation_choice;
 use super::super::support::{id, setup};
 use super::fixture::{app, event, register_runner, target_workspace};
 use super::http::Server;
+use super::quarantine_failure::failed_relocation_keeps_all_selected_labels_isolated;
 
 #[tokio::test]
 async fn legacy_shared_id_gets_fresh_binding_and_keeps_captured_registration_targets() {
@@ -197,4 +198,6 @@ async fn legacy_shared_id_gets_fresh_binding_and_keeps_captured_registration_tar
     assert_eq!(server.eligible_runners("ciproxy"), vec![73]);
     assert_eq!(server.state.lock().unwrap().runners.len(), 3);
     assert_eq!(server.state.lock().unwrap().deletes, Vec::<i64>::new());
+    failed_relocation_keeps_all_selected_labels_isolated(database.store.clone(), &app, &server)
+        .await;
 }

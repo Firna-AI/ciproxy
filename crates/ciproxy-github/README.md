@@ -216,8 +216,8 @@ See [Service integration boundaries](INTEGRATION.md#service-integration-boundari
 ### Trusted run metadata
 
 The [run metadata guide](run-metadata.md) gives the trusted run facts,
-the assignment facts for the agent, the cache entry metadata, and webhook
-delivery recovery.
+the assignment facts for the agent, the cache entry metadata, job
+completion recovery, and webhook delivery recovery.
 
 ## Quick Start
 
@@ -260,6 +260,7 @@ commands, fixture contracts, and cleanup for the live probes.
 ### Key Code
 
 - [src/redelivery.rs](src/redelivery.rs) recovers failed App webhooks.
+- [src/timing.rs](src/timing.rs) recovers real job times and completions.
 
 - [src/app/mod.rs](src/app/mod.rs) owns `GitHubApp` and its role and
   lifecycle callbacks.

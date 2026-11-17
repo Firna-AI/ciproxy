@@ -31,13 +31,13 @@ async fn requester_creates_named_workspace_with_atomic_defaults_and_private_grou
     let observed = created.clone();
     let api: Arc<dyn ScaleSetApi> = Arc::new(Unimock::new((
         ScaleSetApiMock::ensure
-            .some_call(matching!("ciproxy", 47, None))
+            .some_call(matching!("ciproxy", 47, None, _))
             .returns(Ok(53)),
         ScaleSetApiMock::ensure
-            .some_call(matching!("ciproxy-4vcpu", 47, None))
+            .some_call(matching!("ciproxy-4vcpu", 47, None, _))
             .returns(Ok(59)),
         ScaleSetApiMock::ensure
-            .some_call(matching!("ciproxy-8vcpu", 47, None))
+            .some_call(matching!("ciproxy-8vcpu", 47, None, _))
             .returns(Ok(61)),
     )));
     let _keep_api = api.clone();
@@ -142,7 +142,7 @@ async fn admin_intent_uses_shared_workspace_and_replay_keeps_label_edits() {
     edited.size.vcpus = 6;
     let api: Arc<dyn ScaleSetApi> = Arc::new(Unimock::new(
         ScaleSetApiMock::ensure
-            .some_call(matching!("ciproxy", 47, Some(53)))
+            .some_call(matching!("ciproxy", 47, Some(53), _))
             .returns(Ok(53)),
     ));
     let service = app(Unimock::new((

@@ -37,7 +37,7 @@ impl ScaleSetApi for Queue {
     async fn find_runner(&self, _: &str) -> Result<Option<i64>> {
         Err(Error::AccessUnavailable(501))
     }
-    async fn ensure(&self, _: &str, _: i64, _: Option<i64>) -> Result<i64> {
+    async fn ensure(&self, _: &str, _: i64, _: Option<i64>, _: &[&str]) -> Result<i64> {
         Err(Error::AccessUnavailable(501))
     }
     async fn open(&self, _: i64, _: &str) -> Result<Box<dyn MessageQueue>> {
@@ -52,7 +52,7 @@ impl ScaleSetApi for Queue {
     async fn remove_scale_set(&self, _: i64) -> Result<()> {
         Err(Error::AccessUnavailable(501))
     }
-    async fn rename_scale_set(&self, _: i64, _: &str) -> Result<()> {
+    async fn rename_scale_set(&self, _: i64, _: &str, _: &[&str]) -> Result<()> {
         Err(Error::AccessUnavailable(501))
     }
 }

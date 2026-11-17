@@ -31,6 +31,7 @@ pub(super) struct RemoteState {
     pub(super) sets: BTreeMap<i64, RemoteSet>,
     pub(super) runners: BTreeMap<i64, i64>,
     pub(super) fail_create: Option<String>,
+    pub(super) fail_rename: Option<i64>,
     pub(super) creates: Vec<i64>,
     pub(super) deletes: Vec<i64>,
     next_set: i64,
@@ -59,6 +60,7 @@ impl Server {
             )]),
             runners: BTreeMap::new(),
             fail_create: None,
+            fail_rename: None,
             creates: vec![],
             deletes: vec![],
             next_set: 83,
@@ -168,6 +170,10 @@ async fn handle(
             return StatusCode::NO_CONTENT.into_response();
         }
         if method == Method::PATCH {
+            if state.fail_rename == Some(id) {
+                state.fail_rename = None;
+                return StatusCode::SERVICE_UNAVAILABLE.into_response();
+            }
             let name = body["name"].as_str().unwrap();
             let group = state.sets[&id].group;
             if state

@@ -79,6 +79,7 @@ impl ScaleSetApi for SdkScaleSetApi {
         label: &str,
         runner_group_id: i64,
         saved_id: Option<i64>,
+        requested_labels: &[&str],
     ) -> Result<i64> {
         let group = RunnerGroupId(runner_group_id);
         if let Some(id) = saved_id {
@@ -92,7 +93,7 @@ impl ScaleSetApi for SdkScaleSetApi {
                         });
                     }
                     if !is_quarantined(&existing) {
-                        return self.restore_label(&existing, label).await;
+                        return self.restore_label(&existing, label, requested_labels).await;
                     }
                 }
                 Err(error) if missing(&error, Operation::ScaleSet(id)) => {}
@@ -106,9 +107,10 @@ impl ScaleSetApi for SdkScaleSetApi {
             .internal()?
             && !is_quarantined(&existing)
         {
-            return self.restore_label(&existing, label).await;
+            return self.restore_label(&existing, label, requested_labels).await;
         }
-        self.release_quarantine_labels(group, label).await?;
+        self.release_quarantine_labels(group, requested_labels)
+            .await?;
         let spec = RunnerScaleSetSpec::new(label)
             .runner_group_id(group)
             .disable_update();
@@ -185,7 +187,13 @@ impl ScaleSetApi for SdkScaleSetApi {
         }
     }
 
-    async fn rename_scale_set(&self, scale_set_id: i64, name: &str) -> Result<()> {
-        self.retire_remote(scale_set_id, name).await
+    async fn rename_scale_set(
+        &self,
+        scale_set_id: i64,
+        name: &str,
+        requested_labels: &[&str],
+    ) -> Result<()> {
+        self.retire_remote(scale_set_id, name, requested_labels)
+            .await
     }
 }

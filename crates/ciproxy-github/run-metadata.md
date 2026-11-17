@@ -1,9 +1,9 @@
 # Trusted run metadata
 
 This guide gives the run facts that the App integration reads from
-GitHub, the assignment facts for the agent, the cache entry metadata, and
-webhook delivery recovery. The [crate README](README.md) gives the rest of
-the integration.
+GitHub, the assignment facts for the agent, the cache entry metadata, job
+completion recovery, and webhook delivery recovery. The
+[crate README](README.md) gives the rest of the integration.
 
 ## Run facts
 
@@ -57,6 +57,27 @@ The control plane calls this adapter only for the repository of a job that
 runs on the calling machine. The
 [cache protocol](../../docs/protocol/cache.md#restore-order) gives that
 rule and the use of these facts.
+
+## Job completion recovery
+
+The REST timing repair reads the actual Actions job of a run and its
+unique runner. It saves the real times and the numeric Actions job ID of
+an attempt that still lacks a real start or finish. The control plane runs
+it in its [accounting worker](../ciproxy-control-plane/github-workers.md),
+with a backoff for each attempt.
+
+A listener receives the messages of one remote scale set. When reconcile
+moves a binding to a fresh remote set, its listener restarts on the new
+remote ID. A started job on the old remote set then gets no completion
+message. The repair therefore also selects each started attempt whose
+exact runner registered on a previous remote ID of the binding. A started
+job on the current remote ID stays out of this scan.
+
+For such an attempt, the repair polls GitHub with the same backoff until
+GitHub reports the actual completion. It saves the terminal state, the
+finish time, and GitHub's conclusion verbatim as the job result. A saved
+nonempty result stays. Unavailable times and results stay absent. This
+needs only the existing "Actions: read" permission and no new service.
 
 ## Webhook delivery recovery
 

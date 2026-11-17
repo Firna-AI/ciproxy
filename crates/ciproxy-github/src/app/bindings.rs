@@ -9,7 +9,7 @@ use crate::error::{Error, Result};
 use crate::persistence::mutation::MutationLease;
 use crate::persistence::session::ListenerTarget;
 use crate::scale_sets::ScaleSetApi;
-use crate::scale_sets::ownership::{quarantine_name, retirement_name};
+use crate::scale_sets::ownership::quarantine_name;
 
 use super::AppService;
 
@@ -110,23 +110,31 @@ impl AppService {
         let foreign = self
             .retire_bindings(organization, labels, bindings, api, lease)
             .await?;
+        let requested_labels: Vec<_> = labels.iter().map(|label| label.name.as_str()).collect();
         let mut prepared = Vec::new();
         for label in labels {
             let previous = bindings.iter().find(|set| set.label_id == label.id);
             let reusable = previous.filter(|set| !foreign.contains(&set.github_id));
             lease.check().await?;
             let mut github_id = api
-                .ensure(&label.name, group_id, reusable.map(|set| set.github_id))
+                .ensure(
+                    &label.name,
+                    group_id,
+                    reusable.map(|set| set.github_id),
+                    &requested_labels,
+                )
                 .await?;
             lease.check().await?;
             let mut attempt = 0;
             while foreign.contains(&github_id) {
                 attempt += 1;
-                let name =
-                    retirement_name(&format!("ciproxy-retired-{github_id}-{attempt}"), labels);
-                api.rename_scale_set(github_id, &name).await?;
+                let name = format!("ciproxy-retired-{github_id}-{attempt}");
+                api.rename_scale_set(github_id, &name, &requested_labels)
+                    .await?;
                 lease.check().await?;
-                github_id = api.ensure(&label.name, group_id, None).await?;
+                github_id = api
+                    .ensure(&label.name, group_id, None, &requested_labels)
+                    .await?;
                 lease.check().await?;
             }
             prepared.push(ScaleSet {
@@ -148,8 +156,9 @@ impl AppService {
         api: &dyn ScaleSetApi,
         lease: &dyn MutationLease,
     ) -> Result<Vec<i64>> {
+        let requested_labels: Vec<_> = labels.iter().map(|label| label.name.as_str()).collect();
         let foreign = self
-            .retire_foreign_bindings(organization, labels, bindings, api, lease)
+            .retire_foreign_bindings(organization, &requested_labels, bindings, api, lease)
             .await?;
         for set in bindings.iter().filter(|set| {
             !foreign.contains(&set.github_id)
@@ -196,8 +205,9 @@ impl AppService {
                 }
             }
             lease.check().await?;
-            let name = retirement_name(&format!("ciproxy-retired-{}", set.id.simple()), labels);
-            api.rename_scale_set(set.github_id, &name).await?;
+            let name = format!("ciproxy-retired-{}", set.id.simple());
+            api.rename_scale_set(set.github_id, &name, &requested_labels)
+                .await?;
             lease.check().await?;
         }
         Ok(foreign)
@@ -207,7 +217,7 @@ impl AppService {
     async fn retire_foreign_bindings(
         &self,
         organization: &Organization,
-        labels: &[Label],
+        requested_labels: &[&str],
         bindings: &[ScaleSet],
         api: &dyn ScaleSetApi,
         lease: &dyn MutationLease,
@@ -245,9 +255,9 @@ impl AppService {
             } else {
                 format!("ciproxy-retired-{}", set.id.simple())
             };
-            let name = retirement_name(&base, labels);
             lease.check().await?;
-            api.rename_scale_set(set.github_id, &name).await?;
+            api.rename_scale_set(set.github_id, &base, requested_labels)
+                .await?;
             lease.check().await?;
             retired.push(set.github_id);
         }

@@ -30,7 +30,7 @@ async fn retained_reinstall_reuses_workspace_and_preserves_shared_label_configur
     retained.delete_after = Some(at() + Duration::days(29));
     let api: Arc<dyn ScaleSetApi> = Arc::new(Unimock::new(
         ScaleSetApiMock::ensure
-            .some_call(matching!("ciproxy", 47, Some(53)))
+            .some_call(matching!("ciproxy", 47, Some(53), _))
             .returns(Ok(53)),
     ));
     let service = app(Unimock::new((
@@ -99,7 +99,7 @@ async fn expired_retained_organization_joins_admin_workspace_as_new_registration
     expired.delete_after = Some(at());
     let api: Arc<dyn ScaleSetApi> = Arc::new(Unimock::new(
         ScaleSetApiMock::ensure
-            .some_call(matching!("ciproxy", 47, Some(53)))
+            .some_call(matching!("ciproxy", 47, Some(53), _))
             .returns(Ok(53)),
     ));
     let service = app(Unimock::new((

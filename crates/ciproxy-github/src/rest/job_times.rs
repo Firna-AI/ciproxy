@@ -21,6 +21,7 @@ struct Job {
     runner_id: Option<i64>,
     started_at: Option<DateTime<Utc>>,
     completed_at: Option<DateTime<Utc>>,
+    conclusion: Option<String>,
     status: String,
 }
 
@@ -63,6 +64,7 @@ impl RestClient {
                     actions_job_id: job.id,
                     started_at: job.started_at,
                     completed_at: job.completed_at,
+                    result: job.conclusion,
                     terminal: job.status == "completed",
                 });
             }

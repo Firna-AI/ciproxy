@@ -8,6 +8,7 @@ mod fake_http;
 mod inactive_listener_tests;
 mod installation_tests;
 mod jit_tests;
+mod legacy_timing_tests;
 mod lifecycle_retry_tests;
 mod listener_tests;
 mod ownership;

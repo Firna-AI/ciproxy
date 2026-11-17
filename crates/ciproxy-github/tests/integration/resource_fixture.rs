@@ -125,7 +125,7 @@ impl ScaleSetApi for Resources {
     async fn find_runner(&self, _name: &str) -> Result<Option<i64>> {
         Ok(None)
     }
-    async fn ensure(&self, label: &str, group: i64, saved: Option<i64>) -> Result<i64> {
+    async fn ensure(&self, label: &str, group: i64, saved: Option<i64>, _: &[&str]) -> Result<i64> {
         if self.fail_next.swap(false, Ordering::SeqCst) {
             return Err(Error::AccessUnavailable(503));
         }
@@ -165,7 +165,7 @@ impl ScaleSetApi for Resources {
     async fn remove_scale_set(&self, _: i64) -> Result<()> {
         Err(Error::AccessUnavailable(501))
     }
-    async fn rename_scale_set(&self, id: i64, _: &str) -> Result<()> {
+    async fn rename_scale_set(&self, id: i64, _: &str, _: &[&str]) -> Result<()> {
         self.names.lock().unwrap().retain(|_, value| *value != id);
         self.retired.lock().unwrap().insert(id);
         Ok(())

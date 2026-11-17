@@ -86,12 +86,19 @@ Reconcile restores the name and the labels of each saved set of the
 selected workspace to its label name. A saved remote ID that another
 workspace also claims is foreign. Reconcile gives that shared set a durable
 quarantine name and marker label on GitHub. Later retirement renames keep
-the quarantine state.
-A saved-ID ensure never adopts a marked set. It creates or recovers a fresh
-current set for that label, so a later return cannot restore the shared
-set. GitHub keeps the marker, so the store keeps no extra record. Internal
-names avoid the requested labels. A label that uses an internal prefix
-remains valid. This path removes no runner.
+the quarantine state. A saved-ID ensure never adopts a marked set. It
+creates or recovers a fresh current set for that label, so a later return
+cannot restore the shared set. A started job on the old remote ID gets its
+real completion from
+[job completion recovery](run-metadata.md#job-completion-recovery).
+GitHub keeps the marker, so the store keeps no extra record. This path
+removes no runner.
+
+Before each remote mutation, reconcile chooses the final retirement name
+and marker label. One selector checks the provider's existing resources
+and every requested customer label. It keeps the chosen name and marker
+off the requested labels, also when a collision needs a suffix. A label
+that uses an internal prefix remains valid.
 [App removal](../../docs/protocol/app-removal.md#removing-the-app) gives
 the workspace rule.
 

@@ -1,6 +1,5 @@
 //! Remote ownership markers and label restoration without reserved user names.
 
-use ciproxy_store_interface::labels::Label;
 use scaleset::{RunnerGroupId, RunnerScaleSet, RunnerScaleSetSpec, ScaleSetId};
 
 use crate::error::{Result, ResultExt};
@@ -25,15 +24,6 @@ pub(super) fn is_quarantined(set: &RunnerScaleSet) -> bool {
         .eq([quarantine_label(&set.name).as_str()])
 }
 
-/// Leave every requested customer label available during remote retirement.
-pub(crate) fn retirement_name(base: &str, labels: &[Label]) -> String {
-    available_name(base, &|name| {
-        labels
-            .iter()
-            .any(|label| label.name == name || label.name == quarantine_label(name))
-    })
-}
-
 fn available_name(base: &str, occupied: &dyn Fn(&str) -> bool) -> String {
     let mut name = base.to_owned();
     let mut suffix = 0;
@@ -46,7 +36,12 @@ fn available_name(base: &str, occupied: &dyn Fn(&str) -> bool) -> String {
 
 impl SdkScaleSetApi {
     /// Restore a safe saved resource after retirement in another workspace.
-    pub(super) async fn restore_label(&self, set: &RunnerScaleSet, label: &str) -> Result<i64> {
+    pub(super) async fn restore_label(
+        &self,
+        set: &RunnerScaleSet,
+        label: &str,
+        requested_labels: &[&str],
+    ) -> Result<i64> {
         if set.name != label
             || !set
                 .labels
@@ -54,6 +49,8 @@ impl SdkScaleSetApi {
                 .map(|value| value.name.as_str())
                 .eq([label])
         {
+            self.release_quarantine_labels(set.runner_group_id, requested_labels)
+                .await?;
             self.client
                 .update_runner_scale_set(set.id, &RunnerScaleSetSpec::new(label).labels([label]))
                 .await
@@ -63,7 +60,12 @@ impl SdkScaleSetApi {
     }
 
     /// Keep the quarantine pair when an internal resource name changes.
-    pub(super) async fn retire_remote(&self, id: i64, name: &str) -> Result<()> {
+    pub(super) async fn retire_remote(
+        &self,
+        id: i64,
+        name: &str,
+        requested_labels: &[&str],
+    ) -> Result<()> {
         let existing = match self.client.get_runner_scale_set_by_id(ScaleSetId(id)).await {
             Ok(existing) => existing,
             Err(error) if missing(&error, Operation::ScaleSet(id)) => return Ok(()),
@@ -77,7 +79,7 @@ impl SdkScaleSetApi {
             .list_runner_scale_sets(existing.runner_group_id)
             .await
             .internal()?;
-        self.rename_retired(&existing, name, quarantine, &sets, None)
+        self.rename_retired(&existing, name, quarantine, &sets, requested_labels)
             .await
     }
 
@@ -85,19 +87,21 @@ impl SdkScaleSetApi {
     pub(super) async fn release_quarantine_labels(
         &self,
         group: RunnerGroupId,
-        label: &str,
+        requested_labels: &[&str],
     ) -> Result<()> {
         let sets = self.client.list_runner_scale_sets(group).await.internal()?;
         for set in sets.iter().filter(|set| {
             is_quarantined(set)
-                && (set.name == label || set.labels.iter().any(|value| value.name == label))
+                && requested_labels.iter().any(|label| {
+                    set.name == *label || set.labels.iter().any(|value| value.name == *label)
+                })
         }) {
             self.rename_retired(
                 set,
                 &quarantine_name(set.id.get()),
                 true,
                 &sets,
-                Some(label),
+                requested_labels,
             )
             .await?;
         }
@@ -110,11 +114,13 @@ impl SdkScaleSetApi {
         base: &str,
         quarantine: bool,
         sets: &[RunnerScaleSet],
-        forbidden: Option<&str>,
+        requested_labels: &[&str],
     ) -> Result<()> {
         let name = available_name(base, &|name| {
             let marker = quarantine_label(name);
-            forbidden.is_some_and(|label| label == name || label == marker)
+            requested_labels
+                .iter()
+                .any(|label| *label == name || *label == marker)
                 || sets.iter().filter(|other| other.id != set.id).any(|other| {
                     other.name == name
                         || other

@@ -162,6 +162,7 @@ async fn actual_scale_attempts_count_once_across_replay_restart_reassignment_map
                 actions_job_id: 333,
                 started_at: job.started_at,
                 completed_at: Some(time("2026-11-05T12:01:00.000000001Z")),
+                result: None,
                 terminal: true,
             },
             at(),
