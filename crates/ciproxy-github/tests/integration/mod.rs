@@ -5,6 +5,8 @@ mod auth_tests;
 mod coordination_tests;
 mod database;
 mod fake_http;
+mod foreign_timing_support;
+mod foreign_timing_tests;
 mod inactive_listener_tests;
 mod installation_tests;
 mod jit_tests;

@@ -28,15 +28,19 @@ struct TimingUpdate {
     phase: Option<DemandPhase>,
 }
 
-/// A captured runner target proves that the current listener cannot finish this attempt.
+/// Match captured runners across retained owners in the same GitHub organization.
+/// Compare their targets with the attempt's own current binding.
 const STRANDED_STARTED: &str = concat!(
     "github_job_attempts.phase = 1 AND EXISTS (",
-    "SELECT 1 FROM runners r JOIN scale_sets s ON s.id = r.scale_set_id ",
-    "AND s.workspace_id = r.workspace_id AND s.organization_id = r.organization_id ",
-    "WHERE r.workspace_id = github_job_attempts.workspace_id ",
-    "AND r.organization_id = github_job_attempts.organization_id ",
-    "AND r.scale_set_id = (github_job_attempts.body->>'scale_set_id')::uuid ",
-    "AND r.label_id = (github_job_attempts.body->>'label_id')::uuid ",
+    "SELECT 1 FROM scale_sets s JOIN organizations job_org ",
+    "ON job_org.id = s.organization_id AND job_org.workspace_id = s.workspace_id ",
+    "JOIN organizations runner_org ON runner_org.github_id = job_org.github_id ",
+    "JOIN runners r ON r.organization_id = runner_org.id ",
+    "AND r.workspace_id = runner_org.workspace_id ",
+    "WHERE s.workspace_id = github_job_attempts.workspace_id ",
+    "AND s.organization_id = github_job_attempts.organization_id ",
+    "AND s.id = (github_job_attempts.body->>'scale_set_id')::uuid ",
+    "AND s.label_id = (github_job_attempts.body->>'label_id')::uuid ",
     "AND r.github_id = (github_job_attempts.body->>'runner_github_id')::bigint ",
     "AND r.registration_scale_set_id <> s.github_id)",
 );

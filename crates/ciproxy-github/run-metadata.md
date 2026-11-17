@@ -73,6 +73,10 @@ message. The repair therefore also selects each started attempt whose
 exact runner registered on a previous remote ID of the binding. A started
 job on the current remote ID stays out of this scan.
 
+The runner can belong to a retained registration in another workspace of
+the same GitHub organization. Recovery matches stable GitHub organization
+and runner IDs. The attempt and its updates stay in its saved workspace.
+
 For such an attempt, the repair polls GitHub with the same backoff until
 GitHub reports the actual completion. It saves the terminal state, the
 finish time, and GitHub's conclusion verbatim. The store's
