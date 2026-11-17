@@ -1,14 +1,15 @@
 // The account menu that the avatar of the top bar opens: the signed-in
-// person, the role in the organization, the docs, and Sign out. An owner of
-// the organization on GitHub with the Billing or the Viewer role claims the
-// Admin role here; ciproxy checks the ownership with the person's own sign-in.
+// person, the role in the workspace, the docs, and Sign out. A person with
+// the Billing or the Viewer role claims the Admin role here when ciproxy
+// offers the claim. The menu reads only that offer, as the dashboard reads
+// the claim of the session. ciproxy decides it from the person's own sign-in.
 
 import { BookOpen, LogOut, ShieldCheck } from "lucide-react";
 import { MockLink } from "@mokly/mokly";
 import { Avatar } from "@firna/ui/avatar";
 
 import { roles, type Role } from "../../fixtures/members.ts";
-import { org, workspace } from "../../fixtures/org.ts";
+import { workspace } from "../../fixtures/org.ts";
 import { Action } from "../actions.tsx";
 import { paths } from "../paths.ts";
 import { Tag } from "../status.tsx";
@@ -22,7 +23,7 @@ export function AccountMenu({
   person: ShellPerson;
   role: Role;
 }) {
-  const canClaim = person.owner === true && role !== "admin";
+  const canClaim = person.canClaimAdmin === true;
   return (
     <div className="account-menu" role="menu" aria-label="Account">
       <div className="account-section account-person">
@@ -44,8 +45,7 @@ export function AccountMenu({
       {canClaim ? (
         <div className="account-section">
           <p className="small">
-            You are an owner of <span className="nowrap">{org.login}</span> on
-            GitHub, so you can claim the Admin role.
+            Your ownership on GitHub lets you claim the Admin role.
           </p>
           <Action tone="primary" size="sm" icon={ShieldCheck} block>
             Claim the Admin role

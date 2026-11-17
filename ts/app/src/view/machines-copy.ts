@@ -225,6 +225,8 @@ export const overflowCopy = {
   noSpend: "Boat spend shows here when Boat reports it.",
   loading: "Loading overflow…",
   failed: "Unable to load overflow",
+  refreshTitle: "Unable to refresh overflow",
+  refreshBody: "Overflow shows the last state that it read.",
 } as const;
 
 export const addCopy = {

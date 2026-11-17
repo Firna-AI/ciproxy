@@ -1,6 +1,7 @@
 // The own machines of the workspace, their slots, warm runners, health, and
 // cache, and the Boat account that takes overflow. Every role sees them. Only
-// an Admin adds a machine and opens the overflow settings.
+// an Admin adds a machine and opens the overflow settings. A failed read of
+// the Overflow panel shows in the panel, and the machines stay on the page.
 
 import { Plus, Server } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -34,6 +35,7 @@ export const machinesStates = [
   "no-cache-measured",
   "loading",
   "error",
+  "overflow-refresh",
 ] as const;
 export type MachinesState = (typeof machinesStates)[number];
 
@@ -46,6 +48,7 @@ const sceneOf: Record<MachinesState, MachineScene> = {
   "no-cache-measured": "noCacheMeasured",
   loading: "steady",
   error: "steady",
+  "overflow-refresh": "steady",
 };
 
 export function MachinesScreen({
@@ -177,7 +180,10 @@ function MachinesBody({
           readOnly={!admin}
         />
       </Panel>
-      <OverflowPanel settings={admin} />
+      <OverflowPanel
+        settings={admin}
+        refreshFailed={state === "overflow-refresh"}
+      />
     </>
   );
 }

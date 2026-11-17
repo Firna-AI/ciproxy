@@ -32,8 +32,8 @@
     its old view until the reply arrives, at
     `ts/app/src/state/session.ts:87`. A billing read keeps the cached page
     until its new answer arrives. The billing caches are keyed by the
-    services and the workspace only, at `ts/app/src/state/billing.ts:55`
-    and `:73`.
+    services and the workspace only, at `ts/app/src/state/billing.ts:52`
+    and `:75`.
   - So after a fresh session says Viewer, these controls still trust the
     `can_pay` of the older payer page:
     - `continuablePayment` returns the saved Stripe URL without the current
@@ -50,7 +50,7 @@
       Update card, at `banner.ts:63-69`, on every workspace page until its
       read returns, and also after a failed read.
   - The shared payment gate already reads the current session role, at
-    `billing.ts:157`, so no new payment starts from a stale page.
+    `billing.ts:167`, so no new payment starts from a stale page.
   - The server refuses each dashboard payer request of a Viewer, at
     `crates/ciproxy-api/src/handlers/checkout.rs:33` and
     `crates/ciproxy-api/src/handlers/billing_call.rs:25`. Only the saved

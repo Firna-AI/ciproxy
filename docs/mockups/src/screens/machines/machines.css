@@ -57,6 +57,14 @@ a.machine-link:hover {
   padding: 10px 14px 12px;
 }
 
+/* The Overflow panel: a refresh warning, when one shows, above the row. */
+
+.overflow-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .overflow-row {
   display: flex;
   align-items: center;

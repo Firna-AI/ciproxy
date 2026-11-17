@@ -28,7 +28,7 @@
 - **Background:**
   - A failed charge of a paid change gives the result "Stripe could not
     charge your card" with Update card and Try again, when the outcome has
-    no Stripe page. `ts/app/src/view/billing-outcome.ts:140` builds that
+    no Stripe page. `ts/app/src/view/billing-outcome.ts:141` builds that
     action.
   - The server gives a payment outcome without a Stripe page only in
     unusual states, for example an upgrade during a past-due renewal, at

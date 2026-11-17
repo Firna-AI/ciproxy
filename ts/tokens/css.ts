@@ -2,6 +2,7 @@ import {
   chartColors,
   colors,
   fonts,
+  markRadii,
   navColors,
   radii,
   slotColors,
@@ -20,18 +21,27 @@ export function colorDeclarations(
   );
 }
 
+/** A radius group as `--r-<group>-<name>:<value>px` declarations. */
+function radiusDeclarations(
+  group: string,
+  values: Readonly<Record<string, number>>,
+): string[] {
+  const prefix = group ? `${group}-` : "";
+  return Object.entries(values).map(
+    ([name, value]) => `--r-${prefix}${name}:${value}px`,
+  );
+}
+
 /** The shared tokens as CSS custom property declarations. */
 export function tokenDeclarations(): string[] {
-  const radiusDeclarations = Object.entries(radii).map(
-    ([name, value]) => `--r-${name}:${value}px`,
-  );
   return [
     ...colorDeclarations("", colors),
     ...colorDeclarations("status", statusColors),
     ...colorDeclarations("chart", chartColors),
     ...colorDeclarations("slot", slotColors),
     ...colorDeclarations("nav", navColors),
-    ...radiusDeclarations,
+    ...radiusDeclarations("", radii),
+    ...radiusDeclarations("mark", markRadii),
     `--font-sans:${fonts.sans}`,
     `--font-mono:${fonts.mono}`,
   ];
