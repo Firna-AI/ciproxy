@@ -1,11 +1,11 @@
 //! Taken-at counts, advisory limits, and whole-workspace forecasts.
 
+use ciproxy_store_interface::billing::state::{AddOns, Selection, Tier};
 use ciproxy_store_interface::metering::facts::{JobPlace, MachineRegistration, WorkspaceUsage};
 use ciproxy_store_interface::metering::history::Period;
 use ciproxy_store_interface::metering::totals::{AccountedJob, StartTotal};
 use uuid::Uuid;
 
-use crate::pricing::{AddOns, Plan, Tier};
 use crate::test_support::{at, day, job, plan, usd};
 use crate::usage::{Banner, PaymentNotice, workspace_usage};
 
@@ -166,7 +166,7 @@ fn soft_limits_use_strict_excess_and_payment_banner_precedence() {
         (Tier::Free, 2_000, 1, false),
         (Tier::Free, 2_001, 2, true),
     ] {
-        let saved = Plan {
+        let saved = Selection {
             tier,
             add_ons: AddOns {
                 start_blocks: 1,

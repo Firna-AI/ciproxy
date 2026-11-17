@@ -52,7 +52,10 @@ pub(crate) async fn review(
     if context.record.command.is_some() || context.record.checkout.is_some() {
         return Err(Error::Conflict);
     }
-    let suggested = billing_views::choice_selection(context.usage.offer.plan)?;
+    let suggested = billing_views::selection(
+        context.usage.offer.plan.tier,
+        context.usage.offer.plan.add_ons,
+    );
     let tier = input.tier.unwrap_or(suggested.tier);
     let defaults = if tier == suggested.tier {
         suggested.add_ons
@@ -96,10 +99,7 @@ pub(crate) async fn review(
             None,
         )
     };
-    let mut choice = page_context::offer(plan_choice(billing_views::plan(
-        selected.tier,
-        selected.add_ons,
-    )))?;
+    let mut choice = page_context::offer(plan_choice(selected));
     choice.monthly_cents = Cents(i128::from(review.monthly_cents));
     Ok(Json(CheckoutReviewPage {
         quote,

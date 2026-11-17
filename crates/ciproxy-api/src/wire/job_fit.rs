@@ -15,7 +15,7 @@ pub struct WaitingLabelFit {
     pub label_name: String,
     /// Visible waiting jobs with this exact label as a decimal string.
     pub waiting_jobs: String,
-    /// Current label policy and physical own-machine fit, absent after retirement.
+    /// Current label policy and physical machine and Boat fit, absent after retirement.
     pub current: Option<LabelView>,
     /// Boat resource fit, distinct from current provider availability.
     pub boat: BoatLabelFit,
@@ -28,7 +28,7 @@ pub struct WaitingLabelFit {
 }
 
 /// Boat resources under the label policy, without claiming a start is available.
-#[derive(Serialize, ToSchema)]
+#[derive(Clone, Serialize, ToSchema)]
 #[serde(tag = "state", rename_all = "snake_case")]
 pub enum BoatLabelFit {
     /// The trusted image sizing, account, or catalog observation is unavailable.

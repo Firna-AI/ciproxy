@@ -3,7 +3,7 @@
 use chrono::{DateTime, Duration, SecondsFormat, Utc};
 use ciproxy_schema::github::github_jobs;
 use ciproxy_store_interface::error::{Result, ResultExt};
-use ciproxy_store_interface::github::{DemandPhase, GithubJob, JobDelivery};
+use ciproxy_store_interface::github::{GithubJob, JobDelivery};
 use diesel::dsl::sql;
 use diesel::prelude::*;
 use diesel::query_dsl::methods;
@@ -11,20 +11,11 @@ use diesel::sql_types::{BigInt, Bool, Jsonb, Nullable, Timestamptz};
 use serde_json::Value;
 use uuid::Uuid;
 
-use super::attempts;
 use crate::connection::PgStore;
 use crate::error::QueryResultExt;
 use crate::gateway_transaction::transaction;
 
-const MERGED_BODY: &str = concat!(
-    "CASE WHEN excluded.assignment_order = github_jobs.assignment_order ",
-    "THEN excluded.body || jsonb_build_object(",
-    "'started_at', COALESCE(NULLIF(excluded.body->'started_at', 'null'::jsonb), github_jobs.body->'started_at'), ",
-    "'completed_at', COALESCE(NULLIF(excluded.body->'completed_at', 'null'::jsonb), github_jobs.body->'completed_at'), ",
-    "'runner_github_id', COALESCE(NULLIF(excluded.body->'runner_github_id', 'null'::jsonb), github_jobs.body->'runner_github_id'), ",
-    "'actions_job_id', COALESCE(NULLIF(excluded.body->'actions_job_id', 'null'::jsonb), github_jobs.body->'actions_job_id')) ",
-    "ELSE excluded.body END",
-);
+use super::{attempts, updates};
 
 pub(super) fn save(
     store: &PgStore,
@@ -33,53 +24,57 @@ pub(super) fn save(
     observed_at: DateTime<Utc>,
 ) -> Result<()> {
     let body = serde_json::to_value(job).internal()?;
-    let phase = match job.phase {
-        DemandPhase::Available => -1_i16,
-        DemandPhase::Assigned => 0,
-        DemandPhase::Started => 1,
-        DemandPhase::Completed => 2,
-    };
-    let completion_observed = (job.phase == DemandPhase::Completed).then_some(observed_at);
+    let phase = updates::phase(job.phase);
+    let completion_observed = updates::completion_observation(job.phase, observed_at);
+    let merged_body = format!(
+        "CASE WHEN excluded.assignment_order = github_jobs.assignment_order THEN {} ELSE excluded.body END",
+        updates::merged_body("github_jobs", "excluded.body")
+    );
+    let completed_observed_at = format!(
+        "CASE WHEN excluded.assignment_order = github_jobs.assignment_order THEN {} ELSE excluded.completed_observed_at END",
+        updates::completed_observed_at("github_jobs", "excluded.completed_observed_at")
+    );
     let condition = format!(
-        "github_jobs.workspace_id = excluded.workspace_id AND (excluded.assignment_order > github_jobs.assignment_order OR (excluded.assignment_order = github_jobs.assignment_order AND excluded.phase >= github_jobs.phase)) AND github_jobs.body IS DISTINCT FROM ({MERGED_BODY})"
+        "github_jobs.workspace_id = excluded.workspace_id AND (excluded.assignment_order > github_jobs.assignment_order OR (excluded.assignment_order = github_jobs.assignment_order AND excluded.phase >= github_jobs.phase)) AND github_jobs.body IS DISTINCT FROM ({merged_body})"
     );
     transaction(&mut *store.connection()?, |connection| {
         methods::FilterDsl::filter(
-        diesel::insert_into(github_jobs::table)
-            .values((
-                github_jobs::workspace_id.eq(workspace_id),
-                github_jobs::organization_id.eq(job.organization_id),
-                github_jobs::job_id.eq(job.id),
-                github_jobs::scale_set_id.eq(job.scale_set_id),
-                github_jobs::label_id.eq(job.label_id),
-                github_jobs::assigned_at.eq(job.assigned_at),
-                github_jobs::phase.eq(phase),
-                github_jobs::body.eq(&body),
-                github_jobs::completed_observed_at.eq(completion_observed),
-                github_jobs::assignment_order.eq(job
-                    .assigned_at
-                    .map(|at| at.to_rfc3339_opts(SecondsFormat::Nanos, true))
-                    .unwrap_or_default()),
-            ))
-            .on_conflict((github_jobs::organization_id, github_jobs::job_id))
-            .do_update()
-            .set((
-                github_jobs::scale_set_id.eq(job.scale_set_id),
-                github_jobs::label_id.eq(job.label_id),
-                github_jobs::assigned_at.eq(job.assigned_at),
-                github_jobs::phase.eq(phase),
-                github_jobs::body.eq(sql::<Jsonb>(MERGED_BODY)),
-                github_jobs::completed_observed_at.eq(sql::<Nullable<Timestamptz>>("CASE WHEN excluded.assignment_order = github_jobs.assignment_order THEN COALESCE(github_jobs.completed_observed_at, excluded.completed_observed_at) ELSE excluded.completed_observed_at END")),
-                github_jobs::assignment_order.eq(job
-                    .assigned_at
-                    .map(|at| at.to_rfc3339_opts(SecondsFormat::Nanos, true))
-                    .unwrap_or_default()),
-                github_jobs::revision.eq(sql::<BigInt>("github_jobs.revision + 1")),
-            )),
-        sql::<Bool>(&condition),
-    )
-    .execute(connection)
-    .store()?;
+            diesel::insert_into(github_jobs::table)
+                .values((
+                    github_jobs::workspace_id.eq(workspace_id),
+                    github_jobs::organization_id.eq(job.organization_id),
+                    github_jobs::job_id.eq(job.id),
+                    github_jobs::scale_set_id.eq(job.scale_set_id),
+                    github_jobs::label_id.eq(job.label_id),
+                    github_jobs::assigned_at.eq(job.assigned_at),
+                    github_jobs::phase.eq(phase),
+                    github_jobs::body.eq(&body),
+                    github_jobs::completed_observed_at.eq(completion_observed),
+                    github_jobs::assignment_order.eq(job
+                        .assigned_at
+                        .map(|at| at.to_rfc3339_opts(SecondsFormat::Nanos, true))
+                        .unwrap_or_default()),
+                ))
+                .on_conflict((github_jobs::organization_id, github_jobs::job_id))
+                .do_update()
+                .set((
+                    github_jobs::scale_set_id.eq(job.scale_set_id),
+                    github_jobs::label_id.eq(job.label_id),
+                    github_jobs::assigned_at.eq(job.assigned_at),
+                    github_jobs::phase.eq(phase),
+                    github_jobs::body.eq(sql::<Jsonb>(&merged_body)),
+                    github_jobs::completed_observed_at
+                        .eq(sql::<Nullable<Timestamptz>>(&completed_observed_at)),
+                    github_jobs::assignment_order.eq(job
+                        .assigned_at
+                        .map(|at| at.to_rfc3339_opts(SecondsFormat::Nanos, true))
+                        .unwrap_or_default()),
+                    github_jobs::revision.eq(sql::<BigInt>(updates::NEXT_REVISION)),
+                )),
+            sql::<Bool>(&condition),
+        )
+        .execute(connection)
+        .store()?;
         attempts::save(connection, workspace_id, job, observed_at)?;
         Ok(())
     })
