@@ -30,6 +30,7 @@ pub(super) struct Socket {
     socket: WebSocketStream<MaybeTlsStream<TcpStream>>,
     server: JoinHandle<()>,
     pub(super) report_saved: Arc<Notify>,
+    _observed: Unimock,
 }
 
 impl Socket {
@@ -60,7 +61,7 @@ impl Socket {
         let saved = report_saved.clone();
         let open = gateway.clone();
         let receive = gateway.clone();
-        let observed: Arc<dyn MachineGateway> = Arc::new(Unimock::new((
+        let observed = Unimock::new((
             MachineGatewayMock::open
                 .each_call(matching!(_))
                 .answers_arc(Arc::new(move |_, message| open.open(message))),
@@ -77,8 +78,8 @@ impl Socket {
             MachineGatewayMock::is_current
                 .each_call(matching!(_))
                 .answers_arc(Arc::new(move |_, session| gateway.is_current(session))),
-        )));
-        let transport = WebSocketTransport::new(observed, connections);
+        ));
+        let transport = WebSocketTransport::new(Arc::new(observed.clone()), connections);
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let url = format!("ws://{}/agent/", listener.local_addr().unwrap());
         let server = tokio::spawn(async move {
@@ -89,6 +90,7 @@ impl Socket {
             socket,
             server,
             report_saved,
+            _observed: observed,
         };
         client
             .send(AgentMessage::Hello {
@@ -123,6 +125,19 @@ impl Socket {
             .unwrap()
             .unwrap();
         serde_json::from_str(message.to_text().unwrap()).unwrap()
+    }
+
+    /// Finish the connection and join the listener before mock owners verify.
+    pub(super) async fn close(mut self) {
+        self.socket.close(None).await.unwrap();
+        timeout(Duration::from_secs(30), async {
+            while self.socket.next().await.is_some() {}
+        })
+        .await
+        .unwrap();
+        self.server.abort();
+        let stopped = (&mut self.server).await;
+        assert!(matches!(stopped, Err(error) if error.is_cancelled()));
     }
 }
 
