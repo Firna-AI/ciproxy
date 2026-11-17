@@ -7,6 +7,9 @@ The package is private and has no open licence.
 
 - `@ciproxy/tokens` exposes plain colours, fonts, radii, and colour groups.
   It has no runtime dependency.
+- `radii` shapes controls and boxes, and the Firna theme reads it.
+  `markRadii` holds the 1, 2, and 3 px corners of small data marks, such as
+  slot segments, chart keys, and the data ends of thin bars.
 - `@ciproxy/tokens/firna` creates the Firna theme.
   It uses the peer dependency `@firna/ui`.
 - `@ciproxy/tokens/fonts` loads Geist and Geist Mono through CSS imports.
@@ -14,6 +17,7 @@ The package is private and has no open licence.
   Expo does not resolve the local font URLs in the CSS imports.
 - `@ciproxy/tokens/css` exposes `tokenDeclarations()` and `tokenCss`.
   These define the `--c-*`, `--r-*`, and `--font-*` custom properties.
+  The mark radii take the `--r-mark-*` names, such as `--r-mark-sm`.
   Firna consumers add their focus ring properties at the Firna boundary.
 
 The root-level TypeScript entries also support the mockup path mapping.

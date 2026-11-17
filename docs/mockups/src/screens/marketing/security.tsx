@@ -4,6 +4,7 @@
 import type { LucideIcon } from "lucide-react";
 import { Box, DatabaseZap, KeyRound, PlugZap } from "lucide-react";
 
+import { appPermissions } from "../../fixtures/github-app.ts";
 import { Section, SectionHead } from "./section.tsx";
 
 type Point = { icon: LucideIcon; title: string; text: string };
@@ -21,8 +22,8 @@ const points: readonly Point[] = [
   },
   {
     icon: KeyRound,
-    title: "Three GitHub permissions",
-    text: "The GitHub App manages self-hosted runners, lists your repositories, and reads the branch and the event of each run.",
+    title: `${appPermissions.length} GitHub permissions`,
+    text: "The GitHub App manages self-hosted runners, lists your repositories, reads the event and the head repository of each workflow run, and checks your organization memberships to give roles.",
   },
   {
     icon: DatabaseZap,

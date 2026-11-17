@@ -98,6 +98,7 @@ export const paths = {
   machineFiguresViewer: "app/machines/roles/figures-viewer",
   machinesLoading: "app/machines/loading-error/loading",
   machinesError: "app/machines/loading-error/error",
+  machinesOverflowRefresh: "app/machines/loading-error/overflow-refresh",
 
   savings: "app/savings",
   savingsMissingCosts: "app/savings/states/missing-costs",

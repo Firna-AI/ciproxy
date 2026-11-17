@@ -14,7 +14,7 @@
   `appRemovedPage`, and `:176`, `accessEndedPage`,
   `crates/ciproxy-api/src/handlers/link_views.rs:55`, the claim view of a
   browser-only sign-in, `docs/mockups/src/screens/auth/app-removed.tsx:18`,
-  and `docs/mockups/src/screens/auth/no-role.tsx:50`, `LeftBody`.
+  and `docs/mockups/src/screens/auth/no-role.tsx:67`, `LeftBody`.
 - **Reason:** The state needs a lost access and a waiting add at once, and
   its fix needs a new mockup state first, then an API change.
 

@@ -11,7 +11,7 @@ export const access = defineScreen({
   description:
     "Lena Fischer is a member of mokly-ai on GitHub with no role in ciproxy, so every page of mokly-ai shows only this one. Her sign-in asked the Admins for access, and the request shows in Settings, under Members. The page names the Admins.",
   rationale:
-    "ciproxy controls access with its own roles, and it cannot list the members of the GitHub organization, so a sign-in is the request for access.",
+    "ciproxy controls access with its own roles, and the person's own sign-in proves membership without a full member list of the GitHub organization, so a sign-in is the request for access.",
   relatedDocs: related("security"),
   address: orgAddress("jobs"),
   useCasePaths: [paths.flowMemberAccess],
@@ -25,7 +25,9 @@ export const access = defineScreen({
       slug: "owner",
       title: "An owner claims the Admin role",
       description:
-        "Tom Becker is an owner of mokly-ai on GitHub with no role in ciproxy. An owner can always claim the Admin role, so an organization never loses control of ciproxy. ciproxy checks the ownership with his own GitHub sign-in.",
+        "Tom Becker owns both organizations of the workspace, mokly-ai and mokly-labs, on GitHub, and has no role in ciproxy. ciproxy offers him the Admin claim, so the page offers Claim the Admin role beside the Admins. An owner of only some organizations sees the member page while the workspace has an Admin.",
+      rationale:
+        "An owner claims the Admin role when the workspace has no Admin, or when the owner owns every organization of the workspace, so no organization takes over another. ciproxy checks the ownership with his own GitHub sign-in, and the page reads only the claim that ciproxy offers, as the dashboard reads the claim of the session.",
       props: { state: "owner" },
     },
     {

@@ -6,7 +6,7 @@
 import { StyleSheet, Text, View } from "react-native";
 import { Table, type TableColumn } from "@firna/ui/table";
 
-import { chartColors, colors, fonts, radii } from "@ciproxy/tokens";
+import { chartColors, colors, fonts, markRadii } from "@ciproxy/tokens";
 
 import { Panel } from "../../components/panel.tsx";
 import { text } from "../../components/text.ts";
@@ -127,8 +127,8 @@ const styles = StyleSheet.create({
   track: { flexDirection: "row", alignItems: "center", gap: 8, flexGrow: 1 },
   bar: {
     height: 10,
-    borderTopRightRadius: radii.sm,
-    borderBottomRightRadius: radii.sm,
+    borderTopRightRadius: markRadii.md,
+    borderBottomRightRadius: markRadii.md,
   },
   barValue: { color: colors.ink, fontWeight: "500" },
   note: { marginTop: 14 },

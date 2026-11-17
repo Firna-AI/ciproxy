@@ -13,6 +13,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
+import { appPermissions } from "../../fixtures/github-app.ts";
 import { Cells, Section, SectionHead } from "./section.tsx";
 
 type Feature = { icon: LucideIcon; title: string; text: ReactNode };
@@ -46,7 +47,7 @@ const features: readonly Feature[] = [
   {
     icon: ShieldCheck,
     title: "Secure by default",
-    text: "A fresh VM for every job, an agent that only connects out, and a GitHub App with three permissions.",
+    text: `A fresh VM for every job, an agent that only connects out, and a GitHub App with ${appPermissions.length} permissions.`,
   },
   {
     icon: Github,
