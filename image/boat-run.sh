@@ -10,6 +10,7 @@ if [[ ${CIPROXY_PRIVATE_NAMESPACE:-} != 1 ]]; then
         --mount --pid --fork --kill-child bash "$0" "$registration"
 fi
 
+python3 "$rootfs/opt/ciproxy-image/file-capabilities.py" restore "$rootfs"
 mount --make-rprivate /
 mount -t proc proc "$rootfs/proc"
 mount --rbind /dev "$rootfs/dev"

@@ -34,10 +34,13 @@ The snapshot contains no runner registration, callback token, or App key.
 Use a new release name so an existing share keeps the same image.
 `snapshot` waits for the saved snapshot and writes its share code to a
 new private file. Copy that code into the control plane's image settings.
-`metadata` runs [metadata-smoke.py](metadata-smoke.py) on the real
-`usr/bin/ping` file before the snapshot. It reads its owner, mode,
-capability, and ACL attributes. Keep this evidence on the host.
+`metadata` first restores the release file capabilities, as
+[Boat smoke](#boat-smoke) says. It then runs
+[metadata-smoke.py](metadata-smoke.py) on the real `usr/bin/ping` file
+before the snapshot. It reads its owner, mode, capability, and ACL
+attributes. Keep this evidence on the host.
 Confirm that `security_capability` has a value before saving the snapshot.
+No Boat step writes the capability map. Only the image export records it.
 
 ## Boat smoke
 
@@ -57,10 +60,21 @@ python3 image/boat.py status SMOKE_SANDBOX_ID --process RUNNER_PROCESS_ID
 python3 image/boat.py delete SMOKE_SANDBOX_ID
 ```
 
+The Boat wrapper, `boat-run.sh`, restores the release file capabilities
+before it starts Docker or the runner. It reads the trusted map that the
+[image export](README.md#inputs-and-build) wrote in the release tree.
+It sets each capability only on its recorded file, and only when the file
+contents match the recorded SHA-256. The restore refuses a changed file, a
+symbolic link, and a path outside the tree. A refusal stops the wrapper
+before Docker and the runner start.
+
 The metadata comparison runs after shared-snapshot restore and before a job.
+`metadata` runs the same capability restore before it reads the file.
+The comparison then checks the state that a job gets.
 It prints `matches_baseline` and each difference as smoke evidence.
 Confirm that `matches_baseline` is `true` after each restore.
 It adds no build gate. Investigate a difference before using the image.
+
 Use `--file RELATIVE_PATH` in both metadata commands to check another file.
 For an ACL restore proof, choose a file with a populated ACL attribute.
 A `null` ACL records its absence and does not prove ACL restoration.
@@ -138,6 +152,7 @@ that the callback deleted its sandbox.
 If the control plane deletes it before status can read the logs, keep the
 callback server's receipt and the provider deletion result as evidence.
 Delete a remaining smoke sandbox with the explicit delete command.
+`delete` sends the sandbox ID in Boat's `X-Ascii-Confirm-Delete` header.
 
 Boat documents 51 GB for files on `small` and `default`.
 Those sizes cannot hold the full userspace.

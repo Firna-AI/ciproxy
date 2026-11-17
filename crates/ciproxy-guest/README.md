@@ -33,6 +33,15 @@ Guest `poweroff` leaves that process alive because x86 Firecracker has no
 ACPI power control. See the [Firecracker shutdown contract][shutdown].
 The image's systemd unit also requests shutdown after initialization fails.
 
+The listener runs as the `runner` account through `runuser`.
+The guest clears its own service environment for this start.
+It passes only the JIT registration and the assignment socket value.
+`runuser` sets `HOME`, `USER`, `LOGNAME`, and `SHELL` from the account.
+The image's [entry script](../../image/runner-entry.sh) then loads
+`/etc/profile`, exports `/etc/environment`, and loads the account's own
+`.profile`, in that order.
+Jobs therefore keep the image tool `PATH` and the account's additions.
+
 Handle `Shutdown` while the runner waits.
 A second configuration starts no second runner, because each guest runs one
 runner. A repeat for the same runner gets `RunnerConfigured` again.
@@ -116,6 +125,8 @@ The source-hook integration test uses a real temporary Unix socket.
 It checks the original credentials and the preparation and decision lines.
 The Shutdown test waits for an actual pending runner future.
 It uses a notification, with no sleep or wall-clock assertion.
+The [runner environment check](../../image/checks.md#runner-account-environment)
+starts the built binary with the real `runuser` and entry script.
 Live vsock, Docker, GitHub, and Boat checks need external infrastructure.
 
 ### Key Code
@@ -133,7 +144,8 @@ Live vsock, Docker, GitHub, and Boat checks need external infrastructure.
 - [src/replay.rs](src/replay.rs) keeps the assignment and a completed
   preparation across a vsock reconnect.
 - [src/handoff.rs](src/handoff.rs) prepares the in-memory proxy.
-- [src/process.rs](src/process.rs) drains the listener and controls its group.
+- [src/process.rs](src/process.rs) starts the listener as the runner
+  account, drains its output, and controls its group.
 - [src/power.rs](src/power.rs) requests the Firecracker reset or leaves Boat
   shutdown to its wrapper.
 - [src/cli.rs](src/cli.rs) composes the selected Linux runtime.

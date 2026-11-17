@@ -81,6 +81,12 @@ def check_export(workspace):
     assert measurement["rootfs"] == "rootfs", "Release measurement must use a neutral root label"
     assert manifest["measurements"]["rootfs"] == "rootfs", (
         "The manifest must not contain the build machine's extraction path")
+    expected_capabilities = {"version": 1, "files": [
+        {"path": name, "sha256": "7190561c52979663f3d0fcfb01186b6f67e3e82c5f9614ec1d488fda53218eaa",
+         "security_capability": CAPABILITY}
+        for name in ["privileged-tool", "tool-alias"]]}
+    assert manifest.get("file_capabilities") == expected_capabilities, (
+        "Release metadata must record every trusted file capability")
     root_disk_bytes = (artifacts / "rootfs.ext4").stat().st_size
     assert measurement.get("root_disk_bytes") == root_disk_bytes, (
         "Measurement must report the actual logical root disk size")
@@ -105,6 +111,10 @@ def check_export(workspace):
     expected_acl = [(1, 7, None), (2, 5, 34567), (4, 5, None),
                     (16, 5, None), (32, 5, None)]
     for tree in [work / "rootfs", boat]:
+        assert json.loads((tree / "etc/ciproxy/file-capabilities.json").read_text()) == expected_capabilities, (
+            "Both release trees must carry the same trusted capability metadata")
+        assert (tree / "opt/ciproxy-image/boat-run.sh").read_bytes() == (image / "boat-run.sh").read_bytes(), (
+            "Export must install the matching Boat capability restore consumer")
         check_guest_network((tree / network_path).read_text())
         assert (tree / service_path).read_bytes() == (source / service_path).read_bytes()
         tool = tree / "privileged-tool"
@@ -115,6 +125,10 @@ def check_export(workspace):
         assert (tree / "sparse-data").stat().st_blocks * 512 < 8388608
     assert disk_attribute(disk, "/privileged-tool", "security.capability", root,
                           "ext4-capability") == CAPABILITY
+    assert json.loads(disk_file(disk, "/etc/ciproxy/file-capabilities.json", root,
+                               "ext4-file-capabilities")) == expected_capabilities
+    assert disk_file(disk, "/opt/ciproxy-image/boat-run.sh", root,
+                     "ext4-boat-run") == (image / "boat-run.sh").read_bytes()
     check_guest_network(disk_file(disk, "/" + network_path, root, "ext4-network").decode())
     assert disk_file(disk, "/" + service_path, root, "ext4-guest-service") == (source / service_path).read_bytes()
     assert acl_entries(disk_attribute(disk, "/privileged-tool", "system.posix_acl_access",

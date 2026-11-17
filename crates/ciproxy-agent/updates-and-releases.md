@@ -18,6 +18,8 @@ Release-plz tags only the agent, with `ciproxy-agent-vVERSION`.
 The release workflow runs the complete gate in a read-only PostgreSQL job.
 Versioning requires that job to pass.
 Package builds run read-only. A separate job uploads the verified assets.
+Each job that runs Cargo installs the Rust toolchain of
+`rust-toolchain.toml` with the rustup commands of CI.
 Action commits and release tool versions are pinned.
 Set `RELEASE_PLZ_TOKEN` to a repository-scoped token with release and pull
 request write access. Its tags must trigger the archive workflow.

@@ -132,7 +132,9 @@ def status(api, args):
 
 
 def metadata(api, args):
-    command = ("sudo python3 /opt/ciproxy/rootfs/opt/ciproxy-image/metadata-smoke.py "
+    command = ("sudo python3 /opt/ciproxy/rootfs/opt/ciproxy-image/file-capabilities.py "
+               "restore /opt/ciproxy/rootfs && "
+               "sudo python3 /opt/ciproxy/rootfs/opt/ciproxy-image/metadata-smoke.py "
                "/opt/ciproxy/rootfs " + shlex.quote(args.file))
     answer = api.command(args.sandbox, command)
     if answer["exitCode"] != 0:

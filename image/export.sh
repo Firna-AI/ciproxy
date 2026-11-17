@@ -21,6 +21,9 @@ if [[ $mode != from-rootfs ]]; then
     sudo bash "$definition/rootfs-archive.sh" extract "$source_archive" "$rootfs"
 fi
 printf '/dev/vda / ext4 defaults 0 1\n' | sudo tee "$rootfs/etc/fstab" > /dev/null
+sudo install -D -m 0644 "$definition/file-capabilities.py" "$rootfs/opt/ciproxy-image/file-capabilities.py"
+sudo install -m 0755 "$definition/boat-run.sh" "$rootfs/opt/ciproxy-image/boat-run.sh"
+sudo python3 "$definition/file-capabilities.py" capture "$rootfs"
 sudo bash "$definition/rootfs-archive.sh" pack "$rootfs" "$artifacts/rootfs.tar.zst"
 sudo python3 "$definition/measure.py" "$rootfs" > "$work_dir/installed-size.json"
 

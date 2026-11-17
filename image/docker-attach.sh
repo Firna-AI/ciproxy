@@ -22,7 +22,8 @@ if [[ ! -f /mnt/ciproxy-docker/.ciproxy-initialized ]]; then
 fi
 read -r free_blocks block_bytes < <(stat --file-system --format='%a %S' /mnt/ciproxy-docker)
 (( free_blocks * block_bytes >= required_free_bytes ))
-mount --move /mnt/ciproxy-docker /var/lib/docker
+umount /mnt/ciproxy-docker
+mount /dev/vdb /var/lib/docker
 systemctl start docker.socket docker.service
 systemctl is-active --quiet docker.service
 trap - ERR
