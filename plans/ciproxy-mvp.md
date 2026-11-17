@@ -1448,7 +1448,7 @@ Depends on: 14, 16, 17
 
 These routes serve the other pages of the dashboard.
 
-- [ ] Orchestrator: finish serving Jobs, Savings, Plan and usage, Plans,
+- [x] Orchestrator: finish serving Jobs, Savings, Plan and usage, Plans,
       Checkout, and one banner for each page. Complete the composition and
       paid-review steps below.
       Branch: `calummoore/ci-proxy-load-balancer`.
@@ -2431,7 +2431,7 @@ list gives what is not done.
       The live smoke stays with Cal. Banner reconciliation stays with the
       Milestone 21 session.
       Branch: `conductor/m20-closure`.
-- [ ] #53, Milestone 21, Jobs, Savings, and billing: close the docs, the
+- [x] #53, Milestone 21, Jobs, Savings, and billing: close the docs, the
       plan records, and the follow-up items. Run the browser checks at 1440,
       720, and 390 pixels, the complete gate, and the final review. Run the
       dashboard part of the Stripe test-mode checkout.
@@ -2443,9 +2443,9 @@ list gives what is not done.
         Branch: `conductor/m21-closure-and-one-banner`.
   - [x] Run the final review after the push, and apply its fix rule.
         Branch: `conductor/m21-closure-and-one-banner`.
-  - [ ] Run the dashboard part of the Stripe test-mode checkout, as the live
+  - [x] Run the dashboard part of the Stripe test-mode checkout, as the live
         TODO of Milestone 21 says. It needs a private credential file and a
-        Free test workspace with a payer.
+        Free test workspace with a payer. Passed on 17 November 2026.
 - [x] Reconcile the two banner paths. The shell shows the workspace banner
       of the API, which covers the soft limit and inactive organizations.
       The Organizations tab of Milestone 20 still shows its own banner with
