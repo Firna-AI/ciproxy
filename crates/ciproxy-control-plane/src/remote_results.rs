@@ -6,6 +6,7 @@ use tokio::sync::Mutex;
 
 use ciproxy_github::persistence::lease::LeaseStore;
 use ciproxy_store_interface::own_runners::OwnRunner;
+use ciproxy_store_interface::runners::{Runner, RunnerPlace, RunnerState};
 use ciproxy_store_interface::runtime_results::{OwnRunnerGuard, OwnRunnerResult};
 use uuid::Uuid;
 
@@ -43,7 +44,7 @@ impl MachineRuntime {
             .internal()?
             .internal()?
             .ok_or(Error::StateChanged)?;
-        if guard.runner != *runner {
+        if dispatch_authority(&guard.runner) != dispatch_authority(runner) {
             return Err(Error::StateChanged);
         }
         Ok(guard)
@@ -67,5 +68,56 @@ impl MachineRuntime {
         .await
         .internal()?
         .internal()
+    }
+}
+
+/// Dispatch ignores the caller's own evidence writes and uses the saved full guard.
+#[derive(PartialEq)]
+struct DispatchAuthority<'a> {
+    runner_id: Uuid,
+    organization_id: Uuid,
+    label_id: Uuid,
+    scale_set_id: Uuid,
+    github_id: Option<i64>,
+    state: RunnerState,
+    place: &'a RunnerPlace,
+    registration_scale_set_id: Option<i64>,
+    label_name: &'a str,
+    command_id: Uuid,
+}
+
+fn dispatch_authority(runner: &OwnRunner) -> DispatchAuthority<'_> {
+    let OwnRunner {
+        registration_scale_set_id,
+        requested_size: _,
+        slot_indices: _,
+        runner,
+        label_name,
+        command_id,
+        issued_at: _,
+        acknowledged: _,
+        confirmed_at: _,
+    } = runner;
+    let Runner {
+        id,
+        organization_id,
+        label_id,
+        scale_set_id,
+        github_id,
+        state,
+        size: _,
+        place,
+    } = runner;
+    DispatchAuthority {
+        runner_id: *id,
+        organization_id: *organization_id,
+        label_id: *label_id,
+        scale_set_id: *scale_set_id,
+        github_id: *github_id,
+        state: *state,
+        place,
+        registration_scale_set_id: *registration_scale_set_id,
+        label_name,
+        command_id: *command_id,
     }
 }

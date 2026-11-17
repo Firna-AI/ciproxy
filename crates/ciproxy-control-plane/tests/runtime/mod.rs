@@ -9,6 +9,7 @@ mod accounting_tests;
 mod app_removal_tests;
 mod binding_target_tests;
 mod clock;
+mod dispatch_evidence_tests;
 mod failure_isolation_tests;
 mod held_remote;
 mod image_delivery_tests;
