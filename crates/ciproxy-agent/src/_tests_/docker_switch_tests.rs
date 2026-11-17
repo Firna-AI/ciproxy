@@ -43,7 +43,7 @@ async fn failed_drive_switch_releases_job_on_root_while_drive_cleanup_waits() {
                 4096,
             )))),
         DockerDisksMock::prepare
-            .some_call(matching!(_, _, _, _, _, _))
+            .some_call(matching!(_, _, _, _, _))
             .returns(Ok(Some(DockerDiskAttachment {
                 free_bytes: 4096,
                 drive_id: "docker".into(),

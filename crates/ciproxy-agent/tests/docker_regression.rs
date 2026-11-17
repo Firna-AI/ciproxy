@@ -11,6 +11,8 @@ mod boundaries;
 mod budget_file;
 #[path = "../src/cache_authority.rs"]
 mod cache_authority;
+#[path = "../src/capacity.rs"]
+mod capacity;
 #[path = "../src/connection_types.rs"]
 mod connection_types;
 #[path = "../src/docker.rs"]
@@ -23,6 +25,8 @@ mod docker_prepare;
 mod docker_recovery;
 #[path = "docker/mod.rs"]
 mod docker_regressions;
+#[path = "../src/docker_reservation.rs"]
+mod docker_reservation;
 #[path = "../src/endpoint.rs"]
 mod endpoint;
 #[path = "../src/error.rs"]
@@ -61,3 +65,7 @@ mod sparse_copy;
 mod state;
 #[path = "../src/storage_sizing.rs"]
 mod storage_sizing;
+#[path = "../src/vm_drives.rs"]
+mod vm_drives;
+#[path = "../src/workload_space.rs"]
+mod workload_space;

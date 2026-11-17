@@ -7,8 +7,8 @@ use async_trait::async_trait;
 use ciproxy_protocol::cache::{DockerDiskAccess, DockerDiskAttachment, DockerDiskReport};
 use ciproxy_protocol::jobs::{JobFacts, JobScope};
 use sha2::{Digest, Sha256};
+use tokio::sync::Mutex;
 
-use crate::boundaries::Cache;
 use crate::docker_files::{self, AttachmentPhase, Lease};
 use crate::docker_prepare::Preparation;
 use crate::error::{ErrorResultExt, Result};
@@ -16,10 +16,13 @@ use crate::layout::Layout;
 use crate::persistence::private_directory;
 use crate::process::Commands;
 use crate::state::VmRecord;
+use crate::vm_drives::VmDrive;
+use crate::workload_space::WorkloadSpace;
 
 #[cfg_attr(test,unimock::unimock(api=DockerDisksMock))]
 #[async_trait]
-pub(crate) trait DockerDisks: Send + Sync {
+/// Durable Docker reservations and disk attachment operations.
+pub trait DockerDisks: Send + Sync {
     fn reserved(&self, vm: &VmRecord) -> Result<bool>;
     fn offered(&self, vm: &VmRecord) -> Result<()>;
     fn failed(&self, vm: &VmRecord) -> Result<bool>;
@@ -32,7 +35,6 @@ pub(crate) trait DockerDisks: Send + Sync {
         scope: &JobScope,
         data_bytes: u64,
         spare: u64,
-        free_pool: u64,
     ) -> Result<Option<DockerDiskAttachment>>;
     fn release(&self, vm: &VmRecord) -> Result<()>;
     fn report(&self) -> Result<DockerDiskReport>;
@@ -43,7 +45,9 @@ pub(crate) trait DockerDisks: Send + Sync {
 pub(crate) struct LinuxDockers {
     pub(crate) layout: Layout,
     pub(crate) commands: Arc<dyn Commands>,
-    pub(crate) cache: Arc<dyn Cache>,
+    pub(crate) allocation: Arc<Mutex<()>>,
+    pub(crate) space: Arc<dyn WorkloadSpace>,
+    pub(crate) image_budget: u64,
 }
 
 #[async_trait]
@@ -81,65 +85,64 @@ impl DockerDisks for LinuxDockers {
         scope: &JobScope,
         data_bytes: u64,
         spare: u64,
-        free_pool: u64,
     ) -> Result<Option<DockerDiskAttachment>> {
         if !facts.sticky_docker || data_bytes == 0 {
             return Ok(None);
         }
-        let leases = docker_files::leases(&self.layout)?;
-        if let Some((_, lease)) = leases.iter().find(|(id, _)| *id == vm.local_id) {
-            return Ok(Some(attachment(
-                lease.writer,
-                vm.report.requested_size.disk_bytes,
-            )));
-        }
-        let key = hex::encode(Sha256::digest(
-            format!("{}:{}", facts.organization_id.0, facts.repository.id.0).as_bytes(),
-        ));
-        let directory = self.layout.data.join("docker").join(&key);
-        private_directory(&directory)?;
-        let exclusive = persistent(facts, scope)
-            && !leases
-                .iter()
-                .any(|(_, lease)| lease.writer && lease.repository == key);
-        let base = directory.join("base.ext4");
-        let path = self.layout.jail_root(vm).join("docker-job.ext4");
-        let old_size = match base.metadata() {
-            Ok(metadata) => metadata.len(),
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => 0,
-            Err(error) => return Err(error).context("inspect Docker base"),
+        let prepared = {
+            let _allocation = self.allocation.lock().await;
+            let free_pool = self.space.available(self.image_budget).await?;
+            let leases = docker_files::leases(&self.layout)?;
+            if let Some((_, lease)) = leases.iter().find(|(id, _)| *id == vm.local_id) {
+                return Ok(Some(attachment(
+                    lease.writer,
+                    vm.report.requested_size.disk_bytes,
+                )));
+            }
+            let key = hex::encode(Sha256::digest(
+                format!("{}:{}", facts.organization_id.0, facts.repository.id.0).as_bytes(),
+            ));
+            let directory = self.layout.data.join("docker").join(&key);
+            private_directory(&directory)?;
+            let exclusive = persistent(facts, scope)
+                && !leases
+                    .iter()
+                    .any(|(_, lease)| lease.writer && lease.repository == key);
+            let base = directory.join("base.ext4");
+            let path = VmDrive::DockerJob.path(&self.layout, vm);
+            let old_size = match base.metadata() {
+                Ok(metadata) => metadata.len(),
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => 0,
+                Err(error) => return Err(error).context("inspect Docker base"),
+            };
+            let limit = spare
+                .min(free_pool)
+                .saturating_sub(leases.iter().map(|(_, lease)| lease.bytes).sum());
+            let desired = data_bytes
+                .saturating_add(vm.report.requested_size.disk_bytes)
+                .max(old_size)
+                .div_ceil(4096)
+                * 4096;
+            if desired > limit {
+                return Ok(None);
+            }
+            let lease = Lease {
+                repository: key,
+                writer: exclusive,
+                bytes: desired,
+                phase: AttachmentPhase::Preparing,
+            };
+            docker_files::save(&self.layout, vm, &lease)?;
+            Preparation {
+                base,
+                path,
+                lease,
+                spare,
+                data: data_bytes,
+            }
         };
-        let limit = spare
-            .min(free_pool)
-            .saturating_sub(leases.iter().map(|(_, lease)| lease.bytes).sum());
-        let desired = data_bytes
-            .saturating_add(vm.report.requested_size.disk_bytes)
-            .max(old_size)
-            .div_ceil(4096)
-            * 4096;
-        if desired > limit {
-            return Ok(None);
-        }
-        let lease = Lease {
-            repository: key,
-            writer: exclusive,
-            bytes: desired,
-            phase: AttachmentPhase::Preparing,
-        };
-        docker_files::save(&self.layout, vm, &lease)?;
-        let result = self
-            .prepare_file(
-                vm,
-                Preparation {
-                    base,
-                    path,
-                    lease,
-                    limit,
-                    data: data_bytes,
-                    free_pool,
-                },
-            )
-            .await;
+        let exclusive = prepared.lease.writer;
+        let result = self.prepare_file(vm, prepared).await;
         match result {
             Ok(()) => Ok(Some(attachment(
                 exclusive,
@@ -155,7 +158,7 @@ impl DockerDisks for LinuxDockers {
     fn release(&self, vm: &VmRecord) -> Result<()> {
         let directory = self.layout.data.join("docker-leases");
         for path in [
-            self.layout.jail_root(vm).join("docker-job.ext4"),
+            VmDrive::DockerJob.path(&self.layout, vm),
             directory.join(&vm.local_id),
         ] {
             match fs::remove_file(path) {
@@ -199,10 +202,19 @@ impl DockerDisks for LinuxDockers {
 
     fn reclaim(&self, free_pool: u64) -> Result<u64> {
         let entries = docker_files::unused(&self.layout)?;
+        let leases = docker_files::leases(&self.layout)?;
         let mut used = entries.iter().map(|(_, _, bytes)| bytes).sum::<u64>();
         for (_, path, bytes) in entries {
             if used <= free_pool {
                 break;
+            }
+            if leases.iter().any(|(_, lease)| {
+                lease.phase == AttachmentPhase::Preparing
+                    && path
+                        .file_name()
+                        .is_some_and(|name| name == lease.repository.as_str())
+            }) {
+                continue;
             }
             fs::remove_dir_all(path).context("reclaim least-recent unused Docker disk")?;
             used = used.saturating_sub(bytes);

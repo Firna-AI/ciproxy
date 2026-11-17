@@ -6,7 +6,6 @@ use ciproxy_protocol::jobs::JobFacts;
 use ciproxy_protocol::runners::RunnerState;
 
 use crate::cache_authority::CacheAuthority;
-use crate::capacity::machine_resources;
 use crate::controller::Controller;
 use crate::docker::DockerDisks;
 use crate::error::{Error, Result};
@@ -50,21 +49,9 @@ impl Controller {
                     }
                     _ => 0,
                 };
-                let free_pool = if first_preparation && self.dockers.is_some() {
-                    let hardware = self.host.hardware()?;
-                    let state = self.state.lock().await;
-                    machine_resources(&hardware, self.image_budget)
-                        .available(state.runners.iter().map(|vm| vm.report.size))
-                        .job_disk_bytes
-                } else {
-                    0
-                };
                 let docker = match (&self.dockers, scope, first_preparation) {
                     (Some(dockers), Some(scope), true) => {
-                        match dockers
-                            .prepare(vm, &facts, &scope, data_bytes, spare, free_pool)
-                            .await
-                        {
+                        match dockers.prepare(vm, &facts, &scope, data_bytes, spare).await {
                             Ok(Some(disk)) => self.attach_docker(vm, dockers.as_ref(), disk).await,
                             Ok(None) => None,
                             Err(error) => {

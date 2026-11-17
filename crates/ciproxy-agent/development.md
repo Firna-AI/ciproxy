@@ -10,10 +10,13 @@ folders. It needs `e2fsprogs`, without root access. It covers four areas:
 
 - Docker leases, preparation, and recovery call the real adapter. They mock
   cache administration and most host commands. The corruption case runs
-  real `e2fsck` on temporary files.
+  real `e2fsck` on temporary files. Admission checks reclaim idle bases
+  before disk creation and each growth step.
 - Image recovery keeps the runtime claim of its caller while it creates the
-  image folder.
-- The runtime lock refuses a second claim until its owner ends.
+  image folder. Image accounting excludes VM drive files and counts jail
+  support files.
+- Run refuses a second runtime claim until its owner ends. Uninstall prints
+  one notice and waits for that claim without a workload mount.
 - The real state store saves an identity with its credential and endpoint.
   A new store instance then loads the same values, as after a restart.
 

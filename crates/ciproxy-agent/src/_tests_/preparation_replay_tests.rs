@@ -10,10 +10,10 @@ use ciproxy_protocol::jobs::{JobScope, UnknownJobScopeReason};
 use ciproxy_protocol::secret::Secret;
 use unimock::{MockFn, Unimock, matching};
 
-use crate::boundaries::{CacheMock, HostMock, StoreMock, VmsMock};
+use crate::boundaries::{CacheMock, StoreMock, VmsMock};
 use crate::controller::Agent;
 use crate::docker::DockerDisksMock;
-use crate::fixtures::{applied, controller, hardware, trusted_facts, vm};
+use crate::fixtures::{applied, controller, trusted_facts, vm};
 use crate::state::{MachineState, PreparationState};
 
 #[tokio::test]
@@ -44,11 +44,8 @@ async fn repeated_facts_do_not_repeat_attachment_before_the_guest_acknowledges_s
                     7,
                 )))
             })),
-        HostMock::hardware
-            .some_call(matching!())
-            .returns(Ok(hardware())),
         DockerDisksMock::prepare
-            .some_call(matching!(_, _, _, 7, 0, _))
+            .some_call(matching!(_, _, _, 7, 0))
             .returns(Ok(Some(attachment))),
         VmsMock::swap_docker.some_call(matching!(_)).returns(Ok(())),
         DockerDisksMock::offered

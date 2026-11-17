@@ -23,6 +23,7 @@ use crate::controller::{Agent, Controller};
 use crate::image_registry::{ImageLease, ImageLeaseMock};
 use crate::state::{Identity, MachineState, VmRecord};
 use crate::storage_sizing::DEFAULT_IMAGE_BYTES;
+use crate::workload_space::MachineWorkloadSpace;
 use ciproxy_protocol::cache::MachineCacheReport;
 
 pub(super) fn identity() -> Identity {
@@ -127,16 +128,22 @@ pub(super) fn report_dependencies_for(hardware: HardwareReport) -> impl Clause {
 
 pub(super) fn controller(state: MachineState, mock: Unimock) -> Controller {
     let mock = Arc::new(mock);
+    let state = Arc::new(Mutex::new(state));
     Controller {
-        allocation: Mutex::new(()),
+        allocation: Arc::new(Mutex::new(())),
         reporting_initialized: Mutex::new(true),
         network_cleanup: Mutex::new(()),
         control_connected: AtomicBool::new(true),
-        state: Mutex::new(state),
+        state: state.clone(),
         store: mock.clone(),
         host: mock.clone(),
         vms: mock.clone(),
         images: mock.clone(),
+        space: Arc::new(MachineWorkloadSpace {
+            state,
+            host: mock.clone(),
+            cache: mock.clone(),
+        }),
         cache: mock,
         image_budget: DEFAULT_IMAGE_BYTES,
         dockers: None,

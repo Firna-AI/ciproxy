@@ -14,7 +14,7 @@ pub(crate) struct IdentityStore {
     pub(crate) endpoints: Arc<dyn EndpointFiles>,
 }
 
-/// Proof that startup has excluded the previous runtime or stopped its service.
+/// Proof that startup holds exclusive runtime ownership.
 pub trait IdentityOwner: Debug + Send + Sync {}
 
 /// Persist recovered identity only while the caller holds startup ownership.

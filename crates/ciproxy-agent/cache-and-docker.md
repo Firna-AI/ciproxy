@@ -144,6 +144,12 @@ stays unchanged.
 
 Before a VM starts or a Docker disk takes space, the cache acknowledges its
 smaller byte budget.
+Both reservations first release idle Docker bases that exceed the free pool.
+Docker preparation keeps its selected source until the attachment owns
+its blocks.
+Each filesystem growth step releases space before it extends the disk.
+Root admission, Docker leases, and the first report budget share one
+allocation lock.
 The cache waits for active file reads and writes before that acknowledgement.
 If administration fails, the agent stops the service and removes its
 occupied cache files. The job then uses GitHub or sees a cache miss.

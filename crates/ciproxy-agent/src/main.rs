@@ -6,6 +6,7 @@ mod application_endpoint;
 mod application_images;
 mod application_metadata;
 mod application_setup;
+mod application_uninstall;
 mod area;
 mod area_files;
 mod area_mounts;
@@ -32,6 +33,7 @@ mod docker;
 mod docker_files;
 mod docker_prepare;
 mod docker_recovery;
+mod docker_reservation;
 mod endpoint;
 mod endpoint_files;
 mod error;
@@ -119,11 +121,13 @@ mod system_service;
 mod terminal_completion;
 mod updates;
 mod vm_config;
+mod vm_drives;
 mod vm_files;
 mod vm_root;
 mod vms;
 mod vsock;
 mod vsock_stream;
+mod workload_space;
 
 #[cfg(test)]
 #[path = "_tests_/vm_root_tests.rs"]

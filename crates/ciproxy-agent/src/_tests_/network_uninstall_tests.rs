@@ -63,6 +63,7 @@ async fn empty_uninstall_preserves_area_and_state_until_orphan_network_cleanup_s
     let mut agent = controller(initial, mock.as_ref().clone());
     agent.vms = Arc::new(runtime(mock.clone()));
     let uninstall = FinalUninstall {
+        _runtime: Arc::new(Unimock::new(())),
         files: mock.clone(),
         images: mock.clone(),
         preparation: mock.clone(),
