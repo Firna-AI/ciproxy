@@ -2447,6 +2447,13 @@ tool output on 11 November 2026. Rotate them.
       The shared report entry point attempts the initial cache budget once.
       The cache client replays its latest budget before a service report.
       This covers registration and restarts without a Docker reclaim.
+- [x] Apply PR #71 owner review round 1, finding 1 = D.
+      The owner's finding check changed the recommendation from B to D.
+      Each machine state keeps its machine and cache confirmation paths
+      in one scene record. Unknown confirmations keep their own scene.
+      Branch: `conductor/item-118-e-unknown-machine-statistics`.
+      The pre-existing draining, saved-offline, and agent-behind links wait
+      in `follow-ups/machine-clear-cache-scene-links.md`.
 - [x] Correct `deploy/release-server.md`: the copied preview command now
       supplies `--agent-url`. My call, 16 November 2026: a doc that
       states the implemented command needs no decision.

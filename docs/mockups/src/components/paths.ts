@@ -84,6 +84,10 @@ export const paths = {
   machineCacheUnknown: "app/machines/machine/figures/cache-unknown",
   machineDockerUnknown: "app/machines/machine/figures/docker-unknown",
   machineFiguresUnknown: "app/machines/machine/figures/both-unknown",
+  machineClearCacheUnknown: "app/machines/machine/clear-unknown/cache-unknown",
+  machineClearDockerUnknown:
+    "app/machines/machine/clear-unknown/docker-unknown",
+  machineClearFiguresUnknown: "app/machines/machine/clear-unknown/both-unknown",
   addMachine: "app/machines/add",
   addMachineConnected: "app/machines/add/connected",
   addMachineRevoked: "app/machines/add/revoked",

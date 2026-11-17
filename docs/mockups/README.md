@@ -270,6 +270,13 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   unavailable figure as Unknown. `src/screens/machines/cache-hits.tsx` gives
   the cache hits of Machines: the share of the machines that measured their
   cache, with the names of the others.
+- `src/screens/machines/machine-scenes.tsx`: the scene of each state of the
+  machine page: its machine, the Clear cache confirmation while it is open,
+  and the confirmation that Clear cache opens, with the screens of its Cancel
+  and Clear cache buttons and whether it names the size of the cache entries.
+  A page with unknown figures opens a confirmation over the same page, with no
+  size. A state with no confirmation of its own shows a plain Clear cache
+  button.
 - `src/fixtures/hardware.ts`: the hardware of each machine, the slot rule,
   and the disk rule: the VM images keep 140 GB, the host keeps a quarter of
   the rest, each running job holds its VM disk, and the machine cache uses

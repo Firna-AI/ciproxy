@@ -8,7 +8,8 @@
 // Every role sees the machine; only an Admin drains, removes, or changes it.
 // The warm runner count is the saved count in every state, also while the
 // machine drains, is offline, or has no slots; the slots show the warm
-// runners that are ready.
+// runners that are ready. The scene of each state gives the machine and its
+// Clear cache confirmation.
 
 import { Pencil } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -23,60 +24,16 @@ import { MachineStatusLabel } from "../../components/status.tsx";
 import { usageBanner } from "../../components/usage-banner.tsx";
 import { dotJoin, monthly } from "../../fixtures/format.ts";
 import { hardwareSize, slotSize } from "../../fixtures/hardware.ts";
-import {
-  machineScenes,
-  type Machine,
-  type MachineScene,
-} from "../../fixtures/machines.ts";
+import type { Machine } from "../../fixtures/machines.ts";
 import type { Role } from "../../fixtures/members.ts";
 import { defaultLabelJobs } from "../../fixtures/settings.ts";
 import { sizePhrase } from "../../fixtures/sizes.ts";
-import { ClearCacheDialog, MachineCache } from "./machine-cache.tsx";
+import { MachineCache } from "./machine-cache.tsx";
 import { MachineHealth } from "./machine-health.tsx";
 import { MachineNotice, type NoticeState } from "./machine-notices.tsx";
+import { machineScene, type MachineState } from "./machine-scenes.tsx";
 import { MachineSlots } from "./machine-slots.tsx";
 import "./machines.css";
-
-export const machineStates = [
-  "healthy",
-  "draining",
-  "offline",
-  "no-slots",
-  "disk-limit",
-  "clear-cache",
-  "clear-requested",
-  "saved-offline",
-  "no-room",
-  "agent-behind",
-  "cache-unknown",
-  "docker-unknown",
-  "both-unknown",
-] as const;
-export type MachineState = (typeof machineStates)[number];
-
-/** The scene of each state, and the machine of that scene that it shows. */
-const machineIn: Record<MachineState, [MachineScene, number]> = {
-  healthy: ["steady", 0],
-  draining: ["draining", 0],
-  offline: ["offline", 2],
-  "no-slots": ["noKvm", 2],
-  "disk-limit": ["fourMachines", 3],
-  "clear-cache": ["steady", 0],
-  "clear-requested": ["steady", 0],
-  "saved-offline": ["drainSaved", 0],
-  "no-room": ["tooSmall", 3],
-  "agent-behind": ["agentBehind", 0],
-  "cache-unknown": ["cacheUnknown", 0],
-  "docker-unknown": ["dockerUnknown", 0],
-  "both-unknown": ["figuresUnknown", 0],
-};
-
-function machineOf(state: MachineState): Machine {
-  const [scene, index] = machineIn[state];
-  const machine = machineScenes[scene][index];
-  if (!machine) throw new Error(`No machine for ${state}`);
-  return machine;
-}
 
 /** The notice that leads the page, or null for a state without one. */
 function noticeOf(state: MachineState): NoticeState | null {
@@ -87,6 +44,9 @@ function noticeOf(state: MachineState): NoticeState | null {
     case "cache-unknown":
     case "docker-unknown":
     case "both-unknown":
+    case "clear-cache-unknown":
+    case "clear-docker-unknown":
+    case "clear-both-unknown":
       return null;
     default:
       return state;
@@ -119,7 +79,8 @@ export function MachineDetailScreen({
   /** The role of the signed-in person: only an Admin changes the machine. */
   role?: Role;
 }) {
-  const machine = machineOf(state);
+  const scene = machineScene(state);
+  const { machine } = scene;
   const { hardware } = machine;
   const noSlots = machine.slots.length === 0;
   const admin = role === "admin";
@@ -169,7 +130,11 @@ export function MachineDetailScreen({
         </Panel>
         <div className="stack">
           <MachineHealth machine={machine} />
-          <MachineCache machine={machine} canClear={admin} />
+          <MachineCache
+            machine={machine}
+            canClear={admin}
+            confirm={scene.clearCache?.screen}
+          />
           <Panel title="Cost">
             <div className="spread">
               <div className="stack-tight">
@@ -185,7 +150,7 @@ export function MachineDetailScreen({
           </Panel>
         </div>
       </div>
-      {state === "clear-cache" ? <ClearCacheDialog machine={machine} /> : null}
+      {scene.overlay}
     </AppShell>
   );
 }

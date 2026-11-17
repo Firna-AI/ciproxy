@@ -1,0 +1,4 @@
+{
+  "title": "Clear cache with unknown figures",
+  "order": ["cache-unknown", "docker-unknown", "both-unknown"]
+}
