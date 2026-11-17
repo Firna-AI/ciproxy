@@ -1,6 +1,5 @@
 //! The only filesystem owner of downloaded images and interrupted artifacts.
 
-use std::fs::File;
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
@@ -12,6 +11,7 @@ use crate::image_artifact::PendingImage;
 use crate::image_space::ImageSpace;
 use crate::image_verification::{CheckedBundle, CheckedDownload};
 use crate::layout::Layout;
+use crate::runtime_ownership::{RuntimeClaims, RuntimeOwner};
 
 #[cfg_attr(test, unimock::unimock(api = ImageStoreMock))]
 #[async_trait]
@@ -27,15 +27,22 @@ pub(crate) trait ImageStore: Send + Sync {
 
 pub(crate) struct LinuxImageStore {
     pub(crate) layout: Layout,
-    pub(crate) owner: Mutex<Option<File>>,
+    pub(crate) owner: Mutex<Option<Arc<dyn RuntimeOwner>>>,
+    pub(crate) claims: Arc<dyn RuntimeClaims>,
     pub(crate) space: Arc<dyn ImageSpace>,
 }
 
 impl LinuxImageStore {
-    pub(crate) fn new(layout: Layout, space: Arc<dyn ImageSpace>) -> Self {
+    pub(crate) fn new(
+        layout: Layout,
+        space: Arc<dyn ImageSpace>,
+        claims: Arc<dyn RuntimeClaims>,
+        owner: Option<Arc<dyn RuntimeOwner>>,
+    ) -> Self {
         Self {
             layout,
-            owner: Mutex::new(None),
+            owner: Mutex::new(owner),
+            claims,
             space,
         }
     }

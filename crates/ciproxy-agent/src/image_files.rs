@@ -1,19 +1,16 @@
 //! Linux image cache uses an exclusive runtime owner and atomic file names.
 
-use std::fs::{self, File, OpenOptions};
+use std::fs::{self, File};
 use std::io;
-use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
 
 use async_trait::async_trait;
 use ciproxy_protocol::identifiers::ImageId;
 use ciproxy_protocol::images::ImageReport;
-use fs2::FileExt;
 use tokio::task::spawn_blocking;
 use uuid::Uuid;
 
 use crate::error::{Error, ErrorResultExt, Result};
-use crate::host_paths::CONTROL;
 use crate::image_artifact::PendingImage;
 use crate::image_store::{ImageStore, LinuxImageStore};
 use crate::image_verification::{CheckedBundle, CheckedDownload};
@@ -37,21 +34,11 @@ impl ImageStore for LinuxImageStore {
             .owner
             .lock()
             .unwrap_or_else(|poison| poison.into_inner());
-        if owner.is_some() {
-            return Ok(());
+        if owner.is_none() {
+            *owner = Some(self.claims.claim()?);
         }
         private_directory(&self.layout.data)?;
-        let file = OpenOptions::new()
-            .create(true)
-            .truncate(false)
-            .read(true)
-            .write(true)
-            .mode(0o600)
-            .open(Path::new(CONTROL).join("images.lock"))
-            .context("open image ownership lock")?;
-        FileExt::try_lock_exclusive(&file).context("claim image cache ownership")?;
         private_directory(&self.layout.data.join("images"))?;
-        *owner = Some(file);
         Ok(())
     }
 

@@ -1,37 +1,89 @@
-//! Uninstall must never pair saved credentials with an invented default target.
+//! Retained credentials never use settings from another install command.
+
+use std::sync::Arc;
 
 use unimock::{MockFn, Unimock, matching};
 
-use crate::application_endpoint::configure;
+use crate::application_endpoint::{ConfiguredAction, configure};
+use crate::application_metadata::MetadataTarget;
+use crate::application_setup::{InvocationSetup, LoadedInvocation};
+use crate::boundaries::{ServiceMock, StoreMock};
 use crate::cli::Action;
-use crate::endpoint::EndpointSettingsMock;
-use crate::error::Error;
+use crate::endpoint::EndpointFilesMock;
+use crate::fixtures::identity;
+use crate::identity_store::IdentityStore;
+use crate::state::MachineState;
 
 #[test]
-fn uninstall_preserves_the_saved_preview_endpoint_for_metadata() {
-    let settings = Unimock::new(
-        EndpointSettingsMock::saved
-            .some_call(matching!())
-            .returns(Ok(Some(
-                "wss://preview.ciproxy.example:8443/agent/".parse().unwrap(),
-            ))),
+fn daemon_and_uninstall_preserve_the_identity_preview_endpoint() {
+    let mut identity = identity();
+    identity.endpoint = Some("wss://preview.ciproxy.example:8443/agent/".parse().unwrap());
+    let settings = Unimock::new(());
+    let action = configure(Action::Run, &settings)
+        .unwrap()
+        .bind_identity(Some(&identity));
+    let ConfiguredAction::Run { endpoint } = action else {
+        panic!("run must keep the daemon action");
+    };
+    assert_eq!(
+        endpoint.unwrap().as_str(),
+        "wss://preview.ciproxy.example:8443/agent/"
     );
     let action = configure(Action::Uninstall, &settings).unwrap();
+    assert!(matches!(action, ConfiguredAction::Uninstall));
+    let target = MetadataTarget::for_machine(Some(&identity));
+    let MetadataTarget::Hosted(source) = target else {
+        panic!("uninstall must retain metadata for running jobs");
+    };
     assert_eq!(
-        action.endpoint().map(|endpoint| endpoint.as_str()),
-        Some("wss://preview.ciproxy.example:8443/agent/")
+        source.url.expose_secret(),
+        "https://preview.ciproxy.example:8443/agent/cache-metadata"
     );
 }
 
 #[test]
-fn uninstall_without_a_trusted_saved_endpoint_keeps_local_cleanup_available() {
-    for saved in [Ok(None), Err(Error::AgentEndpoint)] {
-        let settings = Unimock::new(
-            EndpointSettingsMock::saved
+fn uninstall_without_a_trusted_identity_endpoint_keeps_local_cleanup_available() {
+    for endpoint in [
+        None,
+        Some("https://invalid.ciproxy.example/agent/".to_owned()),
+    ] {
+        let mut identity = identity();
+        identity.endpoint = None;
+        let state = MachineState {
+            identity: Some(identity),
+            ..MachineState::default()
+        };
+        let mock = Arc::new(Unimock::new((
+            ServiceMock::stop.some_call(matching!()).returns(Ok(())),
+            StoreMock::load
                 .some_call(matching!())
-                .returns(saved),
-        );
-        let action = configure(Action::Uninstall, &settings).unwrap();
-        assert_eq!(action.endpoint().map(|endpoint| endpoint.as_str()), None);
+                .returns(Ok(state.clone())),
+            EndpointFilesMock::read
+                .some_call(matching!())
+                .returns(Ok(endpoint)),
+        )));
+        let setup = LoadedInvocation {
+            endpoints: mock.clone(),
+            service: mock.clone(),
+            runtime: mock.clone(),
+            identity: Arc::new(IdentityStore {
+                store: mock.clone(),
+                endpoints: mock.clone(),
+            }),
+        };
+        let loaded = setup
+            .prepare(Action::Uninstall)
+            .ok()
+            .map(|invocation| invocation.state);
+        assert_eq!(loaded, Some(state));
+        let state = loaded.unwrap();
+        let action = configure(Action::Uninstall, mock.as_ref()).unwrap();
+        assert!(matches!(action, ConfiguredAction::Uninstall));
+        let target = MetadataTarget::for_machine(state.identity.as_ref());
+        assert!(matches!(target, MetadataTarget::Unavailable));
+        let action = configure(Action::Run, mock.as_ref())
+            .unwrap()
+            .bind_identity(state.identity.as_ref());
+        assert!(matches!(action, ConfiguredAction::Run { endpoint: None }));
     }
 }

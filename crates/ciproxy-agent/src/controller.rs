@@ -222,3 +222,7 @@ mod unconfigured_retirement_tests;
 #[cfg(test)]
 #[path = "_tests_/startup_removal_tests.rs"]
 mod startup_removal_tests;
+
+#[cfg(test)]
+#[path = "_tests_/identity_removal_tests.rs"]
+mod identity_removal_tests;

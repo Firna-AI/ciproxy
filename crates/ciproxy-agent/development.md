@@ -3,12 +3,23 @@
 Run these commands from the repository root.
 The [agent guide](README.md#development) gives the unit and compile checks.
 
-## Docker integration checks
+## Docker, image, lock, and state checks
 
-Docker lease integration tests call the real adapter in temporary folders.
-They mock cache administration and most host commands.
-The corruption case runs real `e2fsck` on temporary files.
-These tests need `e2fsprogs`, without root access:
+The default `docker_regression` target runs production code in temporary
+folders. It needs `e2fsprogs`, without root access. It covers four areas:
+
+- Docker leases, preparation, and recovery call the real adapter. They mock
+  cache administration and most host commands. The corruption case runs
+  real `e2fsck` on temporary files.
+- Image recovery keeps the runtime claim of its caller while it creates the
+  image folder.
+- The runtime lock refuses a second claim until its owner ends.
+- The real state store saves an identity with its credential and endpoint.
+  A new store instance then loads the same values, as after a restart.
+
+The target also compiles copies of the unit tests in its included
+production modules. The package unit tests already run those tests.
+The `docker_regressions` filter selects only the tests of the four areas:
 
 ```sh
 cargo test --package ciproxy-agent --test docker_regression docker_regressions

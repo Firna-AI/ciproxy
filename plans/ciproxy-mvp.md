@@ -2389,7 +2389,23 @@ tool output on 11 November 2026. Rotate them.
 
 - [x] Decide how reinstall handles an endpoint from another control plane.
       The user answered item 117 with D on 16 November 2026.
-- [ ] Build item 117 = D: the identity carries its endpoint.
+- [x] Build item 117 = D: the identity carries its endpoint.
+      Branch: `conductor/item-117-d-endpoint-in-identity`.
+      Superseded agent call, 16 November 2026: stop the service before
+      install migration. The owner's review found that a directly started
+      older process survives that stop. Owner findings 1 = D and 2 = D
+      replace that call: retain the matching legacy endpoint while identity
+      lives, and let install inspect it without stopping or saving migration.
+      The endpoint rules use the linked `docs/protocol/agent-endpoint.md`,
+      so the main agent protocol stays short.
+- [x] Fix item 117 review finding 1: Run owns the existing runtime lock
+      before it loads and migrates identity state. Keep that same claim
+      through image recovery. The independent check confirmed B.
+      Branch: `conductor/item-117-d-endpoint-in-identity`.
+- [x] Apply PR #70 owner review round 1: findings 1 = D, 2 = D, and 3 = C.
+      Retain the legacy recovery source, keep install inspection read-only,
+      and add a real FileStore round trip. The owner's three finding checks
+      are complete. Finding 2 now shares the immediate fix of finding 1.
       Branch: `conductor/item-117-d-endpoint-in-identity`.
 - [x] Build item 118 = E of `follow-ups/machine-statistics-availability.md`:
       unknown machine statistics, mockup first.

@@ -1,15 +1,17 @@
-//! One checked control-plane endpoint for install and daemon startup.
+//! Checked endpoints and command settings independent of saved machine state.
 
 use std::str::FromStr;
 use std::sync::Arc;
 
 use reqwest::Url;
+use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Result};
 
 const DEFAULT: &str = "wss://app.ciproxy.dev/agent/";
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(try_from = "String")]
 /// A checked secure WebSocket endpoint for one control plane.
 pub struct AgentEndpoint(String);
 
@@ -38,44 +40,39 @@ impl FromStr for AgentEndpoint {
     }
 }
 
+impl TryFrom<String> for AgentEndpoint {
+    type Error = Error;
+
+    fn try_from(value: String) -> Result<Self> {
+        value.parse()
+    }
+}
+
 #[cfg_attr(test, unimock::unimock(api = EndpointFilesMock))]
 pub(crate) trait EndpointFiles: Send + Sync {
     fn environment(&self) -> Result<Option<String>>;
     fn read(&self) -> Result<Option<String>>;
-    fn write(&self, endpoint: &str) -> Result<()>;
+    fn remove(&self) -> Result<()>;
 }
 
 #[cfg_attr(test, unimock::unimock(api = EndpointSettingsMock))]
 pub(crate) trait EndpointSettings: Send + Sync {
-    fn saved(&self) -> Result<Option<AgentEndpoint>>;
     fn resolve(&self, supplied: Option<&AgentEndpoint>) -> Result<AgentEndpoint>;
-    fn save(&self, endpoint: &AgentEndpoint) -> Result<()>;
 }
 
-pub(crate) struct SavedEndpoint {
+pub(crate) struct CommandEndpoint {
     pub(crate) files: Arc<dyn EndpointFiles>,
 }
 
-impl EndpointSettings for SavedEndpoint {
-    fn saved(&self) -> Result<Option<AgentEndpoint>> {
-        self.files.read()?.map(|value| value.parse()).transpose()
-    }
-
+impl EndpointSettings for CommandEndpoint {
     fn resolve(&self, supplied: Option<&AgentEndpoint>) -> Result<AgentEndpoint> {
         if let Some(endpoint) = supplied {
             return Ok(endpoint.clone());
-        }
-        if let Some(endpoint) = self.saved()? {
-            return Ok(endpoint);
         }
         match self.files.environment()? {
             Some(value) => value.parse(),
             None => Ok(AgentEndpoint::default()),
         }
-    }
-
-    fn save(&self, endpoint: &AgentEndpoint) -> Result<()> {
-        self.files.write(endpoint.as_str())
     }
 }
 

@@ -5,6 +5,7 @@ mod application_cache;
 mod application_endpoint;
 mod application_images;
 mod application_metadata;
+mod application_setup;
 mod area;
 mod area_files;
 mod area_mounts;
@@ -46,6 +47,7 @@ mod host_release;
 mod host_system;
 mod host_tool_files;
 mod host_tools;
+mod identity_store;
 mod image_artifact;
 mod image_download;
 mod image_extract;
@@ -105,6 +107,7 @@ mod release_client;
 mod reporting;
 mod retirement;
 mod runtime;
+mod runtime_ownership;
 mod runtime_reports;
 mod runtime_worker;
 mod slot_allocation;
@@ -220,6 +223,10 @@ mod runtime_fakes;
 #[cfg(test)]
 #[path = "_tests_/host_fixtures.rs"]
 mod host_fixtures;
+
+#[cfg(test)]
+#[path = "_tests_/identity_store_fixtures.rs"]
+mod identity_store_fixtures;
 
 #[cfg(test)]
 #[path = "_tests_/host_lifecycle_fakes.rs"]

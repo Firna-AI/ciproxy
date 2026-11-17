@@ -8,7 +8,6 @@ use crate::cache_install::{CheckedCacheRelease, LinuxCacheInstallFiles};
 use crate::cache_network::GuardedCacheStart;
 use crate::cache_service::{CacheService, ReleasedCache};
 use crate::cache_unit::{InstalledCacheUnit, LinuxCacheUnitFiles};
-use crate::endpoint::AgentEndpoint;
 use crate::error::Result;
 use crate::process::Commands;
 use crate::state::Identity;
@@ -16,10 +15,9 @@ use crate::state::Identity;
 /// Compose cache administration and its root metadata task for this identity.
 pub(crate) fn prepare(
     commands: Arc<dyn Commands>,
-    endpoint: Option<&AgentEndpoint>,
     identity: Option<&Identity>,
 ) -> Result<CacheServices> {
-    let hosted = MetadataTarget::for_machine(endpoint, identity).client()?;
+    let hosted = MetadataTarget::for_machine(identity).client()?;
     cache_composition::services(commands, hosted)
 }
 

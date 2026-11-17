@@ -115,7 +115,7 @@ trusted entry facts, as
 The cache service holds no hosted credential. A root task in the agent
 therefore relays its requests for entry facts to the control plane.
 
-A registered agent derives the hosted URL from its selected gateway route.
+A registered agent derives the hosted URL from the endpoint of its identity.
 The URL keeps the host and the port, uses `https`, and has the path
 `/agent/cache-metadata`. The default route gives
 `https://app.ciproxy.dev/agent/cache-metadata`. An agent without a machine
