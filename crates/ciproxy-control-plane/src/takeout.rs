@@ -55,13 +55,30 @@ impl MachineRuntime {
             .filter(|check| check.organization == current)
             .map(|check| check.owner_removed);
         if let Some(owner_removed) = checked {
-            return if owner_removed {
+            let result = if owner_removed {
                 self.retire_owner_set(&input, organization, &*lease).await
             } else {
                 self.retire_takeout_set(&input, organization, &*lease).await
             };
+            if !owner_removed && result.is_err() {
+                lease.check().await.internal()?;
+                self.check_takeout_installation(organization, current, false)?;
+            }
+            return result;
         }
         lease.check().await.internal()?;
+        self.check_takeout_installation(organization, current, true)?;
+        Err(Error::StateChanged)
+    }
+
+    /// A positive answer serves one pending pass without replacing its Busy generation.
+    fn check_takeout_installation(
+        &self,
+        organization: &Organization,
+        current: Organization,
+        initialize: bool,
+    ) -> Result<()> {
+        let workspace_id = organization.workspace_id;
         let runtime = self.worker();
         let organization = organization.clone();
         self.dispatch(Work::Takeout(organization.id), async move {
@@ -101,15 +118,28 @@ impl MachineRuntime {
             if saved != current {
                 return Ok(());
             }
-            runtime.takeout_checks.lock().await.insert(
-                organization.id,
-                TakeoutCheck {
-                    organization: saved,
-                    owner_removed,
-                    generation: 0,
-                    failed: false,
-                },
-            );
+            {
+                let mut checks = runtime.takeout_checks.lock().await;
+                if let Some(check) = checks
+                    .get_mut(&organization.id)
+                    .filter(|check| check.organization == saved)
+                {
+                    check.owner_removed |= owner_removed;
+                } else {
+                    checks.insert(
+                        organization.id,
+                        TakeoutCheck {
+                            organization: saved,
+                            owner_removed,
+                            generation: 0,
+                            failed: false,
+                        },
+                    );
+                }
+            }
+            if !initialize {
+                return Ok(());
+            }
             if owner_removed {
                 return runtime
                     .retire_owner_set(&input, &organization, &*lease)
@@ -122,8 +152,7 @@ impl MachineRuntime {
                 Ok(()) | Err(Error::StateChanged) => Ok(()),
                 Err(error) => Err(error),
             }
-        })?;
-        Err(Error::StateChanged)
+        })
     }
 
     async fn retire_takeout_set(
