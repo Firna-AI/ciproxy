@@ -69,8 +69,11 @@ rest for the host. The machine cache uses the disk that the jobs leave.
   Boat runner for the job.
 - When none of your machines can run the job, for example because its size
   fits none of them, ciproxy starts the Boat runner at once.
-- Each job on Boat runs in its own sandbox, of the cheapest Boat size that
-  covers its label. ciproxy deletes the sandbox when the job ends.
+- Each job on Boat runs in its own sandbox. ciproxy chooses the cheapest
+  Boat size that covers its label. When none fits, the label's
+  [When nothing fits](/docs/reference/labels/#custom-labels) setting can
+  allow the largest Boat size instead. ciproxy deletes the sandbox when the
+  job ends.
 - ciproxy starts a Boat runner only when you connected a Boat account,
   overflow is on, the label allows Boat, and the spend limit has room.
   Otherwise the job waits for your machines.
