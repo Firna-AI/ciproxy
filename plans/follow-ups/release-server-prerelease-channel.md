@@ -1,4 +1,4 @@
-# Deploy the release channel and installer handoff
+# Production release channel is not deployed
 
 - **Severity:** High. **Effort:** Small.
   **Confidence:** High. **Harder later:** Yes.
@@ -7,8 +7,8 @@
   to build in parallel.
 - **Location:** `deploy/scripts/mirror-release-image.sh`,
   `deploy/scripts/deploy_support.py`, and `deploy/release-server.md`.
-- **Reason:** The code is complete, but the operator must mirror its image,
-  set the digest, and verify the deployed change after the merge.
+- **Reason:** The main preview part passed on 17 November 2026, and
+  production exists only after the launch merge.
 
 - **Terms:**
   - **Full release:** a GitHub release that is not marked as a pre-release.
@@ -29,25 +29,35 @@
   The archive contract is unchanged.
   The new installer runs the installed binary with its arguments through
   `exec`, which enables the one-line `install --token` command.
-- **Task:** The orchestrator completes one operator rollout after merge:
-  1. Mirror the pinned server image with
-     `deploy/scripts/mirror-release-image.sh`, as `deploy/setup.md` describes.
-  2. Record the returned digest. Set `RELEASE_SERVER_IMAGE_DIGEST` in each
-     selected GitHub environment, then redeploy with fresh plans.
-  3. Use `deploy/release-server.md` to check the live image and channel.
-     Prove that preview selects a matching pre-release while production
-     stays on full releases. Run the install command on a test machine.
-     Confirm that the agent receives the install arguments and registers.
-     For preview, use an agent release that accepts `--agent-url`, then
-     copy the dashboard command. It supplies the issuing control plane's
-     endpoint and saves it for the installed service.
-     Keep all token values out of logs.
+
+  On 17 November 2026 the main preview ran the mirrored revision with the
+  `prerelease` channel. Both preview release endpoints served the
+  pre-release `ciproxy-agent-v0.1.2`. The one-line install command of the
+  preview dashboard installed agent 0.1.2 and registered the test machine
+  in one call. Every agent release so far after the first is a
+  pre-release.
+- **Task:** The orchestrator completes the production rollout after the
+  launch merge, during `production-launch.md`:
+  1. Set `RELEASE_SERVER_IMAGE_DIGEST` of the production environment to
+     the mirrored digest. Mirror it again with
+     `deploy/scripts/mirror-release-image.sh` only when the pin changed, as
+     `deploy/setup.md` describes.
+  2. Publish the first full agent release, which is not a pre-release,
+     through `.github/workflows/agent-release.yml`.
+  3. Use `deploy/release-server.md` to check the live image and channel of
+     production. Prove that production serves the full release and that a
+     newer matching pre-release does not become its latest release.
+  4. Run the one-line install command of the production dashboard on a
+     test machine. Confirm that the agent receives the install arguments
+     and registers. Keep all token values out of logs.
 - **Impact if no action:** The old image keeps serving full releases only.
   Its installer downloads the agent but does not start `install --token`.
   Publishing a test agent as a full release can reach every customer.
-- **Needs:** The merged ciproxy change, operator image and GitHub access,
-  access to the deployed environments, and a test machine for registration.
-- **Done when:** The selected environments run the mirrored revision.
-  Main preview follows `prerelease`, and production follows `stable`.
-  A newer matching pre-release cannot become production's latest release.
-  The one-line install command registers the test machine.
+- **Needs:** The launch merge, operator GitHub access, access to the
+  production environment, and a test machine for registration.
+- **Done when:** Production runs the mirrored revision and follows
+  `stable`. A newer matching pre-release cannot become production's latest
+  release. The one-line install command registers a test machine on
+  production.
+- **Related:** `production-launch.md` holds this rollout as one of its
+  steps.

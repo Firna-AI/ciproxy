@@ -133,7 +133,7 @@ Federation. Reason: reviews, and no stored keys. Item 81 = C moves every
 regional resource to `us-central1`. The Terraform state buckets of the seed
 stay in `europe-west1`.
 
-- [ ] Add Cloud SQL, Secret Manager, and Cloud KMS for the Boat keys.
+- [x] Add Cloud SQL, Secret Manager, and Cloud KMS for the Boat keys.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
   - [x] Define both projects, private SQL, secret containers, KMS, and IAM.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
@@ -141,16 +141,20 @@ stay in `europe-west1`.
         preview, set the GitHub variables, and start the deploy workflow, as
         item 56 says. Done 6 November 2026: run 42145526077 passed every job.
         Branch: `calummoore/ci-proxy-load-balancer`.
-  - [ ] Orchestrator: the same for production, at launch, as
+  - [x] Orchestrator: the same for production, at launch, as
         [the launch guide](../deploy/launch.md) says.
-- [ ] Run the control plane and the `futex-ai/cli-release` server on GKE
+        Moved on 17 November 2026, at the user's request, to `follow-ups/production-launch.md`.
+- [x] Run the control plane and the `futex-ai/cli-release` server on GKE
       Autopilot with Helm, as item 31 says.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
   - [x] Define Autopilot, Helm charts, SQL proxy, and runtime identities.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
-  - [ ] User: deploy Helm. Enable the control plane after its runtime exists.
+  - [x] User: deploy Helm. Enable the control plane after its runtime exists.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
-- [ ] Set the release server to `get.ciproxy.dev`, `ciproxy-agent`, the tag
+        Done for the main preview: `CONTROL_PLANE_RUNTIME_READY` was `true`
+        on 17 November 2026. The production part moved on 17 November 2026,
+        at the user's request, to `follow-ups/production-launch.md`.
+- [x] Set the release server to `get.ciproxy.dev`, `ciproxy-agent`, the tag
       prefix `ciproxy-agent-v`, and a token with read access to public
       repositories only, as item 70 says.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
@@ -159,7 +163,7 @@ stay in `europe-west1`.
   - [x] User: prepare the pinned image and store the public-read-only token
         for the main preview. Done 6 November 2026.
         Branch: `calummoore/ci-proxy-load-balancer`.
-- [ ] Serve the site, the dashboard, and signed image URLs from a Cloud
+- [x] Serve the site, the dashboard, and signed image URLs from a Cloud
       Storage bucket, through Cloud CDN and one HTTPS load balancer. My call:
       they are static files, so they need no runtime.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
@@ -169,12 +173,15 @@ stay in `europe-west1`.
         for the main preview. Done 6 November 2026: key
         `ciproxy-main-preview-images-v1`, HTTPS checked, uptime checks on.
         Branch: `calummoore/ci-proxy-load-balancer`.
-- [ ] Create the DNS zone, which the user delegates.
+- [x] Create the DNS zone, which the user delegates.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
   - [x] Define production and staging DNS zones and HTTPS records.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
-  - [ ] User: apply the zones and delegate the domain and staging subzone.
+  - [x] User: apply the zones and delegate the domain and staging subzone.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+        Done for the main preview, whose hosts answer over HTTPS. The
+        production zones and their delegation moved on 17 November 2026, at
+        the user's request, to `follow-ups/production-launch.md`.
 - [x] Deploy the main preview on each push, and production on each merge
       into `main` after the main preview run of the same commit passes, as
       item 58 says. Add uptime alerts.
@@ -219,13 +226,16 @@ stay in `europe-west1`.
 - [x] Rename the staging environment to the main preview of item 53, with
       its hosts under `br-main.preview`, before the first apply.
       Branch: `conductor/ciproxy-mvp-milestone-5-main-preview`.
-- [ ] Set up the main preview from the checklist of `deploy/README.md`, as
+- [x] Set up the main preview from the checklist of `deploy/README.md`, as
       item 52 says.
       Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
   - [x] Add both deploy workflows, restricted federation, and uptime alerts.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
-  - [ ] User: set GitHub variables, deploy, check HTTPS, and enable alerts.
+  - [x] User: set GitHub variables, deploy, check HTTPS, and enable alerts.
         Branch: `conductor/ciproxy-mvp-milestone-5-deployment`.
+        Done: on 17 November 2026 the main preview had
+        `CONTROL_PLANE_RUNTIME_READY`, `PUBLIC_UPTIME_ENABLED`, and its CDN
+        key set, and its deploy runs passed.
 - [x] Keep runtime routing when Autopilot moves pods between zones.
       My call, 4 November 2026: use Preview NEG preparation on GKE 1.36.4,
       with matching pod placement. Reason: each zone then has a backend.
@@ -1242,7 +1252,7 @@ UTC RFC 3339, and IDs as strings. Reason: JavaScript loses 64-bit numbers.
       State the four App permissions and the Members read requirement
       for the owner and member checks through the person's sign-in.
       Branch: `conductor/items-94-b-and-98-a-boat-wallets-and-members-permission`.
-- [ ] Orchestrator: run the live API, repeated-authorization, and GitHub
+- [x] Orchestrator: run the live API, repeated-authorization, and GitHub
       install-binding probes in `crates/ciproxy-api/scripts/README.md`.
       Read credentials through `CIPROXY_API_CREDENTIALS_FILE`. Record no
       secret in evidence. Branch: `conductor/ciproxy-mvp-milestone-14-api`.
@@ -1253,7 +1263,8 @@ UTC RFC 3339, and IDs as strings. Reason: JavaScript loses 64-bit numbers.
       workspaces, and the original expiry stayed. The two-tab variant and
       the install-binding probes remain. The binding probes need a GitHub
       user token and an App JWT in the private file. Evidence:
-      `.context/ciproxy-mvp/m14-reauth/`.
+      `.context/ciproxy-mvp/m14-reauth/`. The two probes that remain:
+      Moved on 17 November 2026, at the user's request, to `follow-ups/github-sign-in-live-probes.md`.
 
 ## Milestone 15: Overflow to Boat end to end
 
@@ -1435,12 +1446,14 @@ the event both read the session, so the tier changes once.
       the bank confirmation. The rerun on 5 November 2026 at `287f1bc`,
       after the merge of #23, gave 37 passed, 0 failed, and 1 skipped.
       Evidence: `.context/ciproxy-mvp/billing-live/report.md`.
-- [ ] User: turn on receipt emails for successful payments in the sandbox
+- [x] User: turn on receipt emails for successful payments in the sandbox
       now and in the live Stripe account before launch. Open
       <https://dashboard.stripe.com/settings/emails>, then turn on
       **Successful payments** under **Payments**. The live checklist skipped
       this row, because only the Dashboard shows it. Test payments never
       send these emails.
+      Moved on 17 November 2026, at the user's request, to
+      `follow-ups/production-accounts.md`.
 
 ## Milestone 18: Dashboard API: jobs, usage, savings, and billing
 
@@ -2355,29 +2368,38 @@ The repository is public from item 70 = E, and the site links to it.
       each problem. ciproxy runs private repositories only, and item 70 = E
       made this repository public.
       Close the follow-up item `expo-56-npm-advisories.md`.
-- [ ] Draft the terms and the privacy policy, which the user writes or
+- [x] Draft the terms and the privacy policy, which the user writes or
       approves. They state the limits of "Data retention" in `security.md`.
   - [x] Write the complete draft text of both pages. Square brackets mark
         each detail that the user must complete, and a note at the top of
         each page says that the text is a draft.
         Branch: `conductor/m27-draft-terms-and-privacy-policy`.
-  - [ ] User: complete each detail in square brackets, and approve both
+  - [x] User: complete each detail in square brackets, and approve both
         texts. Then remove the draft note, as the site README says.
-- [ ] Register the production App and the Stripe live mode, which need the
+        Moved on 17 November 2026, at the user's request, to `follow-ups/legal-pages-approval.md`.
+- [x] Register the production App and the Stripe live mode, which need the
       accounts of the user.
-- [ ] Deploy production. Smoke-test a first job, an overflow, and a live
+      Moved on 17 November 2026, at the user's request, to `follow-ups/production-accounts.md`.
+- [x] Deploy production. Smoke-test a first job, an overflow, and a live
       checkout that the user approves.
-- [ ] Check that the open parts build alone, and check the licence of the
+      Moved on 17 November 2026, at the user's request, to
+      `follow-ups/production-launch.md` and
+      `follow-ups/production-smoke-test.md`.
+- [x] Check that the open parts build alone, and check the licence of the
       installer of `futex-ai/cli-release`.
       Run of 16 November 2026: the four Apache-2.0 crates, `ciproxy-protocol`,
       `ciproxy-agent`, `ciproxy-guest`, and `ciproxy-cache-sidecar`, build
       alone in a workspace without the other crates. The installer of
       `futex-ai/cli-release` declares MIT in its Cargo metadata, but that
       repository has no licence file. Item 116 asks the user.
-- [ ] Ask Boat to confirm in writing that a customer may run ciproxy
+      Done: the user answered 116 = A and merged pull request #9 of
+      `futex-ai/cli-release`. On 17 November 2026 GitHub reported its MIT
+      `LICENSE` file.
+- [x] Ask Boat to confirm in writing that a customer may run ciproxy
       runners on its own Boat account. The user sends the request. My call:
       the terms allow this use by inference only.
-- [ ] Check the three prices of the cost claim and the GitHub charge for
+      Moved on 17 November 2026, at the user's request, to `follow-ups/boat-customer-use-confirmation.md`.
+- [x] Check the three prices of the cost claim and the GitHub charge for
       self-hosted runners again. Update the price list of the site and its
       date. Reason: GitHub only postponed a charge of $0.002 a minute, which
       would lower the claim to about 54%.
@@ -2387,11 +2409,14 @@ The repository is public from item 70 = E, and the site links to it.
       date. Hetzner shows the AX42 at €99 a month and €49 to set up, as
       before. Its US dollar view needs a browser, so the date of the site
       stays until a person confirms $119 and $59 there.
-- [ ] Publish the site. Then make the GitHub App public.
+      Moved on 17 November 2026, at the user's request, to `follow-ups/cost-claim-prices.md`.
+- [x] Publish the site. Then make the GitHub App public.
+      Moved on 17 November 2026, at the user's request, to `follow-ups/site-and-app-publication.md`.
 
-- [ ] Move the image-publishing credentials of item 100 = B from the
+- [x] Move the image-publishing credentials of item 100 = B from the
       reusable image workflow on the primary branch to the one on protected
       `main`, after the launch merge puts the repository on `main`.
+      Moved on 17 November 2026, at the user's request, to `follow-ups/production-launch.md`.
 
 ## Milestone 28: Verification, commit, review, and pull request
 
@@ -2414,9 +2439,10 @@ The gate, the review, and the pull request stay with the orchestrator.
 
 ## Post-merge follow-up (non-blocking)
 
-- [ ] Check the prices of the cost claim each month after the launch, and
+- [x] Check the prices of the cost claim each month after the launch, and
       update the price list of the site and its date. My call of 4 November
       2026: the claim names its date, so a monthly check keeps it true.
+      Moved on 17 November 2026, at the user's request, to `follow-ups/cost-claim-prices.md`.
 
 ## State at the move off Conductor, 11 November 2026
 
@@ -2474,9 +2500,21 @@ list gives what is not done.
       `JOB_IMAGE_MANIFEST_PATH` and a new version of the Boat snapshot
       secret. Delete `follow-ups/guest-initialization-reset.md`, which #60
       settles. Then run every live scenario of Milestone 13 again.
-- [ ] Live checks that remain: the overflow smoke of Milestone 15; the
-      docs pages of Milestone 24; and the two-tab authorization and the
-      install-binding probes of Milestone 14. Done on 16 November 2026:
+  - [x] Finish the review and merge #60. Merged on 11 November 2026.
+  - [x] Publish the image release with its Boat shared snapshot, set the
+        manifest path, and add the snapshot secret version. Done on
+        17 November 2026: image `2026-11-17-4a950ae`, secret version 3.
+  - [x] Delete `follow-ups/guest-initialization-reset.md`. On
+        17 November 2026 the checks of the published image showed that an
+        early guest failure and a normal shutdown both reset the guest and
+        end its Firecracker process without a host stop.
+        Evidence: `.context/ciproxy-mvp/live-2026-11-17/image/host/`.
+  - [ ] Run every live scenario of Milestone 13 again. Live run 4 runs
+        them.
+- [ ] Live checks that remain: the overflow smoke of Milestone 15 and the
+      docs pages of Milestone 24. The two-tab authorization and the
+      install-binding probes of Milestone 14 moved to
+      `follow-ups/github-sign-in-live-probes.md`. Done on 16 November 2026:
       Move to Free, the portal undo, the signed webhook replay, the Boat
       live read, the shell and Machines and Settings live checks, and the
       page read check. Done on 17 November 2026: the unfinished Checkout
