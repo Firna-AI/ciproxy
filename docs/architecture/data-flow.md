@@ -12,13 +12,20 @@ each main flow of data across the
    label, and the job starts at once. Without a warm runner, the scaler
    starts a runner in free [slots](../protocol/job-routing.md#slots) of an
    own machine of the workspace.
-3. The control plane reads the ref, the event, and the head repository of
-   the run of the job from the GitHub API. It sends them to the agent for
-   the [cache scopes](../protocol/cache.md#cache-scopes) and the Docker disk
-   of the job.
-4. Metering counts one start. When a slot and its disk are free, the
+3. The control plane reads the event and the head repository of the run of
+   the job from the GitHub API. It sends them to the agent with the default
+   branch of the repository. It also sends the run, the job, and the runner
+   that the runtime token of the job must name.
+4. Before the first step, the runner hands the runtime token of the job to
+   the agent, as [The cache handoff](../protocol/cache.md#the-cache-handoff)
+   says. The machine cache checks the token. Its signed write scope gives
+   the full ref, as
+   [Trusted write-back](../protocol/cache.md#trusted-write-back) says. These
+   facts decide the [cache scopes](../protocol/cache.md#cache-scopes) and
+   the Docker disk of the job.
+5. Metering counts one start. When a slot and its disk are free, the
    scaler sends the agent a registration for a new warm runner.
-5. When the job ends, the agent ends the job VM and reports it.
+6. When the job ends, the agent ends the job VM and reports it.
 
 ## A job on Boat
 

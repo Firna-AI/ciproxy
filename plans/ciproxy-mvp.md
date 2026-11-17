@@ -869,7 +869,7 @@ Live KVM and authenticated job checks remain with the orchestrator.
       of minutes, and retry the GitHub job lookup with backoff. Preserve
       exact actual allocations and trusted timestamp precision.
       Branch: `conductor/ciproxy-mvp-milestone-13-e2e`.
-- [ ] Smoke-test warm starts, slots, drain, remove, offline, a cache hit, a
+- [x] Smoke-test warm starts, slots, drain, remove, offline, a cache hit, a
       restart, and a disallowed repository.
       Orchestrator: use the credential-file scripts on the KVM host with
       the main preview control plane. Keep live evidence separate from
@@ -886,7 +886,7 @@ Live KVM and authenticated job checks remain with the orchestrator.
         installed binary with those arguments. ciproxy pins the merged
         revision `53a1dd3426226a9d25defb4a899d3c9a430a3941` and its chart.
         The orchestrator rollout below owns the live proof.
-  - [ ] Orchestrator: after this change merges, mirror the pinned release
+  - [x] Orchestrator: after this change merges, mirror the pinned release
         server image, record its digest, set `RELEASE_SERVER_IMAGE_DIGEST`
         in the selected GitHub environments, and redeploy with fresh plans.
         Check the live image, `prerelease` in main preview, and `stable` in
@@ -895,7 +895,11 @@ Live KVM and authenticated job checks remain with the orchestrator.
         and registers the test machine. The
         [release-server rollout](follow-ups/release-server-prerelease-channel.md)
         records this operator work.
-  - [ ] Give the guest a working network. Guests get no DNS answer, so the
+        The main preview part passed on 17 November 2026: the release
+        server serves the pre-release 0.1.2, and the one-line install
+        command registered the test machine in one call. The production
+        part stays in that follow-up item.
+  - [x] Give the guest a working network. Guests get no DNS answer, so the
         runner cannot reach GitHub. The agent gives a fixed address and
         gateway on the kernel command line, and the image also runs DHCP
         on `eth0`. Prove the cause on the test host first. My call, 8
@@ -917,9 +921,11 @@ Live KVM and authenticated job checks remain with the orchestrator.
           update and install only missing network packages. Cache success.
           Keep reports and existing VMs running when repair fails, and
           retry at the next network operation.
-    - [ ] Orchestrator: build and publish the merged image and its new
+    - [x] Orchestrator: build and publish the merged image and its new
           Boat shared snapshot. Run every live scenario again.
-  - [ ] Release a guest that never received its registration. After an
+          Done with image `2026-11-17-4a950ae`: public DNS and HTTPS pass
+          before runner startup. Live runs 3 and 4 ran the scenarios.
+  - [x] Release a guest that never received its registration. After an
         agent restart before delivery, the VM stayed Stopping for 600
         seconds. My call, 8 November 2026: the agent retires a proven
         unconfigured guest itself, with the GitHub retirement checks and
@@ -930,6 +936,9 @@ Live KVM and authenticated job checks remain with the orchestrator.
         the next image release.
         Branch:
         `conductor/fix-agent-live-defects-unconfigured-stop-xfs-first-install`.
+        Live proof, 16 and 17 November 2026: an unconfigured guest retired
+        under Drain, and its unit, disk, and network disappeared. The
+        published image resets the guest after an early failure.
   - [ ] Finish the first XFS area setup in one install call. A fresh host
         needed a second install after four growth passes. My call, 8
         November 2026: the install finishes the measured growth itself.
@@ -955,7 +964,7 @@ Live KVM and authenticated job checks remain with the orchestrator.
         image tool `PATH` and the account's additions, and get no root
         service value.
         Branch: `fix/live-run-2026-11-16`.
-  - [ ] Let the Boat client accept the shared snapshot reference of the
+  - [x] Let the Boat client accept the shared snapshot reference of the
         image, tell a create that was never sent apart from an uncertain
         one, and recover the blocked unsent start. The client fix merged in
         `futex-ai/sandbox` as `037fbd7`.
@@ -986,11 +995,13 @@ Live KVM and authenticated job checks remain with the orchestrator.
           `037fbd7e3671975e79775c7dbcfb95b1a1fe37ab` and verify the existing
           unsent-create handler and delete confirmation against it.
           Branch: `fix/live-run-2026-11-16`.
-    - [ ] Recover the blocked start of the live run only with definitive
+    - [x] Recover the blocked start of the live run only with definitive
           proof that its create was never sent. A generic recovery error or
           an empty inventory is not that proof. `SandboxCreateNotSent` covers
           only fresh creates, so it gives no proof for this older `Creating`
           record. An operator must find that proof and recover the start.
+          Done on 17 November 2026 with item 121 = C: a one-time repair
+          ended it as Refused, after a proof that Boat never created it.
   - [x] Send the delete confirmation of Boat from each sandbox deletion,
         in `image/boat.py` and in `futex-ai/sandbox`.
     - [x] Check `image/boat.py`. It already sends the target sandbox ID as
@@ -1023,9 +1034,32 @@ Live KVM and authenticated job checks remain with the orchestrator.
         The version and package jobs run the rustup commands of CI. The
         package job keeps its target.
         Branch: `fix/live-run-2026-11-16`.
-  - [ ] Publish agent pre-release 0.1.2 with item 117 = D and these fixes,
+  - [x] Publish agent pre-release 0.1.2 with item 117 = D and these fixes,
         build the next image release with its Boat snapshot, and run the
         failed and skipped checks again, with the overflow smoke.
+        Live run 4, 17 November 2026, agent 0.1.2 and image
+        `2026-11-17-4a950ae`: cache, cache isolation, cache fallback,
+        sticky Docker, and both Docker recovery checks passed. Both item
+        117 cases passed. The firewall proof before the reboot, the Boat
+        `large` job, and the three overflow checks failed. The firewall
+        proof after the reboot did not run. Evidence:
+        `.context/ciproxy-mvp/live-2026-11-17/run-4-report.md`.
+  - [ ] Fix the three causes of live run 4, and run its failed checks again.
+    - [ ] The pinned Boat client rejects Boat's successful upload
+          acknowledgement, because Boat returns a path relative to the home
+          directory. No Boat runner starts. My call, 17 November 2026: fix
+          the path comparison in `futex-ai/sandbox`, then update the pin.
+          The merge there needs the user's approval.
+    - [ ] The firewall proof script waits for a cache usage report, which
+          needs the agent's budget. My call: separate the readiness check
+          from the usage report.
+          Branch: `conductor/live-run-4-script-fixes`.
+    - [ ] The overflow smoke scripts delete Boat sandboxes without the
+          confirmation header. My call: one shared confirmed-deletion
+          helper for the operator scripts.
+          Branch: `conductor/live-run-4-script-fixes`.
+    - [ ] Run the firewall proof with its reboot, the Boat `large` job with
+          its exit callback, and the three overflow checks again.
 
 Owner review of pull request #31, round 1, 6 November 2026: the user chose
 fix now for findings 1 to 8 and fix after the merge for finding 9.
