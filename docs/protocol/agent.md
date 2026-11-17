@@ -223,8 +223,9 @@ runs on own machines.
   organization removes the GitHub App.
 - In a job VM, the guest is the ciproxy program that supervises the runner.
 - The runner hands its job to the guest just before the first step.
-- "Remove", uninstall, and the App removal of the last organization stop
-  warm runners at once.
+- "Remove", uninstall, and an [App removal](app-removal.md#removing-the-app)
+  by an organization owner are the immediate stops. They stop warm runners
+  at once.
 - A warm runner can take a job just before such a stop.
 - That job can fail when the runner has not handed it to the guest yet.
 - Each job that the guest received finishes. The agent of a removed machine
@@ -233,8 +234,9 @@ runs on own machines.
   Reason: the owner wants no extra mechanism, and accepts that a removal
   can fail a job. Rejected: a stop after GitHub removes the runner, a drain
   before "Remove", and a runner that finishes a taken job at a stop.
-- A drain and each other stop end the job VM of a warm runner only after
-  GitHub removes the runner. A runner that GitHub reports as busy keeps its job.
+- Each stop that is not an immediate stop, such as a drain, ends the job VM
+  of a warm runner only after GitHub removes the runner.
+- A runner that GitHub reports as busy keeps its job.
 - After an authorized stop, the agent ends a guest with a proven lost
   registration without waiting for a guest notice.
 - That stop releases its VM capacity and preserves running jobs.

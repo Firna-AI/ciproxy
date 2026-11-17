@@ -127,9 +127,14 @@ Run each command from the repository root.
   and tables.
 - Never commit `docs/mockups/mokly-generated/` or other build output that
   `.gitignore` lists, such as `target/` and `ts/site/dist/`.
-- `ciproxy-agent` and `ciproxy-protocol` have the Apache-2.0 licence. They
-  must build alone under that licence, so they depend on no other workspace
-  crate. The rest of the repository has no open licence.
+- Each part of this repository that ships to the customer's side has its
+  own Apache-2.0 `LICENSE` file. A crate with its own `LICENSE` file must
+  build alone under that licence, so it depends on no workspace crate
+  without one. No directory with its own `LICENSE` file holds hosted code.
+  The rest of the repository has no open licence.
+  [Licence](README.md#licence) lists the open directories, and
+  [Open source and hosted parts](docs/architecture.md#open-source-and-hosted-parts)
+  gives the decision.
 - This repository is public. No file, commit message, log, or pull request
   text may hold a secret.
 - `@ciproxy/tokens` is the one source of the colours, fonts, and radii of
@@ -149,9 +154,10 @@ Run each command from the repository root.
 
 ## Review focus
 
-- The open-source boundary: `ciproxy-agent` and `ciproxy-protocol` depend
-  on no other workspace crate. They hold no hosted code, because they carry
-  the Apache-2.0 licence.
+- The open-source boundary: a directory with its own `LICENSE` file holds
+  no hosted code, and a crate with one depends on no workspace crate
+  without one. A new part on the customer's side gets its own Apache-2.0
+  `LICENSE` file. [Licence](README.md#licence) lists the open directories.
 - Secrets: the repository is public, so no change, log line, or pull
   request text may hold a secret.
 - The token source: each colour, font, and radius of the mockups, the app,

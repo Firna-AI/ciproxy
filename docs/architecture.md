@@ -74,6 +74,11 @@ these things:
   warm runners included.
 - It keeps the [image](protocol/agent.md#the-image) of the job VMs.
 - It serves the [machine cache](protocol/cache.md#cache-tiers) to its job VMs.
+- It decides the full ref of each job. Outside the job VM, its machine cache
+  checks that GitHub signed the runtime token of the job. It also checks
+  that the token names the run, the job, and the runner that the control
+  plane expects. The signed write scope of the token then gives the ref, as
+  [Trusted write-back](protocol/cache.md#trusted-write-back) says.
 - It keeps the [Docker disks](protocol/docker-disks.md) of the machine.
 
 [Updates](protocol/agent.md#updates) says how the agent gets a new version.
@@ -118,10 +123,13 @@ design tokens that the dashboard uses.
   [App permissions](protocol/security.md#github-app-permissions). It opens a
   message session for each scale set. GitHub sends the messages about the
   jobs of each label through its session. For each new runner, the control
-  plane gets a just-in-time runner registration from GitHub. It reads the
-  ref, the event, and the head repository of the run of each job from the
-  GitHub API. It also reads the [entry facts](protocol/cache.md#terms) of
-  the GitHub cache of a repository. GitHub also reports each
+  plane gets a just-in-time runner registration from GitHub. From the
+  GitHub API, it reads the default branch of each repository, and the
+  event, the head repository, and the branch name of the run of each job.
+  The job history shows the branch name. The control plane never trusts the
+  branch name as a ref, because a branch name can also name a tag. It also
+  reads the [entry facts](protocol/cache.md#terms) of the GitHub cache of a
+  repository. GitHub also reports each
   [removal or suspension](protocol/app-removal.md) of the App.
 - **GitHub and the runners:** each runner opens its own connection to
   GitHub. It gets one job with its code and secrets, and it sends the logs
@@ -130,17 +138,30 @@ design tokens that the dashboard uses.
 - **The control plane and the agents:** each agent opens an outbound
   connection to the machine gateway, with its
   [machine credential](protocol/agent.md#machine-identity). The agent sends
-  reports. The control plane sends runner registrations, the ref, the
-  event, and the head repository of each job, and the
-  [drain](protocol/agent.md#drain-and-remove) and remove actions.
+  reports. The control plane sends runner registrations and the
+  [drain](protocol/agent.md#drain-and-remove) and remove actions. For each
+  job, it also sends the event, the head repository, the default branch,
+  and the run, job, and runner that the runtime token must name. It sends
+  no ref, because the agent decides the ref of each job, as
+  [Trusted write-back](protocol/cache.md#trusted-write-back) says.
   [Connection](protocol/agent.md#connection) holds the rules. For each
   restore of its machine cache, the agent also asks the control plane over
   HTTPS for the entry facts of the repository of the job. The control plane
   answers only the machine that runs the job, as
   [Restore order](protocol/cache.md#restore-order) says.
 - **The agent and its job VMs:** the agent passes one runner registration
-  into each job VM. [Job isolation](protocol/security.md#job-isolation)
-  says what a job VM can reach.
+  into each job VM. Before the first step of the job, the runner hands the
+  cache URLs, the runtime token, and the cache rights of the job to the
+  agent. The agent trusts only that first handoff, as
+  [The cache handoff](protocol/cache.md#the-cache-handoff) says.
+  [Job isolation](protocol/security.md#job-isolation) says what a job VM
+  can reach.
+- **The agent and GitHub:** the machine cache opens its own connection to
+  the GitHub cache, with the runtime token of the job. It streams each
+  entry that a job restores from the GitHub cache, and it sends each save
+  through to the GitHub cache. It also fetches GitHub's public keys to
+  check each runtime token, as
+  [Trusted write-back](protocol/cache.md#trusted-write-back) says.
 - **The control plane and Boat:** the backend client calls Boat with the
   Boat key of the customer. The
   [backend contract](protocol/overflow.md#backend-contract) says what Boat

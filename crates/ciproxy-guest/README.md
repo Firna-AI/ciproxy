@@ -89,8 +89,8 @@ A `GitHubOnly` decision stays in force for the whole job.
 The entry mode selects the byte-identical stock Worker assembly for Boat.
 Its original cache and results endpoints therefore remain unchanged.
 The direct shutdown path can still race an assignment before this handoff.
-The user selected that immediate-stop exception for machine removal,
-uninstall, and last-App removal. Ordinary retirement keeps GitHub-first order.
+[Drain and remove](../../docs/protocol/agent.md#drain-and-remove) says which
+stops use this path, and which stops wait until GitHub removes the runner.
 
 ## Quick Start
 
