@@ -13,7 +13,7 @@
 - **Category:** Docs or spec.
 - **Terms:**
   - **Worker ID:** The UUID in GitHub's `AgentJobRequestMessage.JobId`.
-  - **Scale-set ID:** The job UUID in a typed scale-set assignment message.
+  - **Scale-set job ID:** The UUID in a typed scale-set assignment message.
   - **Runtime token:** The original access token from `SystemVssConnection`.
 - **Background:** ciproxy prepares a private GitHub Actions job before its
   first step. The agent requires the preparation ID to match its Worker ID.
@@ -29,7 +29,7 @@
   job identity for the exact registered runner?
 - **Options:**
   - **A.** Provide one verified current claim report from the same JIT job.
-    Include the Worker ID and typed scale-set IDs in that report.
+    Include the Worker ID and typed scale-set job IDs in that report.
     This needs access to the private runner fixture. Effort: Medium.
   - **B.** Provide an official token schema or issuer source that defines the
     top-level `job_id` and its link to the Worker ID.

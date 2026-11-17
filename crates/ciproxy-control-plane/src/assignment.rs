@@ -28,6 +28,11 @@ impl<'a> Assignment<'a> {
         });
         let runner = runners.next()?;
         if runners.next().is_some() {
+            tracing::warn!(
+                organization_id=%job.organization_id,
+                scale_set_id=%job.scale_set_id,
+                "multiple runner registrations match a saved assignment"
+            );
             return None;
         }
         Some(Self { job, runner })
@@ -50,6 +55,7 @@ impl<'a> Assignment<'a> {
         });
         let assignment = assignments.next()?;
         if assignments.next().is_some() {
+            tracing::warn!(%machine_id, "multiple started assignments match a machine job");
             return None;
         }
         Some(assignment)

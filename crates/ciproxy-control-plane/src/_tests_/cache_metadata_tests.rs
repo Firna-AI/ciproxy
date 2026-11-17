@@ -36,7 +36,10 @@ async fn metadata_http_uses_token_workspace_and_exact_assigned_machine() {
         "completed",
         "unbound",
         "raw-scale-set-id",
+        "ambiguous-runner",
+        "ambiguous-job",
     ] {
+        eprintln!("Cache metadata scenario: {scenario}");
         let mut snapshot = assignment();
         let mut token = machine_token();
         match scenario {
@@ -46,6 +49,17 @@ async fn metadata_http_uses_token_workspace_and_exact_assigned_machine() {
             "runner" => snapshot.runners[0].runner.github_id = Some(99),
             "completed" => snapshot.jobs[0].phase = DemandPhase::Completed,
             "unbound" => snapshot.runners[0].worker_job_id = None,
+            "ambiguous-runner" => {
+                let mut runner = snapshot.runners[0].clone();
+                runner.runner.id = Uuid::from_u128(219);
+                runner.command_id = Uuid::from_u128(218);
+                snapshot.runners.push(runner);
+            }
+            "ambiguous-job" => {
+                let mut job = snapshot.jobs[0].clone();
+                job.id = Uuid::from_u128(217);
+                snapshot.jobs.push(job);
+            }
             _ => {}
         }
         let authentication = MetadataRecordsMock::authenticate.some_call(matching!((hash, at) if
