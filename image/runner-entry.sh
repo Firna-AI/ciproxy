@@ -3,12 +3,12 @@
 set -eo pipefail
 
 source /etc/profile
-if [[ -f /home/runner/.profile ]]; then
-    source /home/runner/.profile
-fi
 set -a
 source /etc/environment
 set +a
+if [[ -f "$HOME/.profile" ]]; then
+    source "$HOME/.profile"
+fi
 cd /opt/actions-runner
 if [[ -n "${CIPROXY_ASSIGNMENT_SOCKET:-}" ]]; then
     cp bin/Runner.Worker.own.dll bin/Runner.Worker.dll

@@ -34,6 +34,8 @@ It needs `chroot`, `ldd`, Bash, Python, tar, zstd, e2fsprogs, `acl`, and
 It runs provisioning inside a fixture chroot with stub provisioning tools.
 It runs the real export script with stub libguestfs transport boundaries.
 Real archive, ext4, and package tools check both outputs and their metadata.
+The manifest, both release trees, and the ext4 disk must carry the same
+[capability map](#boat-file-capabilities) and the current `boat-run.sh`.
 The ext4 check verifies the approved 1% root reserve.
 It also checks neutral root labels in the release measurement and manifest.
 It checks the small root's free margin and both `root_disk_bytes` fields
@@ -94,6 +96,86 @@ network service. The guest network smoke covers Firecracker only.
 
 [reset]: https://github.com/firecracker-microvm/firecracker/blob/v1.17.0/FAQ.md#how-can-i-gracefully-reboot-the-guest-how-can-i-gracefully-poweroff-the-guest
 
+## Guest and Boat scripts
+
+These checks need no KVM, GitHub, or Boat account.
+Each check runs real image code. Fixtures replace the VM, the disk, the
+runner, or the provider that the code would reach.
+A check with `--work-dir` keeps its fixtures there as evidence.
+Use a folder under `.context/`.
+
+### Runner account environment
+
+Build the guest first. The check starts that binary:
+
+```sh
+cargo build --package ciproxy-guest
+sudo python3 image/check-runner-environment.py \
+  --work-dir .context/image-checks/runner-environment
+```
+
+It starts the guest in Boat mode in a chroot, with the real `runuser` and
+`runner-entry.sh`. A fixture listener records its environment.
+The check needs Bash, GNU coreutils, `runuser`, PAM, `ldd`, and `chroot`.
+It needs root to make a private account database in the chroot.
+
+The listener must get `HOME`, `USER`, `LOGNAME`, and `SHELL` from the
+runner account. Its `PATH` must keep the image tools and add the account's
+own entries. The values of `/etc/environment` and the account's `.profile`
+must arrive. The JIT registration must arrive unchanged.
+The assignment socket value must arrive, empty in Boat mode.
+No value of the root service environment can reach the listener.
+
+### Docker disk attachment
+
+```sh
+sudo python3 image/check-docker-attach.py \
+  --work-dir .context/image-checks/docker-attach
+```
+
+It runs `docker-attach.sh` in a chroot with stub mount and service tools.
+The stub refuses a mount move, as a shared mount does.
+The script must unmount its preparation mount and mount `/dev/vdb` directly
+at `/var/lib/docker`. The check then makes each step fail in turn.
+Each failure must leave both mount points unmounted and Docker running on
+the root disk, with its data unchanged.
+It needs root for `chroot` and its private `/proc` mount.
+
+### Boat file capabilities
+
+```sh
+sudo python3 image/check-capabilities.py \
+  --work-dir .context/image-checks/capabilities
+sudo python3 image/check-boat-run.py \
+  --work-dir .context/image-checks/boat-run
+```
+
+The first check runs `file-capabilities.py` on a fixture tree with real
+extended attributes. It needs root for real capabilities and `setfacl`
+from the ACL tools. The capture must record each file capability, also
+both names of a hard link. It must skip symbolic links and a mounted
+`tmpfs`.
+
+The check then removes capabilities and runs `boat.py metadata` locally.
+The restore must bring each capability back, and the comparison must match
+the earlier baseline. A changed mode must still show as a difference.
+A changed file, or a directory replaced by a symbolic link, must get no
+capability, and the restore must fail.
+
+The second check runs `boat-run.sh` in a chroot with stub tools.
+The restore must finish before the image's Docker daemon and the guest
+start. A failed restore must start neither.
+
+### Boat delete confirmation
+
+```sh
+python3 image/check-boat-delete.py
+```
+
+It runs `boat.py delete` for two sandbox IDs with a stub HTTP opener.
+Each `DELETE` request must name its sandbox and send the same ID in the
+`X-Ascii-Confirm-Delete` header. The check needs no Boat key or network.
+
 ## Retained userspace export
 
 To export a retained, complete release tree without software provisioning:
@@ -103,6 +185,8 @@ bash image/export.sh "$PWD/.context/ciproxy-image-build" from-rootfs
 ```
 
 This uses `WORK_DIR/rootfs` and the retained kernel and software reports.
+It installs the current `boat-run.sh` and `file-capabilities.py` in that
+tree, and records its capability map again.
 It rebuilds the root disk and both packages from those inputs.
 
 ## Release growth proof

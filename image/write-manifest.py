@@ -21,6 +21,7 @@ def main():
     guest = args.rootfs / "usr/local/bin/ciproxy-guest"
     manifest = {"image_id": os.environ.get("IMAGE_RELEASE_ID", pins["IMAGE_ID"]),
                 "inputs": pins, "root_disk_bytes": measurement["root_disk_bytes"],
+                "file_capabilities": json.loads((args.rootfs / "etc/ciproxy/file-capabilities.json").read_text()),
                 "guest_sha256": hashlib.sha256(guest.read_bytes()).hexdigest(),
                 "measurements": measurement}
     (args.artifacts / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")

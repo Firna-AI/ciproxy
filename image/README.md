@@ -60,7 +60,14 @@ Both extraction paths use it to restore every saved attribute namespace.
 The partitioned source keeps its mount configuration through inspection and
 export. `source-rootfs.tar.zst` stays in `WORK_DIR` as an intermediate.
 The export extracts one release tree and sets `/dev/vda` in its `etc/fstab`.
+It installs the current `boat-run.sh` and `file-capabilities.py` in it.
+`file-capabilities.py` then writes the capability map of the tree to
+`etc/ciproxy/file-capabilities.json`. Each entry gives a file path, the
+SHA-256 of its contents, and its `security.capability` value.
+The capture follows no symbolic link and does not enter another filesystem.
 Both the Boat archive and Firecracker ext4 disk come from that finalized tree.
+Only the export writes the capability map.
+[Boat](boat.md#boat-smoke) restores the capabilities from it.
 
 To prepare inputs and the recipe without starting a VM:
 
@@ -110,6 +117,7 @@ Each artifact records its logical and allocated bytes.
 The measurement and release manifest expose `root_disk_bytes` at the top
 level. This is the actual logical length of `rootfs.ext4` in SI bytes.
 `write-manifest.py` copies this measured value into the manifest.
+It also copies the capability map into `file_capabilities`.
 The installed userspace records its apparent and allocated bytes.
 The measurement uses the neutral `rootfs` label instead of a machine path.
 The ext4 record uses the image's actual block geometry for offline free
@@ -123,7 +131,9 @@ Each label states free job disk. `RootSizing` adds it and a filesystem
 allowance for ext4 metadata and reserves to the selected image's
 `root_disk_bytes`. The agent grows each job's reflink copy and ext4 before
 boot. Docker uses the root disk unless a sticky Docker disk for the job's
-checked scope attaches.
+checked scope attaches. `docker-attach.sh` prepares that disk, then mounts
+it directly at `/var/lib/docker`. After a failed step, Docker runs on the
+root disk again.
 The agent supplies the guest address and gateway in its kernel arguments.
 The image disables DHCP on `eth0` and keeps the complete kernel network
 configuration, including its boot routes. The image supplies DNS through

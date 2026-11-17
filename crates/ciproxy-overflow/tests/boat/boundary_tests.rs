@@ -4,7 +4,10 @@ use std::{fs, os::unix::fs::PermissionsExt, process::Command};
 
 use chrono::DateTime;
 use rust_decimal::Decimal;
-use sandbox_interface::{SandboxStartRefusal, SandboxStartRetry, TemporaryStartRefusalReason};
+use sandbox_interface::{
+    BackendSandbox, ProviderRef, SandboxStartRefusal, SandboxStartRetry, SandboxState,
+    TemporaryStartRefusalReason,
+};
 use serde_json::json;
 use uuid::Uuid;
 
@@ -31,12 +34,15 @@ async fn real_adapter_preserves_marks_snapshot_ttl_wallet_and_private_root_launc
     assert_eq!(account.start_fee_bound_usd, Some(Decimal::new(7, 2)));
     let sizes = server.backend.capacity.account_capacity().await.unwrap();
     assert_eq!(sizes[0].resources.disk.amount, 111);
-    let sandbox = server
-        .backend
-        .lifecycle
-        .create_sandbox(request())
-        .await
-        .unwrap();
+    let mut create = request();
+    create.snapshot_provider_ref = Some(ProviderRef::new("bsh_fixture_shared_image_v7"));
+    let created = server.backend.lifecycle.create_sandbox(create).await;
+    assert!(
+        matches!(&created, Ok(BackendSandbox { provider_ref, state: SandboxState::Ready })
+            if provider_ref.as_str() == "bx_23456789"),
+        "shared snapshot creation must reach Boat: {created:?}"
+    );
+    let sandbox = created.unwrap();
     server
         .backend
         .launcher
@@ -79,7 +85,7 @@ async fn real_adapter_preserves_marks_snapshot_ttl_wallet_and_private_root_launc
     assert_eq!(create.body["noEnv"], true);
     assert_eq!(create.body["snapshots"], false);
     assert_eq!(create.body["monitoring"], false);
-    assert_eq!(create.body["from"], "shared-image-v7");
+    assert_eq!(create.body["from"], "bsh_fixture_shared_image_v7");
     assert_eq!(create.body["ttlSeconds"], 21600);
     assert_eq!(
         create.body["labels"]["sandbox.workspace"],

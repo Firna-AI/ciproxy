@@ -23,7 +23,7 @@ The control plane must keep own-machine routing available when Boat fails.
 ## What This Crate Does
 
 The dependency revision is
-`965836198ba65947108cbe5e669524d2249d851a` of `futex-ai/sandbox`.
+`037fbd7e3671975e79775c7dbcfb95b1a1fe37ab` of `futex-ai/sandbox`.
 `BoatFactory` constructs the pinned lifecycle, capacity, and file capabilities.
 All capabilities use the same explicit personal or organization wallet.
 Account reads supply the verified name, trial state, and start-fee bound.
@@ -65,6 +65,16 @@ It saves the proven sandbox identity, phase, and original lifetime bound
 before a demand check or another provider call.
 A definitive refusal ends that delivery and preserves its account restriction.
 The next scaler attempt needs a new delivery ID.
+The pinned adapter returns `SandboxCreateNotSent` only when it proves that
+it sent no create request to Boat.
+The service accepts that proof only from the fresh create that follows the
+`Creating` transition.
+That delivery then ends at once as `Refused`, with no sandbox, no account
+restriction, and no counted spend.
+Its sealed input and callback authority end, and collection then erases
+unused retired keys. The next scaler attempt also needs a new delivery ID.
+A recovery read never accepts that proof. Each `Creating` record found at
+recovery therefore keeps recovery reads.
 Relative and absolute retry times use the later supplied time.
 No supplied retry time means no invented retry delay.
 Plan refusals exclude that size until a successful catalog refresh.
@@ -77,6 +87,9 @@ After `Creating`, recovery keeps the exact committed provider parameters.
 `canStart` does not decide whether create will succeed.
 
 Every sandbox restores the shared snapshot with ciproxy marks.
+The snapshot setting can be a saved snapshot name or a share code.
+The pinned adapter sends that exact source in each create.
+Its recovery labels hold only a hash of a share code.
 The pinned adapter sets `noEnv`, disables monitoring and snapshots, and sets
 a six-hour lifetime.
 A free trial gets two hours.
@@ -102,6 +115,7 @@ An end report derives workspace authority from its token digest.
 The store accepts it once for its one live runner.
 There is no independent token timeout before the sandbox ends.
 The service persists deletion before calling Boat.
+The pinned adapter confirms each deletion with the ID of its target sandbox.
 Cleanup retries failed deletion and inspects known IDs omitted from inventory.
 An absent or archived sandbox gets one final usage read before lifecycle end.
 It preserves running jobs and needed idle runners.
@@ -229,6 +243,7 @@ A forwarding recorder captures successful store writes without supplying answers
 Callback tests use real token lookup and one-use claims across two workspaces.
 Boat boundary tests use the production adapter against a local TLS server.
 They keep certificate and host verification enabled.
+They check a create from a share code and the delete confirmation header.
 The cipher unit tests use a mocked KMS transport.
 
 ### Live commands

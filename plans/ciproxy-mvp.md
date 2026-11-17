@@ -932,21 +932,87 @@ Live KVM and authenticated job checks remain with the orchestrator.
       install, warm, slots, drain, offline, restart, disallowed, the
       interrupted startup, remove, Docker with no fit, the Milestone 9
       smokes, and the firewall network checks across the reboot passed.
-      Evidence: `.context/ciproxy-mvp/live-2026-11-16/agent-runtime/`. My
+      Evidence: `.context/ciproxy-mvp/live-2026-11-16/agent-runtime/`.
+      Code check evidence of the fixes: `.context/live-run-2026-11-16/`. My
       calls of 17 November 2026 for its six findings, all fix now:
-  - [ ] Set the runner account environment in the guest launcher, so that
+  - [x] Set the runner account environment in the guest launcher, so that
         `HOME` is `/home/runner`. Cache jobs failed without it.
+        My call, 17 November 2026: the guest clears its service environment
+        and gives `runuser` only the JIT registration and the assignment
+        socket. `runuser` sets the account identity, home, and shell. The
+        entry script loads `/etc/profile`, `/etc/environment`, and then the
+        account's `.profile`, with no login shell. Reason: jobs keep the
+        image tool `PATH` and the account's additions, and get no root
+        service value.
+        Branch: `fix/live-run-2026-11-16`.
   - [ ] Let the Boat client accept the shared snapshot reference of the
         image, tell a create that was never sent apart from an uncertain
-        one, and recover the blocked unsent start. The client part is in
-        `futex-ai/sandbox`, whose merge needs the user.
-  - [ ] Send the delete confirmation of Boat from each sandbox deletion,
+        one, and recover the blocked unsent start. The client fix merged in
+        `futex-ai/sandbox` as `037fbd7`.
+    - [x] In `futex-ai/sandbox`, accept the shared snapshot reference, send
+          the delete confirmation, and return a typed local rejection for a
+          create that the client refuses before it sends the request.
+          [futex-ai/sandbox#13](https://github.com/futex-ai/sandbox/pull/13)
+          holds this code, with `SandboxCreateNotSent` as that rejection.
+          Its reviewed head `16d9a244ed72771acec66d5a33c927c94258d608` passed
+          CI on 17 November 2026.
+          Branch: `fix/boat-shared-snapshots-delete-confirmation` in
+          `futex-ai/sandbox`.
+    - [x] Merge that pull request. Item 119 = A authorized the orchestrator.
+          It merged as `037fbd7e3671975e79775c7dbcfb95b1a1fe37ab`.
+    - [x] When that pull request exists, pin every sandbox dependency to its
+          reviewed immutable revision and update `Cargo.lock` through Cargo.
+          Save a create with the local rejection as definitively not
+          created, and release its pending authority. Keep each create that
+          may have been sent on recovery only. Add a regression through the
+          public overflow service.
+          My call, 17 November 2026: only the fresh create after the
+          `Creating` transition accepts `SandboxCreateNotSent`. The delivery
+          then ends in the existing `Refused` phase, with no account
+          restriction. Reason: the error proves that no request reached
+          Boat, but says nothing about the Boat account.
+          Branch: `fix/live-run-2026-11-16`.
+    - [x] Pin both sandbox crates to the merged revision
+          `037fbd7e3671975e79775c7dbcfb95b1a1fe37ab` and verify the existing
+          unsent-create handler and delete confirmation against it.
+          Branch: `fix/live-run-2026-11-16`.
+    - [ ] Recover the blocked start of the live run only with definitive
+          proof that its create was never sent. A generic recovery error or
+          an empty inventory is not that proof. `SandboxCreateNotSent` covers
+          only fresh creates, so it gives no proof for this older `Creating`
+          record. An operator must find that proof and recover the start.
+  - [x] Send the delete confirmation of Boat from each sandbox deletion,
         in `image/boat.py` and in `futex-ai/sandbox`.
-  - [ ] Mount the prepared Docker disk directly at `/var/lib/docker`, keeping
+    - [x] Check `image/boat.py`. It already sends the target sandbox ID as
+          the confirmation, so its delete operation needs no change.
+          `image/check-boat-delete.py` now checks two IDs through the real
+          command path. A copy of the helper without the header fails it.
+          Branch: `fix/live-run-2026-11-16`.
+    - [x] Send it from `futex-ai/sandbox`, with the upstream change of the
+          Boat client TODO above. The pinned head derives it from the target
+          ID, and the Boat boundary test checks the header on a delete.
+          Branch: `fix/live-run-2026-11-16`.
+    - [x] Merge that upstream change, as the Boat client TODO above says.
+  - [x] Mount the prepared Docker disk directly at `/var/lib/docker`, keeping
         the root fallback. The mount move failed under a shared mount.
-  - [ ] Restore the trusted file capabilities of the image release before
+        Branch: `fix/live-run-2026-11-16`.
+  - [x] Restore the trusted file capabilities of the image release before
         the runner starts on Boat, and keep the comparison check.
-  - [ ] Use the Rust setup of the gate in the tagged agent release workflow.
+        My call, 17 November 2026: the export records each capability of
+        the finalized release tree with the SHA-256 of its file. Both
+        `etc/ciproxy/file-capabilities.json` and the release manifest hold
+        this map. The export also installs the current `boat-run.sh`, so a
+        retained tree gets the matching restore. Boat sets a capability only
+        on an unchanged release file, and a refusal stops the start before
+        Docker and the runner. No Boat step writes the map.
+        `image/boat.py metadata` runs the same restore before its unchanged
+        comparison. Reason: a capability must come from the trusted release
+        and reach only its own file.
+        Branch: `fix/live-run-2026-11-16`.
+  - [x] Use the Rust setup of the gate in the tagged agent release workflow.
+        The version and package jobs run the rustup commands of CI. The
+        package job keeps its target.
+        Branch: `fix/live-run-2026-11-16`.
   - [ ] Publish agent pre-release 0.1.2 with item 117 = D and these fixes,
         build the next image release with its Boat snapshot, and run the
         failed and skipped checks again, with the overflow smoke.

@@ -62,8 +62,9 @@ impl Runner for LinuxRunner {
         };
         let mut command = Command::new("/usr/sbin/runuser");
         command
-            .args(["--user", "runner", "--preserve-environment", "--"])
+            .args(["--user", "runner", "--"])
             .arg(&self.entry)
+            .env_clear()
             .env(
                 "ACTIONS_RUNNER_INPUT_JITCONFIG",
                 registration.expose_secret(),
