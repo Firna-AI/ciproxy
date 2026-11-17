@@ -14,6 +14,9 @@ use crate::service::Guest;
 #[path = "support.rs"]
 pub(super) mod support;
 
+#[path = "command_tests.rs"]
+mod command_tests;
+
 use support::{
     Observation, channel, configure, configured, exited, hello, runner, shutdown_pair, supervisor,
 };

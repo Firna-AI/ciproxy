@@ -115,6 +115,5 @@ pub(crate) fn configure(runner: RunnerSpec) -> AgentToGuest {
         runner_id: runner.runner_id,
         organization_id: runner.organization_id,
         registration: runner.registration,
-        cache: None,
     }
 }

@@ -61,22 +61,6 @@ pub enum AgentToGuest {
         organization_id: OrganizationId,
         /// One-use registration, passed over vsock rather than a disk.
         registration: Secret,
-        /// Access to this machine's cache, when available.
-        cache: Option<CacheConnection>,
-    },
-    /// Pass scope inputs after GitHub assigns the actual job.
-    JobFacts {
-        /// Job whose cache requests use these facts.
-        job_id: JobId,
-        /// Scope values, without choosing their source or trust.
-        facts: JobFacts,
-    },
-    /// Make a repository Docker disk available after a job starts.
-    DockerDisk {
-        /// Job for which the agent attached this disk.
-        job_id: JobId,
-        /// Attached drive and the mode already selected by the agent.
-        disk: DockerDiskAttachment,
     },
     /// Shut down a guest whose idle runner or completed job has stopped.
     Shutdown,

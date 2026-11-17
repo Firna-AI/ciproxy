@@ -119,7 +119,6 @@ async fn dropped_configuration_write_replays_until_the_guest_confirms_receipt() 
         runner_id: record.report.runner_id.clone(),
         organization_id: record.report.organization_id.clone(),
         registration: request.registration,
-        cache: None,
     };
     guests
         .attach(&record, Some(configuration.clone()))
