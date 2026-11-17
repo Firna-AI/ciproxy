@@ -44,6 +44,9 @@ App service's App-JWT installation client, which take-out acceptance uses.
 The API reads machine capacity from the last report of each machine: its
 slots, its job disk minus active Docker leases, and the root bytes of its
 selected image.
+A report with unavailable Docker reservations keeps its slots and image,
+but its dashboard disk capacity is unknown. The scaler keeps the machine's
+label eligibility and starts no new runner there until reservations return.
 A machine without a report has zero slots and unknown disk capacity.
 API maintenance runs at startup and then every minute. A failed run logs a
 warning and runs again.

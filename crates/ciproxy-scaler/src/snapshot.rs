@@ -94,11 +94,13 @@ pub struct Machine {
     pub draining: bool,
     /// Total slots after the protocol's CPU and memory host reserve.
     pub capacity: Slots,
-    /// Total job disk after the host reserve, including cache space.
+    /// Gross job disk after the host reserve, before active Docker reservations.
     ///
     /// This includes disk held by every runner below. It is not free job disk.
     /// The machine cache and unused Docker disks free space for new job VMs.
     pub disk_budget_bytes: u64,
+    /// Active Docker reservations, absent while their statistics are unavailable.
+    pub docker_leased_bytes: Option<u64>,
     /// One shared warm count for this machine, across all organizations.
     pub warm_count: usize,
     /// Per-machine targets from the documented warm-runner allocation policy.

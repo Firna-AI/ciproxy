@@ -1,1 +1,10 @@
-{ "order": ["states", "changes", "hardware", "health"] }
+{
+  "order": [
+    "states",
+    "changes",
+    "hardware",
+    "health",
+    "figures",
+    "clear-unknown"
+  ]
+}

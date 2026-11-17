@@ -52,7 +52,12 @@ async fn rejects_another_machine_credential_without_changing_the_live_session_or
     fixture.advance_to(30);
     let mut attempted_report = original_report.clone();
     attempted_report.hostname = "forged-hello-hostname".into();
-    attempted_report.cache.used_bytes = 999_999;
+    attempted_report
+        .cache
+        .as_mut()
+        .measured()
+        .unwrap()
+        .used_bytes = 999_999;
     let mut rejected = FakeAgent::connect(&fixture.url).await;
     rejected
         .send(hello(

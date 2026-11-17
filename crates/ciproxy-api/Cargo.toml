@@ -18,7 +18,7 @@ ciproxy-billing = { workspace = true }
 ciproxy-metering = { workspace = true }
 ciproxy-overflow = { workspace = true }
 ciproxy-github = { workspace = true }
-ciproxy-protocol = { workspace = true }
+ciproxy-protocol = { workspace = true, features = ["openapi"] }
 ciproxy-store-interface = { workspace = true }
 getrandom = "0.4.3"
 internal-error = { workspace = true }

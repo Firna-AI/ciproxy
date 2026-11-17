@@ -8,6 +8,9 @@ machine cache.
 
 - **Docker disk:** a disk for one repository on one own machine that keeps
   Docker data between the jobs of the repository.
+- **Docker disk figures:** how many repositories have a Docker disk on the
+  machine, the space of these disks, and the space that attached Docker
+  disks and copies reserve.
 - The [tiers](billing.md#tiers) call the Docker disk feature "sticky Docker
   disks".
 
@@ -63,6 +66,28 @@ machine cache.
   of its label. Rejected: a Docker budget, because the 250 GB minimum then
   fits no default job. Reason: Docker then gets the free disk of the label,
   as it does on the root disk.
+
+## Unavailable figures
+
+- When the agent cannot read the Docker disk figures of a machine, it reports
+  them as unavailable, as [Machine figures](cache.md#machine-figures) says.
+- While these figures are unavailable, ciproxy never counts the reservations
+  of the machine as zero bytes.
+- The dashboard then shows the capacity of the machine as unknown. It does
+  not say how many jobs the machine runs at a time, or that its disk limits
+  them.
+- ciproxy starts no new runner on the machine, also no warm runner.
+- ciproxy still counts the machine for the labels whose size it
+  [fits](job-routing.md#fit), so their jobs still wait the
+  [overflow wait](job-routing.md#terms) before Boat runners start for them.
+- The jobs and the runners already on the machine stay, and a ready warm
+  runner can still take a job.
+- The agent refuses each runner start while it cannot read the reservations.
+- New runners can start on the machine again after a report with measured
+  figures.
+- **Decision:** a machine with unavailable reservations keeps its labels and
+  gets no new runner. Rejected: new runners as before, because the agent
+  refuses each of them.
 
 ## Tiers and the machine page
 

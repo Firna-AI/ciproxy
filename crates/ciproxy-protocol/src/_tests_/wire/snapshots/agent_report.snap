@@ -1,6 +1,5 @@
 ---
 source: crates/ciproxy-protocol/src/_tests_/wire/assertions.rs
-assertion_line: 20
 description: Tagged JSON for agent_report; all credentials are dummy test values.
 expression: message
 ---
@@ -98,6 +97,7 @@ expression: message
     ],
     "drain": "active",
     "cache": {
+      "status": "measured",
       "used_bytes": 20000000000,
       "capacity_bytes": 100000000000,
       "restores_last_7_days": 100,
@@ -173,6 +173,7 @@ expression: message
       ]
     },
     "docker_disks": {
+      "status": "measured",
       "leased_bytes": 0,
       "repositories": 2,
       "used_bytes": 15000000000

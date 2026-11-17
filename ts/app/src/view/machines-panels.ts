@@ -1,18 +1,18 @@
 // The panels of the machine page beside its slots: the health checks with
-// the values of the last contact marked as old, the machine cache with Clear
+// the values of the last contact marked as old, who may clear the machine
 // cache, and the monthly cost that the savings report uses. Every value comes
 // from the MachineView of GET machines; a value that the machine has not
-// reported shows as not reported.
+// reported shows as not reported. machines-cache.ts gives the cache figures.
 
 import type { MachineView } from "../api/schema.ts";
-import { cacheCopy, costCopy, healthCopy } from "./machines-copy.ts";
+import { costCopy, healthCopy } from "./machines-copy.ts";
 import {
   centsToInput,
   formatAgo,
   formatMonthly,
   gigabytes,
 } from "./machines-format.ts";
-import { cacheHitsText, contactSince } from "./machines.ts";
+import { contactSince } from "./machines.ts";
 
 export type HealthTone = "ok" | "warn" | "err" | "idle";
 
@@ -110,38 +110,10 @@ function agentRow(
   return { ...fresh(version, "agent", healthCopy.agent), tone: "idle" };
 }
 
-export type CacheModel =
-  | { reported: false; text: string }
-  | {
-      reported: true;
-      ratio: number;
-      value: string;
-      used: string;
-      hits: string;
-      docker: string;
-    };
-
-export function cacheModel(machine: MachineView): CacheModel {
-  const cache = machine.cache ?? null;
-  if (cache === null) return { reported: false, text: cacheCopy.unreported };
-  const capacity = Number(cache.capacity_bytes);
-  return {
-    reported: true,
-    ratio: capacity > 0 ? Math.min(Number(cache.used_bytes) / capacity, 1) : 0,
-    value: cacheCopy.used(
-      gigabytes(cache.used_bytes),
-      gigabytes(cache.capacity_bytes),
-    ),
-    used: gigabytes(cache.used_bytes),
-    hits: cacheHitsText([machine]),
-    docker: cacheCopy.dockerUse(
-      cache.docker_repositories,
-      gigabytes(cache.docker_disk_bytes),
-    ),
-  };
-}
-
-/** Clear cache shows for an Admin while the machine is online and reported. */
+/**
+ * Clear cache shows for an Admin while the machine is online and has a stored
+ * report, also while its figures are unavailable, because a clear needs none.
+ */
 export function canClearCache(machine: MachineView, admin: boolean): boolean {
   return admin && !machine.offline && (machine.cache ?? null) !== null;
 }

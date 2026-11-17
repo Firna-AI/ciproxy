@@ -5,11 +5,7 @@ import { plansHref } from "../src/view/billing-routes.ts";
 import type { Page } from "./browser-driver.ts";
 import { visible } from "./browser-fixture.ts";
 import { workspaceId } from "./fixtures-core.ts";
-
-/** A phone shows cards; a wider window shows tables with column headers. */
-function phone(width: number): boolean {
-  return width < 640;
-}
+import { phone } from "./m20-browser-fixture.ts";
 
 /** The labels show where jobs run now and the jobs of 30 days. */
 export async function labelFacts(page: Page, width: number): Promise<void> {

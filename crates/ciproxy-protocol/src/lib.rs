@@ -12,6 +12,7 @@ pub mod resources;
 pub mod runners;
 pub mod runtime;
 pub mod secret;
+pub mod statistics;
 pub mod version;
 
 #[cfg(test)]

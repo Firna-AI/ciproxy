@@ -14,13 +14,13 @@ import { canPay } from "../../components/role-actions.tsx";
 import { AppShell } from "../../components/shell/app-shell.tsx";
 import { usageBanner } from "../../components/usage-banner.tsx";
 import {
-  cacheHitsPercent,
   countSlots,
   machineScenes,
   offlineFor,
   type MachineScene,
 } from "../../fixtures/machines.ts";
 import type { Role } from "../../fixtures/members.ts";
+import { CacheHitsKpi } from "./cache-hits.tsx";
 import { MachineTable, LoadingMachineTable } from "./machine-table.tsx";
 import { OverflowPanel } from "./overflow-panel.tsx";
 import "./machines.css";
@@ -30,6 +30,8 @@ export const machinesStates = [
   "empty",
   "offline",
   "over-limit",
+  "cache-unknown",
+  "no-cache-measured",
   "loading",
   "error",
 ] as const;
@@ -40,6 +42,8 @@ const sceneOf: Record<MachinesState, MachineScene> = {
   empty: "steady",
   offline: "offline",
   "over-limit": "fourMachines",
+  "cache-unknown": "cacheUnknown",
+  "no-cache-measured": "noCacheMeasured",
   loading: "steady",
   error: "steady",
 };
@@ -164,11 +168,7 @@ function MachinesBody({
           valueFormat={(value) => `${value} of ${slots}`}
         />
         <Kpi label="Warm runners" value={countSlots(machines, "warm")} />
-        <Kpi
-          label="Cache hits, 7 days"
-          value={cacheHitsPercent}
-          valueFormat={(value) => `${value}%`}
-        />
+        <CacheHitsKpi machines={machines} />
       </KpiRow>
       <Panel title="Own machines" flush>
         <MachineTable

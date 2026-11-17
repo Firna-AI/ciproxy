@@ -21,9 +21,9 @@ use crate::boundaries::{CacheMock, HostMock, ImagesMock, VmsMock};
 use crate::cache_authority::CacheAuthority;
 use crate::controller::{Agent, Controller};
 use crate::image_registry::{ImageLease, ImageLeaseMock};
-use crate::reporting::empty_cache;
 use crate::state::{Identity, MachineState, VmRecord};
 use crate::storage_sizing::DEFAULT_IMAGE_BYTES;
+use ciproxy_protocol::cache::MachineCacheReport;
 
 pub(super) fn identity() -> Identity {
     Identity {
@@ -31,6 +31,17 @@ pub(super) fn identity() -> Identity {
         machine_id: MachineId("machine-1".to_owned()),
         credential: Secret::new("machine-secret"),
         endpoint: Some("wss://gateway.test/agent/".parse().unwrap()),
+    }
+}
+
+pub(super) fn empty_cache() -> MachineCacheReport {
+    MachineCacheReport {
+        used_bytes: 0,
+        capacity_bytes: 0,
+        restores_last_7_days: 0,
+        hits_last_7_days: 0,
+        unknown_jobs: Vec::new(),
+        jobs: Vec::new(),
     }
 }
 
@@ -118,6 +129,7 @@ pub(super) fn controller(state: MachineState, mock: Unimock) -> Controller {
     let mock = Arc::new(mock);
     Controller {
         allocation: Mutex::new(()),
+        reporting_initialized: Mutex::new(true),
         network_cleanup: Mutex::new(()),
         control_connected: AtomicBool::new(true),
         state: Mutex::new(state),

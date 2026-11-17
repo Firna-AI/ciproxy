@@ -1,12 +1,13 @@
 // The facts of the Machines list, from GET machines and the overflow summary
-// only: the state of each machine, its slots and cache, the figures above the
-// table, and where jobs go while a machine takes none. A fact that the API
-// does not give stays out, or shows as not reported.
+// only: the state of each machine, its slots, the figures above the table,
+// and where jobs go while a machine takes none. A fact that the API does not
+// give stays out, or shows as not reported. machines-cache.ts gives the cache
+// figures.
 
 import type { MachineView, SlotState, SlotView } from "../api/schema.ts";
 import type { OverflowSettings } from "../api/machine-schema.ts";
+import { cacheHits, type CacheHits } from "./machines-cache.ts";
 import {
-  cacheCopy,
   elsewhereCopy,
   healthCopy,
   listCopy,
@@ -83,15 +84,6 @@ export function hardwareText(machine: MachineView): string {
   );
 }
 
-export function cacheText(machine: MachineView): string {
-  const cache = machine.cache ?? null;
-  if (cache === null) return cacheCopy.noReport;
-  return cacheCopy.used(
-    gigabytes(cache.used_bytes),
-    gigabytes(cache.capacity_bytes),
-  );
-}
-
 /** "14 minutes": the time since the last contact, or null without one. */
 export function contactSince(machine: MachineView, now: number): string | null {
   const contact = machine.last_contact_at ?? null;
@@ -103,29 +95,11 @@ export function lastSeenText(machine: MachineView, now: number): string {
   return contact === null ? healthCopy.noContact : formatAgo(contact, now);
 }
 
-/**
- * The share of the cache restores of the last 7 days that the machine cache
- * served, rounded down so it never overstates, or the words for none.
- */
-export function cacheHitsText(
-  machines: readonly Pick<MachineView, "cache">[],
-): string {
-  let hits = BigInt(0);
-  let restores = BigInt(0);
-  for (const machine of machines) {
-    if (!machine.cache) continue;
-    hits += BigInt(machine.cache.hits_last_7_days);
-    restores += BigInt(machine.cache.restores_last_7_days);
-  }
-  if (restores <= BigInt(0)) return listCopy.noRestores;
-  return `${(hits * BigInt(100)) / restores}%`;
-}
-
 export type MachineFigures = {
   machines: string;
   slots: string;
   warm: string;
-  cacheHits: string;
+  cacheHits: CacheHits;
 };
 
 /**
@@ -152,7 +126,7 @@ export function machineFigures(
     machines: formatCount(machines.length),
     slots: listCopy.slotsOf(used, total),
     warm: formatCount(warm),
-    cacheHits: cacheHitsText(machines),
+    cacheHits: cacheHits(machines),
   };
 }
 

@@ -179,7 +179,10 @@ fn never_uses_a_smaller_boat_vm_while_an_eligible_own_machine_fits() {
     occupied.size = allocated(large());
     state.machines[0].runners = vec![occupied];
     state.queue = vec![queued("a", "large", 100)];
-    assert_eq!(decide(&state), vec![]);
+    for leases in [Some(0), None] {
+        state.machines[0].docker_leased_bytes = leases;
+        assert_eq!(decide(&state), vec![], "reservations {leases:?}");
+    }
 }
 
 #[test]

@@ -41,6 +41,7 @@ pub(crate) trait Agent: Send + Sync {
 pub(crate) struct Controller {
     /// Serialize admission while host inventory runs outside the state lock.
     pub(crate) allocation: Mutex<()>,
+    pub(crate) reporting_initialized: Mutex<bool>,
     /// Prevent overlapping cleanup attempts from deleting a reused index.
     pub(crate) network_cleanup: Mutex<()>,
     pub(crate) control_connected: AtomicBool,
@@ -156,6 +157,15 @@ impl Agent for Controller {
     }
 
     async fn report(&self) -> Result<MachineReport> {
+        {
+            let mut initialized = self.reporting_initialized.lock().await;
+            if !*initialized {
+                if let Err(error) = self.initialize_report_budget().await {
+                    tracing::warn!(%error, "initial cache budget unavailable; keep machine reporting");
+                }
+                *initialized = true;
+            }
+        }
         self.machine_report().await
     }
 

@@ -3,7 +3,8 @@
 // slots, or the office PC office-pc-1, whose memory leaves no room for a
 // slot. A slot holds one job VM of the smallest size; a larger VM size takes
 // several slots. A machine without KVM connects with no slots, so it cannot
-// run jobs.
+// run jobs. In some what-ifs, a machine did not measure its machine cache or
+// its Docker disks, so that part of its report has no figures.
 
 import { unbroken } from "./format.ts";
 import {
@@ -20,6 +21,17 @@ import { gigabyte, vmDiskBytes } from "./vm-disk.ts";
 export type SlotState = "busy" | "warm" | "free";
 export type MachineStatus = "healthy" | "draining" | "offline" | "no-slots";
 
+/**
+ * The figures of one part of a machine report: the figures that the machine
+ * measured, or unavailable when it did not measure them. An unavailable part
+ * has no figures, so no screen shows a zero or a share in their place.
+ */
+export type Statistics<T> =
+  ({ status: "measured" } & T) | { status: "unavailable" };
+
+/** A part of a machine report that the machine did not measure. */
+const unavailable = { status: "unavailable" } as const;
+
 export type Machine = {
   name: string;
   hardware: Hardware;
@@ -33,9 +45,11 @@ export type Machine = {
    * slots are the warm runners that are ready.
    */
   warmTarget: number;
-  cacheUsedGb: number;
-  /** The disk of the machine cache now: the job disk that no job VM holds. */
-  cacheSizeGb: number;
+  /**
+   * The machine cache: its use, and its disk now, the job disk that no job
+   * VM holds. Its cache hits are `cacheHitsPercent` while it is measured.
+   */
+  cache: Statistics<{ usedGb: number; sizeGb: number }>;
   /**
    * The free disk that the agent reported last: the space that no data uses.
    * It can be more than the free job disk, because a job VM uses only the
@@ -43,7 +57,7 @@ export type Machine = {
    */
   freeDiskGb: number;
   /** The repositories with a Docker disk on the machine, and their space. */
-  dockerDisks: { repositories: number; sizeGb: number };
+  dockerDisks: Statistics<{ repositories: number; sizeGb: number }>;
   lastSeen: string;
   /** The agent release that the machine reported last. */
   agentVersion: string;
@@ -87,10 +101,14 @@ function machine(
     slots: slots(machineSlots(ax42), busy, warm),
     kvm: true,
     warmTarget: defaultWarmRunners,
-    cacheUsedGb: [83, 76, 70][index - 1] ?? 0,
-    cacheSizeGb: cacheSpaceGb(ax42, busy + warm),
+    cache: {
+      status: "measured",
+      usedGb: [83, 76, 70][index - 1] ?? 0,
+      sizeGb: cacheSpaceGb(ax42, busy + warm),
+    },
     freeDiskGb: 312,
     dockerDisks: {
+      status: "measured",
       repositories: [3, 2, 2][index - 1] ?? 0,
       sizeGb: [96, 58, 61][index - 1] ?? 0,
     },
@@ -111,10 +129,9 @@ export const officeMini: Machine = {
   slots: slots(machineSlots(miniPc), 0, 2),
   kvm: true,
   warmTarget: defaultWarmRunners,
-  cacheUsedGb: 6,
-  cacheSizeGb: cacheSpaceGb(miniPc, 2),
+  cache: { status: "measured", usedGb: 6, sizeGb: cacheSpaceGb(miniPc, 2) },
   freeDiskGb: 362,
-  dockerDisks: { repositories: 0, sizeGb: 0 },
+  dockerDisks: { status: "measured", repositories: 0, sizeGb: 0 },
   lastSeen: "3s ago",
   agentVersion: latestAgentVersion,
 };
@@ -138,16 +155,25 @@ export const officePc: Machine = {
   slots: [],
   kvm: true,
   warmTarget: defaultWarmRunners,
-  cacheUsedGb: 0,
-  cacheSizeGb: cacheSpaceGb(oldPc, 0),
+  cache: { status: "measured", usedGb: 0, sizeGb: cacheSpaceGb(oldPc, 0) },
   freeDiskGb: 183,
-  dockerDisks: { repositories: 0, sizeGb: 0 },
+  dockerDisks: { status: "measured", repositories: 0, sizeGb: 0 },
   lastSeen: "3s ago",
   agentVersion: latestAgentVersion,
 };
 
 /** hetzner-ax42-1 while its agent still reports the release before 0.4.2. */
 const agentBehindAx42: Machine = { ...machine(1, 5, 1), agentVersion: "0.4.1" };
+
+/** The machine, when it did not measure its machine cache for its report. */
+function cacheUnmeasured(of: Machine): Machine {
+  return { ...of, cache: unavailable };
+}
+
+/** The machine, when it did not measure its Docker disks for its report. */
+function dockerUnmeasured(of: Machine): Machine {
+  return { ...of, dockerDisks: unavailable };
+}
 
 /** The moments that the machine screens show. */
 export const machineScenes = {
@@ -186,11 +212,42 @@ export const machineScenes = {
     machine(3, 4, 2),
     officeMini,
   ],
+  /**
+   * Wednesday 18 November, 14:32: hetzner-ax42-1 did not measure its machine
+   * cache for its last report.
+   */
+  cacheUnknown: [
+    cacheUnmeasured(machine(1, 5, 1)),
+    machine(2, 6, 0),
+    machine(3, 4, 2),
+  ],
+  /** The same moment: hetzner-ax42-1 did not measure its Docker disks. */
+  dockerUnknown: [
+    dockerUnmeasured(machine(1, 5, 1)),
+    machine(2, 6, 0),
+    machine(3, 4, 2),
+  ],
+  /** The same moment: hetzner-ax42-1 measured neither part. */
+  figuresUnknown: [
+    dockerUnmeasured(cacheUnmeasured(machine(1, 5, 1))),
+    machine(2, 6, 0),
+    machine(3, 4, 2),
+  ],
+  /** The same moment: no machine measured its machine cache. */
+  noCacheMeasured: [
+    cacheUnmeasured(machine(1, 5, 1)),
+    cacheUnmeasured(machine(2, 6, 0)),
+    cacheUnmeasured(machine(3, 4, 2)),
+  ],
 } as const satisfies Record<string, readonly Machine[]>;
 
 export type MachineScene = keyof typeof machineScenes;
 
-/** The share of the cache restores of the last 7 days that the caches served. */
+/**
+ * The share of its cache restores of the last 7 days that the machine cache
+ * served. Each machine that measured its cache has this share, so the
+ * machines that Machines counts together have it too.
+ */
 export const cacheHitsPercent = 91;
 
 /** How long ago ciproxy lost contact with the offline machine. */

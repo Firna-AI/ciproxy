@@ -95,6 +95,13 @@ jobs retain their VM. Cleanup deletes only marked sandboxes with no job.
   budget, then take `job_disk_bytes`. Subtract images before the 1:3 split.
   Include disk held by the listed VMs and space used by machine or Docker
   caches. These caches free space for new VMs.
+- Supply active Docker reservations separately as `docker_leased_bytes`.
+  Use `Some(bytes)` for measured reservations, including measured zero.
+  Use `None` while their statistics are unavailable. The scaler then keeps
+  physical label eligibility and the overflow wait, but starts no queue or
+  warm runner on that machine. Existing supply and warm targets still apply.
+  Keep these reservations in the gross disk budget. The scaler subtracts
+  measured reservations once for fit and available capacity.
 - Supply current Boat dimensions, comparable catalog prices, and the
   largest available size. Exclude refused sizes from the largest choice.
 - Supply current UTC calendar month spend for ciproxy sandboxes only.

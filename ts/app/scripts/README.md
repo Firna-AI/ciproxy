@@ -102,7 +102,9 @@ dialogs, and the recovery after a failed read or change. It follows the
 links to History, a job, and Plans, and Back. On the machine page, it checks
 the Docker disks in each machine state and for each role. It also checks
 them while the first read waits, after a failed first read and its Try
-again, after a failed refresh, and after Clear cache.
+again, after a failed refresh, and after Clear cache. Other cases check the
+machine page whose machine cache, Docker disks, or both are unavailable, for
+each role, and the cache hits of the list with some or no measured machines.
 
 - `--case=NAME` runs one case or a comma-separated list of cases. A name
   that matches no case fails the run. With no `--case`, a smoke runs every
@@ -291,6 +293,9 @@ or a disconnect works.
   smoke, with the cases of
   [m20-browser-machines.ts](m20-browser-machines.ts) and
   [m20-browser-settings.ts](m20-browser-settings.ts).
+  [m20-fixtures-statistics.ts](m20-fixtures-statistics.ts) gives the machines
+  with unavailable figures, which
+  [m20-browser-machine-figures.ts](m20-browser-machine-figures.ts) checks.
 - [live-smoke.ts](live-smoke.ts) runs the shell live check, and
   [live-pages-smoke.ts](live-pages-smoke.ts) the page live check.
   [live-pages-private.ts](live-pages-private.ts) keeps the credential and

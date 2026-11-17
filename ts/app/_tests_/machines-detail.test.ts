@@ -2,14 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { headerActions, machineNotice } from "../src/view/machines-detail.ts";
-import {
-  cacheModel,
-  canClearCache,
-  costModel,
-  healthModel,
-} from "../src/view/machines-panels.ts";
+import { costModel, healthModel } from "../src/view/machines-panels.ts";
 import { machine } from "../scripts/fixtures-setup.ts";
-import { cache, nbsp, slot } from "./machines-fixtures.ts";
+import { nbsp, slot } from "./machines-fixtures.ts";
 
 const now = Date.parse("2026-11-18T14:32:00Z");
 const lostAt = "2026-11-18T14:18:00Z";
@@ -198,56 +193,6 @@ test("the agent claims the newest release only from a fresh report that matches 
     }),
     ["Agent", "0.4.2", "idle"],
   );
-});
-
-test("the cache shows its reported use, and only an Admin clears an online cache", () => {
-  const reported = machine({ cache: cache("91", "100") });
-  const model = cacheModel(reported);
-  assert.deepEqual(
-    model.reported ? [model.value, model.hits, model.docker] : null,
-    ["83 of 191 GB", "91%", `3${nbsp}repositories${nbsp}· 96${nbsp}GB`],
-  );
-  const one = cacheModel(
-    machine({ cache: cache("0", "0", { docker_repositories: "1" }) }),
-  );
-  assert.equal(
-    one.reported ? one.docker : null,
-    `1${nbsp}repository${nbsp}· 96${nbsp}GB`,
-  );
-  const many = cacheModel(
-    machine({
-      cache: cache("0", "0", { docker_repositories: "9007199254740993" }),
-    }),
-  );
-  assert.equal(
-    many.reported ? many.docker : null,
-    `9,007,199,254,740,993${nbsp}repositories${nbsp}· 96${nbsp}GB`,
-    "a count past the safe integers of JavaScript stays exact",
-  );
-  const none = cacheModel(
-    machine({
-      cache: cache("0", "0", {
-        docker_disk_bytes: "0",
-        docker_repositories: "0",
-      }),
-    }),
-  );
-  assert.equal(
-    none.reported ? none.docker : null,
-    `0${nbsp}repositories${nbsp}· 0${nbsp}GB`,
-    "a report of no Docker disks shows zero, apart from no report",
-  );
-  assert.equal(canClearCache(reported, true), true);
-  assert.equal(canClearCache(reported, false), false);
-  assert.equal(
-    canClearCache(machine({ cache: cache("1", "1"), offline: true }), true),
-    false,
-  );
-  assert.equal(canClearCache(machine({ cache: null }), true), false);
-  assert.deepEqual(cacheModel(machine({ cache: null })), {
-    reported: false,
-    text: "Cache use shows after the machine reports it.",
-  });
 });
 
 test("a known zero cost stays apart from a cost that nobody entered", () => {

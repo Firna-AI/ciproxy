@@ -37,6 +37,17 @@ addresses.
   report yet shows no cache figures. The page shows the reported Docker
   disks on every tier. On Free, new jobs get no Docker disk. Clear cache
   keeps the Docker disks, and they have no action of their own.
+- The machine cache and the Docker disks of a report are each measured or
+  unavailable, as
+  [Machine figures](../../../../../docs/protocol/cache.md#machine-figures)
+  says. Each unavailable figure shows Unknown, the cache disk then has no
+  meter, and one note names the unknown parts. A measured part keeps its
+  figures. Clear cache keeps its rule, and its confirmation then names no
+  size.
+- Cache hits on the list cover the machines with a measured machine cache,
+  and a line under the figure names each other machine. With no measured
+  machine, the figure says Unknown. The Cache column says Unknown for an
+  unavailable machine cache.
 - When the API says that the disk holds fewer jobs of `ciproxy` than the
   slots, the page names the limit, the VM disk of one such job, and the disk
   for jobs, and the free slots beyond the limit say that they have no disk
@@ -51,6 +62,8 @@ addresses.
   [machines-changes.ts](../../state/machines-changes.ts) runs the changes of
   an Admin, one at a time, and [machines-copy.ts](../../view/machines-copy.ts)
   holds the words.
+- [machines-cache.ts](../../view/machines-cache.ts) words the cache figures
+  of each status, and gives the cache hits of the list.
 - [machine-endpoints.ts](../../api/machine-endpoints.ts) holds the routes of
   Machines on the one HTTP client.
 

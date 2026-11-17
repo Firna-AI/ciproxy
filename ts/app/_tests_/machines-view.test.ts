@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { cacheHits, cacheText } from "../src/view/machines-cache.ts";
 import { concurrentJobs, joinedFits } from "../src/view/machines-capacity.ts";
 import {
   elsewhereText,
@@ -15,7 +16,15 @@ import {
 } from "../src/view/machines-routes.ts";
 import { workspaceId } from "../scripts/fixtures-core.ts";
 import { machine } from "../scripts/fixtures-setup.ts";
-import { cache, nbsp, slot, summary } from "./machines-fixtures.ts";
+import {
+  cache,
+  docker,
+  measuredCache,
+  nbsp,
+  slot,
+  summary,
+  unavailable,
+} from "./machines-fixtures.ts";
 
 test("a machine shows one state: offline, then no slots, then draining", () => {
   const cases: [string, Parameters<typeof machine>[0], string][] = [
@@ -48,10 +57,11 @@ test("the slots column counts busy and warm slots, and never invents free ones",
   );
 });
 
-test("the figures count live slots, unique warm runners, and all cache restores", () => {
+test("the figures count live slots, unique warm runners, and measured cache restores", () => {
   const machines = [
     machine({
       id: "a",
+      hostname: "forge-a",
       slots: 6,
       occupancy: [
         slot(0, "job"),
@@ -63,23 +73,89 @@ test("the figures count live slots, unique warm runners, and all cache restores"
       ],
       cache: cache("90", "100"),
     }),
-    machine({ id: "b", draining: true, slots: 4, occupancy: [slot(0, "job")] }),
+    machine({
+      id: "b",
+      hostname: "forge-b",
+      draining: true,
+      slots: 4,
+      occupancy: [slot(0, "job")],
+    }),
     machine({
       id: "c",
+      hostname: "forge-c",
       offline: true,
       slots: 6,
       occupancy: [slot(0, "job"), slot(1, "warm")],
       cache: cache("1", "3"),
     }),
-    machine({ id: "d", kvm: false, slots: 6 }),
+    machine({ id: "d", hostname: "forge-d", kvm: false, slots: 6 }),
   ];
   assert.deepEqual(machineFigures(machines), {
     machines: "4",
     slots: "4 of 10",
     warm: "1",
-    cacheHits: "88%",
+    cacheHits: {
+      kind: "share",
+      value: "88%",
+      excluded: ["forge-b", "forge-d"],
+    },
   });
-  assert.equal(machineFigures([machine()]).cacheHits, "No restores yet");
+});
+
+test("the cache hits cover the measured machines, name the others, and say Unknown without one", () => {
+  const measured = machine({
+    hostname: "forge-01",
+    cache: cache("90", "100", { docker_disks: unavailable }),
+  });
+  const unmeasured = machine({
+    hostname: "forge-02",
+    cache: cache("0", "0", { machine_cache: unavailable }),
+  });
+  const unreported = machine({ hostname: "forge-03", cache: null });
+  assert.deepEqual(cacheHits([measured, unmeasured, unreported]), {
+    kind: "share",
+    value: "90%",
+    excluded: ["forge-02", "forge-03"],
+  });
+  assert.deepEqual(cacheHits([unmeasured, unreported]), { kind: "unknown" });
+  const quiet = machine({
+    hostname: "forge-04",
+    cache: cache("0", "0", { docker_disks: docker("0", "0") }),
+  });
+  assert.deepEqual(
+    cacheHits([quiet, unmeasured]),
+    { kind: "share", value: "No restores yet", excluded: ["forge-02"] },
+    "measured machines with no restores keep No restores yet",
+  );
+});
+
+test("the cache column shows the measured use, Unknown, or No report yet", () => {
+  const cases: [string, Parameters<typeof machine>[0], string][] = [
+    ["measured", { cache: cache("1", "2") }, "83 of 191 GB"],
+    [
+      "measured cache beside unknown Docker disks",
+      { cache: cache("1", "2", { docker_disks: unavailable }) },
+      "83 of 191 GB",
+    ],
+    [
+      "measured zero",
+      {
+        cache: cache("0", "0", {
+          machine_cache: { ...measuredCache("0", "0"), used_bytes: "0" },
+        }),
+      },
+      "0 of 191 GB",
+    ],
+    [
+      "unmeasured",
+      { cache: cache("1", "2", { machine_cache: unavailable }) },
+      "Unknown",
+    ],
+    ["no report", { cache: null }, "No report yet"],
+  ];
+  for (const [name, overrides, expected] of cases) {
+    assert.equal(cacheText(machine(overrides)), expected, name);
+  }
 });
 
 test("jobs elsewhere name only machines and a Boat account that take jobs now", () => {

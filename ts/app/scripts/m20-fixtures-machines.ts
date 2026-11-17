@@ -149,12 +149,18 @@ export function fixtureMachines(): Machine[] {
     warm_runners: 2,
     monthly_cost_cents: "5290",
     cache: {
-      used_bytes: bytes(96),
-      capacity_bytes: bytes(402),
-      restores_last_7_days: "1000",
-      hits_last_7_days: "840",
-      docker_disk_bytes: bytes(18),
-      docker_repositories: "3",
+      machine_cache: {
+        status: "measured",
+        used_bytes: bytes(96),
+        capacity_bytes: bytes(402),
+        restores_last_7_days: "1000",
+        hits_last_7_days: "840",
+      },
+      docker_disks: {
+        status: "measured",
+        used_bytes: bytes(18),
+        repositories: "3",
+      },
     },
   });
   return [
@@ -213,12 +219,18 @@ export function fixtureMachines(): Machine[] {
         ...[2, 3, 4, 5].map(free),
       ],
       cache: {
-        used_bytes: bytes(6),
-        capacity_bytes: bytes(117),
-        restores_last_7_days: "200",
-        hits_last_7_days: "100",
-        docker_disk_bytes: "0",
-        docker_repositories: "0",
+        machine_cache: {
+          status: "measured",
+          used_bytes: bytes(6),
+          capacity_bytes: bytes(117),
+          restores_last_7_days: "200",
+          hits_last_7_days: "100",
+        },
+        docker_disks: {
+          status: "measured",
+          used_bytes: "0",
+          repositories: "0",
+        },
       },
       monthly_cost_cents: "0",
     }),

@@ -1,6 +1,6 @@
 import { defineScreen } from "@mokly/mokly";
 
-import { related } from "../../../../components/related-docs.ts";
+import { related, relatedMvp } from "../../../../components/related-docs.ts";
 import { orgAddress } from "../../../../fixtures/org.ts";
 import { MachineDetailScreen } from "../../../../screens/machines/machine-detail.tsx";
 import { MachinesScreen } from "../../../../screens/machines/machines-list.tsx";
@@ -50,6 +50,40 @@ export const machineViewer = defineScreen({
     <MachineDetailScreen
       viewport={context.viewport}
       state="healthy"
+      role="viewer"
+    />
+  ),
+});
+
+export const figuresBilling = defineScreen({
+  slug: "figures-billing",
+  title: "Unknown cache figures, seen by a Billing person",
+  description:
+    "Dana Kim has the Billing role. She opens hetzner-ax42-1 while it measures neither its machine cache nor its Docker disks. She sees each figure as Unknown, with the note, read-only: the page has no Drain, Remove, Clear cache, or Edit.",
+  rationale:
+    "The answer E to item 118 shows the same figures to every role. Only the actions of an Admin differ.",
+  relatedDocs: relatedMvp("security", "cache", "dockerDisks"),
+  address: orgAddress("machines/hetzner-ax42-1"),
+  render: (_props, context) => (
+    <MachineDetailScreen
+      viewport={context.viewport}
+      state="both-unknown"
+      role="billing"
+    />
+  ),
+});
+
+export const figuresViewer = defineScreen({
+  slug: "figures-viewer",
+  title: "Unknown cache figures, seen by a Viewer",
+  description:
+    "Jonas Weber, a Viewer, opens the same machine. He sees each figure as Unknown, with the note, read-only, as a Billing person does.",
+  relatedDocs: relatedMvp("security", "cache", "dockerDisks"),
+  address: orgAddress("machines/hetzner-ax42-1"),
+  render: (_props, context) => (
+    <MachineDetailScreen
+      viewport={context.viewport}
+      state="both-unknown"
       role="viewer"
     />
   ),

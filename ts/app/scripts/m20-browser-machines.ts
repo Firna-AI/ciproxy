@@ -17,6 +17,11 @@ import {
   readOnlyCache,
 } from "./m20-browser-machine-cache.ts";
 import {
+  cacheHitsFigure,
+  unknownFigures,
+  unknownFiguresReadOnly,
+} from "./m20-browser-machine-figures.ts";
+import {
   followMachineLinks,
   machineStates,
   slotJobLinks,
@@ -51,6 +56,21 @@ export function machineCases(origin: string, output: string): M20Case[] {
       async check(page, _context, width) {
         await machineStates(page, origin, width, output);
       },
+    },
+    {
+      name: "machine-unknown-figures",
+      check: (page, _context, width) =>
+        unknownFigures(page, origin, width, output),
+    },
+    {
+      name: "machine-unknown-figures-roles",
+      check: (page, _context, width) =>
+        unknownFiguresReadOnly(page, origin, width, output),
+    },
+    {
+      name: "machines-cache-hits",
+      check: (page, _context, width) =>
+        cacheHitsFigure(page, origin, width, output),
     },
     {
       name: "machines-long-name",

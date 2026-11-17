@@ -33,7 +33,7 @@ test("the fit line gives one count, a range, or the machines that fit", () => {
       line: "1 job of this size at a time on 3 of your 4 machines.",
     },
     {
-      name: "a machine has not reported its capacity",
+      name: "the capacity of a machine is not known",
       fit: fit({
         eligible_machines: 3,
         fitting_machines: 2,
@@ -41,7 +41,7 @@ test("the fit line gives one count, a range, or the machines that fit", () => {
         maximum_jobs: "2",
         unavailable_machines: 1,
       }),
-      line: "2 jobs of this size at a time on 2 of your 3 machines. 1 machine has not reported its capacity yet.",
+      line: "2 jobs of this size at a time on 2 of your 3 machines. The capacity of 1 machine is not known yet.",
     },
   ];
   for (const item of cases) {

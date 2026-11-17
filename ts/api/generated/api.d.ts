@@ -891,20 +891,12 @@ export interface components {
             /** @description All wallets accessible to the key. */
             wallets: components["schemas"]["BoatWallet"][];
         };
-        /** @description Machine-cache metadata. Clear cache acts only on this machine's entries. */
+        /** @description Statistics from one stored report, with independent section availability. */
         CacheView: {
-            /** @description Machine-cache capacity bytes, as a decimal string. */
-            capacity_bytes: string;
-            /** @description Persistent Docker disk bytes, which Clear cache preserves. */
-            docker_disk_bytes: string;
-            /** @description Repositories with persistent Docker disks in the last report. */
-            docker_repositories: string;
-            /** @description Local hits during the last seven days. */
-            hits_last_7_days: string;
-            /** @description Handled restores during the last seven days. */
-            restores_last_7_days: string;
-            /** @description Machine-cache bytes used, as a decimal string. */
-            used_bytes: string;
+            /** @description Repository Docker disk use measured independently by the agent. */
+            docker_disks: components["schemas"]["Statistics_DockerDiskView"];
+            /** @description Cache space and seven-day counts measured by the machine cache. */
+            machine_cache: components["schemas"]["Statistics_MachineCacheView"];
         };
         /** @description Integer US cents encoded as a string to preserve JavaScript precision. */
         Cents: string;
@@ -2174,6 +2166,36 @@ export interface components {
             label_id: string;
             /** @description Registered own-machine identity, absent for Boat. */
             machine_id?: string | null;
+        };
+        /** @description One statistics section, with no figures when its producer could not measure it. */
+        Statistics_DockerDiskView: ({
+            /** @description Repositories with persistent Docker disks, as a decimal string. */
+            repositories: string;
+            /** @description Persistent Docker disk bytes, as a decimal string. */
+            used_bytes: string;
+        } & {
+            /** @enum {string} */
+            status: "measured";
+        }) | {
+            /** @enum {string} */
+            status: "unavailable";
+        };
+        /** @description One statistics section, with no figures when its producer could not measure it. */
+        Statistics_MachineCacheView: ({
+            /** @description Machine-cache capacity bytes, as a decimal string. */
+            capacity_bytes: string;
+            /** @description Local hits during the last seven days, as a decimal string. */
+            hits_last_7_days: string;
+            /** @description Handled restores during the last seven days, as a decimal string. */
+            restores_last_7_days: string;
+            /** @description Machine-cache bytes used, as a decimal string. */
+            used_bytes: string;
+        } & {
+            /** @enum {string} */
+            status: "measured";
+        }) | {
+            /** @enum {string} */
+            status: "unavailable";
         };
         /**
          * @description The durable result of an authenticated Stripe delivery.

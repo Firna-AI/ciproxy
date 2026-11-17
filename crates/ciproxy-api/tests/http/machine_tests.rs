@@ -75,9 +75,9 @@ async fn admin_controls_machine_and_clear_cache_targets_only_its_machine_entries
     assert_eq!(view["default_jobs_by_slots"], "6");
     assert_eq!(view["default_root_disk_bytes"], "80000000000");
     assert_eq!(view["disk_limited"], true);
-    assert_eq!(view["cache"]["docker_repositories"], "2");
-    assert_eq!(view["cache"]["hits_last_7_days"], "8");
-    assert_eq!(view["cache"]["docker_disk_bytes"], "900");
+    assert_eq!(view["cache"]["docker_disks"]["repositories"], "2");
+    assert_eq!(view["cache"]["machine_cache"]["hits_last_7_days"], "8");
+    assert_eq!(view["cache"]["docker_disks"]["used_bytes"], "900");
     assert_eq!(view["occupancy"][0]["state"], "free");
     assert!(view["monthly_cost_cents"].is_null());
     assert_eq!(
@@ -133,7 +133,7 @@ async fn admin_controls_machine_and_clear_cache_targets_only_its_machine_entries
     let view = json(fixture.request(Some(&admin), "GET", &path, None).await).await;
     assert_eq!(view["monthly_cost_cents"], "8899");
     assert_eq!(view["warm_runners"], 3);
-    assert_eq!(view["cache"]["used_bytes"], "512");
+    assert_eq!(view["cache"]["machine_cache"]["used_bytes"], "512");
     let history = fixture
         .database
         .store
@@ -212,7 +212,7 @@ async fn admin_controls_machine_and_clear_cache_targets_only_its_machine_entries
     let view = json(fixture.request(Some(&admin), "GET", &path, None).await).await;
     assert_eq!(view["offline"], true);
     assert_eq!(view["health_old"], true);
-    assert_eq!(view["cache"]["used_bytes"], "512");
+    assert_eq!(view["cache"]["machine_cache"]["used_bytes"], "512");
     let response = fixture
         .request(
             Some(&admin),

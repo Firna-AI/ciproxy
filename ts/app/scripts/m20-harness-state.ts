@@ -2,6 +2,7 @@ import type { components } from "../../api/index.ts";
 import { session, workspace } from "./fixtures-core.ts";
 import { fields, type RequestFact } from "./harness-state.ts";
 import { fixtureMachines, machineIds } from "./m20-fixtures-machines.ts";
+import { statisticsMachines } from "./m20-fixtures-statistics.ts";
 import {
   fixtureLabels,
   nothingFits,
@@ -22,6 +23,10 @@ export const m20Scenarios = [
   "machines-empty",
   "machines-long-name",
   "machine-agent-behind",
+  "machine-cache-unknown",
+  "machine-docker-unknown",
+  "machine-figures-unknown",
+  "machines-no-cache-measured",
   "overflow-unconnected",
   "overflow-summary-failure",
   "machines-load-failure",
@@ -46,6 +51,8 @@ export const m20Scenarios = [
   "organizations-suspended",
   "viewer",
   "billing",
+  "viewer-figures-unknown",
+  "billing-figures-unknown",
   "no-role",
   "signed-out",
 ] as const;
@@ -81,7 +88,7 @@ export function createM20State(scenario: M20Scenario = "machines"): M20State {
     build: "fixture-build-m20-a",
     facts: [],
     session: session(),
-    machines: fixtureMachines(),
+    machines: statisticsMachines(scenario, fixtureMachines()),
     labels: fixtureLabels(),
     organizations,
     members: fixtureMembers(),
@@ -96,16 +103,12 @@ export function createM20State(scenario: M20Scenario = "machines"): M20State {
     holdMachines: false,
     heldReads: [],
   };
-  if (["viewer", "billing", "no-role"].includes(scenario))
+  const viewer = scenario === "viewer" || scenario === "viewer-figures-unknown";
+  const billing =
+    scenario === "billing" || scenario === "billing-figures-unknown";
+  if (viewer || billing || scenario === "no-role")
     state.session.workspaces = [
-      workspace({
-        role:
-          scenario === "viewer"
-            ? "viewer"
-            : scenario === "billing"
-              ? "billing"
-              : null,
-      }),
+      workspace({ role: viewer ? "viewer" : billing ? "billing" : null }),
     ];
   if (scenario === "machines-empty" || scenario === "add-machine-waiting")
     state.machines = [];
