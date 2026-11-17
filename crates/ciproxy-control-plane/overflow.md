@@ -234,6 +234,18 @@ A failed check or a failed cleanup prints `FAIL:` lines and exits with
 status 1. The script prints no key, cookie, token, registration, or
 response body.
 
+### Local tests
+
+These tests check that each delete request of the cleanup confirms its
+target sandbox. They replace Boat and the clock with stand-ins. They need
+no credential file, Boat key, or network. They start no sandbox:
+
+```sh
+python3 -B -m unittest discover -s crates/ciproxy-control-plane/scripts/tests -v
+```
+
+They do not count as a live check. The repository gate does not run them.
+
 ### Cleanup and recovery
 
 The script cleans up after each check, also after a failure or Ctrl-C:
@@ -245,7 +257,10 @@ The script cleans up after each check, also after a failure or Ctrl-C:
    It waits until no new registration intent remains and each new delivery
    has ended. A missing sandbox ID does not prove that no sandbox exists.
 4. It deletes each known Boat sandbox that the check started.
-   It waits until Boat confirms each deletion.
+   It waits until Boat confirms each deletion. Each delete request uses
+   the shared [Boat delete helper](../../image/boat_delete.py). The helper
+   takes the encoded route and the `X-Ascii-Confirm-Delete` header from
+   the target sandbox ID.
 5. It restores the original overflow switch, wait, and limit.
 
 One 90-second deadline covers the whole cleanup. An unresolved start keeps

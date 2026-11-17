@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import time
 from urllib.error import HTTPError
 from urllib.parse import quote, urlparse
@@ -11,6 +12,10 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 from uuid import UUID, uuid4
 
 from overflow_smoke.cleanup import restore
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "image"))
+
+from boat_delete import confirmed_delete
 
 class NoRedirect(HTTPRedirectHandler):
     def redirect_request(self, request, fp, code, message, headers, new_url):
@@ -67,9 +72,15 @@ class Live:
                              "Accept": "application/vnd.github+json"}, body)
 
     def boat(self, method, sandbox, missing=False):
-        return self.request(method, "https://boat.dev/api/v1/sandboxes/" + quote(sandbox, safe=""),
+        if method == "DELETE":
+            return confirmed_delete(self.boat_request, sandbox, missing=missing)
+        return self.boat_request(method, "/sandboxes/" + quote(sandbox, safe=""), missing=missing)
+
+    def boat_request(self, method, route, headers=None, missing=False):
+        return self.request(method, "https://boat.dev/api/v1" + route,
                             {"Authorization": "Bearer " + self.config["boat_api_key"],
-                             "X-Boat-Org": self.config.get("boat_wallet", "personal")},
+                             "X-Boat-Org": self.config.get("boat_wallet", "personal"),
+                             **(headers or {})},
                             missing=missing)
 
     def records(self):
