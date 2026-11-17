@@ -5,6 +5,7 @@
 pub mod accounting;
 mod actions;
 pub mod application;
+mod assignment;
 pub mod billing;
 pub mod boat_authority;
 pub mod boat_callback;
@@ -27,6 +28,7 @@ pub mod http;
 mod image_delivery;
 pub mod image_release;
 pub mod image_signing;
+mod job_binding;
 mod lifecycle;
 mod lifecycle_completion;
 mod listeners;

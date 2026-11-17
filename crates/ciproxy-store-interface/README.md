@@ -189,6 +189,9 @@ or its command record, it returns `NotFound` and saves nothing.
 also saves that first evidence, and only an applied result ends delivery.
 `retire_own_runner` saves the trusted GitHub ID, `Stopping`, and the stop
 command in one transaction.
+`bind_own_job` saves one immutable Worker job ID for the exact registered
+machine runner. It accepts identical replay and returns false for conflicts
+or a stopped runner. `OwnRunner.worker_job_id` retains that ID after shutdown.
 
 ## Quick Start
 
@@ -253,6 +256,8 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
   authorization results and their delivery mode.
 - [src/dashboard](src/dashboard) owns dashboard identity and access queries.
 - [src/own_runners.rs](src/own_runners.rs) owns exact execution records.
+- [src/job_bindings.rs](src/job_bindings.rs) defines authenticated Worker job
+  bindings, separate from numeric Actions job identities.
 - [src/runtime_results.rs](src/runtime_results.rs) defines the guards that
   apply a late GitHub or Boat result only while its saved rows still match.
 - [src/boat_runtime.rs](src/boat_runtime.rs) owns Boat registration identities.

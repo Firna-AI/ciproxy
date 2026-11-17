@@ -7,13 +7,12 @@ use ciproxy_github::rest::cache_metadata::CacheEntries;
 use ciproxy_github::runtime::Runtime;
 use ciproxy_protocol::cache_metadata::{CacheMetadataRequest, CacheMetadataResponse};
 use ciproxy_protocol::secret::Secret;
-use ciproxy_store_interface::github::DemandPhase;
 use ciproxy_store_interface::organizations::AppState;
-use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
 use ciproxy_store_interface::secrets::TokenHash;
 use ciproxy_store_interface::tokens::TokenSubject;
 use sha2::{Digest, Sha256};
 
+use crate::assignment::Assignment;
 use crate::error::{Error, ErrorResultExt, Result};
 
 use super::records::MetadataRecords;
@@ -59,19 +58,10 @@ impl CacheMetadata for HostedCacheMetadata {
         if snapshot.workspace_id != token.workspace_id {
             return Err(Error::RunnerOwnership);
         }
-        let job = snapshot
-            .jobs
-            .iter()
-            .find(|job| job.id.to_string() == request.job_id.0 && job.phase == DemandPhase::Started)
+        let assignment = Assignment::for_worker(&snapshot, machine_id, &request.job_id)
             .ok_or(Error::RunnerOwnership)?;
-        let github_id = job.runner_github_id.ok_or(Error::RunnerOwnership)?;
-        let runner = snapshot.runners.iter().find(|runner| {
-            runner.runner.organization_id == job.organization_id
-                && runner.runner.scale_set_id == job.scale_set_id
-                && runner.runner.github_id == Some(github_id)
-                && matches!(runner.runner.state, RunnerState::Busy | RunnerState::Stopping)
-                && matches!(runner.runner.place, RunnerPlace::Machine { machine_id: owner, .. } if owner == machine_id)
-        }).ok_or(Error::RunnerOwnership)?;
+        let job = assignment.job;
+        let runner = assignment.runner;
         let organization = snapshot
             .organizations
             .iter()

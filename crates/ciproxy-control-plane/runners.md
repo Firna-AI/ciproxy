@@ -114,11 +114,55 @@ A busy result preserves it, and its resources stay held until the VM is absent.
 An unconfirmed start is also retired GitHub-first when, more than 60 seconds
 after its issue, a full report received after that issue omits it.
 
+## Job assignment and Worker job binding
+
 The guest supplies only a runner and job identity to the hosted process.
-The runtime matches that identity to durable GitHub demand.
 The GitHub API supplies repository, event, default branch, and head data.
 The original runtime token stays on the customer machine.
 The machine cache checks its signed scope outside the VM.
+
+The runtime keeps three job IDs apart:
+
+- The scale-set job ID is the `jobId` UUID of the scale-set messages.
+  Saved GitHub demand uses it.
+- The Worker job ID is the `JobId` UUID of the job request that the
+  runner's Worker gets. The
+  [trusted source hook](../../image/runner-patch/README.md) reads it before
+  action setup, and the agent reports it.
+- The Actions job ID is the numeric job ID of the GitHub REST API.
+
+The Worker and scale-set job IDs can differ.
+
+`Assignment::resolve` joins saved demand to its runner. The demand must be
+`Started` or `Completed`, and name a GitHub runner ID. The runner must have
+that GitHub runner ID, in the same organization and scale set. When two
+runners match, it selects none. Own-machine job routing and the cache
+metadata route share this join.
+
+An agent `JobStarted` event and a full report that lists a running runner
+carry the Worker job ID. The runtime binds that ID to the runner before it
+routes jobs. The store saves the binding only for the exact runner record,
+with the same workspace, organization, machine, and saved GitHub runner ID.
+It refuses a `Stopped` runner. A JIT runner takes one job, so its first
+saved ID never changes. An identical replay keeps it. A different ID
+changes nothing, and the runtime logs a warning. Without a saved GitHub
+runner ID, the runtime saves nothing and logs a warning. A later full report
+retries. The saved ID stays after the runner stops and across restarts.
+
+`Assignment::for_worker` authorizes the cache metadata route. It accepts a
+job ID only when it equals the saved Worker job ID of a `Busy` or
+`Stopping` runner on the calling machine. Exactly one `Started` demand must
+join to that runner. The answer lists the cache entries of the repository
+of that demand. The route never matches a request against a scale-set job
+ID or a job name.
+
+The binding does not change job preparation or `JobFacts`. Both carry the
+scale-set job ID. The agent applies a preparation only to the runner that
+reported the same job ID. It registers a cache session only when the
+`JobFacts` job ID equals the Worker job ID. So a job whose Worker and
+scale-set job IDs differ gets no preparation and no machine-cache session.
+The [cache sidecar guide](../ciproxy-cache-sidecar/README.md#runtime-token-job-identity)
+gives the source limit of the runtime token's `job_id` claim.
 
 ## Remote requests
 

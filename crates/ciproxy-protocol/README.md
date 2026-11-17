@@ -67,7 +67,7 @@ counts. Zero entries give no observed source.
 Direct GitHub use and fallback carry no counts.
 
 `cache_metadata` carries trusted GitHub cache entry metadata for the
-restore order. `CacheMetadataRequest` names only the assigned job. The
+restore order. `CacheMetadataRequest` names only the assigned Worker job. The
 hosted route at `CACHE_METADATA_PATH` answers with a
 `CacheMetadataResponse`: the current entry list of that job's repository.
 Each `CacheEntryMetadata` holds the GitHub entry ID, the full ref, the key,
