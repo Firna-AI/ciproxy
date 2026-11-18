@@ -8,6 +8,7 @@ use ciproxy_github::persistence::lease::LeaseStore;
 use ciproxy_scaler::actions::{Action, Destination};
 use uuid::Uuid;
 
+use crate::docker_budget::policy;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::runtime::MachineRuntime;
 use crate::snapshot::build;
@@ -72,7 +73,14 @@ impl MachineRuntime {
         }
         self.ensure_image(&input).await?;
         for machine in &input.machines {
-            if let Err(error) = self.send_docker_budget(&input, machine.machine.id).await {
+            if let Err(error) = self
+                .send_docker_budget(
+                    input.workspace_id,
+                    machine.machine.id,
+                    policy(&input, machine.machine.id),
+                )
+                .await
+            {
                 tracing::warn!(machine=%machine.machine.id,%error,"Docker policy update will retry");
             }
         }

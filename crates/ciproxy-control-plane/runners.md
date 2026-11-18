@@ -77,14 +77,21 @@ A full report that omits a confirmed runner releases it only when the report
 arrived after that confirmation. Absence alone never stops an unconfirmed
 start.
 
-The gateway callbacks put each agent event and each machine removal on one
-queue, in arrival order, and return at once. The queue holds up to 1024
-events. One supervised runtime task handles them one at a time. It skips an
-agent event whose connection is no longer the current one of its machine.
+The gateway callbacks put runner observations, command results, and machine
+removals on one queue, in arrival order, and return at once. The queue holds
+up to 1024 events. Each queued event holds only fixed-size identities,
+runner states, command outcomes, and payload keys. It retains no wire
+strings or reports. Exact Worker job IDs stay in separate storage with a
+shared 16 MiB byte budget. That budget includes queued IDs and IDs whose
+events are still being handled. It adds no UUID or spelling rule.
+One supervised runtime task handles events one at a time. After it takes
+the operation lock, it skips an agent event whose connection is no longer
+the current one of its machine.
 When the handling of an event fails or panics, the runtime logs a warning
 and handles the next event. The machine stays connected. The runtime logs a
-warning when it drops an event because the queue is full. The next full
-report and the saved-stop resend then repair the saved state.
+warning for each event dropped because the event queue or byte budget is
+full. Both limits use the same overload rule. The next full report restores
+a dropped Worker binding, and the saved-stop resend repairs delivery.
 
 When the agent sends `RunnerReady`, `JobStarted`, or `RunnerExited`, the
 runtime saves that observation first.

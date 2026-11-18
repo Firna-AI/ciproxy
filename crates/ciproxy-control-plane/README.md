@@ -218,8 +218,10 @@ GitHub, and database access, so they stay operator work.
   agent, and lifecycle entry points as short saved-state steps.
 - [src/runtime_reconciliation.rs](src/runtime_reconciliation.rs) runs the
   short leased workspace pass, and the Boat-only pass after a Boat refresh.
-- [src/runtime_inbox.rs](src/runtime_inbox.rs) handles queued agent events
-  and machine removals in arrival order.
+- [src/runtime_inbox.rs](src/runtime_inbox.rs) converts agent observations
+  to compact values and handles them with machine removals in arrival order.
+- [src/runtime_payloads.rs](src/runtime_payloads.rs) retains exact Worker
+  IDs under the shared byte budget, including events still being handled.
 - [src/runtime_tasks.rs](src/runtime_tasks.rs) owns and joins one GitHub or
   Boat task for each key. `OwnMachines::shutdown` stops them.
 - [src/remote_results.rs](src/remote_results.rs) saves remote results through
@@ -252,6 +254,9 @@ GitHub, and database access, so they stay operator work.
   exact runner. `Assignment::job_ids` gives the pair for job preparation.
 - [src/job_binding.rs](src/job_binding.rs) saves the Worker job ID that an
   agent `JobStarted` event or a full report gives for its exact runner.
+- [src/preparation.rs](src/preparation.rs) starts facts requests with one
+  job, its saved guard, Worker and scale-set IDs, machine identities, and the
+  computed Docker budget.
 - [src/cache_metadata/](src/cache_metadata/mod.rs) checks the machine
   credential, the workspace, and the saved Worker job binding, then lists
   the job's GitHub cache entries.

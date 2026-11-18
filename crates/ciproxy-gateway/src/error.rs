@@ -28,6 +28,9 @@ pub enum Error {
     /// A malformed identifier or JSON message cannot be processed.
     #[error("[gateway] invalid message")]
     InvalidMessage,
+    /// The first complete agent message did not arrive within its deadline.
+    #[error("[gateway] handshake timed out")]
+    HandshakeTimeout,
     /// An unhandled failure retains its original source for trusted callers.
     #[error("[gateway] internal operation failed")]
     Internal(#[from] InternalError),
