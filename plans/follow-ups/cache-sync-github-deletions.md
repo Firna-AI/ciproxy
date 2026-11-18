@@ -1,7 +1,7 @@
 # Machine caches miss GitHub cache deletions
 
-- **Severity:** Low. **Effort:** Medium. **Confidence:** Medium. **Harder
-  later:** No.
+- **Severity:** Low. **Effort:** Medium. **Confidence:** Medium.
+  **Harder later:** No.
 - **Kind:** Needs decision.
 - **Added:** 2026-11-04, from the answer of the user to item 18 of
   `plans/ciproxy-mvp-foundation.md`.
@@ -35,6 +35,11 @@
   entries.
 - **Wider fix:** B.
 - **Previous examples:** None found.
+- **Related:** `plans/follow-ups/job-facts-from-the-hook.md`. It asks
+  whether the App can drop the "Actions" read permission. B of this item
+  syncs through the entry list of the GitHub cache, which needs that
+  permission. Neither item waits for the other, but their answers must
+  agree.
 - **Recommendation:** B, after the MVP.
 - **Action:** ask the user, because B needs a new permission of the GitHub
   App, which the user must approve.
