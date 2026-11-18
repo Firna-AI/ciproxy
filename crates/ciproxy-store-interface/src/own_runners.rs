@@ -99,7 +99,6 @@ pub trait OwnRunnerStore: Send + Sync {
 }
 
 /// Coherent persisted input to one workspace's pure routing calculation.
-#[derive(Clone)]
 pub struct RoutingSnapshot {
     /// Active saved bindings from the same committed view as labels and demand.
     pub scale_sets: Vec<ScaleSet>,

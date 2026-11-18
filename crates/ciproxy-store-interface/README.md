@@ -174,7 +174,8 @@ It preserves the retired labels and their job history.
 OwnRunnerStore exposes one coherent workspace routing snapshot.
 It also holds the Boat account, deliveries, registration identities, and
 the saved Boat runners in `RoutingSnapshot.boat_runners`.
-Its dedicated session lease serializes own-machine decisions.
+`RoutingSnapshot` cannot be cloned. Background work retains narrow inputs.
+The store's dedicated session lease serializes own-machine decisions.
 Runner intents retain exact slot sets and the original whole-GB label
 request. The shared Runner record is the byte-precise actual allocation.
 Metering facts, cursors, and totals use that same actual resource type.
