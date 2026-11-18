@@ -68,8 +68,8 @@ finish. Other runtime work then gets up to five more seconds.
 ### Routing and runners
 
 The [runner guide](runners.md) gives routing, reservations, the agent event
-queue, remote requests, report confirmation, stop replay, retirement
-authority, and the removal and take-out policies.
+queue, job ID binding and preparation, remote requests, report confirmation,
+stop replay, retirement authority, and the removal and take-out policies.
 Take-out checks saved retirement for both own-machine and Boat reservations
 before the API removes GitHub access.
 
@@ -220,6 +220,8 @@ GitHub, and database access, so they stay operator work.
   short leased workspace pass, and the Boat-only pass after a Boat refresh.
 - [src/runtime_inbox.rs](src/runtime_inbox.rs) converts agent observations
   to compact values and handles them with machine removals in arrival order.
+- [src/runtime_payloads.rs](src/runtime_payloads.rs) retains exact Worker
+  IDs under the shared byte budget, including events still being handled.
 - [src/runtime_tasks.rs](src/runtime_tasks.rs) owns and joins one GitHub or
   Boat task for each key. `OwnMachines::shutdown` stops them.
 - [src/remote_results.rs](src/remote_results.rs) saves remote results through
@@ -247,11 +249,17 @@ GitHub, and database access, so they stay operator work.
 - [src/accounting.rs](src/accounting.rs) runs coalesced accounting passes
   outside runner operations.
 - [src/events.rs](src/events.rs) binds authenticated observations to runners.
+- [src/assignment.rs](src/assignment.rs) defines `Assignment`, which job
+  routing, job preparation, and the cache metadata route use to find a job's
+  exact runner. `Assignment::job_ids` gives the pair for job preparation.
+- [src/job_binding.rs](src/job_binding.rs) saves the Worker job ID that an
+  agent `JobStarted` event or a full report gives for its exact runner.
 - [src/preparation.rs](src/preparation.rs) starts facts requests with one
-  job, its saved guard, machine identities, and the computed Docker budget.
+  job, its saved guard, Worker and scale-set IDs, machine identities, and the
+  computed Docker budget.
 - [src/cache_metadata/](src/cache_metadata/mod.rs) checks the machine
-  credential, workspace, and job placement, then lists the job's GitHub
-  cache entries.
+  credential, the workspace, and the saved Worker job binding, then lists
+  the job's GitHub cache entries.
 - [src/snapshot.rs](src/snapshot.rs) builds the pure scaler's inputs,
   including the saved Boat supply.
 - [src/warm.rs](src/warm.rs) allocates warm runners from recent jobs.

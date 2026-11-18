@@ -5,9 +5,12 @@ use std::collections::{BTreeMap, BTreeSet};
 use ciproxy_protocol::cache::DockerBudget;
 use ciproxy_protocol::guest::JobPreparation;
 use ciproxy_protocol::identifiers::{MachineId, WorkspaceId};
+use ciproxy_protocol::jobs::JobFacts;
 use ciproxy_protocol::runners::RunnerReport;
 use ciproxy_protocol::secret::Secret;
-use serde::{Deserialize, Serialize};
+use serde::de::Error;
+use serde::{Deserialize, Deserializer, Serialize};
+use serde_json::Value;
 
 use crate::cache_authority::CacheAuthority;
 use crate::endpoint::AgentEndpoint;
@@ -50,10 +53,36 @@ pub struct VmRecord {
     /// Required original non-secret destination and permission authority.
     pub(crate) cache_authority: CacheAuthority,
     /// CP-confirmed assignment metadata, without runtime credentials.
-    pub(crate) job_facts: Option<ciproxy_protocol::jobs::JobFacts>,
+    #[serde(default, deserialize_with = "saved_job_facts")]
+    pub(crate) job_facts: Option<JobFacts>,
     pub(crate) local_id: String,
     pub(crate) network_index: u16,
     pub(crate) report: RunnerReport,
+}
+
+fn saved_job_facts<'de, D>(deserializer: D) -> Result<Option<JobFacts>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let Some(value) = Option::<Value>::deserialize(deserializer)? else {
+        return Ok(None);
+    };
+    let obsolete = value
+        .get("assignment")
+        .and_then(Value::as_object)
+        .is_some_and(|assignment| {
+            assignment.get("job_id") == Some(&Value::Null) && !assignment.contains_key("job_ids")
+        });
+    if obsolete {
+        tracing::warn!(
+            "Discarded saved job facts with a legacy null ID. The VM keeps its saved state."
+        );
+        return Ok(None);
+    }
+    match serde_json::from_value(value) {
+        Ok(facts) => Ok(Some(facts)),
+        Err(error) => Err(D::Error::custom(error)),
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

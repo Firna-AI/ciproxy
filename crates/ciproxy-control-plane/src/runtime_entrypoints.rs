@@ -11,22 +11,20 @@ use uuid::Uuid;
 
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::runtime::{MachineRuntime, OwnMachines};
-use crate::runtime_inbox::{AgentEvent, Event};
+use crate::runtime_agent_event::AgentEvent;
+use crate::runtime_payloads::WorkerJob;
 
 #[async_trait]
 impl OwnMachines for MachineRuntime {
     fn enqueue_agent(&self, session: Session, message: AgentMessage) {
-        let Some(message) = AgentEvent::from_message(message) else {
-            return;
-        };
         if let Ok(tasks) = self.task_scope() {
-            tasks.enqueue(self.worker(), Event::Agent(session, message));
+            tasks.enqueue_agent(self.worker(), session, message);
         }
     }
 
     fn enqueue_machine_removed(&self, workspace: Uuid, machine: Uuid) {
         if let Ok(tasks) = self.task_scope() {
-            tasks.enqueue(self.worker(), Event::Removed(workspace, machine));
+            tasks.enqueue_removed(self.worker(), workspace, machine);
         }
     }
 
@@ -89,10 +87,16 @@ impl OwnMachines for MachineRuntime {
         message: AgentMessage,
     ) -> Result<()> {
         let _operation = self.operation.lock().await;
-        let Some(message) = AgentEvent::from_message(message) else {
+        let Some((message, worker)) = AgentEvent::from_message(message) else {
             return Ok(());
         };
-        self.agent_event(workspace_id, machine_id, message).await
+        self.agent_event(
+            workspace_id,
+            machine_id,
+            message,
+            worker.map(WorkerJob::direct),
+        )
+        .await
     }
 
     async fn lifecycle(&self, event: LifecycleEvent) -> Result<()> {

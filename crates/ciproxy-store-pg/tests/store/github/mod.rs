@@ -6,6 +6,7 @@ mod installation_association_tests;
 mod lease_tests;
 mod lifecycle_atomic_tests;
 mod lifecycle_retention_tests;
+mod own_job_binding_tests;
 mod own_observation_tests;
 mod own_routing_tests;
 mod reconcile_tests;

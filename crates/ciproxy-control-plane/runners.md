@@ -80,14 +80,18 @@ start.
 The gateway callbacks put runner observations, command results, and machine
 removals on one queue, in arrival order, and return at once. The queue holds
 up to 1024 events. Each queued event holds only fixed-size identities,
-runner states, and command outcomes. It retains no wire strings or reports.
+runner states, command outcomes, and payload keys. It retains no wire
+strings or reports. Exact Worker job IDs stay in separate storage with a
+shared 16 MiB byte budget. That budget includes queued IDs and IDs whose
+events are still being handled. It adds no UUID or spelling rule.
 One supervised runtime task handles events one at a time. After it takes
 the operation lock, it skips an agent event whose connection is no longer
 the current one of its machine.
 When the handling of an event fails or panics, the runtime logs a warning
 and handles the next event. The machine stays connected. The runtime logs a
-warning when it drops an event because the queue is full. The next full
-report and the saved-stop resend then repair the saved state.
+warning for each event dropped because the event queue or byte budget is
+full. Both limits use the same overload rule. The next full report restores
+a dropped Worker binding, and the saved-stop resend repairs delivery.
 
 When the agent sends `RunnerReady`, `JobStarted`, or `RunnerExited`, the
 runtime saves that observation first.
@@ -117,11 +121,65 @@ A busy result preserves it, and its resources stay held until the VM is absent.
 An unconfirmed start is also retired GitHub-first when, more than 60 seconds
 after its issue, a full report received after that issue omits it.
 
+## Job assignment and Worker job binding
+
 The guest supplies only a runner and job identity to the hosted process.
-The runtime matches that identity to durable GitHub demand.
 The GitHub API supplies repository, event, default branch, and head data.
 The original runtime token stays on the customer machine.
 The machine cache checks its signed scope outside the VM.
+
+The runtime keeps three job IDs apart:
+
+- The scale-set job ID is the `jobId` UUID of the scale-set messages.
+  Saved GitHub demand uses it.
+- The Worker job ID is the `JobId` UUID of the job request that the
+  runner's Worker gets. The
+  [trusted source hook](../../image/runner-patch/README.md) reads it before
+  action setup, and the agent reports it.
+- The Actions job ID is the numeric job ID of the GitHub REST API.
+
+The Worker and scale-set job IDs can differ.
+
+`Assignment::resolve` joins saved demand to its runner. The demand must be
+`Started` or `Completed`, and name a GitHub runner ID. The runner must have
+that GitHub runner ID, in the same organization and scale set. When two
+runners match, it selects none. Own-machine job routing, job preparation,
+and the cache metadata route share this join.
+
+An agent `JobStarted` event and a full report that lists a running runner
+carry the Worker job ID. The runtime binds that ID to the runner before it
+routes jobs. The store saves the binding only for the exact runner record,
+with the same workspace, organization, machine, and saved GitHub runner ID.
+It refuses a `Stopped` runner. A JIT runner takes one job, so its first
+saved ID never changes. An identical replay keeps it. A different ID
+changes nothing, and the runtime logs a warning. Without a saved GitHub
+runner ID, the runtime saves nothing and logs a warning. A later full report
+retries. The saved ID stays after the runner stops and across restarts.
+
+`Assignment::for_worker` authorizes the cache metadata route. It accepts a
+job ID only when it equals the saved Worker job ID of a `Busy` or
+`Stopping` runner on the calling machine. Exactly one `Started` demand must
+join to that runner. The answer lists the cache entries of the repository
+of that demand. The route never matches a request against a scale-set job
+ID or a job name.
+
+`Assignment::job_ids` gives the `JobIdBinding` of the joined runner: its
+saved Worker job ID and the scale-set job ID of the saved demand. Until the
+runner has a saved Worker job ID, the runtime sends no job preparation.
+GitHub's `Started` message and the agent's Worker job ID can arrive in
+either order. The routing pass after the later one sends the preparation.
+`JobPreparation` names the Worker job ID. Its `TrustedFacts` carry the
+binding as `JobAssignment.job_ids`. No job name or other ID enters the
+binding.
+
+The agent applies a preparation only to the runner whose running job has
+that Worker job ID. Its cache handoff, session, and cleanup compare only the
+Worker job ID. The machine cache accepts a signed runtime-token `job_id`
+equal to either ID of the binding, as
+[Trusted write-back](../../docs/protocol/cache.md#trusted-write-back)
+requires. The
+[cache sidecar README](../ciproxy-cache-sidecar/README.md#runtime-token-job-identity)
+gives the live proof of that check and its limit.
 
 ## Remote requests
 

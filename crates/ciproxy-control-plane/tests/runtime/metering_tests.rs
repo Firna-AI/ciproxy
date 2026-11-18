@@ -2,6 +2,7 @@
 
 use chrono::Duration;
 use ciproxy_control_plane::accounting::Accounting;
+use ciproxy_protocol::identifiers::JobId;
 use ciproxy_store_interface::github::DemandPhase;
 use ciproxy_store_interface::github_timing::JobTimes;
 use ciproxy_store_interface::jobs::{Job, JobResult, JobState};
@@ -9,6 +10,7 @@ use ciproxy_store_interface::metering::facts::{Completion, JobSource};
 use ciproxy_store_interface::runners::RunnerState;
 use uuid::Uuid;
 
+use super::job_binding_support::bind_job;
 use super::metering_support::{job, make_runtime, time, totals};
 use super::settled::Settled;
 use super::support::{Fixture, at};
@@ -18,6 +20,12 @@ async fn actual_scale_attempts_count_once_across_replay_restart_reassignment_map
 {
     let fixture = Fixture::new();
     let mut job = job(&fixture);
+    bind_job(
+        fixture.store.as_ref(),
+        fixture.workspace,
+        &fixture.intent,
+        JobId(job.id.to_string()),
+    );
     fixture
         .store
         .save_github_job(fixture.workspace, &job, at())
@@ -102,6 +110,12 @@ async fn actual_scale_attempts_count_once_across_replay_restart_reassignment_map
         .store
         .create_own_runner(fixture.workspace, &second)
         .unwrap();
+    bind_job(
+        fixture.store.as_ref(),
+        fixture.workspace,
+        &second,
+        JobId(job.id.to_string()),
+    );
     let mut retry = known;
     retry.assigned_at = Some(time("2026-11-05T12:02:00.000000002Z"));
     retry.started_at = Some(time("2026-11-05T12:02:30.000000001Z"));

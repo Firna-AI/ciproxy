@@ -8,6 +8,7 @@ use ciproxy_store_interface::vm_size::VmSize;
 use crate::actions::UnobservedRunnerUpdate;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::runtime::MachineRuntime;
+use crate::runtime_payloads::WorkerJob;
 
 impl MachineRuntime {
     pub(crate) async fn reconcile_reports(&self, input: &RoutingSnapshot) -> Result<()> {
@@ -43,6 +44,15 @@ impl MachineRuntime {
             .iter()
             .find(|report| report.runner_id.0 == runner.runner.id.to_string())
         {
+            if let runners::RunnerState::Running { job_id } = &observed.state {
+                self.bind_worker_job(
+                    input.workspace_id,
+                    machine_id,
+                    runner,
+                    WorkerJob::direct(job_id.clone()),
+                )
+                .await?;
+            }
             let reported = match observed.state {
                 runners::RunnerState::Starting => RunnerState::Starting,
                 runners::RunnerState::Warm => RunnerState::Ready,

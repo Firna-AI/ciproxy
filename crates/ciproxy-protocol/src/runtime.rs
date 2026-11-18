@@ -38,7 +38,7 @@ pub struct RuntimeCredentials {
 /// Authenticated host registration for one job's cache session.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct CacheRegistration {
-    /// The scale-message job UUID.
+    /// The Worker job UUID from the original trusted runner handoff.
     pub job_id: JobId,
     /// Hosted API facts and expected token identities.
     pub facts: JobFacts,

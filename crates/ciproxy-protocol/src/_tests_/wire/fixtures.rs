@@ -9,7 +9,7 @@ use crate::identifiers::{
     RepositoryId, RunnerId, WorkspaceId,
 };
 use crate::images::{ImageDownload, ImageMetadata, ImageReport};
-use crate::jobs::{JobAssignment, JobFacts, Repository, UnknownJobScopeReason};
+use crate::jobs::{JobAssignment, JobFacts, JobIdBinding, Repository, UnknownJobScopeReason};
 use crate::reports::{
     DiskReport, DrainState, HardwareReport, MachineReport, SlotOccupancy, SlotReport,
 };
@@ -95,7 +95,10 @@ pub(crate) fn facts() -> JobFacts {
         },
         assignment: JobAssignment {
             run_id: "123".into(),
-            job_id: Some(job_id()),
+            job_ids: JobIdBinding {
+                worker_job_id: job_id(),
+                scale_set_job_id: JobId("scale-job-1".into()),
+            },
             runner_id: "456".into(),
         },
         event: JobEvent("pull_request".into()),
@@ -257,6 +260,9 @@ fn cache_assignment(job_id: JobId) -> JobAssignment {
     JobAssignment {
         run_id: "run-cache".to_owned(),
         runner_id: format!("github-{}", job_id.0),
-        job_id: Some(job_id),
+        job_ids: JobIdBinding {
+            scale_set_job_id: JobId(format!("scale-{}", job_id.0)),
+            worker_job_id: job_id,
+        },
     }
 }

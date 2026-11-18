@@ -7,7 +7,9 @@ use axum::http::{Request, StatusCode};
 use ciproxy_github::rest::cache_metadata::CacheEntriesMock;
 use ciproxy_github::runtime::RuntimeMock;
 use ciproxy_protocol::cache_metadata::CACHE_METADATA_PATH;
+use ciproxy_protocol::identifiers::JobId;
 use ciproxy_store_interface::github::DemandPhase;
+use ciproxy_store_interface::job_bindings::WorkerJobId;
 use ciproxy_store_interface::own_runners::{OwnRunner, RoutingSnapshot};
 use ciproxy_store_interface::runners::{Runner, RunnerPlace, RunnerState};
 use ciproxy_store_interface::tokens::{Token, TokenSubject};
@@ -32,7 +34,12 @@ async fn metadata_http_uses_token_workspace_and_exact_assigned_machine() {
         "machine",
         "runner",
         "completed",
+        "unbound",
+        "raw-scale-set-id",
+        "ambiguous-runner",
+        "ambiguous-job",
     ] {
+        eprintln!("Cache metadata scenario: {scenario}");
         let mut snapshot = assignment();
         let mut token = machine_token();
         match scenario {
@@ -41,6 +48,18 @@ async fn metadata_http_uses_token_workspace_and_exact_assigned_machine() {
             "machine" => token.subject = TokenSubject::Machine(Uuid::from_u128(99)),
             "runner" => snapshot.runners[0].runner.github_id = Some(99),
             "completed" => snapshot.jobs[0].phase = DemandPhase::Completed,
+            "unbound" => snapshot.runners[0].worker_job_id = None,
+            "ambiguous-runner" => {
+                let mut runner = snapshot.runners[0].clone();
+                runner.runner.id = Uuid::from_u128(219);
+                runner.command_id = Uuid::from_u128(218);
+                snapshot.runners.push(runner);
+            }
+            "ambiguous-job" => {
+                let mut job = snapshot.jobs[0].clone();
+                job.id = Uuid::from_u128(217);
+                snapshot.jobs.push(job);
+            }
             _ => {}
         }
         let authentication = MetadataRecordsMock::authenticate.some_call(matching!((hash, at) if
@@ -74,10 +93,15 @@ async fn metadata_http_uses_token_workspace_and_exact_assigned_machine() {
                     .returns(fixtures::at()),
             )),
         });
-        let response = router(service).oneshot(Request::builder().method("POST").uri(CACHE_METADATA_PATH)
+        let request_job = if scenario == "raw-scale-set-id" {
+            17
+        } else {
+            117
+        };
+        let response = router(service.clone()).oneshot(Request::builder().method("POST").uri(CACHE_METADATA_PATH)
             .header("authorization","Bearer synthetic-machine-credential")
             .header("content-type","application/json")
-            .body(Body::from(json!({"job_id":Uuid::from_u128(17).to_string(),"repository":"attacker/repo","ref":"refs/heads/attacker"}).to_string())).unwrap()).await.unwrap();
+            .body(Body::from(json!({"job_id":Uuid::from_u128(request_job).to_string(),"repository":"attacker/repo","ref":"refs/heads/attacker"}).to_string())).unwrap()).await.unwrap();
         assert_eq!(
             response.status(),
             if scenario == "valid" {
@@ -108,6 +132,7 @@ fn assignment() -> RoutingSnapshot {
     job.runner_github_id = Some(71);
     job.scale_set_id = input.scale_sets[0].id;
     input.runners.push(OwnRunner {
+        worker_job_id: Some(WorkerJobId(JobId(Uuid::from_u128(117).to_string()))),
         registration_scale_set_id: Some(2),
         requested_size: input.labels[0].size,
         slot_indices: vec![0],

@@ -4,8 +4,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use ciproxy_protocol::agent::JobPreparationOutcome;
-use ciproxy_protocol::identifiers::{GitRef, JobEvent, JobId, OrganizationId, RepositoryId};
-use ciproxy_protocol::jobs::{JobAssignment, JobFacts, Repository};
+use ciproxy_protocol::identifiers::{GitRef, JobEvent, OrganizationId, RepositoryId};
+use ciproxy_protocol::jobs::{JobAssignment, JobFacts, JobIdBinding, Repository};
 use ciproxy_store_interface::github::GithubJob;
 
 use crate::error::Result;
@@ -23,6 +23,7 @@ pub trait JobAssignments: Send + Sync {
         target: ListenerTarget,
         job: &GithubJob,
         jit: &JitRegistration,
+        job_ids: &JobIdBinding,
     ) -> Result<JobPreparationOutcome>;
 }
 
@@ -39,6 +40,7 @@ impl JobAssignments for AssignmentService {
         target: ListenerTarget,
         job: &GithubJob,
         jit: &JitRegistration,
+        job_ids: &JobIdBinding,
     ) -> Result<JobPreparationOutcome> {
         let snapshot = self.store.snapshot(target).await?;
         let Some(repository) = snapshot
@@ -59,7 +61,7 @@ impl JobAssignments for AssignmentService {
                 },
                 assignment: JobAssignment {
                     run_id: job.run_id.to_string(),
-                    job_id: Some(JobId(job.id.to_string())),
+                    job_ids: job_ids.clone(),
                     runner_id: jit.runner_id.to_string(),
                 },
                 event: JobEvent(job.facts.event.clone()),

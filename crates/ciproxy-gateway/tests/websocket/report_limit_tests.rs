@@ -2,6 +2,7 @@
 
 use ciproxy_protocol::agent::{AgentMessage, ControlMessage};
 use ciproxy_protocol::identifiers::{JobId, RunnerId};
+use ciproxy_protocol::jobs::JobIdBinding;
 use ciproxy_protocol::reports::{MachineReport, SlotOccupancy, SlotReport};
 use ciproxy_protocol::resources::Slots;
 use ciproxy_protocol::runners::RunnerState;
@@ -44,7 +45,10 @@ fn busy_report() -> MachineReport {
             let mut job = sample.clone();
             let job_id = JobId(format!("{index:036}"));
             job.job_id = job_id.clone();
-            job.assignment.job_id = Some(job_id);
+            job.assignment.job_ids = JobIdBinding {
+                worker_job_id: job_id.clone(),
+                scale_set_job_id: job_id,
+            };
             job
         })
         .collect();

@@ -38,6 +38,10 @@ one transaction. A missing runner or command record rolls back both writes.
 An applied command result stays a separate value.
 A retirement saves the trusted GitHub ID, `Stopping`, and its stop command
 in one transaction.
+Worker job binding locks the exact registered machine runner before it
+updates the command. The first write saves the opaque ID. An identical
+replay preserves it. A different ID, invalid scope, missing command, or
+stopped runner returns false. State and command updates preserve the saved ID.
 Guarded result writes lock their guard rows and compare them again in one
 transaction. An own-machine result needs the complete saved guard. A Boat
 result needs only its lifecycle authority: the organization, the

@@ -1,5 +1,6 @@
 ---
 source: crates/ciproxy-protocol/src/_tests_/wire/assertions.rs
+assertion_line: 20
 description: Tagged JSON for agent_hello; all credentials are dummy test values.
 expression: message
 ---
@@ -118,7 +119,10 @@ expression: message
           "repository_id": "repository-1",
           "assignment": {
             "run_id": "run-cache",
-            "job_id": "job-1",
+            "job_ids": {
+              "worker_job_id": "job-1",
+              "scale_set_job_id": "scale-job-1"
+            },
             "runner_id": "github-job-1"
           },
           "job_id": "job-1",
@@ -134,7 +138,10 @@ expression: message
           "repository_id": "repository-1",
           "assignment": {
             "run_id": "run-cache",
-            "job_id": "job-2",
+            "job_ids": {
+              "worker_job_id": "job-2",
+              "scale_set_job_id": "scale-job-2"
+            },
             "runner_id": "github-job-2"
           },
           "job_id": "job-2",
@@ -150,7 +157,10 @@ expression: message
           "repository_id": "repository-1",
           "assignment": {
             "run_id": "run-cache",
-            "job_id": "job-3",
+            "job_ids": {
+              "worker_job_id": "job-3",
+              "scale_set_job_id": "scale-job-3"
+            },
             "runner_id": "github-job-3"
           },
           "job_id": "job-3",
@@ -163,7 +173,10 @@ expression: message
           "repository_id": "repository-1",
           "assignment": {
             "run_id": "run-cache",
-            "job_id": "job-4",
+            "job_ids": {
+              "worker_job_id": "job-4",
+              "scale_set_job_id": "scale-job-4"
+            },
             "runner_id": "github-job-4"
           },
           "job_id": "job-4",

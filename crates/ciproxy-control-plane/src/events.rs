@@ -8,10 +8,12 @@ use ciproxy_store_interface::own_runners::{OwnRunner, OwnRunnerObservation, Rout
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
 use uuid::Uuid;
 
+use crate::assignment::Assignment;
 use crate::docker_budget::policy;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::runtime::MachineRuntime;
-use crate::runtime_inbox::AgentEvent;
+use crate::runtime_agent_event::AgentEvent;
+use crate::runtime_payloads::WorkerJob;
 
 impl MachineRuntime {
     /// Consume a compact event while the caller holds the runtime operation lock.
@@ -20,7 +22,9 @@ impl MachineRuntime {
         workspace_id: Uuid,
         machine_id: Uuid,
         message: AgentEvent,
+        worker: Option<WorkerJob>,
     ) -> Result<()> {
+        let _payload_permit = worker.as_ref().and_then(|worker| worker.permit.clone());
         let Some(lease) = self.store.own_runner_lease(workspace_id).await.internal()? else {
             return Err(Error::StateChanged);
         };
@@ -86,6 +90,10 @@ impl MachineRuntime {
         if runner.runner.state == RunnerState::Stopped && state != RunnerState::Stopped {
             return Ok(());
         }
+        if let Some(worker) = worker {
+            self.bind_worker_job(workspace_id, machine_id, runner, worker)
+                .await?;
+        }
         let protected_ready = state == RunnerState::Ready
             && matches!(
                 runner.runner.state,
@@ -117,19 +125,10 @@ impl MachineRuntime {
 
     pub(crate) async fn route_job(&self, input: &RoutingSnapshot, job: &GithubJob) -> Result<()> {
         let workspace_id = input.workspace_id;
-        if job.phase < DemandPhase::Started {
-            return Ok(());
-        }
-        let Some(github_id) = job.runner_github_id else {
+        let Some(assignment) = Assignment::resolve(input, job) else {
             return Ok(());
         };
-        let Some(runner) = input.runners.iter().find(|runner| {
-            runner.runner.github_id == Some(github_id)
-                && runner.runner.organization_id == job.organization_id
-                && runner.runner.scale_set_id == job.scale_set_id
-        }) else {
-            return Ok(());
-        };
+        let runner = assignment.runner;
         if runner.runner.state == RunnerState::Stopped {
             return Ok(());
         }
@@ -155,7 +154,7 @@ impl MachineRuntime {
                 runner,
                 OwnRunnerObservation {
                     state: RunnerState::Busy,
-                    github_id: Some(github_id),
+                    github_id: runner.runner.github_id,
                     observed_at: self.clock.now(),
                 },
             )
@@ -163,8 +162,7 @@ impl MachineRuntime {
         }
         self.prepare_job(
             workspace_id,
-            runner.runner.id,
-            job,
+            &assignment,
             machine_id,
             policy(input, machine_id),
         )

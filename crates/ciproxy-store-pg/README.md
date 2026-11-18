@@ -85,7 +85,7 @@ The [GitHub job guide](github-jobs.md) gives job demand and timing writes.
 
 The [execution query guide](execution.md) gives the gateway queries, the
 own-machine reservations and routing snapshot, observations, retirement,
-and guarded result writes.
+immutable Worker job bindings, and guarded result writes.
 
 PgStoreFactory connects and applies pending migrations.
 One connector opens every store connection with a 10-second connection timeout
@@ -237,6 +237,8 @@ CI starts the database for the existing workspace test phase.
 - [src/own_runners.rs](src/own_runners.rs) stores exact execution intents.
 - [src/own_observation.rs](src/own_observation.rs) saves one scoped runner
   observation and its first confirmation.
+- [src/own_job_bindings.rs](src/own_job_bindings.rs) binds one Worker job ID
+  under the exact registered machine runner scope.
 - [src/routing_snapshot.rs](src/routing_snapshot.rs) reads coherent routing.
 - [src/own_results.rs](src/own_results.rs) and
   [src/boat_results.rs](src/boat_results.rs) apply guarded remote results.

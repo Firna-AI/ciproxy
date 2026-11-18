@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use ciproxy_protocol::identifiers::{GitRef, JobEvent, JobId, OrganizationId, RepositoryId};
-use ciproxy_protocol::jobs::{JobAssignment, JobFacts, Repository};
+use ciproxy_protocol::jobs::{JobAssignment, JobFacts, JobIdBinding, Repository};
 use ciproxy_protocol::secret::Secret;
 use jsonwebtoken::jwk::JwkSet;
 use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
@@ -42,7 +42,10 @@ pub(super) fn facts() -> JobFacts {
         },
         assignment: JobAssignment {
             run_id: "31".into(),
-            job_id: Some(JobId("job-uuid".into())),
+            job_ids: JobIdBinding {
+                worker_job_id: JobId("11111111-1111-4111-8111-111111111111".into()),
+                scale_set_job_id: JobId("22222222-2222-4222-8222-222222222222".into()),
+            },
             runner_id: "71".into(),
         },
         event: JobEvent("push".into()),
@@ -54,7 +57,7 @@ pub(super) fn facts() -> JobFacts {
 
 pub(super) fn claims(access: Value) -> Value {
     json!({"iss":"https://token.actions.githubusercontent.com", "nbf": NOW - 10, "exp": NOW + 100,
-        "repository_id":"10", "run_id":"31", "runner_id":"71", "job_id":"job-uuid", "ac":access.to_string()})
+        "repository_id":"10", "run_id":"31", "runner_id":"71", "job_id":"11111111-1111-4111-8111-111111111111", "ac":access.to_string()})
 }
 
 pub(super) fn signed(claims: &Value) -> Secret {

@@ -11,6 +11,7 @@ use ciproxy_gateway::types::Session;
 use ciproxy_protocol::agent::{AgentMessage, CommandOutcome};
 use ciproxy_protocol::identifiers::{CommandId, JobId, RunnerId};
 use ciproxy_protocol::runners::RunnerExit;
+use ciproxy_store_interface::job_bindings::WorkerJobId;
 use ciproxy_store_interface::runners::RunnerState;
 use tokio::time::timeout;
 use tracing::instrument::WithSubscriber;
@@ -64,7 +65,7 @@ async fn gateway_queue_saves_valid_runner_and_command_after_invalid_runner_event
             session,
             AgentMessage::JobStarted {
                 runner_id: RunnerId(fixture.intent.runner.id.to_string()),
-                job_id: JobId(Uuid::new_v4().to_string()),
+                job_id: JobId("Worker/job:Opaque-Aa".into()),
             },
         )
         .unwrap();
@@ -85,6 +86,10 @@ async fn gateway_queue_saves_valid_runner_and_command_after_invalid_runner_event
     assert!(current.acknowledged);
     assert_eq!(current.confirmed_at, Some(at()));
     assert_eq!(current.slot_indices, vec![0]);
+    assert_eq!(
+        current.worker_job_id,
+        Some(WorkerJobId(JobId("Worker/job:Opaque-Aa".into())))
+    );
     runtime.shutdown().await.unwrap();
 }
 

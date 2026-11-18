@@ -31,6 +31,7 @@ mod organization_lifecycle;
 mod organization_rows;
 mod organizations;
 mod overflow;
+mod own_job_bindings;
 mod own_lease;
 mod own_observation;
 mod own_reservation;

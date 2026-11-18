@@ -3,8 +3,8 @@
 use std::ops::{Deref, DerefMut};
 
 use axum::{Json, Router, routing};
-use ciproxy_protocol::identifiers::{GitRef, JobEvent, OrganizationId, RepositoryId};
-use ciproxy_protocol::jobs::{JobAssignment, JobFacts, Repository};
+use ciproxy_protocol::identifiers::{GitRef, JobEvent, JobId, OrganizationId, RepositoryId};
+use ciproxy_protocol::jobs::{JobAssignment, JobFacts, JobIdBinding, Repository};
 use ciproxy_protocol::secret::Secret;
 use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
 use serde_json::{Value, json};
@@ -49,7 +49,7 @@ impl JobSpec {
         signed(
             &json!({"iss":"https://token.actions.githubusercontent.com", "nbf":999_000,"exp":2_000_000,
             "repository_id":self.repository.id.0,"run_id":self.assignment.run_id,"runner_id":self.assignment.runner_id,
-            "job_id":self.assignment.job_id.as_ref().map(|id| &id.0),"ac":json!(access).to_string()}),
+            "job_id":self.assignment.job_ids.worker_job_id.0,"ac":json!(access).to_string()}),
         )
     }
 }
@@ -77,7 +77,10 @@ pub fn facts(reference: &str) -> JobSpec {
             },
             assignment: JobAssignment {
                 run_id: "31".into(),
-                job_id: None,
+                job_ids: JobIdBinding {
+                    worker_job_id: JobId("worker-job".into()),
+                    scale_set_job_id: JobId("scale-job".into()),
+                },
                 runner_id: "71".into(),
             },
             event: JobEvent("push".into()),

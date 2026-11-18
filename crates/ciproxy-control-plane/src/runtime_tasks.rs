@@ -12,6 +12,7 @@ use uuid::Uuid;
 
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::runtime_inbox::Event;
+use crate::runtime_payloads::WorkerPayloads;
 use crate::tasks::OwnedTask;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -49,6 +50,7 @@ pub(crate) struct RuntimeTasks {
     pub(crate) handle: Handle,
     pub(crate) inbox: OnceLock<mpsc::Sender<Event>>,
     pub(crate) inbox_owner: Mutex<Option<OwnedTask<()>>>,
+    pub(crate) payloads: Arc<WorkerPayloads>,
 }
 
 impl RuntimeTasks {
@@ -62,6 +64,7 @@ impl RuntimeTasks {
             handle: Handle::current(),
             inbox: OnceLock::new(),
             inbox_owner: Mutex::new(None),
+            payloads: Arc::new(WorkerPayloads::new()),
         });
         let task = tasks
             .handle
@@ -155,6 +158,7 @@ impl RuntimeTasks {
     }
 
     pub(crate) fn cancel(&self) {
+        self.payloads.close();
         if let Some(task) = self
             .inbox_owner
             .lock()
@@ -179,6 +183,7 @@ impl RuntimeTasks {
     }
 
     pub(crate) async fn shutdown(&self) -> Result<()> {
+        self.payloads.close();
         self.state
             .lock()
             .unwrap_or_else(|error| error.into_inner())
@@ -232,6 +237,12 @@ impl RuntimeTasks {
             }
         }
         self.changed.notify_waiters();
+    }
+}
+
+impl Drop for RuntimeTasks {
+    fn drop(&mut self) {
+        self.payloads.close();
     }
 }
 

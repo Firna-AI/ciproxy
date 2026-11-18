@@ -17,7 +17,10 @@ expression: message
       },
       "assignment": {
         "run_id": "123",
-        "job_id": "job-1",
+        "job_ids": {
+          "worker_job_id": "job-1",
+          "scale_set_job_id": "scale-job-1"
+        },
         "runner_id": "456"
       },
       "event": "pull_request",

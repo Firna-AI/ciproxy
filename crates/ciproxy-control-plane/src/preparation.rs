@@ -5,25 +5,29 @@ use ciproxy_github::persistence::session::ListenerTarget;
 use ciproxy_github::scale_sets::JitRegistration;
 use ciproxy_protocol::agent::{ControlMessage, JobPreparationOutcome};
 use ciproxy_protocol::cache::DockerBudget;
-use ciproxy_protocol::identifiers::{CommandId, JobId, RunnerId};
-use ciproxy_store_interface::github::GithubJob;
+use ciproxy_protocol::identifiers::{CommandId, RunnerId};
 use ciproxy_store_interface::runtime_results::OwnRunnerResult;
 use uuid::Uuid;
 
+use crate::assignment::Assignment;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::runtime::MachineRuntime;
 use crate::runtime_tasks::Work;
 
 impl MachineRuntime {
-    /// Retain one job, its saved authority, and its computed machine policy.
+    /// Retain one job, both job IDs, saved authority, and computed machine policy.
     pub(crate) async fn prepare_job(
         &self,
         workspace: Uuid,
-        runner_id: Uuid,
-        job: &GithubJob,
+        assignment: &Assignment<'_>,
         machine: Uuid,
         budget: Option<DockerBudget>,
     ) -> Result<()> {
+        let Some(job_ids) = assignment.job_ids() else {
+            return Ok(());
+        };
+        let runner_id = assignment.runner.runner.id;
+        let job = assignment.job;
         let store = self.store.clone();
         let expected =
             tokio::task::spawn_blocking(move || store.own_runner_guard(workspace, runner_id))
@@ -45,7 +49,7 @@ impl MachineRuntime {
             };
             let outcome = runtime
                 .assignments
-                .facts(target, &job, &jit)
+                .facts(target, &job, &jit, &job_ids)
                 .await
                 .internal()?;
             let _operation = runtime.operation.lock().await;
@@ -73,7 +77,7 @@ impl MachineRuntime {
             let message = ControlMessage::JobPreparation {
                 command_id: CommandId(runtime.clock.uuid().to_string()),
                 runner_id: RunnerId(runner_id.to_string()),
-                job_id: JobId(job.id.to_string()),
+                job_id: job_ids.worker_job_id,
                 outcome,
             };
             let gateway = runtime.gateway.clone();
