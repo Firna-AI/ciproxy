@@ -109,13 +109,6 @@ pub enum GuestToAgent {
         /// Runner whose startup completed.
         runner_id: RunnerId,
     },
-    /// Identify the job taken by the runner, without asserting its scope.
-    JobStarted {
-        /// Runner that took its one job.
-        runner_id: RunnerId,
-        /// GitHub identity to correlate with control-plane job facts.
-        job_id: JobId,
-    },
     /// Report the runner exit so the agent can tear down its fresh VM.
     RunnerExited {
         /// Runner whose process ended.

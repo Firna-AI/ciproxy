@@ -4,13 +4,11 @@
   **Confidence:** High. **Harder later:** No.
 - **Kind:** Needs decision.
 - **Added:** 2026-11-17, from the final review of 17 November 2026 of the
-  branch `calummoore/ci-proxy-load-balancer`, finding 101, with a new
-  problem that its check found: no code creates the Docker bridge
-  `ciproxy0`.
+  branch `calummoore/ci-proxy-load-balancer`, finding 101.
 - **Source:** Review.
 - **Category:** Product bug.
 - **Location:** `image/boat-run.sh:9`, `image/boat-run.sh:20`,
-  `image/boat-run.sh:26`, `image/boat-run.sh:28`, `image/boat.md:123`,
+  `image/boat-run.sh:26`, `image/boat.md:123`,
   `docs/protocol/agent-images.md:24`, and
   `crates/ciproxy-scaler/src/size_policy.rs:28`.
 - **Reason:** No option is clearly best: B needs a live Boat proof, C
@@ -66,7 +64,7 @@
     wrapper.
   - The live run of 17 November 2026 stopped before the wrapper ran. The
     pinned Boat client rejected Boat's upload acknowledgement, so no Boat
-    runner started. So that run did not test the bridge defect below.
+    runner started. So that run did not test the image services.
   - Boat documents nested virtualization: every sandbox has `/dev/kvm`, so
     Firecracker runs at full speed inside it. Source:
     [Boat virtualization](https://docs.boat.dev/machines/virtualization.md).
@@ -85,17 +83,8 @@
     PostgreSQL passes, and a later step cannot connect.
   - `sudo systemctl restart docker` also does nothing. Tools that need the
     system bus, such as `timedatectl`, cannot work.
-  - The wrapper starts Docker with `--bridge=ciproxy0`, at
-    `image/boat-run.sh:28`. No code creates that bridge. Docker does not
-    create a bridge with a name other than its default. Its `setupDevice`
-    says: "bridge device with non default name ... must be created
-    manually".
-  - So on a real Boat sandbox, the daemon stops at once. The 60-second
-    check fails, and no runner starts. The stub in
-    `image/check-boat-run.py` hides this.
 - **Impact if no action:** Workflows that start installed services work on
-  customer machines and fail when they overflow to Boat. While the bridge
-  defect stays, no Boat job starts at all.
+  customer machines and fail when they overflow to Boat.
 - **Root question:** How can a Boat job run on the same booted system as a
   job on a customer machine, so that unchanged workflows behave the same?
 - **Options:**
@@ -110,7 +99,7 @@
       network.
     - Extend the Boat smoke: start an installed service, and check that it
       is ready.
-    - B removes the separate Docker start, and with it the bridge defect.
+    - B removes the separate Docker start.
     - Cost: B needs a proof that the image's systemd runs in a Boat
       sandbox, with Docker under it in that namespace. The provider kernel
       stays, so the kernel, container-detection, and size differences stay.
@@ -129,7 +118,7 @@
     - Extend the Boat smoke with an installed service.
     - The job then gets the kernel and the services of a machine. It also
       gets the vCPU and the memory of its label, as on a machine.
-    - C removes the separate Docker start, and with it the bridge defect.
+    - C removes the separate Docker start.
     - Cost: each Boat job pays the overhead of a nested VM. The sandbox
       needs memory for the host and for the VM. So a label whose memory
       fills a Boat size can need the next size. An example is
@@ -145,8 +134,7 @@
     - Explain the difference in `image/boat.md`.
     - Name the workarounds: a `services:` container, or a label that does
       not allow Boat.
-    - D keeps the separate Docker start, so the bridge defect needs its own
-      fix in the wrapper.
+    - D keeps the separate Docker start.
     - Cost: workflows that start services still fail on Boat. D reverses
       part of a user decision and part of a public promise.
     - Effort: Small.
@@ -173,8 +161,8 @@
 - **Recommendation:** B. It covers the whole class of service-manager
   problems, with `systemctl restart docker` and the system-bus tools. It
   adds no nested VM, needs no larger Boat sizes, and removes the separate
-  Docker start with its bridge defect. Choose C if the user also wants the
-  same kernel, or if Docker cannot run under the image's systemd in the
+  Docker start. Choose C if the user also wants the same kernel, or if
+  Docker cannot run under the image's systemd in the
   Boat namespace. C best protects the codebase, because it boots the same
   system as a machine.
 - **Action:** ask the user, because no option is clearly best. B needs a

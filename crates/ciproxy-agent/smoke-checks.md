@@ -126,7 +126,8 @@ endpoint. Earlier agent release assets do not contain that executable.
 Prepare matching verified archives before the live host check.
 Set `CIPROXY_RELEASE_SERVER_URL` to the trusted disposable release endpoint.
 Build the release binaries with the GNU target and glibc check from CI.
-Package both with `scripts/cli-release.sh package`.
+Package both with
+`crates/ciproxy-agent/scripts/cli-release.sh package`.
 
 The operator can prepare a GitHub release from those verified assets:
 

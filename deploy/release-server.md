@@ -53,7 +53,8 @@ The agent install command therefore runs `install --token` after download.
 See the [agent install contract](../docs/protocol/agent.md#install).
 
 The archive contract is unchanged at this revision.
-The repository's `scripts/cli-release.sh package` writes
+The repository's
+`crates/ciproxy-agent/scripts/cli-release.sh package` writes
 `<binary>-<version>-<target>.tar.gz` and its `.sha256` sidecar.
 The archive contains `<binary>-<version>-<target>/<binary>` as an executable.
 The sidecar holds the archive's hexadecimal SHA-256.

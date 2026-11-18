@@ -25,7 +25,6 @@ pub(crate) trait Daemon: Send + Sync {
         identity: Option<Identity>,
         guests: mpsc::Receiver<GuestEvent>,
         removing: bool,
-        removal: mpsc::Receiver<()>,
     ) -> Result<()>;
 }
 
@@ -50,7 +49,6 @@ impl Daemon for AgentDaemon {
         identity: Option<Identity>,
         guests: mpsc::Receiver<GuestEvent>,
         removing: bool,
-        removal: mpsc::Receiver<()>,
     ) -> Result<()> {
         if !removing && identity.is_none() {
             return Err(Error::NotInstalled);
@@ -85,7 +83,7 @@ impl Daemon for AgentDaemon {
             connected,
         };
         let result = tokio::select! {
-            result = self.run_loop(identity, guests, removing, removal, input) => result,
+            result = self.run_loop(identity, guests, removing, input) => result,
             result = reports => result,
         };
         tasks.shutdown().await;
@@ -99,14 +97,12 @@ impl AgentDaemon {
         identity: Option<Identity>,
         mut guests: mpsc::Receiver<GuestEvent>,
         mut removing: bool,
-        mut removal: mpsc::Receiver<()>,
         mut channels: LoopChannels,
     ) -> Result<()> {
         let mut reconnections = JoinSet::new();
         let (reconnected, mut status) = mpsc::channel(1);
         let mut connection_state = channels.connected.subscribe();
         let mut connecting = false;
-        let mut removal_open = true;
         let mut pending_work = None;
         let mut completion_requested = true;
         let mut terminal_complete = false;
@@ -186,10 +182,6 @@ impl AgentDaemon {
                         }
                         None => break Err(Error::Disconnected),
                     }
-                }
-                event = removal.recv(), if removal_open => {
-                    match event { Some(()) => { self.agent.remove().await?; removing = true; completion_requested = true; }, None => removal_open = false }
-                    None
                 }
                 _ = connection_state.changed() => { None }
             };

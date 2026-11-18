@@ -1,7 +1,7 @@
 //! Graceful shutdown keeps a raced job alive until the guest or unit exits.
 
 use ciproxy_protocol::agent::{AgentMessage, CommandFailure, CommandOutcome, ControlMessage};
-use ciproxy_protocol::guest::GuestToAgent;
+use ciproxy_protocol::guest::{AgentToGuest, GuestToAgent, JobDecision};
 use ciproxy_protocol::identifiers::{CommandId, JobId, RunnerId};
 use ciproxy_protocol::runners::{RunnerExit, RunnerState};
 use unimock::{MockFn, Unimock, matching};
@@ -9,6 +9,7 @@ use unimock::{MockFn, Unimock, matching};
 use crate::boundaries::GuestProvenance;
 use crate::boundaries::{CacheMock, StoreMock, VmsMock};
 use crate::cache_authority::CacheAuthority;
+use crate::cache_authority_tests::original;
 use crate::controller::Agent;
 use crate::fixtures::github_decision_sent;
 use crate::fixtures::{applied, controller, vm};
@@ -111,13 +112,17 @@ async fn drain_waits_for_confirmed_stop_and_keeps_jobs_until_resume() {
 }
 
 #[tokio::test]
-async fn a_late_job_started_survives_pending_removal_until_runner_exit() {
+async fn a_late_job_starting_survives_pending_removal_until_runner_exit() {
     let mock = Unimock::new((
         VmsMock::networks.some_call(matching!()).returns(Ok(Vec::new())),
         VmsMock::remove_network.some_call(matching!(1)).returns(Ok(())),
         StoreMock::save.each_call(matching!(_)).answers(&|_, _| Ok(())),
         VmsMock::request_stop.some_call(matching!(_)).returns(Ok(())),
         VmsMock::configuration_lost.some_call(matching!(_)).returns(Ok(false)),
+        VmsMock::send.each_call(matching!((_, message) if *message == &AgentToGuest::PrepareJob {
+            job_id: JobId("raced-job".to_owned()),
+            decision: JobDecision::GitHubOnly,
+        })).answers(&|_, _, _| Ok(())),
         VmsMock::stop.some_call(matching!((record) if record.report.state == RunnerState::Running { job_id: JobId("raced-job".to_owned()) })).returns(Ok(())),
         CacheMock::release.some_call(matching!(_)).returns(Ok(())),
     ));
@@ -144,9 +149,10 @@ async fn a_late_job_started_survives_pending_removal_until_runner_exit() {
             .guest(
                 GuestProvenance::InitialConfiguration,
                 "runner",
-                GuestToAgent::JobStarted {
+                GuestToAgent::JobStarting {
                     runner_id: RunnerId("runner".to_owned()),
-                    job_id: JobId("raced-job".to_owned())
+                    job_id: JobId("raced-job".to_owned()),
+                    runtime: original(),
                 }
             )
             .await

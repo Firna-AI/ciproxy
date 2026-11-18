@@ -35,8 +35,8 @@ Build and package the GNU binary for glibc 2.17 or later:
 ```sh
 python3 -m pip install cargo-zigbuild
 cargo zigbuild --locked --release --package ciproxy-agent --target x86_64-unknown-linux-gnu.2.17
-scripts/cli-release.sh verify-glibc target/x86_64-unknown-linux-gnu/release/ciproxy-agent 2.17
-scripts/cli-release.sh package ciproxy-agent 0.1.0 x86_64-unknown-linux-gnu target/x86_64-unknown-linux-gnu/release/ciproxy-agent .context/agent-release
+crates/ciproxy-agent/scripts/cli-release.sh verify-glibc target/x86_64-unknown-linux-gnu/release/ciproxy-agent 2.17
+crates/ciproxy-agent/scripts/cli-release.sh package ciproxy-agent 0.1.0 x86_64-unknown-linux-gnu target/x86_64-unknown-linux-gnu/release/ciproxy-agent .context/agent-release
 ```
 
 Use the version from the agent manifest.
