@@ -4,9 +4,9 @@ use ciproxy_github::persistence::lease::LeaseStore;
 use ciproxy_github::persistence::session::ListenerTarget;
 use ciproxy_github::scale_sets::JitRegistration;
 use ciproxy_protocol::agent::{ControlMessage, JobPreparationOutcome};
+use ciproxy_protocol::cache::DockerBudget;
 use ciproxy_protocol::identifiers::{CommandId, JobId, RunnerId};
 use ciproxy_store_interface::github::GithubJob;
-use ciproxy_store_interface::own_runners::{OwnRunner, RoutingSnapshot};
 use ciproxy_store_interface::runtime_results::OwnRunnerResult;
 use uuid::Uuid;
 
@@ -15,23 +15,23 @@ use crate::runtime::MachineRuntime;
 use crate::runtime_tasks::Work;
 
 impl MachineRuntime {
+    /// Retain one job, its saved authority, and its computed machine policy.
     pub(crate) async fn prepare_job(
         &self,
-        input: &RoutingSnapshot,
-        runner: &OwnRunner,
+        workspace: Uuid,
+        runner_id: Uuid,
         job: &GithubJob,
         machine: Uuid,
+        budget: Option<DockerBudget>,
     ) -> Result<()> {
-        let workspace = input.workspace_id;
         let store = self.store.clone();
-        let id = runner.runner.id;
-        let expected = tokio::task::spawn_blocking(move || store.own_runner_guard(workspace, id))
-            .await
-            .internal()?
-            .internal()?
-            .ok_or(Error::StateChanged)?;
+        let expected =
+            tokio::task::spawn_blocking(move || store.own_runner_guard(workspace, runner_id))
+                .await
+                .internal()?
+                .internal()?
+                .ok_or(Error::StateChanged)?;
         let job = job.clone();
-        let input = input.clone();
         let runtime = self.worker();
         self.dispatch(Work::Preparation(job.id), async move {
             let target = ListenerTarget {
@@ -64,13 +64,15 @@ impl MachineRuntime {
                 return Ok(());
             }
             if matches!(outcome, JobPreparationOutcome::TrustedFacts { .. })
-                && !runtime.send_docker_budget(&input, machine).await?
+                && !runtime
+                    .send_docker_budget(workspace, machine, budget)
+                    .await?
             {
                 return Ok(());
             }
             let message = ControlMessage::JobPreparation {
                 command_id: CommandId(runtime.clock.uuid().to_string()),
-                runner_id: RunnerId(id.to_string()),
+                runner_id: RunnerId(runner_id.to_string()),
                 job_id: JobId(job.id.to_string()),
                 outcome,
             };

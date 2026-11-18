@@ -77,10 +77,13 @@ A full report that omits a confirmed runner releases it only when the report
 arrived after that confirmation. Absence alone never stops an unconfirmed
 start.
 
-The gateway callbacks put each agent event and each machine removal on one
-queue, in arrival order, and return at once. The queue holds up to 1024
-events. One supervised runtime task handles them one at a time. It skips an
-agent event whose connection is no longer the current one of its machine.
+The gateway callbacks put runner observations, command results, and machine
+removals on one queue, in arrival order, and return at once. The queue holds
+up to 1024 events. Each queued event holds only fixed-size identities,
+runner states, and command outcomes. It retains no wire strings or reports.
+One supervised runtime task handles events one at a time. After it takes
+the operation lock, it skips an agent event whose connection is no longer
+the current one of its machine.
 When the handling of an event fails or panics, the runtime logs a warning
 and handles the next event. The machine stays connected. The runtime logs a
 warning when it drops an event because the queue is full. The next full

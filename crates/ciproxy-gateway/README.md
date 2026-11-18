@@ -65,6 +65,14 @@ a lifecycle message does not close the connection. The runtime logs a
 warning instead. Hosted logging excludes dependency targets that can expose
 frame contents at every verbosity.
 
+A first-message deadline closes with code 1008 and the fixed reason
+`[gateway] handshake timed out`. The close operation sends the close frame
+and waits for the peer reply within one time limit. Failed authentication
+keeps its admission slot until that operation ends. Successful
+authentication releases the slot before its reply reaches the agent.
+[Agent connection](../../docs/protocol/agent-connection.md) defines the
+message size, frame size, admission count, and time limits.
+
 ### Integration boundary
 
 1. Open the PostgreSQL store through `PgStoreFactory`. It applies the
@@ -136,6 +144,8 @@ cargo clippy --package ciproxy-gateway --all-targets -- -D warnings
 - [src/gateway.rs](src/gateway.rs) defines `MachineGateway` and its service.
 - [src/boundary.rs](src/boundary.rs) defines authority, time, and events.
 - [src/transport.rs](src/transport.rs) serves the agent WebSocket route.
+  `WebSocketTransport::new` uses the production limits. `TransportLimits`
+  and `WebSocketTransport::with_limits` set explicit limits at composition.
 - [src/connections.rs](src/connections.rs) routes local commands by session.
 - [src/types.rs](src/types.rs) defines identities and machine actions.
 - [src/logging.rs](src/logging.rs) protects hosted subscribers from raw

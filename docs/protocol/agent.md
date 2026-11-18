@@ -121,18 +121,8 @@ runs on own machines.
 
 ## Connection
 
-- The agent connects out to the
-  [control plane](../architecture.md#components).
-- The own machine opens no inbound port.
-- The own machine needs outbound HTTPS to the control plane, to GitHub, and
-  to the download site.
-- The agent reports to the control plane every 10 seconds.
-- The dashboard shows a machine without contact for 60 seconds as offline.
-- [Failures](job-routing.md#failures) says what happens to the jobs of an
-  offline machine.
-- When the connection fails, the agent keeps its running job VMs and its
-  [warm runners](job-routing.md#warm-runners).
-- The agent then tries to connect again.
+[Agent connection](agent-connection.md) holds the rules of the connection.
+[Contact](agent-connection.md#contact) says when an own machine is offline.
 
 ## Machine identity
 
@@ -248,6 +238,7 @@ runs on own machines.
 ## Related docs
 
 - [Architecture](../architecture.md): the components and the data flow.
+- [Agent connection](agent-connection.md): the connection and its limits.
 - [Agent endpoint](agent-endpoint.md): the control plane of an install and
   of the machine credential.
 - [Labels](labels.md): the labels and the size of each job VM.

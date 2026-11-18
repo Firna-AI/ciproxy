@@ -41,6 +41,7 @@ mod own_replacement_tests;
 mod preparation_delivery_tests;
 mod progress_socket;
 mod progress_support;
+mod queued_event_tests;
 mod recovery_support;
 mod registration_race;
 mod reinstall_removal_tests;

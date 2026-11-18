@@ -1,33 +1,42 @@
 //! Reconcile authenticated agent observations with durable GitHub identities.
 
-use ciproxy_protocol::agent::{AgentMessage, CommandOutcome};
+use ciproxy_github::persistence::lease::LeaseStore;
+use ciproxy_protocol::agent::CommandOutcome;
 use ciproxy_store_interface::github::{DemandPhase, GithubJob};
 use ciproxy_store_interface::organizations::AppState;
 use ciproxy_store_interface::own_runners::{OwnRunner, OwnRunnerObservation, RoutingSnapshot};
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
 use uuid::Uuid;
 
+use crate::docker_budget::policy;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::runtime::MachineRuntime;
+use crate::runtime_inbox::AgentEvent;
 
 impl MachineRuntime {
+    /// Consume a compact event while the caller holds the runtime operation lock.
     pub(crate) async fn agent_event(
         &self,
         workspace_id: Uuid,
         machine_id: Uuid,
-        message: AgentMessage,
+        message: AgentEvent,
     ) -> Result<()> {
-        if let AgentMessage::CommandResult {
+        let Some(lease) = self.store.own_runner_lease(workspace_id).await.internal()? else {
+            return Err(Error::StateChanged);
+        };
+        lease.check().await.internal()?;
+        if let AgentEvent::CommandResult {
             command_id,
             outcome,
-        } = &message
+            canonical,
+        } = message
         {
             let image_command = {
                 let mut requests = self.image_requests.lock().await;
                 let key = (workspace_id, machine_id);
                 let matched = requests
                     .get(&key)
-                    .is_some_and(|request| request.command_id.to_string() == command_id.0);
+                    .is_some_and(|request| canonical && request.command_id == command_id);
                 if matched {
                     requests.remove(&key);
                 }
@@ -36,12 +45,9 @@ impl MachineRuntime {
             if image_command {
                 return Ok(());
             }
-            let Ok(command) = command_id.0.parse() else {
-                return Ok(());
-            };
             let store = self.store.clone();
             let Some(runner) =
-                tokio::task::spawn_blocking(move || store.own_command(workspace_id, command))
+                tokio::task::spawn_blocking(move || store.own_command(workspace_id, command_id))
                     .await
                     .internal()?
                     .internal()?
@@ -51,7 +57,7 @@ impl MachineRuntime {
             require_machine(&runner, machine_id)?;
             let store = self.store.clone();
             let command = runner.command_id;
-            let applied = *outcome == CommandOutcome::Applied;
+            let applied = outcome == CommandOutcome::Applied;
             let at = self.clock.now();
             tokio::task::spawn_blocking(move || {
                 store.record_own_command_result(workspace_id, command, applied, at)
@@ -67,15 +73,14 @@ impl MachineRuntime {
         }
         let input = self.load(workspace_id).await?;
         let (id, state) = match message {
-            AgentMessage::RunnerReady { runner_id } => (runner_id, RunnerState::Ready),
-            AgentMessage::JobStarted { runner_id, .. } => (runner_id, RunnerState::Busy),
-            AgentMessage::RunnerExited { runner_id, .. } => (runner_id, RunnerState::Stopped),
-            _ => return Ok(()),
+            AgentEvent::Runner { runner_id, state } => (runner_id, state),
+            AgentEvent::InvalidRunner => return Err(Error::RunnerOwnership),
+            AgentEvent::CommandResult { .. } => return Ok(()),
         };
         let runner = input
             .runners
             .iter()
-            .find(|runner| runner.runner.id.to_string() == id.0)
+            .find(|runner| runner.runner.id == id)
             .ok_or(Error::RunnerOwnership)?;
         require_machine(runner, machine_id)?;
         if runner.runner.state == RunnerState::Stopped && state != RunnerState::Stopped {
@@ -156,7 +161,14 @@ impl MachineRuntime {
             )
             .await?;
         }
-        self.prepare_job(input, runner, job, machine_id).await
+        self.prepare_job(
+            workspace_id,
+            runner.runner.id,
+            job,
+            machine_id,
+            policy(input, machine_id),
+        )
+        .await
     }
 }
 

@@ -11,13 +11,16 @@ use uuid::Uuid;
 
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::runtime::{MachineRuntime, OwnMachines};
-use crate::runtime_inbox::Event;
+use crate::runtime_inbox::{AgentEvent, Event};
 
 #[async_trait]
 impl OwnMachines for MachineRuntime {
     fn enqueue_agent(&self, session: Session, message: AgentMessage) {
+        let Some(message) = AgentEvent::from_message(message) else {
+            return;
+        };
         if let Ok(tasks) = self.task_scope() {
-            tasks.enqueue(self.worker(), Event::Agent(session, Box::new(message)));
+            tasks.enqueue(self.worker(), Event::Agent(session, message));
         }
     }
 
@@ -86,10 +89,9 @@ impl OwnMachines for MachineRuntime {
         message: AgentMessage,
     ) -> Result<()> {
         let _operation = self.operation.lock().await;
-        let Some(lease) = self.store.own_runner_lease(workspace_id).await.internal()? else {
-            return Err(Error::StateChanged);
+        let Some(message) = AgentEvent::from_message(message) else {
+            return Ok(());
         };
-        lease.check().await.internal()?;
         self.agent_event(workspace_id, machine_id, message).await
     }
 

@@ -3,7 +3,9 @@
 use std::sync::Arc;
 
 use ciproxy_gateway::types::Session;
-use ciproxy_protocol::agent::AgentMessage;
+use ciproxy_protocol::agent::{AgentMessage, CommandOutcome};
+use ciproxy_protocol::identifiers::RunnerId;
+use ciproxy_store_interface::runners::RunnerState;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
@@ -12,8 +14,63 @@ use crate::runtime::{MachineRuntime, OwnMachines};
 use crate::runtime_tasks::RuntimeTasks;
 use crate::tasks::OwnedTask;
 
+/// Bounded runtime observations with no retained wire strings or reports.
+#[derive(Clone, Copy)]
+pub(crate) enum AgentEvent {
+    Runner {
+        runner_id: Uuid,
+        state: RunnerState,
+    },
+    CommandResult {
+        command_id: Uuid,
+        outcome: CommandOutcome,
+        /// Image results must match the canonical text of the issued command.
+        canonical: bool,
+    },
+    InvalidRunner,
+}
+
+impl AgentEvent {
+    pub(crate) fn from_message(message: AgentMessage) -> Option<Self> {
+        match message {
+            AgentMessage::RunnerReady { runner_id } => {
+                Some(Self::runner(runner_id, RunnerState::Ready))
+            }
+            AgentMessage::JobStarted { runner_id, .. } => {
+                Some(Self::runner(runner_id, RunnerState::Busy))
+            }
+            AgentMessage::RunnerExited { runner_id, .. } => {
+                Some(Self::runner(runner_id, RunnerState::Stopped))
+            }
+            AgentMessage::CommandResult {
+                command_id,
+                outcome,
+            } => {
+                let id = command_id.0.parse::<Uuid>().ok()?;
+                Some(Self::CommandResult {
+                    command_id: id,
+                    outcome,
+                    canonical: id.to_string() == command_id.0,
+                })
+            }
+            _ => None,
+        }
+    }
+
+    fn runner(runner_id: RunnerId, state: RunnerState) -> Self {
+        match runner_id.0.parse::<Uuid>() {
+            Ok(id) if id.to_string() == runner_id.0 => Self::Runner {
+                runner_id: id,
+                state,
+            },
+            _ => Self::InvalidRunner,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
 pub(crate) enum Event {
-    Agent(Session, Box<AgentMessage>),
+    Agent(Session, AgentEvent),
     Removed(Uuid, Uuid),
 }
 
@@ -54,6 +111,7 @@ impl RuntimeTasks {
 async fn consume(runtime: &MachineRuntime, event: Event) -> Result<()> {
     match event {
         Event::Agent(session, message) => {
+            let _operation = runtime.operation.lock().await;
             let store = runtime.store.clone();
             let current = tokio::task::spawn_blocking(move || {
                 store.machine_session(session.workspace_id, session.machine_id)
@@ -63,7 +121,7 @@ async fn consume(runtime: &MachineRuntime, event: Event) -> Result<()> {
             .internal()?;
             if current == Some(session.id) {
                 runtime
-                    .agent(session.workspace_id, session.machine_id, *message)
+                    .agent_event(session.workspace_id, session.machine_id, message)
                     .await?;
             }
             Ok(())

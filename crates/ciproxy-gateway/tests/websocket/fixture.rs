@@ -8,7 +8,7 @@ use ciproxy_gateway::boundary::{AgentEvents, Authorization, Clock, Entropy};
 use ciproxy_gateway::connections::{Connections, LocalConnections};
 use ciproxy_gateway::error::{Error, Result};
 use ciproxy_gateway::gateway::{Gateway, MachineGateway};
-use ciproxy_gateway::transport::{AgentTransport, WebSocketTransport};
+use ciproxy_gateway::transport::{AgentTransport, TransportLimits, WebSocketTransport};
 use ciproxy_gateway::types::Session;
 use ciproxy_protocol::agent::AgentMessage;
 use ciproxy_protocol::secret::Secret;
@@ -92,6 +92,14 @@ pub(super) struct Fixture {
 
 impl Fixture {
     pub(super) async fn start() -> Self {
+        Self::start_with_options(None).await
+    }
+
+    pub(super) async fn start_with_limits(limits: TransportLimits) -> Self {
+        Self::start_with_options(Some(limits)).await
+    }
+
+    async fn start_with_options(limits: Option<TransportLimits>) -> Self {
         let database = Database::new();
         database.workspace(WORKSPACE);
         database.workspace(OTHER);
@@ -107,8 +115,13 @@ impl Fixture {
             connections.clone(),
             Arc::new(Events(sender)),
         ));
-        let transport: &dyn AgentTransport =
-            &WebSocketTransport::new(gateway.clone(), connections.clone());
+        let transport = match limits {
+            Some(limits) => {
+                WebSocketTransport::with_limits(gateway.clone(), connections.clone(), limits)
+            }
+            None => WebSocketTransport::new(gateway.clone(), connections.clone()),
+        };
+        let transport: &dyn AgentTransport = &transport;
         let router = transport.router();
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let url = format!("ws://{}/agent/", listener.local_addr().unwrap());
