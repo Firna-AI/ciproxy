@@ -30,7 +30,7 @@ fn rsa_app_jwt_signs_current_issuer_and_bounded_times_after_clock_advances() {
             .once();
     })));
     let signer = RsaAppJwt::from_pem(
-        "test-app-client-id".to_owned(),
+        "test-app-issuer".to_owned(),
         include_bytes!("fixtures/app-test-private-key.pem"),
         runtime,
     )
@@ -51,7 +51,7 @@ fn rsa_app_jwt_signs_current_issuer_and_bounded_times_after_clock_advances() {
         assert_eq!(
             decoded.claims,
             Claims {
-                iss: "test-app-client-id".to_owned(),
+                iss: "test-app-issuer".to_owned(),
                 iat: issued,
                 exp: expires,
             }

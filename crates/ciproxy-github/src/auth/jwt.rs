@@ -13,7 +13,7 @@ use super::AppJwt;
 
 /// A control-plane RSA signer. Its key never leaves this object.
 pub struct RsaAppJwt {
-    client_id: String,
+    issuer: String,
     key: EncodingKey,
     runtime: Arc<dyn Runtime>,
 }
@@ -27,9 +27,9 @@ struct Claims<'a> {
 
 impl RsaAppJwt {
     /// Parse the App's RSA key at the composition root.
-    pub fn from_pem(client_id: String, pem: &[u8], runtime: Arc<dyn Runtime>) -> Result<Self> {
+    pub fn from_pem(issuer: String, pem: &[u8], runtime: Arc<dyn Runtime>) -> Result<Self> {
         Ok(Self {
-            client_id,
+            issuer,
             key: EncodingKey::from_rsa_pem(pem).internal()?,
             runtime,
         })
@@ -40,7 +40,7 @@ impl AppJwt for RsaAppJwt {
     fn token(&self) -> Result<SecretString> {
         let now = self.runtime.now().timestamp();
         let claims = Claims {
-            iss: &self.client_id,
+            iss: &self.issuer,
             iat: now - 60,
             exp: now + 480,
         };

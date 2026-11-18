@@ -1,7 +1,7 @@
 //! Dedicated advisory-lock sessions and digest-only workspace authentication.
 
 use ciproxy_schema::overflow::{overflow_locks, overflow_starts};
-use ciproxy_store_interface::error::{Result, ResultExt};
+use ciproxy_store_interface::error::Result;
 use ciproxy_store_interface::overflow::store::{OverflowSession, OverflowStore};
 use ciproxy_store_interface::secrets::TokenHash;
 use diesel::prelude::*;
@@ -9,6 +9,7 @@ use diesel::sql_types::{BigInt, Bool};
 use uuid::Uuid;
 
 use crate::connection::PgStore;
+use crate::connector::ConnectionUse;
 use crate::error::QueryResultExt;
 
 use super::Session;
@@ -71,8 +72,5 @@ fn session_connection(store: &PgStore, workspace_id: Uuid) -> Result<(PgConnecti
             .first::<i64>(&mut *connection)
             .store()?
     };
-    Ok((
-        PgConnection::establish(&store.database_url).internal()?,
-        key,
-    ))
+    Ok((store.connector.connect(ConnectionUse::Queries)?, key))
 }

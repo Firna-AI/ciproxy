@@ -61,6 +61,7 @@ pub(crate) fn register(connection: &mut PgConnection, registration: &Registratio
         .values((
             machines::id.eq(registration.machine_id),
             machines::workspace_id.eq(workspace),
+            machines::registered_at.eq(registration.contact.at),
             &observed,
         ))
         .execute(connection)

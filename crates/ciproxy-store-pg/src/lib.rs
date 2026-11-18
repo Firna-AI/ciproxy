@@ -8,6 +8,7 @@ mod boat_registration_ownership;
 mod boat_results;
 mod boat_runtime;
 mod connection;
+mod connector;
 mod dashboard;
 mod error;
 mod exact_size;

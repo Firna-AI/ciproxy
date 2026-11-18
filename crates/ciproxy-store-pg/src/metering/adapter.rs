@@ -1,14 +1,9 @@
 //! Store-interface implementation for metering persistence.
 
-use chrono::{DateTime, NaiveDate, Utc};
-use ciproxy_schema::machines::machines;
-use ciproxy_schema::metering::metering_periods;
-use ciproxy_schema::workspaces::workspaces;
+use chrono::NaiveDate;
 use ciproxy_store_interface::error::Result;
 use ciproxy_store_interface::metering::facts::WorkspaceUsage;
-use ciproxy_store_interface::metering::history::{
-    BoatAccounting, BoatCost, MachineCost, Period, PlanCost,
-};
+use ciproxy_store_interface::metering::history::{BoatAccounting, BoatCost, MachineCost, PlanCost};
 use ciproxy_store_interface::metering::report::SavingsSnapshot;
 use ciproxy_store_interface::metering::store::MeteringStore;
 use ciproxy_store_interface::metering::totals::{
@@ -18,7 +13,7 @@ use diesel::prelude::*;
 use uuid::Uuid;
 
 use crate::connection::PgStore;
-use crate::error::{QueryResultExt, require_record};
+use crate::error::QueryResultExt;
 use crate::gateway_transaction::read_snapshot;
 use crate::overflow::accounting;
 
@@ -43,36 +38,6 @@ impl MeteringStore for PgStore {
         snapshot::transaction(&mut *self.connection()?)
             .run(|connection| facts::load(connection, workspace_id))
             .store()
-    }
-
-    fn record_workspace_start(&self, workspace_id: Uuid, at: DateTime<Utc>) -> Result<()> {
-        diesel::update(
-            workspaces::table
-                .find(workspace_id)
-                .filter(workspaces::metering_started_at.is_null()),
-        )
-        .set(workspaces::metering_started_at.eq(at))
-        .execute(&mut *self.connection()?)
-        .store()?;
-        Ok(())
-    }
-
-    fn record_machine_registration(
-        &self,
-        workspace_id: Uuid,
-        machine_id: Uuid,
-        at: DateTime<Utc>,
-    ) -> Result<()> {
-        diesel::update(
-            machines::table
-                .filter(machines::workspace_id.eq(workspace_id))
-                .find(machine_id)
-                .filter(machines::registered_at.is_null()),
-        )
-        .set(machines::registered_at.eq(at))
-        .execute(&mut *self.connection()?)
-        .store()?;
-        Ok(())
     }
 
     fn save_machine_cost(&self, workspace_id: Uuid, cost: &MachineCost) -> Result<()> {
@@ -101,34 +66,6 @@ impl MeteringStore for PgStore {
                 costs: history::load(connection, workspace_id).store()?,
             })
         })
-    }
-
-    fn save_metering_period(&self, workspace_id: Uuid, period: &Period) -> Result<()> {
-        let count = diesel::insert_into(metering_periods::table)
-            .values((
-                metering_periods::workspace_id.eq(workspace_id),
-                metering_periods::starts_at.eq(period.starts_at),
-                metering_periods::ends_at.eq(period.ends_at),
-            ))
-            .on_conflict((metering_periods::workspace_id, metering_periods::starts_at))
-            .do_update()
-            .set(metering_periods::ends_at.eq(period.ends_at))
-            .execute(&mut *self.connection()?)
-            .store()?;
-        require_record(count)
-    }
-
-    fn metering_periods(&self, workspace_id: Uuid) -> Result<Vec<Period>> {
-        let rows = metering_periods::table
-            .filter(metering_periods::workspace_id.eq(workspace_id))
-            .order(metering_periods::starts_at)
-            .select((metering_periods::starts_at, metering_periods::ends_at))
-            .load::<(DateTime<Utc>, DateTime<Utc>)>(&mut *self.connection()?)
-            .store()?;
-        Ok(rows
-            .into_iter()
-            .map(|(starts_at, ends_at)| Period { starts_at, ends_at })
-            .collect())
     }
 
     fn apply_accounting(

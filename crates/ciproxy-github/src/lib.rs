@@ -5,6 +5,8 @@
 pub mod app;
 pub mod assignments;
 pub mod auth;
+mod delivery_throttle;
+pub mod delivery_worker;
 pub mod error;
 pub mod hooks;
 pub mod installation_state;

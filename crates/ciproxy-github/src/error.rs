@@ -4,6 +4,8 @@ use std::error;
 use std::fmt;
 use std::panic::Location;
 
+use chrono::{DateTime, Utc};
+
 /// A failure that callers can handle without inspecting text.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -13,6 +15,14 @@ pub enum Error {
     /// GitHub cannot authorize this operation with the current installation.
     #[error("[github] installation access is unavailable: HTTP {0}")]
     AccessUnavailable(u16),
+    /// GitHub requires the webhook recovery worker to wait before more calls.
+    #[error("[github] webhook delivery API is rate limited")]
+    DeliveryThrottled {
+        /// Provider delay in seconds, preferred over the reset time.
+        retry_after_seconds: Option<u64>,
+        /// Primary rate-limit reset, used only when the budget is exhausted.
+        reset_at: Option<DateTime<Utc>>,
+    },
     /// GitHub has not made a new installation visible yet.
     #[error("[github] installation is not visible yet")]
     InstallationPending,

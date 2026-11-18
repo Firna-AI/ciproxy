@@ -1,11 +1,12 @@
 //! Dedicated database-session ownership for workspace execution decisions.
 
-use ciproxy_store_interface::error::{Result, ResultExt};
+use ciproxy_store_interface::error::Result;
 use ciproxy_store_interface::own_runners::OwnRunnerLease;
 use diesel::prelude::*;
 use diesel::sql_types::{BigInt, Bool, Uuid};
 
 use crate::connection::PgStore;
+use crate::connector::ConnectionUse;
 use crate::error::QueryResultExt;
 
 #[derive(QueryableByName)]
@@ -27,7 +28,7 @@ pub(crate) fn acquire(
     store: &PgStore,
     workspace_id: uuid::Uuid,
 ) -> Result<Option<Box<dyn OwnRunnerLease>>> {
-    let mut connection = PgConnection::establish(&store.database_url).internal()?;
+    let mut connection = store.connector.connect(ConnectionUse::Queries)?;
     let existing =
         diesel::sql_query("SELECT lock_key FROM own_machine_leases WHERE workspace_id = $1")
             .bind::<Uuid, _>(workspace_id)
