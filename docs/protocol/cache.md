@@ -16,6 +16,10 @@ This doc states the cache rules for jobs on
   job restored from the GitHub cache.
 - **entry facts:** the ID, ref, key, version, and creation time of an entry
   of the GitHub cache, as GitHub reports them.
+- **job ID pair:** the two IDs of one job that the control plane binds to
+  the one registered runner of the job. One is the ID that the runner
+  receives with the job. The other is the ID in the messages of GitHub's
+  [scale set](../architecture.md#components) about the job.
 
 ## Transparent cache
 
@@ -115,7 +119,20 @@ This doc states the cache rules for jobs on
 - The machine checks the runtime token outside the job VM at registration.
 - It accepts only RS256 with a key ID present in GitHub's public key set.
 - It checks the exact GitHub Actions issuer and the active validity interval.
-- It checks the assigned repository, run, runner, and supplied job identity.
+- It checks the assigned repository, run, and runner.
+- The control plane names the job to the machine by the ID that its runner
+  received.
+- The control plane also gives the machine the [job ID pair](#terms).
+- The job ID of the token must equal one ID of that pair.
+- No job name or other alias of the job matches.
+- **Decision:** the job ID of the token can equal either ID of the pair.
+  Rejected: one fixed ID of the pair, because the two IDs of one job can
+  differ, and GitHub does not document which ID the token holds. Reason:
+  both IDs belong to the one registered runner of the job, and the token
+  must also pass every other check.
+- The [verified live sample][job-id-proof] had equal Worker, scale-set,
+  and signed job IDs. It proves that the claim named the bound job. It
+  cannot distinguish the two namespaces when the IDs differ.
 - Exactly one signed access-control scope with the write bit gives the ref.
 - Missing, invalid, absent-write, and multiple-write results are unknown.
 - A shared write requires the checked ref to equal
@@ -143,6 +160,7 @@ This doc states the cache rules for jobs on
   pull request could then poison the cache.
 
 [trusted-events]: https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#cache-access-for-low-trust-workflow-triggers
+[job-id-proof]: ../../crates/ciproxy-cache-sidecar/README.md#runtime-token-job-identity
 
 ## Cache tiers
 
@@ -205,31 +223,9 @@ This doc states the cache rules for jobs on
 
 ## The cache handoff
 
-- Before the first step of a job on an own machine, its runner gives the
-  host the original cache URLs, runtime token, and cache rights of the job.
-- The host accepts that first handoff only over the connection that
-  configured the runner.
-- After a reconnect before the first handoff, the job uses only the GitHub
-  cache until it ends.
-- The host saves only the cache rights of the first handoff and the scheme,
-  host, and port of its cache and results URLs. These are the origins.
-- The host keeps the runtime token and the full URLs in memory only.
-- A later handoff of the job cannot change those origins or the original
-  cache rights. It can renew a URL on the same origin.
-- The steps of the job start only after the host decides: the machine cache
-  is ready with the original handoff, or the job uses only the GitHub cache.
-- The runner sets no time limit of its own for that decision, and it does
-  not fail the job.
-- GitHub's job time limit ends a job whose host never decides.
-- **Decision:** the host trusts only a first handoff over the connection
-  that configured the runner. Rejected: rules on the destination alone,
-  because a job could still claim cache rights that it lacks.
-- **Decision:** the steps wait for the host decision, with no time limit.
-  Rejected: a fallback after 30 seconds or after a socket error, because job
-  code could then send the first handoff itself.
-- **Decision:** first runs keep the machine cache, and root in the job VM
-  stays unchanged. Rejected: the GitHub cache only for new jobs, or a
-  restricted root, because they remove a feature or can break jobs.
+- [Cache handoff](cache-handoff.md) states how the runner of a job on an own
+  machine hands the cache rights of the job to the host, and when the steps
+  of the job start.
 
 ## Fallback to the GitHub cache
 
@@ -245,6 +241,8 @@ This doc states the cache rules for jobs on
 
 - [Architecture](../architecture.md): the components and the data flow.
 - [Agent](agent.md): own machines and job VMs.
+- [Cache handoff](cache-handoff.md): the handoff of the cache rights of a
+  job to the host.
 - [Docker disks](docker-disks.md): the Docker disks of own machines.
 - [Security](security.md): job isolation and job data.
 - [Overflow](overflow.md): the jobs that run on Boat.

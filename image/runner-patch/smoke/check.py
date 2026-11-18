@@ -46,7 +46,9 @@ def signed_assignment(processes, registration):
     facts = registration["facts"]
     payload = {"iss": "https://token.actions.githubusercontent.com", "nbf": int(time.time()) - 10,
                "exp": int(time.time()) + 3600, "repository_id": facts["repository"]["id"],
-               **facts["assignment"], "ac": json.dumps([{"Scope": "refs/heads/main", "Permission": 3}])}
+               "run_id": facts["assignment"]["run_id"],
+               "runner_id": facts["assignment"]["runner_id"],
+               "job_id": facts["assignment"]["job_ids"]["scale_set_job_id"], "ac": json.dumps([{"Scope": "refs/heads/main", "Permission": 3}])}
     message = encoded({"alg": "RS256", "kid": "fixture-rsa"}) + "." + encoded(payload)
     signature = subprocess.run(["openssl", "dgst", "-sha256", "-sign", str(fixtures / "key.pem")],
                                input=message.encode(), capture_output=True, check=True).stdout
@@ -110,7 +112,8 @@ def main():
         github = f"http://127.0.0.1:{port()}"
         processes.start("github", [sys.executable, str(Path(__file__).with_name("fake-github.py")), "--port", github.rsplit(":", 1)[1]], github + "/_fixture/state")
         registration = {"job_id": "manual-smoke", "facts": {"organization_id": "1", "repository": {"id": "10", "full_name": "example/repository"},
-                         "assignment": {"run_id": "31", "job_id": "manual-smoke", "runner_id": "71"},
+                         "assignment": {"run_id": "31", "job_ids": {"worker_job_id": "manual-smoke",
+                                          "scale_set_job_id": "scale-manual-smoke"}, "runner_id": "71"},
                          "event": "push", "head_repository": None,
                          "default_ref": "refs/heads/main", "sticky_docker": False}, "permissions": {"read": True, "write": True},
                          "cache_url": github + "/legacy-prefix/", "results_url": github}

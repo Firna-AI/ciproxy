@@ -143,11 +143,6 @@ managed runner groups, scale-set creation and reconcile, label
 replacement, and the
 [workspace ownership](scale-sets.md#workspace-ownership) of scale sets.
 
-Runner group sync creates or updates the managed name and private-access
-policy. It sets selected repositories through the separate repository
-access endpoint after either operation. The create and update bodies omit
-repository IDs, so repeated syncs use GitHub's supported update fields.
-
 ### Durable demand and registrations
 
 Scale-set `jobId` is a UUID. It is separate from the numeric Actions job
@@ -284,8 +279,8 @@ commands, fixture contracts, and cleanup for the live probes.
   retirement for API changes, maintenance, resume, and reinstall.
 - [src/app/admission.rs](src/app/admission.rs) maps initial installation
   approval to the shared activation policy when no retained policy exists.
-- [src/assignments.rs](src/assignments.rs) combines saved API metadata,
-  scale-message identity, and JIT identity into the agent assignment.
+- [src/assignments.rs](src/assignments.rs) builds the agent assignment from
+  saved demand and API facts, the JIT runner, and a supplied `JobIdBinding`.
 - [src/persistence](src/persistence) keeps blocking store calls outside the
   asynchronous services. Its lifecycle seam is the only App state writer.
 - [src/persistence/lease.rs](src/persistence/lease.rs) defines `Lease` and

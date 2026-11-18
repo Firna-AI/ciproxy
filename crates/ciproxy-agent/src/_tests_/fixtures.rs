@@ -194,7 +194,7 @@ pub(super) fn metadata(id: &str, root_disk_bytes: u64) -> ImageMetadata {
 }
 
 pub(super) fn trusted_facts() -> ciproxy_protocol::jobs::JobFacts {
-    serde_json::from_value(serde_json::json!({"organization_id":"org-1","repository":{"id":"repo-1","full_name":"first/project"},"assignment":{"run_id":"run-1","job_id":"job-1","runner_id":"github-runner-1"},"event":"push","head_repository":null,"default_ref":"refs/heads/main","sticky_docker":true})).unwrap()
+    serde_json::from_value(serde_json::json!({"organization_id":"org-1","repository":{"id":"repo-1","full_name":"first/project"},"assignment":{"run_id":"run-1","job_ids":{"worker_job_id":"job-1","scale_set_job_id":"scale-job-1"},"runner_id":"github-runner-1"},"event":"push","head_repository":null,"default_ref":"refs/heads/main","sticky_docker":true})).unwrap()
 }
 
 pub(super) fn github_decision_sent() -> impl Clause {

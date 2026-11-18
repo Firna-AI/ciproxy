@@ -99,6 +99,12 @@ async fn reconnect_reuses_live_session_and_restart_refreshes_the_existing_proxy(
             204
         );
     }
+    assert_eq!(
+        recover(&fixture, &job.registration)
+            .await
+            .map(|credential| credential.token),
+        None
+    );
     assert_eq!(reused.contents("kept", "v1", &[]).await, "payload");
     assert_eq!(
         recover(&fixture, &reused.registration).await.unwrap().token,

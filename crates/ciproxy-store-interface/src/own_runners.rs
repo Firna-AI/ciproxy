@@ -7,6 +7,7 @@ use crate::boat_runtime::BoatRunnerIntent;
 use crate::error::Result;
 use crate::gateway::MachineSnapshot;
 use crate::github::GithubJob;
+use crate::job_bindings::{OwnJobBinding, WorkerJobId};
 use crate::labels::Label;
 use crate::organizations::Organization;
 use crate::overflow::store::OverflowSnapshot;
@@ -17,6 +18,8 @@ use crate::settings::Settings;
 /// One credential-free command paired with its immutable runner placement.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OwnRunner {
+    /// Immutable Worker job identity retained after this runner stops.
+    pub worker_job_id: Option<WorkerJobId>,
     /// Exact remote registration target, absent for older unrecorded runners.
     pub registration_scale_set_id: Option<i64>,
     /// Original label request in byte units, retained across settings changes.
@@ -51,6 +54,11 @@ pub struct OwnRunnerObservation {
 
 /// Queries used by the own-machine runtime, without storing JIT secrets.
 pub trait OwnRunnerStore: Send + Sync {
+    /// Bind the exact registered runner once, accepting only identical replay.
+    /// Verify workspace, organization, machine placement, and saved GitHub identity.
+    /// Require its command and a runner state other than Stopped.
+    /// Return false without changes for a conflicting ID or invalid runner scope.
+    fn bind_own_job(&self, workspace_id: Uuid, binding: &OwnJobBinding) -> Result<bool>;
     /// Reconcile exact original and actual dimensions from the authenticated VM.
     fn save_own_size(
         &self,

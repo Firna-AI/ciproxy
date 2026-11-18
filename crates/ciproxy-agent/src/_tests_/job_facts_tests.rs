@@ -10,7 +10,7 @@ use ciproxy_protocol::guest::AgentToGuest;
 use ciproxy_protocol::identifiers::{
     CommandId, GitRef, JobEvent, JobId, OrganizationId, RepositoryId, RunnerId,
 };
-use ciproxy_protocol::jobs::{JobAssignment, JobFacts, Repository};
+use ciproxy_protocol::jobs::{JobAssignment, JobFacts, JobIdBinding, Repository};
 use unimock::{MockFn, Unimock, matching};
 
 use crate::boundaries::GuestProvenance;
@@ -29,7 +29,10 @@ async fn authenticated_facts_must_match_the_runner_organization_and_observed_job
         },
         assignment: JobAssignment {
             run_id: "run-1".to_owned(),
-            job_id: Some(JobId("job-1".to_owned())),
+            job_ids: JobIdBinding {
+                worker_job_id: JobId("job-1".to_owned()),
+                scale_set_job_id: JobId("scale-job-1".to_owned()),
+            },
             runner_id: "github-runner-1".to_owned(),
         },
         event: JobEvent("pull_request".to_owned()),

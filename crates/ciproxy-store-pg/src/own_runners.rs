@@ -1,11 +1,13 @@
 //! Atomic own-machine runner reservations and credential-free command queries.
 
 use chrono::{DateTime, Utc};
+use ciproxy_protocol::identifiers::JobId;
 use ciproxy_schema::own_runners::own_runner_commands;
 use ciproxy_schema::runners::runners;
 use ciproxy_schema::workspaces::workspaces;
 use ciproxy_store_interface::error::Result;
 use ciproxy_store_interface::error::ResultExt;
+use ciproxy_store_interface::job_bindings::{OwnJobBinding, WorkerJobId};
 use ciproxy_store_interface::own_runners::{OwnRunner, OwnRunnerObservation, OwnRunnerStore};
 use diesel::prelude::*;
 use uuid::Uuid;
@@ -13,8 +15,8 @@ use uuid::Uuid;
 use crate::connection::PgStore;
 use crate::error::{QueryResultExt, require_record};
 use crate::gateway_transaction::transaction;
-use crate::own_observation;
 use crate::runners::RunnerRow;
+use crate::{own_job_bindings, own_observation};
 
 #[derive(Queryable, Selectable, Insertable)]
 #[diesel(table_name = own_runner_commands)]
@@ -28,9 +30,14 @@ pub(crate) struct CommandRow {
     slot_indices: Vec<i64>,
     requested_size: serde_json::Value,
     confirmed_at: Option<DateTime<Utc>>,
+    worker_job_id: Option<String>,
 }
 
 impl OwnRunnerStore for PgStore {
+    fn bind_own_job(&self, workspace_id: Uuid, binding: &OwnJobBinding) -> Result<bool> {
+        own_job_bindings::save(&mut *self.connection()?, workspace_id, binding)
+    }
+
     fn save_own_size(
         &self,
         workspace_id: Uuid,
@@ -142,6 +149,10 @@ impl OwnRunnerStore for PgStore {
                         .internal()?,
                     requested_size: serde_json::to_value(runner.requested_size).internal()?,
                     confirmed_at: runner.confirmed_at,
+                    worker_job_id: runner
+                        .worker_job_id
+                        .as_ref()
+                        .map(|WorkerJobId(JobId(id))| id.clone()),
                 })
                 .execute(connection)
                 .store()?;
@@ -250,6 +261,7 @@ pub(crate) fn load(connection: &mut PgConnection, workspace_id: Uuid) -> Result<
 
 pub(crate) fn into_record((command, runner): (CommandRow, RunnerRow)) -> Result<OwnRunner> {
     Ok(OwnRunner {
+        worker_job_id: command.worker_job_id.map(|id| WorkerJobId(JobId(id))),
         registration_scale_set_id: runner.registration_scale_set_id,
         requested_size: serde_json::from_value(command.requested_size).internal()?,
         slot_indices: command

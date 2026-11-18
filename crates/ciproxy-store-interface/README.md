@@ -179,17 +179,8 @@ Runner intents retain exact slot sets and the original whole-GB label
 request. The shared Runner record is the byte-precise actual allocation.
 Metering facts, cursors, and totals use that same actual resource type.
 No JIT or original runtime-token credential enters these records.
-`OwnRunner.confirmed_at` keeps the time of the first execution evidence of a
-runner, from a command result or a trusted agent or GitHub observation.
-`observe_own_runner` takes a required `OwnRunnerObservation`: the state, the
-GitHub ID, and the observation time. In one transaction, it saves the state
-and the ID, and it sets `confirmed_at` only when it is empty.
-It filters by workspace, organization, and runner only. Without the runner
-or its command record, it returns `NotFound` and saves nothing.
-`record_own_command_result` saves the result of the current command. It
-also saves that first evidence, and only an applied result ends delivery.
-`retire_own_runner` saves the trusted GitHub ID, `Stopping`, and the stop
-command in one transaction.
+See the [registration guide](registration-targets.md#job-bindings-and-evidence)
+for execution observations and immutable Worker job bindings.
 
 ## Quick Start
 
@@ -254,6 +245,8 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
   authorization results and their delivery mode.
 - [src/dashboard](src/dashboard) owns dashboard identity and access queries.
 - [src/own_runners.rs](src/own_runners.rs) owns exact execution records.
+- [src/job_bindings.rs](src/job_bindings.rs) defines authenticated Worker job
+  bindings, separate from numeric Actions job identities.
 - [src/runtime_results.rs](src/runtime_results.rs) defines the remote result
   guards and `BoatRunnerWrite`, the exact guard after a Boat write.
   [src/boat_delivery.rs](src/boat_delivery.rs) defines `BoatDeliveryGuard`,

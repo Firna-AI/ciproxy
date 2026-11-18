@@ -7,6 +7,7 @@ use ciproxy_store_interface::own_runners::{OwnRunner, OwnRunnerObservation, Rout
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
 use uuid::Uuid;
 
+use crate::assignment::Assignment;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::runtime::MachineRuntime;
 
@@ -66,10 +67,12 @@ impl MachineRuntime {
             return Ok(());
         }
         let input = self.load(workspace_id).await?;
-        let (id, state) = match message {
-            AgentMessage::RunnerReady { runner_id } => (runner_id, RunnerState::Ready),
-            AgentMessage::JobStarted { runner_id, .. } => (runner_id, RunnerState::Busy),
-            AgentMessage::RunnerExited { runner_id, .. } => (runner_id, RunnerState::Stopped),
+        let (id, state, job_id) = match message {
+            AgentMessage::RunnerReady { runner_id } => (runner_id, RunnerState::Ready, None),
+            AgentMessage::JobStarted { runner_id, job_id } => {
+                (runner_id, RunnerState::Busy, Some(job_id))
+            }
+            AgentMessage::RunnerExited { runner_id, .. } => (runner_id, RunnerState::Stopped, None),
             _ => return Ok(()),
         };
         let runner = input
@@ -80,6 +83,10 @@ impl MachineRuntime {
         require_machine(runner, machine_id)?;
         if runner.runner.state == RunnerState::Stopped && state != RunnerState::Stopped {
             return Ok(());
+        }
+        if let Some(job_id) = job_id {
+            self.bind_worker_job(workspace_id, machine_id, runner, job_id)
+                .await?;
         }
         let protected_ready = state == RunnerState::Ready
             && matches!(
@@ -112,19 +119,10 @@ impl MachineRuntime {
 
     pub(crate) async fn route_job(&self, input: &RoutingSnapshot, job: &GithubJob) -> Result<()> {
         let workspace_id = input.workspace_id;
-        if job.phase < DemandPhase::Started {
-            return Ok(());
-        }
-        let Some(github_id) = job.runner_github_id else {
+        let Some(assignment) = Assignment::resolve(input, job) else {
             return Ok(());
         };
-        let Some(runner) = input.runners.iter().find(|runner| {
-            runner.runner.github_id == Some(github_id)
-                && runner.runner.organization_id == job.organization_id
-                && runner.runner.scale_set_id == job.scale_set_id
-        }) else {
-            return Ok(());
-        };
+        let runner = assignment.runner;
         if runner.runner.state == RunnerState::Stopped {
             return Ok(());
         }
@@ -150,13 +148,13 @@ impl MachineRuntime {
                 runner,
                 OwnRunnerObservation {
                     state: RunnerState::Busy,
-                    github_id: Some(github_id),
+                    github_id: runner.runner.github_id,
                     observed_at: self.clock.now(),
                 },
             )
             .await?;
         }
-        self.prepare_job(input, runner, job, machine_id).await
+        self.prepare_job(input, &assignment, machine_id).await
     }
 }
 

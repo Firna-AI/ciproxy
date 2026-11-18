@@ -10,6 +10,7 @@ use ciproxy_github::persistence::StoreAdapter;
 use ciproxy_github::registrations::{RegistrationRetirement, RunnerRegistrationsMock};
 use ciproxy_github::runtime::RuntimeMock;
 use ciproxy_protocol::agent::ControlMessage;
+use ciproxy_protocol::identifiers::JobId;
 use ciproxy_store_interface::github::{
     DemandPhase, GithubJob, Repository, RepositoryIdentity, RunFacts,
 };
@@ -17,6 +18,7 @@ use ciproxy_store_interface::runners::RunnerState;
 use unimock::{MockFn, Unimock, matching};
 use uuid::Uuid;
 
+use super::job_binding_support::bind_job;
 use super::settled::Settled;
 use super::support::{Fixture, at};
 
@@ -69,6 +71,12 @@ async fn removal_between_facts_and_delivery_preserves_job_until_trusted_completi
         .store
         .save_github_job(fixture.workspace, &job, at())
         .unwrap();
+    bind_job(
+        fixture.store.as_ref(),
+        fixture.workspace,
+        &fixture.intent,
+        JobId(job.id.to_string()),
+    );
     let store = fixture.store.clone();
     let workspace = fixture.workspace;
     let machine = fixture.machine;

@@ -27,10 +27,10 @@ Older sections without a status decode as measured.
 The optional `openapi` feature exports the shared statistics schema.
 The guest uses separate message types for both directions over vsock.
 The guest Hello requires `handoff_protocol_version`, which is
-`HANDOFF_PROTOCOL_VERSION`, now 2. `PrepareJob` carries the job ID and a
-`JobDecision`: `GitHubOnly`, or `MachineCache` with the checked facts, the
-cache connection, and an optional Docker attachment. Older shapes fail to
-decode.
+`HANDOFF_PROTOCOL_VERSION`, now 2. `PrepareJob` carries the Worker job ID
+and a `JobDecision`: `GitHubOnly`, or `MachineCache` with the checked facts,
+the cache connection, and an optional Docker attachment. Older shapes fail
+to decode.
 `ConfigureRunner` carries the wire version, runner identity, and registration.
 Cache scope and Docker setup arrive together through `PrepareJob`.
 `JobStarting` is the guest's job-start message. It carries the original
@@ -49,7 +49,7 @@ Runner starts, current runner reports, idle-runner stops, and guest
 configuration carry the runner's organization. A warm runner knows its
 organization before GitHub assigns its job.
 `ControlMessage::JobPreparation` then carries a command ID, the runner ID,
-the job ID, and a `JobPreparationOutcome`. `TrustedFacts` holds `JobFacts`
+the Worker job ID, and a `JobPreparationOutcome`. `TrustedFacts` holds `JobFacts`
 with that organization and the actual assigned repository. `GitHubOnly`
 holds only the organization ID. The agent matches either outcome to the
 runner, its organization, and its running job. In JSON, the message `type`
@@ -72,7 +72,7 @@ counts. Zero entries give no observed source.
 Direct GitHub use and fallback carry no counts.
 
 `cache_metadata` carries trusted GitHub cache entry metadata for the
-restore order. `CacheMetadataRequest` names only the assigned job. The
+restore order. `CacheMetadataRequest` names only the assigned Worker job. The
 hosted route at `CACHE_METADATA_PATH` answers with a
 `CacheMetadataResponse`: the current entry list of that job's repository.
 Each `CacheEntryMetadata` holds the GitHub entry ID, the full ref, the key,
@@ -90,12 +90,20 @@ Its `expose_secret` method gives explicit access to the original value.
 JSON serialization also carries the original value for delivery.
 Do not log serialized messages that contain secrets.
 
-Job facts carry expected repository, run, job, and JIT runner identities,
-with the API event, head repository, and default branch. They carry no
-guessed full job ref. `JobScope` separately carries a machine-checked ref
-and readable scopes, or a typed unknown reason. The admin session result
-returns that scope for Docker-disk policy. Machine cache reports count
-unknown jobs by reason. These values grant no trust by their presence.
+Job facts carry expected repository, run, and JIT runner identities, with
+the API event, head repository, and default branch. They carry no guessed
+full job ref. `JobAssignment.job_ids` is a required `JobIdBinding` of the
+exact registered runner: `worker_job_id`, the job UUID that the runner's
+Worker gets, and `scale_set_job_id`, the UUID of the scale-set messages.
+The machine cache accepts a signed runtime-token `job_id` equal to either.
+Encoding always writes `job_ids`. Decoding also reads an earlier non-null
+`job_id` as a binding of two equal IDs, so saved agent VM state and saved
+cache counts keep their single-ID checks. A missing or null earlier
+`job_id`, or a binding without both IDs, fails to decode.
+`JobScope` separately carries a machine-checked ref and readable scopes, or
+a typed unknown reason. The admin session result returns that scope for
+Docker-disk policy. Machine cache reports count unknown jobs by reason.
+These values grant no trust by their presence.
 Memory and disk fields use bytes.
 The documented resource sizes use decimal GB for slot arithmetic.
 Disk capacity does not enter the CPU and memory slot formula.
@@ -173,8 +181,8 @@ Review snapshot changes before accepting them.
   `CacheRestoreCounts::source`, which derives the measured content source.
 - [src/cache_metadata.rs](src/cache_metadata.rs) defines the hosted entry
   metadata route, its values, and the root relay values.
-- [src/jobs.rs](src/jobs.rs) carries expected assignment identities and
-  checked or unknown machine scopes.
+- [src/jobs.rs](src/jobs.rs) carries expected assignment identities, the
+  `JobIdBinding` pair, and checked or unknown machine scopes.
 - [src/secret.rs](src/secret.rs) protects secret diagnostic output.
 - [src/version.rs](src/version.rs) preserves the shared version API.
 - [src/_tests_/wire/](src/_tests_/wire/) holds wire tests and snapshots.

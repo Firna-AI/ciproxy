@@ -1,5 +1,6 @@
 ---
 source: crates/ciproxy-protocol/src/_tests_/wire/assertions.rs
+assertion_line: 20
 description: Tagged JSON for control_job_preparation_facts; all credentials are dummy test values.
 expression: message
 ---
@@ -18,7 +19,10 @@ expression: message
       },
       "assignment": {
         "run_id": "123",
-        "job_id": "job-1",
+        "job_ids": {
+          "worker_job_id": "job-1",
+          "scale_set_job_id": "scale-job-1"
+        },
         "runner_id": "456"
       },
       "event": "pull_request",

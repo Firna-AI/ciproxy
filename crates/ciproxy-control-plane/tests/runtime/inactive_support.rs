@@ -3,12 +3,14 @@
 use ciproxy_protocol::identifiers::{JobId, OrganizationId, RunnerId};
 use ciproxy_protocol::runners;
 use ciproxy_store_interface::github::{DemandPhase, Repository};
+use ciproxy_store_interface::job_bindings::WorkerJobId;
 use ciproxy_store_interface::organizations::Organization;
 use ciproxy_store_interface::own_runners::OwnRunner;
 use ciproxy_store_interface::runners::RunnerPlace;
 use ciproxy_store_interface::scale_sets::ScaleSet;
 use uuid::Uuid;
 
+use super::job_binding_support::bind_job;
 use super::recovery_support::{job, keep_warm, other_organization};
 use super::support::{Fixture, at};
 
@@ -40,7 +42,7 @@ pub(super) fn populate(fixture: &mut Fixture) -> (Organization, OwnRunner, OwnRu
         .store
         .create_scale_set(fixture.workspace, &set)
         .unwrap();
-    let running = additional(
+    let mut running = additional(
         fixture,
         fixture.organization,
         fixture.intent.runner.scale_set_id,
@@ -48,6 +50,13 @@ pub(super) fn populate(fixture: &mut Fixture) -> (Organization, OwnRunner, OwnRu
         49,
         44,
     );
+    bind_job(
+        fixture.store.as_ref(),
+        fixture.workspace,
+        &running,
+        JobId("received".into()),
+    );
+    running.worker_job_id = Some(WorkerJobId(JobId("received".into())));
     let mut started = job(fixture);
     started.runner_github_id = Some(49);
     fixture

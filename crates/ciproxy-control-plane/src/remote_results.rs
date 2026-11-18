@@ -88,6 +88,7 @@ struct DispatchAuthority<'a> {
 
 fn dispatch_authority(runner: &OwnRunner) -> DispatchAuthority<'_> {
     let OwnRunner {
+        worker_job_id: _,
         registration_scale_set_id,
         requested_size: _,
         slot_indices: _,

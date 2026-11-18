@@ -11,6 +11,7 @@ diesel::table! {
         slot_indices -> Array<Int8>,
         requested_size -> Jsonb,
         confirmed_at -> Nullable<Timestamptz>,
+        worker_job_id -> Nullable<Text>,
     }
 }
 

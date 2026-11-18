@@ -81,6 +81,7 @@ impl MachineRuntime {
             target: RegistrationTarget::from(set),
         };
         let runner = OwnRunner {
+            worker_job_id: None,
             registration_scale_set_id: None,
             requested_size: label.size,
             slot_indices: slot_indices.clone(),

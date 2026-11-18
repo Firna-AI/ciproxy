@@ -217,11 +217,9 @@ async fn forged_access_and_missing_signature_never_grant_a_ref() {
 }
 
 #[tokio::test]
-async fn optional_job_identity_and_short_clock_leeway_keep_valid_assignments() {
-    let mut expected = facts();
-    expected.assignment.job_id = None;
+async fn numeric_repository_and_short_clock_leeway_keep_valid_assignments() {
+    let expected = facts();
     let mut payload = claims(json!([{"Scope":"refs/heads/main","Permission":3}]));
-    payload["job_id"] = json!("different-optional-job");
     payload["repository_id"] = json!(10);
     payload["nbf"] = json!(NOW + 30);
     payload["exp"] = json!(NOW + 30);

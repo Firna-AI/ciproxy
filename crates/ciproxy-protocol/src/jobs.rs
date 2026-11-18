@@ -1,6 +1,7 @@
 //! Job identity and cache-scope inputs, without a source or trust decision.
 
-use serde::{Deserialize, Serialize};
+use serde::de::Error;
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::identifiers::{GitRef, JobEvent, JobId, OrganizationId, RepositoryId};
 
@@ -23,7 +24,7 @@ pub struct JobFacts {
     pub organization_id: OrganizationId,
     /// Repository to which the job belongs.
     pub repository: Repository,
-    /// Expected token identity from the scale message and JIT registration.
+    /// Expected token identities from the bound Worker, scale set, and JIT runner.
     pub assignment: JobAssignment,
     /// The event that caused the job.
     pub event: JobEvent,
@@ -35,15 +36,65 @@ pub struct JobFacts {
     pub sticky_docker: bool,
 }
 
-/// GitHub identities expected in the runtime token, never inferred from a ref.
+/// Job UUIDs of the exact one-job runner registered with GitHub.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct JobIdBinding {
+    /// Job UUID reported by the runner Worker and used for guest handoff.
+    pub worker_job_id: JobId,
+    /// Job UUID from the hosted scale-set assignment for the same runner.
+    pub scale_set_job_id: JobId,
+}
+
+/// GitHub identities expected in the runtime token, never inferred from a ref.
+///
+/// Legacy non-null job IDs read as equal pairs. Serialization emits the pair.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct JobAssignment {
     /// Workflow run ID from the scale-set message.
     pub run_id: String,
-    /// Scale-message job UUID, when the assignment provides it.
-    pub job_id: Option<JobId>,
+    /// Both job UUIDs bound to the exact registered runner.
+    pub job_ids: JobIdBinding,
     /// GitHub runner ID from the JIT registration, not ciproxy's runner ID.
     pub runner_id: String,
+}
+
+#[derive(Deserialize)]
+struct JobAssignmentInput {
+    run_id: String,
+    #[serde(default, deserialize_with = "present_job_ids")]
+    job_ids: Option<JobIdBinding>,
+    job_id: Option<JobId>,
+    runner_id: String,
+}
+
+/// Only an absent pair can use legacy input; a present pair must be complete.
+fn present_job_ids<'de, D>(deserializer: D) -> Result<Option<JobIdBinding>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Ok(Some(JobIdBinding::deserialize(deserializer)?))
+}
+
+impl<'de> Deserialize<'de> for JobAssignment {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let input = JobAssignmentInput::deserialize(deserializer)?;
+        let job_ids = match (input.job_ids, input.job_id) {
+            (Some(job_ids), _) => job_ids,
+            (None, Some(job_id)) => JobIdBinding {
+                worker_job_id: job_id.clone(),
+                scale_set_job_id: job_id,
+            },
+            (None, None) => return Err(D::Error::missing_field("job_ids")),
+        };
+        Ok(Self {
+            run_id: input.run_id,
+            job_ids,
+            runner_id: input.runner_id,
+        })
+    }
 }
 
 /// Scope checked by the machine, returned only through its admin interface.
@@ -96,7 +147,7 @@ pub enum UnknownJobScopeReason {
     RunMismatch,
     /// The token belongs to another registered runner.
     RunnerMismatch,
-    /// The token belongs to another scale-message job.
+    /// The token has neither job UUID of the registered runner's binding.
     JobMismatch,
     /// The access-control claim is not an encoded array of scopes.
     InvalidAccessControl,

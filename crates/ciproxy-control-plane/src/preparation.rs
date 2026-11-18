@@ -4,12 +4,12 @@ use ciproxy_github::persistence::lease::LeaseStore;
 use ciproxy_github::persistence::session::ListenerTarget;
 use ciproxy_github::scale_sets::JitRegistration;
 use ciproxy_protocol::agent::{ControlMessage, JobPreparationOutcome};
-use ciproxy_protocol::identifiers::{CommandId, JobId, RunnerId};
-use ciproxy_store_interface::github::GithubJob;
-use ciproxy_store_interface::own_runners::{OwnRunner, RoutingSnapshot};
+use ciproxy_protocol::identifiers::{CommandId, RunnerId};
+use ciproxy_store_interface::own_runners::RoutingSnapshot;
 use ciproxy_store_interface::runtime_results::OwnRunnerResult;
 use uuid::Uuid;
 
+use crate::assignment::Assignment;
 use crate::error::{Error, ErrorResultExt, Result};
 use crate::runtime::MachineRuntime;
 use crate::runtime_tasks::Work;
@@ -18,10 +18,14 @@ impl MachineRuntime {
     pub(crate) async fn prepare_job(
         &self,
         input: &RoutingSnapshot,
-        runner: &OwnRunner,
-        job: &GithubJob,
+        assignment: &Assignment<'_>,
         machine: Uuid,
     ) -> Result<()> {
+        let Some(job_ids) = assignment.job_ids() else {
+            return Ok(());
+        };
+        let runner = assignment.runner;
+        let job = assignment.job;
         let workspace = input.workspace_id;
         let store = self.store.clone();
         let id = runner.runner.id;
@@ -45,7 +49,7 @@ impl MachineRuntime {
             };
             let outcome = runtime
                 .assignments
-                .facts(target, &job, &jit)
+                .facts(target, &job, &jit, &job_ids)
                 .await
                 .internal()?;
             let _operation = runtime.operation.lock().await;
@@ -71,7 +75,7 @@ impl MachineRuntime {
             let message = ControlMessage::JobPreparation {
                 command_id: CommandId(runtime.clock.uuid().to_string()),
                 runner_id: RunnerId(id.to_string()),
-                job_id: JobId(job.id.to_string()),
+                job_id: job_ids.worker_job_id,
                 outcome,
             };
             let gateway = runtime.gateway.clone();

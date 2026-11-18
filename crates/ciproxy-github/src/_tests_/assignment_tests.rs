@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use ciproxy_protocol::agent::JobPreparationOutcome;
 use ciproxy_protocol::identifiers::{GitRef, JobEvent, JobId, OrganizationId, RepositoryId};
-use ciproxy_protocol::jobs::{JobAssignment, JobFacts, Repository};
+use ciproxy_protocol::jobs::{JobAssignment, JobFacts, JobIdBinding, Repository};
 use ciproxy_store_interface::github::{DemandPhase, GithubJob, RepositoryIdentity};
 use secrecy::SecretString;
 use unimock::{MockFn, Unimock, matching};
@@ -63,7 +63,10 @@ async fn assignment_uses_api_repository_event_head_and_message_jit_ids() {
         configuration: SecretString::from("secret-jit"),
     };
     assert_eq!(
-        service.facts(target(), &job, &jit).await.unwrap(),
+        service
+            .facts(target(), &job, &jit, &binding())
+            .await
+            .unwrap(),
         JobPreparationOutcome::TrustedFacts {
             facts: Box::new(JobFacts {
                 organization_id: OrganizationId("17".into()),
@@ -73,7 +76,10 @@ async fn assignment_uses_api_repository_event_head_and_message_jit_ids() {
                 },
                 assignment: JobAssignment {
                     run_id: "31".into(),
-                    job_id: Some(JobId("00000000-0000-0000-0000-000000000071".into())),
+                    job_ids: JobIdBinding {
+                        worker_job_id: JobId("00000000-0000-0000-0000-000000000072".into()),
+                        scale_set_job_id: JobId("00000000-0000-0000-0000-000000000071".into()),
+                    },
                     runner_id: "71".into()
                 },
                 event: JobEvent("pull_request_target".into()),
@@ -106,9 +112,19 @@ async fn absent_repository_snapshot_never_guesses_a_default_branch() {
         configuration: SecretString::from("secret-jit"),
     };
     assert_eq!(
-        service.facts(target(), &job(), &jit).await.unwrap(),
+        service
+            .facts(target(), &job(), &jit, &binding())
+            .await
+            .unwrap(),
         JobPreparationOutcome::GitHubOnly {
             organization_id: OrganizationId("17".into())
         }
     );
+}
+
+fn binding() -> JobIdBinding {
+    JobIdBinding {
+        worker_job_id: JobId("00000000-0000-0000-0000-000000000072".into()),
+        scale_set_job_id: JobId("00000000-0000-0000-0000-000000000071".into()),
+    }
 }

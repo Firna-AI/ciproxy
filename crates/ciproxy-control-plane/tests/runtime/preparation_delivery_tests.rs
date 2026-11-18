@@ -14,6 +14,7 @@ use ciproxy_store_interface::github::Repository;
 use unimock::{MockFn, Unimock, matching};
 use uuid::Uuid;
 
+use super::job_binding_support::bind_job;
 use super::recovery_support::{gateway, job, runtime, runtime_with_clock};
 use super::settled::Settled;
 use super::support::{Fixture, at};
@@ -65,22 +66,23 @@ async fn removed_repository_delivers_a_github_only_decision_on_job_and_tick() {
                 })),
         )),
     );
-    runtime
-        .settled_job(fixture.workspace, job.clone())
-        .await
-        .unwrap();
-    runtime.settled_tick().await.unwrap();
+    let worker = Uuid::from_u128(171);
     runtime
         .settled_agent(
             fixture.workspace,
             fixture.machine,
             AgentMessage::JobStarted {
                 runner_id: RunnerId(fixture.intent.runner.id.to_string()),
-                job_id: JobId(job.id.to_string()),
+                job_id: JobId(worker.to_string()),
             },
         )
         .await
         .unwrap();
+    runtime
+        .settled_job(fixture.workspace, job.clone())
+        .await
+        .unwrap();
+    runtime.settled_tick().await.unwrap();
     let decisions: Vec<_> = messages
         .lock()
         .unwrap()
@@ -88,7 +90,7 @@ async fn removed_repository_delivers_a_github_only_decision_on_job_and_tick() {
         .filter(|message| !matches!(message, ControlMessage::DockerBudget { .. }))
         .cloned()
         .collect();
-    assert_eq!(decisions, vec![github_only(&fixture, job.id); 3]);
+    assert_eq!(decisions, vec![github_only(&fixture, worker); 3]);
 }
 
 fn github_only(fixture: &Fixture, job_id: Uuid) -> ControlMessage {
@@ -106,6 +108,12 @@ fn github_only(fixture: &Fixture, job_id: Uuid) -> ControlMessage {
 async fn transient_assignment_failure_returns_an_error_and_retries_without_fallback() {
     let fixture = Fixture::new();
     let job = job(&fixture);
+    bind_job(
+        fixture.store.as_ref(),
+        fixture.workspace,
+        &fixture.intent,
+        JobId(job.id.to_string()),
+    );
     let messages = Arc::new(Mutex::new(Vec::new()));
     let mut runtime = runtime_with_clock(
         &fixture,
@@ -119,11 +127,11 @@ async fn transient_assignment_failure_returns_an_error_and_retries_without_fallb
         ))),
     );
     runtime.assignments = Arc::new(Unimock::new(JobAssignmentsMock::facts.stub(|each| {
-        each.call(matching!(_, _, _))
-            .answers(&|_, _, _, _| Err(Error::AccessUnavailable(503)))
+        each.call(matching!(_, _, _, _))
+            .answers(&|_, _, _, _, _| Err(Error::AccessUnavailable(503)))
             .once()
             .then()
-            .answers(&|_, _, _, _| {
+            .answers(&|_, _, _, _, _| {
                 Ok(JobPreparationOutcome::GitHubOnly {
                     organization_id: OrganizationId("42".into()),
                 })

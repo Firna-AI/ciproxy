@@ -28,7 +28,8 @@ machine keeps them after GitHub deletes or evicts its copy.
 
 The machine checks each original runtime token at admin registration.
 It verifies RS256, GitHub's issuer, the validity interval, and the expected
-repository, run, runner, and optional job identity from `JobFacts`.
+repository, run, runner, and
+[job ID pair](#runtime-token-job-identity) from `JobFacts`.
 Exactly one signed scope with the write bit supplies the full ref.
 The machine keeps raw scope keys, including GitHub's tag scope keys.
 It ignores job metadata for scope, repository, permission, destination, and
@@ -110,6 +111,28 @@ therefore remain independent of cache availability. An opaque transfer
 ticket can become unavailable during an outage. The cache action then
 reports its usual cache warning or miss.
 
+### Runtime token job identity
+
+`JobFacts.assignment.job_ids` is the `JobIdBinding` of the exact registered
+runner: its Worker job ID, which the runner's Worker gets with the job, and
+its scale-set job ID. The signed top-level `job_id` claim must equal one of
+the two. Another value or a missing claim gives `JobMismatch`. No job name
+or alias matches, and every other token check above also applies.
+[Trusted write-back](../../docs/protocol/cache.md#trusted-write-back) gives
+the rule and the rejected single-ID check.
+
+Live run 44202592271 of `Firna-AI/ciproxy-spike` used control plane
+`9b094e15` and agent 0.1.2. Its runtime token verified as RS256 against
+[GitHub's key set][jwks] with key ID `38826b17-6a30-5f9b-b169-8beb8202f723`.
+Its signed `job_id`, scale-set job ID, and Worker job ID were all
+`6d88988c-67b0-5e52-87a7-a2fa0c927e5e`. So the claim named the bound job.
+The run cannot show which ID the claim holds when the two IDs differ.
+
+The [job identity sources](job-identity-sources.md) trace the Worker job ID
+through pinned GitHub sources and give their limit.
+
+[jwks]: https://token.actions.githubusercontent.com/.well-known/jwks
+
 ## Quick Start
 
 Run the executable smoke check from the repository root:
@@ -171,9 +194,12 @@ each service process. Turn it on before you register or recover sessions.
 `CacheRegistration` contains `job_id`, `facts`, `permissions`, `github_token`,
 `cache_url`, `results_url`, and `proxy_url`. The exact types live in
 [protocol runtime types](../ciproxy-protocol/src/runtime.rs).
-`facts` is the existing protocol `JobFacts`.
-The hosted `JobAssignments` builder combines API facts with the scale
-message and JIT runner identity. `facts` has no full job ref.
+`job_id` is the Worker job ID of the original handoff.
+`facts` is the existing protocol `JobFacts`, with no full job ref. The
+hosted control plane fills it from API facts, the scale-set run ID, the JIT
+runner ID, and the `JobIdBinding` of that exact registered runner.
+Close and fallback select the sessions with the exact `facts` and the
+Worker job ID of that binding.
 The agent supplies
 original runtime credentials and endpoint URLs from the assigned runner
 before job code runs. A job request cannot register or replace them.

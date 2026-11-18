@@ -50,8 +50,7 @@ impl MachineCache {
                     .iter()
                     .filter(|(_, session)| {
                         session.registration.facts == facts
-                            && facts.assignment.job_id.as_ref()
-                                == Some(&session.registration.job_id)
+                            && facts.assignment.job_ids.worker_job_id == session.registration.job_id
                     })
                     .map(|(token, _)| token.clone())
                     .collect();

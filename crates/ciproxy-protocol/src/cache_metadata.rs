@@ -20,7 +20,7 @@ pub struct CacheMetadataSource {
 /// Exact hosted assignment whose repository metadata the machine requests.
 #[derive(Deserialize, Serialize)]
 pub struct CacheMetadataRequest {
-    /// Assigned scale-set job identity. Its placement is checked by the host.
+    /// Worker job identity bound to a registered runner on the calling machine.
     pub job_id: JobId,
 }
 
@@ -58,7 +58,7 @@ pub struct CacheMetadataRelayConfig {
 pub struct CacheMetadataWork {
     /// Opaque identifier used exactly once for its response.
     pub request_id: CacheMetadataRequestId,
-    /// Exact assigned job whose repository the hosted route authorizes.
+    /// Worker job identity whose runner binding the hosted route authorizes.
     pub job_id: JobId,
 }
 

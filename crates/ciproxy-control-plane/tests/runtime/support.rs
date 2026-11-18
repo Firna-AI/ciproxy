@@ -129,6 +129,7 @@ impl Fixture {
             .bind::<sql_types::Uuid,_>(workspace).bind::<sql_types::Uuid,_>(machine).bind::<sql_types::Uuid,_>(contact.session_id)
             .bind::<sql_types::Jsonb,_>(serde_json::to_value(&contact.report).unwrap()).bind::<sql_types::Timestamptz,_>(contact.at).execute(&mut connection).unwrap();
         let intent = OwnRunner {
+            worker_job_id: None,
             registration_scale_set_id: Some(44),
             requested_size: VmSize {
                 vcpus: 2,

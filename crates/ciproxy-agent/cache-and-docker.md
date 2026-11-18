@@ -49,6 +49,34 @@ A sealed replay can recover its cache session, also from saved facts while
 the control plane is unavailable.
 A mismatch, or a running VM without a seal, uses GitHub's cache.
 
+## Job identity
+
+The job ID of the handoff is the Worker job ID: the `JobId` of the job
+request that the runner's Worker gets. The agent records it as the running
+job of the VM and reports it in `JobStarted`. `JobPreparation` names that
+Worker job ID. Its `TrustedFacts` carry the `JobIdBinding` of the job: the
+Worker job ID and the scale-set job ID. The agent applies a preparation only
+to the runner whose running job has that Worker job ID. Cache registration,
+session recovery, fallback, and cleanup compare only the Worker job ID of
+the binding with the handoff. The machine cache accepts a signed
+runtime-token `job_id` equal to either ID of the binding, as the
+[cache sidecar README](../ciproxy-cache-sidecar/README.md#runtime-token-job-identity)
+says.
+
+Saved VM state from an earlier agent holds one `job_id` in its facts. The
+agent reads it as a binding of two equal IDs, so that job keeps its
+single-ID checks after an update.
+
+Saved VM state from agent 0.1.2 can also hold facts with an explicit null
+`job_id` and no `job_ids`. That agent saved them from a preparation that
+carried only `job_ids`, and then it chose GitHub's cache for that job.
+When the agent reads such saved facts, it logs a warning and drops only
+those facts. The VM and its preparation state stay, so the job keeps
+GitHub's cache. No trusted job ID or scope comes from the dropped facts.
+This recovery applies only to saved VM state. A malformed or partial pair
+still fails to load, and a message with a null `job_id` still fails to
+decode.
+
 ## Machine cache service
 
 Install obtains the checked `ciproxy-cache-sidecar` release and creates
@@ -163,7 +191,7 @@ starts the service if necessary and tries again later.
 This failure recovery does not run the offline cache clear.
 Job exit revokes sessions by the persisted trusted assignment.
 This also applies after restart.
-The assignment includes organization, repository, run, job, and runner identity.
+The assignment holds the organization, repository, run, job IDs, and runner.
 Reconnect recovers that assignment's live credential before registering again.
 When the service lost that session, a replay with the saved origins
 registers again with the saved rights.
@@ -200,7 +228,8 @@ Live KVM proof remains required.
 ## Related docs
 
 - [Cache](../../docs/protocol/cache.md) defines the cache rules and the
-  cache handoff.
+  job ID pair. [Cache handoff](../../docs/protocol/cache-handoff.md) defines
+  the cache handoff.
 - [Security](../../docs/protocol/security.md) defines job isolation.
 - [Cache sidecar](../ciproxy-cache-sidecar/README.md) gives the admin
   listener routes and the restore result without entry facts.

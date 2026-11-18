@@ -77,9 +77,10 @@ impl Claims {
         if !self.runner_id.matches(&facts.assignment.runner_id) {
             return Err(UnknownJobScopeReason::RunnerMismatch);
         }
-        if let Some(job) = &facts.assignment.job_id
-            && !self.job_id.is_some_and(|value| value.matches(&job.0))
-        {
+        if !self.job_id.is_some_and(|value| {
+            value.matches(&facts.assignment.job_ids.worker_job_id.0)
+                || value.matches(&facts.assignment.job_ids.scale_set_job_id.0)
+        }) {
             return Err(UnknownJobScopeReason::JobMismatch);
         }
         let Some(AccessClaim::Encoded(encoded)) = self.ac else {

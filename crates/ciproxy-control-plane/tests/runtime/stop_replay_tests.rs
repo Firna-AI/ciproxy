@@ -14,6 +14,7 @@ use unimock::{MockFn, Unimock, matching};
 use uuid::Uuid;
 
 use super::clock::clock;
+use super::job_binding_support::bind_job;
 use super::recovery_support::{gateway, job, reconnect, runtime, runtime_with_clock, saved};
 use super::settled::Settled;
 use super::support::{Fixture, at};
@@ -126,14 +127,20 @@ async fn failed_send_replays_before_job_routing_error_and_running_report_closes_
     runtime.settled_tick().await.unwrap();
     let stopping = saved(&fixture);
     let job = job(&fixture);
+    bind_job(
+        fixture.store.as_ref(),
+        fixture.workspace,
+        &stopping,
+        JobId(job.id.to_string()),
+    );
     fixture
         .store
         .save_github_job(fixture.workspace, &job, at())
         .unwrap();
     runtime.assignments = Arc::new(Unimock::new(
         JobAssignmentsMock::facts
-            .each_call(matching!(_, _, _))
-            .answers(&|_, _, _, _| Err(ciproxy_github::error::Error::OrganizationInactive)),
+            .each_call(matching!(_, _, _, _))
+            .answers(&|_, _, _, _, _| Err(ciproxy_github::error::Error::OrganizationInactive)),
     ));
     runtime.settled_tick().await.unwrap();
     assert_eq!(

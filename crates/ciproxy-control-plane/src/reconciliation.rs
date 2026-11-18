@@ -43,6 +43,10 @@ impl MachineRuntime {
             .iter()
             .find(|report| report.runner_id.0 == runner.runner.id.to_string())
         {
+            if let runners::RunnerState::Running { job_id } = &observed.state {
+                self.bind_worker_job(input.workspace_id, machine_id, runner, job_id.clone())
+                    .await?;
+            }
             let reported = match observed.state {
                 runners::RunnerState::Starting => RunnerState::Starting,
                 runners::RunnerState::Warm => RunnerState::Ready,
