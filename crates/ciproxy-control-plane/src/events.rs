@@ -154,7 +154,7 @@ impl MachineRuntime {
             )
             .await?;
         }
-        self.prepare_job(input, runner, job, machine_id).await
+        self.prepare_job(input, &assignment, machine_id).await
     }
 }
 

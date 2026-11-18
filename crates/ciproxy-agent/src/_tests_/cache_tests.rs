@@ -76,6 +76,11 @@ async fn restored_vm_exit_revokes_its_persisted_job_without_a_runtime_handoff() 
     let cache = HttpCache::with_boundaries(mock.clone(), mock.clone(), mock);
     let mut restored = vm("restored", true);
     restored.job_facts = Some(crate::fixtures::trusted_facts());
+    let mut another_worker = restored.clone();
+    let assignment = &mut another_worker.job_facts.as_mut().unwrap().assignment;
+    assignment.job_ids.worker_job_id = JobId("another-worker".into());
+    assignment.job_ids.scale_set_job_id = JobId("job-1".into());
+    cache.release(&another_worker).await.unwrap();
     cache.release(&restored).await.unwrap();
     assert_eq!(
         *revoked.lock().unwrap(),
@@ -139,12 +144,17 @@ async fn replay_reuses_live_credentials_and_registers_again_only_after_sidecar_l
         .await
         .unwrap();
     let facts = crate::fixtures::trusted_facts();
+    let mut wrong_worker = facts.clone();
+    wrong_worker.assignment.job_ids.worker_job_id = JobId("another-worker".into());
+    wrong_worker.assignment.job_ids.scale_set_job_id = JobId("job-1".into());
+    assert!(matches!(
+        cache.prepare(&record.report.runner_id, &wrong_worker).await,
+        Err(Error::GuestMismatch)
+    ));
     for expected in ["old", "old", "new", "new"] {
-        let (connection, _, data) = cache
-            .prepare(&record.report.runner_id, &facts)
-            .await
-            .unwrap()
-            .unwrap();
+        let preparation = cache.prepare(&record.report.runner_id, &facts).await;
+        assert!(matches!(&preparation, Ok(Some(_))));
+        let (connection, _, data) = preparation.unwrap().unwrap();
         assert_eq!(connection.token, Secret::new(expected));
         assert_eq!(data, 7);
     }

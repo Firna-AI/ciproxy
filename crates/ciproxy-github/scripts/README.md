@@ -114,7 +114,10 @@ Temporary OpenSSL inputs stay under `.context/` and are deleted on exit.
 Check a default-branch push, a branch, a same-name tag, a pull request,
 `pull_request_target`, a read-only cache job, and local and remote reusable
 workflows. Check a ciproxy JIT job as well. Compare its repository and run
-with the API and scale message. Compare its job UUID and runner ID with the
-scale message and JIT registration. A read-only job has no write scope.
+with the API and scale message. Compare its job UUID with the Worker job ID
+of the trusted handoff and the scale-set job ID of the same JIT runner. It
+must equal one of them. Record which one, or that the two IDs are equal.
+Compare its runner ID with the JIT registration. A read-only job has no
+write scope.
 Keep raw scope keys such as `refs/heads/refs/tags/main` in the evidence.
 Save only this safe output under `.context/` for the release review.

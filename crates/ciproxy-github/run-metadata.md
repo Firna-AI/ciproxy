@@ -23,10 +23,16 @@ not identify the triggering pull request. A deleted head repository stays
 absent. This crate makes no event-to-ref conversion and grants no cache
 or Docker trust from these fields.
 `JobAssignments::facts` returns a `JobPreparationOutcome` for each accepted
-assignment. `TrustedFacts` prepares the expected runtime-token identity for
-the agent. It combines the scale-message run ID and job UUID, the JIT
-runner ID, the API repository identity, event, and head repository, and
-the saved repository default branch. `AssignmentService` consumes the
+assignment. Its caller supplies the `JobIdBinding` of the exact registered
+runner: the runner's saved Worker job ID and the scale-set job UUID of the
+saved demand. The
+[runner guide](../ciproxy-control-plane/runners.md#job-assignment-and-worker-job-binding)
+says how the control plane builds it. This crate copies the binding
+unchanged, and no job name enters it. `TrustedFacts` prepares the expected
+runtime-token identity for the agent. It combines the scale-message run ID,
+that binding as `JobAssignment.job_ids`, the JIT runner ID, the API
+repository identity, event, and head repository, and the saved repository
+default branch. `AssignmentService` consumes the
 existing tenant-scoped repository snapshot through `AssignmentStore`.
 When that snapshot loads but lacks the repository, the result is
 `GitHubOnly` with the snapshot's organization ID. The job then uses GitHub
@@ -34,7 +40,8 @@ directly. A snapshot or store error stays an error, so the caller retries.
 It never guesses a default branch or job ref.
 
 The agent sends those facts and the original token to the machine cache.
-The machine returns a checked signed scope or a typed unknown reason.
+The machine accepts a signed `job_id` equal to either ID of the binding.
+It returns a checked signed scope or a typed unknown reason.
 It checks cache trust, also for reusable workflows. The agent uses the
 checked ref for Docker policy and owns the Docker-disk lifecycle.
 The REST adapter reads the API event and head metadata with its

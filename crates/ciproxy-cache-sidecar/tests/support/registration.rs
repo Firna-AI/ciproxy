@@ -53,7 +53,7 @@ impl Fixture {
     ) -> Job {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let origin = format!("http://{}", listener.local_addr().unwrap());
-        facts.assignment.job_id = Some(JobId(id.into()));
+        facts.assignment.job_ids.worker_job_id = JobId(id.into());
         let github_token = facts.runtime_token();
         let registration = CacheRegistration {
             job_id: JobId(id.into()),

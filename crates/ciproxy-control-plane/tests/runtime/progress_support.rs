@@ -1,6 +1,7 @@
 //! A second workspace shares the held remote runtime's real PostgreSQL store.
 
 use ciproxy_gateway::types::Session;
+use ciproxy_protocol::identifiers::JobId;
 use ciproxy_store_interface::gateway::Contact;
 use ciproxy_store_interface::github::GithubJob;
 use ciproxy_store_interface::own_runners::OwnRunner;
@@ -9,6 +10,7 @@ use ciproxy_store_interface::tokens::{Token, TokenSubject};
 use ciproxy_store_interface::workspaces::Workspace;
 use uuid::Uuid;
 
+use super::job_binding_support::bind_job;
 use super::recovery_support::job;
 use super::support::{Fixture, at};
 
@@ -100,6 +102,12 @@ pub(super) fn peer(fixture: &Fixture) -> Peer {
     job.scale_set_id = binding.id;
     job.runner_github_id = Some(147);
     store.save_github_job(workspace, &job, at()).unwrap();
+    bind_job(
+        store.as_ref(),
+        workspace,
+        &runner,
+        JobId(job.id.to_string()),
+    );
     Peer {
         workspace,
         runner,

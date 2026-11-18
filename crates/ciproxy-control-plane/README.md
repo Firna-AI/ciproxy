@@ -68,8 +68,8 @@ finish. Other runtime work then gets up to five more seconds.
 ### Routing and runners
 
 The [runner guide](runners.md) gives routing, reservations, the agent event
-queue, Worker job binding, remote requests, report confirmation, stop
-replay, retirement authority, and the removal and take-out policies.
+queue, job ID binding and preparation, remote requests, report confirmation,
+stop replay, retirement authority, and the removal and take-out policies.
 Take-out checks saved retirement for both own-machine and Boat reservations
 before the API removes GitHub access.
 
@@ -248,7 +248,8 @@ GitHub, and database access, so they stay operator work.
   outside runner operations.
 - [src/events.rs](src/events.rs) binds authenticated observations to runners.
 - [src/assignment.rs](src/assignment.rs) defines `Assignment`, which job
-  routing and the cache metadata route use to find a job's exact runner.
+  routing, job preparation, and the cache metadata route use to find a job's
+  exact runner. `Assignment::job_ids` gives the pair for job preparation.
 - [src/job_binding.rs](src/job_binding.rs) saves the Worker job ID that an
   agent `JobStarted` event or a full report gives for its exact runner.
 - [src/cache_metadata/](src/cache_metadata/mod.rs) checks the machine

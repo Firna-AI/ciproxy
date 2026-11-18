@@ -136,8 +136,8 @@ The Worker and scale-set job IDs can differ.
 `Assignment::resolve` joins saved demand to its runner. The demand must be
 `Started` or `Completed`, and name a GitHub runner ID. The runner must have
 that GitHub runner ID, in the same organization and scale set. When two
-runners match, it selects none. Own-machine job routing and the cache
-metadata route share this join.
+runners match, it selects none. Own-machine job routing, job preparation,
+and the cache metadata route share this join.
 
 An agent `JobStarted` event and a full report that lists a running runner
 carry the Worker job ID. The runtime binds that ID to the runner before it
@@ -156,13 +156,23 @@ join to that runner. The answer lists the cache entries of the repository
 of that demand. The route never matches a request against a scale-set job
 ID or a job name.
 
-The binding does not change job preparation or `JobFacts`. Both carry the
-scale-set job ID. The agent applies a preparation only to the runner that
-reported the same job ID. It registers a cache session only when the
-`JobFacts` job ID equals the Worker job ID. So a job whose Worker and
-scale-set job IDs differ gets no preparation and no machine-cache session.
-The [cache sidecar guide](../ciproxy-cache-sidecar/README.md#runtime-token-job-identity)
-gives the source limit of the runtime token's `job_id` claim.
+`Assignment::job_ids` gives the `JobIdBinding` of the joined runner: its
+saved Worker job ID and the scale-set job ID of the saved demand. Until the
+runner has a saved Worker job ID, the runtime sends no job preparation.
+GitHub's `Started` message and the agent's Worker job ID can arrive in
+either order. The routing pass after the later one sends the preparation.
+`JobPreparation` names the Worker job ID. Its `TrustedFacts` carry the
+binding as `JobAssignment.job_ids`. No job name or other ID enters the
+binding.
+
+The agent applies a preparation only to the runner whose running job has
+that Worker job ID. Its cache handoff, session, and cleanup compare only the
+Worker job ID. The machine cache accepts a signed runtime-token `job_id`
+equal to either ID of the binding, as
+[Trusted write-back](../../docs/protocol/cache.md#trusted-write-back)
+requires. The
+[cache sidecar README](../ciproxy-cache-sidecar/README.md#runtime-token-job-identity)
+gives the live proof of that check and its limit.
 
 ## Remote requests
 

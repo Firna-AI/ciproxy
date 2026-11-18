@@ -157,8 +157,7 @@ async fn tag_named_main_keeps_raw_scope_and_cannot_publish_default_entries() {
 #[tokio::test]
 async fn missing_token_registers_unknown_and_job_listener_cannot_read_checked_scope() {
     let fixture = Fixture::new().await;
-    let mut spec = facts("refs/heads/main");
-    spec.assignment.job_id = None;
+    let spec = facts("refs/heads/main");
     let registration = json!({"job_id":"missing","facts":spec.facts,"permissions":{"read":true,"write":true},
         "cache_url":"http://unused.invalid","results_url":"http://unused.invalid","proxy_url":"http://unused.invalid"});
     let response = fixture

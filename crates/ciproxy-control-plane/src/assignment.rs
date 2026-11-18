@@ -1,6 +1,7 @@
 //! One trusted join from scale-set demand through a registered runner to its Worker.
 
 use ciproxy_protocol::identifiers::JobId;
+use ciproxy_protocol::jobs::JobIdBinding;
 use ciproxy_store_interface::github::{DemandPhase, GithubJob};
 use ciproxy_store_interface::own_runners::{OwnRunner, RoutingSnapshot};
 use ciproxy_store_interface::runners::{RunnerPlace, RunnerState};
@@ -15,6 +16,14 @@ pub(crate) struct Assignment<'a> {
 }
 
 impl<'a> Assignment<'a> {
+    /// Carry both namespaces only after this exact runner reports its Worker job.
+    pub(crate) fn job_ids(&self) -> Option<JobIdBinding> {
+        Some(JobIdBinding {
+            worker_job_id: self.runner.worker_job_id.as_ref()?.0.clone(),
+            scale_set_job_id: JobId(self.job.id.to_string()),
+        })
+    }
+
     /// Resolve only an unambiguous registered identity within its organization and pool.
     pub(crate) fn resolve(input: &'a RoutingSnapshot, job: &'a GithubJob) -> Option<Self> {
         if job.phase < DemandPhase::Started {

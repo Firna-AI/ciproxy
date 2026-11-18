@@ -5,10 +5,10 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use ciproxy_protocol::identifiers::{
-    GitRef, ImageId, JobEvent, LabelName, OrganizationId, RepositoryId, RunnerId,
+    GitRef, ImageId, JobEvent, JobId, LabelName, OrganizationId, RepositoryId, RunnerId,
 };
 use ciproxy_protocol::images::ImageMetadata;
-use ciproxy_protocol::jobs::{JobAssignment, JobFacts, JobScope, Repository};
+use ciproxy_protocol::jobs::{JobAssignment, JobFacts, JobIdBinding, JobScope, Repository};
 use ciproxy_protocol::reports::{DiskReport, HardwareReport};
 use ciproxy_protocol::resources::VmSize;
 use ciproxy_protocol::runners::{RunnerReport, RunnerState};
@@ -156,7 +156,10 @@ pub(super) fn facts() -> JobFacts {
         },
         assignment: JobAssignment {
             run_id: "run-1".to_owned(),
-            job_id: None,
+            job_ids: JobIdBinding {
+                worker_job_id: JobId("job-1".into()),
+                scale_set_job_id: JobId("scale-job-1".into()),
+            },
             runner_id: "github-runner-1".to_owned(),
         },
         event: JobEvent("push".to_owned()),

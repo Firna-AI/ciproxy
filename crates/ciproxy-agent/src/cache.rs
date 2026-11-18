@@ -149,7 +149,7 @@ impl Cache for HttpCache {
         if job.fallback {
             return Ok(None);
         }
-        if facts.assignment.job_id.as_ref() != Some(&job.job_id) {
+        if facts.assignment.job_ids.worker_job_id != job.job_id {
             return Err(Error::GuestMismatch);
         }
         if job.runtime.proxy_url.is_empty() {
@@ -222,7 +222,7 @@ impl Cache for HttpCache {
 
 fn assigned_job(vm: &VmRecord) -> Option<JobFacts> {
     let facts = vm.job_facts.as_ref()?;
-    let job_id = facts.assignment.job_id.as_ref()?;
+    let job_id = &facts.assignment.job_ids.worker_job_id;
     (facts.organization_id == vm.report.organization_id
         && vm.report.state
             == (ciproxy_protocol::runners::RunnerState::Running {

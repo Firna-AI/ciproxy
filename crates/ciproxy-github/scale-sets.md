@@ -29,6 +29,11 @@ GitHub Free. GitHub runs the job of a selected repository on a runner of
 the group. It keeps the job of another private repository queued with no
 runner.
 
+Runner group sync creates or updates the managed name and private-access
+policy. It sets selected repositories through the separate repository
+access endpoint after either operation. The create and update bodies omit
+repository IDs, so repeated syncs use GitHub's supported update fields.
+
 ## Scale sets
 
 The adapter uses `scaleset` 0.2.0. The foundation live spike used 0.1.0.

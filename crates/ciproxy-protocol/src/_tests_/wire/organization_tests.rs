@@ -4,6 +4,8 @@ use serde_json::json;
 
 use crate::agent::{AgentMessage, ControlMessage, JobPreparationOutcome};
 use crate::guest::{AgentToGuest, JobDecision};
+use crate::identifiers::JobId;
+use crate::jobs::{JobAssignment, JobIdBinding};
 use crate::secret::Secret;
 use crate::version::ProtocolVersion;
 
@@ -103,6 +105,63 @@ fn assigned_job_facts_preserve_organization_and_actual_repository() {
                 "id": "repository-1", "full_name": "example/project",
             }),
             "{name}"
+        );
+    }
+}
+
+#[test]
+fn job_assignment_reads_legacy_ids_and_requires_a_complete_pair() {
+    let decoded = serde_json::from_value::<JobAssignment>(json!({
+        "run_id": "31", "runner_id": "71", "job_id": "legacy-job",
+    }));
+    let expected = JobAssignment {
+        run_id: "31".into(),
+        runner_id: "71".into(),
+        job_ids: JobIdBinding {
+            worker_job_id: JobId("legacy-job".into()),
+            scale_set_job_id: JobId("legacy-job".into()),
+        },
+    };
+    assert_eq!(
+        decoded.as_ref().map_err(|error| error.classify()),
+        Ok(&expected)
+    );
+    assert_eq!(
+        serde_json::to_value(decoded.unwrap()).unwrap(),
+        json!({
+            "run_id": "31", "runner_id": "71",
+            "job_ids": {
+                "worker_job_id": "legacy-job", "scale_set_job_id": "legacy-job",
+            },
+        })
+    );
+    for (case, identity) in [
+        ("missing IDs", json!({})),
+        ("null legacy ID", json!({"job_id": null})),
+        ("null pair", json!({"job_ids": null})),
+        (
+            "missing scale-set ID",
+            json!({"job_ids": {"worker_job_id": "worker-job"}}),
+        ),
+        (
+            "missing Worker ID",
+            json!({"job_ids": {"scale_set_job_id": "scale-job"}}),
+        ),
+        (
+            "partial pair with legacy ID",
+            json!({"job_ids": {"worker_job_id": "worker-job"}, "job_id": "legacy-job"}),
+        ),
+    ] {
+        let mut assignment = json!({"run_id": "31", "runner_id": "71"});
+        assignment
+            .as_object_mut()
+            .unwrap()
+            .extend(identity.as_object().unwrap().clone());
+        let decoded = serde_json::from_value::<JobAssignment>(assignment);
+        assert_eq!(
+            decoded.map(|_| ()).map_err(|error| error.classify()),
+            Err(serde_json::error::Category::Data),
+            "{case}"
         );
     }
 }

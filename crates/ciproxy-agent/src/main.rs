@@ -243,3 +243,7 @@ mod area_fixtures;
 #[cfg(test)]
 #[path = "_tests_/root_failure_fixtures.rs"]
 mod root_failure_fixtures;
+
+#[cfg(test)]
+#[path = "_tests_/state_upgrade_tests.rs"]
+mod state_upgrade_tests;

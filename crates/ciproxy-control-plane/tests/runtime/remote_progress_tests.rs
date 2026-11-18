@@ -63,8 +63,8 @@ async fn held_github_create_allows_gateway_report_command_and_other_workspace_st
     );
     let assignments = Unimock::new(
         JobAssignmentsMock::facts
-            .each_call(matching!(_, _, _))
-            .answers(&|_, _, _, _| {
+            .each_call(matching!(_, _, _, _))
+            .answers(&|_, _, _, _, _| {
                 Ok(JobPreparationOutcome::GitHubOnly {
                     organization_id: OrganizationId("142".into()),
                 })

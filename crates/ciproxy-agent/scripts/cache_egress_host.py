@@ -147,7 +147,8 @@ sys.exit(1)
             "job_id": job, "facts": {
                 "organization_id": "0", "repository": {
                     "id": "0", "full_name": "public/firewall-probe"},
-                "assignment": {"run_id": "0", "job_id": job, "runner_id": "0"},
+                "assignment": {"run_id": "0", "job_ids": {"worker_job_id": job,
+                               "scale_set_job_id": str(uuid.uuid4())}, "runner_id": "0"},
                 "event": "workflow_dispatch", "head_repository": None,
                 "default_ref": "refs/heads/main", "sticky_docker": False},
             "permissions": {"read": True, "write": False}, "github_token": "",

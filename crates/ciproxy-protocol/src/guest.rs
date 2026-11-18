@@ -74,7 +74,7 @@ pub enum GuestToAgent {
     JobStarting {
         /// Runner owned by this VM.
         runner_id: RunnerId,
-        /// The scale-message job UUID from the runner's assignment.
+        /// The job UUID reported by the runner Worker.
         job_id: JobId,
         /// Original in-memory runtime handoff, never sent to the control plane.
         runtime: RuntimeCredentials,

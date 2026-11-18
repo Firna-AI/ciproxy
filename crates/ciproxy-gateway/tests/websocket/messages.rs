@@ -6,6 +6,7 @@ use ciproxy_protocol::identifiers::{
     ImageId, JobId, LabelName, MachineId, OrganizationId, RunnerId, WorkspaceId,
 };
 use ciproxy_protocol::images::ImageMetadata;
+use ciproxy_protocol::jobs::{JobAssignment, JobIdBinding};
 use ciproxy_protocol::reports::{DiskReport, MachineReport, SlotOccupancy, SlotReport};
 use ciproxy_protocol::resources::{GIGABYTE, Slots, VmSize};
 use ciproxy_protocol::runners::{RunnerReport, RunnerState};
@@ -62,9 +63,12 @@ pub(super) fn report() -> MachineReport {
     report.cache.as_mut().measured().unwrap().jobs = vec![JobCacheReport {
         organization_id: OrganizationId("org-2".into()),
         repository_id: ciproxy_protocol::identifiers::RepositoryId("repo-9".into()),
-        assignment: ciproxy_protocol::jobs::JobAssignment {
+        assignment: JobAssignment {
             run_id: "run-9".into(),
-            job_id: Some(JobId("job-9".into())),
+            job_ids: JobIdBinding {
+                worker_job_id: JobId("job-9".into()),
+                scale_set_job_id: JobId("scale-job-9".into()),
+            },
             runner_id: "github-runner-9".into(),
         },
         job_id: JobId("job-9".into()),
