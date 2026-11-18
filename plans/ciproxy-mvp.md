@@ -1073,6 +1073,17 @@ Live KVM and authenticated job checks remain with the orchestrator.
           `follow-ups/smoke-cold-image-readiness.md` says.
     - [ ] Run the Boat `large` job with its exit callback and the three
           overflow checks again. They wait for the Boat client fix above.
+  - [x] Replace the total time limit of image downloads with a stall limit.
+        The image client ended each download after 3,600 seconds, so a link
+        slower than about 40 Mbit/s could never finish the 18 GB image. My
+        call, 18 November 2026: fix now, with a connect limit of 20 seconds
+        and a read limit of 120 seconds. Reason: a slow download that keeps
+        receiving bytes finishes, and a stalled one still fails. Resume of
+        partial downloads stays in
+        `follow-ups/repeat-install-image-download.md`.
+        Branch: `conductor/image-download-stall-limit`.
+  - [ ] Publish agent pre-release 0.1.4 with the stall limit before the next
+        live run.
 
 Owner review of pull request #31, round 1, 6 November 2026: the user chose
 fix now for findings 1 to 8 and fix after the merge for finding 9.
