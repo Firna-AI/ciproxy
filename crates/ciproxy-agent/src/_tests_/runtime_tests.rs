@@ -69,14 +69,21 @@ async fn daemon_reports_every_wait_beyond_queue_capacity_while_control_stays_pen
             })),
         MaintenanceMock::run.some_call(matching!()).returns(()),
         DelayMock::wait.each_call(matching!(10)).returns(()),
-        ConnectionMock::receive
-            .some_call(matching!())
-            .returns(Ok(ControlEvent::Message(Box::new(
-                ControlMessage::StartRunner {
-                    command_id: CommandId("blocked".to_owned()),
-                    runner: spec(),
-                },
-            )))),
+        ConnectionMock::receive.stub(|each| {
+            each.call(matching!())
+                .answers(&|_| {
+                    Ok(ControlEvent::Message(Box::new(
+                        ControlMessage::StartRunner {
+                            command_id: CommandId("blocked".to_owned()),
+                            runner: spec(),
+                        },
+                    )))
+                })
+                .once()
+                .then()
+                .answers(&|_| Ok(ControlEvent::CredentialRejected))
+                .once();
+        }),
         ConnectionMock::send
             .each_call(matching!((message) if matches!(message, AgentMessage::Report { .. })))
             .answers_arc(Arc::new(move |_, _| {
@@ -112,8 +119,7 @@ async fn daemon_reports_every_wait_beyond_queue_capacity_while_control_stays_pen
         }),
     };
     let (_guests, guest_events) = mpsc::channel(1);
-    let (remove, removal) = mpsc::channel(1);
-    let run = unconstrained(daemon.run(Some(identity()), guest_events, false, removal));
+    let run = unconstrained(daemon.run(Some(identity()), guest_events, false));
     pin_mut!(run);
     assert!(matches!(poll!(run.as_mut()), Poll::Pending));
     gateway_ready.recv().await.unwrap();
@@ -138,7 +144,7 @@ async fn daemon_reports_every_wait_beyond_queue_capacity_while_control_stays_pen
     release.send(()).unwrap();
     reconcile_ready.recv().await.unwrap();
     assert_eq!(reconciliations.load(Ordering::SeqCst), 1);
-    remove.send(()).await.unwrap();
+    permit.send(()).unwrap();
     run.await.unwrap();
     assert_eq!(reports.load(Ordering::SeqCst), 130);
 }
@@ -202,8 +208,7 @@ async fn daemon_removes_a_rejected_connected_machine_without_another_handshake()
         }),
     };
     let (_guests, guest_events) = mpsc::channel(1);
-    let (_remove, removal) = mpsc::channel(1);
-    let run = unconstrained(daemon.run(Some(identity()), guest_events, false, removal));
+    let run = unconstrained(daemon.run(Some(identity()), guest_events, false));
     pin_mut!(run);
     assert!(matches!(poll!(run.as_mut()), Poll::Pending));
     gateway_ready.recv().await.unwrap();

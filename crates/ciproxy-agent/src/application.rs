@@ -5,7 +5,6 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
 use clap::Parser;
-use tokio::signal::unix::{SignalKind, signal};
 use tokio::sync::{Mutex, mpsc};
 use tracing_subscriber::fmt::writer::BoxMakeWriter;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -249,20 +248,7 @@ async fn execute(action: Action) -> Result<()> {
                     }),
                 }),
             });
-            let mut signal =
-                signal(SignalKind::user_defined1()).context("listen for local uninstall")?;
-            let (remove, removal) = mpsc::channel(1);
-            let input = tokio::spawn(async move {
-                while signal.recv().await.is_some() {
-                    if remove.send(()).await.is_err() {
-                        return;
-                    }
-                }
-            });
-            let result = daemon.run(identity, guest_rx, removing, removal).await;
-            input.abort();
-            let _ = input.await;
-            result?;
+            daemon.run(identity, guest_rx, removing).await?;
         }
         ConfiguredAction::Uninstall => {
             let Some(runtime) = preclaimed else {

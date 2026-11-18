@@ -1,4 +1,4 @@
-# A take-out runtime test flakes under load
+# Take-out runtime tests flake under load
 
 - **Severity:** Medium. **Effort:** Medium. **Confidence:** Medium.
   **Harder later:** No.
@@ -8,7 +8,10 @@
 - **Source:** Implementation.
 - **Category:** Test.
 - **Location:** `crates/ciproxy-control-plane/tests/runtime/overflow_takeout_tests.rs:107`,
-  the test `takeout_waits_for_boat_retirement_and_saves_idle_and_busy_answers`.
+  the test `takeout_waits_for_boat_retirement_and_saves_idle_and_busy_answers`,
+  and `crates/ciproxy-control-plane/tests/runtime/overflow_registration_retention_tests.rs:135`,
+  the test
+  `completed_takeout_forgets_terminal_registrations_after_retained_reinstall`.
 - **Reason:** The merge did not change this test or the runtime code that
   it calls, so the fix belongs in a separate branch.
 - **Terms:**
@@ -25,13 +28,20 @@
   - The test then passed 5 of 5 runs alone, and the whole `runtime_tests`
     binary passed 6 of 6 runs. Other sessions used the same machine and
     PostgreSQL server during the failed gate.
-- **Problem:** The test depends on an order or a timing that load can
+  - On 18 November 2026, the registration-retention test failed in the
+    push CI run for commit `f57cd9ad6db273b8e682786fdaf6652358e3f523`.
+    Its call to `settled_lifecycle` returned `StateChanged`. The panic was
+    `called Result::unwrap() on an Err value: StateChanged` at line 135.
+  - The pull-request CI run for the same commit passed. The failed push
+    job passed on its single rerun. This branch changes neither test nor
+    the control-plane runtime that they call.
+- **Problem:** The tests depend on an order or a timing that load can
   change. The source is not proven. Async ordering between the lifecycle
   call and a runtime tick, or shared fixture state, is the likely source.
 - **Impact if no action:** The gate can fail without a code defect, and its
   Rust phase then skips the later test binaries.
-- **Root question:** How does the take-out test control the order of the
-  events that it checks?
+- **Root question:** How do the take-out tests control the order of the
+  events that they check?
 - **Options:**
   - **A.** Reproduce the flake under load, name its source, and make the
     test deterministic with explicit event order or isolated state. Keep
