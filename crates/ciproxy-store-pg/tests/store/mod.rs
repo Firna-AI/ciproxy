@@ -2,6 +2,7 @@
 
 mod boat_tests;
 mod cleanup_tests;
+mod connection_tests;
 mod dashboard_continuation_tests;
 mod dashboard_pending_tests;
 mod gateway_support;

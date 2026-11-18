@@ -6,8 +6,10 @@ use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use async_trait::async_trait;
+use ciproxy_github::delivery_worker::{RecoveryPass, RecoveryWorker};
 use ciproxy_github::listener::{DurableListener, JobOutput, ListenerOptions, ScaleSetListener};
 use ciproxy_github::persistence::session::ListenerTarget;
+use ciproxy_github::runtime::SystemRuntime;
 use ciproxy_store_interface::github::GithubJob;
 use ciproxy_store_interface::organizations::AppState;
 use tokio::sync::watch;
@@ -89,10 +91,14 @@ impl Hosted {
             machines: self.machines.clone(),
             armed: true,
         };
-        let recovery = self.recovery.clone();
+        let recovery: Arc<dyn RecoveryPass> = Arc::new(RecoveryWorker::new(
+            self.recovery.clone(),
+            Arc::new(SystemRuntime),
+        ));
         let mut recovery_stop = stop.clone();
         let _recovery = RecoveryTask(tokio::spawn(async move {
             let mut ticks = interval(Duration::from_secs(60));
+            ticks.set_missed_tick_behavior(MissedTickBehavior::Delay);
             loop {
                 tokio::select! {
                     _ = ticks.tick() => {

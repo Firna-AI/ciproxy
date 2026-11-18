@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use crate::store::support::{Database, machine};
 
-use super::support::{prices, time, usd};
+use super::support::{historical_registration, historical_workspace_start, prices, time, usd};
 
 #[test]
 fn removal_retries_preserve_first_registration_end_and_exclude_later_cost_days() {
@@ -17,10 +17,7 @@ fn removal_retries_preserve_first_registration_end_and_exclude_later_cost_days()
     let starts = time("2026-11-04T00:00:00Z");
     let first = time("2026-11-04T12:00:00Z");
     let retry = time("2026-11-05T12:00:00Z");
-    database
-        .store
-        .record_workspace_start(workspace.id, starts)
-        .unwrap();
+    historical_workspace_start(&database, workspace.id, starts);
     database
         .store
         .save_plan_cost(
@@ -35,10 +32,7 @@ fn removal_retries_preserve_first_registration_end_and_exclude_later_cost_days()
         .unwrap();
     let own = machine();
     database.store.create_machine(workspace.id, &own).unwrap();
-    database
-        .store
-        .record_machine_registration(workspace.id, own.id, starts)
-        .unwrap();
+    historical_registration(&database, workspace.id, own.id, starts);
     database
         .store
         .save_machine_cost(
@@ -79,10 +73,7 @@ fn removal_retries_preserve_first_registration_end_and_exclude_later_cost_days()
         .store
         .create_machine(workspace.id, &second)
         .unwrap();
-    database
-        .store
-        .record_machine_registration(workspace.id, second.id, starts)
-        .unwrap();
+    historical_registration(&database, workspace.id, second.id, starts);
     database
         .store
         .save_machine_cost(

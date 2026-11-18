@@ -80,8 +80,9 @@ Organization mutation leases wait on dedicated connections. They retain
 all GitHub identity bits in the separate two-key advisory namespace.
 
 MeteringStore reads coherent workspace facts across all organizations.
-It stores trusted creation times, registration times, and cost histories.
-It stores explicit Free and Stripe billing-period boundaries.
+Workspace creation and machine registration save their trusted times.
+MeteringStore stores machine, plan, and Boat cost histories.
+BillingState supplies the current Free or Stripe billing period.
 Anonymous daily aggregates keep actual VM sizes and Boat costs.
 Anonymous timestamp counts preserve exact period boundaries.
 Job and runner cursors support atomic signed aggregate corrections.

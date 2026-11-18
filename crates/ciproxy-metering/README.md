@@ -85,15 +85,17 @@ fn metering(store: Arc<dyn MeteringStore>) -> Arc<dyn Metering> {
 Trusted fact producers must supply these inputs:
 
 1. Create workspaces through WorkspaceStore or GitHub registration.
-   PostgreSQL saves the trusted creation time, zero-dollar Free price,
-   and first Free period in that creation transaction.
-2. At first machine registration, call record_machine_registration.
+   PostgreSQL saves the trusted creation time and zero-dollar Free price
+   in that creation transaction.
+2. Register machines through GatewayStore or create them through MachineStore.
+   PostgreSQL saves the first registration time in that creation transaction.
    Save monthly MachineCost intervals when the customer supplies costs.
    Existing remove_machine calls preserve the registration's end time.
 3. Supply assigned runners and taken-at times through JobStore.
    Update completed-at times when trusted GitHub facts arrive.
-4. Save each ciproxy Boat runner's prices with save_boat_cost.
-   Supply its actual billing start, end, start fee, and minute rate.
+4. Persist Boat execution through OverflowStore.
+   The metering queries read its durable start fee and runtime prices.
+   save_boat_cost remains available for trusted standalone cost facts.
 5. Confirm billing through BillingSession::commit.
    PostgreSQL records a changed monthly PlanCost with the billing state.
    Checkout uses the Stripe period start. Subscription end uses the Free anchor.
@@ -109,7 +111,9 @@ Trusted fact producers must supply these inputs:
    Call savings after refresh for current daily totals.
    Supply both dated USD price lists.
 
-Unknown legacy registration and creation times remain unknown.
+The registration migration recovers legacy dates from retained machine
+credential creation times. Missing legacy registration and creation facts
+remain unknown.
 Runtime wiring, Stripe, machine forms, and catalog configuration belong to
 their respective services.
 
@@ -132,7 +136,8 @@ snapshots through the production adapter.
 
 ### Key Code
 
-- [src/period.rs](src/period.rs) owns Free anchors and period changes.
+- [src/period.rs](src/period.rs) computes the current Free period from its
+  anchor.
 - [src/usage.rs](src/usage.rs) computes counts, forecasts, and notices.
 - [src/pricing.rs](src/pricing.rs) finds paid offers from the shared catalog.
 - [src/service.rs](src/service.rs) implements Metering over a dyn store.

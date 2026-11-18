@@ -1,12 +1,12 @@
 //! Object-safe workspace-scoped metering persistence.
 
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::NaiveDate;
 use unimock::unimock;
 use uuid::Uuid;
 
 use crate::error::Result;
 use crate::metering::facts::WorkspaceUsage;
-use crate::metering::history::{BoatAccounting, BoatCost, MachineCost, Period, PlanCost};
+use crate::metering::history::{BoatAccounting, BoatCost, MachineCost, PlanCost};
 use crate::metering::report::SavingsSnapshot;
 use crate::metering::totals::{AccountedBoat, AccountedJob, DailyBoatCost, DailyDelta, StartTotal};
 
@@ -23,15 +23,6 @@ pub trait MeteringStore: Send + Sync {
     ) -> Result<bool>;
     /// Read all retained started jobs and registrations in one workspace.
     fn workspace_usage(&self, workspace_id: Uuid) -> Result<WorkspaceUsage>;
-    /// Record the trusted workspace creation time for zero-cost prehistory.
-    fn record_workspace_start(&self, workspace_id: Uuid, at: DateTime<Utc>) -> Result<()>;
-    /// Record a trusted first registration time without changing machine state.
-    fn record_machine_registration(
-        &self,
-        workspace_id: Uuid,
-        machine_id: Uuid,
-        at: DateTime<Utc>,
-    ) -> Result<()>;
     /// Store one customer's machine-price interval by its stable identifier.
     fn save_machine_cost(&self, workspace_id: Uuid, cost: &MachineCost) -> Result<()>;
     /// Store one confirmed monthly tier and add-on price interval.
@@ -46,10 +37,6 @@ pub trait MeteringStore: Send + Sync {
         from: NaiveDate,
         until: NaiveDate,
     ) -> Result<SavingsSnapshot>;
-    /// Save or close a billing period using its original start as the key.
-    fn save_metering_period(&self, workspace_id: Uuid, period: &Period) -> Result<()>;
-    /// Read stored Free and Stripe period boundaries in start order.
-    fn metering_periods(&self, workspace_id: Uuid) -> Result<Vec<Period>>;
     /// Apply supplied aggregate corrections and a cursor in one transaction.
     ///
     /// Return false when another refresh changed the previous cursor.

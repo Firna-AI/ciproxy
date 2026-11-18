@@ -14,18 +14,35 @@ completion listeners through the final acknowledgement. Active sibling
 organizations keep their runners and demand.
 
 GitHub does not automatically retry failed webhooks.
-A separate worker scans all pages of retained App delivery history each
-minute. It groups retries by delivery GUID and uses the latest attempt.
-It requests redelivery for each relevant event whose latest attempt did not
-get the route's acknowledgement, HTTP 204. `/hooks/github` returns 204 only
-after the App accepts the delivery.
+A separate worker can start a recovery pass each minute. Each pass scans
+every page of retained App delivery history, without a status filter.
+Recovery groups relevant attempts by delivery GUID. It counts the retained
+attempts and selects the latest attempt by delivery time, then attempt ID.
+An event becomes due after its latest attempt plus an exponential delay.
+The delays are 1, 2, 4, 8, 16, and 32 minutes, then one hour.
+The first failed delivery becomes due after one minute. Recovery keeps
+retrying while GitHub retains the event. It rebuilds each event's schedule
+from that history, also after a process restart.
+Recovery requests redelivery only when the latest attempt did not get the
+route's acknowledgement, HTTP 204. `/hooks/github` returns 204 only after
+the App accepts the delivery.
 GitHub counts every status from 200 to 399 as a success. A redirect or a
 proxy page can return such a status before the route runs, so the worker
 does not count it as delivered. An extra redelivery is safe, because the
 handled events are idempotent. A lost event is not safe.
-A proxy that rewrites the 204 makes the worker redeliver that event each
-minute while GitHub keeps it in the history. Do not put such a proxy in
-front of the route.
+A proxy that rewrites the 204 makes the worker keep redelivering that event
+with this delay. Do not put such a proxy in front of the route.
+
+The worker waits one second before each redelivery request. This keeps
+requests at least one second apart, also across passes. A provider throttle
+stops the current pass. Later passes make no requests before its deadline.
+Recovery recognizes a throttle on HTTP 403 or 429 with `Retry-After` or an
+exhausted `x-ratelimit-remaining` budget. HTTP 429 also counts as a throttle
+without those headers. `Retry-After` takes priority. Otherwise, an exhausted
+budget uses `x-ratelimit-reset`. A missing or unreadable deadline uses a
+one-minute delay. The worker keeps only this global throttle deadline.
+It delays missed recovery ticks instead of running catch-up bursts.
+
 The App's durable lifecycle outbox handles failures after local persistence.
 A separate startup and five-minute poll refreshes current installation
 authority and repository snapshots. It needs no optional event subscriptions.

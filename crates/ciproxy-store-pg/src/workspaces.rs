@@ -2,15 +2,13 @@
 
 use chrono::{DateTime, Utc};
 use ciproxy_schema::billing::billing_accounts;
-use ciproxy_schema::metering::{metering_periods, metering_plan_costs};
+use ciproxy_schema::metering::metering_plan_costs;
 use ciproxy_schema::organizations::organizations;
 use ciproxy_schema::settings::settings;
 use ciproxy_schema::workspaces::workspaces;
 use ciproxy_store_interface::error::Result;
 use ciproxy_store_interface::workspaces::{Workspace, WorkspaceStore};
-use diesel::dsl::sql;
 use diesel::prelude::*;
-use diesel::sql_types::Timestamptz;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -73,16 +71,6 @@ fn initialize_metering_on(
             metering_plan_costs::workspace_id.eq(workspace_id),
             metering_plan_costs::starts_at.eq(created_at),
             metering_plan_costs::monthly_usd.eq(Decimal::ZERO),
-        ))
-        .execute(connection)?;
-    let ends_at = sql::<Timestamptz>("((")
-        .bind::<Timestamptz, _>(created_at)
-        .sql(" AT TIME ZONE 'UTC') + INTERVAL '1 month') AT TIME ZONE 'UTC'");
-    diesel::insert_into(metering_periods::table)
-        .values((
-            metering_periods::workspace_id.eq(workspace_id),
-            metering_periods::starts_at.eq(created_at),
-            metering_periods::ends_at.eq(ends_at),
         ))
         .execute(connection)?;
     Ok(())

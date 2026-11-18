@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use ciproxy_store_interface::billing::state::{AddOns, SubscriptionState, Tier};
 use ciproxy_store_interface::error::Error;
 use ciproxy_store_interface::github::Repository;
-use ciproxy_store_interface::metering::history::{Period, PlanCost};
+use ciproxy_store_interface::metering::history::PlanCost;
 use ciproxy_store_interface::organizations::Organization;
 use ciproxy_store_interface::workspaces::Workspace;
 use diesel::RunQueryDsl;
@@ -62,10 +62,6 @@ fn atomic_install_preserves_first_admin_and_replay_keeps_workspace_defaults() {
     diesel::sql_query("ALTER TABLE billing_accounts ALTER COLUMN created_at SET DEFAULT '2026-01-31T12:00:00Z'::timestamptz")
         .execute(&mut database.connection).unwrap();
     let creation: DateTime<Utc> = "2026-01-31T12:00:00Z".parse().unwrap();
-    let initial_period = Period {
-        starts_at: creation,
-        ends_at: "2026-02-28T12:00:00Z".parse().unwrap(),
-    };
     let source_workspace = database.workspace();
     let source_organization = database.organization(&source_workspace);
     let (mut label, _) = database.label_and_scale_set(&source_organization);
@@ -149,10 +145,6 @@ fn atomic_install_preserves_first_admin_and_replay_keeps_workspace_defaults() {
                 monthly_usd: Decimal::ZERO
             }]
         );
-        assert_eq!(
-            store.metering_periods(workspace_id).unwrap(),
-            vec![initial_period]
-        );
     }
     assert_eq!(store.pending_initial_admin(workspace.id).unwrap(), Some(41));
     let changed_price = PlanCost {
@@ -161,14 +153,7 @@ fn atomic_install_preserves_first_admin_and_replay_keeps_workspace_defaults() {
         ends_at: None,
         monthly_usd: Decimal::new(7, 0),
     };
-    let changed_period = Period {
-        starts_at: creation,
-        ends_at: "2026-02-14T12:00:00Z".parse().unwrap(),
-    };
     store.save_plan_cost(workspace.id, &changed_price).unwrap();
-    store
-        .save_metering_period(workspace.id, &changed_period)
-        .unwrap();
     label.size.vcpus = 6;
     store.update_label(workspace.id, &label).unwrap();
     store
@@ -185,10 +170,6 @@ fn atomic_install_preserves_first_admin_and_replay_keeps_workspace_defaults() {
         .costs;
     assert_eq!(replay_costs.workspace_started_at, Some(creation));
     assert_eq!(replay_costs.plans, vec![changed_price]);
-    assert_eq!(
-        store.metering_periods(workspace.id).unwrap(),
-        vec![changed_period]
-    );
     assert_eq!(store.pending_initial_admin(workspace.id).unwrap(), Some(41));
     store.confirm_initial_admin(workspace.id).unwrap();
     assert_eq!(store.pending_initial_admin(workspace.id).unwrap(), None);

@@ -41,9 +41,9 @@
     - Boat costs: `save` in
       `crates/ciproxy-store-pg/src/overflow/placements.rs`. It writes
       `metering_boat_costs` from the delivery record.
-  - Step 4 of the producer list says: "Save each ciproxy Boat runner's
-    prices with save_boat_cost." No production code calls
-    `save_boat_cost`.
+  - Step 4 of the producer list names `OverflowStore` for production Boat
+    prices. It describes `save_boat_cost` as a writer for standalone cost
+    facts. No production code calls that method.
   - Several store tests rewrite a Boat cost to imitate later readings. The
     production writer takes that cost from the delivery record.
   - On 17 November 2026 the final review chose to remove the unused period
@@ -54,27 +54,27 @@
   - "Replacing an old way" in the `plans` skill says that when a change
     replaces a way, every consumer moves, and the old way goes.
 - **Problem:** Each cost fact has two writers: the production writer in the
-  owning transaction, and a store method that only tests call. Step 4 of
-  the producer list names the method that only tests call.
+  owning transaction, and a store method that only tests call.
 - **Impact if no action:** Tests can build a fact in a way that production
   never uses, so they can pass while the production writer is wrong. A
-  reader of the README calls a method that production does not use.
+  reader can still use the separate cost methods instead of their owning
+  transactions.
 - **Root question:** How does each cost fact keep one writer, in the
   transaction that owns it, while the tests still build that fact?
 - **Options:**
-  - **A.** Correct step 4 of the producer list only. Name the Boat price
-    write of `overflow/placements.rs`, and keep the three methods for the
+  - **A.** Keep the corrected producer list and the three methods for the
     tests. Cost: two writers stay for each fact. Effort: Small.
   - **B.** Move the three methods out of `MeteringStore` into one
     test-support module, as typed helpers that write the same rows. Correct
-    step 4. Cost: the helpers still bypass the production writers.
+    the documentation for the retired methods. Cost: the helpers still
+    bypass the production writers.
     Effort: Medium.
   - **C.** Delete `save_machine_cost`, `save_plan_cost`, and
     `save_boat_cost` with their adapter code. Each cost fact then has one
     writer, in the transaction that owns it.
     - The tests build these facts through the production writers, or
       through typed helpers in one test-support module.
-    - Correct step 4 of the producer list.
+    - Remove the documentation for the retired methods.
     - C drops the assumption that a metering fact can keep a second writer
       on `MeteringStore` that only tests call. The source is the code. Its
       only reason is test convenience, not a requirement.

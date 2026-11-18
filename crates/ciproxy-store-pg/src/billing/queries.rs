@@ -2,12 +2,13 @@
 
 use ciproxy_schema::billing::{billing_accounts, billing_payments};
 use ciproxy_store_interface::billing::store::{BillingRecord, BillingSession, BillingStore};
-use ciproxy_store_interface::error::{Result, ResultExt};
+use ciproxy_store_interface::error::Result;
 use diesel::prelude::*;
 use diesel::sql_types::{BigInt, Bool};
 use uuid::Uuid;
 
 use crate::connection::PgStore;
+use crate::connector::ConnectionUse;
 use crate::error::QueryResultExt;
 
 use super::rows;
@@ -48,7 +49,7 @@ impl BillingStore for PgStore {
             .select(billing_accounts::lock_key)
             .first::<i64>(&mut *self.connection()?)
             .store()?;
-        let mut connection = PgConnection::establish(&self.database_url).internal()?;
+        let mut connection = self.connector.connect(ConnectionUse::Queries)?;
         let lock = diesel::sql_query("SELECT pg_try_advisory_lock($1) AS acquired")
             .bind::<BigInt, _>(key)
             .get_result::<LockResult>(&mut connection)

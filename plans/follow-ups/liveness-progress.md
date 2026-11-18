@@ -55,6 +55,11 @@
     production connection. It sets connection, statement, and lock limits,
     and `idle_in_transaction_session_timeout` for a stalled lock holder.
     `PgStore` keeps only that connector.
+  - Query and lease sessions now use 30-second statement limits,
+    5-second lock limits, and 30-second idle transaction limits. Migration
+    sessions use 10-minute statement limits, 30-second lock limits, and
+    60-second idle transaction limits. All sessions share the bounded
+    connector. Ordinary calls still share one serialized query connection.
   - Those limits cannot see a lost path behind the proxy, a stuck lease
     connection that holds the operation lock, or a stall outside the
     database.
