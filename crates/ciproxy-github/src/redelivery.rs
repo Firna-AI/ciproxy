@@ -2,16 +2,19 @@
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use std::time::Duration;
 
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, TimeDelta, Utc};
 use reqwest::{Client, Url};
 use secrecy::ExposeSecret;
 use serde::Deserialize;
 
 use crate::auth::AppJwt;
+use crate::delivery_throttle::response_error;
 use crate::error::{Error, Result, ResultExt};
 use crate::hooks::WEBHOOK_ACCEPTED_STATUS;
+use crate::runtime::Runtime;
 
 #[derive(Debug, thiserror::Error)]
 #[error("[github/redelivery] repeated delivery-history cursor")]
@@ -50,11 +53,11 @@ pub trait DeliveryApi: Send + Sync {
     async fn redeliver(&self, id: u64) -> Result<()>;
 }
 
-/// Continuous runtime recovery boundary.
+/// One history recovery pass with time supplied by its scheduler.
 #[async_trait]
 pub trait WebhookRecovery: Send + Sync {
-    /// Retry only the latest failed attempt of each relevant event.
-    async fn retry_failed(&self) -> Result<()>;
+    /// Retry each due latest failure using retained attempts and injected time.
+    async fn retry_failed(&self, runtime: &dyn Runtime) -> Result<()>;
 }
 
 /// Retained GitHub history supplies recovery after a control-plane restart.
@@ -65,8 +68,8 @@ pub struct RecoverDeliveries {
 
 #[async_trait]
 impl WebhookRecovery for RecoverDeliveries {
-    async fn retry_failed(&self) -> Result<()> {
-        let mut latest = HashMap::<String, Delivery>::new();
+    async fn retry_failed(&self, runtime: &dyn Runtime) -> Result<()> {
+        let mut latest = HashMap::<String, (Delivery, u32)>::new();
         let mut cursor = None;
         let mut cursors = HashSet::new();
         loop {
@@ -78,9 +81,10 @@ impl WebhookRecovery for RecoverDeliveries {
                 ) {
                     continue;
                 }
-                let old = latest
+                let (old, count) = latest
                     .entry(delivery.guid.clone())
-                    .or_insert_with(|| delivery.clone());
+                    .or_insert_with(|| (delivery.clone(), 0));
+                *count = count.saturating_add(1);
                 if (delivery.delivered_at, delivery.id) > (old.delivered_at, old.id) {
                     *old = delivery;
                 }
@@ -94,13 +98,24 @@ impl WebhookRecovery for RecoverDeliveries {
                 break;
             }
         }
+        let now = runtime.now();
         let mut failed: Vec<_> = latest
             .values()
-            .filter(|delivery| delivery.status_code != Some(WEBHOOK_ACCEPTED_STATUS.as_u16()))
+            .filter(|(delivery, count)| {
+                let minutes = (1_i64 << count.saturating_sub(1).min(6)).min(60);
+                delivery.status_code != Some(WEBHOOK_ACCEPTED_STATUS.as_u16())
+                    && now.signed_duration_since(delivery.delivered_at)
+                        >= TimeDelta::minutes(minutes)
+            })
+            .map(|(delivery, _)| delivery)
             .collect();
         failed.sort_by_key(|delivery| (delivery.delivered_at, delivery.id));
         for delivery in failed {
+            runtime.pause(Duration::from_secs(1)).await;
             if let Err(error) = self.api.redeliver(delivery.id).await {
+                if matches!(error, Error::DeliveryThrottled { .. }) {
+                    return Err(error);
+                }
                 tracing::warn!(id=delivery.id,%error,"failed webhook redelivery will retry from GitHub history");
             }
         }
@@ -144,7 +159,7 @@ impl DeliveryApi for HttpDeliveries {
             .await
             .internal()?;
         if !response.status().is_success() {
-            return Err(Error::AccessUnavailable(response.status().as_u16()));
+            return Err(response_error(&response));
         }
         let next = response
             .headers()
@@ -179,7 +194,7 @@ impl DeliveryApi for HttpDeliveries {
         if response.status().is_success() {
             Ok(())
         } else {
-            Err(Error::AccessUnavailable(response.status().as_u16()))
+            Err(response_error(&response))
         }
     }
 }
@@ -187,3 +202,7 @@ impl DeliveryApi for HttpDeliveries {
 #[cfg(test)]
 #[path = "_tests_/redelivery_tests.rs"]
 mod redelivery_tests;
+
+#[cfg(test)]
+#[path = "_tests_/redelivery_schedule_tests.rs"]
+mod redelivery_schedule_tests;

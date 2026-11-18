@@ -12,7 +12,7 @@ use ciproxy_store_interface::runners::RunnerPlace;
 use uuid::Uuid;
 
 use super::super::support::{Database, at, job, machine, runner};
-use super::support::{free, time, usd};
+use super::support::{free, historical_registration, historical_workspace_start, time, usd};
 
 #[test]
 fn metering_reads_all_workspace_organizations_and_current_machines() {
@@ -33,10 +33,12 @@ fn metering_reads_all_workspace_organizations_and_current_machines() {
         .store
         .create_machine(workspace.id, &removed)
         .unwrap();
-    database
-        .store
-        .record_machine_registration(workspace.id, removed.id, time("2026-11-01T00:00:00Z"))
-        .unwrap();
+    historical_registration(
+        &database,
+        workspace.id,
+        removed.id,
+        time("2026-11-01T00:00:00Z"),
+    );
     database
         .store
         .remove_machine(workspace.id, removed.id, at())
@@ -118,14 +120,8 @@ fn metering_reads_all_workspace_organizations_and_current_machines() {
         ),
         (2, 1, 2, 1)
     );
-    database
-        .store
-        .record_workspace_start(workspace.id, at())
-        .unwrap();
-    database
-        .store
-        .record_machine_registration(workspace.id, own.id, at())
-        .unwrap();
+    historical_workspace_start(&database, workspace.id, at());
+    historical_registration(&database, workspace.id, own.id, at());
     let cost = MachineCost {
         id: Uuid::new_v4(),
         machine_id: own.id,

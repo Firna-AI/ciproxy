@@ -249,6 +249,7 @@ cargo clippy --package ciproxy-github --all-targets -- -D warnings
 Unit tests use `unimock` at narrow service boundaries.
 HTTP integration tests start an isolated fake GitHub service.
 They use the real SDK, REST adapter, listener, and PostgreSQL queries.
+Delivery recovery tests use a dedicated local HTTP peer and need no database.
 Live probes require a real test organization and App installation.
 They belong to the operator workflow under `scripts/`.
 
@@ -259,7 +260,10 @@ commands, fixture contracts, and cleanup for the live probes.
 
 ### Key Code
 
-- [src/redelivery.rs](src/redelivery.rs) recovers failed App webhooks.
+- [src/redelivery.rs](src/redelivery.rs) selects due failed App webhooks
+  from complete retained history with an injected clock and pause.
+- [src/delivery_worker.rs](src/delivery_worker.rs) keeps the provider
+  throttle deadline across recovery passes.
 - [src/timing.rs](src/timing.rs) recovers real job times and completions.
 
 - [src/app/mod.rs](src/app/mod.rs) owns `GitHubApp` and its role and

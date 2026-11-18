@@ -65,7 +65,6 @@ async fn measured_production_start_uses_saved_fee_in_the_public_savings_report()
     assert_eq!(view.scaler_account(finished).unwrap().spend.spent, 82_000);
 
     let store = &harness.database.store;
-    store.record_workspace_start(id(1), at()).unwrap();
     store
         .save_plan_cost(
             id(1),

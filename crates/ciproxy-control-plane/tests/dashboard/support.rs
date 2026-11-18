@@ -69,7 +69,6 @@ impl Dashboard {
             "UPDATE billing_accounts SET created_at=$1 WHERE workspace_id=$2",
             "UPDATE workspaces SET metering_started_at=$1 WHERE id=$2",
             "UPDATE metering_plan_costs SET starts_at=$1 WHERE workspace_id=$2",
-            "UPDATE metering_periods SET starts_at=$1 WHERE workspace_id=$2",
         ] {
             diesel::sql_query(statement)
                 .bind::<Timestamptz, _>(at("2026-11-01T00:00:00Z"))

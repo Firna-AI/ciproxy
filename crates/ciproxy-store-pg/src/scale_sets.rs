@@ -3,7 +3,7 @@
 use chrono::{DateTime, Utc};
 use ciproxy_schema::labels::labels;
 use ciproxy_schema::scale_sets::scale_sets;
-use ciproxy_store_interface::error::{Result, ResultExt};
+use ciproxy_store_interface::error::Result;
 use ciproxy_store_interface::scale_sets::{
     ScaleSet, ScaleSetBinding, ScaleSetSession, ScaleSetStore,
 };
@@ -12,6 +12,7 @@ use diesel::sql_types::{BigInt, Bool};
 use uuid::Uuid;
 
 use crate::connection::PgStore;
+use crate::connector::ConnectionUse;
 use crate::error::QueryResultExt;
 use crate::scale_set_tracking;
 
@@ -132,7 +133,7 @@ impl ScaleSetStore for PgStore {
             .select(scale_sets::lock_key)
             .first::<i64>(&mut *self.connection()?)
             .store()?;
-        let mut connection = PgConnection::establish(&self.database_url).internal()?;
+        let mut connection = self.connector.connect(ConnectionUse::Queries)?;
         let result = diesel::sql_query("SELECT pg_try_advisory_lock($1) AS acquired")
             .bind::<BigInt, _>(key)
             .get_result::<LockResult>(&mut connection)

@@ -45,7 +45,6 @@ impl Pages {
             "UPDATE billing_accounts SET created_at=$1 WHERE workspace_id=$2",
             "UPDATE workspaces SET metering_started_at=$1 WHERE id=$2",
             "UPDATE metering_plan_costs SET starts_at=$1 WHERE workspace_id=$2",
-            "UPDATE metering_periods SET starts_at=$1 WHERE workspace_id=$2",
         ] {
             diesel::sql_query(statement)
                 .bind::<Timestamptz, _>(start)
@@ -165,16 +164,6 @@ impl Pages {
         let mut connection = PgConnection::establish(&self.fixture.database.url).unwrap();
         diesel::sql_query("INSERT INTO metering_start_totals(workspace_id,taken_at,starts) VALUES ($1,'2026-11-02T12:00:00Z',$2) ON CONFLICT(workspace_id,taken_at) DO UPDATE SET starts=EXCLUDED.starts")
             .bind::<diesel::sql_types::Uuid, _>(self.fixture.workspace).bind::<BigInt, _>(count).execute(&mut connection).unwrap();
-    }
-
-    pub(super) fn registration(&self, machine: Uuid) {
-        let mut connection = PgConnection::establish(&self.fixture.database.url).unwrap();
-        diesel::sql_query("UPDATE machines SET registered_at=$1 WHERE id=$2 AND workspace_id=$3")
-            .bind::<Timestamptz, _>(self.fixture.runtime.now())
-            .bind::<diesel::sql_types::Uuid, _>(machine)
-            .bind::<diesel::sql_types::Uuid, _>(self.fixture.workspace)
-            .execute(&mut connection)
-            .unwrap();
     }
 }
 

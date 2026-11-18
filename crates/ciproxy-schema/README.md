@@ -33,7 +33,8 @@ It stores job metadata and references to immutable runner placements.
 Cache measurements and restored content origins remain independent.
 The schema accepts measured GitHub-only fetches and zero-entry restores.
 It has no job-content, job-log, plaintext-token, or plaintext-key field.
-Metering tables hold trusted times, costs, and billing-period boundaries.
+Metering tables hold trusted times and costs.
+Confirmed billing state supplies current billing-period boundaries.
 Anonymous aggregates hold daily VM-size totals and Boat costs.
 Anonymous timestamp counts preserve exact period starts.
 Job and runner accounting cursors cascade with their source records.
@@ -159,6 +160,15 @@ registrations record their first database observation. Reinstall preserves it.
 Complete repository snapshots record their observation separately. Dashboard
 roles retain initial request organizations and current grant dates. Optional
 public names remain with the existing retained dashboard identity.
+
+Machine registration backfill uses the earliest retained machine credential's
+creation time in its workspace. The gateway saves that credential with the
+machine in the registration transaction. Revocation preserves its creation
+time. The migration preserves known registration times. Legacy machines
+without a retained machine credential keep an unknown registration time.
+Rollback preserves the repaired times because their source remains trusted.
+The next migration removes the unused stored metering-period table.
+Its rollback restores an empty table. Confirmed billing state remains intact.
 
 ## Development
 
