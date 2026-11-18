@@ -129,7 +129,7 @@ The same migration sets it to the migration time for acknowledged commands.
 Other older commands keep it empty.
 They contain no JIT configuration or runtime-token secret.
 Workspace execution leases have their own negative advisory-key range.
-The `202611172128_own_worker_job_binding` migration adds a nullable opaque
+The `202611180222_own_worker_job_binding` migration adds a nullable opaque
 Worker job ID to each command record. Existing records keep that ID unknown.
 
 The exact-resource migration keeps actual VM allocations in integer bytes.
