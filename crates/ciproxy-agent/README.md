@@ -141,6 +141,8 @@ The [registration and retirement guide](registration-and-retirement.md)
 covers endpoint selection and storage, cache metadata during uninstall,
 authentication, one-use delivery, reconnect proof, and authorized idle stops.
 
+Image downloads have no total time limit.
+The client allows 20 seconds to connect and 120 seconds for each read.
 The agent verifies the release byte count and SHA-256 before extraction.
 The released `.tar.zst` bundle contains the root, kernel, and five metadata
 files. Extraction rejects other paths, links, and duplicate members.
@@ -216,6 +218,7 @@ uses it before any runner starts, without credentials.
 The default `docker_regression` target also uses path includes.
 The gate compiles and runs that target because it needs no feature.
 Real VM and GitHub checks use separate smoke scripts.
+The image download regression uses local HTTP and a controlled clock.
 The [real root regression](image-budget.md#disposable-root-growth-regression)
 checks free bytes as runner UID 1001 on two image sizes.
 The [development guide](development.md) gives the `docker_regression` checks,
@@ -292,6 +295,8 @@ KVM and GitHub smoke checks, and release packaging commands.
 - [src/vsock_stream.rs](src/vsock_stream.rs) keeps each registration in
   memory until the guest confirms receipt.
 - [src/images.rs](src/images.rs) coordinates checked image fetches.
+- [src/application_images.rs](src/application_images.rs) constructs image
+  services and their client with a read timeout.
 - [src/image_registry.rs](src/image_registry.rs) owns holds and reclamation.
 - [src/image_store.rs](src/image_store.rs) defines the mockable cache boundary.
 - [src/image_files.rs](src/image_files.rs) owns Linux image files and recovery.

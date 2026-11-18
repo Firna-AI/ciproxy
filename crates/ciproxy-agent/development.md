@@ -3,6 +3,18 @@
 Run these commands from the repository root.
 The [agent guide](README.md#development) gives the unit and compile checks.
 
+## Image download checks
+
+The default `image_download_regression` target uses the production client
+builder with a local HTTP server. It uses a controlled clock for read limits.
+It checks that a body with regular data outlasts the former total limit.
+It checks that a stalled body fails at the read limit.
+HTTPS remains required by the production client and download adapter.
+
+```sh
+cargo test --package ciproxy-agent --test image_download_regression
+```
+
 ## Docker, image, lock, and state checks
 
 The default `docker_regression` target runs production code in temporary

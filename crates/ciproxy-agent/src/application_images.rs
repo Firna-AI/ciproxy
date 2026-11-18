@@ -3,8 +3,6 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use reqwest::Client;
-
 use crate::boundaries::Images;
 use crate::error::{ErrorResultExt, Result};
 use crate::image_download::HttpsImageDownload;
@@ -13,6 +11,11 @@ use crate::image_store::LinuxImageStore;
 use crate::images::ManagedImages;
 use crate::layout::Layout;
 use crate::runtime_ownership::{RuntimeClaims, RuntimeOwner};
+
+mod client;
+
+/// Two minutes tolerate temporary network pauses without leaving a stalled fetch open.
+const IMAGE_READ_TIMEOUT: Duration = Duration::from_secs(120);
 
 pub(crate) struct ImageServices {
     pub(crate) images: Arc<dyn Images>,
@@ -39,11 +42,7 @@ pub(crate) fn prepare(
             owner,
         )),
         Arc::new(HttpsImageDownload {
-            client: Client::builder()
-                .https_only(true)
-                .http1_only()
-                .connect_timeout(Duration::from_secs(20))
-                .timeout(Duration::from_secs(3600))
+            client: client::builder(Duration::from_secs(20), IMAGE_READ_TIMEOUT)
                 .build()
                 .context("configure image downloads")?,
         }),
