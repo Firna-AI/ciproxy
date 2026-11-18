@@ -527,6 +527,13 @@ reserve. The image measurement sets the real budget later.
       fresh disposable KVM host with `/var/lib` on ext4. It checks the first
       install, a repair, two reflink jobs, and uninstall.
       Branch: `conductor/ciproxy-mvp-milestone-13-e2e`.
+      Live run 5, 18 November 2026, agent 0.1.3 and image
+      `2026-11-18-6ed25c36`: on a fresh ext4 VM, the first install, the
+      repair, and the shared reflink check passed. The first job then
+      waited for the 18 GB image download until its guard of 180 polls
+      ended, so the two reflink jobs and the uninstall did not run. The
+      fix waits for the user: `follow-ups/smoke-cold-image-readiness.md`.
+      Evidence: `.context/ciproxy-mvp/live-2026-11-18/report.md`.
 
 ## Milestone 10: Job VM image
 
@@ -1058,8 +1065,14 @@ Live KVM and authenticated job checks remain with the orchestrator.
           confirmation header. My call: one shared confirmed-deletion
           helper for the operator scripts.
           Branch: `conductor/live-run-4-script-fixes`.
-    - [ ] Run the firewall proof with its reboot, the Boat `large` job with
-          its exit callback, and the three overflow checks again.
+    - [x] Run the firewall proof with its reboot again. Live run 5 passed
+          it on 18 November 2026, with agent 0.1.3 and image
+          `2026-11-18-6ed25c36`, before and after a real reboot. A first
+          attempt on the cold image ended at its job window of 600
+          seconds during the image download, as
+          `follow-ups/smoke-cold-image-readiness.md` says.
+    - [ ] Run the Boat `large` job with its exit callback and the three
+          overflow checks again. They wait for the Boat client fix above.
 
 Owner review of pull request #31, round 1, 6 November 2026: the user chose
 fix now for findings 1 to 8 and fix after the merge for finding 9.
@@ -2381,7 +2394,7 @@ The 117 claims that need a Boat job wait for the Boat client fix, and the
 firewall reboot proof waits for a rerun. Evidence:
 `.context/ciproxy-mvp/m24-docs/live-2026-11-17/`.
 
-- [ ] Bind the hosted job ID to the job ID of the runner's assignment, and
+- [x] Bind the hosted job ID to the job ID of the runner's assignment, and
       use the binding for preparation, cache authorization, job metadata,
       and cleanup. Then run the affected page checks again.
       Pull request #86 merged the binding on 18 November 2026. A live
@@ -2391,6 +2404,15 @@ firewall reboot proof waits for a rerun. Evidence:
       that one binding. Reason: both IDs belong to one job on the exact
       registered runner, so this widens no trust. Live run 5 reruns the
       jobs with different IDs on agent 0.1.3.
+      Live run 5, 18 November 2026, agent 0.1.3: the container job and the
+      hold job of the private fixture started their steps with no manual
+      Drain or Resume. In each job, the Worker ID equaled the scale-set ID,
+      so `follow-ups/private-ci-different-job-ids.md` stays open. The
+      changed page claims passed: the registration time, the Savings
+      totals, the overflow refresh warning, the Jobs tabs and Back, and
+      the Members text. The user accepted a source check of the changed
+      claim text and deferred its live view.
+      Evidence: `.context/ciproxy-mvp/live-2026-11-18/report.md`.
 
 ## Milestone 25: Tier features: backend
 
@@ -2424,16 +2446,19 @@ Depends on: every milestone from 1 to 26
 
 The repository is public from item 70 = E, and the site links to it.
 
-- [ ] Run the CI of a private test repository on ciproxy, and fix or record
+- [x] Run the CI of a private test repository on ciproxy, and fix or record
       each problem. ciproxy runs private repositories only, and item 70 = E
       made this repository public.
-      Close the follow-up item `expo-56-npm-advisories.md`.
       Run of 17 November 2026: a copy of this repository at `f81fb8d` ran
       its complete gate on ciproxy in the private repository
       `firna-test-org/test-repo-private`, with only `runs-on` changed.
       PostgreSQL, Rust, Node, the cache actions, and the gate passed, but
       only after a manual Drain released the job preparation. The job ID
       binding of Milestone 24 fixes that. Then run it again.
+      Live run 5, 18 November 2026, agent 0.1.3: a copy at `6ed25c36`,
+      with only `runs-on` changed, passed its complete gate with no manual
+      step.
+- [ ] Close the follow-up item `expo-56-npm-advisories.md`.
 - [x] Draft the terms and the privacy policy, which the user writes or
       approves. They state the limits of "Data retention" in `security.md`.
   - [x] Write the complete draft text of both pages. Square brackets mark
@@ -2492,6 +2517,10 @@ The gate, the review, and the pull request stay with the orchestrator.
 Item 122 = B, 17 November 2026: the final review starts before the live
 checks of Milestones 13, 15, 24, and 27 end. A fix from a check gets one
 more review round before the pull request.
+Live run 5, 18 November 2026, ran the open checks of Milestones 13 and 27
+and the changed page claims of Milestone 24. Still open: the
+fresh-machine smoke, the Boat `large` job, the three overflow checks, and
+the page claims that wait for a live check.
 
 - [ ] Run the targeted tests and the complete gate named in `AGENTS.md`.
 - [ ] Commit with Conventional Commits and push the branch.
@@ -2589,7 +2618,9 @@ list gives what is not done.
         end its Firecracker process without a host stop.
         Evidence: `.context/ciproxy-mvp/live-2026-11-17/image/host/`.
   - [ ] Run every live scenario of Milestone 13 again. Live run 4 runs
-        them.
+        them. Live run 5 passed the firewall proof with its reboot on
+        18 November 2026. The Boat `large` job and the three overflow
+        checks remain.
 - [ ] Live checks that remain: the overflow smoke of Milestone 15 and the
       docs pages of Milestone 24. The two-tab authorization and the
       install-binding probes of Milestone 14 moved to
@@ -2598,7 +2629,8 @@ list gives what is not done.
       live read, the shell and Machines and Settings live checks, and the
       page read check. Done on 17 November 2026: the unfinished Checkout
       of Milestone 18, the dashboard Checkout of Milestone 21, and the
-      one-tab authorization of Milestone 14.
+      one-tab authorization of Milestone 14. Done on 18 November 2026:
+      the changed page claims of Milestone 24.
 
 The preview runs the control-plane image that CI builds, and the release
 server of `futex-ai/cli-release` at `53a1dd3` with the pre-release channel.

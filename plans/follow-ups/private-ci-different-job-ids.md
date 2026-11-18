@@ -42,3 +42,10 @@ RS256 verification used GitHub's public JWKS at
 `https://token.actions.githubusercontent.com/.well-known/jwks` and key ID
 `38826b17-6a30-5f9b-b169-8beb8202f723`.
 That equal-ID sample cannot distinguish the two namespaces.
+
+On 18 November 2026, live run 5 used agent 0.1.3 and control plane
+`754a5048`. In `firna-test-org/test-repo-private`, the container job and
+the hold job of fixture run `44308584322` and the complete gate of run
+`44310052849` started their steps with no manual Drain or Resume. In each
+of these jobs, the Worker ID equaled the scale-set job ID. So a live job
+with different IDs is still not proved.
