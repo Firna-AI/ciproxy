@@ -78,7 +78,10 @@ export function LinkTabs({
   return (
     <View style={styles.tabs} role="navigation" aria-label={label}>
       {tabs.map((tab) => (
-        <Link key={tab.key} href={tab.href} asChild>
+        // The sibling views share one route and differ only in the query.
+        // The router replaces the history entry of such a link by default,
+        // so each tab pushes a new entry, and Back returns to the last tab.
+        <Link key={tab.key} href={tab.href} asChild push>
           <TabAnchor tab={tab} current={tab.key === current} />
         </Link>
       ))}

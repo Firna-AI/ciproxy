@@ -47,9 +47,11 @@
 - **Wider fix:** B.
 - **Previous examples:** None found.
 - **Related:**
-  - `plans/follow-ups/job-facts-from-the-hook.md`: it proposes to drop
-    "Actions" read. B needs that permission, and the cache entry list
-    already depends on it. A drop of the permission would block B.
+  - `plans/follow-ups/job-facts-from-the-hook.md`: it asks whether the App
+    can drop the "Actions" read permission. B of this item syncs through
+    the entry list of the GitHub cache, which needs that permission, so a
+    drop of the permission would block B. Neither item waits for the other,
+    but their answers must agree.
   - `plans/follow-ups/follow-up-decision-sync.md`: this item is the second
     case of that class. Its old option B kept a fact that a later decision
     had replaced. Neither item waits for the other.

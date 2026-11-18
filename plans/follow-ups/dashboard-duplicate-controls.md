@@ -4,8 +4,8 @@
   **Harder later:** Yes.
 - **Kind:** Fix after merge.
 - **Added:** 2026-11-17, from the final review of 17 November 2026 of the
-  branch `calummoore/ci-proxy-load-balancer`, finding 605, with the Back
-  defect of the Jobs tabs that its check found.
+  branch `calummoore/ci-proxy-load-balancer`, finding 605. Round 2 of the
+  same review added option E on 18 November 2026, from finding 1202.
 - **Source:** Review.
 - **Category:** Code structure.
 - **Location:** `ts/app/src/components/feature-parts.tsx:31`,
@@ -13,8 +13,10 @@
   `ts/app/src/components/detail-list.tsx:26`,
   `ts/app/src/components/status-label.tsx:26`,
   `ts/app/src/components/text-link.tsx:64`,
-  `ts/app/src/components/link-tabs.tsx:81`, and
-  `ts/app/src/screens/settings/settings-tabs.tsx:98`.
+  `ts/app/src/components/link-tabs.tsx:84`,
+  `ts/app/src/screens/settings/settings-tabs.tsx:98`,
+  `ts/app/src/components/shell/nav-link.tsx:166`, and
+  `ts/app/src/screens/jobs/history-view.tsx:44`.
 - **Reason:** The cleanup changes many screens and needs browser checks
   against the mockups, and no requirement fails while both sets stay.
 
@@ -30,6 +32,10 @@
     before it builds a control.
   - **Mokly:** the tool that renders the approved mockups under
     `docs/mockups`, with react-dom and CSS classes.
+  - **History mode of a link:** how an in-app link of the router changes
+    the browser history. With `push`, the link adds an entry. With no mode,
+    the link gets the router default. That default replaces the current
+    entry when the link opens the route that shows, with another query.
 - **Background:**
   - The dashboard is the Expo app in `ts/app`. It renders React Native Web.
   - Two sets of base controls are live. 19 screen files of Machines and
@@ -62,8 +68,8 @@
       and a sideways scroll on a phone.
   - The copies also differ in their defaults:
     - Back on links and tabs that stay on the same route: the feature parts
-      `TextLink` and `SettingsTabs` push a history entry. The standalone
-      `TextLink` and `LinkTabs` replace it.
+      `TextLink`, `SettingsTabs`, and the standalone `LinkTabs` push a
+      history entry. The standalone `TextLink` replaces it.
     - The size of labels and links: 13 px in the feature parts, 14 px in
       the standalone components.
     - The status word: ink, wrapping, with a 6 px gap, in the feature
@@ -71,19 +77,28 @@
       component.
   - The standalone set already matches the mockups in three points: 14 px
     panel padding on a phone, the status word, and 14 px detail rows.
-  - The Back defect of the Jobs tabs:
-    - `LinkTabs` renders each tab as `<Link href={tab.href} asChild>`,
-      with no `push`, at `ts/app/src/components/link-tabs.tsx:81`.
-    - The Jobs tabs Live and History open the same route and differ only in
-      the query `tab=history`, from `jobsHref` at
-      `ts/app/src/view/jobs-links.ts:42-55`.
-    - So expo-router replaces the history entry, and Back from History
-      skips Live.
-    - The header comment of `link-tabs.tsx` says that the tabs work with
-      the back button. The Settings tabs push for this reason, at
-      `settings-tabs.tsx:96-98`.
-    - The finding check found this through a read of the expo-router code.
-      Nobody ran it.
+  - The history mode of the in-app links:
+    - 29 files use the router `Link` directly, with 34 links. 9 of them
+      pass `push`. Each other link gets the router default.
+    - The Jobs tabs Live and History share `/jobs` and differ only in the
+      query `tab=history`. `LinkTabs` pushes, so Back from History opens
+      Live. The journey `history-filters-detail-and-back` of the page smoke
+      in `ts/app/scripts/browser-pages-data-journeys.ts` checks it.
+    - The sidebar items, `NavLink` at
+      `ts/app/src/components/shell/nav-link.tsx:166`, use the router
+      default. A click on the item of the current page from a sub-view, such
+      as Machines from one machine page, or Jobs from History, replaces the
+      entry of that sub-view. Back then skips the sub-view. No doc states
+      what Back must do in this case.
+    - A click on the tab that already shows pushes a second entry for the
+      same address, on the Settings tabs and on the Jobs tabs. The next
+      Back then shows the same tab.
+    - "Clear filters" in History, at
+      `ts/app/src/screens/jobs/history-view.tsx:44`, must keep replacing
+      the entry. A History filter change replaces the address, as
+      `ts/app/README.md` says, and as `history-filters.tsx:55` does.
+    - A push to the same route remounts the page, as the Settings tabs and
+      the machine links do now.
   - `feature-parts.tsx` has 300 lines. The gate fails on a source file
     over 300 lines.
   - `@firna/ui` has no panel, no text link, and no label-value row. Both
@@ -94,10 +109,13 @@
     figures.
 - **Problem:** Two sets of base controls implement the same controls apart.
   They already differ in mobile spacing, named panel regions, link
-  navigation, status text, and Back behaviour.
+  navigation, status text, and Back behaviour. Each in-app link also
+  chooses its own history mode, so Back works differently from link to
+  link.
 - **Impact if no action:** A fix of a shared control reaches only some
-  pages. Each later change must handle both sets. The Jobs tabs keep the
-  Back defect.
+  pages. Each later change must handle both sets. Back skips a sub-view
+  after a click on the sidebar item of its page, and shows the same tab
+  again after a click on the tab that shows.
 - **Root question:** How should all dashboard pages share their base
   controls?
 - **Options:**
@@ -117,10 +135,11 @@
     - One dialog frame: `FeatureDialog` moves into its own module and
       serves every dialog, also the two dialogs that repeat its placement.
     - `SettingsTabs` is built on `LinkTabs`, with the count and the
-      sideways scroll.
-    - Decide each conflicting default once, against the mockups. Make
-      `TextLink` and the link tabs push.
-    - Add a Back case for the Jobs tabs to the browser checks.
+      sideways scroll. Keep the Back case of the Jobs tabs in the page
+      smoke.
+    - Decide each conflicting default once, against the mockups. Make the
+      standalone `TextLink` push, as `LinkTabs` and the feature parts
+      `TextLink` do.
     - Keep the refresh failure of the Overflow panel.
     - Update `ts/app/README.md`.
     - Cost: more call sites than B, with three headers, two dialogs, and
@@ -133,6 +152,25 @@
     that piece is on the primary branch. The skill lives in
     `futex-ai/skills`, outside this repository, so this part needs the
     user. Effort: Medium.
+  - **E.** Do C, and wrap the router `Link` once, in one app link
+    component that sets the history mode of every in-app link:
+    - It pushes by default.
+    - It adds no entry when the target is the address that already shows.
+    - It replaces the entry only where a page asks for that, such as
+      "Clear filters" in History.
+    - Move `LinkTabs`, `SettingsTabs`, both `TextLink` components, and the
+      other in-app links to it. Remove their own `push` props.
+    - `NavLink` moves only when the user accepts one change: a click on
+      the sidebar item of the current page from a sub-view then adds an
+      entry. Until then, `NavLink` keeps the router `Link`, with a comment
+      that says why.
+    - Extend the journey `history-filters-detail-and-back` of the page
+      smoke: a click on the tab that shows adds no entry, and "Clear
+      filters" still replaces the address.
+    - State the rule in `ts/app/README.md`.
+    - Cost: 34 links in 29 files. A push to the same route remounts the
+      page, as the Settings tabs and the machine links do now.
+    - Effort: Medium.
 - **Left out:**
   - Compatibility wrappers: they have the same effort grade as B. They
     keep a second API where the adapted props `muted`, `first`, `mono`, and
@@ -150,13 +188,29 @@
     `Text`, and 29 files import the router `Link` directly. So the rule
     could guard only the status dot and the dialog frame. It is also a new
     lint, which needs the user.
+  - A screen `getId` or `dangerouslySingular` keyed on the tab: it fails
+    the goal. When a person returns to a view that they visited, the router
+    moves the old route to the top and replaces the entry. Back then no
+    longer returns to the other view.
+  - A full page load for each tab click: `push` keeps Back without a
+    reload of the dashboard and all its data.
+  - A patch to Expo Router that makes a navigation of the query alone
+    push: E uses the supported `push`, and no Expo upgrade must carry a
+    patch.
+  - A lint or a test for the class of the history mode: E is a structural
+    fix, and a new lint needs the user.
 - **Wider fix:** D. The reuse rule of the `product-ui` skill is in force,
   but it could not apply, because no branch saw the files of the others.
   C is the fix inside this repository. The skill part of D waits for the
-  user in `plans/follow-ups/parallel-shared-code-duplication.md`.
-- **Previous examples:** The same review found a second case. Billing and
-  metering each built the monthly price calculation on parallel branches,
-  `4304e3f` and `a0a57e9`, both from `4bfa4e5`, on 4 November 2026.
+  user in `plans/follow-ups/parallel-shared-code-duplication.md`. For the
+  history mode of links, E is the wider fix: one component sets it for
+  every in-app link, also for links that later pages add.
+- **Previous examples:**
+  - The same review found a second case. Billing and metering each built
+    the monthly price calculation on parallel branches, `4304e3f` and
+    `a0a57e9`, both from `4bfa4e5`, on 4 November 2026.
+  - The Jobs tabs replaced their entry until 18 November 2026, while the
+    Settings tabs pushed. So Back from History skipped Live.
 - **Related:**
   - `plans/follow-ups/parallel-shared-code-duplication.md`, a shared wider
     fix. It holds the skill part of D. Neither item waits for the other.
@@ -164,9 +218,10 @@
     fix changes `ts/app/src/screens/machines/overflow-panel.tsx`, which C
     moves to the standalone `Panel` and `TextLink`. Only the order of the
     work changes. The options do not conflict.
-- **Recommendation:** C, changed from B. B as written leaves the header,
-  the dialog frame, and the tabs duplicated, and it treats conflicting
-  defaults as additions. C settles them for a few more call sites. D best
-  protects the codebase, but its skill part needs the user.
-- **Action:** fix after merge, apply C, because the severity is Low, and
-  the change reaches many screens that need browser checks.
+- **Recommendation:** E, changed from C. C settles the duplicated controls,
+  but each in-app link still chooses its own history mode. E gives every
+  in-app link one default, so the sidebar items and the tabs keep Back
+  too. D best protects the codebase from new copies, but its skill part
+  needs the user.
+- **Action:** fix after merge, apply E, because the severity is Low, and
+  the change reaches 29 files and many screens that need browser checks.
