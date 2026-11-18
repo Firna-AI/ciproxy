@@ -10,16 +10,18 @@
 - **Category:** Security.
 - **Location:** `deploy/terraform/modules/edge/backends.tf`,
   `google_compute_backend_service.runtime`, the tests under
-  `deploy/terraform/edge/`, and `crates/ciproxy-gateway/src/transport.rs`,
-  `authenticate` and the agent route of `router`.
+  `deploy/terraform/edge/`, `crates/ciproxy-gateway/src/transport.rs`,
+  `authenticate` and the agent route of `router`, and
+  `docs/protocol/agent-connection.md`, "Connection limits".
 - **Reason:** B needs a security policy at the load balancer, which is
   infrastructure, and the user made it a step of the production launch.
 
 - **Terms:**
   - **Agent route:** the WebSocket route `/agent/` of the control plane.
     Each machine connects there.
-  - **Handshake:** the time from the WebSocket upgrade to the first
-    message, `Hello` or `Register`, which carries the credential.
+  - **Handshake:** the time from the WebSocket upgrade until the gateway
+    accepts the credential of the first message, `Hello` or `Register`, or
+    until the connection ends. A failed handshake ends after its close.
   - **Edge:** the external Application Load Balancer of Google Cloud in
     front of the control plane, from `deploy/terraform/modules/edge/`.
   - **Security policy:** a Google Cloud Armor policy on a backend service.
@@ -45,9 +47,51 @@
     progress.
   - These limits bound the memory of the pod. They do not tell one client
     address from another.
+  - On 18 November 2026, commit `512224f` applied A with these defaults.
+    "Connection limits" in `docs/protocol/agent-connection.md` states them.
+    - The first complete message must arrive within 15 seconds after the
+      upgrade. Otherwise the gateway closes the connection with the code
+      1008 and the reason `[gateway] handshake timed out`.
+    - Each gateway instance has at most eight handshakes in progress. The
+      cap counts all client addresses together.
+    - The gateway answers each upgrade above the cap with the HTTP status
+      503. The agent can try again later.
+    - Each frame and each reassembled message holds at most 16 MiB. This
+      also holds for full reports, because a report has no finite largest
+      valid size.
+    - Each close sends its close frame and waits for the reply of the peer.
+      The send and the wait take at most five seconds in total.
+  - A failed handshake keeps its place in the cap during its close. So a
+    silent client holds a place for about 20 seconds: 15 seconds for the
+    first message, and up to five seconds for the close.
+  - The one pod gives one gateway instance. So production has eight
+    handshake places in total.
+  - A machine without contact for 60 seconds shows as offline, and no new
+    runner starts on it.
+  - Normal reconnects come in bursts. After a deploy or a restart of the
+    control plane, every machine connects again. Many machines of one
+    customer can share one NAT address. A limit for each address must let
+    such a burst through.
+  - Route match:
+    - `google_compute_backend_service.runtime` creates one backend service
+      for each runtime, `release` and `control_plane`. The agent route uses
+      `control_plane`.
+    - A security policy applies to the whole backend service. The
+      `control_plane` backend service serves the agent route and other
+      routes of the control plane.
+    - Each rule of the policy chooses the requests that it counts.
+    - The wider fix of B covers every route behind the same backend
+      service. A rule that counts only upgrades at `/agent/` is narrower
+      than that recorded choice.
+    - A rule that counts every route must also let through the normal
+      request rate of those other routes from one address.
+  - A limit for each client address is a new requirement of the agent
+    route. Add it to "Connection limits" in
+    `docs/protocol/agent-connection.md` in the same change.
 - **Problem:** After the gateway limits, one client address can still open
   connections up to the handshake cap, and open new ones as each deadline
-  ends. Machines then find the cap full and cannot connect.
+  ends. About eight silent connections every 20 seconds keep the cap full.
+  Machines then find the cap full and cannot connect.
 - **Impact if no action:** An unauthenticated client can keep machines from
   connecting or reconnecting, for example after a deploy. Their jobs then
   do not start on own machines.

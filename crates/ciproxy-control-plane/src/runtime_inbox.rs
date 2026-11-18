@@ -7,6 +7,8 @@ use ciproxy_protocol::agent::{AgentMessage, CommandOutcome};
 use ciproxy_protocol::identifiers::RunnerId;
 use ciproxy_store_interface::runners::RunnerState;
 use tokio::sync::mpsc;
+use tracing::Instrument;
+use tracing::instrument::WithSubscriber;
 use uuid::Uuid;
 
 use crate::error::{ErrorResultExt, Result};
@@ -82,19 +84,24 @@ impl RuntimeTasks {
         let sender = self.inbox.get_or_init(|| {
             let (sender, mut receiver) = mpsc::channel(1024);
             let tasks = Arc::downgrade(self);
-            let task = self.handle.spawn(async move {
-                while let Some(event) = receiver.recv().await {
-                    let worker = runtime.worker();
-                    let mut event_task = OwnedTask(tokio::spawn(async move { consume(&worker, event).await }));
-                    match (&mut event_task.0).await {
-                        Ok(Ok(())) => (),
-                        Ok(Err(error)) => tracing::warn!(%error,"agent event failed; full reports and saved stops retain recovery"),
-                        Err(error) => tracing::warn!(%error,"agent event task failed; ordered consumption continues"),
+            let task = self.handle.spawn(
+                async move {
+                    while let Some(event) = receiver.recv().await {
+                        let worker = runtime.worker();
+                        let mut event_task = OwnedTask(tokio::spawn(
+                            async move { consume(&worker, event).await }.with_current_subscriber(),
+                        ));
+                        match (&mut event_task.0).await {
+                            Ok(Ok(())) => (),
+                            Ok(Err(error)) => tracing::warn!(%error,"agent event failed; full reports and saved stops retain recovery"),
+                            Err(error) => tracing::warn!(%error,"agent event task failed; ordered consumption continues"),
+                        }
+                        let Some(tasks) = tasks.upgrade() else { return; };
+                        tasks.queue_finished();
                     }
-                    let Some(tasks) = tasks.upgrade() else { return; };
-                    tasks.queue_finished();
                 }
-            });
+                .with_current_subscriber(),
+            );
             *self.inbox_owner.lock().unwrap_or_else(|error| error.into_inner()) = Some(OwnedTask(task));
             sender
         });
@@ -111,7 +118,11 @@ impl RuntimeTasks {
 async fn consume(runtime: &MachineRuntime, event: Event) -> Result<()> {
     match event {
         Event::Agent(session, message) => {
-            let _operation = runtime.operation.lock().await;
+            let _operation = runtime
+                .operation
+                .lock()
+                .instrument(tracing::trace_span!("agent_event_operation"))
+                .await;
             let store = runtime.store.clone();
             let current = tokio::task::spawn_blocking(move || {
                 store.machine_session(session.workspace_id, session.machine_id)
