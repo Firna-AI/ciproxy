@@ -83,18 +83,6 @@ fn guest_runner_ready_identifies_the_configured_runner() {
 }
 
 #[test]
-fn guest_job_started_names_the_assignment_without_scope_claims() {
-    snapshot(
-        "guest_job_started",
-        "job_started",
-        GuestToAgent::JobStarted {
-            runner_id: fixtures::runner_id(),
-            job_id: fixtures::job_id(),
-        },
-    );
-}
-
-#[test]
 fn guest_runner_exited_reports_the_process_exit_code() {
     snapshot(
         "guest_runner_exited",

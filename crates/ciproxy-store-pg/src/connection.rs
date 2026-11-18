@@ -6,11 +6,12 @@ use ciproxy_store_interface::error::{Error, Result};
 use ciproxy_store_interface::store::Store;
 use diesel::PgConnection;
 
+use crate::connector::Connector;
 use crate::error::InternalCause;
 
 pub(crate) struct PgStore {
     pub(crate) connection: Mutex<PgConnection>,
-    pub(crate) database_url: String,
+    pub(crate) connector: Box<dyn Connector>,
 }
 
 impl PgStore {

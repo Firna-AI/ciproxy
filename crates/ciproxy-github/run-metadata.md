@@ -87,12 +87,13 @@ permission and no new service.
 ## Webhook delivery recovery
 
 The hosted runtime can recover failed webhook deliveries through the
-App-JWT delivery-history API. Recovery reads every cursor page and groups
-attempts by event GUID. A latest attempt that got the route's
-acknowledgement prevents an older failure from being redelivered again.
-Every other latest attempt counts as failed. The
-[GitHub worker guide](../ciproxy-control-plane/github-workers.md) gives the
-acknowledgement status and its reason. Individual redelivery failures
-remain retryable without blocking the other retained events.
+App-JWT delivery-history API. Recovery reads every cursor page without a
+status filter. A next-page cursor comes only from the Link relation `next`.
+A final page with only `prev` ends the scan.
+The [GitHub worker guide](../ciproxy-control-plane/github-workers.md) gives
+the acknowledgement rule, the retry delays from retained attempts, and
+the provider throttle policy. Individual redelivery failures remain
+retryable without blocking other retained events. A provider throttle
+stops the pass and delays later passes.
 Recovery uses only the App JWT, as
 [Credential scopes](README.md#credential-scopes) says.

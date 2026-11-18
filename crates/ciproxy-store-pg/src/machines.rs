@@ -49,7 +49,7 @@ impl MachineStore for PgStore {
         self.connection()?
             .transaction(|connection| {
                 diesel::insert_into(machines::table)
-                    .values(&row)
+                    .values((&row, machines::registered_at.eq(diesel::dsl::now)))
                     .execute(connection)?;
                 replace_disks(connection, workspace_id, machine.id, &machine.disks)
             })

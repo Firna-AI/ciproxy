@@ -71,10 +71,15 @@ and pending initial Admin together. A failed registration rolls back all
 of them. GitHub repository refresh atomically replaces one snapshot.
 Workspace creation and first GitHub registration share one transaction
 helper. It inserts the workspace, initial Free billing, and settings.
-It also records the trusted creation time, zero-dollar Free cost, and
-initial Free period from the same billing creation anchor.
+It also records the trusted creation time and zero-dollar Free cost from
+the same billing creation anchor. BillingState supplies the current Free
+or Stripe period.
 GitHub labels, pending Admin, and lifecycle events remain in the enclosing
 registration transaction.
+
+Gateway registration records the first machine registration time with the
+machine, credential, and report. Later contacts preserve it.
+Direct machine creation records its database transaction time.
 
 The [GitHub job guide](github-jobs.md) gives job demand and timing writes.
 
@@ -83,12 +88,23 @@ own-machine reservations and routing snapshot, observations, retirement,
 and guarded result writes.
 
 PgStoreFactory connects and applies pending migrations.
+One connector opens every store connection with a 10-second connection timeout
+per host or IP address. It enables TCP keepalives after 10 idle seconds, with
+5-second probe intervals and three lost probes. A 30-second TCP user timeout
+limits unacknowledged transmitted data where the operating system supports it.
+Ordinary queries and dedicated sessions have a 30-second statement timeout,
+a 5-second lock timeout, and a 30-second idle transaction timeout.
+Migrations have separate limits of 10 minutes per statement, 30 seconds per
+lock wait, and 60 seconds per idle transaction. The connector sets these
+limits before it returns each connection. Other startup parameters stay in
+effect. DNS resolution and a live proxy can still prevent timely progress.
 One connection serializes ordinary queries across clones of the store.
 Each scale set lock owns a separate PostgreSQL connection.
 The database releases its advisory lock when that connection closes.
 The handle checks the connection so a listener can detect a lost session.
 Each scale set has a distinct sequence key, without hashing its identifier.
 Organization mutations use waiting leases on other dedicated connections.
+Waiting leases return a storage error when their finite lock wait expires.
 Two signed 32-bit keys preserve all 64 GitHub organization-ID bits.
 Their advisory namespace is separate from one-key scale-set locks.
 Waiting takes no ordinary shared-query connection and creates no key row.
@@ -234,6 +250,7 @@ CI starts the database for the existing workspace test phase.
   outcomes.
 - [src/factory.rs](src/factory.rs) opens stores and applies migrations.
 - [src/connection.rs](src/connection.rs) owns the private query connection.
+- [src/connector.rs](src/connector.rs) bounds all PostgreSQL connections.
 - [src/workspaces.rs](src/workspaces.rs) creates shared customer tenants.
 - [src/organizations.rs](src/organizations.rs) updates App installation state.
 - [src/error.rs](src/error.rs) maps database failures to interface errors.

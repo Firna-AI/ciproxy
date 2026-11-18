@@ -1,8 +1,9 @@
 // The two menus of the top bar. The workspace switch lists every workspace
 // of the person, also one with no role yet, with Add an organization for an
 // Admin and the install on another organization. The account menu shows the
-// person and the role, the claim of the Admin role for an owner, the docs,
-// and Sign out. Both are Firna menus, so the keyboard opens and moves them.
+// person and the role, the claim of the Admin role when ciproxy offers it,
+// the docs, and Sign out. Both are Firna menus, so the keyboard opens and
+// moves them.
 
 import type { ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -108,7 +109,7 @@ export function AccountMenu({
     entries.push({
       id: "claim",
       label: "Claim the Admin role",
-      secondary: "You own an organization of this workspace on GitHub.",
+      secondary: "Your ownership on GitHub lets you claim the Admin role.",
       type: "item",
       leading: ({ color }) => <ClaimIcon color={color} />,
       onPress: onClaim,

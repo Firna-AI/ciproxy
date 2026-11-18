@@ -1,6 +1,7 @@
 // The page that a person with no role sees in place of every page of a
-// workspace. It names the Admins, checks again, and lets an owner claim the
-// Admin role. Links lead to the other workspaces of the person.
+// workspace. It names the Admins and checks again. When ciproxy offers the
+// person the Admin claim, the page offers Claim the Admin role. Links lead to
+// the other workspaces of the person.
 
 import { useRef, useState } from "react";
 import { Link } from "expo-router";

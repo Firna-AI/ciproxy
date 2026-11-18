@@ -23,7 +23,6 @@ async fn m18_savings_keeps_exact_minutes_missing_costs_and_signed_display_roundi
     let mut pages = Pages::new(stripe.provider());
     let admin = pages.fixture.login(7, Some(Role::Admin)).await;
     let (machine, _connection) = register(&pages.fixture, &admin).await;
-    pages.registration(machine);
     let own = runner(&pages, Some(machine), 1001);
     let boat = runner(&pages, None, 1002);
     actions(&pages, &own, 1, "2026-11-06T11:59:00Z");

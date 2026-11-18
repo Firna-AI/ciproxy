@@ -33,6 +33,9 @@ cache connection, and an optional Docker attachment. Older shapes fail to
 decode.
 `ConfigureRunner` carries the wire version, runner identity, and registration.
 Cache scope and Docker setup arrive together through `PrepareJob`.
+`JobStarting` is the guest's job-start message. It carries the original
+runtime credentials to the agent. The agent reports the start to the
+control plane through its separate `AgentMessage::JobStarted` message.
 
 A ciproxy workspace owns each machine, its install token, and its machine
 credential. Register carries the install token without a workspace ID.

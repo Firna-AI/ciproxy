@@ -97,8 +97,7 @@ async fn disconnected_removal_exits_after_cleanup_without_another_input_event() 
         })
         .await
         .unwrap();
-    let (_remove, removal) = mpsc::channel(1);
-    let run = unconstrained(daemon.run(Some(identity()), guest_events, true, removal));
+    let run = unconstrained(daemon.run(Some(identity()), guest_events, true));
     pin_mut!(run);
     assert!(poll!(run.as_mut()).is_pending());
     exit_ready.recv().await.unwrap();

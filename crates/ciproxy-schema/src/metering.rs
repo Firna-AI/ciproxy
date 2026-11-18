@@ -30,13 +30,6 @@ diesel::table! {
     }
 }
 diesel::table! {
-    metering_periods (workspace_id, starts_at) {
-        workspace_id -> Uuid,
-        starts_at -> Timestamptz,
-        ends_at -> Timestamptz,
-    }
-}
-diesel::table! {
     metering_daily_sizes (workspace_id, day, vcpus, memory_bytes, disk_bytes) {
         workspace_id -> Uuid,
         day -> Date,

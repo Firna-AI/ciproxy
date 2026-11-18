@@ -10,7 +10,9 @@ use diesel::prelude::*;
 use diesel::sql_types;
 use uuid::Uuid;
 
-use crate::store::metering::support::{prices, time, usd};
+use crate::store::metering::support::{
+    historical_registration, historical_workspace_start, prices, time, usd,
+};
 use crate::store::support::{Database, machine};
 
 use super::support::{backend_pid, tagged_store, wait_for_blocker};
@@ -20,10 +22,7 @@ fn savings_snapshot_cannot_omit_a_concurrently_registered_machine_cost() {
     let mut database = Database::new();
     let workspace = database.legacy_workspace();
     let starts = time("2026-11-04T00:00:00Z");
-    database
-        .store
-        .record_workspace_start(workspace.id, starts)
-        .unwrap();
+    historical_workspace_start(&database, workspace.id, starts);
     database
         .store
         .save_plan_cost(
@@ -61,10 +60,7 @@ fn savings_snapshot_cannot_omit_a_concurrently_registered_machine_cost() {
     wait_for_blocker(&mut observer, reader.pid, controller_pid);
     let own = machine();
     database.store.create_machine(workspace.id, &own).unwrap();
-    database
-        .store
-        .record_machine_registration(workspace.id, own.id, starts)
-        .unwrap();
+    historical_registration(&database, workspace.id, own.id, starts);
     database
         .store
         .save_machine_cost(
