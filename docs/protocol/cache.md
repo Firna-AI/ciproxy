@@ -130,6 +130,9 @@ This doc states the cache rules for jobs on
   differ, and GitHub does not document which ID the token holds. Reason:
   both IDs belong to the one registered runner of the job, and the token
   must also pass every other check.
+- The [verified live sample][job-id-proof] had equal Worker, scale-set,
+  and signed job IDs. It proves that the claim named the bound job. It
+  cannot distinguish the two namespaces when the IDs differ.
 - Exactly one signed access-control scope with the write bit gives the ref.
 - Missing, invalid, absent-write, and multiple-write results are unknown.
 - A shared write requires the checked ref to equal
@@ -157,6 +160,7 @@ This doc states the cache rules for jobs on
   pull request could then poison the cache.
 
 [trusted-events]: https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#cache-access-for-low-trust-workflow-triggers
+[job-id-proof]: ../../crates/ciproxy-cache-sidecar/README.md#runtime-token-job-identity
 
 ## Cache tiers
 

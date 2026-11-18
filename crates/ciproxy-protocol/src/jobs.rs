@@ -61,9 +61,18 @@ pub struct JobAssignment {
 #[derive(Deserialize)]
 struct JobAssignmentInput {
     run_id: String,
+    #[serde(default, deserialize_with = "present_job_ids")]
     job_ids: Option<JobIdBinding>,
     job_id: Option<JobId>,
     runner_id: String,
+}
+
+/// Only an absent pair can use legacy input; a present pair must be complete.
+fn present_job_ids<'de, D>(deserializer: D) -> Result<Option<JobIdBinding>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Ok(Some(JobIdBinding::deserialize(deserializer)?))
 }
 
 impl<'de> Deserialize<'de> for JobAssignment {

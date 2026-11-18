@@ -140,6 +140,10 @@ fn job_assignment_reads_legacy_ids_and_requires_a_complete_pair() {
         ("null legacy ID", json!({"job_id": null})),
         ("null pair", json!({"job_ids": null})),
         (
+            "null pair with legacy ID",
+            json!({"job_ids": null, "job_id": "legacy-job"}),
+        ),
+        (
             "missing scale-set ID",
             json!({"job_ids": {"worker_job_id": "worker-job"}}),
         ),
