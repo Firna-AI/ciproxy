@@ -2384,6 +2384,13 @@ firewall reboot proof waits for a rerun. Evidence:
 - [ ] Bind the hosted job ID to the job ID of the runner's assignment, and
       use the binding for preparation, cache authorization, job metadata,
       and cleanup. Then run the affected page checks again.
+      Pull request #86 merged the binding on 18 November 2026. A live
+      token sample showed all three IDs equal, so it could not tell the two
+      ID namespaces apart. My call, 18 November 2026: the facts carry both
+      IDs of the verified binding, and the token check accepts either ID of
+      that one binding. Reason: both IDs belong to one job on the exact
+      registered runner, so this widens no trust. Live run 5 reruns the
+      jobs with different IDs on agent 0.1.3.
 
 ## Milestone 25: Tier features: backend
 
@@ -2488,11 +2495,21 @@ more review round before the pull request.
 
 - [ ] Run the targeted tests and the complete gate named in `AGENTS.md`.
 - [ ] Commit with Conventional Commits and push the branch.
-- [ ] Review the complete local diff against `origin/main` with the
+- [x] Review the complete local diff against `origin/main` with the
       `implementation-review` skill after the push. Report the findings,
       then apply the fix rule: fix the `fix now` findings, record
       follow-up items under `plans/follow-ups/` for the rest, re-review
       once, and report.
+      Round 1, 17 November 2026, at `e7c67b1`: nine reviewers, one for each
+      area, found 33 findings. One check removed one. Pull requests #74 and
+      #76 to #81 fixed 24, and their own reviews found and fixed 7 more.
+      Round 2 read the fix diff up to `9b094e15` and found 26 findings.
+      Two more came from its checks: own machines never saved their
+      registration time, and unauthenticated agent connections had no
+      limits. Pull requests #83 to #87 fixed 21. The deferred findings and
+      the problems outside the scope are follow-up items. Findings 101
+      (Boat services) and 801 (prelaunch images) wait for the user.
+      Evidence: `.context/reviews/calummoore/ci-proxy-load-balancer/`.
 - [ ] Delete this plan when the `plans` skill says, under "Deleting the
       plan".
 - [ ] Open the pull request. Its description gives the decisions and the
