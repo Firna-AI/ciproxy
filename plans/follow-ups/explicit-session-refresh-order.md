@@ -10,6 +10,10 @@
   `calummoore/ci-proxy-load-balancer` found the Setup case again as
   finding 602. The wider fix of its finding 604 joined this item too,
   because both are one class: one read rule for every dashboard read store.
+  Round 2 of that review found the repeated Setup requests again as
+  finding 1206, and its check found a second repeat after the landing. On
+  2026-11-17 the user chose its option E, the visit rule for the Setup page
+  entry. It joined this item as option H.
 - **Source:** Review.
 - **Category:** Product bug.
 - **Location:** `ts/app/src/state/session.ts:87`, `load`, `:137`, `mutate`,
@@ -19,7 +23,10 @@
   `ts/app/src/state/page-store.ts`, `createPageStore`,
   `ts/app/src/state/machines.ts:46`, `ts/app/src/state/jobs-live.ts:41`,
   `ts/app/src/state/savings.ts:50`, `ts/app/src/state/settings-store.ts:22`,
-  and `ts/app/src/state/settings-members.ts:37`.
+  `ts/app/src/state/settings-members.ts:37`,
+  `ts/app/src/screens/landing.tsx`, `open`,
+  `ts/app/src/screens/setup/setup-screen.tsx`, the page load, and
+  `ts/app/src/screens/workspace-page.tsx`, `useSetupProgress`.
 - **Reason:** Each wrong result needs one reply that arrives after a later
   read or action, and one more check, a reload, or a new Setup visit
   recovers.
@@ -33,11 +40,15 @@
     while Setup waits.
   - **Explicit read:** a read that a person or an action asks for, so it
     must start after that request. Examples are Check again, Try again, the
-    read after an Admin claim, the CSRF recovery that `mutate` runs after a
-    refused change, and the Setup page load.
+    read after an Admin claim, and the CSRF recovery that `mutate` runs
+    after a refused change. Until 17 November 2026, the Setup page load was
+    an explicit read too.
   - **Background read:** a read that only keeps a page current, so it can
     share an open read. Examples are the first load, a page change, the
-    role check that `report` starts after a refused read, and a Setup poll.
+    Setup page entry, and a Setup poll. The role check that `report` starts
+    after a refused read is one too. A page change and the Setup page entry
+    are visits. A visit also keeps a read that ended less than 2 seconds
+    ago, as `visit` of the session store does.
   - **Generation:** the counter of the session store. Sign-out and a 401
     advance it, and a reply from an older generation changes nothing.
 - **Background:**
@@ -88,6 +99,17 @@
   - On a direct load or a reload of Setup, the page's `load` and the
     shell's `ensure` at `ts/app/src/screens/workspace-page.tsx:58` start at
     the same time. So the page sends `GET setup` and `GET machines` twice.
+    A read-only probe of the final review on 17 November 2026 saw
+    `/setup`, `/machines`, `/setup`, `/machines` before either caller
+    finished.
+  - The shell call is in `useSetupProgress`, in the parent component
+    `WorkspacePageView`. React DOM 19.3.1 runs the effects of a child
+    before the effects of its parent. So today the page `load` starts
+    before the shell `ensure`.
+  - `open` in `ts/app/src/screens/landing.tsx` reads Setup with `ensure`
+    before it opens the Setup page. The page then reads `GET setup` and
+    `GET machines` again. So while Setup is not done, the entry after a
+    sign-in or an install return also sends four Setup requests.
   - The poller waits for each read before it schedules the next, so two
     polls never overlap. A poll whose read returns false stops the poller.
     A stopped poller ignores the tab visibility.
@@ -139,7 +161,8 @@
     older reply. `forgetEnded` of the billing stores is such work.
 - **Problem:** Two stores can let an older reply decide what a newer read or
   action shows, and five stores keep copies of the read rule by hand. These
-  cases give a wrong result, or can give one later:
+  cases give a wrong result or a repeated read, or can give a wrong result
+  later:
   - Claim: an older session read with the earlier role answers the read
     after a successful claim. The landing then shows the page for no role
     again, or the shell with the earlier role. A page change within 2
@@ -154,16 +177,20 @@
     the older reply, the store showed zero machines and scheduled no poll.
   - Setup failure: a late failure of that load shows that Setup tries again
     by itself, after the poller stopped.
+  - Repeat: one open of Setup sends each Setup request twice. On a direct
+    open, the page `load` and the shell `ensure` both read. After the
+    landing, the landing read and the page read both read.
   - Copies: the five copies work today, but a hand-made copy can break, as
     the copy of the overflow summary store did before 17 November 2026.
 - **Impact if no action:** A granted Admin role can stay hidden until
   another explicit check, and a change that could succeed stays refused.
   Setup can show an open first job until a reload, with a notice that
   promises a retry that does not run. Each new read store needs its own
-  copy of the rule, and each copy can break again.
-- **Root question:** How does every dashboard read store stop an older
-  reply from setting its state, failure, or polling, or from answering a
-  newer request?
+  copy of the rule, and each copy can break again. Each open of Setup
+  sends four requests in place of two.
+- **Root question:** How does every dashboard read store choose the read
+  that answers each request, so that no older reply sets its state,
+  failure, or polling?
 - **Options:**
   - **A.** Read again after each affected action. The claim and the CSRF
     recovery wait for the open session read, then start one more read. Setup
@@ -194,6 +221,9 @@
       applies only when no read that started later has applied.
     - A background read shares an open read. An explicit read starts a new
       read.
+    - A page entry is a visit. It shares an open read, or keeps a read that
+      ended less than 2 seconds ago. Otherwise it starts a new read. Move
+      the visit rule of H into the module.
     - A poll decides from the stored state, not from its own reply.
     - The snapshot keeps the last good data beside the failure of the
       newest read. Keep one of the two generic snapshot types.
@@ -237,6 +267,30 @@
     - Cost: the four readers change shape, and the session store stays
       unfixed.
     - Effort: Small.
+  - **H.** Give the Setup store the visit rule of the session store, and use
+    it for the Setup page entry.
+    - The first visit starts the read of `ensure`, or shares it.
+    - A later visit shares an open read, or keeps a read that ended less
+      than `sessionFreshFor`, 2 seconds, ago. Otherwise it reads again.
+    - Try again and the poll keep `load`.
+    - Pass `env.now` to `createSetupStore`.
+    - A direct open then sends each request once, in either order of the
+      effects. The page that the landing opens uses the read of the landing.
+    - Add three store cases. The shell `ensure` and then the page visit
+      send each request once. A visit within 2 seconds of a read sends no
+      request. A later visit reads again.
+    - H drops two assumptions. The first is that each page entry after the
+      first read starts a new read. The term of an explicit read in this
+      item said so. That reason does not hold for an entry directly after a
+      read of the same navigation, such as the read of the landing.
+    - The second is that only the first read of a document repeats. The
+      first report of the repeat said so. The landing path repeats the pair
+      too.
+    - Cost: an entry can show a read up to 2 seconds old. The 5-second poll
+      corrects it. A read that started earlier and stalls answers the
+      entry, because the HTTP client has no timeout. Try again still starts
+      a new read.
+    - Effort: Small.
 - **Left out:**
   - Change nothing: it fails the goal, because the orders above stay
     possible.
@@ -248,10 +302,27 @@
   - A revision from the API: inside one tab, the start order of the client
     gives the same result with no Rust change. Also, only the client knows
     that its read failed.
-  - One shared open read, or a queue, for every Setup read: the page load
-    and Try again would get, or wait behind, a read that started before
-    them. The client has no timeout, so Try again could wait behind a
-    stalled read.
+  - One shared open read, or a queue, for every Setup read: Try again would
+    get, or wait behind, a read that started before it. The client has no
+    timeout, so Try again could wait behind a stalled read. Until 17
+    November 2026 this entry also named the page load. H now lets the page
+    entry share an open read, and Try again keeps a new read.
+  - The read of `ensure`, which lasts for the document, for every Setup
+    entry: later entries stay stale, as
+    `plans/follow-ups/setup-progress-cache.md` records.
+  - The recorded explicit page load, with one more case for the order of
+    the page `load` and the shell `ensure`: it fails the goal. It removes
+    the repeat only while React runs the page effect first, which a store
+    test cannot see. The landing path keeps four requests.
+  - No Setup read in the shell on the Setup page: an entry rule in the
+    Setup store is better on every point. It has the same effect, and it
+    keeps page knowledge out of the shared shell.
+  - A merge of identical open GET requests in the HTTP client: it fails the
+    goal. The landing read and the page read do not overlap. Without an
+    opt-out for each call, Try again would also wait behind a stalled read.
+  - A session field that tells the landing whether Setup is done: H is
+    better on every point. H removes the same landing read with no Rust
+    change and no API change.
   - A poll that restarts only while the stored state waits: old progress
     still shows for up to 5 seconds.
   - An abort of older requests in the client: A and E are better on each
@@ -260,7 +331,7 @@
   - A first-job state that never moves back: a machine can leave and the
     App can be removed, so it would hide real changes.
   - One combined Setup endpoint: two combined reads can still answer out of
-    order, and it needs a Rust change.
+    order, and it needs a Rust change. It also still repeats the read.
   - One store type that also owns the sign-in state of every store: the
     session store keeps its own shape, with the generation, the CSRF token,
     and the 2-second window. E shares the rule and the snapshot, and each
@@ -271,7 +342,10 @@
     would then follow the 10-second poll of the machines. Each summary read
     asks Boat for the costs of the open starts.
 - **Wider fix:** E. One module holds the read rule and the snapshot, so
-  each store and each later read store gets the rule by default.
+  each store and each later read store gets the rule by default. E takes
+  the visit rule of H for each page entry. Option F of
+  `plans/follow-ups/machine-page-overflow-read.md` proposes the same entry
+  read for the page store.
 - **Previous examples:**
   - Sign-out and a 401 already advance the generation, so a reply from
     before them changes nothing. The tests "sign out clears local access and
@@ -294,9 +368,15 @@
     code. Its removal runs inside the `read` of the billing page stores,
     before the counter drops an older reply. The rule of E orders the reads
     of one store only, so neither item closes the other.
+  - `plans/follow-ups/machine-page-overflow-read.md`, the same cause and a
+    shared wider fix. There, the machine page reads the overflow summary
+    with `ensure`, so later visits read nothing. Here, the Setup page and
+    the shell both read. One visit rule for a page entry answers both. The
+    options do not conflict, and neither fix waits for the other.
 - **Recommendation:** E. One rule gives every explicit read a new read, and
   it stops every older reply in every read store. G is the smallest fix of
-  Setup alone.
+  Setup alone. H is the smallest fix of the repeated Setup requests, and E
+  takes its visit rule.
 - **Action:** fix after merge, apply E, because each wrong order needs one
   stalled reply in a short window, and one more check or a reload
   recovers.
@@ -313,9 +393,10 @@
   - A discarded reply changes neither the stored state nor the time of the
     last read.
   - In the Setup store, `ensure` and the poll make background reads. The
-    page load and Try again make explicit reads. Keep the Setup reply and
-    the machines reply as one pair. The shell's `ensure` then shares the
-    open page read, so a direct load sends each Setup request once.
+    page entry makes a visit, with the rule of H. Try again makes an
+    explicit read. Keep the Setup reply and the machines reply as one pair.
+    A direct open and the entry after the landing then send each Setup
+    request once, in either order of the effects.
   - The poll decides from the stored state after its read settles. A stored
     failure keeps the poll running, as now.
   - Keep the sign-out and 401 rule. They drop every open read, so no older
@@ -347,6 +428,10 @@
     Expect the completed state, no refresh failure, and a stopped poller.
   - Setup failure case: release the older reply as a failure. Expect no
     refresh failure.
+  - Setup entry cases: the shell `ensure` and then the page visit send each
+    request once. A visit within 2 seconds of a read sends no request. A
+    later visit reads again. A page visit after the read of the landing
+    sends no second pair.
   - Run `node --test ts/app/_tests_/session.test.ts` and
     `node --test ts/app/_tests_/setup.test.ts`. The complete gate does not
     run these tests. Run each new case 10 times.
@@ -354,6 +439,8 @@
     such as `machines-store.test.ts`, `jobs-store.test.ts`,
     `savings-store.test.ts`, `settings-stores.test.ts`,
     `settings-members.test.ts`, and the billing tests.
-  - When a change fixes only one store, use D for the session store, and G
-    or the guard of A for Setup. Do not copy the shared open read of the
-    session store into Setup.
+  - When a change fixes only one store, use D for the session store. For
+    Setup, use G or the guard of A against older replies, and H for the
+    page entry. The user chose H for the Setup page entry on 17 November
+    2026. Do not give Try again or the poll the shared open read of the
+    session store.

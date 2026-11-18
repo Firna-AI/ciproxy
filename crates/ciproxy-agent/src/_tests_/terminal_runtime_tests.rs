@@ -114,8 +114,7 @@ async fn daemon_sends_exit_and_reports_while_terminal_cleanup_waits_then_finaliz
         }),
     };
     let (guests, guest_events) = mpsc::channel(1);
-    let (_remove, removal) = mpsc::channel(1);
-    let run = unconstrained(daemon.run(Some(identity()), guest_events, false, removal));
+    let run = unconstrained(daemon.run(Some(identity()), guest_events, false));
     pin_mut!(run);
     assert!(poll!(run.as_mut()).is_pending());
     gateway_ready.recv().await.unwrap();

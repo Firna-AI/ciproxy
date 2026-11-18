@@ -25,6 +25,6 @@ export const appPermissions: readonly AppPermission[] = [
   {
     name: "Members",
     access: "read",
-    use: "see who belongs to your organization, so that ciproxy can give roles",
+    use: "to check your own organization memberships and ownership",
   },
 ];

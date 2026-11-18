@@ -103,7 +103,7 @@ export type AccountMenu = {
   login: string;
   roleName: string;
   workspaceName: string;
-  /** An owner with the Billing or the Viewer role claims Admin here. */
+  /** Whether ciproxy offers the Admin claim, so the menu shows it. */
   canClaim: boolean;
 };
 

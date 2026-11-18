@@ -36,6 +36,22 @@ export function dataJourneys(origin: string, output: string): PagesSmokeRun[] {
         await visible(
           page.getByRole("link", { name: "Browser checks", exact: true }),
         );
+        // Each tab adds an entry to the browser history, so Back opens Live.
+        await page.goBack({ waitUntil: "domcontentloaded" });
+        assert.equal(page.url(), origin + jobsHref(workspaceId, "live"));
+        await visible(
+          page.getByRole("region", { name: "Running · 1", exact: true }),
+        );
+        assert.equal(
+          await page
+            .getByRole("link", { name: "Live", exact: true })
+            .getAttribute("aria-current"),
+          "page",
+        );
+        await history.click();
+        await visible(
+          page.getByRole("link", { name: "Browser checks", exact: true }),
+        );
         await apiAction(page, "jobs/history", "GET", async () => {
           await page.getByLabel("Search jobs", { exact: true }).fill("Browser");
           await page.getByLabel("Search jobs", { exact: true }).press("Enter");

@@ -71,7 +71,7 @@ impl Controller {
                     .started_record(
                         &vm,
                         &job_id,
-                        Some(runtime),
+                        runtime,
                         provenance == GuestProvenance::InitialConfiguration,
                     )
                     .await?;
@@ -174,13 +174,6 @@ impl Controller {
                 self.store.save(&next)?;
                 *state = next;
                 AgentMessage::RunnerReady { runner_id }
-            }
-            GuestToAgent::JobStarted { runner_id, job_id } => {
-                if runner_id != vm.report.runner_id {
-                    return Err(Error::GuestMismatch);
-                }
-                self.started_record(&vm, &job_id, None, false).await?;
-                AgentMessage::JobStarted { runner_id, job_id }
             }
             GuestToAgent::RunnerExited { runner_id, exit } => {
                 if runner_id != vm.report.runner_id {

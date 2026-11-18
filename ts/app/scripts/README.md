@@ -85,11 +85,12 @@ build change.
 The page smoke, `browser-pages-smoke.ts`, covers the states of Jobs, the job
 page, Savings, Plan and usage, Plans, the Checkout review and return, and the
 banner. It also covers each page while it loads, and Viewer and Billing views
-of Jobs, Savings, and the billing pages. Its journeys follow the History
-filters to a job and back, change the Savings range, recover a failed read,
-and take an offer through review, payment, and return. Other journeys cover a
-paid change with a bank confirmation, a refused quote that needs a new review
-and a new click, and a return that names its workspace.
+of Jobs, Savings, and the billing pages. Its journeys open History from Live
+and go Back to Live, follow the History filters to a job and back, change the
+Savings range, recover a failed read, and take an offer through review,
+payment, and return. Other journeys cover a paid change with a bank
+confirmation, a refused quote that needs a new review and a new click, and a
+return that names its workspace.
 Another journey checks the banner of the Organizations tab. The API chooses
 it, and a failed payment comes first. Turn on opens the dialog of the row,
 and the banner reads again after it.

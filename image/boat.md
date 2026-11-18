@@ -121,6 +121,7 @@ The upload uses a private temporary directory.
 No credential enters Boat's command text or a saved snapshot.
 The wrapper removes the uploaded file and uses a private runtime mount.
 It stops Boat's outer Docker daemon before it starts the image's daemon.
+The image's daemon creates Docker's default `docker0` bridge.
 The daemon and runner use the same full userspace as Firecracker.
 The wrapper uses private mount and PID namespaces.
 The sandbox's network namespace and provider kernel remain in use.

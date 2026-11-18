@@ -90,7 +90,9 @@ link keeps them. A value that a page does not know falls back to its default.
 
 - `/jobs`: `tab=history` opens History, with `search=<text>`,
   `place=machine` or `place=boat`, and `days=7`, `days=30`, or `days=90`.
-  With no `days`, History shows today. A filter change replaces the address.
+  With no `days`, History shows today. A tab change adds an entry to the
+  browser history, so Back opens the last tab. A filter change replaces the
+  address.
 - `/job`: `job=<id>` names the job. With no job, the page opens History.
 - `/savings`: `range=this_month` or `range=last_month`. With no range, the
   report covers the last 30 days.

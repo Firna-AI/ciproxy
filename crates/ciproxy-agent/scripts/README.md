@@ -1,10 +1,16 @@
 # Agent scripts
 
-This folder holds the live operator checks of the agent and their local
-regression tests. A live check runs on a real x64 Linux host and changes
-that host. This guide covers the cache firewall proof and its tests. The
-[agent README](../README.md#development) links the guides of the other
-scripts.
+This Apache-2.0 folder holds release packaging, live operator checks, and
+their local regression tests. A live check runs on a real x64 Linux host
+and changes that host. The [agent README](../README.md#development) links
+the guides of the other scripts.
+
+## Release packaging
+
+[cli-release.sh](cli-release.sh) packages the agent and cache sidecar for
+the release workflow and local smoke checks. Run it from the repository
+root. The [packaging guide](../development.md#release-packaging) gives the
+build, glibc check, and archive commands.
 
 ## Cache firewall proof
 
@@ -74,6 +80,8 @@ scripts.
 
 ## Key Code
 
+- [cli-release.sh](cli-release.sh) checks release tags and glibc versions
+  and writes the public binary archives with their licences and checksums.
 - [cache_egress_host.py](cache_egress_host.py) inspects the installed
   cache, checks readiness, and waits for the usage report.
 - [cache_egress_lifecycle.py](cache_egress_lifecycle.py) restarts the cache

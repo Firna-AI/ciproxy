@@ -85,8 +85,7 @@ async fn removed_startup_drains_saved_jobs_without_identity_or_gateway_access() 
         }),
     };
     let (guests, guest_events) = mpsc::channel(1);
-    let (_remove, removal) = mpsc::channel(1);
-    let run = unconstrained(daemon.run(identity, guest_events, true, removal));
+    let run = unconstrained(daemon.run(identity, guest_events, true));
     pin_mut!(run);
     assert!(
         poll!(run.as_mut()).is_pending(),
