@@ -1055,7 +1055,7 @@ Live KVM and authenticated job checks remain with the orchestrator.
         proof after the reboot did not run. Evidence:
         `.context/ciproxy-mvp/live-2026-11-17/run-4-report.md`.
   - [ ] Fix the three causes of live run 4, and run its failed checks again.
-    - [ ] The pinned Boat client rejects Boat's successful upload
+    - [x] The pinned Boat client rejects Boat's successful upload
           acknowledgement, because Boat returns a path relative to the home
           directory. No Boat runner starts. My call, 17 November 2026: fix
           the path comparison in `futex-ai/sandbox`, then update the pin.
