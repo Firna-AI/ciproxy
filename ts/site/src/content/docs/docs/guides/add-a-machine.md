@@ -41,7 +41,8 @@ Only an Admin of the workspace sees the install command.
    machine, and connects it to your workspace.
 4. Keep the page open. It shows that it waits for the machine. Then it
    shows the host name of the machine and what the agent reported: threads,
-   memory, KVM, and slots.
+   memory, KVM, and slots. A new machine first downloads the job image and
+   takes jobs when it is ready.
 
 The install token works for one hour. Within that hour, it adds any number
 of machines, so you can run the same command on each of them. To end the
