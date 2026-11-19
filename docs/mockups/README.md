@@ -65,19 +65,26 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   own period, which begins on the day the tier begins. Cal Moore installs the
   GitHub App, so he is the first Admin. `members.ts` names the person of each
   role, the owner with the Billing role, and a second Admin.
-- Some screens are what-ifs of November, in `access.ts`, `machines.ts`, and
-  `settings.ts`: a fourth machine, the mini PC office-mini-1, whose disk
-  holds fewer jobs than its slots; the agent of hetzner-ax42-1 one release
-  behind the newest; hetzner-ax42-1 without measured figures of its machine
-  cache, its Docker disks, or both; a moment in which no machine measured
-  its machine cache; Tom Becker suspends or removes the GitHub App; an owner
-  of mokly-labs removes the App from mokly-labs alone; Jonas Weber leaves
-  the organizations on GitHub; and a setup that skipped Boat, so the labels
-  run on the machines only. `hardware.ts` holds the slot rule and the disk
-  rule, in which each running job holds its VM disk: the current image with
-  the free disk of its label, as `vm-disk.ts` gives it. In
-  `job-details.ts`, ciproxy has no saved request for two jobs of the history,
-  so their pages show an unknown request and the VM that ran each job.
+- Some screens are what-ifs of November, in `access.ts`, `machines.ts`,
+  `new-machine.ts`, and `settings.ts`: a fourth machine, the mini PC
+  office-mini-1, whose disk holds fewer jobs than its slots; a fourth AX42,
+  hetzner-ax42-4, that joined minutes ago and gets its first job image; the
+  agent of hetzner-ax42-1 one release behind the newest; hetzner-ax42-1 without
+  measured figures of its machine cache, its Docker disks, or both; a moment in
+  which no machine measured its machine cache; Tom Becker suspends or removes
+  the GitHub App; an owner of mokly-labs removes the App from mokly-labs alone;
+  Jonas Weber leaves the organizations on GitHub; and a setup that skipped Boat,
+  so the labels run on the machines only. `hardware.ts` holds the slot rule and
+  the disk rule, in which each running job holds its VM disk: the current image
+  with the free disk of its label, as `vm-disk.ts` gives it. In
+  `job-details.ts`, ciproxy has no saved request for two jobs of the history, so
+  their pages show an unknown request and the VM that ran each job.
+- A machine that gets its first job image takes no job until the image is
+  ready. Every page that shows such a machine says so: the machine list and
+  the machine page show it as Preparing, and Setup and Add a machine show it
+  as connected, with a line about the image. While a first job waits for it,
+  the first-job step of Setup gives the reason. No figure counts its slots,
+  and no text promises a time, because a slow link makes the download long.
 - The return of Add an organization and the inactive organizations are
   what-ifs in `org-links.ts`. In the main story, Cal Moore is an Admin of one
   workspace, so the return links mokly-labs at once. On 2 November, he is also
@@ -270,9 +277,12 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
 - `src/fixtures/machines.ts`: the own machines of each moment. The machine
   cache and the Docker disks of a machine each hold the figures that it
   measured, or no figures when they are unavailable. A screen shows an
-  unavailable figure as Unknown. `src/screens/machines/cache-hits.tsx` gives
-  the cache hits of Machines: the share of the machines that measured their
-  cache, with the names of the others.
+  unavailable figure as Unknown. A measured cache that served no restore
+  yet, such as the cache of a new machine, shows No restores yet.
+  `src/screens/machines/cache-hits.tsx` gives the cache hits of Machines: the
+  share of the machines that measured their cache, with the names of the
+  others. `src/fixtures/new-machine.ts` holds hetzner-ax42-4 while it gets
+  its first job image, and the busy afternoon with it as a fourth machine.
 - `src/screens/machines/machine-scenes.tsx`: the scene of each state of the
   machine page: its machine, the Clear cache confirmation while it is open,
   and the confirmation that Clear cache opens, with the screens of its Cancel
@@ -295,8 +305,9 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   `canTakeOut()` give the rule of the last organization from them.
 - `src/components/inactive-banner.tsx`: the banner of an inactive
   organization, and the reason of each hold, which its row repeats.
-- `src/components/install-command.tsx`: the one-line install command, and the
-  notices of a machine without KVM or with too little disk.
+- `src/components/install-command.tsx`: the one-line install command, the
+  notices of a machine without KVM or with too little disk, and the line and
+  the notice of a machine that gets its first job image.
 - `src/fixtures/site.ts`: the host of the public site. `cost-claim.ts` holds
   the cost claim of the landing page and its calculation, `plan-choice.ts` the
   cheapest plan that covers a use, and `plan-compare.ts` the feature

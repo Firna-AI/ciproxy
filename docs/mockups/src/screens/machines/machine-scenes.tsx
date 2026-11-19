@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 
 import { paths, type CataloguePath } from "../../components/paths.ts";
 import { machineScenes, type Machine } from "../../fixtures/machines.ts";
+import { preparingAx42 } from "../../fixtures/new-machine.ts";
 import {
   ClearCacheDialog,
   type ClearCacheConfirmation,
@@ -27,6 +28,7 @@ export const machineStates = [
   "clear-requested",
   "saved-offline",
   "no-room",
+  "preparing",
   "agent-behind",
   "cache-unknown",
   "docker-unknown",
@@ -144,6 +146,8 @@ export function machineScene(state: MachineState): MachineDetailScene {
       return { machine: machineScenes.fourMachines[3] };
     case "no-room":
       return { machine: machineScenes.tooSmall[3] };
+    case "preparing":
+      return { machine: preparingAx42 };
     case "cache-unknown":
       return cacheUnknown;
     case "clear-cache-unknown":

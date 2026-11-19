@@ -8,8 +8,10 @@
 // Every role sees the machine; only an Admin drains, removes, or changes it.
 // The warm runner count is the saved count in every state, also while the
 // machine drains, is offline, or has no slots; the slots show the warm
-// runners that are ready. The scene of each state gives the machine and its
-// Clear cache confirmation.
+// runners that are ready. A machine that gets its first job image takes no
+// job yet, so its slots show no slot bar and no free slot, and a notice says
+// that jobs start on it when it is ready. The scene of each state gives the
+// machine and its Clear cache confirmation.
 
 import { Pencil } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -34,6 +36,11 @@ import { MachineNotice, type NoticeState } from "./machine-notices.tsx";
 import { machineScene, type MachineState } from "./machine-scenes.tsx";
 import { MachineSlots } from "./machine-slots.tsx";
 import "./machines.css";
+
+/** A fourth machine passes the three machines of Team. */
+function overMachines(state: MachineState): boolean {
+  return state === "disk-limit" || state === "no-room" || state === "preparing";
+}
 
 /** The notice that leads the page, or null for a state without one. */
 function noticeOf(state: MachineState): NoticeState | null {
@@ -92,7 +99,7 @@ export function MachineDetailScreen({
       active="machines"
       role={role}
       banner={
-        state === "disk-limit" || state === "no-room"
+        overMachines(state)
           ? usageBanner("over-machines", "other", canPay(role))
           : undefined
       }
@@ -160,6 +167,11 @@ function SlotsBody({ machine }: { machine: Machine }) {
   if (machine.status === "offline") {
     return (
       <p className="small muted">Slots show again when the machine is back.</p>
+    );
+  }
+  if (machine.status === "preparing") {
+    return (
+      <p className="small muted">Slots take jobs when the machine is ready.</p>
     );
   }
   if (machine.slots.length === 0) {

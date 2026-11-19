@@ -2,6 +2,8 @@
 // cache, and the Boat account that takes overflow. Every role sees them. Only
 // an Admin adds a machine and opens the overflow settings. A failed read of
 // the Overflow panel shows in the panel, and the machines stay on the page.
+// The slot figures count only the machines that run jobs or can take them,
+// never an offline machine or one that gets its first job image.
 
 import { Plus, Server } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -18,11 +20,16 @@ import {
   countSlots,
   machineScenes,
   offlineFor,
-  type MachineScene,
+  type Machine,
 } from "../../fixtures/machines.ts";
 import type { Role } from "../../fixtures/members.ts";
+import { newMachineScene } from "../../fixtures/new-machine.ts";
 import { CacheHitsKpi } from "./cache-hits.tsx";
-import { MachineTable, LoadingMachineTable } from "./machine-table.tsx";
+import {
+  LoadingMachineTable,
+  MachineTable,
+  slotsLive,
+} from "./machine-table.tsx";
 import { OverflowPanel } from "./overflow-panel.tsx";
 import "./machines.css";
 
@@ -33,23 +40,30 @@ export const machinesStates = [
   "over-limit",
   "cache-unknown",
   "no-cache-measured",
+  "new-machine",
   "loading",
   "error",
   "overflow-refresh",
 ] as const;
 export type MachinesState = (typeof machinesStates)[number];
 
-const sceneOf: Record<MachinesState, MachineScene> = {
-  steady: "steady",
-  empty: "steady",
-  offline: "offline",
-  "over-limit": "fourMachines",
-  "cache-unknown": "cacheUnknown",
-  "no-cache-measured": "noCacheMeasured",
-  loading: "steady",
-  error: "steady",
-  "overflow-refresh": "steady",
+const machinesOf: Record<MachinesState, readonly Machine[]> = {
+  steady: machineScenes.steady,
+  empty: machineScenes.steady,
+  offline: machineScenes.offline,
+  "over-limit": machineScenes.fourMachines,
+  "cache-unknown": machineScenes.cacheUnknown,
+  "no-cache-measured": machineScenes.noCacheMeasured,
+  "new-machine": newMachineScene,
+  loading: machineScenes.steady,
+  error: machineScenes.steady,
+  "overflow-refresh": machineScenes.steady,
 };
+
+/** A fourth machine passes the three machines of Team. */
+function overMachines(state: MachinesState): boolean {
+  return state === "over-limit" || state === "new-machine";
+}
 
 export function MachinesScreen({
   viewport,
@@ -61,7 +75,7 @@ export function MachinesScreen({
   /** The role of the signed-in person. */
   role?: Role;
 }) {
-  const machines = machineScenes[sceneOf[state]];
+  const machines = machinesOf[state];
   const admin = role === "admin";
   const offline = machines.find((machine) => machine.status === "offline");
   return (
@@ -74,7 +88,7 @@ export function MachinesScreen({
         state === "empty" ? { done: 1, total: 4, active: false } : undefined
       }
       banner={
-        state === "over-limit"
+        overMachines(state)
           ? usageBanner("over-machines", "other", canPay(role))
           : undefined
       }
@@ -121,7 +135,7 @@ function MachinesBody({
 }: {
   viewport: Viewport;
   state: MachinesState;
-  machines: (typeof machineScenes)[MachineScene];
+  machines: readonly Machine[];
   admin: boolean;
 }) {
   if (state === "error") {
@@ -159,7 +173,7 @@ function MachinesBody({
     );
   }
   const slots = machines
-    .filter((machine) => machine.status !== "offline")
+    .filter(slotsLive)
     .reduce((sum, machine) => sum + machine.slots.length, 0);
   return (
     <>

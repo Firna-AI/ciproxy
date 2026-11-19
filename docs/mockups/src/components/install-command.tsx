@@ -4,7 +4,9 @@
 // whose disk holds fewer jobs than its slots, and the command after Revoke
 // token. The command is one line: the install script of get.ciproxy.dev
 // installs the agent, then runs it with the arguments after "--", as design
-// call 30 says.
+// call 30 says. A machine that connected gets its first job image before it
+// takes a job. Every page that shows such a machine says so, and no text
+// promises a time, because a slow link makes the download long.
 
 import type { ReactNode } from "react";
 import { CircleCheck } from "lucide-react";
@@ -85,13 +87,19 @@ export function WaitingLine({ children }: { children: string }) {
   );
 }
 
-/** A machine that the agent just connected, with what it reported. */
+/**
+ * A machine that the agent just connected, with what it reported. While it
+ * gets its first job image, a line under the facts says so.
+ */
 export function ConnectedMachine({
   name,
   hardware,
+  preparing = false,
 }: {
   name: string;
   hardware: Hardware;
+  /** The machine gets its first job image, so it takes no job yet. */
+  preparing?: boolean;
 }) {
   const { bySlots, atOnce } = defaultLabelJobs(hardware);
   return (
@@ -113,8 +121,32 @@ export function ConnectedMachine({
             Its disk holds {atOnce} jobs of ciproxy at a time.
           </p>
         ) : null}
+        {preparing ? (
+          <div className="image-line">
+            <Busy size={14} />
+            <span>
+              Getting the job image. Jobs start on it when it is ready.
+            </span>
+          </div>
+        ) : null}
       </div>
     </div>
+  );
+}
+
+/** The notice of a machine that gets its first job image. */
+export function ImageNotice({
+  name,
+  children,
+}: {
+  name: string;
+  /** When jobs start, and where they run until then. */
+  children: ReactNode;
+}) {
+  return (
+    <Notice tone="info" title={`${name} is getting the job image`}>
+      {children}
+    </Notice>
   );
 }
 

@@ -27,6 +27,7 @@ export const paths = {
 
   onboarding: "app/onboarding",
   machineConnected: "app/onboarding/add-machine/connected",
+  machineConnectedPreparing: "app/onboarding/add-machine/preparing",
   machineNoKvm: "app/onboarding/add-machine/no-kvm",
   connectBoat: "app/onboarding/connect-boat",
   connectBoatInvalid: "app/onboarding/connect-boat/states/invalid-key",
@@ -38,6 +39,7 @@ export const paths = {
   firstJob: "app/onboarding/first-job",
   firstJobPassed: "app/onboarding/first-job/passed",
   firstJobAfterSkip: "app/onboarding/first-job/after-skip",
+  firstJobWaitsForImage: "app/onboarding/first-job/waits-for-image",
 
   jobs: "app/jobs",
   jobsPeak: "app/jobs/live/peak",
@@ -71,7 +73,9 @@ export const paths = {
   machinesOverLimit: "app/machines/list/over-limit",
   machinesCacheUnknown: "app/machines/list/cache-unknown",
   machinesNoCacheMeasured: "app/machines/list/no-cache-measured",
+  machinesPreparing: "app/machines/new-machine/preparing",
   machine: "app/machines/machine",
+  machinePreparing: "app/machines/machine/new-machine/preparing",
   machineDraining: "app/machines/machine/states/draining",
   machineOffline: "app/machines/machine/states/offline",
   machineNoSlots: "app/machines/machine/states/no-slots",
@@ -90,6 +94,7 @@ export const paths = {
   machineClearFiguresUnknown: "app/machines/machine/clear-unknown/both-unknown",
   addMachine: "app/machines/add",
   addMachineConnected: "app/machines/add/connected",
+  addMachinePreparing: "app/machines/add/preparing",
   addMachineRevoked: "app/machines/add/revoked",
   machinesViewer: "app/machines/roles/viewer",
   machinesBilling: "app/machines/roles/billing",
@@ -192,6 +197,7 @@ export const paths = {
 
   flowFirstGreenJob: "user-flows/first-green-job",
   flowPeakOverflow: "user-flows/peak-overflow-to-boat",
+  flowNewMachineImage: "user-flows/new-machine-gets-image",
   flowFreeToTeam: "user-flows/free-upgrades-to-team",
   flowLandingToSignIn: "user-flows/landing-to-sign-in",
   flowMemberAccess: "user-flows/member-asks-for-access",

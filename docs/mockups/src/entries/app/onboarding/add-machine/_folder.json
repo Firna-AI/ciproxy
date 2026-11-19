@@ -1,4 +1,4 @@
 {
   "title": "Add a machine",
-  "order": ["connected", "no-kvm"]
+  "order": ["preparing", "connected", "no-kvm"]
 }

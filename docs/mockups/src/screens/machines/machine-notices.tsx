@@ -1,7 +1,8 @@
 // The notices of the machine page: a drain, a lost contact, a machine
-// without KVM, a machine without room for a slot, and a machine whose disk
-// holds fewer jobs than its slots. Each names what happens to the jobs, and
-// the fix when one exists; only an Admin gets the install command of a fix.
+// without KVM, a machine without room for a slot, a machine whose disk holds
+// fewer jobs than its slots, and a machine that gets its first job image.
+// Each names what happens to the jobs, and the fix when one exists; only an
+// Admin gets the install command of a fix.
 // After Clear cache, or a change that the machine gets when it connects
 // again, a notice says so, because the page shows the effect later.
 
@@ -9,6 +10,7 @@ import { LinkAction } from "../../components/actions.tsx";
 import { Notice } from "../../components/feedback.tsx";
 import {
   DiskLimitNotice,
+  ImageNotice,
   NoKvmNotice,
 } from "../../components/install-command.tsx";
 import { paths } from "../../components/paths.ts";
@@ -22,7 +24,8 @@ export type NoticeState =
   | "disk-limit"
   | "clear-requested"
   | "saved-offline"
-  | "no-room";
+  | "no-room"
+  | "preparing";
 
 function DrainingNotice({ machine }: { machine: Machine }) {
   const finishing = machine.slots.filter((slot) => slot === "busy").length;
@@ -83,6 +86,13 @@ export function MachineNotice({
     case "disk-limit":
       return (
         <DiskLimitNotice name={machine.name} hardware={machine.hardware} />
+      );
+    case "preparing":
+      return (
+        <ImageNotice name={machine.name}>
+          Jobs start on it when it is ready. Until then, jobs run on your other
+          machines and on Boat.
+        </ImageNotice>
       );
   }
 }

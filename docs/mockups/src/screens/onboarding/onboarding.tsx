@@ -1,7 +1,9 @@
 // Setup of a new organization: install the GitHub App, add a machine with one
 // command, connect Boat, and run the first job. One screen; the state picks
 // the open step. The Boat step can be skipped: it then shows a dash and a
-// link to Settings under Overflow, and it does not count as done.
+// link to Settings under Overflow, and it does not count as done. A machine
+// that connected gets its first job image before it takes a job. Setup goes
+// on meanwhile, and the machine step and the first job name the image.
 
 import { Check, Minus } from "lucide-react";
 import type { Viewport } from "@mokly/mokly";
@@ -13,11 +15,17 @@ import { AppShell } from "../../components/shell/app-shell.tsx";
 import { dotJoin, monthly } from "../../fixtures/format.ts";
 import { boat } from "../../fixtures/machines.ts";
 import { org, workspace } from "../../fixtures/org.ts";
-import { BoatStep, FirstJobStep, MachineStep } from "./step-bodies.tsx";
+import {
+  BoatStep,
+  FirstJobStep,
+  MachineStep,
+  setupMachine,
+} from "./step-bodies.tsx";
 import "./onboarding.css";
 
 export const onboardingStates = [
   "machine-waiting",
+  "machine-preparing",
   "machine-connected",
   "machine-no-kvm",
   "boat",
@@ -29,6 +37,7 @@ export const onboardingStates = [
   "boat-wallet",
   "boat-skipped",
   "first-job-waiting",
+  "first-job-preparing",
   "first-job-passed",
 ] as const;
 
@@ -53,7 +62,7 @@ const steps: readonly {
     key: "machine",
     title: "Add a machine",
     todo: "Run one command on a Linux machine.",
-    done: "hetzner-ax42-1 · 6 slots",
+    done: `${setupMachine} · 6 slots`,
   },
   {
     key: "boat",
@@ -74,6 +83,7 @@ const steps: readonly {
 
 const openStep: Record<OnboardingState, StepKey> = {
   "machine-waiting": "machine",
+  "machine-preparing": "machine",
   "machine-connected": "machine",
   "machine-no-kvm": "machine",
   boat: "boat",
@@ -85,16 +95,40 @@ const openStep: Record<OnboardingState, StepKey> = {
   "boat-wallet": "boat",
   "boat-skipped": "job",
   "first-job-waiting": "job",
+  "first-job-preparing": "job",
   "first-job-passed": "job",
 };
+
+/** The states after Skip for now, while Boat is not connected. */
+function skipsBoat(state: OnboardingState): boolean {
+  return state === "boat-skipped" || state === "first-job-preparing";
+}
+
+/** The states in which the machine gets its first job image. */
+function machinePreparing(state: OnboardingState): boolean {
+  return state === "machine-preparing" || state === "first-job-preparing";
+}
 
 function statusOf(state: OnboardingState, key: StepKey): StepStatus {
   const order: StepKey[] = ["github", "machine", "boat", "job"];
   const open = openStep[state];
-  if (state === "boat-skipped" && key === "boat") return "skipped";
+  if (skipsBoat(state) && key === "boat") return "skipped";
   if (state === "first-job-passed") return "done";
   if (open === key) return "active";
   return order.indexOf(key) < order.indexOf(open) ? "done" : "todo";
+}
+
+/** The line of a closed step. A done machine step names the image wait. */
+function closedLine(
+  step: (typeof steps)[number],
+  status: StepStatus,
+  state: OnboardingState,
+): string {
+  if (status !== "done") return step.todo;
+  if (step.key === "machine" && machinePreparing(state)) {
+    return dotJoin(setupMachine, "getting the job image");
+  }
+  return step.done;
 }
 
 function doneCount(state: OnboardingState): number {
@@ -142,7 +176,7 @@ export function OnboardingScreen({
                   <SkippedLine />
                 ) : (
                   <p className="muted small">
-                    {status === "done" ? step.done : step.todo}
+                    {closedLine(step, status, state)}
                   </p>
                 )}
               </div>
@@ -174,7 +208,7 @@ function StepBody({ state, step }: { state: OnboardingState; step: StepKey }) {
     case "boat":
       return <BoatStep state={state} />;
     case "job":
-      return <FirstJobStep passed={state === "first-job-passed"} />;
+      return <FirstJobStep state={state} />;
     case "github":
       return null;
   }

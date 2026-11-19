@@ -1,9 +1,11 @@
 // Add another own machine with the one install command. A fourth machine on
-// Team passes the included machines: the banner of every page says so, and
-// the machine runs jobs at once. The fourth machine, office-mini-1, reports
-// fewer slots than its threads and memory give, because of its disk. After
-// Revoke token, the command adds no machine, and a new command is one click
-// away. The Admin role alone adds a machine, as the answer to item 50 says.
+// Team passes the included machines: the banner of every page says so. A new
+// machine first gets its job image, and jobs start on it when it is ready:
+// hetzner-ax42-4 shows that state. The fourth machine office-mini-1 runs jobs,
+// and it reports fewer jobs at a time than its slots, because of its disk.
+// After Revoke token, the command adds no machine, and a new command is one
+// click away. The Admin role alone adds a machine, as the answer to item 50
+// says.
 
 import type { Viewport } from "@mokly/mokly";
 
@@ -19,11 +21,40 @@ import { paths } from "../../components/paths.ts";
 import { AppShell } from "../../components/shell/app-shell.tsx";
 import { usageBanner } from "../../components/usage-banner.tsx";
 import { officeMini } from "../../fixtures/machines.ts";
+import { preparingAx42 } from "../../fixtures/new-machine.ts";
 import { workspace } from "../../fixtures/org.ts";
 import "./machines.css";
 
-export const addMachineStates = ["waiting", "connected", "revoked"] as const;
+export const addMachineStates = [
+  "waiting",
+  "preparing",
+  "connected",
+  "revoked",
+] as const;
 export type AddMachineState = (typeof addMachineStates)[number];
+
+/** The machine that joined, and the Machines list that shows it. */
+function JoinedMachine({ state }: { state: "preparing" | "connected" }) {
+  const preparing = state === "preparing";
+  const machine = preparing ? preparingAx42 : officeMini;
+  return (
+    <>
+      <ConnectedMachine
+        name={machine.name}
+        hardware={machine.hardware}
+        preparing={preparing}
+      />
+      <div className="row">
+        <LinkAction
+          to={preparing ? paths.machinesPreparing : paths.machinesOverLimit}
+          tone="primary"
+        >
+          Open Machines
+        </LinkAction>
+      </div>
+    </>
+  );
+}
 
 function AddMachineBody({ state }: { state: AddMachineState }) {
   if (state === "revoked") return <RevokedCommand next={paths.addMachine} />;
@@ -34,22 +65,11 @@ function AddMachineBody({ state }: { state: AddMachineState }) {
         connects the machine to {workspace.name}.
       </p>
       <InstallCommand revokeTo={paths.addMachineRevoked} />
-      {state === "connected" ? (
-        <>
-          <ConnectedMachine
-            name={officeMini.name}
-            hardware={officeMini.hardware}
-          />
-          <div className="row">
-            <LinkAction to={paths.machinesOverLimit} tone="primary">
-              Open Machines
-            </LinkAction>
-          </div>
-        </>
-      ) : null}
       {state === "waiting" ? (
         <WaitingLine>Waiting for the machine to connect…</WaitingLine>
-      ) : null}
+      ) : (
+        <JoinedMachine state={state} />
+      )}
     </>
   );
 }
@@ -67,7 +87,7 @@ export function AddMachineScreen({
       tier="team"
       active="machines"
       banner={
-        state === "connected"
+        state === "connected" || state === "preparing"
           ? usageBanner("over-machines", "other")
           : undefined
       }

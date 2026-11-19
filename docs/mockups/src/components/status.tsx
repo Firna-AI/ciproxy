@@ -1,6 +1,8 @@
 // Status: a small dot beside its word, never colour alone and never a pill.
 // Machine names use the monospace face. A tag is a small bordered label, such
-// as the tier beside the organization or the current plan.
+// as the tier beside the organization or the current plan. A preparing
+// machine gets its first job image, work in progress, so it takes the blue
+// dot of a running job.
 
 import type { ReactNode } from "react";
 import { Cloud, Server } from "lucide-react";
@@ -26,6 +28,7 @@ const machineStates: Readonly<Record<MachineStatus, StateLook>> = {
   draining: { label: "Draining", tone: "warn" },
   offline: { label: "Offline", tone: "err" },
   "no-slots": { label: "No slots", tone: "err" },
+  preparing: { label: "Preparing", tone: "run" },
 };
 
 /** The dot alone. Pass a label when no word beside it names the state. */
