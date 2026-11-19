@@ -23,5 +23,5 @@ ciproxy-store-pg = { path = "crates/ciproxy-store-pg" }
 cli-updater = { git = "https://github.com/futex-ai/cli-release", rev = "30513bd1a6e15d8e9c1b18f2ed92d1d4dfa11786", version = "0.1.0" }
 cli-release-interface = { git = "https://github.com/futex-ai/cli-release", rev = "30513bd1a6e15d8e9c1b18f2ed92d1d4dfa11786", version = "0.1.0" }
 internal-error = { git = "https://github.com/futex-ai/internal-error", rev = "d7b94d766bf2844aa0b4a801fd21c465543e8a58" }
-sandbox-interface = { git = "https://github.com/futex-ai/sandbox", rev = "037fbd7e3671975e79775c7dbcfb95b1a1fe37ab" }
-sandbox-boat = { git = "https://github.com/futex-ai/sandbox", rev = "037fbd7e3671975e79775c7dbcfb95b1a1fe37ab" }
+sandbox-interface = { git = "https://github.com/futex-ai/sandbox", rev = "ac412fc52f201c9571531f08e4ada9a3ad837203" }
+sandbox-boat = { git = "https://github.com/futex-ai/sandbox", rev = "ac412fc52f201c9571531f08e4ada9a3ad837203" }

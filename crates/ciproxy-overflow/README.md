@@ -23,7 +23,7 @@ The control plane must keep own-machine routing available when Boat fails.
 ## What This Crate Does
 
 The dependency revision is
-`037fbd7e3671975e79775c7dbcfb95b1a1fe37ab` of `futex-ai/sandbox`.
+`ac412fc52f201c9571531f08e4ada9a3ad837203` of `futex-ai/sandbox`.
 `BoatFactory` constructs the pinned lifecycle, capacity, and file capabilities.
 All capabilities use the same explicit personal or organization wallet.
 Account reads supply the verified name, trial state, and start-fee bound.
@@ -99,6 +99,10 @@ It contains no Boat key and no machine-cache connection.
 The first empty file write initializes the shared adapter's restricted user.
 The trusted launcher then creates a private directory and a mode-0600 target.
 The shared file capability transfers the registration into that target.
+File acknowledgements can use absolute paths or paths relative to
+`/home/user`. The pinned adapter requires the same confined file after
+normalization. It rejects parent components and paths outside that home.
+Success, encoding, byte count, and full-file SHA-256 checks remain required.
 
 The image needs root for Docker, mounts, and its private namespaces.
 The shared process capability deliberately runs a restricted user.
