@@ -83,8 +83,10 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   ready. Every page that shows such a machine says so: the machine list and
   the machine page show it as Preparing, and Setup and Add a machine show it
   as connected, with a line about the image. While a first job waits for it,
-  the first-job step of Setup gives the reason. No figure counts its slots,
-  and no text promises a time, because a slow link makes the download long.
+  the first-job step of Setup gives the reason. The docs pages Quickstart and
+  Add a machine say that a new machine first downloads the job image and
+  takes jobs when it is ready. No figure counts its slots, and no text
+  promises a time, because a slow link makes the download long.
 - The return of Add an organization and the inactive organizations are
   what-ifs in `org-links.ts`. In the main story, Cal Moore is an Admin of one
   workspace, so the return links mokly-labs at once. On 2 November, he is also
@@ -305,9 +307,10 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   `canTakeOut()` give the rule of the last organization from them.
 - `src/components/inactive-banner.tsx`: the banner of an inactive
   organization, and the reason of each hold, which its row repeats.
-- `src/components/install-command.tsx`: the one-line install command, the
-  notices of a machine without KVM or with too little disk, and the line and
-  the notice of a machine that gets its first job image.
+- `src/components/install-command.tsx`: the one-line install command, its
+  form on a docs page with a placeholder for the token, the notices of a
+  machine without KVM or with too little disk, and the line and the notice of
+  a machine that gets its first job image.
 - `src/fixtures/site.ts`: the host of the public site. `cost-claim.ts` holds
   the cost claim of the landing page and its calculation, `plan-choice.ts` the
   cheapest plan that covers a use, and `plan-compare.ts` the feature

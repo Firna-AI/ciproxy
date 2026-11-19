@@ -2626,20 +2626,45 @@ Tags: mockup
 
 Depends on: 27b
 
-- [ ] Add one sentence about the first image download to the docs mockups
+- [x] Add one sentence about the first image download to the docs mockups
       of the "Add a machine" guide and the Quickstart. The Quickstart
       mockup no longer says that the first job starts at once on a warm
       runner.
-- [ ] Fix the machine page fixture of `office-pc-1`, which shows 91% cache
+      My calls, 19 November 2026: the docs mockups had no page of the "Add
+      a machine" guide, so a new docs mockup shows the whole guide as the
+      site has it. The docs sidebar, the Quickstart, and the docs home link
+      to it, as the site does. The sentence is "A new machine first
+      downloads the job image and takes jobs when it is ready.", in the
+      words of the install line of Milestone 27c. The push step of the
+      Quickstart says only where the job ran and how long it waited,
+      because the first job can wait for the image or start on Boat. The
+      machine step of the Quickstart mockup takes its sentence about the
+      slots from the site, because a new machine starts no warm runner
+      before it has the image.
+      Branch: `conductor/m27e-27f-first-image-docs`.
+      Evidence: `.context/ciproxy-mvp/m27e-27f/mockups/`.
+- [x] Fix the machine page fixture of `office-pc-1`, which shows 91% cache
       hits for a machine that never ran a job.
+      Branch: `conductor/m27e-27f-first-image-docs`.
+- [x] Match the Overview and Quickstart docs mockups to their current site
+      pages.
+      User's call, 19 November 2026: fix now in this branch. The site text
+      comes from recorded decisions: Milestone 24, the docs review of 8
+      November 2026, and the monthly spend limit of the Boat step.
+      My call, 19 November 2026: the install command of each docs mockup
+      shows a placeholder for the token, as the site does, because a docs
+      page cannot know the token of a workspace.
+      Branch: `conductor/m27e-27f-first-image-docs`.
 
 ## Milestone 27f: Site: the first image wait
 
 Depends on: 27e
 
-- [ ] Add the sentence about the first image download to the "Add a
+- [x] Add the sentence about the first image download to the "Add a
       machine" guide and the Quickstart of the site, as the mockups of
       Milestone 27e show.
+      Branch: `conductor/m27e-27f-first-image-docs`.
+      Evidence: `.context/ciproxy-mvp/m27e-27f/site/`.
 - [ ] Delete `follow-ups/machine-image-preparing-status.md`, which
       Milestones 27b to 27f settle.
 

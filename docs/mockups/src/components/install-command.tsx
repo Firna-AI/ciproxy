@@ -26,8 +26,17 @@ import { CodeBlock } from "./figures.tsx";
 import type { CataloguePath } from "./paths.ts";
 import "./install-command.css";
 
-export const installCommand =
-  "curl -fsSL https://get.ciproxy.dev | sudo sh -s -- install --token cpx_8Hq2Lw7Xr4Tz";
+/** The command up to its token, the same in the dashboard and the docs. */
+const commandStart =
+  "curl -fsSL https://get.ciproxy.dev | sudo sh -s -- install --token";
+
+export const installCommand = `${commandStart} cpx_8Hq2Lw7Xr4Tz`;
+
+/**
+ * The command as a docs page shows it. A docs page cannot know the token of
+ * a workspace, so a placeholder takes its place.
+ */
+export const docsInstallCommand = `${commandStart} <install token>`;
 
 export function InstallCommand({
   revokeTo,

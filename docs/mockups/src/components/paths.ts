@@ -11,6 +11,7 @@ export const paths = {
   docsHome: "docs/home",
   docsSearch: "docs/home/search",
   quickstart: "docs/quickstart",
+  addMachineGuide: "docs/add-a-machine",
   labelsReference: "docs/labels",
 
   signIn: "app/auth/sign-in",

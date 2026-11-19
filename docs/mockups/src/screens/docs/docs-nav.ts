@@ -20,7 +20,7 @@ export const docsNav: readonly DocsNavGroup[] = [
   {
     title: "Guides",
     items: [
-      { label: "Add a machine" },
+      { label: "Add a machine", to: paths.addMachineGuide },
       { label: "Connect Boat" },
       { label: "Move your workflows" },
       { label: "Set a spend limit" },

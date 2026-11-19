@@ -71,17 +71,19 @@ export function DocsHomeScreen({
             <span className="inline-code">runs-on: ciproxy</span>.
           </li>
           <li>
-            A warm runner on one of your machines takes the job and runs it in a
-            fresh VM.
+            A ready warm runner on one of your machines takes the job at once.
+            Or ciproxy starts a runner where a machine has room. The job runs in
+            a fresh VM.
           </li>
           <li>
-            When a job has waited {boat.waitSeconds} seconds for a free slot,
-            ciproxy starts a runner for it in your Boat account instead.
+            When your machines have no room for the job, ciproxy can start a
+            runner for it in your Boat account instead. By default, it waits{" "}
+            {boat.waitSeconds} seconds for room on your machines first.
           </li>
           <li>
-            On your machines, the job reads and writes its{" "}
-            <span className="inline-code">actions/cache</span> entries on the
-            local disk.
+            On your machines, <span className="inline-code">actions/cache</span>{" "}
+            restores entries from the disk of the machine when it has them, and
+            saves them there and to GitHub.
           </li>
         </ol>
         <DocsH2 id="what-you-need">What you need</DocsH2>
@@ -90,8 +92,14 @@ export function DocsHomeScreen({
           <li>
             One or more x64 Linux machines with systemd, {unbroken("cgroup v2")}
             , KVM, {unbroken("4 cores")}, {unbroken("16 GB")} of memory, and{" "}
-            {unbroken("250 GB")} of disk or more. Add a machine lists the
-            supported distributions.
+            {unbroken("250 GB")} of disk or more.{" "}
+            <TextLink
+              to={paths.addMachineGuide}
+              fragment="what-the-machine-needs"
+            >
+              Add a machine
+            </TextLink>{" "}
+            lists the supported distributions.
           </li>
           <li>A Boat account for overflow. You can connect it later.</li>
         </ul>
