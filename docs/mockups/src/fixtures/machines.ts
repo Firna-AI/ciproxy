@@ -19,7 +19,12 @@ import { defaultLabelSize } from "./sizes.ts";
 import { gigabyte, vmDiskBytes } from "./vm-disk.ts";
 
 export type SlotState = "busy" | "warm" | "free";
-export type MachineStatus = "healthy" | "draining" | "offline" | "no-slots";
+/**
+ * The state of a machine. A preparing machine is online and gets its first
+ * job image, so it takes no job until the image is ready.
+ */
+export type MachineStatus =
+  "healthy" | "draining" | "offline" | "no-slots" | "preparing";
 
 /**
  * The figures of one part of a machine report: the figures that the machine
@@ -47,9 +52,10 @@ export type Machine = {
   warmTarget: number;
   /**
    * The machine cache: its use, and its disk now, the job disk that no job
-   * VM holds. Its cache hits are `cacheHitsPercent` while it is measured.
+   * VM holds. Its cache hits are `cacheHitsPercent` while it is measured,
+   * unless it served no restore yet, as the cache of a new machine.
    */
-  cache: Statistics<{ usedGb: number; sizeGb: number }>;
+  cache: Statistics<{ usedGb: number; sizeGb: number; noRestores?: true }>;
   /**
    * The free disk that the agent reported last: the space that no data uses.
    * It can be more than the free job disk, because a job VM uses only the
@@ -240,8 +246,6 @@ export const machineScenes = {
     cacheUnmeasured(machine(3, 4, 2)),
   ],
 } as const satisfies Record<string, readonly Machine[]>;
-
-export type MachineScene = keyof typeof machineScenes;
 
 /**
  * The share of its cache restores of the last 7 days that the machine cache

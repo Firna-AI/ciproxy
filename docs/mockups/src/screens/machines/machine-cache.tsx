@@ -2,12 +2,14 @@
 // disks. Each part shows the figures that the machine measured in its last
 // report. A part that the machine did not measure shows Unknown, never a zero
 // or a share, and a note says that its figures show after the machine
-// measures them. Clear cache deletes every entry of the machine cache, for
-// example to drop a bad entry that the machine kept after GitHub deleted it.
-// It never deletes an entry of the GitHub cache. Only an Admin clears a cache,
-// also while its figures are unknown, because a clear needs no figures. The
-// confirmation names the size of the cache entries only when its page asks
-// for it and the machine measured that size.
+// measures them. A measured cache that served no restore yet, such as the
+// cache of a new machine, says so in place of a share. Clear cache deletes
+// every entry of the machine cache, for example to drop a bad entry that the
+// machine kept after GitHub deleted it. It never deletes an entry of the
+// GitHub cache. Only an Admin clears a cache, also while its figures are
+// unknown, because a clear needs no figures. The confirmation names the size
+// of the cache entries only when its page asks for it and the machine
+// measured that size.
 
 import { Action, LinkAction } from "../../components/actions.tsx";
 import { Dialog } from "../../components/dialog.tsx";
@@ -67,6 +69,12 @@ function CacheDisk({ cache }: { cache: Machine["cache"] }) {
   );
 }
 
+/** The cache hits of the last 7 days, or why the machine shows no share. */
+function CacheHits({ cache }: { cache: Machine["cache"] }) {
+  if (cache.status === "unavailable") return <UnknownFigure />;
+  return cache.noRestores ? "No restores yet" : `${cacheHitsPercent}%`;
+}
+
 /** The note under the figures that names the parts that show Unknown. */
 function unknownNote(machine: Machine): string | null {
   const cache = machine.cache.status === "unavailable";
@@ -105,11 +113,7 @@ export function MachineCache({
         <CacheDisk cache={cache} />
         <DetailList>
           <DetailRow label="Cache hits, 7 days">
-            {cache.status === "measured" ? (
-              `${cacheHitsPercent}%`
-            ) : (
-              <UnknownFigure />
-            )}
+            <CacheHits cache={cache} />
           </DetailRow>
           <DetailRow label="Docker disks">
             {dockerDisks.status === "measured" ? (

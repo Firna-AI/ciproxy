@@ -1,5 +1,6 @@
 import { defineScreen } from "@mokly/mokly";
 
+import { paths } from "../../../../components/paths.ts";
 import { relatedMvp } from "../../../../components/related-docs.ts";
 import { stateSchema } from "../../../../components/state-schema.ts";
 import { orgAddress } from "../../../../fixtures/org.ts";
@@ -16,6 +17,7 @@ export const addMachine = defineScreen({
     "Design call 30: the command stays one line. The install script of get.ciproxy.dev installs the agent, then runs it with the arguments after the two dashes: install and the token. The answer C to item 93: the note under the command names the hosts that the installer supports, so a person learns them before preparing a machine.",
   relatedDocs: relatedMvp("agent", "security", "metering"),
   address: orgAddress("machines/new"),
+  useCasePaths: [paths.flowNewMachineImage],
   propSchema: stateSchema(addMachineStates),
   props: { state: "waiting" },
   render: (props, context) => (
@@ -23,10 +25,21 @@ export const addMachine = defineScreen({
   ),
   variants: [
     {
+      slug: "preparing",
+      title: "A fourth machine gets its job image",
+      description:
+        "hetzner-ax42-4, a fourth AX42, connected and reported 16 threads, 64 GB, KVM ready, and 6 slots. It gets its first job image, so the line under its facts says that jobs start on it when it is ready. Open Machines shows it as Preparing. Team includes three own machines, so the banner offers the extra-machine add-on.",
+      rationale:
+        "The answer E to item 124: the page that shows a new machine says that it takes no job until it has its first job image. The machine did connect, so the check and the word connected stay. No text promises a time, because a slow link makes the download long.",
+      relatedDocs: relatedMvp("agent", "jobRouting", "metering"),
+      props: { state: "preparing" },
+      useCasePaths: [paths.flowNewMachineImage],
+    },
+    {
       slug: "connected",
       title: "A fourth machine connected",
       description:
-        "office-mini-1, a mini PC in the office, connected and runs jobs. Its disk holds 3 jobs of ciproxy at a time, fewer than its 6 slots, and the line under its name says so. Team includes three own machines, so the banner of every page offers the extra-machine add-on.",
+        "office-mini-1, a mini PC in the office, connected, has its job image, and runs jobs. Its disk holds 3 jobs of ciproxy at a time, fewer than its 6 slots, and the line under its name says so. Team includes three own machines, so the banner of every page offers the extra-machine add-on.",
       props: { state: "connected" },
     },
     {

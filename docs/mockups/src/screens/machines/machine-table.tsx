@@ -1,4 +1,6 @@
-// The own machines as a table on desktop and as a dense list on mobile.
+// The own machines as a table on desktop and as a dense list on mobile. An
+// offline machine and a machine that gets its first job image show no slot
+// bar: no job can start in their slots, and the caption says why.
 
 import type { Viewport } from "@mokly/mokly";
 import { MockLink } from "@mokly/mokly";
@@ -18,8 +20,9 @@ import { UnknownFigure } from "./machine-cache.tsx";
 
 /**
  * The detail screens that exist: hetzner-ax42-1, also while its cache is
- * unknown, the offline machine, and office-mini-1, whose disk limits its
- * slots. A person who cannot change machines opens the read-only machine page.
+ * unknown, the offline machine, office-mini-1, whose disk limits its slots,
+ * and hetzner-ax42-4 while it gets its first job image. A person who cannot
+ * change machines opens the read-only machine page.
  */
 function detailPath(
   machine: Machine,
@@ -28,6 +31,7 @@ function detailPath(
   const first = machine.name === "hetzner-ax42-1";
   if (readOnly) return first ? paths.machineViewer : undefined;
   if (machine.status === "offline") return paths.machineOffline;
+  if (machine.status === "preparing") return paths.machinePreparing;
   if (machine.name === officeMini.name) return paths.machineDiskLimit;
   if (!first) return undefined;
   return machine.cache.status === "measured"
@@ -57,8 +61,18 @@ function MachineName({
   );
 }
 
+/**
+ * The slots of the machine run jobs or can take them: the machine is neither
+ * offline nor getting its first job image. Only such slots show a slot bar
+ * and count in the slot figures of Machines.
+ */
+export function slotsLive(machine: Machine): boolean {
+  return machine.status !== "offline" && machine.status !== "preparing";
+}
+
 function slotText(machine: Machine): string {
   if (machine.status === "offline") return "No slots available";
+  if (machine.status === "preparing") return "Getting the job image";
   if (machine.slots.length === 0) return "No slots";
   const busy = machine.slots.filter((slot) => slot === "busy").length;
   const warm = machine.slots.filter((slot) => slot === "warm").length;
@@ -74,9 +88,7 @@ function cell(machine: Machine, key: string, readOnly: boolean) {
     case "slots":
       return (
         <span className="slots-cell">
-          {machine.status === "offline" ? null : (
-            <SlotStrip slots={machine.slots} />
-          )}
+          {slotsLive(machine) ? <SlotStrip slots={machine.slots} /> : null}
           <span className="caption">{slotText(machine)}</span>
         </span>
       );
@@ -121,10 +133,10 @@ export function MachineTable({
               <MachineStatusLabel status={machine.status} />
             </div>
             <div className="spread">
-              {machine.status === "offline" ? (
-                <span />
-              ) : (
+              {slotsLive(machine) ? (
                 <SlotStrip slots={machine.slots} />
+              ) : (
+                <span />
               )}
               <span className="caption">{slotText(machine)}</span>
             </div>

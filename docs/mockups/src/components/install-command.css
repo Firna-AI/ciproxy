@@ -34,3 +34,20 @@
   flex-direction: column;
   gap: 4px;
 }
+
+/* The line of a connected machine that gets its first job image: a small
+   spinner beside the words, which wrap under one another. */
+
+.image-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--c-ink2);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.image-line > :first-child {
+  flex-shrink: 0;
+  margin-top: 1px;
+}

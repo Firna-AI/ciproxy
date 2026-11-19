@@ -2570,10 +2570,17 @@ shows that state wherever a customer waits for a new machine or its first
 job. `follow-ups/machine-image-preparing-status.md` holds the full item
 until Milestones 27b to 27d settle it.
 
-- [ ] Add the state of a machine that waits for its first image to the
+- [x] Add the state of a machine that waits for its first image to the
       machine list, the machine page, Setup with its first-job step, and
       Add a machine. Its text says that the machine gets the job image and
       that jobs start when it is ready. It promises no time.
+      My calls, 19 November 2026: the state word is Preparing, as option A
+      of item 124 names it, with the blue dot of work in progress. The new
+      machine is a fourth AX42, hetzner-ax42-4, because the disk limit of
+      office-mini-1 would add a second state. The first job waits for the
+      machine after Skip for now, because with Boat connected, routing
+      starts the job on Boat at once.
+      Branch: `conductor/m27b-machine-image-state-mockups`.
 
 ## Milestone 27c: Backend: the image state of a machine
 

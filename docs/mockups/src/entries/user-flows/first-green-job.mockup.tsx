@@ -1,13 +1,13 @@
 import { defineUseCase } from "@mokly/mokly";
 
 import { paths } from "../../components/paths.ts";
-import { related } from "../../components/related-docs.ts";
+import { relatedMvp } from "../../components/related-docs.ts";
 
 export const firstGreenJob = defineUseCase({
   title: "From sign-in to the first green job",
   description:
-    "Cal Moore signs in on 1 September 2026, installs the GitHub App on mokly-ai, adds one Hetzner machine with one command, connects Boat, and sees the first job pass on the own machine.",
-  relatedDocs: related(
+    "Cal Moore signs in on 1 September 2026, installs the GitHub App on mokly-ai, adds one Hetzner machine with one command, waits while it gets its job image, connects Boat, and sees the first job pass on the own machine.",
+  relatedDocs: relatedMvp(
     "workspaces",
     "security",
     "agent",
@@ -35,9 +35,16 @@ export const firstGreenJob = defineUseCase({
         "Setup opens on the machine step. Cal runs the one command on hetzner-ax42-1 and the page waits.",
     },
     {
-      screenPath: paths.machineConnected,
+      screenPath: paths.machineConnectedPreparing,
       title: "The machine connects",
-      description: "The agent reports 16 threads, 64 GB, KVM, and 6 slots.",
+      description:
+        "The agent reports 16 threads, 64 GB, KVM, and 6 slots. hetzner-ax42-1 gets its first job image, and jobs start on it when it is ready.",
+    },
+    {
+      screenPath: paths.machineConnected,
+      title: "The machine is ready",
+      description:
+        "hetzner-ax42-1 has its job image, so it takes jobs. Continue opens the Boat step.",
     },
     {
       screenPath: paths.connectBoat,
