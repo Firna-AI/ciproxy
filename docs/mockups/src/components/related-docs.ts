@@ -6,6 +6,7 @@
 const docs = {
   architecture: "docs/architecture.md",
   agent: "docs/protocol/agent.md",
+  agentInstall: "docs/protocol/agent-install.md",
   appRemoval: "docs/protocol/app-removal.md",
   billing: "docs/protocol/billing.md",
   cache: "docs/protocol/cache.md",

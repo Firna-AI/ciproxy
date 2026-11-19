@@ -152,7 +152,8 @@ const withoutKvm: Machine = {
 
 /**
  * office-pc-1, an older office PC that joined on 18 November. KVM works, but
- * its memory leaves no room for one slot, so it connects with no slots.
+ * its memory leaves no room for one slot, so it connects with no slots. It
+ * never ran a job, so its cache served no restore yet.
  */
 export const officePc: Machine = {
   name: "office-pc-1",
@@ -161,7 +162,12 @@ export const officePc: Machine = {
   slots: [],
   kvm: true,
   warmTarget: defaultWarmRunners,
-  cache: { status: "measured", usedGb: 0, sizeGb: cacheSpaceGb(oldPc, 0) },
+  cache: {
+    status: "measured",
+    usedGb: 0,
+    sizeGb: cacheSpaceGb(oldPc, 0),
+    noRestores: true,
+  },
   freeDiskGb: 183,
   dockerDisks: { status: "measured", repositories: 0, sizeGb: 0 },
   lastSeen: "3s ago",

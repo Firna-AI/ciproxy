@@ -1,6 +1,8 @@
 // The quickstart, ciproxy.dev/docs/quickstart: what a team needs, then five
 // steps from sign-in to the first job on an own machine. The code blocks are
-// the install command of Add machine and the one-line workflow change.
+// the install command of Add machine and the one-line workflow change. A new
+// machine first downloads the job image, so no step promises that the first
+// job starts at once, and no text promises a time.
 
 import type { Viewport } from "@mokly/mokly";
 
@@ -10,7 +12,6 @@ import { CodeBlock } from "../../components/figures.tsx";
 import { installCommand } from "../../components/install-command.tsx";
 import { paths } from "../../components/paths.ts";
 import { unbroken } from "../../fixtures/format.ts";
-import { defaultWarmRunners } from "../../fixtures/machines.ts";
 import { jobSteps, runsOnDiff, workflowFile } from "../../fixtures/workflow.ts";
 import { DocsShell, type TocItem } from "./docs-shell.tsx";
 import {
@@ -46,8 +47,14 @@ export function QuickstartScreen({ viewport }: { viewport: Viewport }) {
           A GitHub organization with private repositories, and an x64 Linux
           machine with systemd, {unbroken("cgroup v2")}, KVM,{" "}
           {unbroken("4 cores")}, {unbroken("16 GB")} of memory, and{" "}
-          {unbroken("250 GB")} of disk or more. Add a machine lists the
-          supported distributions.
+          {unbroken("250 GB")} of disk or more.{" "}
+          <TextLink
+            to={paths.addMachineGuide}
+            fragment="what-the-machine-needs"
+          >
+            Add a machine
+          </TextLink>{" "}
+          lists the supported distributions.
         </Notice>
         <DocsH2 id="set-up">Set up ciproxy</DocsH2>
         <Steps>
@@ -67,8 +74,9 @@ export function QuickstartScreen({ viewport }: { viewport: Viewport }) {
             <CodeBlock label="Terminal" lines={[installCommand]} />
             <p>
               The command holds a token for your workspace, which works for one
-              hour. The machine shows in Machines with its slots and{" "}
-              {defaultWarmRunners} warm runners.
+              hour. When the machine connects, ciproxy shows it with its slots.
+              A new machine first downloads the job image and takes jobs when it
+              is ready.
             </p>
           </Step>
           <Step id="connect-boat" title="Connect Boat">
@@ -90,8 +98,8 @@ export function QuickstartScreen({ viewport }: { viewport: Viewport }) {
           </Step>
           <Step id="push" title="Push the change">
             <p>
-              Push to GitHub. The job starts on a warm runner on your machine,
-              and <strong>Jobs</strong> in ciproxy shows where it ran.
+              Push to GitHub. <strong>Jobs</strong> in ciproxy shows where the
+              job ran, and how long it waited.
             </p>
           </Step>
         </Steps>
