@@ -138,6 +138,29 @@
     - Cost: workflows that start services still fail on Boat. D reverses
       part of a user decision and part of a public promise.
     - Effort: Small.
+  - **E.** Install the software of the job image directly onto Boat's own
+    system, and save that system as the shared Boat snapshot. The user
+    named this approach on 19 November 2026. `Firna-AI/conductive` uses it
+    for its Boat sandboxes: it installs its software on a sandbox from
+    Boat's base image, enables its systemd units, and saves a snapshot.
+    Boat's own systemd then starts those units in each new sandbox.
+    - Run the install scripts of the job image, with the same pinned
+      versions, on a sandbox from Boat's base image. Install the Boat guest
+      as a normal service. Then save the snapshot.
+    - Boat's own systemd then starts installed services, so
+      `systemctl start postgresql` works as on a machine.
+    - E removes the `chroot` wrapper, the private namespace, the restore of
+      file capabilities, and the separate Docker start.
+    - First check two facts in one Boat sandbox: Boat's base system is the
+      Ubuntu release of the job image, and the Docker and services of the
+      image do not break Boat's controller.
+    - Cost: the image definition is built twice, on two base systems.
+      Packages that the scripts do not pin, and the packages of Boat's base
+      system, can differ from the machine image. The decision in
+      `docs/protocol/agent-images.md` names one image definition for both,
+      so the user decides whether two builds of it still meet that
+      decision. Each release also runs the full install in a Boat sandbox.
+    - Effort: Large.
 - **Left out:**
   - A list of daemons that the wrapper starts by hand: it leaves the other
     services unsupported.
@@ -158,13 +181,16 @@
   B keeps.
 - **Previous examples:** None found in the history of `origin/main` or in
   the earlier review reports.
-- **Recommendation:** B. It covers the whole class of service-manager
-  problems, with `systemctl restart docker` and the system-bus tools. It
-  adds no nested VM, needs no larger Boat sizes, and removes the separate
-  Docker start. Choose C if the user also wants the same kernel, or if
-  Docker cannot run under the image's systemd in the
-  Boat namespace. C best protects the codebase, because it boots the same
-  system as a machine.
+- **Recommendation:** E, changed from B on 19 November 2026, after a
+  test of one Boat sandbox. E already runs services on Boat in
+  `Firna-AI/conductive`, adds no nested layer, needs no larger Boat
+  sizes, and removes the custom wrapper. The test checks that Boat's base
+  system is the Ubuntu release of the job image, and that the image's
+  Docker and services leave Boat's controller working. If the test
+  fails, choose B, and choose C if B also fails. C best protects the
+  codebase, because it boots the same system as a machine.
 - **Action:** ask the user, because no option is clearly best. B needs a
   proof that the image's systemd runs inside a Boat sandbox. C changes the
-  Boat sizes and the cost. D reverses part of a user decision.
+  Boat sizes and the cost. D reverses part of a user decision. E builds the
+  one image definition twice, and the user decides whether that meets the
+  decision in `docs/protocol/agent-images.md`.
