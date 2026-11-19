@@ -71,17 +71,19 @@ export function DocsHomeScreen({
             <span className="inline-code">runs-on: ciproxy</span>.
           </li>
           <li>
-            A warm runner on one of your machines takes the job and runs it in a
-            fresh VM.
+            A ready warm runner on one of your machines takes the job at once.
+            Or ciproxy starts a runner where a machine has room. The job runs in
+            a fresh VM.
           </li>
           <li>
-            When a job has waited {boat.waitSeconds} seconds for a free slot,
-            ciproxy starts a runner for it in your Boat account instead.
+            When your machines have no room for the job, ciproxy can start a
+            runner for it in your Boat account instead. By default, it waits{" "}
+            {boat.waitSeconds} seconds for room on your machines first.
           </li>
           <li>
-            On your machines, the job reads and writes its{" "}
-            <span className="inline-code">actions/cache</span> entries on the
-            local disk.
+            On your machines, <span className="inline-code">actions/cache</span>{" "}
+            restores entries from the disk of the machine when it has them, and
+            saves them there and to GitHub.
           </li>
         </ol>
         <DocsH2 id="what-you-need">What you need</DocsH2>

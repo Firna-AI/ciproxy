@@ -2646,6 +2646,15 @@ Depends on: 27b
 - [x] Fix the machine page fixture of `office-pc-1`, which shows 91% cache
       hits for a machine that never ran a job.
       Branch: `conductor/m27e-27f-first-image-docs`.
+- [x] Match the Overview and Quickstart docs mockups to their current site
+      pages.
+      User's call, 19 November 2026: fix now in this branch. The site text
+      comes from recorded decisions: Milestone 24, the docs review of 8
+      November 2026, and the monthly spend limit of the Boat step.
+      My call, 19 November 2026: the install command of each docs mockup
+      shows a placeholder for the token, as the site does, because a docs
+      page cannot know the token of a workspace.
+      Branch: `conductor/m27e-27f-first-image-docs`.
 
 ## Milestone 27f: Site: the first image wait
 

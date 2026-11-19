@@ -9,7 +9,7 @@ import type { Viewport } from "@mokly/mokly";
 import { TextLink } from "../../components/actions.tsx";
 import { Notice } from "../../components/feedback.tsx";
 import { CodeBlock } from "../../components/figures.tsx";
-import { installCommand } from "../../components/install-command.tsx";
+import { docsInstallCommand } from "../../components/install-command.tsx";
 import { paths } from "../../components/paths.ts";
 import { unbroken } from "../../fixtures/format.ts";
 import { defaultWarmRunners } from "../../fixtures/machines.ts";
@@ -59,7 +59,7 @@ function InstallSteps() {
       <li>
         <div className="docs-flow">
           <p>Copy the command. It holds an install token of your workspace:</p>
-          <CodeBlock label="Terminal" lines={[installCommand]} />
+          <CodeBlock label="Terminal" lines={[docsInstallCommand]} />
         </div>
       </li>
       <li>

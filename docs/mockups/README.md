@@ -307,9 +307,10 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
   `canTakeOut()` give the rule of the last organization from them.
 - `src/components/inactive-banner.tsx`: the banner of an inactive
   organization, and the reason of each hold, which its row repeats.
-- `src/components/install-command.tsx`: the one-line install command, the
-  notices of a machine without KVM or with too little disk, and the line and
-  the notice of a machine that gets its first job image.
+- `src/components/install-command.tsx`: the one-line install command, its
+  form on a docs page with a placeholder for the token, the notices of a
+  machine without KVM or with too little disk, and the line and the notice of
+  a machine that gets its first job image.
 - `src/fixtures/site.ts`: the host of the public site. `cost-claim.ts` holds
   the cost claim of the landing page and its calculation, `plan-choice.ts` the
   cheapest plan that covers a use, and `plan-compare.ts` the feature

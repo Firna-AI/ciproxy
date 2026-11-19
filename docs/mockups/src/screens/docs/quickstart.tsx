@@ -1,15 +1,16 @@
 // The quickstart, ciproxy.dev/docs/quickstart: what a team needs, then five
 // steps from sign-in to the first job on an own machine. The code blocks are
-// the install command of Add machine and the one-line workflow change. A new
-// machine first downloads the job image, so no step promises that the first
-// job starts at once, and no text promises a time.
+// the install command of Setup, with a placeholder for the token, and the
+// one-line workflow change. A new machine first downloads the job image, so
+// no step promises that the first job starts at once, and no text promises a
+// time.
 
 import type { Viewport } from "@mokly/mokly";
 
 import { TextLink } from "../../components/actions.tsx";
 import { Notice } from "../../components/feedback.tsx";
 import { CodeBlock } from "../../components/figures.tsx";
-import { installCommand } from "../../components/install-command.tsx";
+import { docsInstallCommand } from "../../components/install-command.tsx";
 import { paths } from "../../components/paths.ts";
 import { unbroken } from "../../fixtures/format.ts";
 import { jobSteps, runsOnDiff, workflowFile } from "../../fixtures/workflow.ts";
@@ -26,7 +27,11 @@ import {
 const toc: readonly TocItem[] = [
   { id: "before-you-start", label: "Before you start" },
   { id: "set-up", label: "Set up ciproxy" },
-  { id: "sign-in", label: "Sign in", nested: true },
+  {
+    id: "sign-in",
+    label: "Sign in and install the GitHub App",
+    nested: true,
+  },
   { id: "add-a-machine", label: "Add a machine", nested: true },
   { id: "connect-boat", label: "Connect Boat", nested: true },
   { id: "change-runs-on", label: "Change runs-on", nested: true },
@@ -62,16 +67,22 @@ export function QuickstartScreen({ viewport }: { viewport: Viewport }) {
             <p>
               <TextLink to={paths.signIn}>Sign in to ciproxy</TextLink> with
               GitHub. Then install the ciproxy GitHub App on your organization,
-              and pick the repositories that may use it.
+              and pick the repositories that may use it. If you are not an owner
+              of the organization, GitHub sends your request to its owners.
+            </p>
+            <p>
+              The person who installs the App becomes the first Admin of the new
+              workspace. When an owner approves the request of a member, the
+              member who asked becomes the first Admin.
             </p>
           </Step>
           <Step id="add-a-machine" title="Add a machine">
             <p>
-              In ciproxy, open <strong>Machines</strong> and select{" "}
-              <strong>Add machine</strong>. Run the command that it shows on
-              your Linux machine:
+              In ciproxy, Setup shows the install command. You also find it in{" "}
+              <strong>Machines</strong>, under <strong>Add machine</strong>. Run
+              the command on your Linux machine:
             </p>
-            <CodeBlock label="Terminal" lines={[installCommand]} />
+            <CodeBlock label="Terminal" lines={[docsInstallCommand]} />
             <p>
               The command holds a token for your workspace, which works for one
               hour. When the machine connects, ciproxy shows it with its slots.
@@ -81,9 +92,10 @@ export function QuickstartScreen({ viewport }: { viewport: Viewport }) {
           </Step>
           <Step id="connect-boat" title="Connect Boat">
             <p>
-              To start jobs on Boat when your machines are full, paste a Boat
-              API key in <strong>Settings</strong>, under{" "}
-              <strong>Overflow</strong>. You can connect Boat later.
+              To start jobs on Boat when your machines are full, connect your
+              Boat account in Setup, or in <strong>Settings</strong> under{" "}
+              <strong>Overflow</strong>. Give an API key of your Boat account
+              and a monthly spend limit. You can connect Boat later.
             </p>
           </Step>
           <Step id="change-runs-on" title="Change runs-on">
@@ -109,6 +121,10 @@ export function QuickstartScreen({ viewport }: { viewport: Viewport }) {
             title="Labels and VM sizes"
             text="Give each job the VM size that it needs."
             to={paths.labelsReference}
+          />
+          <LinkCard
+            title="Move your workflows"
+            text="The repositories that use ciproxy, and the software of a job."
           />
           <LinkCard
             title="How ciproxy works"
