@@ -1,7 +1,8 @@
 // Setup of one workspace: GET setup and GET machines, read together, and
-// read again while Setup waits for a machine or for the first job. A failed
-// refresh keeps the last good view and shows the failure. Each workspace
-// has its own store, so a page for one workspace never shows another one.
+// read again while Setup waits for a machine, for the first job, or for the
+// first job image of a machine. A failed refresh keeps the last good view and
+// shows the failure. Each workspace has its own store, so a page for one
+// workspace never shows another one.
 
 import type { ApiFailure, ApiResult } from "../api/client.ts";
 import type { Endpoints } from "../api/endpoints.ts";
@@ -74,7 +75,11 @@ export function createSetupStore(options: {
       machines: machines.value,
       refreshFailure: null,
     });
-    return setupWaits(setup.value);
+    // A first job can end on Boat while a machine still gets its image.
+    return (
+      setupWaits(setup.value) ||
+      machines.value.some((machine) => machine.state === "preparing")
+    );
   };
 
   const poller = createPoller(

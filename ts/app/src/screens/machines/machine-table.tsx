@@ -1,8 +1,8 @@
 // The own machines as a table on a wide or narrow window and as a dense list
 // on a phone. Each machine name is a link to its page, in the mono face,
 // with its threads and memory beside it. A long name wraps inside its column,
-// and on a phone the health stays beside it. An offline machine shows no
-// slots.
+// and on a phone the health stays beside it. An offline machine and a machine
+// that gets its first job image show no slot bar, and the caption says why.
 
 import { StyleSheet, Text, View } from "react-native";
 
@@ -19,7 +19,7 @@ import {
   lastSeenText,
   machineStatus,
   slotCaption,
-  slotStates,
+  slotBar,
 } from "../../view/machines.ts";
 import { SlotLegend, SlotStrip } from "./machine-figures.tsx";
 import { StatusLabel, TextLink } from "../../components/feature-parts.tsx";
@@ -67,7 +67,7 @@ function Slots({
   stacked: boolean;
 }) {
   const caption = slotCaption(machine);
-  const states = machine.offline ? [] : slotStates(machine);
+  const states = slotBar(machine);
   return (
     <View style={[styles.slots, stacked && styles.slotsStacked]}>
       {states.length > 0 ? <SlotStrip states={states} label={caption} /> : null}

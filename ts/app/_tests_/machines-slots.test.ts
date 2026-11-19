@@ -51,10 +51,25 @@ test("a machine without slots says where its jobs go instead", () => {
   assert.deepEqual(slotsModel(lab, [lab, other], summary()), {
     kind: "message",
     text: "No slots. Jobs run on your other machines and on Boat.",
+    caption: null,
   });
   assert.deepEqual(slotsModel(machine({ offline: true }), [], null), {
     kind: "message",
     text: "Slots show again when the machine is back.",
+    caption: null,
+  });
+});
+
+test("a machine that gets its first job image shows no slot and no free slot, only its size", () => {
+  const preparing = machine({
+    state: "preparing",
+    slots: 6,
+    occupancy: [0, 1, 2, 3, 4, 5].map((index) => slot(index, "free")),
+  });
+  assert.deepEqual(slotsModel(preparing, [preparing], summary()), {
+    kind: "message",
+    text: "Slots take jobs when the machine is ready.",
+    caption: `6${nbsp}slots of 2${nbsp}vCPU and 8${nbsp}GB. A larger VM size takes several slots.`,
   });
 });
 

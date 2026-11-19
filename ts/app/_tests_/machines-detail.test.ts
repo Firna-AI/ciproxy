@@ -4,7 +4,7 @@ import test from "node:test";
 import { headerActions, machineNotice } from "../src/view/machines-detail.ts";
 import { costModel, healthModel } from "../src/view/machines-panels.ts";
 import { machine } from "../scripts/fixtures-setup.ts";
-import { nbsp, slot } from "./machines-fixtures.ts";
+import { nbsp, slot, summary } from "./machines-fixtures.ts";
 
 const now = Date.parse("2026-11-18T14:32:00Z");
 const lostAt = "2026-11-18T14:18:00Z";
@@ -16,6 +16,7 @@ function labels(overrides: Parameters<typeof machine>[0]): string[] {
 test("an Admin gets the actions of each machine state", () => {
   assert.deepEqual(labels({}), ["Drain", "Remove"]);
   assert.deepEqual(labels({ draining: true }), ["Stop draining"]);
+  assert.deepEqual(labels({ state: "preparing" }), ["Drain", "Remove"]);
   assert.deepEqual(labels({ offline: true, draining: true }), [
     "Remove machine",
   ]);
@@ -31,6 +32,8 @@ test("an Admin gets the actions of each machine state", () => {
 test("the notice says why a machine takes no jobs, with the fix where one exists", () => {
   const offline = machineNotice(
     machine({ hostname: "forge-03", offline: true, last_contact_at: lostAt }),
+    [],
+    null,
     now,
   );
   assert.equal(offline?.title, "forge-03 is offline");
@@ -38,17 +41,27 @@ test("the notice says why a machine takes no jobs, with the fix where one exists
     offline?.body,
     `ciproxy lost contact with it 14${nbsp}minutes ago. Check that the machine is on and can reach ciproxy.dev.`,
   );
-  const noKvm = machineNotice(machine({ hostname: "lab", kvm: false }), now);
+  const noKvm = machineNotice(
+    machine({ hostname: "lab", kvm: false }),
+    [],
+    null,
+    now,
+  );
   assert.deepEqual(
     [noKvm?.key, noKvm?.title, noKvm?.fix],
     ["no-kvm", "lab cannot start VMs", true],
   );
-  const noRoom = machineNotice(machine({ hostname: "tiny", slots: 0 }), now);
+  const noRoom = machineNotice(
+    machine({ hostname: "tiny", slots: 0 }),
+    [],
+    null,
+    now,
+  );
   assert.deepEqual(
     [noRoom?.key, noRoom?.title, noRoom?.fix],
     ["no-slots", "tiny has no slots", false],
   );
-  assert.equal(machineNotice(machine({}), now), null);
+  assert.equal(machineNotice(machine({}), [], null, now), null);
   const limited = {
     hostname: "office-mini-1",
     concurrent_default_jobs: "3",
@@ -56,7 +69,7 @@ test("the notice says why a machine takes no jobs, with the fix where one exists
     job_disk_bytes: "279000000000",
     disk_limited: true,
   };
-  const disk = machineNotice(machine(limited), now);
+  const disk = machineNotice(machine(limited), [], null, now);
   assert.deepEqual(
     [disk?.key, disk?.tone, disk?.title, disk?.body],
     [
@@ -67,12 +80,47 @@ test("the notice says why a machine takes no jobs, with the fix where one exists
     ],
   );
   assert.equal(
-    machineNotice(machine({ ...limited, disk_limited: false }), now),
+    machineNotice(machine({ ...limited, disk_limited: false }), [], null, now),
     null,
   );
   assert.equal(
-    machineNotice(machine({ ...limited, disk_limited: null }), now),
+    machineNotice(machine({ ...limited, disk_limited: null }), [], null, now),
     null,
+  );
+});
+
+test("a machine that gets its first job image says when jobs start, and where they run until then", () => {
+  const preparing = machine({
+    id: "new",
+    hostname: "forge-04",
+    state: "preparing",
+  });
+  const other = machine({ id: "other", hostname: "forge-01" });
+  const notice = machineNotice(preparing, [preparing, other], summary(), now);
+  assert.deepEqual(notice, {
+    key: "preparing",
+    tone: "info",
+    title: "forge-04 is getting the job image",
+    body: "Jobs start on it when it is ready. Until then, jobs run on your other machines and on Boat.",
+    fix: false,
+  });
+  assert.equal(
+    machineNotice(preparing, [preparing], summary(), now)?.body,
+    "Jobs start on it when it is ready. Until then, jobs run on Boat.",
+  );
+  assert.equal(
+    machineNotice(preparing, [preparing], null, now)?.body,
+    "Jobs start on it when it is ready.",
+    "with no other place, the jobs wait for this machine",
+  );
+  assert.equal(
+    machineNotice(
+      machine({ hostname: "forge-04", state: "preparing", draining: true }),
+      [],
+      null,
+      now,
+    )?.key,
+    "draining",
   );
 });
 
@@ -87,11 +135,11 @@ test("a drain counts each running job once, also a job of several slots", () => 
     ],
   });
   assert.equal(
-    machineNotice(draining, now)?.body,
+    machineNotice(draining, [], null, now)?.body,
     `2${nbsp}jobs are finishing. The machine takes no new jobs, and it keeps no warm runners.`,
   );
   assert.equal(
-    machineNotice(machine({ draining: true }), now)?.body,
+    machineNotice(machine({ draining: true }), [], null, now)?.body,
     "The machine takes no new jobs, and it keeps no warm runners.",
   );
 });

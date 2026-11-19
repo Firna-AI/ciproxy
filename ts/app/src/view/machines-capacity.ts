@@ -7,16 +7,16 @@
 import type { MachineView } from "../api/schema.ts";
 import { addCopy, slotCopy } from "./machines-copy.ts";
 import { dotJoin, gigabytes, unbroken } from "./machines-format.ts";
-import { machineStatus } from "./machines.ts";
+import { slotsLive } from "./machines.ts";
 
 /**
  * The jobs of the label ciproxy that the machine runs at a time, by its slots
  * and its disk, as the API computes them; null while the capacity is not
- * known.
+ * known, and while the slots of the machine are not live, such as while it
+ * gets its first job image.
  */
 export function concurrentJobs(machine: MachineView): number | null {
-  const status = machineStatus(machine);
-  if (status === "offline" || status === "no-slots") return null;
+  if (!slotsLive(machine)) return null;
   const jobs = machine.concurrent_default_jobs ?? null;
   if (!machine.capacity_known || jobs === null) return null;
   return Number(jobs);

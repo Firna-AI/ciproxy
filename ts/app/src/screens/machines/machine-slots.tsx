@@ -1,7 +1,8 @@
 // The slots of one machine, each with its job or its warm runner, and the
 // warm runner count. A busy slot names its job, with the repository and how
 // long it has run, and the name opens the page of that job. A slot whose job
-// the API could not match says only that it runs a job.
+// the API could not match says only that it runs a job. A machine without
+// slots to show says why, with the size of its slots when it has some.
 
 import { StyleSheet, Text, View } from "react-native";
 
@@ -89,7 +90,12 @@ export function SlotsPanel({
       action={<TextLink href={jobsHref} label={detailCopy.jobHistory} />}
     >
       {model.kind === "message" ? (
-        <Text style={[text.small, styles.muted]}>{model.text}</Text>
+        <>
+          <Text style={[text.small, styles.muted]}>{model.text}</Text>
+          {model.caption === null ? null : (
+            <Text style={text.caption}>{model.caption}</Text>
+          )}
+        </>
       ) : (
         <>
           <SlotStrip states={model.states} label={slotCaption(machine)} />

@@ -21,6 +21,7 @@ import {
   unknownFigures,
   unknownFiguresReadOnly,
 } from "./m20-browser-machine-figures.ts";
+import { machineImage } from "./m20-browser-machine-image.ts";
 import {
   followMachineLinks,
   machineStates,
@@ -56,6 +57,11 @@ export function machineCases(origin: string, output: string): M20Case[] {
       async check(page, _context, width) {
         await machineStates(page, origin, width, output);
       },
+    },
+    {
+      name: "machine-preparing",
+      check: (page, _context, width) =>
+        machineImage(page, origin, width, output),
     },
     {
       name: "machine-unknown-figures",

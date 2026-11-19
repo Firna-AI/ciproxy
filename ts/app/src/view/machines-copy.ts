@@ -1,7 +1,8 @@
 // Every word of the Machines pages, after the approved mockups: the list, the
-// machine page, Add a machine, and the Overflow panel. Screens and models
-// take their text from here, so one change of a word changes every place
-// that shows it. Values arrive formatted.
+// machine page, Add a machine, and the Overflow panel. Setup takes the words
+// of a machine that gets its first job image from here too. Screens and
+// models take their text from here, so one change of a word changes every
+// place that shows it. Values arrive formatted.
 
 import { dotJoin, formatExactCount, unbroken } from "./machines-format.ts";
 
@@ -46,11 +47,13 @@ export const statusWords = {
   draining: "Draining",
   offline: "Offline",
   "no-slots": "No slots",
+  preparing: "Preparing",
 } as const;
 
 export const slotCopy = {
   offline: "No slots available",
   none: "No slots",
+  preparing: "Getting the job image",
   busyWarm: (busy: number, warm: number) =>
     dotJoin(unbroken(`${busy} busy`), unbroken(`${warm} warm`)),
   unreported: (slots: number) => count(slots, "slot", "slots"),
@@ -64,14 +67,19 @@ export const slotCopy = {
   fits: (jobs: number) =>
     `${count(jobs, "job", "jobs")} of ciproxy ${jobs === 1 ? "fits" : "fit"} at a time.`,
   offlineBody: "Slots show again when the machine is back.",
+  preparingBody: "Slots take jobs when the machine is ready.",
   noSlotsBody: (elsewhere: string) => `No slots. ${elsewhere}`,
   unreportedBody: "The slots show when the machine reports them.",
 } as const;
 
-/** Where jobs go while a machine takes none: "Jobs" or "New jobs" first. */
+/**
+ * Where jobs go while a machine takes none: "Jobs", "New jobs", or "Until
+ * then, jobs" first.
+ */
 export const elsewhereCopy = {
   jobs: "Jobs",
   newJobs: "New jobs",
+  untilReady: "Until then, jobs",
   machinesAndBoat: (subject: string) =>
     `${subject} run on your other machines and on Boat.`,
   machines: (subject: string) => `${subject} run on your other machines.`,
@@ -123,6 +131,8 @@ export const noticeCopy = {
     vmDisk === null || jobDisk === null
       ? "Add disk to run more jobs at once."
       : `With the current image, a job of ciproxy holds ${unbroken(`${vmDisk} GB`)} of disk. The machine has ${unbroken(`${jobDisk} GB`)} for jobs after the VM images and the host reserve. Add disk to run more jobs at once.`,
+  preparingTitle: (host: string) => `${host} is getting the job image`,
+  preparing: "Jobs start on it when it is ready.",
   savedOffline: (host: string) =>
     `${host} gets the change when it connects again.`,
   savedTitle: "Saved",
@@ -237,4 +247,15 @@ export const addCopy = {
   connected: (host: string) => `${host} connected`,
   diskHolds: (jobs: number) =>
     `Its disk holds ${count(jobs, "job", "jobs")} of ciproxy at a time.`,
+} as const;
+
+/**
+ * A machine that connected and gets its first job image, as Setup and Add a
+ * machine show it. No text promises a time, because a slow link makes the
+ * download long.
+ */
+export const imageCopy = {
+  line: "Getting the job image. Jobs start on it when it is ready.",
+  step: "getting the job image",
+  firstJob: "The job starts on it when it is ready.",
 } as const;

@@ -34,6 +34,7 @@ export const m20Scenarios = [
   "machine-mutation-failure",
   "add-machine-waiting",
   "add-machine-connected",
+  "add-machine-preparing",
   "install-command-failure",
   "install-revoke-failure",
   "settings",
@@ -129,6 +130,10 @@ export function createM20State(scenario: M20Scenario = "machines"): M20State {
     state.machines = state.machines.filter(
       (item) =>
         item.id === machineIds.primary || item.id === machineIds.diskLimited,
+    );
+  if (scenario === "add-machine-preparing")
+    state.machines = state.machines.filter(
+      (item) => item.id === machineIds.unknownCapacity,
     );
   // forge-01 reports the release before the newest; the slots stay as they are.
   const forge = state.machines.find((item) => item.id === machineIds.primary);

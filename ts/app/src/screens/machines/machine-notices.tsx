@@ -2,10 +2,12 @@
 // actions of the state: Drain and Remove, Stop draining, or Remove machine.
 // One change runs at a time, so the other actions wait while one runs. The
 // notice of a machine without KVM gives an Admin the install command, which
-// is the fix.
+// is the fix. The notice of a machine that gets its first job image says
+// where jobs run until then, from the other machines and the overflow summary.
 
 import { Link } from "expo-router";
 
+import type { OverflowSettings } from "../../api/machine-schema.ts";
 import type { MachineView } from "../../api/schema.ts";
 import { ActionButton, ActionLink } from "../../components/actions.tsx";
 import { Notice } from "../../components/notice.tsx";
@@ -50,18 +52,23 @@ export function HeaderActions({
 
 export function MachineNotices({
   machine,
+  machines,
+  summary,
   workspaceId,
   admin,
   change,
   now,
 }: {
   machine: MachineView;
+  /** Every machine of the read, for where jobs run meanwhile. */
+  machines: readonly MachineView[];
+  summary: OverflowSettings | null;
   workspaceId: string;
   admin: boolean;
   change: ChangeSnapshot;
   now: number;
 }) {
-  const notice = machineNotice(machine, now);
+  const notice = machineNotice(machine, machines, summary, now);
   const outcome = outcomeNotice(change, machine.hostname);
   const fix = addMachineHref(workspaceId);
   return (

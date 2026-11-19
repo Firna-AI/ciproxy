@@ -61,6 +61,11 @@ Setup is done after the App, a machine, and the first job, with or without
 Boat. After Skip for now, the Boat step links to Settings under Overflow.
 The API keeps no record of a skip, so it lasts only for the tab, the
 workspace, and the person who skipped.
+While the machine of Setup gets its first job image, its step says so, and
+Setup goes on. A first job that waits for a runner then says that it waits
+for that machine, while no other machine takes jobs and Boat is not
+connected. Setup reads again while a machine gets its image, also after the
+first job ended.
 `?reason=github` or `?reason=ended` on `/sign-in` adds a notice.
 The shell holds the navigation, the workspace switch, the account menu, and
 Add an organization for Admins. A person with no role sees a page that names

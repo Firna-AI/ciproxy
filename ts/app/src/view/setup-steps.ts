@@ -1,9 +1,10 @@
 // The four steps of Setup: the GitHub App, a machine, Boat, and the first
 // job. Every fact comes from the API: the organizations, the machines that
-// joined, the Boat account, and the first job with its phase and its result.
-// A job counts as passed only when GitHub reports success. The Boat step can
-// be skipped, and it never holds Setup open: Setup is complete when the
-// first job finished, because the API keeps no record of a skip.
+// joined with their state, the Boat account, and the first job with its phase
+// and its result. A job counts as passed only when GitHub reports success.
+// The Boat step can be skipped, and it never holds Setup open: Setup is
+// complete when the first job finished, because the API keeps no record of a
+// skip. A machine that gets its first job image still completes its step.
 
 import type { MachineView, SetupJob, SetupView } from "../api/schema.ts";
 import {
@@ -12,6 +13,8 @@ import {
   formatGigabytes,
   joinWords,
 } from "./format.ts";
+import { imageCopy } from "./machines-copy.ts";
+import { machineStatus, otherMachineTakesJobs } from "./machines.ts";
 
 export type StepStatus = "done" | "active" | "todo" | "skipped";
 
@@ -28,6 +31,8 @@ export type ConnectedMachine = {
   facts: string;
   /** Set when the disk holds fewer jobs of ciproxy than the slots. */
   diskNote: string | null;
+  /** The machine gets its first job image, so it takes no job yet. */
+  preparing: boolean;
 };
 
 /** What Setup knows of Boat: the line of a connected account, or a skip. */
@@ -54,6 +59,8 @@ export type SetupModel = {
   /** Organizations whose App GitHub suspended. */
   suspended: readonly string[];
   job: FirstJob;
+  /** The machine whose first job image the waiting first job waits for. */
+  imageWait: string | null;
 };
 
 const outcomes: Readonly<Record<string, string>> = {
@@ -122,7 +129,36 @@ export function connectedMachine(machine: MachineView): ConnectedMachine {
       atOnce !== null && atOnce < machine.slots
         ? `Its disk holds ${countText(atOnce, "job", "jobs")} of ciproxy at a time.`
         : null,
+    preparing: machineStatus(machine) === "preparing",
   };
+}
+
+/** "forge-01 · 6 slots", or the image wait of the machine. */
+function machineSummary(machine: MachineView): string {
+  const preparing = machineStatus(machine) === "preparing";
+  return `${machine.hostname} · ${
+    preparing ? imageCopy.step : countText(machine.slots, "slot", "slots")
+  }`;
+}
+
+/**
+ * The machine that the first job waits for while it gets its first job
+ * image, or null. The job waits for it only while it waits for a runner, no
+ * other machine takes jobs, and Boat is not connected. With Boat connected,
+ * routing starts the job on Boat at once.
+ */
+function imageWait(
+  setup: SetupView,
+  machine: MachineView | undefined,
+  machines: readonly MachineView[],
+  boat: BoatProgress,
+): string | null {
+  if (setup.first_job?.phase !== "available") return null;
+  if (machine === undefined || machineStatus(machine) !== "preparing")
+    return null;
+  if (boat.connected !== null || otherMachineTakesJobs(machine, machines))
+    return null;
+  return machine.hostname;
 }
 
 function jobSummary(job: FirstJob): string {
@@ -189,7 +225,7 @@ export function setupModel(
       title: "Add a machine",
       status: machineDone ? "done" : "active",
       summary: ready
-        ? `${ready.hostname} · ${countText(ready.slots, "slot", "slots")}`
+        ? machineSummary(ready)
         : "Run one command on a Linux machine.",
     },
     {
@@ -218,5 +254,6 @@ export function setupModel(
     noKvm,
     suspended,
     job,
+    imageWait: imageWait(setup, ready, machines, boat),
   };
 }

@@ -52,7 +52,21 @@ test("Setup uses actual machine capacity and KVM for its steps", () => {
     name: "forge-01",
     facts: "12 threads · 64 GB · KVM ready · 6 slots",
     diskNote: "Its disk holds 2 jobs of ciproxy at a time.",
+    preparing: false,
   });
+  assert.equal(ready.steps[1]?.summary, "forge-01 · 6 slots");
+  const preparing = setupModel(
+    setup({ machines: 1, waiting_for_machine: false }),
+    [machine({ state: "preparing" })],
+    false,
+    noBoat,
+  );
+  assert.equal(preparing.connected?.preparing, true);
+  assert.deepEqual(
+    [preparing.steps[1]?.status, preparing.steps[1]?.summary],
+    ["done", "forge-01 · getting the job image"],
+    "Setup goes on while the machine gets its first job image",
+  );
   assert.deepEqual(
     ready.steps.map((step) => step.status),
     ["done", "done", "active", "todo"],
@@ -109,6 +123,86 @@ test("first job follows GitHub phases and only its success result reports a pass
   });
   assert.equal(setupWaits(complete), false);
   assert.equal(setupModel(complete, [machine()], false, noBoat).complete, true);
+});
+
+test("a waiting first job names the machine whose job image it waits for, only when nothing else takes it", () => {
+  const joined = { machines: 1, waiting_for_machine: false };
+  const queued = job({
+    phase: "available",
+    assigned_at: null,
+    started_at: null,
+  });
+  const available = setup({ ...joined, first_job: queued });
+  const preparing = machine({ state: "preparing" });
+  const second = {
+    id: "30000000-0000-4000-8000-000000000002",
+    hostname: "forge-02",
+  };
+  const skipped: BoatProgress = { connected: null, skipped: true };
+  const boat: BoatProgress = {
+    connected: "Connected to the Boat account northstar",
+    skipped: false,
+  };
+  const wait = (
+    view: typeof available,
+    machines: Parameters<typeof setupModel>[1],
+    progress: BoatProgress = skipped,
+  ) => setupModel(view, machines, false, progress).imageWait;
+  assert.equal(wait(available, [preparing]), "forge-01");
+  assert.equal(wait(available, [preparing], noBoat), "forge-01");
+  assert.equal(
+    wait(available, [preparing], boat),
+    null,
+    "with Boat connected, routing starts the job on Boat",
+  );
+  assert.equal(
+    wait(available, [preparing, machine(second)]),
+    null,
+    "another machine takes the job",
+  );
+  assert.equal(
+    wait(available, [preparing, machine({ ...second, state: "preparing" })]),
+    "forge-01",
+  );
+  assert.equal(wait(available, [machine()]), null);
+  assert.equal(wait(setup(joined), [preparing]), null);
+  for (const phase of ["assigned", "started"] as const) {
+    assert.equal(
+      wait(setup({ ...joined, first_job: job({ phase }) }), [preparing]),
+      null,
+    );
+  }
+});
+
+test("Setup reads again while a machine gets its first job image, also after the first job ended", async () => {
+  const ended = setup({
+    machines: 1,
+    waiting_for_machine: false,
+    first_job: job({ phase: "completed", result: "success", place: "boat" }),
+  });
+  const preparing = machine({ state: "preparing" });
+  const { app, schedule } = appWith(
+    response(ended),
+    response([preparing]),
+    response(ended),
+    response([preparing]),
+    response(ended),
+    response([machine()]),
+  );
+  const store = app.setup(workspaceId);
+  await store.ensure();
+  const stop = store.watch();
+  schedule.fire();
+  await settled();
+  assert.equal(schedule.pending(), 1, "the machine still gets its image");
+  schedule.fire();
+  await settled();
+  assert.equal(
+    schedule.pending(),
+    0,
+    "nothing waits once the machine is ready",
+  );
+  stop();
 });
 
 test("Setup refresh errors retain the last view and recover without creating install tokens", async () => {

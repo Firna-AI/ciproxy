@@ -12,7 +12,7 @@ import {
   workspace,
   workspaceId,
 } from "./fixtures-core.ts";
-import { job, machine, setup } from "./fixtures-setup.ts";
+import { job, machine, preparingMachine, setup } from "./fixtures-setup.ts";
 import {
   applyBoatScenario,
   boatScenarios,
@@ -58,6 +58,8 @@ export const scenarios = [
   "links-preparing",
   "setup-waiting",
   "setup-connected",
+  "setup-preparing",
+  "setup-image-wait",
   "setup-no-kvm",
   "setup-available",
   "setup-assigned",
@@ -238,11 +240,16 @@ export function recordedScenario(name: ScenarioName): Scenario {
     data.setup.machines = 1;
     data.setup.waiting_for_machine = false;
   }
+  if (name === "setup-preparing" || name === "setup-image-wait") {
+    data.machines = [preparingMachine()];
+    data.setup.machines = 1;
+    data.setup.waiting_for_machine = false;
+  }
   if (name === "setup-no-kvm") {
     data.machines = [machine({ kvm: false })];
     data.setup.machines = 1;
   }
-  if (name === "setup-available")
+  if (name === "setup-available" || name === "setup-image-wait")
     data.setup.first_job = job({
       phase: "available",
       assigned_at: null,

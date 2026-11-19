@@ -1,6 +1,9 @@
 // The open step of Setup: the machine step with the install command, and
-// the first-job step. Every name, count, and result comes from the API.
+// the first-job step. Every name, count, and result comes from the API. A
+// machine that connected and gets its first job image says so, and a first
+// job that waits for that machine says why.
 
+import type { ReactNode } from "react";
 import { Link } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 
@@ -14,7 +17,9 @@ import { Notice } from "../../components/notice.tsx";
 import { WaitingLine } from "../../components/page-state.tsx";
 import { text } from "../../components/text.ts";
 import { workspaceHref } from "../../routing/pages.ts";
+import { imageCopy, noticeCopy } from "../../view/machines-copy.ts";
 import type { SetupModel } from "../../view/setup-steps.ts";
+import { ImageLine } from "../machines/image-line.tsx";
 import { InstallCommandView } from "./install-command.tsx";
 
 const workflowFile = ".github/workflows/ci.yml";
@@ -30,10 +35,13 @@ function Outcome({
   ok,
   title,
   children,
+  note,
 }: {
   ok: boolean;
   title: string;
   children: string;
+  /** A line under the body, such as the first job image of a machine. */
+  note?: ReactNode;
 }) {
   return (
     <View style={styles.outcome}>
@@ -45,6 +53,7 @@ function Outcome({
       <View style={styles.outcomeText}>
         <Text style={[text.body, text.strong]}>{title}</Text>
         <Text style={text.small}>{children}</Text>
+        {note}
       </View>
     </View>
   );
@@ -77,7 +86,11 @@ export function MachineStep({
       <InstallCommandView workspaceId={workspaceId} />
       {model.connected && onContinue ? (
         <>
-          <Outcome ok title={`${model.connected.name} connected`}>
+          <Outcome
+            ok
+            title={`${model.connected.name} connected`}
+            note={model.connected.preparing ? <ImageLine /> : null}
+          >
             {[model.connected.facts, model.connected.diskNote]
               .filter(Boolean)
               .join(". ")}
@@ -135,6 +148,11 @@ export function JobStep({
           ? job.text
           : "Waiting for a job with runs-on: ciproxy…"}
       </WaitingLine>
+      {model.imageWait === null ? null : (
+        <Notice tone="info" title={noticeCopy.preparingTitle(model.imageWait)}>
+          {imageCopy.firstJob}
+        </Notice>
+      )}
     </View>
   );
 }

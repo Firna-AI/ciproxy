@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { cacheHits, cacheText } from "../src/view/machines-cache.ts";
 import { concurrentJobs, joinedFits } from "../src/view/machines-capacity.ts";
 import {
   elsewhereText,
   machineFigures,
   machineStatus,
+  slotBar,
   slotCaption,
 } from "../src/view/machines.ts";
 import {
@@ -16,22 +16,21 @@ import {
 } from "../src/view/machines-routes.ts";
 import { workspaceId } from "../scripts/fixtures-core.ts";
 import { machine } from "../scripts/fixtures-setup.ts";
-import {
-  cache,
-  docker,
-  measuredCache,
-  nbsp,
-  slot,
-  summary,
-  unavailable,
-} from "./machines-fixtures.ts";
+import { cache, nbsp, slot, summary } from "./machines-fixtures.ts";
 
-test("a machine shows one state: offline, then no slots, then draining", () => {
+test("a machine shows one state: offline, no slots, draining, preparing, then healthy", () => {
   const cases: [string, Parameters<typeof machine>[0], string][] = [
-    ["offline and draining", { offline: true, draining: true }, "offline"],
+    ["offline and draining", { state: "offline", draining: true }, "offline"],
     ["no KVM with reported slots", { kvm: false, slots: 6 }, "no-slots"],
+    ["no KVM while preparing", { state: "preparing", kvm: false }, "no-slots"],
     ["KVM without room for a slot", { slots: 0 }, "no-slots"],
     ["draining", { draining: true }, "draining"],
+    [
+      "draining while preparing",
+      { state: "preparing", draining: true },
+      "draining",
+    ],
+    ["getting its first job image", { state: "preparing" }, "preparing"],
     ["healthy", {}, "healthy"],
   ];
   for (const [name, overrides, expected] of cases) {
@@ -50,11 +49,27 @@ test("the slots column counts busy and warm slots, and never invents free ones",
   });
   assert.equal(slotCaption(busy), `2${nbsp}busy${nbsp}· 1${nbsp}warm`);
   assert.equal(slotCaption(machine({ offline: true })), "No slots available");
+  assert.equal(
+    slotCaption(machine({ state: "preparing", occupancy: [slot(0, "free")] })),
+    "Getting the job image",
+  );
   assert.equal(slotCaption(machine({ kvm: false })), "No slots");
   assert.equal(
     slotCaption(machine({ slots: 6, occupancy: [] })),
     `6${nbsp}slots`,
   );
+});
+
+test("the list shows no slot bar while a machine is offline or gets its first job image", () => {
+  const occupancy = [slot(1, "warm"), slot(0, "job"), slot(2, "free")];
+  assert.deepEqual(slotBar(machine({ occupancy })), ["job", "warm", "free"]);
+  assert.deepEqual(slotBar(machine({ draining: true, occupancy })), [
+    "job",
+    "warm",
+    "free",
+  ]);
+  assert.deepEqual(slotBar(machine({ state: "offline", occupancy })), []);
+  assert.deepEqual(slotBar(machine({ state: "preparing", occupancy })), []);
 });
 
 test("the figures count live slots, unique warm runners, and measured cache restores", () => {
@@ -89,73 +104,32 @@ test("the figures count live slots, unique warm runners, and measured cache rest
       cache: cache("1", "3"),
     }),
     machine({ id: "d", hostname: "forge-d", kvm: false, slots: 6 }),
+    machine({
+      id: "e",
+      hostname: "forge-e",
+      state: "preparing",
+      slots: 6,
+      occupancy: [0, 1, 2, 3, 4, 5].map((index) => slot(index, "free")),
+    }),
+    machine({
+      id: "f",
+      hostname: "forge-f",
+      state: "preparing",
+      draining: true,
+      slots: 4,
+      occupancy: [0, 1, 2, 3].map((index) => slot(index, "free")),
+    }),
   ];
   assert.deepEqual(machineFigures(machines), {
-    machines: "4",
+    machines: "6",
     slots: "4 of 10",
     warm: "1",
     cacheHits: {
       kind: "share",
       value: "88%",
-      excluded: ["forge-b", "forge-d"],
+      excluded: ["forge-b", "forge-d", "forge-e", "forge-f"],
     },
   });
-});
-
-test("the cache hits cover the measured machines, name the others, and say Unknown without one", () => {
-  const measured = machine({
-    hostname: "forge-01",
-    cache: cache("90", "100", { docker_disks: unavailable }),
-  });
-  const unmeasured = machine({
-    hostname: "forge-02",
-    cache: cache("0", "0", { machine_cache: unavailable }),
-  });
-  const unreported = machine({ hostname: "forge-03", cache: null });
-  assert.deepEqual(cacheHits([measured, unmeasured, unreported]), {
-    kind: "share",
-    value: "90%",
-    excluded: ["forge-02", "forge-03"],
-  });
-  assert.deepEqual(cacheHits([unmeasured, unreported]), { kind: "unknown" });
-  const quiet = machine({
-    hostname: "forge-04",
-    cache: cache("0", "0", { docker_disks: docker("0", "0") }),
-  });
-  assert.deepEqual(
-    cacheHits([quiet, unmeasured]),
-    { kind: "share", value: "No restores yet", excluded: ["forge-02"] },
-    "measured machines with no restores keep No restores yet",
-  );
-});
-
-test("the cache column shows the measured use, Unknown, or No report yet", () => {
-  const cases: [string, Parameters<typeof machine>[0], string][] = [
-    ["measured", { cache: cache("1", "2") }, "83 of 191 GB"],
-    [
-      "measured cache beside unknown Docker disks",
-      { cache: cache("1", "2", { docker_disks: unavailable }) },
-      "83 of 191 GB",
-    ],
-    [
-      "measured zero",
-      {
-        cache: cache("0", "0", {
-          machine_cache: { ...measuredCache("0", "0"), used_bytes: "0" },
-        }),
-      },
-      "0 of 191 GB",
-    ],
-    [
-      "unmeasured",
-      { cache: cache("1", "2", { machine_cache: unavailable }) },
-      "Unknown",
-    ],
-    ["no report", { cache: null }, "No report yet"],
-  ];
-  for (const [name, overrides, expected] of cases) {
-    assert.equal(cacheText(machine(overrides)), expected, name);
-  }
 });
 
 test("jobs elsewhere name only machines and a Boat account that take jobs now", () => {
@@ -174,6 +148,12 @@ test("jobs elsewhere name only machines and a Boat account that take jobs now", 
   assert.equal(
     elsewhereText(offline, [offline, draining], summary()),
     "Jobs run on Boat.",
+  );
+  const preparing = machine({ id: "new", state: "preparing" });
+  assert.equal(
+    elsewhereText(offline, [offline, preparing], summary()),
+    "Jobs run on Boat.",
+    "a machine that gets its first job image takes no jobs yet",
   );
   const rejected = summary({
     account: {
@@ -219,6 +199,24 @@ test("the jobs of ciproxy at a time show only when the API knows them", () => {
   );
   assert.equal(concurrentJobs(machine({ offline: true })), null);
   assert.equal(concurrentJobs(machine({ kvm: false })), null);
+  for (const draining of [false, true]) {
+    const preparing = { state: "preparing" as const, draining };
+    assert.equal(
+      concurrentJobs(machine({ ...preparing, concurrent_default_jobs: "3" })),
+      null,
+      "a machine that gets its first job image runs no job yet",
+    );
+  }
+  assert.equal(
+    joinedFits(
+      machine({
+        state: "preparing",
+        concurrent_default_jobs: "6",
+        disk_limited: false,
+      }),
+    ),
+    null,
+  );
   assert.equal(
     joinedFits(machine({ concurrent_default_jobs: "6", disk_limited: false })),
     `6${nbsp}jobs of ciproxy fit at a time.`,

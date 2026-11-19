@@ -25,6 +25,18 @@ addresses.
 - Add a machine shows the install command of Setup after its first read of
   the machines. A machine that was not in that read is new, and the page
   shows what its agent reported.
+- Each machine shows one status, in this order: Offline, No slots,
+  Draining, Preparing, and Healthy. Offline and Preparing come from the
+  `state` of the API, which routing uses too. A preparing machine is online
+  and gets its first job image, so it takes no job yet.
+- The list shows "Getting the job image" in place of the slot bar of a
+  preparing machine. Its page says that jobs start on it when it is ready,
+  and where jobs run until then. Its slots show their size, but no slot bar
+  and no free slot. Add a machine shows it as connected, with a line about
+  the image.
+- Slots in use, Warm runners, and the jobs of `ciproxy` at a time count only
+  a machine that the API calls ready, so never a preparing machine, also
+  while it drains.
 - The machine page shows the saved warm runner count in every state, also
   while the machine drains, is offline, or has no slots. The slots show the
   warm runners that are ready.
@@ -67,6 +79,10 @@ addresses.
   [machines-changes.ts](../../state/machines-changes.ts) runs the changes of
   an Admin, one at a time, and [machines-copy.ts](../../view/machines-copy.ts)
   holds the words.
+- [machines.ts](../../view/machines.ts) gives the status of each machine,
+  the slots that count, and where jobs go while a machine takes none.
+  [image-line.tsx](image-line.tsx) is the line under a machine that gets its
+  first job image, which Setup shows too.
 - [machines-cache.ts](../../view/machines-cache.ts) words the cache figures
   of each status, and gives the cache hits of the list.
 - [machine-endpoints.ts](../../api/machine-endpoints.ts) holds the routes of
