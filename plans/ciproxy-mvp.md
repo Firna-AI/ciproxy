@@ -2613,12 +2613,22 @@ Tags: ui
 
 Depends on: 27b, 27c
 
-- [ ] Show the state on the machine list, the machine page, Setup, and Add
+- [x] Show the state on the machine list, the machine page, Setup, and Add
       a machine, as the mockups of Milestone 27b show.
       My call, 19 November 2026: the status order is Offline, No slots,
       Draining, Preparing, and then Healthy. Reason: a draining machine
       takes no new job in either case, and the drain is the customer's
       own action.
+      Design calls, 19 November 2026: the slot figures and the jobs at a
+      time count only a machine that the API calls ready, also while it
+      drains, because a preparing machine runs no job. The notice of a
+      preparing machine names where jobs run until then, and leaves that
+      sentence out while the jobs wait for the machine. The first-job
+      notice of Setup shows while the first job waits for a runner, no
+      other machine takes jobs, and Boat is not connected, because routing
+      starts the job elsewhere in the other cases. Setup reads again while
+      a machine prepares, so that its line ends when the image is ready.
+      Branch: `conductor/m27d-machine-image-state-ui`.
 
 ## Milestone 27e: Mockups: the docs pages for the first image wait
 

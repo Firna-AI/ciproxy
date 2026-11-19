@@ -10,6 +10,7 @@ import { buildNavigation } from "./browser-build.ts";
 import { smokeCases, type SmokeCase } from "./browser-cases.ts";
 import type { BrowserContext, Page } from "./browser-driver.ts";
 import { control, viewportControls, visible } from "./browser-fixture.ts";
+import { createImageRuns } from "./browser-image.ts";
 import { shellJourney, staticReloads } from "./browser-journeys.ts";
 import { createLateApprovalRuns } from "./browser-late-approval.ts";
 import { installNavigation } from "./browser-install.ts";
@@ -77,6 +78,7 @@ export function createSmokeRegistry(
       check: (page, context) => installNavigation(page, context, origin),
     },
     ...createLateApprovalRuns(origin),
+    ...createImageRuns(origin, output),
     ...createBoatRuns(origin),
     ...createOverflowRuns(origin),
     ...createBoatAccountRuns(origin),

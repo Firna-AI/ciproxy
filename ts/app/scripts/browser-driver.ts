@@ -16,6 +16,7 @@ export type Locator = {
   fill(value: string): Promise<void>;
   inputValue(): Promise<string>;
   focus(): Promise<void>;
+  scrollIntoViewIfNeeded(): Promise<void>;
   press(key: string): Promise<void>;
   fill(value: string): Promise<void>;
   inputValue(): Promise<string>;

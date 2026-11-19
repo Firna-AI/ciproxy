@@ -4,7 +4,8 @@
 // usable command; a revoke during the visit keeps its notice. Then it waits
 // for a machine that joins, and shows what the agent reported, with the jobs
 // of ciproxy that its disk holds when the disk sets that number. A machine
-// without KVM gets the notice with the fix. A failed read after the baseline
+// that gets its first job image says so under its facts. A machine without
+// KVM gets the notice with the fix. A failed read after the baseline
 // keeps the command, the baseline, and the last machines, and shows the
 // shared refresh warning with Try again; the next good read, from Try again
 // or the interval, clears it and creates no command. The Admin role alone adds
@@ -39,8 +40,10 @@ import {
 } from "../../view/machines-copy.ts";
 import { machinesHref } from "../../view/machines-routes.ts";
 import { connectedFacts, joinedFits } from "../../view/machines-capacity.ts";
+import { machineStatus } from "../../view/machines.ts";
 import { InstallCommandView } from "../setup/install-command.tsx";
 import type { WorkspaceContext } from "../workspace-page.tsx";
+import { ImageLine } from "./image-line.tsx";
 import { MachinesRefreshNotice } from "./machines-refresh.tsx";
 
 function Joined({ machine }: { machine: MachineView }) {
@@ -61,6 +64,7 @@ function Joined({ machine }: { machine: MachineView }) {
         </Text>
         <Text style={text.caption}>{connectedFacts(machine)}</Text>
         {fits === null ? null : <Text style={text.caption}>{fits}</Text>}
+        {machineStatus(machine) === "preparing" ? <ImageLine /> : null}
       </View>
     </View>
   );

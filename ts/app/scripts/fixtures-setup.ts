@@ -7,7 +7,13 @@ import type {
 } from "../src/api/schema.ts";
 import { activation, fixtureTime } from "./fixtures-core.ts";
 
+/**
+ * One machine of GET machines. The API gives `offline` from `state`, so a
+ * machine that sets only one of them gets the other to match.
+ */
 export function machine(overrides: Partial<MachineView> = {}): MachineView {
+  const state =
+    overrides.state ?? (overrides.offline === true ? "offline" : "ready");
   return {
     agent_version: "0.1.0",
     cache: null,
@@ -25,15 +31,31 @@ export function machine(overrides: Partial<MachineView> = {}): MachineView {
     memory_bytes: "64000000000",
     monthly_cost_cents: null,
     occupancy: [],
-    offline: false,
+    offline: state === "offline",
     processor: "Fixture CPU",
     selected_image_disk_bytes: "40000000000",
     slots: 6,
-    state: "ready",
+    state,
     threads: 12,
     warm_runners: 1,
     ...overrides,
   } satisfies MachineView;
+}
+
+/**
+ * A machine that connected and gets its first job image. Its report selects
+ * no image yet, so the API knows no root and no jobs at a time.
+ */
+export function preparingMachine(
+  overrides: Partial<MachineView> = {},
+): MachineView {
+  return machine({
+    state: "preparing",
+    capacity_known: false,
+    concurrent_default_jobs: null,
+    selected_image_disk_bytes: null,
+    ...overrides,
+  });
 }
 
 export function organization(

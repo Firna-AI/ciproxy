@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  cacheHits,
+  cacheText,
   cacheUse,
   clearCacheBody,
   dockerUse,
@@ -103,4 +105,60 @@ test("one note names each part of the cache that the machine did not measure, an
     `ciproxy deletes the cache entries ${rest}`,
     "the confirmation names no size that the machine did not measure",
   );
+});
+
+test("the cache hits cover the measured machines, name the others, and say Unknown without one", () => {
+  const measured = machine({
+    hostname: "forge-01",
+    cache: cache("90", "100", { docker_disks: unavailable }),
+  });
+  const unmeasured = machine({
+    hostname: "forge-02",
+    cache: cache("0", "0", { machine_cache: unavailable }),
+  });
+  const unreported = machine({ hostname: "forge-03", cache: null });
+  assert.deepEqual(cacheHits([measured, unmeasured, unreported]), {
+    kind: "share",
+    value: "90%",
+    excluded: ["forge-02", "forge-03"],
+  });
+  assert.deepEqual(cacheHits([unmeasured, unreported]), { kind: "unknown" });
+  const quiet = machine({
+    hostname: "forge-04",
+    cache: cache("0", "0", { docker_disks: docker("0", "0") }),
+  });
+  assert.deepEqual(
+    cacheHits([quiet, unmeasured]),
+    { kind: "share", value: "No restores yet", excluded: ["forge-02"] },
+    "measured machines with no restores keep No restores yet",
+  );
+});
+
+test("the cache column shows the measured use, Unknown, or No report yet", () => {
+  const cases: [string, Parameters<typeof machine>[0], string][] = [
+    ["measured", { cache: cache("1", "2") }, "83 of 191 GB"],
+    [
+      "measured cache beside unknown Docker disks",
+      { cache: cache("1", "2", { docker_disks: unavailable }) },
+      "83 of 191 GB",
+    ],
+    [
+      "measured zero",
+      {
+        cache: cache("0", "0", {
+          machine_cache: { ...measuredCache("0", "0"), used_bytes: "0" },
+        }),
+      },
+      "0 of 191 GB",
+    ],
+    [
+      "unmeasured",
+      { cache: cache("1", "2", { machine_cache: unavailable }) },
+      "Unknown",
+    ],
+    ["no report", { cache: null }, "No report yet"],
+  ];
+  for (const [name, overrides, expected] of cases) {
+    assert.equal(cacheText(machine(overrides)), expected, name);
+  }
 });

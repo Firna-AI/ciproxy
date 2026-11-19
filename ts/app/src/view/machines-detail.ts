@@ -1,10 +1,13 @@
 // The machine page: the actions of an Admin for each state, and the notice
 // that says why a machine runs no jobs, takes no new ones, or runs fewer jobs
-// than its slots. Every value comes from the MachineView of GET machines. The
-// slots are in machines-slots.ts, and the health, cache, and cost panels in
-// machines-panels.ts.
+// than its slots. Every value comes from the MachineView of GET machines and
+// the overflow summary. The slots are in machines-slots.ts, and the health,
+// cache, and cost panels in machines-panels.ts.
 
-import type { MachineCommand } from "../api/machine-schema.ts";
+import type {
+  MachineCommand,
+  OverflowSettings,
+} from "../api/machine-schema.ts";
 import type { MachineView } from "../api/schema.ts";
 import type { NoticeTone } from "./page-model.ts";
 import { detailCopy, noticeCopy } from "./machines-copy.ts";
@@ -15,6 +18,7 @@ import {
   countRunners,
   hardwareText,
   machineStatus,
+  untilReadyText,
 } from "./machines.ts";
 
 /**
@@ -64,13 +68,15 @@ export function headerActions(machine: MachineView): HeaderAction[] {
       return machine.draining ? [resume, remove] : [remove];
     case "draining":
       return [resume];
+    case "preparing":
     case "healthy":
       return [drain, remove];
   }
 }
 
 export type MachineNotice = {
-  key: "offline" | "no-kvm" | "no-slots" | "draining" | "disk-limit";
+  key:
+    "offline" | "no-kvm" | "no-slots" | "draining" | "preparing" | "disk-limit";
   tone: NoticeTone;
   title: string;
   body: string;
@@ -83,7 +89,34 @@ function jobsRunning(machine: MachineView): number | null {
   return countRunners(machine, "job");
 }
 
-function statusNotice(machine: MachineView, now: number): MachineNotice | null {
+/**
+ * The notice of a machine that gets its first job image: when jobs start on
+ * it, and where they run until then, unless they wait for it.
+ */
+function preparingNotice(
+  machine: MachineView,
+  machines: readonly MachineView[],
+  summary: OverflowSettings | null,
+): MachineNotice {
+  const until = untilReadyText(machine, machines, summary);
+  return {
+    key: "preparing",
+    tone: "info",
+    title: noticeCopy.preparingTitle(machine.hostname),
+    body:
+      until === null
+        ? noticeCopy.preparing
+        : `${noticeCopy.preparing} ${until}`,
+    fix: false,
+  };
+}
+
+function statusNotice(
+  machine: MachineView,
+  machines: readonly MachineView[],
+  summary: OverflowSettings | null,
+  now: number,
+): MachineNotice | null {
   const host = machine.hostname;
   switch (machineStatus(machine)) {
     case "offline":
@@ -118,6 +151,8 @@ function statusNotice(machine: MachineView, now: number): MachineNotice | null {
         body: noticeCopy.draining(jobsRunning(machine)),
         fix: false,
       };
+    case "preparing":
+      return preparingNotice(machine, machines, summary);
     case "healthy": {
       const limit = diskLimit(machine);
       return limit === null
@@ -135,12 +170,16 @@ function statusNotice(machine: MachineView, now: number): MachineNotice | null {
 
 /**
  * The notice that leads the page: offline, no KVM, no room for a slot, a
- * drain, or a disk that holds fewer jobs of ciproxy than the slots, when the
- * API says that the disk sets that number. Each state shows one notice.
+ * drain, the first job image, or a disk that holds fewer jobs of ciproxy than
+ * the slots, when the API says that the disk sets that number. Each state
+ * shows one notice. `machines` and `summary` say where jobs run until a
+ * machine has its first job image.
  */
 export function machineNotice(
   machine: MachineView,
+  machines: readonly MachineView[],
+  summary: OverflowSettings | null,
   now: number,
 ): MachineNotice | null {
-  return statusNotice(machine, now);
+  return statusNotice(machine, machines, summary, now);
 }

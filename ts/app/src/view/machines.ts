@@ -1,8 +1,9 @@
 // The facts of the Machines list, from GET machines and the overflow summary
 // only: the state of each machine, its slots, the figures above the table,
-// and where jobs go while a machine takes none. A fact that the API does not
-// give stays out, or shows as not reported. machines-cache.ts gives the cache
-// figures.
+// and where jobs go while a machine takes none. Whether a machine is offline,
+// gets its first job image, or is ready comes from the state of the API, which
+// routing reads too. A fact that the API does not give stays out, or shows as
+// not reported. machines-cache.ts gives the cache figures.
 
 import type { MachineView, SlotState, SlotView } from "../api/schema.ts";
 import type { OverflowSettings } from "../api/machine-schema.ts";
@@ -26,14 +27,31 @@ import {
 export type MachineStatus = keyof typeof statusWords;
 
 /**
- * Offline first, then a machine that cannot run jobs, then a drain. A machine
- * without KVM gets no slots, as the agent doc says.
+ * Offline first, then a machine that cannot run jobs, then a drain, then a
+ * machine that gets its first job image. A machine without KVM gets no slots,
+ * as the agent doc says. A drained machine takes no new job either way, and
+ * the drain is the customer's own action, so it shows over the image wait.
  */
 export function machineStatus(machine: MachineView): MachineStatus {
-  if (machine.offline) return "offline";
+  if (machine.state === "offline") return "offline";
   if (!machine.kvm || machine.slots === 0) return "no-slots";
   if (machine.draining) return "draining";
+  if (machine.state === "preparing") return "preparing";
   return "healthy";
+}
+
+/**
+ * Whether the slots of the machine run jobs or can take them, so that the
+ * figures and the jobs at a time count them: the API says that the machine
+ * is ready, and it has slots. A drain still runs its jobs. An offline machine
+ * reports old slots, and a machine that gets its first job image runs no job,
+ * also while it drains.
+ */
+export function slotsLive(machine: MachineView): boolean {
+  const status = machineStatus(machine);
+  return (
+    machine.state === "ready" && (status === "healthy" || status === "draining")
+  );
 }
 
 /** The reported slots in slot order, each with its own index. */
@@ -43,7 +61,14 @@ export function slotEntries(machine: MachineView): SlotView[] {
   );
 }
 
-export function slotStates(machine: MachineView): SlotState[] {
+/**
+ * The slot bar of the list, in slot order. An offline machine reports old
+ * slots, and no job starts in the slots of a machine that gets its first job
+ * image, so neither shows a bar. Its caption says why.
+ */
+export function slotBar(machine: MachineView): SlotState[] {
+  const status = machineStatus(machine);
+  if (status === "offline" || status === "preparing") return [];
   return slotEntries(machine).map((slot) => slot.state);
 }
 
@@ -69,6 +94,7 @@ export function slotCaption(machine: MachineView): string {
   const status = machineStatus(machine);
   if (status === "offline") return slotCopy.offline;
   if (status === "no-slots") return slotCopy.none;
+  if (status === "preparing") return slotCopy.preparing;
   if (machine.occupancy.length === 0) return slotCopy.unreported(machine.slots);
   return slotCopy.busyWarm(
     countState(machine, "job"),
@@ -103,16 +129,14 @@ export type MachineFigures = {
 };
 
 /**
- * The figures above the table. Slots count only the machines that can run
- * jobs now; the occupancy of an offline machine is old, so it counts none.
+ * The figures above the table. Slots and warm runners count only the machines
+ * whose slots are live: the occupancy of an offline machine is old, and a
+ * machine that gets its first job image takes no job yet.
  */
 export function machineFigures(
   machines: readonly MachineView[],
 ): MachineFigures {
-  const live = machines.filter((machine) => {
-    const status = machineStatus(machine);
-    return status === "healthy" || status === "draining";
-  });
+  const live = machines.filter(slotsLive);
   const total = live.reduce((sum, machine) => sum + machine.slots, 0);
   const used = live.reduce(
     (sum, machine) => sum + countState(machine, "job"),
@@ -143,22 +167,54 @@ export function boatTakesJobs(summary: OverflowSettings | null): boolean {
   );
 }
 
+/** Whether a machine other than `machine` takes new jobs now. */
+export function otherMachineTakesJobs(
+  machine: MachineView,
+  machines: readonly MachineView[],
+): boolean {
+  return machines.some(
+    (other) => other.id !== machine.id && machineStatus(other) === "healthy",
+  );
+}
+
 /**
- * Where jobs go while `machine` takes none: the other machines that run jobs
- * now, and Boat when it takes jobs. `subject` leads the sentence.
+ * The sentence of where jobs go while `machine` takes none: the other
+ * machines that take jobs now, and Boat when it takes jobs. Null when no
+ * other place takes them.
  */
+function elsewhereSentence(
+  machine: MachineView,
+  machines: readonly MachineView[],
+  summary: OverflowSettings | null,
+): ((subject: string) => string) | null {
+  const others = otherMachineTakesJobs(machine, machines);
+  const boat = boatTakesJobs(summary);
+  if (others && boat) return elsewhereCopy.machinesAndBoat;
+  if (others) return elsewhereCopy.machines;
+  if (boat) return elsewhereCopy.boat;
+  return null;
+}
+
+/** Where jobs go while `machine` takes none. `subject` leads the sentence. */
 export function elsewhereText(
   machine: MachineView,
   machines: readonly MachineView[],
   summary: OverflowSettings | null,
   subject: string = elsewhereCopy.jobs,
 ): string {
-  const others = machines.some(
-    (other) => other.id !== machine.id && machineStatus(other) === "healthy",
-  );
-  const boat = boatTakesJobs(summary);
-  if (others && boat) return elsewhereCopy.machinesAndBoat(subject);
-  if (others) return elsewhereCopy.machines(subject);
-  if (boat) return elsewhereCopy.boat(subject);
-  return elsewhereCopy.wait(subject);
+  const sentence = elsewhereSentence(machine, machines, summary);
+  return (sentence ?? elsewhereCopy.wait)(subject);
+}
+
+/**
+ * Where jobs run until a machine that gets its first job image is ready, or
+ * null when no other place takes them, so they wait for it.
+ */
+export function untilReadyText(
+  machine: MachineView,
+  machines: readonly MachineView[],
+  summary: OverflowSettings | null,
+): string | null {
+  const sentence = elsewhereSentence(machine, machines, summary);
+  return sentence === null ? null : sentence(elsewhereCopy.untilReady);
 }

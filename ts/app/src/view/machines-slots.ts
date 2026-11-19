@@ -3,7 +3,8 @@
 // the dashboard job that the API matched to it, with the name of its
 // repository, its pull request or branch, how long it has run, and the job
 // identity for its link. A report job that the API could not match names no
-// job and links nowhere. A free slot that the disk cannot serve says so.
+// job and links nowhere. A free slot that the disk cannot serve says so. A
+// machine that gets its first job image shows no slot, only their size.
 
 import type { OverflowSettings } from "../api/machine-schema.ts";
 import type {
@@ -35,7 +36,12 @@ export type SlotRow = {
 };
 
 export type SlotsModel =
-  | { kind: "message"; text: string }
+  | {
+      kind: "message";
+      text: string;
+      /** The size of the slots, when the message leaves them out. */
+      caption: string | null;
+    }
   | {
       kind: "slots";
       states: SlotState[];
@@ -127,14 +133,25 @@ export function slotsModel(
 ): SlotsModel {
   const status = machineStatus(machine);
   if (status === "offline")
-    return { kind: "message", text: slotCopy.offlineBody };
+    return { kind: "message", text: slotCopy.offlineBody, caption: null };
+  if (status === "preparing") {
+    return {
+      kind: "message",
+      text: slotCopy.preparingBody,
+      caption: slotCopy.size(machine.slots),
+    };
+  }
   if (status === "no-slots") {
     const elsewhere = elsewhereText(machine, machines, summary);
-    return { kind: "message", text: slotCopy.noSlotsBody(elsewhere) };
+    return {
+      kind: "message",
+      text: slotCopy.noSlotsBody(elsewhere),
+      caption: null,
+    };
   }
   const entries = slotEntries(machine);
   if (entries.length === 0) {
-    return { kind: "message", text: slotCopy.unreportedBody };
+    return { kind: "message", text: slotCopy.unreportedBody, caption: null };
   }
   const jobs = concurrentJobs(machine);
   return {

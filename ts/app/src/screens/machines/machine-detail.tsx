@@ -128,6 +128,7 @@ export function MachineDetail({
     );
   }
   const status = machineStatus(machine);
+  const summary = overflowSummary(overflow);
   const now = services.env.now();
   const wide = viewport === "wide";
   const clearBusy =
@@ -163,6 +164,8 @@ export function MachineDetail({
       <MachinesRefreshNotice store={store} />
       <MachineNotices
         machine={machine}
+        machines={snapshot.machines}
+        summary={summary}
         workspaceId={workspaceId}
         admin={admin}
         change={change}
@@ -172,11 +175,7 @@ export function MachineDetail({
         <View style={[styles.column, wide && styles.columnWide]}>
           <SlotsPanel
             machine={machine}
-            model={slotsModel(
-              machine,
-              snapshot.machines,
-              overflowSummary(overflow),
-            )}
+            model={slotsModel(machine, snapshot.machines, summary)}
             jobsHref={jobHistoryHref(workspaceId)}
             jobHref={(jobId) => slotJobHref(workspaceId, jobId)}
             warm={warmControl(machine, change, changes, admin)}

@@ -80,7 +80,8 @@ node ts/app/scripts/m20-browser-smoke.ts
 
 The shell smoke, `browser-smoke.ts`, covers the sign-in and Setup pages and
 their states, Settings under Overflow, the shell, and the reload after a
-build change.
+build change. Its Setup states include a machine that gets its first job
+image, and a first job that waits for that machine after Skip for now.
 
 The page smoke, `browser-pages-smoke.ts`, covers the states of Jobs, the job
 page, Savings, Plan and usage, Plans, the Checkout review and return, and the
@@ -106,6 +107,8 @@ them while the first read waits, after a failed first read and its Try
 again, after a failed refresh, and after Clear cache. Other cases check the
 machine page whose machine cache, Docker disks, or both are unavailable, for
 each role, and the cache hits of the list with some or no measured machines.
+One case follows a machine that gets its first job image: its row and the
+slot figures of the list, its page, and Add a machine when it joins.
 
 - `--case=NAME` runs one case or a comma-separated list of cases. A name
   that matches no case fails the run. With no `--case`, a smoke runs every
