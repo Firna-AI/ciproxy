@@ -2648,7 +2648,7 @@ Depends on: 27b
       Branch: `conductor/m27e-27f-first-image-docs`.
 - [x] Match the Overview and Quickstart docs mockups to their current site
       pages.
-      User's call, 19 November 2026: fix now in this branch. The site text
+      My call, 19 November 2026: fix now in this branch. The site text
       comes from recorded decisions: Milestone 24, the docs review of 8
       November 2026, and the monthly spend limit of the Boat step.
       My call, 19 November 2026: the install command of each docs mockup
