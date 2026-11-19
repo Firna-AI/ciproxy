@@ -2568,7 +2568,7 @@ Depends on: none
 Item 124 = E, 19 November 2026: a machine that waits for its first image
 shows that state wherever a customer waits for a new machine or its first
 job. `follow-ups/machine-image-preparing-status.md` holds the full item
-until Milestones 27b to 27d settle it.
+until Milestones 27b to 27f settle it.
 
 - [x] Add the state of a machine that waits for its first image to the
       machine list, the machine page, Setup with its first-job step, and
@@ -2615,10 +2615,33 @@ Depends on: 27b, 27c
 
 - [ ] Show the state on the machine list, the machine page, Setup, and Add
       a machine, as the mockups of Milestone 27b show.
-- [ ] Add one sentence about the first image download to the "Add a
-      machine" guide and the Quickstart of the site.
+      My call, 19 November 2026: the status order is Offline, No slots,
+      Draining, Preparing, and then Healthy. Reason: a draining machine
+      takes no new job in either case, and the drain is the customer's
+      own action.
+
+## Milestone 27e: Mockups: the docs pages for the first image wait
+
+Tags: mockup
+
+Depends on: 27b
+
+- [ ] Add one sentence about the first image download to the docs mockups
+      of the "Add a machine" guide and the Quickstart. The Quickstart
+      mockup no longer says that the first job starts at once on a warm
+      runner.
+- [ ] Fix the machine page fixture of `office-pc-1`, which shows 91% cache
+      hits for a machine that never ran a job.
+
+## Milestone 27f: Site: the first image wait
+
+Depends on: 27e
+
+- [ ] Add the sentence about the first image download to the "Add a
+      machine" guide and the Quickstart of the site, as the mockups of
+      Milestone 27e show.
 - [ ] Delete `follow-ups/machine-image-preparing-status.md`, which
-      Milestones 27b to 27d settle.
+      Milestones 27b to 27f settle.
 
 ## Milestone 28: Verification, commit, review, and pull request
 
@@ -6347,7 +6370,7 @@ then C stay the fallbacks. Milestone 27a builds E. The full item is
 each machine to the machine API and to routing, and every page that shows
 a new machine or its first job shows the state. Rejected: A, B, and D,
 which copy the routing rule into the app, and C, a guide sentence only.
-Milestones 27b to 27d build E. The full item is
+Milestones 27b to 27f build E. The full item is
 `follow-ups/machine-image-preparing-status.md`.
 
 ### 125. Answers for later work, 19 November 2026
