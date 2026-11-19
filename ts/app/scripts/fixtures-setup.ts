@@ -29,6 +29,7 @@ export function machine(overrides: Partial<MachineView> = {}): MachineView {
     processor: "Fixture CPU",
     selected_image_disk_bytes: "40000000000",
     slots: 6,
+    state: "ready",
     threads: 12,
     warm_runners: 1,
     ...overrides,

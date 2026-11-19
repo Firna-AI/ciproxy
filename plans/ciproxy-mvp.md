@@ -2579,15 +2579,26 @@ until Milestones 27b to 27d settle it.
 
 Depends on: none
 
-- [ ] Add one function that gives each machine a closed state: offline,
+Implementation call, 19 November 2026: the machine API field `state` uses
+`offline`, `preparing`, and `ready`. These values describe contact and image
+readiness. Drain and resource fit stay separate.
+
+Documentation call, 19 November 2026: move install detail and capacity rules
+into linked protocol pages. This keeps each page short and preserves the
+existing section links.
+
+- [x] Add one function that gives each machine a closed state: offline,
       waiting for its first image, or ready. The gateway uses it for the
       machine view, and `machine_input` uses it for `connected`. Add the
       state to the machine API, and regenerate the API types.
-- [ ] Update `docs/protocol/agent.md` under "Install" and
+      Branch: `conductor/m27c-machine-image-state`.
+- [x] Update `docs/protocol/agent.md` under "Install" and
       `docs/protocol/job-routing.md`: a machine takes jobs only after it
       reports its image. Correct the fallback sentence under "Disk".
-- [ ] End a first `ciproxy-agent install` with one sentence about the image
+      Branch: `conductor/m27c-machine-image-state`.
+- [x] End a first `ciproxy-agent install` with one sentence about the image
       download.
+      Branch: `conductor/m27c-machine-image-state`.
 
 ## Milestone 27d: Dashboard UI: the image state of a machine
 

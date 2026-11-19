@@ -34,6 +34,9 @@ test("the machines reader keeps each fact, a null apart from zero, and the match
   const job = { ...wire.occupancy[0].job, runtime_seconds: "-4" };
   const occupancy = [{ ...wire.occupancy[0], job }];
   assert.equal(parseMachines([{ ...wire, occupancy }]), undefined);
+  for (const state of ["offline", "preparing", "ready"]) {
+    assert.equal(parseMachines([{ ...primary, state }])?.[0]?.state, state);
+  }
 });
 
 test("the machines reader keeps each part of a report measured or unavailable, and no report as null", () => {

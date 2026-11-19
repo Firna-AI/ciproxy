@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 use chrono::Duration;
 use ciproxy_protocol::agent::{AgentMessage, ControlMessage};
-use ciproxy_store_interface::gateway::{Contact, GatewayStore};
+use ciproxy_store_interface::gateway::{Contact, GatewayStore, MachineState};
 use unimock::unimock;
 use uuid::Uuid;
 
@@ -214,16 +214,13 @@ impl MachineGateway for Gateway {
             .internal()?
             .into_iter()
             .map(|snapshot| {
-                let online = snapshot
-                    .machine
-                    .last_contact_at
-                    .is_some_and(|at| now < at + Duration::seconds(60));
+                let state = snapshot.state(now);
                 MachineView {
                     snapshot,
-                    presence: if online {
-                        Presence::Online
-                    } else {
-                        Presence::Offline
+                    state,
+                    presence: match state {
+                        MachineState::Offline => Presence::Offline,
+                        MachineState::Preparing | MachineState::Ready => Presence::Online,
                     },
                 }
             })

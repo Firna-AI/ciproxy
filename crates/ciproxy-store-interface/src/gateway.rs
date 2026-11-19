@@ -1,6 +1,6 @@
 //! Atomic machine gateway queries and full latest reports.
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use ciproxy_protocol::reports::MachineReport;
 use unimock::unimock;
 use uuid::Uuid;
@@ -17,6 +17,39 @@ pub struct MachineSnapshot {
     pub machine: Machine,
     /// Latest full report, absent for registrations made before the gateway.
     pub report: Option<ReceivedReport>,
+}
+
+/// Shared contact and selected-image state for machine views and routing.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MachineState {
+    /// No contact arrived during the last sixty seconds.
+    Offline,
+    /// Contact is recent, but no reported image is selected for new jobs.
+    Preparing,
+    /// Contact is recent and the report selects an available image.
+    Ready,
+}
+
+impl MachineSnapshot {
+    /// Give the current contact and image state without changing other admission rules.
+    pub fn state(&self, now: DateTime<Utc>) -> MachineState {
+        if !self
+            .machine
+            .last_contact_at
+            .is_some_and(|at| now < at + Duration::seconds(60))
+        {
+            return MachineState::Offline;
+        }
+        if self
+            .report
+            .as_ref()
+            .is_some_and(|report| report.report.images.selected().is_some())
+        {
+            MachineState::Ready
+        } else {
+            MachineState::Preparing
+        }
+    }
 }
 
 /// One full inventory report bound to its trusted gateway receipt time.
@@ -105,3 +138,7 @@ pub trait GatewayStore: TokenStore + Send + Sync {
     fn revoke_machine(&self, workspace_id: Uuid, machine_id: Uuid, at: DateTime<Utc>)
     -> Result<()>;
 }
+
+#[cfg(test)]
+#[path = "_tests_/machine_state_tests.rs"]
+mod machine_state_tests;

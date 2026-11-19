@@ -15000,6 +15000,15 @@
           }
         }
       },
+      "MachineState": {
+        "type": "string",
+        "description": "The closed contact and selected-image states of a machine.",
+        "enum": [
+          "offline",
+          "preparing",
+          "ready"
+        ]
+      },
       "MachineView": {
         "type": "object",
         "description": "Hardware and state for one own machine. Byte counts use decimal strings.",
@@ -15012,6 +15021,7 @@
           "kvm",
           "slots",
           "capacity_known",
+          "state",
           "offline",
           "health_old",
           "draining",
@@ -15165,6 +15175,10 @@
             "type": "integer",
             "format": "int32",
             "description": "Reported CPU and memory slot capacity."
+          },
+          "state": {
+            "$ref": "#/components/schemas/MachineState",
+            "description": "Shared contact and selected-image state used by routing."
           },
           "threads": {
             "type": "integer",

@@ -1,7 +1,7 @@
 //! Explicit host budgets and the documented history window change routing.
 
 use ciproxy_agent::root_sizing::RootSizing;
-use ciproxy_protocol::identifiers::OrganizationId;
+use ciproxy_protocol::identifiers::{ImageId, OrganizationId};
 use ciproxy_protocol::statistics::Statistics;
 use ciproxy_scaler::actions::{Action, StartReason};
 use ciproxy_scaler::decision::decide;
@@ -9,6 +9,45 @@ use ciproxy_scaler::decision::decide;
 use crate::snapshot::build;
 
 use super::fixtures::{at, input, job, organization};
+
+#[test]
+fn routing_requires_recent_contact_and_a_selected_image() {
+    let mut input = input();
+    let runnable = vec![input.organizations[0].id];
+    let original = input.machines[0].clone();
+    for (name, age_seconds, image_id, connected) in [
+        ("ready", Some(59), Some("fixture"), true),
+        ("missing image", Some(0), None, false),
+        (
+            "unknown selected image",
+            Some(0),
+            Some("missing-image"),
+            false,
+        ),
+        ("no contact", None, Some("fixture"), false),
+        ("exact boundary", Some(60), Some("fixture"), false),
+        ("stale contact", Some(61), Some("fixture"), false),
+    ] {
+        let machine = &mut input.machines[0];
+        *machine = original.clone();
+        machine.machine.last_contact_at =
+            age_seconds.map(|seconds| at() - chrono::Duration::seconds(seconds));
+        machine.report.as_mut().unwrap().report.images.newest =
+            image_id.map(|id| ImageId(id.to_owned()));
+        let snapshot = build(&input, &runnable, at(), RootSizing::default());
+        assert_eq!(snapshot.machines[0].connected, connected, "{name}");
+        let warm_starts = decide(&snapshot)
+            .iter()
+            .filter(|action| matches!(action, Action::StartRunner(start) if start.reason == StartReason::WarmPool))
+            .count();
+        assert_eq!(warm_starts, usize::from(connected), "{name}");
+    }
+    input.machines[0] = original;
+    input.machines[0].report = None;
+    let snapshot = build(&input, &runnable, at(), RootSizing::default());
+    assert!(!snapshot.machines[0].connected, "no report");
+    assert_eq!(decide(&snapshot), vec![], "no report");
+}
 
 #[test]
 fn persisted_image_budget_still_limits_warm_starts_when_cache_reporting_fails() {

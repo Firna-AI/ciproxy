@@ -121,6 +121,11 @@ function machine(value: unknown): MachineView {
       decimal,
     ),
     slots: integer(fields.slots),
+    state: oneOf<MachineView["state"]>({
+      offline: true,
+      preparing: true,
+      ready: true,
+    })(fields.state),
     threads: integer(fields.threads),
     warm_runners: integer(fields.warm_runners),
   };

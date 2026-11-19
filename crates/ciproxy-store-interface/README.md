@@ -118,6 +118,9 @@ locks before it inserts the machine.
 They retain the full typed protocol report with a connection identifier.
 A `MachineSnapshot` returns it as a `ReceivedReport` with its receipt time.
 Later lifecycle contact does not change that time.
+`MachineSnapshot::state(now)` supplies the shared contact and image state.
+The gateway and routing use its `Offline`, `Preparing`, and `Ready` values.
+This state keeps drain and resource admission separate.
 Report writes preserve desired drain and warm settings.
 They reject replaced sessions and removed registrations.
 Gateway token issuance and registration serialize with workspace removal.
@@ -276,7 +279,8 @@ cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
 - [src/github_lifecycle.rs](src/github_lifecycle.rs) defines atomic App
   transitions and immutable ordered lifecycle delivery.
 - [src/metering](src/metering) defines metering facts and history APIs.
-- [src/gateway.rs](src/gateway.rs) defines atomic registration and reports.
+- [src/gateway.rs](src/gateway.rs) defines atomic registration, reports,
+  and `MachineSnapshot::state` for shared contact and image readiness.
 - [src/overflow](src/overflow) defines durable Boat sessions and deliveries.
 - [src/overflow/admission.rs](src/overflow/admission.rs) defines required
   monthly amounts, current label facts, prepared dispatch, and its outcomes.

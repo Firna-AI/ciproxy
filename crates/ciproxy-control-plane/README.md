@@ -72,6 +72,9 @@ queue, job ID binding and preparation, remote requests, report confirmation,
 stop replay, retirement authority, and the removal and take-out policies.
 Take-out checks saved retirement for both own-machine and Boat reservations
 before the API removes GitHub access.
+Routing reads `MachineSnapshot::state` from the store interface. Only `Ready`
+sets a machine's scaler connection flag. Resource and drain checks still
+control admission after that flag.
 
 ### Boat overflow
 
@@ -261,7 +264,7 @@ GitHub, and database access, so they stay operator work.
   credential, the workspace, and the saved Worker job binding, then lists
   the job's GitHub cache entries.
 - [src/snapshot.rs](src/snapshot.rs) builds the pure scaler's inputs,
-  including the saved Boat supply.
+  including the shared machine state and saved Boat supply.
 - [src/warm.rs](src/warm.rs) allocates warm runners from recent jobs.
 - [src/slots.rs](src/slots.rs) selects exact logical slot sets.
 - [src/http.rs](src/http.rs) mounts shared HTTP routes and health checks.
