@@ -2,7 +2,7 @@
 
 - **Severity:** High. **Effort:** Medium. **Confidence:** High.
   **Harder later:** Yes.
-- **Kind:** Needs decision.
+- **Kind:** Fix after merge.
 - **Added:** 2026-11-17, from the final review of 17 November 2026 of the
   branch `calummoore/ci-proxy-load-balancer`, finding 801.
 - **Source:** Review.
@@ -12,9 +12,8 @@
   `deploy/terraform/bootstrap/control-plane-images.tf:21`,
   `deploy/image-workflow-bootstrap.md:131`, and
   `deploy/control-plane-images.md:14`.
-- **Reason:** Every option needs a launch step or new infrastructure, and
-  the recommended B changes the shared image registry that the user chose
-  on 5 November 2026.
+- **Reason:** The user chose B on 19 November 2026, as a step of the
+  production launch.
 
 - **Terms:**
   - **Primary branch:** `calummoore/ci-proxy-load-balancer`, the
@@ -188,6 +187,6 @@
     build on each push.
   - C best protects the codebase, because it refuses every image without
     trusted provenance.
-- **Action:** ask the user, because every option needs a launch step or new
-  infrastructure, and the recommended B changes the shared image registry
-  that the user chose on 5 November 2026.
+- **Action:** fix after merge, apply B, because the user chose B on
+  19 November 2026 as a step of the production launch. B changes the
+  shared image registry that the user chose on 5 November 2026.

@@ -2,7 +2,7 @@
 
 - **Severity:** Medium. **Likelihood:** Common. **Effort:** Medium.
   **Confidence:** High. **Harder later:** No.
-- **Kind:** Needs decision.
+- **Kind:** Fix after merge.
 - **Added:** 2026-11-18, from `calummoore/ci-proxy-load-balancer`, live
   run 5, item 5 of its report.
 - **Location:** `crates/ciproxy-agent/src/installation.rs`, method
@@ -11,8 +11,8 @@
   `Error`. `crates/ciproxy-agent/src/main.rs`, function `main`.
   `crates/ciproxy-agent/src/host_preparation.rs`, functions `stage` and
   `stage_error`.
-- **Reason:** The fix gives the customer new facts and new actions in the
-  error texts of the install command, and no protocol doc states them.
+- **Reason:** The user chose C on 19 November 2026, as work after the
+  merge. C adds error texts that no protocol doc states yet.
 
 - **Terms:**
   - **Install token:** the token in the install command from the
@@ -119,6 +119,6 @@
   failure, also an unforeseen one like the first customer install of live
   run 5, for a little more work than A. D best meets the logging rule of
   the error contract, but it adds a dependency and needs URL redaction.
-- **Action:** ask the user, because the new error texts add facts and
-  actions that no protocol doc states, and the user reviews each new
-  user-visible text of this kind.
+- **Action:** fix after merge, apply C, because the user chose C on
+  19 November 2026, as work after the merge. The new error texts go to
+  the user for review with the change.

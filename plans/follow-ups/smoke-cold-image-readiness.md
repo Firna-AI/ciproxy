@@ -2,7 +2,7 @@
 
 - **Severity:** High. **Effort:** Medium. **Confidence:** High.
   **Harder later:** No.
-- **Kind:** Needs decision.
+- **Kind:** Fix after merge.
 - **Added:** 2026-11-18, from `calummoore/ci-proxy-load-balancer`, live
   run 5, item 4 of its report.
 - **Location:** `crates/ciproxy-agent/scripts/smoke-common.sh`, functions
@@ -10,8 +10,8 @@
   `crates/ciproxy-agent/scripts/smoke-host.sh`.
   `crates/ciproxy-agent/scripts/own_smoke.py`, methods `Smoke.__init__` and
   `Smoke.wait`.
-- **Reason:** Each fix lets a live smoke wait longer before its first job
-  starts, and a longer time limit for a test waits for the user.
+- **Reason:** The user chose E on 19 November 2026, as work after the
+  merge.
 
 - **Terms:**
   - **Cold image:** the state of a machine that has no verified job image
@@ -112,9 +112,9 @@
 - **Recommendation:** E, changed from B. The cold image meets every live
   smoke on a new host, and E costs the same as B, which also needs both the
   shell and the Python layer.
-- **Action:** ask the user, because each option lets a live smoke wait
-  longer before its first job starts, and a longer time limit for a test
-  waits for the user.
+- **Action:** fix after merge, apply E, because the user chose E on
+  19 November 2026, as work after the merge. Until then, the
+  fresh-machine smoke cannot pass on a new host.
 
 The fix needs three more details:
 

@@ -534,6 +534,9 @@ reserve. The image measurement sets the real budget later.
       ended, so the two reflink jobs and the uninstall did not run. The
       fix waits for the user: `follow-ups/smoke-cold-image-readiness.md`.
       Evidence: `.context/ciproxy-mvp/live-2026-11-18/report.md`.
+      Item 125, 19 November 2026: the user chose that fix after the merge.
+      So this smoke cannot pass before the merge, as item 122 = B asks.
+      That conflict waits for the user.
 
 ## Milestone 10: Job VM image
 
@@ -1057,6 +1060,9 @@ Live KVM and authenticated job checks remain with the orchestrator.
           directory. No Boat runner starts. My call, 17 November 2026: fix
           the path comparison in `futex-ai/sandbox`, then update the pin.
           The merge there needs the user's approval.
+          User answer, 19 November 2026: A, I merge it. `futex-ai/sandbox`
+          #14 merged as `ac412fc`, and pull request #82 pins it.
+          Branch: `conductor/live-run-4-boat-pin`.
     - [x] The firewall proof script waits for a cache usage report, which
           needs the agent's budget. My call: separate the readiness check
           from the usage report.
@@ -1072,7 +1078,8 @@ Live KVM and authenticated job checks remain with the orchestrator.
           seconds during the image download, as
           `follow-ups/smoke-cold-image-readiness.md` says.
     - [ ] Run the Boat `large` job with its exit callback and the three
-          overflow checks again. They wait for the Boat client fix above.
+          overflow checks again. They wait for the Boat client fix above
+          and for the Boat-native image of Milestone 27a.
   - [x] Replace the total time limit of image downloads with a stall limit.
         The image client ended each download after 3,600 seconds, so a link
         slower than about 40 Mbit/s could never finish the 18 GB image. My
@@ -1082,8 +1089,8 @@ Live KVM and authenticated job checks remain with the orchestrator.
         partial downloads stays in
         `follow-ups/repeat-install-image-download.md`.
         Branch: `conductor/image-download-stall-limit`.
-  - [ ] Publish agent pre-release 0.1.4 with the stall limit before the next
-        live run.
+  - [ ] Publish agent pre-release 0.1.4 with the stall limit and the install
+        line of Milestone 27c before the next live run.
 
 Owner review of pull request #31, round 1, 6 November 2026: the user chose
 fix now for findings 1 to 8 and fix after the merge for finding 9.
@@ -2519,6 +2526,81 @@ The repository is public from item 70 = E, and the site links to it.
       reusable image workflow on the primary branch to the one on protected
       `main`, after the launch merge puts the repository on `main`.
       Moved on 17 November 2026, at the user's request, to `follow-ups/production-launch.md`.
+
+## Milestone 27a: Boat-native job image
+
+Depends on: 13, 15
+
+Item 123 = E, 19 November 2026: a Boat job runs on Boat's own system, with
+the software of the job image installed on it. Boat's own systemd then
+starts the installed services, as on a machine.
+`follow-ups/boat-image-services.md` holds the full item until this
+milestone settles it.
+
+- [ ] Test one Boat sandbox: its base system, a native install of
+      PostgreSQL, MySQL, and Docker, Boat's controller after the installs,
+      and a restore from a snapshot.
+      Evidence: `.context/ciproxy-mvp/boat-native-test/`.
+- [ ] Design the Boat build from the test result: the image build steps
+      that run on Boat's base system, the pins that keep the versions of the
+      machine image, and the start of the guest as a systemd service. Record
+      the design calls here.
+- [ ] Update `docs/protocol/agent-images.md`: one image definition, built as
+      the machine image and as the Boat snapshot. State each difference that
+      stays, such as Boat's kernel.
+- [ ] Build the Boat snapshot with the image definition on Boat's base
+      system. Remove the `chroot` wrapper, the private namespace, the
+      restore of file capabilities, and the separate Docker start of
+      `image/boat-run.sh`.
+- [ ] Extend the Boat smoke: start an installed service, and check that it
+      is ready.
+- [ ] Publish an image release with its Boat snapshot. Then run the Boat
+      `large` job with its exit callback and the three overflow checks.
+- [ ] Delete `follow-ups/boat-image-services.md`, which this milestone
+      settles.
+
+## Milestone 27b: Mockups: the image state of a machine
+
+Tags: mockup
+
+Depends on: none
+
+Item 124 = E, 19 November 2026: a machine that waits for its first image
+shows that state wherever a customer waits for a new machine or its first
+job. `follow-ups/machine-image-preparing-status.md` holds the full item
+until Milestones 27b to 27d settle it.
+
+- [ ] Add the state of a machine that waits for its first image to the
+      machine list, the machine page, Setup with its first-job step, and
+      Add a machine. Its text says that the machine gets the job image and
+      that jobs start when it is ready. It promises no time.
+
+## Milestone 27c: Backend: the image state of a machine
+
+Depends on: none
+
+- [ ] Add one function that gives each machine a closed state: offline,
+      waiting for its first image, or ready. The gateway uses it for the
+      machine view, and `machine_input` uses it for `connected`. Add the
+      state to the machine API, and regenerate the API types.
+- [ ] Update `docs/protocol/agent.md` under "Install" and
+      `docs/protocol/job-routing.md`: a machine takes jobs only after it
+      reports its image. Correct the fallback sentence under "Disk".
+- [ ] End a first `ciproxy-agent install` with one sentence about the image
+      download.
+
+## Milestone 27d: Dashboard UI: the image state of a machine
+
+Tags: ui
+
+Depends on: 27b, 27c
+
+- [ ] Show the state on the machine list, the machine page, Setup, and Add
+      a machine, as the mockups of Milestone 27b show.
+- [ ] Add one sentence about the first image download to the "Add a
+      machine" guide and the Quickstart of the site.
+- [ ] Delete `follow-ups/machine-image-preparing-status.md`, which
+      Milestones 27b to 27d settle.
 
 ## Milestone 28: Verification, commit, review, and pull request
 
@@ -6229,3 +6311,35 @@ and the final review starts now, beside them.
 - **Wider fix:** None, because this is a choice of scope.
 - **Recommendation:** B.
 - **Action:** ask the user, because speed and coverage trade off.
+
+### 123. Boat jobs cannot start installed services
+
+**Answer, 19 November 2026:** E, after a test of one Boat sandbox. The
+user pointed to `Firna-AI/conductive`, which installs its software on
+Boat's own system and saves a snapshot. Rejected: A, a mapping of each
+service to Boat's service manager; B, the image's systemd in a private
+namespace, because its feasibility is unknown; C, a nested VM, because of
+larger Boat sizes; D, accepting the difference. If the test fails, B and
+then C stay the fallbacks. Milestone 27a builds E. The full item is
+`follow-ups/boat-image-services.md`.
+
+### 124. New machines look ready before their image is
+
+**Answer, 19 November 2026:** E. One function gives the closed state of
+each machine to the machine API and to routing, and every page that shows
+a new machine or its first job shows the state. Rejected: A, B, and D,
+which copy the routing rule into the app, and C, a guide sentence only.
+Milestones 27b to 27d build E. The full item is
+`follow-ups/machine-image-preparing-status.md`.
+
+### 125. Answers for later work, 19 November 2026
+
+- Prelaunch images: B, a new image repository at the launch. The work is
+  `follow-ups/prelaunch-image-boundary.md`.
+- Live smokes on a cold image: E, after the merge. The work is
+  `follow-ups/smoke-cold-image-readiness.md`.
+- Install failure texts: C, after the merge. The work is
+  `follow-ups/install-failure-messages.md`.
+- The licence-line gate: B, after the merge. The work is
+  `follow-ups/licence-line-gate.md`.
+- The Boat client fix: A. `futex-ai/sandbox` #14 merged as `ac412fc`.

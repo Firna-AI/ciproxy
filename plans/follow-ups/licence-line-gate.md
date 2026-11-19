@@ -2,7 +2,7 @@
 
 - **Severity:** Low. **Effort:** Medium. **Confidence:** High.
   **Harder later:** No.
-- **Kind:** Needs decision.
+- **Kind:** Fix after merge.
 - **Added:** 2026-11-17, from the final review of 17 November 2026 of the
   branch `calummoore/ci-proxy-load-balancer`: the blocked wider fix E of
   finding 1105, with finding 705 of round 1 as its previous example.
@@ -11,7 +11,8 @@
 - **Location:** `xtask/src/check/phases.rs`, the phases of the gate,
   `xtask/README.md`, the phase table, `AGENTS.md`, the licence rule under
   "Repository rules", and `README.md`, "Licence".
-- **Reason:** B adds a new gate phase, and only the user can add a gate.
+- **Reason:** The user approved the gate phase of B on 19 November 2026,
+  as work after the merge.
 
 - **Terms:**
   - **Licensed directory:** a directory with its own Apache-2.0 `LICENSE`
@@ -84,5 +85,5 @@
   the header of `scripts/cli-release.sh`.
 - **Recommendation:** B. The written rule did not prevent the class, and B
   catches it in every file at each gate run.
-- **Action:** ask the user, because B adds a new gate phase, and only the
-  user can add a gate.
+- **Action:** fix after merge, apply B, because the user approved this new
+  gate phase on 19 November 2026, as work after the merge.
