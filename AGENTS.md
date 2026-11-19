@@ -62,6 +62,9 @@ Run each command from the repository root.
   and string IDs.
   Byte counts and other large integers use decimal strings.
 - Build: `cargo build --workspace`
+- Rust test tools: the agent tests run the `e2fsprogs` tools, such as
+  `e2fsck`, and the control-plane tests run `openssl`. On Debian or
+  Ubuntu, use `sudo apt-get install e2fsprogs openssl`.
 - Targeted tests: `cargo test --package <crate> <test name filter>` for
   Rust. TypeScript tests live in a `_tests_` folder beside the code and run
   on the Node test runner: `node --test ts/<package>/_tests_/<name>.test.ts`.

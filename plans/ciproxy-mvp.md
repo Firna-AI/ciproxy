@@ -2675,8 +2675,9 @@ Depends on: 27e
       Milestone 27e show.
       Branch: `conductor/m27e-27f-first-image-docs`.
       Evidence: `.context/ciproxy-mvp/m27e-27f/site/`.
-- [ ] Delete `follow-ups/machine-image-preparing-status.md`, which
-      Milestones 27b to 27f settle.
+- [x] Delete `follow-ups/machine-image-preparing-status.md`, which
+      Milestones 27b to 27f settle. Done on 19 November 2026, after pull
+      requests #89 to #92 merged.
 
 ## Milestone 28: Verification, commit, review, and pull request
 
@@ -6405,8 +6406,9 @@ then C stay the fallbacks. Milestone 27a builds E. The full item is
 each machine to the machine API and to routing, and every page that shows
 a new machine or its first job shows the state. Rejected: A, B, and D,
 which copy the routing rule into the app, and C, a guide sentence only.
-Milestones 27b to 27f build E. The full item is
-`follow-ups/machine-image-preparing-status.md`.
+Milestones 27b to 27f built E, in pull requests #89 to #92. The full
+item, `follow-ups/machine-image-preparing-status.md`, was deleted on
+19 November 2026, when that work merged.
 
 ### 125. Answers for later work, 19 November 2026
 

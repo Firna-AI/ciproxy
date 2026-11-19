@@ -107,8 +107,10 @@
   - `plans/follow-ups/repeat-install-image-download.md`: same cause of a
     longer wait. A repeat install restarts the download, so the readiness
     wait must run after the repair step of the fresh-machine smoke.
-  - `plans/follow-ups/machine-image-preparing-status.md`: same cold image.
-    The dashboard shows such a machine as healthy.
+  - Since 19 November 2026, the machine API gives each machine a `state`
+    of `offline`, `preparing`, or `ready`, from the function that routing
+    uses. The dashboard shows a cold machine as Preparing. A Python live
+    smoke can wait on that field instead of the image index.
 - **Recommendation:** E, changed from B. The cold image meets every live
   smoke on a new host, and E costs the same as B, which also needs both the
   shell and the Python layer.
