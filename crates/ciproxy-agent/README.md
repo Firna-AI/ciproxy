@@ -20,6 +20,8 @@ This crate does not implement those components.
 
 `ciproxy-agent install --token TOKEN` registers once and installs systemd.
 A reinstall preserves the machine identity, its endpoint, and its drain state.
+After a first registration, install ends with a sentence about the job image
+download and taking jobs when ready. A reinstall keeps its existing output.
 Preview commands also supply `--agent-url` for their control plane.
 Registration saves the selected endpoint in the identity for credential use.
 `ciproxy-agent run` starts the daemon.
@@ -239,6 +241,7 @@ KVM and GitHub smoke checks, and release packaging commands.
   into an identity without one, and keeps a matching legacy file.
 - [src/installation.rs](src/installation.rs) registers once, or repairs
   and names both endpoints when the command selects another one.
+  `InstallOutcome::message` adds the image sentence only for a new registration.
 - [src/startup.rs](src/startup.rs) checks local completion before workload
   recovery and permits a removed machine to drain without a credential.
 - [src/controller.rs](src/controller.rs) defines durable machine control.

@@ -26,77 +26,24 @@ runs on own machines.
 
 - One command installs the agent and connects the own machine to a
   [workspace](workspaces.md#terms).
-- The [dashboard](../architecture.md#components) shows the command in Setup
-  and in Machines under "Add machine".
-- Only a person who may add a machine sees the command, as
-  [Roles](security.md#roles) says.
-- The command is one line, with the install token after `--token`:
-
-  ```sh
-  curl -fsSL https://get.ciproxy.dev | sudo sh -s -- install --token <install token>
-  ```
-
-- The command fetches the install script over HTTPS from the download site,
-  and runs it as root.
-- The copied command registers with the control plane that issued it.
-- A command for another environment supplies that environment's agent
-  endpoint from trusted runtime configuration, never from the request.
-- The production command keeps the form above.
-- [Agent endpoint](agent-endpoint.md#install) says which control plane an
-  install registers with, and what it does on a registered machine.
-- The install script installs the agent, then runs the agent with the
-  arguments that the command gives the script.
-- So the agent runs `install` with the install token, and the machine needs
-  no second command.
-- Install prepares Firecracker, its jailer, and the required host tools.
-- Install prepares a persistent reflink disk area in one XFS file on any
-  filesystem.
-- The area holds the [job disk](job-routing.md#terms).
-- The area holds the separate [image budget](job-routing.md#disk).
-- Its filesystem overhead comes from the host reserve.
-- The first install finishes measured area growth in the same call.
-- Repeated installation repairs missing parts and preserves machine
-  identity, drain state, and job data.
-- Uninstall finishes running jobs before it removes its owned disk area.
-- **Decision:** install prepares the tools and one XFS file with reflinks.
-  Rejected: customer preparation, full copies without reflinks, and
-  deferral until after launch. Reason: one command must prepare the machine
-  without a slow full-copy path.
-- **Decision:** the install script runs the agent with the arguments of the
-  script. Rejected: a second command that runs the agent after the
-  install. Reason: the install command stays one line.
-- An install token belongs to one workspace.
-- An install token works for one hour.
-- Within its hour, an install token adds any number of machines.
-- **Decision:** one install token adds any number of machines within its
-  hour. Rejected: one machine for each token, an approval of each new
-  machine in the dashboard, and a code that the agent prints for a person
-  to enter in the dashboard, because each one adds a step for every machine.
-- An Admin can revoke an install token before its hour ends.
-- After the revoke, the install token adds no machine.
-- The machines that registered with the token stay registered.
-- **Decision:** an Admin can revoke an install token. Rejected: a token
-  that always works for its whole hour, because a leaked token must not
-  stay usable.
-- An own machine needs x64 Linux with KVM, 4 cores, 16 GB of memory, and
-  250 GB of disk or more.
-- Reason: the 140 GB image budget leaves 110 GB before the host reserve.
-- The host keeps 27.5 GB, so the job disk is 82.5 GB.
-- [Worked examples](job-routing-examples.md) shows the default job fit with
-  the current image root.
-- An own machine also needs systemd and cgroup v2.
-- Its Linux distribution is Debian, Ubuntu, Fedora, RHEL, Rocky Linux, or
-  AlmaLinux.
-- **Decision:** own machines need systemd, cgroup v2, and one of these
-  distributions. Rejected: a promise of any x64 Linux host that meets the
-  hardware minimum, because customers must know these limits before they
-  set up a machine.
-- Next to the command, the dashboard says how long the install token works
-  and what the machine needs.
+- [Agent install](agent-install.md) gives the command, what install
+  prepares, the install token, and what an own machine needs.
 - Until the machine connects, the dashboard shows that it waits for the
   machine.
 - Then the dashboard shows the host name of the machine and what the agent
   reported: threads, memory, KVM, and [slots](job-routing.md#slots).
+- After the install, the agent downloads and extracts its first image.
+- The machine takes no job until it reports its selected image, as
+  [Own machines first](job-routing.md#own-machines-first) says.
+- Until then, each page that shows the connected machine or the first job
+  shows the machine as preparing.
+- The dashboard says that the machine gets the image, and that jobs start
+  when the machine is ready.
+- The first install ends its output with one sentence that explains this
+  wait.
+- No text about this wait promises a time.
+- **Decision:** the text about this wait promises no time. Rejected: an
+  expected time, because a slow link makes the large first download long.
 - A machine without KVM connects, but it cannot start a job VM, so it gets
   no slots.
 - The dashboard then says that the machine cannot start VMs, and it names
@@ -107,17 +54,12 @@ runs on own machines.
   machine without KVM.
 - A machine can run fewer jobs of the label `ciproxy` at a time than its
   slots hold, because each job also holds disk, as
-  [Disk](job-routing.md#disk) says.
+  [Disk](job-routing-capacity.md#disk) says.
 - The dashboard then says how many such jobs the machine runs at a time.
 - The machine page also gives the reason and the fix: add disk.
 - The page of a machine that cannot run jobs offers to remove the machine,
   as [Drain and remove](#drain-and-remove) says.
 - [Own machines](metering.md#own-machines) says how such a machine counts.
-- When the install command runs again on a registered machine, the machine
-  keeps its registration and its place in the
-  [machine count](metering.md#own-machines).
-- **Decision:** own machines run x64 Linux only. Rejected: more platforms,
-  because one platform is the fastest way to ship.
 
 ## Connection
 
@@ -238,6 +180,8 @@ runs on own machines.
 ## Related docs
 
 - [Architecture](../architecture.md): the components and the data flow.
+- [Agent install](agent-install.md): the install command, the install
+  token, and what an own machine needs.
 - [Agent connection](agent-connection.md): the connection and its limits.
 - [Agent endpoint](agent-endpoint.md): the control plane of an install and
   of the machine credential.

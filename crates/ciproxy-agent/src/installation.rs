@@ -22,8 +22,10 @@ pub(crate) trait Install: Send + Sync {
 
 /// The completed registration or repair result printed by the CLI.
 pub(crate) enum InstallOutcome {
-    /// Registration or repair uses the endpoint selected by the command.
+    /// Fresh registration uses the endpoint selected by the command.
     Installed,
+    /// Repair keeps an existing identity at the endpoint selected by the command.
+    Reinstalled,
     /// Repair kept an identity whose endpoint differs from the command.
     Repaired {
         endpoint: Option<AgentEndpoint>,
@@ -32,10 +34,11 @@ pub(crate) enum InstallOutcome {
 }
 
 impl InstallOutcome {
-    /// Produce the last CLI line after all install or repair work succeeds.
+    /// Produce the CLI output after all install or repair work succeeds.
     pub(crate) fn message(&self) -> String {
         match self {
-            Self::Installed => "ciproxy agent installed".to_owned(),
+            Self::Installed => "ciproxy agent installed\nThis machine downloads the job image and takes jobs when ready.".to_owned(),
+            Self::Reinstalled => "ciproxy agent installed".to_owned(),
             Self::Repaired {
                 endpoint,
                 requested,
@@ -71,7 +74,7 @@ impl Install for Installer {
         {
             self.service.install()?;
             return Ok(if identity.endpoint.as_ref() == Some(&self.endpoint) {
-                InstallOutcome::Installed
+                InstallOutcome::Reinstalled
             } else {
                 InstallOutcome::Repaired {
                     endpoint: identity.endpoint.clone(),

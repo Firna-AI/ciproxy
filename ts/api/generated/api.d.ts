@@ -1341,6 +1341,11 @@ export interface components {
              */
             monthly_cost_cents: components["schemas"]["Cents"];
         };
+        /**
+         * @description The closed contact and selected-image states of a machine.
+         * @enum {string}
+         */
+        MachineState: "offline" | "preparing" | "ready";
         /** @description Hardware and state for one own machine. Byte counts use decimal strings. */
         MachineView: {
             /** @description Exact release match, unavailable when current release metadata is absent. */
@@ -1395,6 +1400,8 @@ export interface components {
              * @description Reported CPU and memory slot capacity.
              */
             slots: number;
+            /** @description Shared contact and selected-image state used by routing. */
+            state: components["schemas"]["MachineState"];
             /**
              * Format: int32
              * @description Reported hardware threads.

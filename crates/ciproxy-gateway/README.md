@@ -43,6 +43,9 @@ clock. Each full report also keeps its own receipt time. Only `Register`,
 old report look new. At 60 seconds without
 contact, machine reads show offline and retain the last report. Closing a
 socket does not clear health or mark the machine offline early.
+Machine reads also expose the shared snapshot state. A machine with recent
+contact stays online while its state is `Preparing` without a selected image.
+The same state supplies routing readiness in the control plane.
 
 Drain and resume persist desired state before command delivery. Agent
 reports cannot change that setting. Removal revokes credentials before it
@@ -147,7 +150,8 @@ cargo clippy --package ciproxy-gateway --all-targets -- -D warnings
   `WebSocketTransport::new` uses the production limits. `TransportLimits`
   and `WebSocketTransport::with_limits` set explicit limits at composition.
 - [src/connections.rs](src/connections.rs) routes local commands by session.
-- [src/types.rs](src/types.rs) defines identities and machine actions.
+- [src/types.rs](src/types.rs) defines identities, machine actions, and
+  `MachineView` with its shared state and contact presence.
 - [src/logging.rs](src/logging.rs) protects hosted subscribers from raw
   dependency frame logs.
 - [tests/websocket](tests/websocket) tests the complete transport contract.

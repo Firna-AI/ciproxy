@@ -1,6 +1,7 @@
 //! Own-machine views, health, cache facts, and Admin controls.
 
 use chrono::{DateTime, Utc};
+use ciproxy_store_interface::gateway;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
@@ -41,6 +42,8 @@ pub struct MachineView {
     pub disk_limited: Option<bool>,
     /// Whether prepared capacity and the required root allocation are available.
     pub capacity_known: bool,
+    /// Shared contact and selected-image state used by routing.
+    pub state: MachineState,
     /// Whether no contact arrived during the last sixty seconds.
     pub offline: bool,
     /// Whether health values describe old contact data.
@@ -65,6 +68,28 @@ pub struct MachineView {
     pub cache: Option<CacheView>,
     /// Current monthly machine cost in integer US cents.
     pub monthly_cost_cents: Option<Cents>,
+}
+
+/// The closed contact and selected-image states of a machine.
+#[derive(Deserialize, Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum MachineState {
+    /// No contact arrived during the last sixty seconds.
+    Offline,
+    /// Contact is recent, but no reported image is selected for new jobs.
+    Preparing,
+    /// Contact is recent and the report selects an available image.
+    Ready,
+}
+
+impl From<gateway::MachineState> for MachineState {
+    fn from(value: gateway::MachineState) -> Self {
+        match value {
+            gateway::MachineState::Offline => Self::Offline,
+            gateway::MachineState::Preparing => Self::Preparing,
+            gateway::MachineState::Ready => Self::Ready,
+        }
+    }
 }
 
 /// Last reported disk capacity and free space.

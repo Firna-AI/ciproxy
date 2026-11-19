@@ -4,6 +4,8 @@ use axum::http::StatusCode;
 use chrono::Duration;
 use ciproxy_gateway::types::Handshake;
 use ciproxy_protocol::agent::{AgentMessage, ControlMessage};
+use ciproxy_protocol::identifiers::ImageId;
+use ciproxy_protocol::images::ImageMetadata;
 use ciproxy_protocol::reports::MachineReport;
 use ciproxy_protocol::secret::Secret;
 use ciproxy_protocol::version::ProtocolVersion;
@@ -70,7 +72,11 @@ async fn admin_controls_machine_and_clear_cache_targets_only_its_machine_entries
     )
     .await;
     assert_eq!(list.as_array().unwrap().len(), 1);
+    assert_eq!(list[0]["state"], "preparing");
     let view = json(fixture.request(Some(&admin), "GET", &path, None).await).await;
+    assert_eq!(view["state"], "preparing");
+    assert_eq!(view["offline"], false);
+    assert_eq!(view["health_old"], false);
     assert_eq!(view["concurrent_default_jobs"], "2");
     assert_eq!(view["default_jobs_by_slots"], "6");
     assert_eq!(view["default_root_disk_bytes"], "80000000000");
@@ -208,8 +214,32 @@ async fn admin_controls_machine_and_clear_cache_targets_only_its_machine_entries
                 | ("resume", ControlMessage::Resume { .. })
         ));
     }
+    let mut ready_report = report();
+    ready_report.images.newest = Some(ImageId("verified-image".to_owned()));
+    ready_report.images.available.push(ImageMetadata {
+        image_id: ImageId("verified-image".to_owned()),
+        root_disk_bytes: 60_000_000_000,
+    });
+    let gateway = fixture.gateway.clone();
+    let session = handshake.session;
+    tokio::task::spawn_blocking(move || {
+        gateway.receive(
+            session,
+            AgentMessage::Report {
+                report: ready_report,
+            },
+        )
+    })
+    .await
+    .unwrap()
+    .unwrap();
+    let ready = json(fixture.request(Some(&admin), "GET", &path, None).await).await;
+    assert_eq!(ready["state"], "ready");
+    assert_eq!(ready["offline"], false);
+    assert_eq!(ready["health_old"], false);
     fixture.advance(Duration::seconds(60));
     let view = json(fixture.request(Some(&admin), "GET", &path, None).await).await;
+    assert_eq!(view["state"], "offline");
     assert_eq!(view["offline"], true);
     assert_eq!(view["health_old"], true);
     assert_eq!(view["cache"]["machine_cache"]["used_bytes"], "512");

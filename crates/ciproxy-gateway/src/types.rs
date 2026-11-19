@@ -3,7 +3,7 @@
 use chrono::{DateTime, Utc};
 use ciproxy_protocol::agent::ControlMessage;
 use ciproxy_protocol::secret::Secret;
-use ciproxy_store_interface::gateway::MachineSnapshot;
+use ciproxy_store_interface::gateway::{MachineSnapshot, MachineState};
 use uuid::Uuid;
 
 use crate::connections::Outbox;
@@ -67,7 +67,7 @@ pub enum Delivery {
 pub enum Presence {
     /// The last contact was less than sixty seconds ago.
     Online,
-    /// There was no contact for sixty seconds or no report exists.
+    /// There was no contact for sixty seconds or no contact was recorded.
     Offline,
 }
 
@@ -76,6 +76,8 @@ pub enum Presence {
 pub struct MachineView {
     /// Persisted latest health and desired machine settings.
     pub snapshot: MachineSnapshot,
+    /// Shared contact and image state used by routing.
+    pub state: MachineState,
     /// Offline reports remain available and have old health values.
     pub presence: Presence,
 }

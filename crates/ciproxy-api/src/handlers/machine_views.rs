@@ -124,6 +124,7 @@ pub(super) fn machine(
             .zip(allocated)
             .map(|(resources, size)| resources.concurrent_vms(size).to_string()),
         capacity_known: resources.is_some() && allocated.is_some(),
+        state: value.state.into(),
         offline: value.presence == Presence::Offline,
         health_old: value.presence == Presence::Offline,
         draining: machine.draining,

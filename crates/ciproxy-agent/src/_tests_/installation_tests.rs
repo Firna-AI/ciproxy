@@ -38,7 +38,10 @@ async fn reinstall_keeps_registration_without_reusing_the_install_token() {
         failed_starts: Default::default(),
         pending_networks: Default::default(),
         docker_budget: None,
-        identity: Some(identity()),
+        identity: Some(Identity {
+            endpoint: Some(AgentEndpoint::default()),
+            ..identity()
+        }),
         mode: Mode::Draining,
         runners: vec![vm("active-job", true)],
     };
@@ -64,10 +67,11 @@ async fn reinstall_keeps_registration_without_reusing_the_install_token() {
             })),
     ));
     let installer = installer(mock);
-    installer
+    let outcome = installer
         .install(Secret::new("expired-install-token"))
         .await
         .unwrap();
+    assert_eq!(outcome.message(), "ciproxy agent installed");
     assert_eq!(*events.lock().unwrap(), vec!["prepare", "service"]);
 }
 
@@ -116,10 +120,14 @@ async fn registration_saves_identity_and_endpoint_in_one_state_write() {
             )))),
         ServiceMock::install.some_call(matching!()).returns(Ok(())),
     ));
-    installer(mock)
+    let outcome = installer(mock)
         .install(Secret::new("install-secret"))
         .await
         .unwrap();
+    assert_eq!(
+        outcome.message(),
+        "ciproxy agent installed\nThis machine downloads the job image and takes jobs when ready."
+    );
     assert_eq!(
         *sent.lock().unwrap(),
         vec![AgentMessage::Register {

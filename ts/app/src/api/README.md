@@ -42,6 +42,8 @@ API build.
 
 - [client.ts](client.ts) is the one HTTP client. The readers in `parse-*.ts`
   narrow each response body to its generated type;
+  [parse-machines.ts](parse-machines.ts) keeps the shared machine `state`
+  from the generated contract without deriving it from other fields;
   [parse-jobs.ts](parse-jobs.ts) reads one dashboard job, as a busy slot
   names it. [route-path.ts](route-path.ts) builds the path of a generated
   route.

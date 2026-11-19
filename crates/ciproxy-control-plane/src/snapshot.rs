@@ -13,7 +13,7 @@ use ciproxy_scaler::registration::RegistrationTarget;
 use ciproxy_scaler::snapshot::{
     Destinations, Label, Machine, NothingFits, Runner, RunnerState, Snapshot, WaitingJob,
 };
-use ciproxy_store_interface::gateway::MachineSnapshot;
+use ciproxy_store_interface::gateway::{MachineSnapshot, MachineState};
 use ciproxy_store_interface::github::DemandPhase;
 use ciproxy_store_interface::labels::WhenNothingFits;
 use ciproxy_store_interface::organizations::AppState;
@@ -159,7 +159,7 @@ fn machine_input(
     Machine {
         id: MachineId(machine.machine.id.to_string()),
         selected_image: machine.report.as_ref().and_then(|report| report.report.images.selected().cloned()),
-        connected: machine.machine.last_contact_at.is_some_and(|at| now < at + chrono::Duration::seconds(60)) && machine.report.as_ref().is_some_and(|report| report.report.images.selected().is_some()),
+        connected: machine.state(now) == MachineState::Ready,
         draining: machine.machine.draining,
         capacity: resources.slots, disk_budget_bytes: resources.job_disk_bytes,
         docker_leased_bytes: machine.report.as_ref().and_then(|report| report.report.docker_disks.as_ref().measured().map(|docker| docker.leased_bytes)),

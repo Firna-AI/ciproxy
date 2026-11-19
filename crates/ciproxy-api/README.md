@@ -188,6 +188,9 @@ configured release host. The router constructs a redirect-free HTTPS client.
 Release failure leaves update status unavailable. Offline health still marks
 the last reported version and cache facts as old. Tests can supply a release
 collaborator with `router_with_agent_releases`.
+Each machine view has a required `state`: `offline`, `preparing`, or `ready`.
+The gateway supplies it from the shared contact and selected-image state
+that routing uses. `offline` and `health_old` still describe contact age.
 
 Machine views keep slot-only default-label fit separate from complete root
 allocation and prepared job disk. Slots expose a canonical job only after the
@@ -260,6 +263,8 @@ It never prints a cookie, token, install command, or response body.
 - [src/wire/overflow.rs](src/wire/overflow.rs) defines the Boat wire types.
 - [src/maintenance.rs](src/maintenance.rs) owns restart and hourly work.
 - [src/wire](src/wire) owns the Rust dashboard boundary types.
+- [src/wire/machines.rs](src/wire/machines.rs) defines the machine view and
+  its closed contact and selected-image state.
 - [src/wire/machine_statistics.rs](src/wire/machine_statistics.rs) carries
   independent cache and Docker observations through the shared protocol type.
 - [src/openapi.rs](src/openapi.rs) builds the generated reference.
