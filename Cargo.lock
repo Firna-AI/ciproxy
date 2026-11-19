@@ -2926,7 +2926,7 @@ dependencies = [
 [[package]]
 name = "sandbox-boat"
 version = "0.2.0"
-source = "git+https://github.com/futex-ai/sandbox?rev=037fbd7e3671975e79775c7dbcfb95b1a1fe37ab#037fbd7e3671975e79775c7dbcfb95b1a1fe37ab"
+source = "git+https://github.com/futex-ai/sandbox?rev=ac412fc52f201c9571531f08e4ada9a3ad837203#ac412fc52f201c9571531f08e4ada9a3ad837203"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -2950,7 +2950,7 @@ dependencies = [
 [[package]]
 name = "sandbox-interface"
 version = "0.2.0"
-source = "git+https://github.com/futex-ai/sandbox?rev=037fbd7e3671975e79775c7dbcfb95b1a1fe37ab#037fbd7e3671975e79775c7dbcfb95b1a1fe37ab"
+source = "git+https://github.com/futex-ai/sandbox?rev=ac412fc52f201c9571531f08e4ada9a3ad837203#ac412fc52f201c9571531f08e4ada9a3ad837203"
 dependencies = [
  "async-trait",
  "chrono",
@@ -2968,7 +2968,7 @@ dependencies = [
 [[package]]
 name = "sandbox-runtime-assets"
 version = "0.2.0"
-source = "git+https://github.com/futex-ai/sandbox?rev=037fbd7e3671975e79775c7dbcfb95b1a1fe37ab#037fbd7e3671975e79775c7dbcfb95b1a1fe37ab"
+source = "git+https://github.com/futex-ai/sandbox?rev=ac412fc52f201c9571531f08e4ada9a3ad837203#ac412fc52f201c9571531f08e4ada9a3ad837203"
 
 [[package]]
 name = "scaleset"
