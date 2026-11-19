@@ -198,6 +198,21 @@ export async function serveApi(
     send(page.status, page.body, page.requestBody);
     return;
   }
+  // Every role reads Machines and its overflow summary, as the API allows.
+  // The summary is the Boat settings of the scenario.
+  if (
+    method === "GET" &&
+    (action === "machines" || action === "overflow/summary")
+  ) {
+    if (member.role == null)
+      send(403, problem("access_denied", "A workspace role is required."));
+    else
+      send(
+        200,
+        action === "machines" ? current.machines : current.boat.settings,
+      );
+    return;
+  }
   if (member.role !== "admin") {
     send(403, problem("access_denied", "Admin role required."));
     return;
@@ -221,15 +236,6 @@ export async function serveApi(
         ? problem("unavailable", "Setup is unavailable.")
         : current.setup,
     );
-    return;
-  }
-  if (action === "machines" && method === "GET") {
-    send(200, current.machines);
-    return;
-  }
-  // Machines reads the overflow summary: the Boat settings of the scenario.
-  if (action === "overflow/summary" && method === "GET") {
-    send(200, current.boat.settings);
     return;
   }
   // The Settings page reads its labels and organizations. The Overflow page
