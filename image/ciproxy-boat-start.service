@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0
+[Unit]
+Description=Refresh the native Boat runtime and start its guest
+
+[Service]
+Type=oneshot
+User=root
+Slice=system.slice
+ExecStart=/opt/ciproxy-image/boat-start.sh
+RemainAfterExit=yes
+Restart=no
+TimeoutStartSec=infinity
+KillMode=control-group
+
+[Install]
+WantedBy=multi-user.target

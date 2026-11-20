@@ -6,13 +6,10 @@ import argparse
 import pathlib
 import shutil
 
+from pin_recipe import PINNED_RECIPE_DIRECTORY, render
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("upstream", type=pathlib.Path)
-    parser.add_argument("output", type=pathlib.Path)
-    args = parser.parse_args()
-    templates = args.upstream.resolve() / "images/ubuntu/templates"
+
+def prepare_template(templates, output):
     recipe = (templates / "build.ubuntu-24_04.pkr.hcl").read_text()
     recipe = recipe.replace('sources = ["source.azure-arm.image"]',
                             'sources = ["source.qemu.image"]')
@@ -73,10 +70,20 @@ def main():
   }
 '''
     recipe = recipe.rstrip().removesuffix("}") + packaging + "}\n"
-    args.output.mkdir(parents=True, exist_ok=True)
-    (args.output / "build.pkr.hcl").write_text(recipe)
-    shutil.copy(templates / "variable.ubuntu.pkr.hcl", args.output)
-    shutil.copy(pathlib.Path(__file__).with_name("source.qemu.pkr.hcl"), args.output)
+    output.mkdir(parents=True, exist_ok=True)
+    (output / "build.pkr.hcl").write_text(recipe)
+    shutil.copy(templates / "variable.ubuntu.pkr.hcl", output)
+    shutil.copy(pathlib.Path(__file__).with_name("source.qemu.pkr.hcl"), output)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("upstream", type=pathlib.Path)
+    parser.add_argument("output", type=pathlib.Path)
+    args = parser.parse_args()
+    pinned = args.output.resolve().parent / PINNED_RECIPE_DIRECTORY
+    render(args.upstream.resolve(), pinned)
+    prepare_template(pinned / "images/ubuntu/templates", args.output)
 
 
 if __name__ == "__main__":

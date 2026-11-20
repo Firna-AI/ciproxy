@@ -9,6 +9,8 @@ import shutil
 import subprocess
 import tempfile
 
+from pin_recipe import PINNED_RECIPE_DIRECTORY
+
 
 SOURCE_FSTAB = ("UUID=source-root / ext4 discard,errors=remount-ro 0 1\n"
                 "UUID=source-efi /boot/efi vfat umask=0077 0 1\n")
@@ -75,9 +77,12 @@ def create(workspace, image):
         target.write(b"!")
     pins = dict(line.split("=", 1) for line in (image / "pins.env").read_text().splitlines()
                 if line and not line.startswith("#"))
-    report = work / ("runner-images-" + pins["RUNNER_IMAGES_COMMIT"]) / "images/ubuntu"
+    report = work / PINNED_RECIPE_DIRECTORY / "images/ubuntu"
     report.mkdir(parents=True)
-    (report / "software-report.json").write_text("{}\n")
+    (report / "software-report.json").write_text('{"fixture_source":"pinned-recipe"}\n')
+    stale = work / ("runner-images-" + pins["RUNNER_IMAGES_COMMIT"]) / "images/ubuntu"
+    stale.mkdir(parents=True)
+    (stale / "software-report.json").write_text('{"fixture_source":"stale-unpinned-recipe"}\n')
     (work / "qemu-output").mkdir()
     (work / "qemu-output/ciproxy.qcow2").write_bytes(b"fixture source disk\n")
     (work / "upstream-software.json").write_text("{}\n")

@@ -13,7 +13,7 @@ fi
     sha256sum --check SHA256SUMS
 )
 gcloud storage cp "${generation_options[@]}" \
-    "$artifacts/rootfs.ext4" "$artifacts/rootfs.tar.zst" \
+    "$artifacts/rootfs.ext4" \
     "$artifacts/vmlinux" "$artifacts/upstream-software.json" \
     "$artifacts/software-report.json" \
     "$artifacts/firecracker.tar.zst" "$artifacts/firecracker-content.sha256" \

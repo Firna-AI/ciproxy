@@ -1,4 +1,4 @@
-//! End an own-machine Firecracker VM or leave a Boat namespace to its wrapper.
+//! End an own-machine Firecracker VM or leave Boat cleanup to its provider.
 
 use async_trait::async_trait;
 use tokio::process::Command;
@@ -40,10 +40,10 @@ impl Power for LinuxPower {
     }
 }
 
-pub(crate) struct NamespacePower;
+pub(crate) struct BoatPower;
 
 #[async_trait]
-impl Power for NamespacePower {
+impl Power for BoatPower {
     async fn shutdown(&mut self) -> Result<()> {
         Ok(())
     }

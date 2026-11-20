@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
-"""Check source mount order and both finalized artifacts without KVM."""
+"""Check source mount order and the finalized machine disk without KVM."""
 
 import argparse
 import configparser
@@ -76,17 +76,13 @@ def check_export(workspace):
                "source-archive-fstab") == SOURCE_FSTAB
 
     artifacts = work / "artifacts"
+    assert json.loads((artifacts / "software-report.json").read_text()) == {
+        "fixture_source": "pinned-recipe"}, "Export must use the rendered recipe's software report"
     measurement = json.loads((artifacts / "measurement.json").read_text())
     manifest = json.loads((artifacts / "manifest.json").read_text())
     assert measurement["rootfs"] == "rootfs", "Release measurement must use a neutral root label"
     assert manifest["measurements"]["rootfs"] == "rootfs", (
         "The manifest must not contain the build machine's extraction path")
-    expected_capabilities = {"version": 1, "files": [
-        {"path": name, "sha256": "7190561c52979663f3d0fcfb01186b6f67e3e82c5f9614ec1d488fda53218eaa",
-         "security_capability": CAPABILITY}
-        for name in ["privileged-tool", "tool-alias"]]}
-    assert manifest.get("file_capabilities") == expected_capabilities, (
-        "Release metadata must record every trusted file capability")
     root_disk_bytes = (artifacts / "rootfs.ext4").stat().st_size
     assert measurement.get("root_disk_bytes") == root_disk_bytes, (
         "Measurement must report the actual logical root disk size")
@@ -96,12 +92,6 @@ def check_export(workspace):
         "The small fixture root must not retain job-growth headroom")
     assert measurement["firecracker_ext4"]["offline_free_job_bytes"] >= 64 * 1024 ** 2, (
         "The compacted root must keep its free margin after the root reserve")
-    boat = root / "boat"
-    boat.mkdir()
-    run(["bash", str(image / "rootfs-archive.sh"), "extract",
-         str(artifacts / "rootfs.tar.zst"), str(boat)], root, "boat-extract")
-    assert (boat / "etc/fstab").read_text() == RELEASE_FSTAB, (
-        "Boat archive did not come from the finalized filesystem")
     disk = artifacts / "rootfs.ext4"
     geometry = run(["dumpe2fs", "-h", str(disk)], root, "ext4-geometry")
     fields = dict(line.split(":", 1) for line in geometry.splitlines() if ":" in line)
@@ -110,25 +100,17 @@ def check_export(workspace):
     assert disk_file(disk, "/etc/fstab", root, "ext4-fstab").decode() == RELEASE_FSTAB
     expected_acl = [(1, 7, None), (2, 5, 34567), (4, 5, None),
                     (16, 5, None), (32, 5, None)]
-    for tree in [work / "rootfs", boat]:
-        assert json.loads((tree / "etc/ciproxy/file-capabilities.json").read_text()) == expected_capabilities, (
-            "Both release trees must carry the same trusted capability metadata")
-        assert (tree / "opt/ciproxy-image/boat-run.sh").read_bytes() == (image / "boat-run.sh").read_bytes(), (
-            "Export must install the matching Boat capability restore consumer")
-        check_guest_network((tree / network_path).read_text())
-        assert (tree / service_path).read_bytes() == (source / service_path).read_bytes()
-        tool = tree / "privileged-tool"
-        assert (tool.stat().st_uid, tool.stat().st_gid, tool.stat().st_mode & 0o7777) == (1234, 2345, 0o755)
-        assert os.getxattr(tool, "security.capability").hex() == CAPABILITY
-        assert acl_entries(os.getxattr(tool, "system.posix_acl_access").hex()) == expected_acl
-        assert tool.stat().st_ino == (tree / "tool-alias").stat().st_ino
-        assert (tree / "sparse-data").stat().st_blocks * 512 < 8388608
+    tree = work / "rootfs"
+    check_guest_network((tree / network_path).read_text())
+    assert (tree / service_path).read_bytes() == (source / service_path).read_bytes()
+    tool = tree / "privileged-tool"
+    assert (tool.stat().st_uid, tool.stat().st_gid, tool.stat().st_mode & 0o7777) == (1234, 2345, 0o755)
+    assert os.getxattr(tool, "security.capability").hex() == CAPABILITY
+    assert acl_entries(os.getxattr(tool, "system.posix_acl_access").hex()) == expected_acl
+    assert tool.stat().st_ino == (tree / "tool-alias").stat().st_ino
+    assert (tree / "sparse-data").stat().st_blocks * 512 < 8388608
     assert disk_attribute(disk, "/privileged-tool", "security.capability", root,
                           "ext4-capability") == CAPABILITY
-    assert json.loads(disk_file(disk, "/etc/ciproxy/file-capabilities.json", root,
-                               "ext4-file-capabilities")) == expected_capabilities
-    assert disk_file(disk, "/opt/ciproxy-image/boat-run.sh", root,
-                     "ext4-boat-run") == (image / "boat-run.sh").read_bytes()
     check_guest_network(disk_file(disk, "/" + network_path, root, "ext4-network").decode())
     assert disk_file(disk, "/" + service_path, root, "ext4-guest-service") == (source / service_path).read_bytes()
     assert acl_entries(disk_attribute(disk, "/privileged-tool", "system.posix_acl_access",
@@ -150,7 +132,7 @@ def check_export(workspace):
         root, "release-checksums")
     (root / "result.json").write_text(json.dumps({
         "fixture_only": True, "source_mounts_preserved": True,
-        "firecracker_fstab": RELEASE_FSTAB, "boat_fstab": RELEASE_FSTAB,
+        "firecracker_fstab": RELEASE_FSTAB,
         "capabilities_acl_owners_hardlinks_sparse_preserved": True,
         "real_tools": ["tar", "zstd", "mkfs.ext4", "debugfs", "measure.py", "package.sh"],
         "stubbed_tools": ["provisioning tools inside chroot", "virt-customize", "guestfish", "sudo"],
@@ -165,7 +147,7 @@ def main():
     args = parser.parse_args()
     started = time.perf_counter()
     case = unittest.FunctionTestCase(lambda: check_export(args.work_dir),
-                                     description="source mounts survive until both artifacts are finalized")
+                                     description="source mounts and pinned software report reach the machine disk")
     result = unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite([case]))
     print(f"Regression command duration: {time.perf_counter() - started:.3f}s")
     return 0 if result.wasSuccessful() else 1

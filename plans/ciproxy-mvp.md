@@ -2575,6 +2575,40 @@ milestone settles it.
         restore keeps the processes of Boat's base.
       - Services stay disabled at start, as the recipe and GitHub's runners
         have them. A workflow starts them with `systemctl`.
+
+Owner implementation calls, 20 November 2026:
+
+- Use one shared definition of the rendered recipe path for the machine
+  export and its fixture. A wrong report path must fail the fixture.
+- Remove ciproxy's build-only files and apt settings before the snapshot.
+  Keep `/imagegeneration` and `/opt/post-generation`, as the machine image
+  does. Both builds run post-generation scripts during provisioning, with
+  no extra call at startup.
+- Keep upstream cache, test-helper, and apt-wrapper cleanup. Omit only
+  the native provider's temporary-file and log wipes.
+- Remove the dead final Boat archive, capability map, and their helpers
+  and tests. Keep the source archive and ext4 metadata preservation that
+  the machine build needs. Published old objects stay unchanged.
+- Before the install steps, remove each Boat command and shell setting that
+  shadows or blocks a tool of the pinned definition. Keep Boat's extra
+  tools that shadow no pinned tool, and keep its provider and agent
+  commands. Report the extra tools. Add no gate for a version difference.
+
+Implementation calls, 20 November 2026:
+
+- Queue daemon refresh and guest start in a root systemd unit. Restarting
+  Boat's user service manager must not stop initialization.
+- Run the final build from a clean Boat template after the local checks.
+  This proves the complete definition and cleanup from the provider base.
+- The Boat copy of the upstream owner test compares `/usr`, `/etc`,
+  `/usr/local`, and `/usr/local/bin` with their owners before the first
+  step. Reason: Boat's base gives `/usr/local` to its `user` account, and
+  the test still catches a build step that changes an owner.
+- A native move step depends on every source of the copy steps that write
+  its folder. Reason: a replayed copy must not leave a copied folder.
+- Start a new clean build source after the pin-precedence change. Reason:
+  the change alters the state before the first install step.
+
 - [ ] Update `docs/protocol/agent-images.md`: one image definition, built as
       the machine image and as the Boat snapshot. State each difference that
       stays, such as Boat's kernel.

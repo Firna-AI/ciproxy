@@ -77,7 +77,7 @@ impl GuestLauncher for ImageLauncher {
         let directory = registration_root(delivery_id);
         let marker = format!("/run/ciproxy-overflow/{}", delivery_id.simple());
         let command = format!(
-            "sudo -n /bin/sh -c 'set -eu; install -d -m 0700 /run/ciproxy-overflow; if mkdir {marker} 2>/dev/null; then nohup setsid /bin/bash /opt/ciproxy/rootfs/opt/ciproxy-image/boat-run.sh {directory}/registration.json </dev/null >/dev/null 2>&1 & fi'"
+            "sudo -n /bin/sh -c 'set -eu; install -d -m 0700 /run/ciproxy-overflow; if mkdir {marker} 2>/dev/null; then nohup setsid /bin/bash /opt/ciproxy-image/boat-run.sh {directory}/registration.json </dev/null >/dev/null 2>&1 & fi'"
         );
         let result = self
             .runtime

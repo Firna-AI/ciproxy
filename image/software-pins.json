@@ -1,0 +1,238 @@
+{
+  "sources": {
+    "reference_inventory_sha256": "d84dfc4a11ea6a3bb46b2db89e42533ec5077764ffb22f67f3ef43a7dab8b874",
+    "additional_versions_date": "2026-11-20"
+  },
+  "versions": {
+    "OS Version:": "24.04.5 LTS",
+    "Kernel Version:": "6.8.0-147-generic",
+    "Image Version:": "20261101.360.1",
+    "Systemd version:": "255.4-1ubuntu8.18",
+    "Bash": "5.2.21(1)-release",
+    "Clang": [
+      "16.0.6",
+      "17.0.6",
+      "18.1.3"
+    ],
+    "Clang-format": [
+      "16.0.6",
+      "17.0.6",
+      "18.1.3"
+    ],
+    "Clang-tidy": [
+      "16.0.6",
+      "17.0.6",
+      "18.1.3"
+    ],
+    "Dash": "0.5.12-6ubuntu5",
+    "GNU C++": [
+      "12.4.0",
+      "13.3.0",
+      "14.2.0"
+    ],
+    "GNU Fortran": [
+      "12.4.0",
+      "13.3.0",
+      "14.2.0"
+    ],
+    "Julia": "1.13.3",
+    "Kotlin": "2.4.21",
+    "Node.js": [
+      "22.23.4",
+      "24.22.2"
+    ],
+    "Perl": "5.38.2",
+    "Python": [
+      "3.11.18",
+      "3.12.16",
+      "3.13.18",
+      "3.14.10",
+      "3.15.2"
+    ],
+    "Ruby": [
+      "3.2.11",
+      "3.3.13",
+      "3.4.12",
+      "4.0.9"
+    ],
+    "Swift": "6.4.2",
+    "cpan": "1.64",
+    "Helm": "3.22.1",
+    "Homebrew": "7.0.12",
+    "Miniconda": "26.9.4",
+    "Npm": "10.9.9",
+    "Pip": "24.0",
+    "Pip3": "24.0",
+    "Pipx": "1.16.7",
+    "RubyGems": "3.4.20",
+    "Vcpkg": "(build from commit 29718cfec8)",
+    "Yarn": "1.22.22",
+    "Ant": "1.10.14",
+    "Gradle": "9.8.2",
+    "Lerna": "10.1.1",
+    "Maven": "3.10.0",
+    "Ansible": "2.21.6",
+    "AzCopy": "10.34.1 - available by `azcopy` and `azcopy10` aliases",
+    "Bazel": "9.3.1",
+    "Bazelisk": "1.28.1",
+    "Bicep": "0.48.1",
+    "Buildah": "1.33.7",
+    "CMake": "3.31.6",
+    "CodeQL Action Bundle": "2.27.4",
+    "Docker Amazon ECR Credential Helper": "0.12.0",
+    "Docker Compose": "2.38.2",
+    "Docker-Buildx": "0.38.2",
+    "Docker Client": "28.0.4",
+    "Docker Server": "28.0.4",
+    "Fastlane": "2.241.2",
+    "Git": "2.56.0",
+    "Git LFS": "3.8.1",
+    "Git-ftp": "1.6.0",
+    "Haveged": "1.9.14",
+    "jq": "1.7",
+    "Kind": "0.33.0",
+    "Kubectl": "1.37.2",
+    "Kustomize": "5.8.3",
+    "MediaInfo": "24.01",
+    "Mercurial": "6.7.2",
+    "Minikube": "1.39.0",
+    "n": "11.0.0",
+    "Newman": "6.2.3",
+    "nvm": "0.41.0",
+    "OpenSSL": "3.0.13-0ubuntu3.16",
+    "Packer": "1.16.2",
+    "Parcel": "2.16.4",
+    "Podman": "4.9.3",
+    "Pulumi": "3.274.0",
+    "Skopeo": "1.13.3",
+    "Sphinx Open Source Search Server": "2.2.11",
+    "yamllint": "1.38.0",
+    "yq": "4.54.1",
+    "zstd": "1.5.7",
+    "Ninja": "1.13.2",
+    "AWS CLI": "2.39.4",
+    "AWS CLI Session Manager Plugin": "1.2.896.0",
+    "AWS SAM CLI": "1.171.0",
+    "Azure CLI": "2.92.0",
+    "Azure CLI (azure-devops)": "1.0.10",
+    "GitHub CLI": "2.103.3",
+    "Google Cloud CLI": "592.0.0",
+    "PHP": [
+      "8.3.6"
+    ],
+    "Composer": "2.11.1",
+    "PHPUnit": "8.5.56",
+    "Cabal": "3.18.2.0",
+    "GHC": "9.14.1",
+    "GHCup": "0.2.6.2",
+    "Stack": "3.11.1",
+    "Cargo": "1.99.1",
+    "Rust": "1.99.1",
+    "Rustdoc": "1.99.1",
+    "Rustup": "1.29.3",
+    "Rustfmt": "1.10.0",
+    "Google Chrome": "157.0.8103.38",
+    "ChromeDriver": "157.0.8103.38",
+    "Chromium": "157.0.8103.0",
+    "Microsoft Edge": "156.0.4314.58",
+    "Microsoft Edge WebDriver": "156.0.4314.58",
+    "Selenium server": "4.52.0",
+    "Mozilla Firefox": "159.0.1",
+    "Geckodriver": "0.37.1",
+    ".NET Core SDK": [
+      "8.0.133",
+      "8.0.206",
+      "8.0.319",
+      "8.0.427",
+      "9.0.123",
+      "9.0.205",
+      "9.0.320",
+      "10.0.114",
+      "10.0.204",
+      "10.0.303",
+      "10.0.403"
+    ],
+    "nbgv": "3.10.94+dea9a6c17c",
+    "sqlite3": "3.45.1",
+    "PostgreSQL": "16.15",
+    "MySQL": "8.0.46-0ubuntu0.24.04.4",
+    "Go": [
+      "1.24.13",
+      "1.25.14",
+      "1.26.10"
+    ],
+    "PyPy": [
+      "3.9.19 [PyPy 7.3.16]",
+      "3.10.16 [PyPy 7.3.19]",
+      "3.11.17 [PyPy 8.0.1]"
+    ],
+    "PowerShell": "7.6.9",
+    "Az": [
+      "15.6.1"
+    ],
+    "Microsoft.Graph": [
+      "2.41.2"
+    ],
+    "Pester": [
+      "5.9.0"
+    ],
+    "PSScriptAnalyzer": [
+      "1.25.0"
+    ]
+  },
+  "github": {
+    "actions/action-versions": "v1.0.60",
+    "Azure/bicep": "v0.48.1",
+    "cli/cli": "v2.103.3",
+    "aws/aws-sam-cli": "v1.171.0",
+    "mikefarah/yq": "v4.54.1",
+    "apple/swift": "swift-6.4.2-RELEASE",
+    "facebook/zstd": "v1.5.7",
+    "nvm-sh/nvm": "v0.41.0",
+    "ninja-build/ninja": "v1.13.2",
+    "kubernetes-sigs/kind": "v0.33.0",
+    "JetBrains/kotlin": "v2.4.21",
+    "mozilla/geckodriver": "v0.37.1",
+    "SeleniumHQ/selenium": "selenium-4.52.0",
+    "awslabs/amazon-ecr-credential-helper": "v0.12.0",
+    "docker/buildx": "v0.38.2",
+    "docker/compose": "v2.38.2"
+  },
+  "extra": {
+    "containerd": "2.4.2",
+    "action_versions": "v1.0.60",
+    "awf": [
+      "v0.29.17",
+      "v0.29.16",
+      "v0.29.14"
+    ],
+    "copilot": "1.0.103",
+    "brew_install_commit": "c9c975046f78e6e6d662deb801bd461ebd6a54ed",
+    "vcpkg_commit": "29718cfec805208b4e2d80ed91e681143b488dd7",
+    "multi_json": "1.21.2",
+    "ansible": "14.6.0",
+    "PowerShellGet": "2.2.5",
+    "chromium_revision": "1717349"
+  },
+  "npm": {
+    "grunt": "1.6.3",
+    "gulp": "5.0.1",
+    "n": "11.0.0",
+    "parcel": "2.16.4",
+    "typescript": "7.0.2",
+    "newman": "6.2.3",
+    "webpack": "5.113.0",
+    "webpack-cli": "7.3.1",
+    "lerna": "10.1.1",
+    "yarn": "1.22.22",
+    "@bazel/bazelisk": "1.28.1"
+  },
+  "docker_images": {
+    "dependabot/dependabot-updater-core": "sha256:0db1b35c7649a933f69802029c5316502a958bb6a584a40dcaba5cac9a2a660f",
+    "github/gh-aw-mcpg": "sha256:0d7e6b64b3d13b2afed8988be5bf961d0dc65eb74989939df1f2d612eac3f9e3",
+    "github/gh-aw-firewall/agent": "sha256:ba0b06fcf767f4e2c4f36ee44eabca94353b491f534bb99e52d043d116a692f2",
+    "github/gh-aw-firewall/api-proxy": "sha256:b2c7388738463dbbf7ae1856f32cf55433ee43f2aac3dc31bd9267aa9c53dab1",
+    "github/gh-aw-firewall/squid": "sha256:ccf566a704ef09185a207794cdee9e2e396353cdf3d542353db5f756d3c8de02",
+    "github/github-mcp-server": "sha256:040c4e99810076035eb1d9beb4b4a96fcf589c43cefed6ff51a46a553eb4e174"
+  }
+}

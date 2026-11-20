@@ -8,10 +8,14 @@ jobs:
     steps:
       - run: |
           uname -a
+          id
           python3 --version
           node --version
           dotnet --list-sdks
           java -version
           docker version
           docker run --rm hello-world
+          sudo systemctl start postgresql
+          pg_isready
+          sudo -u postgres psql --no-psqlrc --tuples-only --command 'SELECT 1'
           df --block-size=1 /

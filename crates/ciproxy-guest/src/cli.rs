@@ -10,7 +10,7 @@ use crate::boat::BoatChannel;
 use crate::boundary::{Channel, Power};
 use crate::error::Result;
 use crate::guest_setup::LinuxGuestSetup;
-use crate::power::{LinuxPower, LinuxShutdownCommand, NamespacePower};
+use crate::power::{BoatPower, LinuxPower, LinuxShutdownCommand};
 use crate::process::LinuxRunner;
 use crate::service::{Guest, Supervisor};
 use crate::vsock::VsockChannel;
@@ -69,7 +69,7 @@ impl Application for LinuxApplication {
             ),
             Mode::Boat { registration_file } => (
                 Box::new(BoatChannel::from_file(&registration_file)?),
-                Box::new(NamespacePower),
+                Box::new(BoatPower),
             ),
         };
         let mut guest: Box<dyn Guest> = Box::new(Supervisor {

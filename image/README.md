@@ -2,10 +2,15 @@
 
 This Apache-2.0 image definition keeps the full Ubuntu 24.04 x64 software
 recipe of `actions/runner-images`.
-One built userspace supplies Firecracker disks and Boat snapshots.
+Each release builds it twice, with the same recipe and version pins.
+The machine build makes the Firecracker disk, which boots the bundled Linux
+kernel.
+The [Boat build](boat.md) installs the same software on Boat's own Ubuntu
+system and saves it as the Boat snapshot.
 The stock runner is the same in both.
-The bundled Linux kernel boots Firecracker.
-Boat keeps its provider kernel and services.
+Boat keeps its provider kernel, base packages, and provider services.
+[Agent images](../docs/protocol/agent-images.md) gives the requirements and
+each difference that stays.
 The [guest guide](../crates/ciproxy-guest/README.md) explains supervision.
 
 ## Inputs and build
@@ -16,7 +21,15 @@ configuration by version and SHA-256.
 The runner-images pin is `ubuntu24/20261101.360` at
 `add4380b0d6685806e9192c33c37359ee0aa4023`.
 Its inventory is the reference for the full software set.
-Some upstream provisioners resolve remote package repositories at build
+The recipe selects some software at its latest version.
+[software-pins.json](software-pins.json) pins each of these selections,
+such as tool versions, release assets, and container image digests.
+[software-apt-pins.json](software-apt-pins.json) pins the apt package
+revisions. Each pin uses the version of the reference inventory when the
+inventory names one. The other pins record a concrete version from their
+source. Both builds apply these pins to a copy of the recipe, the pinned
+recipe. [paths.env](paths.env) names its folder in `WORK_DIR`.
+Packages that no pin covers still resolve from their repositories at build
 time. Review the generated software inventory before publishing.
 
 Use a disposable x64 Linux build machine with KVM and enough disk for the
@@ -46,7 +59,7 @@ bash image/build.sh "$PWD/.context/ciproxy-image-build"
 ```
 
 This downloads and checks the inputs, builds the kernel and guest, and
-runs the full upstream provisioners in QEMU.
+runs the full provisioners of the pinned recipe in QEMU.
 QEMU supplies the image packaging.
 It retains the upstream software tests and software report.
 The QEMU bootstrap prepares the generic Ubuntu package sources for the
@@ -56,18 +69,11 @@ It adds the ciproxy guest, runner, kernel, and service after provisioning.
 No Azure account is needed.
 `rootfs-archive.sh` shares the export and extraction metadata policy.
 It saves numeric owners, extended attributes, and POSIX ACLs with guestfish.
-Both extraction paths use it to restore every saved attribute namespace.
+The extraction restores every saved attribute namespace.
 The partitioned source keeps its mount configuration through inspection and
 export. `source-rootfs.tar.zst` stays in `WORK_DIR` as an intermediate.
 The export extracts one release tree and sets `/dev/vda` in its `etc/fstab`.
-It installs the current `boat-run.sh` and `file-capabilities.py` in it.
-`file-capabilities.py` then writes the capability map of the tree to
-`etc/ciproxy/file-capabilities.json`. Each entry gives a file path, the
-SHA-256 of its contents, and its `security.capability` value.
-The capture follows no symbolic link and does not enter another filesystem.
-Both the Boat archive and Firecracker ext4 disk come from that finalized tree.
-Only the export writes the capability map.
-[Boat](boat.md#boat-smoke) restores the capabilities from it.
+The Firecracker ext4 disk comes from that finalized tree.
 
 To prepare inputs and the recipe without starting a VM:
 
@@ -102,22 +108,22 @@ complete release tree without software provisioning.
 
 ## Artifacts and measurements
 
-`WORK_DIR/artifacts` holds `rootfs.ext4`, `rootfs.tar.zst`, `vmlinux`, the
-reference software inventory, the generated software report, the release
-manifest, and `SHA256SUMS`.
+`WORK_DIR/artifacts` holds `rootfs.ext4`, `vmlinux`, the reference
+software inventory, the generated software report, the release manifest,
+and `SHA256SUMS`.
 `firecracker.tar.zst` bundles the sparse ext4 disk, kernel, inner manifest,
 inventories, measurement, and `firecracker-content.sha256`.
 The agent's single `ImageDownload` URL must point to that bundle.
 `downloads.json` gives its actual SHA-256 and byte size.
 After extraction, check `firecracker-content.sha256` before boot.
 The inner manifest excludes the bundle's own hash to avoid a hash cycle.
-The Boat download remains `rootfs.tar.zst`.
+Boat uses no release download. The [Boat build](boat.md) installs the
+same pinned image definition on Boat's own system.
 `package.sh ARTIFACT_DIR` can repeat the bundle and checksum step.
 Each artifact records its logical and allocated bytes.
 The measurement and release manifest expose `root_disk_bytes` at the top
 level. This is the actual logical length of `rootfs.ext4` in SI bytes.
 `write-manifest.py` copies this measured value into the manifest.
-It also copies the capability map into `file_capabilities`.
 The installed userspace records its apparent and allocated bytes.
 The measurement uses the neutral `rootfs` label instead of a machine path.
 The ext4 record uses the image's actual block geometry for offline free
@@ -146,7 +152,8 @@ Change `/etc/ciproxy/guest.env` when the agent uses another port.
 The agent must send one JSON object per line over that connection.
 The image service requests a guest reboot after exit, including an early
 initialization failure. With the agent's `reboot=k` argument, this reset
-ends x86 Firecracker. Boat does not start this systemd service.
+ends x86 Firecracker. The Boat snapshot has its own guest unit with no
+reboot, as [Boat launch](boat.md#boat-launch) says.
 
 The [checks and growth proofs](checks.md) cover the bootstrap and artifacts.
 Offline checks need no KVM. They grow a release copy with plain `resize2fs`,
@@ -170,18 +177,21 @@ Ship a required security update at once.
 GitHub can refuse an old runner after a newer release, or at once for a
 critical security update.
 The release check prints version data. A live smoke job proves acceptance.
-Repeat the full image build, publication, Boat snapshot, and both smoke
-jobs when the pins change.
+Repeat the machine build, publication, the Boat build and snapshot, and
+both smoke jobs when the pins change.
 
 ## Boat shared snapshot
 
-Follow the [Boat preparation guide](boat.md#boat-shared-snapshot) with the
-same checked userspace archive as Firecracker.
+Follow the [Boat build guide](boat.md#boat-shared-snapshot) after the
+machine build. It installs the same image definition on Boat's own system,
+with the same pins and the same built ciproxy parts. It then saves the Boat
+snapshot.
 
 ## Boat smoke
 
-The [Boat smoke guide](boat.md#boat-smoke) covers metadata, a real GitHub
-job, and callback cleanup. Boat keeps its provider network and resolver.
+The [Boat smoke guide](boat-smoke.md) covers metadata, a restore without
+a registration, a real GitHub job, and callback cleanup. Boat keeps its
+provider kernel, network, and resolver.
 
 ## Sources
 
