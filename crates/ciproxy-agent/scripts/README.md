@@ -12,6 +12,13 @@ the release workflow and local smoke checks. Run it from the repository
 root. The [packaging guide](../development.md#release-packaging) gives the
 build, glibc check, and archive commands.
 
+## Job image wait
+
+Each live smoke in this folder runs real GitHub jobs on the machine. Before
+its first job, it waits until the machine has its job image. The
+[smoke guide](../smoke-checks.md#wait-for-the-job-image) gives the rule,
+the time limit, and the inputs of the wait.
+
 ## Cache firewall proof
 
 [smoke-cache-egress.py](smoke-cache-egress.py) is the entry point of the
@@ -73,10 +80,21 @@ from the repository root:
 python3 -B -m unittest discover -s crates/ciproxy-agent/scripts/tests -v
 ```
 
-They check the network probes, readiness without a budget, and the usage
-report after the agent starts again. They do not count as live proof.
-The repository gate does not run them. Run them after you change these
-scripts.
+They check these things:
+
+- The network probes of the cache firewall proof.
+- Readiness without a budget, and the usage report after the agent starts
+  again.
+- The readiness rule of the job image wait, also with an expected release.
+- The time limit of the image wait, its default, and its override.
+- The order of the smoke steps: the image wait comes before the first warm
+  wait and the first dispatch, and after the repair of the ext4 host smoke.
+- The cancel of the dispatched GitHub run when a shell smoke fails.
+
+The image wait tests use a fake image index and a fake clock, so they never
+sleep. The shell tests run the real shell smokes with stand-in commands.
+They need `bash`, `jq`, and `rg`. The tests do not count as live proof. The
+repository gate does not run them. Run them after you change these scripts.
 
 ## Key Code
 
@@ -88,4 +106,11 @@ scripts.
   with the agent stopped and runs the firewall-failure job.
 - [cache_egress_network.py](cache_egress_network.py) runs the network
   probes against the installed cache.
+- [smoke_image.py](smoke_image.py) waits until the image index names a
+  ready job image, for the shell and the Python smokes.
+- [smoke-common.sh](smoke-common.sh) holds the shared steps of the shell
+  smokes. `prerequisites` runs the image wait, and `fail` tries to cancel
+  the dispatched GitHub run.
+- [own_smoke.py](own_smoke.py) holds `Smoke`, the shared client of the
+  Python smokes. `Smoke` runs the image wait when it starts.
 - [tests/](tests/) holds the regression tests and their stand-in hosts.
