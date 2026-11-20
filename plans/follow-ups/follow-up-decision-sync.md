@@ -13,7 +13,8 @@
   `references/follow-up-items.md` of the `plans` skill in
   `futex-ai/skills`.
 - **Reason:** The change is in `futex-ai/skills`, not in this repository.
-  The user chose A on 20 November 2026, in its own workspace there.
+  On 20 November 2026 the user chose to add the rule of B, in its own
+  workspace there.
 
 - **Terms:**
   - **Follow-up item:** one file under `plans/follow-ups/` that records work
@@ -92,6 +93,6 @@
     this class. Its direct fix does not wait for this item.
 - **Recommendation:** B. One rule at the step that makes an item stale
   covers both known cases, with no new field.
-- **Action:** fix after merge, apply A, because the user chose A on
-  20 November 2026, as its own workspace in `futex-ai/skills`. Delete this
-  item when that pull request merges.
+- **Action:** fix after merge, apply B, because on 20 November 2026 the
+  user chose to add this rule, as its own workspace in `futex-ai/skills`.
+  Delete this item when that pull request merges.

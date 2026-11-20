@@ -11,7 +11,8 @@
 - **Location:** None in this repository. The change goes in
   `delegating/SKILL.md` of `futex-ai/skills`, under "Independence test".
 - **Reason:** The change is in `futex-ai/skills`, not in this repository.
-  The user chose A on 20 November 2026, in its own workspace there.
+  On 20 November 2026 the user chose to add the rule of B, in its own
+  workspace there.
 
 - **Terms:**
   - **`delegating` skill:** the shared procedure that splits work across
@@ -101,6 +102,6 @@
 - **Recommendation:** B. One line at the step where the orchestrator splits
   the work stops both known cases, also when the plan did not foresee the
   shared piece.
-- **Action:** fix after merge, apply A, because the user chose A on
-  20 November 2026, as its own workspace in `futex-ai/skills`. Delete this
-  item when that pull request merges.
+- **Action:** fix after merge, apply B, because on 20 November 2026 the
+  user chose to add this rule, as its own workspace in `futex-ai/skills`.
+  Delete this item when that pull request merges.

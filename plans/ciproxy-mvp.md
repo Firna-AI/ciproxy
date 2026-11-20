@@ -6478,7 +6478,8 @@ answer "after the merge" of item 125 for that work, and it keeps item
 ### 127. Two rules for the shared skills
 
 **Answer, 20 November 2026:** add both rules, each in its own workspace
-of `futex-ai/skills`, with option A. The `delegating` skill gets the rule
+of `futex-ai/skills`. Option B of each follow-up item holds the rule. The
+`delegating` skill gets the rule
 that work items which need the same new shared piece start in parallel
 only after that piece is on the primary branch
 (`follow-ups/parallel-shared-code-duplication.md`). The `plans` skill
