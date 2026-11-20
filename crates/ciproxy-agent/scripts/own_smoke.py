@@ -10,6 +10,8 @@ import urllib.parse
 import urllib.request
 import uuid
 
+from smoke_image import ImageReadinessError, wait_for_image
+
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, request, response, code, message, headers, target):
@@ -37,6 +39,10 @@ class Smoke:
         if session["state"] != "ready":
             raise Failure("The dashboard session is not ready")
         self.csrf = session["csrf_token"]
+        try:
+            wait_for_image()
+        except ImageReadinessError as error:
+            raise Failure(str(error)) from None
 
     def request(self, origin, method, path, headers, body=None, absent=False):
         data = None if body is None else json.dumps(body).encode()

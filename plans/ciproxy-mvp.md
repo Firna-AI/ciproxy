@@ -2717,10 +2717,20 @@ Item 126 = B, 20 November 2026: the readiness wait of
 `follow-ups/smoke-cold-image-readiness.md`, option E, comes before the
 merge, so the fresh-machine smoke of Milestone 9 can pass.
 
-- [ ] Put the image readiness wait in the shared entry of every live smoke,
+- [x] Put the image readiness wait in the shared entry of every live smoke,
       as option E of that item says, with its three details: the expected
       release, the wait after the repair step, and the cancel of the
       dispatched run on a failure.
+      Design calls, 20 November 2026: the wait has its own default limit
+      of 7200 seconds, two hours, and `CIPROXY_SMOKE_IMAGE_TIMEOUT_SECONDS`
+      changes it for a slow link. Reason: the 18 GB download takes about
+      96 minutes at 25 Mbit/s, which leaves about 24 minutes for the check
+      and the extraction. One optional input,
+      `CIPROXY_SMOKE_IMAGE_RELEASE`, names the expected release for the
+      shell and the Python smokes alike. The Python smokes also read the
+      local image index, not the machine API, because each runs on the
+      machine.
+      Branch: `conductor/m27g-smoke-readiness`.
 - [ ] Delete `follow-ups/smoke-cold-image-readiness.md`, which this
       milestone settles.
 

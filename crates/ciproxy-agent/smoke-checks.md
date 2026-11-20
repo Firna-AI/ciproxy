@@ -34,10 +34,52 @@ The warm check proves that the runner was ready before dispatch.
 It snapshots every VM ID before dispatch, including Starting VMs.
 The replacement warm VM must have an ID absent from that snapshot.
 An active machine that never reaches warm readiness fails the check.
-The smoke host also needs journalctl.
+The smoke host also needs journalctl and Python 3.
 Each check waits for the used VM and disks to disappear.
 Evidence stays under `.context/ciproxy-mvp/`.
 Missing resources produce `SKIP` and exit 77. Failed checks exit 1.
+
+## Wait for the job image
+
+A new machine takes jobs only after its agent downloads, checks, and
+extracts the selected job image. The download is about 18 GB. So each live
+smoke, in shell and in Python, first waits for that image. Until the image
+is ready, the smoke waits for no warm runner and dispatches no job.
+
+The wait reads the image index of the machine. The image is ready when
+`newest` in the index names an image that `available` also lists. The
+control plane uses the same rule before it routes jobs to the machine.
+When the image is already ready, the wait ends at once. The smoke prints a
+`WAIT:` line when the wait starts. It prints a `READY:` line with the
+release when the image is ready.
+
+These optional inputs change the wait:
+
+- `CIPROXY_SMOKE_IMAGE_TIMEOUT_SECONDS` sets the time limit of the wait, in
+  whole seconds. The default is 7200 seconds, two hours.
+- `CIPROXY_SMOKE_IMAGE_INDEX` sets the path of the image index. The default
+  is `/var/lib/ciproxy/area/images/index.json`.
+- `CIPROXY_SMOKE_IMAGE_RELEASE` names the image release that the smoke
+  expects. Then `newest` must name that release. An older release in
+  `available` does not count.
+
+At 25 Mbit/s, the download takes about 96 minutes. The default limit then
+leaves about 24 minutes for the check and the extraction. On a slower link,
+set a larger limit. When you start a smoke with `sudo`, add each variable
+that you set to its `--preserve-env` list.
+
+The image wait has its own limit and its own failure message. The time
+limits of the job steps, such as `deadline_seconds` in the input JSON, do
+not change. They start only after the wait. If the image is not ready in
+time, the smoke fails with exit 1 and dispatches no job. Its message gives
+the last state of the image index.
+
+The [ext4 host smoke](host-preparation.md#ext4-and-kvm-smoke) waits after
+its repair step. The repair restarts the agent, which can start the image
+download again.
+
+When a smoke prints `FAIL` after it found its dispatched GitHub run, it
+tries to cancel that run. So a later smoke does not find an old queued job.
 
 ## Complete own-machine runtime check
 

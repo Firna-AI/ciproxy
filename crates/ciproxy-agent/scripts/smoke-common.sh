@@ -4,7 +4,13 @@ set +x
 set -euo pipefail
 
 skip() { printf 'SKIP: %s\n' "$1" >&2; exit 77; }
-fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
+fail() {
+  printf 'FAIL: %s\n' "$1" >&2
+  if [ -n "${smoke_run:-}" ]; then
+    gh run cancel "$smoke_run" --repo "$CIPROXY_SMOKE_REPO" >/dev/null 2>&1 || true
+  fi
+  exit 1
+}
 
 credentials() {
   [ -n "${CIPROXY_SMOKE_CREDENTIALS:-}" ] && [ -r "$CIPROXY_SMOKE_CREDENTIALS" ] || skip 'set CIPROXY_SMOKE_CREDENTIALS to a private JSON credential file'
@@ -17,7 +23,7 @@ prerequisites() {
   [ "$(uname -m)" = x86_64 ] || skip 'an x64 Linux machine is required'
   [ "$(id -u)" -eq 0 ] || skip 'root is required to inspect VM ownership'
   [ -r /dev/kvm ] && [ -w /dev/kvm ] || skip 'a usable /dev/kvm is required'
-  for tool in gh jq rg systemctl journalctl; do
+  for tool in gh jq rg systemctl journalctl python3; do
     command -v "$tool" >/dev/null 2>&1 || skip "$tool is required"
   done
   [ -n "${CIPROXY_SMOKE_REPO:-}" ] || skip 'set CIPROXY_SMOKE_REPO to the private test repository'
@@ -32,6 +38,7 @@ prerequisites() {
   smoke_id="$(date -u +%Y%m%dT%H%M%S)-$RANDOM-$RANDOM"
   smoke_evidence="${CIPROXY_SMOKE_EVIDENCE:-.context/ciproxy-mvp/smoke-$smoke_mode-$smoke_id}"
   mkdir -p "$smoke_evidence"
+  python3 -B crates/ciproxy-agent/scripts/smoke_image.py || fail 'the selected job image is not ready'
 }
 
 dispatch() {
