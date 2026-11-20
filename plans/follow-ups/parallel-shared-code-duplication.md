@@ -2,7 +2,7 @@
 
 - **Severity:** Low. **Effort:** Small. **Confidence:** High.
   **Harder later:** No.
-- **Kind:** Needs decision.
+- **Kind:** Fix after merge.
 - **Added:** 2026-11-17, from the final review of 17 November 2026 of the
   branch `calummoore/ci-proxy-load-balancer`: the blocked wider fix D of
   finding 605, which finding 403 shares.
@@ -10,8 +10,8 @@
 - **Category:** Process.
 - **Location:** None in this repository. The change goes in
   `delegating/SKILL.md` of `futex-ai/skills`, under "Independence test".
-- **Reason:** The change is in `futex-ai/skills`, a repository that the
-  user owns, and every repository follows its rules.
+- **Reason:** The change is in `futex-ai/skills`, not in this repository.
+  The user chose A on 20 November 2026, in its own workspace there.
 
 - **Terms:**
   - **`delegating` skill:** the shared procedure that splits work across
@@ -101,5 +101,6 @@
 - **Recommendation:** B. One line at the step where the orchestrator splits
   the work stops both known cases, also when the plan did not foresee the
   shared piece.
-- **Action:** ask the user, because the change is in `futex-ai/skills`, a
-  repository that the user owns.
+- **Action:** fix after merge, apply A, because the user chose A on
+  20 November 2026, as its own workspace in `futex-ai/skills`. Delete this
+  item when that pull request merges.

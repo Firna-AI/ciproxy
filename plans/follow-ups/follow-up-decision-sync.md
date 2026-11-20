@@ -2,7 +2,7 @@
 
 - **Severity:** Low. **Effort:** Small. **Confidence:** High.
   **Harder later:** No.
-- **Kind:** Needs decision.
+- **Kind:** Fix after merge.
 - **Added:** 2026-11-17, from the final review of 17 November 2026 of the
   branch `calummoore/ci-proxy-load-balancer`: the blocked wider fix D of
   finding 1207, with `plans/follow-ups/cache-sync-github-deletions.md` as
@@ -12,8 +12,8 @@
 - **Location:** None in this repository. The change goes in
   `references/follow-up-items.md` of the `plans` skill in
   `futex-ai/skills`.
-- **Reason:** The change is in `futex-ai/skills`, a repository that the
-  user owns, and every repository follows its rules.
+- **Reason:** The change is in `futex-ai/skills`, not in this repository.
+  The user chose A on 20 November 2026, in its own workspace there.
 
 - **Terms:**
   - **Follow-up item:** one file under `plans/follow-ups/` that records work
@@ -92,5 +92,6 @@
     this class. Its direct fix does not wait for this item.
 - **Recommendation:** B. One rule at the step that makes an item stale
   covers both known cases, with no new field.
-- **Action:** ask the user, because the change is in the `plans` skill of
-  `futex-ai/skills`, a repository that the user owns.
+- **Action:** fix after merge, apply A, because the user chose A on
+  20 November 2026, as its own workspace in `futex-ai/skills`. Delete this
+  item when that pull request merges.
