@@ -39,9 +39,10 @@
   download survives it.
 - **Wider fix:** B. It keeps the progress for each cause of a restart.
 - **Previous examples:** None found.
-- **Related:** `plans/follow-ups/smoke-cold-image-readiness.md`: same cause
-  of a longer wait. The readiness wait of the live smokes must run after
-  the repair step.
+- **Related:** since 20 November 2026, the live smokes wait for the image
+  in `crates/ciproxy-agent/scripts/smoke_image.py`. The fresh-machine
+  smoke runs that wait after its repair step, because a repeat install
+  restarts the download.
 - **Recommendation:** B. It covers a repair, a crash, and a reboot.
 - **Action:** fix after merge, apply B, because only an agent restart
   during the first download meets it, and it costs only time.

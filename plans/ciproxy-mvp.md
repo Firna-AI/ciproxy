@@ -537,7 +537,8 @@ reserve. The image measurement sets the real budget later.
       Item 125, 19 November 2026: the user chose that fix after the merge.
       So this smoke cannot pass before the merge, as item 122 = B asks.
       Item 126 = B, 20 November 2026: the fix moves into this branch, as
-      Milestone 27g, and this smoke runs in live run 6.
+      Milestone 27g, and this smoke runs in live run 6. Pull request #94
+      merged that fix on 20 November 2026.
 
 ## Milestone 10: Job VM image
 
@@ -2731,8 +2732,9 @@ merge, so the fresh-machine smoke of Milestone 9 can pass.
       local image index, not the machine API, because each runs on the
       machine.
       Branch: `conductor/m27g-smoke-readiness`.
-- [ ] Delete `follow-ups/smoke-cold-image-readiness.md`, which this
-      milestone settles.
+- [x] Delete `follow-ups/smoke-cold-image-readiness.md`, which this
+      milestone settles. Done on 20 November 2026, after pull request #94
+      merged.
 
 ## Milestone 28: Verification, commit, review, and pull request
 
@@ -6483,7 +6485,8 @@ item, `follow-ups/machine-image-preparing-status.md`, was deleted on
 option E of `follow-ups/smoke-cold-image-readiness.md`, comes before the
 merge, and the fresh-machine smoke runs in live run 6. This replaces the
 answer "after the merge" of item 125 for that work, and it keeps item
-122 = B. Rejected: A, the smoke after the merge. Milestone 27g builds it.
+122 = B. Rejected: A, the smoke after the merge. Milestone 27g built it in
+pull request #94, and the follow-up item was deleted.
 
 ### 127. Two rules for the shared skills
 
