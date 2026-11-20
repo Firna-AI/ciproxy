@@ -201,8 +201,9 @@
     fix, and a new lint needs the user.
 - **Wider fix:** D. The reuse rule of the `product-ui` skill is in force,
   but it could not apply, because no branch saw the files of the others.
-  C is the fix inside this repository. The skill part of D waits for the
-  user in `plans/follow-ups/parallel-shared-code-duplication.md`. For the
+  C is the fix inside this repository. The skill part of D is in force
+  since 20 November 2026: the `delegating` skill builds a shared piece
+  before the parallel work items that need it. For the
   history mode of links, E is the wider fix: one component sets it for
   every in-app link, also for links that later pages add.
 - **Previous examples:**
@@ -212,8 +213,8 @@
   - The Jobs tabs replaced their entry until 18 November 2026, while the
     Settings tabs pushed. So Back from History skipped Live.
 - **Related:**
-  - `plans/follow-ups/parallel-shared-code-duplication.md`, a shared wider
-    fix. It holds the skill part of D. Neither item waits for the other.
+  - The skill part of D merged on 20 November 2026 in `futex-ai/skills`.
+    This item keeps the fix inside this repository.
   - `plans/follow-ups/machines-boat-start-status.md`, the same code. Its
     fix changes `ts/app/src/screens/machines/overflow-panel.tsx`, which C
     moves to the standalone `Panel` and `TextLink`. Only the order of the

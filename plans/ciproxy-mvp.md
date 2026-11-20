@@ -6542,3 +6542,5 @@ only after that piece is on the primary branch
 (`follow-ups/parallel-shared-code-duplication.md`). The `plans` skill
 gets the rule that a change which replaces a decision also updates each
 follow-up item that names it (`follow-ups/follow-up-decision-sync.md`).
+Both rules merged on 20 November 2026, as pull requests #97 and #98 of
+`futex-ai/skills`, and both follow-up items were deleted.

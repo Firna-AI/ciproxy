@@ -52,9 +52,10 @@
     the entry list of the GitHub cache, which needs that permission, so a
     drop of the permission would block B. Neither item waits for the other,
     but their answers must agree.
-  - `plans/follow-ups/follow-up-decision-sync.md`: this item is the second
-    case of that class. Its old option B kept a fact that a later decision
-    had replaced. Neither item waits for the other.
+  - This item was the second case of the class of stale follow-up items.
+    Its old option B kept a fact that a later decision had replaced. Since
+    20 November 2026, the `plans` skill requires that a change which
+    replaces a decision also updates each follow-up item that names it.
 - **Recommendation:** B, after the MVP.
 - **Action:** ask the user, because B changes a rule of "Cache scopes" in
   `docs/protocol/cache.md`. The rule says that the machine cache keeps its
