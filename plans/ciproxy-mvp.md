@@ -537,7 +537,8 @@ reserve. The image measurement sets the real budget later.
       Item 125, 19 November 2026: the user chose that fix after the merge.
       So this smoke cannot pass before the merge, as item 122 = B asks.
       Item 126 = B, 20 November 2026: the fix moves into this branch, as
-      Milestone 27g, and this smoke runs in live run 6.
+      Milestone 27g, and this smoke runs in live run 6. Pull request #94
+      merged that fix on 20 November 2026.
 
 ## Milestone 10: Job VM image
 
@@ -2751,12 +2752,23 @@ Item 126 = B, 20 November 2026: the readiness wait of
 `follow-ups/smoke-cold-image-readiness.md`, option E, comes before the
 merge, so the fresh-machine smoke of Milestone 9 can pass.
 
-- [ ] Put the image readiness wait in the shared entry of every live smoke,
+- [x] Put the image readiness wait in the shared entry of every live smoke,
       as option E of that item says, with its three details: the expected
       release, the wait after the repair step, and the cancel of the
       dispatched run on a failure.
-- [ ] Delete `follow-ups/smoke-cold-image-readiness.md`, which this
-      milestone settles.
+      Design calls, 20 November 2026: the wait has its own default limit
+      of 7200 seconds, two hours, and `CIPROXY_SMOKE_IMAGE_TIMEOUT_SECONDS`
+      changes it for a slow link. Reason: the 18 GB download takes about
+      96 minutes at 25 Mbit/s, which leaves about 24 minutes for the check
+      and the extraction. One optional input,
+      `CIPROXY_SMOKE_IMAGE_RELEASE`, names the expected release for the
+      shell and the Python smokes alike. The Python smokes also read the
+      local image index, not the machine API, because each runs on the
+      machine.
+      Branch: `conductor/m27g-smoke-readiness`.
+- [x] Delete `follow-ups/smoke-cold-image-readiness.md`, which this
+      milestone settles. Done on 20 November 2026, after pull request #94
+      merged.
 
 ## Milestone 28: Verification, commit, review, and pull request
 
@@ -6507,7 +6519,8 @@ item, `follow-ups/machine-image-preparing-status.md`, was deleted on
 option E of `follow-ups/smoke-cold-image-readiness.md`, comes before the
 merge, and the fresh-machine smoke runs in live run 6. This replaces the
 answer "after the merge" of item 125 for that work, and it keeps item
-122 = B. Rejected: A, the smoke after the merge. Milestone 27g builds it.
+122 = B. Rejected: A, the smoke after the merge. Milestone 27g built it in
+pull request #94, and the follow-up item was deleted.
 
 ### 127. Two rules for the shared skills
 
