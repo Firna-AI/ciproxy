@@ -43,7 +43,7 @@ def check_family(case, workspace):
     (root / "status").write_text("\n".join(installed))
     (root / "etc/sources.list").write_text(f"deb [trusted=yes] file:{root}/repo ./\n")
     definition = pathlib.Path(__file__).resolve().parents[1]
-    pins = json.loads((definition / "software-apt-pins.json").read_text())
+    pins = json.loads((definition / "software-apt-pins.json").read_text())["packages"]
     (root / "etc/preferences").write_text(apt_preferences(pins))
     prefix = pathlib.Path(apt_get).resolve().parents[1]
     options = {

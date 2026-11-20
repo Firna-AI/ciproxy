@@ -16,6 +16,9 @@ from boat_build_owners import capture as capture_owners
 from boat_build_report import collect, digest, save, service_inventory
 
 
+NATIVE_TAR_OPTIONS = "--no-overwrite-dir"
+
+
 def fingerprint(step):
     checksum = hashlib.sha256(json.dumps(step, sort_keys=True).encode())
     sources = step.get("sources", [step["script"]] if "script" in step else []) + step.get("inputs", [])
@@ -53,7 +56,8 @@ def run_step(step, output):
         command = ["bash", "-e", "-c", "\n".join(step["inline"])]
     load_environment = ('if [ -f /etc/profile ]; then . /etc/profile; fi; '
                         'set -a; if [ -f /etc/environment ]; then . /etc/environment; fi; '
-                        'set +a; if [ -f "$HOME/.profile" ]; then . "$HOME/.profile"; fi; exec "$@"')
+                        'set +a; if [ -f "$HOME/.profile" ]; then . "$HOME/.profile"; fi; '
+                        f'export TAR_OPTIONS={NATIVE_TAR_OPTIONS}; exec "$@"')
     command = ["bash", "-c", load_environment, "ciproxy-build", *command]
     environment = {**os.environ, "DEBIAN_FRONTEND": "noninteractive", "SUDO_USER": "user",
                    "HOME": "/root", "USER": "root", "LOGNAME": "root", **step["environment"]}
@@ -85,13 +89,16 @@ def execute(build_dir, resume=False, inventory=True):
     if inventory and not (build_dir / "services-before.json").exists():
         save(build_dir / "services-before.json", service_inventory())
     failure = False
+    identity = ""
     for original in plan["steps"]:
         step = json.loads(json.dumps(original).replace("/opt/ciproxy-build", str(build_dir)))
+        step.setdefault("environment", {})["TAR_OPTIONS"] = NATIVE_TAR_OPTIONS
         if step["type"] == "shell":
             step.setdefault("working_directory", str(temporary))
+        identity = hashlib.sha256(json.dumps([identity, fingerprint(step)]).encode()).hexdigest()
         record = {"id": step["id"], "provisioner": step["provisioner"], "type": step["type"],
                   "name": pathlib.Path(step.get("script", step["id"])).name,
-                  "input_sha256": fingerprint(step)}
+                  "input_sha256": identity}
         if failure:
             record["status"] = "pending"
         elif step.get("skip"):

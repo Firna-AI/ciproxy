@@ -12,6 +12,8 @@ from boat_build_tmp import relocate_temp_paths
 def adapt(upstream):
     scripts = upstream / "images/ubuntu/scripts/build"
     changes = []
+    changes.append({"environment": {"TAR_OPTIONS": "--no-overwrite-dir"},
+                    "reason": "GNU tar keeps the owner and mode of existing provider directories during native extraction, including CMake. New directories keep the archive metadata."})
 
     def edit(name, old, new, reason):
         path = scripts / name
@@ -42,6 +44,15 @@ def adapt(upstream):
          merge_directory("/imagegeneration/post-generation", "/opt/post-generation"),
          "Merge refreshed post-generation files while retaining existing metadata on a replay.")
     changes.extend(adapt_cleanup(upstream))
+    edit("install-pypy.sh", '    local package_url=$1\n',
+         '    local package_url=$1\n'
+         '    if [ -f "$AGENT_TOOLSDIRECTORY/PyPy/$toolset_version/x64.complete" ]; then\n'
+         '        return 0\n'
+         '    fi\n',
+         "Reuse complete native PyPy versions without repeating their download or dependency installation.")
+    edit("install-pypy.sh", '    mkdir $pypy_toolcache_version_path\n',
+         '    rm -rf "$pypy_toolcache_version_path"\n    mkdir -p "$pypy_toolcache_version_path"\n',
+         "Replace only the incomplete native PyPy version before retrying its installation.")
     for name in ("configure-system.sh", "install-nodejs.sh"):
         content = (scripts / name).read_text()
         for folder in ("/usr/share", "/opt", "/usr/local/bin", "/usr/local/lib/node_modules"):

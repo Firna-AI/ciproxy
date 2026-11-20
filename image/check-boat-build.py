@@ -18,7 +18,7 @@ from unittest.mock import patch
 
 from _checks_.boat_cleanup import check_cleanup
 from _checks_.apt_family import check_family
-from _checks_.boat_inputs import check_inputs
+from _checks_.boat_inputs import check_inputs, check_bootstrap_chain, check_failed_step
 from _checks_.apt_alias import check_alias
 from _checks_.boat_sources import check_sources
 from _checks_.boat_workdir import check_workdir
@@ -27,9 +27,17 @@ from _checks_.release_tools import check_azcopy, check_bazel, check_docker, chec
 from _checks_.ansible_tools import check_ansible
 from _checks_.boat_tmp import check_tmp
 from _checks_.boat_owners import check_owners, check_adaptation, check_changed_directories, check_inventory
-from _checks_.boat_developer import check_developer, check_developer_warnings, check_developer_inventory
+from _checks_.boat_developer import check_developer, check_developer_warnings, check_developer_inventory, check_developer_packages
+from _checks_.boat_developer import fixture as developer_fixture, run_cleanup as run_developer_cleanup
+from _checks_.github_lookup import check_lookup, check_warm_lookup
+from _checks_.java_pins import check_java_request, check_pin_reports
+from _checks_.pypy_resume import check_pypy_resume
+from _checks_.boat_cli import check_prepare_cli
+from _checks_.toolset_defaults import check_node_default
+from _checks_.boat_permissions import check_permissions
+from _checks_.boat_tar import check_tar
+from _checks_.apt_epoch import check_epoch
 from boat import Api
-from boat_build_plan import make_plan
 from boat_build_report import changed_services, compare_inventory, service_inventory
 
 
@@ -38,6 +46,60 @@ EXECUTOR = pathlib.Path(__file__).with_name("boat-build-execute.py").resolve()
 
 
 class NativeBuild(unittest.TestCase):
+    def test_rendered_apt_pin_keeps_the_repository_epoch(self):
+        check_epoch(self, WORKSPACE)
+
+    def test_native_tar_keeps_existing_folder_metadata_and_new_archive_metadata(self):
+        check_tar(self, WORKSPACE)
+
+    def test_native_permissions_make_the_target_writable_and_keep_provider_entries(self):
+        check_permissions(self, WORKSPACE)
+
+    def test_rendered_node_keeps_the_upstream_default_form_and_installs_the_exact_pin(self):
+        check_node_default(self, WORKSPACE)
+
+    def test_rendered_release_lookup_pages_exact_versions_and_keeps_pin_routes(self):
+        check_lookup(self, WORKSPACE)
+
+    def test_bundle_warms_cmake_release_pages_from_the_rendered_toolset(self):
+        check_warm_lookup(self, WORKSPACE)
+
+    def test_rendered_java_request_uses_the_apt_pin_with_a_newer_version_available(self):
+        check_java_request(self, WORKSPACE)
+
+    def test_apt_pin_differences_reach_boat_and_machine_reports_without_failure(self):
+        check_pin_reports(self, WORKSPACE)
+
+    def test_native_pypy_resumes_failed_pip_and_reuses_complete_versions(self):
+        check_pypy_resume(self, WORKSPACE)
+
+    def test_prepare_is_only_in_boat_cli_and_other_build_commands_stay(self):
+        check_prepare_cli(self)
+
+    def test_developer_package_purge_clears_installed_and_residual_dotnet_conffiles(self):
+        sample = developer_fixture(WORKSPACE)
+        paths = ("etc/dotnet/install_location", "etc/dotnet/install_location_x64", "etc/profile.d/dotnet.sh")
+        for relative in paths:
+            path = sample.root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("/usr/lib/dotnet\n")
+        state = json.loads(sample.package_state.read_text())
+        state.update(installed={"dotnet-host-8.0": "8.0.11-0ubuntu1"},
+                     residual={"dotnet-sdk-8.0": "8.0.110-0ubuntu1"},
+                     conffiles={"dotnet-host-8.0": list(paths[:2]), "dotnet-sdk-8.0": [paths[2]]})
+        sample.package_state.write_text(json.dumps(state))
+        report = run_developer_cleanup(self, sample)
+        self.assertEqual([relative for relative in paths if (sample.root / relative).exists()], [],
+                         "A purge must clear the stale .NET conffiles.")
+        dotnet = next(group for group in report["packages"] if group["pinned_tool"] == ".NET")
+        self.assertEqual({package["name"] for package in dotnet["packages"]},
+                         {"dotnet-host-8.0", "dotnet-sdk-8.0"})
+        self.assertEqual(dotnet["action"], "purge")
+        self.assertEqual(json.loads(sample.package_state.read_text())["residual"], {})
+
+    def test_developer_packages_remove_only_safe_matches_and_record_absent_or_kept_groups(self):
+        check_developer_packages(self, WORKSPACE)
+
     def test_bootstrap_removes_pin_shadows_and_keeps_provider_files_and_extra_tools(self):
         check_developer(self, WORKSPACE)
 
@@ -89,8 +151,11 @@ class NativeBuild(unittest.TestCase):
     def test_native_sources_prepare_boat_and_generic_uris_for_the_shared_mirror_setup(self):
         check_sources(self, WORKSPACE)
 
-    def test_resume_uses_immutable_inputs_and_preserves_unrelated_passed_steps(self):
+    def test_resume_chains_immutable_inputs_without_replaying_earlier_steps(self):
         check_inputs(self, WORKSPACE)
+
+    def test_bootstrap_input_change_replays_later_steps_and_unchanged_run_reuses_them(self):
+        check_bootstrap_chain(self, WORKSPACE)
 
     def test_shared_apt_pin_selects_coherent_systemd_companions(self):
         check_family(self, WORKSPACE)
@@ -154,73 +219,7 @@ class NativeBuild(unittest.TestCase):
         self.assertNotIn("fixture-host-key", json.dumps(bodies))
 
     def test_failed_step_resumes_without_repeating_unchanged_passed_steps(self):
-        root = pathlib.Path(tempfile.mkdtemp(dir=WORKSPACE)).resolve()
-        upstream = root / "runner-images"
-        templates = upstream / "images/ubuntu/templates"
-        scripts = upstream / "images/ubuntu/scripts/build"
-        helpers = upstream / "images/ubuntu/scripts/helpers"
-        for folder in (templates, scripts, helpers):
-            folder.mkdir(parents=True, exist_ok=True)
-        trace, flag = root / "trace", root / "blocked"
-        flag.touch()
-        (helpers / "helper.txt").write_text("helper data\n")
-        (scripts / "toolset.json").write_text('{"fixture": true}\n')
-        (scripts / "first.sh").write_text('printf "first\\n" >> "$TRACE"\n')
-        (scripts / "second.sh").write_text('printf "second\\n" >> "$TRACE"\n'
-                                           'test ! -e "$BLOCKED" || exit 17\n')
-        recipe = '''build {
-  provisioner "file" {
-    source = "${path.root}/../scripts/helpers"
-    destination = "COPIED"
-  }
-  provisioner "file" {
-    source = "${path.root}/../scripts/build/toolset.json"
-    destination = "TOOLSET"
-  }
-  provisioner "shell" {
-    environment_vars = ["TRACE=TRACEFILE", "BLOCKED=FLAGFILE"]
-    scripts = ["${path.root}/../scripts/build/first.sh", "${path.root}/../scripts/build/second.sh"]
-  }
-  provisioner "shell" {
-    inline = ["printf 'last\\n' >> TRACEFILE"]
-  }
-}
-'''.replace("COPIED", str(root / "copied")).replace("TOOLSET", str(root / "copied.json"))
-        recipe = recipe.replace("TRACEFILE", str(trace)).replace("FLAGFILE", str(flag))
-        (templates / "build.ubuntu-24_04.pkr.hcl").write_text(recipe)
-        plan = make_plan(upstream)
-        artifact = root / "artifact"
-        artifact.write_text("first input\n")
-        plan["steps"][-1]["inputs"] = [str(artifact)]
-        (root / "plan.json").write_text(json.dumps(plan))
-
-        def run(resume=False):
-            command = ["python3", str(EXECUTOR), str(root), "--no-inventory"]
-            observed = subprocess.run(command + (["--resume"] if resume else []),
-                                      capture_output=True, text=True)
-            return observed, json.loads((root / "report.json").read_text())
-
-        initial, report = run()
-        self.assertEqual(initial.returncode, 1)
-        self.assertEqual([step["status"] for step in report["provisioners"]],
-                         ["passed", "passed", "passed", "failed", "pending"])
-        self.assertEqual(report["provisioners"][3]["exit_code"], 17)
-        self.assertEqual((root / "copied/helper.txt").read_text(), "helper data\n")
-        self.assertEqual(json.loads((root / "copied.json").read_text()), {"fixture": True})
-        self.assertEqual(trace.read_text(), "first\nsecond\n")
-        flag.unlink()
-        resumed, report = run(True)
-        self.assertEqual(resumed.returncode, 0, resumed.stderr)
-        self.assertEqual(report["status"], "passed")
-        self.assertEqual(trace.read_text(), "first\nsecond\nsecond\nlast\n")
-        (scripts / "first.sh").write_text('printf "changed\\n" >> "$TRACE"\n')
-        changed, report = run(True)
-        self.assertEqual(changed.returncode, 0, changed.stderr)
-        self.assertEqual(trace.read_text(), "first\nsecond\nsecond\nlast\nchanged\n")
-        artifact.write_text("new input\n")
-        refreshed, report = run(True)
-        self.assertEqual(refreshed.returncode, 0, refreshed.stderr)
-        self.assertEqual(trace.read_text(), "first\nsecond\nsecond\nlast\nchanged\nlast\n")
+        check_failed_step(self, WORKSPACE)
 
     def test_inventory_difference_reports_versions_and_tables_without_a_failure(self):
         reference = {"Title": "Image", "Children": [

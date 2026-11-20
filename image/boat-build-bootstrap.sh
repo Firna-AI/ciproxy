@@ -16,7 +16,7 @@ APT::Get::Assume-Yes "true";
 APT::Get::allow-downgrades "true";
 Dpkg::Options { "--force-confdef"; "--force-confold"; };
 EOF
-apt-get update
+apt-get update --allow-releaseinfo-change-label
 python3 "$definition/boat-build-developer.py"
 apt-get install -y ca-certificates curl jq gnupg lsb-release \
     software-properties-common unzip python3

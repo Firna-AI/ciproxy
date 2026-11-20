@@ -5,6 +5,7 @@ import json
 import re
 
 from pin_release_tools import azcopy_script, bazel_script, docker_cache, ruby_script
+from pin_github import lookup_script
 
 
 def apply_scripts(upstream, pins):
@@ -52,6 +53,7 @@ def apply_scripts(upstream, pins):
     edit("install-azure-devops-cli.sh", "az extension add -n azure-devops",
          "az extension add -n azure-devops --version " + versions["Azure CLI (azure-devops)"])
     edit("install-nodejs.sh", "/tj/n/master/", "/tj/n/v" + versions["n"] + "/")
+    edit("install-nodejs.sh", "bash ~/n $default_version", "bash ~/n " + versions["Node.js"][0])
     edit("install-homebrew.sh", "/Homebrew/install/master/", "/Homebrew/install/" + extra["brew_install_commit"] + "/")
     edit("install-homebrew.sh", '# Invoke shellenv',
          'git -C /home/linuxbrew/.linuxbrew/Homebrew fetch --depth 1 origin refs/tags/' + versions["Homebrew"] +
@@ -87,12 +89,6 @@ def apply_scripts(upstream, pins):
     helper = upstream / "images/ubuntu/scripts/helpers"
     (helper / "ciproxy-pins.json").write_text(json.dumps(pins, indent=2) + "\n")
     install = helper / "install.sh"
-    install.write_text(install.read_text() + '''
-# Shared exact release selections. Metadata can be prepared on the build host.
-get_github_releases_by_version() {
-    local repo=$1 version=${2:-} tag
-    tag=$(jq -r --arg repo "$repo" '.github[$repo] // empty' "$HELPER_SCRIPTS/ciproxy-pins.json")
-    if [[ -z "$tag" ]]; then tag="$version"; fi
-    get_github_api_json "repos/${repo}/releases/tags/${tag}"
-}
-''')
+    upstream_helper = install.read_text().replace("get_github_releases_by_version() {",
+        "upstream_get_github_releases_by_version() {", 1)
+    install.write_text(upstream_helper + lookup_script())

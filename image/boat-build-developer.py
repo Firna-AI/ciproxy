@@ -3,8 +3,10 @@
 """Remove Boat entries that shadow or block the pinned image's tools."""
 
 import argparse
+import fnmatch
 import hashlib
 import json
+import os
 import pathlib
 import re
 import stat
@@ -39,9 +41,10 @@ def remove(root, rule):
     return record
 
 
-def query(arguments):
+def query(arguments, program="dpkg-query"):
     try:
-        return subprocess.run(["dpkg-query", *arguments], capture_output=True, text=True)
+        return subprocess.run([program, *arguments], capture_output=True, text=True,
+                              env={**os.environ, "LC_ALL": "C"})
     except OSError:
         return None
 
@@ -126,6 +129,73 @@ def retain(root, rule):
     return {**rule, **details, "status": "absent" if details["type"] == "absent" else "kept"}
 
 
+def package_versions():
+    answer = query(["-W", "-f=${binary:Package}\t${Version}\t${db:Status-Status}\n"])
+    if answer is None or answer.returncode:
+        return None
+    packages = {}
+    for line in answer.stdout.splitlines():
+        fields = line.split("\t")
+        if len(fields) != 3:
+            return None
+        name, version, status = fields
+        if status in ("installed", "config-files"):
+            packages[name] = version
+    return packages
+
+
+def package_groups(rules):
+    records = []
+    action = "purge"
+    for rule in rules:
+        record = {**rule, "action": action, "status": "absent", "packages": []}
+        records.append(record)
+        before = package_versions()
+        tool = rule["pinned_tool"]
+        if before is None:
+            record.update(status="kept", warning="Cannot read package versions for " + tool + ".")
+            continue
+        names = sorted(name for name in before if any(
+            fnmatch.fnmatchcase(name.partition(":")[0], pattern) for pattern in rule["patterns"]))
+        if not names:
+            continue
+        record.update(status="kept", packages=[
+            {"name": name, "version": before[name], "status": "kept"} for name in names])
+        arguments = ["--no-auto-remove", action, "--", *names]
+        simulation = query(["--simulate", *arguments], "apt-get")
+        record["simulation_exit_code"] = simulation.returncode if simulation is not None else None
+        if simulation is None:
+            record["warning"] = "Cannot simulate removal of " + tool + " packages."
+            continue
+        planned = sorted({line.split()[1] for line in simulation.stdout.splitlines()
+                          if line.startswith(("Remv ", "Purg ")) and len(line.split()) > 1})
+        record["simulated_removals"] = planned
+        extra = sorted(set(planned) - set(names))
+        record["extra_removals"] = extra
+        if extra:
+            record["warning"] = "Kept " + tool + " packages because apt would also remove: " + ", ".join(extra) + "."
+            continue
+        if simulation.returncode:
+            record["warning"] = "Cannot simulate removal of " + tool + " packages."
+            continue
+        if not planned:
+            record["warning"] = "Apt reported no package removal plan for " + tool + "."
+            continue
+        removal = query(["-y", *arguments], "apt-get")
+        record["removal_exit_code"] = removal.returncode if removal is not None else None
+        remaining = package_versions()
+        for package in record["packages"]:
+            package["status"] = ("unknown" if remaining is None else
+                                 "kept" if package["name"] in remaining else "removed")
+        if remaining is None:
+            record["status"] = "unknown"
+        elif all(package["status"] == "removed" for package in record["packages"]):
+            record["status"] = "removed"
+        if removal is None or removal.returncode or record["status"] != "removed":
+            record["warning"] = "Could not complete removal of " + tool + " packages."
+    return records
+
+
 def cleanup(root, policy):
     record_path = root / "opt/ciproxy-build" / RECORD_NAME
     if record_path.exists():
@@ -143,12 +213,14 @@ def cleanup(root, policy):
     settings.extend(retain(root, rule) for rule in definition["kept_settings"])
     extras = [retain(root, {"path": "/usr/local/bin/" + name, "name": name, "reason": group["reason"]})
               for group in definition["kept_extras"] for name in group["names"]]
+    packages = package_groups(definition["packages"])
     kept = {}
     for folder in ("/usr/local/bin", "/usr/local/sbin"):
         path = root / folder.lstrip("/")
         kept[folder] = sorted(item.name for item in path.iterdir()) if path.is_dir() else []
     record = {"commands": commands, "kept_entries": kept, "kept_extras": extras, "settings": settings,
-              "warnings": [item["warning"] for item in commands + settings if "warning" in item]}
+              "packages": packages,
+              "warnings": [item["warning"] for item in commands + settings + packages if "warning" in item]}
     record_path.parent.mkdir(parents=True, exist_ok=True)
     with record_path.open("x") as output:
         output.write(json.dumps(record, indent=2) + "\n")

@@ -35,8 +35,9 @@ def main():
         BASELINE.write_text(json.dumps(before) + "\n")
     else:
         before = json.loads(BASELINE.read_text())
-        for path in paths(pathlib.Path(args.root)):
-            if str(path) not in before:
+        root = pathlib.Path(args.root)
+        for path in paths(root):
+            if path == root or str(path) not in before:
                 path.chmod(0o777)
 
 

@@ -2590,10 +2590,6 @@ Owner implementation calls, 20 November 2026:
 - Remove the dead final Boat archive, capability map, and their helpers
   and tests. Keep the source archive and ext4 metadata preservation that
   the machine build needs. Published old objects stay unchanged.
-- Before the install steps, remove each Boat command and shell setting that
-  shadows or blocks a tool of the pinned definition. Keep Boat's extra
-  tools that shadow no pinned tool, and keep its provider and agent
-  commands. Report the extra tools. Add no gate for a version difference.
 
 Implementation calls, 20 November 2026:
 
@@ -2609,6 +2605,14 @@ Implementation calls, 20 November 2026:
   its folder. Reason: a replayed copy must not leave a copied folder.
 - Start a new clean build source after the pin-precedence change. Reason:
   the change alters the state before the first install step.
+- Before the install steps, remove each Boat command, shell setting, and
+  base package that shadows or blocks a tool of the pinned definition.
+  Keep Boat's extra tools that shadow no pinned tool, and its provider and
+  agent commands. Reason: the design call above installs the pinned
+  versions over Boat's base versions, so a job behaves the same on both.
+- Reuse a passed build step only when it and every earlier step are
+  unchanged. Reason: a later step can depend on the effect of an earlier
+  step, such as the bootstrap cleanup or the apt pins.
 
 - [ ] Update `docs/protocol/agent-images.md`: one image definition, built as
       the machine image and as the Boat snapshot. State each difference that

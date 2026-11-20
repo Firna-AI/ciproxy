@@ -37,7 +37,9 @@ python3 image/boat-build.py bundle \
 [pins.env](pins.env). It renders the pinned recipe, as the machine build
 does. It then changes a few upstream scripts and tests for Boat, and keeps
 each change with its reason. It also fetches the public GitHub release
-answers that the pins name, with no credential. The build reads these
+answers that the pins name, with no credential. CMake has no `github` pin,
+so `bundle` also fetches the release pages up to the release whose tag
+names the exact CMake version of the toolset. The build reads these
 answers before it asks GitHub. `--metadata-cache DIRECTORY` adds saved
 answers first. The bundle holds the image definition, the pinned recipe,
 the build plan, the reference inventory, and the ciproxy parts.
@@ -71,7 +73,6 @@ The script checks the SHA-256 of the bundle and extracts it to
 `/opt/ciproxy-build`. It then starts the build as the
 `ciproxy-image-build` systemd unit and returns.
 The build continues after the Boat command ends.
-`boat-build.py prepare` does the same as `boat.py prepare`.
 `report` prints the build report. Repeat it until the build status is
 `passed` or `failed`. `report --output DIRECTORY --logs` also copies the
 report files and the provisioner logs to the host.
@@ -87,7 +88,10 @@ python3 image/boat-build.py refresh TEMPLATE_SANDBOX_ID \
 ```
 
 `resume` runs the failed provisioner again and then the provisioners after
-it. A provisioner that passed runs again only when its inputs changed.
+it. It reuses a passed provisioner only when that provisioner and every
+earlier one are unchanged. So a changed or new earlier provisioner makes
+each later provisioner run again. A later change never makes an earlier
+provisioner run again.
 A step that moves a copied folder, such as the merge of `docs-gen` into
 `SoftwareReport`, depends on every source of the earlier copy steps that
 write that folder. So a copy step that runs again is always followed by its
@@ -98,6 +102,14 @@ After a fix to the image definition, write a new bundle and use `refresh`.
 `refresh` checks the new bundle, extracts it over the build folder, and
 resumes. It refuses to start while the build still runs.
 Keep the build report in the sandbox, because a resume reads it.
+
+A provisioner that runs again finds the files of its earlier run. The PyPy
+installer reuses a complete version and replaces its own incomplete version
+folder. Other installers can fail on their own earlier files. A replay
+failure of that kind needs a new build from a clean Boat source.
+The first step keeps its first records and does not repeat its cleanup.
+So a change to the state before the recipe steps, such as a new cleanup
+rule, also needs a new build from a clean Boat source.
 
 The build keeps Boat's controller, desktop services, network, and resolver.
 Before it changes Boat's system, it records these facts of Boat's base in
@@ -110,9 +122,9 @@ the build folder:
 
 It sets apt to confirm each install and to permit a downgrade, so a pinned
 version can replace a newer version of Boat's base.
-After the package index update, it removes Boat's own commands and shell
-settings that shadow or block a tool of the pinned definition. So a job
-finds the pinned version first, as on a job VM:
+After the package index update, it removes Boat's own commands, shell
+settings, and apt packages that shadow or block a tool of the pinned
+definition. So a job finds the pinned version first, as on a job VM:
 
 - The commands of CMake, Go, Node, the Ruby family, the Rust family,
   Composer, Gradle, and Kotlin in `/usr/local/bin`. It removes only the
@@ -124,6 +136,11 @@ finds the pinned version first, as on a job VM:
   the file stay. The build then checks the file against the md5 that dpkg
   records for it. A mismatch adds a warning to the record, and the build
   continues.
+- Boat's apt packages for CMake, .NET 8, Maven, and PHP 8.4. The build
+  first simulates the purge of each group. When apt would also remove
+  another package, the build keeps the whole group and records a warning.
+  Otherwise it purges the group, also packages that keep only their
+  configuration files.
 
 It keeps Boat's provider and agent commands, the tool homes, and the extra
 tools that no pinned tool replaces, such as pnpm, Bun, Deno, uv, Poetry,
@@ -157,8 +174,9 @@ changes are:
 - It removes the Azure swap, resource disk, boot loader, and root mount
   setup, because Boat owns them. It skips the tests of that setup.
 - It runs the read-ahead test of the disks only on a SCSI or NVMe disk.
-- It applies the upstream writable permissions only to new paths, so
-  Boat's own files keep their modes.
+- It gives each folder that the upstream recipe makes writable, such as
+  `/opt`, mode 777, as upstream does. Boat's existing entries below that
+  folder keep their modes and owners. New entries get mode 777.
 - The upstream cleanup and the post-generation log script keep `/tmp` and
   the logs of the running Boat system. Their other cleanup steps stay.
 - The Docker installer keeps Boat's `docker` group ID. It restarts the
@@ -167,6 +185,12 @@ changes are:
   `<Directory> keeps its owner from before the build`. It checks that
   `/usr`, `/etc`, `/usr/local`, and `/usr/local/bin` keep the owners that
   the build recorded. The machine image keeps the upstream root test.
+- The PyPy installer reuses a complete version. It replaces only its own
+  incomplete version folder before it installs again.
+- Native steps run GNU tar with `--no-overwrite-dir`. So an archive that
+  extracts over an existing folder keeps the owner and mode of that folder.
+  A new folder gets the metadata of the archive. The machine build is
+  unchanged.
 
 The report lists each change with its reason.
 
@@ -190,21 +214,25 @@ After the provisioners, the build writes its reports under
 - `software-report.json`, the upstream software report of the Boat build.
 - `installed-packages.json`, each installed package and its version.
 - `installed-inventory.json`, the same packages, and whether the software
-  report exists. It also gives the records that the build made of Boat's
-  base system. A record that does not exist is `null`:
+  report exists. It gives `apt_pin_differences`, each installed package
+  whose version differs from its APT pin. The
+  [README](README.md#inputs-and-build) gives its fields. It also gives the
+  records that the build made of Boat's base system. A record that does
+  not exist is `null`:
   - `provider_docker_gid`, the group ID of Boat's `docker` group.
   - `provider_directory_owners`, the owners of the four directories.
-  - `provider_developer_environment`, each command and setting that the
-    cleanup removed or kept, with its warnings.
+  - `provider_developer_environment`, each command, setting, and package
+    group that the cleanup removed or kept, with its warnings.
 - `inventory-differences.json`, each version difference from the
-  reference inventory. It says when the software report is missing.
+  reference inventory, and the same `apt_pin_differences`. It says when
+  the software report is missing.
 - `changed-services.json`, the running services whose program or unit file
   the build changed. Docker and containerd are always in this list.
 
 The build also writes that service list to
 `/etc/ciproxy/boat-restart-services` for each launch.
-A version difference does not fail the build. Record the differences with
-the release evidence.
+A version difference or a pin difference does not fail the build. Record
+both with the release evidence.
 
 Require a passed build report before `finalize`.
 `finalize` copies the report, its files, and the provisioner logs to the

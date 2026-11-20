@@ -86,11 +86,11 @@ image. Boat [sandboxes](overflow.md#terms) start from the Boat snapshot.
   ciproxy adds.
 - A Boat job finds the pinned version of each tool of the image definition
   first, as on a job VM.
-- **Decision:** the Boat build removes Boat's own commands for each such
-  tool, and the settings that put them first, before the install steps.
-  Rejected: keeping Boat's commands first, because a job would then use
-  other versions than on a job VM. Rejected: removing Boat's other tools
-  too, because they change no pinned version.
+- **Decision:** the Boat build removes Boat's own commands and apt packages
+  for each such tool, and the settings that put them first, before the
+  install steps. Rejected: keeping Boat's tools first, because a job would
+  then use other versions than on a job VM. Rejected: removing Boat's other
+  tools too, because they change no pinned version.
 - The snapshot leaves out only the parts that only a job VM needs, and the
   setup that Boat owns. Examples are the kernel, the boot and disk setup,
   the network configuration, and the reboot that ends a job VM.

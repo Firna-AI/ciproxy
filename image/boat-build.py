@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
-"""Prepare, resume or report a native Boat image build without registration."""
+"""Bundle, refresh, resume or report a native Boat image build without registration."""
 
 import argparse
 import json
 import pathlib
 import shlex
 
-from boat import Api, prepare
+from boat import Api
 from boat_build_bundle import bundle, checksum
 
 
 def remote(api, args):
-    if args.action == "prepare":
-        return prepare(api, args)
     if args.action == "refresh":
         digest = checksum(args.archive)
         api.upload(args.sandbox, args.archive, "/tmp/ciproxy-native-refresh.tar.gz")
@@ -85,9 +83,6 @@ def main():
     for name in ("upstream-archive", "guest", "cache", "worker", "runner", "reference", "output"):
         command.add_argument("--" + name, type=pathlib.Path, required=True)
     command.add_argument("--metadata-cache", type=pathlib.Path)
-    command = commands.add_parser("prepare")
-    command.add_argument("sandbox")
-    command.add_argument("archive", type=pathlib.Path)
     command = commands.add_parser("resume")
     command.add_argument("sandbox")
     command = commands.add_parser("refresh")

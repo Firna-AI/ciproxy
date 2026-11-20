@@ -49,6 +49,32 @@
       "reason": "Boat's /usr/local/bin entries resolve before the pinned Kotlin links."
     }
   ],
+  "packages": [
+    {
+      "patterns": ["cmake", "cmake-data"],
+      "pinned_tool": "CMake 3.31.6",
+      "install_path": "/usr/local/bin",
+      "reason": "Boat's apt CMake makes the pinned installer skip installation."
+    },
+    {
+      "patterns": ["dotnet-*-8.0", "aspnetcore-*-8.0", "netstandard-targeting-pack-2.1-8.0"],
+      "pinned_tool": ".NET",
+      "install_path": "/usr/share/dotnet",
+      "reason": "Boat's apt .NET host owns /usr/bin/dotnet and blocks the pinned link."
+    },
+    {
+      "patterns": ["maven"],
+      "pinned_tool": "Maven",
+      "install_path": "/usr/bin/mvn",
+      "reason": "Boat's Maven alternative blocks the link from the pinned Maven installation."
+    },
+    {
+      "patterns": ["php8.4-*"],
+      "pinned_tool": "PHP 8.3",
+      "install_path": "/usr/bin/php",
+      "reason": "The automatic PHP alternative selects Boat's PHP 8.4 before pinned PHP 8.3."
+    }
+  ],
   "kept_extras": [
     {
       "names": ["pnpm", "pnpx", "bun", "bunx", "deno", "uv", "poetry", "sbt", "scala", "scalac", "scaladoc"],

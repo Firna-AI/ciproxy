@@ -49,6 +49,7 @@ def check_export(workspace):
     image = pathlib.Path(__file__).resolve().parent
     root, source, work, environment = create(workspace, image)
     print("Fixture evidence: " + str(root), flush=True)
+    assert not (source / "etc/apt/preferences.d/ciproxy-software").exists()
     run([shutil.which("chroot"), str(source), "/usr/bin/bash", "/image/provision.sh"], root,
         "provision", {**os.environ, "PATH": "/usr/bin"})
     network_path = "etc/systemd/network/10-ciproxy.network"
@@ -79,6 +80,12 @@ def check_export(workspace):
     assert json.loads((artifacts / "software-report.json").read_text()) == {
         "fixture_source": "pinned-recipe"}, "Export must use the rendered recipe's software report"
     measurement = json.loads((artifacts / "measurement.json").read_text())
+    assert not (work / "rootfs/etc/apt/preferences.d/ciproxy-software").exists()
+    assert measurement["apt_pin_differences"] == {
+        "available": True, "differences_fail_build": False, "difference_count": 1,
+        "differences": [{"package": "temurin-17-jdk", "installed": "17.0.22.0.0+7-0",
+                         "pin": "17.0.21.0.0+9-*"}],
+    }, measurement["apt_pin_differences"]
     manifest = json.loads((artifacts / "manifest.json").read_text())
     assert measurement["rootfs"] == "rootfs", "Release measurement must use a neutral root label"
     assert manifest["measurements"]["rootfs"] == "rootfs", (

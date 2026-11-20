@@ -24,13 +24,39 @@ Its inventory is the reference for the full software set.
 The recipe selects some software at its latest version.
 [software-pins.json](software-pins.json) pins each of these selections,
 such as tool versions, release assets, and container image digests.
-[software-apt-pins.json](software-apt-pins.json) pins the apt package
-revisions. Each pin uses the version of the reference inventory when the
-inventory names one. The other pins record a concrete version from their
-source. Both builds apply these pins to a copy of the recipe, the pinned
-recipe. [paths.env](paths.env) names its folder in `WORK_DIR`.
+[software-apt-pins.json](software-apt-pins.json) holds every APT
+preference of both builds in its `packages` map.
+Each pin uses the version of the reference inventory when the inventory
+names one. When a repository no longer offers that version, the pin uses a
+version that the repository offers. `selection_notes` explains each pin
+that differs from the reference. The file also records the repository
+`sources` and the date of its last check, `checked_on`.
+The other pins record a concrete version from their source. The `sources`
+notes of `software-pins.json` explain a pin that its source cannot match
+exactly. An example is the Chromium pin, which is the newest snapshot at or
+below the pinned Chrome revision.
+Some pins keep the selector form that the recipe expects. For example, the
+toolset keeps the upstream Node.js default, and the install command names
+the exact pinned Node.js version.
+Both builds apply these pins to a copy of the recipe, the pinned recipe.
+[paths.env](paths.env) names its folder in `WORK_DIR`.
+In the pinned recipe, no package request overrides its APT pin.
+A GitHub release lookup uses the pin of the repository when one exists.
+An exact version without a pin selects the one release whose tag names
+that version. `latest` or a pattern without a pin keeps the upstream
+lookup.
 Packages that no pin covers still resolve from their repositories at build
-time. Review the generated software inventory before publishing.
+time. Both builds compare each installed package with the `packages` map,
+and report each package whose version differs from its pin. No difference
+fails a build. The machine build adds this report to `measurement.json` as
+`apt_pin_differences`, and the manifest includes that measurement.
+The report gives `available`, `difference_count`, `differences`, and
+`differences_fail_build`, which is always `false`. Each difference gives
+`package`, `installed`, and `pin`. A vertical bar joins several matching
+pins. When the build cannot read the pin map or the package status,
+`available` is `false`, and `reason` says why.
+Review the generated software inventory and these differences before
+publishing.
 
 Use a disposable x64 Linux build machine with KVM and enough disk for the
 base disk, build disk, Linux source, archive, extraction, and final disk.

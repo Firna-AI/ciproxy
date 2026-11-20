@@ -7,6 +7,7 @@ import pathlib
 import subprocess
 
 from boat_build_owners import RECORD_NAME
+from apt_pin_report import compare_pins
 
 
 BUILD_UNIT = "ciproxy-image-build.service"
@@ -92,11 +93,12 @@ def compare_inventory(reference, installed):
 
 
 def collect(build_dir, image_dir=pathlib.Path("/imagegeneration"),
-            restart_file=pathlib.Path("/etc/ciproxy/boat-restart-services")):
+            restart_file=pathlib.Path("/etc/ciproxy/boat-restart-services"), system_root=pathlib.Path("/")):
     artifacts = build_dir / "reports"
     artifacts.mkdir(exist_ok=True)
     owners = build_dir / RECORD_NAME
     developer = build_dir / "provider-developer-environment.json"
+    pin_differences = compare_pins(system_root)
     packages = subprocess.run(["dpkg-query", "-W", "-f=${Package}\t${Version}\n"],
                               capture_output=True, text=True)
     save(artifacts / "installed-packages.json", {
@@ -109,19 +111,22 @@ def collect(build_dir, image_dir=pathlib.Path("/imagegeneration"),
         "provider_docker_gid": (pathlib.Path("/etc/ciproxy/provider-docker-gid").read_text().strip()
                                 if pathlib.Path("/etc/ciproxy/provider-docker-gid").exists() else None),
         "provider_directory_owners": json.loads(owners.read_text()) if owners.exists() else None,
-        "provider_developer_environment": json.loads(developer.read_text()) if developer.exists() else None})
+        "provider_developer_environment": json.loads(developer.read_text()) if developer.exists() else None,
+        "apt_pin_differences": pin_differences})
     report = image_dir / "software-report.json"
     reference = build_dir / "reference-software.json"
     if report.exists():
         installed = json.loads(report.read_text())
         save(artifacts / "software-report.json", installed)
         if reference.exists():
-            save(artifacts / "inventory-differences.json",
-                 compare_inventory(json.loads(reference.read_text()), installed))
+            differences = compare_inventory(json.loads(reference.read_text()), installed)
+            differences["apt_pin_differences"] = pin_differences
+            save(artifacts / "inventory-differences.json", differences)
     elif reference.exists():
         differences = compare_inventory(json.loads(reference.read_text()), {})
         differences["software_report_available"] = False
         differences["reason"] = "Provisioning stopped before the upstream software report was available."
+        differences["apt_pin_differences"] = pin_differences
         save(artifacts / "inventory-differences.json", differences)
     before = build_dir / "services-before.json"
     if before.exists():

@@ -1,7 +1,8 @@
 {
   "sources": {
     "reference_inventory_sha256": "d84dfc4a11ea6a3bb46b2db89e42533ec5077764ffb22f67f3ef43a7dab8b874",
-    "additional_versions_date": "2026-11-20"
+    "additional_versions_date": "2026-11-20",
+    "chromium_snapshot_reason": "Use the newest available Linux_x64 snapshot at or below Chrome revision 1717349. The snapshot listing on 2026-11-20 selects 1717344. Not every Chrome revision has a snapshot."
   },
   "versions": {
     "OS Version:": "24.04.5 LTS",
@@ -212,7 +213,7 @@
     "multi_json": "1.21.2",
     "ansible": "14.6.0",
     "PowerShellGet": "2.2.5",
-    "chromium_revision": "1717349"
+    "chromium_revision": "1717344"
   },
   "npm": {
     "grunt": "1.6.3",

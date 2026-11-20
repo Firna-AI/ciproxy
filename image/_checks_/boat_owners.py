@@ -94,6 +94,7 @@ def native_fixture(workspace, block=PINNED_TEST):
         "build/configure-system.sh": "mv -f /imagegeneration/post-generation /opt\n",
         "build/install-docker.sh": 'groupmod -g "$gid" docker\n# Docker daemon takes time\n',
         "build/install-nodejs.sh": "",
+        "build/install-pypy.sh": 'install_pypy() {\n    local package_url=$1\n    mkdir $pypy_toolcache_version_path\n}\n',
         "build/cleanup.sh": "",
         "helpers/install.sh": "",
         "tests/System.Tests.ps1": "",

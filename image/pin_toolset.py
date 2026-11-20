@@ -20,8 +20,6 @@ def apply_toolset(upstream, pins):
             tool["versions"] = [value.split(" ")[0] for value in versions["PyPy"]]
     toolset["java"]["maven"] = versions["Maven"]
     toolset["pwsh"]["version"] = versions["PowerShell"]
-    toolset["node"]["default"] = versions["Node.js"][0]
-    toolset["selenium"]["version"] = versions["Selenium server"]
     toolset["vcpkg"] = {"commit": pins["extra"]["vcpkg_commit"]}
     for module in toolset["powershellModules"]:
         module["versions"] = versions[module["name"]]

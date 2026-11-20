@@ -65,6 +65,9 @@ def create(workspace, image):
     work = root / "work"
     provision_sandbox(source, image)
     (source / "etc/fstab").write_text(SOURCE_FSTAB)
+    (source / "var/lib/dpkg").mkdir(parents=True)
+    (source / "var/lib/dpkg/status").write_text(
+        "Package: temurin-17-jdk\nStatus: install ok installed\nVersion: 17.0.22.0.0+7-0\n")
     (source / "usr/local/bin/ciproxy-guest").write_bytes(b"fixture guest\n")
     (source / "privileged-tool").write_bytes(b"fixture tool\n")
     (source / "privileged-tool").chmod(0o755)

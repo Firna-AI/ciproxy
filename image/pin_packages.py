@@ -32,18 +32,8 @@ def apply_packages(upstream, pins, apt):
             raise RuntimeError(f"Pinned package override does not match {name}: {old[:80]}")
         path.write_text(content.replace(old, new))
 
-    for package, version in {
-        "azure-cli": versions["Azure CLI"], "gh": versions["GitHub CLI"],
-        "google-cloud-cli": versions["Google Cloud CLI"], "git-lfs": versions["Git LFS"],
-        "git": versions["Git"], "microsoft-edge-stable": versions["Microsoft Edge"],
-        "firefox": versions["Mozilla Firefox"], "kubectl": versions["Kubectl"],
-        "mysql-server* mysql-client* mysql-common mysql-community*": versions["MySQL"],
-        "postgresql-16 postgresql-client-16 libpq-dev libpq5": versions["PostgreSQL"] + "-*",
-        "temurin-8-jdk": "8.0.504*", "temurin-11-jdk": "11.0.33*",
-        "temurin-17-jdk": "17.0.21*", "temurin-21-jdk": "21.0.13*", "temurin-25-jdk": "25.0.5*",
-    }.items():
-        apt[package] = version if "*" in version or package.startswith("mysql") else version + "*"
     preferences = apt_preferences(apt)
+    edit("install-java-tools.sh", r"temurin-${java_version}-jdk=\*", "temurin-${java_version}-jdk")
     edit("configure-apt.sh", "source $HELPER_SCRIPTS/os.sh",
          "source $HELPER_SCRIPTS/os.sh\ncat > /etc/apt/preferences.d/ciproxy-software <<'CIPROXY_PINS'\n" +
          preferences + "\nCIPROXY_PINS\n")

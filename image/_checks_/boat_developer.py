@@ -97,7 +97,9 @@ def fixture(workspace, warning=False):
     kept[root / "etc/profile.d/nvm.sh"] = signature(root / "etc/profile.d/nvm.sh")
     package_state = work / "packages.json"
     package_state.write_text(json.dumps({"md5": hashlib.md5(default_bash).hexdigest(),
-                                        "owned": ["/etc/profile.d/rust.sh"] if warning else []}))
+                                        "owned": ["/etc/profile.d/rust.sh"] if warning else [],
+                                        "installed": {}, "residual": {}, "conffiles": {},
+                                        "extra_removals": [], "events": []}))
     query = tools / "dpkg-query"
     query.write_text(f'#!{sys.executable}\nimport json,pathlib,sys\n'
                      f'state=json.loads(pathlib.Path({str(package_state)!r}).read_text())\n'
@@ -105,7 +107,13 @@ def fixture(workspace, warning=False):
                      '    owned=sys.argv[-1] in state["owned"]\n'
                      '    print("fixture-package: "+sys.argv[-1]) if owned else None\n'
                      '    raise SystemExit(0 if owned else 1)\n'
-                     'print(" /etc/bash.bashrc "+state["md5"])\n')
+                     'if "-f=${Conffiles}" in sys.argv:\n'
+                     '    print(" /etc/bash.bashrc "+state["md5"])\n'
+                     'else:\n'
+                     '    for name,version in state["installed"].items():\n'
+                     '        print(name+"\\t"+version+"\\tinstalled")\n'
+                     '    for name,version in state["residual"].items():\n'
+                     '        print(name+"\\t"+version+"\\tconfig-files")\n')
     query.chmod(0o755)
     definition = root / "opt/ciproxy-build/definition"
     for name in ("boat-build-bootstrap.sh", "boat-build-developer.py", "boat-developer-tools.json"):
@@ -118,8 +126,30 @@ def fixture(workspace, warning=False):
     python.write_text(f'#!/bin/sh\nexec {sys.executable} "$@" --root "{root}"\n')
     python.chmod(0o755)
     apt = tools / "apt-get"
-    apt.write_text(f'#!{sys.executable}\nimport pathlib,sys\nroot=pathlib.Path({str(root)!r})\n'
+    apt.write_text(f'#!{sys.executable}\nimport json,pathlib,sys\nroot=pathlib.Path({str(root)!r})\n'
                    f'record=root/{str(RECORD)!r}\n'
+                   'if "remove" in sys.argv or "purge" in sys.argv:\n'
+                   '    action="purge" if "purge" in sys.argv else "remove"\n'
+                   '    assert "--no-auto-remove" in sys.argv\n'
+                   '    assert not (root/"usr/local/bin/cmake").is_symlink()\n'
+                   '    assert (root/"etc/bash.bashrc").read_bytes().startswith(b"# package bash fixture")\n'
+                   f'    path=pathlib.Path({str(package_state)!r})\n'
+                   '    state=json.loads(path.read_text())\n'
+                   '    names=sys.argv[sys.argv.index("--")+1:]\n'
+                   '    simulation="--simulate" in sys.argv\n'
+                   '    state["events"].append({"simulation":simulation,"packages":names,"action":action})\n'
+                   '    if simulation:\n'
+                   '        extra=state["extra_removals"] if "dotnet-host-8.0" in names else []\n'
+                   '        for name in names+extra: print(("Purg " if action=="purge" else "Remv ")+name)\n'
+                   '    else:\n'
+                   '        for name in names:\n'
+                   '            version=state["installed"].pop(name,state["residual"].get(name))\n'
+                   '            if action=="purge":\n'
+                   '                state["residual"].pop(name,None)\n'
+                   '                for relative in state["conffiles"].get(name,[]): (root/relative).unlink(missing_ok=True)\n'
+                   '            else: state["residual"][name]=version\n'
+                   '    path.write_text(json.dumps(state))\n'
+                   '    raise SystemExit(0)\n'
                    'if sys.argv[1] == "update" and record.exists():\n'
                    '    print("Cleanup must follow the package index update.")\n'
                    '    raise SystemExit(24)\n'
@@ -130,7 +160,7 @@ def fixture(workspace, warning=False):
     env = {**os.environ, "PATH": str(tools) + os.pathsep + os.environ["PATH"]}
     return types.SimpleNamespace(root=root, env=env, policy=policy, commands=commands, targets=targets,
                                  kept=kept, environment=expected_environment, bash=default_bash + extra,
-                                 bootstrap=bootstrap)
+                                 bootstrap=bootstrap, package_state=package_state)
 
 
 def run_cleanup(case, sample, bootstrap=False):
@@ -216,3 +246,37 @@ def check_developer_inventory(case, workspace):
         (root / RECORD.name).write_text(json.dumps(expected))
         collect(root, root / "imagegeneration", root / "restart-services")
     case.assertEqual(json.loads(inventory.read_text())["provider_developer_environment"], expected)
+
+
+def check_developer_packages(case, workspace):
+    sample = fixture(workspace)
+    installed = {"cmake": "3.28.3-1build7", "cmake-data": "3.28.3-1build7",
+                 "dotnet-host-8.0": "8.0.11-0ubuntu1", "dotnet-sdk-8.0": "8.0.110-0ubuntu1",
+                 "aspnetcore-runtime-8.0": "8.0.11-0ubuntu1", "netstandard-targeting-pack-2.1-8.0": "8.0.11-0ubuntu1",
+                 "php8.4-cli": "8.4.16-1", "php8.4-common": "8.4.16-1", "php8.3-cli": "8.3.14-1",
+                 "nodejs": "20.19.0", "ninja-build": "1.11.1-2", "openjdk-11-jre-headless": "11.0.29",
+                 "provider-controller": "1"}
+    state = json.loads(sample.package_state.read_text())
+    state.update(installed=installed, extra_removals=["provider-controller"])
+    sample.package_state.write_text(json.dumps(state))
+    report = run_cleanup(case, sample)
+    case.assertEqual([(item["pinned_tool"], item["status"]) for item in report.get("packages", [])],
+                     [("CMake 3.31.6", "removed"), (".NET", "kept"), ("Maven", "absent"), ("PHP 8.3", "removed")])
+    groups = {item["pinned_tool"]: item for item in report["packages"]}
+    removed = {"cmake", "cmake-data", "php8.4-cli", "php8.4-common"}
+    for group in groups.values():
+        case.assertEqual(group.get("action"), "purge")
+        for item in group["packages"]:
+            case.assertEqual(item["version"], installed[item["name"]])
+            case.assertEqual(item["status"], "removed" if item["name"] in removed else "kept")
+    case.assertEqual(groups["Maven"]["packages"], [])
+    case.assertEqual(groups[".NET"]["extra_removals"], ["provider-controller"])
+    case.assertEqual({item["name"] for item in groups[".NET"]["packages"]},
+                     {"dotnet-host-8.0", "dotnet-sdk-8.0", "aspnetcore-runtime-8.0", "netstandard-targeting-pack-2.1-8.0"})
+    case.assertEqual(report["warnings"], ["Kept .NET packages because apt would also remove: provider-controller."])
+    final = json.loads(sample.package_state.read_text())
+    case.assertEqual(final["installed"], {name: version for name, version in installed.items() if name not in removed})
+    removals = [set(event["packages"]) for event in final["events"] if not event["simulation"]]
+    case.assertEqual(removals, [{"cmake", "cmake-data"}, {"php8.4-cli", "php8.4-common"}])
+    case.assertEqual([event["simulation"] for event in final["events"]], [True, False, True, True, False])
+    case.assertEqual({event["action"] for event in final["events"]}, {"purge"})
