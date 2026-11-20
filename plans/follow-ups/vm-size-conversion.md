@@ -150,8 +150,9 @@
   - C can remove the whole-GB values from runtime code. But it must drop
     the documented whole-GB request type, or move it to a crate that the
     scaler can use. So C does not rank higher.
-  - `plans/follow-ups/parallel-shared-code-duplication.md` does not cover
-    this class. The copies did not come from parallel branches. They came
+  - The rule of the `delegating` skill for shared pieces of parallel work,
+    added on 20 November 2026, does not cover this class. The copies did
+    not come from parallel branches. They came
     one after another on one line of history, in `599d240b`, `a8697a1d`,
     `703b9b19`, `fa721d4c`, and `85b1c288`, from 5 to 8 November 2026.
 - **Previous examples:** Commit `3b082ee` of 17 November 2026 removed a copy
