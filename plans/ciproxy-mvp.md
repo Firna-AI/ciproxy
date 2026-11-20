@@ -2537,14 +2537,43 @@ starts the installed services, as on a machine.
 `follow-ups/boat-image-services.md` holds the full item until this
 milestone settles it.
 
-- [ ] Test one Boat sandbox: its base system, a native install of
+- [x] Test one Boat sandbox: its base system, a native install of
       PostgreSQL, MySQL, and Docker, Boat's controller after the installs,
       and a restore from a snapshot.
-      Evidence: `.context/ciproxy-mvp/boat-native-test/`.
-- [ ] Design the Boat build from the test result: the image build steps
+      Run of 20 November 2026: Boat's base is Ubuntu 24.04.4 with systemd
+      as process 1, cgroup v2, kernel 6.8, Docker 29.7.0, and its
+      controller `ascii-agent.service`. The unchanged PostgreSQL, MySQL,
+      Docker, Apache, and Nginx installers passed their upstream tests,
+      and the services worked under Boat's systemd. Boat's controller
+      kept working. A restore keeps the processes of the base, so Docker
+      failed until a restart. The Docker installer changed the number of
+      the `docker` group, which broke Boat's own Docker users.
+      Evidence: `.context/ciproxy-mvp/boat-native-test/run-2/`.
+- [x] Design the Boat build from the test result: the image build steps
       that run on Boat's base system, the pins that keep the versions of the
       machine image, and the start of the guest as a systemd service. Record
       the design calls here.
+      My calls, 20 November 2026:
+      - The build runs the provisioners of the pinned image definition, with
+        `image/pins.env`, on a sandbox from Boat's base image, through the
+        Boat command API. Reason: one image definition, as item 123 says.
+      - It installs the pinned versions, also over a newer version of
+        Boat's base, such as Docker 28.0.4 over 29.7.0. Each selection that
+        the recipe leaves at `latest`, such as containerd, gets a pin in the
+        image definition, so both builds get it. The release reports each
+        version difference of the two inventories. Reason: a job behaves
+        the same on both.
+      - It keeps Boat's controller, its desktop services, its network, and
+        the number of its `docker` group. It skips the provisioners that
+        only the Firecracker disk needs: the kernel, the boot loader, the
+        network units, and the reboot of the vsock guest unit. Reason: the
+        launch inspection needs Boat's controller.
+      - After a restore, the launcher reloads systemd, restarts each
+        changed daemon, at least Docker and containerd, and starts the
+        ciproxy guest as a systemd service in its Boat mode. Reason: a
+        restore keeps the processes of Boat's base.
+      - Services stay disabled at start, as the recipe and GitHub's runners
+        have them. A workflow starts them with `systemctl`.
 - [ ] Update `docs/protocol/agent-images.md`: one image definition, built as
       the machine image and as the Boat snapshot. State each difference that
       stays, such as Boat's kernel.
