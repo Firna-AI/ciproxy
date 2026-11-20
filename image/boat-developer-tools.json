@@ -1,0 +1,118 @@
+{
+  "commands": [
+    {
+      "names": ["cmake", "cpack", "ctest"],
+      "pinned_tool": "CMake 3.31.6",
+      "install_path": "/usr/local/bin",
+      "reason": "Boat's cmake makes the pinned installer skip installation. These entries also block its /usr/local install."
+    },
+    {
+      "names": ["go", "gofmt"],
+      "pinned_tool": "Go 1.24.13",
+      "install_path": "/usr/bin",
+      "reason": "Boat's /usr/local/bin entries resolve before the pinned default Go links."
+    },
+    {
+      "names": ["node", "npm", "npx"],
+      "pinned_tool": "Node.js 22.23.4",
+      "install_path": "/usr/local/bin",
+      "reason": "Boat's nvm links could make the pinned installer write into Boat's user tool home."
+    },
+    {
+      "names": ["ruby", "gem", "bundle", "bundler", "erb", "irb", "minitest", "racc", "rake", "rbs", "rdbg", "rdoc", "ri", "syntax_suggest", "test-unit", "typeprof"],
+      "pinned_tool": "Ruby 3.2.3",
+      "install_path": "/usr/bin",
+      "reason": "Boat's Ruby interpreter shadows the pinned Ruby. Its related commands use that interpreter."
+    },
+    {
+      "names": ["cargo", "cargo-clippy", "cargo-fmt", "clippy-driver", "rust-analyzer", "rustc", "rustfmt", "rustup"],
+      "pinned_tool": "Rust 1.99.1",
+      "install_path": "~/.cargo/bin",
+      "reason": "Boat's proxies and Rust settings select Boat's toolchains instead of the runner's pinned Rust."
+    },
+    {
+      "names": ["composer"],
+      "pinned_tool": "Composer 2.11.1",
+      "install_path": "/usr/bin/composer",
+      "reason": "Boat's /usr/local/bin entry resolves before the pinned Composer."
+    },
+    {
+      "names": ["gradle"],
+      "pinned_tool": "Gradle 9.8.2",
+      "install_path": "/usr/bin/gradle",
+      "reason": "Boat's /usr/local/bin entry resolves before the pinned Gradle link."
+    },
+    {
+      "names": ["kotlin", "kotlinc"],
+      "pinned_tool": "Kotlin 2.4.21",
+      "install_path": "/usr/bin",
+      "reason": "Boat's /usr/local/bin entries resolve before the pinned Kotlin links."
+    }
+  ],
+  "packages": [
+    {
+      "patterns": ["cmake", "cmake-data"],
+      "pinned_tool": "CMake 3.31.6",
+      "install_path": "/usr/local/bin",
+      "reason": "Boat's apt CMake makes the pinned installer skip installation."
+    },
+    {
+      "patterns": ["dotnet-*-8.0", "aspnetcore-*-8.0", "netstandard-targeting-pack-2.1-8.0"],
+      "pinned_tool": ".NET",
+      "install_path": "/usr/share/dotnet",
+      "reason": "Boat's apt .NET host owns /usr/bin/dotnet and blocks the pinned link."
+    },
+    {
+      "patterns": ["maven"],
+      "pinned_tool": "Maven",
+      "install_path": "/usr/bin/mvn",
+      "reason": "Boat's Maven alternative blocks the link from the pinned Maven installation."
+    },
+    {
+      "patterns": ["php8.4-*"],
+      "pinned_tool": "PHP 8.3",
+      "install_path": "/usr/bin/php",
+      "reason": "The automatic PHP alternative selects Boat's PHP 8.4 before pinned PHP 8.3."
+    }
+  ],
+  "kept_extras": [
+    {
+      "names": ["pnpm", "pnpx", "bun", "bunx", "deno", "uv", "poetry", "sbt", "scala", "scalac", "scaladoc"],
+      "reason": "These extra commands shadow no tool installed by the pinned image definition."
+    }
+  ],
+  "kept_settings": [
+    {
+      "path": "/etc/profile.d/nvm.sh",
+      "reason": "The pinned nvm sets its default to system, so this script adds no runner Node path."
+    },
+    {
+      "path": "/root/.profile",
+      "reason": "This file affects only the build user and shadows no pinned tool."
+    },
+    {
+      "path": "/root/.bashrc",
+      "reason": "This file affects only the build user and shadows no pinned tool."
+    }
+  ],
+  "settings": {
+    "environment": {
+      "path": "/etc/environment",
+      "path_elements": ["/usr/local/cargo/bin"],
+      "variables": ["RUSTUP_HOME"],
+      "reason": "Boat's Rust settings override the runner's pinned Rust toolchain."
+    },
+    "profile_scripts": [
+      {
+        "path": "/etc/profile.d/rust.sh",
+        "reason": "Boat's unowned profile script redirects the runner's pinned Rust to Boat's toolchains."
+      }
+    ],
+    "bash_conffile": {
+      "path": "/etc/bash.bashrc",
+      "package": "bash",
+      "remove_block": "# Rust toolchain (added by install-all-deps.sh)\n# RUSTUP_HOME is shared, CARGO_HOME defaults to ~/.cargo per user\nexport RUSTUP_HOME=\"/usr/local/rustup\"\nexport PATH=\"/usr/local/cargo/bin:$PATH\"\n\n",
+      "reason": "Boat's Rust exports redirect pinned Rust. Check the edited conffile against dpkg's recorded md5."
+    }
+  }
+}

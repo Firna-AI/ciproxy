@@ -95,7 +95,7 @@ async fn real_adapter_preserves_marks_snapshot_ttl_wallet_and_private_root_launc
     verify_private_preparation(captured[4].body["command"].as_str().unwrap());
     let launch = captured[5].body["command"].as_str().unwrap();
     assert!(launch.contains("if mkdir /run/ciproxy-overflow/0000000000000000000000000000000b"));
-    assert!(launch.contains("/opt/ciproxy/rootfs/opt/ciproxy-image/boat-run.sh"));
+    assert!(launch.contains("/bin/bash /opt/ciproxy-image/boat-run.sh "));
     assert!(!launch.contains("fixture-key"));
     assert_eq!(captured[7].headers["x-ascii-confirm-delete"], "bx_23456789");
 }

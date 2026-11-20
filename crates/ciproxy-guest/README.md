@@ -52,14 +52,22 @@ Runner stderr goes to `/dev/null`.
 Neither pipe can block the child because the guest stopped reading it.
 
 In `boat` mode, consume a private registration file.
+The guest does not follow a symbolic link to the file.
+The file must belong to the guest's user, with no group or other access.
 Remove the file before starting the runner.
 POST only the existing `GuestToAgent::RunnerExited` value.
 Use the file's HTTPS URL and its sandbox-scoped bearer token.
 Disable HTTP redirects to keep that token at its intended endpoint.
 The control plane must validate the token and delete the sandbox.
 If the report fails, the Boat lifetime remains the backstop.
-The Boat wrapper ends its private namespace after the guest ends.
-It retains Boat's provider kernel and provider services.
+A missing file ends the guest with exit code 1 and the error
+`registration file is missing`. The error names no path.
+The guest then starts no runner and sends no report.
+In a Boat sandbox, the guest runs as a service of Boat's own systemd.
+The [Boat launcher](../../image/boat.md#boat-launch) starts that service
+after it refreshes the restored services.
+The guest leaves the end of the sandbox to the control plane and the Boat
+lifetime.
 
 Before the runner can take its one job, the guest measures the proxy URL on
 Docker's actual bridge and the preloaded Docker bytes.
@@ -110,8 +118,16 @@ ciproxy-guest --image-id IMAGE_ID vsock --port 5252
 ```
 
 The agent must use the same guest port.
-The [image guide](../../image/README.md) gives the Boat file format and
-the build, publication, and live smoke commands.
+The Boat snapshot starts its guest with this interface:
+
+```sh
+ciproxy-guest --image-id IMAGE_ID boat \
+  --registration-file /run/ciproxy/registration.json
+```
+
+The [image guide](../../image/README.md) gives the build and publication
+commands. The [Boat smoke guide](../../image/boat-smoke.md) gives the Boat
+file format and the live smoke commands.
 No registration or control-plane token belongs in an image or snapshot.
 
 ## Development
@@ -129,6 +145,8 @@ The Shutdown test waits for an actual pending runner future.
 It uses a notification, with no sleep or wall-clock assertion.
 The [runner environment check](../../image/checks.md#runner-account-environment)
 starts the built binary with the real `runuser` and entry script.
+The [Boat launch check](../../image/checks.md#boat-launch) starts it
+through the Boat launcher without a registration.
 Live vsock, Docker, GitHub, and Boat checks need external infrastructure.
 
 ### Key Code
@@ -148,13 +166,15 @@ Live vsock, Docker, GitHub, and Boat checks need external infrastructure.
 - [src/handoff.rs](src/handoff.rs) prepares the in-memory proxy.
 - [src/process.rs](src/process.rs) starts the listener as the runner
   account, drains its output, and controls its group.
-- [src/power.rs](src/power.rs) requests the Firecracker reset or leaves Boat
-  shutdown to its wrapper.
+- [src/power.rs](src/power.rs) requests the Firecracker reset or leaves the
+  end of a Boat sandbox to the control plane.
 - [src/cli.rs](src/cli.rs) composes the selected Linux runtime.
 - [src/_tests_/service_tests.rs](src/_tests_/service_tests.rs) protects the
   lifecycle requirements.
 - [tests/assignment_socket.rs](tests/assignment_socket.rs)
   checks the source-hook wire contract through the production socket path.
+- [tests/boat_registration.rs](tests/boat_registration.rs) checks the safe
+  error of the built binary when no Boat registration arrived.
 
 ### Related Docs
 

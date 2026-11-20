@@ -1,15 +1,17 @@
 # Scratch output: reviews, evidence, measurements, and logs.
 .context/
 
-# npm dependencies.
-node_modules/
+# npm dependencies and workspace links.
+node_modules
 
 # Mokly build output and its reservation directory. Never commit them.
 docs/mockups/mokly-generated/
 .mokly-export-reservations/
 
-# Rust build output.
-target/
+# Rust build output and workspace links.
+target
+
+__pycache__/
 
 # App and site build output and caches.
 ts/app/dist/

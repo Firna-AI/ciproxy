@@ -9,6 +9,9 @@ import shutil
 import subprocess
 import tempfile
 
+from pin_recipe import PINNED_RECIPE_DIRECTORY
+from _checks_.image_cleanup import legacy_image
+
 
 SOURCE_FSTAB = ("UUID=source-root / ext4 discard,errors=remount-ro 0 1\n"
                 "UUID=source-efi /boot/efi vfat umask=0077 0 1\n")
@@ -20,17 +23,21 @@ def provision_sandbox(source, image):
     for relative in ["usr/bin", "dev", "image", "etc/ciproxy", "etc/sudoers.d",
                      "etc/systemd/network", "etc/systemd/system", "usr/local/bin", "sbin"]:
         (source / relative).mkdir(parents=True, exist_ok=True)
-    for name in ["provision.sh", "pins.env", "ciproxy-guest.service"]:
+    for name in ["provision.sh", "boat-build-clean-image.sh", "pins.env", "ciproxy-guest.service"]:
         shutil.copyfile(image / name, source / "image" / name)
-    bash = pathlib.Path(shutil.which("bash")).resolve()
-    libraries = subprocess.check_output(["ldd", str(bash)], text=True)
-    for path in [str(bash), *re.findall(r"(/[^\s()]+)", libraries)]:
-        destination = source / path.lstrip("/")
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(path, destination)
-        destination.chmod(0o755)
-    shutil.copyfile(bash, source / "usr/bin/bash")
-    (source / "usr/bin/bash").chmod(0o755)
+    for name in ["bash", "rm"]:
+        binary = pathlib.Path(shutil.which(name)).resolve()
+        with binary.open("rb") as command:
+            header = command.readline(256)
+        executable = pathlib.Path(header[2:].split()[0].decode()) if header.startswith(b"#!") else binary
+        libraries = subprocess.check_output(["ldd", str(executable)], text=True)
+        for path in [str(binary), str(executable), *re.findall(r"(/[^\s()]+)", libraries)]:
+            destination = source / path.lstrip("/")
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(path, destination)
+            destination.chmod(0o755)
+        shutil.copyfile(binary, source / "usr/bin" / name)
+        (source / "usr/bin" / name).chmod(0o755)
     (source / "dev/null").touch()
     stub = source / "usr/bin/provision-stub"
     stub.write_text('''#!/usr/bin/bash
@@ -52,7 +59,7 @@ exit 0
         command.write_text('#!/usr/bin/bash\nprintf \'%s\\n\' "${0##*/}" "$@" > /reset-observation\n')
         command.chmod(0o755)
     for name in ["dirname", "cat", "sha256sum", "install", "id", "useradd",
-                 "chmod", "chown", "tar", "cp", "find", "systemctl", "rm"]:
+                 "chmod", "chown", "tar", "cp", "find", "systemctl"]:
         (source / "usr/bin" / name).symlink_to(stub.name)
 
 
@@ -62,7 +69,11 @@ def create(workspace, image):
     source = root / "source"
     work = root / "work"
     provision_sandbox(source, image)
+    legacy_image(source, preferences=False)
     (source / "etc/fstab").write_text(SOURCE_FSTAB)
+    (source / "var/lib/dpkg").mkdir(parents=True)
+    (source / "var/lib/dpkg/status").write_text(
+        "Package: temurin-17-jdk\nStatus: install ok installed\nVersion: 17.0.22.0.0+7-0\n")
     (source / "usr/local/bin/ciproxy-guest").write_bytes(b"fixture guest\n")
     (source / "privileged-tool").write_bytes(b"fixture tool\n")
     (source / "privileged-tool").chmod(0o755)
@@ -75,9 +86,12 @@ def create(workspace, image):
         target.write(b"!")
     pins = dict(line.split("=", 1) for line in (image / "pins.env").read_text().splitlines()
                 if line and not line.startswith("#"))
-    report = work / ("runner-images-" + pins["RUNNER_IMAGES_COMMIT"]) / "images/ubuntu"
+    report = work / PINNED_RECIPE_DIRECTORY / "images/ubuntu"
     report.mkdir(parents=True)
-    (report / "software-report.json").write_text("{}\n")
+    (report / "software-report.json").write_text('{"fixture_source":"pinned-recipe"}\n')
+    stale = work / ("runner-images-" + pins["RUNNER_IMAGES_COMMIT"]) / "images/ubuntu"
+    stale.mkdir(parents=True)
+    (stale / "software-report.json").write_text('{"fixture_source":"stale-unpinned-recipe"}\n')
     (work / "qemu-output").mkdir()
     (work / "qemu-output/ciproxy.qcow2").write_bytes(b"fixture source disk\n")
     (work / "upstream-software.json").write_text("{}\n")

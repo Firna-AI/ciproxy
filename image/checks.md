@@ -33,9 +33,17 @@ It needs `chroot`, `ldd`, Bash, Python, tar, zstd, e2fsprogs, `acl`, and
 `setcap` from the Linux capability tools. It keeps all fixtures as evidence.
 It runs provisioning inside a fixture chroot with stub provisioning tools.
 It runs the real export script with stub libguestfs transport boundaries.
-Real archive, ext4, and package tools check both outputs and their metadata.
-The manifest, both release trees, and the ext4 disk must carry the same
-[capability map](#boat-file-capabilities) and the current `boat-run.sh`.
+Real archive, ext4, and package tools check the release tree, the ext4 disk,
+and their metadata. Both must keep the owners, modes, file capabilities,
+ACLs, and hard links of the source.
+The release must use the software report of the pinned recipe, not a stale
+report in the unpinned recipe folder.
+A package that differs from its APT pin must appear in the measurement as
+`apt_pin_differences`, also when the release tree has no APT preference
+file. The export must still finish.
+The provision step must remove the build-only files of ciproxy before the
+export, and the final tree must have none of them. The upstream files of
+`/imagegeneration` must stay.
 The ext4 check verifies the approved 1% root reserve.
 It also checks neutral root labels in the release measurement and manifest.
 It checks the small root's free margin and both `root_disk_bytes` fields
@@ -53,7 +61,7 @@ python3 image/check-network-probe.py
 ```
 
 The export check also checks the generated network file in the source,
-the finalized tree, the Boat archive, and the ext4 disk. DHCP must be off.
+the finalized tree, and the ext4 disk. DHCP must be off.
 The complete kernel configuration must stay in place. The image supplies
 DNS and does not duplicate the agent's address or gateway.
 
@@ -90,9 +98,9 @@ It sends no runner registration. The offline export check executes the
 installed cleanup command and checks that both artifacts keep that unit.
 The [Firecracker shutdown contract][reset] explains the x86 reset path.
 
-Boat keeps its provider kernel and network services. Its wrapper copies
-the provider resolver file into the chroot and never starts the image's
-network service. The guest network smoke covers Firecracker only.
+Boat keeps its provider kernel, network services, and resolver. The Boat
+build installs none of the image's network configuration. The guest network
+smoke covers Firecracker only.
 
 [reset]: https://github.com/firecracker-microvm/firecracker/blob/v1.17.0/FAQ.md#how-can-i-gracefully-reboot-the-guest-how-can-i-gracefully-poweroff-the-guest
 
@@ -141,30 +149,55 @@ Each failure must leave both mount points unmounted and Docker running on
 the root disk, with its data unchanged.
 It needs root for `chroot` and its private `/proc` mount.
 
-### Boat file capabilities
+### Boat build
 
 ```sh
-sudo python3 image/check-capabilities.py \
-  --work-dir .context/image-checks/capabilities
+python3 image/check-boat-build.py \
+  --work-dir .context/image-checks/boat-build
+```
+
+It runs the real build executor and the real pinned renderer on fixture
+recipes. The [Boat build check](boat-build-checks.md) lists what it covers
+and the tools that it needs.
+
+### Boat launch
+
+Build the guest first. The check starts that binary:
+
+```sh
+cargo build --package ciproxy-guest
 sudo python3 image/check-boat-run.py \
   --work-dir .context/image-checks/boat-run
 ```
 
-The first check runs `file-capabilities.py` on a fixture tree with real
-extended attributes. It needs root for real capabilities and `setfacl`
-from the ACL tools. The capture must record each file capability, also
-both names of a hard link. It must skip symbolic links and a mounted
-`tmpfs`.
+It runs `boat-run.sh` in a fixture root with a `systemctl` spy and the
+real guest. When the launch queues `ciproxy-boat-start.service`, the spy
+runs the real command of that unit. A restart of `user@1000.service`
+fails unless it runs in that unit, as a restart of Boat's user manager
+would end a command in its scope.
+With a registration, the launch must reload systemd and queue the start
+unit. The start unit must reload systemd, stop Docker and its socket,
+restart containerd, and restart each other listed service. It must then
+start Docker and its socket, and then the guest unit.
+The delivered file must arrive at `/run/ciproxy/registration.json` with
+mode 0600 and root as its owner. The source file must be gone, and the
+output must not show its contents.
+Without a registration, the launch must take the same steps. The real
+guest must then end with exit code 1 and its missing-registration error.
+The check needs root, `chroot`, and `ldd`, so that the fixture root stays
+private.
 
-The check then removes capabilities and runs `boat.py metadata` locally.
-The restore must bring each capability back, and the comparison must match
-the earlier baseline. A changed mode must still show as a difference.
-A changed file, or a directory replaced by a symbolic link, must get no
-capability, and the restore must fail.
+### Boat metadata comparison
 
-The second check runs `boat-run.sh` in a chroot with stub tools.
-The restore must finish before the image's Docker daemon and the guest
-start. A failed restore must start neither.
+```sh
+sudo python3 image/check-boat-metadata.py \
+  --work-dir .context/image-checks/boat-metadata
+```
+
+It runs `boat.py metadata` locally on a fixture root with a real file
+capability and a real ACL. The comparison must match the earlier baseline.
+A changed mode must show as a difference. The check needs root for the real
+capability and `setfacl` from the ACL tools.
 
 ### Boat delete confirmation
 
@@ -185,9 +218,11 @@ bash image/export.sh "$PWD/.context/ciproxy-image-build" from-rootfs
 ```
 
 This uses `WORK_DIR/rootfs` and the retained kernel and software reports.
-It installs the current `boat-run.sh` and `file-capabilities.py` in that
-tree, and records its capability map again.
-It rebuilds the root disk and both packages from those inputs.
+The generated software report must be in the pinned recipe folder that
+[paths.env](paths.env) names.
+The export removes the Boat files that older exports put in the tree:
+`boat-run.sh`, `file-capabilities.py`, and the capability map.
+It rebuilds the root disk and the Firecracker package from those inputs.
 
 ## Release growth proof
 

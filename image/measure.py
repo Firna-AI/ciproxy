@@ -36,8 +36,10 @@ def main():
     if args.job:
         result["free_job_bytes"] = disk.f_bavail * disk.f_frsize
     if args.artifacts:
+        from apt_pin_report import compare_pins
+        result["apt_pin_differences"] = compare_pins(rootfs)
         result["root_disk_bytes"] = (args.artifacts / "rootfs.ext4").stat().st_size
-        for name in ["rootfs.ext4", "rootfs.tar.zst", "vmlinux"]:
+        for name in ["rootfs.ext4", "vmlinux"]:
             path = args.artifacts / name
             info = path.stat()
             result["artifacts"][name] = {

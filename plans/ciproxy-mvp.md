@@ -2576,19 +2576,63 @@ milestone settles it.
         restore keeps the processes of Boat's base.
       - Services stay disabled at start, as the recipe and GitHub's runners
         have them. A workflow starts them with `systemctl`.
-- [ ] Update `docs/protocol/agent-images.md`: one image definition, built as
+
+Owner implementation calls, 20 November 2026:
+
+- Use one shared definition of the rendered recipe path for the machine
+  export and its fixture. A wrong report path must fail the fixture.
+- Remove ciproxy's build-only files and apt settings before the snapshot.
+  Keep `/imagegeneration` and `/opt/post-generation`, as the machine image
+  does. Both builds run post-generation scripts during provisioning, with
+  no extra call at startup.
+- Keep upstream cache, test-helper, and apt-wrapper cleanup. Omit only
+  the native provider's temporary-file and log wipes.
+- Remove the dead final Boat archive, capability map, and their helpers
+  and tests. Keep the source archive and ext4 metadata preservation that
+  the machine build needs. Published old objects stay unchanged.
+
+Implementation calls, 20 November 2026:
+
+- Queue daemon refresh and guest start in a root systemd unit. Restarting
+  Boat's user service manager must not stop initialization.
+- Run the final build from a clean Boat template after the local checks.
+  This proves the complete definition and cleanup from the provider base.
+- The Boat copy of the upstream owner test compares `/usr`, `/etc`,
+  `/usr/local`, and `/usr/local/bin` with their owners before the first
+  step. Reason: Boat's base gives `/usr/local` to its `user` account, and
+  the test still catches a build step that changes an owner.
+- A native move step depends on every source of the copy steps that write
+  its folder. Reason: a replayed copy must not leave a copied folder.
+- Start a new clean build source after the pin-precedence change. Reason:
+  the change alters the state before the first install step.
+- Before the install steps, remove each Boat command, shell setting, and
+  base package that shadows or blocks a tool of the pinned definition.
+  Keep Boat's extra tools that shadow no pinned tool, and its provider and
+  agent commands. Reason: the design call above installs the pinned
+  versions over Boat's base versions, so a job behaves the same on both.
+- Reuse a passed build step only when it and every earlier step are
+  unchanged. Reason: a later step can depend on the effect of an earlier
+  step, such as the bootstrap cleanup or the apt pins.
+
+- [x] Update `docs/protocol/agent-images.md`: one image definition, built as
       the machine image and as the Boat snapshot. State each difference that
       stays, such as Boat's kernel.
-- [ ] Build the Boat snapshot with the image definition on Boat's base
+      Branch: `conductor/m27a-boat-native-image`
+- [x] Build the Boat snapshot with the image definition on Boat's base
       system. Remove the `chroot` wrapper, the private namespace, the
       restore of file capabilities, and the separate Docker start of
       `image/boat-run.sh`.
-- [ ] Extend the Boat smoke: start an installed service, and check that it
+      Branch: `conductor/m27a-boat-native-image`
+- [x] Extend the Boat smoke: start an installed service, and check that it
       is ready.
+      Branch: `conductor/m27a-boat-native-image`
 - [ ] Publish an image release with its Boat snapshot. Then run the Boat
       `large` job with its exit callback and the three overflow checks.
 - [ ] Delete `follow-ups/boat-image-services.md`, which this milestone
       settles.
+
+Evidence of the native build, snapshot and restore of 20 November 2026:
+`.context/ciproxy-mvp/m27a-boat-native-build/final-completion-report.md`.
 
 ## Milestone 27b: Mockups: the image state of a machine
 

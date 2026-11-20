@@ -4,6 +4,7 @@ set -euo pipefail
 
 definition=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$definition/pins.env"
+source "$definition/paths.env"
 work_dir=$(realpath "${1:?Usage: image/export.sh WORK_DIR [from-rootfs]}")
 mode=${2:-from-source}
 disk="$work_dir/qemu-output/ciproxy.qcow2"
@@ -21,10 +22,10 @@ if [[ $mode != from-rootfs ]]; then
     sudo bash "$definition/rootfs-archive.sh" extract "$source_archive" "$rootfs"
 fi
 printf '/dev/vda / ext4 defaults 0 1\n' | sudo tee "$rootfs/etc/fstab" > /dev/null
-sudo install -D -m 0644 "$definition/file-capabilities.py" "$rootfs/opt/ciproxy-image/file-capabilities.py"
-sudo install -m 0755 "$definition/boat-run.sh" "$rootfs/opt/ciproxy-image/boat-run.sh"
-sudo python3 "$definition/file-capabilities.py" capture "$rootfs"
-sudo bash "$definition/rootfs-archive.sh" pack "$rootfs" "$artifacts/rootfs.tar.zst"
+sudo rm -f "$rootfs/opt/ciproxy-image/boat-run.sh" \
+    "$rootfs/opt/ciproxy-image/boat-start.sh" \
+    "$rootfs/opt/ciproxy-image/file-capabilities.py" \
+    "$rootfs/etc/ciproxy/file-capabilities.json"
 sudo python3 "$definition/measure.py" "$rootfs" > "$work_dir/installed-size.json"
 
 sudo env ROOTFS_BYTES="${ROOTFS_BYTES:-}" python3 \
@@ -32,7 +33,7 @@ sudo env ROOTFS_BYTES="${ROOTFS_BYTES:-}" python3 \
     --report "$work_dir/root-disk-sizing.json"
 cp "$work_dir/vmlinux" "$artifacts/vmlinux"
 cp "$work_dir/upstream-software.json" "$artifacts/upstream-software.json"
-cp "$work_dir/runner-images-$RUNNER_IMAGES_COMMIT/images/ubuntu/software-report.json" \
+cp "$work_dir/$PINNED_RECIPE_DIRECTORY/images/ubuntu/software-report.json" \
     "$artifacts/software-report.json"
 sudo python3 "$definition/measure.py" "$rootfs" --artifacts "$artifacts" \
     > "$artifacts/measurement.json"

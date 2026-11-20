@@ -38,7 +38,7 @@ crates/ciproxy-overflow/scripts/boat-live.sh delete \
 
 Use `--trial` with `create` on a free trial.
 The private registration file uses the
-[image's Boat format](../../image/README.md#boat-small-and-default-smoke).
+[image's Boat format](../../image/boat-smoke.md#github-job-smoke).
 It needs a live JIT registration and an HTTPS callback URL and token.
 The runner probe adjusts the internal runner ID to the recorded delivery.
 The live state file contains identities and phases, without credentials.

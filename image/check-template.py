@@ -3,6 +3,7 @@
 """Run the generated QEMU bootstrap against offline Ubuntu source files."""
 
 import argparse
+import importlib.util
 import json
 import os
 import pathlib
@@ -29,8 +30,10 @@ def check_sources(workspace):
 }
 ''')
     (templates / "variable.ubuntu.pkr.hcl").touch()
-    subprocess.run(["python3", str(pathlib.Path(__file__).with_name("prepare-template.py")),
-                    str(root / "upstream"), str(root / "packer")], check=True)
+    spec = importlib.util.spec_from_file_location("image_template", pathlib.Path(__file__).with_name("prepare-template.py"))
+    template = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(template)
+    template.prepare_template(templates, root / "packer")
     recipe = (root / "packer/build.pkr.hcl").read_text()
     inline = re.search(r'provisioner "shell"\s*\{\s*inline\s*=\s*', recipe)
     commands, _ = json.JSONDecoder().raw_decode(recipe[inline.end():])

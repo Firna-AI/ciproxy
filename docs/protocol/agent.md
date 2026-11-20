@@ -9,8 +9,9 @@ runs on own machines.
   agent.
 - **agent:** the open-source program on an own machine.
 - **job VM:** the VM on an own machine in which one job runs.
-- **image:** the disk image of the job VMs and of the
-  [Boat sandboxes](overflow.md#overflow-runners).
+- **image:** the job image. Job VMs boot its machine image, and
+  [Boat sandboxes](overflow.md#overflow-runners) start from its Boat
+  snapshot, as [Agent images](agent-images.md#terms) says.
 - **install token:** the token in the install command.
 - **download site:** the site of ciproxy that serves the install script and
   each version of the agent.

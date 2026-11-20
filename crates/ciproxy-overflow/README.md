@@ -104,11 +104,13 @@ File acknowledgements can use absolute paths or paths relative to
 normalization. It rejects parent components and paths outside that home.
 Success, encoding, byte count, and full-file SHA-256 checks remain required.
 
-The image needs root for Docker, mounts, and its private namespaces.
+The image launch needs root to refresh the restored services and to start
+the guest service.
 The shared process capability deliberately runs a restricted user.
 The narrow launcher therefore uses the pinned adapter's trusted controller
 API with one fixed image command.
-It runs `/opt/ciproxy/rootfs/opt/ciproxy-image/boat-run.sh`.
+It runs `/opt/ciproxy-image/boat-run.sh` with the path of the delivered
+file. The [Boat launch](../../image/boat.md#boat-launch) says what it does.
 Secrets travel in the private file, never in that command.
 A root-owned per-delivery marker permits at most one guest launch.
 Launch recovery reuses that marker and does not rewrite consumed input.

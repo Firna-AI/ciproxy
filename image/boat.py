@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
-"""Prepare, share, and smoke-test the common full rootfs with Boat's API."""
+"""Prepare, share, and smoke-test the native job image with Boat's API."""
 
 import argparse
 import base64
@@ -67,24 +67,22 @@ def create(api, args):
 
 def prepare(api, args):
     checksum = hashlib.sha256()
-    with args.archive.open("rb") as source:
+    with args.bundle.open("rb") as source:
         for block in iter(lambda: source.read(1024 * 1024), b""):
             checksum.update(block)
     digest = checksum.hexdigest()
-    api.upload(args.sandbox, args.archive, "/tmp/ciproxy-rootfs.tar.zst")
+    api.upload(args.sandbox, args.bundle, "/tmp/ciproxy-native-build.tar.gz")
     api.upload(args.sandbox, pathlib.Path(__file__).with_name("boat-prepare.sh"),
                "/tmp/ciproxy-prepare.sh")
-    api.upload(args.sandbox, pathlib.Path(__file__).with_name("rootfs-archive.sh"),
-               "/tmp/rootfs-archive.sh")
     answer = api.command(args.sandbox,
                          "sudo bash /tmp/ciproxy-prepare.sh "
-                         "/tmp/ciproxy-rootfs.tar.zst " + digest, detached=True)
-    print(json.dumps({"process_id": answer["processId"], "archive_sha256": digest}))
+                         "/tmp/ciproxy-native-build.tar.gz " + digest, detached=True)
+    print(json.dumps({"process_id": answer["processId"], "bundle_sha256": digest}))
 
 
 def snapshot(api, args):
-    check = api.command(args.sandbox, "test ! -e /opt/ciproxy/rootfs/opt/actions-runner/.runner "
-                        "&& test ! -e /opt/ciproxy/rootfs/run/ciproxy/registration.json")
+    check = api.command(args.sandbox, "sudo test ! -e /opt/actions-runner/.runner "
+                        "&& sudo test ! -e /run/ciproxy/registration.json")
     if check["exitCode"] != 0:
         raise RuntimeError("The template has runner data; use a fresh sandbox")
     name = urllib.parse.quote(args.name, safe="")
@@ -107,14 +105,16 @@ def snapshot(api, args):
 
 
 def run(api, args):
-    if args.registration.stat().st_mode & 0o077:
-        raise RuntimeError("The local registration file must have mode 0600")
-    directory = api.command(args.sandbox, "mktemp -d /tmp/ciproxy.XXXXXXXX")
-    path = directory["stdout"].strip() + "/registration.json"
-    api.request("PUT", f"/sandboxes/{args.sandbox}/files", {
-        "path": path, "content": base64.b64encode(args.registration.read_bytes()).decode(),
-        "encoding": "base64"})
-    command = "sudo bash /opt/ciproxy/rootfs/opt/ciproxy-image/boat-run.sh " + shlex.quote(path)
+    command = "sudo bash /opt/ciproxy-image/boat-run.sh"
+    if args.registration:
+        if args.registration.stat().st_mode & 0o077:
+            raise RuntimeError("The local registration file must have mode 0600")
+        directory = api.command(args.sandbox, "mktemp -d /tmp/ciproxy.XXXXXXXX")
+        path = directory["stdout"].strip() + "/registration.json"
+        api.request("PUT", f"/sandboxes/{args.sandbox}/files", {
+            "path": path, "content": base64.b64encode(args.registration.read_bytes()).decode(),
+            "encoding": "base64"})
+        command += " " + shlex.quote(path)
     answer = api.command(args.sandbox, command, detached=True)
     print(json.dumps({"sandbox_id": args.sandbox, "process_id": answer["processId"]}))
 
@@ -134,10 +134,7 @@ def status(api, args):
 
 
 def metadata(api, args):
-    command = ("sudo python3 /opt/ciproxy/rootfs/opt/ciproxy-image/file-capabilities.py "
-               "restore /opt/ciproxy/rootfs && "
-               "sudo python3 /opt/ciproxy/rootfs/opt/ciproxy-image/metadata-smoke.py "
-               "/opt/ciproxy/rootfs " + shlex.quote(args.file))
+    command = ("sudo python3 /opt/ciproxy-image/metadata-smoke.py / " + shlex.quote(args.file))
     answer = api.command(args.sandbox, command)
     if answer["exitCode"] != 0:
         raise RuntimeError("The metadata smoke command could not read the file")
@@ -168,14 +165,14 @@ def main():
     command.add_argument("--trial", action="store_true")
     command = commands.add_parser("prepare")
     command.add_argument("sandbox")
-    command.add_argument("archive", type=pathlib.Path)
+    command.add_argument("bundle", type=pathlib.Path)
     command = commands.add_parser("snapshot")
     command.add_argument("sandbox")
     command.add_argument("name")
     command.add_argument("--share-file", type=pathlib.Path, required=True)
     command = commands.add_parser("run")
     command.add_argument("sandbox")
-    command.add_argument("registration", type=pathlib.Path)
+    command.add_argument("registration", type=pathlib.Path, nargs="?")
     command = commands.add_parser("status")
     command.add_argument("sandbox")
     command.add_argument("--process", type=int)

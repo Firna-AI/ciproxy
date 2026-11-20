@@ -4,7 +4,7 @@ use std::future::pending;
 use std::os::unix::fs::{MetadataExt, OpenOptionsExt, PermissionsExt};
 use std::path::Path;
 use std::time::Duration;
-use std::{fs, io::Read};
+use std::{fs, io::ErrorKind, io::Read};
 
 use async_trait::async_trait;
 use ciproxy_protocol::guest::{AgentToGuest, GuestToAgent};
@@ -33,11 +33,16 @@ pub(crate) struct BoatChannel {
 
 impl BoatChannel {
     pub(crate) fn from_file(path: &Path) -> Result<Self> {
-        let mut file = fs::OpenOptions::new()
+        let opened = fs::OpenOptions::new()
             .read(true)
             .custom_flags(libc::O_NOFOLLOW)
-            .open(path)
-            .context("open private registration")?;
+            .open(path);
+        let mut file = match opened {
+            Err(error) if error.kind() == ErrorKind::NotFound => {
+                return Err(Error::MissingRegistrationFile);
+            }
+            other => other.context("open private registration")?,
+        };
         let metadata = file.metadata().context("read registration permissions")?;
         if metadata.permissions().mode() & 0o077 != 0 || metadata.uid() != geteuid().as_raw() {
             return Err(Error::InsecureRegistrationFile);
