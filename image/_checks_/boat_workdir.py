@@ -9,6 +9,8 @@ import subprocess
 import sys
 import tempfile
 
+from _checks_.image_cleanup import assert_clean_image, legacy_image
+
 
 def check_workdir(case, workspace):
     namespace = pathlib.Path(tempfile.mkdtemp(dir=workspace)).resolve()
@@ -45,6 +47,7 @@ def check_workdir(case, workspace):
 
 def finalize_fixture(case, namespace):
     definition = pathlib.Path(__file__).resolve().parents[1]
+    legacy_image(namespace)
     tools = namespace / "finalize-tools"
     tools.mkdir()
     python = tools / "python3"
@@ -62,6 +65,8 @@ def finalize_fixture(case, namespace):
     rm.chmod(0o755)
     finalizer = namespace / "finalize.sh"
     shutil.copy2(definition / "boat-build-finalize.sh", finalizer)
+    shutil.copy2(definition / "boat-build-clean-image.sh", namespace / "boat-build-clean-image.sh")
     result = subprocess.run(["bash", str(finalizer)], env={**os.environ,
         "PATH": str(tools) + os.pathsep + os.environ["PATH"]}, capture_output=True, text=True)
     case.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+    assert_clean_image(namespace)

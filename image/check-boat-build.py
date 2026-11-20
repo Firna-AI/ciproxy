@@ -37,6 +37,8 @@ from _checks_.toolset_defaults import check_node_default
 from _checks_.boat_permissions import check_permissions
 from _checks_.boat_tar import check_tar
 from _checks_.apt_epoch import check_epoch
+from _checks_.github_answers import check_answer_refresh
+from _checks_.image_cleanup import check_image_cleanup
 from boat import Api
 from boat_build_report import changed_services, compare_inventory, service_inventory
 
@@ -46,6 +48,12 @@ EXECUTOR = pathlib.Path(__file__).with_name("boat-build-execute.py").resolve()
 
 
 class NativeBuild(unittest.TestCase):
+    def test_mutable_release_answers_keep_all_step_identities_and_reuse_passed_steps(self):
+        check_answer_refresh(self, WORKSPACE)
+
+    def test_build_file_cleanup_keeps_upstream_files_and_is_repeatable(self):
+        check_image_cleanup(self, WORKSPACE)
+
     def test_rendered_apt_pin_keeps_the_repository_epoch(self):
         check_epoch(self, WORKSPACE)
 

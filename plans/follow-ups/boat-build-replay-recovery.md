@@ -4,7 +4,8 @@
   **Confidence:** High. **Harder later:** No.
 - **Kind:** Fix after merge.
 - **Added:** 2026-11-20, from `conductor/m27a-boat-native-image`, review
-  round 1, the wider fix of the PyPy resume finding.
+  round 1, the wider fix of the PyPy resume finding. Review round 2
+  confirmed the class and added facts and options.
 - **Location:** `image/boat-build-execute.py` (the replay decision),
   `image/boat_build_native.py` (the native adaptations of upstream
   scripts), and these rendered upstream installers:
@@ -13,6 +14,13 @@
   link, of `/usr/bin/mvn` and of `/usr/bin/gradle`), `install-swift.sh`
   (three `ln -s` lines), `install-google-chrome.sh` (`ln -s` of
   chromedriver and Chromium), and `install-nvm.sh` (`mkdir $NVM_DIR`).
+  Also plain `ln -s` in `install-julia.sh`, `install-miniconda.sh`,
+  `install-microsoft-edge.sh`, `install-mssql-tools.sh`,
+  `install-nodejs.sh`, `install-firefox.sh`, `install-sbt.sh` and
+  `install-haskell.sh`, and `unzip` without `-o` into kept folders in
+  `install-java-tools.sh`, `install-google-chrome.sh`,
+  `install-microsoft-edge.sh`, `install-ninja.sh`, `install-kotlin.sh`,
+  `install-terraform.sh` and `install-sqlpackage.sh`.
 - **Reason:** The branch made PyPy safe to replay. The other installers
   need their own native changes, and a refusal of unsafe replays is a new
   rejection, which the always-on rules reserve for the user.
@@ -46,6 +54,15 @@
     folder itself.
   - Replays of `install-swift.sh`, `install-google-chrome.sh`, and
     `install-nvm.sh` stop with `File exists`.
+  - The Haskell link to `/etc/skel/.ghcup` adds a link inside that folder
+    on a replay, as the Java link does.
+  - `unzip` without `-o` keeps the old file and exits 1 when its input is
+    closed, as under `systemd-run`. So a same-version replay of Java stops
+    at the Maven `unzip`, and a replay of Chrome stops at the chromedriver
+    `unzip`.
+  - The PyPy reuse check reads only `PyPy/<version>/x64.complete`. After a
+    refresh with a new PyPy pin for the same Python version, it keeps the
+    old PyPy build. A new Python version leaves the old version folder.
 - **Impact if no action:** After a failed step or a changed input, the
   operator must repair files by hand or start a new build from a clean Boat
   template, which costs about an hour and a paid sandbox.
@@ -67,18 +84,31 @@
   - **D.** Document only that a replay failure that comes from an
     installer's own earlier files needs a new build from a clean template.
     Effort: Small.
+  - **E.** The executor records the new top-level entries of each step in
+    a fixed list of install folders, such as `/usr/bin`, `/usr/local`,
+    `/usr/share`, `/opt`, `/etc/skel` and the tool cache. Before a replay,
+    it removes the recorded entries of each step that runs again, in
+    reverse step order, and keeps entries that a package owns. The
+    installers stay unchanged. It does not undo an edit inside an existing
+    file, and a wrong folder list can remove a provider path. Effort:
+    Large.
+  - **F.** One rendering rule for every installer: plain `ln -s` becomes
+    `ln -sfn`, plain `mkdir` becomes `mkdir -p`, and each `unzip` gets
+    `-o`, with a separate edit for each `mv` into a kept folder. It can
+    replace a file of Boat's base on a first run, and it keeps old version
+    folders after a pin change. Effort: Medium.
 - **Left out:** A refusal of unsafe replays, because it is a new build
   rejection, which the always-on rules reserve for the user.
   A shell wrapper that makes `mkdir` and `ln -s` accept existing paths,
   because it cannot repair a `mv` into an existing folder.
-- **Wider fix:** A. It changes the rendered commands by one rule, so a new
-  installer with the same commands is also safe.
+- **Wider fix:** E. It does not depend on the commands of an installer, so
+  it still covers a new installer or a changed upstream line.
 - **Previous examples:** The branch already made the native setup safe to
   repeat: `mkdir -p` for `/imagegeneration`, `ln -sfn` for the test helper
   link, and merged folder moves. It also made the PyPy installer replace
   its incomplete version folders.
-- **Recommendation:** A. It keeps resume useful for the common failures and
-  adds no refusal.
-- **Action:** fix after merge, apply A, because the branch needed only the
-  PyPy change for its review finding and the other installers need their
-  own regressions.
+- **Recommendation:** E. It removes the earlier outputs of every replayed
+  step with no edit for each installer line. A and F must know each line
+  and can keep an old version after a refresh with new pins.
+- **Action:** fix after merge, apply E, because it is a Large change of the
+  replay path that this branch does not need for a clean build.

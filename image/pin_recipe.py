@@ -34,9 +34,13 @@ def render(upstream, output):
 get_github_api_json() {
     local api_path=$1 cache key
     key=$(printf '%s' "$api_path" | sha256sum | cut -d' ' -f1)
-    cache="$HELPER_SCRIPTS/github-cache/$key.json"
+    if [[ -n ${CIPROXY_GITHUB_ANSWERS:-} && -f "$CIPROXY_GITHUB_ANSWERS/$key.json" ]]; then
+        cat "$CIPROXY_GITHUB_ANSWERS/$key.json"
+        return 0
+    fi
+    cache="${CIPROXY_GITHUB_CACHE:-/tmp/ciproxy-github-cache}/$key.json"
     if [[ -f "$cache" ]]; then cat "$cache"; return 0; fi
-    mkdir -p "$HELPER_SCRIPTS/github-cache"
+    mkdir -p "$(dirname "$cache")"
     get_github_api_json_network "$api_path" > "$cache.tmp" || return $?
     mv "$cache.tmp" "$cache"
     cat "$cache"
@@ -46,8 +50,7 @@ get_github_api_json() {
     return pins
 
 
-def warm_github_cache(upstream, pins):
-    directory = upstream / "images/ubuntu/scripts/helpers/github-cache"
+def warm_github_cache(upstream, pins, directory):
     directory.mkdir(parents=True, exist_ok=True)
     def read(route):
         destination = directory / (hashlib.sha256(route.encode()).hexdigest() + ".json")

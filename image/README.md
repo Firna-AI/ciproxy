@@ -44,7 +44,9 @@ In the pinned recipe, no package request overrides its APT pin.
 A GitHub release lookup uses the pin of the repository when one exists.
 An exact version without a pin selects the one release whose tag names
 that version. `latest` or a pattern without a pin keeps the upstream
-lookup.
+lookup. The lookup reads the prepared release answers first, and then the
+answers that the build saved earlier. The machine build saves each answer
+that it fetches in `/tmp/ciproxy-github-cache`, outside `/imagegeneration`.
 Packages that no pin covers still resolve from their repositories at build
 time. Both builds compare each installed package with the `packages` map,
 and report each package whose version differs from its pin. No difference
@@ -93,6 +95,12 @@ upstream mirror-list setup and its existing check.
 `prepare-template.py` replaces the Azure source and deprovision command.
 It adds the ciproxy guest, runner, kernel, and service after provisioning.
 No Azure account is needed.
+The ciproxy provision step at the end of the machine build runs
+[boat-build-clean-image.sh](boat-build-clean-image.sh). It removes the
+build-only files of ciproxy, such as the answer cache in
+`/tmp/ciproxy-github-cache` and the pin file in `/imagegeneration/helpers`.
+The upstream image metadata, helpers, tests, software reports, and
+`SoftwareReport` folder stay.
 `rootfs-archive.sh` shares the export and extraction metadata policy.
 It saves numeric owners, extended attributes, and POSIX ACLs with guestfish.
 The extraction restores every saved attribute namespace.

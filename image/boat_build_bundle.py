@@ -42,10 +42,10 @@ def bundle(args):
         root = workspace / "bundle"
         root.mkdir()
         locked = render(upstream, root / "runner-images")
+        answers = root / "github-answers"
         if args.metadata_cache:
-            shutil.copytree(args.metadata_cache, root / "runner-images/images/ubuntu/scripts/helpers/github-cache",
-                            dirs_exist_ok=True)
-        warm_github_cache(root / "runner-images", locked)
+            shutil.copytree(args.metadata_cache, answers, dirs_exist_ok=True)
+        warm_github_cache(root / "runner-images", locked, answers)
         adaptations = adapt(root / "runner-images")
         shutil.copytree(definition, root / "definition",
                         ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
@@ -76,7 +76,7 @@ def bundle(args):
         plan["steps"].append({"id": "086-boat-provision", "provisioner": 100, "type": "shell",
                               "inputs": ["/opt/ciproxy-build/artifacts", *[
                                   "/opt/ciproxy-build/definition/" + name for name in (
-                                      "provision.sh", "pins.env", "boat-run.sh", "boat-start.sh", "measure.py",
+                                      "provision.sh", "boat-build-clean-image.sh", "pins.env", "boat-run.sh", "boat-start.sh", "measure.py",
                                       "metadata-smoke.py", "runner-entry.sh", "docker-attach.sh",
                                       "runner-patch/container-proxy-url.sh", "ciproxy-boat-start.service",
                                       "ciproxy-boat-guest.service")]],

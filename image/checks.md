@@ -41,6 +41,9 @@ report in the unpinned recipe folder.
 A package that differs from its APT pin must appear in the measurement as
 `apt_pin_differences`, also when the release tree has no APT preference
 file. The export must still finish.
+The provision step must remove the build-only files of ciproxy before the
+export, and the final tree must have none of them. The upstream files of
+`/imagegeneration` must stay.
 The ext4 check verifies the approved 1% root reserve.
 It also checks neutral root labels in the release measurement and manifest.
 It checks the small root's free margin and both `root_disk_bytes` fields

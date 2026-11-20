@@ -6,6 +6,7 @@ import io
 import json
 import os
 import shlex
+import shutil
 import subprocess
 import urllib.parse
 from unittest.mock import patch
@@ -33,7 +34,7 @@ def responses(root):
     return directory, values
 
 
-def invoke(upstream, directory, calls, command):
+def invoke(upstream, directory, calls, command, answers=None):
     helpers = upstream / "images/ubuntu/scripts/helpers"
     script = '''source "$HELPER_SCRIPTS/install.sh"
 get_github_api_json_network() {
@@ -49,7 +50,9 @@ get_github_api_json_network() {
 ''' + command
     return subprocess.run(["bash", "-e", "-c", script], capture_output=True, text=True,
                           env={**os.environ, "HELPER_SCRIPTS": str(helpers), "FIXTURE_RESPONSES": str(directory),
-                               "FIXTURE_CALLS": str(calls)})
+                               "FIXTURE_CALLS": str(calls),
+                               "CIPROXY_GITHUB_CACHE": str(directory.parent / "live-answers"),
+                               "CIPROXY_GITHUB_ANSWERS": str(answers or directory.parent / "bundle-answers")})
 
 
 def check_lookup(case, workspace):
@@ -71,6 +74,17 @@ def check_lookup(case, workspace):
     case.assertEqual(cached.returncode, 0, cached.stderr)
     case.assertEqual(json.loads(cached.stdout)["tag_name"], "v3.31.6")
     case.assertEqual(calls.read_bytes(), before)
+    answers = root / "bundle-answers"
+    shutil.copytree(directory, answers)
+    key = hashlib.sha256(b"repos/Kitware/CMake/releases?per_page=100&page=2").hexdigest()
+    (answers / (key + ".json")).write_text(json.dumps([
+        {"tag_name": "v3.31.6", "assets": [{"browser_download_url": "https://example.invalid/current-cmake.sh"}]}]))
+    current = invoke(upstream, directory, calls,
+                     'resolve_github_release_asset_url Kitware/CMake \'endswith(".sh")\' 3.31.6', answers)
+    case.assertEqual(current.returncode, 0, current.stderr)
+    case.assertEqual(current.stdout.strip(), "https://example.invalid/current-cmake.sh")
+    case.assertEqual(calls.read_bytes(), before)
+    case.assertFalse((helpers / "github-cache").exists())
     prefixed = invoke(upstream, directory, calls, 'get_github_releases_by_version kubernetes/minikube v1.39.0')
     case.assertEqual(prefixed.returncode, 0, prefixed.stderr)
     case.assertEqual(json.loads(prefixed.stdout)["tag_name"], "release-v1.39.0")
@@ -105,7 +119,7 @@ def check_warm_lookup(case, workspace):
         return io.BytesIO(json.dumps(values[route]).encode())
 
     with patch("pin_recipe.urllib.request.urlopen", side_effect=open_fixture):
-        warm_github_cache(upstream, {"github": {}})
+        warm_github_cache(upstream, {"github": {}}, root / "bundle-answers")
     case.assertEqual(routes, ["repos/Kitware/CMake/releases?per_page=100&page=1",
                              "repos/Kitware/CMake/releases?per_page=100&page=2"])
     calls = root / "calls"

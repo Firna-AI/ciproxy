@@ -113,4 +113,3 @@ resolve_github_release_asset_url() {
 
     echo $matched_url
 }
-

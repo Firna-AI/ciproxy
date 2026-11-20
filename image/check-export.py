@@ -20,6 +20,7 @@ sys.dont_write_bytecode = True
 from _checks_.export_fixture import (
     CAPABILITY, RELEASE_FSTAB, SOURCE_FSTAB, create, disk_attribute, disk_file, run,
 )
+from _checks_.image_cleanup import assert_clean_image
 
 
 def acl_entries(value):
@@ -52,6 +53,7 @@ def check_export(workspace):
     assert not (source / "etc/apt/preferences.d/ciproxy-software").exists()
     run([shutil.which("chroot"), str(source), "/usr/bin/bash", "/image/provision.sh"], root,
         "provision", {**os.environ, "PATH": "/usr/bin"})
+    assert_clean_image(source)
     network_path = "etc/systemd/network/10-ciproxy.network"
     check_guest_network((source / network_path).read_text())
     service_path = "etc/systemd/system/ciproxy-guest.service"
@@ -108,6 +110,7 @@ def check_export(workspace):
     expected_acl = [(1, 7, None), (2, 5, 34567), (4, 5, None),
                     (16, 5, None), (32, 5, None)]
     tree = work / "rootfs"
+    assert_clean_image(tree)
     check_guest_network((tree / network_path).read_text())
     assert (tree / service_path).read_bytes() == (source / service_path).read_bytes()
     tool = tree / "privileged-tool"

@@ -84,7 +84,9 @@ def execute(build_dir, resume=False, inventory=True):
     temporary = build_dir / "tmp"
     temporary.mkdir(exist_ok=True)
     temporary.chmod(0o1777)
-    os.environ["TMPDIR"] = str(temporary)
+    os.environ.update(TMPDIR=str(temporary),
+                      CIPROXY_GITHUB_ANSWERS=str(build_dir / "github-answers"),
+                      CIPROXY_GITHUB_CACHE=str(build_dir / "github-cache"))
     capture_owners(build_dir)
     if inventory and not (build_dir / "services-before.json").exists():
         save(build_dir / "services-before.json", service_inventory())

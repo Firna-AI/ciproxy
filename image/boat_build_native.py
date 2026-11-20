@@ -59,7 +59,7 @@ def adapt(upstream):
             old = "chmod -R 777 " + folder
             if old in content:
                 edit(name, old, "python3 /opt/ciproxy-build/definition/boat-build-permissions.py " + folder,
-                     "Apply writable tool permissions to new paths and retain permissions of pre-existing provider paths.")
+                     "Give the recipe folder and its new paths the recipe mode 777; keep the mode and owner of pre-existing provider entries below it.")
     edit("install-docker.sh", 'groupmod -g "$gid" docker',
          'groupmod -g "$(cat /etc/ciproxy/provider-docker-gid)" docker',
          "Preserve the provider Docker group number used by its already running controller and desktop processes.")

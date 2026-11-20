@@ -30,6 +30,8 @@ def remote(api, args):
             raise RuntimeError("Keep build files until all required reports have been downloaded.")
         api.upload(args.sandbox, pathlib.Path(__file__).with_name("boat-build-finalize.sh"),
                    "/tmp/ciproxy-finalize.sh")
+        api.upload(args.sandbox, pathlib.Path(__file__).with_name("boat-build-clean-image.sh"),
+                   "/tmp/boat-build-clean-image.sh")
         result = api.command(args.sandbox, "sudo bash /tmp/ciproxy-finalize.sh")
         if result["exitCode"] != 0:
             raise RuntimeError("Native finalization failed: " + result.get("stderr", ""))

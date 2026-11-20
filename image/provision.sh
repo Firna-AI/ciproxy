@@ -45,6 +45,7 @@ if [[ $mode == boat ]]; then
         /tmp/ciproxy-cache-sidecar /tmp/ciproxy-worker.dll
     exit 0
 fi
+bash "$definition/boat-build-clean-image.sh"
 systemctl enable docker ciproxy-guest
 systemctl disable walinuxagent cloud-init cloud-config cloud-final || true
 rm -f /etc/netplan/50-cloud-init.yaml

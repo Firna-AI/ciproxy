@@ -34,6 +34,12 @@ The [checks guide](checks.md) lists the other image checks.
   and leaves out the unit of the build itself.
 - The host report download records each report that it cannot read. No
   request to the sandbox carries the Boat key.
+- A change of release data, such as a download count, a reaction count,
+  the release text, or a new CMake release, keeps each step identity. A
+  refresh then reuses each passed step.
+- Answers from `--metadata-cache` reach the answer store of the bundle. A
+  refresh replaces that store and removes an old cache from the recipe
+  tree.
 - Only `boat.py` has `prepare`. `boat-build.py` keeps `bundle`, `refresh`,
   `report`, `resume`, and `finalize`.
 
@@ -69,6 +75,12 @@ The [checks guide](checks.md) lists the other image checks.
   or `null` when a record does not exist.
 - The Boat cleanup keeps `/tmp` and the logs. It still runs each other
   upstream cleanup step, such as the removal of the test helper link.
+- The cleanup script removes only the build-only files of ciproxy. It
+  keeps `imagedata.json`, the software reports, the upstream helpers and
+  tests, `SoftwareReport`, the post-generation files, and the restart list.
+- A second run of the cleanup script changes no file, owner, mode, inode,
+  or time. The script needs no build folder. Finalization runs it and keeps
+  the upstream files.
 
 ## Pins and native installers
 
@@ -79,8 +91,11 @@ The [checks guide](checks.md) lists the other image checks.
 - A cached lookup makes no new request. A pinned repository uses its pin.
   `latest` or a pattern without a pin calls the upstream lookup with the
   original arguments.
-- `bundle` caches the CMake release pages for the exact version of the
-  rendered toolset. The lookup in the sandbox then needs no network.
+- The lookup reads the current bundle answers before the answers of an
+  earlier run. It saves no answer in the recipe helpers.
+- `bundle` stores the CMake release pages for the exact version of the
+  rendered toolset in its answer store, outside the recipe. The lookup in
+  the sandbox then needs no network.
 - The Java installer selects the pinned Temurin package also when a newer
   package exists.
 - An APT pin with an epoch selects its exact version also when a higher

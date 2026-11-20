@@ -9,6 +9,8 @@ if systemctl is-active --quiet ciproxy-image-build.service; then
     exit 1
 fi
 printf '%s  %s\n' "$checksum" "$archive" | sha256sum --check
+rm -rf /opt/ciproxy-build/github-answers \
+    /opt/ciproxy-build/runner-images/images/ubuntu/scripts/helpers/github-cache
 tar -xzf "$archive" -C /opt/ciproxy-build
 rm -f "$archive"
 systemd-run --unit=ciproxy-image-build --collect \

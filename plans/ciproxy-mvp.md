@@ -2614,19 +2614,25 @@ Implementation calls, 20 November 2026:
   unchanged. Reason: a later step can depend on the effect of an earlier
   step, such as the bootstrap cleanup or the apt pins.
 
-- [ ] Update `docs/protocol/agent-images.md`: one image definition, built as
+- [x] Update `docs/protocol/agent-images.md`: one image definition, built as
       the machine image and as the Boat snapshot. State each difference that
       stays, such as Boat's kernel.
-- [ ] Build the Boat snapshot with the image definition on Boat's base
+      Branch: `conductor/m27a-boat-native-image`
+- [x] Build the Boat snapshot with the image definition on Boat's base
       system. Remove the `chroot` wrapper, the private namespace, the
       restore of file capabilities, and the separate Docker start of
       `image/boat-run.sh`.
-- [ ] Extend the Boat smoke: start an installed service, and check that it
+      Branch: `conductor/m27a-boat-native-image`
+- [x] Extend the Boat smoke: start an installed service, and check that it
       is ready.
+      Branch: `conductor/m27a-boat-native-image`
 - [ ] Publish an image release with its Boat snapshot. Then run the Boat
       `large` job with its exit callback and the three overflow checks.
 - [ ] Delete `follow-ups/boat-image-services.md`, which this milestone
       settles.
+
+Evidence of the native build, snapshot and restore of 20 November 2026:
+`.context/ciproxy-mvp/m27a-boat-native-build/final-completion-report.md`.
 
 ## Milestone 27b: Mockups: the image state of a machine
 
