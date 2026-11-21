@@ -1,7 +1,7 @@
 # ciproxy MVP
 
-Status: Active. On branch `calummoore/ci-proxy-load-balancer`, no pull
-request yet. The user approved this plan on 4 November 2026, in the words
+Status: Active. [PR #97](https://github.com/Firna-AI/ciproxy/pull/97) is
+open. The user approved this plan on 4 November 2026, in the words
 "plan is approved". The pull request that completes the work deletes this
 plan, as the `plans` skill says.
 
