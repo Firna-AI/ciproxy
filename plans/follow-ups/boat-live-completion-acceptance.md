@@ -6,30 +6,30 @@
 - **Added:** 2026-11-21, from `conductor/boat-callback-diagnosis`, item 2
   of the read-only code and contract trace of the failed Boat `large` live
   check. A fresh options check on the same day added options E, F, and G,
-  and changed the recommendation from B to F. A review then corrected C,
-  E, and G.
+  and changed the recommendation from B to F. Two reviews then corrected
+  options B to G.
 - **Source:** Review.
 - **Category:** Test.
 - **Location:** `plans/ciproxy-mvp.md:2827-2830`, `:2888-2890`, and
   `:2910-2913`.
-- **Reason:** The user asked to see the options before any acceptance
-  change, and the last two paid sandbox slots wait for the answer.
+- **Reason:** F changes the acceptance rule that the plan records, and the
+  options have real trade-offs, so the human user must answer. The last two
+  paid sandbox slots wait for that answer.
 
 - **Terms:**
   - **Boat sandbox:** a VM that ciproxy rents from Boat, the overflow
     provider, for one job when the customer's machines are busy.
   - **Exit report:** the HTTPS POST of `RunnerExited` to
-    `/hooks/boat/runner-exit` that the ciproxy guest in the sandbox sends
-    once when its runner exits.
+    `/hooks/boat/runner-exit` that the guest, the ciproxy program in the
+    sandbox, sends once when its runner exits.
   - **Claim:** the stored acceptance of one exit report for a delivery,
     the record of one VM and runner. It saves `reported_at` in
     `crates/ciproxy-store-pg/src/overflow/completion.rs:16-44`.
-  - **Job-end cleanup:** the cleanup pass that deletes a sandbox after
-    GitHub reports its job as completed. It starts at
-    `crates/ciproxy-control-plane/src/boat_jobs.rs:45-49`.
   - **Live check:** the paid Boat checks of the Boat runner-start task: the
     `large` job, the overflow smoke, and the spend-limit smoke. Its scripts
     are outside the repository.
+  - **Orchestrator:** the agent session that runs this Boat task and owns
+    its run order and its budget of six paid sandboxes. It is not the user.
 - **Background:**
   - The live check passes a case only when its delivery ended in the phase
     `ended`, with `reported_at` and `ends_at` set. The same rule applies to
@@ -50,6 +50,12 @@
     the guest report its runner exit, and that the control plane then
     delete the sandbox at once (`:115-118`). The exit report is the fast
     trigger, and the sandbox lifetime is the backstop (`:124-129`).
+  - The job-end cleanup is the cleanup pass that deletes a sandbox after
+    GitHub reports its job as completed
+    (`crates/ciproxy-control-plane/src/boat_jobs.rs:45-49`). It and the exit
+    report both need the workspace lock. That is the PostgreSQL advisory
+    lock that each overflow operation of a workspace holds for its whole
+    run (`crates/ciproxy-store-pg/src/overflow/queries.rs:24-76`).
   - No protocol line says which trigger comes first, or that a claim is
     recorded for each successful job. So the design permits the job-end
     cleanup to end a successful job's sandbox before any claim.
@@ -65,13 +71,6 @@
   - The image's Boat smoke guide asks for the callback receipt and the
     provider deletion as evidence (`image/boat-smoke.md:230-234`). That
     guide covers a manual smoke with a hand-made registration.
-  - The guest logs `runner exit report accepted` only after a 2xx answer
-    (`crates/ciproxy-guest/src/boat.rs:91-92`). Its journal goes with the
-    deleted sandbox (`image/boat-smoke.md:227`).
-  - Each overflow operation of a workspace holds one PostgreSQL advisory
-    lock, the workspace lock, for its whole run. The exit report and the
-    job-end cleanup both need it
-    (`crates/ciproxy-store-pg/src/overflow/queries.rs:24-76`).
   - The route returns 401 for a missing or unknown token, and for a claim
     that finds no live delivery. It returns 503 for each other error
     (`crates/ciproxy-control-plane/src/boat_callback.rs:27-45` and
@@ -79,12 +78,28 @@
     before the claim, with nothing saved, or after a saved claim. After a
     saved claim, `reported_at` is set, and the next pass retries the
     deletion (`inventory.rs:87-97`).
+  - Guest 0.1.4 logs `runner exit report accepted` after `error_for_status`
+    passes (`crates/ciproxy-guest/src/boat.rs:91-92`). In the pinned
+    `reqwest` 0.13.5, that check rejects only 4xx and 5xx answers. So a
+    3xx, or a nonstandard code from 600 to 999, also logs the line. The
+    guest follows no redirect (`boat.rs:57`).
+  - A saved claim can also exist without that line. The claim commits in
+    its own transaction (`completion.rs:23`). A later step of the same
+    request can then fail with 503 (`cleanup.rs:34-42` and `:71`). The
+    guest then only warns (`crates/ciproxy-guest/src/service.rs:45-49`).
+    The route's delete can also stop the sandbox before the guest logs the
+    line. The journal goes with the sandbox (`image/boat-smoke.md:227`).
+  - So the line is no receipt, and no option reads it. The receipt is the
+    saved claim, `reported_at`, read from persisted state.
   - Observed `large` run, 21 November 2026: job 136802119867 on sandbox
     `bx_tn79cdzz` succeeded. Its locale, PostgreSQL, and Docker steps
     passed, with no setlocale warning.
-  - The guest posted its exit report at 09:27:59.621438Z. It got 503 after
-    5.351988 seconds, because a 5-second database lock limit ended its
-    wait for the workspace lock.
+  - One POST to the exit route arrived at 09:27:59.621438Z. It was the
+    only POST to the route in a four-minute query. It got 503 after
+    5.351988 seconds, and a database lock-timeout line came at 5.30 seconds.
+    That fits a 5-second limit on the report's wait for the workspace lock.
+    Its timing strongly fits this case's guest. The retained entry itself
+    does not name the sender.
   - The delivery ended at 09:28:10.142605Z with `reported_at` NULL, and the
     provider now returns 404 for the sandbox. The job-end cleanup is the
     code path that fits this saved state. The process ID of the lock
@@ -103,12 +118,11 @@
     - Their control plane was deploy `bf2da45e`. Its crates match the
       crates of `main` at `3bdc4777`. They ran the same guest, release
       0.1.4 at `b751ef5f`, on an older snapshot with the same report path.
-    - Both cases failed their own checks for other causes. Those FAILs
-      stay.
+    - Both cases failed their checks for other causes. Those FAILs stay.
   - Four of the six paid sandbox slots that the orchestrator allowed are
     used, and each of the four sandboxes now returns 404. The last two
     slots are for the overflow smoke and the spend-limit smoke. They stay
-    unused until this item has an answer.
+    unused until the user answers this item.
 - **Problem:**
   - For a successful job, the job-end cleanup and the exit report compete
     for the workspace lock, and the code gives neither side priority. When
@@ -124,28 +138,29 @@
   blocked.
 - **Root question:** What must the remaining live Boat checks prove about
   the exit report and the end of each sandbox?
-- **Options:**
+- **Options:** "Evidence levels" below defines the report evidence that
+  options B, D, E, F, and G use.
   - **A.** Pass a successful job on the job-end path. Require GitHub
     success, the matching runner, an ended delivery, and a provider GET
     404. Keep `reported_at` as evidence only. A needs no product change. A
     broken exit report route then passes unseen for successful jobs.
     Effort: Small.
-  - **B.** Do A, and also require that the load balancer log shows the
-    guest's POST to `/hooks/boat/runner-exit` in the delivery's time
-    window. Record its status. B proves that the guest sent its report
-    after a normal runner exit. It does not prove that the control plane
-    accepted the report. It needs load balancer request logs with a
+  - **B.** Do A, and also require route activity: a POST to
+    `/hooks/boat/runner-exit` in the delivery's time window, in the load
+    balancer log. Record its status. When the case runs alone, the POST
+    reaches the isolated-window level. B shows no valid token, no matched
+    runner, and no saved claim. It needs load balancer request logs with a
     sample rate of 1, as in the observed run. Effort: Small.
-  - **C.** Keep the current rule. Run the held cases only after a product
-    change that records the claim in the observed order, and after its
-    deploy. That change is option B, C, F, G, or H of
+  - **C.** Keep the current rule, which requires a saved claim for every
+    case. Run the held cases only after a product change that records the
+    claim in the observed order, and after its deploy. That change is
+    option B, C, F, G, or H of
     `plans/follow-ups/boat-exit-report-lock-timeout.md`.
     - C can still fail. Under B, F, G, or H there, a first POST after the
       job-end cleanup ended the delivery records no claim. Under C there, a
       POST after the grace or behind another long holder can record none.
       Under F there, the claim also needs the lock within the wait limit.
-    - In the observed run, the guest posted 0.75 seconds after the
-      completed job.
+    - The observed POST came 0.75 seconds after the completed job.
     - A new `large` run needs a paid sandbox past the six-sandbox limit,
       and each failed run needs one more. Each needs a new call of the
       orchestrator.
@@ -156,30 +171,34 @@
     example is a stop of the runner process through the Boat command API
     while no job is assigned. The `idle-delete` scenario does not fit,
     because ciproxy's own cleanup causes that exit and races the report.
-    Use A or B for the successful jobs. D needs one more paid sandbox past
-    the current limit, so it needs a new call of the orchestrator.
-    Effort: Medium.
+    That case passes at the saved-claim level. Use A or B for the
+    successful jobs. D needs one more paid sandbox past the current limit,
+    so it needs a new call of the orchestrator. Effort: Medium.
   - **E.** Keep the claim rule only for the exit callback of the large
     job, as one check of its own.
     - Pass the two held smokes now on the rule of B, while the large
       callback check stays open and FAIL.
     - Close that check only when a new successful `large` job and the
-      accepted claim of its own delivery are recorded together. That run
+      saved claim of its own delivery are recorded together. That run
       comes after option B, C, F, G, or H of
       `plans/follow-ups/boat-exit-report-lock-timeout.md` is deployed.
     - That run can still lose its claim, as C above says. Under F there,
       it also loses it when the lock does not come free within the wait
       limit.
-    - E relaxes no requirement of the plan, and the milestone stays open.
-      The callback run needs one paid sandbox past the six-sandbox limit,
-      and each failed run needs one more. Each needs a new call of the
-      orchestrator.
+    - E keeps the plan's requirement of a large job with the claim of its
+      own delivery. It weakens the claim rule of the live check for the two
+      smokes, which then need only the route activity of B. C keeps every
+      claim rule of the live check.
+    - The milestone stays open. The callback run needs one paid sandbox
+      past the six-sandbox limit, and each failed run needs one more. Each
+      needs a new call of the orchestrator.
     - Effort: Medium, plus the product change.
   - **F.** Do B for the two held smokes. Prove the exit callback with the
     two accepted reports of `bx_748nk3ay` and `bx_gbsxpayp` above.
     - Record the choice and a new run record. The original FAILs stay.
     - F proves what B cannot: the deployed control plane accepts a real
-      guest's report and then deletes the sandbox.
+      guest's report and then deletes the sandbox. Those reports have saved
+      claims. The held smokes reach only the level of B.
     - F does not prove a claim after a successful job.
       `plans/follow-ups/boat-exit-report-lock-timeout.md` shows that the
       product does not give that claim in the observed order.
@@ -213,38 +232,67 @@
       race, a wrong runner ID also passes. Option F, or a product option,
       must show the claim.
     - G fails a status that the race cannot explain, which A and B accept.
-      It needs Cloud SQL logs in the live check and a small clock tolerance
-      between the two logs. G stays a proposal and puts no check in force.
+      So it narrows the false positive of the isolated window. It needs
+      Cloud SQL logs in the live check and a small clock tolerance between
+      the two logs. G stays a proposal and puts no check in force.
     - Effort: Medium.
 - **Left out:**
   - Change nothing and run the held cases, because successful jobs can
     meet the same race and use the last paid slots.
   - Mark a recorded FAIL as a PASS, because each run failed the rule that
-    it had. A new rule needs the orchestrator's recorded choice and a new
-    run record. F does not mark a FAIL as a PASS. It cites facts of those
-    runs in a new record.
+    it had. A new rule needs the user's recorded answer to this item and a
+    new run record. F does not mark a FAIL as a PASS. It cites facts of
+    those runs in a new record.
 - **Wider fix:** None at the check boundary. Option B or H of
   `plans/follow-ups/boat-exit-report-lock-timeout.md` removes the race from
   the claim itself.
 - **Previous examples:** None found.
-- **Related:** `plans/follow-ups/boat-exit-report-lock-timeout.md`. Options
-  C and E of this item wait for its option B, C, F, G, or H and their
-  deploy. Its option F records the claim only if the lock comes free
-  within its wait limit. Options A, B, F, and G of this item relax the
-  claim for each case that C keeps. E relaxes it for the two smokes. So
-  they conflict with C. Option F of this item uses earlier evidence of the
-  report path, which that item does not change.
+- **Related:**
+  - `plans/follow-ups/boat-exit-report-lock-timeout.md`: options C and E of
+    this item wait for its option B, C, F, G, or H and their deploy. Its
+    option F records the claim only if the lock comes free within its wait
+    limit. Option F of this item uses earlier evidence of the report path,
+    which that item does not change.
+  - `plans/follow-ups/boat-exit-report-response-log.md`: it corrects the
+    guest's log line that the Background describes. No option here waits
+    for it.
 - **Recommendation:** F. The first recommendation was B. F has the cost of
   B and needs no paid sandbox beyond the last two held slots. It also
   proves that the deployed control plane accepts a real guest's report
   where that report alone ends the sandbox. B is the fallback if the user
-  rejects evidence from those earlier cases. E is the option that relaxes
-  nothing.
+  rejects evidence from those earlier cases. E keeps the plan's large-job
+  and own-claim requirement, but it weakens the live check's claim rule for
+  the two smokes. C best protects the checks, because it keeps that rule
+  for every case. A recommendation grants no new acceptance rule and no
+  sandbox past the limit. The rule needs the user's answer. The sandbox
+  needs the orchestrator's authorization.
 - **Action:** ask the user, because F changes the acceptance rule that the
-  plan records, and the user asked to see the options before any
-  acceptance change.
+  plan records, and the options have real trade-offs.
 
-Evidence of the observed run, outside Git: the folder `callback-resume/`
-in `.context/ciproxy-mvp/live-2026-11-20/boat-runner-start-2026-11-21/`.
-That folder also holds the orchestrator's check of the two earlier
-accepted reports.
+## Evidence levels
+
+Each level names what the evidence of one case shows. A time match is no
+sender match.
+
+| Level | Evidence | Supports | Does not prove |
+| --- | --- | --- | --- |
+| Route activity | A POST to `/hooks/boat/runner-exit` in the case's delivery window, in the load balancer log | That some client posted in that window | Which sandbox sent it, a valid token, a matched runner, or a claim |
+| Isolated window | Route activity while no other delivery of this control plane is live. A delivery is live until its `ends_at` is set | Attribution to this case's guest, by inference | That this guest sent it. The route is public, so a POST that no guest sent can match |
+| Trusted delivery link | A server observation after token and runner verification that ties the POST to one delivery | That the request matches this delivery | Which process sent it, or a saved claim. The observed run retained no such field |
+| Saved claim | `reported_at` on the case's delivery, in persisted state | The receipt: the control plane accepted the report | That the report ended the sandbox. `ends_at` and the provider's 404 show the end |
+
+- No timing match proves a valid token or a matched runner.
+- The retained entry of the observed run keeps no source address, trace,
+  delivery, or runner identity.
+- In a later run, a match of a logged source address to the sandbox's
+  provider address is only a candidate. It holds only if Boat gives each
+  sandbox its own egress address. Nothing shows that, so this record claims
+  no such match.
+- The task allowed the checks beside the merge into main. The orchestrator
+  owns their run order and may run the two held smokes one after the other.
+  That supports the isolated-window inference. It creates no new gate and
+  changes no acceptance rule before the user's answer.
+
+Evidence outside Git: the observed run and the orchestrator's check of the
+two earlier accepted reports, in the folder `callback-resume/` in
+`.context/ciproxy-mvp/live-2026-11-20/boat-runner-start-2026-11-21/`.
