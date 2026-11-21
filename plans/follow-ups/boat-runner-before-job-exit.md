@@ -2,15 +2,16 @@
 
 - **Severity:** High. **Likelihood:** Common. **Effort:** Small.
   **Confidence:** High. **Harder later:** No.
-- **Kind:** Needs decision.
+- **Kind:** Fix after merge.
 - **Added:** 2026-11-21, from `conductor/boat-locale-fix`, the official
   overflow and spend-limit live checks of the Boat snapshot
   `2026-11-21-boat-locale-5a493ed6`.
 - **Location:** `image/runner-entry.sh:3-20`,
   `crates/ciproxy-guest/src/process.rs:63-87`, and
   `crates/ciproxy-guest/src/process.rs:133-139`.
-- **Reason:** The exact cause is not proved, and its diagnosis needs a new
-  paid sandbox beyond the six-sandbox limit of the task that found it.
+- **Reason:** The exact cause is not proved. The orchestrator's call of
+  21 November 2026 diagnoses it with one new sandbox before the merge into
+  `main`, in the next Boat branch.
 
 - **Terms:**
   - **Boat sandbox:** a VM that ciproxy rents from Boat, the overflow
@@ -181,5 +182,6 @@
   early setup, and the original cause can stay open. B was blocked in
   the task that found it, because the user limited that task to six
   sandboxes, and all six were used and deleted.
-- **Action:** ask the user, because B needs a new paid sandbox beyond the
-  six-sandbox limit that the user set for the task that found it.
+- **Action:** fix now, apply B, in the next Boat branch before the merge
+  into `main`. The six-sandbox limit was the orchestrator's limit, not the
+  user's, so a new budget needs no user decision.

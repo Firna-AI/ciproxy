@@ -2,16 +2,16 @@
 
 - **Severity:** High. **Likelihood:** Common. **Effort:** Small.
   **Confidence:** High. **Harder later:** No.
-- **Kind:** Needs decision.
+- **Kind:** Fix after merge.
 - **Added:** 2026-11-21, from `conductor/boat-locale-fix`, the first
   restore check of the Boat snapshot `2026-11-21-boat-locale-5a493ed6`.
   An options check on the same day added F and G and changed the
   recommendation from E to F.
 - **Location:** `image/boat-start.sh:17`, `image/measure.py:12-16`, and
   `image/measure.py:30-31`.
-- **Reason:** The user approved only the Boat locale fix for the branch
-  that found it. The user asked to get each other live failure with its
-  cause and options.
+- **Reason:** It was found after the branch of the locale fix had used its
+  scope. The orchestrator's call of 21 November 2026 fixes it before the
+  merge into `main`, in the next Boat branch.
 
 - **Terms:**
   - **Boat sandbox:** a VM that ciproxy rents from Boat, the overflow
@@ -195,6 +195,7 @@
   customer job again. E adds a build step and a report that nothing needs.
   D is the smaller choice if the start must stay strict on its
   measurement.
-- **Action:** ask the user, because the user approved only the locale fix
-  for that branch, and asked to see each other live failure with its
-  options.
+- **Action:** fix now, apply F, in the next Boat branch before the merge
+  into `main`. No decision-test condition holds: F changes no requirement,
+  and nothing reads the removed walk. The six-sandbox limit and the scope
+  of the locale branch were the orchestrator's limits, not the user's.

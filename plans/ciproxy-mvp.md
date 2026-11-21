@@ -2800,7 +2800,7 @@ merge, so the fresh-machine smoke of Milestone 9 can pass.
 
 Depends on: 27a
 
-User call, 21 November 2026: apply option B of live run 6 item 1 before
+My call, 21 November 2026: apply option B of live run 6 item 1 before
 merge. Fix the Boat image so a provider command emits no locale warning.
 Keep the client response policy unchanged. An upstream client change still
 needs the user's approval.
