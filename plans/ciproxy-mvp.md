@@ -2827,16 +2827,19 @@ The machine image definition and its selected release stay unchanged.
 - [ ] Pass the Boat large job, its exit callback, its PostgreSQL and Docker
       steps, the overflow smoke, and the complete spend-limit smoke.
       Turn overflow off in both workspaces. Delete every task sandbox.
+      The passing job checks wait for
+      `follow-ups/boat-runner-before-job-exit.md`.
 - [x] Run the complete gate with `DATABASE_URL` set. Commit and push.
 - [x] Review the diff against the primary branch with
       `implementation-review`. Apply its fix rule and re-review the fixes.
       The checked resume finding is deferred in
       `follow-ups/boat-provision-retry-inputs.md`.
-- [ ] Re-review the combined test and guide fixes after their push.
+- [x] Re-review the combined test and guide fixes after their push.
       Record the separate live measurement failure in
       `follow-ups/boat-live-root-measurement-race.md`.
-- [ ] Keep this parent plan while the other MVP work stays open. Open a
+- [x] Keep this parent plan while the other MVP work stays open. Open a
       ready pull request into the primary branch. Do not merge it.
+      [PR #96](https://github.com/Firna-AI/ciproxy/pull/96) is open.
 
 ## Milestone 28: Verification, commit, review, and pull request
 
