@@ -2827,8 +2827,7 @@ The machine image definition and its selected release stay unchanged.
 - [ ] Pass the Boat large job, its exit callback, its PostgreSQL and Docker
       steps, the overflow smoke, and the complete spend-limit smoke.
       Turn overflow off in both workspaces. Delete every task sandbox.
-      The passing job checks wait for
-      `follow-ups/boat-runner-before-job-exit.md`.
+      The passing job checks continue in Milestone 27i.
 - [x] Run the complete gate with `DATABASE_URL` set. Commit and push.
 - [x] Review the diff against the primary branch with
       `implementation-review`. Apply its fix rule and re-review the fixes.
@@ -2840,6 +2839,41 @@ The machine image definition and its selected release stay unchanged.
 - [x] Keep this parent plan while the other MVP work stays open. Open a
       ready pull request into the primary branch. Do not merge it.
       [PR #96](https://github.com/Firna-AI/ciproxy/pull/96) is open.
+
+## Milestone 27i: Boat runner startup and real jobs
+
+Depends on: 27a
+
+Cal's call, 21 November 2026: apply measurement option F and runner
+diagnosis option B now, before the merge into main. The scope and the
+six-sandbox budget are Cal's limits. Keep protocol messages unchanged.
+Stop and report options if a new boundary or protocol change is needed.
+
+Implementation direction: keep the measurement and runner fixes in the
+Boat image. Preserve the machine runtime and the existing client policy.
+Keep a bounded, redacted copy of runner stderr in the sandbox journal.
+
+- [x] Create a new worktree from the primary branch, and diagnose one
+      restored snapshot with no real registration.
+      Evidence: .context/ciproxy-mvp/boat-runner-start-2026-11-21/.
+- [x] Remove the runtime size walk. Measure free space only and make a
+      measurement failure a journal warning before guest startup.
+- [x] Fix the proved optional NVM lookup failure under errexit. Keep
+      bounded runner stderr in the journal without a protocol change.
+- [x] Add meaningful regressions and align the image guides. Close the
+      two follow-up items that Cal selected when their fixes are proved.
+- [ ] Build a clean Boat snapshot and pass its restore checks.
+- [ ] Publish the snapshot secret version on stdin and select it in the
+      preview. Retain the machine release if its runtime is unchanged.
+- [ ] Pass the actual large job, callback, PostgreSQL and Docker steps,
+      job-log locale check, overflow smoke and complete spend-limit smoke.
+      Turn overflow off in both workspaces and delete every task sandbox.
+- [ ] Restore the main machine in Firna-AI with agent/cache 0.1.4.
+- [ ] Run the complete gate with DATABASE_URL set, commit and push.
+- [ ] Review the diff against the primary branch with implementation-review
+      and apply its bounded fix rounds.
+- [ ] Keep this parent plan for the remaining MVP work. Open a ready PR
+      into the primary branch. Do not merge it.
 
 ## Milestone 28: Verification, commit, review, and pull request
 

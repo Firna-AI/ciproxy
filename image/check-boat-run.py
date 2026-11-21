@@ -3,6 +3,7 @@
 """Check native Boat daemon refresh and private guest registration delivery."""
 
 import argparse
+import json
 import os
 import pathlib
 import shutil
@@ -14,7 +15,7 @@ import unittest
 
 sys.dont_write_bytecode = True
 
-from _checks_.boat_fixture import prepare_root
+from _checks_.boat_fixture import MEASURE_PATH, prepare_root
 
 
 class BoatRun(unittest.TestCase):
@@ -32,12 +33,16 @@ class BoatRun(unittest.TestCase):
         print(f"{self.id()}: {time.perf_counter() - self.started:.3f}s", flush=True)
         print("Fixture evidence: " + str(self.root), flush=True)
 
-    def launch(self, registration=None):
-        command = [shutil.which("chroot"), str(self.root), "/usr/bin/bash", "/image/boat-run.sh"]
+    def run_in_root(self, *command, **environment):
+        return subprocess.run([shutil.which("chroot"), str(self.root), *command], capture_output=True, text=True,
+                              env={"PATH": "/usr/bin:/bin", "LC_ALL": "C", "TZ": "UTC",
+                                   "PYTHONDONTWRITEBYTECODE": "1", **environment})
+
+    def launch(self, registration=None, **environment):
+        command = ["/usr/bin/bash", "/image/boat-run.sh"]
         if registration:
             command.append(registration)
-        result = subprocess.run(command, capture_output=True, text=True,
-                                env={"PATH": "/usr/bin:/bin", "LC_ALL": "C", "TZ": "UTC"})
+        result = self.run_in_root(*command, **environment)
         (self.root / "state/launch.log").write_text(result.stdout + result.stderr)
         events = (self.root / "state/events").read_text().splitlines()
         return result, events
@@ -56,8 +61,17 @@ class BoatRun(unittest.TestCase):
         source.write_text("fixture-private-registration\n")
         source.chmod(0o600)
         result, events = self.launch("/private-registration.json")
+        self.assertFalse((self.root / "state/du-calls").exists(),
+                         "Boat job measurement must not walk the live root.")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assert_refresh(events)
+        measurement = json.loads(result.stdout)
+        disk = os.statvfs(self.root)
+        self.assertEqual(set(measurement), {
+            "backing_filesystem_bytes", "backing_filesystem_available_bytes", "free_job_bytes",
+        })
+        self.assertEqual(measurement["backing_filesystem_bytes"], disk.f_blocks * disk.f_frsize)
+        self.assertEqual(measurement["free_job_bytes"], measurement["backing_filesystem_available_bytes"])
         delivered = self.root / "state/delivered-registration.json"
         self.assertEqual(delivered.read_text(), "fixture-private-registration\n")
         self.assertEqual(delivered.stat().st_mode & 0o777, 0o600)
@@ -73,6 +87,27 @@ class BoatRun(unittest.TestCase):
         self.assertIn("[ciproxy-guest] registration file is missing",
                       (self.root / "state/guest.log").read_text())
         self.assertFalse((self.root / "run/ciproxy/registration.json").exists())
+
+    def test_failed_job_measurement_warns_and_starts_guest(self):
+        (self.root / "state/sitecustomize.py").write_text('''import os
+
+def unavailable(path):
+    raise OSError("fixture statvfs failure")
+
+os.statvfs = unavailable
+''')
+        result, events = self.launch(PYTHONPATH="/state")
+        self.assertIn("fixture statvfs failure", result.stderr)
+        self.assert_refresh(events)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Warning: Boat job disk measurement failed.", result.stderr)
+
+    def test_non_job_measurement_propagates_failed_du(self):
+        result = self.run_in_root("/usr/bin/python3", MEASURE_PATH, "/")
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertEqual(result.stdout, "")
+        self.assertTrue((self.root / "state/du-calls").is_file())
+        self.assertIn("fixture du failure", result.stderr)
 
 
 if __name__ == "__main__":

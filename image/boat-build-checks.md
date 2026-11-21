@@ -88,7 +88,9 @@ The [checks guide](checks.md) lists the other image checks.
 
 - The check runs the real [boat-provision.sh](boat-provision.sh) from a
   private definition folder. Safe substitutes take the place of the
-  account, service, and runner installation commands. A wrapper runs the
+  account, service, and runner installation commands. An empty script
+  takes the place of the NVM guard, which
+  [check-boat-runner.py](check-boat-runner.py) checks. A wrapper runs the
   real locale script with the fixture root. So the check fails when
   `boat-provision.sh` no longer runs the locale script.
 - The locale script writes the `en_US.UTF-8` data to

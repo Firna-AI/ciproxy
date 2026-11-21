@@ -107,6 +107,26 @@ recorded from Boat's base system. Boat's user and the runner account must
 both use Docker. The build files and the build apt settings must be
 absent, and the two upstream folders must stay. Boat's controller must
 still run commands and file transfers.
+
+Then check the start of the runner entry, with no registration value.
+The second command runs the installed entry as the guest does, through
+`runuser` with a cleared environment:
+
+```sh
+sudo grep -cF "|| __ascii_nvm_bin=''" /etc/profile.d/nvm.sh
+sudo env -i /usr/sbin/runuser --user runner -- /usr/local/libexec/ciproxy-runner
+sudo journalctl --identifier=ciproxy-boat-runner-stderr --no-pager
+sudo find /opt/actions-runner/_diag -name 'Runner_*.log'
+```
+
+The `grep` must print `1`, the count of the guarded NVM lookup. The entry
+must exit with 1 at its registration check, because it has no
+registration value. The entry sends its stderr to the journal. So the
+journal must show this line, and no error of `nvm.sh`:
+`[ciproxy] runner entry error: JIT registration required`.
+No `Runner_*.log` file must appear, because the listener does not start
+without a registration. Keep the journal lines and the file list as smoke
+evidence.
 Then delete the sandbox:
 
 ```sh

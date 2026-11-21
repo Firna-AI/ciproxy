@@ -9,6 +9,10 @@ The [Boat build](boat.md) installs the same software on Boat's own Ubuntu
 system and saves it as the Boat snapshot.
 The stock runner is the same in both.
 Boat keeps its provider kernel, base packages, and provider services.
+Only the Boat build guards one line of Boat's NVM profile and wraps the
+runner entry. The
+[Boat build steps](boat-build-steps.md#the-nvm-profile-of-boats-base) say
+why.
 [Agent images](../docs/protocol/agent-images.md) gives the requirements and
 each difference that stays.
 The [guest guide](../crates/ciproxy-guest/README.md) explains supervision.
@@ -227,8 +231,9 @@ The [Boat smoke guide](boat-smoke.md) covers metadata, a restore without
 a registration, a real GitHub job, and callback cleanup. The restore part
 first runs [boat-locale-smoke.py](boat-locale-smoke.py). That check
 requires the `UTF-8` codeset and an empty stderr for the first command in
-the restored sandbox. Boat keeps its provider kernel, network, and
-resolver.
+the restored sandbox. The restore part also runs the runner entry with no
+registration, which must reach its registration check. Boat keeps its
+provider kernel, network, and resolver.
 
 ## Sources
 

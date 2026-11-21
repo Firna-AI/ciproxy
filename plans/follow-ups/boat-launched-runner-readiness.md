@@ -1,6 +1,6 @@
 # An unreported Boat start failure strands its job
 
-- **Severity:** High. **Likelihood:** Common. **Effort:** Medium.
+- **Severity:** High. **Likelihood:** Rare. **Effort:** Medium.
   **Confidence:** High. **Harder later:** No.
 - **Kind:** Needs decision.
 - **Added:** 2026-11-21, from `conductor/boat-locale-fix`, the options
@@ -36,9 +36,10 @@
     file at line 52, before it decodes it.
   - No exit report today:
     - `ciproxy-boat-start.service` fails or hangs before it starts the
-      guest. `image/boat-start.sh:3` stops at the first error, line 18
-      starts the guest, and `image/ciproxy-boat-start.service:12` sets no
-      time limit.
+      guest. `image/boat-start.sh:3` stops at the first error of the
+      service refresh. A failed disk measurement only writes a warning, at
+      lines 17-19, and line 20 starts the guest.
+      `image/ciproxy-boat-start.service:12` sets no time limit.
     - The guest service does not start.
     - The guest cannot open, check, read, or decode its registration file,
       or cannot build its HTTPS client (`boat.rs:35-66`).
@@ -82,19 +83,24 @@
     sandbox lifetime ends.
   - One known case with no report came from a restore check with no
     registration on 2026-11-21. There, `ciproxy-boat-start.service`
-    failed in its disk measurement before it started the guest, as
-    `plans/follow-ups/boat-live-root-measurement-race.md` records. That
-    check had no waiting job, so it stranded no job. That item grades its
-    cause Common, because each job start runs the measurement soon after
-    its restore.
+    failed in its whole-root disk walk before it started the guest. That
+    check had no waiting job, so it stranded no job. Cal's option F has
+    since removed that walk: the start reads only `statvfs`, and a failed
+    measurement only writes a warning. The
+    [measurement record][measurement-record] holds the history.
   - Known cases with a report: on 2026-11-21, the guests of two real jobs
     with registrations, boxes 5 and 6, sent exit reports at 03:09:56 and
     03:18:24 UTC. ciproxy ended each start about 7 seconds later and
     deleted each sandbox. It made another start for the waiting job 14
-    seconds after box 6 ended, and that start ended unsent. The cause of
-    those exits is not proved, as
-    `plans/follow-ups/boat-runner-before-job-exit.md` records.
-  - No stranded job has been seen yet.
+    seconds after box 6 ended, and that start ended unsent.
+  - A later diagnosis proved the cause of those exits. The optional NVM
+    lookup on line 31 of Boat's `/etc/profile.d/nvm.sh` returned 1 under
+    `set -e` of the runner entry. `image/boat-build-nvm.py` now guards that
+    line in the Boat build. No real job with a registration has passed on
+    a snapshot with that guard yet. The [exit record][exit-record] holds the
+    history.
+  - No stranded job has been seen yet. With the disk walk gone, no observed
+    cause of a start with no report remains.
 - **Impact if no action:** A customer job can wait for hours while its
   sandbox bills with no runner. A new sandbox for the job after the
   lifetime runs the same start again.
@@ -137,9 +143,8 @@
     each attempt, and ciproxy still learns nothing.
   - A shorter sandbox lifetime, because it also ends healthy jobs, which
     can run for 6 hours.
-  - A fix of one cause, such as the disk measurement, because
-    `plans/follow-ups/boat-live-root-measurement-race.md` holds it, and the
-    other causes stay.
+  - A fix of one cause, such as the disk walk that option F removed,
+    because the other causes stay.
 - **Wider fix:** C. Ready then means a runner that reported ready, and its
   deadline ends each start that never gets there. A and B end the stranded
   start but keep the inferred ready state.
@@ -148,11 +153,12 @@
   waiting job claims a starting machine runner only while its machine is
   connected (`lifecycle.rs:62-63`).
 - **Related:**
-  - `plans/follow-ups/boat-live-root-measurement-race.md` records one cause
-    of a start that sends no report. Its fix removes that cause, not this
-    class. Fix the two items apart.
-  - `plans/follow-ups/boat-runner-before-job-exit.md` records two runner
-    exits that did send their reports. This item does not explain them.
+  - The [measurement record][measurement-record] is a historical example of
+    a start that sends no report. `image/boat-start.sh` and
+    `image/measure.py` now remove that cause, not this class.
+  - The [exit record][exit-record] holds two runner exits that did send
+    their reports, so this item does not explain them.
+    `image/boat-build-nvm.py` now guards their cause.
 - **Recommendation:** None yet. No option is clearly best, because no
   requirement says how soon ciproxy must replace a failed start. A and B
   combine well: A ends a failure that the guest cannot report at once, and
@@ -160,3 +166,6 @@
   largest effort.
 - **Action:** ask the user, because each option adds behaviour at a
   boundary that no requirement covers, and no option is clearly best.
+
+[measurement-record]: https://github.com/Firna-AI/ciproxy/blob/34bc620945cb5a388af949373c209d8e97bcbfb6/plans/follow-ups/boat-live-root-measurement-race.md
+[exit-record]: https://github.com/Firna-AI/ciproxy/blob/34bc620945cb5a388af949373c209d8e97bcbfb6/plans/follow-ups/boat-runner-before-job-exit.md
