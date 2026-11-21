@@ -107,6 +107,9 @@
   repeat: `mkdir -p` for `/imagegeneration`, `ln -sfn` for the test helper
   link, and merged folder moves. It also made the PyPy installer replace
   its incomplete version folders.
+- **Related:** `plans/follow-ups/boat-provision-retry-inputs.md` has the
+  same broad class. There, a retry lacks the files that its earlier attempt
+  deleted. Option E here does not cover it, so fix the two items apart.
 - **Recommendation:** E. It removes the earlier outputs of every replayed
   step with no edit for each installer line. A and F must know each line
   and can keep an old version after a refresh with new pins.

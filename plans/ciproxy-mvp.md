@@ -2827,9 +2827,11 @@ The machine image definition and its selected release stay unchanged.
 - [ ] Pass the Boat large job, its exit callback, its PostgreSQL and Docker
       steps, the overflow smoke, and the complete spend-limit smoke.
       Turn overflow off in both workspaces. Delete every task sandbox.
-- [ ] Run the complete gate with `DATABASE_URL` set. Commit and push.
-- [ ] Review the diff against the primary branch with
+- [x] Run the complete gate with `DATABASE_URL` set. Commit and push.
+- [x] Review the diff against the primary branch with
       `implementation-review`. Apply its fix rule and re-review the fixes.
+      The checked resume finding is deferred in
+      `follow-ups/boat-provision-retry-inputs.md`. No code fix was needed.
 - [ ] Keep this parent plan while the other MVP work stays open. Open a
       ready pull request into the primary branch. Do not merge it.
 
