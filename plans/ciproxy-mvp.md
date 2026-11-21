@@ -2907,6 +2907,13 @@ Live run 5, 18 November 2026, ran the open checks of Milestones 13 and 27
 and the changed page claims of Milestone 24. Still open: the
 fresh-machine smoke, the Boat `large` job, the three overflow checks, and
 the page claims that wait for a live check.
+User answer, 21 November 2026: merge into `main` now, and run the
+remaining Boat smokes in parallel. This replaces item 122 = B for the
+checks that remain: the Boat exit callback, the overflow smoke, the
+spend-limit smoke, and the page claims that wait for a live check. So
+this pull request keeps the plan, as the `plans` skill says for a pull
+request before the work is complete. The last pull request of the
+remaining work deletes it.
 
 - [ ] Run the targeted tests and the complete gate named in `AGENTS.md`.
 - [ ] Commit with Conventional Commits and push the branch.
