@@ -21,7 +21,6 @@ PRIVATE = re.compile(
     r"authoriz|bearer|credential|token|cookie|password|passwd|secret|signature|"
     r"(?:api|private)[ _-]?key|jit[ _-]?config", re.IGNORECASE,
 )
-PRIVATE_URL = re.compile(r"https?://(?:[^/\s]*@|[^\s]*\?)", re.IGNORECASE)
 OPAQUE = re.compile(r"[A-Za-z0-9+/_=-]{32,}")
 
 
@@ -78,9 +77,12 @@ def redact(line, secrets):
     if not text.strip():
         return b""
     if (any(character != "\t" and not character.isprintable() for character in text)
-            or PRIVATE.search(text) or PRIVATE_URL.search(text) or OPAQUE.search(text)
+            or PRIVATE.search(text) or OPAQUE.search(text)
             or any(value in text for value in secrets)):
         return REDACTED
+    url_separator = text.find("://")
+    if url_separator != -1:
+        text = text[:url_separator] + "://[redacted]"
     return text.encode() + b"\n"
 
 

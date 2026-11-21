@@ -60,18 +60,29 @@ class BoatRun(unittest.TestCase):
         source = self.root / "private-registration.json"
         source.write_text("fixture-private-registration\n")
         source.chmod(0o600)
-        result, events = self.launch("/private-registration.json")
+        (self.root / "state/sitecustomize.py").write_text('''import os
+from pathlib import Path
+from types import SimpleNamespace
+
+def fixed_statvfs(path):
+    Path("/state/statvfs-path").write_text(str(path))
+    return SimpleNamespace(
+        f_bsize=8192, f_frsize=4096, f_blocks=1000, f_bavail=200, f_bfree=300,
+    )
+
+os.statvfs = fixed_statvfs
+''')
+        result, events = self.launch("/private-registration.json", PYTHONPATH="/state")
         self.assertFalse((self.root / "state/du-calls").exists(),
                          "Boat job measurement must not walk the live root.")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assert_refresh(events)
-        measurement = json.loads(result.stdout)
-        disk = os.statvfs(self.root)
-        self.assertEqual(set(measurement), {
-            "backing_filesystem_bytes", "backing_filesystem_available_bytes", "free_job_bytes",
+        self.assertEqual((self.root / "state/statvfs-path").read_text(), "/")
+        self.assertEqual(json.loads(result.stdout), {
+            "backing_filesystem_bytes": 4096000,
+            "backing_filesystem_available_bytes": 819200,
+            "free_job_bytes": 819200,
         })
-        self.assertEqual(measurement["backing_filesystem_bytes"], disk.f_blocks * disk.f_frsize)
-        self.assertEqual(measurement["free_job_bytes"], measurement["backing_filesystem_available_bytes"])
         delivered = self.root / "state/delivered-registration.json"
         self.assertEqual(delivered.read_text(), "fixture-private-registration\n")
         self.assertEqual(delivered.stat().st_mode & 0o777, 0o600)

@@ -186,9 +186,11 @@ Without a registration, the launch must take the same steps. The real
 guest must then end with exit code 1 and its missing-registration error.
 The fixture root holds the real Python, the real `measure.py`, and a `du`
 that records each call and fails.
-With a registration, the start must not call `du`. Its measurement must
-print only `backing_filesystem_bytes`,
-`backing_filesystem_available_bytes`, and `free_job_bytes`.
+With a registration, the start must not call `du`. A fixed `statvfs`
+sample has different block sizes and different free and available block
+counts. The start must measure `/` and print exactly the size as
+`backing_filesystem_bytes`, and the available bytes as
+`backing_filesystem_available_bytes` and `free_job_bytes`.
 When `statvfs` fails in the start, the start must print
 `Warning: Boat job disk measurement failed.`, take each refresh step, and
 still start the guest unit.
@@ -203,11 +205,11 @@ private.
 sudo python3 image/check-boat-runner.py
 ```
 
-It needs no real registration. Three of its four cases need root and
-`chroot`. They run as an unprivileged user in a private root with Bash,
-Python, the real Boat runner files, and a fixture journal writer. The
-check removes its fixtures under `.context/image-checks/boat-runner` at
-the end.
+It needs no real registration. Each case that runs an entry or the helper
+needs root and `chroot`. Such a case runs as an unprivileged user in a
+private root with Bash, Python, the real Boat runner files, and a fixture
+journal writer. The check removes its fixtures under
+`.context/image-checks/boat-runner` at the end.
 
 - The NVM guard: a fixture profile with the same lookup line ends a
   `bash -e` shell before the guard. After the guard, the profile goes on
@@ -220,7 +222,14 @@ the end.
   value. The kept text starts with the profile error and the constant
   missing-registration line. It holds no registration value and no value
   decoded from it. It also holds no bearer, cookie, or password line, no
-  long opaque value, no oversized line, and no output past the limit.
+  long opaque value, no oversized line, and no output past the limit. A
+  URL line keeps its text before the first `://` and ends with
+  `://[redacted]`, unless a private part redacts the whole line.
+- The real Boat entry runs with the real helper, the real error hook, and
+  a recording journal writer. A profile prints the decoded fixture
+  credential and then fails without output. After a pipe shows that the
+  helper has ended, the entry must have exit status 1 and no output. The
+  journal must hold exactly `[redacted]` and then the hook record.
 - The entry sends its stderr to the helper before `/etc/profile` runs. A
   failed journal writer does not stop the runner. The listener gets no
   `BASH_ENV`, and its stdout and exit status pass through.

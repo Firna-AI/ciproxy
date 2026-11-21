@@ -172,10 +172,10 @@ brings the restored services up to date before the guest starts:
 3. It restarts each other running service in
    `/etc/ciproxy/boat-restart-services`, such as `user@1000.service`.
 4. It starts Docker and its socket again.
-5. It prints the size and the free bytes of the root filesystem to its
-   journal, as `free_job_bytes`. It reads them with `statvfs` and scans no
-   files. If this measurement fails, it writes
-   `Warning: Boat job disk measurement failed.` and goes on.
+5. It prints the size of the root filesystem as `backing_filesystem_bytes`
+   and the bytes that a job can use as `free_job_bytes` to its journal. It
+   reads them with `statvfs` and scans no files. If this measurement fails,
+   it writes `Warning: Boat job disk measurement failed.` and goes on.
 6. It starts `ciproxy-boat-guest.service`.
 
 A failure of the service refresh stops the start before the guest starts.

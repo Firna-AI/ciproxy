@@ -178,12 +178,13 @@ runner entry first sends its stderr to a journal helper:
   identifier `ciproxy-boat-runner-stderr`, and then one truncation notice.
   A line longer than 4 KiB also ends the output with that notice.
 - The helper removes the registration value from its own environment, and
-  gives the journal writer no environment. It replaces a line with
+  gives the journal writer no environment. It replaces a whole line with
   `[redacted]` when the line holds the registration value or a value
-  decoded from it. It does the same for a credential word, a URL with
-  credentials, or a long opaque value. It turns the constant
-  missing-registration error into
-  `[ciproxy] runner entry error: JIT registration required`.
+  decoded from it. It does the same for a credential word or a long opaque
+  value. In each other line, it keeps the text before the first `://` and
+  replaces the rest with `://[redacted]`. The scheme stays. The URL suffix does not reach
+  the journal. It turns the constant missing-registration
+  error into `[ciproxy] runner entry error: JIT registration required`.
 - When the helper or the journal fails, the runner goes on, and its
   stderr is dropped.
 

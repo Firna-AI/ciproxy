@@ -84,9 +84,9 @@
   - One known case with no report came from a restore check with no
     registration on 2026-11-21. There, `ciproxy-boat-start.service`
     failed in its whole-root disk walk before it started the guest. That
-    check had no waiting job, so it stranded no job. Cal's option F has
-    since removed that walk: the start reads only `statvfs`, and a failed
-    measurement only writes a warning. The
+    check had no waiting job, so it stranded no job. The orchestrator's
+    option F has since removed that walk: the start reads only `statvfs`,
+    and a failed measurement only writes a warning. The
     [measurement record][measurement-record] holds the history.
   - Known cases with a report: on 2026-11-21, the guests of two real jobs
     with registrations, boxes 5 and 6, sent exit reports at 03:09:56 and

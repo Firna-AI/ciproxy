@@ -109,24 +109,34 @@ absent, and the two upstream folders must stay. Boat's controller must
 still run commands and file transfers.
 
 Then check the start of the runner entry, with no registration value.
-The second command runs the installed entry as the guest does, through
-`runuser` with a cleared environment:
+The `runuser` command runs the installed entry as the guest does, with a
+cleared environment. The journal commands before and after it share one
+cursor file, so the second read shows only records that are newer than the
+first read:
 
 ```sh
 sudo grep -cF "|| __ascii_nvm_bin=''" /etc/profile.d/nvm.sh
+sudo find /opt/actions-runner/_diag -name 'Runner_*.log'
+sudo journalctl --identifier=ciproxy-boat-runner-stderr \
+  --cursor-file=/tmp/ciproxy-runner-cursor --no-pager
 sudo env -i /usr/sbin/runuser --user runner -- /usr/local/libexec/ciproxy-runner
-sudo journalctl --identifier=ciproxy-boat-runner-stderr --no-pager
+sudo journalctl --identifier=ciproxy-boat-runner-stderr \
+  --cursor-file=/tmp/ciproxy-runner-cursor --no-pager
 sudo find /opt/actions-runner/_diag -name 'Runner_*.log'
 ```
 
 The `grep` must print `1`, the count of the guarded NVM lookup. The entry
 must exit with 1 at its registration check, because it has no
-registration value. The entry sends its stderr to the journal. So the
-journal must show this line, and no error of `nvm.sh`:
-`[ciproxy] runner entry error: JIT registration required`.
-No `Runner_*.log` file must appear, because the listener does not start
-without a registration. Keep the journal lines and the file list as smoke
-evidence.
+registration value. The entry sends its stderr to a journal helper, and
+the exit of the entry does not show that the helper has written its
+record. So repeat the second journal read about once a second, for up to
+15 seconds, until the line below appears. Keep every record that these
+reads show. The new records must show this line, and no error of
+`nvm.sh`: `[ciproxy] runner entry error: JIT registration required`.
+Compare the two file lists. No new `Runner_*.log` file must appear,
+because the entry stops before it starts the listener. Another listener
+call, such as `Runner.Listener --version`, can write its own diagnostic
+files. Keep the journal lines and both file lists as smoke evidence.
 Then delete the sandbox:
 
 ```sh
@@ -207,6 +217,16 @@ python3 image/github.py --app-id APP_ID --app-key /PRIVATE/APP.pem \
 Require `completed`, `success`, and the expected runner ID in that result.
 The journal of `ciproxy-boat-start.service` shows the free bytes before
 the guest starts.
+While the sandbox exists, copy its bounded, redacted runner stderr with
+the Boat command API:
+
+```sh
+sudo journalctl --identifier=ciproxy-boat-runner-stderr --no-pager
+```
+
+The exit callback deletes the sandbox, and the journal goes with it.
+Read it at short intervals while the job runs. This read only copies the journal. It changes nothing in
+the product.
 A successful callback prints `runner exit report accepted`.
 Verify the final Boat state as well. A successful job alone does not prove
 that the callback deleted its sandbox.

@@ -7,6 +7,7 @@ import binascii
 import json
 import os
 import pathlib
+import select
 import shutil
 import subprocess
 import sys
@@ -43,6 +44,31 @@ def write_script(path, content):
     path.chmod(0o755)
 
 
+def fixture_jit():
+    credential = base64.b64encode(json.dumps({"data": {"key": SECRET}}).encode()).decode()
+    return base64.b64encode(json.dumps({".credentials": credential}).encode()).decode()
+
+
+def recording_journal(root):
+    write_script(root / "usr/bin/systemd-cat", '''#!/bin/bash
+test -z "${ACTIONS_RUNNER_INPUT_JITCONFIG+x}" || exit 33
+printf '%s\\n' "$@" > /observations/identifier
+exec /usr/bin/cat > /observations/journal
+''')
+    return root / "observations/journal"
+
+
+def write_failing_profile(root, diagnostics=""):
+    (root / "etc/profile").write_text(diagnostics + ". /etc/profile.d/nvm.sh\n")
+    (root / "etc/profile.d").mkdir()
+    (root / "etc/profile.d/nvm.sh").write_text('''test -z "${BASH_ENV+x}"
+startup_failure() {
+    test "$ACTIONS_RUNNER_INPUT_JITCONFIG" = mismatch
+}
+startup_failure
+''')
+
+
 def prepare_root(root):
     assert os.geteuid() == 0, "Run the fixed-path fixture with sudo"
     root.chmod(0o755)
@@ -70,12 +96,13 @@ def prepare_root(root):
     os.chown(root / "opt/actions-runner/bin", 12345, 12345)
 
 
-def in_runner_root(root, *command, registration="fixture-jit", source=None, stderr=subprocess.PIPE):
+def in_runner_root(root, *command, registration="fixture-jit", source=None,
+                   stderr=subprocess.PIPE, pass_fds=(), timeout=None):
     return subprocess.run(
         [shutil.which("chroot"), "--userspec=12345:12345", str(root), *command],
         env={"PATH": "/usr/bin:/bin", "HOME": "/home/runner", "USER": "runner",
              "LOGNAME": "runner", JIT_VARIABLE: registration},
-        stdin=source, stdout=subprocess.PIPE, stderr=stderr,
+        stdin=source, stdout=subprocess.PIPE, stderr=stderr, pass_fds=pass_fds, timeout=timeout,
     )
 
 
@@ -128,24 +155,29 @@ class BoatRunner(unittest.TestCase):
 
     def test_stderr_retains_a_redacted_prefix_and_drains_the_burst(self):
         prepare_root(self.root)
-        journal = self.root / "observations/journal"
-        write_script(self.root / "usr/bin/systemd-cat", '''#!/bin/bash
-test -z "${ACTIONS_RUNNER_INPUT_JITCONFIG+x}" || exit 33
-printf '%s\\n' "$@" > /observations/identifier
-exec /usr/bin/cat > /observations/journal
-''')
-        credential = base64.b64encode(json.dumps({"data": {"key": SECRET}}).encode()).decode()
-        jit = base64.b64encode(json.dumps({".credentials": credential}).encode()).decode()
+        journal = recording_journal(self.root)
+        jit = fixture_jit()
         short_jit = base64.b64encode(b"{}").decode()
         opaque = b"aZ47_/b+" * 8
         prefix = (PROFILE_ERROR + b"/usr/local/libexec/ciproxy-runner-common: line 19: "
                   b"ACTIONS_RUNNER_INPUT_JITCONFIG: JIT registration required\n")
-        burst = (prefix + jit.encode() + b"\nvalue: " + SECRET.encode()
+        urls = (b"Database connection failed: postgresql://demo:fixture@db/app\n"
+                b"ICU is missing; see https://example.test/guide then ftp://example.test/faq\n"
+                b"Redirect: example://local?token=fake\n"
+                b"Redirect: example://local/" + SECRET.encode()
+                + b"\nRedirect: example://" + opaque + b"\n")
+        burst = (prefix + urls + jit.encode() + b"\nvalue: " + SECRET.encode()
                  + b"\nAuthorization: Bearer abc\nCookie: short\npassword=fake\n" + opaque
                  + b"\n" + b"next diagnostic\n" * 8192 + b"late diagnostic\n")
         wide_line = (prefix + short_jit.encode() + b"\n"
                      + b"z" * 131072 + b"\nlate diagnostic\n")
-        for registration, data in ((jit, burst), (short_jit, wide_line)):
+        safe_prefix = PROFILE_ERROR + b"[ciproxy] runner entry error: JIT registration required\n"
+        safe_urls = (b"Database connection failed: postgresql://[redacted]\n"
+                     b"ICU is missing; see https://[redacted]\n"
+                     b"[redacted]\n[redacted]\n[redacted]\n")
+        for registration, data, expected_prefix in (
+            (jit, burst, safe_prefix + safe_urls), (short_jit, wide_line, safe_prefix),
+        ):
             with self.subTest(bytes=len(data)):
                 journal.unlink(missing_ok=True)
                 with tempfile.TemporaryFile(dir=self.root) as source:
@@ -160,8 +192,7 @@ exec /usr/bin/cat > /observations/journal
                 retained = journal.read_bytes()
                 self.assertIn(b"--identifier=ciproxy-boat-runner-stderr\n",
                               (self.root / "observations/identifier").read_bytes())
-                self.assertTrue(retained.startswith(
-                    PROFILE_ERROR + b"[ciproxy] runner entry error: JIT registration required\n"))
+                self.assertEqual(retained[:len(expected_prefix)], expected_prefix)
                 self.assertTrue(retained.endswith(NOTICE))
                 self.assertEqual(retained.count(NOTICE), 1)
                 self.assertLessEqual(len(retained), 16 * 1024 + len(NOTICE))
@@ -203,19 +234,34 @@ exit 23
 
     def test_silent_profile_error_keeps_status_and_reports_only_source_location(self):
         prepare_root(self.root)
-        (self.root / "etc/profile").write_text(". /etc/profile.d/nvm.sh\n")
-        (self.root / "etc/profile.d").mkdir()
-        (self.root / "etc/profile.d/nvm.sh").write_text('''test -z "${BASH_ENV+x}"
-startup_failure() {
-    test "$ACTIONS_RUNNER_INPUT_JITCONFIG" = mismatch
-}
-startup_failure
-''')
+        write_failing_profile(self.root)
         result = in_runner_root(
             self.root, "/usr/bin/env", "BASH_ENV=/usr/local/libexec/ciproxy-boat-runner-errors.sh",
             "/usr/local/libexec/ciproxy-runner-common", source=subprocess.DEVNULL,
         )
         self.assertEqual((result.returncode, result.stdout, result.stderr), (1, b"", PROFILE_ERROR))
+
+    def test_entry_writes_redacted_jit_and_profile_error_to_the_journal(self):
+        prepare_root(self.root)
+        journal = recording_journal(self.root)
+        write_failing_profile(self.root, f"printf '%s\\n' 'value: {SECRET}' >&2\n")
+
+        read_end, write_end = os.pipe()
+        with os.fdopen(read_end, "rb") as completion:
+            try:
+                result = in_runner_root(
+                    self.root, "/usr/local/libexec/ciproxy-runner", registration=fixture_jit(),
+                    source=subprocess.DEVNULL, pass_fds=(write_end,), timeout=30,
+                )
+            finally:
+                os.close(write_end)
+            self.assertTrue(select.select([completion], [], [], 30)[0],
+                            "Runner stderr helper did not finish")
+            self.assertEqual(completion.read(1), b"", "Completion pipe must reach EOF")
+
+        self.assertEqual((result.returncode, result.stdout, result.stderr), (1, b"", b""))
+        self.assertTrue(journal.exists(), "Runner stderr did not reach the recording writer")
+        self.assertEqual(journal.read_bytes(), b"[redacted]\n" + PROFILE_ERROR)
 
 
 if __name__ == "__main__":

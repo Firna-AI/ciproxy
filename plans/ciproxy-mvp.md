@@ -2844,14 +2844,33 @@ The machine image definition and its selected release stay unchanged.
 
 Depends on: 27a
 
-Cal's call, 21 November 2026: apply measurement option F and runner
-diagnosis option B now, before the merge into main. The scope and the
-six-sandbox budget are Cal's limits. Keep protocol messages unchanged.
+The orchestrator's call, 21 November 2026: apply measurement option F and
+runner diagnosis option B now, before the merge into main. The scope and
+the six-sandbox budget are the orchestrator's limits. Keep protocol
+messages unchanged.
 Stop and report options if a new boundary or protocol change is needed.
+
+Attribution correction, 21 November 2026: commit `995e4f88` attributed
+these calls to Cal in error. The orchestrator chose measurement option F
+and runner diagnosis option B. The orchestrator also set the scope and
+the six-sandbox limit. The pushed commit stays unchanged.
+
+The two follow-up items stay closed. Their corrected call records are:
+
+- [Boat live-root measurement race][closed-measurement]: the
+  orchestrator's call was option F, before the merge into main.
+- [Boat runner before-job exit][closed-runner]: the orchestrator's call
+  was option B. The six-sandbox limit came from the orchestrator.
+
+[closed-measurement]: https://github.com/Firna-AI/ciproxy/blob/34bc620945cb5a388af949373c209d8e97bcbfb6/plans/follow-ups/boat-live-root-measurement-race.md
+[closed-runner]: https://github.com/Firna-AI/ciproxy/blob/34bc620945cb5a388af949373c209d8e97bcbfb6/plans/follow-ups/boat-runner-before-job-exit.md
 
 Implementation direction: keep the measurement and runner fixes in the
 Boat image. Preserve the machine runtime and the existing client policy.
 Keep a bounded, redacted copy of runner stderr in the sandbox journal.
+Implementation review, 21 November 2026: remove each URL suffix from stderr
+and keep the safe prefix. Add the exact journal-delivery and free-byte
+regressions. Keep the rare failed-callback drain case as a follow-up.
 
 - [x] Create a new worktree from the primary branch, and diagnose one
       restored snapshot with no real registration.
@@ -2861,7 +2880,8 @@ Keep a bounded, redacted copy of runner stderr in the sandbox journal.
 - [x] Fix the proved optional NVM lookup failure under errexit. Keep
       bounded runner stderr in the journal without a protocol change.
 - [x] Add meaningful regressions and align the image guides. Close the
-      two follow-up items that Cal selected when their fixes are proved.
+      two follow-up items that the orchestrator selected when their fixes
+      are proved.
 - [ ] Build a clean Boat snapshot and pass its restore checks.
 - [ ] Publish the snapshot secret version on stdin and select it in the
       preview. Retain the machine release if its runtime is unchanged.
