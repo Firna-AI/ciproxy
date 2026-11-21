@@ -2882,15 +2882,15 @@ regressions. Keep the rare failed-callback drain case as a follow-up.
 - [x] Add meaningful regressions and align the image guides. Close the
       two follow-up items that the orchestrator selected when their fixes
       are proved.
-- [ ] Build a clean Boat snapshot and pass its restore checks.
-- [ ] Publish the snapshot secret version on stdin and select it in the
+- [x] Build a clean Boat snapshot and pass its restore checks.
+- [x] Publish the snapshot secret version on stdin and select it in the
       preview. Retain the machine release if its runtime is unchanged.
 - [ ] Pass the actual large job, callback, PostgreSQL and Docker steps,
       job-log locale check, overflow smoke and complete spend-limit smoke.
       Turn overflow off in both workspaces and delete every task sandbox.
 - [ ] Restore the main machine in Firna-AI with agent/cache 0.1.4.
-- [ ] Run the complete gate with DATABASE_URL set, commit and push.
-- [ ] Review the diff against the primary branch with implementation-review
+- [x] Run the complete gate with DATABASE_URL set, commit and push.
+- [x] Review the diff against the primary branch with implementation-review
       and apply its bounded fix rounds.
 - [ ] Keep this parent plan for the remaining MVP work. Open a ready PR
       into the primary branch. Do not merge it.
