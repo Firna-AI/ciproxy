@@ -203,34 +203,42 @@ class BoatRunner(unittest.TestCase):
                 for description, value in excluded.items():
                     self.assertFalse(value in retained, f"Journal must exclude {description}")
 
-    def test_entry_redirects_before_profiles_and_survives_a_journal_failure(self):
-        prepare_root(self.root)
-        write_script(self.root / "usr/bin/systemd-cat", '''#!/bin/bash
+    def test_entry_redirects_before_profiles_and_survives_logging_failures(self):
+        for failure in ("journal-writer", "stderr-helper"):
+            with self.subTest(failure=failure):
+                root = self.root / failure
+                root.mkdir()
+                prepare_root(root)
+                if failure == "stderr-helper":
+                    (root / "usr/local/libexec/ciproxy-boat-runner-stderr.py").unlink()
+                    recording_journal(root)
+                else:
+                    write_script(root / "usr/bin/systemd-cat", '''#!/bin/bash
 printf 'journal failure\\n'
 printf 'journal failure\\n' >&2
 exit 37
 ''')
-        (self.root / "etc/profile").write_text('''
+                (root / "etc/profile").write_text('''
 /usr/bin/python3 -I -c 'import os, stat; assert stat.S_ISFIFO(os.fstat(2).st_mode)'
 printf 'profile stderr\\n' >&2
 ''')
-        (self.root / "etc/environment").touch()
-        runner = self.root / "opt/actions-runner/bin"
-        (runner / "Runner.Worker.stock.dll").write_bytes(b"stock")
-        write_script(runner / "Runner.Listener", '''#!/bin/bash
+                (root / "etc/environment").touch()
+                runner = root / "opt/actions-runner/bin"
+                (runner / "Runner.Worker.stock.dll").write_bytes(b"stock")
+                write_script(runner / "Runner.Listener", '''#!/bin/bash
 set -e
 test -z "${BASH_ENV+x}"
 /usr/bin/cat /observations/burst >&2
 printf 'Listening for Jobs\\n%s\\n' "$*"
 exit 23
 ''')
-        (self.root / "observations/burst").write_bytes(b"listener diagnostic\n" * 8192)
-        with tempfile.TemporaryFile(dir=self.root) as stderr:
-            result = in_runner_root(self.root, "/usr/local/libexec/ciproxy-runner",
-                                    source=subprocess.DEVNULL, stderr=stderr)
-            stderr.seek(0)
-            self.assertEqual((result.returncode, result.stdout, stderr.read()),
-                             (23, b"Listening for Jobs\nrun --once\n", b""))
+                (root / "observations/burst").write_bytes(b"listener diagnostic\n" * 8192)
+                with tempfile.TemporaryFile(dir=root) as stderr:
+                    result = in_runner_root(root, "/usr/local/libexec/ciproxy-runner",
+                                            source=subprocess.DEVNULL, stderr=stderr, timeout=30)
+                    stderr.seek(0)
+                    self.assertEqual((result.returncode, result.stdout, stderr.read()),
+                                     (23, b"Listening for Jobs\nrun --once\n", b""))
 
     def test_silent_profile_error_keeps_status_and_reports_only_source_location(self):
         prepare_root(self.root)

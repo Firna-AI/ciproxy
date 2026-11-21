@@ -225,8 +225,8 @@ sudo journalctl --identifier=ciproxy-boat-runner-stderr --no-pager
 ```
 
 The exit callback deletes the sandbox, and the journal goes with it.
-Read it at short intervals while the job runs. This read only copies the journal. It changes nothing in
-the product.
+Read it at short intervals while the job runs. This read only copies the
+journal. It changes nothing in the product.
 A successful callback prints `runner exit report accepted`.
 Verify the final Boat state as well. A successful job alone does not prove
 that the callback deleted its sandbox.

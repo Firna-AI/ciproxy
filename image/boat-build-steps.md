@@ -182,8 +182,8 @@ runner entry first sends its stderr to a journal helper:
   `[redacted]` when the line holds the registration value or a value
   decoded from it. It does the same for a credential word or a long opaque
   value. In each other line, it keeps the text before the first `://` and
-  replaces the rest with `://[redacted]`. The scheme stays. The URL suffix does not reach
-  the journal. It turns the constant missing-registration
+  replaces the rest with `://[redacted]`. The scheme stays. The URL suffix
+  does not reach the journal. It turns the constant missing-registration
   error into `[ciproxy] runner entry error: JIT registration required`.
 - When the helper or the journal fails, the runner goes on, and its
   stderr is dropped.
