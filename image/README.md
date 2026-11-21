@@ -224,8 +224,11 @@ snapshot.
 ## Boat smoke
 
 The [Boat smoke guide](boat-smoke.md) covers metadata, a restore without
-a registration, a real GitHub job, and callback cleanup. Boat keeps its
-provider kernel, network, and resolver.
+a registration, a real GitHub job, and callback cleanup. The restore part
+first runs [boat-locale-smoke.py](boat-locale-smoke.py). That check
+requires the `UTF-8` codeset and an empty stderr for the first command in
+the restored sandbox. Boat keeps its provider kernel, network, and
+resolver.
 
 ## Sources
 

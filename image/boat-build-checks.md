@@ -9,7 +9,9 @@ The check runs the real build executor, the real pinned renderer, and real
 recipe scripts on fixture recipes and private file trees.
 It needs no root, Boat account, or network.
 Its package-family scenario needs `apt-get` and `apt-cache`, and its
-Ansible scenario needs `pip`. Each reports a skip when its tool is absent.
+Ansible scenario needs `pip`. Its locale scenario needs `localedef`,
+`locale`, and the glibc sources of the `en_US` locale and the `UTF-8`
+charmap. Each reports a skip when one of its tools or sources is absent.
 The [checks guide](checks.md) lists the other image checks.
 
 ## Build and resume
@@ -81,6 +83,26 @@ The [checks guide](checks.md) lists the other image checks.
 - A second run of the cleanup script changes no file, owner, mode, inode,
   or time. The script needs no build folder. Finalization runs it and keeps
   the upstream files.
+
+## The locale of Boat's controller
+
+- The locale script writes the `en_US.UTF-8` data to
+  `/usr/local/lib/ciproxy/locales/en_US.utf8` in a fixture root.
+- The check sets `LOCPATH` to the fixture copies of the folders that the
+  profile names. The fixture `/usr/lib/locale` is empty. With `LOCPATH`
+  set, glibc reads no locale archive. Then `en_US.UTF-8` and `C.UTF-8`
+  must each give the `UTF-8` charmap and an empty stderr.
+- For `HOME=/home/user`, two reads of the profile both set `LOCPATH` to
+  `/usr/local/lib/ciproxy/locales:/usr/lib/locale`. A folder of an
+  inherited `LOCPATH` stays between these two folders.
+- For another home, such as `/home/runner`, `LOCPATH` stays unset.
+- A unique test locale name first fails to load. A link then points that
+  name at the generated data, and the lookup must return UTF-8 without
+  stderr. Host locale folders cannot supply that test name.
+- [boat-locale-smoke.py](boat-locale-smoke.py) passes only for exit code
+  0, the `UTF-8` codeset, and an empty stderr. Stderr with only white space
+  fails it, and so does a failed request. Its messages hold no text from
+  the Boat reply.
 
 ## Pins and native installers
 

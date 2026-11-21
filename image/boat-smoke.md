@@ -15,11 +15,31 @@ This check needs no GitHub registration and contacts no GitHub service.
 python3 image/boat.py create --size large \
   --share-file .context/ciproxy-image-share.json
 python3 image/boat.py status RESTORE_SANDBOX_ID
+python3 image/boat-locale-smoke.py RESTORE_SANDBOX_ID
 python3 image/boat.py metadata RESTORE_SANDBOX_ID \
   --baseline .context/rootfs-metadata-before.json
 python3 image/boat.py run RESTORE_SANDBOX_ID
 python3 image/boat.py status RESTORE_SANDBOX_ID --process LAUNCH_PROCESS_ID
 ```
+
+Repeat `status` until the state is `ready`, `idle`, or `running`. Then run
+the locale check at once, before `metadata`, because Boat can still
+generate its locales again at that time. The check runs one Python command
+through Boat's controller, with the shell settings of Boat's `user`
+account. The command must exit with 0, print the `UTF-8` codeset, and
+leave stderr empty. Then the check exits with 0 and prints this line:
+
+```json
+{"codeset": "UTF-8", "exit_code": 0, "stderr_empty": true}
+```
+
+Otherwise the check prints one fixed message on stderr and exits with 1.
+It never prints text from the Boat reply. Require a pass before `run`.
+The [Boat build steps](boat-build-steps.md#the-locale-of-boats-controller)
+say why a locale warning stops the start of a runner. Boat's locale setup
+can end before the check runs. So the
+[Boat build check](boat-build-checks.md#the-locale-of-boats-controller)
+also checks the locale without a locale archive.
 
 The metadata comparison runs after the restore and before a launch.
 It prints `matches_baseline` and each difference as smoke evidence.

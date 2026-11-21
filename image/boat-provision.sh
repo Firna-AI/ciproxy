@@ -10,3 +10,4 @@ install -d -o sandbox-workload -g sandbox-workload -m 0755 /home/sandbox-workloa
 bash "$definition/provision.sh" boat
 systemctl disable ciproxy-boat-start.service ciproxy-boat-guest.service
 systemctl daemon-reload
+bash "$definition/boat-build-locale.sh"
