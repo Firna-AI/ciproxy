@@ -518,7 +518,7 @@ reserve. The image measurement sets the real budget later.
       Apply the approved removal rule of item 79 = A and the Docker space
       rule of item 80 = D.
       Branch: `conductor/ciproxy-mvp-milestone-13-e2e`.
-- [ ] Smoke-test a Docker job, a warm runner, and a restart during a job.
+- [x] Smoke-test a Docker job, a warm runner, and a restart during a job.
       Orchestrator: run `crates/ciproxy-agent/scripts/smoke-docker.sh`,
       `crates/ciproxy-agent/scripts/smoke-warm.sh`, and
       `crates/ciproxy-agent/scripts/smoke-restart.sh` on the KVM test host
@@ -539,6 +539,10 @@ reserve. The image measurement sets the real budget later.
       Item 126 = B, 20 November 2026: the fix moves into this branch, as
       Milestone 27g, and this smoke runs in live run 6. Pull request #94
       merged that fix on 20 November 2026.
+      Live run 6, 20 November 2026, agent 0.1.4: `smoke-host.sh` passed on
+      a fresh ext4 VM: the install, the repair, two reflink Docker jobs, a
+      repeat install during a job, and the uninstall.
+      Evidence: `.context/ciproxy-mvp/live-2026-11-20/`.
 
 ## Milestone 10: Job VM image
 
@@ -1082,6 +1086,9 @@ Live KVM and authenticated job checks remain with the orchestrator.
     - [ ] Run the Boat `large` job with its exit callback and the three
           overflow checks again. They wait for the Boat client fix above
           and for the Boat-native image of Milestone 27a.
+          Live run 6, 20 November 2026: the idle-delete smoke passed. The
+          Boat `large` job, the overflow smoke, and the spend-limit smoke
+          failed before the runner started, as Milestone 27a says.
   - [x] Replace the total time limit of image downloads with a stall limit.
         The image client ended each download after 3,600 seconds, so a link
         slower than about 40 Mbit/s could never finish the 18 GB image. My
@@ -1091,7 +1098,7 @@ Live KVM and authenticated job checks remain with the orchestrator.
         partial downloads stays in
         `follow-ups/repeat-install-image-download.md`.
         Branch: `conductor/image-download-stall-limit`.
-  - [ ] Publish agent pre-release 0.1.4 with the stall limit and the install
+  - [x] Publish agent pre-release 0.1.4 with the stall limit and the install
         line of Milestone 27c before the next live run.
 
 Owner review of pull request #31, round 1, 6 November 2026: the user chose
@@ -2628,6 +2635,15 @@ Implementation calls, 20 November 2026:
       Branch: `conductor/m27a-boat-native-image`
 - [ ] Publish an image release with its Boat snapshot. Then run the Boat
       `large` job with its exit callback and the three overflow checks.
+      Live run 6, 20 November 2026: image `2026-11-20-b751ef5f` and its
+      Boat snapshot are published, with snapshot secret version 5. The
+      Boat `large` job, the overflow smoke, and the spend-limit smoke
+      failed before the runner started. Each command on the snapshot
+      printed a locale warning, and the pinned Boat client treats any text
+      on stderr as a failure. The idle-delete smoke passed. My call, 21
+      November 2026: fix the warning in the Boat build and run the checks
+      again. A client that accepts such a warning waits for the user.
+      Evidence: `.context/ciproxy-mvp/live-2026-11-20/report.md`.
 - [ ] Delete `follow-ups/boat-image-services.md`, which this milestone
       settles.
 
