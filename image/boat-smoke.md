@@ -24,10 +24,12 @@ python3 image/boat.py status RESTORE_SANDBOX_ID --process LAUNCH_PROCESS_ID
 
 Repeat `status` until the state is `ready`, `idle`, or `running`. Then run
 the locale check at once, before `metadata`, because Boat can still
-generate its locales again at that time. The check runs one Python command
-through Boat's controller, with the shell settings of Boat's `user`
-account. The command must exit with 0, print the `UTF-8` codeset, and
-leave stderr empty. Then the check exits with 0 and prints this line:
+generate its locales again at that time. The check runs
+`/usr/bin/locale charmap` through Boat's controller, with the shell
+settings of Boat's `user` account. That program prints the codeset of the
+locale that the command inherits, and it changes no locale itself. The
+command must exit with 0, print the `UTF-8` codeset, and leave stderr
+empty. Then the check exits with 0 and prints this line:
 
 ```json
 {"codeset": "UTF-8", "exit_code": 0, "stderr_empty": true}
@@ -39,7 +41,9 @@ The [Boat build steps](boat-build-steps.md#the-locale-of-boats-controller)
 say why a locale warning stops the start of a runner. Boat's locale setup
 can end before the check runs. So the
 [Boat build check](boat-build-checks.md#the-locale-of-boats-controller)
-also checks the locale without a locale archive.
+also checks the locale without a locale archive. It runs the same command,
+and it shows that the check rejects the result with `LANG=C` and no
+`LC_*` setting.
 
 The metadata comparison runs after the restore and before a launch.
 It prints `matches_baseline` and each difference as smoke evidence.

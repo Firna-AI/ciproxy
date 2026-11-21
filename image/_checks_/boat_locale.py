@@ -20,6 +20,7 @@ from boat import Api
 
 
 DEFINITION = pathlib.Path(__file__).resolve().parents[1]
+SMOKE_SCRIPT = "boat-locale-smoke.py"
 FALLBACK = "/usr/local/lib/ciproxy/locales"
 DEFAULT = "/usr/lib/locale"
 
@@ -65,6 +66,12 @@ printf '\\0'
     return paths.splitlines(), sorted(before.split("\0")), sorted(after.split("\0"))
 
 
+def run_probe(probe, environment):
+    result = subprocess.run(["bash", "--noprofile", "--norc", "-c", probe],
+                            env=environment, capture_output=True, text=True)
+    return result.returncode, result.stdout, result.stderr
+
+
 def check_locale(case, workspace):
     if not all(shutil.which(tool) for tool in ("localedef", "locale")):
         case.skipTest("The Boat locale check needs localedef and locale.")
@@ -91,12 +98,10 @@ def check_locale(case, workspace):
         paths = DEFAULT if provider[-1] == "unset" else provider[-1]
         fixture_paths = ":".join(str(root / path.lstrip("/")) for path in paths.split(":"))
         expected = (0, "UTF-8\n", "")
+        probe = runpy.run_path(str(DEFINITION / SMOKE_SCRIPT))["COMMAND"]
 
         def charmap(locale_name):
-            command = subprocess.run(["bash", "--noprofile", "--norc", "-c", "locale charmap"],
-                                     env={**environment, "LC_ALL": locale_name, "LOCPATH": fixture_paths},
-                                     capture_output=True, text=True)
-            return command.returncode, command.stdout, command.stderr
+            return run_probe(probe, {**environment, "LC_ALL": locale_name, "LOCPATH": fixture_paths})
 
         for locale_name in ("en_US.UTF-8", "C.UTF-8"):
             with case.subTest(locale=locale_name):
@@ -117,15 +122,21 @@ def check_locale(case, workspace):
 
 
 def check_locale_smoke(case):
-    script = DEFINITION / "boat-locale-smoke.py"
+    script = DEFINITION / SMOKE_SCRIPT
     sandbox = "bx_fixture"
     passed = {"exitCode": 0, "stdout": "UTF-8\n", "stderr": "", "other": "private fixture data"}
+
+    def ascii_reply(_sandbox, probe):
+        exit_code, stdout, stderr = run_probe(probe, {"PATH": os.environ["PATH"], "LANG": "C"})
+        return {"exitCode": exit_code, "stdout": stdout, "stderr": stderr}
+
     scenarios = (
         ("stderr", {**passed, "stderr": " \n"}, "Boat locale command did not have empty stderr."),
         ("stdout", {**passed, "stdout": "private fixture data"}, "Boat locale command did not report UTF-8."),
         ("exit", {**passed, "exitCode": 7}, "Boat locale command did not exit successfully."),
         ("request failure", http.client.BadStatusLine("private fixture data"), "Boat locale request failed."),
         ("success", passed, ""),
+        ("inherited ASCII", ascii_reply, "Boat locale command did not report UTF-8."),
     )
     for scenario, reply, error in scenarios:
         with case.subTest(scenario=scenario):

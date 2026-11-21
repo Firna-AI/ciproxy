@@ -10,8 +10,7 @@ import sys
 from boat import Api
 
 
-COMMAND = ("python3 -I -S -c 'import locale; locale.setlocale(locale.LC_ALL, \"\"); "
-           "print(locale.nl_langinfo(locale.CODESET))'")
+COMMAND = "/usr/bin/locale charmap"
 
 
 def fail(message):

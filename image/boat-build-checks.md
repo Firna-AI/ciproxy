@@ -96,7 +96,8 @@ The [checks guide](checks.md) lists the other image checks.
 - The check sets `LOCPATH` to the fixture copies of the folders that the
   profile names. The fixture `/usr/lib/locale` is empty. With `LOCPATH`
   set, glibc reads no locale archive. Then `en_US.UTF-8` and `C.UTF-8`
-  must each give the `UTF-8` charmap and an empty stderr.
+  must each give the `UTF-8` charmap and an empty stderr. These cases run
+  the same command that the restore check sends.
 - For `HOME=/home/user`, two reads of the profile both set `LOCPATH` to
   `/usr/local/lib/ciproxy/locales:/usr/lib/locale`. With an inherited
   `LOCPATH`, the profile keeps each inherited entry and adds no folder
@@ -111,6 +112,11 @@ The [checks guide](checks.md) lists the other image checks.
   0, the `UTF-8` codeset, and an empty stderr. Stderr with only white space
   fails it, and so does a failed request. Its messages hold no text from
   the Boat reply.
+- The check runs the exact command that the script sends,
+  `/usr/bin/locale charmap`, with `LANG=C` and no `LC_*` setting. The
+  script must reject that ASCII result. So a probe that prints a fixed
+  text fails the check. On a host where `C.UTF-8` loads, so does a probe
+  that changes the locale itself.
 
 ## Pins and native installers
 

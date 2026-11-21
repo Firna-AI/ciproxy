@@ -22,6 +22,9 @@
     `runner` account and then starts the listener.
   - **Listener:** `Runner.Listener`, the stock GitHub runner process. It
     writes `Runner_*.log` files in `/opt/actions-runner/_diag`.
+  - **Registration value:** the one-time GitHub runner configuration that
+    the guest passes in `ACTIONS_RUNNER_INPUT_JITCONFIG`. A dummy value is
+    not a registration.
 - **Background:**
   - The call path: `ciproxy-boat-guest.service` runs the guest. The guest
     runs `/usr/sbin/runuser --user runner -- /usr/local/libexec/ciproxy-runner`
@@ -113,14 +116,42 @@
     artifact or Boat API read gives these bytes, so Boat or the user must
     supply them. Effort: Small.
   - **B.** In a separate task with a new budget of one sandbox, restore
-    this published snapshot with no real job registration. Capture the
-    exact profile bytes. Run the runner entry as the guest does, through
-    `runuser --user runner` with a cleared environment. Add a Bash `ERR`
-    trap that prints only the file, the line, and the exit status. Set it
-    through `BASH_ENV`, for example, so the entry file stays unchanged.
-    Then delete the sandbox. Without a registration, an entry that passes
-    the profiles and the copy stops at line 19, which shows that the
-    earlier lines passed. Effort: Small.
+    this published snapshot, and delete the sandbox at the end. No step
+    uses a real registration, a real server, or a key. The user must
+    approve that task first. Effort: Small. The steps:
+    1. Capture the bytes of `/etc/profile.d/nvm.sh`, and check them
+       against the recorded SHA-256. Record the runner's effective
+       `HOME`, `NVM_DIR`, default alias, and path state.
+    2. Run the unchanged runner entry as the guest does, through
+       `runuser --user runner` with a cleared environment and no
+       registration value. Set a Bash `ERR` trap through `BASH_ENV` that
+       prints only the file, the line, and the exit status. Print no
+       command text, environment value, or trace.
+    3. The `ERR` trap does not run when the `${...:?}` check at line 19
+       ends the shell. So also record the exit status of the process,
+       and, as yes or no, whether stderr holds the constant text
+       `JIT registration required`. Print no other stderr text.
+    4. When the entry stops at line 19, run it once more with a known
+       dummy value in `ACTIONS_RUNNER_INPUT_JITCONFIG`. That value is no
+       registration, names no real server, and holds no key. Line 20
+       then starts the listener, which cannot register or take a job.
+       Record the exit status, and whether a `Runner_*.log` file
+       appears.
+    - The outcomes:
+      - An exit before line 19 shows the file and the line of a failing
+        command in this probe. It can reproduce a candidate cause.
+      - A stop at line 19 shows only that the earlier lines passed in
+        this probe. It does not prove the cause of the original exit.
+      - A listener exit with no log can reproduce a candidate failure in
+        the listener start.
+      - A listener that writes its log and then rejects the dummy value
+        passed its start in this probe. The original cause then stays
+        open.
+    - The known differences from the real starts: the probe has no real
+      registration, and it runs later after the restore. Also,
+      `ciproxy-boat-start.service` does not run first. The real entry of
+      box 6 ran directly after that service, about 45 seconds after the
+      sandbox started. So one sandbox cannot guarantee the exact cause.
   - **C.** In a separate product change, add bounded, redacted diagnostics
     of the runner start and exit. An example is the last stage that the
     entry reached and its exit status, with no command output. Then
@@ -136,14 +167,19 @@
   - More real jobs, because each costs a paid sandbox and, with stderr
     dropped, shows the same exit with no cause.
 - **Wider fix:** C. It makes each later exit before the listener visible.
-  B finds only the cause of this observed exit.
+  B can show where this probe exits, but it may not find the cause of the
+  observed exit.
 - **Previous examples:** Commit `5a493ed6` fixed the effect of a Boat
   profile line on the commands of Boat's controller. There too, a profile
   of Boat's base ran inside a ciproxy start path.
+- **Related:** `plans/follow-ups/boat-launched-runner-readiness.md`
+  covers starts that send no exit report. Both runners here did send
+  their reports, so that item does not explain these exits.
 - **Recommendation:** B. The candidates are not proved, and the original
-  stderr was dropped. So one bounded diagnosis on the real snapshot is the
-  shortest way to the exact cause. B was blocked in the task that found
-  it, because the user limited that task to six sandboxes, and all six
-  were used and deleted.
+  stderr was dropped. So one bounded probe on the real snapshot is the
+  cheapest next step. It can reproduce a candidate cause or rule out the
+  early setup, and the original cause can stay open. B was blocked in
+  the task that found it, because the user limited that task to six
+  sandboxes, and all six were used and deleted.
 - **Action:** ask the user, because B needs a new paid sandbox beyond the
   six-sandbox limit that the user set for the task that found it.
