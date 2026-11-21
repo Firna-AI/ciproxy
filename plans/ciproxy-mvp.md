@@ -1,9 +1,10 @@
 # ciproxy MVP
 
-Status: Active. [PR #97](https://github.com/Firna-AI/ciproxy/pull/97) is
-open. The user approved this plan on 4 November 2026, in the words
-"plan is approved". The pull request that completes the work deletes this
-plan, as the `plans` skill says.
+Status: Active. [PR #97](https://github.com/Firna-AI/ciproxy/pull/97)
+merged the MVP into `main` on 21 November 2026. The plan stays for the
+remaining Boat checks and page claims. The user approved this plan on
+4 November 2026, in the words "plan is approved". The pull request that
+completes the work deletes this plan, as the `plans` skill says.
 
 This plan builds and launches the MVP of ciproxy: the agent, the control
 plane, the dashboard, billing, the site, and the deployment. A job names a
