@@ -9,7 +9,9 @@ The check runs the real build executor, the real pinned renderer, and real
 recipe scripts on fixture recipes and private file trees.
 It needs no root, Boat account, or network.
 Its package-family scenario needs `apt-get` and `apt-cache`, and its
-Ansible scenario needs `pip`. Each reports a skip when its tool is absent.
+Ansible scenario needs `pip`. Its locale scenario needs `localedef`,
+`locale`, and the glibc sources of the `en_US` locale and the `UTF-8`
+charmap. Each reports a skip when one of its tools or sources is absent.
 The [checks guide](checks.md) lists the other image checks.
 
 ## Build and resume
@@ -81,6 +83,40 @@ The [checks guide](checks.md) lists the other image checks.
 - A second run of the cleanup script changes no file, owner, mode, inode,
   or time. The script needs no build folder. Finalization runs it and keeps
   the upstream files.
+
+## The locale of Boat's controller
+
+- The check runs the real [boat-provision.sh](boat-provision.sh) from a
+  private definition folder. Safe substitutes take the place of the
+  account, service, and runner installation commands. A wrapper runs the
+  real locale script with the fixture root. So the check fails when
+  `boat-provision.sh` no longer runs the locale script.
+- The locale script writes the `en_US.UTF-8` data to
+  `/usr/local/lib/ciproxy/locales/en_US.utf8` in the fixture root.
+- The check sets `LOCPATH` to the fixture copies of the folders that the
+  profile names. The fixture `/usr/lib/locale` is empty. With `LOCPATH`
+  set, glibc reads no locale archive. Then `en_US.UTF-8` and `C.UTF-8`
+  must each give the `UTF-8` charmap and an empty stderr. These cases run
+  the same command that the restore check sends.
+- For `HOME=/home/user`, two reads of the profile both set `LOCPATH` to
+  `/usr/local/lib/ciproxy/locales:/usr/lib/locale`. With an inherited
+  `LOCPATH`, the profile keeps each inherited entry and adds no folder
+  twice.
+- For another home, such as `/home/runner`, the check starts with a known
+  exported `LANG` and no `LC_ALL`. The exported environment must be the
+  same before and after the profile, and stderr must stay empty.
+- A unique test locale name first fails to load. A link then points that
+  name at the generated data, and the lookup must return UTF-8 without
+  stderr. Host locale folders cannot supply that test name.
+- [boat-locale-smoke.py](boat-locale-smoke.py) passes only for exit code
+  0, the `UTF-8` codeset, and an empty stderr. Stderr with only white space
+  fails it, and so does a failed request. Its messages hold no text from
+  the Boat reply.
+- The check runs the exact command that the script sends,
+  `/usr/bin/locale charmap`, with `LANG=C` and no `LC_*` setting. The
+  script must reject that ASCII result. So a probe that prints a fixed
+  text fails the check. On a host where `C.UTF-8` loads, so does a probe
+  that changes the locale itself.
 
 ## Pins and native installers
 

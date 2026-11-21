@@ -2796,6 +2796,51 @@ merge, so the fresh-machine smoke of Milestone 9 can pass.
       milestone settles. Done on 20 November 2026, after pull request #94
       merged.
 
+## Milestone 27h: Boat locale during restore
+
+Depends on: 27a
+
+User call, 21 November 2026: apply option B of live run 6 item 1 before
+merge. Fix the Boat image so a provider command emits no locale warning.
+Keep the client response policy unchanged. An upstream client change still
+needs the user's approval.
+
+The provider starts commands before its restore-time `locale-gen` finishes.
+That command removes the locale archive and generated directories under
+`/usr/lib/locale`. Boat's profile exports `en_US.UTF-8` during this gap.
+The native build must keep generated data for that locale outside the
+provider's regeneration area. Only Boat's controller account uses the
+additional locale path. The runner keeps its ordinary locale environment.
+The machine image definition and its selected release stay unchanged.
+
+- [x] Diagnose one sandbox from `2026-11-20-b751ef5f`. Record the packages,
+      controller and command locale settings, archive, and pinned helper.
+      Reproduce the archive gap and prove the dedicated locale data fix.
+      Evidence: `.context/ciproxy-mvp/boat-locale-fix-2026-11-21/`.
+- [x] Update the Boat build and its guide. Add the regression test and the
+      restore check for empty command stderr.
+      Branch: `conductor/boat-locale-fix`.
+- [x] Build from a clean Boat template, save a new snapshot, and pass its
+      restore checks. Use at most six Boat sandboxes for the whole task.
+- [x] Add the snapshot secret version on stdin. Redeploy the preview with
+      the retained machine manifest when the machine image is unchanged.
+- [ ] Pass the Boat large job, its exit callback, its PostgreSQL and Docker
+      steps, the overflow smoke, and the complete spend-limit smoke.
+      Turn overflow off in both workspaces. Delete every task sandbox.
+      The passing job checks wait for
+      `follow-ups/boat-runner-before-job-exit.md`.
+- [x] Run the complete gate with `DATABASE_URL` set. Commit and push.
+- [x] Review the diff against the primary branch with
+      `implementation-review`. Apply its fix rule and re-review the fixes.
+      The checked resume finding is deferred in
+      `follow-ups/boat-provision-retry-inputs.md`.
+- [x] Re-review the combined test and guide fixes after their push.
+      Record the separate live measurement failure in
+      `follow-ups/boat-live-root-measurement-race.md`.
+- [x] Keep this parent plan while the other MVP work stays open. Open a
+      ready pull request into the primary branch. Do not merge it.
+      [PR #96](https://github.com/Firna-AI/ciproxy/pull/96) is open.
+
 ## Milestone 28: Verification, commit, review, and pull request
 
 Depends on: every other milestone

@@ -17,6 +17,7 @@ import unittest
 from unittest.mock import patch
 
 from _checks_.boat_cleanup import check_cleanup
+from _checks_.boat_locale import check_locale, check_locale_smoke
 from _checks_.apt_family import check_family
 from _checks_.boat_inputs import check_inputs, check_bootstrap_chain, check_failed_step
 from _checks_.apt_alias import check_alias
@@ -48,6 +49,12 @@ EXECUTOR = pathlib.Path(__file__).with_name("boat-build-execute.py").resolve()
 
 
 class NativeBuild(unittest.TestCase):
+    def test_provider_locale_stays_quiet_without_the_archive_or_generated_directory(self):
+        check_locale(self, WORKSPACE)
+
+    def test_restore_locale_requires_utf8_and_empty_stderr(self):
+        check_locale_smoke(self)
+
     def test_mutable_release_answers_keep_all_step_identities_and_reuse_passed_steps(self):
         check_answer_refresh(self, WORKSPACE)
 

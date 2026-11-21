@@ -116,6 +116,10 @@ image. Boat [sandboxes](overflow.md#terms) start from the Boat snapshot.
   their place, because Boat starts only its own kernel, and each launch
   needs Boat's controller.
 - Boat's controller keeps working during the build and in each sandbox.
+- In each restored sandbox, a command that Boat's controller runs has the
+  UTF-8 locale that Boat's base system sets. This holds from the first
+  command after the restore.
+- Boat's controller adds no locale warning to the stderr of such a command.
 - Boat's own users and the runner account can use Docker in each sandbox.
 - A Boat job runs on the system of its sandbox, under its service manager,
   with no `chroot` and no private namespace.

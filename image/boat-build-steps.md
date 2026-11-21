@@ -107,6 +107,32 @@ The script also adds the `sandbox-workload` account that receives each
 delivered registration. It installs `ciproxy-boat-start.service` and
 `ciproxy-boat-guest.service` disabled, so a restore alone starts no guest.
 
+## The locale of Boat's controller
+
+At its end, [boat-provision.sh](boat-provision.sh) runs
+[boat-build-locale.sh](boat-build-locale.sh). The machine build does not
+run this script.
+
+Boat's `/home/user/.profile` sets `LC_ALL=en_US.UTF-8` for the commands of
+Boat's controller. After a restore, Boat can run `locale-gen` while it
+already accepts commands. Without arguments, `locale-gen` first removes the
+locale archive and each locale folder in `/usr/lib/locale`, except
+`C.utf8`. Then it generates the configured locales again. Without other
+locale data, the shell of a command in that gap prints a `setlocale`
+warning on stderr, also when the command succeeds. The pinned Boat client
+of the overflow backend rejects each helper reply with text on stderr. So
+the warning stops the start of a runner.
+
+The script writes the `en_US.UTF-8` data to its own folder,
+`/usr/local/lib/ciproxy/locales/en_US.utf8`. `locale-gen` does not change
+this folder. The script also installs
+`/etc/profile.d/ciproxy-boat-locale.sh`, which a login shell reads before
+`/home/user/.profile`. When `HOME` is `/home/user`, the `LOCPATH` that
+this profile exports holds `/usr/local/lib/ciproxy/locales`. So a command
+of Boat's controller finds the `en_US.UTF-8` data also while `locale-gen`
+runs. Each other account, such as the runner account, keeps its locale
+environment.
+
 ## Reports
 
 After the provisioners, the build writes its reports under
