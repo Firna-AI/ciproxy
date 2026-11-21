@@ -86,16 +86,24 @@ The [checks guide](checks.md) lists the other image checks.
 
 ## The locale of Boat's controller
 
+- The check runs the real [boat-provision.sh](boat-provision.sh) from a
+  private definition folder. Safe substitutes take the place of the
+  account, service, and runner installation commands. A wrapper runs the
+  real locale script with the fixture root. So the check fails when
+  `boat-provision.sh` no longer runs the locale script.
 - The locale script writes the `en_US.UTF-8` data to
-  `/usr/local/lib/ciproxy/locales/en_US.utf8` in a fixture root.
+  `/usr/local/lib/ciproxy/locales/en_US.utf8` in the fixture root.
 - The check sets `LOCPATH` to the fixture copies of the folders that the
   profile names. The fixture `/usr/lib/locale` is empty. With `LOCPATH`
   set, glibc reads no locale archive. Then `en_US.UTF-8` and `C.UTF-8`
   must each give the `UTF-8` charmap and an empty stderr.
 - For `HOME=/home/user`, two reads of the profile both set `LOCPATH` to
-  `/usr/local/lib/ciproxy/locales:/usr/lib/locale`. A folder of an
-  inherited `LOCPATH` stays between these two folders.
-- For another home, such as `/home/runner`, `LOCPATH` stays unset.
+  `/usr/local/lib/ciproxy/locales:/usr/lib/locale`. With an inherited
+  `LOCPATH`, the profile keeps each inherited entry and adds no folder
+  twice.
+- For another home, such as `/home/runner`, the check starts with a known
+  exported `LANG` and no `LC_ALL`. The exported environment must be the
+  same before and after the profile, and stderr must stay empty.
 - A unique test locale name first fails to load. A link then points that
   name at the generated data, and the lookup must return UTF-8 without
   stderr. Host locale folders cannot supply that test name.

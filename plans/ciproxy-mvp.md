@@ -2820,9 +2820,9 @@ The machine image definition and its selected release stay unchanged.
 - [x] Update the Boat build and its guide. Add the regression test and the
       restore check for empty command stderr.
       Branch: `conductor/boat-locale-fix`.
-- [ ] Build from a clean Boat template, save a new snapshot, and pass its
+- [x] Build from a clean Boat template, save a new snapshot, and pass its
       restore checks. Use at most six Boat sandboxes for the whole task.
-- [ ] Add the snapshot secret version on stdin. Redeploy the preview with
+- [x] Add the snapshot secret version on stdin. Redeploy the preview with
       the retained machine manifest when the machine image is unchanged.
 - [ ] Pass the Boat large job, its exit callback, its PostgreSQL and Docker
       steps, the overflow smoke, and the complete spend-limit smoke.
@@ -2831,7 +2831,10 @@ The machine image definition and its selected release stay unchanged.
 - [x] Review the diff against the primary branch with
       `implementation-review`. Apply its fix rule and re-review the fixes.
       The checked resume finding is deferred in
-      `follow-ups/boat-provision-retry-inputs.md`. No code fix was needed.
+      `follow-ups/boat-provision-retry-inputs.md`.
+- [ ] Re-review the combined test and guide fixes after their push.
+      Record the separate live measurement failure in
+      `follow-ups/boat-live-root-measurement-race.md`.
 - [ ] Keep this parent plan while the other MVP work stays open. Open a
       ready pull request into the primary branch. Do not merge it.
 

@@ -8,6 +8,7 @@ import json
 import os
 import pathlib
 import runpy
+import shlex
 import shutil
 import subprocess
 import sys
@@ -23,18 +24,45 @@ FALLBACK = "/usr/local/lib/ciproxy/locales"
 DEFAULT = "/usr/lib/locale"
 
 
-def profile_paths(case, root, environment, home, **inherited):
+def provision_locale(case, root, environment, i18n_path):
+    definition = root / "definition"
+    definition.mkdir()
+    tools = root / "bin"
+    tools.mkdir()
+    for name in ("id", "useradd", "install", "systemctl"):
+        stub = tools / name
+        stub.write_text("#!/bin/sh\nexit 0\n")
+        stub.chmod(0o755)
+    shutil.copyfile(DEFINITION / "boat-provision.sh", definition / "boat-provision.sh")
+    (definition / "provision.sh").write_text("exit 0\n")
+    installer = shlex.join(["bash", str(DEFINITION / "boat-build-locale.sh"), str(root)])
+    (definition / "boat-build-locale.sh").write_text(
+        'test "$#" -eq 0 || exit 1\n'
+        f'PATH={shlex.quote(environment["PATH"])} I18NPATH={shlex.quote(i18n_path)} exec {installer}\n')
+    result = subprocess.run(["bash", str(definition / "boat-provision.sh")],
+                            env={**environment, "PATH": f"{tools}{os.pathsep}{environment['PATH']}"},
+                            capture_output=True, text=True)
+    case.assertEqual(result.returncode, 0, result.stderr)
+
+
+def read_profile(case, root, environment):
     result = subprocess.run(["bash", "--noprofile", "--norc", "-ec", '''
+env -0
+printf '\\0'
 for pass in 1 2; do
     for profile in "$1"/etc/profile.d/*.sh; do
         if [ -r "$profile" ]; then . "$profile"; fi
     done
     printf '%s\\n' "${LOCPATH-unset}"
 done
-''', "check-boat-profile", str(root)], env={**environment, "HOME": home, **inherited},
+printf '\\0\\0'
+env -0
+printf '\\0'
+''', "check-boat-profile", str(root)], env=environment,
         capture_output=True, text=True)
     case.assertEqual((result.returncode, result.stderr), (0, ""))
-    return result.stdout.splitlines()
+    before, paths, after = result.stdout.rstrip("\0").split("\0\0")
+    return paths.splitlines(), sorted(before.split("\0")), sorted(after.split("\0"))
 
 
 def check_locale(case, workspace):
@@ -53,12 +81,13 @@ def check_locale(case, workspace):
         root = pathlib.Path(temporary).resolve()
         (root / "etc/profile.d").mkdir(parents=True)
         (root / DEFAULT.lstrip("/")).mkdir(parents=True)
-        install = subprocess.run(["bash", str(DEFINITION / "boat-build-locale.sh"), str(root)],
-                                 env={**environment, "I18NPATH": i18n_path},
-                                 capture_output=True, text=True)
-        case.assertEqual(install.returncode, 0, install.stderr)
+        provision_locale(case, root, environment, i18n_path)
+        generated = root / FALLBACK.lstrip("/") / "en_US.utf8"
+        case.assertTrue((generated / "LC_CTYPE").is_file(),
+                        "Boat provisioning must install the dedicated locale data.")
 
-        provider = profile_paths(case, root, environment, "/home/user")
+        provider_environment = {**environment, "HOME": "/home/user"}
+        provider, _, _ = read_profile(case, root, provider_environment)
         paths = DEFAULT if provider[-1] == "unset" else provider[-1]
         fixture_paths = ":".join(str(root / path.lstrip("/")) for path in paths.split(":"))
         expected = (0, "UTF-8\n", "")
@@ -73,17 +102,18 @@ def check_locale(case, workspace):
             with case.subTest(locale=locale_name):
                 case.assertEqual(charmap(locale_name), expected)
 
-        generated = root / FALLBACK.lstrip("/") / "en_US.utf8"
-        case.assertTrue((generated / "LC_CTYPE").is_file())
         alias = f"ciproxy{uuid.uuid4().hex}"
         case.assertNotEqual(charmap(f"{alias}.UTF-8"), expected,
                             "The host must not supply the fixture locale alias.")
         generated.with_name(f"{alias}.utf8").symlink_to(generated.name, target_is_directory=True)
         case.assertEqual(charmap(f"{alias}.UTF-8"), expected)
         case.assertEqual(provider, [f"{FALLBACK}:{DEFAULT}"] * 2)
-        case.assertEqual(profile_paths(case, root, environment, "/home/user", LOCPATH=f"/custom:{DEFAULT}"),
-                         [f"{FALLBACK}:/custom:{DEFAULT}"] * 2)
-        case.assertEqual(profile_paths(case, root, environment, "/home/runner"), ["unset", "unset"])
+        inherited, _, _ = read_profile(case, root, {**provider_environment, "LOCPATH": f"/custom:{DEFAULT}"})
+        case.assertEqual(inherited, [f"{FALLBACK}:/custom:{DEFAULT}"] * 2)
+        runner_environment = {"PATH": environment["PATH"], "HOME": "/home/runner", "LANG": "C"}
+        runner, before, after = read_profile(case, root, runner_environment)
+        case.assertEqual(runner, ["unset", "unset"])
+        case.assertEqual(after, before, "The Boat profile must not change the runner's exported environment.")
 
 
 def check_locale_smoke(case):

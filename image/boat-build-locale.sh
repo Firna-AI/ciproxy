@@ -8,6 +8,9 @@ umask 022
 install -d -m 0755 "$locale_dir"
 localedef --no-archive -i en_US -f UTF-8 "$locale_dir"
 
+# Prepend the dedicated directory if it is absent.
+# Append the default directory if it is absent.
+# Keep inherited entries in order. Repeated reads add no duplicates.
 install -m 0644 /dev/stdin "$root/etc/profile.d/ciproxy-boat-locale.sh" <<'PROFILE'
 if [ "${HOME:-}" = /home/user ]; then
     case ":${LOCPATH:-}:" in

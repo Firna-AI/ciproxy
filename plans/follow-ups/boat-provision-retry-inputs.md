@@ -83,21 +83,37 @@
     of `image/boat-provision.sh`. Each attempt of step `086` then copies
     them first. Add a regression that fails once and then resumes.
     Effort: Medium. The steps:
-    1. In `image/boat-provision.sh`, add
+    1. First give the locale check the same isolation as the retry
+       regression of step 4. For `check_locale`, `provision_locale` in
+       `image/_checks_/boat_locale.py` runs the real `boat-provision.sh`
+       without root. After step 2, that script copies the runner files to
+       fixed `/tmp` names, which a check without root cannot keep private.
+    2. In `image/boat-provision.sh`, add
        `cp "$definition/../artifacts/"* /tmp/` before the call to
        `provision.sh`.
-    2. In `image/boat_build_bundle.py`, remove the line
+    3. In `image/boat_build_bundle.py`, remove the line
        `cp /opt/ciproxy-build/artifacts/* /tmp/` from step `085`. Remove
        `/opt/ciproxy-build/artifacts` from its inputs. Step `086` already
        lists that folder, at line 77.
-    3. Add the regression. Run the real `boat-provision.sh` twice from a
-       fixture folder, with stubs for `id`, `install`, and `systemctl` on
-       `PATH`. Use a stub `provision.sh` that requires the four files and
-       deletes them. Use a locale stub that fails on the first run only.
-       The second run must pass. See the test fail on the current code
-       first. The test writes the fixed `/tmp` names, so it removes them
-       at the end.
-    4. Add one sentence to "The ciproxy parts" in
+    4. Add the retry regression in a private filesystem root that holds
+       its own `/tmp`. Run it as root under `chroot`, as
+       `image/check-export.py` and `image/check-boat-run.py` do:
+       - `create` and `provision_sandbox` in
+         `image/_checks_/export_fixture.py` build a private root for the
+         real `provision.sh`.
+       - `copy_program` in `image/_checks_/boat_fixture.py` copies a real
+         program, with its interpreter or libraries, into a root.
+       - In the root, the real `boat-provision.sh` copies a fixture
+         artifacts folder with the real `cp`. Stubs replace `id`,
+         `useradd`, `install`, and `systemctl`.
+       - A stub `provision.sh` requires the four files in `/tmp` and
+         deletes them with the real `rm`, as the Boat-mode cleanup does.
+       - A locale stub fails on the first attempt only.
+       - The second attempt, with the same bundle, must pass. See the test
+         fail on the current code first.
+       - The test writes no host path, and it keeps the copy line under
+         test unchanged.
+    5. Add one sentence to "The ciproxy parts" in
        `image/boat-build-steps.md`: each attempt copies the runner files
        first.
   - **E.** Read the Boat inputs in place from the bundle, with no copy and

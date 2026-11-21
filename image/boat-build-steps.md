@@ -127,12 +127,11 @@ The script writes the `en_US.UTF-8` data to its own folder,
 `/usr/local/lib/ciproxy/locales/en_US.utf8`. `locale-gen` does not change
 this folder. The script also installs
 `/etc/profile.d/ciproxy-boat-locale.sh`, which a login shell reads before
-`/home/user/.profile`. When `HOME` is `/home/user`, this profile exports
-`LOCPATH` with `/usr/local/lib/ciproxy/locales` at its start and
-`/usr/lib/locale` at its end. So a command of Boat's controller finds the
-`en_US.UTF-8` data also while `locale-gen` runs. The profile adds a folder
-only when `LOCPATH` does not hold it yet, so a second read changes nothing.
-It does not set `LOCPATH` for another account, such as the runner account.
+`/home/user/.profile`. When `HOME` is `/home/user`, the `LOCPATH` that
+this profile exports holds `/usr/local/lib/ciproxy/locales`. So a command
+of Boat's controller finds the `en_US.UTF-8` data also while `locale-gen`
+runs. Each other account, such as the runner account, keeps its locale
+environment.
 
 ## Reports
 
