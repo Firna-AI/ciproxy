@@ -11,7 +11,7 @@ modules.
 
 Use the Node version in [.nvmrc](../../.nvmrc).
 The `.nvmrc` file must name a Node version that Mokly accepts.
-Mokly rejects Node older than 22.15, Node 23, and Node 24.14 to 24.18.
+Mokly rejects Node older than 22.14.
 Run these commands from the repository root:
 
 ```sh
@@ -213,7 +213,7 @@ npm --prefix ts run mockups:format   # format the mockup sources with Prettier
 ### Key Code
 
 - `../../mokly.config.json`: the catalogue root, the renderer, and the package
-  root `ts` for module resolution. Mokly 0.18 reads only a JSON configuration.
+  root `ts` for module resolution. Mokly reads only a JSON configuration.
 - `src/render.tsx`: the renderer. It adds the base stylesheet, the static
   Firna CSS with the tokens, and the Firna theme provider around every screen.
 - [`@ciproxy/tokens`](../../ts/tokens/README.md): the Graphite tokens: the
