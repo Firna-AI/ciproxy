@@ -1,0 +1,61 @@
+---
+title: Overview
+description: >-
+  ciproxy runs your GitHub Actions jobs on your own machines first. When they
+  are full, it starts runners in your Boat account.
+---
+
+import { CardGrid, LinkCard } from "@astrojs/starlight/components";
+import { jsx } from "astro/jsx-runtime";
+
+import { freePlanNote } from "../../../data/tiers.ts";
+
+export const startHereCards = [
+  {
+    title: "Quickstart",
+    description: "Run your first job on your own machine.",
+    href: "/docs/quickstart/",
+  },
+  {
+    title: "How ciproxy works",
+    description: "Warm runners, slots, overflow, and the cache.",
+    href: "/docs/how-ciproxy-works/",
+  },
+  {
+    title: "Labels and VM sizes",
+    description: "Pick the size of the VM for each job.",
+    href: "/docs/reference/labels/",
+  },
+  {
+    title: "Security",
+    description: "Job isolation, the agent connection, and GitHub access.",
+    href: "/docs/security/job-isolation/",
+  },
+];
+
+## Start here
+
+{jsx(CardGrid, { children: startHereCards.map((card) => jsx(LinkCard, card)) })}
+
+## How a job runs
+
+1. GitHub queues a job whose workflow says `runs-on: ciproxy`.
+2. A ready warm runner on one of your machines takes the job at once. Or
+   ciproxy starts a runner where a machine has room. The job runs in a
+   fresh VM.
+3. When your machines have no room for the job, ciproxy can start a runner
+   for it in your Boat account instead. By default, it waits 30 seconds
+   for room on your machines first.
+4. On your machines, `actions/cache` restores entries from the disk of the
+   machine when it has them, and saves them there and to GitHub.
+
+## What you need
+
+- A GitHub organization with private repositories.
+- One or more x64 Linux machines with systemd, cgroup v2, KVM, 4 cores,
+  16 GB of memory, and 250 GB of disk or more.
+  [Add a machine](/docs/guides/add-a-machine/#what-the-machine-needs) lists
+  the supported distributions.
+- A Boat account for overflow. You can connect it later.
+
+{freePlanNote} See [Pricing](/pricing/) for the plans.

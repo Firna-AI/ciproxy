@@ -1,0 +1,40 @@
+---
+// The hero of the landing page: the outcome as the title, how ciproxy gets
+// there in one sentence, the two actions, what Free includes, and the
+// picture of the product.
+
+import { signInUrl, sitePages } from "../../data/site.ts";
+import { freePlanNote } from "../../data/tiers.ts";
+import LinkButton from "../LinkButton.astro";
+import HeroPanel from "./HeroPanel.astro";
+import "./marketing.css";
+import "./hero.css";
+
+interface Props {
+  lead: string;
+}
+
+const { lead } = Astro.props;
+---
+
+<section class="hero">
+  <div class="hero-copy">
+    <p class="hero-chip">
+      <span class="hero-chip-label">One line in your workflow</span>
+      <code class="hero-chip-code">runs-on: ciproxy</code>
+    </p>
+    <h1 class="hero-title">
+      <span class="hero-line">Pay less for CI.</span>{" "}
+      <span class="hero-line hero-soft">Keep your jobs fast.</span>
+    </h1>
+    <p class="hero-lead">{lead}</p>
+    <div class="mk-actions is-center">
+      <LinkButton href={signInUrl} tone="primary">
+        Start free
+      </LinkButton>
+      <LinkButton href={sitePages.docs}>Read the docs</LinkButton>
+    </div>
+    <p class="caption hero-note">{freePlanNote}</p>
+  </div>
+  <HeroPanel />
+</section>

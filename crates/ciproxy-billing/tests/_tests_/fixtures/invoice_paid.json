@@ -1,0 +1,19 @@
+{
+  "id": "evt_invoice_paid",
+  "object": "event",
+  "api_version": "2026-10-28.endive",
+  "created": 1793966400,
+  "type": "invoice.paid",
+  "data": {
+    "object": {
+      "id": "in_recorded",
+      "object": "invoice",
+      "status": "paid",
+      "parent": {
+        "subscription_details": {
+          "subscription": "sub_recorded"
+        }
+      }
+    }
+  }
+}

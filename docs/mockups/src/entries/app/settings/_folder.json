@@ -1,0 +1,11 @@
+{
+  "order": [
+    "labels",
+    "label-names",
+    "no-boat",
+    "overflow",
+    "organizations",
+    "members",
+    "loading-error"
+  ]
+}

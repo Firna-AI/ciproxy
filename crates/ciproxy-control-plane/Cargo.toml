@@ -1,0 +1,51 @@
+[package]
+name = "ciproxy-control-plane"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+async-trait = "0.1.92"
+axum = { version = "0.8.9", features = ["ws"] }
+chrono = "0.4.45"
+ciproxy-agent = { workspace = true }
+ciproxy-api = { workspace = true }
+ciproxy-billing = { workspace = true }
+ciproxy-gateway = { workspace = true }
+ciproxy-github = { workspace = true }
+ciproxy-metering = { workspace = true }
+ciproxy-overflow = { workspace = true }
+ciproxy-protocol = { workspace = true }
+ciproxy-scaler = { workspace = true }
+ciproxy-store-interface = { workspace = true }
+ciproxy-store-pg = { workspace = true }
+internal-error = { workspace = true }
+clap = { version = "4.6.7", features = ["derive", "env"] }
+reqwest = "0.13.5"
+rust_decimal = "1.43.0"
+secrecy = "0.10.3"
+serde = "1.0.229"
+serde_json = "1.0.154"
+thiserror = "2.0.21"
+tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread", "net", "process", "signal", "sync", "time"] }
+tracing = "0.1.44"
+tracing-subscriber = "0.3.23"
+uuid = "1.29.0"
+hmac = "0.13.0"
+sha1 = "0.11.0"
+base64 = "0.23.1"
+sha2 = "0.11.1"
+
+[dev-dependencies]
+hex = "0.4.3"
+http-body-util = "0.1.5"
+tiny_http = "0.12.0"
+url = "2.5.8"
+sandbox-interface = { workspace = true }
+sandbox-boat = { workspace = true }
+diesel = { version = "2.3.14", features = ["postgres"] }
+tower = { version = "0.5.3", features = ["util"] }
+unimock = "0.6.8"
+tokio-tungstenite = "0.30.0"
+futures-util = "0.3.34"

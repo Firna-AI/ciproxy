@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "ciproxy",
+    "slug": "ciproxy",
+    "version": "0.1.0",
+    "platforms": ["web"],
+    "userInterfaceStyle": "light",
+    "plugins": ["expo-router"],
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    }
+  }
+}

@@ -1,0 +1,175 @@
+/* The product panel of the hero (hero-panel.tsx): a window with a bar, the
+   machines with their slots, and the running jobs. */
+
+.hero-panel {
+  position: relative;
+  max-width: 960px;
+  margin: 72px auto 0;
+  overflow: hidden;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-xl);
+  background: var(--c-surface);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--c-ink) 4%, transparent),
+    0 16px 32px -20px color-mix(in srgb, var(--c-ink) 12%, transparent);
+  text-align: left;
+}
+
+.mockup-mobile .hero-panel {
+  margin-top: 48px;
+}
+
+.hp-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 44px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-bg);
+}
+
+.hp-org {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hp-slash {
+  color: var(--c-border2);
+  font-size: 18px;
+  font-weight: 300;
+}
+
+.hp-body {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+}
+
+.mockup-mobile .hp-body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.hp-machines,
+.hp-jobs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 18px 20px 20px;
+}
+
+.hp-jobs {
+  border-left: 1px solid var(--c-border);
+}
+
+.mockup-mobile .hp-jobs {
+  border-top: 1px solid var(--c-border);
+  border-left: 0;
+}
+
+.hp-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.hp-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hp-machine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--c-border);
+}
+
+.hp-machine:first-child {
+  border-top: 0;
+}
+
+.hp-machine-name {
+  font-size: 12.5px;
+}
+
+.hp-spend {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--c-border);
+}
+
+.hp-boat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  background: var(--c-bg);
+}
+
+.hp-boat-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hp-job {
+  display: grid;
+  grid-template-columns:
+    10px minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1.25fr)
+    52px;
+  align-items: center;
+  gap: 12px;
+  height: 38px;
+  border-top: 1px solid var(--c-border);
+  font-size: 13px;
+}
+
+.hp-job:first-child {
+  border-top: 0;
+}
+
+.hp-job-name,
+.hp-job-ref {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hp-job-time {
+  text-align: right;
+}
+
+.mockup-mobile .hp-job {
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+}
+
+.mockup-mobile .hp-job-ref,
+.mockup-mobile .hp-job-time {
+  display: none;
+}
+
+/* A narrow desktop window: the panel stacks its two columns. */
+
+@media (max-width: 960px) {
+  .mockup-desktop .hp-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mockup-desktop .hp-jobs {
+    border-top: 1px solid var(--c-border);
+    border-left: 0;
+  }
+}

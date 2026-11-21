@@ -1,0 +1,4 @@
+extends:
+  - minimal
+rules:
+  path-parameters-defined: error

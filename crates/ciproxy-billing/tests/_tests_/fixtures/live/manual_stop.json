@@ -1,0 +1,56 @@
+{
+  "source": "origin/tmp/billing-live-fixtures@30dfcf4 replay-finding-2.json observed_result.manual_stop_counterexample",
+  "initial_state": {
+    "workspace_id": "c30398e2-3985-4793-a480-140fb34a3d2a",
+    "tier": "team",
+    "add_ons": {
+      "start_blocks": 0,
+      "machines": 0
+    },
+    "customer_id": "cus_VZP5uwDumqEBQ1",
+    "subscription_id": "sub_1UYGHQAGa5h8DTS39E8tu7jz",
+    "status": "active",
+    "free_started_at": "2026-11-05T02:20:00.078056+00:00",
+    "paid_period_start": "2026-12-19T04:12:02Z",
+    "paid_period_end": "2027-01-19T04:12:02Z",
+    "cancel_at": null,
+    "failed_at": null,
+    "failed_invoice_id": null,
+    "next_retry_at": null,
+    "ended_banner_until": null
+  },
+  "event": {
+    "id": "evt_1UYGI3AGa5h8DTS37mDvSXkw",
+    "created": 1793845235,
+    "type": "invoice.updated",
+    "request": {
+      "id": "req_a207ALlF8pFAJX"
+    },
+    "data": {
+      "object": {
+        "id": "in_1UYGHrAGa5h8DTS3mhnRZIPL",
+        "created": 1800331922,
+        "status": "open",
+        "billing_reason": "subscription_cycle",
+        "next_payment_attempt": null,
+        "hosted_invoice_url": "https://stripe.invalid/invoices/in_1UYGHrAGa5h8DTS3mhnRZIPL",
+        "customer": "cus_VZP5uwDumqEBQ1",
+        "parent": {
+          "subscription_details": {
+            "subscription": "sub_1UYGHQAGa5h8DTS39E8tu7jz"
+          }
+        },
+        "attempt_count": 1,
+        "attempted": true,
+        "auto_advance": false,
+        "amount_due": 4900,
+        "amount_paid": 0,
+        "amount_remaining": 4900,
+        "collection_method": "charge_automatically"
+      },
+      "previous_attributes": {
+        "auto_advance": true
+      }
+    }
+  }
+}

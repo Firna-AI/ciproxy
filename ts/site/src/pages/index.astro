@@ -1,0 +1,28 @@
+---
+// The landing page of ciproxy.dev, after the landing mockup: the hero with
+// the outcome, how it works in three steps, the features, the cost claim, the
+// pricing teaser, security, and the closing call to action. The page shows no
+// customer logos, quotes, or press.
+
+import ClosingCta from "../components/marketing/ClosingCta.astro";
+import CostCompare from "../components/marketing/CostCompare.astro";
+import Features from "../components/marketing/Features.astro";
+import Hero from "../components/marketing/Hero.astro";
+import HowItWorks from "../components/marketing/HowItWorks.astro";
+import PricingTeaser from "../components/marketing/PricingTeaser.astro";
+import Security from "../components/marketing/Security.astro";
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+
+const lead =
+  "ciproxy runs your GitHub Actions jobs on your own machines first, and starts runners in your Boat account only when they are full.";
+---
+
+<MarketingLayout title="ciproxy" description={lead} section="home">
+  <Hero lead={lead} />
+  <HowItWorks />
+  <Features />
+  <CostCompare />
+  <PricingTeaser />
+  <Security />
+  <ClosingCta />
+</MarketingLayout>

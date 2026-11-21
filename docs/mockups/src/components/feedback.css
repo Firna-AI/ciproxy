@@ -1,0 +1,131 @@
+/* A notice: a white box with a hairline, or a tinted box for a warning or a
+   failure. The icon carries the tone; the edge stays the same all round. */
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  background: var(--c-surface);
+}
+
+.mockup-mobile .notice {
+  flex-wrap: wrap;
+}
+
+.notice-warning {
+  border-color: color-mix(in srgb, var(--c-amber) 30%, var(--c-amber-soft));
+  background: var(--c-amber-soft);
+}
+
+.notice-danger {
+  border-color: color-mix(in srgb, var(--c-rose) 24%, var(--c-rose-soft));
+  background: var(--c-rose-soft);
+}
+
+.notice-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.notice-info .notice-icon {
+  color: var(--c-status-run);
+}
+
+.notice-warning .notice-icon {
+  color: var(--c-amber-deep);
+}
+
+.notice-danger .notice-icon {
+  color: var(--c-rose-deep);
+}
+
+.notice-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mockup-mobile .notice-text {
+  flex-basis: calc(100% - 26px);
+}
+
+.notice-title {
+  font-weight: 500;
+}
+
+.notice-body {
+  color: var(--c-ink2);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.mockup-mobile .notice-actions {
+  padding-left: 26px;
+}
+
+/* The centred block of an empty, finished, or failed state. */
+
+.state-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 40px 16px;
+  text-align: center;
+}
+
+.state-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 6px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  background: var(--c-surface);
+  color: var(--c-ink2);
+}
+
+.state-icon-success {
+  color: var(--c-status-ok);
+}
+
+.state-icon-warning {
+  border-color: color-mix(in srgb, var(--c-amber) 30%, var(--c-amber-soft));
+  background: var(--c-amber-soft);
+  color: var(--c-amber-deep);
+}
+
+.state-icon-danger {
+  border-color: color-mix(in srgb, var(--c-rose) 24%, var(--c-rose-soft));
+  background: var(--c-rose-soft);
+  color: var(--c-rose-deep);
+}
+
+.state-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.state-body {
+  max-width: 400px;
+  color: var(--c-muted);
+}
+
+.state-action {
+  justify-content: center;
+  margin-top: 8px;
+}

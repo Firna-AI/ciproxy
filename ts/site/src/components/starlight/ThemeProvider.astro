@@ -1,0 +1,11 @@
+---
+// Starlight's ThemeProvider override. The site is light only, so the page
+// always uses the light theme, also when the operating system or a stored
+// choice asks for dark. The script is inline so that it runs before the page
+// paints. Without JavaScript, the theme in styles/starlight keeps the light
+// colours.
+---
+
+<script is:inline>
+  document.documentElement.dataset.theme = "light";
+</script>

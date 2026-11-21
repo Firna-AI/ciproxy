@@ -1,0 +1,44 @@
+/* The pricing page (pricing.astro): the head and the add-ons. The tier
+   cells, the comparison, and the questions have their own stylesheets. */
+
+.mk-section.pricing-top {
+  padding-top: 88px;
+}
+
+.pricing-note {
+  text-align: center;
+}
+
+.addon-price {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.addon-amount {
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 40px;
+}
+
+.addon-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.addon-text {
+  color: var(--c-ink2);
+}
+
+@media (40rem <= width <= 960px) {
+  .mk-section.pricing-top {
+    padding-top: 72px;
+  }
+}
+
+@media (width < 40rem) {
+  .mk-section.pricing-top {
+    padding-top: 48px;
+  }
+}

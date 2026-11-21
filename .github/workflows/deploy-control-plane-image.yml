@@ -1,0 +1,183 @@
+name: Build and publish the control-plane image
+on:
+  workflow_call:
+    outputs:
+      image:
+        description: Immutable image selected by trusted image jobs
+        value: ${{ jobs.publish.outputs.image }}
+permissions:
+  contents: read
+jobs:
+  lookup:
+    runs-on: ubuntu-24.04
+    environment: main-preview
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      tools_sha: ${{ steps.workflow.outputs.tools_sha }}
+      source_hash: ${{ steps.inputs.outputs.source_hash }}
+      image: ${{ steps.lookup.outputs.image }}
+    steps:
+      - name: Read this trusted workflow revision before checkout
+        id: workflow
+        run: |
+          python3 - <<'PY'
+          import base64
+          import json
+          import os
+          import re
+          import sys
+          import urllib.request
+
+          try:
+              request = urllib.request.Request(
+                  os.environ["ACTIONS_ID_TOKEN_REQUEST_URL"] + "&audience=ciproxy-image-tools",
+                  headers={"Authorization": "Bearer " + os.environ["ACTIONS_ID_TOKEN_REQUEST_TOKEN"]},
+              )
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  token = json.load(response)["value"]
+              payload = token.split(".")[1]
+              claims = json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
+              expected = "Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/calummoore/ci-proxy-load-balancer"
+              revision = claims.get("job_workflow_sha", "")
+              if claims.get("job_workflow_ref") != expected or not re.fullmatch("[0-9a-f]{40}", revision):
+                  raise ValueError("Untrusted image workflow revision")
+              with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+                  output.write("tools_sha=" + revision + "\n")
+          except Exception:
+              print("Cannot read the trusted image workflow revision.", file=sys.stderr)
+              raise SystemExit(1)
+          PY
+      - name: Checkout this trusted workflow's tools
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          repository: Firna-AI/ciproxy
+          ref: ${{ steps.workflow.outputs.tools_sha }}
+          persist-credentials: false
+      - name: Checkout exact source inputs as data
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.sha }}
+          path: source
+          persist-credentials: false
+      - name: Hash the exact build inputs
+        id: inputs
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        run: python3 deploy/scripts/control_plane_image.py inputs --source source --revision "$SOURCE_SHA"
+      - name: Install pinned crane
+        run: bash deploy/scripts/install-image-tools.sh
+      - name: Authenticate the image lookup identity
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          project_id: ciproxy
+          workload_identity_provider: ${{ vars.GCP_IMAGE_LOOKUP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_IMAGE_LOOKUP_SERVICE_ACCOUNT }}
+      - name: Set up Google Cloud tools
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db
+        with:
+          version: 592.0.0
+      - name: Reuse the source image or select an explicit rollback
+        id: lookup
+        env:
+          SOURCE_HASH: ${{ steps.inputs.outputs.source_hash }}
+          ROLLBACK_IMAGE: ${{ vars.CONTROL_PLANE_ROLLBACK_IMAGE }}
+        run: python3 deploy/scripts/control_plane_image.py lookup --source-hash "$SOURCE_HASH" --rollback "$ROLLBACK_IMAGE"
+  build:
+    needs: lookup
+    if: needs.lookup.outputs.image == ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    outputs:
+      digest: ${{ steps.image.outputs.digest }}
+      artifact_id: ${{ steps.archive.outputs.artifact-id }}
+    steps:
+      - name: Checkout this trusted workflow's tools
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          repository: Firna-AI/ciproxy
+          ref: ${{ needs.lookup.outputs.tools_sha }}
+          persist-credentials: false
+      - name: Checkout exact source inputs as data
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.sha }}
+          path: source
+          persist-credentials: false
+      - name: Install pinned image tools and start BuildKit
+        run: |
+          bash deploy/scripts/install-image-tools.sh build
+          bash deploy/scripts/install-image-tools.sh
+          bash deploy/scripts/start-buildkit.sh
+      - name: Build without cloud credentials and record its canonical digest
+        id: image
+        env:
+          SOURCE_HASH: ${{ needs.lookup.outputs.source_hash }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: >-
+          python3 deploy/scripts/control_plane_image.py build
+          --source source --revision "$SOURCE_SHA" --source-hash "$SOURCE_HASH"
+          --archive .context/control-plane-image/control-plane.tar
+      - name: Transfer the image archive
+        id: archive
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: control-plane-image-${{ github.run_attempt }}
+          path: .context/control-plane-image/control-plane.tar
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+  publish:
+    needs: [lookup, build]
+    if: >-
+      always() && needs.lookup.result == 'success' &&
+      (needs.build.result == 'success' || needs.build.result == 'skipped')
+    runs-on: ubuntu-24.04
+    environment: main-preview
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+    steps:
+      - name: Checkout this trusted workflow's tools
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          repository: Firna-AI/ciproxy
+          ref: ${{ needs.lookup.outputs.tools_sha }}
+          persist-credentials: false
+      - name: Install pinned crane
+        if: needs.lookup.outputs.image == ''
+        run: bash deploy/scripts/install-image-tools.sh
+      - name: Download the build job's immutable artifact ID
+        if: needs.lookup.outputs.image == ''
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          artifact-ids: ${{ needs.build.outputs.artifact_id }}
+          path: .context/control-plane-image
+      - name: Authenticate the image publisher
+        if: needs.lookup.outputs.image == ''
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          project_id: ciproxy
+          workload_identity_provider: ${{ vars.GCP_IMAGE_PUBLISH_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_IMAGE_PUBLISH_SERVICE_ACCOUNT }}
+      - name: Set up Google Cloud tools
+        if: needs.lookup.outputs.image == ''
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db
+        with:
+          version: 592.0.0
+      - name: Compare the build digest and select the immutable deployment image
+        id: image
+        env:
+          SOURCE_HASH: ${{ needs.lookup.outputs.source_hash }}
+          EXISTING_IMAGE: ${{ needs.lookup.outputs.image }}
+          EXPECTED_DIGEST: ${{ needs.build.outputs.digest }}
+        run: >-
+          python3 deploy/scripts/control_plane_image.py publish
+          --source-hash "$SOURCE_HASH" --existing "$EXISTING_IMAGE"
+          --expected-digest "$EXPECTED_DIGEST"
+          --archive .context/control-plane-image/control-plane.tar

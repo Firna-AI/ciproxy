@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+set -euo pipefail
+
+artifacts=$(realpath "${1:?Usage: image/publish.sh ARTIFACT_DIR gs://BUCKET/PREFIX}")
+destination=${2:?Cloud Storage release prefix required}
+generation_options=()
+if [[ ${3:-} == --new-release ]]; then
+    generation_options+=(--if-generation-match=0)
+fi
+(
+    cd "$artifacts"
+    sha256sum --check SHA256SUMS
+)
+gcloud storage cp "${generation_options[@]}" \
+    "$artifacts/rootfs.ext4" \
+    "$artifacts/vmlinux" "$artifacts/upstream-software.json" \
+    "$artifacts/software-report.json" \
+    "$artifacts/firecracker.tar.zst" "$artifacts/firecracker-content.sha256" \
+    "$artifacts/downloads.json" \
+    "$artifacts/manifest.json" "$artifacts/measurement.json" \
+    "$artifacts/SHA256SUMS" "$destination/"

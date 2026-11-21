@@ -1,0 +1,4 @@
+{
+  "title": "Boat wallet",
+  "order": ["connect", "reconnect", "change-key"]
+}

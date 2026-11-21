@@ -1,0 +1,55 @@
+/* The features of a tier (tier-feature-list.tsx): a check or a clock beside
+   each feature, and "Coming later" under a feature that ships later. */
+
+.tier-feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tier-feature-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--c-ink2);
+}
+
+.tier-feature-icon {
+  flex-shrink: 0;
+  margin-top: 3px;
+  color: var(--c-ink);
+}
+
+.tier-feature-list li.is-later .tier-feature-icon {
+  color: var(--c-muted);
+}
+
+.tier-feature-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tier-feature-list.is-sm {
+  gap: 6px;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.tier-feature-list.is-sm li {
+  color: var(--c-ink);
+}
+
+.tier-feature-list.is-sm .tier-feature-icon {
+  margin-top: 2px;
+  color: var(--c-ink2);
+}
+
+.coming-later {
+  color: var(--c-muted);
+  font-size: 12px;
+  line-height: 16px;
+}

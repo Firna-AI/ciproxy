@@ -1,0 +1,160 @@
+//! Host subprocess adapter and shared mandatory reflink copy operation.
+
+use std::path::Path;
+use std::process::Stdio;
+
+use async_trait::async_trait;
+use tokio::io::AsyncWriteExt;
+use tokio::process::Command;
+
+use crate::error::{Error, ErrorResultExt, Result};
+
+#[cfg_attr(test, unimock::unimock(api = CommandsMock))]
+#[async_trait]
+pub(crate) trait Commands: Send + Sync {
+    /// List namespace names with typed absence and filesystem errors.
+    async fn namespaces(&self) -> Result<Vec<String>>;
+    async fn check_filesystem(&self, path: &str) -> Result<()>;
+    async fn run(&self, program: &str, args: &[String], input: &[u8]) -> Result<Vec<u8>>;
+    async fn unit(&self, name: &str) -> Result<UnitState>;
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+/// Unit status used to preserve live VMs and reclaim exited VMs.
+pub enum UnitState {
+    /// The unit process is live or starting.
+    Active,
+    /// The unit process exited with this code.
+    Exited(i32),
+    /// No loaded unit has this locally generated name.
+    Absent,
+}
+
+pub(crate) struct LinuxCommands;
+
+#[async_trait]
+impl Commands for LinuxCommands {
+    async fn namespaces(&self) -> Result<Vec<String>> {
+        let mut directory = match tokio::fs::read_dir("/run/netns").await {
+            Ok(directory) => directory,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+            Err(error) => return Err(error).context("inspect network namespaces"),
+        };
+        let mut names = Vec::new();
+        while let Some(entry) = directory
+            .next_entry()
+            .await
+            .context("list network namespaces")?
+        {
+            names.push(entry.file_name().to_string_lossy().into_owned());
+        }
+        Ok(names)
+    }
+
+    async fn check_filesystem(&self, path: &str) -> Result<()> {
+        let status = Command::new("e2fsck")
+            .args(["-p", path])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .await
+            .context("check cached Docker filesystem")?;
+        match status.code() {
+            Some(0 | 1) => Ok(()),
+            Some(2..=15) => Err(Error::DockerFilesystem),
+            _ => Err(Error::HostCommand {
+                program: "e2fsck".to_owned(),
+            }),
+        }
+    }
+    async fn unit(&self, name: &str) -> Result<UnitState> {
+        let output = Command::new("systemctl")
+            .args([
+                "show",
+                "--property=LoadState,ActiveState,ExecMainStatus",
+                name,
+            ])
+            .output()
+            .await
+            .context("inspect VM unit")?;
+        let text = String::from_utf8(output.stdout).context("read VM unit state")?;
+        let value = |key| {
+            text.lines().find_map(|line| {
+                let (name, value) = line.split_once('=')?;
+                (name == key).then_some(value)
+            })
+        };
+        if value("LoadState") == Some("not-found") {
+            return Ok(UnitState::Absent);
+        }
+        if !output.status.success() {
+            return Err(Error::HostCommand {
+                program: "systemctl".to_owned(),
+            });
+        }
+        if matches!(
+            value("ActiveState"),
+            Some("active" | "activating" | "reloading")
+        ) {
+            return Ok(UnitState::Active);
+        }
+        let code = value("ExecMainStatus")
+            .unwrap_or("1")
+            .parse()
+            .context("parse VM exit code")?;
+        Ok(UnitState::Exited(code))
+    }
+
+    async fn run(&self, program: &str, args: &[String], input: &[u8]) -> Result<Vec<u8>> {
+        let mut child = Command::new(program)
+            .args(args)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .kill_on_drop(true)
+            .spawn()
+            .context("start host tool")?;
+        if let Some(mut stdin) = child.stdin.take() {
+            stdin
+                .write_all(input)
+                .await
+                .context("write host tool input")?;
+        }
+        let output = child
+            .wait_with_output()
+            .await
+            .context("wait for host tool")?;
+        if !output.status.success() {
+            return Err(Error::HostCommand {
+                program: program.to_owned(),
+            });
+        }
+        Ok(output.stdout)
+    }
+}
+
+pub(crate) fn arguments(values: &[&str]) -> Vec<String> {
+    values.iter().map(|value| (*value).to_owned()).collect()
+}
+
+/// Copy a VM root or Docker disk with mandatory sparse-preserving block sharing.
+pub(crate) async fn reflink_copy(
+    commands: &dyn Commands,
+    source: &Path,
+    destination: &Path,
+) -> Result<()> {
+    commands
+        .run(
+            "cp",
+            &arguments(&[
+                "--reflink=always",
+                "--sparse=auto",
+                "--",
+                &source.to_string_lossy(),
+                &destination.to_string_lossy(),
+            ]),
+            &[],
+        )
+        .await?;
+    Ok(())
+}

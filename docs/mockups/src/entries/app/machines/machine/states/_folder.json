@@ -1,0 +1,4 @@
+{
+  "title": "Machine states",
+  "order": ["draining", "offline", "no-slots", "disk-limit", "clear-cache"]
+}

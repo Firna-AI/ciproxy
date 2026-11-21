@@ -1,0 +1,167 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+"""Check source mount order and the finalized machine disk without KVM."""
+
+import argparse
+import configparser
+import json
+import os
+import pathlib
+import re
+import shutil
+import shlex
+import struct
+import sys
+import time
+import unittest
+
+sys.dont_write_bytecode = True
+
+from _checks_.export_fixture import (
+    CAPABILITY, RELEASE_FSTAB, SOURCE_FSTAB, create, disk_attribute, disk_file, run,
+)
+from _checks_.image_cleanup import assert_clean_image
+
+
+def acl_entries(value):
+    data = bytes.fromhex(value)
+    assert struct.unpack_from("<I", data)[0] == 2
+    return [(tag, permissions, identifier if tag in (2, 8) else None)
+            for tag, permissions, identifier in struct.iter_unpack("<HHI", data[4:])]
+
+
+def check_guest_network(contents):
+    network = configparser.ConfigParser(interpolation=None)
+    network.read_string(contents)
+    assert network["Match"]["Name"] == "eth0"
+    assert not network.getboolean("Network", "DHCP"), (
+        "Guest DHCP must stay off: the agent supplies kernel address and gateway")
+    keep = network["Network"]["KeepConfiguration"].lower()
+    assert configparser.ConfigParser.BOOLEAN_STATES.get(keep) is True, (
+        "Preserve the complete kernel network configuration, including boot routes")
+    assert network["Network"]["DNS"].strip(), "The image must supply its resolver"
+    assert all(not any(key in section for key in ["Address", "Gateway"])
+               for section in network.values()), (
+        "The image must not duplicate the agent's guest address or gateway")
+
+
+def check_export(workspace):
+    assert os.geteuid() == 0, "Run this fixture check with sudo for chroot and file capabilities"
+    image = pathlib.Path(__file__).resolve().parent
+    root, source, work, environment = create(workspace, image)
+    print("Fixture evidence: " + str(root), flush=True)
+    assert not (source / "etc/apt/preferences.d/ciproxy-software").exists()
+    run([shutil.which("chroot"), str(source), "/usr/bin/bash", "/image/provision.sh"], root,
+        "provision", {**os.environ, "PATH": "/usr/bin"})
+    assert_clean_image(source)
+    network_path = "etc/systemd/network/10-ciproxy.network"
+    check_guest_network((source / network_path).read_text())
+    service_path = "etc/systemd/system/ciproxy-guest.service"
+    service = configparser.ConfigParser(interpolation=None)
+    service.read_string((source / service_path).read_text())
+    run(["chroot", str(source), *shlex.split(service["Service"]["ExecStopPost"])],
+        root, "guest-initialization-reset")
+    assert (source / "reset-observation").read_text().splitlines() == ["reboot"], (
+        "Guest initialization failure must use the x86 Firecracker reset path")
+    assert (source / "etc/fstab").read_text() == SOURCE_FSTAB, (
+        "source fstab changed during provisioning before disk inspection")
+    run(["bash", str(image / "export.sh"), str(work)], root, "export", environment)
+    events = [json.loads(line) for line in (root / "events.jsonl").read_text().splitlines()]
+    assert [event["tool"] for event in events] == ["virt-customize", "guestfish"]
+    assert all(event["source_fstab"] == SOURCE_FSTAB for event in events)
+    assert (source / "etc/fstab").read_text() == SOURCE_FSTAB
+    assert (work / "rootfs/etc/fstab").read_text() == RELEASE_FSTAB
+    intermediate = list(work.glob("*.tar.zst"))
+    assert len(intermediate) == 1, "Keep one source archive outside the final artifact directory"
+    names = run(["tar", "-I", "zstd", "-tf", str(intermediate[0])], root, "source-archive-list")
+    fstab_name = next(name for name in names.splitlines() if name.lstrip("./") == "etc/fstab")
+    assert run(["tar", "-I", "zstd", "-xOf", str(intermediate[0]), fstab_name], root,
+               "source-archive-fstab") == SOURCE_FSTAB
+
+    artifacts = work / "artifacts"
+    assert json.loads((artifacts / "software-report.json").read_text()) == {
+        "fixture_source": "pinned-recipe"}, "Export must use the rendered recipe's software report"
+    measurement = json.loads((artifacts / "measurement.json").read_text())
+    assert not (work / "rootfs/etc/apt/preferences.d/ciproxy-software").exists()
+    assert measurement["apt_pin_differences"] == {
+        "available": True, "differences_fail_build": False, "difference_count": 1,
+        "differences": [{"package": "temurin-17-jdk", "installed": "17.0.22.0.0+7-0",
+                         "pin": "17.0.21.0.0+9-*"}],
+    }, measurement["apt_pin_differences"]
+    manifest = json.loads((artifacts / "manifest.json").read_text())
+    assert measurement["rootfs"] == "rootfs", "Release measurement must use a neutral root label"
+    assert manifest["measurements"]["rootfs"] == "rootfs", (
+        "The manifest must not contain the build machine's extraction path")
+    root_disk_bytes = (artifacts / "rootfs.ext4").stat().st_size
+    assert measurement.get("root_disk_bytes") == root_disk_bytes, (
+        "Measurement must report the actual logical root disk size")
+    assert manifest.get("root_disk_bytes") == root_disk_bytes, (
+        "Manifest must expose the release root disk size")
+    assert root_disk_bytes < 512 * 1024 ** 2, (
+        "The small fixture root must not retain job-growth headroom")
+    assert measurement["firecracker_ext4"]["offline_free_job_bytes"] >= 64 * 1024 ** 2, (
+        "The compacted root must keep its free margin after the root reserve")
+    disk = artifacts / "rootfs.ext4"
+    geometry = run(["dumpe2fs", "-h", str(disk)], root, "ext4-geometry")
+    fields = dict(line.split(":", 1) for line in geometry.splitlines() if ":" in line)
+    assert int(fields["Reserved block count"]) == int(fields["Block count"]) // 100, (
+        "The job disk must reserve one percent of its blocks for root")
+    assert disk_file(disk, "/etc/fstab", root, "ext4-fstab").decode() == RELEASE_FSTAB
+    expected_acl = [(1, 7, None), (2, 5, 34567), (4, 5, None),
+                    (16, 5, None), (32, 5, None)]
+    tree = work / "rootfs"
+    assert_clean_image(tree)
+    check_guest_network((tree / network_path).read_text())
+    assert (tree / service_path).read_bytes() == (source / service_path).read_bytes()
+    tool = tree / "privileged-tool"
+    assert (tool.stat().st_uid, tool.stat().st_gid, tool.stat().st_mode & 0o7777) == (1234, 2345, 0o755)
+    assert os.getxattr(tool, "security.capability").hex() == CAPABILITY
+    assert acl_entries(os.getxattr(tool, "system.posix_acl_access").hex()) == expected_acl
+    assert tool.stat().st_ino == (tree / "tool-alias").stat().st_ino
+    assert (tree / "sparse-data").stat().st_blocks * 512 < 8388608
+    assert disk_attribute(disk, "/privileged-tool", "security.capability", root,
+                          "ext4-capability") == CAPABILITY
+    check_guest_network(disk_file(disk, "/" + network_path, root, "ext4-network").decode())
+    assert disk_file(disk, "/" + service_path, root, "ext4-guest-service") == (source / service_path).read_bytes()
+    assert acl_entries(disk_attribute(disk, "/privileged-tool", "system.posix_acl_access",
+                                      root, "ext4-acl")) == expected_acl
+    tool_stat = run(["debugfs", "-R", "stat /privileged-tool", str(disk)], root, "ext4-tool")
+    alias_stat = run(["debugfs", "-R", "stat /tool-alias", str(disk)], root, "ext4-alias")
+    assert re.search(r"Inode: (\d+)", tool_stat).group(1) == re.search(r"Inode: (\d+)", alias_stat).group(1)
+    sparse_stat = run(["debugfs", "-R", "stat /sparse-data", str(disk)], root, "ext4-sparse")
+    assert int(re.search(r"Blockcount: (\d+)", sparse_stat).group(1)) * 512 < 8388608
+    grown = root / "job-copy.ext4"
+    run(["cp", "--sparse=always", str(disk), str(grown)], root, "copy-for-growth")
+    run(["truncate", "-s", str(root_disk_bytes + 134217728), str(grown)], root, "extend-copy")
+    run(["resize2fs", str(grown)], root, "released-disk-resize")
+    grown_headers = run(["dumpe2fs", "-h", str(grown)], root, "grown-copy-geometry")
+    grown_fields = dict(line.split(":", 1) for line in grown_headers.splitlines() if ":" in line)
+    assert int(grown_fields["Block count"]) * int(grown_fields["Block size"]) > root_disk_bytes, (
+        "The released disk copy must grow without forcing resize2fs or running a repair")
+    run(["bash", "-c", 'cd "$1" && sha256sum --check SHA256SUMS', "check", str(artifacts)],
+        root, "release-checksums")
+    (root / "result.json").write_text(json.dumps({
+        "fixture_only": True, "source_mounts_preserved": True,
+        "firecracker_fstab": RELEASE_FSTAB,
+        "capabilities_acl_owners_hardlinks_sparse_preserved": True,
+        "real_tools": ["tar", "zstd", "mkfs.ext4", "debugfs", "measure.py", "package.sh"],
+        "stubbed_tools": ["provisioning tools inside chroot", "virt-customize", "guestfish", "sudo"],
+        "not_proved": "Real libguestfs inspection and mounting, a full image build, or VM boot",
+    }, indent=2) + "\n")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--work-dir", type=pathlib.Path,
+                        default=pathlib.Path(".context/ciproxy-mvp/orchestrator-fix-1"))
+    args = parser.parse_args()
+    started = time.perf_counter()
+    case = unittest.FunctionTestCase(lambda: check_export(args.work_dir),
+                                     description="source mounts and pinned software report reach the machine disk")
+    result = unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite([case]))
+    print(f"Regression command duration: {time.perf_counter() - started:.3f}s")
+    return 0 if result.wasSuccessful() else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

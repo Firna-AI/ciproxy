@@ -1,0 +1,59 @@
+[package]
+name = "ciproxy-agent"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+license = "Apache-2.0"
+
+[dependencies]
+async-trait = "0.1.92"
+ciproxy-protocol = { workspace = true }
+clap = { version = "4.6.7", features = ["derive"] }
+cli-updater = { workspace = true }
+cli-release-interface = { workspace = true }
+flate2 = "1.1.10"
+fs2 = "0.4.3"
+futures-util = "0.3.34"
+getrandom = "0.4.3"
+hex = "0.4.3"
+internal-error = { workspace = true }
+reqwest = { version = "0.13.5", default-features = false, features = ["json", "rustls", "stream"] }
+rustix = { version = "1.1.6", features = ["fs"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+sha2 = "0.11.1"
+tar = "0.4.46"
+thiserror = "2.0.21"
+tokio = { version = "1.54.1", features = ["full"] }
+tokio-tungstenite = { version = "0.30.0", features = ["rustls-tls-native-roots"] }
+tracing = "0.1.44"
+tracing-log = "0.2.0"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json"] }
+uuid = { version = "1.29.0", features = ["v4"] }
+zstd = "0.14.3"
+
+[dev-dependencies]
+tokio = { version = "1.54.1", features = ["test-util"] }
+log = "0.4.35"
+unimock = "0.6.8"
+
+[features]
+filesystem-regression = []
+
+[[test]]
+name = "storage-regression"
+path = "tests/storage_regression.rs"
+harness = false
+required-features = ["filesystem-regression"]
+
+[[test]]
+name = "root-disk-regression"
+path = "tests/root_disk_regression.rs"
+required-features = ["filesystem-regression"]
+
+[[example]]
+name = "network-smoke-driver"
+path = "tests/network_smoke/driver.rs"
+test = false
+required-features = ["filesystem-regression"]

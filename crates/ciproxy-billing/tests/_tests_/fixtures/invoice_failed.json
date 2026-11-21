@@ -1,0 +1,20 @@
+{
+  "id": "evt_invoice_failed",
+  "object": "event",
+  "api_version": "2026-10-28.endive",
+  "created": 1793880000,
+  "type": "invoice.payment_failed",
+  "data": {
+    "object": {
+      "id": "in_recorded",
+      "object": "invoice",
+      "created": 1793790000,
+      "status": "open",
+      "parent": {
+        "subscription_details": {
+          "subscription": "sub_recorded"
+        }
+      }
+    }
+  }
+}

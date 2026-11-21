@@ -1,0 +1,226 @@
+/* The top bar of the public site (SiteHeader.astro). The frame of a marketing
+   page carries .site-frame, which sets the content width and the gutter that
+   the top bar and the page sections share. The docs form fills the fixed bar
+   of Starlight, which frame.css gives the same height, fill, and hairline.
+   On a phone, narrower than 40rem, the bar is 56 px high. */
+
+.site-frame {
+  --site-width: 1120px;
+  --site-gutter: 32px;
+}
+
+.site-header {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+header.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid var(--c-border);
+  background: color-mix(in srgb, var(--c-surface) 90%, transparent);
+  backdrop-filter: saturate(1.6) blur(10px);
+}
+
+.site-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  width: min(var(--site-width), 100%);
+  height: 64px;
+  margin: 0 auto;
+  padding: 0 var(--site-gutter);
+}
+
+.site-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.site-home {
+  display: inline-flex;
+}
+
+.site-slash {
+  color: var(--c-border2);
+  font-size: 20px;
+  font-weight: 300;
+}
+
+.site-section {
+  color: var(--c-ink);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.site-nav {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 28px;
+}
+
+.site-nav-link {
+  color: var(--c-ink2);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.site-nav-link:hover,
+.site-nav-link.is-active {
+  color: var(--c-ink);
+}
+
+.site-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+/* The menu of a phone: a plain icon button, and the links in a panel under
+   the bar. The panel is a popover, so it opens and closes without a script,
+   and a tap outside it or Escape closes it. */
+
+.site-menu-button {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--c-ink);
+  cursor: pointer;
+}
+
+.site-menu-button:hover {
+  background: var(--c-soft);
+}
+
+.site-menu {
+  position: fixed;
+  inset: 56px 0 auto;
+  width: auto;
+  margin: 0;
+  padding: 4px var(--site-gutter) 12px;
+  border: 0;
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-ink);
+  font-size: 15px;
+  line-height: 20px;
+}
+
+.site-menu:popover-open {
+  display: flex;
+  flex-direction: column;
+}
+
+.site-menu-link {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--c-border);
+  font-weight: 500;
+}
+
+.site-menu-link:last-child {
+  border-bottom: 0;
+}
+
+/* The docs form: the search box in the middle of the bar, and the actions
+   on the right. */
+
+.site-header.is-docs {
+  height: 100%;
+}
+
+.is-docs .site-header-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  column-gap: 24px;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+}
+
+.is-docs .site-actions {
+  justify-self: end;
+  gap: 12px;
+  margin-left: 0;
+}
+
+.site-docs-pricing {
+  margin-right: 6px;
+}
+
+.site-header-search {
+  width: 340px;
+}
+
+/* A narrow window: the docs links, the gaps, and the search box give way
+   first. Under 50rem, Starlight's menu button holds the docs sidebar. */
+
+@media (width <= 1000px) {
+  .site-docs-pricing,
+  .is-docs .site-sign-in {
+    display: none;
+  }
+
+  .site-header-search {
+    width: 220px;
+  }
+}
+
+@media (width <= 760px) {
+  .site-header-inner {
+    gap: 20px;
+  }
+
+  .site-nav {
+    gap: 18px;
+  }
+
+  .site-header-search {
+    width: auto;
+  }
+}
+
+@media (width < 50rem) {
+  .is-docs .site-header-inner {
+    display: flex;
+    gap: 12px;
+  }
+
+  .site-header-search {
+    margin-left: auto;
+  }
+}
+
+@media (width < 40rem) {
+  .site-frame {
+    --site-gutter: 20px;
+  }
+
+  .site-header-inner {
+    justify-content: space-between;
+    gap: 12px;
+    height: 56px;
+    padding: 0 12px 0 var(--site-gutter);
+  }
+
+  .site-nav,
+  .site-sign-in,
+  .is-docs .site-start {
+    display: none;
+  }
+
+  .site-menu-button {
+    display: inline-flex;
+  }
+}

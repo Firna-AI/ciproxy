@@ -1,0 +1,286 @@
+# ciproxy-api
+
+The hosted dashboard API for ciproxy. The control plane mounts its axum router
+under `/api`. Depend on this crate to compose sign-in, workspace access, Setup,
+Machines, Settings, Jobs, Savings, and billing pages. Settings includes
+[Boat under Overflow](overflow.md). This crate has no open licence.
+
+## Responsibilities
+
+Own the dashboard HTTP contract in Rust. Require the workspace role for all
+private reads and changes. Use the existing GitHub App and machine gateway
+services. Keep credentials out of response diagnostics.
+
+## What This Crate Does
+
+GitHub App OAuth uses one-use browser-bound state and PKCE S256. A sealed Secure
+HttpOnly cookie keeps the fixed 30-day sign-in. It contains profile and session
+metadata, with no GitHub token. The store keeps a person, session digest, and
+encrypted OAuth grant only while a role or an open access request exists. A
+deleted session leaves only the signed-in install or access page. It cannot
+authorize a private workspace route.
+
+The session response provides a same-origin reauthorization URL. The frontend
+uses top-level navigation to get fresh GitHub proof for Check again or
+promotion. A matching GitHub identity keeps the first sign-in expiry.
+Reauthorization rotates session and CSRF secrets. Membership refresh uses the
+latest stored grant under a database lease. It does not create another access
+request after an Admin declines one.
+Token rotation saves its encrypted replacement pair before membership checks.
+A failed check preserves the previous membership snapshot and freshness time.
+
+Requests that change data require the configured Origin and the session's CSRF
+token. Every response carries `x-ciproxy-build` and `Cache-Control: no-store`.
+This includes framework extraction errors and unknown routes.
+
+Install commands use the agent endpoint derived from the trusted
+`ApiConfig.public_origin`. Preview commands supply `--agent-url` so the
+machine registers with the issuing control plane. The production command
+keeps its documented form. Request headers never select this endpoint.
+
+The API consumes actual prepared job-area capacity through an injected
+`MachineCapacity` adapter. The hosted runtime reads the exact snapshot. A report
+without available capacity produces an explicit unavailable value. Label fit
+includes the trusted image disk size supplied by the caller. Machine byte counts
+and other large counters use decimal strings. IDs are strings. Money uses
+integer US cents as decimal strings. Times use UTC RFC 3339.
+
+Intentional take-out saves its own durable removal marker before remote cleanup.
+It preserves job history and sets no owner-removal retention period. Lifecycle
+replay runs after the mutation lease ends. The API and maintenance start
+cleanup only after the runtime accepts that replay. The runtime accepts it
+only when each runner of the organization has a saved stop, a stopped
+reservation, or a protected busy job. Cleanup deletes scale sets before it
+uninstalls the exact App installation.
+After the marker is saved, a replay that the runtime keeps pending is not an
+error. The take-out request then returns the usual `Success` response with
+no remote cleanup. Maintenance finishes the cleanup after the runtime
+accepts. Other replay errors still fail the request. The last organization
+of a workspace still gets a conflict before any marker is saved.
+
+The generated [OpenAPI document](../../ts/api/generated/openapi.json) is the
+route and schema reference. The TypeScript package
+[@ciproxy/api](../../ts/api/README.md) generates the dashboard types.
+
+## Quick Start
+
+Mount the router from the hosted composition root:
+
+```rust
+use axum::Router;
+use ciproxy_api::router::router;
+use ciproxy_api::state::ApiState;
+
+fn application(state: ApiState) -> Router {
+    Router::new().nest("/api", router(state))
+}
+```
+
+Construct `AccessService` first. Coerce cloned Arcs to `DashboardAccess`,
+`ciproxy_gateway::boundary::Authorization`, and
+`ciproxy_github::app::InstallAuthority`. Then construct the gateway and App
+service. They do not form a construction cycle.
+
+Supply a redirect-free reqwest client to `GithubOAuthClient` and
+`GithubInstallationAdmin`. Load the OAuth client secret and the 32-byte
+credential encryption key from the operator's secret store. Keep the key stable
+across restarts and for all replicas that serve the same sign-ins. Keep each
+machine's API callers and WebSocket on the same gateway owner.
+
+Register `PUBLIC_URL/api/auth/github/callback` as the sign-in callback. Register
+`PUBLIC_URL/api/github/setup` as the App setup URL. PUBLIC_URL has no trailing
+slash. Keep OAuth during installation OFF, expiring user tokens ON, and redirect
+on update OFF. The separate PKCE flow requests `offline_access`. M13 owns
+`/hooks/github` and periodic repository refresh. Stripe uses `/hooks/stripe`.
+There is no `/hooks` alias.
+
+The public setup route treats incoming ID/state as untrusted. It reads the
+configured-App installation and starts fresh user authorization. Its sealed
+one-use binding captures purpose and prior token-free metadata at the start. The
+callback requires the same installation/account through the fresh user token and
+requires organization membership or exact personal ownership. Only then can
+sign-in persistence run. Verified Add claims can then choose their workspace.
+GET `/session` returns typed setup and installation-link outcomes without
+frontend installation-ID forwarding.
+Its `installation_continuation` lists the exact claim IDs from the latest
+successful GitHub authorization. They are the claims that it proved or
+completed, and the results that a failed authorization left pending. Match
+every ID to `organization_links`. The store keeps this list under the existing
+browser session ID until its fixed expiry, also when no person record remains.
+The cookie and OAuth binding contain no claim list.
+Each successful authorization replaces it, including an empty result.
+Previously proved completed claims add no new result. A signed Direct install
+completed before sign-in appears after its first successful own-user
+installation proof. Setup proof counts as that first proof. Repeated proof of
+an open claim keeps its ID in the result. Proof from GET `/installation-links`
+or a workspace choice adds no result.
+This metadata grants no access.
+Failed proof preserves business records and the existing sign-in. A matching
+identity keeps its original expiry.
+An authorization saves each result as pending, in the same store transaction
+as its claim. The next successful authorization of the same GitHub user lists
+it. The earlier sign-in does not show it.
+Cookie preparation finishes before the store atomically saves the continuation,
+consumes its pending results, and rotates a retained session. A failed
+preparation or write preserves the previous session and the pending results.
+
+The superseded `/api/auth/callback` route and session-query bridge are gone.
+
+Warm runners and cost have independent typed writes:
+
+- PUT `/workspaces/{workspace_id}/machines/{machine_id}/warm-runners` changes
+  only `warm_runners`. An unknown cost stays unknown and no history is added.
+- PUT `/workspaces/{workspace_id}/machines/{machine_id}/cost` changes only
+  `monthly_cost_cents`. It preserves the warm target. Zero is a known cost.
+
+The old generic machine PUT has no alias. Current-cost writes read the injected
+clock after acquiring their store locks.
+That time closes the prior interval and starts the replacement interval.
+The API supplies no historical price. Earlier unknown registered dates keep the
+savings figure unavailable. This API adds no effective-date policy.
+
+Label deletion stops new acquisition and runner registration immediately.
+Retired bindings keep their job results and completion sessions. Remote cleanup
+waits for tracked jobs, pending delivery, and the listener's session lease.
+A draining remote binding releases its label name before a same-name re-create.
+Cleanup records completion for the exact old binding and leaves its history.
+
+HTTP path workspace IDs are opaque. Only the access boundary returns a checked
+UUID after the current workspace role check. Owner claim has its own
+membership-authorized opener. Request parsing and rejection order stay
+unchanged.
+
+Supply `ApiState.capacity` with a runtime adapter that returns actual slots and
+optional prepared job-area bytes from each machine snapshot. The API does not
+reconstruct a disk budget from hardware totals.
+
+Set `ApiConfig.image_disk_bytes` from the trusted current release's root disk
+size. Run `Maintenance::reconcile` on startup and at least hourly. It refreshes
+memberships, prunes expired authentication data, and retries unfinished
+intentional removals and retired-label cleanup. Use the same API collaborators.
+
+## Organization linking
+
+The [organization linking guide](organization-linking.md) gives the install
+start, the Add flow, installation claims, local activation, and the related
+maintenance.
+
+## Jobs, Savings, and billing composition
+
+The [pages and billing guide](pages-and-billing.md) shows how to mount the page
+router and the Stripe hook. It also gives the paid review and payment steps,
+and the rules of Jobs, Savings, and the shared banner.
+
+Plans, usage, and Checkout use the billing catalog in ciproxy-store-interface.
+The same catalog supplies job-history limits. The page builders use its
+shared Selection plan model directly.
+
+## Machines and Settings facts
+
+Settings keeps the Admin's permission to start Add in `can_add_organization`.
+`new_organization_requires_upgrade` predicts the hold for a new registration.
+It uses the actual stored tier and current non-removed organization count.
+Settings and the workspace choice share that prediction. Retained reinstalls
+continue to use their saved activation and admission authority.
+
+The machine routes fetch the newest supported Linux agent version from the
+configured release host. The router constructs a redirect-free HTTPS client.
+Release failure leaves update status unavailable. Offline health still marks
+the last reported version and cache facts as old. Tests can supply a release
+collaborator with `router_with_agent_releases`.
+Each machine view has a required `state`: `offline`, `preparing`, or `ready`.
+The gateway supplies it from the shared contact and selected-image state
+that routing uses. `offline` and `health_old` still describe contact age.
+
+Machine views keep slot-only default-label fit separate from complete root
+allocation and prepared job disk. Slots expose a canonical job only after the
+report identity, exact stored runner, machine, slot range, and job alias match.
+A mismatched or ambiguous report keeps the raw identity with no job link.
+The cache view contains independent `machine_cache` and `docker_disks`
+observations. Each observation is measured or unavailable. Measured figures
+use decimal strings, including true zeros. Only a machine without a stored
+report has a null cache view. Unknown Docker reservations keep slot and image
+facts, but make disk capacity and complete concurrency unavailable.
+
+Labels include physical machine offers, complete root allocations, Boat fit,
+the largest Boat size, and current placement. The normal router uses the
+existing overflow service and trusted configured image size. PageServices can
+supply its existing collaborators. Busy slots, provider refusals, and missing
+spend bounds do not change physical resource fit. Thirty-day job summaries use
+retained label identity and canonical taken jobs across every organization.
+Unknown start times keep their label's count unavailable.
+A successful observation distinguishes a disconnected Boat account from an
+unknown connection. Disconnected Boat keeps catalog fit unavailable.
+Known machines then run jobs alone, or known no-fit capacity waits.
+Missing observations or unknown own capacity keep placement unavailable.
+Settings and Jobs use one physical Boat fit calculation. Each waiting label
+in Jobs has the same Boat choice in `current.fit.boat` and `boat`. Its
+`current.fit` also includes the account presence, required root disk,
+largest Boat size, and placement when the trusted image sizing is known.
+
+Organizations include nullable first-registration and removal dates, complete
+repository snapshot counts, and retained adder profiles. Members include the
+GitHub public name and avatar, exact initial request organizations, and the
+current role's grant date. Repeated identical grants preserve the date.
+Legacy metadata stays unavailable. Retained reinstall preserves the first
+registration date. Profile retention follows the existing role/request rule.
+
+## Development
+
+Run commands from the repository root. Set up PostgreSQL as
+[AGENTS.md](../../AGENTS.md#commands) describes.
+
+```sh
+cargo build --package ciproxy-api
+cargo test --package ciproxy-api --test http_tests
+cargo clippy --package ciproxy-api --all-targets -- -D warnings
+npm --prefix ts run api:generate
+npm --prefix ts run api:generate:check
+```
+
+The HTTP tests use real PostgreSQL, the gateway, AppService, and advisory
+leases. Controlled external services replace GitHub. The adapter tests run the
+production OAuth client and scale-set SDK against a local HTTP peer. They
+require no live credential.
+
+[Live verification](scripts/README.md) uses an operator-owned credential file.
+It never prints a cookie, token, install command, or response body.
+
+### Key Code
+
+- [src/state.rs](src/state.rs) defines the hosted composition boundary.
+- [src/router.rs](src/router.rs) registers routes and browser protection.
+- [src/access](src/access) owns sign-in and shared role adapters.
+- [src/identity/http.rs](src/identity/http.rs) implements GitHub user OAuth.
+- [src/installations.rs](src/installations.rs) implements App-JWT metadata reads
+  and intentional uninstall.
+- [src/handlers/links.rs](src/handlers/links.rs) owns requester choice and
+  enable, and creates attempts only through explicit installation starts.
+- [src/handlers/overflow.rs](src/handlers/overflow.rs) serves the Boat Setup
+  and Settings routes.
+- [src/handlers/overflow_views.rs](src/handlers/overflow_views.rs) builds the
+  safe Boat view and converts limits and display amounts.
+- [src/wire/overflow.rs](src/wire/overflow.rs) defines the Boat wire types.
+- [src/maintenance.rs](src/maintenance.rs) owns restart and hourly work.
+- [src/wire](src/wire) owns the Rust dashboard boundary types.
+- [src/wire/machines.rs](src/wire/machines.rs) defines the machine view and
+  its closed contact and selected-image state.
+- [src/wire/machine_statistics.rs](src/wire/machine_statistics.rs) carries
+  independent cache and Docker observations through the shared protocol type.
+- [src/openapi.rs](src/openapi.rs) builds the generated reference.
+- [src/pages.rs](src/pages.rs) composes metering, billing, and Stripe previews.
+- [src/handlers/checkout.rs](src/handlers/checkout.rs) serves reviews, quote
+  payments, and Checkout.
+- [tests/http](tests/http) covers the HTTP contract with PostgreSQL.
+
+### Related Docs
+
+- [Architecture](../../docs/architecture.md) gives the hosted boundaries.
+- [Security](../../docs/protocol/security.md) defines sign-in and roles.
+- [Workspaces](../../docs/protocol/workspaces.md) defines organization joins.
+- [Agent](../../docs/protocol/agent.md) defines install and machine controls.
+- [Labels](../../docs/protocol/labels.md) defines label policy.
+- [Overflow](../../docs/protocol/overflow.md) defines the Boat account and
+  the spend limit.
+- [Cache](../../docs/protocol/cache.md) defines Clear cache.
+- [App removal](../../docs/protocol/app-removal.md) defines owner removal.

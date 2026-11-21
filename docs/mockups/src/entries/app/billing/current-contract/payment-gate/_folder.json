@@ -1,0 +1,4 @@
+{
+  "title": "When a payment cannot start",
+  "order": ["status-failed", "checking", "waiting", "not-payer"]
+}

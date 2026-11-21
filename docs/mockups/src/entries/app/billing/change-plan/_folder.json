@@ -1,0 +1,10 @@
+{
+  "title": "Change a paid plan",
+  "order": [
+    "to-business",
+    "move-to-free",
+    "free-scheduled",
+    "free-organizations",
+    "inactive-organization"
+  ]
+}

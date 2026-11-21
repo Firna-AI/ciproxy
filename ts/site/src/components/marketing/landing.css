@@ -1,0 +1,219 @@
+/* The sections of the landing page under the hero: how it works, features,
+   the pricing teaser, security, and the closing call to action. The cost
+   comparison has its own stylesheet, cost.css. */
+
+/* How it works: three steps, each with what the person sees. */
+
+.hiw-number {
+  color: var(--c-muted);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+.hiw-title,
+.feature-title,
+.security-title {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 22px;
+}
+
+.hiw-text,
+.feature-text,
+.security-text {
+  color: var(--c-ink2);
+  line-height: 22px;
+}
+
+.hiw-visual {
+  margin-top: auto;
+  padding-top: 18px;
+}
+
+.hiw-permissions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  background: var(--c-bg);
+}
+
+.hiw-permission-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  font-size: 13px;
+  list-style: none;
+}
+
+.hiw-permission-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.hiw-check {
+  margin-top: 3px;
+  color: var(--c-ink);
+}
+
+.hiw-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Features: an icon tile, a title, and one or two lines. */
+
+.feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-bottom: 6px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  background: var(--c-bg);
+  color: var(--c-ink);
+}
+
+/* The pricing teaser: the three tiers as cells. */
+
+.teaser-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.teaser-price {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.teaser-amount {
+  font-size: 36px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 44px;
+}
+
+.teaser-limits {
+  color: var(--c-ink2);
+  line-height: 22px;
+}
+
+/* Security: the head beside four points in two columns. */
+
+.security {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 56px;
+  align-items: start;
+}
+
+.security .mk-head {
+  margin-bottom: 0;
+}
+
+.security-points {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 36px 32px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.security-point {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.security-point .icon {
+  margin-bottom: 4px;
+}
+
+/* The closing call to action, over the faint grid of the hero. */
+
+.mk-closing {
+  position: relative;
+  overflow: hidden;
+}
+
+.mk-closing::before {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, var(--c-border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--c-border) 1px, transparent 1px);
+  background-position: -1px -1px;
+  background-size: 56px 56px;
+  content: "";
+  mask-image: radial-gradient(
+    ellipse 50% 70% at 50% 100%,
+    var(--c-ink) 0%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.mk-closing > * {
+  position: relative;
+}
+
+.mk-closing .mk-head {
+  margin-bottom: 32px;
+}
+
+/* A narrow desktop window: the features in two columns, security stacked. */
+
+@media (40rem <= width <= 960px) {
+  .mk-cells-3.feature-cells {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .security {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+  }
+}
+
+/* A phone: a feature puts its icon beside its title, and security stacks. */
+
+@media (width < 40rem) {
+  .mk-cell.feature {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr);
+    align-items: center;
+    gap: 6px 14px;
+  }
+
+  .feature-icon {
+    margin-bottom: 0;
+  }
+
+  .feature-text {
+    grid-column: 1 / -1;
+  }
+
+  .security {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .security .mk-head {
+    margin-bottom: 32px;
+  }
+
+  .security-points {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+}

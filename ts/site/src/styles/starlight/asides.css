@@ -1,0 +1,76 @@
+/* Asides (:::note, :::tip, :::caution, :::danger) in the look of the Notice
+   of the mockups: a box with a full hairline border, never a left accent
+   edge. A note or a tip is white, a caution is amber, and a danger is rose.
+   The icon carries the tone, and the text sits beside the icon. */
+
+.starlight-aside {
+  --sl-color-asides-border: var(--c-border);
+  --sl-color-asides-text-accent: var(--c-ink);
+
+  padding: 12px 14px;
+  border: 1px solid var(--sl-color-asides-border);
+  border-radius: var(--r-lg);
+  background-color: var(--c-surface);
+  color: var(--c-ink2);
+}
+
+.starlight-aside--caution {
+  --sl-color-asides-border: color-mix(
+    in srgb,
+    var(--c-amber) 30%,
+    var(--c-amber-soft)
+  );
+  --sl-color-asides-text-accent: var(--c-amber-deep);
+
+  background-color: var(--c-amber-soft);
+}
+
+.starlight-aside--danger {
+  --sl-color-asides-border: color-mix(
+    in srgb,
+    var(--c-rose) 24%,
+    var(--c-rose-soft)
+  );
+  --sl-color-asides-text-accent: var(--c-rose-deep);
+
+  background-color: var(--c-rose-soft);
+}
+
+.starlight-aside__title {
+  gap: 10px;
+  align-items: flex-start;
+  color: var(--c-ink);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.starlight-aside__icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  font-size: 16px;
+  color: var(--sl-color-asides-text-accent);
+}
+
+.starlight-aside--note .starlight-aside__icon {
+  color: var(--c-status-run);
+}
+
+.starlight-aside__title + .starlight-aside__content {
+  margin-top: 2px;
+}
+
+.starlight-aside__content {
+  padding-inline-start: 26px;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.starlight-aside .starlight-aside__content code {
+  border-color: var(--sl-color-asides-border);
+  background-color: color-mix(
+    in srgb,
+    var(--sl-color-asides-text-accent) 5%,
+    transparent
+  );
+}

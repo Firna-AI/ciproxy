@@ -1,0 +1,116 @@
+// The people of mokly-ai in ciproxy and their roles. Each role contains the
+// one below it. Cal Moore installed the GitHub App on 1 September, so he is
+// the first Admin, and Ana Souza is a second Admin. Dana Kim has the Billing
+// role, and Tom Becker has no role. Both own mokly-ai and mokly-labs on
+// GitHub, so ciproxy offers each of them the Admin claim: Dana in the account
+// menu, and Tom on the page for no role. Lena Fischer is a member of mokly-ai
+// on GitHub with no role yet: her sign-in asks the Admins for access.
+
+import { unbroken } from "./format.ts";
+import { user } from "./org.ts";
+
+export type Role = "admin" | "billing" | "viewer";
+
+/** The roles in the order of the role picker. */
+export const roleOrder: readonly Role[] = ["admin", "billing", "viewer"];
+
+/** The name of each role and what it may do. */
+export const roles: Readonly<Record<Role, { name: string; can: string }>> = {
+  admin: {
+    name: "Admin",
+    can: "Can do everything: the machines, labels, settings, Boat, roles, and billing.",
+  },
+  billing: {
+    name: "Billing",
+    can: "Sees what a Viewer sees, and manages the plan, the add-ons, and the invoices.",
+  },
+  viewer: {
+    name: "Viewer",
+    can: "Sees the jobs, the machines, the savings, and Plan and usage.",
+  },
+};
+
+export type Member = {
+  name: string;
+  login: string;
+  initials: string;
+  role: Role;
+  /** The day the person got the role. */
+  since: string;
+  /** How the person got it, when not from an Admin. */
+  note?: string;
+  /**
+   * ciproxy offers the person the Admin claim, as the API says in the session.
+   * The API decides it from the ownership of the person on GitHub.
+   */
+  canClaimAdmin?: boolean;
+};
+
+/** Jonas Weber, a Viewer, whose view the read-only billing screens show. */
+export const viewer: Member = {
+  name: "Jonas Weber",
+  login: "jweber",
+  initials: "JW",
+  role: "viewer",
+  since: unbroken("21 September"),
+};
+
+/** Ana Souza, a second Admin of the workspace. */
+export const secondAdmin: Member = {
+  name: "Ana Souza",
+  login: "anasouza",
+  initials: "AS",
+  role: "admin",
+  since: unbroken("2 September"),
+};
+
+/** Dana Kim, who pays, and who owns mokly-ai and mokly-labs on GitHub. */
+export const billingPerson: Member = {
+  name: "Dana Kim",
+  login: "danakim",
+  initials: "DK",
+  role: "billing",
+  since: unbroken("4 September"),
+  canClaimAdmin: true,
+};
+
+/** Cal Moore, who installed the GitHub App, so he is the first Admin. */
+export const firstAdmin: Member = {
+  ...user,
+  role: "admin",
+  since: unbroken("1 September"),
+  note: "installed the GitHub App",
+};
+
+export const members: readonly Member[] = [
+  firstAdmin,
+  secondAdmin,
+  billingPerson,
+  viewer,
+];
+
+/** The person whose view a screen of each role shows. */
+export const personFor: Readonly<Record<Role, Member>> = {
+  admin: firstAdmin,
+  billing: billingPerson,
+  viewer,
+};
+
+/** The member of mokly-ai on GitHub who has no role and asks for access. */
+export const requester = {
+  name: "Lena Fischer",
+  login: "lfischer",
+  initials: "LF",
+  asked: unbroken("18 November"),
+} as const;
+
+/** The requests for access that wait for an Admin, from 18 November. */
+export const openRequests: readonly (typeof requester)[] = [requester];
+
+/** Tom Becker, who owns mokly-ai and mokly-labs on GitHub, with no role. */
+export const owner = {
+  name: "Tom Becker",
+  login: "tbecker",
+  initials: "TB",
+  canClaimAdmin: true,
+} as const;

@@ -1,0 +1,23 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.17.1",
+  "resource_changes": [
+    {
+      "address": "google_iam_workload_identity_pool.github",
+      "mode": "managed",
+      "type": "google_iam_workload_identity_pool",
+      "name": "github",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": ["delete", "create"],
+        "before": {"workload_identity_pool_id": "ciproxy-main-preview"},
+        "after": {"workload_identity_pool_id": "ciproxy-main-preview-renamed"},
+        "after_unknown": {"id": true, "name": true},
+        "before_sensitive": {},
+        "after_sensitive": {},
+        "replace_paths": [["workload_identity_pool_id"]]
+      },
+      "action_reason": "replace_because_cannot_update"
+    }
+  ]
+}

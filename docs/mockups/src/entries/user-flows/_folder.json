@@ -1,0 +1,21 @@
+{
+  "title": "User flows",
+  "order": [
+    "landing-to-sign-in",
+    "first-green-job",
+    "new-machine-gets-image",
+    "peak-overflow-to-boat",
+    "admin-skips-boat",
+    "admin-changes-boat-key",
+    "free-upgrades-to-team",
+    "member-asks-for-access",
+    "admin-gives-admin-role",
+    "admin-adds-organization",
+    "admin-chooses-workspace",
+    "owner-approves-later",
+    "free-keeps-organizations",
+    "free-adds-organization",
+    "admin-turns-on-organization",
+    "removed-organization-returns"
+  ]
+}

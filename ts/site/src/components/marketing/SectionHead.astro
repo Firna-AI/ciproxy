@@ -1,0 +1,41 @@
+---
+// The head of a marketing section: an eyebrow, the title, and a lead. A
+// title of several sentences starts each sentence on a line. The head of a
+// page has its title as the h1. A lead with a link comes in the lead slot.
+
+import "./marketing.css";
+
+interface Props {
+  eyebrow?: string;
+  title: string | readonly string[];
+  lead?: string;
+  page?: boolean;
+  center?: boolean;
+}
+
+const { eyebrow, title, lead, page = false, center = false } = Astro.props;
+const Title = page ? "h1" : "h2";
+const lines = typeof title === "string" ? [title] : title;
+const leadSlot = Astro.slots.has("lead");
+---
+
+<div class:list={["mk-head", { "is-center": center }]}>
+  {eyebrow && <p class="mk-eyebrow">{eyebrow}</p>}
+  <Title class:list={["mk-title", { "is-page": page }]}>
+    {lines.length === 1
+      ? lines[0]
+      : lines.map((line, index) => (
+          <span class="mk-title-line">
+            {index > 0 && " "}
+            {line}
+          </span>
+        ))}
+  </Title>
+  {leadSlot ? (
+    <p class="mk-lead">
+      <slot name="lead" />
+    </p>
+  ) : (
+    lead && <p class="mk-lead">{lead}</p>
+  )}
+</div>

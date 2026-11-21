@@ -1,0 +1,53 @@
+.waiting-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--c-ink2);
+}
+
+.connected-machine {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  background: var(--c-surface);
+}
+
+.connected-machine .icon-ok {
+  margin-top: 1px;
+}
+
+.connected-title {
+  font-weight: 500;
+}
+
+.install-note {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mockup-mobile .install-note {
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* The line of a connected machine that gets its first job image: a small
+   spinner beside the words, which wrap under one another. */
+
+.image-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--c-ink2);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.image-line > :first-child {
+  flex-shrink: 0;
+  margin-top: 1px;
+}

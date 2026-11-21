@@ -1,0 +1,10 @@
+{
+  "title": "Boat account",
+  "order": [
+    "not-connected",
+    "boat-rejected",
+    "change-key",
+    "disconnect",
+    "unavailable"
+  ]
+}

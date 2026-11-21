@@ -1,0 +1,278 @@
+[
+  {
+    "initial_state": {
+      "workspace_id": "bf8b61ab-9406-4c3c-a0fd-9a8deb009846",
+      "tier": "team",
+      "add_ons": {
+        "start_blocks": 0,
+        "machines": 0
+      },
+      "customer_id": "cus_VZOpu6OSs4ASgZ",
+      "subscription_id": "sub_1UYG2EAGa5h8DTS3MU9rRSjj",
+      "status": "active",
+      "free_started_at": "2026-11-05T02:04:17.935405+00:00",
+      "paid_period_start": "2026-11-05T02:04:14Z",
+      "paid_period_end": "2026-12-05T02:04:14Z",
+      "cancel_at": null,
+      "failed_at": null,
+      "failed_invoice_id": null,
+      "next_retry_at": null,
+      "ended_banner_until": null
+    },
+    "event": {
+      "id": "evt_1UYG6jAGa5h8DTS3yh7FgxeC",
+      "created": 1793844533,
+      "type": "customer.subscription.deleted",
+      "request": {
+        "id": null
+      },
+      "data": {
+        "object": {
+          "id": "sub_1UYG2EAGa5h8DTS3MU9rRSjj"
+        },
+        "previous_attributes": null
+      }
+    },
+    "source_snapshot": "sha256:5a869a3855250237534be4cacd74fc28b9b3a2884ce2247382ac943437b26c55",
+    "subscription": {
+      "id": "sub_1UYG2EAGa5h8DTS3MU9rRSjj",
+      "customer": "cus_VZOpu6OSs4ASgZ",
+      "metadata": {
+        "workspace_id": "bf8b61ab-9406-4c3c-a0fd-9a8deb009846"
+      },
+      "status": "canceled",
+      "items": {
+        "data": [
+          {
+            "id": "si_VZOpcPMzWeQAte",
+            "quantity": 1,
+            "current_period_start": 1796436254,
+            "current_period_end": 1799114654,
+            "price": {
+              "id": "price_1UYExUAGa5h8DTS3DByNjL2T",
+              "lookup_key": "ciproxy_team_monthly_usd"
+            }
+          }
+        ],
+        "has_more": false
+      },
+      "pending_update": null,
+      "latest_invoice": {
+        "id": "in_1UYG2dAGa5h8DTS3EJpOdX0b",
+        "created": 1796436254,
+        "status": "open",
+        "billing_reason": "subscription_cycle",
+        "next_payment_attempt": null,
+        "hosted_invoice_url": "https://stripe.invalid/invoices/in_1UYG2dAGa5h8DTS3EJpOdX0b",
+        "customer": "cus_VZOpu6OSs4ASgZ",
+        "parent": {
+          "subscription_details": {
+            "subscription": "sub_1UYG2EAGa5h8DTS3MU9rRSjj"
+          }
+        },
+        "attempt_count": 9,
+        "attempted": true,
+        "auto_advance": false,
+        "amount_due": 4900,
+        "amount_paid": 0,
+        "amount_remaining": 4900,
+        "collection_method": "charge_automatically"
+      },
+      "cancel_at_period_end": false,
+      "cancel_at": null,
+      "ended_at": 1797649666,
+      "cancellation_details": {
+        "comment": null,
+        "feedback": null,
+        "feedback_option": null,
+        "reason": "payment_failed"
+      },
+      "collection_method": "charge_automatically",
+      "pause_collection": null
+    }
+  },
+  {
+    "initial_state": {
+      "workspace_id": "3bb560c5-87b9-44ea-a77e-5ab801e15966",
+      "tier": "team",
+      "add_ons": {
+        "start_blocks": 0,
+        "machines": 0
+      },
+      "customer_id": "cus_VZOpDEgS3UD81t",
+      "subscription_id": "sub_1UYG2IAGa5h8DTS3RPn8NDQw",
+      "status": "active",
+      "free_started_at": "2026-11-05T02:04:21.909062+00:00",
+      "paid_period_start": "2026-11-05T02:04:14Z",
+      "paid_period_end": "2026-12-05T02:04:14Z",
+      "cancel_at": null,
+      "failed_at": null,
+      "failed_invoice_id": null,
+      "next_retry_at": null,
+      "ended_banner_until": null
+    },
+    "event": {
+      "id": "evt_1UYG6lAGa5h8DTS3CxWiaREz",
+      "created": 1793844535,
+      "type": "customer.subscription.deleted",
+      "request": {
+        "id": null
+      },
+      "data": {
+        "object": {
+          "id": "sub_1UYG2IAGa5h8DTS3RPn8NDQw"
+        },
+        "previous_attributes": null
+      }
+    },
+    "source_snapshot": "sha256:6dd575061c60ff9050cc988b770d967ba52a201329ef66c628fffff727567fe9",
+    "subscription": {
+      "id": "sub_1UYG2IAGa5h8DTS3RPn8NDQw",
+      "customer": "cus_VZOpDEgS3UD81t",
+      "metadata": {
+        "workspace_id": "3bb560c5-87b9-44ea-a77e-5ab801e15966"
+      },
+      "status": "canceled",
+      "items": {
+        "data": [
+          {
+            "id": "si_VZOpQ6kdAYKcEW",
+            "quantity": 1,
+            "current_period_start": 1796436254,
+            "current_period_end": 1799114654,
+            "price": {
+              "id": "price_1UYExUAGa5h8DTS3DByNjL2T",
+              "lookup_key": "ciproxy_team_monthly_usd"
+            }
+          }
+        ],
+        "has_more": false
+      },
+      "pending_update": null,
+      "latest_invoice": {
+        "id": "in_1UYG3EAGa5h8DTS3qIN1vzYw",
+        "created": 1796439859,
+        "status": "void",
+        "billing_reason": "subscription_update",
+        "next_payment_attempt": null,
+        "hosted_invoice_url": "https://stripe.invalid/invoices/in_1UYG3EAGa5h8DTS3qIN1vzYw",
+        "customer": "cus_VZOpDEgS3UD81t",
+        "parent": {
+          "subscription_details": {
+            "subscription": "sub_1UYG2IAGa5h8DTS3RPn8NDQw"
+          }
+        },
+        "attempt_count": 1,
+        "attempted": true,
+        "auto_advance": false,
+        "amount_due": 24967,
+        "amount_paid": 0,
+        "amount_remaining": 24967,
+        "collection_method": "charge_automatically"
+      },
+      "cancel_at_period_end": false,
+      "cancel_at": null,
+      "ended_at": 1797652908,
+      "cancellation_details": {
+        "comment": null,
+        "feedback": null,
+        "feedback_option": null,
+        "reason": "payment_failed"
+      },
+      "collection_method": "charge_automatically",
+      "pause_collection": null
+    }
+  },
+  {
+    "initial_state": {
+      "workspace_id": "4dde070d-de54-477f-bda9-edc6804c926a",
+      "tier": "team",
+      "add_ons": {
+        "start_blocks": 0,
+        "machines": 0
+      },
+      "customer_id": "cus_VZOqWgh6mqr6dh",
+      "subscription_id": "sub_1UYG2MAGa5h8DTS3lo4mfSMf",
+      "status": "active",
+      "free_started_at": "2026-11-05T02:04:25.560320+00:00",
+      "paid_period_start": "2026-11-05T02:04:14Z",
+      "paid_period_end": "2026-12-05T02:04:14Z",
+      "cancel_at": null,
+      "failed_at": null,
+      "failed_invoice_id": null,
+      "next_retry_at": null,
+      "ended_banner_until": null
+    },
+    "event": {
+      "id": "evt_1UYG6oAGa5h8DTS33CtC52Iz",
+      "created": 1793844538,
+      "type": "customer.subscription.deleted",
+      "request": {
+        "id": null
+      },
+      "data": {
+        "object": {
+          "id": "sub_1UYG2MAGa5h8DTS3lo4mfSMf"
+        },
+        "previous_attributes": null
+      }
+    },
+    "source_snapshot": "sha256:810213be1c67d2c5de1692a2fd0928700bb625f62af3a61b20d945fab332147a",
+    "subscription": {
+      "id": "sub_1UYG2MAGa5h8DTS3lo4mfSMf",
+      "customer": "cus_VZOqWgh6mqr6dh",
+      "metadata": {
+        "workspace_id": "4dde070d-de54-477f-bda9-edc6804c926a"
+      },
+      "status": "canceled",
+      "items": {
+        "data": [
+          {
+            "id": "si_VZOqf42bdojdf4",
+            "quantity": 1,
+            "current_period_start": 1796436254,
+            "current_period_end": 1799114654,
+            "price": {
+              "id": "price_1UYExUAGa5h8DTS3DByNjL2T",
+              "lookup_key": "ciproxy_team_monthly_usd"
+            }
+          }
+        ],
+        "has_more": false
+      },
+      "pending_update": null,
+      "latest_invoice": {
+        "id": "in_1UYG3IAGa5h8DTS3WoKT2GeW",
+        "created": 1796439859,
+        "status": "void",
+        "billing_reason": "subscription_update",
+        "next_payment_attempt": null,
+        "hosted_invoice_url": "https://stripe.invalid/invoices/in_1UYG3IAGa5h8DTS3WoKT2GeW",
+        "customer": "cus_VZOqWgh6mqr6dh",
+        "parent": {
+          "subscription_details": {
+            "subscription": "sub_1UYG2MAGa5h8DTS3lo4mfSMf"
+          }
+        },
+        "attempt_count": 1,
+        "attempted": true,
+        "auto_advance": false,
+        "amount_due": 24967,
+        "amount_paid": 0,
+        "amount_remaining": 24967,
+        "collection_method": "charge_automatically"
+      },
+      "cancel_at_period_end": false,
+      "cancel_at": null,
+      "ended_at": 1797652970,
+      "cancellation_details": {
+        "comment": null,
+        "feedback": null,
+        "feedback_option": null,
+        "reason": "payment_failed"
+      },
+      "collection_method": "charge_automatically",
+      "pause_collection": null
+    }
+  }
+]

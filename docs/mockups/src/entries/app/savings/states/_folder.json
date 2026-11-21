@@ -1,0 +1,4 @@
+{
+  "title": "States",
+  "order": ["missing-costs", "empty", "empty-range", "loading", "error"]
+}

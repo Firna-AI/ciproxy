@@ -1,0 +1,39 @@
+{
+  "name": "@ciproxy/tokens",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./firna": "./firna.ts",
+    "./fonts": "./fonts.ts",
+    "./font-assets": "./font-assets.ts",
+    "./css": "./css.ts"
+  },
+  "scripts": {
+    "check": "npm run lint && npm run typecheck && npm test",
+    "lint": "eslint . --max-warnings 0",
+    "typecheck": "tsc --project tsconfig.json",
+    "test": "node --test _tests_/*.test.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "peerDependencies": {
+    "@firna/ui": "^4.0.0"
+  },
+  "dependencies": {
+    "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource-variable/geist-mono": "^5.3.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "eslint": "^10.14.0",
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.1"
+  }
+}

@@ -1,0 +1,73 @@
+//! A private reflink root grows to the scheduled total without changing the base.
+
+use std::fs::{self, OpenOptions};
+use std::path::Path;
+use std::sync::Arc;
+
+use async_trait::async_trait;
+
+use crate::error::{Error, ErrorResultExt, Result};
+use crate::process::{Commands, arguments, reflink_copy};
+
+#[cfg_attr(test, unimock::unimock(api = RootFilesMock))]
+/// File operations used while preparing a disposable VM root.
+pub(crate) trait RootFiles: Send + Sync {
+    /// Read the verified base's logical length.
+    fn length(&self, path: &Path) -> Result<u64>;
+    /// Set the VM copy's logical length without allocating its sparse tail.
+    fn extend(&self, path: &Path, bytes: u64) -> Result<()>;
+}
+
+/// Filesystem operations on the image and its private copy.
+pub(crate) struct LinuxRootFiles;
+
+impl RootFiles for LinuxRootFiles {
+    fn length(&self, path: &Path) -> Result<u64> {
+        Ok(fs::metadata(path).context("read image disk size")?.len())
+    }
+
+    fn extend(&self, path: &Path, bytes: u64) -> Result<()> {
+        OpenOptions::new()
+            .write(true)
+            .open(path)
+            .context("open private VM root")?
+            .set_len(bytes)
+            .context("extend sparse VM root")
+    }
+}
+
+#[async_trait]
+/// Prepare the job root separately from any later sticky Docker attachment.
+pub(crate) trait RootDisk: Send + Sync {
+    /// Reflink the base and grow its copy to the reserved total logical length.
+    ///
+    /// Restore the file length after ext4 rounds to whole filesystem blocks.
+    async fn prepare(&self, image: &Path, copy: &Path, root_bytes: u64) -> Result<()>;
+}
+
+/// Mandatory reflink copying followed by offline ext4 growth on the VM copy.
+pub(crate) struct ReflinkRoot {
+    /// Reads the base length and extends only the disposable copy.
+    pub(crate) files: Arc<dyn RootFiles>,
+    /// Runs the host tools supplied by installation.
+    pub(crate) commands: Arc<dyn Commands>,
+}
+
+#[async_trait]
+impl RootDisk for ReflinkRoot {
+    async fn prepare(&self, image: &Path, copy: &Path, root_bytes: u64) -> Result<()> {
+        let image_bytes = self.files.length(image)?;
+        if root_bytes < image_bytes {
+            return Err(Error::Capacity);
+        }
+        reflink_copy(self.commands.as_ref(), image, copy).await?;
+        if root_bytes > image_bytes {
+            self.files.extend(copy, root_bytes)?;
+            self.commands
+                .run("resize2fs", &arguments(&[&copy.to_string_lossy()]), &[])
+                .await?;
+            self.files.extend(copy, root_bytes)?;
+        }
+        Ok(())
+    }
+}

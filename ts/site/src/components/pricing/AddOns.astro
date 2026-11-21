@@ -1,0 +1,42 @@
+---
+// The add-ons of the pricing page: more starts and more own machines by the
+// month, on the tiers that sell add-ons.
+
+import { formatCount, formatMoney } from "../../data/format.ts";
+import { addOnPrices, tiers } from "../../data/tiers.ts";
+import Section from "../marketing/Section.astro";
+import SectionHead from "../marketing/SectionHead.astro";
+import "./pricing.css";
+
+const addOns: readonly { price: number; title: string; text: string }[] = [
+  {
+    price: addOnPrices.startsPrice,
+    title: `${formatCount(addOnPrices.startsBlock)} more starts`,
+    text: "For each block, every month, on top of the starts of your plan.",
+  },
+  {
+    price: addOnPrices.machinePrice,
+    title: "One more own machine",
+    text: "For each machine above the machines of your plan, every month.",
+  },
+];
+---
+
+<Section flush>
+  <SectionHead
+    title="Add-ons"
+    lead={`On ${tiers.team.name} and ${tiers.business.name}, add starts and machines by the month. Set the quantities in the dashboard; ciproxy adds no charges by itself.`}
+  />
+  <div class="mk-cells mk-cells-2">
+    {addOns.map((addOn) => (
+      <div class="mk-cell addon">
+        <p class="addon-price">
+          <span class="addon-amount num">{formatMoney(addOn.price)}</span>
+          <span class="muted">a month</span>
+        </p>
+        <h3 class="addon-title">{addOn.title}</h3>
+        <p class="addon-text">{addOn.text}</p>
+      </div>
+    ))}
+  </div>
+</Section>

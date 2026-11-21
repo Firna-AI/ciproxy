@@ -1,0 +1,154 @@
+/* Desktop: a white sidebar beside a column with the top bar and the page. */
+
+.shell {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.side {
+  border-right: 1px solid var(--c-border);
+  background: var(--c-surface);
+}
+
+.side-inner {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100vh;
+  padding: 0 12px 12px;
+}
+
+.side-brand {
+  display: flex;
+  align-items: center;
+  height: 56px;
+  margin: 0 -12px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.side-nav {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.side-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--r-md);
+  color: var(--c-nav-label);
+  font-weight: 500;
+}
+
+.side-item svg {
+  flex-shrink: 0;
+  color: var(--c-nav-icon);
+}
+
+.side-item:hover {
+  background: var(--c-soft);
+  color: var(--c-ink);
+}
+
+.side-item.is-active {
+  background: var(--c-primary-soft);
+  color: var(--c-ink);
+}
+
+.side-item.is-active svg {
+  color: var(--c-ink);
+}
+
+.side-label {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.side-count {
+  color: var(--c-nav-label);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.side-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 10px;
+  border-top: 1px solid var(--c-border);
+}
+
+.shell-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* The top bar: the organization, its tier, and the page as breadcrumbs. */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  padding: 0 24px 0 16px;
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-surface);
+}
+
+.topbar-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.org-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 8px;
+}
+
+.org-name {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.org-chevron {
+  flex-shrink: 0;
+  color: var(--c-nav-icon);
+}
+
+.topbar-slash {
+  color: var(--c-border2);
+  font-size: 20px;
+  font-weight: 300;
+}
+
+.topbar-page {
+  padding: 0 8px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.shell-main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+  padding: 28px 40px 48px;
+}

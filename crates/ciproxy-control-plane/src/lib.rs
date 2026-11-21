@@ -1,0 +1,58 @@
+//! Composition and lifecycle of the hosted ciproxy HTTP service.
+
+#![warn(unreachable_pub)]
+
+pub mod accounting;
+mod actions;
+pub mod application;
+mod assignment;
+pub mod billing;
+pub mod boat_authority;
+pub mod boat_callback;
+mod boat_jobs;
+mod boat_retirement;
+mod boat_runtime;
+mod boat_snapshot;
+mod boat_start;
+mod cache_metadata;
+mod capacity;
+mod comparison_prices;
+pub mod composition;
+pub mod config;
+mod docker_budget;
+mod docker_delivery;
+pub mod error;
+mod events;
+pub mod hosted_events;
+pub mod http;
+mod image_delivery;
+pub mod image_release;
+pub mod image_signing;
+mod job_binding;
+mod lifecycle;
+mod lifecycle_completion;
+mod listeners;
+mod overflow_composition;
+mod own_start;
+pub mod pages;
+mod preparation;
+mod reconciliation;
+mod remote_results;
+mod remote_retirement;
+mod repositories;
+mod reservations;
+mod retirement;
+pub mod runtime;
+mod runtime_agent_event;
+mod runtime_entrypoints;
+mod runtime_inbox;
+mod runtime_payloads;
+mod runtime_reconciliation;
+mod runtime_tasks;
+mod slots;
+mod snapshot;
+mod startup_api;
+mod startup_billing;
+mod takeout;
+mod tasks;
+mod warm;

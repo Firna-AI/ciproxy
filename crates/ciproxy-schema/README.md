@@ -1,0 +1,221 @@
+# ciproxy-schema
+
+The PostgreSQL schema and migrations of the hosted ciproxy control plane.
+Store implementations depend on this crate.
+Service code uses ciproxy-store-interface instead.
+This crate has no open licence.
+
+## Responsibilities
+
+Own table definitions and schema history.
+Keep one Diesel schema module for each area.
+Keep database rows inside the store implementation.
+
+## What This Crate Does
+
+Embeds ordered forward and reverse SQL migrations.
+Defines workspaces as the customer tenant.
+Workspaces own labels, machines, tokens, settings, and Boat key versions.
+Each GitHub organization has at most one current workspace registration.
+Removed registrations keep their old workspace history during retention.
+It owns its installation, repository access, scale sets, runners, and jobs.
+Composite foreign keys enforce both ownership boundaries.
+One workspace machine can serve all organizations in that workspace.
+The machine area also stores the last report of each disk.
+The gateway report table retains the full latest protocol report as JSONB.
+Its connection identifier fences reports from replaced agent connections.
+Its required `received_at` holds the receipt time of that report.
+The `202611062200_inventory_receipts` migration gives older rows the Unix
+epoch, so an older report can never prove that a VM is gone.
+
+The schema stores token hashes and encrypted Boat keys.
+It stores job metadata and references to immutable runner placements.
+Cache measurements and restored content origins remain independent.
+The schema accepts measured GitHub-only fetches and zero-entry restores.
+It has no job-content, job-log, plaintext-token, or plaintext-key field.
+Metering tables hold trusted times and costs.
+Confirmed billing state supplies current billing-period boundaries.
+Anonymous aggregates hold daily VM-size totals and Boat costs.
+Anonymous timestamp counts preserve exact period starts.
+Job and runner accounting cursors cascade with their source records.
+Anonymous aggregates belong only to the workspace.
+They survive organization deletion until their own retention expires.
+
+Billing accounts keep confirmed typed state and durable command inputs.
+Their creation time supplies the initial Free period anchor.
+Each has a distinct negative advisory-lock key.
+Billing events keep committed receipt identifiers.
+Billing renewals retain invoice outcomes and verified automatic collection
+stops.
+One forward migration preserves legacy pending stops as eligible per-event
+decisions and retains the latest collection-change time.
+Their workspace ownership and subscription index keep queries scoped.
+The last organization removal keeps a durable cancellation request.
+The `202611082200_billing_quotes` migration adds paid quotes.
+Each row keeps one workspace quote as JSON, its expiry, and its command.
+Workspace deletion removes its rows.
+A quote holds Stripe object IDs and amounts, with no key or card data.
+The `202611082300_billing_payments` migration adds `billing_payments`.
+Each row keeps the payment journal of one paid move as JSON, keyed by its
+command, with a pending flag.
+A partial index on pending rows serves the recovery poll.
+Its workspace reference cascades on delete, so the workspace purge removes it.
+Quote pruning and command cleanup leave it.
+Dashboard tables own verified memberships, roles, and access requests.
+Workspace deletion cascades through its retained records after 30 days.
+
+The GitHub area adds visible repository snapshots and pending initial
+Admin delivery. UUID scale-set demand is separate from numeric Actions
+history. Each demand record keeps a monotonic assignment and phase, its
+trusted raw run facts, and durable notification revisions.
+The assignment order keeps nanoseconds independently of timestamp storage.
+The first trusted completion observation bounds retention when GitHub
+omitted its finish time. It does not replace that absent GitHub field.
+These records hold metadata only. They hold no runner registration secret.
+A forward M6 index supports scoped trusted run-facts lookup.
+Organization advisory leases need no persistent schema key rows.
+The lifecycle outbox stores ordered, immutable organization metadata.
+It survives organization/workspace purge until the consumer accepts it.
+It contains no key, token, JIT configuration, job content, or job log.
+Confirmed events are deleted instead of retained indefinitely.
+
+Overflow tables hold credential-free account observations and durable
+sandbox deliveries across every organization of a workspace.
+One pending connection grant per workspace holds a fresh operation identity
+and the intended key-version identity.
+It holds no plaintext key or ciphertext.
+Last-App removal deletes the grant, and successful activation consumes it.
+Each delivery holds a callback digest and temporary encrypted runner input.
+Provider identity, phase, start-price quote, and per-month runtime facts
+survive a control-plane restart.
+Unfinished deliveries keep their Boat key reference during rotation.
+The overflow advisory-key sequence has its own reserved range.
+Delivery metadata has no cascading organization reference, so retention
+cannot discard live cleanup authority when one organization leaves.
+
+The `202611070000_boat_runner_intents` migration adds Boat registration
+identities. Each row keeps the runner, delivery, organization, label, and
+scale-set IDs, with the sizes and the required root bytes. It keeps the
+GitHub runner ID after the registration. It holds no JIT configuration or
+callback token. Workspace deletion removes its rows.
+
+The dashboard area stores verified GitHub memberships, workspace roles,
+access requests, opaque session digests, and encrypted OAuth grants.
+A separate token-free continuation stores exact claim IDs under the existing
+browser session ID until its fixed expiry. It has no person reference.
+A person record stays only with a role or an open request. Intentional
+organization removal keeps a separate durable marker and no owner-removal
+retention deadline. Retired labels preserve history while active names
+remain unique.
+Scale-set bindings retain a separate remote cleanup confirmation. Label
+retirement and confirmed removal preserve the binding and its job references.
+
+Installation-link tables retain state digests, exact signed requesters, fresh
+user association, and eligible workspace offers without tokens or profiles.
+A separate pending-result table keeps each undelivered authorization result.
+Its rows hold only the claim ID, the exact requester GitHub ID, and a
+database-issued revision. They have no person, session, token, or grant
+reference. Deletion of a claim deletes its pending results.
+Independent activation rows preserve admission and billing/Admin holds through
+retained reinstall. Existing organization metadata is explicitly backfilled.
+A claim survives deletion of its chosen workspace without becoming a direct
+install. Old migration files remain unchanged.
+
+Own-machine command records retain delivery identity, exact slot indices,
+and byte-precise requested and actual VM dimensions.
+Their optional `confirmed_at` holds the time of the first agent or GitHub
+evidence of the runner.
+The same migration sets it to the migration time for acknowledged commands.
+Other older commands keep it empty.
+They contain no JIT configuration or runtime-token secret.
+Workspace execution leases have their own negative advisory-key range.
+The `202611180222_own_worker_job_binding` migration adds a nullable opaque
+Worker job ID to each command record. Existing records keep that ID unknown.
+
+The exact-resource migration keeps actual VM allocations in integer bytes.
+Its rollback works only when every value fits exactly in signed integer GB.
+It refuses an unsupported rollback before it changes tables or values.
+Keep the exact-resource schema when a released root needs fractional GB.
+
+## Quick Start
+
+Use the migration constant through Diesel's migration harness:
+
+```rust
+use ciproxy_schema::migrations::MIGRATIONS;
+use diesel::PgConnection;
+use diesel_migrations::MigrationHarness;
+
+fn migrate(
+    connection: &mut PgConnection,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    connection.run_pending_migrations(MIGRATIONS)?;
+    Ok(())
+}
+```
+
+The PostgreSQL store factory applies pending migrations when it connects.
+The factory serializes migration runs with a database session lock.
+
+Dashboard fact metadata remains nullable for legacy records. New organization
+registrations record their first database observation. Reinstall preserves it.
+Complete repository snapshots record their observation separately. Dashboard
+roles retain initial request organizations and current grant dates. Optional
+public names remain with the existing retained dashboard identity.
+
+Machine registration backfill uses the earliest retained machine credential's
+creation time in its workspace. The gateway saves that credential with the
+machine in the registration transaction. Revocation preserves its creation
+time. The migration preserves known registration times. Legacy machines
+without a retained machine credential keep an unknown registration time.
+Rollback preserves the repaired times because their source remains trusted.
+The next migration removes the unused stored metering-period table.
+Its rollback restores an empty table. Confirmed billing state remains intact.
+
+## Development
+
+Run commands from the repository root:
+
+```sh
+cargo build --package ciproxy-schema
+cargo fmt --all -- --check
+cargo clippy --package ciproxy-schema --all-targets -- -D warnings
+```
+
+The [store tests](../ciproxy-store-pg/README.md#development) use a real
+PostgreSQL database.
+New migration names use a full date, hour, and minute prefix.
+Each migration has an up.sql and a down.sql.
+
+### Key Code
+
+- [src/boat_runner_intents.rs](src/boat_runner_intents.rs) defines the Boat
+  registration identity table.
+- [src/dashboard.rs](src/dashboard.rs) defines dashboard authentication tables.
+- [src/installation_links.rs](src/installation_links.rs) defines installation
+  attempts, claims, offers, activation, and pending authorization results.
+- [src/own_runners.rs](src/own_runners.rs) defines execution command state.
+
+- [src/billing.rs](src/billing.rs) defines billing accounts, quotes,
+  payments, and event receipts.
+
+- [build.rs](build.rs) tracks migration directory changes for Cargo.
+- [src/migrations.rs](src/migrations.rs) exports the embedded migrations.
+- [migrations](migrations) holds the forward and reverse schema history.
+- [src/workspaces.rs](src/workspaces.rs) defines the shared customer tenant.
+- [src/organizations.rs](src/organizations.rs) defines GitHub installations.
+- [src/runners.rs](src/runners.rs) defines stored runner placements.
+- [src/github.rs](src/github.rs) defines repository snapshots and durable
+  UUID job notifications.
+- [src/metering.rs](src/metering.rs) defines histories and aggregates.
+- [src/overflow.rs](src/overflow.rs) defines durable sandbox execution state.
+
+### Related Docs
+
+- [Architecture](../../docs/architecture.md) gives the hosted boundaries.
+- [Security](../../docs/protocol/security.md) defines isolation and custody.
+- [Cache](../../docs/protocol/cache.md#cache-tiers) defines handling and counts.
+- [Workspaces](../../docs/protocol/workspaces.md) defines organization joins.
+- [Labels](../../docs/protocol/labels.md) defines labels.
+- [App removal](../../docs/protocol/app-removal.md) defines retention.
+- [Metering](../../docs/protocol/metering.md) defines counts and reports.

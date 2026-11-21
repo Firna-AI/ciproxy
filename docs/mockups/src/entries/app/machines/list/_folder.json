@@ -1,0 +1,10 @@
+{
+  "title": "List states",
+  "order": [
+    "empty",
+    "offline",
+    "over-limit",
+    "cache-unknown",
+    "no-cache-measured"
+  ]
+}

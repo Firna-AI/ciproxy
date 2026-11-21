@@ -1,0 +1,139 @@
+.settings-intro {
+  max-width: 640px;
+}
+
+.settings-form {
+  max-width: 560px;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.label-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 6px 0;
+}
+
+.label-cards {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.label-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--c-border);
+}
+
+.label-card:first-child {
+  border-top: 0;
+}
+
+.label-card-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.repo-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mockup-mobile .repo-list {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.repo-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--c-border2);
+  border-radius: var(--r-sm);
+  background: var(--c-surface);
+  color: var(--c-on-solid);
+  flex-shrink: 0;
+}
+
+.check.is-checked {
+  border-color: var(--c-primary);
+  background: var(--c-primary);
+}
+
+/* The actions of an organization row: its repositories and Take out. */
+.org-actions {
+  justify-content: flex-end;
+}
+
+.mockup-mobile .org-actions {
+  justify-content: flex-start;
+}
+
+/* An inactive organization: its status under its name, with the avatar at
+   the top, and the actions that clear its holds above the other actions. */
+.person-top {
+  align-items: flex-start;
+}
+
+.org-status {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.org-actions-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.mockup-mobile .org-actions-stack {
+  align-items: flex-start;
+}
+
+/* The spend of the month when ciproxy cannot read it from Boat. */
+.spend-missing {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.spend-missing .stack-tight {
+  flex: 1;
+  min-width: 0;
+}

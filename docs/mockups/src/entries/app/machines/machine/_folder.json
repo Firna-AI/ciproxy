@@ -1,0 +1,11 @@
+{
+  "order": [
+    "states",
+    "new-machine",
+    "changes",
+    "hardware",
+    "health",
+    "figures",
+    "clear-unknown"
+  ]
+}

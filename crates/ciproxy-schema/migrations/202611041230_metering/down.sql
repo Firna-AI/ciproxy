@@ -1,0 +1,14 @@
+DROP TABLE metering_boat_cursors;
+DROP TABLE metering_job_cursors;
+DROP TABLE metering_start_totals;
+DROP TABLE metering_daily_boat_costs;
+DROP TABLE metering_daily_sizes;
+DROP TABLE metering_periods;
+DROP TABLE metering_boat_costs;
+DROP TABLE metering_plan_costs;
+DROP TABLE metering_machine_costs;
+ALTER TABLE runners DROP CONSTRAINT runners_workspace_id_id_key;
+ALTER TABLE jobs DROP CONSTRAINT jobs_workspace_id_id_key;
+ALTER TABLE machines DROP COLUMN registered_at;
+ALTER TABLE workspaces DROP COLUMN metering_started_at;
+ALTER TABLE workspaces DROP COLUMN metering_retained_from;

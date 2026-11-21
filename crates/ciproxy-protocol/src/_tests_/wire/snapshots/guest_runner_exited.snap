@@ -1,0 +1,13 @@
+---
+source: crates/ciproxy-protocol/src/_tests_/wire/assertions.rs
+assertion_line: 20
+description: Tagged JSON for guest_runner_exited; all credentials are dummy test values.
+expression: message
+---
+{
+  "type": "runner_exited",
+  "runner_id": "runner-1",
+  "exit": {
+    "code": 0
+  }
+}

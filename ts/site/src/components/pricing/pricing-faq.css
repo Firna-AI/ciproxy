@@ -1,0 +1,62 @@
+/* The common questions of the pricing page (PricingFaq.astro): the head
+   beside the answers. A question that a link opens stays clear of the top
+   bar. */
+
+.faq {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
+  gap: 56px;
+  align-items: start;
+}
+
+.faq .mk-head {
+  margin-bottom: 0;
+}
+
+.faq-list {
+  margin: 0;
+}
+
+.faq-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px 0;
+  border-top: 1px solid var(--c-border);
+  scroll-margin-top: 80px;
+}
+
+.faq-item:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.faq-question {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.faq-answer {
+  margin: 0;
+  color: var(--c-ink2);
+  line-height: 22px;
+}
+
+@media (40rem <= width <= 960px) {
+  .faq {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+  }
+}
+
+@media (width < 40rem) {
+  .faq {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .faq .mk-head {
+    margin-bottom: 24px;
+  }
+}

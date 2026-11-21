@@ -1,0 +1,154 @@
+/* The machines table and list, the overflow row, and the slots of one
+   machine. A machine name is in the monospace face, with its size beside it
+   on a wide desktop and under it elsewhere. */
+
+.machine-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mockup-desktop .machine-name {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.machine-link {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+a.machine-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.slots-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.machine-legend {
+  padding: 10px 16px;
+  border-top: 1px solid var(--c-border);
+}
+
+.machine-cards {
+  display: flex;
+  flex-direction: column;
+}
+
+.machine-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--c-border);
+}
+
+.machine-cards > .machine-card:first-child {
+  border-top: 0;
+}
+
+.machine-cards .machine-legend {
+  padding: 10px 14px 12px;
+}
+
+/* The Overflow panel: a refresh warning, when one shows, above the row. */
+
+.overflow-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.overflow-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mockup-mobile .overflow-row {
+  flex-wrap: wrap;
+}
+
+.overflow-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.overflow-meter {
+  width: 260px;
+}
+
+.mockup-mobile .overflow-meter {
+  width: 100%;
+}
+
+/* The slots of one machine, each with its job. */
+
+.slot-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.slot-list-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--c-border);
+}
+
+.slot-list-row:first-child {
+  border-top: 0;
+}
+
+.slot-list-row .slot {
+  align-self: center;
+  flex-shrink: 0;
+}
+
+.slot-number {
+  min-width: 42px;
+}
+
+.slot-job {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 8px;
+  min-width: 0;
+}
+
+/* The note under the figures of Health or Cache. */
+.health-note,
+.cache-note {
+  margin-top: 10px;
+}
+
+.add-machine {
+  max-width: 720px;
+}
+
+/* A narrow desktop window stacks the parts of a cell. */
+
+@media (max-width: 960px) {
+  .mockup-desktop .machine-name,
+  .mockup-desktop .slots-cell {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .mockup-desktop .slots-cell {
+    gap: 6px;
+  }
+}

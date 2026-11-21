@@ -1,0 +1,4 @@
+{
+  "title": "Return from Stripe Checkout",
+  "order": ["confirming", "still-confirming", "confirmed", "cancelled"]
+}

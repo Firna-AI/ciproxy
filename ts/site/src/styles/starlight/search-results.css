@@ -1,0 +1,125 @@
+/* One heading collection supplies these rows, the count, and selection. */
+
+docs-search .ds-count {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 12px 16px 4px;
+  color: var(--c-muted);
+  font-size: 12px;
+  line-height: 16px;
+  overflow-wrap: anywhere;
+}
+
+docs-search [role="grid"] {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 8px 12px;
+}
+
+docs-search .ds-page {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+docs-search .ds-page-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  color: var(--c-ink);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+docs-search .ds-page-title .icon {
+  flex-shrink: 0;
+  color: var(--c-faint);
+}
+
+docs-search .ds-hit {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-left: 15px;
+  padding: 8px 32px 8px 14px;
+  border-radius: var(--r-md);
+  color: var(--c-ink);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+docs-search .ds-hit:hover {
+  background: var(--c-primary-soft);
+}
+
+docs-search .ds-hit-heading {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+docs-search .ds-hit-excerpt {
+  color: var(--c-muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+docs-search mark {
+  background: transparent;
+  color: var(--c-ink);
+  font-weight: 600;
+}
+
+docs-search .ds-enter {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  display: none;
+  color: var(--c-muted);
+  transform: translateY(-50%);
+}
+
+docs-search .ds-keys {
+  display: none;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 10px 16px;
+  border-top: 1px solid var(--c-border);
+  background: var(--c-bg);
+  color: var(--c-muted);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+docs-search .ds-keys kbd {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-sm);
+  background: var(--c-surface);
+}
+
+docs-search.has-keyboard-selection .ds-hit.is-selected {
+  background: var(--c-primary-soft);
+}
+
+@media (min-width: 40rem) {
+  docs-search .ds-keys {
+    display: flex;
+  }
+
+  docs-search .ds-hit.is-selected {
+    background: var(--c-primary-soft);
+  }
+
+  docs-search .ds-hit.is-selected .ds-enter {
+    display: block;
+  }
+}

@@ -1,0 +1,45 @@
+/* A status dot and its word (status.tsx), where a job runs, and tags. */
+
+.dot {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.dot-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--c-ink2);
+  white-space: nowrap;
+}
+
+.where {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--c-ink2);
+  white-space: nowrap;
+}
+
+.where-machine {
+  color: var(--c-ink);
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-sm);
+  color: var(--c-muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.tag-accent {
+  border-color: var(--c-ink);
+  background: var(--c-ink);
+  color: var(--c-on-solid);
+}

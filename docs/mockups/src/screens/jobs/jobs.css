@@ -1,0 +1,128 @@
+/* Job lists: one line per job on a wide desktop, the context under the name
+   in a narrow window, durations in the monospace face, and the dense mobile
+   list. */
+
+.job-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mockup-desktop .job-name {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.job-name-title {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+a.job-name-title:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.job-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.duration {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.more-row {
+  padding: 10px 16px;
+  border-top: 1px solid var(--c-border);
+}
+
+.mockup-mobile .more-row {
+  padding: 10px 14px;
+}
+
+/* The dense mobile list. */
+
+.job-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.job-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 12px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--c-border);
+}
+
+.job-row.is-finished {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.job-row:first-child {
+  border-top: 0;
+}
+
+.job-row > .dot {
+  margin-top: 6px;
+}
+
+.job-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.job-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 14px;
+}
+
+.job-row > .duration {
+  color: var(--c-ink2);
+  line-height: 20px;
+}
+
+/* History: the filters above the table. */
+
+.history-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.history-search {
+  flex: 1;
+  min-width: 220px;
+}
+
+/* A narrow desktop window puts the job context under its name, and the
+   history drops the clock time, so where each job ran stays whole. */
+
+@media (max-width: 960px) {
+  .mockup-desktop .job-name {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .mockup-desktop .job-context {
+    white-space: normal;
+  }
+
+  .mockup-desktop .dt .col-finished {
+    display: none;
+  }
+}

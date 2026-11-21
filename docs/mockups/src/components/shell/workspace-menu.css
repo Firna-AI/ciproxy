@@ -1,0 +1,78 @@
+/* The menu of the workspace switch (workspace-menu.tsx): a popover under the
+   workspace name of the top bar, with the workspaces and one action. */
+
+.workspace-switch {
+  position: relative;
+}
+
+.workspace-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  width: 288px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  background: var(--c-surface);
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--c-ink) 14%, transparent);
+}
+
+.workspace-menu-title {
+  padding: 12px 14px 4px;
+}
+
+.workspace-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+  padding: 4px 6px 6px;
+  list-style: none;
+}
+
+.workspace-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: var(--r-md);
+}
+
+.workspace-menu-item.is-current {
+  background: var(--c-soft);
+}
+
+.workspace-menu-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.workspace-menu-check {
+  flex-shrink: 0;
+  color: var(--c-ink);
+}
+
+.workspace-menu-foot {
+  padding: 6px;
+  border-top: 1px solid var(--c-border);
+}
+
+.workspace-menu-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: var(--r-md);
+  color: var(--c-nav-label);
+  font-weight: 500;
+}
+
+.workspace-menu-action svg {
+  color: var(--c-nav-icon);
+}

@@ -1,0 +1,18 @@
+---
+// The ordered list of a docs page as Starlight steps, on a rail. A page maps
+// its Markdown `ol` to this component with `export const components`, so its
+// source needs no component tag, which the Markdown check of the gate
+// refuses. MDX passes the list items as the default slot, and Steps needs
+// one `ol` around them.
+
+import { Steps } from "@astrojs/starlight/components";
+import type { HTMLAttributes } from "astro/types";
+
+type Props = HTMLAttributes<"ol">;
+---
+
+<Steps>
+  <ol {...Astro.props}>
+    <slot />
+  </ol>
+</Steps>

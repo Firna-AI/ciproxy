@@ -1,0 +1,36 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.17.1",
+  "resource_changes": [
+    {
+      "address": "terraform_data.example",
+      "mode": "managed",
+      "type": "terraform_data",
+      "name": "example",
+      "provider_name": "terraform.io/builtin/terraform",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {
+          "id": "5e014ad6-4642-537a-d9c2-4069911c7e68",
+          "input": "first",
+          "output": "first",
+          "store": null,
+          "triggers_replace": null
+        },
+        "after": {
+          "id": "5e014ad6-4642-537a-d9c2-4069911c7e68",
+          "input": "second",
+          "store": null,
+          "triggers_replace": null
+        },
+        "after_unknown": {
+          "output": true
+        },
+        "before_sensitive": {},
+        "after_sensitive": {}
+      }
+    }
+  ]
+}

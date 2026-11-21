@@ -1,0 +1,63 @@
+---
+// The footer of the marketing pages, after the footer mockup: the wordmark
+// with one line about the product, the columns of links, and the copyright.
+// A link to a docs page shows once its page exists, and a column without a
+// link does not show. The GitHub mark of the agent waits for the public
+// repository of the agent.
+
+import { docsLinks, type DocsLink } from "../../data/docs-links.ts";
+import { copyrightYear, signInUrl, sitePages } from "../../data/site.ts";
+import Brand from "../Brand.astro";
+import "./site-footer.css";
+
+type FooterColumn = { title: string; links: readonly DocsLink[] };
+
+const columns: readonly FooterColumn[] = [
+  {
+    title: "Product",
+    links: [
+      { label: "Pricing", href: sitePages.pricing },
+      { label: "Docs", href: sitePages.docs },
+      { label: "Sign in", href: signInUrl },
+    ],
+  },
+  { title: "Docs", links: await docsLinks(["quickstart", "labels"]) },
+  {
+    title: "Legal",
+    links: [
+      { label: "Terms", href: sitePages.terms },
+      { label: "Privacy policy", href: sitePages.privacy },
+    ],
+  },
+].filter((column) => column.links.length > 0);
+---
+
+<footer class="foot">
+  <div class="foot-top">
+    <div class="foot-brand">
+      <Brand />
+      <p class="small muted">GitHub Actions on your own machines.</p>
+    </div>
+    <nav class="foot-columns" aria-label="Footer">
+      {columns.map((column) => (
+        <div class="foot-column">
+          <p class="foot-title">{column.title}</p>
+          <ul class="foot-list">
+            {column.links.map((link) => (
+              <li>
+                <a href={link.href} class="foot-link">
+                  {link.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </nav>
+  </div>
+  <div class="foot-base">
+    <span class="caption">
+      © {copyrightYear} ciproxy. The agent is open source under Apache-2.0.
+    </span>
+  </div>
+</footer>

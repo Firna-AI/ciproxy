@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Repository gate
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: ciproxy
+          POSTGRES_PASSWORD: ciproxy
+          POSTGRES_DB: ciproxy_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ciproxy -d ciproxy_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://ciproxy:ciproxy@127.0.0.1:5432/ciproxy_test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Set up Rust
+        run: |
+          set -euo pipefail
+          rustup toolchain install
+          rustup default "$(rustup show active-toolchain | cut -d ' ' -f 1)"
+      - name: Cache Cargo builds
+        uses: Swatinem/rust-cache@v2
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ts/package-lock.json
+      - name: Install TypeScript packages
+        run: npm --prefix ts ci
+      - name: Run the complete gate
+        run: cargo xtask check --keep-going

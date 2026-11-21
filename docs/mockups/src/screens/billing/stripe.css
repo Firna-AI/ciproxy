@@ -1,0 +1,163 @@
+/* The Stripe Checkout page with the ciproxy branding: the Graphite colours,
+   the hairlines, and the black button. */
+
+.stripe {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-height: 100vh;
+  background: var(--c-surface);
+  color: var(--c-ink);
+}
+
+.stripe-mobile {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.stripe-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 56px 48px 32px 80px;
+  background: var(--c-bg);
+  border-right: 1px solid var(--c-border);
+}
+
+.stripe-mobile .stripe-summary {
+  padding: 24px 20px;
+  border-right: 0;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.stripe-merchant {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  font-weight: 600;
+}
+
+.stripe-muted {
+  color: var(--c-muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.stripe-amount {
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 40px;
+}
+
+.stripe-lines {
+  display: flex;
+  flex-direction: column;
+  margin-top: 24px;
+}
+
+.stripe-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--c-border);
+  font-weight: 500;
+}
+
+.stripe-sub {
+  display: block;
+  font-size: 12px;
+}
+
+.stripe-total {
+  font-weight: 600;
+}
+
+.stripe-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 440px;
+  padding: 56px 48px;
+}
+
+.stripe-mobile .stripe-form {
+  max-width: none;
+  padding: 24px 20px 32px;
+}
+
+.stripe-heading {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.stripe-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stripe-label {
+  color: var(--c-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.stripe-input {
+  display: block;
+  padding: 9px 12px;
+  border: 1px solid var(--c-border2);
+  border-radius: var(--r-md);
+  box-shadow: 0 1px 1px color-mix(in srgb, var(--c-ink) 4%, transparent);
+}
+
+.stripe-input.is-empty {
+  color: var(--c-faint);
+}
+
+.stripe-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.stripe-card > .stripe-input {
+  border-radius: var(--r-md) var(--r-md) 0 0;
+}
+
+.stripe-card-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.stripe-card-row .stripe-input {
+  margin-top: -1px;
+  border-radius: 0 0 0 var(--r-md);
+}
+
+.stripe-card-row .stripe-input + .stripe-input {
+  margin-left: -1px;
+  border-radius: 0 0 var(--r-md) 0;
+}
+
+.stripe-foot {
+  color: var(--c-faint);
+  font-size: 12px;
+  text-align: center;
+}
+
+@media (max-width: 860px) {
+  .stripe {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stripe-summary {
+    padding: 32px 32px 24px;
+    border-right: 0;
+    border-bottom: 1px solid var(--c-border);
+  }
+
+  .stripe-form {
+    max-width: none;
+    padding: 24px 32px 40px;
+  }
+}

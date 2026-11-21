@@ -1,0 +1,150 @@
+{
+  "source": "origin/tmp/billing-live-fixtures@30dfcf4 replay-finding-2.json",
+  "initial_state": {
+    "workspace_id": "dbbe2187-c518-4e17-b920-452a657202f0",
+    "tier": "team",
+    "add_ons": {
+      "start_blocks": 0,
+      "machines": 0
+    },
+    "customer_id": "cus_VZOzT3QYL47GCn",
+    "subscription_id": "sub_1UYGBaAGa5h8DTS3gWIV6qn7",
+    "status": "active",
+    "free_started_at": "2026-11-05T02:13:58.044684+00:00",
+    "paid_period_start": "2026-11-05T02:13:50Z",
+    "paid_period_end": "2026-12-05T02:13:50Z",
+    "cancel_at": null,
+    "failed_at": null,
+    "failed_invoice_id": null,
+    "next_retry_at": null,
+    "ended_banner_until": null
+  },
+  "events": [
+    {
+      "id": "evt_1UYGDlAGa5h8DTS3HBdp1twW",
+      "created": 1793844969,
+      "type": "invoice.payment_failed",
+      "request": {
+        "id": null
+      },
+      "data": {
+        "object": {
+          "id": "in_1UYGBnAGa5h8DTS3nWEvyYLM",
+          "created": 1796436830,
+          "status": "open",
+          "billing_reason": "subscription_cycle",
+          "next_payment_attempt": 1797653521,
+          "hosted_invoice_url": "https://stripe.invalid/invoices/in_1UYGBnAGa5h8DTS3nWEvyYLM",
+          "customer": "cus_VZOzT3QYL47GCn",
+          "parent": {
+            "subscription_details": {
+              "subscription": "sub_1UYGBaAGa5h8DTS3gWIV6qn7"
+            }
+          },
+          "attempt_count": 8,
+          "attempted": true,
+          "auto_advance": true,
+          "amount_due": 4900,
+          "amount_paid": 0,
+          "amount_remaining": 4900,
+          "collection_method": "charge_automatically"
+        },
+        "previous_attributes": null
+      }
+    },
+    {
+      "id": "evt_1UYGEFAGa5h8DTS3EFjuUW2i",
+      "created": 1793844998,
+      "type": "invoice.payment_failed",
+      "request": {
+        "id": null
+      },
+      "data": {
+        "object": {
+          "id": "in_1UYGBnAGa5h8DTS3nWEvyYLM",
+          "created": 1796436830,
+          "status": "open",
+          "billing_reason": "subscription_cycle",
+          "next_payment_attempt": null,
+          "hosted_invoice_url": "https://stripe.invalid/invoices/in_1UYGBnAGa5h8DTS3nWEvyYLM",
+          "customer": "cus_VZOzT3QYL47GCn",
+          "parent": {
+            "subscription_details": {
+              "subscription": "sub_1UYGBaAGa5h8DTS3gWIV6qn7"
+            }
+          },
+          "attempt_count": 9,
+          "attempted": true,
+          "auto_advance": true,
+          "amount_due": 4900,
+          "amount_paid": 0,
+          "amount_remaining": 4900,
+          "collection_method": "charge_automatically"
+        },
+        "previous_attributes": null
+      }
+    },
+    {
+      "id": "evt_1UYGEFAGa5h8DTS3z2H40Eaa",
+      "created": 1793844998,
+      "type": "invoice.updated",
+      "request": {
+        "id": null
+      },
+      "data": {
+        "object": {
+          "id": "in_1UYGBnAGa5h8DTS3nWEvyYLM",
+          "created": 1796436830,
+          "status": "open",
+          "billing_reason": "subscription_cycle",
+          "next_payment_attempt": null,
+          "hosted_invoice_url": "https://stripe.invalid/invoices/in_1UYGBnAGa5h8DTS3nWEvyYLM",
+          "customer": "cus_VZOzT3QYL47GCn",
+          "parent": {
+            "subscription_details": {
+              "subscription": "sub_1UYGBaAGa5h8DTS3gWIV6qn7"
+            }
+          },
+          "attempt_count": 9,
+          "attempted": true,
+          "auto_advance": false,
+          "amount_due": 4900,
+          "amount_paid": 0,
+          "amount_remaining": 4900,
+          "collection_method": "charge_automatically"
+        },
+        "previous_attributes": {
+          "auto_advance": true
+        }
+      }
+    },
+    {
+      "id": "evt_1UYGEGAGa5h8DTS3xjkuYxBQ",
+      "created": 1793844999,
+      "type": "customer.subscription.pending_update_expired",
+      "request": {
+        "id": "req_SCrJcMIrrbq8d1"
+      },
+      "data": {
+        "object": {
+          "id": "sub_1UYGBaAGa5h8DTS3gWIV6qn7"
+        },
+        "previous_attributes": null
+      }
+    },
+    {
+      "id": "evt_1UYGEQAGa5h8DTS3kp47fyEi",
+      "created": 1793845010,
+      "type": "customer.subscription.deleted",
+      "request": {
+        "id": "req_2lEBeD2Gnfcex4"
+      },
+      "data": {
+        "object": {
+          "id": "sub_1UYGBaAGa5h8DTS3gWIV6qn7"
+        },
+        "previous_attributes": null
+      }
+    }
+  ]
+}

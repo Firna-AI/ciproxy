@@ -1,0 +1,194 @@
+/* The legal pages (LegalPage.astro): the head with the effective date and
+   the switch between the terms and the privacy policy, then "On this page"
+   beside the article on a wide window. A heading that a link opens stays
+   clear of the top bar. */
+
+.mk-section.legal-top {
+  padding-bottom: 48px;
+}
+
+.legal-top .mk-head {
+  margin-bottom: 28px;
+}
+
+.legal-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.legal-switch-link {
+  padding: 6px 12px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  color: var(--c-ink2);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.legal-switch-link.is-active {
+  border-color: var(--c-ink);
+  color: var(--c-ink);
+}
+
+/* The draft note: a tinted box with a full hairline border, as a caution
+   of the docs, and never a left accent edge. The site README says when it
+   goes. */
+
+.legal-draft {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: fit-content;
+  margin-top: 24px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--c-amber) 30%, var(--c-amber-soft));
+  border-radius: var(--r-lg);
+  background: var(--c-amber-soft);
+  color: var(--c-ink2);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.legal-draft-title {
+  color: var(--c-ink);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.mk-section.legal-body {
+  padding-top: 56px;
+}
+
+.legal-grid {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 64px;
+  align-items: start;
+}
+
+.legal-toc {
+  position: sticky;
+  top: 88px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.legal-toc-title {
+  color: var(--c-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.legal-toc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legal-toc-link {
+  color: var(--c-muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.legal-toc-link:hover {
+  color: var(--c-ink);
+}
+
+.legal-article {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  max-width: 680px;
+}
+
+.legal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.legal-h2 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 28px;
+  scroll-margin-top: 88px;
+}
+
+/* A long word, such as a web address, wraps rather than widen a phone
+   page. */
+
+.legal-section p {
+  color: var(--c-ink2);
+  font-size: 15px;
+  line-height: 1.7;
+  overflow-wrap: break-word;
+}
+
+.legal-table-frame {
+  overflow: hidden;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-xl);
+}
+
+.legal-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.legal-table th {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-bg);
+  color: var(--c-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: left;
+}
+
+.legal-table td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--c-border);
+  color: var(--c-ink);
+  vertical-align: top;
+}
+
+.legal-table tr:last-child td {
+  border-bottom: 0;
+}
+
+/* A narrow window drops "On this page", as the docs move it. */
+
+@media (width <= 880px) {
+  .legal-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .legal-toc {
+    display: none;
+  }
+}
+
+@media (width < 40rem) {
+  .mk-section.legal-top {
+    padding-bottom: 36px;
+  }
+
+  .mk-section.legal-body {
+    padding-top: 40px;
+  }
+
+  .legal-table th,
+  .legal-table td {
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+}

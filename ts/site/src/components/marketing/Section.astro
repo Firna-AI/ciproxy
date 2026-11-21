@@ -1,0 +1,18 @@
+---
+// A section of a marketing page, between hairlines. A flush section runs its
+// cells to the rails, and only its head and its foot keep the gutter.
+
+import "./marketing.css";
+
+interface Props {
+  id?: string;
+  flush?: boolean;
+  class?: string;
+}
+
+const { id, flush = false, class: className } = Astro.props;
+---
+
+<section id={id} class:list={["mk-section", { "is-flush": flush }, className]}>
+  <slot />
+</section>

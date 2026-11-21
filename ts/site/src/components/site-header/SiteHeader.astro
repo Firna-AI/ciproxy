@@ -1,0 +1,109 @@
+---
+// The top bar of the public site, after the site header of the mockups.
+// Marketing pages: the wordmark, Pricing and Docs, then the Sign in link and
+// the Start free button. On a phone, the menu button opens the links that do
+// not fit. Docs: the wordmark with "Docs", the search box that the Starlight
+// header passes in, and the same actions. Every button that opens sign-in
+// says Start free; the link serves people who already use ciproxy.
+
+import { signInUrl, sitePages, type SiteSection } from "../../data/site.ts";
+import Brand from "../Brand.astro";
+import Icon from "../icon/Icon.astro";
+import LinkButton from "../LinkButton.astro";
+import "./site-header.css";
+
+interface Props {
+  section: SiteSection;
+}
+
+/** The main links of the marketing pages. */
+const mainLinks = [
+  { label: "Pricing", href: sitePages.pricing, section: "pricing" },
+  { label: "Docs", href: sitePages.docs, section: "docs" },
+] as const;
+
+const { section } = Astro.props;
+const docs = section === "docs";
+// Starlight draws the fixed bar of a docs page, so the docs form is only the
+// content of that bar.
+const Bar = docs ? "div" : "header";
+---
+
+<Bar class:list={["site-header", { "is-docs": docs }]}>
+  <div class="site-header-inner">
+    <div class="site-title">
+      <a href={sitePages.home} class="site-home">
+        <Brand />
+      </a>
+      {docs && (
+        <>
+          <span class="site-slash" aria-hidden="true">
+            /
+          </span>
+          <a href={sitePages.docs} class="site-section">
+            Docs
+          </a>
+        </>
+      )}
+    </div>
+    {docs ? (
+      <div class="site-header-search">
+        <slot name="search" />
+      </div>
+    ) : (
+      <nav class="site-nav" aria-label="Main">
+        {mainLinks.map((link) => (
+          <a
+            href={link.href}
+            class:list={[
+              "site-nav-link",
+              { "is-active": link.section === section },
+            ]}
+            aria-current={link.section === section ? "page" : undefined}
+          >
+            {link.label}
+          </a>
+        ))}
+      </nav>
+    )}
+    <div class="site-actions">
+      {docs && (
+        <a href={sitePages.pricing} class="site-nav-link site-docs-pricing">
+          Pricing
+        </a>
+      )}
+      <a href={signInUrl} class="site-nav-link site-sign-in">
+        Sign in
+      </a>
+      <LinkButton href={signInUrl} tone="primary" size="sm" class="site-start">
+        Start free
+      </LinkButton>
+      {!docs && (
+        <button
+          type="button"
+          class="site-menu-button"
+          popovertarget="site-menu"
+          aria-label="Menu"
+        >
+          <Icon name="menu" size={16} />
+        </button>
+      )}
+    </div>
+  </div>
+  {!docs && (
+    <nav id="site-menu" class="site-menu" popover aria-label="Menu">
+      {mainLinks.map((link) => (
+        <a
+          href={link.href}
+          class="site-menu-link"
+          aria-current={link.section === section ? "page" : undefined}
+        >
+          {link.label}
+        </a>
+      ))}
+      <a href={signInUrl} class="site-menu-link">
+        Sign in
+      </a>
+    </nav>
+  )}
+</Bar>

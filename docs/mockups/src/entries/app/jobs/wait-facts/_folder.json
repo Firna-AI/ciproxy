@@ -1,0 +1,10 @@
+{
+  "title": "Wait reasons from current facts",
+  "order": [
+    "unknown-fit",
+    "largest-boat",
+    "boat-key",
+    "boat-billing",
+    "overflow-off"
+  ]
+}

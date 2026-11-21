@@ -1,0 +1,103 @@
+---
+import Icon from "../icon/Icon.astro";
+---
+
+<docs-search>
+  <button
+    type="button"
+    data-open-modal
+    disabled
+    aria-label="Search docs"
+    aria-haspopup="dialog"
+    aria-expanded="false"
+    aria-controls="docs-search-dialog"
+    aria-keyshortcuts="Control+K Meta+K"
+  >
+    <Icon name="search" size={15} />
+    <span class="search-label" aria-hidden="true">
+      Search docs
+    </span>
+    <kbd class="search-shortcut" aria-hidden="true">
+      Ctrl K
+    </kbd>
+  </button>
+  <dialog id="docs-search-dialog" aria-label="Search docs">
+    <div class="ds-field">
+      <Icon name="search" size={16} class="ds-search-icon" />
+      <input
+        class="ds-input"
+        type="text"
+        role="combobox"
+        aria-label="Search docs"
+        aria-autocomplete="list"
+        aria-haspopup="grid"
+        aria-controls="docs-search-results"
+        aria-expanded="false"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        placeholder="Search docs"
+      />
+      <button type="button" class="ds-clear" aria-label="Clear search" hidden>
+        <Icon name="x" size={14} />
+      </button>
+      <kbd class="ds-escape" aria-hidden="true">
+        esc
+      </kbd>
+      <button type="button" class="ds-cancel" data-close-modal>
+        Cancel
+      </button>
+    </div>
+    <p class="ds-count" role="status" aria-live="polite" aria-atomic="true">
+      Search the docs.
+    </p>
+    <div class="ds-body">
+      <div
+        id="docs-search-results"
+        role="grid"
+        aria-label="Search results"
+        hidden
+      />
+    </div>
+    <p class="ds-keys" hidden>
+      <kbd role="img" aria-label="Up">
+        <Icon name="arrow-up" size={11} />
+      </kbd>
+      <kbd role="img" aria-label="Down">
+        <Icon name="arrow-down" size={11} />
+      </kbd>
+      <span>to move,</span>
+      <kbd role="img" aria-label="Enter">
+        <Icon name="corner-down-left" size={11} />
+      </kbd>
+      <span>to open</span>
+    </p>
+  </dialog>
+  <template data-page>
+    <div role="rowgroup" class="ds-page">
+      <div role="row">
+        <span role="columnheader" class="ds-page-title">
+          <Icon name="file-text" size={14} />
+          <span data-title />
+        </span>
+      </div>
+    </div>
+  </template>
+  <template data-hit>
+    <div role="row">
+      <div role="gridcell">
+        <a class="ds-hit">
+          <span class="ds-hit-heading" />
+          <span class="ds-hit-excerpt" />
+          <Icon name="corner-down-left" size={14} class="ds-enter" />
+        </a>
+      </div>
+    </div>
+  </template>
+</docs-search>
+
+<script>
+  import { DocsSearch } from "./search/dialog.ts";
+
+  customElements.define("docs-search", DocsSearch);
+</script>

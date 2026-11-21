@@ -1,0 +1,101 @@
+---
+title: Labels and VM sizes
+description: The label in runs-on picks the size of the VM that runs the job.
+---
+
+import { Badge } from "@astrojs/starlight/components";
+import { jsx } from "astro/jsx-runtime";
+
+import {
+  ax42,
+  defaultJobDiskGb,
+  imageBudgetGb,
+  machineSlots,
+} from "../../../../data/hardware.ts";
+
+Each job starts in a fresh VM of the size of its label: on your machines
+first, and on Boat when they are busy.
+
+## Default labels
+
+Every workspace starts with these labels. `ciproxy` is the default label.
+
+| Label                                       | Size                             | Slots |
+| ------------------------------------------- | -------------------------------- | ----- |
+| `ciproxy` {jsx(Badge, { text: "Default" })} | 2 vCPU · 8 GB · 20 GB free disk  | 1     |
+| `ciproxy-4vcpu`                             | 4 vCPU · 16 GB · 20 GB free disk | 2     |
+| `ciproxy-8vcpu`                             | 8 vCPU · 32 GB · 60 GB free disk | 4     |
+
+Like the disk of a GitHub-hosted runner, the disk of a label is the free
+disk that each job gets. Its VM also holds the image: with the current
+image, a job of `ciproxy` has a VM disk of about {defaultJobDiskGb} GB.
+
+```yaml title=".github/workflows/e2e.yml"
+jobs:
+  e2e:
+    runs-on: ciproxy-8vcpu
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm run test:e2e
+```
+
+A label sets the size of the VM, not its software. Every label starts from
+the same image. To use other software, see
+[Run steps in another image][container].
+
+## Slots
+
+Each machine keeps a quarter of its threads and its memory for the host. It
+splits the rest into slots of 2 vCPU and 8 GB. A job takes as many slots as
+its size needs, so a job of `ciproxy-8vcpu` takes 4 slots.
+
+A running job also holds its VM disk. Each machine keeps {imageBudgetGb} GB
+for the VM images, and a quarter of the rest for the host. The machine cache
+uses the disk that the jobs leave.
+
+The agent reports the slots of a machine when it connects. A Hetzner AX42
+with {ax42.threads} threads and {ax42.memoryGb} GB has {machineSlots(ax42)}
+slots.
+
+## Custom labels
+
+Add a label with its own size in **Settings**, under **Labels**. A label has
+a name, vCPU, memory in GB, and free disk in GB, with at least 1 GB of free
+disk. Sizes use decimal GB, so 1 GB is 1,000,000,000 bytes.
+
+Each label runs on your machines, on Boat, or on both, with the switches
+**Your machines** and **Boat**. A label that allows both starts its jobs on
+your machines first.
+
+- A label name follows the rules of GitHub for runner labels. ciproxy checks
+  the name with GitHub when you save the label.
+- A label keeps its name. To rename a label, add a new one, move your
+  workflows to it, and delete the old one.
+- You can delete any label except `ciproxy`. The waiting jobs of a deleted
+  label stay queued in GitHub, and its running jobs finish.
+- After you change the size of a label, each job that a runner takes gets
+  the new size. A job that runs during the change keeps its VM.
+- The dialog of a label says how many jobs of its size fit on each of your
+  machines at a time.
+
+:::note[Sizes larger than your machines]
+A job whose size fits none of your machines runs on Boat only. When no Boat
+size fits either, the label setting **When nothing fits** decides: its jobs
+wait, or run on the largest Boat size.
+:::
+
+**Wait** is the default. **Run on the largest Boat size** can give a job
+less vCPU, memory, or free disk than its label, but its disk always holds
+the image.
+
+## Where a job runs
+
+A job that one of your machines can run waits there for room, up to the
+overflow wait. Then it starts on Boat, when Boat can take it. The wait is
+30 seconds by default. Set it in **Settings**, under **Overflow**: at once,
+15 seconds, 30 seconds, 1 minute, or 2 minutes.
+
+At the Boat spend limit, jobs run on your machines only, and wait there for
+room.
+
+[container]: /docs/guides/move-your-workflows/#run-steps-in-another-image

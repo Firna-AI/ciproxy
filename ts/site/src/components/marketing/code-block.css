@@ -1,0 +1,84 @@
+/* A code block (CodeBlock.astro) on the page grey, with a hairline and a
+   light head. A diff line takes a faint status tint across its full width.
+   Each line is a block, so the space between the lines in the markup does
+   not show. */
+
+.code-block {
+  overflow: hidden;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  background: var(--c-bg);
+  text-align: left;
+}
+
+.code-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 39px;
+  padding: 4px 6px 4px 12px;
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-surface);
+}
+
+.code-label {
+  color: var(--c-muted);
+  font-size: 12px;
+}
+
+/* The Copy button: the small secondary button of the mockups. */
+
+.code-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--c-control-border);
+  border-radius: var(--r-md);
+  background: var(--c-surface);
+  color: var(--c-ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 15px;
+  cursor: pointer;
+}
+
+.code-copy[hidden] {
+  display: none;
+}
+
+.code-copy:hover {
+  background: var(--c-soft);
+}
+
+.code-copy:active {
+  background: var(--c-bg2);
+}
+
+.code-lines {
+  margin: 0;
+  padding: 10px 0;
+  color: var(--c-ink);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 20px;
+  white-space: normal;
+}
+
+.code-lines > span {
+  display: block;
+  padding: 0 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.code-add {
+  background: color-mix(in srgb, var(--c-status-ok) 12%, transparent);
+}
+
+.code-remove {
+  background: color-mix(in srgb, var(--c-status-err) 10%, transparent);
+}

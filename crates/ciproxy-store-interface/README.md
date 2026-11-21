@@ -1,0 +1,299 @@
+# ciproxy-store-interface
+
+Typed persistence traits for the hosted ciproxy control plane.
+Services depend on these traits through dyn.
+The PostgreSQL adapter implements them in ciproxy-store-pg.
+This crate has no open licence.
+
+## Responsibilities
+
+Own the store API, data types, and typed error contract.
+Keep database rows and Diesel out of service code.
+Keep persistence separate from scheduling and external services.
+
+## What This Crate Does
+
+Defines object-safe traits for workspace data and each store area.
+A workspace owns shared machines, labels, credentials, settings, and Boat.
+Each GitHub organization keeps its installation and repository access.
+Scale sets serve one organization and one shared workspace label.
+Runners and jobs keep their organization identity.
+Resource queries require the workspace identifier.
+Organization-specific queries also require the organization identifier.
+Token authentication finds workspace authority from a precomputed hash.
+
+TokenHash and EncryptedBoatKey accept bytes from trusted callers.
+Their Debug output hides the bytes.
+Account metadata excludes encrypted keys.
+Token metadata excludes hashes.
+KMS encryption and token hashing belong to callers.
+
+The store preserves runner placements, retained requests, and actual VM sizes
+for job history. Dashboard jobs use current requests only while queued.
+Executed jobs keep an optional whole-GB request separate from actual allocation.
+Missing retained requests stay unknown.
+It accepts optional ref metadata without choosing its provenance.
+The later job-facts service must supply trusted GitHub metadata.
+Job cache metadata separates content origin from machine-handled measurements.
+One optional count bundle holds restored entries and bytes together.
+Measured GitHub-only fetches and zero-entry restores keep that bundle.
+Direct GitHub use and fallback have no measured count bundle.
+Organization removal keeps shared resources while another App remains.
+Removal of the last App revokes machine and install credentials.
+Live sandbox-end tokens and retired Boat keys stay available for cleanup.
+Sandbox-end tokens stop working when their runner ends.
+Organization and empty-workspace records have 30-day deletion deadlines.
+Reinstall clears the workspace deadline and preserves its retained data.
+The purge query deletes one expired workspace and its owned records.
+GitHub-ID lookup returns current and retained registrations.
+The caller selects a workspace from the install intent.
+A new registration in another workspace leaves old history in place.
+Removal and retention queries change stored records only.
+They do not stop machines, call GitHub, or delete Boat sandboxes.
+
+The GitHub area stores visible repository metadata and default branches.
+It atomically registers a new workspace with labels and a pending first
+Admin assignment. Its demand records use the UUID from scale-set jobId.
+They keep the existing numeric Actions history identity separate.
+An atomic job update also saves a pending notification revision.
+Replay preserves terminal state and exact nanosecond assignment order.
+Confirmation of an older revision cannot consume a newer update.
+The demand retention query removes completed records after 90 days,
+including pending deliveries. When GitHub omitted its completion time,
+the first caller-supplied completion observation starts that period.
+Replay preserves that observation without fabricating a GitHub time.
+Trusted run facts preserve raw API fields. A branch name is not a full ref.
+GitHub lifecycle transitions save verified identity, App state, prepared
+resources, and immutable notification snapshots together. Only completed
+remote preparation permits activation. Failed delivery stays pending in
+sequence order even after organization rows change or a workspace purges.
+Consumer acceptance permits deletion. A crash before confirmation requires
+idempotent delivery. A pending-organization scan supports restart recovery.
+Each `Removed` event keeps its required `RemovalCause`, `Owner` or
+`WorkspaceTakeout`, with no default.
+Verified installation snapshots save login and App state together.
+The scoped write returns the saved record. It cannot change another
+workspace or account, replace a newer installation, or revive removal.
+Known-run facts queries require workspace, organization, and run identity.
+Remote scale-set upserts preserve the internal row and lock key.
+Organization mutation leases wait on dedicated connections. They retain
+all GitHub identity bits in the separate two-key advisory namespace.
+
+MeteringStore reads coherent workspace facts across all organizations.
+Workspace creation and machine registration save their trusted times.
+MeteringStore stores machine, plan, and Boat cost histories.
+BillingState supplies the current Free or Stripe billing period.
+Anonymous daily aggregates keep actual VM sizes and Boat costs.
+Anonymous timestamp counts preserve exact period boundaries.
+Job and runner cursors support atomic signed aggregate corrections.
+BoatAccounting holds source costs and cursors from one coherent snapshot.
+SavingsSnapshot holds registrations, range totals, and monthly costs
+from one coherent snapshot.
+Its registrations include removed machines for historical cost dates.
+The savings read excludes jobs, start counts, and accounting cursors.
+Deleting a job or runner deletes its cursor and preserves its aggregates.
+The metering service supplies all calculation rules and retention dates.
+Boat accounting returns known price intervals and bounded measured prefixes.
+It remains available when another overflow cost lacks a fee or final reading.
+The metering refresh can then complete its retention pass.
+Savings snapshots return `AccountingIncomplete` for gaps in their requested
+date range. They never publish a missing cost as zero or as outage time.
+
+The [billing store guide](src/billing/README.md) describes BillingStore and
+BillingSession: state, commands, quotes, payments, renewals, receipts, and
+cancellations.
+
+The [overflow store guide](src/overflow/README.md) describes OverflowStore:
+Boat sessions, connection grants, deliveries, dispatch, callbacks, and costs.
+
+BoatRuntimeStore keeps credential-free Boat registration identities.
+The runtime saves each identity before the GitHub JIT request.
+A save requires current organization, label, scale-set, and Boat authority.
+Its durable snapshot read needs no provider access or overflow session.
+
+The gateway queries atomically register a machine and its hashed credential.
+GatewayStore reuses TokenStore authority lookup to derive the workspace from
+the install hash. Registration rechecks the token under its transaction
+locks before it inserts the machine.
+They retain the full typed protocol report with a connection identifier.
+A `MachineSnapshot` returns it as a `ReceivedReport` with its receipt time.
+Later lifecycle contact does not change that time.
+`MachineSnapshot::state(now)` supplies the shared contact and image state.
+The gateway and routing use its `Offline`, `Preparing`, and `Ready` values.
+This state keeps drain and resource admission separate.
+Report writes preserve desired drain and warm settings.
+They reject replaced sessions and removed registrations.
+Gateway token issuance and registration serialize with workspace removal.
+
+The dashboard area stores verified GitHub memberships, workspace roles,
+access requests, opaque session digests, and encrypted OAuth grants.
+Session establishment atomically replaces exact authorization claim IDs under
+the existing browser session ID and consumes their pending results. It
+consumes only the revisions that the caller read for that GitHub user, so a
+result saved again after the read stays pending. This token-free continuation
+expires with the sign-in and retains no person or OAuth grant for browser-only
+sign-ins.
+A person record stays only with a role or an open request. Intentional
+organization removal keeps a separate durable marker and no owner-removal
+retention deadline. Retired labels preserve history while active names
+remain unique.
+
+Credential-only rotation writes preserve verified memberships and their check
+time. Current machine cost inputs contain no effective timestamp. Their atomic
+write reads the injected clock after acquiring its locks.
+
+Scale-set bindings distinguish Active, Draining, and Removed. Listener discovery
+includes active bindings and draining bindings with tracked work or pending
+delivery. Exact context survives cleanup for final acknowledgements and runner
+removal. Confirmed removal applies only to the exact saved binding and remote
+ID.
+
+InstallationLinkStore owns explicit typed entry evidence, signed requester
+claims, fresh-user proof, exact eligible offers, and immutable workspace choice.
+SignedInstallation joins signed identity with the requester's own Add
+evidence.
+The store saves ownership and flow together. Replay keeps the signed flow.
+Browser proof cannot replace signed ownership or change that flow.
+InstallationClaim derives one typed recovery state from those durable facts.
+Signed Direct events need no Add proof or choice. Provisional Direct callbacks
+still wait for the signed event. Add retains both proof and choice requirements.
+Its records retain no GitHub grant or profile and do not retain dashboard users.
+With `InstallationResultDelivery::Pending`, a claim save also saves a pending
+authorization result in its transaction, unless the claim was already proved
+and completed. `pending_installation_results` reads the claim IDs and
+store-issued revisions of one exact requester.
+OrganizationActivation stores separate billing and Admin holds. Missing metadata
+never authorizes execution. Existing organizations have explicit admitted data.
+New linked organizations count even while inactive. Removed ones do not count.
+Retained reinstall preserves holds and admission. Only a confirmed new workspace
+creates first-Admin work. Runnable authority also requires active GitHub App
+state.
+`OrganizationActivation::permits_activation` is the common policy for remote
+preparation and registration. Retained admission permits both. Otherwise,
+both initial holds must be clear.
+Retired-label cleanup discovers workspaces and reads exact scale-set bindings.
+It preserves the retired labels and their job history.
+
+OwnRunnerStore exposes one coherent workspace routing snapshot.
+It also holds the Boat account, deliveries, registration identities, and
+the saved Boat runners in `RoutingSnapshot.boat_runners`.
+`RoutingSnapshot` cannot be cloned. Background work retains narrow inputs.
+The store's dedicated session lease serializes own-machine decisions.
+Runner intents retain exact slot sets and the original whole-GB label
+request. The shared Runner record is the byte-precise actual allocation.
+Metering facts, cursors, and totals use that same actual resource type.
+No JIT or original runtime-token credential enters these records.
+See the [registration guide](registration-targets.md#job-bindings-and-evidence)
+for execution observations and immutable Worker job bindings.
+
+## Quick Start
+
+Use the same interface for PostgreSQL and service test doubles:
+
+```rust
+use ciproxy_store_interface::error::Result;
+use ciproxy_store_interface::labels::Label;
+use ciproxy_store_interface::store::Store;
+use uuid::Uuid;
+
+fn workspace_labels(
+    store: &dyn Store,
+    workspace_id: Uuid,
+) -> Result<Vec<Label>> {
+    store.labels(workspace_id)
+}
+```
+
+Shared services hold `Arc<dyn Store>`.
+Keep a ScaleSetSession handle alive for the complete GitHub session.
+Call its check_connection method before continued use after a connection
+error or during listener health checks.
+Stop the listener when this query fails.
+The store lease traits are synchronous. Async services take the scale-set,
+organization, and workspace execution leases through
+`ciproxy_github::persistence::lease::LeaseStore`. It runs each lock and
+each check on a blocking worker.
+
+## Dashboard fact provenance
+
+Dashboard queries expose nullable registration and complete repository
+observation times. Member projections include retained public profile facts,
+initial request organizations, and the actual grant time of the current role.
+A repeated save of the same role preserves that time. Legacy records keep
+unknown metadata empty. Session establishment captures an optional GitHub
+public name atomically with the retained identity.
+
+The canonical job projection retains the exact runner identity and proved
+report aliases. Callers can join a machine slot without treating a report job
+UUID as a numeric Actions job. Label summaries use retained label identities
+and the same canonical projection, independently of visible history limits.
+
+## Development
+
+Run commands from the repository root:
+
+```sh
+cargo build --package ciproxy-store-interface
+cargo test --package ciproxy-store-interface
+cargo fmt --all -- --check
+cargo clippy --package ciproxy-store-interface --all-targets -- -D warnings
+```
+
+### Key Code
+
+- [src/installation_links.rs](src/installation_links.rs) owns association and
+  execution admission.
+- [src/installation_association.rs](src/installation_association.rs) owns the
+  typed signed identity and deterministic association rules.
+- [src/installation_results.rs](src/installation_results.rs) defines pending
+  authorization results and their delivery mode.
+- [src/dashboard](src/dashboard) owns dashboard identity and access queries.
+- [src/own_runners.rs](src/own_runners.rs) owns exact execution records.
+- [src/job_bindings.rs](src/job_bindings.rs) defines authenticated Worker job
+  bindings, separate from numeric Actions job identities.
+- [src/runtime_results.rs](src/runtime_results.rs) defines the remote result
+  guards and `BoatRunnerWrite`, the exact guard after a Boat write.
+  [src/boat_delivery.rs](src/boat_delivery.rs) defines `BoatDeliveryGuard`,
+  the delivery part of a Boat guard, with no usage or billing reading.
+- [src/boat_runtime.rs](src/boat_runtime.rs) owns Boat registration identities.
+
+- [src/store.rs](src/store.rs) defines Store and its connection factory.
+- [src/billing/store.rs](src/billing/store.rs) owns durable billing sessions.
+- [src/billing/payments.rs](src/billing/payments.rs) defines payment journals.
+- [src/billing/quotes.rs](src/billing/quotes.rs) defines stored paid quotes
+  and their reviewed Stripe item replacements.
+- [src/billing/renewals.rs](src/billing/renewals.rs) defines durable renewal
+  outcomes and verified automatic collection stops.
+- [src/billing/collection.rs](src/billing/collection.rs) defines per-event
+  cancellation decisions and their terminal states.
+- [src/workspaces.rs](src/workspaces.rs) defines shared customer ownership.
+- [src/organizations.rs](src/organizations.rs) defines GitHub App records.
+- [src/error.rs](src/error.rs) owns typed failures and safe diagnostics.
+- [src/secrets.rs](src/secrets.rs) owns opaque hashes and ciphertext.
+- [src/scale_sets.rs](src/scale_sets.rs) defines session lock ownership.
+- [src/jobs.rs](src/jobs.rs) defines metadata-only job records.
+- [src/job_views.rs](src/job_views.rs) defines trusted dashboard projections
+  across Actions jobs and exact scale-set attempts.
+- [src/github.rs](src/github.rs) defines repository snapshots and durable
+  UUID demand and pending role delivery.
+- [src/github_lifecycle.rs](src/github_lifecycle.rs) defines atomic App
+  transitions and immutable ordered lifecycle delivery.
+- [src/metering](src/metering) defines metering facts and history APIs.
+- [src/gateway.rs](src/gateway.rs) defines atomic registration, reports,
+  and `MachineSnapshot::state` for shared contact and image readiness.
+- [src/overflow](src/overflow) defines durable Boat sessions and deliveries.
+- [src/overflow/admission.rs](src/overflow/admission.rs) defines required
+  monthly amounts, current label facts, prepared dispatch, and its outcomes.
+- [src/overflow/connection.rs](src/overflow/connection.rs) defines pending
+  connection grant identities.
+
+### Related Docs
+
+- [Architecture](../../docs/architecture.md) gives the service boundaries.
+- [Security](../../docs/protocol/security.md) defines isolation and custody.
+- [Cache](../../docs/protocol/cache.md#cache-tiers) defines handling and counts.
+- [Agent](../../docs/protocol/agent.md) defines credentials and removal.
+- [Overflow](../../docs/protocol/overflow.md) defines Boat key rotation.
+- [App removal](../../docs/protocol/app-removal.md) defines retention.
+- [Workspaces](../../docs/protocol/workspaces.md) defines organization joins.
+- [Metering](../ciproxy-metering/README.md) documents trusted producer calls.
