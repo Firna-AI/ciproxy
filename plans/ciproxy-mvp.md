@@ -2888,7 +2888,7 @@ regressions. Keep the rare failed-callback drain case as a follow-up.
 - [ ] Pass the actual large job, callback, PostgreSQL and Docker steps,
       job-log locale check, overflow smoke and complete spend-limit smoke.
       Turn overflow off in both workspaces and delete every task sandbox.
-- [ ] Restore the main machine in Firna-AI with agent/cache 0.1.4.
+- [x] Restore the main machine in Firna-AI with agent/cache 0.1.4.
 - [x] Run the complete gate with DATABASE_URL set, commit and push.
 - [x] Review the diff against the primary branch with implementation-review
       and apply its bounded fix rounds.
