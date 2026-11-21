@@ -70,16 +70,25 @@ Spike code stays under `.context/macos-own-machines/spikes/`, not on the
 branch. Its `README.md` gives the steps. Each item names its evidence.
 The spike needs an Apple Silicon Mac with macOS 14 or later.
 
-- [ ] Install macOS from Apple's restore image into a base VM with our own
+- [x] Install macOS from Apple's restore image into a base VM with our own
       Rust code, then finish the Setup Assistant in a window.
-- [ ] Clone the base VM with APFS clones and cold-start the clone to an SSH
+      Passed on a Mac mini M4 with a macOS 26.6.2 guest: install in 169 s.
+      The Setup Assistant ran over the private `_VZVNCServer`, with no
+      screen on the Mac.
+- [x] Clone the base VM with APFS clones and cold-start the clone to an SSH
       login. Pass: a clone in under 1 s, SSH in under 60 s.
+      Passed: a clone in 1 ms, SSH login in 11.4 s.
 - [ ] Run one real GitHub job on a just-in-time runner in a fresh clone.
-- [ ] Find the limit of concurrent macOS VMs and its error text.
-- [ ] Save a VM state, restore it, and measure the time to SSH. Check
+- [x] Find the limit of concurrent macOS VMs and its error text.
+      Passed: the limit is 2, and the third start fails at once.
+- [x] Save a VM state, restore it, and measure the time to SSH. Check
       whether two restores of one state run at once.
-- [ ] Prove that pf rules leave a guest the internet only, as
+      Passed: SSH 3.6 s after a restore. One saved state serves one VM at
+      a time, so a Mac keeps one saved state for each slot.
+- [x] Prove that pf rules leave a guest the internet only, as
       [Job isolation](../docs/protocol/security.md#job-isolation) says.
+      Passed after a rule that blocks all IPv6 from the guests. Without
+      it, a guest reached the host over IPv6 link-local.
 
 Evidence: `.context/macos-own-machines/spikes/vz/RESULT.md`.
 
