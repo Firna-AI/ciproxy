@@ -14,5 +14,7 @@ if [[ -f /etc/ciproxy/boat-restart-services ]]; then
     done < /etc/ciproxy/boat-restart-services
 fi
 systemctl start docker.service docker.socket
-python3 /opt/ciproxy-image/measure.py / --job
+if ! python3 /opt/ciproxy-image/measure.py / --job; then
+    printf '%s\n' 'Warning: Boat job disk measurement failed.' >&2
+fi
 systemctl start ciproxy-boat-guest.service

@@ -6,6 +6,11 @@ import pathlib
 import re
 import shutil
 import subprocess
+import sys
+import sysconfig
+
+
+MEASURE_PATH = "/opt/ciproxy-image/measure.py"
 
 
 def copy_program(source, root, destination=None):
@@ -26,6 +31,16 @@ def copy_program(source, root, destination=None):
         target.chmod(0o755)
 
 
+def copy_python(root):
+    python = pathlib.Path(sys.executable).resolve()
+    copy_program(python, root)
+    if python != pathlib.Path("/usr/bin/python3"):
+        (root / "usr/bin/python3").symlink_to(python)
+    stdlib = pathlib.Path(sysconfig.get_path("stdlib"))
+    shutil.copytree(stdlib, root / stdlib.relative_to("/"),
+                    ignore=shutil.ignore_patterns("__pycache__", "site-packages", "dist-packages"))
+
+
 def prepare_root(root, guest):
     image = pathlib.Path(__file__).resolve().parents[1]
     for relative in ["usr/bin", "image", "dev", "state", "etc/ciproxy", "opt/ciproxy-image"]:
@@ -33,9 +48,11 @@ def prepare_root(root, guest):
     for name in ["bash", "env", "install", "rm", "cp", "cat"]:
         copy_program(shutil.which(name), root, "/usr/bin/" + name)
     copy_program(guest, root, "/usr/local/bin/ciproxy-guest")
+    copy_python(root)
     (root / "bin").symlink_to("usr/bin")
     (root / "dev/null").touch()
     shutil.copyfile(image / "boat-run.sh", root / "image/boat-run.sh")
+    shutil.copyfile(image / "measure.py", root / MEASURE_PATH.lstrip("/"))
     startup = image / "ciproxy-boat-start.service"
     service = configparser.ConfigParser(interpolation=None)
     service.read(startup)
@@ -68,6 +85,10 @@ fi
 exit 0
 '''.replace("@START_COMMAND@", service["Service"]["ExecStart"]))
     systemctl.chmod(0o755)
-    python = root / "usr/bin/python3"
-    python.write_text("#!/usr/bin/bash\nexit 0\n")
-    python.chmod(0o755)
+    du = root / "usr/bin/du"
+    du.write_text('''#!/usr/bin/bash
+printf '%s\\n' "$*" >> /state/du-calls
+printf '%s\\n' 'fixture du failure' >&2
+exit 1
+''')
+    du.chmod(0o755)

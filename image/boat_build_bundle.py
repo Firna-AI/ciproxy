@@ -77,6 +77,8 @@ def bundle(args):
                               "inputs": ["/opt/ciproxy-build/artifacts", *[
                                   "/opt/ciproxy-build/definition/" + name for name in (
                                       "provision.sh", "boat-build-clean-image.sh", "boat-build-locale.sh",
+                                      "boat-build-nvm.py", "boat-runner-entry.sh", "boat-runner-errors.sh",
+                                      "boat-runner-stderr.py",
                                       "pins.env", "boat-run.sh", "boat-start.sh", "measure.py",
                                       "metadata-smoke.py", "runner-entry.sh", "docker-attach.sh",
                                       "runner-patch/container-proxy-url.sh", "ciproxy-boat-start.service",

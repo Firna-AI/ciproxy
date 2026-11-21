@@ -11,3 +11,4 @@ bash "$definition/provision.sh" boat
 systemctl disable ciproxy-boat-start.service ciproxy-boat-guest.service
 systemctl daemon-reload
 bash "$definition/boat-build-locale.sh"
+python3 "$definition/boat-build-nvm.py"

@@ -36,6 +36,7 @@ def provision_locale(case, root, environment, i18n_path):
         stub.chmod(0o755)
     shutil.copyfile(DEFINITION / "boat-provision.sh", definition / "boat-provision.sh")
     (definition / "provision.sh").write_text("exit 0\n")
+    (definition / "boat-build-nvm.py").touch()
     installer = shlex.join(["bash", str(DEFINITION / "boat-build-locale.sh"), str(root)])
     (definition / "boat-build-locale.sh").write_text(
         'test "$#" -eq 0 || exit 1\n'

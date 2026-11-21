@@ -97,6 +97,13 @@ The report lists each change with its reason.
 It runs [provision.sh](provision.sh) in its Boat mode. That mode installs
 the runner, the guest, the cache sidecar, and the patched worker as on a
 machine. It adds the `runner` account to the `sudo` and `docker` groups.
+It installs [boat-runner-entry.sh](boat-runner-entry.sh) at
+`/usr/local/libexec/ciproxy-runner`, the path that the guest runs. It
+installs the common [runner-entry.sh](runner-entry.sh) as
+`/usr/local/libexec/ciproxy-runner-common`, and the two helpers that
+[The runner stderr of a Boat job](#the-runner-stderr-of-a-boat-job)
+describes. The machine build keeps `runner-entry.sh` at
+`/usr/local/libexec/ciproxy-runner`, with no wrapper.
 It runs the post-generation scripts of the recipe at build time, as the
 machine build does. No start runs them again. It installs no kernel, no
 network configuration, and no vsock guest unit.
@@ -109,7 +116,7 @@ delivered registration. It installs `ciproxy-boat-start.service` and
 
 ## The locale of Boat's controller
 
-At its end, [boat-provision.sh](boat-provision.sh) runs
+Then [boat-provision.sh](boat-provision.sh) runs
 [boat-build-locale.sh](boat-build-locale.sh). The machine build does not
 run this script.
 
@@ -132,6 +139,54 @@ this profile exports holds `/usr/local/lib/ciproxy/locales`. So a command
 of Boat's controller finds the `en_US.UTF-8` data also while `locale-gen`
 runs. Each other account, such as the runner account, keeps its locale
 environment.
+
+## The NVM profile of Boat's base
+
+Last, `boat-provision.sh` runs [boat-build-nvm.py](boat-build-nvm.py). The
+machine build does not run this script.
+
+The first step keeps Boat's `/etc/profile.d/nvm.sh`, which each login
+shell reads through `/etc/profile`. Its line 31 is
+`__ascii_nvm_bin="$(__ascii_nvm_path 2>/dev/null)"`. The lookup returns 1
+when it finds no default NVM version, as for the runner account. The
+runner entry runs `set -eo pipefail` before it reads `/etc/profile`. So
+without a guard, that line ends the entry with exit status 1 before the
+listener starts.
+
+The script appends `|| __ascii_nvm_bin=''` to that one assignment. A
+failed lookup then leaves the variable empty, and the profile takes its
+fallback as before. A found version still goes first in `PATH`. A second
+run changes nothing. When the profile is missing, is a link, or has no
+known lookup line, the script prints a warning and leaves the file
+unchanged. The build does not fail on that warning.
+
+## The runner stderr of a Boat job
+
+The guest drops the stderr of the runner process. So in Boat mode, the
+runner entry first sends its stderr to a journal helper:
+
+- [boat-runner-entry.sh](boat-runner-entry.sh) starts
+  [boat-runner-stderr.py](boat-runner-stderr.py) beside it, and sends its
+  own stderr there before any profile runs. It sets `BASH_ENV` to the
+  error hook, and then runs the unchanged common entry.
+- [boat-runner-errors.sh](boat-runner-errors.sh) is the error hook. It
+  first unsets `BASH_ENV`, so the listener and the job do not get it. For
+  a failing command of the entry or its profiles, it prints only the file
+  name, the line, and the exit status.
+- `boat-runner-stderr.py` reads all of the stderr, so the runner never
+  waits on it. It writes at most 16 KiB to the journal, with the
+  identifier `ciproxy-boat-runner-stderr`, and then one truncation notice.
+  A line longer than 4 KiB also ends the output with that notice.
+- The helper removes the registration value from its own environment, and
+  gives the journal writer no environment. It replaces a whole line with
+  `[redacted]` when the line holds the registration value or a value
+  decoded from it. It does the same for a credential word or a long opaque
+  value. In each other line, it keeps the text before the first `://` and
+  replaces the rest with `://[redacted]`. The scheme stays. The URL suffix
+  does not reach the journal. It turns the constant missing-registration
+  error into `[ciproxy] runner entry error: JIT registration required`.
+- When the helper or the journal fails, the runner goes on, and its
+  stderr is dropped.
 
 ## Reports
 

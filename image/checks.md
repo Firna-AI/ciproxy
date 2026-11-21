@@ -184,8 +184,31 @@ mode 0600 and root as its owner. The source file must be gone, and the
 output must not show its contents.
 Without a registration, the launch must take the same steps. The real
 guest must then end with exit code 1 and its missing-registration error.
+The fixture root holds the real Python, the real `measure.py`, and a `du`
+that records each call and fails.
+With a registration, the start must not call `du`. A fixed `statvfs`
+sample has different block sizes and different free and available block
+counts. The start must measure `/` and print exactly the size as
+`backing_filesystem_bytes`, and the available bytes as
+`backing_filesystem_available_bytes` and `free_job_bytes`.
+When `statvfs` fails in the start, the start must print
+`Warning: Boat job disk measurement failed.`, take each refresh step, and
+still start the guest unit.
+Outside job mode, `measure.py` must still call `du`, fail when `du` fails,
+and print nothing.
 The check needs root, `chroot`, and `ldd`, so that the fixture root stays
 private.
+
+### Boat runner start
+
+```sh
+sudo python3 image/check-boat-runner.py
+```
+
+It runs the real NVM guard on a fixture profile. It runs the real Boat
+runner files in a private root with a fixture listener. The
+[Boat runner check](boat-runner-checks.md) lists what it covers and the
+tools that it needs.
 
 ### Boat metadata comparison
 

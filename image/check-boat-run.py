@@ -3,6 +3,7 @@
 """Check native Boat daemon refresh and private guest registration delivery."""
 
 import argparse
+import json
 import os
 import pathlib
 import shutil
@@ -14,7 +15,7 @@ import unittest
 
 sys.dont_write_bytecode = True
 
-from _checks_.boat_fixture import prepare_root
+from _checks_.boat_fixture import MEASURE_PATH, prepare_root
 
 
 class BoatRun(unittest.TestCase):
@@ -32,12 +33,16 @@ class BoatRun(unittest.TestCase):
         print(f"{self.id()}: {time.perf_counter() - self.started:.3f}s", flush=True)
         print("Fixture evidence: " + str(self.root), flush=True)
 
-    def launch(self, registration=None):
-        command = [shutil.which("chroot"), str(self.root), "/usr/bin/bash", "/image/boat-run.sh"]
+    def run_in_root(self, *command, **environment):
+        return subprocess.run([shutil.which("chroot"), str(self.root), *command], capture_output=True, text=True,
+                              env={"PATH": "/usr/bin:/bin", "LC_ALL": "C", "TZ": "UTC",
+                                   "PYTHONDONTWRITEBYTECODE": "1", **environment})
+
+    def launch(self, registration=None, **environment):
+        command = ["/usr/bin/bash", "/image/boat-run.sh"]
         if registration:
             command.append(registration)
-        result = subprocess.run(command, capture_output=True, text=True,
-                                env={"PATH": "/usr/bin:/bin", "LC_ALL": "C", "TZ": "UTC"})
+        result = self.run_in_root(*command, **environment)
         (self.root / "state/launch.log").write_text(result.stdout + result.stderr)
         events = (self.root / "state/events").read_text().splitlines()
         return result, events
@@ -55,9 +60,29 @@ class BoatRun(unittest.TestCase):
         source = self.root / "private-registration.json"
         source.write_text("fixture-private-registration\n")
         source.chmod(0o600)
-        result, events = self.launch("/private-registration.json")
+        (self.root / "state/sitecustomize.py").write_text('''import os
+from pathlib import Path
+from types import SimpleNamespace
+
+def fixed_statvfs(path):
+    Path("/state/statvfs-path").write_text(str(path))
+    return SimpleNamespace(
+        f_bsize=8192, f_frsize=4096, f_blocks=1000, f_bavail=200, f_bfree=300,
+    )
+
+os.statvfs = fixed_statvfs
+''')
+        result, events = self.launch("/private-registration.json", PYTHONPATH="/state")
+        self.assertFalse((self.root / "state/du-calls").exists(),
+                         "Boat job measurement must not walk the live root.")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assert_refresh(events)
+        self.assertEqual((self.root / "state/statvfs-path").read_text(), "/")
+        self.assertEqual(json.loads(result.stdout), {
+            "backing_filesystem_bytes": 4096000,
+            "backing_filesystem_available_bytes": 819200,
+            "free_job_bytes": 819200,
+        })
         delivered = self.root / "state/delivered-registration.json"
         self.assertEqual(delivered.read_text(), "fixture-private-registration\n")
         self.assertEqual(delivered.stat().st_mode & 0o777, 0o600)
@@ -73,6 +98,27 @@ class BoatRun(unittest.TestCase):
         self.assertIn("[ciproxy-guest] registration file is missing",
                       (self.root / "state/guest.log").read_text())
         self.assertFalse((self.root / "run/ciproxy/registration.json").exists())
+
+    def test_failed_job_measurement_warns_and_starts_guest(self):
+        (self.root / "state/sitecustomize.py").write_text('''import os
+
+def unavailable(path):
+    raise OSError("fixture statvfs failure")
+
+os.statvfs = unavailable
+''')
+        result, events = self.launch(PYTHONPATH="/state")
+        self.assertIn("fixture statvfs failure", result.stderr)
+        self.assert_refresh(events)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Warning: Boat job disk measurement failed.", result.stderr)
+
+    def test_non_job_measurement_propagates_failed_du(self):
+        result = self.run_in_root("/usr/bin/python3", MEASURE_PATH, "/")
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertEqual(result.stdout, "")
+        self.assertTrue((self.root / "state/du-calls").is_file())
+        self.assertIn("fixture du failure", result.stderr)
 
 
 if __name__ == "__main__":

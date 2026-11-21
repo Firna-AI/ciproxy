@@ -23,18 +23,24 @@ def main():
     parser.add_argument("--job", action="store_true",
                         help="The rootfs is on this job's actual filesystem")
     args = parser.parse_args()
-    rootfs = args.rootfs.resolve()
+    rootfs = args.rootfs if args.job else args.rootfs.resolve()
     disk = os.statvfs(rootfs)
+    available_bytes = disk.f_bavail * disk.f_frsize
+    filesystem = {
+        "backing_filesystem_bytes": disk.f_blocks * disk.f_frsize,
+        "backing_filesystem_available_bytes": available_bytes,
+    }
+    if args.job:
+        print(json.dumps({**filesystem, "free_job_bytes": available_bytes}, indent=2))
+        return
+
     result = {
         "rootfs": "rootfs",
         "installed_apparent_bytes": du(rootfs, True),
         "installed_allocated_bytes": du(rootfs),
-        "backing_filesystem_bytes": disk.f_blocks * disk.f_frsize,
-        "backing_filesystem_available_bytes": disk.f_bavail * disk.f_frsize,
+        **filesystem,
         "artifacts": {},
     }
-    if args.job:
-        result["free_job_bytes"] = disk.f_bavail * disk.f_frsize
     if args.artifacts:
         from apt_pin_report import compare_pins
         result["apt_pin_differences"] = compare_pins(rootfs)

@@ -16,7 +16,14 @@ install -m 0644 /tmp/ciproxy-worker.dll /opt/actions-runner/bin/Runner.Worker.ow
 chown -R runner:runner /opt/actions-runner
 install -m 0755 /tmp/ciproxy-guest /usr/local/bin/ciproxy-guest
 install -m 0755 /tmp/ciproxy-cache-sidecar /usr/local/bin/ciproxy-cache-sidecar
-install -m 0755 "$definition/runner-entry.sh" /usr/local/libexec/ciproxy-runner
+if [[ $mode == boat ]]; then
+    install -m 0755 "$definition/runner-entry.sh" /usr/local/libexec/ciproxy-runner-common
+    install -m 0644 "$definition/boat-runner-errors.sh" /usr/local/libexec/ciproxy-boat-runner-errors.sh
+    install -m 0644 "$definition/boat-runner-stderr.py" /usr/local/libexec/ciproxy-boat-runner-stderr.py
+    install -m 0755 "$definition/boat-runner-entry.sh" /usr/local/libexec/ciproxy-runner
+else
+    install -m 0755 "$definition/runner-entry.sh" /usr/local/libexec/ciproxy-runner
+fi
 install -m 0755 "$definition/docker-attach.sh" /usr/local/libexec/ciproxy-docker-attach
 install -m 0755 "$definition/runner-patch/container-proxy-url.sh" /usr/local/libexec/ciproxy-container-proxy-url
 if [[ $mode == boat ]]; then
