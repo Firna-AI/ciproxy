@@ -179,9 +179,17 @@ Mac boot the macOS image.
 - The agent checks the byte count and the SHA-256 of the whole file at the
   end. A failed check deletes the bytes, and the next download starts from
   zero.
-- An HTTP error status, such as the answer to an expired URL, fails the
-  download command and keeps the bytes. The next download command brings a
-  fresh URL.
+- A server error status or a rate limit answer does not end the download
+  command. The agent asks again a few times, after the wait that a rate
+  limit answer names, but at most 60 s.
+- **Decision:** the agent asks again after a server error or a rate limit
+  answer in the same download command. Rejected: each HTTP error status
+  ends the command, because the next command then hashes up to 60 GB again.
+  Reason: the parent workspace chose this with the user's authority on 23
+  November 2026.
+- Another HTTP error status, such as the answer to an expired URL, fails
+  the download command and keeps the bytes. The next download command
+  brings a fresh URL.
 - When the host cannot continue the bytes, for example because it does not
   serve the requested range, the agent starts the download again from zero.
 - **Decision:** the agent continues with HTTP range requests, and the

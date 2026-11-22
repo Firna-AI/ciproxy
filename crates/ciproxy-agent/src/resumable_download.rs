@@ -5,10 +5,11 @@
 //! names the image ID, the SHA-256, and the byte size that the bytes belong
 //! to. A later command for the same image continues the partial file with a
 //! `Range` request. Inside one command, a broken stream retries a few times.
-//! A `Range` answer that cannot continue the file empties it, and the retry
-//! asks for the whole archive.
-//! An HTTP error status ends the command and keeps the partial file, because
-//! the next command brings a fresh URL. After the size and the SHA-256 match,
+//! A `5xx` or a `429` retries in the same way, and a `429` waits as its
+//! `Retry-After` header asks, up to a limit. A `Range` answer that cannot
+//! continue the file empties it, and the retry asks for the whole archive.
+//! Another HTTP error status ends the command and keeps the partial file,
+//! because the next command brings a fresh URL. After the size and the SHA-256 match,
 //! the partial file becomes `NAME.tar`.
 //!
 //! The macOS image store uses this module. It builds on every platform for
@@ -36,13 +37,16 @@ use crate::error::{Error, Result};
 
 pub(crate) use self::files::recover;
 
-/// How often and how fast a broken stream retries inside one command.
+/// How often and how fast a broken stream, a `5xx`, or a `429` retries
+/// inside one command.
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Retry {
     /// Retries after consecutive broken streams with no new bytes.
     pub(crate) retries: u32,
     /// The wait before each retry.
     pub(crate) wait: Duration,
+    /// The longest wait that a `Retry-After` header of a `429` can ask for.
+    pub(crate) longest_wait: Duration,
 }
 
 impl Retry {
@@ -51,6 +55,7 @@ impl Retry {
     pub(crate) const BROKEN_STREAM: Self = Self {
         retries: 3,
         wait: Duration::from_secs(5),
+        longest_wait: Duration::from_secs(60),
     };
 }
 
@@ -64,8 +69,9 @@ pub(crate) struct ResumableDownload {
 enum Transfer {
     /// The body ended without an error.
     Ended,
-    /// The connection or the body broke. A retry can continue.
-    Broken(Error),
+    /// The connection or the body broke, or the host was busy. A retry can
+    /// continue, after the wait that the host asked for, if any.
+    Broken(Error, Option<Duration>),
 }
 
 impl ResumableDownload {
@@ -93,9 +99,9 @@ impl ResumableDownload {
         let mut failures = 0_u32;
         while partial.len() < image.size_bytes {
             let before = partial.len();
-            let error = match self.request(image, partial).await? {
-                Transfer::Broken(error) => error,
-                Transfer::Ended if partial.len() < image.size_bytes => Error::ImageAnswer,
+            let (error, asked) = match self.request(image, partial).await? {
+                Transfer::Broken(error, asked) => (error, asked),
+                Transfer::Ended if partial.len() < image.size_bytes => (Error::ImageAnswer, None),
                 Transfer::Ended => break,
             };
             if partial.len() > before {
@@ -105,8 +111,9 @@ impl ResumableDownload {
             if failures > self.retry.retries {
                 return Err(error);
             }
-            tracing::warn!(%error, bytes = partial.len(), "the image download continues");
-            tokio::time::sleep(self.retry.wait).await;
+            let wait = asked.map_or(self.retry.wait, |asked| asked.min(self.retry.longest_wait));
+            tracing::warn!(%error, bytes = partial.len(), wait_seconds = wait.as_secs(), "the image download continues");
+            tokio::time::sleep(wait).await;
         }
         Ok(())
     }
@@ -127,8 +134,12 @@ impl ResumableDownload {
             Answer::Rest => {}
             Answer::Unusable => {
                 partial.restart().await?;
-                return Ok(Transfer::Broken(Error::ImageAnswer));
+                return Ok(Transfer::Broken(Error::ImageAnswer, None));
             }
+            Answer::Busy {
+                status,
+                retry_after,
+            } => return Ok(Transfer::Broken(Error::ImageStatus { status }, retry_after)),
         }
         let mut stream = response.bytes_stream();
         while let Some(chunk) = stream.next().await {
@@ -144,7 +155,7 @@ impl ResumableDownload {
 /// A transport failure that a retry can continue. The error drops the URL,
 /// because the URL holds the signature.
 fn broken(error: reqwest::Error, action: &'static str) -> Transfer {
-    Transfer::Broken(Error::internal_with(error.without_url(), action))
+    Transfer::Broken(Error::internal_with(error.without_url(), action), None)
 }
 
 #[cfg(test)]

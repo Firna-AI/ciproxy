@@ -212,8 +212,10 @@ metadata files, and `macos-content.sha256`.
    `images/NAME.tar.partial.json` holds the image ID, the SHA-256, and the
    byte size of the `ImageDownload`. A broken stream retries with
    `Range: bytes=LENGTH-` three times, 5 s apart, and each new byte resets
-   the count. An HTTP error status, such as `403` for an expired URL, ends
-   the command and keeps the partial file. A later `FetchImage` with the
+   the count. A `5xx` or a `429` retries in the same way. A `429` waits for
+   the seconds of its `Retry-After` header instead, at most 60 s. Another
+   HTTP error status, such as `403` for an expired URL, ends the command
+   and keeps the partial file. A later `FetchImage` with the
    same sidecar values hashes the bytes on disk and continues them. Other
    values, or a file longer than the image, start again from zero, and so
    does a `200` answer to a `Range` request. A `206` from another start, or

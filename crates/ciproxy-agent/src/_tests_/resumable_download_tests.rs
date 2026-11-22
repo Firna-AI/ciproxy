@@ -66,6 +66,7 @@ fn download(retries: u32) -> ResumableDownload {
         Retry {
             retries,
             wait: Duration::ZERO,
+            longest_wait: Duration::ZERO,
         },
     )
 }
@@ -163,26 +164,64 @@ async fn whole_answer_to_a_range_request_starts_the_file_again() {
     assert_eq!(server.ranges(), vec![None, Some("bytes=5-".to_owned())]);
 }
 
+/// Check that the command kept the first five bytes and its sidecar.
+fn assert_kept_five(archive: &Path) {
+    let [partial, sidecar] = partial_files(archive);
+    assert_eq!(read(&partial), &BODY[..5]);
+    assert!(sidecar.is_file());
+    assert!(!archive.exists());
+}
+
 #[tokio::test]
-async fn refused_answer_ends_the_command_and_keeps_the_partial_file() {
-    let cases = [
-        (Reply::Status(403), Error::ImageStatus { status: 403 }),
-        (Reply::Status(503), Error::ImageStatus { status: 503 }),
-    ];
-    for (reply, expected) in cases {
+async fn forbidden_answer_ends_the_command_and_keeps_the_partial_file() {
+    let folder = Folder::new();
+    let archive = folder.archive("macos-1");
+    let replies = vec![Reply::Break(5), Reply::Status(403), Reply::Serve];
+    let server = RangeServer::start(BODY, replies).await;
+    let result = download(3)
+        .fetch(&image("macos-1", BODY, &server), &archive)
+        .await;
+    assert!(
+        matches!(result, Err(Error::ImageStatus { status: 403 })),
+        "{result:?}"
+    );
+    assert_eq!(server.ranges().len(), 2);
+    assert_kept_five(&archive);
+}
+
+#[tokio::test]
+async fn server_error_or_rate_limit_retries_in_the_same_command() {
+    for reply in [Reply::Status(503), Reply::RateLimit] {
         let folder = Folder::new();
         let archive = folder.archive("macos-1");
         let server = RangeServer::start(BODY, vec![Reply::Break(5), reply, Reply::Serve]).await;
-        let result = download(3)
+        download(3)
             .fetch(&image("macos-1", BODY, &server), &archive)
-            .await;
-        assert_eq!(result.unwrap_err().to_string(), expected.to_string());
-        assert_eq!(server.ranges().len(), 2, "{reply:?}");
-        let [partial, sidecar] = partial_files(&archive);
-        assert_eq!(read(&partial), &BODY[..5], "{reply:?}");
-        assert!(sidecar.is_file(), "{reply:?}");
-        assert!(!archive.exists(), "{reply:?}");
+            .await
+            .unwrap();
+        assert_eq!(read(&archive), BODY, "{reply:?}");
+        let rest = Some("bytes=5-".to_owned());
+        assert_eq!(server.ranges(), vec![None, rest.clone(), rest], "{reply:?}");
     }
+}
+
+#[tokio::test]
+async fn four_server_errors_in_a_row_end_the_command_and_keep_the_bytes() {
+    let folder = Folder::new();
+    let archive = folder.archive("macos-1");
+    break_after_five("macos-1", BODY, &archive).await;
+    let mut replies = vec![Reply::Status(503); 4];
+    replies.push(Reply::Serve);
+    let server = RangeServer::start(BODY, replies).await;
+    let result = download(3)
+        .fetch(&image("macos-1", BODY, &server), &archive)
+        .await;
+    assert!(
+        matches!(result, Err(Error::ImageStatus { status: 503 })),
+        "{result:?}"
+    );
+    assert_eq!(server.ranges().len(), 4);
+    assert_kept_five(&archive);
 }
 
 #[tokio::test]

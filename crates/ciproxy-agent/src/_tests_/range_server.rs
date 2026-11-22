@@ -20,6 +20,8 @@ pub(crate) enum Reply {
     Shifted,
     /// This status with no body.
     Status(u16),
+    /// `429` with `Retry-After: 30` and no body.
+    RateLimit,
 }
 
 /// One running host for one body.
@@ -88,6 +90,7 @@ async fn answer(socket: &mut TcpStream, body: &[u8], range: Option<usize>, reply
     };
     let ((status, shown, rest), cut) = match reply {
         Reply::Status(status) => ((status, None, &body[..0]), None),
+        Reply::RateLimit => ((429, None, &body[..0]), None),
         Reply::IgnoreRange => ((200, None, body), None),
         Reply::Serve => (from(0), None),
         Reply::Break(bytes) => (from(0), Some(bytes)),
@@ -103,6 +106,9 @@ async fn answer(socket: &mut TcpStream, body: &[u8], range: Option<usize>, reply
             "Content-Range: bytes {shown}-{last}/{}\r\n",
             body.len()
         ));
+    }
+    if let Reply::RateLimit = reply {
+        head.push_str("Retry-After: 30\r\n");
     }
     head.push_str("\r\n");
     socket.write_all(head.as_bytes()).await.unwrap();

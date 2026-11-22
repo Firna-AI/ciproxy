@@ -32,7 +32,7 @@
   form of its state.
 - **Wider fix:** None.
 - **Previous examples:** None found.
-- **Related:** `macos-download-server-error-retry.md` makes the case less
-  common.
+- **Related:** a `5xx` or a `429` retries inside the command, so a short
+  host error no longer meets this case.
 - **Recommendation:** A.
 - **Action:** fix after merge, apply A, because the cost is time only.
