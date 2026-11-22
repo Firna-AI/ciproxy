@@ -3,8 +3,8 @@
 //! The generic composition in `application.rs` builds the controller, the
 //! daemon, and the CLI actions. It gets each part that depends on the
 //! operating system from the native [`Platform`]. Linux gives the systemd,
-//! Firecracker, XFS, ext4, and nftables adapters. macOS gives adapters that
-//! return [`Error::PlatformUnsupported`](crate::error::Error) for now.
+//! Firecracker, XFS, ext4, and nftables adapters. macOS gives the launchd,
+//! Virtualization.framework, APFS, and pf adapters.
 
 use std::any::Any;
 use std::sync::Arc;
@@ -40,6 +40,8 @@ pub(crate) const NATIVE: ciproxy_protocol::platform::Platform =
     ciproxy_protocol::platform::Platform::MacosArm64;
 #[cfg(target_os = "macos")]
 pub(crate) use macos::MacPlatform as NativePlatform;
+#[cfg(target_os = "macos")]
+pub(crate) use macos::import_image;
 #[cfg(target_os = "macos")]
 pub(crate) use macos::prepare_host;
 #[cfg(target_os = "macos")]

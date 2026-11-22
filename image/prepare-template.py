@@ -50,8 +50,8 @@ def prepare_template(templates, output):
     destination = "/tmp/ciproxy-cache-sidecar"
   }
   provisioner "file" {
-    source = var.worker_binary
-    destination = "/tmp/ciproxy-worker.dll"
+    source = "${var.worker_overlay}/"
+    destination = "/tmp/ciproxy-worker"
   }
   provisioner "file" {
     source = "${var.image_definition}/"

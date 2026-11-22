@@ -244,9 +244,10 @@ Docker disks, the agent update, and the final uninstall.
 - [src/platform/linux.rs](src/platform/linux.rs) builds the Linux adapters:
   systemd, Firecracker and its jailer, XFS, ext4, and nftables.
   `src/main.rs` builds the Linux adapter modules only on Linux.
-- [src/platform/macos.rs](src/platform/macos.rs) builds stubs. Each stub
-  returns `Error::PlatformUnsupported`, so each command stops at the root
-  check on a Mac.
+- [src/platform/macos.rs](src/platform/macos.rs) builds the macOS adapters:
+  launchd, Virtualization.framework, an APFS volume, and pf. The
+  [macOS host guide](macos-host.md) gives them, with the hidden test and
+  operator commands `prepare-host` and `import-image`.
 
 The `Vms` port is the VM backend. The backend sends each guest message to the
 `GuestEvent` channel that it gets when it is built. When a VM stops, the

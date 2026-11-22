@@ -25,6 +25,9 @@ def provision_sandbox(source, image):
         (source / relative).mkdir(parents=True, exist_ok=True)
     for name in ["provision.sh", "boat-build-clean-image.sh", "pins.env", "ciproxy-guest.service"]:
         shutil.copyfile(image / name, source / "image" / name)
+    # The Worker install has its own checks, so the export fixture stubs it.
+    (source / "image/runner-patch").mkdir()
+    (source / "image/runner-patch/install-worker.sh").write_text("exit 0\n")
     for name in ["bash", "rm"]:
         binary = pathlib.Path(shutil.which(name)).resolve()
         with binary.open("rb") as command:

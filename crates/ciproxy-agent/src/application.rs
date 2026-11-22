@@ -49,6 +49,10 @@ pub(crate) async fn main() -> Result<()> {
         }
         _ => {}
     }
+    #[cfg(target_os = "macos")]
+    if let Action::ImportImage(request) = action {
+        return crate::platform::import_image(request).await;
+    }
     execute(NativePlatform::new(), action).await
 }
 

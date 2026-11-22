@@ -8,7 +8,8 @@ original runner and does not use the source hook.
 ## Build the trusted assignment hook
 
 The image uses the pinned official runner archive.
-It replaces only `Runner.Worker.dll` with a source-built assembly.
+It adds a source-built `Runner.Worker.dll` and raises two package
+assemblies, as [Worker overlay](#worker-overlay) says.
 `image/build-runner.sh WORK_DIR` downloads the pinned source, verifies its
 checksum, applies `prepare-source.py`, and publishes the Worker.
 The source requires the .NET SDK version in its `global.json`.
@@ -25,7 +26,8 @@ The image retains separate stock and own-machine Worker assemblies.
 The trusted entry mode selects the own-machine assembly for vsock mode.
 Boat mode restores the byte-identical official stock assembly before launch.
 Each fresh VM or sandbox has one listener, so this selection has no race.
-The image runs the original listener and other official assemblies.
+The image runs the original listener and the other official assemblies,
+except the packages that the Worker overlay raises.
 `prepare-source.py` also adds the format probe
 `Runner.Worker ciproxy-handoff-protocol-2`. The entry script runs it before
 the listener starts, so the listener never starts with an older Worker.
@@ -35,6 +37,49 @@ It also raises `Microsoft.AspNetCore.WebUtilities` in the Worker project to
 8.0.34, the first 8.0 version that fixes GHSA-x33c-w48q-qrgc. The pinned
 `Microsoft.DevTunnels.Connections` brings 8.0.25, and the runner's NuGet
 audit fails the build on it. The audit stays on.
+
+## Worker overlay
+
+The official runner brings `Microsoft.AspNetCore.WebUtilities` and
+`Microsoft.Net.Http.Headers` 8.0.25 for its dev tunnels. GHSA-x33c-w48q-qrgc
+affects that WebUtilities version. Both the stock and the own-machine
+Worker load these assemblies from the runner's `bin` folder. So the images
+also install the 8.0.34 assemblies of the patched build, the versions that
+the patched build resolves.
+
+`worker-overlay.py` runs on the build host after the Worker build. It
+reads `bin/Runner.Worker.deps.json` from the pinned runner archive. It
+writes the overlay folder:
+
+- `Runner.Worker.dll`, the patched Worker;
+- each package assembly that the patched build raises over the runner;
+- `Runner.Worker.deps.json`, the runner's own deps file with only the
+  raised package entries and the references to them changed;
+- `install-files.txt`, `packages.txt`, and `stock-deps.sha256`, the inputs
+  of the install script.
+
+The overlay does not copy the deps file of the patched build. The official
+runner is self-contained: its deps file lists the .NET runtime pack, and
+its `Runner.Common`, `Runner.Sdk`, and `Sdk` entries have version 1.0.0.
+The patched build is framework-dependent and has other project versions.
+Its deps file would leave the runtime out of the runner.
+
+The script stops when the patched build lowers a package, adds a package
+that the runner lacks, or changes the files of a raised package. It stops
+when the runtimes differ. It also stops when a package that
+`prepare-source.py` pins is below its pinned version in the overlay deps
+file. It then compares the file version of each raised assembly with the
+deps file.
+
+`install-worker.sh RUNNER_DIR OVERLAY_DIR` installs the overlay in the
+image. It needs no Python, and it runs on the Bash 3.2 of macOS. It stops
+when the runner's deps file is not the one that the overlay was made from.
+It keeps the stock `Runner.Worker.dll` as `Runner.Worker.stock.dll` and
+installs the patched Worker as `Runner.Worker.own.dll`. It copies the raised
+assemblies and the deps file into `bin`. It then checks that each file is in
+place and that the deps file names only the raised version of each raised
+package. The Linux machine image, the Boat image, and the macOS image use
+the same two scripts.
 
 `CiproxyAssignment.cs` reads `SystemVssConnection` from the original GitHub
 job request before action setup. It reads the runtime token, cache URL,
@@ -88,6 +133,27 @@ The cases are `early_eof`, `connect_error`, and `github_cancellation`.
 `JobRunner` and checks its `Canceled` result with no started step.
 The check writes its project, build output, and sockets under `.context/`.
 It has no retry or repeat option.
+
+## Overlay load check
+
+This opt-in check installs a Worker overlay into a fresh copy of the
+official runner. It then starts the runner's own `Runner.Worker` host with
+the stock and the own-machine Worker. A .NET startup hook,
+`OverlayLoadHook.cs`, loads each raised package from `bin`, checks its
+version, and runs code in it. The check then runs the format probe of the
+own-machine Worker and `Runner.Listener --version`. It needs the .NET SDK
+and runs on the OS of the runner archive:
+
+```sh
+python3 image/runner-patch/worker-overlay.py \
+  --worker-output BUILD_DIR/patched-worker \
+  --runner-archive RUNNER_ARCHIVE --output BUILD_DIR/worker-overlay
+python3 image/runner-patch/tests/overlay-load.py \
+  --runner-archive RUNNER_ARCHIVE --overlay BUILD_DIR/worker-overlay
+```
+
+Each step prints `PASS` or `FAIL`. The check writes the runner copy and
+the hook build under `.context/overlay-load/`.
 
 ## Local executable smoke
 
