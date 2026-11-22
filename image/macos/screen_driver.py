@@ -84,6 +84,34 @@ class Screen:
             self.wait(pattern, timeout)
         self.click(pattern, False)
 
+    def uncheck(self, pattern):
+        """Clear the checkbox at the left edge of a label. A checked box is
+        filled with the blue accent colour, so the build looks for that
+        colour from the label's first character leftward."""
+        matches = self.find(pattern)
+        if not matches:
+            self.fail(f"no checkbox label matches {pattern!r}")
+        label = matches[0]
+        left = label["x"] - label["width"] // 2
+        y = label["y"]
+        box = self.blue_box(left + label["height"], y)
+        if box is None:
+            return
+        self.vnc.click(box, y)
+        time.sleep(1)
+        self.read()
+        if self.blue_box(left + label["height"], y) is not None:
+            self.fail(f"the checkbox of {pattern!r} stayed checked")
+
+    def blue_box(self, start, y):
+        """The x of the first accent-blue pixel left of start, or None."""
+        self.vnc.refresh()
+        for x in range(int(start), max(int(start) - 60, 0), -2):
+            blue, _green, red = self.vnc.pixel(x, y)
+            if blue > 150 and red < 120 and blue - red > 80:
+                return x - 4
+        return None
+
     def type(self, text):
         self.vnc.type(text)
 
@@ -108,6 +136,8 @@ def run_steps(screen, steps, log=print):
         for action, *values in actions:
             if action == "click":
                 screen.click(*values)
+            elif action == "uncheck":
+                screen.uncheck(*values)
             elif action == "select":
                 screen.select(*values)
             elif action == "type":

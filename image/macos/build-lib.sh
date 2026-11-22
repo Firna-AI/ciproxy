@@ -38,6 +38,7 @@ vm_start() {
     rm -f "$run_dir/status.json" "$run_dir/stop"
     local recovery=""
     [[ $mode == recovery ]] && recovery=--recovery
+    printf '\n== start %s at %s\n' "$mode" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$run_dir/vm.log"
     "$vm_tool" run --bundle "$bundle" ${recovery:+"$recovery"} \
         --vnc-password-file "$secrets/vnc-password" --status-file "$run_dir/status.json" \
         --stop-file "$run_dir/stop" --cpus "${BUILD_CPUS:-4}" --memory-gib "${BUILD_MEMORY_GIB:-8}" \

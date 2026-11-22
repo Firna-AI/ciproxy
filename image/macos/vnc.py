@@ -107,6 +107,11 @@ class Vnc:
             start = ((y + row) * self.width + x) * 4
             self.frame[start:start + width * 4] = data[row * width * 4:(row + 1) * width * 4]
 
+    def pixel(self, x, y):
+        """The (blue, green, red) bytes of one pixel of the current frame."""
+        start = (int(y) * self.width + int(x)) * 4
+        return tuple(self.frame[start:start + 3])
+
     def png(self, path):
         """Write the current frame as an RGB PNG file."""
         rows = bytearray()

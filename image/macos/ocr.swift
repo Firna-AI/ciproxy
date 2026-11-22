@@ -27,6 +27,7 @@ for observation in request.results ?? [] {
         "x": Int(box.midX * width),
         "y": Int((1 - box.midY) * height),
         "height": Int(box.height * height),
+        "width": Int(box.width * width),
     ]
     let data = try JSONSerialization.data(withJSONObject: line, options: [.sortedKeys])
     print(String(data: data, encoding: .utf8)!)

@@ -13,6 +13,7 @@ use futures_executor::block_on;
 use crate::{Command, Machine};
 
 const GIB: u64 = 1024 * 1024 * 1024;
+const LOCK_WAIT: Duration = Duration::from_secs(60);
 
 pub fn run(command: Command) -> Result<ExitCode, String> {
     match command {
@@ -80,12 +81,7 @@ fn run_vm(
     machine: Machine,
 ) -> Result<ExitCode, String> {
     let password = std::fs::read_to_string(password_file).map_err(text)?;
-    let vm = Arc::new(Vm::new(bundle, &settings(machine)).map_err(text)?);
-    if recovery {
-        block_on(vm.start_recovery()).map_err(text)?;
-    } else {
-        block_on(vm.start()).map_err(text)?;
-    }
+    let vm = Arc::new(start(bundle, recovery, machine)?);
     let vnc = vm.start_vnc(0, Some(password.trim())).map_err(text)?;
     let mut port = vnc.port();
     for _ in 0..50 {
@@ -125,6 +121,34 @@ fn run_vm(
         if !stopping && stop_file.exists() {
             stopping = true;
             block_on(vm.stop()).map_err(text)?;
+        }
+    }
+}
+
+/// Make and start the VM. Virtualization.framework keeps the lock of the
+/// auxiliary storage for some seconds after another process used the
+/// bundle, such as the install. So a start retries while the lock is taken.
+fn start(bundle: &Bundle, recovery: bool, machine: Machine) -> Result<Vm, String> {
+    let deadline = Instant::now() + LOCK_WAIT;
+    loop {
+        let result = Vm::new(bundle, &settings(machine)).and_then(|vm| {
+            if recovery {
+                block_on(vm.start_recovery())?;
+            } else {
+                block_on(vm.start())?;
+            }
+            Ok(vm)
+        });
+        match result {
+            Ok(vm) => return Ok(vm),
+            Err(error)
+                if error.to_string().contains("lock auxiliary storage")
+                    && Instant::now() < deadline =>
+            {
+                eprintln!("the auxiliary storage is still locked, retrying: {error}");
+                thread::sleep(Duration::from_secs(2));
+            }
+            Err(error) => return Err(text(error)),
         }
     }
 }
