@@ -20,8 +20,9 @@
 #
 # CIPROXY_SMOKE_HELPER_USER runs the helper as that user instead of root.
 # CIPROXY_SMOKE_HELPER_DOMAIN then selects the launchd domain: `system`
-# (the default, with a UserName key), `user` (the user's background domain),
-# or `gui` (the user's login session).
+# (the default, with a UserName key), `system-session` (also with
+# SessionCreate, a new security session), `user` (the user's background
+# domain), or `gui` (the user's login session).
 set -euo pipefail
 
 if [[ "$(uname -s)" != Darwin || "${EUID}" -ne 0 || $# -lt 2 || $# -gt 3 ]]; then
@@ -48,9 +49,13 @@ if [[ -n "${helper_user}" ]]; then
   helper_uid=$(id -u "${helper_user}")
   case "${domain}" in
   system) user_key="<key>UserName</key><string>${helper_user}</string>" ;;
+  system-session)
+    target=system
+    user_key="<key>UserName</key><string>${helper_user}</string><key>SessionCreate</key><true/>"
+    ;;
   user | gui) target="${domain}/${helper_uid}" ;;
   *)
-    echo "SKIP: CIPROXY_SMOKE_HELPER_DOMAIN is system, user, or gui" >&2
+    echo "SKIP: CIPROXY_SMOKE_HELPER_DOMAIN is system, system-session, user, or gui" >&2
     exit 77
     ;;
   esac
