@@ -112,15 +112,22 @@ test("the list shows Linux labels, then macOS labels, from the smallest size to 
     label("g", { ...medium, name: "builds" }),
     label("h", { ...medium, name: "E2E" }),
     label("i", { name: "ciproxy", vcpus: 2, memory_gb: 8, disk_gb: 20 }),
+    // Fewer vCPU but more memory than the labels of 4 vCPU, so the vCPU key
+    // decides its place.
+    label("j", { name: "lean-cpu", vcpus: 2, memory_gb: 64, disk_gb: 20 }),
+    // First by name among its memory, but more disk, so the disk key decides.
+    label("k", { ...medium, name: "big-disk", disk_gb: 40 }),
   ]);
   assert.deepEqual(
     rows.map((row) => [row.id, row.name]),
     [
       ["i", "ciproxy"],
+      ["j", "lean-cpu"],
       // Names of one size compare by character code, so E2E comes first.
       ["h", "E2E"],
       ["g", "builds"],
       ["d", "ciproxy-medium"],
+      ["k", "big-disk"],
       ["f", "more-disk"],
       ["e", "more-memory"],
       ["b", "ciproxy-large"],
