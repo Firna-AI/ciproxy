@@ -148,10 +148,21 @@ impl Vm {
     }
 
     /// Stop the VM at once, as a power cut does.
+    ///
+    /// A VM in [`VmState::Stopped`] or [`VmState::Error`] is not running,
+    /// so this does nothing for it and succeeds. A VM is in `Error` after a
+    /// failed start, for example at the limit of 2 VMs, or after a crash.
     pub async fn stop(&self) -> Result<()> {
-        // SAFETY: Runs on the VM's queue with a completion block.
-        self.call(|machine, block| unsafe { machine.stopWithCompletionHandler(block) })
-            .await?;
+        // SAFETY: Runs on the VM's queue with a completion block. The state
+        // check and the stop run in one block, so the state cannot change
+        // between them.
+        self.call(|machine, block| unsafe {
+            match map_state(machine.state()) {
+                VmState::Stopped | VmState::Error => block.call((std::ptr::null_mut(),)),
+                _ => machine.stopWithCompletionHandler(block),
+            }
+        })
+        .await?;
         self.inner.delegate.0.ivars().finish(StopReason::Host);
         Ok(())
     }

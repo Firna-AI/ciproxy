@@ -41,8 +41,9 @@ pub enum Error {
     Unsupported(String),
     /// macOS already runs the most macOS VMs that its licence allows.
     ///
-    /// The limit is 2 active macOS VMs on one Mac. Pause, save, or stop
-    /// another VM first. This is `VZErrorVirtualMachineLimitExceeded`.
+    /// The limit is 2 active macOS VMs on one Mac. A paused VM still counts,
+    /// so stop another VM first. After this error, the VM is in the error
+    /// state. This is `VZErrorVirtualMachineLimitExceeded`.
     #[error("the Mac already runs the most macOS VMs that macOS allows: {message}")]
     VirtualMachineLimit {
         /// The text from Virtualization.framework.
