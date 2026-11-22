@@ -206,12 +206,29 @@ and the operator step follow them.
       request is ready.
 - [ ] Update the site README where a rule of the legal pages changes.
 - [ ] Run the site build, the site tests, and the Markdown check.
-- [ ] Delete `plans/follow-ups/privacy-retention-requirements.md` and
-      `plans/follow-ups/terms-changes-unattended-workspaces.md`.
 
-## Milestone 3: The setup return and the sign-in links pass the terms step
+## Milestone 3: Screens
+
+Tags: ui
 
 Depends on: 1
+
+The dashboard gets the terms step page and the two new lines, as the
+mockups show them. It needs only the copy of the mockups, so it runs beside
+Milestone 2. Until Milestone 4, Continue on the terms step gives a plain
+sign-in, because the API ignores the `resume` value.
+
+- [ ] Add the `/continue` page, with the terms notice of the sign-in page
+      from one shared part and a button that opens
+      `/api/auth/github?resume=setup`.
+- [ ] Add the terms line to the dialog that grants the Admin role.
+- [ ] Add the business-use line to the checkout review.
+- [ ] Update the dashboard README and the guides of these pages.
+- [ ] Run the typecheck, the lint, the export, and the Node tests.
+
+## Milestone 4: The setup return and the sign-in links pass the terms step
+
+Depends on: 2, 3
 
 The API sends each GitHub sign-in that does not start on the sign-in page
 through the terms step.
@@ -229,40 +246,40 @@ through the terms step.
 - [ ] Update the `ciproxy-api` README.
 - [ ] Run the targeted API tests, rustfmt, and clippy.
 
-## Milestone 4: Screens
+## Milestone 5: Dashboard fixtures and browser smokes
 
 Tags: ui
 
-Depends on: 1, 2, 3
+Depends on: 4
 
-The dashboard gets the terms step page and the two new lines, as the
-mockups show them.
+The fixtures of the dashboard mirror the API again, and the browser smokes
+pass the terms step.
 
-- [ ] Add the `/continue` page, with the terms notice of the sign-in page
-      from one shared part.
-- [ ] Add the terms line to the dialog that grants the Admin role.
-- [ ] Add the business-use line to the checkout review.
-- [ ] Update the fixtures and the browser smokes of the dashboard for the
-      terms step.
-- [ ] Update the dashboard README and its guides.
-- [ ] Run the typecheck, the lint, the export, the Node tests, and the
-      changed browser smokes.
+- [ ] Give `/continue` as the reauthorization URL in the fixtures that
+      mirror the API.
+- [ ] Make the browser smokes that follow a GitHub sign-in link pass the
+      terms step and its Continue.
+- [ ] Update the sign-in rules in `ts/app/src/api/README.md` and the
+      browser checks in `ts/app/scripts/README.md`.
+- [ ] Run the typecheck, the lint, and the changed browser smokes.
+
+## Milestone 6: Follow-up items
+
+Depends on: 2, 4, 5
+
+The five items close, and the other items stay true after the change.
+
 - [ ] Delete `plans/follow-ups/terms-notice-on-every-sign-in.md`,
-      `plans/follow-ups/terms-acceptance-parties.md`, and
+      `plans/follow-ups/terms-acceptance-parties.md`,
+      `plans/follow-ups/privacy-retention-requirements.md`,
+      `plans/follow-ups/terms-changes-unattended-workspaces.md`, and
       `plans/follow-ups/consumer-purchase-rules.md`.
-
-## Milestone 5: Follow-up items
-
-Depends on: 2, 3, 4
-
-The other items stay true after the change.
-
 - [ ] Record in `plans/follow-ups/taxes-after-launch.md` that the decision
       of 4 November 2026 stays in force, and keep the item open.
 - [ ] Update each other follow-up item that names a changed section, file,
       or decision.
 
-## Milestone 6: Verification, commit, review, and pull request
+## Milestone 7: Verification, commit, review, and pull request
 
 Depends on: every other milestone
 
