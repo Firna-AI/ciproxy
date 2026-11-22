@@ -119,14 +119,23 @@ No production data or workload resource needs to exist for this step.
    `CONTROL_PLANE_RUNTIME_READY=false` and `PUBLIC_UPTIME_ENABLED=false`.
    Leave `CDN_SIGNING_KEY_NAME` unset until production key registration.
 4. Limit its deployment branch to protected `main`.
-5. Enable the repository switch:
+5. After the last operator bootstrap, repeat the provider check of the
+   [image trust move][image-trust] with the claim on `main`. Each image
+   provider must print `true`. The retirement stopped preview trust
+   writes. Production CI stays off until the switch. So this check reads
+   the provider state that production starts with.
+
+   If a provider fails, keep the switch false. Repeat the bootstrap apply
+   and the provider check of the move from protected `main`.
+
+6. Enable the repository switch:
 
    ```sh
    gh variable set PRODUCTION_DEPLOY_ENABLED --repo=Firna-AI/ciproxy --body=true
    ```
 
-6. Start a new main preview push run on `main`, or rerun all jobs of one.
-7. Let production follow that exact successful commit.
+7. Start a new main preview push run on `main`, or rerun all jobs of one.
+8. Let production follow that exact successful commit.
 
 The GCP latch makes preview read central state even before the repository
 switch changes. After the switch, production alone has central apply

@@ -15,11 +15,12 @@ the run. A
 missing manifest starts a build. A denied request, missing repository, or
 unavailable registry stops the run. Those errors never count as a cache miss.
 
-Until launch, the caller uses the reusable image workflow on the primary
-branch. Both image identities require that exact `job_workflow_ref`.
-[Image workflow trust](image-workflow-bootstrap.md) gives the claim, its
-activation, and its move to protected `main` at launch. An ordinary caller
-job cannot obtain either image identity, including the npm workload job.
+The caller uses the reusable image workflow on protected `main`. Both image
+identities require that exact `job_workflow_ref`.
+[Image workflow trust](image-workflow-bootstrap.md) gives the claim, the
+prelaunch binding to the primary branch, its activation, and the launch
+move to `main`. An ordinary caller job cannot obtain either image identity,
+including the npm workload job.
 The reusable workflow reads its own `job_workflow_sha` from GitHub OIDC
 before checking out any repository. It prints no token or claim payload.
 Every image job checks out tools at that immutable trusted revision.

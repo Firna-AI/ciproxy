@@ -74,10 +74,14 @@ def admits(provider, claims, oidc=True):
                 {"__builtins__": {}}, {"assertion": Claims()})
 
 
-def jobs(documents):
+def preview_workflow_ref(caller_ref):
+    return f"Firna-AI/ciproxy/.github/workflows/deploy-main-preview.yml@{caller_ref}"
+
+
+def jobs(documents, caller_ref):
     entry = documents["deploy-main-preview.yml"]
     result = []
-    caller = "Firna-AI/ciproxy/.github/workflows/deploy-main-preview.yml@refs/heads/calummoore/ci-proxy-load-balancer"
+    caller = preview_workflow_ref(caller_ref)
     for name, job in entry["jobs"].items():
         if job.get("uses", "").startswith("Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@"):
             reference = job["uses"].replace("@", "@refs/heads/", 1)
@@ -89,17 +93,16 @@ def jobs(documents):
     return result
 
 
-def image_jobs(documents):
-    return [item for item in jobs(documents) if any(
+def image_jobs(documents, caller_ref):
+    return [item for item in jobs(documents, caller_ref) if any(
         "GCP_IMAGE_" in str(step.get("with", {}).get("service_account", ""))
         for step in item[1].get("steps", []))]
 
 
-def claims(job, reusable=None):
+def claims(job, caller_ref, reusable=None):
     result = {"repository_id": "1442045837", "repository_owner_id": "307519338",
               "environment": job.get("environment", ""), "event_name": "push",
-              "ref": "refs/heads/calummoore/ci-proxy-load-balancer",
-              "workflow_ref": "Firna-AI/ciproxy/.github/workflows/deploy-main-preview.yml@refs/heads/calummoore/ci-proxy-load-balancer"}
+              "ref": caller_ref, "workflow_ref": preview_workflow_ref(caller_ref)}
     if reusable:
         result["job_workflow_ref"] = reusable
         result["job_workflow_sha"] = TOOLS_SHA

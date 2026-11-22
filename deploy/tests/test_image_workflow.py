@@ -14,6 +14,9 @@ from unittest.mock import patch
 from deploy.tests import image_security_support as security
 
 
+PRIMARY_CALLER_REF = "refs/heads/calummoore/ci-proxy-load-balancer"
+
+
 class ImageWorkflowTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -22,7 +25,7 @@ class ImageWorkflowTests(unittest.TestCase):
 
     def test_only_reusable_image_jobs_on_main_satisfy_real_provider_conditions(self):
         workload = self.documents["deploy-main-preview.yml"]["jobs"]["workloads"]
-        ordinary = security.claims(workload)
+        ordinary = security.claims(workload, PRIMARY_CALLER_REF)
         self.assertNotIn("job_workflow_ref", ordinary)
         self.assertEqual(set(self.providers), {"image_lookup", "image_publish"})
         for name, provider in self.providers.items():
@@ -32,24 +35,28 @@ class ImageWorkflowTests(unittest.TestCase):
             for scenario, reference in security.UNTRUSTED.items():
                 with self.subTest(identity=name, scenario=scenario):
                     self.assertFalse(security.admits(provider, dict(ordinary, job_workflow_ref=reference)))
-        privileged = security.image_jobs(self.documents)
-        self.assertEqual(len(privileged), 2)
-        for job_name, job, _, _ in privileged:
-            for name, provider in self.providers.items():
-                with self.subTest(identity=name, job=job_name, scenario="trusted workflow on main"):
-                    self.assertTrue(security.admits(provider, security.claims(job, security.TRUSTED)))
-        build = next(item for item in security.jobs(self.documents) if any(
+        for caller_ref in (PRIMARY_CALLER_REF, "refs/heads/main"):
+            privileged = security.image_jobs(self.documents, caller_ref)
+            self.assertEqual(len(privileged), 2)
+            for job_name, job, _, _ in privileged:
+                trusted_claims = security.claims(job, caller_ref, security.TRUSTED)
+                for name, provider in self.providers.items():
+                    with self.subTest(identity=name, job=job_name, caller_ref=caller_ref,
+                                      scenario="trusted workflow on main"):
+                        self.assertTrue(security.admits(provider, trusted_claims))
+        build = next(item for item in security.jobs(self.documents, PRIMARY_CALLER_REF) if any(
             "control_plane_image.py build" in step.get("run", "") for step in item[1].get("steps", [])))
         permissions = build[1].get("permissions", build[3])
         self.assertEqual(permissions, {"contents": "read"})
         self.assertNotIn("environment", build[1])
         for name, provider in self.providers.items():
             with self.subTest(identity=name, scenario="source build without OIDC"):
-                self.assertFalse(security.admits(provider, security.claims(build[1], build[2]),
-                                                  oidc=permissions.get("id-token") == "write"))
+                self.assertFalse(security.admits(
+                    provider, security.claims(build[1], PRIMARY_CALLER_REF, build[2]),
+                    oidc=permissions.get("id-token") == "write"))
 
     def test_main_image_workflow_uses_its_own_tools_revision_without_token_output(self):
-        privileged = security.image_jobs(self.documents)
+        privileged = security.image_jobs(self.documents, PRIMARY_CALLER_REF)
         self.assertEqual(len(privileged), 2)
         for name, _, origin, _ in privileged:
             with self.subTest(job=name, scenario="preview calls image workflow on main"):
@@ -99,7 +106,7 @@ class ImageWorkflowTests(unittest.TestCase):
                     self.assertNotIn(token, stdout.getvalue() + stderr.getvalue() + emitted)
                     self.assertNotIn(payload, stdout.getvalue() + stderr.getvalue() + emitted)
                     self.assertNotIn("fixture-request-credential", stdout.getvalue() + stderr.getvalue())
-        for _, job, _, _ in security.jobs(self.documents):
+        for _, job, _, _ in security.jobs(self.documents, PRIMARY_CALLER_REF):
             checkouts = [step for step in job.get("steps", []) if step.get("uses", "").startswith("actions/checkout@")]
             if not any("control_plane_image.py" in step.get("run", "") for step in job.get("steps", [])):
                 continue
@@ -112,10 +119,10 @@ class ImageWorkflowTests(unittest.TestCase):
             self.assertFalse(any(step.get("working-directory") == "source" for step in job.get("steps", [])))
 
     def test_publication_consumes_build_artifact_id_and_canonical_digest(self):
-        candidates = security.jobs(self.documents)
+        candidates = security.jobs(self.documents, PRIMARY_CALLER_REF)
         build = next(job for _, job, _, _ in candidates if any(
             "control_plane_image.py build" in step.get("run", "") for step in job.get("steps", [])))
-        publish = next(job for _, job, _, _ in security.image_jobs(self.documents) if any(
+        publish = next(job for _, job, _, _ in security.image_jobs(self.documents, PRIMARY_CALLER_REF) if any(
             "control_plane_image.py publish" in step.get("run", "") for step in job.get("steps", [])))
         upload = next(step for step in build["steps"] if step.get("uses", "").startswith("actions/upload-artifact@"))
         digest = next(step for step in build["steps"] if "control_plane_image.py build" in step.get("run", ""))

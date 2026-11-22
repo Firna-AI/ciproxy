@@ -5,30 +5,46 @@ Two cloud identities serve the control-plane image jobs:
 through workload identity federation. Each identity has one provider,
 `github`, in the workload identity pool of the same name. Each provider
 admits only the jobs of one reusable workflow, through its
-`job_workflow_ref` claim. Until launch, that workflow is on the primary
-branch `calummoore/ci-proxy-load-balancer`. Both providers require this
-exact claim:
+`job_workflow_ref` claim. That workflow is on protected `main`. Both
+providers require this exact claim:
 
 ```text
-Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/calummoore/ci-proxy-load-balancer
+Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/main
 ```
 
-The preview caller calls the workflow on that branch, also when the caller
-runs on `main`. Each provider maps `attribute.job_workflow_ref` from the
-signed GitHub token. An ordinary job, such as the npm workload job, has no
-such claim. A call of another workflow file or another branch has a
-different claim. The binding changes no role permission.
+The preview caller on `main` calls that workflow. A preview run on the
+primary branch `calummoore/ci-proxy-load-balancer` gets the image
+identities only when its own caller also calls the workflow on `main`. The
+binding changes no role permission.
+
+Each provider maps `attribute.job_workflow_ref` from the signed GitHub
+token. An ordinary job, such as the npm workload job, has no such claim. A
+call of another workflow file or another branch has a different claim.
 [GitHub OIDC claims][oidc-claims] define `job_workflow_ref` and
 `job_workflow_sha`. [Build and reuse](control-plane-images.md#build-and-reuse)
 gives the job boundaries.
 
-The primary branch has no ruleset. A push to it can change this workflow
-and the tools that the workflow checks out. So this binding is a prelaunch
-trust root, not protected `main`. Keep production off until
-[the move to `main`](#move-the-binding-to-main-at-launch). Preview needs
-no change on `main`.
+The prelaunch binding named the workflow on the primary branch. That branch
+has no ruleset. A push to it can change that workflow and the tools that
+the workflow checks out. So the prelaunch binding was a trust root outside
+protected `main`.
+
+Both providers keep the prelaunch claim until a bootstrap from protected
+`main` applies [the move](#move-the-binding-to-main-at-launch). Until the
+[launch retirement](launch.md#retire-prelaunch-authority), a rerun of a
+`main` push from before the move can apply the prelaunch claim again. Keep
+production off until the move and its launch checks pass.
 
 ## Activate the primary binding
+
+These steps activate the prelaunch binding. After the move to `main`, do
+not apply the bootstrap of a primary-branch revision. That bootstrap
+applies the prelaunch claim again. Use the bootstrap and the provider check
+of [the move](#move-the-binding-to-main-at-launch) instead.
+
+For a fresh project, run that bootstrap with `--image-registry` after
+shared core exists. Keep the variable setup below, and check the providers
+with the claim on `main`.
 
 Run these steps after the reviewed image workflow change merges into the
 primary branch. They change nothing on `main`. They need no pull request,
@@ -130,10 +146,10 @@ rerun.
 
 ## Move the binding to main at launch
 
-The launch merge puts the complete tree on protected `main`. Until the
-move, preview runs on `main` still call the primary workflow. Production
-promotes the images that this workflow publishes. So move the binding
-before you enable production:
+The launch merge puts the complete tree on protected `main`. Preview runs
+of `main` commits from before the move call the primary workflow.
+Production promotes the images that the trusted workflow publishes. So move
+the binding before you enable production:
 
 1. Merge one reviewed change into protected `main`. It switches these
    values from the primary branch to `main` together:
@@ -154,9 +170,9 @@ before you enable production:
    bash deploy/scripts/bootstrap.sh main-preview --existing-state
    ```
 
-   Before the launch handoff, the trust jobs of the `main` preview run can
-   apply the same plan first. The operator plan then shows no provider
-   change.
+   Before the launch handoff, the trust jobs of the preview run of that
+   commit can apply the same plan first. The operator plan then shows no
+   provider change.
 
 3. Repeat the provider check of [activation](#activate-the-primary-binding)
    with this claim:
@@ -165,10 +181,34 @@ before you enable production:
    CLAIM=Firna-AI/ciproxy/.github/workflows/deploy-control-plane-image.yml@refs/heads/main
    ```
 
-4. Rerun all jobs of a preview push on `main`. A preview run that still
-   calls the primary workflow now fails image authentication.
+4. Rerun all jobs of the preview push of the current reviewed `main`
+   commit. Use the commit that you checked out for the bootstrap apply:
+
+   ```sh
+   gh run list --repo=Firna-AI/ciproxy --workflow=deploy-main-preview.yml \
+     --branch=main --event=push --commit="$(git rev-parse HEAD)" \
+     --json databaseId,headSha,event,status,conclusion
+   RUN_ID=SELECTED_RUN_ID
+   gh run rerun "$RUN_ID" --repo=Firna-AI/ciproxy
+   ```
+
+   This run calls the workflow on `main`, so its image jobs test the new
+   claim. Then
+   [check the image run](control-plane-images.md#check-the-image-run).
+
+   Do not rerun a `main` push from before the move. Until the
+   [retirement](launch.md#retire-prelaunch-authority), its trust jobs
+   apply the bootstrap of its own commit before its image job. That
+   bootstrap restores the prelaunch claim. Then its image job can
+   authenticate. So the run can pass without a test of the move.
+
+   A push run on the primary branch applies no bootstrap. While both
+   providers keep the claim on `main`, a run that calls the primary
+   workflow fails image authentication.
 
 Enable production only after these steps. The [launch guide](launch.md)
-gives the separate, irreversible trust handoff.
+gives the separate, irreversible trust handoff. It repeats the provider
+check after its last operator bootstrap, before the production switch.
+After the retirement, no preview run can change the providers.
 
 [oidc-claims]: https://docs.github.com/en/actions/reference/security/oidc

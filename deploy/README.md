@@ -25,8 +25,8 @@ release-token delivery path and needs no secret version while Boat is off.
 - [Promotion](promotion.md) gives saved plans, approvals, and recovery.
 - [Control-plane images](control-plane-images.md) gives automatic image
   publication, source reuse, promotion, operator grants, and rollback.
-- [Image workflow trust](image-workflow-bootstrap.md) gives the prelaunch
-  trust root of the image identities, its activation, and its launch move.
+- [Image workflow trust](image-workflow-bootstrap.md) gives the trusted
+  reusable workflow claim, its activation, and its launch move.
 - [Operations](operations.md) gives images, runtime setup, and rotation.
 - [Release server](release-server.md) gives the source pin, release channels,
   archive contract, and rollout checks.
