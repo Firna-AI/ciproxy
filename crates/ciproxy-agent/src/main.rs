@@ -112,6 +112,8 @@ mod launches;
 #[cfg(target_os = "linux")]
 mod layout;
 mod logging;
+#[cfg(any(target_os = "macos", test))]
+mod macos;
 mod maintenance;
 mod mode;
 #[cfg(target_os = "linux")]

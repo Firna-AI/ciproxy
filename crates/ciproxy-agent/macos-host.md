@@ -54,26 +54,32 @@ its own VM helper, as each Linux VM runs in its own systemd unit.
 
 ### Control socket
 
-One request per connection, as one text line. The first line of each
-request names the protocol version: `CIPROXY-VM 1`. A new agent must still
-speak to an older VM helper after an update, so this protocol stays small.
+One request per connection, as one text line: the version
+`CIPROXY-VM 1`, a word, and for `CONNECT` the port. The answer is one line:
+`OK`, `OK WORD`, or `ERR CODE`. Only enums build the words, so no line
+carries free text or a secret. A new agent must still speak to an older VM
+helper after an update, so this protocol stays small.
+[`vm_control.rs`](src/macos/vm_control.rs) defines it.
 
-| Request        | Answer                                          |
-| -------------- | ----------------------------------------------- |
-| `STATE`        | One line with the VM state                      |
-| `CONNECT PORT` | `OK`, then the vsock stream fd by `SCM_RIGHTS`  |
-| `STOP`         | `OK` after `request_stop`                       |
-| `SAVE PATH`    | `OK` after pause and `Vm::save`                 |
-| `WAIT`         | One line with the stop reason when the VM stops |
+| Request        | Answer                                             |
+| -------------- | -------------------------------------------------- |
+| `STATE`        | `OK PHASE`, for example `OK running`               |
+| `CONNECT PORT` | `OK` with the vsock stream fd by `SCM_RIGHTS`      |
+| `STOP`         | `OK` after `request_stop`                          |
+| `SAVE`         | `OK` after pause and `Vm::save` into the VM folder |
+| `WAIT`         | `OK REASON` when the VM stops                      |
+
+`SAVE` takes no path, so a request cannot make the helper write outside
+its VM folder. `ERR guest-not-listening` is the one retryable answer.
 
 The agent keeps one `WAIT` connection open for each VM. Its answer, or its
 end, tells the agent that the VM stopped. The backend then sends
 `RunnerExited` to the core, as L's `Vms` interface says.
 
 The vsock fd passes to the agent, so the runner registration never passes
-through the VM helper. **Check:** a `ciproxy-vz` vsock fd works in another
-process after `SCM_RIGHTS`. If it does not, the VM helper relays the bytes
-and keeps them in memory only.
+through the VM helper. V checks on the Mac that a `ciproxy-vz` vsock fd
+stays valid after `SCM_RIGHTS` and after the framework releases its
+connection object.
 
 ## Host-guest transport
 
