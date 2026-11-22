@@ -400,6 +400,10 @@ from the user. It saves its evidence under
       accepts a key with `workspace:admin`, for item 3.
 - [ ] Run a CPU-heavy build and a network-heavy job for 30 minutes each.
       Record whether an instabox abuse check pauses the sandbox.
+- [ ] Run the `snapshot import` steps on the `ci` base with a test OCI
+      image, and save one snapshot. From it, start two sizes with a stopped
+      create and a resize, and with a fork. This is for item 1 options C,
+      D, and I.
 - [ ] Create a sandbox from a pinned `ci` version with `templateVersion`,
       for item 1 option F.
 - [ ] Ask instabox whether ciproxy can publish an OAuth app, for item 3
@@ -679,7 +683,9 @@ Five items wait for the user. Each item uses the layout of the
 `decisions-and-findings` skill. The options check of 22 November 2026 added
 options F, G, and H to item 1, E and F to item 3, E to item 4, and C to
 item 5. It changed the recommendations of items 1 and 5. Its report:
-`.context/overflow-providers-and-instabox/options-check.md`.
+`.context/overflow-providers-and-instabox/options-check.md`. On 22 November
+2026, the user asked for other ways to load a snapshot. The answer added
+option I to item 1 and lowered the costs of its options C and D.
 
 ### 1. instabox cannot use a shared snapshot
 
@@ -696,7 +702,9 @@ item 5. It changed the recommendations of items 1 and 5. Its report:
   instabox's kernel and base system, because instabox starts only its own
   kernel.
 - **Problem:** instabox cannot share a snapshot across instabox
-  workspaces. A snapshot also fixes the vCPU and memory of its sandbox.
+  workspaces. No route moves a snapshot or a sandbox to another workspace.
+  A snapshot also fixes the vCPU and memory of a sandbox that a create
+  makes from it.
   The `ci` template has GitHub's tool set from `ubuntu24/20261026.354`,
   and ciproxy pins `ubuntu24/20261101.360`. The `ci` template also leaves
   out Haskell, Swift, Julia, CodeQL, Edge, and Homebrew, and its Android SDK
@@ -717,12 +725,16 @@ item 5. It changed the recommendations of items 1 and 5. Its report:
   - **C.** Build an overlay snapshot in each customer workspace at connect
     and at each ciproxy release. Parity as in A, with fixed and faster
     starts. Each account gets an image state: a first wait, rollouts,
-    cleanup, and failed builds. It also needs a snapshot for each size, or
-    a resize that uses a second start. Effort: Large.
-  - **D.** Import a ciproxy-built image into each customer workspace at
-    each release, over the `ci` system, and save a snapshot. Full parity of
-    tool versions. Each account pulls about 18 GB for each release and gets
-    the image state of C. The layering is not tested. Effort: Large.
+    cleanup, and failed builds. A stopped create and a resize give each
+    size from one snapshot, with a second start for each job. Milestone 3
+    confirms it. Effort: Large.
+  - **D.** Publish the image as an OCI image at each release. In each
+    customer workspace, run the steps of instabox's `snapshot import`
+    through the API on the `ci` base, and save a snapshot. The CLI uses a
+    Debian base, so ciproxy runs the steps itself. Full parity of tool
+    versions. Each account pulls about 18 GB for each release, and pulls
+    have no cap. It gets the image state of C. Milestone 3 tests the
+    layering. Effort: Large.
   - **E.** Run the full pinned recipe in each customer workspace, as the
     Boat build does on Boat, and save a snapshot. Full parity. Each build
     takes hours for each account and release, with the image state of C.
@@ -741,11 +753,21 @@ item 5. It changed the recommendations of items 1 and 5. Its report:
     built from a public OCI build of the image definition. Full parity, and
     no image state for each account. It waits for instabox, as B does.
     Effort: Medium, after instabox agrees.
+  - **I.** D or E, and each start forks a prepared sandbox that runs no
+    job. Each fork gets the job's size and boots in seconds. Forks stay on
+    the host of their source. A full host gives a retryable
+    `409 fork_unavailable`, and the start then creates from the snapshot.
+    Effort: Large.
 - **Left out:**
   - The machine image in a nested VM in each sandbox. Reason: a sandbox
     has no `/dev/kvm`, so a nested VM cannot run.
-  - A fork of a prepared sandbox. Reason: a fork starts only on the host of
-    its source, so parallel starts fail with `409 fork_unavailable`.
+  - A move of a snapshot or a sandbox from a ciproxy workspace. Reason:
+    the API has no such route. Only a sign-in can move a whole personal
+    plan into a workspace.
+  - A devcontainer image. Reason: instabox applies the devcontainer
+    settings, but it does not boot the image.
+  - An export of a sandbox. Reason: an export holds only `/data`, and
+    instabox cannot import one.
 - **Wider fix:** None. The image source kind of the provider descriptor
   already lets each provider choose its own source.
 - **Previous examples:** "The Boat snapshot" in
@@ -756,7 +778,8 @@ item 5. It changed the recommendations of items 1 and 5. Its report:
 - **Recommendation:** F, and ask instabox for B or H at the same time. The
   options check changed the recommendation from A. F keeps the few moving
   parts of A, and a template change becomes a tested release step. B or H
-  replaces F with full parity when instabox ships one of them.
+  replaces F with full parity when instabox ships one of them. D is the
+  best route to full parity without instabox.
 - **Action:** ask the user, because F changes the requirement that an
   overflow job finds the pinned tool versions first.
 
