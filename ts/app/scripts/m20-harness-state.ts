@@ -15,6 +15,7 @@ import {
   inactiveOrganization,
   organizationIds,
 } from "./m20-fixtures-settings.ts";
+import { macLabels, macMachines } from "./m20-fixtures-macs.ts";
 
 type Schemas = components["schemas"];
 
@@ -45,6 +46,7 @@ export const m20Scenarios = [
   "label-refused",
   "label-no-fit",
   "label-partial-fit",
+  "macs",
   "organizations-single-with-removed",
   "organizations-free",
   "organizations-inactive-admin",
@@ -126,6 +128,10 @@ export function createM20State(scenario: M20Scenario = "machines"): M20State {
   }
   if (scenario === "overflow-unconnected")
     for (const label of state.labels) label.fit = withoutBoat(label.fit);
+  if (scenario === "macs") {
+    state.machines.push(...macMachines());
+    state.labels.push(...macLabels());
+  }
   if (scenario === "add-machine-connected")
     state.machines = state.machines.filter(
       (item) =>

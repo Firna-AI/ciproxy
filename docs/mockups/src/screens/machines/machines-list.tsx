@@ -23,6 +23,7 @@ import {
   type Machine,
 } from "../../fixtures/machines.ts";
 import type { Role } from "../../fixtures/members.ts";
+import { macScene } from "../../fixtures/macs.ts";
 import { newMachineScene } from "../../fixtures/new-machine.ts";
 import { CacheHitsKpi } from "./cache-hits.tsx";
 import {
@@ -44,6 +45,7 @@ export const machinesStates = [
   "loading",
   "error",
   "overflow-refresh",
+  "macs",
 ] as const;
 export type MachinesState = (typeof machinesStates)[number];
 
@@ -58,11 +60,12 @@ const machinesOf: Record<MachinesState, readonly Machine[]> = {
   loading: machineScenes.steady,
   error: machineScenes.steady,
   "overflow-refresh": machineScenes.steady,
+  macs: macScene,
 };
 
-/** A fourth machine passes the three machines of Team. */
+/** A fourth machine, also a Mac, passes the three machines of Team. */
 function overMachines(state: MachinesState): boolean {
-  return state === "over-limit" || state === "new-machine";
+  return state === "over-limit" || state === "new-machine" || state === "macs";
 }
 
 export function MachinesScreen({
@@ -159,8 +162,8 @@ function MachinesBody({
             ) : undefined
           }
         >
-          Run one command on a Linux machine. Jobs start there first, and on
-          Boat when it is busy.
+          Run one command on a Linux machine or a Mac. Jobs start there first.
+          When it is busy, Linux jobs run on Boat.
         </StateBlock>
       </Panel>
     );

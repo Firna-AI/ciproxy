@@ -246,7 +246,9 @@ export function recordedScenario(name: ScenarioName): Scenario {
     data.setup.waiting_for_machine = false;
   }
   if (name === "setup-no-kvm") {
-    data.machines = [machine({ kvm: false })];
+    data.machines = [
+      machine({ kvm: false, virtualization: "kvm_unavailable" }),
+    ];
     data.setup.machines = 1;
   }
   if (name === "setup-available" || name === "setup-image-wait")

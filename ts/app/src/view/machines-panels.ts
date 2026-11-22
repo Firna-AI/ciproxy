@@ -13,6 +13,7 @@ import {
   gigabytes,
 } from "./machines-format.ts";
 import { contactSince } from "./machines.ts";
+import { canStartVms } from "./platform.ts";
 
 export type HealthTone = "ok" | "warn" | "err" | "idle";
 
@@ -54,12 +55,16 @@ export function healthModel(machine: MachineView, now: number): HealthModel {
       tone: machine.offline ? "err" : contact === null ? "idle" : "ok",
       old: false,
     },
-    machine.kvm
-      ? fresh(healthCopy.kvmReady, "kvm", healthCopy.kvm)
+    canStartVms(machine)
+      ? fresh(
+          healthCopy.virtualizationReady,
+          "virtualization",
+          healthCopy.virtualization,
+        )
       : {
-          key: "kvm",
-          label: healthCopy.kvm,
-          value: healthCopy.kvmMissing,
+          key: "virtualization",
+          label: healthCopy.virtualization,
+          value: healthCopy.virtualizationMissing,
           tone: old ? "idle" : "err",
           old,
         },

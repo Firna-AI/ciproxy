@@ -2,7 +2,9 @@
 // spend limit, and the first job. The first Admin adds the machine, also
 // after a member asked for the install, because the Admin role alone adds a
 // machine, as the answer to item 50 says. A machine that connected gets its
-// first job image; while a first job waits for it, the step says why.
+// first job image; while a first job waits for it, the step says why. A Mac
+// connects with the same command, and the step says that it runs the jobs
+// of macOS labels.
 
 import { CircleCheck } from "lucide-react";
 
@@ -14,12 +16,13 @@ import {
   ConnectedMachine,
   ImageNotice,
   InstallCommand,
-  NoKvmNotice,
+  NoVirtualizationNotice,
   WaitingLine,
 } from "../../components/install-command.tsx";
 import { paths } from "../../components/paths.ts";
 import { unbroken } from "../../fixtures/format.ts";
 import { ax42 } from "../../fixtures/hardware.ts";
+import { macStudioMachine } from "../../fixtures/macs.ts";
 import { boat } from "../../fixtures/machines.ts";
 import { org, workspace } from "../../fixtures/org.ts";
 import { runsOnDiff, workflowFile } from "../../fixtures/workflow.ts";
@@ -32,20 +35,24 @@ export const setupMachine = "hetzner-ax42-1";
 const firstJobWaiting = `test (rust) in ${org.login}/mokly is waiting for a runner…`;
 
 export function MachineStep({ state }: { state: OnboardingState }) {
-  const joined = state === "machine-connected" || state === "machine-preparing";
+  const mac = state === "machine-mac";
+  const joined =
+    state === "machine-connected" || state === "machine-preparing" || mac;
   return (
     <div className="stack">
       <p className="small">
-        Run this command on a Linux machine. It installs the ciproxy agent and
-        connects the machine to {workspace.name}.
+        Run this command on a Linux machine or a Mac. It installs the ciproxy
+        agent and connects the machine to {workspace.name}.
       </p>
-      {state === "machine-no-kvm" ? <NoKvmNotice name={setupMachine} /> : null}
+      {state === "machine-no-kvm" ? (
+        <NoVirtualizationNotice name={setupMachine} />
+      ) : null}
       <InstallCommand />
       {joined ? (
         <>
           <ConnectedMachine
-            name={setupMachine}
-            hardware={ax42}
+            name={mac ? macStudioMachine.name : setupMachine}
+            hardware={mac ? macStudioMachine.hardware : ax42}
             preparing={state === "machine-preparing"}
           />
           <div className="row">

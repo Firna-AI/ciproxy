@@ -1,6 +1,7 @@
 // The health of one machine. While it is offline, only the last contact is
 // current: the other checks show their last values in grey, with a note. A
-// machine without KVM shows that check as failed. The agent row says that
+// machine that cannot start VMs shows the virtualization check as failed:
+// KVM on a Linux machine, and Virtualization.framework on a Mac. The agent row says that
 // the agent runs the newest release, or names the newest release beside an
 // older one; the old value of an offline machine claims neither.
 
@@ -46,8 +47,8 @@ export function MachineHealth({ machine }: { machine: Machine }) {
         <DetailRow label="Last contact">
           <DotLabel tone={offline ? "err" : "ok"}>{machine.lastSeen}</DotLabel>
         </DetailRow>
-        <DetailRow label="KVM">
-          {machine.kvm ? (
+        <DetailRow label="Virtualization">
+          {machine.virtualization ? (
             <Check stale={offline}>Ready</Check>
           ) : offline ? (
             <Check stale>Not available</Check>
@@ -66,8 +67,8 @@ export function MachineHealth({ machine }: { machine: Machine }) {
       </DetailList>
       {offline ? (
         <p className="caption health-note">
-          KVM, disk, and agent show the values of the last contact, {offlineFor}{" "}
-          ago.
+          Virtualization, disk, and agent show the values of the last contact,{" "}
+          {offlineFor} ago.
         </p>
       ) : null}
     </Panel>

@@ -5,7 +5,8 @@
 // the full request of the size with "fits", as the live queue does, and not
 // the largest job that a machine or a Boat size takes, which the API does not
 // give. Without a Boat account, the line keeps the fit of the machines and
-// says that Boat is not connected; it checks no Boat size.
+// says that Boat is not connected; it checks no Boat size. A macOS label
+// counts the Macs only, and checks no Boat size either.
 
 import { Notice } from "../../components/feedback.tsx";
 import type { Machine } from "../../fixtures/machines.ts";
@@ -33,13 +34,25 @@ export function FitNote({
   /** The workspace has a Boat account. */
   boat?: boolean;
 }) {
+  const macos = label.platform === "macos";
   if (fitsOwnMachine(label, machines)) {
     const { fewest, most } = jobsPerMachine(label, machines);
     return (
       <p className="caption">
-        Each of your machines runs {jobsText(fewest, most)} of this size at a
-        time.{boat ? null : " Boat is not connected."}
+        Each of your {macos ? "Macs" : "machines"} runs {jobsText(fewest, most)}{" "}
+        of this size at a time.
+        {boat || macos ? null : " Boat is not connected."}
       </p>
+    );
+  }
+  if (macos) {
+    return (
+      <Notice
+        tone="warning"
+        title={`No Mac of yours fits a job of ${requestPhrase(label)}`}
+      >
+        Jobs with this label wait until a Mac that fits connects.
+      </Notice>
     );
   }
   if (!boat) {

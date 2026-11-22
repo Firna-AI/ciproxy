@@ -1,6 +1,8 @@
 ---
 title: Labels and VM sizes
-description: The label in runs-on picks the size of the VM that runs the job.
+description: >-
+  The label in runs-on picks the platform and size of the VM that runs the
+  job.
 ---
 
 import { Badge } from "@astrojs/starlight/components";
@@ -11,20 +13,26 @@ import {
   defaultJobDiskGb,
   imageBudgetGb,
   machineSlots,
+  macosVmLimit,
+  macStudio,
 } from "../../../../data/hardware.ts";
 
-Each job starts in a fresh VM of the size of its label: on your machines
-first, and on Boat when they are busy.
+Each job starts in a fresh VM of the platform and size of its label: on
+your machines first, and on Boat when they are busy. A job of a macOS label
+runs on your Macs only.
 
 ## Default labels
 
-Every workspace starts with these labels. `ciproxy` is the default label.
+Every workspace starts with these Linux and macOS labels. `ciproxy` is the
+default label.
 
-| Label                                       | Size                             | Slots |
-| ------------------------------------------- | -------------------------------- | ----- |
-| `ciproxy` {jsx(Badge, { text: "Default" })} | 2 vCPU · 8 GB · 20 GB free disk  | 1     |
-| `ciproxy-4vcpu`                             | 4 vCPU · 16 GB · 20 GB free disk | 2     |
-| `ciproxy-8vcpu`                             | 8 vCPU · 32 GB · 60 GB free disk | 4     |
+| Label                                       | Platform | Size                             | Slots |
+| ------------------------------------------- | -------- | -------------------------------- | ----- |
+| `ciproxy` {jsx(Badge, { text: "Default" })} | Linux    | 2 vCPU · 8 GB · 20 GB free disk  | 1     |
+| `ciproxy-4vcpu`                             | Linux    | 4 vCPU · 16 GB · 20 GB free disk | 2     |
+| `ciproxy-8vcpu`                             | Linux    | 8 vCPU · 32 GB · 60 GB free disk | 4     |
+| `ciproxy-macos`                             | macOS    | 2 vCPU · 8 GB · 20 GB free disk  | 1     |
+| `ciproxy-macos-4vcpu`                       | macOS    | 4 vCPU · 16 GB · 20 GB free disk | 2     |
 
 Like the disk of a GitHub-hosted runner, the disk of a label is the free
 disk that each job gets. Its VM also holds the image: with the current
@@ -39,8 +47,8 @@ jobs:
       - run: npm run test:e2e
 ```
 
-A label sets the size of the VM, not its software. Every label starts from
-the same image. To use other software, see
+A label sets the platform and size of the VM, not its software. Every
+label of a platform starts from the same image. To use other software, see
 [Run steps in another image][container].
 
 ## Slots
@@ -57,20 +65,39 @@ The agent reports the slots of a machine when it connects. A Hetzner AX42
 with {ax42.threads} threads and {ax42.memoryGb} GB has {machineSlots(ax42)}
 slots.
 
+## macOS labels
+
+A job of a macOS label, such as `ciproxy-macos`, runs in a fresh macOS VM
+on one of your Macs. The macOS image holds Xcode and the tools of the
+GitHub runner image for `macos-latest`.
+
+- A macOS label runs on your Macs only. Its jobs never run on Boat, so they
+  wait for a free Mac.
+- A Mac uses the same slots as a Linux machine, but it runs at most
+  {macosVmLimit} job VMs at a time, because Apple allows at most
+  {macosVmLimit} macOS VMs on one Mac. A Mac Studio with {macStudio.threads}
+  cores and {macStudio.memoryGb} GB has {machineSlots(macStudio)} slots, and
+  it runs {macosVmLimit} jobs at a time.
+- A Linux label never runs on a Mac, and a macOS label never runs on a Linux
+  machine.
+
 ## Custom labels
 
-Add a label with its own size in **Settings**, under **Labels**. A label has
-a name, vCPU, memory in GB, and free disk in GB, with at least 1 GB of free
-disk. Sizes use decimal GB, so 1 GB is 1,000,000,000 bytes.
+Add a label with its own platform and size in **Settings**, under
+**Labels**. A label has a name, a platform, vCPU, memory in GB, and free
+disk in GB, with at least 1 GB of free disk. Sizes use decimal GB, so 1 GB
+is 1,000,000,000 bytes.
 
-Each label runs on your machines, on Boat, or on both, with the switches
-**Your machines** and **Boat**. A label that allows both starts its jobs on
-your machines first.
+Each Linux label runs on your machines, on Boat, or on both, with the
+switches **Your machines** and **Boat**. A label that allows both starts its
+jobs on your machines first. A macOS label runs on your Macs only, so its
+dialog has no switches.
 
 - A label name follows the rules of GitHub for runner labels. ciproxy checks
   the name with GitHub when you save the label.
-- A label keeps its name. To rename a label, add a new one, move your
-  workflows to it, and delete the old one.
+- A label keeps its name and its platform. To rename a label or change its
+  platform, add a new one, move your workflows to it, and delete the old
+  one.
 - You can delete any label except `ciproxy`. The waiting jobs of a deleted
   label stay queued in GitHub, and its running jobs finish.
 - After you change the size of a label, each job that a runner takes gets
@@ -79,7 +106,7 @@ your machines first.
   machines at a time.
 
 :::note[Sizes larger than your machines]
-A job whose size fits none of your machines runs on Boat only. When no Boat
+A Linux job whose size fits none of your machines runs on Boat only. When no Boat
 size fits either, the label setting **When nothing fits** decides: its jobs
 wait, or run on the largest Boat size.
 :::

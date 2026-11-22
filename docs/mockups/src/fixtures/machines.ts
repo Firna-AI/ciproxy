@@ -3,7 +3,7 @@
 // slots, or the office PC office-pc-1, whose memory leaves no room for a
 // slot. A slot holds one job VM of the smallest size; a larger VM size takes
 // several slots. A machine without KVM connects with no slots, so it cannot
-// run jobs. In some what-ifs, a machine did not measure its machine cache or
+// run jobs. The Macs of macs.ts join in the what-ifs of macOS jobs. In some what-ifs, a machine did not measure its machine cache or
 // its Docker disks, so that part of its report has no figures.
 
 import { unbroken } from "./format.ts";
@@ -42,8 +42,11 @@ export type Machine = {
   hardware: Hardware;
   status: MachineStatus;
   slots: readonly SlotState[];
-  /** The machine can start a VM for each job. */
-  kvm: boolean;
+  /**
+   * The machine can start a VM for each job: KVM on Linux, and
+   * Virtualization.framework on a Mac.
+   */
+  virtualization: boolean;
   /**
    * The saved warm runner count, which an Admin sets on the machine page. It
    * stays while the machine drains, is offline, or has no slots. The warm
@@ -105,7 +108,7 @@ function machine(
     hardware: ax42,
     status,
     slots: slots(machineSlots(ax42), busy, warm),
-    kvm: true,
+    virtualization: true,
     warmTarget: defaultWarmRunners,
     cache: {
       status: "measured",
@@ -133,7 +136,7 @@ export const officeMini: Machine = {
   hardware: miniPc,
   status: "healthy",
   slots: slots(machineSlots(miniPc), 0, 2),
-  kvm: true,
+  virtualization: true,
   warmTarget: defaultWarmRunners,
   cache: { status: "measured", usedGb: 6, sizeGb: cacheSpaceGb(miniPc, 2) },
   freeDiskGb: 362,
@@ -147,7 +150,7 @@ const withoutKvm: Machine = {
   ...machine(3, 0, 0),
   status: "no-slots",
   slots: [],
-  kvm: false,
+  virtualization: false,
 };
 
 /**
@@ -160,7 +163,7 @@ export const officePc: Machine = {
   hardware: oldPc,
   status: "no-slots",
   slots: [],
-  kvm: true,
+  virtualization: true,
   warmTarget: defaultWarmRunners,
   cache: {
     status: "measured",

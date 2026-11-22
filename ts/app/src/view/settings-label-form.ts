@@ -1,15 +1,26 @@
 // The form of the label dialog. The size fields hold the text that the
 // person types; a size is whole GB and whole vCPU of at least 1, as the API
 // requires. The name goes to the API as typed, because GitHub decides which
-// names work in runs-on, and the dialog shows the refusal of GitHub.
+// names work in runs-on, and the dialog shows the refusal of GitHub. A label
+// keeps its platform, as it keeps its name. A macOS label runs on the Macs
+// only, so it always goes to the API with Boat off and "Wait". The free disk
+// of a label can have a most value, such as the free space of the macOS
+// image, when the API gives one.
 
 import type { ApiFailure } from "../api/client.ts";
-import type { LabelInput, LabelView, NothingFits } from "../api/schema.ts";
+import type {
+  LabelInput,
+  LabelView,
+  NothingFits,
+  Platform,
+} from "../api/schema.ts";
 import type { FailureCopy } from "./claim.ts";
+import { labelPlatform } from "./platform.ts";
 import { protectedLabelName } from "./settings-labels.ts";
 
 export type LabelDraft = {
   name: string;
+  platform: Platform;
   vcpus: string;
   memory: string;
   disk: string;
@@ -29,6 +40,15 @@ const largest = 2_147_483_647;
 
 export const sizeError = "Enter a whole number of 1 or more.";
 
+/** The most free disk of a label, when the API gives one, in whole GB. */
+export type DraftLimits = { maxDiskGb: number | null };
+
+export const noLimits: DraftLimits = { maxDiskGb: null };
+
+export function diskLimitError(maxDiskGb: number): string {
+  return `Enter ${maxDiskGb} GB or less.`;
+}
+
 function whole(text: string): number | null {
   if (!/^\d+$/.test(text.trim())) return null;
   const value = Number(text.trim());
@@ -38,6 +58,7 @@ function whole(text: string): number | null {
 export function editDraft(label: LabelInput): LabelDraft {
   return {
     name: label.name,
+    platform: labelPlatform(label),
     vcpus: String(label.vcpus),
     memory: String(label.memory_gb),
     disk: String(label.disk_gb),
@@ -52,6 +73,7 @@ export function newDraft(labels: readonly LabelView[]): LabelDraft {
   const base = labels.find((view) => view.label.name === protectedLabelName);
   return {
     name: "",
+    platform: "linux_x64",
     vcpus: base ? String(base.label.vcpus) : "",
     memory: base ? String(base.label.memory_gb) : "",
     disk: base ? String(base.label.disk_gb) : "",
@@ -61,35 +83,56 @@ export function newDraft(labels: readonly LabelView[]): LabelDraft {
   };
 }
 
+/** The free disk, or its error: below 1 GB, or above the most free disk. */
+function diskOf(
+  text: string,
+  limits: DraftLimits,
+): { gb: number } | { error: string } {
+  const gb = whole(text);
+  if (gb === null) return { error: sizeError };
+  if (limits.maxDiskGb !== null && gb > limits.maxDiskGb) {
+    return { error: diskLimitError(limits.maxDiskGb) };
+  }
+  return { gb };
+}
+
 /** The label of the draft, or the size fields that need a fix. */
-export function checkDraft(draft: LabelDraft): DraftCheck {
+export function checkDraft(
+  draft: LabelDraft,
+  limits: DraftLimits = noLimits,
+): DraftCheck {
   const vcpus = whole(draft.vcpus);
   const memory = whole(draft.memory);
-  const disk = whole(draft.disk);
-  if (vcpus === null || memory === null || disk === null) {
+  const disk = diskOf(draft.disk, limits);
+  if (vcpus === null || memory === null || "error" in disk) {
     const errors: Partial<Record<SizeField, string>> = {};
     if (vcpus === null) errors.vcpus = sizeError;
     if (memory === null) errors.memory = sizeError;
-    if (disk === null) errors.disk = sizeError;
+    if ("error" in disk) errors.disk = disk.error;
     return { ok: false, errors };
   }
+  const mac = draft.platform === "macos_arm64";
   return {
     ok: true,
     input: {
       name: draft.name,
+      platform: draft.platform,
       vcpus,
       memory_gb: memory,
-      disk_gb: disk,
-      allow_machines: draft.allowMachines,
-      allow_boat: draft.allowBoat,
-      when_nothing_fits: draft.whenNothingFits,
+      disk_gb: disk.gb,
+      allow_machines: mac ? true : draft.allowMachines,
+      allow_boat: mac ? false : draft.allowBoat,
+      when_nothing_fits: mac ? "wait" : draft.whenNothingFits,
     },
   };
 }
 
 /** Whether a save can start: a name, and a size that the API accepts. */
-export function canSave(draft: LabelDraft): boolean {
-  return draft.name !== "" && checkDraft(draft).ok;
+export function canSave(
+  draft: LabelDraft,
+  limits: DraftLimits = noLimits,
+): boolean {
+  return draft.name !== "" && checkDraft(draft, limits).ok;
 }
 
 /** A refused save: the refusal of the name by GitHub, or a failure. */

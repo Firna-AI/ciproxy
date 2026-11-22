@@ -20,11 +20,13 @@ test("an Admin gets the actions of each machine state", () => {
   assert.deepEqual(labels({ offline: true, draining: true }), [
     "Remove machine",
   ]);
-  assert.deepEqual(labels({ kvm: false }), ["Remove"]);
-  assert.deepEqual(labels({ kvm: false, draining: true }), [
-    "Stop draining",
+  assert.deepEqual(labels({ kvm: false, virtualization: "kvm_unavailable" }), [
     "Remove",
   ]);
+  assert.deepEqual(
+    labels({ kvm: false, virtualization: "kvm_unavailable", draining: true }),
+    ["Stop draining", "Remove"],
+  );
   const commands = headerActions(machine({})).map((action) => action.command);
   assert.deepEqual(commands, ["drain", "remove"]);
 });
@@ -42,14 +44,14 @@ test("the notice says why a machine takes no jobs, with the fix where one exists
     `ciproxy lost contact with it 14${nbsp}minutes ago. Check that the machine is on and can reach ciproxy.dev.`,
   );
   const noKvm = machineNotice(
-    machine({ hostname: "lab", kvm: false }),
+    machine({ hostname: "lab", kvm: false, virtualization: "kvm_unavailable" }),
     [],
     null,
     now,
   );
   assert.deepEqual(
     [noKvm?.key, noKvm?.title, noKvm?.fix],
-    ["no-kvm", "lab cannot start VMs", true],
+    ["no-virtualization", "lab cannot start VMs", true],
   );
   const noRoom = machineNotice(
     machine({ hostname: "tiny", slots: 0 }),
@@ -172,7 +174,7 @@ test("health marks the values of the last contact as old while offline", () => {
     old.rows.map((row) => [row.label, row.value, row.tone]),
     [
       ["Last contact", "14m ago", "err"],
-      ["KVM", "Ready", "idle"],
+      ["Virtualization", "Ready", "idle"],
       ["Disk /", `312${nbsp}GB free`, "idle"],
       ["Disk /data", `100${nbsp}GB free`, "idle"],
       ["Agent", "0.4.2", "idle"],
@@ -180,24 +182,33 @@ test("health marks the values of the last contact as old while offline", () => {
   );
   assert.equal(
     old.note,
-    `KVM, disk, and agent show the values of the last contact, 14${nbsp}minutes ago.`,
+    `Virtualization, disk, and agent show the values of the last contact, 14${nbsp}minutes ago.`,
   );
-  const missing = healthModel(machine({ kvm: false, disks: [] }), now);
+  const missing = healthModel(
+    machine({ kvm: false, virtualization: "kvm_unavailable", disks: [] }),
+    now,
+  );
   assert.deepEqual(
     missing.rows.slice(1, 3).map((row) => [row.label, row.value, row.tone]),
     [
-      ["KVM", "Not available", "err"],
+      ["Virtualization", "Not available", "err"],
       ["Disk", "No report yet", "idle"],
     ],
   );
   assert.equal(missing.note, null);
   const lastKvm = healthModel(
-    machine({ offline: true, health_old: true, kvm: false, disks: [] }),
+    machine({
+      offline: true,
+      health_old: true,
+      kvm: false,
+      virtualization: "kvm_unavailable",
+      disks: [],
+    }),
     now,
   ).rows[1];
   assert.deepEqual(
     [lastKvm?.label, lastKvm?.value, lastKvm?.tone, lastKvm?.old],
-    ["KVM", "Not available", "idle", true],
+    ["Virtualization", "Not available", "idle", true],
     "a failed KVM check of the last contact is old while offline",
   );
 });

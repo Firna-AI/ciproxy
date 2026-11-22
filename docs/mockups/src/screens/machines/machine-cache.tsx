@@ -1,5 +1,6 @@
 // The machine cache of one machine: its use, the cache hits, and the Docker
-// disks. Each part shows the figures that the machine measured in its last
+// disks, which a Mac does not have, because a macOS VM runs no Docker. Each
+// part shows the figures that the machine measured in its last
 // report. A part that the machine did not measure shows Unknown, never a zero
 // or a share, and a note says that its figures show after the machine
 // measures them. A measured cache that served no restore yet, such as the
@@ -115,16 +116,18 @@ export function MachineCache({
           <DetailRow label="Cache hits, 7 days">
             <CacheHits cache={cache} />
           </DetailRow>
-          <DetailRow label="Docker disks">
-            {dockerDisks.status === "measured" ? (
-              dotJoin(
-                unbroken(`${dockerDisks.repositories} repositories`),
-                unbroken(`${dockerDisks.sizeGb} GB`),
-              )
-            ) : (
-              <UnknownFigure />
-            )}
-          </DetailRow>
+          {machine.hardware.platform === "macos" ? null : (
+            <DetailRow label="Docker disks">
+              {dockerDisks.status === "measured" ? (
+                dotJoin(
+                  unbroken(`${dockerDisks.repositories} repositories`),
+                  unbroken(`${dockerDisks.sizeGb} GB`),
+                )
+              ) : (
+                <UnknownFigure />
+              )}
+            </DetailRow>
+          )}
         </DetailList>
       </div>
       {note ? <p className="caption cache-note">{note}</p> : null}

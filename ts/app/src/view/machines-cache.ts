@@ -59,10 +59,13 @@ export function machineHits(figures: MeasuredCache): string {
   );
 }
 
-/** The note under the cache figures that names the parts that show Unknown. */
-export function unknownNote(cache: CacheView): string | null {
+/**
+ * The note under the cache figures that names the parts that show Unknown.
+ * A Mac has no Docker disks, so its note never names them.
+ */
+export function unknownNote(cache: CacheView, docker = true): string | null {
   const cacheUnknown = cache.machine_cache.status === "unavailable";
-  const dockerUnknown = cache.docker_disks.status === "unavailable";
+  const dockerUnknown = docker && cache.docker_disks.status === "unavailable";
   if (cacheUnknown && dockerUnknown) return cacheCopy.unknownBoth;
   if (cacheUnknown) return cacheCopy.unknownCache;
   if (dockerUnknown) return cacheCopy.unknownDocker;

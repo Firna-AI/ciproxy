@@ -6,15 +6,33 @@
 // bytes. RootSizing in ciproxy-agent holds the rule that the agent and the
 // scheduler share, and this file mirrors it. An own machine reserves the VM
 // disk of each job VM, and a Boat size fits a label when its disk holds that
-// VM disk. Disks use decimal GB, and the rule whole bytes.
+// VM disk. Disks use decimal GB, and the rule whole bytes. Until the
+// protocol docs give a rule of their own, a macOS VM grows the root disk of
+// the macOS image by the same rule.
 
 import { formatCount, unbroken } from "./format.ts";
+import type { Platform } from "./platform.ts";
 
 /** One decimal GB, in bytes. */
 export const gigabyte = 1_000_000_000;
 
 /** The measured root disk of the current image release, in bytes. */
 export const currentImageRootBytes = 60_263_759_872;
+
+/**
+ * The root disk of the current macOS image, with Xcode, in bytes. A
+ * placeholder until the image build measures it.
+ */
+export const currentMacosImageRootBytes = 120_000_000_000;
+
+/** The free disk of a job, and the platform of its image. */
+type DiskSize = { freeDiskGb: number; platform?: Platform };
+
+function imageRootBytes(platform: Platform = "linux"): number {
+  return platform === "macos"
+    ? currentMacosImageRootBytes
+    : currentImageRootBytes;
+}
 
 /** The most that the kernel keeps back on ext4: 4,096 blocks of 4,096 bytes. */
 const kernelReserveBytes = 16 * 1_024 * 1_024;
@@ -33,17 +51,15 @@ function ceilDiv(a: number, b: number): number {
 }
 
 /** The VM disk of a job of a size with the current image, in bytes. */
-export function vmDiskBytes(size: { freeDiskGb: number }): number {
+export function vmDiskBytes(size: DiskSize): number {
   const freeBytes = size.freeDiskGb * gigabyte + kernelReserveBytes;
   const growth = ceilDiv(freeBytes * 100, 97);
-  return ceilDiv(currentImageRootBytes + growth, blockBytes) * blockBytes;
+  const root = imageRootBytes(size.platform);
+  return ceilDiv(root + growth, blockBytes) * blockBytes;
 }
 
 /** How many jobs of a size a disk of this many bytes holds at a time. */
-export function jobsInDisk(
-  diskBytes: number,
-  size: { freeDiskGb: number },
-): number {
+export function jobsInDisk(diskBytes: number, size: DiskSize): number {
   return floorDiv(diskBytes, vmDiskBytes(size));
 }
 

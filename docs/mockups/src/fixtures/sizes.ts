@@ -14,6 +14,16 @@ export type Size = { vcpu: number; memoryGb: number; freeDiskGb: number };
 /** The size of the default label ciproxy. */
 export const defaultLabelSize: Size = { vcpu: 2, memoryGb: 8, freeDiskGb: 20 };
 
+/**
+ * The size of the default macOS label ciproxy-macos: one slot, as the label
+ * ciproxy. A placeholder until the protocol docs set the macOS labels.
+ */
+export const defaultMacosLabelSize: Size = {
+  vcpu: 2,
+  memoryGb: 8,
+  freeDiskGb: 20,
+};
+
 /** The least free disk that a label gives each job, in GB. */
 export const minimumFreeDiskGb = 1;
 

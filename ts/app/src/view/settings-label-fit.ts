@@ -5,9 +5,11 @@
 // request, never by what a machine or a Boat size offers. Without a Boat
 // account, the line keeps the fit of the machines and says that Boat is not
 // connected; it never says that a Boat size does not fit unless the Boat
-// catalog says so. The sizes in words are in settings-label-sizes.ts.
+// catalog says so. A macOS label counts the Macs only, and never Boat, so
+// its line names Macs. The sizes in words are in settings-label-sizes.ts.
 
 import type { LabelFit, LabelInput } from "../api/schema.ts";
+import { isMacLabel } from "./platform.ts";
 import { largestBoatText, requestPhrase } from "./settings-label-sizes.ts";
 
 /** A caption, or a warning whose title can stand alone. */
@@ -27,24 +29,55 @@ function plural(count: number, one: string, many: string): string {
   return `${count} ${count === 1 ? one : many}`;
 }
 
+/** The machines of a label: Linux machines, or Macs. */
+type Machines = { one: string; many: string };
+
+const linuxMachines: Machines = { one: "machine", many: "machines" };
+const macs: Machines = { one: "Mac", many: "Macs" };
+
 /** The jobs of the size that each fitting machine runs at a time. */
-function machineFit(fit: LabelFit): string {
+function machineFit(fit: LabelFit, noun: Machines = linuxMachines): string {
   const { eligible_machines: eligible, fitting_machines: fitting } = fit;
   const unknown = fit.unavailable_machines;
   const minimum = fit.minimum_jobs ?? null;
   const maximum = fit.maximum_jobs ?? null;
   if (minimum === null || maximum === null) {
-    return "Your machines run jobs of this size.";
+    return `Your ${noun.many} run jobs of this size.`;
   }
   const jobs = jobsText(minimum, maximum);
   if (fitting === eligible) {
-    return `Each of your machines runs ${jobs} of this size at a time.`;
+    return `Each of your ${noun.many} runs ${jobs} of this size at a time.`;
   }
   const unknownCapacity =
     unknown > 0
-      ? ` The capacity of ${plural(unknown, "machine", "machines")} is not known yet.`
+      ? ` The capacity of ${plural(unknown, noun.one, noun.many)} is not known yet.`
       : "";
-  return `${jobs} of this size at a time on ${fitting} of your ${eligible} machines.${unknownCapacity}`;
+  return `${jobs} of this size at a time on ${fitting} of your ${eligible} ${noun.many}.${unknownCapacity}`;
+}
+
+/**
+ * The line of a macOS label, which runs on the Macs only. A Mac runs at most
+ * 2 jobs at a time, and the API counts that limit in the fit.
+ */
+function macFit(label: LabelInput, fit: LabelFit): FitLine {
+  if (fit.fitting_machines > 0) {
+    return { kind: "caption", text: machineFit(fit, macs) };
+  }
+  if (fit.unavailable_machines > 0) {
+    return {
+      kind: "caption",
+      text: "The capacity of your Macs is not known yet.",
+    };
+  }
+  const wait = "Jobs with this label wait until a Mac that fits connects.";
+  return {
+    kind: "warning",
+    title: `No Mac of yours fits a job of ${requestPhrase(label)}`,
+    body:
+      fit.eligible_machines === 0
+        ? `No connected Mac can run jobs now. ${wait}`
+        : wait,
+  };
 }
 
 const onlyBoat = "Only Boat may run jobs with this label.";
@@ -168,6 +201,7 @@ function unavailable(label: LabelInput, fit: LabelFit): FitLine {
 
 /** The line of the dialog that says, before the save, where jobs run. */
 export function fitLine(label: LabelInput, fit: LabelFit): FitLine {
+  if (isMacLabel(label)) return macFit(label, fit);
   switch (fit.placement) {
     case "machines_then_boat":
       return { kind: "caption", text: machineFit(fit) };

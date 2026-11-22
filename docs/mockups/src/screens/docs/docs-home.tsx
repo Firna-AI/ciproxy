@@ -92,14 +92,15 @@ export function DocsHomeScreen({
           <li>
             One or more x64 Linux machines with systemd, {unbroken("cgroup v2")}
             , KVM, {unbroken("4 cores")}, {unbroken("16 GB")} of memory, and{" "}
-            {unbroken("250 GB")} of disk or more.{" "}
+            {unbroken("250 GB")} of disk or more, or Macs with Apple Silicon for
+            macOS jobs.{" "}
             <TextLink
               to={paths.addMachineGuide}
               fragment="what-the-machine-needs"
             >
               Add a machine
             </TextLink>{" "}
-            lists the supported distributions.
+            lists the supported distributions and what a Mac needs.
           </li>
           <li>A Boat account for overflow. You can connect it later.</li>
         </ul>
