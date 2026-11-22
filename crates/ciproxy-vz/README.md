@@ -81,7 +81,23 @@ the framework calls the completion blocks and the delegate there.
 A VM lives inside the process that made it. It stops when the last `Vm`
 handle drops or when the process exits.
 
-### Private VNC
+### User context
+
+Run VMs in a process of a normal user, not as root. The test Mac showed
+two failures as root:
+
+- A test binary that runs with `sudo` fails at `start` with `VZErrorDomain`
+  error -9, "Unable to access security information".
+- A root helper under a launchd system job starts and runs a VM, but
+  `pause` and then `save` stop the VM with `VZErrorDomain` error 1,
+  "Internal Virtualization error".
+
+The same calls pass in a process of a normal user. Apple documents only
+that a saved state is encrypted with a key that is tied to the host. The
+likely cause is that the framework needs the security session of a user,
+for example a keychain. This is not proven.
+
+
 
 The `private-vnc` feature adds `Vm::start_vnc(port, password)` over the
 private `_VZVNCServer`. Apple does not document it, and it can change in any
