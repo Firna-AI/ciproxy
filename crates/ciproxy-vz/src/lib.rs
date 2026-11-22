@@ -6,6 +6,8 @@
 //! the threading model.
 
 pub mod bundle;
+#[cfg(any(target_os = "macos", test))]
+mod bundle_clone;
 pub mod error;
 pub mod lease;
 pub mod mac_address;
