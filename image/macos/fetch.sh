@@ -13,7 +13,7 @@ inputs="$work_dir/inputs"
 mkdir -p "$inputs"
 
 check() {
-    printf '%s  %s\n' "$1" "$2" | shasum -a 256 --check
+    printf '%s  %s\n' "$1" "$2" | shasum -a 256 -c
 }
 
 fetch() {

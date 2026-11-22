@@ -5,7 +5,7 @@ set -euo pipefail
 
 archive=${1:?Usage: install-runner.sh RUNNER_ARCHIVE}
 : "${RUNNER_SHA256:?RUNNER_SHA256 is required}"
-printf '%s  %s\n' "$RUNNER_SHA256" "$archive" | shasum -a 256 --check
+printf '%s  %s\n' "$RUNNER_SHA256" "$archive" | shasum -a 256 -c
 rm -rf /opt/actions-runner
 mkdir -p /opt/actions-runner
 tar -xzf "$archive" -C /opt/actions-runner

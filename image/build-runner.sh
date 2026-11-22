@@ -12,7 +12,12 @@ archive="$work_dir/runner-source.tar.gz"
 if [[ ! -f "$archive" ]]; then
     curl -fsSL "https://codeload.github.com/actions/runner/tar.gz/$commit" -o "$archive"
 fi
-printf '%s  %s\n' "$digest" "$archive" | sha256sum --check
+# macOS has a BSD sha256sum without --check, and shasum on every host.
+if command -v shasum >/dev/null; then
+    printf '%s  %s\n' "$digest" "$archive" | shasum -a 256 -c
+else
+    printf '%s  %s\n' "$digest" "$archive" | sha256sum -c
+fi
 if [[ ! -d "$source_dir" ]]; then tar -xzf "$archive" -C "$work_dir"; fi
 python3 "$definition/runner-patch/prepare-source.py" "$source_dir"
 (

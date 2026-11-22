@@ -7,7 +7,10 @@ set -euo pipefail
 
 definition=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 repository=$(cd "$definition/../.." && pwd)
+# DISK_BYTES and IMAGE_RELEASE_ID in the environment override the pins.
+disk_override=${DISK_BYTES:-}
 source "$definition/pins.env"
+DISK_BYTES=${disk_override:-$DISK_BYTES}
 work_dir=$(mkdir -p "${1:?Usage: image/macos/build.sh WORK_DIR [PHASE...]}" && cd "$1" && pwd)
 shift
 vm_tool="$work_dir/tools/ciproxy-image-vm"
@@ -111,6 +114,26 @@ phase_provision_check() {
     }
 }
 
+# Shrink the configured guest to a disk of DISK_BYTES. Opt-in, for a small
+# test image. It removes the guest's Recovery container.
+phase_shrink() {
+    vm_running || vm_start
+    wait_ssh 600
+    guest_scp /tmp/ "$definition/shrink-disk.sh"
+    guest_ssh "sudo bash /tmp/shrink-disk.sh $DISK_BYTES" | tee "$run_dir/shrink.json"
+    guest_ssh 'sudo rm -f /tmp/shrink-disk.sh; sudo shutdown -h now' || true
+    vm_wait_stopped 300
+    python3 -c 'import os, sys; os.truncate(sys.argv[1], int(sys.argv[2]))' \
+        "$bundle/disk.img" "$DISK_BYTES"
+    # The first start proves that the cut disk boots, and writes the backup
+    # GPT at the new end.
+    vm_start
+    wait_ssh 900
+    guest_ssh 'yes | sudo diskutil repairDisk disk0 >/dev/null; diskutil list disk0'
+    guest_ssh 'sudo shutdown -h now' || true
+    vm_wait_stopped 300
+}
+
 # A test image for the end-to-end test: the configured guest with the stock
 # runner, the guest service, and auto-login, without Xcode and the upstream
 # toolset. It has the release archive form and a manifest with test_image.
@@ -119,7 +142,7 @@ phase_test_image() {
     vm_running || vm_start
     wait_ssh 600
     local artifacts="$work_dir/artifacts"
-    export IMAGE_RELEASE_ID="${IMAGE_RELEASE_ID:-$IMAGE_ID-test}"
+    export IMAGE_RELEASE_ID="${IMAGE_RELEASE_ID:-$TEST_IMAGE_ID}"
     guest_ssh 'rm -rf /tmp/ciproxy && mkdir -p /tmp/ciproxy'
     guest_scp /tmp/ciproxy/ "$work_dir/inputs/runner.tar.gz" "$definition/install-runner.sh" \
         "$definition/clean-image.sh"

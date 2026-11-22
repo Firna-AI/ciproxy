@@ -99,11 +99,16 @@ file holds the password in a reversible form.
 ## The test image
 
 `build.sh WORK_DIR test-image` packs a test image for the end-to-end test.
-Run it after the `configure` phase. It needs no Xcode archive. It installs
+Run it after the `configure` phase. For a small test disk, run the opt-in
+`shrink` phase first, with `DISK_BYTES` set in the environment. It removes
+the update's leftovers and the guest's Recovery container, shrinks the main
+APFS container, and cuts `disk.img` to `DISK_BYTES`. Then it starts the
+guest once, which proves that the disk boots, and repairs the partition map.
+It changes nothing when the used space does not fit with a 2 GB margin. It needs no Xcode archive. It installs
 the stock runner and the guest from `GUEST_DIR`, turns on auto-login, reads
 the guest's facts, removes the build state, and packages the guest in the
-release form. The manifest has `"test_image": true`, and the image ID ends
-in `-test`. The image has no Xcode and no upstream toolset, so it is only
+release form. The manifest has `"test_image": true`, and the image ID is
+`TEST_IMAGE_ID` of the pins. The image has no Xcode and no upstream toolset, so it is only
 for tests. The cleanup removes the build's SSH key, so copy the VM folder
 first when you want to run more phases on it.
 
