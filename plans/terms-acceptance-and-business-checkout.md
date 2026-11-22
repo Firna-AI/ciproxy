@@ -1,8 +1,7 @@
 # Terms acceptance and business checkout
 
-Status: Active. On branch
-`conductor/ciproxy-terms-acceptance-and-business-checkout`, no pull request
-yet. The pull request that completes the work deletes this plan, as the
+Status: Active. [PR #125](https://github.com/Firna-AI/ciproxy/pull/125) is
+open. The pull request that completes the work deletes this plan, as the
 `plans` skill says.
 
 The review of the legal pages in pull request #111 left five follow-up
@@ -353,8 +352,10 @@ Evidence: `.context/terms-acceptance-and-business-checkout/m6/`.
 
 Depends on: every other milestone
 
-- [ ] Run the targeted tests and the complete gate named in `AGENTS.md`.
-- [ ] Commit with Conventional Commits and push the branch.
+- [x] Run the targeted tests and the complete gate named in `AGENTS.md`.
+- [x] Commit with Conventional Commits and push the branch.
+  Evidence: `.context/terms-acceptance-and-business-checkout/gate-1.log` and
+  `gate-1-macos-rerun.log`.
 - [ ] Review the complete local diff against `origin/docs/legal-pages-firna`,
       the branch of #111, with the `implementation-review` skill after the
       push. Report the findings, then apply the fix rule: fix the `fix now`
