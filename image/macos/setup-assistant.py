@@ -67,7 +67,7 @@ def steps(password):
         # The dialog "Mac Data Will Not Be Securely Encrypted" has the only
         # Continue of this screen.
         ("filevault", r"Ready for FileVault",
-         [("click_until", r"^Not Now$", r"Will Not Be Securely Encrypted"),
+         [("click_until", r"^Not Now$", r"Securely Encrypted"),
           ("click", CONTINUE, False)], 180),
         ("look", r"Choose Your Look", [("click", CONTINUE)], 120),
         ("updates", r"Update Mac Automatically",
