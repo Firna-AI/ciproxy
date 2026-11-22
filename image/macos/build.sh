@@ -103,6 +103,9 @@ phase_provision() {
     PKR_VAR_vm_password=$(cat "$secrets/password")
     PKR_VAR_github_api_pat=${GITHUB_API_PAT:-$(cat "$secrets/github-api-pat" 2>/dev/null || true)}
     export PKR_VAR_vm_password PKR_VAR_github_api_pat
+    # Packer's debug log, for SSH and plugin errors. Packer masks the values
+    # of sensitive variables, such as the password, in it.
+    export PACKER_LOG=1 PACKER_LOG_PATH="$run_dir/packer-debug.log"
     (cd "$(dirname "$template")" && "$work_dir/inputs/packer" build -color=false -timestamp-ui \
         -var "source_vm_name=$(guest_ip 5)" -var "build_id=$IMAGE_ID" \
         -var "vm_username=$guest_user" \
