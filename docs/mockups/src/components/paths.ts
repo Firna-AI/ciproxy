@@ -14,11 +14,12 @@ export const paths = {
   addMachineGuide: "docs/add-a-machine",
   labelsReference: "docs/labels",
 
-  signIn: "app/auth/sign-in",
+  signIn: "app/auth",
   signInFailed: "app/auth/sign-in/failed",
   signInExpired: "app/auth/sign-in/expired",
   installApp: "app/auth/install-app",
   installPending: "app/auth/install-app/pending-approval",
+  termsStep: "app/auth/continue",
   noRole: "app/access",
   noRoleOwner: "app/access/owner",
   accessEnded: "app/access/left",

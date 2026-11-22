@@ -29,7 +29,8 @@ export const freeUpgradesToTeam = defineUseCase({
     {
       screenPath: paths.checkoutReview,
       title: "Review the plan",
-      description: "No add-ons are needed. The total is $49 a month.",
+      description:
+        "No add-ons are needed. The total is $49 a month, and a line says that paid plans are for business use only.",
     },
     {
       screenPath: paths.checkoutStripe,

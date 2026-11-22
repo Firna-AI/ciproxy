@@ -140,6 +140,22 @@ Each design call below is my call of 22 November 2026.
   ready today. The pull request description says that the date changes to
   the publication date if they differ. Reason: the brief asks for it, and
   nobody has signed in or paid yet.
+- **An expired pending setup.** My call, from the mockups: when the pending
+  setup is older than 10 minutes, Continue gives a plain sign-in, and the
+  dashboard opens the page that the session asks for. After a first
+  install, that is the install page, whose "Install on GitHub" recovers.
+  Reason: the case needs more than 10 minutes on the terms step, and an
+  existing page recovers it. Rejected: a longer life of the pending setup,
+  and a new notice that the API would report.
+- **The late approval.** My call, from the mockups: the flow "An owner
+  approves later" keeps its step "at his next sign-in" with no terms step.
+  Reason: that sign-in starts on the sign-in page or on a dashboard link,
+  and both show the terms notice, so each start of it shows the notice.
+- **The sign-in folder of the mockups.** My call, from the mockups: the
+  folder `app/auth` gets an index with sign-in as its one canonical screen,
+  and the states of sign-in, the install page, and the terms step move into
+  child folders. Reason: a sixth screen on that page breaks the limit of
+  five screens.
 
 Contract owners:
 
@@ -159,22 +175,24 @@ Depends on: none
 The sign-in area gets the terms step, and the flows pass it after each setup
 return. The grant dialog and the checkout reviews get their new lines.
 
-- [ ] Add the terms step screen at `/continue`, with the terms notice of
+- [x] Add the terms step screen at `/continue`, with the terms notice of
       the sign-in screen from one shared part and a "Continue with GitHub"
       button.
-- [ ] Add the terms step to each user flow that passes a setup return or a
+- [x] Add the terms step to each user flow that passes a setup return or a
       GitHub sign-in link inside the dashboard. Point the "Sign in with
       GitHub" action of the install that ciproxy cannot confirm to it.
-- [ ] Add the line about later versions of the terms, with a link to the
+- [x] Add the line about later versions of the terms, with a link to the
       Terms, to the dialog that grants the Admin role. Update the texts of
       the entries and the flow that describe the dialog.
-- [ ] Add the business-use line, with a link to the Terms, to each checkout
+- [x] Add the business-use line, with a link to the Terms, to each checkout
       review with a pay button, in the known and the current-contract
       scenes.
-- [ ] Run `npm --prefix ts run mockups:check`. Smoke-test the changed pages
+- [x] Run `npm --prefix ts run mockups:check`. Smoke-test the changed pages
       at both widths.
-- [ ] Update the design and the TODOs of this plan for each problem that
+- [x] Update the design and the TODOs of this plan for each problem that
       the mockups show.
+
+Evidence: `.context/terms-acceptance-and-business-checkout/m1/`.
 
 ## Milestone 2: Documentation, protocol, and legal texts
 

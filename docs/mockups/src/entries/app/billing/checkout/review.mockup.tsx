@@ -8,7 +8,9 @@ import { CheckoutReviewScreen } from "../../../../screens/billing/checkout-revie
 export const review = defineScreen({
   title: "Review the plan",
   description:
-    "The customer sets the add-on quantities and sees the monthly total before Stripe Checkout opens.",
+    "The customer sets the add-on quantities and sees the monthly total before Stripe Checkout opens. Above Continue to payment, a line says that paid plans are for business use only, with a link to the Terms.",
+  rationale:
+    "The agent call of 22 November 2026, under the user's delegation: paid plans are for business use only. So each review with a pay button says so near the button, with a link to the Terms.",
   relatedDocs: related("billing", "metering"),
   address: orgAddress("billing/checkout"),
   useCasePaths: [paths.flowFreeToTeam],

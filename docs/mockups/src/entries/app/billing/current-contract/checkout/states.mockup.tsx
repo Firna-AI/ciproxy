@@ -6,11 +6,15 @@ import { CheckoutReviewScreen } from "../../../../../screens/billing/checkout-re
 
 const address = orgAddress("billing/checkout");
 
+const businessUseRationale =
+  "The agent call of 22 November 2026, under the user's delegation: paid plans are for business use only. So each review with a pay button says so near the button, with a link to the Terms.";
+
 export const review = defineScreen({
   slug: "review",
   title: "Review Team, as the API prices it",
   description:
-    "The review of Team from Free on 4 September, as the API prices it: the plan, the add-on quantities, a monthly total of $49 a month, and $49 charged today, then on the 4th of each month. The API gives no unit prices, so the quantities and the summary show no line amounts. Continue to payment opens Stripe Checkout.",
+    "The review of Team from Free on 4 September, as the API prices it: the plan, the add-on quantities, a monthly total of $49 a month, and $49 charged today, then on the 4th of each month. The API gives no unit prices, so the quantities and the summary show no line amounts. A line says that paid plans are for business use only, with a link to the Terms. Continue to payment opens Stripe Checkout.",
+  rationale: businessUseRationale,
   relatedDocs: related("billing", "metering"),
   address,
   render: (_props, context) => (
@@ -47,8 +51,8 @@ export const paidReview = defineScreen({
   slug: "paid-review",
   title: "Review Business, priced by the API",
   description:
-    "The review of Business from Team on 18 November, as the API prices it. Stripe charges $133.33 today for the rest of this period, which ends on 3 December, then $299 on the 4th of each month. Move to Business pays exactly this reviewed charge. After Review again, the new review shows here the same way, and it pays only after a new click on Move to Business, also when its charge did not change. In the catalogue, Move to Business opens the refusal of a review that is out of date.",
-  rationale: quoteRationale,
+    "The review of Business from Team on 18 November, as the API prices it. Stripe charges $133.33 today for the rest of this period, which ends on 3 December, then $299 on the 4th of each month. A line says that paid plans are for business use only, with a link to the Terms. Move to Business pays exactly this reviewed charge. After Review again, the new review shows here the same way, and it pays only after a new click on Move to Business, also when its charge did not change. In the catalogue, Move to Business opens the refusal of a review that is out of date.",
+  rationale: `${quoteRationale} ${businessUseRationale}`,
   relatedDocs: related("billing", "paidMoves", "metering"),
   address,
   render: (_props, context) => (

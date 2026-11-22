@@ -12,7 +12,7 @@ import {
 export const addOrganization = defineScreen({
   title: "Add an organization",
   description:
-    "The return from GitHub after Add an organization, in a what-if of 2 November: Cal Moore is also an Admin of driftwood, a workspace on Free. On GitHub, he picked mokly-labs. ciproxy checked the install with his own GitHub sign-in, and then it lists the workspaces where he is an Admin, in the order of the workspace switch, with none picked. tidepool, where he is a Viewer, is not in the list. On driftwood, mokly-labs would join inactive, because Free includes one organization. The button names the organization, and after the pick also the workspace. With one Admin workspace, the return links at once and does not show this page.",
+    "The return from GitHub after Add an organization, in a what-if of 2 November: Cal Moore is also an Admin of driftwood, a workspace on Free. On GitHub, he picked mokly-labs, and GitHub returned to the terms step, whose Continue with GitHub signed him in again. ciproxy checked the install with that sign-in, and then it lists the workspaces where he is an Admin, in the order of the workspace switch, with none picked. tidepool, where he is a Viewer, is not in the list. On driftwood, mokly-labs would join inactive, because Free includes one organization. The button names the organization, and after the pick also the workspace. With one Admin workspace, the return links at once and does not show this page.",
   rationale:
     "The answer B to item 82: GitHub keeps the choice of the organization, and the person picks the workspace, because ciproxy cannot know it. The workspace where Add started is no pick, so ciproxy never guesses one. The list offers no new workspace: an install that no Admin started with Add an organization makes one, as before.",
   relatedDocs: relatedMvp("workspaces", "security", "billing"),
@@ -38,7 +38,7 @@ export const addOrganization = defineScreen({
       slug: "request-wait",
       title: "Waiting for an owner",
       description:
-        "Cal Moore is no owner of mokly-labs, so GitHub sends his request to its owners and returns. The request names the organization, but no install exists yet, so ciproxy picks no workspace. Check again continues once an owner approves. Back to Organizations opens the tab where Cal started, which stays as it was.",
+        "Cal Moore is no owner of mokly-labs, so GitHub sends his request to its owners and returns to the terms step, whose Continue with GitHub opens this page. The request names the organization, but no install exists yet, so ciproxy picks no workspace. Check again continues once an owner approves. Back to Organizations opens the tab where Cal started, which stays as it was.",
       props: { state: "request-wait" },
       useCasePaths: [paths.flowApprovedLater],
     },
@@ -46,7 +46,7 @@ export const addOrganization = defineScreen({
       slug: "not-confirmed",
       title: "The install is not confirmed",
       description:
-        "ciproxy could not confirm the install with Cal's own GitHub sign-in, for example because that sign-in did not finish. The page names the failure and offers one action: a new GitHub sign-in, which checks the install again. No workspace gets the organization before the check passes.",
+        "ciproxy could not confirm the install with Cal's own GitHub sign-in, for example because that sign-in did not finish. The page names the failure and offers one action: Sign in with GitHub, which opens the terms step. Its Continue with GitHub starts a new GitHub sign-in, which checks the install again. No workspace gets the organization before the check passes.",
       props: { state: "not-confirmed" },
     },
     {

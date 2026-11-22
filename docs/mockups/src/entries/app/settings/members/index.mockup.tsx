@@ -36,9 +36,9 @@ export const members = defineScreen({
       slug: "grant-admin",
       title: "Give the Admin role",
       description:
-        "Cal Moore picks Admin for Dana Kim. Before her role changes, the dialog says that an Admin can add machines and connect Boat, which run the jobs of mokly-ai and mokly-labs with their secrets. It also says that an organization whose runners other people should control gets a workspace of its own.",
+        "Cal Moore picks Admin for Dana Kim. Before her role changes, the dialog says that an Admin can add machines and connect Boat, which run the jobs of mokly-ai and mokly-labs with their secrets. It also says that an organization whose runners other people should control gets a workspace of its own. A last line says that an Admin also accepts new versions of the ciproxy Terms for the customer that holds the workspace, with a link to the Terms.",
       rationale:
-        "The answer to item 50: the Admin role alone adds a machine, connects Boat, and adds an organization, and ciproxy checks no GitHub right. So the grant of the role is the one explicit step of trust, and its dialog names it.",
+        "The answer to item 50: the Admin role alone adds a machine, connects Boat, and adds an organization, and ciproxy checks no GitHub right. So the grant of the role is the one explicit step of trust, and its dialog names it. The agent call of 22 November 2026, under the user's delegation: each person accepts the terms for their own use, the first Admin also accepts them for the customer, and the customer lets each Admin accept later versions for it. So the dialog names that power too.",
       relatedDocs: relatedMvp("security", "workspaces"),
       props: { state: "grant-admin" },
       useCasePaths: [paths.flowGrantAdmin],

@@ -11,7 +11,9 @@ export const toBusiness = defineScreen({
   slug: "to-business",
   title: "Move between paid tiers",
   description:
-    "mokly-ai moves from Team to Business on 18 November. The move takes effect at once and keeps the period, so the 8,640 starts so far count toward Business. Stripe charges the card on file $133.33 for the 16 days left, with no Stripe Checkout.",
+    "mokly-ai moves from Team to Business on 18 November. The move takes effect at once and keeps the period, so the 8,640 starts so far count toward Business. Stripe charges the card on file $133.33 for the 16 days left, with no Stripe Checkout. Above Move to Business, a line says that paid plans are for business use only, with a link to the Terms.",
+  rationale:
+    "The agent call of 22 November 2026, under the user's delegation: paid plans are for business use only. So each review with a pay button says so near the button, with a link to the Terms.",
   relatedDocs: related("billing", "metering"),
   address: orgAddress("billing/change/business"),
   render: (_props, context) => (
