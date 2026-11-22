@@ -25,10 +25,7 @@ install -d -m 0755 /usr/local/bin /usr/local/libexec /etc/ciproxy
 install -m 0755 "$here/ciproxy-guest" "$here/ciproxy-cache-sidecar" /usr/local/bin/
 install -m 0755 "$here/start.sh" /usr/local/libexec/ciproxy-guest-start
 install -m 0755 "$here/runner-entry.sh" /usr/local/libexec/ciproxy-runner
-if [[ ! -f $runner/bin/Runner.Worker.stock.dll ]]; then
-    install -m 0644 "$runner/bin/Runner.Worker.dll" "$runner/bin/Runner.Worker.stock.dll"
-fi
-install -m 0644 "$here/Runner.Worker.dll" "$runner/bin/Runner.Worker.own.dll"
+bash "$here/install-worker.sh" "$runner" "$here/worker"
 chown -R "$account" "$runner"
 printf 'IMAGE_ID=%s\nVSOCK_PORT=5252\nRUNNER_ACCOUNT=%s\n' "$image_id" "$account" \
     > /etc/ciproxy/guest.env
