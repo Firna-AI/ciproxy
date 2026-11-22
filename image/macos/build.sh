@@ -101,7 +101,7 @@ phase_provision() {
     export PACKER_PLUGIN_PATH="$work_dir/packer-plugins" PACKER_CACHE_DIR="$work_dir/packer-cache"
     # Secrets go through the environment, not the command line.
     PKR_VAR_vm_password=$(cat "$secrets/password")
-    PKR_VAR_github_api_pat=${GITHUB_API_PAT:-}
+    PKR_VAR_github_api_pat=${GITHUB_API_PAT:-$(cat "$secrets/github-api-pat" 2>/dev/null || true)}
     export PKR_VAR_vm_password PKR_VAR_github_api_pat
     (cd "$(dirname "$template")" && "$work_dir/inputs/packer" build -color=false \
         -var "source_vm_name=$(guest_ip 5)" -var "build_id=$IMAGE_ID" \

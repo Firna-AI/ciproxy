@@ -95,7 +95,8 @@ limit in the upstream scripts. The token stays out of the image.
    each guest restart, brings it to the guest's `127.0.0.1`. So the agent's
    pf rules, which block guests from the host, do not stop the build. Set
    `GITHUB_API_PAT` to a token without rights for a higher GitHub API rate
-   limit. It reaches Packer through the environment, not the command line.
+   limit, or put it in `secrets/github-api-pat` of the work folder. It
+   reaches Packer through the environment, not the command line.
    The upstream tests and software report run as upstream.
 8. `guest-facts.sh` reads the macOS version, the used and free bytes of the
    data volume, SIP, and Xcode. Then the guest turns off, and the build
