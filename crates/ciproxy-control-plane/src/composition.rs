@@ -28,6 +28,7 @@ use ciproxy_github::scale_sets::{ScaleSetFactory, sdk::AppScaleSetFactory};
 use ciproxy_github::timing::RepairTiming;
 use ciproxy_metering::service::{Metering, StoredMetering};
 use ciproxy_overflow::api::Overflow;
+use ciproxy_protocol::platform::Platform;
 use ciproxy_store_interface::store::Store;
 use reqwest::{Client, Url, redirect};
 use secrecy::ExposeSecret;
@@ -39,9 +40,9 @@ use crate::cache_metadata::transport;
 use crate::config::Config;
 use crate::error::{ErrorResultExt, Result};
 use crate::hosted_events::Relay;
-use crate::image_signing::CdnSigning;
+use crate::image_signing::{CdnSigning, ImageSigning};
 use crate::repositories::{RefreshRepositories, RepositoryRefresh, StoredInstallations};
-use crate::runtime::{MachineRuntime, OwnMachines};
+use crate::runtime::{ImageOffer, MachineRuntime, OwnMachines};
 
 /// The process's shared gateway, GitHub App, and runtime service boundaries.
 pub struct Hosted {
@@ -144,17 +145,25 @@ impl Hosted {
                 store: persistence.clone(),
             }),
             clock.clone(),
-            config.image.clone(),
+            Vec::new(),
             installations.clone(),
         );
         machine_runtime.overflow = overflow.as_ref().map(|overflow| overflow.service.clone());
         machine_runtime.boat_retirement = overflow
             .as_ref()
             .map(|overflow| overflow.retirement.clone());
-        machine_runtime.image_signing = Some(Arc::new(CdnSigning::new(
+        let cdn: Arc<dyn ImageSigning> = Arc::new(CdnSigning::new(
             config.cdn_signing_key_name.clone(),
             config.secret("cdn-signing-key")?.expose_secret(),
-        )?));
+        )?);
+        machine_runtime.images = config
+            .images
+            .iter()
+            .map(|download| ImageOffer {
+                signing: (download.platform == Platform::LinuxX64).then(|| cdn.clone()),
+                download: download.clone(),
+            })
+            .collect();
         let metering: Arc<dyn Metering> = Arc::new(StoredMetering::new(store.clone()));
         let accounting = Arc::new(AccountingWorker::new(
             store.clone(),

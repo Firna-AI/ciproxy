@@ -50,15 +50,17 @@ async fn runtime_restart_recovers_post_create_delivery_with_same_identities_and_
     });
     let registrations = harness.runtime.registrations.clone();
     harness.service = service(&harness.fixture, &harness.ports, registrations.clone());
+    let images = harness.runtime.images.clone();
     let mut restarted = MachineRuntime::new(
         store.clone(),
         harness.runtime.gateway.clone(),
         registrations.clone(),
         harness.runtime.assignments.clone(),
         harness.ports.clone(),
-        harness.runtime.image.clone(),
+        Vec::new(),
         harness.runtime.installations.clone(),
     );
+    restarted.images = images;
     restarted.overflow = Some(harness.service.clone());
     restarted.boat_retirement = Some(authority(&harness.fixture, &harness.ports, registrations));
     harness.runtime = restarted;

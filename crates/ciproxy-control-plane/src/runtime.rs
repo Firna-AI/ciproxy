@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 
 use async_trait::async_trait;
+use ciproxy_agent::root_sizing::RootSizing;
 use ciproxy_gateway::gateway::MachineGateway;
 use ciproxy_gateway::types::Session;
 use ciproxy_github::assignments::JobAssignments;
@@ -14,6 +15,7 @@ use ciproxy_overflow::api::Overflow;
 use ciproxy_protocol::agent::AgentMessage;
 use ciproxy_protocol::identifiers::ImageId;
 use ciproxy_protocol::images::ImageDownload;
+use ciproxy_protocol::platform::Platform;
 use ciproxy_store_interface::github::GithubJob;
 use ciproxy_store_interface::github_lifecycle::LifecycleEvent;
 use ciproxy_store_interface::own_runners::RoutingSnapshot;
@@ -74,10 +76,8 @@ pub struct MachineRuntime {
     pub clock: Arc<dyn Runtime>,
     /// Exact App-JWT installation lookup for pending take-out authority.
     pub installations: Arc<dyn InstallationApi>,
-    /// Authenticated release download, refreshed by release composition.
-    pub image: Option<ImageDownload>,
-    /// Production CDN signer, supplied only at the hosted composition root.
-    pub image_signing: Option<Arc<dyn ImageSigning>>,
+    /// Released images, at most one for each platform.
+    pub images: Vec<ImageOffer>,
     pub(crate) operation: Arc<Mutex<()>>,
     pub(crate) tasks: Weak<RuntimeTasks>,
     task_owner: Option<Arc<RuntimeTasks>>,
@@ -85,6 +85,25 @@ pub struct MachineRuntime {
     pub(crate) image_requests: Arc<Mutex<HashMap<(Uuid, Uuid), ImageRequest>>>,
     pub(crate) boat_answers: Arc<Mutex<HashMap<Uuid, (u64, BoatRunnerGuard)>>>,
     pub(crate) takeout_checks: Arc<Mutex<HashMap<Uuid, TakeoutCheck>>>,
+}
+
+/// One released image that the runtime offers to the machines of its platform.
+#[derive(Clone)]
+pub struct ImageOffer {
+    /// Release facts with the unsigned artifact URL.
+    pub download: ImageDownload,
+    /// Signs a fresh URL for each send. Without it, the URL goes out as it is.
+    pub signing: Option<Arc<dyn ImageSigning>>,
+}
+
+impl ImageOffer {
+    /// Offer a release whose URL needs no signature.
+    pub fn unsigned(download: ImageDownload) -> Self {
+        Self {
+            download,
+            signing: None,
+        }
+    }
 }
 
 pub(crate) struct ImageRequest {
@@ -101,7 +120,7 @@ impl MachineRuntime {
         registrations: Arc<dyn RunnerRegistrations>,
         assignments: Arc<dyn JobAssignments>,
         clock: Arc<dyn Runtime>,
-        image: Option<ImageDownload>,
+        images: impl IntoIterator<Item = ImageDownload>,
         installations: Arc<dyn InstallationApi>,
     ) -> Self {
         let tasks = RuntimeTasks::new();
@@ -113,9 +132,8 @@ impl MachineRuntime {
             registrations,
             assignments,
             clock,
-            image,
+            images: images.into_iter().map(ImageOffer::unsigned).collect(),
             installations,
-            image_signing: None,
             operation: Arc::new(Mutex::new(())),
             tasks: Arc::downgrade(&tasks),
             task_owner: Some(tasks),
@@ -144,8 +162,7 @@ impl MachineRuntime {
             assignments: self.assignments.clone(),
             clock: self.clock.clone(),
             installations: self.installations.clone(),
-            image: self.image.clone(),
-            image_signing: self.image_signing.clone(),
+            images: self.images.clone(),
             operation: self.operation.clone(),
             image_requests: self.image_requests.clone(),
             takeout_checks: self.takeout_checks.clone(),
@@ -154,6 +171,21 @@ impl MachineRuntime {
             task_owner: None,
             boat_operations: self.boat_operations.clone(),
         }
+    }
+
+    /// The release that the machines of this platform get.
+    pub(crate) fn offer(&self, platform: Platform) -> Option<&ImageOffer> {
+        self.images
+            .iter()
+            .find(|offer| offer.download.platform == platform)
+    }
+
+    /// Root sizing of Linux job VMs and Boat sandboxes, from the Linux release.
+    pub(crate) fn root_sizing(&self) -> RootSizing {
+        self.offer(Platform::LinuxX64)
+            .map_or_else(RootSizing::default, |offer| RootSizing {
+                image_root_bytes: offer.download.root_disk_bytes,
+            })
     }
 
     pub(crate) async fn load(&self, workspace_id: Uuid) -> Result<RoutingSnapshot> {

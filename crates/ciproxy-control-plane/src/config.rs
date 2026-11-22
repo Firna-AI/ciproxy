@@ -45,8 +45,8 @@ pub struct Config {
     pub download_url: String,
     /// Immutable deployed commit identity.
     pub build_id: String,
-    /// Current authenticated image metadata supplied by release composition.
-    pub image: Option<ImageDownload>,
+    /// Released images, at most one for each platform, from release composition.
+    pub images: Vec<ImageDownload>,
     /// Immutable published manifest path under IMAGE_URL_PREFIX.
     pub image_manifest_path: String,
     /// Exact released filesystem bytes from the same operator manifest.
@@ -76,7 +76,7 @@ impl Config {
             github_app_slug: required("GITHUB_APP_SLUG")?,
             download_url: required("DOWNLOAD_URL")?,
             build_id: required("BUILD_ID")?,
-            image: None,
+            images: Vec::new(),
             image_disk_bytes: 0,
             image_manifest_path: required("JOB_IMAGE_MANIFEST_PATH")?,
             comparison_prices: comparison_prices::configured()?,

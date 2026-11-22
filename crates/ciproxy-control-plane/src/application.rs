@@ -54,7 +54,7 @@ impl ControlPlane for Production {
                 clock: Arc::new(SystemRuntime),
             });
             let release = releases.current().await?;
-            config.image = Some(release.download);
+            config.images.push(release.download);
             config.image_disk_bytes = release.root_disk_bytes;
             let database_url = config.database_url.expose_secret().to_owned();
             let store = tokio::task::spawn_blocking(move || PgStoreFactory.connect(&database_url))
