@@ -1,9 +1,10 @@
 # macOS image hosting and delivery
 
 Status: Active. On branch
-`calummoore/macos-h-macos-image-hosting-and-delivery-6ebi`, no pull request
-yet. The pull request that completes the work deletes this plan, as the
-`plans` skill says.
+`calummoore/macos-h-macos-image-hosting-and-delivery-6ebi`. The work lands
+in four pull requests, one for each sub-workspace of workstream H, as
+"Pull requests" below says. The pull request that completes the work
+deletes this plan, as the `plans` skill says.
 
 This is workstream H of the macOS work. The parent plan is
 `plans/macos-own-machines.md` on branch `calummoore/support-mac-os-kq1u`.
@@ -32,6 +33,25 @@ User decisions:
 - Decision 2 of the parent workspace: the build downloads each Xcode `.xip`
   once and keeps a private copy in a private R2 bucket. GitHub does the
   same with `XCODE_INSTALL_STORAGE_URL` and a signed token.
+- 23 November 2026, through the parent workspace: Cal chose the
+  recommended option of each decision below: 1 B, 2 D, 3 A, 4 B, 5 A, and
+  6 A. He also asked for Milestone 2 as its own pull request.
+
+Design calls:
+
+- 23 November 2026, my call: the control plane signs the presigned URL
+  with its own code, not with the `rusty-s3` crate (decision 1 E).
+  `rusty-s3` 0.12 needs `jiff` 1.0 beside the locked `jiff` 0.2, and a
+  crypto backend chosen by feature flags. Own code reuses `hmac` and
+  `sha2`, which the control plane already uses, and a test checks it
+  against the published AWS example.
+- 23 November 2026, my call: one GitHub variable,
+  `MACOS_IMAGE_URL_PREFIX`, holds the R2 endpoint and the bucket in path
+  style, as `IMAGE_URL_PREFIX` does for Linux. So the operator sets no
+  separate account and bucket variables.
+- 23 November 2026, my call: the resume logic of decision 2 lives in a
+  module of the agent that builds on every platform, so that the Linux
+  tests run it. The macOS image store calls it.
 
 Out of scope: a macOS image build in CI, the Boat snapshot, and custom
 images.
@@ -184,10 +204,94 @@ ciproxy-xcode/
   image. Decision 6 chooses how the build reads it.
 - The bucket never gets a public domain.
 
+### Settings and credentials
+
+These names are fixed. Code, docs, and the operator use only these.
+
+Cloudflare account `785233830ca9dfa2eb7c3561dd52f675`. The account ID is
+not a secret. The buckets have the location hint WEUR, no jurisdiction,
+no r2.dev access, and no custom domain. So the S3 endpoint is
+`https://785233830ca9dfa2eb7c3561dd52f675.r2.cloudflarestorage.com`.
+
+| R2 API token                             | Permission and scope                               | Store                                                                                                                      |
+| ---------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `ciproxy-main-preview-macos-images-read` | Object Read only, bucket `ciproxy-macos-images`    | Secret Manager secret `ciproxy-main-preview-r2-images` in project `ciproxy`                                                |
+| `ciproxy-production-macos-images-read`   | Object Read only, bucket `ciproxy-macos-images`    | Secret Manager secret `ciproxy-production-r2-images` in project `ciproxy`                                                  |
+| `ciproxy-macos-images-publish`           | Object Read & Write, bucket `ciproxy-macos-images` | The operator's password manager. `publish.sh` reads it from `R2_PUBLISH_ACCESS_KEY_ID` and `R2_PUBLISH_SECRET_ACCESS_KEY`. |
+| `ciproxy-xcode-read`                     | Object Read only, bucket `ciproxy-xcode`           | The operator's password manager. `fetch.sh` reads it from `R2_XCODE_ACCESS_KEY_ID` and `R2_XCODE_SECRET_ACCESS_KEY`.       |
+
+- Each Secret Manager version holds one JSON object:
+  `{"access_key_id": "<token ID>", "secret_access_key": "<SHA-256 hex of
+  the token value>"}`. The Cloudflare API gives the token ID and the
+  token value. The secret access key is the SHA-256 of the value.
+- Terraform creates each Secret Manager parent in the `data` root, as for
+  the Boat snapshot. Add a version only after that data apply. A parent
+  made by hand conflicts with the apply.
+- Deploy copies the latest version into the Kubernetes Secret `r2-images`
+  with the key `R2_IMAGES_KEY`. The pod reads it as the optional variable
+  `R2_IMAGES_KEY`.
+- GitHub environment variables in `main-preview` and `production`:
+  - `MACOS_IMAGE_URL_PREFIX`:
+    `https://785233830ca9dfa2eb7c3561dd52f675.r2.cloudflarestorage.com/ciproxy-macos-images`.
+  - `MACOS_IMAGE_MANIFEST_PATH`: `releases/<image_id>/manifest.json`, or
+    empty until the first publish.
+- `publish.sh` and `fetch.sh` also read `R2_ACCOUNT_ID`.
+- The scripts give the R2 keys to the AWS CLI only in its own process
+  environment. They never print them.
+- No GitHub secret is needed. Cal uploaded the Xcode archive with his own
+  account token, so no Xcode upload token is needed.
+
+### The macOS release reader
+
+- The control plane reads the macOS release only when
+  `MACOS_IMAGE_URL_PREFIX`, `MACOS_IMAGE_MANIFEST_PATH`, and
+  `R2_IMAGES_KEY` are all set. Otherwise it logs once that macOS images
+  are off.
+- It reads `manifest.json` and the sibling `downloads.json` with
+  presigned URLs that expire after 5 minutes. It takes `image_id` and
+  `root_disk_bytes` from the manifest, and the `macos` artifact from
+  `downloads.json`.
+- A failed read or a malformed key logs a warning, and the control plane
+  starts without a macOS release.
+- The presigned URL uses AWS Signature Version 4 with the region `auto`,
+  the service `s3`, the signed header `host`, and `UNSIGNED-PAYLOAD`. A
+  `FetchImage` URL expires after 2 hours.
+
+### The resumable download
+
+- The agent writes `images/<name>.tar.partial` and the sidecar
+  `images/<name>.tar.partial.json`, which holds the image ID, the SHA-256,
+  and the byte size. A partial file continues only when its sidecar
+  matches the command.
+- On resume, the agent hashes the bytes on disk, then sends
+  `Range: bytes=<length>-`. A `206` answer must start at that length. A
+  `200` answer starts the file again from zero.
+- Inside one command, the agent retries a broken stream with `Range` a
+  few times, with a short wait. An HTTP error such as `403` for an expired
+  URL ends the command and keeps the partial file. The next `FetchImage`
+  brings a fresh URL.
+- Recovery at start keeps a partial file with a valid sidecar. It still
+  removes a finished archive that waits for extraction, as today.
+- One download runs at a time. A second `FetchImage` for the same image
+  waits for the first.
+- After the size and the SHA-256 match, the partial file becomes
+  `images/<name>.tar`, and publication continues as today.
+
+## Pull requests
+
+- PR H2, this workspace: Milestone 2, one release for each platform.
+- PR H3, sub-workspace "H3 macOS release from R2": Milestones 1 and 3,
+  stacked on H2.
+- PR H5, sub-workspace "H5 resumable image download": Milestone 5, from
+  `main`.
+- PR H4, sub-workspace "H4 publish and Xcode fetch": Milestones 4 and 6,
+  stacked on PR #113, because `image/macos/` comes with that pull request.
+
 ## Decisions
 
 The decisions are numbered in the order of the message to the parent
-workspace. Each decision waits for the user.
+workspace. Cal answered all six on 23 November 2026. Each item gives its
+outcome.
 
 ### 1. How a Mac proves it may download
 
@@ -238,6 +342,8 @@ workspace. Each decision waits for the user.
   read token, and follows the Linux pattern of a URL per send. With B and E, the
   download host is `<account>.r2.cloudflarestorage.com`, so a customer firewall
   must allow that host. E is a sub-choice of B.
+- **Outcome:** 23 November 2026, Cal chose B. A private bucket and a presigned
+  URL for each send.
 - **Action:** ask the user, because the options trade cost, privacy of Xcode,
   and parts to run, and no option is clearly best.
 
@@ -289,6 +395,8 @@ workspace. Each decision waits for the user.
   Xcode stays valid for 2 hours, not 12. B and D both change agent recovery,
   which deletes each `*.tar` at start today. They also stop a second
   `FetchImage` for the same image from writing the same partial file.
+- **Outcome:** 23 November 2026, Cal chose D. Resume with `Range`, with the
+  2-hour URL.
 - **Action:** ask the user, because the resume behaviour is new agent behaviour
   that no requirement covers, and it touches the area of workstream A.
 
@@ -328,6 +436,8 @@ workspace. Each decision waits for the user.
 - **Recommendation:** A. It reuses the deploy path and the rollback of Linux,
   and a macOS release is rare. D is the choice for a reviewed record of each
   release in the repository.
+- **Outcome:** 23 November 2026, Cal chose A. The GitHub variable
+  `MACOS_IMAGE_MANIFEST_PATH`.
 - **Action:** ask the user, because B saves a deploy for each release, and the
   user chooses that trade.
 
@@ -371,6 +481,8 @@ workspace. Each decision waits for the user.
 - **Recommendation:** B. It is the only option where a missing or wrong key
   never stops the pod. B copies the key into a Kubernetes Secret, as the Boat
   snapshot does. D keeps it out of Kubernetes objects.
+- **Outcome:** 23 November 2026, Cal chose B. The Boat path, with
+  `ciproxy-<env>-r2-images`.
 - **Action:** ask the user, because it adds a Secret Manager secret and an
   operator step in each environment.
 
@@ -411,6 +523,8 @@ workspace. Each decision waits for the user.
 - **Recommendation:** A. The build is already manual, and a script adds no
   runner and no secret to the public repository. D is an optional improvement on
   A. C is probably blocked by nested virtualization.
+- **Outcome:** 23 November 2026, Cal chose A. `image/macos/publish.sh`, run by a
+  person on the build Mac.
 - **Action:** ask the user, because B puts a write secret in GitHub, and the
   user chooses where secrets live.
 
@@ -453,6 +567,8 @@ workspace. Each decision waits for the user.
 - **Recommendation:** A. A read-only token for one bucket is a small risk, and
   it lets a build run with no person. D is the choice for no change to the
   script of workstream I.
+- **Outcome:** 23 November 2026, Cal chose A. `fetch.sh` reads the archive from
+  `ciproxy-xcode`.
 - **Action:** ask the user, because it puts a long-lived token on the build Mac,
   and the build script belongs to workstream I.
 
