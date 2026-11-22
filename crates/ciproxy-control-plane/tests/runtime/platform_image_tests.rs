@@ -75,7 +75,7 @@ async fn fetches(images: Vec<ImageOffer>) -> (Fixture, Uuid, Vec<(Uuid, ImageId,
             })),
     ));
     let clock = clock(true);
-    let mut runtime = MachineRuntime::new(
+    let runtime = MachineRuntime::new(
         fixture.store.clone(),
         gateway,
         Arc::new(Unimock::new(())),
@@ -83,10 +83,9 @@ async fn fetches(images: Vec<ImageOffer>) -> (Fixture, Uuid, Vec<(Uuid, ImageId,
             store: Arc::new(StoreAdapter::new(fixture.store.clone(), clock.clone())),
         }),
         clock,
-        Vec::new(),
+        images,
         Arc::new(Unimock::new(())),
     );
-    runtime.images = images;
     runtime.settled_tick().await.unwrap();
     let mut fetched = sent.lock().unwrap().clone();
     fetched.sort_by_key(|(machine, _, _)| *machine != fixture.machine);
@@ -131,8 +130,19 @@ async fn a_mac_gets_no_image_while_only_a_linux_release_exists() {
     );
 }
 
+fn cdn() -> Arc<CdnSigning> {
+    Arc::new(CdnSigning::new("test-key".to_owned(), "AAECAwQFBgcICQoLDA0ODw==").unwrap())
+}
+
+fn both_releases() -> [ImageDownload; 2] {
+    [
+        release(Platform::LinuxX64, "linux-release"),
+        release(Platform::MacosArm64, "macos-release"),
+    ]
+}
+
 #[tokio::test]
-async fn a_mac_gets_a_two_hour_presigned_r2_url_and_a_linux_machine_a_cdn_url() {
+async fn each_fetch_image_url_carries_the_signature_of_its_own_release() {
     let macos = MacosImageSettings {
         url_prefix: Some("https://account.r2.example/ciproxy-macos-images".to_owned()),
         manifest_path: Some("releases/macos-release/manifest.json".to_owned()),
@@ -141,25 +151,25 @@ async fn a_mac_gets_a_two_hour_presigned_r2_url_and_a_linux_machine_a_cdn_url() 
         )),
     };
     let signing = PlatformSigning {
-        linux: Arc::new(
-            CdnSigning::new("test-key".to_owned(), "AAECAwQFBgcICQoLDA0ODw==").unwrap(),
-        ),
+        linux: cdn(),
         macos: macos.download_signing(),
     };
-    let (_, _, fetched) = fetches(signing.offers(&[
-        release(Platform::LinuxX64, "linux-release"),
-        release(Platform::MacosArm64, "macos-release"),
-    ]))
-    .await;
-    let urls: Vec<&str> = fetched.iter().map(|(_, _, url)| url.as_str()).collect();
-    assert_eq!(urls.len(), 2);
-    assert!(
-        urls[0].starts_with("https://images.example/linux-release.tar?Expires=")
-            && urls[0].contains("&KeyName=test-key&Signature="),
-        "{}",
-        urls[0]
+    let (fixture, mac, fetched) = fetches(signing.offers(&both_releases())).await;
+    assert_eq!(
+        fetched
+            .iter()
+            .map(|(machine, _, _)| *machine)
+            .collect::<Vec<_>>(),
+        vec![fixture.machine, mac]
     );
-    let (unsigned, signature) = urls[1].split_once("&X-Amz-Signature=").unwrap();
+    let linux = &fetched[0].2;
+    assert!(
+        linux.starts_with(
+            "https://images.example/linux-release.tar?Expires=1793887200&KeyName=test-key&Signature="
+        ) && !linux.contains("X-Amz-"),
+        "{linux}"
+    );
+    let (unsigned, signature) = fetched[1].2.split_once("&X-Amz-Signature=").unwrap();
     assert_eq!(
         unsigned,
         "https://images.example/macos-release.tar?X-Amz-Algorithm=AWS4-HMAC-SHA256\
@@ -167,4 +177,17 @@ async fn a_mac_gets_a_two_hour_presigned_r2_url_and_a_linux_machine_a_cdn_url() 
          &X-Amz-Date=20261105T120000Z&X-Amz-Expires=7200&X-Amz-SignedHeaders=host"
     );
     assert_eq!(signature.len(), 64);
+}
+
+#[tokio::test]
+async fn a_macos_release_without_its_r2_signer_is_never_sent_unsigned() {
+    let signing = PlatformSigning {
+        linux: cdn(),
+        macos: None,
+    };
+    let (fixture, _, fetched) = fetches(signing.offers(&both_releases())).await;
+    assert_eq!(
+        ids(fetched),
+        vec![(fixture.machine, ImageId("linux-release".to_owned()))]
+    );
 }

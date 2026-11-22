@@ -26,6 +26,7 @@ mod events;
 pub mod hosted_events;
 pub mod http;
 mod image_delivery;
+pub mod image_offers;
 pub mod image_release;
 pub mod image_signing;
 mod job_binding;

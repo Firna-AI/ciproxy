@@ -61,6 +61,7 @@ The runtime holds at most one release for each platform. It offers each
 machine the release of the machine's platform, and nothing when that
 platform has no release. Each release has its own URL signer. The Linux
 release uses the CDN key. The macOS release uses a presigned R2 URL that
-expires after 2 hours.
+expires after 2 hours. Without the R2 signer, the runtime does not offer
+the macOS release, so no unsigned macOS URL reaches a Mac.
 [Runtime setup](../../deploy/runtime.md#turn-on-the-runtime) says which
 release file gives each field.
