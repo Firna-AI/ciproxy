@@ -19,7 +19,7 @@ pub(crate) fn at() -> DateTime<Utc> {
 pub(crate) fn input() -> RoutingSnapshot {
     let report=serde_json::from_value(serde_json::json!({
   "hostname":"fixture", "agent_version":"fixture",
-  "hardware":{"processor":"x64","threads":8,"memory_bytes":32_000_000_000u64,"kvm":true,"disks":[{"name":"/","capacity_bytes":1_000_000_000_000u64,"free_bytes":800_000_000_000u64}]},
+  "hardware":{"platform":"linux_x64","processor":"x64","threads":8,"memory_bytes":32_000_000_000u64,"virtualization":"available","disks":[{"name":"/","capacity_bytes":1_000_000_000_000u64,"free_bytes":800_000_000_000u64}]},
   "capacity":3,"job_disk_bytes":150_000_000_000u64,"slots":[],"runners":[],"drain":"active",
   "cache":{"used_bytes":0,"capacity_bytes":0,"restores_last_7_days":0,"hits_last_7_days":0,"jobs":[]},"docker_disks":{"leased_bytes":0,"repositories":0,"used_bytes":0},"images":{"available":[{"image_id":"fixture","root_disk_bytes":60_263_759_872u64}],"newest":"fixture"}
  })).unwrap();

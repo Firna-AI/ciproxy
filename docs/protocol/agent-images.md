@@ -175,10 +175,20 @@ Mac boot the macOS image.
   Virtualization.framework needs to start it.
 - The macOS image has no Boat snapshot, because a macOS job never runs on
   Boat, as [Overflow runners](overflow.md#overflow-runners) says.
+- The image disk is built at the smallest size that holds the full image,
+  as the machine image root is.
 - Each release supplies the logical bytes of its disk, as the machine image
   does.
 - The agent makes an APFS clone of the image disk for each job VM. It grows
   the clone by the free disk of the label and the filesystem allowance.
+- The clone is sparse, so its growth takes no space until the job writes.
+- At boot, the guest grows the APFS container of the VM disk to the whole
+  disk, before the runner starts.
+- **Decision:** a macOS job VM gets the free disk of its label as on Linux,
+  from a small image disk that the agent grows. Rejected: a fixed image
+  disk with free space inside, because the label disk would then depend on
+  the image, and scheduling would count the complete fixed disk for each
+  job VM.
 - The free disk of the label remains available to the unprivileged runner
   at job start.
 - A job VM starts from the newest macOS image that its Mac has, and a
