@@ -68,6 +68,9 @@ pub(crate) fn parse_sums(text: &str) -> Option<BTreeMap<String, String>> {
 pub(crate) struct Manifest {
     /// The macOS of the guest. A host must run this release or a newer one.
     pub(crate) minimum_host_macos: String,
+    /// The free bytes of the guest data volume at the end of the build: the
+    /// space that a job can write into its fixed disk.
+    pub(crate) free_job_bytes: u64,
 }
 
 /// The folder name of an image: the hex SHA-256 of its ID, so an ID can
@@ -90,6 +93,8 @@ pub(crate) struct IndexedImage {
     pub(crate) image_id: ImageId,
     pub(crate) root_disk_bytes: u64,
     pub(crate) minimum_host_macos: String,
+    /// The disk hold of each VM of this image, from its manifest.
+    pub(crate) free_job_bytes: u64,
 }
 
 impl ImageIndex {

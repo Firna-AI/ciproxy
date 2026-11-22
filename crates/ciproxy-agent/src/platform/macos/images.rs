@@ -164,6 +164,7 @@ impl Images for MacImages {
             image_id: image.image_id.clone(),
             root_disk_bytes: root,
             minimum_host_macos: manifest.minimum_host_macos,
+            free_job_bytes: manifest.free_job_bytes,
         });
         self.inner.reclaim(&mut state)
     }
