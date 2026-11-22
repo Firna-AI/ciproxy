@@ -201,6 +201,33 @@ metadata files, and `macos-content.sha256`.
 4. A rename publishes `images/NAME/`. The index names it the newest image.
    Each image that is neither the newest nor held is removed.
 
+#### Image import, a test and operator path
+
+The hidden command `import-image` publishes a local `macos.tar` with no
+image host. It is for tests, such as the first end-to-end run, and for an
+operator who moves an image by hand. `--help` does not list it.
+
+```sh
+sudo /usr/local/bin/ciproxy-agent import-image --archive PATH \
+  --image-id ID --sha256 HEX --root-disk-bytes N
+```
+
+1. Run it as root after `prepare-host` and before `install`. It needs the
+   area volume, and it takes the runtime lock, so it refuses to run while
+   the daemon runs. The daemon then loads the image when it starts.
+2. It copies the archive to `images/NAME.tar`, owned by root with mode
+   `0600`. The copy is an APFS clone when the archive is on the area
+   volume, and a full copy when it is not. Stage the archive at the area
+   root, such as `/var/db/ciproxy/area/macos.tar`. The command refuses an
+   archive in `images/`, because recovery removes each `.tar` file there.
+3. It checks the byte count and the SHA-256 of the copy, not of the
+   source, so a later change of the source cannot reach extraction.
+4. Then it runs the same steps 2 to 4 as a download. A failed check or
+   extraction removes the copy and the pending folder. When the command
+   is stopped, the next import or daemon start removes them.
+
+An image ID that the index already lists is not imported again.
+
 ### Job disk
 
 Cal's decision 17 is open. P and A recommend option (b): the image disk
@@ -209,6 +236,14 @@ has a fixed size of 200 GB, and each VM holds the image's measured
 and one saved state per seat serves every label. The agent keeps
 `free_job_bytes` in its image index. The core uses it once P adds the field
 to the protocol.
+
+The image budget is the space of the volume that the job disk does not
+use: the job disk is (volume capacity − image budget) × 3/4. The default
+budget is 200 GiB. `CIPROXY_IMAGE_BUDGET_BYTES` sets another value, with
+the same rule as on Linux: an integer greater than 16,777,216. Each command
+reads the setting again, so put it in `/etc/ciproxy-agent/environment` for
+the daemon. A Mac records no budget, so a change applies at the next start.
+`prepare-host` prints the budget in use.
 
 ## VM seats and saved states
 
@@ -338,7 +373,7 @@ first of:
   no call for `VZVirtualMachine.isSupported` yet.
 - `entitlement_missing` when `codesign` shows no
   `com.apple.security.virtualization` for the running binary.
-- `operating_system_too_old` when the Mac's macOS is older than 26.7.2 or
+- `operating_system_too_old` when the Mac's macOS is older than 26.7.3 or
   than the `minimum_host_macos` of the newest image.
 - `available` otherwise.
 
@@ -348,7 +383,7 @@ Seats follow `Slots::for_machine` with P's rule, then
 ## Install
 
 1. Refuse a user other than root, a processor other than arm64, and a
-   macOS older than 26.7.2, the macOS of the planned image. The message
+   macOS older than 26.7.3, the macOS of the macOS image. The message
    names the minimum, the current version, and the repair.
 2. Create the control folder, the area volume, and the area folders. Load
    the pf rules.

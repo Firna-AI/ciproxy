@@ -5,7 +5,7 @@ import { orgAddress } from "../../../../../fixtures/org.ts";
 import { MachineDetailScreen } from "../../../../../screens/machines/machine-detail.tsx";
 
 const rationale =
-  "The job routing doc says that a Mac uses the slot rule of a Linux machine, and that it runs at most 2 job VMs at a time, because Apple allows at most 2 macOS VMs at a time on one Mac. A Mac runs the jobs of macOS labels only. The health check names virtualization on both platforms: KVM on Linux, and Virtualization.framework on a Mac. The macOS version that a Mac needs is the macOS of the job image, a placeholder of macOS 26.7.2 until the image build sets it.";
+  "The job routing doc says that a Mac uses the slot rule of a Linux machine, and that it runs at most 2 job VMs at a time, because Apple allows at most 2 macOS VMs at a time on one Mac. A Mac runs the jobs of macOS labels only. The health check names virtualization on both platforms: KVM on Linux, and Virtualization.framework on a Mac. The macOS version that a Mac needs is the macOS of the job image, macOS 26.7.3.";
 
 const relatedDocs = related("agent", "jobRouting", "metering");
 
@@ -39,7 +39,7 @@ export const oldMacos = defineScreen({
   slug: "old-macos",
   title: "A Mac with an old macOS",
   description:
-    "mac-mini-1 when its macOS is older than the macOS of the job image. A macOS VM cannot run a newer macOS than its host, so the Mac cannot start VMs and connects with no slots. Health shows Virtualization as not available. The notice names the fix, an update to macOS 26.7.2 or later, and an Admin gets the install command to run again. Jobs of macOS labels wait until a Mac has a free slot.",
+    "mac-mini-1 when its macOS is older than the macOS of the job image. A macOS VM cannot run a newer macOS than its host, so the Mac cannot start VMs and connects with no slots. Health shows Virtualization as not available. The notice names the fix, an update to macOS 26.7.3 or later, and an Admin gets the install command to run again. Jobs of macOS labels wait until a Mac has a free slot.",
   rationale,
   relatedDocs: related("agent", "agentInstall", "jobRouting"),
   address: orgAddress("machines/mac-mini-1"),

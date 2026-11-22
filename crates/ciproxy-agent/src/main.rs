@@ -144,7 +144,6 @@ mod slot_allocation;
 mod sparse_copy;
 mod startup;
 mod state;
-#[cfg(target_os = "linux")]
 mod storage_sizing;
 #[cfg(target_os = "linux")]
 mod system_service;

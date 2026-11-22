@@ -36,6 +36,24 @@ enum Command {
         #[arg(long)]
         with_service: bool,
     },
+    /// Publish a local `macos.tar` as the newest image. A test and operator
+    /// path: run it as root after prepare-host and before install.
+    #[cfg(target_os = "macos")]
+    #[command(hide = true)]
+    ImportImage {
+        /// The `macos.tar` file. On the area volume, the copy is an APFS clone.
+        #[arg(long)]
+        archive: std::path::PathBuf,
+        /// The image ID that the agent reports.
+        #[arg(long, value_parser = crate::macos::image_import::parse_image_id)]
+        image_id: String,
+        /// The SHA-256 of the archive, as 64 hex digits.
+        #[arg(long, value_parser = crate::macos::image_import::parse_sha256)]
+        sha256: String,
+        /// The root disk length of the image in bytes.
+        #[arg(long, value_parser = clap::value_parser!(u64).range(1..))]
+        root_disk_bytes: u64,
+    },
     /// Run one job VM. The agent starts this command in its own launchd job.
     #[cfg(target_os = "macos")]
     #[command(hide = true)]
@@ -60,6 +78,8 @@ pub(crate) enum Action {
     PrepareHost {
         with_service: bool,
     },
+    #[cfg(target_os = "macos")]
+    ImportImage(crate::macos::image_import::ImageImport),
 }
 
 impl Cli {
@@ -74,6 +94,18 @@ impl Cli {
             Some(Command::VmRun { local_id }) => Action::VmRun { local_id },
             #[cfg(target_os = "macos")]
             Some(Command::PrepareHost { with_service }) => Action::PrepareHost { with_service },
+            #[cfg(target_os = "macos")]
+            Some(Command::ImportImage {
+                archive,
+                image_id,
+                sha256,
+                root_disk_bytes,
+            }) => Action::ImportImage(crate::macos::image_import::ImageImport {
+                archive,
+                image_id: ciproxy_protocol::identifiers::ImageId(image_id),
+                sha256,
+                root_disk_bytes,
+            }),
             _ => Action::Run,
         }
     }

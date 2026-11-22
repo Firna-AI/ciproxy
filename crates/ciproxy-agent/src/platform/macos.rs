@@ -15,6 +15,7 @@ use crate::error::{Error, Result};
 use crate::macos::guests::{HelperLiveness, HelperTransport, VmFolders};
 use crate::macos::paths::{AREA, CONTROL};
 use crate::preparation::{Preparation, Uninstall};
+use crate::storage_sizing::requested_image_budget;
 use crate::vsock::GuestChannels;
 use crate::workload_space::WorkloadSpace;
 
@@ -25,6 +26,7 @@ mod cache;
 mod guard;
 mod host;
 mod images;
+mod import;
 mod isolation;
 mod launchctl;
 mod preparation;
@@ -35,6 +37,8 @@ mod updates;
 mod vm_files;
 pub(crate) mod vm_helper;
 mod vms;
+
+pub(crate) use import::import_image;
 
 use cache::NoMachineCache;
 use host::MacHost;
@@ -47,9 +51,10 @@ use service::LaunchdService;
 use updates::MacUpdates;
 use vms::MacVms;
 
-/// The bytes that the area volume keeps for images: the newest image, the
-/// next one while it downloads, and its archive. Provisional until the
-/// first measured image.
+/// The default bytes that the area volume keeps for images: the newest
+/// image, the next one while it downloads, and its archive. Provisional
+/// until the first measured image. `CIPROXY_IMAGE_BUDGET_BYTES` sets
+/// another value, as on Linux.
 const IMAGE_BUDGET_BYTES: u64 = 200 * 1024 * 1024 * 1024;
 
 /// Build saved states of the seats for warm starts. Off: on the test Mac, a
@@ -84,7 +89,8 @@ impl MacPlatform {
 
 #[async_trait]
 impl Platform for MacPlatform {
-    type Prepared = ();
+    /// The image budget in bytes.
+    type Prepared = u64;
 
     fn service(&self) -> Arc<dyn Service> {
         Arc::new(LaunchdService)
@@ -94,7 +100,7 @@ impl Platform for MacPlatform {
         Arc::new(MacHost::new(self.images.clone()))
     }
 
-    fn prepare(&self) -> Result<(Arc<dyn Preparation>, ())> {
+    fn prepare(&self) -> Result<(Arc<dyn Preparation>, u64)> {
         let area_bytes = match std::env::var("CIPROXY_AREA_BYTES") {
             Ok(value) => Some(value.trim().parse().map_err(|_| Error::Preparation {
                 component: "area size setting",
@@ -102,17 +108,18 @@ impl Platform for MacPlatform {
             })?),
             Err(_) => None,
         };
+        let image_budget = requested_image_budget()?.unwrap_or(IMAGE_BUDGET_BYTES);
         Ok((
             Arc::new(MacPreparation {
                 isolation: self.isolation.clone(),
                 launchd: Arc::new(Launchctl),
                 area_bytes,
             }),
-            (),
+            image_budget,
         ))
     }
 
-    fn machine(&self, _prepared: (), input: MachineInput<'_>) -> Result<Machine> {
+    fn machine(&self, image_budget: u64, input: MachineInput<'_>) -> Result<Machine> {
         let folders = VmFolders {
             area: PathBuf::from(AREA),
         };
@@ -138,7 +145,7 @@ impl Platform for MacPlatform {
             operation: Mutex::new(()),
         });
         Ok(Machine {
-            image_budget: IMAGE_BUDGET_BYTES,
+            image_budget,
             images: self.images.clone(),
             cache: Arc::new(NoMachineCache),
             vms,
@@ -192,7 +199,7 @@ pub(crate) async fn prepare_host(with_service: bool) -> Result<()> {
     let platform = MacPlatform::new();
     let host = platform.host();
     host.require_root()?;
-    let (preparation, ()) = platform.prepare()?;
+    let (preparation, image_budget) = platform.prepare()?;
     preparation.prepare().await?;
     println!("host prepared: control folder, area volume, fstab line, and pf rules");
     if let Some(record) = area::record()? {
@@ -203,6 +210,7 @@ pub(crate) async fn prepare_host(with_service: bool) -> Result<()> {
     }
     let report = serde_json::to_string(&host.hardware()?).map_err(|_| Error::MacHostUnsupported)?;
     println!("hardware report: {report}");
+    println!("image budget: {image_budget} bytes");
     if with_service {
         platform.service().install()?;
         println!("launchd daemon dev.ciproxy.agent installed and loaded");

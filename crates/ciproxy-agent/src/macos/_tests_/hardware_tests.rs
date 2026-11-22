@@ -27,7 +27,7 @@ fn versions_parse_and_order_by_number() {
     assert_eq!(version("26.7").to_string(), "26.7.0");
     assert_eq!(version("26.7.3\n").to_string(), "26.7.3");
     assert!(version("26.10") > version("26.9.9"));
-    assert!(version("26.7.2") == MINIMUM);
+    assert!(version("26.7.3") == MINIMUM);
     for text in ["", "26.", "26.x", "26.7.3.1", "v26"] {
         assert_eq!(MacosVersion::parse(text), None, "{text}");
     }
@@ -112,7 +112,8 @@ fn the_report_names_the_area_volume_and_caps_free_space() {
 
 #[test]
 fn install_refuses_with_a_repair_message() {
-    assert!(install_check(true, true, version("26.7.2")).is_ok());
+    assert!(install_check(true, true, version("26.7.3")).is_ok());
+    assert!(install_check(true, true, version("26.7.2")).is_err());
     assert!(matches!(
         install_check(false, true, version("26.7.3")),
         Err(Error::MacHostUnsupported)
@@ -124,6 +125,6 @@ fn install_refuses_with_a_repair_message() {
     let error = install_check(true, true, version("15.4")).expect_err("too old");
     assert_eq!(
         error.to_string(),
-        "[agent/host] ciproxy needs macOS 26.7.2 or later on this Mac. This Mac runs macOS 15.4.0. Update macOS in System Settings, then run the install again."
+        "[agent/host] ciproxy needs macOS 26.7.3 or later on this Mac. This Mac runs macOS 15.4.0. Update macOS in System Settings, then run the install again."
     );
 }
