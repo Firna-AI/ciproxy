@@ -113,3 +113,21 @@ fn a_failed_copy_fails_with_the_target_path() {
         Err(Error::Io { action: "clone the bundle", path, .. }) if path == target
     ));
 }
+
+/// The public `clone_bundle` with `clonefile`. The temporary folder of a Mac
+/// is on APFS, so the macOS CI job runs this test. It starts no VM.
+#[cfg(target_os = "macos")]
+#[test]
+fn clone_bundle_clones_an_image_without_identity_files_on_apfs() {
+    let directory = tempfile::tempdir().unwrap();
+    let image = image(&directory.path().join("image"));
+    let target = directory.path().join("vm");
+    let identity = seat_identity();
+
+    let clone = crate::clone_bundle(&image, &target, &identity).unwrap();
+
+    clone.check_files().unwrap();
+    assert_eq!(clone.read_identity().unwrap(), identity);
+    assert_eq!(clone.read_hardware_model().unwrap(), b"model");
+    assert!(!image.machine_identifier().exists());
+}
