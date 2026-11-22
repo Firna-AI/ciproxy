@@ -108,7 +108,7 @@ phase_provision() {
     export PACKER_LOG=1 PACKER_LOG_PATH="$run_dir/packer-debug.log"
     (cd "$(dirname "$template")" && "$work_dir/inputs/packer" build -color=false -timestamp-ui \
         -var "source_vm_name=$(guest_ip 5)" -var "build_id=$IMAGE_ID" \
-        -var "vm_username=$guest_user" \
+        -var "vm_username=$guest_user" -var "ciproxy_ssh_key=$ssh_key" \
         -var "xcode_install_storage_url=http://127.0.0.1:$port/" -var "xcode_install_sas=build" \
         -var "ciproxy_inputs=$work_dir/inputs" -var "ciproxy_definition=$definition" \
         -var "ciproxy_runner_sha256=$RUNNER_SHA256" "$(basename "$template")") \

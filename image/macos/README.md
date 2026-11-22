@@ -87,6 +87,9 @@ limit in the upstream scripts. The token stays out of the image.
 7. `prepare-template.py` copies the upstream template and keeps every
    upstream provisioner. It removes the Anka plugin and its source, selects
    the upstream `null` builder over SSH, and writes the trimmed toolset.
+   Packer logs in with the build's SSH key, not the password. Each upstream
+   shell step that expects no restart retries twice, because a step lost its
+   SSH session twice in a row while `softwareupdate` ran, for no cause found.
    It appends three ciproxy steps: `install-runner.sh` puts the runner in
    `/opt/actions-runner`, the guest's `install.sh` adds the guest and its
    launchd service, and `clean-image.sh` removes the build state. The host
