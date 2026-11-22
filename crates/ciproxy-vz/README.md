@@ -97,7 +97,7 @@ that a saved state is encrypted with a key that is tied to the host. The
 likely cause is that the framework needs the security session of a user,
 for example a keychain. This is not proven.
 
-
+### Private VNC
 
 The `private-vnc` feature adds `Vm::start_vnc(port, password)` over the
 private `_VZVNCServer`. Apple does not document it, and it can change in any
