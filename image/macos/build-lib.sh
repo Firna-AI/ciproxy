@@ -114,3 +114,24 @@ wait_ssh() {
 host_address() {
     guest_ssh "route -n get default | awk '/gateway:/ {print \$2}'"
 }
+
+# Wait until the guest runs the given macOS build. A macOS update restarts
+# the guest one or more times. When a restart ends the VM's run, start it
+# again.
+wait_for_build() {
+    local target=$1 timeout=$2 started=$SECONDS seen=none
+    while (( SECONDS - started < timeout )); do
+        sleep 20
+        if ! vm_running; then
+            echo "the VM stopped during the update; starting it again"
+            vm_start
+        fi
+        if seen=$(guest_ssh 'sw_vers -buildVersion' 2>/dev/null) && [[ $seen == "$target" ]]; then
+            echo "the guest runs build $seen after $(( SECONDS - started )) s"
+            return 0
+        fi
+    done
+    echo "the guest did not reach build $target in $timeout s; last seen: $seen" >&2
+    guest_ssh 'tail -n 30 /var/log/ciproxy-update.log' >&2 2>/dev/null || true
+    return 1
+}

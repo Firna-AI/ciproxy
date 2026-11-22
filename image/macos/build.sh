@@ -65,8 +65,7 @@ phase_configure() {
     guest_ssh "sudo bash /tmp/update-macos.sh $MACOS_TARGET $guest_user" \
         < "$secrets/password" || status=$?
     if [[ $status == 10 ]]; then
-        sleep 120
-        wait_ssh 3600
+        wait_for_build "${MACOS_TARGET##*-}" 3600
         status=0
     fi
     [[ $status == 0 ]] || return "$status"
