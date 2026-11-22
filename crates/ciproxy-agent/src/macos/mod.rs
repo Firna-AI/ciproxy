@@ -59,3 +59,9 @@ pub(crate) mod image_extract;
 #[cfg(test)]
 #[path = "_tests_/image_bundle_tests.rs"]
 mod image_bundle_tests;
+
+pub(crate) mod image_import;
+
+#[cfg(test)]
+#[path = "_tests_/image_import_tests.rs"]
+mod image_import_tests;

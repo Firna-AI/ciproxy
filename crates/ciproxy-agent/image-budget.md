@@ -39,6 +39,11 @@ The service can read it from the record without inheriting the shell.
 An explicit environment value that differs from the record is an error.
 The agent never silently ignores or changes that value.
 
+On macOS, the same setting sets the image budget of the area volume, with
+the same value rule. A Mac has no area record, so it records no budget and
+reads the setting at each start. The
+[macOS host guide](macos-host.md#job-disk) gives it.
+
 To change an established budget, use the replacement steps below.
 The current format does not resize an active or published area.
 
