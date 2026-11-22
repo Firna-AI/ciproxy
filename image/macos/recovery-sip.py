@@ -4,8 +4,8 @@
 
 GitHub's macOS VMs run without SIP, and the upstream recipe writes the
 system TCC database. The guest must be started in Recovery. The steps open
-Options from the startup picker, log in as `runner`, open Terminal from the
-Utilities menu, run csrutil disable, and turn the guest off.
+Options from the startup picker, choose the language, open Terminal from the
+Utilities menu, run csrutil disable as `runner`, and turn the guest off.
 """
 
 import json
@@ -18,34 +18,61 @@ from screen_driver import Screen, run_steps
 USER = "runner"
 
 
-def steps(password):
+def steps():
     return [
         # The tile's label is not the control. A click on the gear icon above
         # it selects the tile, and Continue appears under it.
         ("options", r"^Options$",
          [("double_click_above", r"^Options$", 70), ("wait", r"^Continue\.?$", 30),
           ("click", r"^Continue\.?$")], 300),
-        ("user", r"Select a user",
-         [("click", rf"^{USER}$"), ("click", r"^Next$")], 900),
-        ("password", r"Enter.*[Pp]assword|^Password$",
-         [("type", password + "\n")], 300),
     ]
 
 
+RECOVERY_WINDOW = r"Reinstall macOS|Disk Utility|Restore from Time Machine"
+
+
+def reach_recovery(screen, password, timeout=900):
+    """Wait for the Recovery window. On the way, answer each optional screen
+    once: the language list, a user picker, and a password field. macOS
+    26.6.2 shows only the language list, but FileVault adds a login."""
+    handled = set()
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        time.sleep(3)
+        screen.read()
+        if screen.find(RECOVERY_WINDOW):
+            return
+        if "language" not in handled and screen.find(r"^English \(UK\)$"):
+            screen.click(r"^English$", False)
+            screen.press("return")
+            handled.add("language")
+        elif "user" not in handled and screen.find(r"Select a user"):
+            screen.click(rf"^{USER}$")
+            screen.click(r"^Next$")
+            handled.add("user")
+        elif "password" not in handled and screen.find(r"Enter.*[Pp]assword"):
+            screen.type(password + "\n")
+            handled.add("password")
+    screen.fail(f"the Recovery window did not appear in {timeout} s")
+
+
 def open_terminal(screen):
-    """The Recovery window stays behind Terminal, so this is no step."""
-    screen.wait(r"macOS Recovery|Reinstall macOS|Disk Utility|Safari", 900)
+    """A click on the menu item does nothing, but the keys work. Terminal is
+    the third item of the Utilities menu."""
     screen.click(r"^Utilities$", False)
-    screen.wait(r"^Terminal$", 30)
-    screen.click(r"^Terminal$", False)
-    screen.wait(r"-bash|bash-\d|# ?$", 90)
+    screen.wait(r"Startup Security Utility", 30)
+    for _ in range(3):
+        screen.press("down")
+    screen.press("return")
+    screen.wait(r"-bash|bash-\d|# ?$", 120)
     time.sleep(2)
 
 
 def disable_sip(screen, password, timeout=180):
     """Answer the prompts of csrutil disable in the order that they come."""
     screen.type("csrutil disable\n")
-    answers = [(r"\[y/n\]|\(y/n\)", "y"), (r"[Uu]sername", USER), (r"[Pp]assword", password)]
+    answers = [(r"\[y/n\]|\(y/n\)", "y"), (r"Authorized user|[Uu]sername", USER),
+               (r"[Pp]assword", password)]
     answered = set()
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -69,7 +96,8 @@ def main():
     screen = Screen("127.0.0.1", status["vnc_port"], work / "tools/ocr",
                     work / "evidence/recovery", (secrets / "vnc-password").read_text().strip())
     try:
-        run_steps(screen, steps(password))
+        run_steps(screen, steps())
+        reach_recovery(screen, password)
         open_terminal(screen)
         disable_sip(screen, password)
         time.sleep(2)
