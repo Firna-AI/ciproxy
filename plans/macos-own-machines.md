@@ -96,36 +96,48 @@ Evidence: `.context/macos-own-machines/spikes/vz/RESULT.md`.
 
 ## Milestone 2: Build, in parallel workspaces
 
-Depends on: 1. Each item becomes its own sub-workspace and pull request.
+Depends on: 1. Each item is its own sub-workspace of the workspace "support
+mac os" and its own pull request into `main`. The letter in front of each
+item is its short name. "After" names the items whose contracts it needs.
 
-- [ ] Protocol and docs: add the platform to each label and each machine.
-      Route a macOS label only to Macs, with no Boat overflow. Cap the
-      macOS slots of a Mac at the licence limit. Update the contract docs.
-- [ ] Agent platform layer: put the Linux-only parts of `ciproxy-agent`
+- [ ] P. Protocol and docs: the platform of each label and each machine in
+      the docs and in `ciproxy-protocol`. A macOS label goes only to Macs,
+      with no Boat overflow. A Mac has at most 2 macOS slots.
+- [ ] C. Control plane: the platform in the store, the API, the scaler, and
+      the gateway. After: P.
+- [ ] D. Dashboard and site: the platform in the label dialog and on the
+      machine page, the Mac install guide, and the tier text "own Linux
+      machines". After: C.
+- [ ] L. Agent platform layer: put the Linux-only parts of `ciproxy-agent`
       behind one platform interface, with no change in Linux behaviour.
       These parts are systemd, Firecracker, ext4 and `e2fsprogs`, the
       network rules, and the `/proc` and `/sys` reads.
-- [ ] Agent on macOS: the Virtualization.framework VM layer, APFS clones,
-      launchd, pf isolation, the hardware report, and the macOS paths of
-      install, update, and uninstall. Depends on the platform layer.
-- [ ] macOS image: an automatic build from Apple's restore image and the
-      macOS scripts of the GitHub runner images, with Xcode, the runner,
-      and the guest. Automate the Setup Assistant. Serve the image from
-      the download site.
-- [ ] Guest, cache sidecar, and runner patch on macOS, with the cache
-      handoff of [The cache handoff](../docs/protocol/cache-handoff.md).
-- [ ] Control plane: the platform in the store, the API, the scaler, and
-      the gateway.
-- [ ] Dashboard and site: the platform in the label dialog and on the
-      machine page, the Mac install guide, and the tier text "own Linux
-      machines".
-- [ ] Release: a signed and notarized macOS arm64 agent, and the macOS path
-      of the install script.
+- [ ] V. `ciproxy-vz`: a new Apache-2.0 crate over Virtualization.framework,
+      from the spike: install, configuration, APFS clones, start, save and
+      restore, stop, VNC, and the DHCP lease lookup. The gate checks it for
+      `aarch64-apple-darwin`.
+- [ ] A. Agent on macOS: the VM layer on `ciproxy-vz`, launchd, pf
+      isolation with the IPv6 rule, the hardware report, one saved state for
+      each slot, and the macOS paths of install, update, and uninstall.
+      After: P, L, V.
+- [ ] I. macOS image: an automatic build from Apple's restore image and the
+      macOS scripts of the GitHub runner images, with Xcode, the runner, and
+      the guest. It automates the Setup Assistant over VNC. After: V.
+- [ ] G. Guest, cache sidecar, and runner patch on macOS, with
+      [The cache handoff](../docs/protocol/cache-handoff.md).
+- [ ] R. Release: a signed and notarized macOS arm64 agent, a macOS job in
+      CI, and the macOS path of the install script.
+
+Shared test Mac: the Mac mini of Milestone 1, over Tailscale. It runs at
+most 2 macOS VMs, so each workspace takes the lock file `~/vz/LOCK` before
+it starts a VM. Each workspace works in its own directory and clones from
+the shared, read-only `~/vz/base`.
 
 ## Open questions
 
 - Which Apple Developer ID signs the agent, and who holds it.
 - Where the macOS image lives, because it is far larger than the Linux
   image.
-- Whether a warm runner on a Mac uses a restored state, after the spike
-  measures it.
+- Whether a warm runner on a Mac uses a restored state. The spike measured
+  3.6 s to SSH after a restore, against 11.4 s cold.
+- Which Apple ID downloads Xcode for the image build.
