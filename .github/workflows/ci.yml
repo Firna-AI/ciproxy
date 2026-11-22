@@ -62,6 +62,9 @@ jobs:
       # The crates with macOS code. Add a crate here when it builds and
       # tests on macOS.
       MACOS_PACKAGES: ciproxy-protocol ciproxy-vz ciproxy-guest ciproxy-cache-sidecar
+      # The crates that build on macOS, but whose tests use Linux fixtures.
+      # Move a crate to MACOS_PACKAGES when its tests build on macOS.
+      MACOS_BUILD_ONLY_PACKAGES: ciproxy-agent
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -75,12 +78,14 @@ jobs:
       - name: Build and test the macOS crates
         run: |
           set -euo pipefail
-          args=()
-          for package in $MACOS_PACKAGES; do args+=(--package "$package"); done
-          cargo build --locked "${args[@]}"
-          cargo test --locked "${args[@]}"
+          tested=()
+          for package in $MACOS_PACKAGES; do tested+=(--package "$package"); done
+          built=("${tested[@]}")
+          for package in $MACOS_BUILD_ONLY_PACKAGES; do built+=(--package "$package"); done
+          cargo build --locked "${built[@]}"
+          cargo test --locked "${tested[@]}"
       - name: Sign the agent ad hoc and check it
-        if: contains(format(' {0} ', env.MACOS_PACKAGES), ' ciproxy-agent ')
+        if: contains(format(' {0} {1} ', env.MACOS_PACKAGES, env.MACOS_BUILD_ONLY_PACKAGES), ' ciproxy-agent ')
         run: |
           set -euo pipefail
           binary=target/debug/ciproxy-agent
