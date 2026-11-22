@@ -51,6 +51,12 @@ use vms::MacVms;
 /// first measured image.
 const IMAGE_BUDGET_BYTES: u64 = 200 * 1024 * 1024 * 1024;
 
+/// Build saved states of the seats for warm starts. Off: on the test Mac, a
+/// save works only in a logged-in user's GUI session, and the root daemon
+/// starts helpers in the system domain, where a save stops the VM. Cal
+/// decides between cold starts only and warm starts in a login session.
+const SAVED_STATES: bool = false;
+
 /// The macOS adapters of one invocation.
 pub(crate) struct MacPlatform {
     images: Arc<MacImages>,
@@ -126,7 +132,7 @@ impl Platform for MacPlatform {
             launchd,
             guests: channels,
             isolation: self.isolation.clone(),
-            builds: !input.uninstall,
+            builds: SAVED_STATES && !input.uninstall,
             operation: Mutex::new(()),
         });
         Ok(Machine {
