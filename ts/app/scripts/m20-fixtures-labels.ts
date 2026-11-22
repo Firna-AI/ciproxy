@@ -181,13 +181,13 @@ export function fixtureLabels(): Label[] {
     label(labelIds.default, {}, fixtureFit(), "14371"),
     label(
       labelIds.medium,
-      { name: "ciproxy-4vcpu", vcpus: 4, memory_gb: 16 },
+      { name: "ciproxy-medium", vcpus: 4, memory_gb: 16 },
       fixtureFit(gb(81), ["3", "3"]),
       "502",
     ),
     label(
       labelIds.large,
-      { name: "ciproxy-8vcpu", vcpus: 8, memory_gb: 32, disk_gb: 60 },
+      { name: "ciproxy-large", vcpus: 8, memory_gb: 32, disk_gb: 60 },
       fixtureFit(gb(122), ["1", "1"], boatSizes.xlarge),
       "2899",
     ),

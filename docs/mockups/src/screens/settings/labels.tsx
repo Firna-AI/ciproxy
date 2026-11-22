@@ -1,12 +1,12 @@
 // Labels and their sizes. A workflow picks a label in runs-on; each label
 // starts a VM of its size on an own machine, or on Boat. The dialog states
-// open over the list: edit ciproxy-8vcpu, add a label that fits no machine,
+// open over the list: edit ciproxy-large, add a label that fits no machine,
 // edit ciproxy-32vcpu, which nothing fits, raise the free disk of
-// ciproxy-4vcpu while the machines fit different numbers of its jobs, and add
+// ciproxy-medium while the machines fit different numbers of its jobs, and add
 // a label whose name GitHub refuses. The list is the moment of 18 November,
 // when a request for access waits on the Members tab. A what-if without a
 // Boat account, after a setup that skipped Boat, shows the list and the edit
-// of ciproxy-8vcpu, whose jobs run on the machines only. A what-if with a Mac
+// of ciproxy-large, whose jobs run on the machines only. A what-if with a Mac
 // shows the list with the macOS label ciproxy-macos, the add dialog with
 // macOS picked, and the edit of ciproxy-macos.
 

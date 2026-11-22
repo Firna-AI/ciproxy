@@ -44,12 +44,12 @@ const placementText: Record<Placement, string> = {
 
 /** The labels whose dialog has a screen of its own, with and without Boat. */
 const editPaths: Readonly<Record<string, CataloguePath>> = {
-  "ciproxy-8vcpu": paths.editLabel,
+  "ciproxy-large": paths.editLabel,
   [nothingFitsLabel.name]: paths.nothingFits,
   [macosLabel.name]: paths.editMacosLabel,
 };
 const editPathsNoBoat: Readonly<Record<string, CataloguePath>> = {
-  "ciproxy-8vcpu": paths.editLabelNoBoat,
+  "ciproxy-large": paths.editLabelNoBoat,
 };
 
 function LabelName({ label }: { label: Label }) {

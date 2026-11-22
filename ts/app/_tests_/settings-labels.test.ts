@@ -100,12 +100,12 @@ test("the label list says where jobs run now, as the API places them, and the jo
 
 test("every label except ciproxy offers Delete label", () => {
   assert.equal(canDelete(labelInput({ name: "ciproxy" })), false);
-  assert.equal(canDelete(labelInput({ name: "ciproxy-4vcpu" })), true);
+  assert.equal(canDelete(labelInput({ name: "ciproxy-medium" })), true);
   assert.equal(canDelete(labelInput({ name: "Ciproxy" })), true);
 });
 
 test("an edit sends the saved name unchanged with the new size", () => {
-  const saved = labelInput({ name: "ciproxy-4vcpu", disk_gb: 20 });
+  const saved = labelInput({ name: "ciproxy-medium", disk_gb: 20 });
   const draft = { ...editDraft(saved), disk: "40" };
   assert.deepEqual(checkDraft(draft), {
     ok: true,
