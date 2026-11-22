@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::identifiers::ImageId;
+use crate::platform::Platform;
 use crate::secret::Secret;
 
 /// One published image that the agent can fetch and verify.
@@ -10,6 +11,8 @@ use crate::secret::Secret;
 pub struct ImageDownload {
     /// The release that this download provides.
     pub image_id: ImageId,
+    /// The platform of the VMs that start from this image.
+    pub platform: Platform,
     /// Download URL, including any signature, hidden from diagnostics.
     pub download_url: Secret,
     /// SHA-256 digest in hexadecimal for verification after download.

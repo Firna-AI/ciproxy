@@ -45,11 +45,19 @@ against a tier.
 
 ### Tier features
 
-- Every tier includes own Linux machines, Boat overflow, the
+- Every tier includes own machines, both x64 Linux computers and Apple
+  Silicon Macs, Boat overflow for Linux jobs, the
   [transparent cache](cache.md#transparent-cache), warm runners, the
   dashboard, and the [savings report](metering.md#savings-report).
+- A Mac counts as one own machine, on every tier and in the add-ons, at the
+  price of any own machine.
+- **Decision:** a Mac counts as one own machine at the same price.
+  Rejected: a separate Mac price. Reason: the user chose one count and one
+  price on 21 November 2026.
 - Team adds several GitHub organizations, sticky Docker disks, alerts by
   email and Slack, and email support.
+- Sticky Docker disks apply to Linux machines only, as
+  [Docker disks on a Mac](docker-disks.md#docker-disks-on-a-mac) says.
 - Business adds single sign-on, an audit log, custom VM images, and
   priority support.
 - A tier also includes each feature of the tiers below it.

@@ -20,7 +20,8 @@ command, and the wait for the first image.
   [Roles](security.md#roles) says.
 - Next to the command, the dashboard says how long the install token works
   and what the machine needs.
-- The command is one line, with the install token after `--token`:
+- The command is one line, with the install token after `--token`.
+- The same command works on x64 Linux and on a Mac:
 
   ```sh
   curl -fsSL https://get.ciproxy.dev | sudo sh -s -- install --token <install token>
@@ -44,9 +45,10 @@ command, and the wait for the first image.
 
 ## What install prepares
 
-- Install prepares Firecracker, its jailer, and the required host tools.
-- Install prepares a persistent reflink disk area in one XFS file on any
-  filesystem.
+- On Linux, install prepares Firecracker, its jailer, and the required host
+  tools.
+- On Linux, install prepares a persistent reflink disk area in one XFS file
+  on any filesystem.
 - The area holds the [job disk](job-routing.md#terms).
 - The area holds the separate [image budget](job-routing-capacity.md#disk).
 - Its filesystem overhead comes from the host reserve.
@@ -61,6 +63,15 @@ command, and the wait for the first image.
   Rejected: customer preparation, full copies without reflinks, and
   deferral until after launch. Reason: one command must prepare the machine
   without a slow full-copy path.
+- On a Mac, install prepares a launchd service for the agent, the pf rules
+  of [Job isolation](security.md#job-isolation-on-a-mac), and a disk area
+  in a folder on an APFS volume.
+- APFS makes copy-on-write clones on every APFS volume, so a Mac needs no
+  extra filesystem file.
+- A Mac needs no tool other than the agent. Virtualization.framework is
+  part of macOS.
+- Uninstall on a Mac removes the launchd service, the pf rules, and the
+  disk area, after the running jobs finish.
 
 ## The install token
 
@@ -80,8 +91,12 @@ command, and the wait for the first image.
 
 ## What an own machine needs
 
-- An own machine needs x64 Linux with KVM, 4 cores, 16 GB of memory, and
-  250 GB of disk or more.
+- An own machine is an x64 Linux computer or an Apple Silicon Mac.
+
+### Linux
+
+- An x64 Linux machine needs KVM, 4 cores, 16 GB of memory, and 250 GB of
+  disk or more.
 - Reason: the 140 GB image budget leaves 110 GB before the host reserve.
 - The host keeps 27.5 GB, so the job disk is 82.5 GB.
 - [Worked examples](job-routing-examples.md) shows the default job fit with
@@ -93,8 +108,39 @@ command, and the wait for the first image.
   distributions. Rejected: a promise of any x64 Linux host that meets the
   hardware minimum, because customers must know these limits before they
   set up a machine.
-- **Decision:** own machines run x64 Linux only. Rejected: more platforms,
-  because one platform is the fastest way to ship.
+
+### Mac
+
+- A Mac needs Apple Silicon, which is an M1 chip or later.
+- Virtualization.framework runs macOS VMs only on Apple Silicon. So
+  `install` refuses a Mac with an Intel processor, with a message that
+  names the cause.
+- A Mac needs 16 GB of memory or more. With 16 GB, the
+  [host reserve](job-routing.md#slots) leaves 1 slot.
+- Virtualization.framework runs no macOS guest that is newer than the macOS
+  of the Mac.
+- So the macOS of a Mac must be the macOS version of the
+  [macOS image](agent-images.md#the-macos-image) or later.
+- `install` refuses a Mac with an older macOS, with a message that names
+  the version that the Mac needs.
+- The planned minimum is macOS 26.7.2. The pinned GitHub runner image
+  `macos-26-arm64/20261117.0516`, which `macos-latest` names now, runs
+  macOS 26.7.2. The build installs Apple's newest full restore image,
+  macOS 26.6.2, and then updates the guest to macOS 26.7.2.
+- The minimum stays a planned value until the user chooses the options of
+  the image build.
+- When a Mac cannot run the image that it has, its
+  [virtualization check](agent.md#the-virtualization-check) reports
+  `operating_system_too_old`.
+- A Mac needs 512 GB of disk or more. This value is a placeholder until the
+  size of the macOS image is measured.
+- A Mac must stay awake. The agent prevents system sleep while it runs.
+- Other apps can also run macOS VMs. Each such VM counts against the limit
+  of 2 macOS VMs on the Mac, as [Platforms](agent.md#platforms) says.
+- **Decision:** own machines run x64 Linux or macOS on Apple Silicon. This
+  replaces the decision of x64 Linux only. Reason: the user chose macOS
+  jobs on the customer's own Macs on 21 November 2026. Rejected: Linux
+  arm64 jobs on Macs.
 
 ## Related docs
 

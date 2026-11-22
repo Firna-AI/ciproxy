@@ -38,7 +38,7 @@ fn dashboard_capacity_subtracts_only_active_leases_and_sizes_the_selected_local_
     let mut report = serde_json::from_value::<ciproxy_protocol::reports::MachineReport>(
         serde_json::json!({
             "hostname":"capacity", "agent_version":"fixture",
-            "hardware":{"processor":"x64","threads":32,"memory_bytes":128_000_000_000u64,"kvm":true,"disks":[]},
+            "hardware":{"platform":"linux_x64","processor":"x64","threads":32,"memory_bytes":128_000_000_000u64,"virtualization":"available","disks":[]},
             "capacity":7,"job_disk_bytes":150_000_000_000u64,"slots":[],"runners":[],"drain":"active",
             "cache":{"used_bytes":8_000_000_000u64,"capacity_bytes":9_000_000_000u64,"restores_last_7_days":0,"hits_last_7_days":0,"jobs":[]},
             "docker_disks":{"leased_bytes":13_000_000_000u64,"repositories":1,"used_bytes":80_000_000_000u64},

@@ -67,7 +67,9 @@ The control plane is closed source and written in Rust. It has these parts:
 
 ### Agent
 
-The agent is open source and written in Rust. On its own machine, it does
+The agent is open source and written in Rust. It runs on an x64 Linux
+computer or on an Apple Silicon Mac, as
+[Platforms](protocol/agent.md#platforms) says. On its own machine, it does
 these things:
 
 - It starts a fresh [job VM](protocol/agent.md#job-vms) for each runner,
@@ -85,9 +87,21 @@ these things:
 
 ### Job VMs and sandboxes
 
-A job VM is a KVM VM on an own machine. A Boat sandbox plays the same part
-for overflow. Both start from the image, which holds the GitHub Actions
-runner. The runner takes one job.
+A job VM is a fresh VM on an own machine. A Boat sandbox plays the same
+part for overflow of Linux jobs. Both start from the image, which holds the
+GitHub Actions runner. The runner takes one job.
+
+- On an x64 Linux machine, a job VM is a Firecracker VM over KVM. It runs
+  Linux.
+- On a Mac, a job VM is a macOS VM over Apple's Virtualization.framework.
+  The agent drives the framework with its own Rust code, through the
+  `objc2-virtualization` crate.
+- A macOS job never runs on Boat, as
+  [Overflow runners](protocol/overflow.md#overflow-runners) says.
+- **Decision:** the agent runs macOS VMs with its own Rust code over
+  Virtualization.framework. Rejected: Tart and Lume as external tools.
+  Reason: one agent binary, the Apache-2.0 licence of the agent, and no
+  limit from the licence of a third party.
 
 ### Dashboard
 

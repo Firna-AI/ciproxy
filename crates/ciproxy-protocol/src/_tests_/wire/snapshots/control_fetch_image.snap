@@ -8,6 +8,7 @@ expression: message
   "command_id": "command-1",
   "image": {
     "image_id": "ubuntu-image-1",
+    "platform": "linux_x64",
     "download_url": "https://download.example/image?signature=dummy-image-key",
     "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
     "size_bytes": 12000000000,

@@ -8,10 +8,11 @@
     "hostname": "builder",
     "agent_version": "0.1.0",
     "hardware": {
+      "platform": "linux_x64",
       "processor": "x64",
       "threads": 4,
       "memory_bytes": 16000000000,
-      "kvm": true,
+      "virtualization": "available",
       "disks": []
     },
     "capacity": 1,
